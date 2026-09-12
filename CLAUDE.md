@@ -208,6 +208,42 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-12 — downloadCompanyLogo requires a token; a fixed sessionID was invalidating ours
+
+The API owner confirmed what the bench had found by probing: **`GET /common/downloadCompanyLogo/{companyID}`
+is the one endpoint in the common module that needs a token.** Everything else there is public.
+
+It now runs like any other endpoint — Signup & Login issues the token — and the exception is
+asserted as an exact list in `tests/api/kpost/common/coverage.spec.ts`:
+
+    const REQUIRES_TOKEN = ['common-download-company-logo'];
+
+An exact list, not "at least these", so an endpoint that starts _or_ stops requiring a token fails
+that test instead of changing the module's security posture silently. (It had to change: the old
+assertion was "no endpoint requires a token", which was true when written and wrong within a day.)
+
+**A bench bug this exposed.** Enabling it reported `authentication.valid-token FAILED: valid USER
+token was rejected with 401`, while the same call by hand answered 404. The cause was ours: the
+login payload used a **fixed** `sessionID` (`qa-bench-session`). KPost treats that as the session
+key, so each login invalidated the tokens issued to the previous one — with several principals and
+several workers, tokens died mid-run and every failure looked like an auth defect. The workbook's
+own sample is a UUID; taking that literally is the fix, and `sessionID` is now generated per login.
+
+Worth recording as a lesson: an authentication failure the API cannot reproduce by hand is the
+bench's fault until proven otherwise.
+
+**Where that endpoint stands now:** 12 of 14 executed cases pass, including every auth probe
+(missing, invalid, malformed and unsigned tokens all correctly rejected — it is the only endpoint in
+the module where that rule is testable at all). The two failures are the same for every company id
+tried, with all three token types:
+
+    GET /common/downloadCompanyLogo/1000008  ->  404 "The requested resource does not exist."
+
+No company on this host has a logo yet, which is unsurprising because `updateCompanyLogo` is gated
+and has never run. Open with the owner: a companyID that _has_ a logo, or the host this route really
+lives on — its workbook row (KatchupAPI!R178) says module **Admin** and points at
+`kpostapis.kpostindia.com`, a third host, and the route is not on `:9595`.
+
 ### 2026-09-12 — Signup & Login: 14 endpoints, all four user types, and the auth plumbing
 
 The second module, and the one every other module needed: `/v2/signupLogin/*` plus the

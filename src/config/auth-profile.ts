@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { RequestSpec } from '@api/client/request-builder';
 import { authConfig, type Principal, type Role } from './auth.config';
 import { testData } from './test-data.config';
@@ -49,11 +50,16 @@ export interface AuthProfile {
 }
 
 /**
- * The device fields KPost's login requires. They are not credentials but the API rejects a login
- * without them, and a stable identity per run keeps the session list from filling with strangers.
+ * The device fields KPost's login requires. Not credentials, but the API rejects a login without
+ * them.
+ *
+ * `sessionID` is deliberately **not** here: it must be unique per login. A fixed one made the
+ * server invalidate previously issued tokens - two accounts logging in under the same session id
+ * clobbered each other, and the bench then saw `401` on an endpoint that answers `404` to a
+ * freshly minted token. The workbook's own sample is a UUID, which is the clue we should have taken
+ * literally the first time.
  */
 const DEVICE = {
-  sessionID: 'qa-bench-session',
   deviceType: 'Web',
   deviceIdentity_primary: '9f9d6bd8-238f-11ed-b3e2-73ce62ed0e94',
   deviceIdentity_secondary: 'Desktop-Chrome',
@@ -146,6 +152,8 @@ export const AUTH_PROFILES: Record<AuthProfile['id'], AuthProfile> = {
     loginRequest: (principal) => ({
       body: {
         ...DEVICE,
+        // Unique per login: see the note on DEVICE.
+        sessionID: randomUUID(),
         kpostID: principal.username,
         loginRO: {
           countryID: String(testData.countryId),

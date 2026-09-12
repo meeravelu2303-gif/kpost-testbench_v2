@@ -87,17 +87,19 @@ export const downloadCompanyLogoApi = defineKpostEndpoint({
   method: 'GET',
   path: '/common/downloadCompanyLogo/{companyID}',
   summary: "Download a company's logo",
-  tags: [...COMPANY_TAGS, 'binary', 'needs-login'],
+  tags: [...COMPANY_TAGS, 'binary', 'requires-token'],
   /*
    * Returns an image, not the KPost envelope. `envelope: false` switches off the JSON-shaped
    * checks (structure, schema, data conventions) while keeping status, headers, security,
    * performance and the auth probes - the ones that still mean something for a binary response.
    *
-   * **It is the one common endpoint that is NOT public.** The live API answers
-   * `401 "Authentication is required to access this resource."`, which the bench found on its
-   * first run - the workbook says nothing about auth anywhere. So it is declared as requiring a
-   * token and tagged `needs-login`: the company spec leaves it out until the Signup & Login
-   * module supplies one, rather than reporting 40 failures for a missing credential.
+   * **It is the one common endpoint that is NOT public** - confirmed by the API owner, and by the
+   * API itself: 401 without a token, 401 with an invalid one. The workbook says nothing about auth
+   * on any endpoint, so the bench found this by probing.
+   *
+   * It runs like everything else now that Signup & Login can issue a token. Its auth cases are the
+   * valuable ones here: it is the only endpoint in the module where "reject an unauthenticated
+   * caller" is a rule that can be tested at all.
    */
   authentication: { required: true },
   envelope: false,

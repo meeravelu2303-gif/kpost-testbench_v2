@@ -21,11 +21,20 @@ test.describe('KPost common · module coverage', () => {
     }
   });
 
-  test('no endpoint requires a token: the common module is public @framework', () => {
+  /**
+   * The common module is public with exactly one exception, confirmed by the API owner and by the
+   * live API: `downloadCompanyLogo` requires a token (401 without one, 401 with a bad one).
+   *
+   * Asserted as an exact list rather than "at least these", so an endpoint that starts or stops
+   * requiring a token fails this test instead of changing the module's security posture silently.
+   */
+  const REQUIRES_TOKEN = ['common-download-company-logo'];
+
+  test('the common module is public, except the endpoints listed here @framework', () => {
     const requiringAuth = commonApis
       .filter((api) => api.authentication?.required !== false)
       .map((api) => api.id);
-    expect(requiringAuth).toEqual([]);
+    expect(requiringAuth.sort()).toEqual([...REQUIRES_TOKEN].sort());
   });
 
   test('every endpoint plans at least 10 validation cases @framework', () => {
