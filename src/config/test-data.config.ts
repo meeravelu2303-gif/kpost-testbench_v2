@@ -37,6 +37,15 @@ const schema = z.object({
   userType: z.string().min(1).default('PERSONAL'),
   countryId: z.coerce.number().int().positive().default(1),
 
+  /**
+   * The four KPost user types, each a real account on the target host. KPost has exactly these
+   * (confirmed by the API owner): PERSONAL, and BUSINESS_S / _M / _L for Small, Medium and Large.
+   * There is no separate "admin" type - a business account administers its own company.
+   */
+  businessSKpostId: z.string().min(3).default('qa.business.s@kpost.in'),
+  businessMKpostId: z.string().min(3).default('qa.business.m@kpost.in'),
+  businessLKpostId: z.string().min(3).default('qa.business.l@kpost.in'),
+
   /** Business-tier administrator, for the company and admin-facing lookups. */
   adminKpostId: z.string().min(3).default('qa.admin@kpost.in'),
   adminPassword: z.string().min(1).default('mock-password'),
@@ -102,6 +111,9 @@ const SOURCES = {
   password: 'QA_PASSWORD',
   userType: 'QA_USER_TYPE',
   countryId: 'QA_COUNTRY_ID',
+  businessSKpostId: 'QA_BUSINESS_S_KPOST_ID',
+  businessMKpostId: 'QA_BUSINESS_M_KPOST_ID',
+  businessLKpostId: 'QA_BUSINESS_L_KPOST_ID',
   adminKpostId: 'QA_ADMIN_KPOST_ID',
   adminPassword: 'QA_ADMIN_PASSWORD',
   adminUserType: 'QA_ADMIN_USER_TYPE',

@@ -4,7 +4,13 @@ import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import { TokenProvider } from '@api/client/token-provider';
 import type { ApiRegistry } from '@api/registry/api-registry';
 import type { RequestFactoryHelpers } from '@api/registry/endpoint-definition';
-import { authConfig, principalFor, type Principal, type Role } from '@config/auth.config';
+import {
+  AUTH_PROFILES,
+  authProfileFor,
+  principalForRole,
+  type AuthProfile,
+} from '@config/auth-profile';
+import { authConfig, type Principal, type Role } from '@config/auth.config';
 import { suiteFor } from '@config/ownership.config';
 import { env } from '@config/env';
 import { deepMerge, getPath } from '@utils/json';
@@ -35,7 +41,10 @@ export class EndpointExecutor {
     private readonly apiRegistry: ApiRegistry,
     private readonly log: Logger,
   ) {
-    this.tokens = new TokenProvider((principal) => this.login(principal), env.API_BASE_URL);
+    this.tokens = new TokenProvider(
+      (principal, profile) => this.login(principal, profile),
+      env.API_BASE_URL,
+    );
   }
 
   get helpers(): RequestFactoryHelpers {
@@ -81,10 +90,14 @@ export class EndpointExecutor {
     return this.send(resolveEndpoint(this.apiRegistry.get(endpointId)), spec, options);
   }
 
-  principal(role: Role): Principal {
-    const principal = principalFor(role);
+  /** A principal for `role` from the profile that owns `endpoint`. */
+  principal(role: Role, endpoint?: ResolvedEndpoint): Principal {
+    const profile = endpoint ? authProfileFor(endpoint.definition) : AUTH_PROFILES.mock;
+    const principal = principalForRole(profile, role);
     if (!principal)
-      throw new Error(`No principal configured for role ${role} (see AUTH_PRINCIPALS)`);
+      throw new Error(
+        `No ${profile.id} principal configured for role ${role} (see src/config/auth-profile.ts)`,
+      );
     return principal;
   }
 
@@ -126,21 +139,26 @@ export class EndpointExecutor {
   ): Promise<string | undefined> {
     if (auth && 'header' in auth) return auth.header;
     if (!auth && !endpoint.authentication.required) return undefined;
+    const profile = authProfileFor(endpoint.definition);
     const principal =
       auth && 'principal' in auth
         ? auth.principal
-        : this.principal(auth?.role ?? endpoint.authentication.role);
-    return `${authConfig.scheme} ${await this.tokens.tokenFor(principal)}`;
+        : this.principal(auth?.role ?? endpoint.authentication.role, endpoint);
+    return `${profile.scheme} ${await this.tokens.tokenFor(principal, profile)}`;
   }
 
-  private async login(principal: Principal): Promise<string> {
-    const endpoint = resolveEndpoint(this.apiRegistry.get(authConfig.loginEndpointId));
-    const exchange = await this.send(endpoint, authConfig.loginRequest(principal), {
+  /*
+   * The profile follows the endpoint being tested, not a global: a token minted by the mock and
+   * sent to the live API would be rejected as invalid and read like an API defect.
+   */
+  private async login(principal: Principal, profile: AuthProfile): Promise<string> {
+    const endpoint = resolveEndpoint(this.apiRegistry.get(profile.loginEndpointId));
+    const exchange = await this.send(endpoint, profile.loginRequest(principal), {
       label: 'setup:login',
       auth: { header: undefined },
     });
     const parsed = exchange.json();
-    const token = parsed.ok ? getPath(parsed.value, authConfig.tokenPath) : undefined;
+    const token = parsed.ok ? getPath(parsed.value, profile.tokenPath) : undefined;
     if (!endpoint.expectedStatus.includes(exchange.status) || typeof token !== 'string') {
       throw new Error(
         `Login failed for principal "${principal.key}" (HTTP ${exchange.status}, correlationId ${exchange.correlationId})`,

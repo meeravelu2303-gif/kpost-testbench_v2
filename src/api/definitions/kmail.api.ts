@@ -12,5 +12,17 @@ import { loadModuleEndpoints } from './module-endpoints';
  * rather than about KMail.
  */
 export const kmailApis: EndpointDefinition[] = env.KMAIL_API_BASE_URL
-  ? loadModuleEndpoints(suiteFor('kmail-api'))
+  ? loadModuleEndpoints(suiteFor('kmail-api'), {
+      // KMail's payload sits under `value`, with no `statusCode` - a different envelope from
+      // KPost core, measured across its 26 documented responses.
+      responseContract: 'kmail',
+      /*
+       * KMail enforces authentication: `GET /common/getSaluations/` answers 403 with an empty body
+       * on the live host. Nothing in the workbook says so - the bench found it. Tagged so the spec
+       * can leave these out until the Signup & Login module can issue a token, rather than
+       * reporting 15 endpoints as broken when the only thing missing is a credential.
+       */
+      authentication: { required: true },
+      tags: ['needs-login'],
+    })
   : [];

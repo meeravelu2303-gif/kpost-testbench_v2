@@ -19,8 +19,13 @@ export const commonErrorValidator = defineValidator({
   check: (context) => {
     const checks: CheckDetail[] = errorExchanges(context).map((exchange) => {
       const parsed = exchange.json();
-      const code = parsed.ok ? getPath(parsed.value, 'code') : undefined;
-      const expectedCode = apiConfig.errorCodeByStatus[exchange.status];
+      /*
+       * An API without an error-code field (KPost) is checked for 5xx only. Asserting a code it
+       * never promised would fail every error response and bury the real finding.
+       */
+      const codeField = context.endpoint.contract.errorCodeField;
+      const code = codeField && parsed.ok ? getPath(parsed.value, codeField) : undefined;
+      const expectedCode = codeField ? apiConfig.errorCodeByStatus[exchange.status] : undefined;
       const problem =
         exchange.status >= 500
           ? `server error ${exchange.status}`

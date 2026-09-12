@@ -208,6 +208,68 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-12 — Signup & Login: 14 endpoints, all four user types, and the auth plumbing
+
+The second module, and the one every other module needed: `/v2/signupLogin/*` plus the
+medium/large business login. FR-S01..S12 in the FRD.
+
+```
+src/api/definitions/kpost/signup-login/
+  login.api.ts      login, token refresh, sessions, logout, access code   (8)
+  signup.api.ts     registration, business registration, availability     (6)
+tests/api/kpost/signup-login/
+  login.spec.ts  signup.spec.ts  user-types.spec.ts  coverage.spec.ts
+```
+
+**Auth became per-API.** `src/config/auth-profile.ts` now holds _how_ an API issues tokens, the way
+`response-contract.ts` holds what its responses look like. The bench had one global login shaped for
+its mock (`{username, password}` → `data.accessToken`); KPost logs in with a nested `loginRO` and
+returns the token at the **top level**. The profile is chosen by the same signal as the base URL
+(`mockFixture`), so a host and its credentials can never disagree — a mock-minted token sent to the
+live API would be rejected as invalid and read like an API defect.
+
+`AUTH_PROFILES.kpost.loginEndpointId` points at this module's own definition, so the login payload
+exists once: the token provider and the login endpoint's own tests use the same builder.
+
+**All four user types are real accounts and all four log in.** PERSONAL, BUSINESS_S, BUSINESS_M,
+BUSINESS_L — confirmed by the API owner, verified against the host. The tier is **part of the
+credential**, not a flag: logging the BUSINESS_S account in as PERSONAL is rejected. So each tier is
+its own principal, and `user-types.spec.ts` asserts per tier that it logs in, is echoed back as that
+type, gets a token whose subject is its own kpostID, and — for businesses only — carries a
+`companyID` (S=1000008, M=1000009, L=1000010).
+
+Two central bugs this module exposed, both fixed:
+
+- **The primary role came from the mock's default (`ADMIN`).** KPost has no ADMIN principal, so
+  every authenticated KPost endpoint failed with "no principal configured for role ADMIN" — 82
+  cases reporting a configuration mismatch as an API failure. The default role now comes from the
+  endpoint's own auth profile (`USER` for KPost).
+- **The error-code check assumed a `code` field.** KPost's errors carry prose and a `traceId`, no
+  code. `errorCodeField` is now part of the response contract; where an API has none, only the 5xx
+  rule applies. Failures dropped from 102 to 29.
+
+#### Findings — reproduced by hand, every one
+
+| What                                             | Endpoint                              | Evidence                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A failed login answers HTTP 500**              | `userLogin`                           | `{"statusCode":500,"status":"FAILURE","message":"Invalid Credential"}` for a wrong password _and_ a wrong tier. The most common client error on the most security-sensitive endpoint, returned as a server fault — it pages whoever owns the alerts and tells the caller nothing. Asserted as a 4xx, so it stays red.                                            |
+| **Concurrent logins fail**                       | `userLogin`                           | Four _different_ accounts logging in simultaneously: 1–2 of 4 answer `500 "internal error… Quote the traceId"`, reproducibly (3 rounds: 2, 1, 1 failures). Sequentially all four pass; two concurrent logins of the _same_ account both pass. Looks like shared mutable state, and it is exactly the real access pattern — an office signing in at nine o'clock. |
+| **Protected endpoints answer 409 to everything** | `getActiveSession`, `getLoginHistory` | Identical `409 "The request conflicts with the current state of the resource."` **with a valid token and with no token at all**. Two problems in one: the endpoint does not work, and it never returns 401, so auth is not enforced on it.                                                                                                                       |
+| Documented payload is incomplete                 | `kpostIDsuggestionList`               | `400 "Request validation failed"` with `fieldErrors: {kpostID…}` — the API requires `kpostID`; the workbook's sample omits it.                                                                                                                                                                                                                                   |
+| A second stale GET row                           | `GET /v2/signupLogin/signup/`         | **405 Method Not Allowed**. Sheet3 R13 documents it with no payload, so the method rule derived GET — the same kind of incomplete row as `mobileNoExist`.                                                                                                                                                                                                        |
+| Login probes trip a throttle                     | `adminUserLogin`                      | 429 during the negative probes. Worth knowing the endpoint _is_ rate-limited; it also means its probe results are unreliable until the limit is understood.                                                                                                                                                                                                      |
+
+**Open with the API owner:** whether `adminUserLogin` expects an **encrypted** password — its
+workbook sample is `"0FPnV+OKhDGGXMkQjtj1eQ=="` where every other login sample is plaintext.
+
+**Session-ending endpoints are gated `global`:** `userLogout`, `userLogoutFromAllDevices`,
+`setAccessCode` and `adminRegistration`. Logging the shared QA account out mid-run would produce
+401s across the report that look like auth defects.
+
+**`PERSONAL` is missing from the workbook's Types tab** — it lists only the three business tiers. A
+documentation gap, recorded as a named exception in `user-types.spec.ts` that fails if the tab ever
+gains it, so the workaround cannot outlive the gap.
+
 ### 2026-09-12 — Common module: 32 endpoints under test, 1 278 cases, first real findings
 
 The first module. `/common` and `/v2/common` — everything a client calls before anyone has a

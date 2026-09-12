@@ -30,6 +30,12 @@ export function jwtExpiry(token: string): number | undefined {
   return typeof exp === 'number' ? exp * 1000 : undefined;
 }
 
+/** The token's subject claim — for KPost, the kpostID it was issued to. */
+export function jwtSubject(token: string): string | undefined {
+  const sub = decodeJwt(token)?.payload.sub;
+  return typeof sub === 'string' ? sub : undefined;
+}
+
 /** Same header and claims, broken signature — a well-formed but invalid token. */
 export function tamperSignature(token: string): string {
   const [header = '', payload = '', signature = ''] = token.split('.');

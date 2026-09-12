@@ -1,4 +1,5 @@
 import type { SuiteOwnership } from '@config/ownership.config';
+import type { ResponseContractId } from '@config/response-contract';
 import { isPlainObject } from '@utils/json';
 import type { EndpointDefinition } from '../registry/endpoint-definition';
 import { loadOpenApiEndpoints } from '../registry/endpoint-loader';
@@ -18,6 +19,12 @@ import { toJsonSchema } from '../schema/contract-schema';
  * hand-written definition with a request factory, exactly like the KPost core endpoints.
  */
 export interface ModuleLoadOptions {
+  /** Response contract the module follows - see src/config/response-contract.ts. */
+  responseContract?: ResponseContractId;
+  /** Whether the module requires a token. Measured, not assumed. */
+  authentication?: EndpointDefinition['authentication'];
+  /** Extra tags applied to every loaded endpoint (e.g. `needs-login`). */
+  tags?: readonly string[];
   /** Upper bound, so one module cannot dominate a run. */
   max?: number;
   /** Extra per-endpoint configuration, keyed by operationId. */
@@ -60,7 +67,9 @@ export function loadModuleEndpoints(
       // The module decides the base URL, the Bugzilla product and the owning developer.
       suite: suite.id,
       // Spec tags are the Bugzilla component names for these products.
-      tags: definition.tags ?? [],
+      tags: [...(definition.tags ?? []), ...(options.tags ?? [])],
+      responseContract: options.responseContract,
+      authentication: options.authentication ?? definition.authentication,
     }));
 }
 

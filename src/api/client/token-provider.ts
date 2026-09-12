@@ -1,7 +1,8 @@
+import type { AuthProfile } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { jwtExpiry } from '@utils/jwt';
 
-export type LoginFn = (principal: Principal) => Promise<string>;
+export type LoginFn = (principal: Principal, profile: AuthProfile) => Promise<string>;
 
 interface CachedToken {
   token: string;
@@ -22,12 +23,19 @@ export class TokenProvider {
     private readonly scope: string,
   ) {}
 
-  async tokenFor(principal: Principal): Promise<string> {
-    const key = `${this.scope}|${principal.key}`;
+  /**
+   * A token for `principal` from `profile`'s login endpoint.
+   *
+   * The profile is part of the cache key: the same principal key can exist in two profiles (the
+   * mock's "admin" and KPost's), and handing a mock-minted token to the live API would be
+   * rejected as invalid - a failure that looks like an API defect but is the bench's fault.
+   */
+  async tokenFor(principal: Principal, profile: AuthProfile): Promise<string> {
+    const key = `${this.scope}|${profile.id}|${principal.key}`;
     const cached = await cache.get(key)?.catch(() => undefined);
     if (cached && cached.expiresAt - REFRESH_MARGIN_MS > Date.now()) return cached.token;
 
-    const pending = this.login(principal).then((token) => ({
+    const pending = this.login(principal, profile).then((token) => ({
       token,
       expiresAt: jwtExpiry(token) ?? Date.now() + FALLBACK_LIFETIME_MS,
     }));

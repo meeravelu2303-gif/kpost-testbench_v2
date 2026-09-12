@@ -1,7 +1,8 @@
 import type { RequestSpec } from '@api/client/request-builder';
 import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import type { RequestFactoryHelpers } from '@api/registry/endpoint-definition';
-import { principalFor, type Principal, type Role } from '@config/auth.config';
+import { authProfileFor, principalForRole } from '@config/auth-profile';
+import { type Principal, type Role } from '@config/auth.config';
 import type { ValidationProfile } from '@config/constants';
 import { deepMerge } from '@utils/json';
 import type { Logger } from '@utils/logger';
@@ -115,11 +116,12 @@ export class EngineValidationContext implements ValidationContext {
   }
 
   principal(role: Role, options?: { foreignTenantOf?: string }): Principal | undefined {
-    return principalFor(role, options);
+    return principalForRole(authProfileFor(this.endpoint.definition), role, options);
   }
 
   tokenFor(principal: Principal): Promise<string> {
-    return this.deps.executor.tokens.tokenFor(principal);
+    // The endpoint under validation decides which API issues the token.
+    return this.deps.executor.tokens.tokenFor(principal, authProfileFor(this.endpoint.definition));
   }
 
   expiredToken(): Promise<string | undefined> {

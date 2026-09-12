@@ -63,6 +63,12 @@ export interface ResponseContract {
   errorStatusInBody: boolean;
   /** Field carrying that number (`status` in the reference contract, `statusCode` in KPost). */
   errorStatusField: string;
+  /**
+   * Field holding a machine-readable error code (`UNAUTHORIZED`, `NOT_FOUND`, …), when the API has
+   * one. KPost has none - its errors carry a prose `message` and a `traceId` - so demanding one
+   * would fail every error response and say nothing true.
+   */
+  errorCodeField?: string;
   /** Headers every response of this API must carry. */
   requiredHeaders: readonly string[];
   /** Status a successful call returns, per method. */
@@ -77,7 +83,7 @@ export interface ResponseContract {
   idFormat: { pattern: RegExp; description: string };
 }
 
-export type ResponseContractId = 'standard' | 'kpost';
+export type ResponseContractId = 'standard' | 'kpost' | 'kmail';
 
 /**
  * KPost's live envelope. `looseObject` keeps it open — a response may carry its own top-level
@@ -122,6 +128,27 @@ const kpostErrorEnvelope = z.looseObject({
   traceId: z.string().optional(),
 });
 
+/**
+ * KMail's envelope. A separate service in a separate repository, and a **third** shape - measured
+ * across its 26 documented responses:
+ *
+ *     urlPath   26/26
+ *     status    26/26
+ *     value     20/26     <- the payload key is `value`, not `data`
+ *
+ * No `statusCode` at all, unlike KPost core. Reusing the `kpost` profile here would look tidy and
+ * be wrong: every response would be reported as missing `statusCode`, and `data` would be read as
+ * the payload when the payload is under `value`.
+ *
+ * Its error shape is unknown: the only observed error is `403` with an **empty body**, which is
+ * not enough to write a contract from, so `error` stays undefined and error-format validation
+ * skips with that reason rather than inventing one.
+ */
+const kmailSuccessEnvelope = z.looseObject({
+  status: z.string().regex(/^success$/i, 'status must be SUCCESS'),
+  urlPath: z.string().optional(),
+});
+
 export const RESPONSE_CONTRACTS: Record<ResponseContractId, ResponseContract> = {
   /** The bench's own reference contract, used by the mock-backed framework self-tests. */
   standard: {
@@ -134,6 +161,7 @@ export const RESPONSE_CONTRACTS: Record<ResponseContractId, ResponseContract> = 
     metadata: true,
     errorStatusInBody: true,
     errorStatusField: 'status',
+    errorCodeField: 'code',
     requiredHeaders: apiConfig.requiredResponseHeaders,
     expectedStatus: apiConfig.defaultExpectedStatus,
     echoesCorrelationId: true,
@@ -162,6 +190,23 @@ export const RESPONSE_CONTRACTS: Record<ResponseContractId, ResponseContract> = 
     },
     echoesCorrelationId: false,
     // Integers, in a string or a number: `{"countryID": 1}` and `{"fieldCount": "6"}` both occur.
+    idFormat: { pattern: /^\d+$/, description: 'a positive integer' },
+  },
+
+  /** The KMail module, measured from its own documented samples. */
+  kmail: {
+    id: 'kmail',
+    description: 'KMail envelope: status/urlPath with the payload under `value`',
+    success: kmailSuccessEnvelope,
+    error: undefined,
+    dataKey: 'value',
+    schemaTarget: 'body',
+    metadata: false,
+    errorStatusInBody: false,
+    errorStatusField: 'statusCode',
+    requiredHeaders: [],
+    expectedStatus: { GET: [200], POST: [200], PUT: [200], PATCH: [200], DELETE: [200] },
+    echoesCorrelationId: false,
     idFormat: { pattern: /^\d+$/, description: 'a positive integer' },
   },
 };

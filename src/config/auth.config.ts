@@ -13,6 +13,11 @@ const PrincipalSchema = z.object({
   tenantId: z.string().optional(),
   username: z.string().min(1),
   password: z.string().min(1),
+  /**
+   * KPost's user type (PERSONAL, BUSINESS_S/M/L, INSTITUTION_*). The same password authenticates
+   * a tiered account only when its tier is sent, so it belongs to the principal.
+   */
+  userType: z.string().min(1).optional(),
 });
 export type Principal = z.infer<typeof PrincipalSchema>;
 

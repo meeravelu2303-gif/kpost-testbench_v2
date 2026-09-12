@@ -2,6 +2,7 @@ import type { HttpMethod } from '@api/client/request-builder';
 import type { AuthFailureMode, EndpointDefinition } from '@api/registry/endpoint-definition';
 import type { ContractSchema } from '@api/schema/contract-schema';
 import { apiConfig } from '@config/api.config';
+import { authProfileFor } from '@config/auth-profile';
 import { authConfig, type Role } from '@config/auth.config';
 import { VALIDATION_PROFILES, type ValidationProfile } from '@config/constants';
 import { DEFAULT_SUITE, suiteFor, type SuiteOwnership } from '@config/ownership.config';
@@ -111,12 +112,17 @@ const MUTATING_METHODS: readonly HttpMethod[] = ['POST', 'PUT', 'PATCH', 'DELETE
 export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoint {
   const contract = responseContract(definition.responseContract);
   const roles = definition.authorization?.roles ?? [];
+  /*
+   * The default role belongs to the API being tested, not to the bench. KPost has no ADMIN
+   * principal - its accounts are USER (personal) and COMPANY_ADMIN (business) - so falling back to
+   * the mock's ADMIN default made every authenticated KPost endpoint fail with "no principal
+   * configured for role ADMIN": 82 cases reporting a configuration mismatch as an API failure.
+   */
+  const profileDefaultRole = authProfileFor(definition).defaultRole;
   const primaryRole =
     definition.authentication?.role ??
-    (roles.length === 0 || roles.includes(authConfig.defaultRole)
-      ? authConfig.defaultRole
-      : roles[0]) ??
-    authConfig.defaultRole;
+    (roles.length === 0 || roles.includes(profileDefaultRole) ? profileDefaultRole : roles[0]) ??
+    profileDefaultRole;
 
   return {
     definition,
