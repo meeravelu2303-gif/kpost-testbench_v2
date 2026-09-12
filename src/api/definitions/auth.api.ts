@@ -17,6 +17,7 @@ function loginProbeCredentials() {
 
 export const loginApi: EndpointDefinition = {
   id: 'auth-login',
+  mockFixture: true,
   method: 'POST',
   path: '/auth/login',
   summary: 'Exchange credentials for an access token',

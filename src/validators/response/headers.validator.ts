@@ -8,6 +8,10 @@ export const headersValidator = defineValidator({
   severity: 'MEDIUM',
   description: 'Required response headers are present and the correlation ID is echoed',
   toggle: 'headers',
+  appliesTo: ({ endpoint }) =>
+    endpoint.requiredHeaders.length || endpoint.contract.echoesCorrelationId
+      ? true
+      : `${endpoint.contract.id} requires no response headers`,
   check: ({ primary, endpoint }) => {
     const checks: CheckDetail[] = endpoint.requiredHeaders.map((name) => {
       const value = primary.header(name);
@@ -18,13 +22,16 @@ export const headersValidator = defineValidator({
         actual: value ?? '(missing)',
       };
     });
-    const echoed = primary.header(apiConfig.correlationHeader);
-    checks.push({
-      name: `${apiConfig.correlationHeader} echo`,
-      status: echoed === primary.correlationId ? 'PASSED' : 'FAILED',
-      expected: primary.correlationId,
-      actual: echoed ?? '(missing)',
-    });
+    // Only an API that promises to echo the correlation ID is held to it.
+    if (endpoint.contract.echoesCorrelationId) {
+      const echoed = primary.header(apiConfig.correlationHeader);
+      checks.push({
+        name: `${apiConfig.correlationHeader} echo`,
+        status: echoed === primary.correlationId ? 'PASSED' : 'FAILED',
+        expected: primary.correlationId,
+        actual: echoed ?? '(missing)',
+      });
+    }
     return fromChecks(checks, 'header checks');
   },
 });

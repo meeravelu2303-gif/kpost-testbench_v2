@@ -12,10 +12,15 @@ export function hasNoContent(exchange: ApiResponseWrapper): boolean {
 export function responseData(context: ValidationContext): ParsedJson {
   const parsed = context.primary.json();
   if (!parsed.ok) return parsed;
-  return {
-    ok: true,
-    value: context.endpoint.envelope ? getPath(parsed.value, 'data') : parsed.value,
-  };
+  const { contract, envelope } = context.endpoint;
+  /*
+   * Where the payload lives is a property of the API, not of every validator. KPost documents
+   * whole bodies (envelope included) and often has no `data` key at all, so unwrapping one would
+   * hand every validator `undefined` and skip the checks that matter.
+   */
+  const dataKey =
+    envelope && contract.schemaTarget === 'data' ? (contract.dataKey ?? undefined) : undefined;
+  return { ok: true, value: dataKey ? getPath(parsed.value, dataKey) : parsed.value };
 }
 
 /** Every exchange with an HTTP error status collected so far (primary + probes). */

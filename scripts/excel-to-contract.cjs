@@ -472,22 +472,44 @@ function parseBody(text) {
 }
 
 /** JSON Schema from an example. No `required`: an example cannot prove a field is mandatory. */
-function inferSchema(value) {
+/*
+ * ## Response types permit null; request types do not
+ *
+ * For a RESPONSE, one example proves a type was observed, never that null is forbidden - the same
+ * reason no property is marked `required`. Not theoretical: the documented
+ * `/v2/common/countries` sample shows `"fieldCount": "6"`, while the live API returns `null` for
+ * 236 of its 240 countries. Asserting "string" produced 236 violations on one endpoint and buried
+ * the real findings under them. A genuine mismatch (a string where a number is documented) still
+ * fails.
+ *
+ * For a REQUEST the opposite holds. The negative probes send null into each documented field and
+ * expect a 4xx; a nullable request schema would mean "the contract permits null", the probe would
+ * be skipped as not-invalid, and a real defect would go unreported - exactly what happened to
+ * `POST /v2/common/languages`, which accepts `{"countryID": null}` and answers 200 with the rows
+ * for country 0.
+ */
+function inferSchema(value, nullable = false) {
+  const type = (name) => (nullable ? [name, 'null'] : name);
   if (Array.isArray(value)) {
-    return { type: 'array', items: value.length ? inferSchema(value[0]) : {} };
+    return {
+      type: type('array'),
+      items: value.length ? inferSchema(value[0], nullable) : {},
+    };
   }
   if (value === null) return {};
   switch (typeof value) {
     case 'string':
-      return { type: 'string' };
+      return { type: type('string') };
     case 'number':
-      return { type: Number.isInteger(value) ? 'integer' : 'number' };
+      return { type: type(Number.isInteger(value) ? 'integer' : 'number') };
     case 'boolean':
-      return { type: 'boolean' };
+      return { type: type('boolean') };
     case 'object':
       return {
-        type: 'object',
-        properties: Object.fromEntries(Object.entries(value).map(([k, v]) => [k, inferSchema(v)])),
+        type: type('object'),
+        properties: Object.fromEntries(
+          Object.entries(value).map(([k, v]) => [k, inferSchema(v, nullable)]),
+        ),
       };
     default:
       return {};
@@ -814,7 +836,7 @@ for (const [product, meta] of Object.entries(PRODUCTS)) {
               description: 'Documented sample response',
               content: {
                 'application/json': {
-                  schema: inferSchema(record.responseExample),
+                  schema: inferSchema(record.responseExample, true),
                   example: record.responseExample,
                 },
               },

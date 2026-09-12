@@ -1,4 +1,3 @@
-import { errorEnvelopeSchema, successEnvelopeSchema } from '@config/api.config';
 import { defineValidator } from '@engine/validator';
 import { outcome } from '@engine/validation-result';
 import { isPlainObject } from '@utils/json';
@@ -12,19 +11,37 @@ export const responseStructureValidator = defineValidator({
   toggle: 'responseStructure',
   appliesTo: ({ endpoint, primary }) => {
     if (!endpoint.envelope) return 'endpoint does not use the response envelope';
-    return hasNoContent(primary) ? `response has no content (HTTP ${primary.status})` : true;
+    if (hasNoContent(primary)) return `response has no content (HTTP ${primary.status})`;
+    /*
+     * An API that documents no error shape cannot have one asserted. Saying so is the honest
+     * result; passing would claim a contract we never checked.
+     */
+    if (primary.isErrorStatus && !endpoint.contract.error)
+      return `${endpoint.contract.id} documents no error envelope`;
+    return true;
   },
-  check: ({ primary }) => {
+  check: ({ primary, endpoint }) => {
     const parsed = primary.json();
     if (!parsed.ok) return outcome.failed(parsed.reason);
-    const envelope = primary.isErrorStatus ? errorEnvelopeSchema : successEnvelopeSchema;
+    const { contract } = endpoint;
+    const envelope = primary.isErrorStatus ? contract.error : contract.success;
+    if (!envelope) return outcome.skipped(`${contract.id} documents no error envelope`);
     const expected = primary.isErrorStatus ? 'error envelope' : 'success envelope';
     const result = envelope.safeParse(parsed.value);
     const issues = result.success
       ? []
       : result.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`);
-    if (!primary.isErrorStatus && !(isPlainObject(parsed.value) && 'data' in parsed.value))
-      issues.push('data: missing');
+    /*
+     * Only demand the payload key where the contract says every success carries one. KPost's
+     * envelope has `data` on 67 of 119 documented responses - a message-only reply is valid.
+     */
+    if (
+      !primary.isErrorStatus &&
+      contract.dataKey &&
+      contract.metadata &&
+      !(isPlainObject(parsed.value) && contract.dataKey in parsed.value)
+    )
+      issues.push(`${contract.dataKey}: missing`);
     return issues.length
       ? outcome.failed(`not a valid ${expected}: ${issues.join('; ')}`, {
           expected,

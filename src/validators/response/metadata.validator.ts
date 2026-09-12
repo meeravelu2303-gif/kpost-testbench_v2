@@ -13,6 +13,8 @@ export const metadataValidator = defineValidator({
   dependsOn: ['response.structure'],
   appliesTo: ({ endpoint, primary }) => {
     if (!endpoint.envelope) return 'endpoint does not use the response envelope';
+    if (!endpoint.contract.metadata)
+      return `${endpoint.contract.id} responses carry no metadata block`;
     return hasNoContent(primary) ? `response has no content (HTTP ${primary.status})` : true;
   },
   check: ({ primary }) => {

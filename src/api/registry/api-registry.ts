@@ -6,6 +6,12 @@ export interface EndpointFilter {
   ids?: readonly string[];
   /** Endpoint must have at least one of these tags. */
   tags?: readonly string[];
+  /**
+   * Endpoint must have NONE of these tags. Lets a spec cover a module while leaving out the
+   * endpoints it cannot run yet (`needs-login`) without deleting their definitions - which would
+   * silently drop them from coverage.
+   */
+  excludeTags?: readonly string[];
   methods?: readonly HttpMethod[];
   /** Module the endpoint belongs to (see src/config/ownership.config.ts). */
   suites?: readonly SuiteId[];
@@ -70,7 +76,8 @@ export class ApiRegistry {
         (!filter.ids || filter.ids.includes(e.id)) &&
         (!filter.methods || filter.methods.includes(e.method)) &&
         (!filter.suites || filter.suites.includes(suiteOf(e))) &&
-        (!filter.tags || filter.tags.some((tag) => e.tags?.includes(tag))),
+        (!filter.tags || filter.tags.some((tag) => e.tags?.includes(tag))) &&
+        (!filter.excludeTags || !filter.excludeTags.some((tag) => e.tags?.includes(tag))),
     );
   }
 }

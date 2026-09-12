@@ -5,6 +5,8 @@ import { apiConfig } from '@config/api.config';
 import { authConfig, type Role } from '@config/auth.config';
 import { VALIDATION_PROFILES, type ValidationProfile } from '@config/constants';
 import { DEFAULT_SUITE, suiteFor, type SuiteOwnership } from '@config/ownership.config';
+import { responseContract, type ResponseContract } from '@config/response-contract';
+import type { SideEffect } from './production-guard';
 import { thresholds } from '@config/thresholds.config';
 import type { Validator } from './validator';
 
@@ -63,6 +65,8 @@ export const PROFILE_SETS = {
 
 /** An EndpointDefinition with every central default applied. Validators only read this. */
 export interface ResolvedEndpoint {
+  /** The response contract this endpoint follows; validators read the envelope from it. */
+  contract: ResponseContract;
   definition: EndpointDefinition;
   id: string;
   method: HttpMethod;
@@ -92,6 +96,7 @@ export interface ResolvedEndpoint {
   responseSchema?: ContractSchema;
   pagination: boolean;
   requiredHeaders: readonly string[];
+  sideEffect: SideEffect;
   performance: { maxResponseTimeMs: number; maxPayloadBytes: number; timeoutMs: number };
   security: NonNullable<EndpointDefinition['security']>;
   validations: ValidationToggles;
@@ -104,6 +109,7 @@ export interface ResolvedEndpoint {
 const MUTATING_METHODS: readonly HttpMethod[] = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
 export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoint {
+  const contract = responseContract(definition.responseContract);
   const roles = definition.authorization?.roles ?? [];
   const primaryRole =
     definition.authentication?.role ??
@@ -120,7 +126,8 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
     label: `${definition.method} ${definition.path}`,
     tags: definition.tags ?? [],
     suite: suiteFor(definition.suite ?? DEFAULT_SUITE),
-    expectedStatus: definition.expectedStatus ?? apiConfig.defaultExpectedStatus[definition.method],
+    contract,
+    expectedStatus: definition.expectedStatus ?? contract.expectedStatus[definition.method],
     contentType: definition.contentType ?? apiConfig.defaultContentType,
     envelope: definition.envelope ?? true,
     authentication: {
@@ -140,10 +147,8 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
     invalidRequestStatus: definition.invalidRequestStatus ?? apiConfig.invalidRequestStatus,
     responseSchema: definition.responseSchema,
     pagination: definition.pagination ?? false,
-    requiredHeaders: [
-      ...apiConfig.requiredResponseHeaders,
-      ...(definition.headers?.required ?? []),
-    ],
+    sideEffect: definition.sideEffect ?? 'data',
+    requiredHeaders: [...contract.requiredHeaders, ...(definition.headers?.required ?? [])],
     performance: {
       maxResponseTimeMs:
         definition.performance?.maxResponseTimeMs ??

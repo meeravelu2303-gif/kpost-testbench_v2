@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { z } from 'zod';
 import { signToken, verifyToken, type Claims } from './jwt.ts';
+import { kpostCommonRoutes } from './kpost-common.ts';
 
 /**
  * Local, in-memory stand-in for the KPost API so the validation framework can be exercised
@@ -75,7 +76,7 @@ interface FieldError {
   message: string;
 }
 
-class HttpError extends Error {
+export class HttpError extends Error {
   readonly status: number;
   readonly code: string;
   readonly errors?: FieldError[];
@@ -95,7 +96,7 @@ class HttpError extends Error {
   }
 }
 
-interface Ctx {
+export interface Ctx {
   req: IncomingMessage;
   res: ServerResponse;
   url: URL;
@@ -331,14 +332,23 @@ function assertAssignableBy(claims: Claims, role: Role): void {
 
 // ---------------------------------------------------------------------------- routes
 
-type Handler = (ctx: Ctx, params: Record<string, string>) => void | Promise<void>;
-interface Route {
+export type Handler = (ctx: Ctx, params: Record<string, string>) => void | Promise<void>;
+export interface Route {
   method: string;
   pattern: RegExp;
   handler: Handler;
 }
 
+/** What a route module needs from the server, passed in so there is no import cycle. */
+export type HttpErrorLike = HttpError;
+export interface MockHelpers {
+  send: typeof send;
+  readJson: typeof readJson;
+  HttpError: typeof HttpError;
+}
+
 const routes: Route[] = [
+  ...kpostCommonRoutes({ send, readJson, HttpError }),
   { method: 'GET', pattern: /^\/health$/, handler: (ctx) => ok(ctx, 200, { status: 'UP' }) },
 
   {

@@ -4,6 +4,7 @@ import { loginApi } from './auth.api';
 import { companyApis } from './companies.api';
 import { dictionaryApis } from './dictionary.api';
 import { healthCheckApi } from './health.api';
+import { commonApis } from './kpost/common/index';
 import { kmailApis } from './kmail.api';
 import { userApis } from './users.api';
 
@@ -21,6 +22,8 @@ export const apiRegistry = new ApiRegistry().register(
   ...userApis,
   ...companyApis,
   ...dictionaryApis,
+  // KPost common module - public endpoints, no token required.
+  ...commonApis,
   // Admin module — Jaganathan Murthy. Loaded from its own spec when ADMIN_API_BASE_URL is set.
   ...adminApis,
   // KMail module — Jitendra Kumar. Loaded from its own spec when KMAIL_API_BASE_URL is set.

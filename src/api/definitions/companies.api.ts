@@ -8,6 +8,7 @@ import { companySchema, createCompanyRequestSchema } from '../schemas/company.sc
  */
 export const createCompanyApi: EndpointDefinition = {
   id: 'create-company',
+  mockFixture: true,
   method: 'POST',
   path: '/companies',
   summary: 'Create a company',

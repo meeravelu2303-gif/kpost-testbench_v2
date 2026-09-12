@@ -23,6 +23,7 @@ const existingUserId = async (helpers: RequestFactoryHelpers): Promise<string> =
 
 export const createUserApi: EndpointDefinition = {
   id: 'create-user',
+  mockFixture: true,
   method: 'POST',
   path: '/users',
   summary: 'Create a user in a company',
@@ -41,6 +42,7 @@ export const createUserApi: EndpointDefinition = {
 
 export const getUserApi: EndpointDefinition = {
   id: 'get-user',
+  mockFixture: true,
   method: 'GET',
   path: '/users/{id}',
   summary: 'Get a user by ID',
@@ -53,6 +55,7 @@ export const getUserApi: EndpointDefinition = {
 
 export const listUsersApi: EndpointDefinition = {
   id: 'list-users',
+  mockFixture: true,
   method: 'GET',
   path: '/users',
   summary: 'List users (paginated)',
@@ -66,6 +69,7 @@ export const listUsersApi: EndpointDefinition = {
 
 export const updateUserApi: EndpointDefinition = {
   id: 'update-user',
+  mockFixture: true,
   method: 'PUT',
   path: '/users/{id}',
   summary: "Replace a user's profile and role",
@@ -87,6 +91,7 @@ export const updateUserApi: EndpointDefinition = {
 
 export const deleteUserApi: EndpointDefinition = {
   id: 'delete-user',
+  mockFixture: true,
   method: 'DELETE',
   path: '/users/{id}',
   summary: 'Soft-delete a user',

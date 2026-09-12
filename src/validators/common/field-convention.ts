@@ -12,8 +12,11 @@ export interface FieldConventionOptions {
   severity?: Severity;
   /** Field names this convention applies to (from apiConfig.dataConventions). */
   field: RegExp;
-  /** Return a problem description or undefined. `null` values are never passed. */
-  check(value: unknown, visit: JsonVisit): string | undefined;
+  /**
+   * Return a problem description or undefined. `null` values are never passed. The context is
+   * passed so a convention can depend on the API's own contract (an id format, for instance).
+   */
+  check(value: unknown, visit: JsonVisit, context: ValidationContext): string | undefined;
   /** Additional cross-field checks. */
   extraChecks?(data: unknown, context: ValidationContext): CheckDetail[];
 }
@@ -40,7 +43,7 @@ export function createFieldConventionValidator(options: FieldConventionOptions):
       const checks: CheckDetail[] = walkJson(data.value)
         .filter((visit) => options.field.test(visit.key) && visit.value !== null)
         .map((visit) => {
-          const problem = options.check(visit.value, visit);
+          const problem = options.check(visit.value, visit, context);
           return {
             name: visit.path,
             status: problem ? 'FAILED' : 'PASSED',

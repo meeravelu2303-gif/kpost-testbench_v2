@@ -173,6 +173,7 @@ test.describe('Validation framework', { tag: '@framework' }, () => {
       const report = await engine.validate(
         {
           id: 'plain-text-probe',
+          mockFixture: true,
           method: 'GET',
           path: '/__test/plain-text',
           authentication: { required: false },
@@ -199,6 +200,7 @@ test.describe('Validation framework', { tag: '@framework' }, () => {
       const report = await engine.validate(
         {
           id: 'health-with-unknown-rule',
+          mockFixture: true,
           method: 'GET',
           path: '/health',
           businessRules: ['does-not-exist'],

@@ -1,5 +1,7 @@
 import type { Role } from '@config/auth.config';
 import type { SuiteId } from '@config/ownership.config';
+import type { ResponseContractId } from '@config/response-contract';
+import type { SideEffect } from '@engine/production-guard';
 import type { ValidationToggles } from '@engine/validation-policy';
 import type { HttpMethod, RequestSpec } from '../client/request-builder';
 import type { ContractSchema } from '../schema/contract-schema';
@@ -44,8 +46,13 @@ export interface EndpointDefinition {
   expectedStatus?: readonly number[];
   /** Defaults to apiConfig.defaultContentType. */
   contentType?: string;
-  /** Response wrapped in the standard success/error envelope. Default: true. */
+  /** Response wrapped in the envelope of `responseContract`. Default: true. */
   envelope?: boolean;
+  /**
+   * Which API response contract this endpoint follows - see src/config/response-contract.ts.
+   * Default: `standard`. Real KPost endpoints use `kpost`.
+   */
+  responseContract?: ResponseContractId;
 
   authentication?: {
     /** Default: true. */
@@ -103,4 +110,16 @@ export interface EndpointDefinition {
   database?: { validations: readonly string[] };
   /** Mutates or deletes data. Default: true for POST/PUT/PATCH/DELETE. */
   destructive?: boolean;
+  /**
+   * This endpoint is the BENCH'S OWN fixture, served by `mock-server/`, not part of KPost's API.
+   * It is called on the mock's base URL whatever the module hosts are set to - otherwise
+   * configuring a real KPOST_API_BASE_URL silently redirects the framework's self-tests at the
+   * live API, which is exactly what happened the first time a real host was configured.
+   */
+  mockFixture?: boolean;
+  /**
+   * How far the side effect reaches: `data` (test-owned records, the default), `external` (sends
+   * a real SMS or email) or `global` (changes shared environment state). See production-guard.ts.
+   */
+  sideEffect?: SideEffect;
 }

@@ -66,8 +66,13 @@ export class EndpointExecutor {
       .timeoutMs(options.timeoutMs ?? endpoint.performance.timeoutMs)
       .authorization(await this.authorizationFor(endpoint, options.auth))
       .build();
-    // Each module has its own host, so the client follows the endpoint's suite.
-    const client = await this.clients.get(endpoint.suite);
+    // Each module has its own host, so the client follows the endpoint's suite - unless the
+    // endpoint is one of the bench's own mock fixtures, which always uses the mock's base URL.
+    const client = await this.clients.get(
+      endpoint.definition.mockFixture
+        ? { ...endpoint.suite, id: `${endpoint.suite.id}:mock`, baseUrl: env.API_BASE_URL }
+        : endpoint.suite,
+    );
     return client.execute(request, options.label);
   }
 

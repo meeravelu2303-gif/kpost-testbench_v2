@@ -6,8 +6,9 @@ export const idValidator = createFieldConventionValidator({
   noun: 'ID',
   description: 'ID fields (`id`, `*Id`) use the platform ID format',
   field: apiConfig.dataConventions.id.field,
-  check: (value) =>
-    typeof value === 'string' && apiConfig.dataConventions.id.value.test(value)
-      ? undefined
-      : 'not a valid ID',
+  // The shape of an identifier is a property of the API - see src/config/response-contract.ts.
+  check: (value, _visit, context) => {
+    const { pattern, description } = context.endpoint.contract.idFormat;
+    return pattern.test(String(value)) ? undefined : `not ${description}`;
+  },
 });

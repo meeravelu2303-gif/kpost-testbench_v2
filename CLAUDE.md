@@ -208,6 +208,88 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-12 — Common module: 32 endpoints under test, 1 278 cases, first real findings
+
+The first module. `/common` and `/v2/common` — everything a client calls before anyone has a
+token. 32 endpoints, grouped by how they fail rather than by URL:
+
+```
+src/api/definitions/kpost/common/
+  otp.api.ts        OTP send/verify, password recovery   (side effects: SMS, email, passwords)
+  location.api.ts   countries, states, cities, postcodes (read-only reference data)
+  identity.api.ts   "does this exist" lookups            (enumeration surface)
+  company.api.ts    company records and the logo         (cross-tenant surface)
+  platform.api.ts   status, app version, public writes
+tests/api/kpost/common/    one spec per group + coverage.spec.ts (self-tests, no HTTP)
+```
+
+**Each endpoint reports ~40 named cases, not one.** `describeEndpointCases` runs the engine once per
+endpoint and emits a Playwright test per validation, so a run reads like a test plan
+(`response.status-code`, `request.null-value`, `security.injection`, …). One HTTP run per endpoint
+is a correctness requirement, not an optimisation: these endpoints send SMS, so a run per case
+would send a message per case. Each endpoint's block is pinned to one worker with `mode: 'default'`
+because the project is `fullyParallel`.
+
+**Definitions carry no schemas.** `defineKpostEndpoint` reads the request and response schema, the
+documented example and the method's provenance from the generated contract, and throws at import
+time if the method+path is not in it. Payloads are built from `testData` (the `QA_*` values in
+`.env`), never from the workbook examples, which contain real colleagues' phone numbers.
+
+#### The environment turned out to be reachable
+
+192.168.0.66:8989 answers. That changed the work from "model it" to "measure it", and four
+assumptions the bench had baked in were wrong about the real API:
+
+- **The envelope.** The validators asserted `{success, data, metadata.correlationId}` with POST→201.
+  KPost answers `{status, statusCode, urlPath, message, data}` with 200. Envelopes are now data:
+  `RESPONSE_CONTRACTS` in `src/config/response-contract.ts`, selected per endpoint, so the bench's
+  own mock-backed self-tests keep their contract while KPost gets its own.
+- **Identifiers.** KPost ids are auto-increment integers; the UUID convention produced 243 failures
+  on one states lookup. `idFormat` is now part of the contract.
+- **Nullability.** A response type may be null even when the sample shows a string
+  (`fieldCount: "6"` documented, `null` for 236 of 240 countries). Inferred **response** schemas now
+  permit null — request schemas deliberately do not, or the null-value probe would stop finding the
+  defect below.
+- **The error envelope, which the workbook never documents.** Probing produced it:
+  `{status: "FAILURE", statusCode, message, urlPath, timestamp?, traceId?}`. Encoded as observed,
+  labelled as observed, so error-format validation is active for all 337 endpoints instead of
+  skipping.
+
+#### Safety: "destructive" was too blunt
+
+It blocked writes on production and allowed them everywhere else — fine for creating a throwaway
+record, wrong for sending an SMS. Endpoints now declare `sideEffect`:
+
+|            | meaning                                                                 | runs by default                               |
+| ---------- | ----------------------------------------------------------------------- | --------------------------------------------- |
+| `data`     | records the tests own                                                   | yes, off production                           |
+| `external` | real SMS or email                                                       | **no** — needs `ALLOW_DESTRUCTIVE_TESTS=true` |
+| `global`   | shared state: app version, another account's password, a company's logo | **no**                                        |
+
+Configuring a real `KPOST_API_BASE_URL` also silently redirected the bench's own mock fixtures at
+the live API (two self-tests failed with 401). Those definitions now carry `mockFixture: true` and
+always use the mock's host.
+
+#### First findings — 43 failing cases across 18 endpoints, all reproduced by hand
+
+| What                                                     | Endpoint(s)                                                                             | Evidence                                                                                                                                                   |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wrong OTP answers **HTTP 500**                           | `validateOTP`                                                                           | `{"statusCode":500,"status":"Failure","message":"OTP validation failed"}` — a client error returned as a server error, so it pages whoever owns the alerts |
+| `null` accepted where a number is required               | `languages`, `domain`, `mobileNoExist`, `saveEnquiryDetails`, `getTotalCountByDate`, +4 | `{"countryID":null}` → 200 with the rows for country 0, while `{"countryID":"abc"}` → 400                                                                  |
+| Wrong type accepted                                      | `getDesignation`, `uniqueNameExist`, +5                                                 | `{"designation":123}` → 200                                                                                                                                |
+| 500 on a valid payload                                   | `saveEnquiryDetails`                                                                    | `{"message":"The request could not be completed."}`                                                                                                        |
+| 409 on a valid date                                      | `getTotalCountByDate`                                                                   | `{"statusCode":409,"message":"The request conflicts with the current state of the resource."}`                                                             |
+| 404 on the documented payload                            | `saveUnsubscriberDetails`                                                               | `{"message":"The requested resource does not exist."}`                                                                                                     |
+| 400 on the documented payload                            | `getCompanyDetailsByAdmin`, `getCompanyDetailsByMobileNoAndproductId`                   | `"Request validation failed"` — workbook payload and API disagree                                                                                          |
+| `status` is a **boolean** here, a string everywhere else | `uniqueNameExist`                                                                       | `{"status":false,"statusCode":200}`                                                                                                                        |
+| Documented as JSON, returns plain text                   | `msStatus`                                                                              | body is the bare string `SUCCESS`                                                                                                                          |
+| Envelope case differs from the documentation             | all                                                                                     | `"Success"`/`"Failure"` live, `"SUCCESS"` in all 119 workbook samples                                                                                      |
+| Not public, though nothing says so                       | `downloadCompanyLogo`                                                                   | `401 "Authentication is required"` — declared auth-required and tagged `needs-login`                                                                       |
+
+**An OTP bypass exists on this environment** (`123456` always validates, `QA_BYPASS_OTP`). It makes
+the happy path testable. It is also an account-takeover key if it ever reaches production, so it is
+worth confirming it is environment-scoped.
+
 ### 2026-09-12 — Only POST and GET exist; yellow rows are unused and not added
 
 Two rules from the owner, both verified against the workbook before applying:
