@@ -112,6 +112,23 @@ export class BugzillaClient {
     return { bugs: readBugs(result.json).filter((bug) => bug.is_open) };
   }
 
+  /**
+   * Whether a Bugzilla account exists and can log in. Checked before a ticket is assigned:
+   * Bugzilla refuses a create with an unknown `assigned_to`, which would lose the ticket.
+   */
+  async userExists(email: string): Promise<boolean> {
+    const result = await this.call('GET', `/user?names=${encodeURIComponent(email)}`);
+    if (!result.ok) {
+      this.log.warn(`could not verify assignee ${email}: ${describeFailure(result)}`);
+      return false;
+    }
+    const users =
+      isPlainObject(result.json) && Array.isArray(result.json.users) ? result.json.users : [];
+    return users
+      .filter(isPlainObject)
+      .some((user) => str(user.email)?.toLowerCase() === email.toLowerCase());
+  }
+
   async createBug(fields: Record<string, unknown>): Promise<{ id: number } | { error: string }> {
     const result = await this.call('POST', '/bug', fields);
     const id =

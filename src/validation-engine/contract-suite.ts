@@ -7,9 +7,11 @@ import { ProductionSafetyError } from './production-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
 
 function tagsFor(endpoint: ResolvedEndpoint): string[] {
+  // The module tag (e.g. @kmail-api) lets one command run exactly one module's contracts.
   return [
     '@api',
-    ...endpoint.tags.map((tag) => `@${tag}`),
+    `@${endpoint.suite.id}`,
+    ...endpoint.tags.map((tag) => `@${tag.replace(/\s+/g, '-')}`),
     ...(endpoint.destructive ? ['@destructive'] : []),
   ];
 }
@@ -20,10 +22,17 @@ function tagsFor(endpoint: ResolvedEndpoint): string[] {
  */
 export function describeEndpointContracts(
   filter: EndpointFilter,
-  options: { profile?: ValidationProfile } = {},
+  options: { profile?: ValidationProfile; allowEmpty?: boolean } = {},
 ): void {
   const endpoints = apiRegistry.find(filter).map(resolveEndpoint);
-  if (!endpoints.length) throw new Error(`No registered endpoints match ${JSON.stringify(filter)}`);
+  if (!endpoints.length) {
+    // A module whose host is not configured registers no endpoints — a skip, not a typo.
+    if (options.allowEmpty) {
+      test.skip(`no endpoints registered for ${JSON.stringify(filter)}`, () => {});
+      return;
+    }
+    throw new Error(`No registered endpoints match ${JSON.stringify(filter)}`);
+  }
 
   for (const endpoint of endpoints) {
     test(

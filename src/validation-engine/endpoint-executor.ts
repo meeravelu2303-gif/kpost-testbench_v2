@@ -1,10 +1,11 @@
-import type { ApiClient } from '@api/client/api-client';
+import type { ApiClientPool } from '@api/client/api-client-pool';
 import { RequestBuilder, type RequestSpec } from '@api/client/request-builder';
 import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import { TokenProvider } from '@api/client/token-provider';
 import type { ApiRegistry } from '@api/registry/api-registry';
 import type { RequestFactoryHelpers } from '@api/registry/endpoint-definition';
 import { authConfig, principalFor, type Principal, type Role } from '@config/auth.config';
+import { suiteFor } from '@config/ownership.config';
 import { env } from '@config/env';
 import { deepMerge, getPath } from '@utils/json';
 import type { Logger } from '@utils/logger';
@@ -30,7 +31,7 @@ export class EndpointExecutor {
   readonly tokens: TokenProvider;
 
   constructor(
-    private readonly client: ApiClient,
+    private readonly clients: ApiClientPool,
     private readonly apiRegistry: ApiRegistry,
     private readonly log: Logger,
   ) {
@@ -65,7 +66,9 @@ export class EndpointExecutor {
       .timeoutMs(options.timeoutMs ?? endpoint.performance.timeoutMs)
       .authorization(await this.authorizationFor(endpoint, options.auth))
       .build();
-    return this.client.execute(request, options.label);
+    // Each module has its own host, so the client follows the endpoint's suite.
+    const client = await this.clients.get(endpoint.suite);
+    return client.execute(request, options.label);
   }
 
   /** Sends a literal request to a registered endpoint (no request factory involved). */
@@ -102,7 +105,8 @@ export class EndpointExecutor {
   async expiredToken(): Promise<string | undefined> {
     if (env.EXPIRED_TOKEN) return env.EXPIRED_TOKEN;
     if (!env.MOCK_API) return undefined;
-    const exchange = await this.client.execute(
+    const client = await this.clients.get(suiteFor());
+    const exchange = await client.execute(
       RequestBuilder.for('GET', authConfig.mockExpiredTokenPath).build(),
       'setup:expired-token',
     );

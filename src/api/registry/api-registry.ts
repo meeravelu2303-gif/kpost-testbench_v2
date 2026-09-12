@@ -1,3 +1,4 @@
+import { DEFAULT_SUITE, type SuiteId } from '@config/ownership.config';
 import type { HttpMethod } from '../client/request-builder';
 import type { EndpointDefinition } from './endpoint-definition';
 
@@ -6,9 +7,13 @@ export interface EndpointFilter {
   /** Endpoint must have at least one of these tags. */
   tags?: readonly string[];
   methods?: readonly HttpMethod[];
+  /** Module the endpoint belongs to (see src/config/ownership.config.ts). */
+  suites?: readonly SuiteId[];
 }
 
-/** Single source of truth for every endpoint under test. */
+const suiteOf = (definition: EndpointDefinition): SuiteId => definition.suite ?? DEFAULT_SUITE;
+
+/** Single source of truth for every endpoint under test, across all KPost modules. */
 export class ApiRegistry {
   private readonly endpoints = new Map<string, EndpointDefinition>();
 
@@ -17,12 +22,20 @@ export class ApiRegistry {
       if (this.endpoints.has(definition.id)) {
         throw new Error(`Endpoint "${definition.id}" is already registered`);
       }
+      /*
+       * Uniqueness is per module, not global. KPost's modules are separate services with
+       * their own hosts, and they genuinely share paths — every Spring Boot service answers
+       * `GET /health`, for instance. Only a collision WITHIN one module is a mistake.
+       */
       const clash = this.all().find(
-        (e) => e.method === definition.method && e.path === definition.path,
+        (e) =>
+          suiteOf(e) === suiteOf(definition) &&
+          e.method === definition.method &&
+          e.path === definition.path,
       );
       if (clash) {
         throw new Error(
-          `${definition.method} ${definition.path} is already registered as "${clash.id}"`,
+          `${definition.method} ${definition.path} is already registered in ${suiteOf(definition)} as "${clash.id}"`,
         );
       }
       if (!definition.path.startsWith('/')) {
@@ -56,6 +69,7 @@ export class ApiRegistry {
       (e) =>
         (!filter.ids || filter.ids.includes(e.id)) &&
         (!filter.methods || filter.methods.includes(e.method)) &&
+        (!filter.suites || filter.suites.includes(suiteOf(e))) &&
         (!filter.tags || filter.tags.some((tag) => e.tags?.includes(tag))),
     );
   }

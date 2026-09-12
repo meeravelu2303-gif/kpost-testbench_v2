@@ -1,5 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 import { ApiClient } from '@api/client/api-client';
+import { ApiClientPool } from '@api/client/api-client-pool';
 import { apiRegistry } from '@api/definitions/index';
 import { env } from '@config/env';
 import { createDatabaseClient } from '@database/database-client';
@@ -16,7 +17,10 @@ import { validationRegistry } from '@validators/index';
 
 interface TestFixtures {
   log: Logger;
+  /** Ad-hoc client for the default module's base URL. */
   api: ApiClient;
+  /** One client per KPost module (core, admin, kmail), created on demand. */
+  apiClients: ApiClientPool;
   /** Calls registered endpoints directly (integration tests, setup). */
   endpoints: EndpointExecutor;
   /** Builds an engine; overrides let framework tests swap registries or reporting. */
@@ -43,16 +47,22 @@ export const test = base.extend<TestFixtures>({
     await request.dispose();
   },
 
-  endpoints: async ({ api, log }, use) => {
-    await use(new EndpointExecutor(api, apiRegistry, log));
+  apiClients: async ({ playwright, log }, use) => {
+    const pool = new ApiClientPool(playwright.request, log);
+    await use(pool);
+    await pool.dispose();
   },
 
-  createValidationEngine: async ({ api, log, playwright }, use, testInfo) => {
+  endpoints: async ({ apiClients, log }, use) => {
+    await use(new EndpointExecutor(apiClients, apiRegistry, log));
+  },
+
+  createValidationEngine: async ({ apiClients, log, playwright }, use, testInfo) => {
     const dbRequest = await playwright.request.newContext({ baseURL: env.API_BASE_URL });
     await use(
       (overrides = {}) =>
         new ValidationEngine({
-          client: api,
+          clients: apiClients,
           apiRegistry,
           validators: validationRegistry,
           businessRules: businessRuleRegistry,

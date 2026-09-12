@@ -1,4 +1,5 @@
 import { JUDGED_NOT_A_DEFECT, type BugzillaConfig } from '@config/bugzilla.config';
+import { SUITES, suiteFor } from '@config/ownership.config';
 import type { Logger } from '@utils/logger';
 import {
   buildAdoptionComment,
@@ -25,6 +26,10 @@ import type { BugzillaClient, ProductMetadata } from './bugzilla-client';
  *   nothing found                              → file a new bug
  *   the SEARCH failed                          → file nothing (a transient error must never
  *                                                mint a duplicate)
+ *
+ * Every new ticket is assigned to the module's developer (ownership.config.ts) once the account
+ * is verified; an unverifiable account means the field is omitted and Bugzilla's component
+ * default assignee takes it, rather than the create being refused.
  */
 
 export type FilingDecision =
@@ -42,8 +47,10 @@ export interface FilingEntry {
   decision: FilingDecision;
   bugId?: number;
   summary: string;
-  component: string;
   product: string;
+  component: string;
+  /** Who the ticket went to. */
+  assignee: string;
   severity: string;
   reason?: string;
 }
@@ -65,7 +72,16 @@ const emptyCounts = (): Record<FilingDecision, number> => ({
   failed: 0,
 });
 
+interface FilingTarget {
+  component: string;
+  version: string;
+  assignee?: string;
+}
+
 export class BugzillaFiler {
+  /** Verified Bugzilla accounts, so one lookup per developer per run. */
+  private readonly knownAssignees = new Map<string, boolean>();
+
   constructor(
     private readonly client: BugzillaClient,
     private readonly config: BugzillaConfig,
@@ -80,14 +96,12 @@ export class BugzillaFiler {
     };
     if (!candidates.length) return outcome;
 
-    const metadata = await this.client.productMetadata([
-      this.config.apiProduct,
-      this.config.uiProduct,
-    ]);
+    const products = [...new Set(Object.values(SUITES).map((suite) => suite.bugzilla.product))];
+    const metadata = await this.client.productMetadata(products);
     let created = 0;
 
     for (const candidate of candidates) {
-      const target = this.resolveTarget(candidate, metadata);
+      const target = await this.resolveTarget(candidate, metadata);
       if ('error' in target) {
         outcome.entries.push(this.entry(candidate, 'failed', { reason: target.error }));
         continue;
@@ -107,7 +121,7 @@ export class BugzillaFiler {
         continue;
       }
 
-      const entry = await this.process(prepared, target.version);
+      const entry = await this.process(prepared, target);
       if (entry.decision === 'created') created += 1;
       outcome.entries.push(entry);
     }
@@ -116,19 +130,16 @@ export class BugzillaFiler {
     return outcome;
   }
 
-  /** Validates product/component/version against the live instance before anything is filed. */
-  private resolveTarget(
+  /** Validates product, component, version and assignee against the live instance. */
+  private async resolveTarget(
     candidate: BugCandidate,
     metadata: Map<string, ProductMetadata>,
-  ): { component: string; version: string } | { error: string } {
+  ): Promise<FilingTarget | { error: string }> {
     const product = metadata.get(candidate.product);
     if (!product)
       return { error: `product "${candidate.product}" does not exist or is not accessible` };
 
-    const fallback =
-      candidate.source === 'ui'
-        ? this.config.uiFallbackComponent
-        : this.config.apiFallbackComponent;
+    const fallback = suiteFor(candidate.suiteId).bugzilla.fallbackComponent;
     let component = candidate.component;
     if (!product.components.has(component)) {
       if (!product.components.has(fallback)) {
@@ -141,13 +152,29 @@ export class BugzillaFiler {
       );
       component = fallback;
     }
-    const version = product.versions.has(this.config.version)
-      ? this.config.version
-      : ([...product.versions][0] ?? this.config.version);
-    return { component, version };
+    const version = product.versions.has(candidate.version)
+      ? candidate.version
+      : ([...product.versions][0] ?? candidate.version);
+
+    return { component, version, assignee: await this.verifiedAssignee(candidate.assignee) };
   }
 
-  private async process(candidate: BugCandidate, version: string): Promise<FilingEntry> {
+  private async verifiedAssignee(email: string): Promise<string | undefined> {
+    if (this.config.dryRun) return email;
+    const cached = this.knownAssignees.get(email);
+    if (cached !== undefined) return cached ? email : undefined;
+
+    const exists = await this.client.userExists(email);
+    this.knownAssignees.set(email, exists);
+    if (!exists) {
+      this.log.warn(
+        `assignee "${email}" could not be verified — leaving the component default owner`,
+      );
+    }
+    return exists ? email : undefined;
+  }
+
+  private async process(candidate: BugCandidate, target: FilingTarget): Promise<FilingEntry> {
     const found = await this.client.findByTag(candidate.id);
     if ('error' in found) {
       // Never create after a failed search: the ticket may already exist and we cannot see it.
@@ -186,7 +213,7 @@ export class BugzillaFiler {
     const adopted = await this.adoptExisting(candidate);
     if (adopted) return adopted;
 
-    const fields = buildBugFields(candidate, this.config, version);
+    const fields = buildBugFields(candidate, target);
     const created = await this.client.createBug(fields as unknown as Record<string, unknown>);
     if ('error' in created) return this.entry(candidate, 'failed', { reason: created.error });
 
@@ -236,8 +263,9 @@ export class BugzillaFiler {
       id: candidate.id,
       decision,
       summary: buildSummary(candidate),
-      component: candidate.component,
       product: candidate.product,
+      component: candidate.component,
+      assignee: candidate.assignee,
       severity: candidate.severity,
       ...extra,
     };

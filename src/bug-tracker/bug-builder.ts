@@ -1,9 +1,4 @@
-import {
-  BUGZILLA_LIMITS,
-  BUGZILLA_PRIORITY,
-  BUGZILLA_SEVERITY,
-  type BugzillaConfig,
-} from '@config/bugzilla.config';
+import { BUGZILLA_LIMITS, BUGZILLA_PRIORITY, BUGZILLA_SEVERITY } from '@config/bugzilla.config';
 import { normalizeForFingerprint } from './bug-fingerprint';
 import type { BugCandidate } from './bug-candidate';
 
@@ -31,6 +26,9 @@ export interface BugFields {
   platform: string;
   /** `[cat:Xxx]` (+ `[browser:…]`). The create parameter is `status_whiteboard`. */
   status_whiteboard: string;
+  /** The module's developer. Omitted when the account cannot be verified, so the
+      component's default assignee takes the ticket rather than the create failing. */
+  assigned_to?: string;
 }
 
 function clamp(value: string, label: string): string {
@@ -103,7 +101,7 @@ export function buildDescription(candidate: BugCandidate): string {
   if (candidate.repro) lines.push('', 'Repro:', clamp(candidate.repro, 'repro'));
   lines.push(
     '',
-    'Owner: the default assignee of this Bugzilla component',
+    `Owner: ${candidate.ownerName} <${candidate.assignee}> — maintainer of the ${candidate.product} module`,
     `Environment: ${candidate.environment} (${candidate.baseURL})`,
     `Run date: ${candidate.observedAt}`,
     `Filed by: kpost-testbench_v2, build ${candidate.build}, run ${candidate.testRunId}`,
@@ -117,20 +115,21 @@ export function buildDescription(candidate: BugCandidate): string {
 
 export function buildBugFields(
   candidate: BugCandidate,
-  config: BugzillaConfig,
-  version: string,
+  target: { version: string; assignee?: string },
 ): BugFields {
   return {
     product: candidate.product,
     component: candidate.component,
     summary: buildSummary(candidate),
-    version,
+    version: target.version,
     description: buildDescription(candidate),
     severity: BUGZILLA_SEVERITY[candidate.severity],
     priority: BUGZILLA_PRIORITY[candidate.severity],
     op_sys: 'All',
     platform: 'All',
     status_whiteboard: buildWhiteboard(candidate),
+    // Omitted when the account could not be verified, so the component's default owner takes it.
+    ...(target.assignee ? { assigned_to: target.assignee } : {}),
   };
 }
 

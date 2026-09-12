@@ -4,7 +4,20 @@ The KPost test bench automation framework, built on [Playwright](https://playwri
 
 - **A centralized API validation framework.** You define an endpoint once, and 44 common validators (auth, authz, status, request, response, schema, headers, errors, performance, security, data conventions) apply automatically. See **[docs/validation-framework.md](docs/validation-framework.md)**.
 - **UI end-to-end tests** built on the Page Object Model, running on Chromium, Firefox and WebKit.
-- **Automatic Bugzilla filing.** Real failures become tickets — deduplicated, validity-gated, and never re-filed once a human closes them. Dry run by default. See **[docs/bug-filing.md](docs/bug-filing.md)**.
+- **Automatic Bugzilla filing, routed to the right developer.** Real failures become tickets — deduplicated, validity-gated, never re-filed once a human closes them, and assigned to the module's maintainer (KMail → Jitendra, KPost API and Admin → Jagan, KPost UI → Ayyappan). Dry run by default. See **[docs/bug-filing.md](docs/bug-filing.md)**.
+
+- **Contracts come from the Excel workbook**, not from swagger. One script converts it into separate KPost and KMail contracts plus generated OpenAPI, excluding anything invalid or duplicated. See **[docs/api-contracts.md](docs/api-contracts.md)**.
+
+## Modules
+
+KPost is one product built from separately maintained modules. Each suite targets its own host and owns where its defects go — declared once in [src/config/ownership.config.ts](src/config/ownership.config.ts):
+
+| Suite       | Module                | Base URL             | Bugzilla product | Owner             |
+| ----------- | --------------------- | -------------------- | ---------------- | ----------------- |
+| `kpost-api` | KPost core API        | `KPOST_API_BASE_URL` | KPost API        | Jaganathan Murthy |
+| `admin-api` | Admin module          | `ADMIN_API_BASE_URL` | KPost Admin      | Jaganathan Murthy |
+| `kmail-api` | KMail module          | `KMAIL_API_BASE_URL` | KMail API        | Jitendra Kumar    |
+| `kpost-ui`  | KPost React front end | `BASE_URL`           | KPost UI         | Ayyappan Ashok    |
 
 ## Stack
 

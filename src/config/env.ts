@@ -21,6 +21,14 @@ const EnvSchema = z.object({
   TEST_ENV: z.enum(['local', 'dev', 'qa', 'staging', 'production']).default('local'),
   BASE_URL: z.url().default('https://playwright.dev'),
   API_BASE_URL: z.url().optional(),
+  /**
+   * Per-module API base URLs. KPost is one product built from separately maintained modules
+   * that are deployed independently, so each suite targets its own host. Unset falls back to
+   * API_BASE_URL (which is the bundled mock API locally).
+   */
+  KPOST_API_BASE_URL: z.url().optional(),
+  ADMIN_API_BASE_URL: z.url().optional(),
+  KMAIL_API_BASE_URL: z.url().optional(),
   /** Start and target the bundled mock KPost API. Defaults to on for `local` without API_BASE_URL. */
   MOCK_API: z.stringbool().optional(),
   MOCK_API_PORT: z.coerce.number().int().positive().default(4010),
@@ -43,11 +51,6 @@ const EnvSchema = z.object({
   BUGZILLA_API_KEY: z.string().optional(),
   /** Filing is irreversible, so the default is a dry run that only reports what it would file. */
   BUGZILLA_DRY_RUN: z.stringbool().default(true),
-  BUGZILLA_PRODUCT: z.string().default('KPost API'),
-  BUGZILLA_UI_PRODUCT: z.string().default('KPost UI'),
-  BUGZILLA_VERSION: z.string().default('unspecified'),
-  BUGZILLA_FALLBACK_COMPONENT: z.string().default('kpost-webservice-application'),
-  BUGZILLA_UI_FALLBACK_COMPONENT: z.string().default('General'),
   /** Lowest severity that may become a ticket. */
   BUGZILLA_MIN_SEVERITY: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
   /** Safety valve for a staged rollout: file at most N bugs per run (0 = no cap). */

@@ -1,0 +1,349 @@
+﻿Priority,Product,Tab,Row,Module,Endpoint,Path,Method,SuggestedMethod,HasRequest,HasResponse,Action
+P1,kmail-api,KMAILAPI,39,Kmail,,/common/deleteOtherDomainContact/,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kmail-api,KMAILAPI,40,Kmail,,/common/editOtherDomainContactsDetails/,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kmail-api,KMAILAPI,41,Kmail,,/common/knownPostBoxContacts/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,2,Signup,fetchUserDetails,/v2/profile/fetchUserDetails/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,3,Signup,fetchUserDetails,/v2/profile/fetchUserDetails/,,GET?,no,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,3,Signup,,/v2/signupLogin/fetchUserDetails/,,GET?,no,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,4,,userLogin,/v2/signupLogin/userLogin/,,,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,5,Signup,generateJWTokens,/v2/signupLogin/generateJWTokens/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,6,common,msStatus,/v2/common/msStatus/,,,no,text only,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,7,common,forgotPasswordUpdate,/v2/common/forgotPasswordUpdate,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,7,common,changePassword,/v2/profile/changePassword,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,8,common,sendOTP,/v2/common/sendOTP/,,POST?,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,8,common,validateOTP,/v2/common/validateOTP/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,9,common,forgotPasswordOTPOrSentKpostIDSms,/v2/common/forgotPasswordOTPOrSentKpostIDSms,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,10,common,countries,/v2/common/countries,,GET?,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,11,common,languages,/v2/common/languages,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,12,common,sendOTPtoMail,/v2/common/sendOTPtoMail/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,13,common,validateMailOTP,/v2/common/validateMailOTP/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,14,common,mobileNoExist,/v2/common/mobileNoExist/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,15,Signup,kpostIdExist,/v2/signupLogin/kpostIdExist/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,16,Signup,kpostIDsuggestionList,/v2/signupLogin/kpostIDsuggestionList/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,17,Signup,signup,/v2/signupLogin/signup/,,POST?,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,18,,importPhoneContacts,/v2/contacts/importPhoneContacts/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,19,common,domain,/v2/common/domain/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,20,,homeDashboardMsgs,/v2/dashboard/homeDashboardMsgs/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,21,dashboard,katchupDashboardMsg,/v2/dashboard/katchupDashboardMsg/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,22,dashboard,getKmailDashboardMsg,/kmail5/common/getKmailDashboardMsg/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,25,katchup,frequentlyAccessContacts,/v2/katchup/frequentlyAccessContacts,,,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,26,contacts,addContact,/v2/contacts/addContact,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,27,contacts,addContactReference,/v2/contacts/addContactReference/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,28,contacts,getImportedPhoneContacts,/v2/contacts/getImportedPhoneContacts/,,GET?,no,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,31,katchup,getSharedMessageInfo,/v2/katchup/getSharedMessageInfo/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,32,contacts,myContacts,/v2/contacts/myContacts/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,33,contacts,myUnknownKatchupContacts,/v2/contacts/myUnknownKatchupContacts/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,34,contacts,myGroups,/v2/contacts/myGroups/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,35,contacts,myUnknownGroups,/v2/contacts/myUnknownGroups/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,37,katchup,sendMessage,/v2/katchup/sendMessage/,,POST?,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,38,katchup,saveKatchupMessages,/v2/katchup/saveKatchupMessages/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,39,katchup,searchKatchUpMessage,/v2/katchup/searchKatchUpMessage/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,40,katchup,katchupMessagesForSelectedContactID,/v2/katchup/katchupMessagesForSelectedContactID/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,41,katchup,markOrUnmarkImportantMessage,/v2/katchup/markOrUnmarkImportantMessage/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,42,katchup,recallMessage,/v2/katchup/recallMessage/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,43,katchup,getReadStatusGroupMessage,/v2/katchup/getReadStatusGroupMessage/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,44,katchup,deleteKatchUpMessage,/v2/katchup/deleteKatchUpMessage/,,POST?,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,45,group,createUserGroup,/v2/group/createUserGroup/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,46,group,addUserToGroup,/v2/group/addUserToGroup/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,47,group,removeGroupMember,/v2/group/removeGroupMember/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,48,group,addOrRemoveAdminAccess,/v2/group/addOrRemoveAdminAccess/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,49,group,leaveFromGroup,/v2/group/leaveFromGroup/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,50,katchup,sendKatchupMsgMultiPart,/v2/katchup/sendKatchupMsgMultiPart/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,68,,getDigitalCard,/v2/profile/getDigitalCard/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,71,,,/kmail5/v2/translator/translation/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,72,,,/v2/contacts/deleteContact/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,73,,,/v2/contacts/blockOrUnBlockContact/,,POST?,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,74,,,/v2/contacts/getSearchDetails/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,75,,,/v2/profile/autoSearchWithName/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,76,,,/v2/profile/advancedSearch/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,77,,,/v2/contacts/globalSearch/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,80,,,/v2/common/getDesignation/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,81,,,/v2/profile/updateDesignation,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,82,Integration,,/metaDee/aiMessage,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,83,KALLv2  Kool Kall,,/v2/kall/scheduledKall,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,84,KALLv2  Kool Kall & individual Kool,,/v2/kall/updateKallStatus,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,85,KALLv2  Kool Kall,,/v2/kall/joinScheduleKall,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,87,KALLv2  Kool Kall,,/v2/kall/reScheduleKall,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,88,KALLv2  Kool Kall,,/v2/kall/endKall,,,no,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,88,KALLv2  Kool Kall,,/v2/kall/endKoolKall,,,no,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,90,KALLv2,,/v2/kall/kallDashboard,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,91,KALLv2,,/v2/kall/initiateKall,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,93,KALLv2,,/v2/kall/clearKallBykallIds,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,96,KALLv2,,/v2/kall/contactInfo/,,,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,97,KALLv2,,/v2/kall/kallInfo,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,100,Katchup,,/v2/katchup/getBulkMessageInfo/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,101,Group,,/v2/group/updateGroupProfileImage/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,102,Group,,/v2/group/removeGroupProfileImage,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,104,Group,,/v2/group/editGroupName,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,105,profile,,/v2/profile/updateAboutYourself/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,106,profile,,/v2/profile/updateContactInformation/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,107,profile,,/v2/profile/saveOrUpdateCollegeDetails/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,108,profile,,/v2/profile/saveOrUpdateSchoolDetails/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,109,profile,,/v2/profile/saveOrUpdateUniversityDetails/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,110,profile,,/v2/profile/saveOrUpdateOtherActivity/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,111,profile,,/v2/profile/saveOrUpdateExperienceDetails/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,112,profile,,/v2/profile/updateBasicInformation/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,113,profile,,/v2/profile/uploadProfileAttachments,,POST?,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,114,profile,,/v2/profile/uploadCoverImage/,,POST?,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,117,Contacts,,/v2/contacts/addMultipleContact,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,118,katchup,,/v2/katchup/forwardKatchupMessage/,,POST?,yes,text only,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,119,katchup,,/v2/katchup/getMessagesByReferenceMessageList,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,120,katchup,,/v2/katchup/getReferenceMSGDetails/,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,121,profile,,/v2/profile/deactivateAccount/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,124,profile,,/v2/profile/setDeviceAsPrimary/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,125,profile,,/v2/profile/isDevicePrimaryOrNot/,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,126,profile,,/v2/profile/updateDeviceAsPrimary/,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,130,profile,,/v2/profile/setDeviceAsSecondary,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,131,profile,,/v2/profile/updateDeviceAsSecondary,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,132,generatePresignedUrl KMAIL,,/v2/aws/generate-presigned-url,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,133,KMAIL READMAIL,,/kmail5/readMail/getKmailDetailsUsingKmailID/,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,134,kmail SENTMAIL,,/kmail5/v2/sentMail/postMail/,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,136,KALL,,/v2/kall/scheduledRepeatKall,,,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,137,KALL,,/v2/kall/fetchScheduledRepeatKall,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,138,AWS katchup,,/v2/aws/katchup/generate-presigned-url,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,139,katchup,,/v2/katchup/forwardKatchupMessageNew,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,140,katchup,,/v2/katchup/sendBulkKatchupMsg,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,141,Login,,/v2/signupLogin/userLogout/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,143,Dashboard,,/v2/dashboard/homeDashboardNewMsgs,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,144,AWS katchup,,/v2/aws/checkAttachmentS3/,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,147,profile,,/v2/profile/deleteCollegeDetail,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,148,profile,,/v2/profile/deleteSchoolDetail,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,149,profile,,/v2/profile/deleteUniversityDetail,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,150,profile,,/v2/profile/deleteExperienceDetail,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,151,KALL,,/v2/kall/getKallStatus,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,152,Katchup,,/v2/katchup/messageCountBetweenSenderAndReceiver/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,157,Integration,,/redbus/tripdetailsV2/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,159,Integration,,/redbus/availabletrips/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,160,Integration,,/redbus/destinations/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,161,Integration,,/redbus/tripdetails/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,162,Integration,,/redbus/blockTicket/{kpostId},,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,164,Integration,,/redbus/boardingPoint/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,165,Katchup,,/v2/katchup/filterKatchUpMessage/,,,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,166,Katchup,,/v2/signupLogin/setAccessCode,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,167,kall,,/v2/kall/updateSenderAndReceiverKallStatus,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,168,"Business,Institution sigunp",,/v2/signupLogin/adminRegistration/,,,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,170,Admin,,/admin/addingUserByAdmin/,,POST?,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,171,Admin,,/admin/resetPassword/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,172,Admin,,/admin/holdOrRelease/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,173,Admin,,/admin/createOrRemoveBackupAdmin/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,174,Admin,,/admin/terminateUser/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,176,Common,,/v2/common/getCompanyDetails,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,177,Admin,,/common/updateCompanyLogo,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,179,Admin,,/admin/removeCompanyLogo,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,180,KMail,,/kmail5/v2/readMail/downloadODAttachment,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,182,Group,,/v2/group/deleteGroup,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,183,Kmail,,/v2/kmailSetting/saveOrUpdateCustomizedInstantReply,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,184,Kmail,,/v2/kmailSetting/deleteCustomizedInstantReply,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,185,profile,,/v2/profile/getUserProfileUsingKpostID/,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,186,Kall,,/v2/kall/getKallStatusUsingKallID,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,187,Contacts,,/v2/contacts/updateInviteStatus/,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,188,profile,,/v2/profile/shareUserDetails,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,189,Contacts,,/v2/contacts/blockOrUnBlockMultipleContact,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,193,Katchup,,/v2/katchup/reportAbuse,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,194,Katchup,,/v2/katchup/forwardKatchupMultipleMsgs,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,195,kall,,/v2/kall/modifyKallMembers,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,196,katchup,,/v2/katchup/forwardMessageBacktrackByMsgID,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,197,Admin,,/v2/admin/updateCompanyDetails,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,198,Admin,,/v2/admin/updateBankAccountDetails,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,199,Admin,,/v2/admin/createKpostIDAndDesignationSuggestion,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,200,Admin,,/v2/admin/updateRole,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,201,Common,,/v2/common/getTotalCountByDate,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,202,Common,,/v2/common/generateDomainAndUniqueName,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,203,Common,,/v2/common/saveEnquiryDetails,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,205,Common,,/v2/common/mobileNoExistInsideCompany/,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,206,Admin,,/admin/displayNameSuggestion,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,208,Common,,/v2/common/uniqueNameExist,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,209,Common,,/v2/common/saveUnsubscriberDetails,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,210,Login,,/v2/signupLogin/getLoginHistory,,GET?,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,211,signupLoginForMediumAndLarge,,/signupLoginForMediumAndLarge/adminUserLogin,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,212,Common,,/v2/common/getCompanyDetailsByAdmin,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,213,katchup,,/v2/katchup/searchKatchUpMessageSubject,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,214,Profile,,/v2/profile/convertBase64ToImage,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,215,Profile,,/v2/profile/uploadImageToS3,,POST?,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,217,Profile,,/v2/profile/updateSignatureImage,,POST?,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,219,katchup,,/v2/katchup/sendMessageForForwardSelectedAttachment,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,221,General Setting,,/generalSetting/fontSetting,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,223,General Setting,,/generalSetting/changeTheme,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,224,General Setting,,/generalSetting/katchupNotification,,,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,225,General Setting,,/generalSetting/kmailNotification,,,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,226,General Setting,,/generalSetting/kallNotification,,,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,229,Katchup,,/v2/katchup/generateThumbnailUsingUUID,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,230,Common,,/v2/common/updateFlutterAppVersion,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,231,Common,,/v2/common/getCompanyDetailsByMobileNoAndproductId,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,232,Common,,/v2/common/pinCode,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,233,Profile,,/v2/profile/getUserBasicDetailsUsingKpostID,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,234,AI,,/ai/chatResponse,,,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,236,AI,,/ai/messages/1,,,no,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,237,Kword,,/kword/create,,POST?,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,238,Kword,,/kword/saveContent,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,242,Kword,,/kword/share,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,243,KPresentation,,/kpresentation/create,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,244,KPresentation,,/kpresentation/savePresentation,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,248,Common,,/v2/common/getUserDetailsByMobNo,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,249,Profile,,/v2/profile/updatePrivacySettingDetails/,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,250,AI,,/ai/messageAssist,,,text only,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,251,Common,,/v2/common/getKpostIdUsingModule,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,254,Common,,/v2/common/getCitiesByRegionId/,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,256,Knews,,/v2/knews/getSubCategoriesByCategoryId/,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,257,Knews,,/v2/knews/getPublicationByLanguageId/,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,259,Knews,,/v2/knews/updateKnewsSettings/,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,262,Kword,,/kword/joinDocument,,,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,266,Kword,,/kword/update,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,267,Kword,,/kword/isConvertToKad,,GET?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,268,Kword,,/kword/deleteHeading,,POST?,yes,no,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,10,,,/common/mobileNoExist/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,11,,,/v2/common/mobileNoExist/,,,no,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,12,,,/signupLogin/signup/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,13,,,/v2/signupLogin/signup/,,POST?,no,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,14,,,/v2/common/sendOTP/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,15,,,/common/sendOTP/,,POST?,no,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,16,,,/v2/common/validateOTP/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,17,,,/common/validateOTP/,,POST?,no,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,19,,,/v2/signupLogin/kpostIdExist/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,20,,,/v2/signupLogin/kpostIdExist/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,21,,,/v2/common/postalPinCode/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,22,,,/v2/common/sendOTPtoMail/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,23,,,/v2/common/validateMailOTP/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,24,,,/v2/signupLogin/kpostIDsuggestionList/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,Sheet3,25,,,/v2/signupLogin/fetchUserDetails,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P2,kmail-api,KMAILAPI,5,Kmail,,/common/postBoxContacts/,POST,,text only,yes,Add the request payload.
+P2,kmail-api,KMAILAPI,16,Kmail,,/common/frequentKmailContact/,POST,,text only,yes,Add the request payload.
+P2,kmail-api,KMAILAPI,17,Kmail,,/common/unOpenedMailCountBySenderID/,POST,,text only,yes,Add the request payload.
+P2,kmail-api,KMAILAPI,18,Kmail,,/common/miscellaneousContacts/,POST,,text only,yes,Add the request payload.
+P2,kmail-api,KMAILAPI,19,Kmail,,/common/convertMailAsPDF/,POST,,no,no,Add the request payload and a sample response.
+P2,kmail-api,KMAILAPI,23,Kmail,,/sentMail/loadOtherDomainMails/,POST,,text only,yes,Add the request payload.
+P2,kmail-api,KMAILAPI,25,Kmail,,/draft/getAllDraftMails/,POST,,text only,yes,Add the request payload.
+P2,kmail-api,KMAILAPI,26,Kmail,,/draft/getDraftMailsContacts/,POST,,text only,yes,Add the request payload.
+P2,kmail-api,KMAILAPI,30,Kmail,,/readMail/referenceMailContent/,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,38,Kmail,,/kmailSetting/getDigitalSignature,GET,,text only,no,Add a sample response.
+P2,kmail-api,KMAILAPI,42,Kmail,,/common/statusOfKmailsContactsTotalCount/,GET,,text only,no,Add a sample response.
+P2,kmail-api,KMAILAPI,45,Kmail,,/v2/sentMail/postMail/,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,46,Kmail,,/readMail/getCopiesInfo/{kmailID},GET,,no,no,Add a sample response.
+P2,kmail-api,KMAILAPI,47,Kmail,,/v2/aws/generate-presigned-url,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,48,Kmail,,/v2/readMail/downloadODAttachment,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,49,Kmail,,/readMail/downloadThumbnail/{uuid},GET,,text only,no,Add a sample response.
+P2,kmail-api,KMAILAPI,50,Kmail,,/readMail/mediaStreaming/{uuid},GET,,text only,no,Add a sample response.
+P2,kmail-api,KMAILAPI,51,Kmail,,/kmailSetting/deleteCustomizedInstantReply,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,52,Kmail,,/kmailSetting/saveOrUpdateCustomizedInstantReply,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,53,Kmail,,/common/kmailGroupReadStatus/,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,55,Kmail,,/kmailSetting/saveOrUpdateCustomizedSaluations,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,56,Kmail,,/kmailSetting/deleteCustomizedSaluation,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,57,Kmail,,/readMail/getKmailDetailsUsingKmailID,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,58,Kmail,,/readMail/download/{uuid},POST,,text only,no,Add the request payload and a sample response.
+P2,kmail-api,KMAILAPI,60,Kmail,,/kmailSetting/getAllLetterHead,GET,,text only,no,Add a sample response.
+P2,kmail-api,KMAILAPI,61,Kmail,,/kmailSetting/setLetterHead,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,62,Kmail,,/kmailSetting/getLetterHead,GET,,text only,no,Add a sample response.
+P2,kmail-api,KMAILAPI,63,Kmail,,/kmailSetting/saveOrUpdateMailSignaturePersonalData,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,64,Kmail,,/kmailSetting/saveOrUpdateMailSignatureCompanyData,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,65,Kmail,,/kmailSetting/saveOrUpdateMailSignatureGraphics,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,66,Kmail,,/kmailSetting/saveOrUpdateMailSignatureStyle,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,67,Kmail,,/kmailSetting/saveOrUpdateMailSignatureSocialMediaLink,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,68,Kmail,,/kmailSetting/getMailSignature,GET,,text only,no,Add a sample response.
+P2,kmail-api,KMAILAPI,69,Kmail,,/kmailSetting/getLetterHeadTemplate,GET,,text only,no,Add a sample response.
+P2,kmail-api,KMAILAPI,70,Kmail,,/kmailSetting/saveOrUpdateMailSignatureTemplateId,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,71,Kmail,,/kmailSetting/saveOrUpdateMailSignature,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,72,Kmail,,/kmailSetting/deleteLetterHead,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,73,Kmail,,/sentMail/postBulkMail,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,74,Kmail,,/sentMail/bulkMail/status/{fromAddress},GET,,text only,no,Add a sample response.
+P2,kmail-api,KMAILAPI,75,Kmail,,/common/getBulkKmailDashboardMsg,POST,,yes,text only,Add a sample response.
+P2,kmail-api,KMAILAPI,76,Kmail,,/common/getAllMailCount,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,77,Kmail,,/kmailSetting/updateMailCountDaysLimit,POST,,yes,no,Add a sample response.
+P2,kmail-api,KMAILAPI,78,Kmail,,/kmailSetting/getMailCountDaysLimit,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,65,,download,/v2/katchup/download/{uuid},GET,,text only,text only,Add a sample response.
+P2,kpost-api,KatchupAPI,98,profile,,/v2/profile/downloadProfileImage/{kpostID},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,103,Group,,/v2/group/downloadGroupProfileImage/{{groupKpostID}/{kpostID},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,115,profile,,/v2/profile/downloadCoverImage/{kpostID},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,122,profile,,/v2/profile/sendAccountDeactivationOtp/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,127,common,,/v2/common/getFlutterAppVersion/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,128,profile,,/v2/profile/getlanguages/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,129,profile,,/v2/profile/sendPrimaryOrSecondaryDeviceOtp/{requestType},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,135,katchup,,/v2/katchup/getUnopenedMessagesAndKmailsTotalCount/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,142,Login,,/v2/signupLogin/userLogoutFromAllDevices/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,145,AWS KMAIL,,/v2/aws/deleteAttachmentFromS3/{uuid},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,146,katchup,,/v2/katchup/getKatchupMessagesSubject,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,153,Kmail,,/kmail5/v2/readMail/getCopiesInfo/{kmailID},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,154,Kloud,,/kmail5/v2/kmailData/getKloudUsedData,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,155,Kecommerce,,/v2/ecommerce/getEcommerceDetails/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,156,Katchup,,/v2/katchup/mediaStreaming/{uuid},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,163,Integration,,/redbus/updatecitylist,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,169,Katchup,,/v2/katchup/getSharedMessageDetails/{msgID},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,178,Admin,,/common/downloadCompanyLogo/{companyID},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,181,Group,,/kmail5/v2/readMail/downloadODAttachment,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,190,profile,,/v2/profile/downloadFullProfileImage/{kpostID},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,191,Group,,/v2/group/downloadGroupFullProfileImage/{{groupkpostID}/{kpostID},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,192,Katchup,,/v2/katchup/getAllReportMsg,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,204,Admin,,/admin/getBankAndCompanyDetails/{companyID},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,207,Kecommerce,,/v2/ecommerce/getAll,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,216,Profile,,/v2/profile/getSignatureImage,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,218,katchup,,/v2/katchup/downloadFromS3/{uuid},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,220,Contacts,,/v2/contacts/getblockContactDetails,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,222,General Setting,,/generalSetting/getPersonalize,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,227,General Setting,,/generalSetting/getAllNotification,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,228,Katchup,,/v2/katchup/downloadAttachment/{uuid},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,235,AI,,/ai/sessions,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,239,Kword,,/kword/documents/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,240,Kword,,/kword/documents/{docId},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,241,Kword,,/kword/delete?docId={docId},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,245,KPresentation,,/kpresentation/presentations,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,246,KPresentation,,/kpresentation/presentations/{presentationId},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,247,KPresentation,,/delete?presentationId={presentationId},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,252,Common,,/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,253,Common,,/v2/common/getStates/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,255,Knews,,/v2/knews/getAllCategories/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,258,Knews,,/v2/knews/getAllNewsSource/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,260,Knews,,/v2/knews/getKnewsSettings/,GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,261,Kword,,/kword/presence/{docId},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,263,Kword,,/kword/exitDocument/{docId},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,264,Kword,,/kword/getAccessActivity/{docId},GET,,text only,no,Add a sample response.
+P2,kpost-api,KatchupAPI,265,Kword,,/kword/getAllRevision/{docId},GET,,text only,no,Add a sample response.
+P2,kpost-api,KDIARY,3,KDIARY- Schedule,,/dairySchedule/createSchedule,POST,,text only,yes,Add the request payload.
+P2,kpost-api,KDIARY,4,KDIARY- Schedule,,/dairySchedule/getTodaySchedules,GET,,no,no,Add a sample response.
+P2,kpost-api,KDIARY,6,KDIARY- Schedule,,/dairySchedule/updateEvent,POST,,no,yes,Add the request payload.
+P2,kpost-api,KDIARY,7,KDIARY- Schedule,,/dairySchedule/getEvents,GET,,no,text only,Add a sample response.
+P2,kpost-api,KDIARY,8,KDIARY- Schedule,,/dairySchedule/getEventDate,POST,,no,yes,Add the request payload.
+P2,kpost-api,KDIARY,9,KDIARY- Schedule,,/dairySchedule/getEventSelectedDate,POST,,no,yes,Add the request payload.
+P2,kpost-api,KDIARY,10,KDIARY- Schedule,,/dairySchedule/deleteEvent,POST,,no,yes,Add the request payload.
+P2,kpost-api,KDIARY,11,KDIARY- Schedule,,/dairySchedule/addparticipants,POST,,no,yes,Add the request payload.
+P2,kpost-api,KDIARY,12,KDIARY- Schedule,,/dairySchedule/updateScheduleRemarks,POST,,no,yes,Add the request payload.
+P2,kpost-api,KDIARY,13,KDIARY- Report,,/dairySchedule/saveReport,POST,,no,yes,Add the request payload.
+P2,kpost-api,KDIARY,14,KDIARY- Report,,/dairySchedule/editReport,POST,,no,yes,Add the request payload.
+P2,kpost-api,KDIARY,15,KDIARY- Report,,/dairySchedule/getTodayReport,GET,,no,text only,Add a sample response.
+P2,kpost-api,KDIARY,16,KDIARY- Report,,/dairySchedule/editScheduleEvent,POST,,no,yes,Add the request payload.
+P2,kpost-api,V2 TESTED APIS,10,,,/v2/signupLogin/signup/,POST,,no,no,Add the request payload and a sample response.
+P3,kmail-api,KMAILAPI,15,Kmail,,/common/getAllImportantMails/,POST,,yes,text only,Fix the JSON — prose is mixed into it (response-unparseable).
+P3,kmail-api,KMAILAPI,20,Kmail,,/common/selectedContactMails/,POST,,text only,no,Fix the JSON — prose is mixed into it (request-unparseable).
+P3,kmail-api,KMAILAPI,24,Kmail,,/draft/draftMail/,POST,,text only,yes,Fix the JSON — prose is mixed into it (request-unparseable).
+P3,kmail-api,KMAILAPI,31,Kmail,,/readMail/sentAndInboxMailContent/,POST,,text only,yes,Fix the JSON — prose is mixed into it (request-unparseable).
+P3,kmail-api,KMAILAPI,43,Kmail,,/common/clearStatusOfKmailsContacts/,POST,,text only,no,Fix the JSON — prose is mixed into it (request-unparseable).
+P3,kmail-api,KMAILAPI,44,Kmail,,/draft/draftMailMultiPart,POST,,text only,no,Fix the JSON — prose is mixed into it (request-unparseable).
+P3,kmail-api,KMAILAPI,54,Kmail,,/common/clearStatusOfAllKmailsContacts,POST,,text only,no,Fix the JSON — prose is mixed into it (request-unparseable).
+P3,kpost-api,KatchupAPI,70,,,/v2/katchup/downloadThumbnail/{uuid},GET,,text only,text only,Fix the JSON — prose is mixed into it (response-unparseable).
+P3,kpost-api,KDIARY,5,KDIARY- Schedule,,/dairySchedule/createEvent,POST,,no,text only,Fix the JSON — prose is mixed into it (response-unparseable).
+P4,kmail-api,KMAILAPI,37,Kmail,,/common/postBoxContacts/,POST,,yes,no,Confirm which row is current (duplicate-of KMAILAPI:R5).
+P4,kpost-api,KatchupAPI,89,KALLv2,,/v2/kall/todayKoolKall/,GET,,text only,yes,Confirm which row is current (duplicate-of KatchupAPI:R78).
+P4,kpost-api,KatchupAPI,92,KALLv2,,/v2/kall/frequentKallContacts,GET,,text only,yes,Confirm which row is current (duplicate-of KatchupAPI:R54).
+P4,kpost-api,KatchupAPI,94,KALLv2,,/v2/kall/clearKallHistory,GET,,text only,yes,Confirm which row is current (duplicate-of KatchupAPI:R57).
+P5,kmail-api,KMAILAPI,7,Kmail,,/common/statusOfKmailsContacts/,POST,,text only,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kmail-api,KMAILAPI,21,Kmail,,/sentMail/postMail/,POST,,text only,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kmail-api,KMAILAPI,22,Kmail,,/sentMail/postMailMultiPart/,POST,,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kmail-api,KMAILAPI,59,Kmail,,/kmailSetting/letterHeadUpload,POST,,text only,no,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,23,KALL,,/v2/dashboard/kallDashboard/,,,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,24,,,/v2/contacts/katchupContacts,GET,,text only,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,29,,,/v2/contacts/fetchAdditionalKatchupContacts/,GET,,text only,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,51,KALL,,/v2/kall/initiateKall,,,text only,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,52,KALL,,/v2/kall/checkNewKall,GET,,text only,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,53,KALL,,/v2/kall/getKallStatus,,GET?,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,54,KALL,,/v2/kall/frequentKallContacts,GET,,text only,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,55,KALL,,/v2/kall/setKallStatus,,POST?,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,56,KALL,,/v2/kall/clearKallBykallIds,,POST?,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,57,KALL,,/v2/kall/clearKallHistory,GET,,text only,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,58,KALL,,/v2/kall/katchupKall,,,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,59,KALL,,/v2/kall/joinKatchupKall,,,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,60,KALL,,/v2/kall/acceptKatchupKall,,,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,61,KALL,,/v2/kall/addMemberKatchupKall,,POST?,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,62,KALL,,/v2/kall/cancelScheduleKall,,,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,63,KALL,,/v2/kall/reScheduleKatchupKall,,,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,64,KALL,,/v2/kall/reScheduleKatchupKall,,,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,78,,,/v2/kall/todayKoolKall/,GET,,text only,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,79,,,/kmail5/v2/sentMail/postMailMultiPart/,,POST?,yes,yes,None — retired (yellow). Confirm it can stay out of scope.
+P5,kpost-api,KatchupAPI,86,KALLv2  Kool Kall,,/v2/kall/addMembersToKall,,POST?,yes,yes,None — retired (yellow). Confirm it can stay out of scope.

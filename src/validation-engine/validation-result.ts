@@ -1,5 +1,6 @@
 import type { HttpMethod } from '@api/client/request-builder';
 import type { ValidationProfile } from '@config/constants';
+import type { SuiteId } from '@config/ownership.config';
 
 export const ValidationStatus = {
   PASSED: 'PASSED',
@@ -81,6 +82,8 @@ export interface ValidationReport {
   method: HttpMethod;
   /** Endpoint tags — used to route a filed bug to its Bugzilla component. */
   tags: readonly string[];
+  /** Owning module — decides the Bugzilla product and which developer gets the ticket. */
+  suite: SuiteId;
   profile: ValidationProfile;
   environment: string;
   build: string;

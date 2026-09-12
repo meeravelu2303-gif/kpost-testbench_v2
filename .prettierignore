@@ -5,4 +5,10 @@ blob-report/
 .auth/
 reports/
 junit-report/
+
+# Generated from the Excel workbook by scripts/excel-to-contract.cjs — reformatting them by hand
+# would only be undone by the next run. (openapi/dictionary.openapi.json is hand-written and stays.)
+contracts/
+openapi/kpost-api.openapi.json
+openapi/kmail-api.openapi.json
 package-lock.json

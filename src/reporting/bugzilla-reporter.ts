@@ -12,6 +12,7 @@ import { BugzillaFiler, type FilingOutcome } from '../bug-tracker/bugzilla-filer
 import { applyValidityGate, assessRunValidity } from '../bug-tracker/validity-gate';
 import { readBugzillaConfig } from '../config/bugzilla.config';
 import { env } from '../config/env';
+import { suiteFor } from '../config/ownership.config';
 import { createLogger } from '../utils/logger';
 import type { ValidationReport } from '../validation-engine/validation-result';
 import { VALIDATION_REPORT_ATTACHMENT } from './report-attachment';
@@ -127,7 +128,8 @@ export default class BugzillaReporter implements Reporter {
 
   private apiCandidates(): BugCandidate[] {
     return this.validationReports.flatMap((report) =>
-      candidatesFromReport(report, { tags: report.tags, baseURL: env.API_BASE_URL }, this.config),
+      // The module's own host, so the ticket names the service that actually answered.
+      candidatesFromReport(report, { baseURL: suiteFor(report.suite).baseUrl }, this.config),
     );
   }
 

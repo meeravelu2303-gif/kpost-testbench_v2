@@ -49,4 +49,23 @@ export default defineConfig(
     },
   },
   { files: ['**/*.mjs'], extends: [tseslint.configs.disableTypeChecked] },
+  {
+    // Build-time Node scripts: CommonJS, outside the TypeScript program.
+    files: ['**/*.cjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+    // `require()` is how a CommonJS build script imports; the ESM rule does not apply here.
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+    languageOptions: {
+      sourceType: 'commonjs',
+      parserOptions: { projectService: false },
+      globals: {
+        require: 'readonly',
+        module: 'writable',
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+      },
+    },
+  },
 );

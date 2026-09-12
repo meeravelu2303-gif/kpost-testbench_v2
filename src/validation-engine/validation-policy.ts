@@ -4,6 +4,7 @@ import type { ContractSchema } from '@api/schema/contract-schema';
 import { apiConfig } from '@config/api.config';
 import { authConfig, type Role } from '@config/auth.config';
 import { VALIDATION_PROFILES, type ValidationProfile } from '@config/constants';
+import { DEFAULT_SUITE, suiteFor, type SuiteOwnership } from '@config/ownership.config';
 import { thresholds } from '@config/thresholds.config';
 import type { Validator } from './validator';
 
@@ -68,6 +69,8 @@ export interface ResolvedEndpoint {
   path: string;
   label: string;
   tags: readonly string[];
+  /** Owning module: decides base URL, Bugzilla product/component and the responsible developer. */
+  suite: SuiteOwnership;
   expectedStatus: readonly number[];
   contentType: string;
   envelope: boolean;
@@ -116,6 +119,7 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
     path: definition.path,
     label: `${definition.method} ${definition.path}`,
     tags: definition.tags ?? [],
+    suite: suiteFor(definition.suite ?? DEFAULT_SUITE),
     expectedStatus: definition.expectedStatus ?? apiConfig.defaultExpectedStatus[definition.method],
     contentType: definition.contentType ?? apiConfig.defaultContentType,
     envelope: definition.envelope ?? true,

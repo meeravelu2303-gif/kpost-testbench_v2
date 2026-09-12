@@ -1,10 +1,5 @@
-import {
-  API_COMPONENT_BY_TAG,
-  UI_COMPONENT_BY_PATH,
-  categoryFor,
-  type BugCategory,
-  type BugzillaConfig,
-} from '@config/bugzilla.config';
+import { categoryFor, type BugCategory, type BugzillaConfig } from '@config/bugzilla.config';
+import { componentFor, suiteFor, type SuiteId } from '@config/ownership.config';
 import type { Severity, ValidationReport, ValidationResult } from '@engine/validation-result';
 import { maskSensitive, maskString } from '@utils/masking';
 import { apiFingerprint, uiFingerprint } from './bug-fingerprint';
@@ -12,11 +7,17 @@ import { apiFingerprint, uiFingerprint } from './bug-fingerprint';
 /**
  * A defect ready to be filed — derived from evidence the run already produced, never invented.
  * One candidate is one Bugzilla ticket; repeated observations raise `occurrences`.
+ *
+ * Where it goes (product, component, owner) comes entirely from the endpoint's module, so a
+ * KMail defect reaches the KMail developer and an Admin defect the Admin developer without any
+ * per-test configuration. See src/config/ownership.config.ts.
  */
 export interface BugCandidate {
   /** Dedupe tag, e.g. `KPV2-A1B2C3`. Written into the summary as `[KPV2-A1B2C3]`. */
   id: string;
   source: 'api' | 'ui';
+  /** Owning module. */
+  suiteId: SuiteId;
   title: string;
   /** Prose that explains the finding, above the Expected/Actual blocks. */
   narrative: string;
@@ -26,8 +27,11 @@ export interface BugCandidate {
   classification: string;
   product: string;
   component: string;
+  version: string;
+  /** Developer who maintains this module; set as the ticket's assignee. */
+  assignee: string;
+  ownerName: string;
   endpoint?: string;
-  module?: string;
   expected: string;
   actual: string;
   repro?: string;
@@ -49,22 +53,12 @@ const text = (value: unknown): string => {
   return maskString(typeof value === 'string' ? value : JSON.stringify(value, null, 2));
 };
 
-/** Endpoint tag → component; unknown areas fall back to the product's catch-all. */
-export function apiComponentFor(tags: readonly string[], config: BugzillaConfig): string {
-  for (const tag of tags) {
-    const component = API_COMPONENT_BY_TAG[tag];
-    if (component) return component;
-  }
-  return config.apiFallbackComponent;
-}
-
-/** Spec path → UI component; unknown areas fall back to the UI product's catch-all. */
-export function uiComponentFor(file: string, config: BugzillaConfig): string {
-  const lower = file.toLowerCase();
-  for (const [fragment, component] of Object.entries(UI_COMPONENT_BY_PATH)) {
-    if (lower.includes(fragment)) return component;
-  }
-  return config.uiFallbackComponent;
+/** Words from a spec path and test title, used to find the UI screen's component. */
+function screenTokens(file: string, title: string): string[] {
+  return `${file} ${title}`
+    .toLowerCase()
+    .split(/[^a-z0-9-]+/)
+    .filter(Boolean);
 }
 
 /**
@@ -74,7 +68,7 @@ export function uiComponentFor(file: string, config: BugzillaConfig): string {
  */
 export function candidatesFromReport(
   report: ValidationReport,
-  context: { tags: readonly string[]; baseURL: string },
+  context: { baseURL: string },
   config: BugzillaConfig,
 ): BugCandidate[] {
   return report.results
@@ -85,33 +79,36 @@ export function candidatesFromReport(
 function fromValidationResult(
   result: ValidationResult,
   report: ValidationReport,
-  context: { tags: readonly string[]; baseURL: string },
+  context: { baseURL: string },
   config: BugzillaConfig,
 ): BugCandidate {
+  const suite = suiteFor(report.suite);
   const id = apiFingerprint({
     prefix: config.tagPrefix,
     endpointId: result.endpointId,
     validatorName: result.validatorName,
     message: result.message,
   });
-  const component = apiComponentFor(context.tags, config);
   return {
     id,
     source: 'api',
+    suiteId: suite.id,
     title: `${result.endpoint}: ${maskString(result.message)}`,
     narrative:
       `The centralized validation engine ran "${result.validatorName}" against ${result.endpoint} ` +
-      `under the ${report.profile} profile and the endpoint did not satisfy it. ` +
+      `in the ${suite.label} under the ${report.profile} profile, and the endpoint did not satisfy it. ` +
       `Category ${result.category}, severity ${result.severity}. ` +
       `Every request of this run carries a correlation ID, so the exchange can be traced in the ` +
       `application logs (see below).`,
     severity: result.severity,
     category: categoryFor(result.category),
     classification: result.validatorName,
-    product: config.apiProduct,
-    component,
+    product: suite.bugzilla.product,
+    component: componentFor(suite, report.tags),
+    version: suite.bugzilla.version,
+    assignee: suite.owner.email,
+    ownerName: suite.owner.name,
     endpoint: result.endpoint,
-    module: component,
     expected: text(result.expected),
     actual: text(result.actual),
     repro: `VALIDATION_PROFILE=${report.profile} npx playwright test --project=api --grep "${result.endpointId}"`,
@@ -123,6 +120,8 @@ function fromValidationResult(
     testRunId: report.testRunId,
     observedAt: result.timestamp,
     evidence: maskSensitive({
+      module: suite.label,
+      repository: suite.repository,
       validator: result.validatorName,
       category: result.category,
       severity: result.severity,
@@ -153,32 +152,35 @@ export interface UiFailureInput {
   observedAt: string;
 }
 
-/** Turns a browser test failure into a candidate for the UI product. */
+/** Turns a browser test failure into a candidate for the UI module and its developer. */
 export function candidateFromUiFailure(
   input: UiFailureInput,
   config: BugzillaConfig,
 ): BugCandidate {
+  const suite = suiteFor('kpost-ui');
   const id = uiFingerprint({
     prefix: config.tagPrefix,
     file: input.file,
     title: input.title,
     message: input.message,
   });
-  const component = uiComponentFor(input.file, config);
   return {
     id,
     source: 'ui',
+    suiteId: suite.id,
     title: `${input.title}: ${maskString(input.message)}`,
     narrative:
-      `The browser test "${input.title}" (${input.file}) failed on ${input.browser}. ` +
-      `Filed from the UI suite, so the evidence is the assertion failure below plus the ` +
-      `Playwright trace and screenshot kept with the run's HTML report.`,
+      `The browser test "${input.title}" (${input.file}) failed on ${input.browser} against the ` +
+      `${suite.label}. The evidence is the assertion failure below, plus the Playwright trace and ` +
+      `screenshot kept with the run's HTML report.`,
     severity: 'HIGH',
     category: 'Functional',
     classification: 'UI Test Failure',
-    product: config.uiProduct,
-    component,
-    module: component,
+    product: suite.bugzilla.product,
+    component: componentFor(suite, screenTokens(input.file, input.title)),
+    version: suite.bugzilla.version,
+    assignee: suite.owner.email,
+    ownerName: suite.owner.name,
     expected: 'The test completes its assertions successfully.',
     actual: maskString(input.message),
     repro: `npx playwright test ${input.file} --project=${input.browser} -g "${input.title}"`,
@@ -190,6 +192,8 @@ export function candidateFromUiFailure(
     testRunId: input.testRunId,
     observedAt: input.observedAt,
     evidence: maskSensitive({
+      module: suite.label,
+      repository: suite.repository,
       file: input.file,
       title: input.title,
       browser: input.browser,
@@ -200,8 +204,7 @@ export function candidateFromUiFailure(
 
 /**
  * Collapses candidates that share an identity: one ticket per defect, with the occurrence count
- * and (for UI defects) every browser that observed it. A defect seen on three browsers is one
- * ticket tagged `[browser:chromium,firefox,webkit]`, not three tickets.
+ * and (for UI defects) every browser that observed it.
  */
 export function mergeCandidates(candidates: readonly BugCandidate[]): BugCandidate[] {
   const merged = new Map<string, BugCandidate>();

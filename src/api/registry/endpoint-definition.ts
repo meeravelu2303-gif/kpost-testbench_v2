@@ -1,4 +1,5 @@
 import type { Role } from '@config/auth.config';
+import type { SuiteId } from '@config/ownership.config';
 import type { ValidationToggles } from '@engine/validation-policy';
 import type { HttpMethod, RequestSpec } from '../client/request-builder';
 import type { ContractSchema } from '../schema/contract-schema';
@@ -30,6 +31,12 @@ export interface EndpointDefinition {
   method: HttpMethod;
   /** OpenAPI-style template, e.g. `/users/{id}`. */
   path: string;
+  /**
+   * Which KPost module this endpoint belongs to. Decides the base URL it is called on and,
+   * when a defect is found, the Bugzilla product, component and owning developer.
+   * Default: `kpost-api`. See src/config/ownership.config.ts.
+   */
+  suite?: SuiteId;
   summary?: string;
   tags?: readonly string[];
 

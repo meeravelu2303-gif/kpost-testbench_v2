@@ -1,0 +1,2655 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "KPost API",
+    "version": "KPOST API (5).xlsx",
+    "description": "KPost core API (katchup, kall, kdiary, knews, kword, admin-facing and common routes).\n\nGENERATED from \"KPOST API (5).xlsx\" by scripts/excel-to-contract.cjs — do not edit by hand.\nOnly rows with a real path and a known HTTP method are included; superseded (yellow), duplicate and legacy rows are excluded and listed in contracts/_conversion-report.json.\nSchemas are inferred from the documented examples, so no property is marked required, and the workbook documents no status codes or auth requirements."
+  },
+  "servers": [
+    {
+      "url": "https://devapi2.kpostindia.com"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/admin/getBankAndCompanyDetails/{companyID}": {
+      "get": {
+        "operationId": "get-admin-getBankAndCompanyDetails",
+        "summary": "GET /admin/getBankAndCompanyDetails/{companyID}",
+        "tags": [
+          "Admin"
+        ],
+        "x-excel-source": "KatchupAPI:R204",
+        "parameters": [
+          {
+            "name": "companyID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/admin/userManagementDetails/{companyID}": {
+      "get": {
+        "operationId": "get-admin-userManagementDetails",
+        "summary": "GET /admin/userManagementDetails/{companyID}",
+        "tags": [
+          "Admin"
+        ],
+        "x-excel-source": "KatchupAPI:R175",
+        "parameters": [
+          {
+            "name": "companyID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "memberCountDetails": {
+                      "type": "object",
+                      "properties": {
+                        "totalMembersCount": {
+                          "type": "integer"
+                        },
+                        "allocatedMembersCount": {
+                          "type": "integer"
+                        },
+                        "unAllocatedMembersCount": {
+                          "type": "integer"
+                        },
+                        "addNewMembersCount": {
+                          "type": "integer"
+                        },
+                        "currentPlan": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "contactsDetails": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "contactID": {
+                            "type": "string"
+                          },
+                          "contactName": {
+                            "type": "string"
+                          },
+                          "mobileNumber": {
+                            "type": "string"
+                          },
+                          "activeStatus": {
+                            "type": "string"
+                          },
+                          "referenceName": {
+                            "type": "string"
+                          },
+                          "transferDetails": {},
+                          "isAdmin": {
+                            "type": "boolean"
+                          },
+                          "isBackUpAdminValue": {
+                            "type": "boolean"
+                          },
+                          "createdDate": {
+                            "type": "string"
+                          },
+                          "modifiedDate": {}
+                        }
+                      }
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "memberCountDetails": {
+                    "totalMembersCount": 6,
+                    "allocatedMembersCount": 3,
+                    "unAllocatedMembersCount": 1,
+                    "addNewMembersCount": 2,
+                    "currentPlan": "Free"
+                  },
+                  "contactsDetails": [
+                    {
+                      "contactID": "vp@vpveg.kpost.in",
+                      "contactName": "Prakash Venkat",
+                      "mobileNumber": "8610368086",
+                      "activeStatus": "yes",
+                      "referenceName": "Marketing Director",
+                      "transferDetails": null,
+                      "isAdmin": true,
+                      "isBackUpAdminValue": false,
+                      "createdDate": "2024-10-14 06:22:58",
+                      "modifiedDate": null
+                    },
+                    {
+                      "contactID": "ranjith@ransh.kpost.in",
+                      "contactName": "Ranjith Kumar",
+                      "mobileNumber": "8627857589",
+                      "activeStatus": "yes",
+                      "referenceName": "Developer manager",
+                      "transferDetails": null,
+                      "isAdmin": false,
+                      "isBackUpAdminValue": true,
+                      "createdDate": "2024-10-15 11:38:50",
+                      "modifiedDate": "2024-10-15 06:10:22"
+                    },
+                    {
+                      "contactID": "kark@rkveg.kpost.in",
+                      "contactName": "Karkuvel Rajan",
+                      "mobileNumber": "9630157841",
+                      "activeStatus": "yes",
+                      "referenceName": "Testing Trainee",
+                      "transferDetails": null,
+                      "isAdmin": false,
+                      "isBackUpAdminValue": false,
+                      "createdDate": "2024-10-15 11:10:32",
+                      "modifiedDate": null
+                    },
+                    {
+                      "contactID": "sohai@reksoh.kpost.in",
+                      "contactName": "Sohail Ahmed",
+                      "mobileNumber": "9999999",
+                      "activeStatus": "No",
+                      "referenceName": "Testing manager",
+                      "transferDetails": "[{\"lastName\": \"Ahmed\", \"firstName\": \"Sohail\", \"createdDate\": \"2024-10-15 11:11:55.0\", \"modifiedDate\": \"2024-10-15 11:36:26.581\"}]",
+                      "isAdmin": false,
+                      "isBackUpAdminValue": false,
+                      "createdDate": "2024-10-15 11:11:55",
+                      "modifiedDate": "2024-10-15 06:06:27"
+                    }
+                  ],
+                  "urlPath": "userManagementDetails",
+                  "status": "SUCCESS",
+                  "statusCode": 200
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/sessions": {
+      "get": {
+        "operationId": "get-ai-sessions",
+        "summary": "GET /ai/sessions",
+        "tags": [
+          "AI"
+        ],
+        "x-excel-source": "KatchupAPI:R235",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/common/downloadCompanyLogo/{companyID}": {
+      "get": {
+        "operationId": "get-common-downloadCompanyLogo",
+        "summary": "GET /common/downloadCompanyLogo/{companyID}",
+        "tags": [
+          "Admin"
+        ],
+        "x-excel-source": "KatchupAPI:R178",
+        "parameters": [
+          {
+            "name": "companyID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/dairySchedule/addparticipants": {
+      "post": {
+        "operationId": "post-dairySchedule-addparticipants",
+        "summary": "POST /dairySchedule/addparticipants",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R11",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "eventID": {
+                      "type": "integer"
+                    },
+                    "participants": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "participant": {
+                            "type": "string"
+                          },
+                          "userType": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "eventID": 39,
+                  "participants": [
+                    {
+                      "participant": "samaranpkm@kpostmalaysia.com",
+                      "userType": "PERSONAL"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dairySchedule/createEvent": {
+      "post": {
+        "operationId": "post-dairySchedule-createEvent",
+        "summary": "POST /dairySchedule/createEvent",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R5",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/dairySchedule/createSchedule": {
+      "post": {
+        "operationId": "post-dairySchedule-createSchedule",
+        "summary": "POST /dairySchedule/createSchedule",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R3",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kallSession": {
+                      "type": "string"
+                    },
+                    "kallMode": {
+                      "type": "integer"
+                    },
+                    "meetingLink": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "priority": {
+                      "type": "integer"
+                    },
+                    "scheduleStartDateAndTime": {
+                      "type": "string"
+                    },
+                    "scheduleEndDateAndTime": {
+                      "type": "string"
+                    },
+                    "isReminder": {
+                      "type": "boolean"
+                    },
+                    "isKoolKall": {
+                      "type": "boolean"
+                    },
+                    "snoozeDetails": {
+                      "type": "string"
+                    },
+                    "participants": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "participant": {
+                            "type": "string"
+                          },
+                          "userType": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "kallSession": "Koolkallsession145d04",
+                  "kallMode": 0,
+                  "meetingLink": "KoolKall2bd821c",
+                  "description": "Team meeting to discuss project status",
+                  "title": "Project Status Meeting",
+                  "priority": 1,
+                  "scheduleStartDateAndTime": "2024-06-17T10:00:00",
+                  "scheduleEndDateAndTime": "2024-06-17T11:00:00",
+                  "isReminder": true,
+                  "isKoolKall": false,
+                  "snoozeDetails": "5 minutes before",
+                  "participants": [
+                    {
+                      "participant": "virat@kpost.in",
+                      "userType": "Personal"
+                    },
+                    {
+                      "participant": "rajan@kpost.in",
+                      "userType": "Personal"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dairySchedule/deleteEvent": {
+      "post": {
+        "operationId": "post-dairySchedule-deleteEvent",
+        "summary": "POST /dairySchedule/deleteEvent",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R10",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "eventID": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "eventID": 38
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dairySchedule/editReport": {
+      "post": {
+        "operationId": "post-dairySchedule-editReport",
+        "summary": "POST /dairySchedule/editReport",
+        "tags": [
+          "KDIARY- Report"
+        ],
+        "x-excel-source": "KDIARY:R14",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "taskReport": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "id": 1,
+                  "taskReport": "Updated KMail dashboard, forward mail reference implementation, API testing, and bug fixes."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dairySchedule/editScheduleEvent": {
+      "post": {
+        "operationId": "post-dairySchedule-editScheduleEvent",
+        "summary": "POST /dairySchedule/editScheduleEvent",
+        "tags": [
+          "KDIARY- Report"
+        ],
+        "x-excel-source": "KDIARY:R16",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "eventID": {
+                      "type": "integer"
+                    },
+                    "kallMode": {
+                      "type": "integer"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "priority": {
+                      "type": "integer"
+                    },
+                    "scheduleStartDateAndTime": {
+                      "type": "string"
+                    },
+                    "scheduleEndDateAndTime": {
+                      "type": "string"
+                    },
+                    "participants": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "participant": {
+                            "type": "string"
+                          },
+                          "userType": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "eventID": 340,
+                  "kallMode": 1,
+                  "description": "Team meeting to discuss project status Edited",
+                  "title": "Project Status Meeting Edited",
+                  "priority": 1,
+                  "scheduleStartDateAndTime": "2026-06-15T13:05:00",
+                  "scheduleEndDateAndTime": "2026-06-15T14:05:00",
+                  "participants": [
+                    {
+                      "participant": "virat@kpost.in",
+                      "userType": "Personal"
+                    },
+                    {
+                      "participant": "rajan@kpost.in",
+                      "userType": "Personal"
+                    },
+                    {
+                      "participant": "isagiyoichi@kpost.in",
+                      "userType": "Personal"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dairySchedule/getEventDate": {
+      "post": {
+        "operationId": "post-dairySchedule-getEventDate",
+        "summary": "POST /dairySchedule/getEventDate",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R8",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "eventIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "eventIds": [
+                    39
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dairySchedule/getEvents": {
+      "get": {
+        "operationId": "get-dairySchedule-getEvents",
+        "summary": "GET /dairySchedule/getEvents",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R7",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/dairySchedule/getEventSelectedDate": {
+      "post": {
+        "operationId": "post-dairySchedule-getEventSelectedDate",
+        "summary": "POST /dairySchedule/getEventSelectedDate",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R9",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scheduleStartDateAndTime": {
+                      "type": "string"
+                    },
+                    "scheduleEndDateAndTime": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "scheduleStartDateAndTime": "2026-04-16T13:25:00",
+                  "scheduleEndDateAndTime": "2026-04-30T13:25:00"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dairySchedule/getTodayReport": {
+      "get": {
+        "operationId": "get-dairySchedule-getTodayReport",
+        "summary": "GET /dairySchedule/getTodayReport",
+        "tags": [
+          "KDIARY- Report"
+        ],
+        "x-excel-source": "KDIARY:R15",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/dairySchedule/getTodaySchedules": {
+      "get": {
+        "operationId": "get-dairySchedule-getTodaySchedules",
+        "summary": "GET /dairySchedule/getTodaySchedules",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R4",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/dairySchedule/saveReport": {
+      "post": {
+        "operationId": "post-dairySchedule-saveReport",
+        "summary": "POST /dairySchedule/saveReport",
+        "tags": [
+          "KDIARY- Report"
+        ],
+        "x-excel-source": "KDIARY:R13",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "taskReport": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "taskReport": "Completed KMail dashboard changes, forward mail reference implementation, and API testing."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dairySchedule/updateEvent": {
+      "post": {
+        "operationId": "post-dairySchedule-updateEvent",
+        "summary": "POST /dairySchedule/updateEvent",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R6",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "eventID": {
+                      "type": "integer"
+                    },
+                    "repeat": {
+                      "type": "boolean"
+                    },
+                    "weekly": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "example": {
+                  "eventID": 38,
+                  "repeat": true,
+                  "weekly": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dairySchedule/updateScheduleRemarks": {
+      "post": {
+        "operationId": "post-dairySchedule-updateScheduleRemarks",
+        "summary": "POST /dairySchedule/updateScheduleRemarks",
+        "tags": [
+          "KDIARY- Schedule"
+        ],
+        "x-excel-source": "KDIARY:R12",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "eventIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "remarks": {
+                      "type": "integer"
+                    },
+                    "remarksDescription": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "eventIds": [
+                    39
+                  ],
+                  "remarks": 1,
+                  "remarksDescription": "i completed the work"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delete?presentationId={presentationId}": {
+      "get": {
+        "operationId": "get-deletepresentationIdpresentationId",
+        "summary": "GET /delete?presentationId={presentationId}",
+        "tags": [
+          "KPresentation"
+        ],
+        "x-excel-source": "KatchupAPI:R247",
+        "parameters": [
+          {
+            "name": "presentationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/generalSetting/getAllNotification": {
+      "get": {
+        "operationId": "get-generalSetting-getAllNotification",
+        "summary": "GET /generalSetting/getAllNotification",
+        "tags": [
+          "General Setting"
+        ],
+        "x-excel-source": "KatchupAPI:R227",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/generalSetting/getPersonalize": {
+      "get": {
+        "operationId": "get-generalSetting-getPersonalize",
+        "summary": "GET /generalSetting/getPersonalize",
+        "tags": [
+          "General Setting"
+        ],
+        "x-excel-source": "KatchupAPI:R222",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kmail5/v2/kmailData/getKloudUsedData": {
+      "get": {
+        "operationId": "get-kmailData-getKloudUsedData",
+        "summary": "GET /kmail5/v2/kmailData/getKloudUsedData",
+        "tags": [
+          "Kloud"
+        ],
+        "x-excel-source": "KatchupAPI:R154",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kmail5/v2/readMail/downloadODAttachment": {
+      "get": {
+        "operationId": "get-readMail-downloadODAttachment",
+        "summary": "GET /kmail5/v2/readMail/downloadODAttachment",
+        "tags": [
+          "Group"
+        ],
+        "x-excel-source": "KatchupAPI:R181",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kmail5/v2/readMail/getCopiesInfo/{kmailID}": {
+      "get": {
+        "operationId": "get-readMail-getCopiesInfo",
+        "summary": "GET /kmail5/v2/readMail/getCopiesInfo/{kmailID}",
+        "tags": [
+          "Kmail"
+        ],
+        "x-excel-source": "KatchupAPI:R153",
+        "parameters": [
+          {
+            "name": "kmailID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kpresentation/presentations": {
+      "get": {
+        "operationId": "get-kpresentation-presentations",
+        "summary": "GET /kpresentation/presentations",
+        "tags": [
+          "KPresentation"
+        ],
+        "x-excel-source": "KatchupAPI:R245",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kpresentation/presentations/{presentationId}": {
+      "get": {
+        "operationId": "get-kpresentation-presentations-246",
+        "summary": "GET /kpresentation/presentations/{presentationId}",
+        "tags": [
+          "KPresentation"
+        ],
+        "x-excel-source": "KatchupAPI:R246",
+        "parameters": [
+          {
+            "name": "presentationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kword/delete?docId={docId}": {
+      "get": {
+        "operationId": "get-kword-deletedocIddocId",
+        "summary": "GET /kword/delete?docId={docId}",
+        "tags": [
+          "Kword"
+        ],
+        "x-excel-source": "KatchupAPI:R241",
+        "parameters": [
+          {
+            "name": "docId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kword/documents/": {
+      "get": {
+        "operationId": "get-kword-documents",
+        "summary": "GET /kword/documents/",
+        "tags": [
+          "Kword"
+        ],
+        "x-excel-source": "KatchupAPI:R239",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kword/documents/{docId}": {
+      "get": {
+        "operationId": "get-kword-documents-240",
+        "summary": "GET /kword/documents/{docId}",
+        "tags": [
+          "Kword"
+        ],
+        "x-excel-source": "KatchupAPI:R240",
+        "parameters": [
+          {
+            "name": "docId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kword/exitDocument/{docId}": {
+      "get": {
+        "operationId": "get-kword-exitDocument",
+        "summary": "GET /kword/exitDocument/{docId}",
+        "tags": [
+          "Kword"
+        ],
+        "x-excel-source": "KatchupAPI:R263",
+        "parameters": [
+          {
+            "name": "docId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kword/getAccessActivity/{docId}": {
+      "get": {
+        "operationId": "get-kword-getAccessActivity",
+        "summary": "GET /kword/getAccessActivity/{docId}",
+        "tags": [
+          "Kword"
+        ],
+        "x-excel-source": "KatchupAPI:R264",
+        "parameters": [
+          {
+            "name": "docId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kword/getAllRevision/{docId}": {
+      "get": {
+        "operationId": "get-kword-getAllRevision",
+        "summary": "GET /kword/getAllRevision/{docId}",
+        "tags": [
+          "Kword"
+        ],
+        "x-excel-source": "KatchupAPI:R265",
+        "parameters": [
+          {
+            "name": "docId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/kword/presence/{docId}": {
+      "get": {
+        "operationId": "get-kword-presence",
+        "summary": "GET /kword/presence/{docId}",
+        "tags": [
+          "Kword"
+        ],
+        "x-excel-source": "KatchupAPI:R261",
+        "parameters": [
+          {
+            "name": "docId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/redbus/citysuggestion/chennai": {
+      "get": {
+        "operationId": "get-citysuggestion-chennai",
+        "summary": "GET /redbus/citysuggestion/chennai",
+        "tags": [
+          "Integration"
+        ],
+        "x-excel-source": "KatchupAPI:R158",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "errorvalue": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "cityID": {
+                            "type": "string"
+                          },
+                          "cityName": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "errorcode": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "errorvalue": "Not Applicable",
+                  "value": [
+                    {
+                      "cityID": "102",
+                      "cityName": "Chennai"
+                    }
+                  ],
+                  "errorcode": "Not Applicable",
+                  "status": "SUCCESS"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/redbus/updatecitylist": {
+      "get": {
+        "operationId": "get-redbus-updatecitylist",
+        "summary": "GET /redbus/updatecitylist",
+        "tags": [
+          "Integration"
+        ],
+        "x-excel-source": "KatchupAPI:R163",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/aws/deleteAttachmentFromS3/{uuid}": {
+      "get": {
+        "operationId": "get-aws-deleteAttachmentFromS3",
+        "summary": "GET /v2/aws/deleteAttachmentFromS3/{uuid}",
+        "tags": [
+          "AWS KMAIL"
+        ],
+        "x-excel-source": "KatchupAPI:R145",
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}": {
+      "get": {
+        "operationId": "get-common-getCompanyNameExistOnKpostAndKsmacc",
+        "summary": "GET /v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}",
+        "tags": [
+          "Common"
+        ],
+        "x-excel-source": "KatchupAPI:R252",
+        "parameters": [
+          {
+            "name": "companyName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/common/getFlutterAppVersion/": {
+      "get": {
+        "operationId": "get-common-getFlutterAppVersion",
+        "summary": "GET /v2/common/getFlutterAppVersion/",
+        "tags": [
+          "common"
+        ],
+        "x-excel-source": "KatchupAPI:R127",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/common/getStates/": {
+      "get": {
+        "operationId": "get-common-getStates",
+        "summary": "GET /v2/common/getStates/",
+        "tags": [
+          "Common"
+        ],
+        "x-excel-source": "KatchupAPI:R253",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/common/mobileNoExist/": {
+      "post": {
+        "operationId": "post-common-mobileNoExist",
+        "summary": "POST /v2/common/mobileNoExist/",
+        "x-excel-source": "V2 TESTED APIS:R11",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "example": {
+                  "statusCode": 200,
+                  "status": "SUCCESS",
+                  "message": "Mobile number can be used",
+                  "urlPath": "/mobileNoExist/",
+                  "data": false
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "countryID": {
+                    "type": "integer"
+                  },
+                  "mobileNumber": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "countryID": 1,
+                "mobileNumber": "9626306856"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/common/msStatus/": {
+      "get": {
+        "operationId": "get-common-msStatus",
+        "summary": "GET /v2/common/msStatus/",
+        "x-excel-source": "V2 TESTED APIS:R6",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "status": "SUCCESS"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/common/sendOTP/": {
+      "post": {
+        "operationId": "post-common-sendOTP",
+        "summary": "POST /v2/common/sendOTP/",
+        "x-excel-source": "V2 TESTED APIS:R8",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "OTP has been sent to given mobile number. Valid for 10 minutes only.",
+                  "urlPath": "sendOTP",
+                  "status": "SUCCESS"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "countryID": {
+                    "type": "integer"
+                  },
+                  "mobileNumber": {
+                    "type": "string"
+                  },
+                  "requestType": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "countryID": 1,
+                "mobileNumber": "8056234596",
+                "requestType": "signup"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/common/validateOTP/": {
+      "post": {
+        "operationId": "post-common-validateOTP",
+        "summary": "POST /v2/common/validateOTP/",
+        "x-excel-source": "V2 TESTED APIS:R8",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "OTP has been sent to given mobile number. Valid for 10 minutes only.",
+                  "urlPath": "sendOTP",
+                  "status": "SUCCESS"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "otp": {
+                    "type": "string"
+                  },
+                  "countryID": {
+                    "type": "integer"
+                  },
+                  "mobileNumber": {
+                    "type": "string"
+                  },
+                  "sendDate": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "otp": "546093",
+                "countryID": 1,
+                "mobileNumber": "8056234596",
+                "sendDate": 1687927955000
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/contacts/getblockContactDetails": {
+      "get": {
+        "operationId": "get-contacts-getblockContactDetails",
+        "summary": "GET /v2/contacts/getblockContactDetails",
+        "tags": [
+          "Contacts"
+        ],
+        "x-excel-source": "KatchupAPI:R220",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/ecommerce/getAll": {
+      "get": {
+        "operationId": "get-ecommerce-getAll",
+        "summary": "GET /v2/ecommerce/getAll",
+        "tags": [
+          "Kecommerce"
+        ],
+        "x-excel-source": "KatchupAPI:R207",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/ecommerce/getEcommerceDetails/": {
+      "get": {
+        "operationId": "get-ecommerce-getEcommerceDetails",
+        "summary": "GET /v2/ecommerce/getEcommerceDetails/",
+        "tags": [
+          "Kecommerce"
+        ],
+        "x-excel-source": "KatchupAPI:R155",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/group/downloadGroupFullProfileImage/{{groupkpostID}/{kpostID}": {
+      "get": {
+        "operationId": "get-group-downloadGroupFullProfileImage",
+        "summary": "GET /v2/group/downloadGroupFullProfileImage/{{groupkpostID}/{kpostID}",
+        "tags": [
+          "Group"
+        ],
+        "x-excel-source": "KatchupAPI:R191",
+        "parameters": [
+          {
+            "name": "groupkpostID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kpostID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/group/downloadGroupProfileImage/{{groupKpostID}/{kpostID}": {
+      "get": {
+        "operationId": "get-group-downloadGroupProfileImage",
+        "summary": "GET /v2/group/downloadGroupProfileImage/{{groupKpostID}/{kpostID}",
+        "tags": [
+          "Group"
+        ],
+        "x-excel-source": "KatchupAPI:R103",
+        "parameters": [
+          {
+            "name": "groupKpostID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kpostID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/katchup/download/{uuid}": {
+      "get": {
+        "operationId": "download",
+        "summary": "download",
+        "x-excel-source": "KatchupAPI:R65",
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/katchup/downloadAttachment/{uuid}": {
+      "get": {
+        "operationId": "get-katchup-downloadAttachment",
+        "summary": "GET /v2/katchup/downloadAttachment/{uuid}",
+        "tags": [
+          "Katchup"
+        ],
+        "x-excel-source": "KatchupAPI:R228",
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/katchup/downloadFromS3/{uuid}": {
+      "get": {
+        "operationId": "get-katchup-downloadFromS3",
+        "summary": "GET /v2/katchup/downloadFromS3/{uuid}",
+        "tags": [
+          "katchup"
+        ],
+        "x-excel-source": "KatchupAPI:R218",
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/katchup/downloadThumbnail/{uuid}": {
+      "get": {
+        "operationId": "get-katchup-downloadThumbnail",
+        "summary": "GET /v2/katchup/downloadThumbnail/{uuid}",
+        "x-excel-source": "KatchupAPI:R70",
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/katchup/getAllReportMsg": {
+      "get": {
+        "operationId": "get-katchup-getAllReportMsg",
+        "summary": "GET /v2/katchup/getAllReportMsg",
+        "tags": [
+          "Katchup"
+        ],
+        "x-excel-source": "KatchupAPI:R192",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/katchup/getKatchupMessagesSubject": {
+      "get": {
+        "operationId": "get-katchup-getKatchupMessagesSubject",
+        "summary": "GET /v2/katchup/getKatchupMessagesSubject",
+        "tags": [
+          "katchup"
+        ],
+        "x-excel-source": "KatchupAPI:R146",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/katchup/getSharedMessageDetails/{msgID}": {
+      "get": {
+        "operationId": "get-katchup-getSharedMessageDetails",
+        "summary": "GET /v2/katchup/getSharedMessageDetails/{msgID}",
+        "tags": [
+          "Katchup"
+        ],
+        "x-excel-source": "KatchupAPI:R169",
+        "parameters": [
+          {
+            "name": "msgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/katchup/getUnopenedMessagesAndKmailsTotalCount/": {
+      "get": {
+        "operationId": "get-katchup-getUnopenedMessagesAndKmailsTotalCount",
+        "summary": "GET /v2/katchup/getUnopenedMessagesAndKmailsTotalCount/",
+        "tags": [
+          "katchup"
+        ],
+        "x-excel-source": "KatchupAPI:R135",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/katchup/getUnopenedMessagesCount/": {
+      "get": {
+        "operationId": "getUnopenedMessagesCount",
+        "summary": "getUnopenedMessagesCount",
+        "tags": [
+          "katchup"
+        ],
+        "x-excel-source": "KatchupAPI:R36",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "msgsCount": {
+                      "type": "integer"
+                    },
+                    "resultList": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "sender": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer"
+                          },
+                          "senderName": {
+                            "type": "string"
+                          },
+                          "groupFlag": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "msgsCount": 11,
+                  "resultList": [
+                    {
+                      "sender": "fgfdm@kpostindia.com",
+                      "count": 1,
+                      "senderName": "vino krish",
+                      "groupFlag": "false"
+                    },
+                    {
+                      "sender": "vinkri578037078@kpostindia.com",
+                      "count": 1,
+                      "senderName": "vino krish",
+                      "groupFlag": "false"
+                    },
+                    {
+                      "sender": "vinkri578@kpostindia.com",
+                      "count": 1,
+                      "senderName": "vino krish",
+                      "groupFlag": "false"
+                    },
+                    {
+                      "sender": "vinkri679@kpostindia.com",
+                      "count": 1,
+                      "senderName": "vino krish",
+                      "groupFlag": "false"
+                    },
+                    {
+                      "sender": "vino@kpostindia.com",
+                      "count": 1,
+                      "senderName": "vino krish",
+                      "groupFlag": "false"
+                    },
+                    {
+                      "sender": "vinodh@kpostindia.com",
+                      "count": 1,
+                      "senderName": "vino krish",
+                      "groupFlag": "false"
+                    },
+                    {
+                      "sender": "vinois679@kpostindia.com",
+                      "count": 1,
+                      "senderName": "vino krish",
+                      "groupFlag": "false"
+                    },
+                    {
+                      "sender": "vinovino@kpostindia.com",
+                      "count": 1,
+                      "senderName": "vino krish",
+                      "groupFlag": "false"
+                    },
+                    {
+                      "sender": "mg326@kpostindia.com",
+                      "count": 3,
+                      "senderName": "My Group",
+                      "groupFlag": "true"
+                    }
+                  ],
+                  "status": "SUCCESS"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/katchup/mediaStreaming/{uuid}": {
+      "get": {
+        "operationId": "get-katchup-mediaStreaming",
+        "summary": "GET /v2/katchup/mediaStreaming/{uuid}",
+        "tags": [
+          "Katchup"
+        ],
+        "x-excel-source": "KatchupAPI:R156",
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/knews/getAllCategories/": {
+      "get": {
+        "operationId": "get-knews-getAllCategories",
+        "summary": "GET /v2/knews/getAllCategories/",
+        "tags": [
+          "Knews"
+        ],
+        "x-excel-source": "KatchupAPI:R255",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/knews/getAllNewsSource/": {
+      "get": {
+        "operationId": "get-knews-getAllNewsSource",
+        "summary": "GET /v2/knews/getAllNewsSource/",
+        "tags": [
+          "Knews"
+        ],
+        "x-excel-source": "KatchupAPI:R258",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/knews/getKnewsSettings/": {
+      "get": {
+        "operationId": "get-knews-getKnewsSettings",
+        "summary": "GET /v2/knews/getKnewsSettings/",
+        "tags": [
+          "Knews"
+        ],
+        "x-excel-source": "KatchupAPI:R260",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/profile/changePassword": {
+      "post": {
+        "operationId": "post-profile-changePassword",
+        "summary": "POST /v2/profile/changePassword",
+        "x-excel-source": "V2 TESTED APIS:R7",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Password Changed Successfully",
+                  "urlPath": "changePassword",
+                  "status": "SUCCESS"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kpostID": {
+                    "type": "string"
+                  },
+                  "confirmPassword": {
+                    "type": "string"
+                  },
+                  "oldPassword": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "kpostID": "karans@kpostindia.com",
+                "confirmPassword": "12345678",
+                "oldPassword": "1234567890"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/profile/downloadCoverImage/{kpostID}": {
+      "get": {
+        "operationId": "get-profile-downloadCoverImage",
+        "summary": "GET /v2/profile/downloadCoverImage/{kpostID}",
+        "tags": [
+          "profile"
+        ],
+        "x-excel-source": "KatchupAPI:R115",
+        "parameters": [
+          {
+            "name": "kpostID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/profile/downloadFullProfileImage/{kpostID}": {
+      "get": {
+        "operationId": "get-profile-downloadFullProfileImage",
+        "summary": "GET /v2/profile/downloadFullProfileImage/{kpostID}",
+        "tags": [
+          "profile"
+        ],
+        "x-excel-source": "KatchupAPI:R190",
+        "parameters": [
+          {
+            "name": "kpostID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/profile/downloadProfileImage/{kpostID}": {
+      "get": {
+        "operationId": "get-profile-downloadProfileImage",
+        "summary": "GET /v2/profile/downloadProfileImage/{kpostID}",
+        "tags": [
+          "profile"
+        ],
+        "x-excel-source": "KatchupAPI:R98",
+        "parameters": [
+          {
+            "name": "kpostID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/profile/forgotPasswordOrKpostID/": {
+      "post": {
+        "operationId": "post-profile-forgotPasswordOrKpostID",
+        "summary": "POST /v2/profile/forgotPasswordOrKpostID/",
+        "x-excel-source": "V2 TESTED APIS:R9",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mobileNumber": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "countryID": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "mobileNumber": "9841669307",
+                  "message": " OTP Sent to your registered mobile number",
+                  "urlPath": "/forgotPWDorIDorAccessCode/",
+                  "countryID": 1,
+                  "status": "SUCCESS"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mobileNumber": {
+                    "type": "string"
+                  },
+                  "requestType": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "mobileNumber": "9626306856",
+                "requestType": "kpostID"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/profile/getlanguages/": {
+      "get": {
+        "operationId": "get-profile-getlanguages",
+        "summary": "GET /v2/profile/getlanguages/",
+        "tags": [
+          "profile"
+        ],
+        "x-excel-source": "KatchupAPI:R128",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/profile/getSignatureImage": {
+      "get": {
+        "operationId": "get-profile-getSignatureImage",
+        "summary": "GET /v2/profile/getSignatureImage",
+        "tags": [
+          "Profile"
+        ],
+        "x-excel-source": "KatchupAPI:R216",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/profile/removeCoverImage/": {
+      "get": {
+        "operationId": "get-profile-removeCoverImage",
+        "summary": "GET /v2/profile/removeCoverImage/",
+        "tags": [
+          "profile"
+        ],
+        "x-excel-source": "KatchupAPI:R116",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "statusCode": 200,
+                  "status": "SUCCESS",
+                  "message": "Cover Image Removed Successfully",
+                  "urlPath": "/removeCoverImage/",
+                  "data": ""
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/profile/removeProfileImage/": {
+      "get": {
+        "operationId": "removeProfileImage",
+        "summary": "removeProfileImage",
+        "x-excel-source": "KatchupAPI:R67",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "data": {}
+                  }
+                },
+                "example": {
+                  "statusCode": 200,
+                  "status": "SUCCESS",
+                  "message": "Profile Image Removed Successfully",
+                  "urlPath": "/removeProfileImage/",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/profile/sendAccountDeactivationOtp/": {
+      "get": {
+        "operationId": "get-profile-sendAccountDeactivationOtp",
+        "summary": "GET /v2/profile/sendAccountDeactivationOtp/",
+        "tags": [
+          "profile"
+        ],
+        "x-excel-source": "KatchupAPI:R122",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/profile/sendPrimaryDeviceOtp/": {
+      "get": {
+        "operationId": "get-profile-sendPrimaryDeviceOtp",
+        "summary": "GET /v2/profile/sendPrimaryDeviceOtp/",
+        "tags": [
+          "profile"
+        ],
+        "x-excel-source": "KatchupAPI:R123",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": " OTP Sent to your registered mobile number",
+                  "urlPath": "sendPrimaryDeviceOtp",
+                  "statusCode": 200,
+                  "status": "SUCCESS"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/profile/sendPrimaryOrSecondaryDeviceOtp/{requestType}": {
+      "get": {
+        "operationId": "get-profile-sendPrimaryOrSecondaryDeviceOtp",
+        "summary": "GET /v2/profile/sendPrimaryOrSecondaryDeviceOtp/{requestType}",
+        "tags": [
+          "profile"
+        ],
+        "x-excel-source": "KatchupAPI:R129",
+        "parameters": [
+          {
+            "name": "requestType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/signupLogin/fetchUserDetails": {
+      "post": {
+        "operationId": "post-signupLogin-fetchUserDetails",
+        "summary": "POST /v2/signupLogin/fetchUserDetails",
+        "x-excel-source": "V2 TESTED APIS:R5",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "firstName": {
+                          "type": "string"
+                        },
+                        "lastName": {
+                          "type": "string"
+                        },
+                        "kpostID": {
+                          "type": "string"
+                        },
+                        "countryID": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "data": {
+                    "firstName": "Baskar",
+                    "lastName": "Thambidurai",
+                    "kpostID": "baskar1992@kpostindia.com",
+                    "countryID": "1"
+                  },
+                  "urlPath": "fetchNameAndDesignation",
+                  "status": "SUCCESS"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kpostID": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "kpostID": "baskar1992@kpostindia.com"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/signupLogin/getActiveSession": {
+      "get": {
+        "operationId": "get-signupLogin-getActiveSession",
+        "summary": "GET /v2/signupLogin/getActiveSession",
+        "x-excel-source": "KatchupAPI:R69",
+        "responses": {
+          "200": {
+            "description": "Documented sample response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "sessionID": {
+                            "type": "string"
+                          },
+                          "kpostID": {
+                            "type": "string"
+                          },
+                          "deviceType": {
+                            "type": "string"
+                          },
+                          "deviceIdentity_primary": {
+                            "type": "string"
+                          },
+                          "deviceIdentity_secondary": {
+                            "type": "string"
+                          },
+                          "logintime": {
+                            "type": "string"
+                          },
+                          "login_lattitude": {
+                            "type": "string"
+                          },
+                          "login_longitude": {
+                            "type": "string"
+                          },
+                          "oneSignal_Key": {
+                            "type": "string"
+                          },
+                          "socketID": {},
+                          "loginRO": {}
+                        }
+                      }
+                    },
+                    "urlPath": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "data": [
+                    {
+                      "sessionID": "45939170-2500-11fd-7609-eff623a703d6",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "Web",
+                      "deviceIdentity_primary": "9f9d6bd8-238f-11ed-b3e2-73ce62ed0e94",
+                      "deviceIdentity_secondary": "Desktop-Chrome",
+                      "logintime": "2023-09-16T11:03:28.000+00:00",
+                      "login_lattitude": "13.0476875",
+                      "login_longitude": "80.2655737",
+                      "oneSignal_Key": "oneSignalKey",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "5F0CE10B-F9AE-40DF-ADC8-665476DDF30F",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "ios",
+                      "deviceIdentity_primary": "5F0CE10B-F9AE-40DF-ADC8-665476DDF30F",
+                      "deviceIdentity_secondary": "",
+                      "logintime": "2023-09-16T10:53:05.000+00:00",
+                      "login_lattitude": "37.785834",
+                      "login_longitude": "37.785834",
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "76569B75-4CD1-4970-BE4C-BD31F920EA9E",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "ios",
+                      "deviceIdentity_primary": "76569B75-4CD1-4970-BE4C-BD31F920EA9E",
+                      "deviceIdentity_secondary": "",
+                      "logintime": "2023-09-16T10:44:27.000+00:00",
+                      "login_lattitude": "13.043163301521643",
+                      "login_longitude": "13.043163301521643",
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "E909332B-53E8-4998-A021-C9AD0A70D359",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "ios",
+                      "deviceIdentity_primary": "E909332B-53E8-4998-A021-C9AD0A70D359",
+                      "deviceIdentity_secondary": "",
+                      "logintime": "2023-09-16T07:57:26.000+00:00",
+                      "login_lattitude": "37.785834",
+                      "login_longitude": "37.785834",
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "D580BFFA-A751-4544-A460-142C7AC73CA3",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "ios",
+                      "deviceIdentity_primary": "D580BFFA-A751-4544-A460-142C7AC73CA3",
+                      "deviceIdentity_secondary": "",
+                      "logintime": "2023-08-26T06:34:02.000+00:00",
+                      "login_lattitude": "37.785834",
+                      "login_longitude": "37.785834",
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "4304ee43365bc807",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "Android",
+                      "deviceIdentity_primary": "4304ee43365bc807",
+                      "deviceIdentity_secondary": "4304ee43365bc807",
+                      "logintime": "2023-06-12T13:30:45.000+00:00",
+                      "login_lattitude": null,
+                      "login_longitude": null,
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "a1b876fa7df98c67",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "Android",
+                      "deviceIdentity_primary": "a1b876fa7df98c67",
+                      "deviceIdentity_secondary": "a1b876fa7df98c67",
+                      "logintime": "2023-05-12T12:21:20.000+00:00",
+                      "login_lattitude": null,
+                      "login_longitude": null,
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "90773c8c0700469c",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "Android",
+                      "deviceIdentity_primary": "90773c8c0700469c",
+                      "deviceIdentity_secondary": "90773c8c0700469c",
+                      "logintime": "2023-04-27T11:10:37.000+00:00",
+                      "login_lattitude": null,
+                      "login_longitude": null,
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "9838a89e23ef370d",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "Android",
+                      "deviceIdentity_primary": "9838a89e23ef370d",
+                      "deviceIdentity_secondary": "9838a89e23ef370d",
+                      "logintime": "2023-04-22T12:01:12.000+00:00",
+                      "login_lattitude": null,
+                      "login_longitude": null,
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "70b0259fb0263e1f",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "Android",
+                      "deviceIdentity_primary": "70b0259fb0263e1f",
+                      "deviceIdentity_secondary": "70b0259fb0263e1f",
+                      "logintime": "2023-04-06T14:25:29.000+00:00",
+                      "login_lattitude": null,
+                      "login_longitude": null,
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "73f4ff2ad5208c0d",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "Android",
+                      "deviceIdentity_primary": "73f4ff2ad5208c0d",
+                      "deviceIdentity_secondary": "73f4ff2ad5208c0d",
+                      "logintime": "2023-03-31T14:12:19.000+00:00",
+                      "login_lattitude": null,
+                      "login_longitude": null,
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "b81db427e3838d2e",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "Android",
+                      "deviceIdentity_primary": "b81db427e3838d2e",
+                      "deviceIdentity_secondary": "b81db427e3838d2e",
+                      "logintime": "2022-08-26T07:42:25.000+00:00",
+                      "login_lattitude": "13.0476875",
+                      "login_longitude": "80.2655737",
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    },
+                    {
+                      "sessionID": "fee18acf32cf4765",
+                      "kpostID": "karkuvelrajan@kpostindia.com",
+                      "deviceType": "Android",
+                      "deviceIdentity_primary": "fee18acf32cf4765",
+                      "deviceIdentity_secondary": "fee18acf32cf4765",
+                      "logintime": "2022-08-26T07:42:25.000+00:00",
+                      "login_lattitude": "13.0476875",
+                      "login_longitude": "80.2655737",
+                      "oneSignal_Key": "oneSignal_Key",
+                      "socketID": null,
+                      "loginRO": null
+                    }
+                  ],
+                  "urlPath": "getActiveSession",
+                  "status": "SUCCESS",
+                  "statusCode": 200
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/signupLogin/signup/": {
+      "post": {
+        "operationId": "post-signupLogin-signup",
+        "summary": "POST /v2/signupLogin/signup/",
+        "x-excel-source": "V2 TESTED APIS:R10",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/v2/signupLogin/userLogoutFromAllDevices/": {
+      "get": {
+        "operationId": "get-signupLogin-userLogoutFromAllDevices",
+        "summary": "GET /v2/signupLogin/userLogoutFromAllDevices/",
+        "tags": [
+          "Login"
+        ],
+        "x-excel-source": "KatchupAPI:R142",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    }
+  }
+}

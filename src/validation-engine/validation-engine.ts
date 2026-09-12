@@ -1,4 +1,4 @@
-import type { ApiClient } from '@api/client/api-client';
+import type { ApiClientPool } from '@api/client/api-client-pool';
 import type { ApiRegistry } from '@api/registry/api-registry';
 import type { EndpointDefinition } from '@api/registry/endpoint-definition';
 import type { BusinessRuleRegistry } from '@rules/business-rule';
@@ -32,7 +32,7 @@ import {
 import { buildResult, defineValidator, STAGE_ORDER, type Validator } from './validator';
 
 export interface ValidationEngineDeps {
-  client: ApiClient;
+  clients: ApiClientPool;
   apiRegistry: ApiRegistry;
   validators: ValidationRegistry;
   businessRules: BusinessRuleRegistry;
@@ -85,7 +85,7 @@ export class ValidationEngine {
     const startedAt = new Date();
     const started = performance.now();
 
-    const executor = new EndpointExecutor(this.deps.client, this.deps.apiRegistry, this.deps.log);
+    const executor = new EndpointExecutor(this.deps.clients, this.deps.apiRegistry, this.deps.log);
     const request = await executor.buildRequest(resolved);
     const primary = await executor.send(resolved, request, { label: 'primary' });
     const log = this.deps.log.child({
@@ -123,6 +123,7 @@ export class ValidationEngine {
       endpoint: resolved.label,
       method: resolved.method,
       tags: resolved.tags,
+      suite: resolved.suite.id,
       profile,
       ...run,
       correlationId: primary.correlationId,
