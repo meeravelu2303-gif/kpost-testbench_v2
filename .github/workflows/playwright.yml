@@ -33,6 +33,8 @@ env:
   # Until a deployed KPost API is configured (vars.API_BASE_URL), tests run against the mock API.
   MOCK_API: ${{ vars.MOCK_API || 'true' }}
   ALLOW_DESTRUCTIVE_TESTS: ${{ vars.ALLOW_DESTRUCTIVE_TESTS || 'false' }}
+  BUGZILLA_URL: ${{ vars.BUGZILLA_URL }}
+  BUGZILLA_API_KEY: ${{ secrets.BUGZILLA_API_KEY }}
 
 jobs:
   quality:
@@ -70,6 +72,9 @@ jobs:
       EXPIRED_TOKEN: ${{ secrets.EXPIRED_TOKEN }}
       DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
       LOG_FORMAT: json
+      # Shards never file: bugs are filed once from the merged report, so two shards
+      # cannot race to file the same defect.
+      BUGZILLA_DRY_RUN: 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -104,8 +109,17 @@ jobs:
           path: all-blob-reports
           pattern: blob-report-*
           merge-multiple: true
-      - name: Merge into HTML, JUnit and validation summary
+      - name: Merge reports, then file bugs once for the whole run
+        # Filing stays off until the BUGZILLA_DRY_RUN repository variable is set to 'false'.
+        env:
+          BUGZILLA_DRY_RUN: ${{ vars.BUGZILLA_DRY_RUN || 'true' }}
         run: npx playwright merge-reports --config merge.config.ts ./all-blob-reports
+      - uses: actions/upload-artifact@v7
+        if: ${{ hashFiles('reports/bugs/*.json') != '' }}
+        with:
+          name: bug-filing-${{ github.run_attempt }}
+          path: reports/bugs
+          retention-days: 30
       - name: Publish validation summary
         if: ${{ hashFiles('reports/validation/summary.md') != '' }}
         run: cat reports/validation/summary.md >> "$GITHUB_STEP_SUMMARY"

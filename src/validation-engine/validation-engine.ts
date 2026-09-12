@@ -122,6 +122,7 @@ export class ValidationEngine {
       endpointId: resolved.id,
       endpoint: resolved.label,
       method: resolved.method,
+      tags: resolved.tags,
       profile,
       ...run,
       correlationId: primary.correlationId,

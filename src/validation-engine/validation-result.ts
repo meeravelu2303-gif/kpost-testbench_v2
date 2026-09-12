@@ -79,6 +79,8 @@ export interface ValidationReport {
   endpointId: string;
   endpoint: string;
   method: HttpMethod;
+  /** Endpoint tags — used to route a filed bug to its Bugzilla component. */
+  tags: readonly string[];
   profile: ValidationProfile;
   environment: string;
   build: string;

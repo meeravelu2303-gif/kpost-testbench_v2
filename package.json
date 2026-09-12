@@ -17,6 +17,8 @@
     "test:framework": "playwright test --project=framework",
     "test:integration": "playwright test --project=integration",
     "mock:api": "node mock-server/server.ts",
+    "bugs:preview": "cross-env BUGZILLA_DRY_RUN=true playwright test --project=api",
+    "bugs:file": "cross-env BUGZILLA_DRY_RUN=false playwright test --project=api",
     "test:smoke": "playwright test --grep @smoke",
     "test:regression": "playwright test --grep @regression",
     "test:headed": "playwright test --headed",

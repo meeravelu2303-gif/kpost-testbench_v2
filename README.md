@@ -4,6 +4,7 @@ The KPost test bench automation framework, built on [Playwright](https://playwri
 
 - **A centralized API validation framework.** You define an endpoint once, and 44 common validators (auth, authz, status, request, response, schema, headers, errors, performance, security, data conventions) apply automatically. See **[docs/validation-framework.md](docs/validation-framework.md)**.
 - **UI end-to-end tests** built on the Page Object Model, running on Chromium, Firefox and WebKit.
+- **Automatic Bugzilla filing.** Real failures become tickets — deduplicated, validity-gated, and never re-filed once a human closes them. Dry run by default. See **[docs/bug-filing.md](docs/bug-filing.md)**.
 
 ## Stack
 
@@ -75,6 +76,8 @@ With `TEST_ENV=local` and no `API_BASE_URL`, Playwright starts the bundled mock 
 | `npm run test:chromium`       | UI tests on Chromium only                                        |
 | `npm run test:smoke`          | Tests tagged `@smoke`                                            |
 | `npm run mock:api`            | Start the mock API manually                                      |
+| `npm run bugs:preview`        | Dry run: print the bugs a run would file into Bugzilla           |
+| `npm run bugs:file`           | File them for real (deduplicated against the live instance)      |
 | `npm run report`              | Open the last HTML report                                        |
 | `npm run check`               | Typecheck + lint + format check (CI gate)                        |
 

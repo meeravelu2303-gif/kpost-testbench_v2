@@ -3,6 +3,7 @@ import { STORAGE_STATE, TAGS, TIMEOUTS } from './src/config/constants';
 import { env } from './src/config/env';
 
 const VALIDATION_REPORTER = './src/reporting/validation-reporter.ts';
+const BUGZILLA_REPORTER = './src/reporting/bugzilla-reporter.ts';
 const MOCK_API_STARTUP_TIMEOUT_MS = 30_000;
 
 /** UI projects reuse the session saved by the `setup` project. */
@@ -29,9 +30,11 @@ export default defineConfig({
     env.IS_PRODUCTION && !env.ALLOW_DESTRUCTIVE_TESTS ? new RegExp(TAGS.destructive) : undefined,
 
   // CI emits blob reports so sharded runs can be merged (see merge.config.ts).
+  // In CI the shards only produce blobs; bugs are filed once from the merged report
+  // (merge.config.ts), so two shards can never file the same defect twice.
   reporter: env.CI
     ? [['blob'], ['github'], ['list'], [VALIDATION_REPORTER]]
-    : [['list'], ['html', { open: 'never' }], [VALIDATION_REPORTER]],
+    : [['list'], ['html', { open: 'never' }], [VALIDATION_REPORTER], [BUGZILLA_REPORTER]],
 
   // Local stand-in for the KPost API (MOCK_API=true, the default for TEST_ENV=local).
   webServer: env.MOCK_API

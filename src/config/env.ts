@@ -37,6 +37,24 @@ const EnvSchema = z.object({
   DB_ENABLED: z.stringbool().optional(),
   DB_CONNECTION_STRING: z.string().optional(),
 
+  // ---- Bugzilla bug filing (see src/config/bugzilla.config.ts)
+  /** REST root, e.g. http://192.168.0.50/rest. Unset disables filing entirely. */
+  BUGZILLA_URL: z.url().optional(),
+  BUGZILLA_API_KEY: z.string().optional(),
+  /** Filing is irreversible, so the default is a dry run that only reports what it would file. */
+  BUGZILLA_DRY_RUN: z.stringbool().default(true),
+  BUGZILLA_PRODUCT: z.string().default('KPost API'),
+  BUGZILLA_UI_PRODUCT: z.string().default('KPost UI'),
+  BUGZILLA_VERSION: z.string().default('unspecified'),
+  BUGZILLA_FALLBACK_COMPONENT: z.string().default('kpost-webservice-application'),
+  BUGZILLA_UI_FALLBACK_COMPONENT: z.string().default('General'),
+  /** Lowest severity that may become a ticket. */
+  BUGZILLA_MIN_SEVERITY: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
+  /** Safety valve for a staged rollout: file at most N bugs per run (0 = no cap). */
+  BUGZILLA_MAX_FILE: z.coerce.number().int().min(0).default(0),
+  /** File failures from the browser (UI) suites as well. */
+  BUGZILLA_FILE_UI_FAILURES: z.stringbool().default(true),
+
   VALIDATION_PROFILE: z.enum(VALIDATION_PROFILES).default('REGRESSION'),
   ALLOW_DESTRUCTIVE_TESTS: z.stringbool().default(false),
 
