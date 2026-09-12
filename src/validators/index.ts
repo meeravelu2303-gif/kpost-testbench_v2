@@ -24,6 +24,11 @@ import { emptyValueValidator } from './request/empty-value.validator';
 import { enumValidator } from './request/enum.validator';
 import { formatValidator } from './request/format.validator';
 import { invalidPayloadValidator } from './request/invalid-payload.validator';
+import {
+  emptyBodyValidator,
+  methodNotAllowedValidator,
+  unsupportedMediaTypeValidator,
+} from './request/error-shape.validator';
 import { malformedJsonValidator } from './request/malformed-json.validator';
 import { nullValueValidator } from './request/null-value.validator';
 import { requiredFieldsValidator } from './request/required-fields.validator';
@@ -86,6 +91,9 @@ export const validationRegistry = new ValidationRegistry().register(
   unknownFieldsValidator,
   invalidPayloadValidator,
   malformedJsonValidator,
+  methodNotAllowedValidator,
+  unsupportedMediaTypeValidator,
+  emptyBodyValidator,
   // Security
   securityHeadersValidator,
   jwtValidator,

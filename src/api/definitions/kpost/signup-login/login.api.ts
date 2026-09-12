@@ -31,6 +31,7 @@ const LOGIN_TAGS = ['signup-login', 'login', 'critical'] as const;
 
 export const userLoginApi = defineKpostEndpoint({
   id: 'signup-login-user-login',
+  requirements: ['FR-S09', 'FR-S10', 'NFR-SEC01'],
   method: 'POST',
   path: '/v2/signupLogin/userLogin/',
   summary: 'Exchange KPost credentials for an access token',
@@ -56,6 +57,7 @@ export const userLoginApi = defineKpostEndpoint({
 
 export const adminUserLoginApi = defineKpostEndpoint({
   id: 'signup-login-admin-user-login',
+  requirements: ['FR-S09', 'FR-S10'],
   method: 'POST',
   path: '/signupLoginForMediumAndLarge/adminUserLogin',
   summary: 'Log in an administrator of a medium or large business',
@@ -81,6 +83,7 @@ export const adminUserLoginApi = defineKpostEndpoint({
 
 export const generateJwTokensApi = defineKpostEndpoint({
   id: 'signup-login-generate-jwt',
+  requirements: ['FR-S10', 'NFR-SEC01'],
   method: 'POST',
   path: '/v2/signupLogin/generateJWTokens/',
   summary: 'Exchange a refresh token for a new access token',
@@ -103,6 +106,7 @@ export const generateJwTokensApi = defineKpostEndpoint({
 
 export const activeSessionApi = defineKpostEndpoint({
   id: 'signup-login-active-session',
+  requirements: ['FR-S11'],
   method: 'GET',
   path: '/v2/signupLogin/getActiveSession',
   summary: "List the account's active sessions",
@@ -114,6 +118,7 @@ export const activeSessionApi = defineKpostEndpoint({
 
 export const loginHistoryApi = defineKpostEndpoint({
   id: 'signup-login-login-history',
+  requirements: ['FR-S11'],
   method: 'POST',
   path: '/v2/signupLogin/getLoginHistory',
   summary: "Login history for the caller's account",
@@ -130,6 +135,7 @@ export const loginHistoryApi = defineKpostEndpoint({
 
 export const userLogoutApi = defineKpostEndpoint({
   id: 'signup-login-user-logout',
+  requirements: ['FR-S12'],
   method: 'POST',
   path: '/v2/signupLogin/userLogout/',
   summary: 'End the current session',
@@ -151,6 +157,7 @@ export const userLogoutApi = defineKpostEndpoint({
 
 export const logoutAllDevicesApi = defineKpostEndpoint({
   id: 'signup-login-logout-all-devices',
+  requirements: ['FR-S12'],
   method: 'GET',
   path: '/v2/signupLogin/userLogoutFromAllDevices/',
   summary: 'End every session of the account',
@@ -163,6 +170,7 @@ export const logoutAllDevicesApi = defineKpostEndpoint({
 
 export const setAccessCodeApi = defineKpostEndpoint({
   id: 'signup-login-set-access-code',
+  requirements: ['FR-S11', 'NFR-SEC03'],
   method: 'POST',
   path: '/v2/signupLogin/setAccessCode',
   summary: "Set the account's access code",

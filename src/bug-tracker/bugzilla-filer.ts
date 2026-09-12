@@ -4,6 +4,7 @@ import type { Logger } from '@utils/logger';
 import {
   buildAdoptionComment,
   buildBugFields,
+  buildDescription,
   buildEvidenceAttachment,
   buildReopenComment,
   buildReproducedComment,
@@ -53,6 +54,8 @@ export interface FilingEntry {
   assignee: string;
   severity: string;
   reason?: string;
+  /** Full ticket text — present on a dry run so the output can be reviewed before filing. */
+  description?: string;
 }
 
 export interface FilingOutcome {
@@ -267,6 +270,14 @@ export class BugzillaFiler {
       component: candidate.component,
       assignee: candidate.assignee,
       severity: candidate.severity,
+      /*
+       * The full ticket text, on a dry run only.
+       *
+       * A dry run whose artifact holds nothing but summaries cannot be reviewed - and reviewing
+       * what will be filed is the entire point of having one. On a live run it is omitted: the
+       * text is already in Bugzilla, and duplicating it here would bloat the artifact.
+       */
+      ...(this.config.dryRun ? { description: buildDescription(candidate) } : {}),
       ...extra,
     };
   }

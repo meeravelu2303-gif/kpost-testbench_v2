@@ -1,7 +1,9 @@
+import type { RequestSpec } from '@api/client/request-builder';
 import { categoryFor, type BugCategory, type BugzillaConfig } from '@config/bugzilla.config';
 import { componentFor, suiteFor, type SuiteId } from '@config/ownership.config';
 import type { Severity, ValidationReport, ValidationResult } from '@engine/validation-result';
 import { maskSensitive, maskString } from '@utils/masking';
+import { buildCurl } from './curl';
 import { apiFingerprint, uiFingerprint } from './bug-fingerprint';
 
 /**
@@ -35,6 +37,11 @@ export interface BugCandidate {
   expected: string;
   actual: string;
   repro?: string;
+  /** Body of the primary response, quoted in the ticket. */
+  responseBody?: string;
+  responseStatus?: number;
+  /** A copy-pasteable command that reproduces the failure. */
+  curl?: string;
   correlationId?: string;
   /** Browser projects that observed a UI failure. */
   browsers?: string[];
@@ -46,6 +53,17 @@ export interface BugCandidate {
   observedAt: string;
   /** Full, unabridged evidence for the ticket attachment. */
   evidence: Record<string, unknown>;
+}
+
+/** The path out of an endpoint label like "POST /v2/common/validateOTP/". */
+function endpointPath(label: string): string {
+  const space = label.indexOf(String.fromCharCode(32));
+  return space > 0 ? label.slice(space + 1) : label;
+}
+
+/** The request of the first failing sub-check, when a probe recorded one. */
+function failingRequest(result: ValidationResult): RequestSpec | undefined {
+  return result.details?.find((detail) => detail.status === 'FAILED' && detail.request)?.request;
 }
 
 const text = (value: unknown): string => {
@@ -111,7 +129,34 @@ function fromValidationResult(
     endpoint: result.endpoint,
     expected: text(result.expected),
     actual: text(result.actual),
+    /** What the endpoint actually replied, quoted the way the existing tickets here do. */
+    responseBody: report.primary?.body?.trim() ? report.primary.body : undefined,
+    responseStatus: report.primary?.status,
     repro: `VALIDATION_PROFILE=${report.profile} npx playwright test --project=api --grep "${result.endpointId}"`,
+    curl: buildCurl({
+      method: report.method,
+      /*
+       * `result.endpoint` is the label "POST /v2/common/validateOTP/", not a path. Split at the
+       * first space rather than with a regex: an earlier regex here lost its escapes while being
+       * edited and produced `http://host:8989POST /v2/...` — a curl that cannot run, in a ticket
+       * whose whole purpose is to be runnable.
+       */
+      path: endpointPath(result.endpoint),
+      baseUrl: context.baseURL,
+      /*
+       * The request of the case that actually FAILED, when a probe recorded one. A probe validator
+       * sends many requests, and the happy-path call does not reproduce the defect — a developer
+       * pasting it would see a 200 and close the ticket.
+       */
+      request: failingRequest(result) ?? report.request,
+      // Shown only where the endpoint needs one, so a public endpoint's repro stays copy-and-run.
+      /*
+       * From the endpoint's own contract, not from a tag: a token endpoint whose curl omits the
+       * header reproduces as 401 and sends the reader chasing an authentication problem that is
+       * not the bug.
+       */
+      authenticated: report.requiresAuth ?? Boolean(report.request?.headers?.Authorization),
+    }),
     correlationId: result.correlationId,
     occurrences: 1,
     environment: report.environment,

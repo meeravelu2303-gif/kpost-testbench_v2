@@ -98,7 +98,20 @@ export function buildDescription(candidate: BugCandidate): string {
     'Actual:',
     clamp(candidate.actual, 'response'),
   );
+  if (candidate.responseBody) {
+    lines.push(
+      '',
+      `Response body (HTTP ${candidate.responseStatus ?? '?'}):`,
+      clamp(candidate.responseBody, 'response body'),
+    );
+  }
   if (candidate.repro) lines.push('', 'Repro:', clamp(candidate.repro, 'repro'));
+  /*
+   * The curl goes last of the reproduction material, matching the tickets already in this Bugzilla
+   * (see bug 98). Any token is a $KPOST_TOKEN placeholder and masked values stay masked - see
+   * src/bug-tracker/curl.ts for why that is deliberate.
+   */
+  if (candidate.curl) lines.push('', 'curl:', clamp(candidate.curl, 'curl'));
   lines.push(
     '',
     `Owner: ${candidate.ownerName} <${candidate.assignee}> — maintainer of the ${candidate.product} module`,

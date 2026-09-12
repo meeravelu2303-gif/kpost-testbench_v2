@@ -112,7 +112,8 @@ cross-resource access), password strength (NFR-SEC03 → request validators), au
 (NFR-R01), no silent data loss when a dependent service fails (NFR-R02), message latency (NFR-P01 →
 the response-time budget, which is a functional check, not load testing).
 
-**Not yet mapped:** FR-level traceability from each requirement to a specific test. Planned in §9.
+**Mapped so far:** every Signup & Login endpoint carries the FRD ids it exercises (`requirements`
+on the definition). Katchup, Kall and KMail are still unmapped.
 
 ## 5. What the bench is today
 
@@ -207,6 +208,107 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 ## 8. Decision log — what was done and why
 
 Newest first. Each entry records the decision, not just the change.
+
+### 2026-09-12 — Error shapes probed on every endpoint; the FRD's flow rules tested
+
+**Three new central validators**, so every endpoint is held to the error behaviour any HTTP API is
+expected to have — the cases hand-written suites skip because nobody writes them 70 times:
+
+| Validator                        | Probe                                  | Accepted           |
+| -------------------------------- | -------------------------------------- | ------------------ |
+| `request.method-not-allowed`     | a verb the endpoint does not implement | 405, 404, 401, 403 |
+| `request.unsupported-media-type` | the valid body sent as `text/plain`    | 415, 400, 406      |
+| `request.empty-body`             | no body at all, and `{}`               | 400, 422, 415      |
+
+A range rather than one code, because a gateway routing by path may legitimately answer 404 and a
+service authenticating before routing may answer 401. **A 2xx or a 5xx always fails** — the endpoint
+either served a request it does not implement or crashed on one.
+
+Only **GET** is ever used as the wrong verb, and a GET endpoint is skipped with that reason: the
+alternatives all mutate, and sending DELETE at a live API to see what happens is how a test suite
+deletes production data.
+
+**Throttled probes are now inconclusive, not failures.** Some endpoints rate-limit
+(`adminUserLogin`, `uniqueNameExist`), and a dozen negative probes trip them. A 429 the bench caused
+teaches nothing about the API: reporting it as a failed error-shape check would blame the API for
+our load, and passing it would claim we verified something we never saw. `runProbes` now marks those
+SKIPPED with the reason — unless 429 is the expected status, which is what the rate-limit validator
+asserts.
+
+First results: `method-not-allowed` and `unsupported-media-type` pass widely (KPost handles both
+correctly). `empty-body` found `/v2/common/languages` accepting `{}` with **200** and returning
+country 0's rows — the same root cause as its `countryID: null` finding. `userLogin` rejects `{}`
+correctly, with the best error body in the API: `fieldErrors: {deviceType, loginRO}`.
+
+#### The documents, and what they demand that the API does not have
+
+All five documents in `D:\Kpost Documents` were read in full at the start of this work (§1–§4).
+Acting on them now rather than only recording them:
+
+**Requirement traceability is wired.** Endpoint definitions carry a `requirements` field, and all 14
+Signup & Login endpoints are tagged with the FRD ids they exercise (FR-S01..S12, BR-S02, NFR-SEC01,
+NFR-SEC03). Coverage can now be reported against the 55 FRs and 9 BRs the documents define, rather
+than against a count of endpoints — which says nothing about whether the product's rules are tested.
+
+**There is no activation endpoint.** BR-S01 states that activation is mandatory and "login before
+activation must fail". Searching all 356 documented endpoints for activation finds only
+`deactivateAccount` and `sendAccountDeactivationOtp` — the reverse operation. So either activation
+happens outside the API, or the workbook is missing it, or signup activates immediately and BR-S01
+is unimplemented. `tests/api/kpost/signup-login/flow-rules.spec.ts` answers it empirically:
+registers an account, immediately tries to log in, and asserts no token is issued. It is gated
+behind `ALLOW_DESTRUCTIVE_TESTS` because it creates a real account.
+
+**Two document rules pass**, and both are worth knowing:
+
+- **BR-S02** — an existing KPost ID is not reported as available by `kpostIdExist`.
+- **Account enumeration is not possible on login** — a wrong password and an unknown account answer
+  identically (same status, same message), so login cannot be used to discover who has an account.
+  A genuine security property holding, found by testing for it rather than assuming it.
+
+### 2026-09-12 — Bug reports made reproducible, and routed to the right component
+
+Reviewed the tickets already in this Bugzilla (bugs 95–101, filed by the previous bench) and
+matched their house style, then fixed the two things that made our output weaker than theirs.
+
+**The component was wrong.** Every finding was landing on `kpost-webservice-application`, the
+catch-all, because `componentByTag` for KPost API was empty. The previous bench's tickets sit on
+precise components (`KPresentation`, `User Profile V2`, `Kdiary - Schedules…`). Mapped the bench's
+module tags to the 27 components that exist in this instance, and fixed a shadowing bug in
+`componentFor`: an endpoint carries both a module tag and a group tag (`['common',
+'common-company']`), and iterating in order let the generic one win, so every company defect went
+to the utilities component. **The most specific tag now wins** (longest matching key).
+
+    Common Reference Data & Utilities V2   22        (was: 50 on the catch-all)
+    Authentication V2                      22
+    Company Administration                  4
+    Authentication - Medium & Large Ent.    2
+
+**A ticket now reproduces itself.** Three additions, in the order the existing tickets use:
+
+- **`curl:`** — the real URL with path parameters substituted, the real body, and
+  `Authorization: Bearer $KPOST_TOKEN` where the endpoint needs a token (read from the endpoint's
+  contract, not guessed from tags). Tokens are never printed; masked values stay masked, so the
+  command needs one edit before it runs — a reproducible password in a ticket is worse than that.
+- **The failing request, not the happy path.** A probe validator sends many requests, so
+  `runProbes` now records the request on each FAILED case and the ticket shows _that_ one. A
+  developer pasting the happy-path call would see a 200 and close the bug. The `null-value` ticket
+  for `validateOTP` now carries `"countryID": null` — the exact payload that answered 200.
+- **`Response body (HTTP nnn):`** — quoted from the primary response, with its `traceId`. "Actual:
+  409" alone made the reader re-run the call to find out what the API said.
+
+**Dry runs are now reviewable.** `reports/bugs/filing.json` carries the full ticket text for every
+candidate on a dry run (omitted on a live run - Bugzilla has it). A dry run whose artifact holds
+only summaries cannot be reviewed, which is the entire point of having one.
+
+**A false-bug source removed.** `dictionary.api.ts` - a bench fixture, not a KPost route - was
+missing `mockFixture: true`, so it was called on the live host, 404'd, and proposed six tickets
+against `KPost API` for an endpoint KPost does not have. A false bug on a developer's queue costs
+more than a missing one: it teaches them to distrust the whole report.
+
+**Where filing stands:** 50 candidates, 20 rejected by the validity gate, `BUGZILLA_DRY_RUN=true`
+and `BUGZILLA_MAX_FILE=0` - nothing has been filed. The 50 collapse to **29 distinct
+endpoint+fault pairs** in 8 classes; filing all 50 would put near-duplicates on one queue, so the
+recommendation is to file by class, highest severity first, after the owner confirms which are known.
 
 ### 2026-09-12 — downloadCompanyLogo requires a token; a fixed sessionID was invalidating ours
 

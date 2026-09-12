@@ -55,6 +55,15 @@ export const apiConfig = {
   invalidRequestStatus: [400, 422] as readonly number[],
   invalidPathParamStatus: [400, 404] as readonly number[],
   malformedJsonStatus: [400] as readonly number[],
+  /*
+   * The defensible answers to each non-payload fault. A range, not a single code: a gateway that
+   * routes by path may answer 404 to an unknown verb, and a service that authenticates before
+   * routing may answer 401. What is NOT defensible is a 2xx (the endpoint served a request it does
+   * not implement) or a 5xx (it crashed on one) - both fail.
+   */
+  wrongMethodStatus: [405, 404, 401, 403] as readonly number[],
+  unsupportedMediaTypeStatus: [415, 400, 406] as readonly number[],
+  emptyBodyStatus: [400, 422, 415] as readonly number[],
   rateLimitStatus: 429,
 
   requiredResponseHeaders: ['x-correlation-id'] as readonly string[],

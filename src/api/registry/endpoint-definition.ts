@@ -41,6 +41,13 @@ export interface EndpointDefinition {
   suite?: SuiteId;
   summary?: string;
   tags?: readonly string[];
+  /**
+   * Requirement ids from the Full Suite FRD v2.0 that this endpoint exercises (FR-S01, BR-K02,
+   * NFR-SEC01, ...). Recorded so coverage can be reported against the 55 FRs and 9 BRs the
+   * documents define, rather than against a count of endpoints - which says nothing about whether
+   * the product's rules are tested.
+   */
+  requirements?: readonly string[];
 
   /** Defaults to apiConfig.defaultExpectedStatus[method]. */
   expectedStatus?: readonly number[];

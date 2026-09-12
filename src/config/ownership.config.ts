@@ -47,6 +47,40 @@ export interface SuiteOwnership {
 }
 
 /**
+ * KPost API: the module tags the bench puts on its endpoints, mapped to the Bugzilla components
+ * that already exist in this instance (27 of them, read live on 2026-09-12).
+ *
+ * Without this map every finding landed on `kpost-webservice-application`, the catch-all — and the
+ * tickets the previous bench filed (bugs 95-101) are on precise components like
+ * `KPresentation` and `User Profile V2`. A whole module's defects arriving on one generic
+ * component is how a queue becomes unreadable, and it loses the per-component default assignee that
+ * Bugzilla would otherwise apply.
+ *
+ * Keys are lower-cased; `componentFor` looks up both the tag and its lower-case form.
+ */
+const KPOST_COMPONENT_BY_TAG: Record<string, string> = {
+  // Signup & Login (FR-S01..S12)
+  'signup-login': 'Authentication V2',
+  login: 'Authentication V2',
+  signup: 'Authentication V2',
+  session: 'Authentication V2',
+  'token-refresh': 'Authentication V2',
+  'account-security': 'Authentication V2',
+  // The medium/large enterprise login is its own component in this Bugzilla.
+  'business-tier': 'Authentication - Medium & Large Enterprise',
+  // OTP and password recovery are authentication concerns, not generic utilities.
+  'common-otp': 'Authentication V2',
+  // Reference data, existence checks and platform utilities.
+  'common-reference': 'Common Reference Data & Utilities V2',
+  'common-identity': 'Common Reference Data & Utilities V2',
+  'common-platform': 'Common Reference Data & Utilities V2',
+  common: 'Common Reference Data & Utilities V2',
+  // Company records, the logo and business registration.
+  'common-company': 'Company Administration',
+  company: 'Company Administration',
+};
+
+/**
  * KMail's Swagger tags and its Bugzilla components were named separately, so they need an
  * explicit map. KPost API and Admin components were created FROM their Swagger tags, so their
  * names already match and only the exceptions are listed.
@@ -90,7 +124,7 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       product: 'KPost API',
       version: 'unspecified',
       fallbackComponent: 'kpost-webservice-application',
-      componentByTag: {},
+      componentByTag: KPOST_COMPONENT_BY_TAG,
     },
     baseUrl: env.KPOST_API_BASE_URL ?? env.API_BASE_URL,
     specFile: path.join(OPENAPI_DIR, 'kpost-api.openapi.json'),
@@ -158,11 +192,23 @@ export function apiSuites(): SuiteOwnership[] {
  * Tags usually ARE the component name; the map covers the modules where they differ.
  */
 export function componentFor(suite: SuiteOwnership, tags: readonly string[]): string {
-  for (const tag of tags) {
-    const mapped =
-      suite.bugzilla.componentByTag[tag] ?? suite.bugzilla.componentByTag[tag.toLowerCase()];
-    if (mapped) return mapped;
-  }
+  /*
+   * The MOST SPECIFIC tag wins, not the first one listed.
+   *
+   * An endpoint carries both a module tag and a group tag - `['common', 'common-company']` - and
+   * iterating in order let the generic one win, so every company defect landed on the generic
+   * utilities component. Longest matching key = most specific: `common-company` beats `common`,
+   * and `business-tier` beats `login` for the enterprise sign-in endpoint.
+   */
+  const matches = tags
+    .map((tag) => ({
+      tag,
+      component:
+        suite.bugzilla.componentByTag[tag] ?? suite.bugzilla.componentByTag[tag.toLowerCase()],
+    }))
+    .filter((entry): entry is { tag: string; component: string } => Boolean(entry.component))
+    .sort((a, b) => b.tag.length - a.tag.length);
+  if (matches[0]) return matches[0].component;
   // A tag that is already a component name (KPost API and Admin were built that way).
   const known = KNOWN_COMPONENTS[suite.id];
   const direct = tags.find((tag) => known?.has(tag));

@@ -9,7 +9,7 @@ import { thresholds } from '@config/thresholds.config';
 import type { DatabaseClient } from '@database/database-client';
 import type { DatabaseValidationRegistry } from '@database/database-validation';
 import type { Logger } from '@utils/logger';
-import { maskSensitive } from '@utils/masking';
+import { maskSensitive, maskString } from '@utils/masking';
 import { EndpointExecutor } from './endpoint-executor';
 import {
   EngineValidationContext,
@@ -122,6 +122,13 @@ export class ValidationEngine {
       endpointId: resolved.id,
       endpoint: resolved.label,
       method: resolved.method,
+      request: maskSensitive(request),
+      requiresAuth: resolved.authentication.required,
+      primary: {
+        status: primary.status,
+        // 2 KB is plenty to recognise an error and small enough not to bloat a ticket.
+        body: maskString(primary.bodyText.slice(0, 2_048)),
+      },
       tags: resolved.tags,
       suite: resolved.suite.id,
       profile,

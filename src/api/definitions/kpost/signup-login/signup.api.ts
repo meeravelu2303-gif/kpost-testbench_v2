@@ -31,6 +31,7 @@ const newMobile = (): string =>
 
 export const signupApi = defineKpostEndpoint({
   id: 'signup-login-signup',
+  requirements: ['FR-S01', 'FR-S02', 'FR-S03', 'FR-S04', 'FR-S05', 'NFR-SEC03'],
   method: 'POST',
   path: '/v2/signupLogin/signup/',
   summary: 'Register a personal account',
@@ -68,6 +69,7 @@ export const signupApi = defineKpostEndpoint({
 
 export const signupGetApi = defineKpostEndpoint({
   id: 'signup-login-signup-get',
+  requirements: ['FR-S01'],
   method: 'GET',
   path: '/v2/signupLogin/signup/',
   summary: 'GET variant of the signup route documented in Sheet3',
@@ -83,6 +85,7 @@ export const signupGetApi = defineKpostEndpoint({
 
 export const adminRegistrationApi = defineKpostEndpoint({
   id: 'signup-login-admin-registration',
+  requirements: ['FR-S01', 'FR-S05'],
   method: 'POST',
   path: '/v2/signupLogin/adminRegistration/',
   summary: 'Register a business account and its company',
@@ -129,6 +132,7 @@ export const adminRegistrationApi = defineKpostEndpoint({
 
 export const kpostIdExistApi = defineKpostEndpoint({
   id: 'signup-login-kpost-id-exist',
+  requirements: ['FR-S03', 'BR-S02'],
   method: 'POST',
   path: '/v2/signupLogin/kpostIdExist/',
   summary: 'Check whether a KPost ID is already taken',
@@ -149,6 +153,7 @@ export const kpostIdExistApi = defineKpostEndpoint({
 
 export const kpostIdSuggestionApi = defineKpostEndpoint({
   id: 'signup-login-kpost-id-suggestions',
+  requirements: ['FR-S03'],
   method: 'POST',
   path: '/v2/signupLogin/kpostIDsuggestionList/',
   summary: 'Suggest available KPost IDs for a name',
@@ -163,6 +168,7 @@ export const kpostIdSuggestionApi = defineKpostEndpoint({
 
 export const fetchUserDetailsApi = defineKpostEndpoint({
   id: 'signup-login-fetch-user-details',
+  requirements: ['FR-S09'],
   method: 'POST',
   path: '/v2/signupLogin/fetchUserDetails/',
   summary: "Fetch an account's details during signup or login",

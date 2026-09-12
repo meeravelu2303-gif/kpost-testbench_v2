@@ -1,4 +1,5 @@
 import type { ApiClientPool } from '@api/client/api-client-pool';
+import type { HttpMethod } from '@api/client/request-builder';
 import { RequestBuilder, type RequestSpec } from '@api/client/request-builder';
 import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import { TokenProvider } from '@api/client/token-provider';
@@ -28,6 +29,13 @@ export interface SendOptions {
   /** Default: the endpoint's primary role (or no header for public endpoints). */
   auth?: AuthMode;
   timeoutMs?: number;
+  /**
+   * Override the HTTP method. Used only by the method-not-allowed probe, which deliberately calls
+   * an endpoint with a verb it does not implement.
+   */
+  method?: HttpMethod;
+  /** Override the Content-Type, for the unsupported-media-type probe. */
+  contentType?: string;
 }
 
 const MAX_ERROR_BODY_CHARS = 300;
@@ -70,8 +78,12 @@ export class EndpointExecutor {
     const blocked = destructiveBlockReason(endpoint);
     if (blocked) throw new ProductionSafetyError(blocked);
 
-    const request = RequestBuilder.for(endpoint.method, endpoint.path)
-      .withSpec(spec)
+    const request = RequestBuilder.for(options.method ?? endpoint.method, endpoint.path)
+      .withSpec(
+        options.contentType
+          ? { ...spec, headers: { ...spec.headers, 'content-type': options.contentType } }
+          : spec,
+      )
       .timeoutMs(options.timeoutMs ?? endpoint.performance.timeoutMs)
       .authorization(await this.authorizationFor(endpoint, options.auth))
       .build();

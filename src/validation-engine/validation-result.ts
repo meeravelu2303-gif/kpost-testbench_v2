@@ -1,4 +1,4 @@
-import type { HttpMethod } from '@api/client/request-builder';
+import type { HttpMethod, RequestSpec } from '@api/client/request-builder';
 import type { ValidationProfile } from '@config/constants';
 import type { SuiteId } from '@config/ownership.config';
 
@@ -34,6 +34,14 @@ export interface CheckDetail {
   actual?: unknown;
   message?: string;
   correlationId?: string;
+  /**
+   * The request this individual case sent, recorded on FAILURES only.
+   *
+   * A probe-based validator sends many requests; without this, a filed bug could only show the
+   * endpoint's happy-path call, leaving the developer to reconstruct the payload that actually
+   * broke it. Kept off passing cases so a green report stays small.
+   */
+  request?: RequestSpec;
 }
 
 /** What a validator's check returns. The engine turns it into a full ValidationResult. */
@@ -80,6 +88,20 @@ export interface ValidationReport {
   endpointId: string;
   endpoint: string;
   method: HttpMethod;
+  /**
+   * The exact request the primary exchange sent, masked. Carried so a filed bug can show a
+   * copy-pasteable `curl` — a developer should never have to reconstruct the call from prose.
+   */
+  request?: RequestSpec;
+  /** Whether the endpoint needs a token, so a filed bug's curl shows the header. */
+  requiresAuth?: boolean;
+  /**
+   * Status and body of the primary response, truncated and masked.
+   *
+   * A ticket saying "Actual: 409" makes the reader go and re-run the call to find out what the API
+   * actually said. The existing tickets in this Bugzilla quote the body, and they are right to.
+   */
+  primary?: { status: number; body?: string };
   /** Endpoint tags — used to route a filed bug to its Bugzilla component. */
   tags: readonly string[];
   /** Owning module — decides the Bugzilla product and which developer gets the ticket. */

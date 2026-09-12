@@ -35,6 +35,8 @@ export interface KpostEndpointConfig {
   summary: string;
   /** Bugzilla component candidates and test filters; `kpost-api` is added automatically. */
   tags?: readonly string[];
+  /** FRD requirement ids this endpoint exercises, e.g. ['FR-S09', 'BR-S01']. */
+  requirements?: readonly string[];
   request?: RequestFactory;
   /** Public endpoints need no token. Default for this module: no authentication required. */
   authentication?: EndpointDefinition['authentication'];
@@ -74,6 +76,7 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     responseContract: 'kpost',
     summary: config.summary,
     tags: ['kpost-api', ...(config.tags ?? [])],
+    requirements: config.requirements,
     // The common module is public: these endpoints are called before anyone has a token.
     authentication: config.authentication ?? { required: false },
     expectedStatus: config.expectedStatus,
