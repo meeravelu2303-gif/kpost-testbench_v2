@@ -1,0 +1,52 @@
+{
+  "name": "kpost-testbench-v2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KPost test bench automation framework built on Playwright + TypeScript",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:chromium": "playwright test --project=chromium",
+    "test:api": "playwright test --project=api",
+    "test:api:smoke": "cross-env VALIDATION_PROFILE=SMOKE playwright test --project=api",
+    "test:api:regression": "cross-env VALIDATION_PROFILE=REGRESSION playwright test --project=api --project=integration",
+    "test:api:security": "cross-env VALIDATION_PROFILE=SECURITY playwright test --project=api",
+    "test:api:full": "cross-env VALIDATION_PROFILE=FULL playwright test --project=api --project=integration",
+    "test:framework": "playwright test --project=framework",
+    "test:integration": "playwright test --project=integration",
+    "mock:api": "node mock-server/server.ts",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:dev": "cross-env TEST_ENV=dev playwright test",
+    "test:staging": "cross-env TEST_ENV=staging playwright test",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen",
+    "install:browsers": "playwright install --with-deps",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run lint && npm run format:check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.13.4",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.4.2",
+    "eslint": "^10.10.0",
+    "eslint-plugin-playwright": "^2.11.0",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "zod": "^4.6.2"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "kpost-mock-api",
+  "private": true,
+  "type": "module",
+  "description": "Local in-memory stand-in for the KPost API (test bench only)"
+}

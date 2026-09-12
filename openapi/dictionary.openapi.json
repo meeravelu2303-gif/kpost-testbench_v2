@@ -1,0 +1,71 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "KPost Dictionary API",
+    "version": "1.0.0"
+  },
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/dictionary/terms": {
+      "get": {
+        "operationId": "list-dictionary-terms",
+        "summary": "List dictionary terms",
+        "tags": ["dictionary"],
+        "x-roles": ["SUPER_ADMIN", "ADMIN", "COMPANY_ADMIN", "USER"],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/Language" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of dictionary terms",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data", "metadata"],
+                  "properties": {
+                    "success": { "const": true },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Term" } },
+                    "metadata": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid credentials" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "Language": { "type": "string", "enum": ["en", "de", "fr"] },
+      "Term": {
+        "type": "object",
+        "required": ["id", "term", "language", "definition", "isPublished", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "term": { "type": "string", "minLength": 1 },
+          "language": { "$ref": "#/components/schemas/Language" },
+          "definition": { "type": "string" },
+          "sourceUrl": { "type": ["string", "null"], "format": "uri" },
+          "isPublished": { "type": "boolean" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}
