@@ -1,7 +1,7 @@
 {
-  "source": "KPOST API (5).xlsx",
+  "source": "KPOST API (6).xlsx",
   "sheet": "Types(Katchup,Kall&KDiary)",
-  "generatedAt": "2026-09-12T03:47:32.552Z",
+  "generatedAt": "2026-09-12T06:41:53.484Z",
   "sections": {
     "katchupStatus": {
       "0": "Sent",
@@ -139,7 +139,10 @@
       "14": "KmedPrep",
       "15": "library Mgmt",
       "16": "HRMS",
-      "17": "Kmed Library"
+      "17": "Kmed Library",
+      "18": "Kams",
+      "19": "DDMS",
+      "20": "local_news_paper"
     }
   }
 }

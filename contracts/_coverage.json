@@ -1,7 +1,7 @@
 {
-  "source": "KPOST API (5).xlsx",
-  "generatedAt": "2026-09-12T03:47:50.215Z",
-  "contractPaths": 356,
+  "source": "KPOST API (6).xlsx",
+  "generatedAt": "2026-09-12T06:44:11.930Z",
+  "contractPaths": 355,
   "workbookMentions": 673,
   "summary": {
     "KatchupAPI": {
@@ -178,6 +178,22 @@
       "column": "N",
       "path": "/document/d/1ytnm_z9_vla7ghfdb2dlf1qmdi2lkj4e7idfn2sqkuc/edit",
       "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 88,
+      "column": "A",
+      "path": "/v2/kall/endkall",
+      "note": "superseded in-row (\"url changed to\"), current URL from KatchupAPI:R88"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 88,
+      "column": "K",
+      "path": "/v2/kall/endkall",
+      "note": "superseded in-row (\"url changed to\"), current URL from KatchupAPI:R88"
     },
     {
       "product": "kpost-api",

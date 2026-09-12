@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "KMail API",
-    "version": "KPOST API (5).xlsx",
-    "description": "KMail module API, maintained in its own repository.\n\nGENERATED from \"KPOST API (5).xlsx\" by scripts/excel-to-contract.cjs — do not edit by hand.\nOnly rows with a real path and a known HTTP method are included; superseded (yellow), duplicate and legacy rows are excluded and listed in contracts/_conversion-report.json.\nSchemas are inferred from the documented examples, so no property is marked required, and the workbook documents no status codes or auth requirements."
+    "version": "KPOST API (6).xlsx",
+    "description": "KMail module API, maintained in its own repository.\n\nGENERATED from \"KPOST API (6).xlsx\" by scripts/excel-to-contract.cjs — do not edit by hand.\nOnly rows with a real path and a known HTTP method are included; superseded (yellow), duplicate and legacy rows are excluded and listed in contracts/_conversion-report.json.\nSchemas are inferred from the documented examples, so no property is marked required, and the workbook documents no status codes or auth requirements."
   },
   "servers": [
     {
@@ -28,6 +28,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R32",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -87,6 +88,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R54",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -102,6 +104,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R43",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -117,6 +120,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R19",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -132,6 +136,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R13",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -184,14 +189,90 @@
         }
       }
     },
-    "/common/frequentKmailContact/": {
+    "/common/deleteOtherDomainContact/": {
       "post": {
-        "operationId": "post-common-frequentKmailContact",
-        "summary": "POST /common/frequentKmailContact/",
+        "operationId": "post-common-deleteOtherDomainContact",
+        "summary": "POST /common/deleteOtherDomainContact/",
+        "tags": [
+          "Kmail"
+        ],
+        "x-excel-source": "KMAILAPI:R39",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "contactEmailID": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "contactEmailID": "baskar.nov@gmail.com"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/common/editOtherDomainContactsDetails/": {
+      "post": {
+        "operationId": "post-common-editOtherDomainContactsDetails",
+        "summary": "POST /common/editOtherDomainContactsDetails/",
+        "tags": [
+          "Kmail"
+        ],
+        "x-excel-source": "KMAILAPI:R40",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "contactEmailID": {
+                    "type": "string"
+                  },
+                  "contactName": {
+                    "type": "string"
+                  },
+                  "referenceName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "contactEmailID": "baskar.nov@gmail.com",
+                "contactName": "Baskar thambi",
+                "referenceName": "gmail account"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/common/frequentKmailContact/": {
+      "get": {
+        "operationId": "get-common-frequentKmailContact",
+        "summary": "GET /common/frequentKmailContact/",
         "tags": [
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R16",
+        "x-method-source": "request-note",
+        "x-method-note": "the request cell states GET and documents no payload, so it overrides the Method column (POST)",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -271,6 +352,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R15",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -303,6 +385,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R76",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -339,6 +422,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R75",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -369,6 +453,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R36",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -427,6 +512,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R4",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -980,6 +1066,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R3",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -1044,6 +1131,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R53",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -1068,6 +1156,39 @@
         }
       }
     },
+    "/common/knownPostBoxContacts/": {
+      "post": {
+        "operationId": "post-common-knownPostBoxContacts",
+        "summary": "POST /common/knownPostBoxContacts/",
+        "tags": [
+          "Kmail"
+        ],
+        "x-excel-source": "KMAILAPI:R41",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lastFetchTime": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "lastFetchTime": "1695280938000"
+              }
+            }
+          }
+        }
+      }
+    },
     "/common/mailSubjectSelectedContact/": {
       "post": {
         "operationId": "post-common-mailSubjectSelectedContact",
@@ -1076,6 +1197,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R6",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -1135,13 +1257,15 @@
       }
     },
     "/common/miscellaneousContacts/": {
-      "post": {
-        "operationId": "post-common-miscellaneousContacts",
-        "summary": "POST /common/miscellaneousContacts/",
+      "get": {
+        "operationId": "get-common-miscellaneousContacts",
+        "summary": "GET /common/miscellaneousContacts/",
         "tags": [
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R18",
+        "x-method-source": "request-note",
+        "x-method-note": "the request cell states GET and documents no payload, so it overrides the Method column (POST)",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -1199,549 +1323,26 @@
         "tags": [
           "Kmail"
         ],
-        "x-excel-source": "KMAILAPI:R5",
+        "x-excel-source": "KMAILAPI:R37",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
-            "description": "Documented sample response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "contactsMap": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "integer"
-                          },
-                          "kpostID": {
-                            "type": "string"
-                          },
-                          "contactID": {
-                            "type": "string"
-                          },
-                          "firstName": {
-                            "type": "string"
-                          },
-                          "lastName": {
-                            "type": "string"
-                          },
-                          "referenceName": {
-                            "type": "string"
-                          },
-                          "mobileNumber": {},
-                          "email": {},
-                          "contactType": {},
-                          "createdBy": {},
-                          "createdDate": {
-                            "type": "integer"
-                          },
-                          "modifiedBy": {},
-                          "modifiedDate": {},
-                          "alternateMobileno": {},
-                          "landLineNumber": {},
-                          "designation": {},
-                          "privacyStatus": {
-                            "type": "integer"
-                          },
-                          "profileStatus": {},
-                          "city": {},
-                          "blocked": {
-                            "type": "boolean"
-                          }
-                        }
-                      }
-                    },
-                    "senderDetailedList": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "kpostID": {
-                            "type": "string"
-                          },
-                          "firstName": {
-                            "type": "string"
-                          },
-                          "lastName": {
-                            "type": "string"
-                          },
-                          "userType": {
-                            "type": "string"
-                          },
-                          "countryID": {
-                            "type": "integer"
-                          },
-                          "countryCode": {
-                            "type": "string"
-                          },
-                          "mobileNumber": {
-                            "type": "string"
-                          },
-                          "gender": {
-                            "type": "string"
-                          },
-                          "dateOfBirth": {
-                            "type": "string"
-                          },
-                          "password": {
-                            "type": "string"
-                          },
-                          "createdBy": {
-                            "type": "string"
-                          },
-                          "createdDate": {
-                            "type": "integer"
-                          },
-                          "modifiedBy": {},
-                          "modifiedDate": {},
-                          "accessCode": {},
-                          "activeStatus": {
-                            "type": "string"
-                          },
-                          "domainID": {},
-                          "email": {
-                            "type": "string"
-                          },
-                          "web": {},
-                          "qrCode": {},
-                          "backGroundTheme": {},
-                          "companyId": {},
-                          "isBackUpAdmin": {
-                            "type": "integer"
-                          },
-                          "transferDetails": {},
-                          "userProfile": {
-                            "type": "object",
-                            "properties": {
-                              "kpostID": {
-                                "type": "string"
-                              },
-                              "profileStatus": {},
-                              "country": {
-                                "type": "string"
-                              },
-                              "state": {
-                                "type": "string"
-                              },
-                              "city": {},
-                              "companyName": {},
-                              "presentAddress": {},
-                              "permanentAddress": {},
-                              "designationID": {
-                                "type": "integer"
-                              },
-                              "pinCode": {},
-                              "aboutYourself": {},
-                              "language": {},
-                              "alternateMobileno": {},
-                              "provienceName": {},
-                              "areaName": {},
-                              "postalDetails": {},
-                              "preferredLanguage": {
-                                "type": "string"
-                              },
-                              "privacyStatus": {
-                                "type": "integer"
-                              },
-                              "college": {},
-                              "degree": {},
-                              "department": {},
-                              "educationFrom": {},
-                              "educationTo": {},
-                              "previousCompany": {},
-                              "previousDesignation": {},
-                              "companyLocation": {},
-                              "experienceFrom": {},
-                              "experienceTo": {},
-                              "webSite": {},
-                              "aadhaarNumber": {},
-                              "privacySettings": {
-                                "type": "integer"
-                              },
-                              "referalId": {},
-                              "landLineNumber": {},
-                              "location": {},
-                              "role": {},
-                              "designation": {},
-                              "officeType": {},
-                              "basicSignature": {},
-                              "signatureImage": {},
-                              "postboxLastSyncDate": {},
-                              "notificationForMail": {
-                                "type": "string"
-                              },
-                              "settingInfo": {},
-                              "mailCount": {
-                                "type": "string"
-                              },
-                              "createdBy": {
-                                "type": "string"
-                              },
-                              "createdDate": {
-                                "type": "integer"
-                              },
-                              "modifiedBy": {},
-                              "modifiedDate": {}
-                            }
-                          },
-                          "groupFlag": {
-                            "type": "boolean"
-                          }
-                        }
-                      }
-                    },
-                    "errorValue": {
-                      "type": "string"
-                    },
-                    "senderidsList": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "errorCode": {
-                      "type": "string"
-                    },
-                    "groupList": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "groupID": {
-                            "type": "integer"
-                          },
-                          "groupKpostID": {
-                            "type": "string"
-                          },
-                          "groupKpostName": {
-                            "type": "string"
-                          },
-                          "groupAdmin": {
-                            "type": "string"
-                          },
-                          "isPrivateGroup": {
-                            "type": "string"
-                          },
-                          "activeStatus": {
-                            "type": "string"
-                          },
-                          "domainID": {
-                            "type": "integer"
-                          },
-                          "email": {
-                            "type": "string"
-                          },
-                          "passCode": {
-                            "type": "string"
-                          },
-                          "createdDate": {
-                            "type": "integer"
-                          },
-                          "createdBy": {
-                            "type": "string"
-                          },
-                          "modifiedBy": {},
-                          "modifiedDate": {},
-                          "memberDetails": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "integer"
-                                },
-                                "kpostID": {
-                                  "type": "string"
-                                },
-                                "hasAdminAccess": {
-                                  "type": "string"
-                                },
-                                "privacyStatus": {
-                                  "type": "string"
-                                },
-                                "remarks": {
-                                  "type": "string"
-                                },
-                                "createdBy": {
-                                  "type": "string"
-                                },
-                                "createdDate": {
-                                  "type": "integer"
-                                },
-                                "modifiedBy": {},
-                                "modifiedDate": {
-                                  "type": "integer"
-                                }
-                              }
-                            }
-                          },
-                          "groupCreateAccess": {
-                            "type": "boolean"
-                          }
-                        }
-                      }
-                    },
-                    "otherDomainContactsList": {
-                      "type": "array",
-                      "items": {}
-                    },
-                    "urlPath": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    }
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lastFetchTime": {
+                    "type": "integer"
                   }
-                },
-                "example": {
-                  "contactsMap": [
-                    {
-                      "id": 33281,
-                      "kpostID": "baskar1992@kpostindia.com",
-                      "contactID": "jitendra@kpostindia.com",
-                      "firstName": "jitendra",
-                      "lastName": "kumar",
-                      "referenceName": "java",
-                      "mobileNumber": null,
-                      "email": null,
-                      "contactType": null,
-                      "createdBy": null,
-                      "createdDate": 1672685710000,
-                      "modifiedBy": null,
-                      "modifiedDate": null,
-                      "alternateMobileno": null,
-                      "landLineNumber": null,
-                      "designation": null,
-                      "privacyStatus": 0,
-                      "profileStatus": null,
-                      "city": null,
-                      "blocked": false
-                    }
-                  ],
-                  "senderDetailedList": [
-                    {
-                      "kpostID": "baskar1992@kpostindia.com",
-                      "firstName": "Baskar",
-                      "lastName": "T",
-                      "userType": "PERSONAL",
-                      "countryID": 1,
-                      "countryCode": "91",
-                      "mobileNumber": "9626306856",
-                      "gender": "male",
-                      "dateOfBirth": "1984-09-19",
-                      "password": "aTrwaD4pcK0=",
-                      "createdBy": "user",
-                      "createdDate": 1671647294000,
-                      "modifiedBy": null,
-                      "modifiedDate": null,
-                      "accessCode": null,
-                      "activeStatus": "yes",
-                      "domainID": null,
-                      "email": "baskar1992@kpostindia.com",
-                      "web": null,
-                      "qrCode": null,
-                      "backGroundTheme": null,
-                      "companyId": null,
-                      "isBackUpAdmin": 0,
-                      "transferDetails": null,
-                      "userProfile": {
-                        "kpostID": "baskar1992@kpostindia.com",
-                        "profileStatus": null,
-                        "country": "India",
-                        "state": "UNSPECIFIED",
-                        "city": null,
-                        "companyName": null,
-                        "presentAddress": null,
-                        "permanentAddress": null,
-                        "designationID": 0,
-                        "pinCode": null,
-                        "aboutYourself": null,
-                        "language": null,
-                        "alternateMobileno": null,
-                        "provienceName": null,
-                        "areaName": null,
-                        "postalDetails": null,
-                        "preferredLanguage": "ENGLISH",
-                        "privacyStatus": 0,
-                        "college": null,
-                        "degree": null,
-                        "department": null,
-                        "educationFrom": null,
-                        "educationTo": null,
-                        "previousCompany": null,
-                        "previousDesignation": null,
-                        "companyLocation": null,
-                        "experienceFrom": null,
-                        "experienceTo": null,
-                        "webSite": null,
-                        "aadhaarNumber": null,
-                        "privacySettings": 0,
-                        "referalId": null,
-                        "landLineNumber": null,
-                        "location": null,
-                        "role": null,
-                        "designation": null,
-                        "officeType": null,
-                        "basicSignature": null,
-                        "signatureImage": null,
-                        "postboxLastSyncDate": null,
-                        "notificationForMail": "Y",
-                        "settingInfo": null,
-                        "mailCount": "0",
-                        "createdBy": "USER",
-                        "createdDate": 1671628773000,
-                        "modifiedBy": null,
-                        "modifiedDate": null
-                      },
-                      "groupFlag": false
-                    },
-                    {
-                      "kpostID": "jitendra@kpostindia.com",
-                      "firstName": "Jitendra",
-                      "lastName": "Kumar",
-                      "userType": "PERSONAL",
-                      "countryID": 1,
-                      "countryCode": "91",
-                      "mobileNumber": "8608548189",
-                      "gender": "male",
-                      "dateOfBirth": "1989-10-18",
-                      "password": "Qgw8DjK3sjfHzuQaVm5Fug==",
-                      "createdBy": "user",
-                      "createdDate": 1671645480000,
-                      "modifiedBy": null,
-                      "modifiedDate": null,
-                      "accessCode": null,
-                      "activeStatus": "yes",
-                      "domainID": "5",
-                      "email": "jitendra@kpostindia.com",
-                      "web": null,
-                      "qrCode": null,
-                      "backGroundTheme": null,
-                      "companyId": null,
-                      "isBackUpAdmin": 0,
-                      "transferDetails": null,
-                      "userProfile": {
-                        "kpostID": "jitendra@kpostindia.com",
-                        "profileStatus": null,
-                        "country": "India",
-                        "state": "UNSPECIFIED",
-                        "city": null,
-                        "companyName": null,
-                        "presentAddress": null,
-                        "permanentAddress": null,
-                        "designationID": 0,
-                        "pinCode": null,
-                        "aboutYourself": null,
-                        "language": null,
-                        "alternateMobileno": null,
-                        "provienceName": null,
-                        "areaName": null,
-                        "postalDetails": null,
-                        "preferredLanguage": "ENGLISH",
-                        "privacyStatus": 0,
-                        "college": null,
-                        "degree": null,
-                        "department": null,
-                        "educationFrom": null,
-                        "educationTo": null,
-                        "previousCompany": null,
-                        "previousDesignation": null,
-                        "companyLocation": null,
-                        "experienceFrom": null,
-                        "experienceTo": null,
-                        "webSite": null,
-                        "aadhaarNumber": null,
-                        "privacySettings": 0,
-                        "referalId": null,
-                        "landLineNumber": null,
-                        "location": null,
-                        "role": null,
-                        "designation": null,
-                        "officeType": null,
-                        "basicSignature": null,
-                        "signatureImage": null,
-                        "postboxLastSyncDate": null,
-                        "notificationForMail": "Y",
-                        "settingInfo": null,
-                        "mailCount": "0",
-                        "createdBy": "USER",
-                        "createdDate": 1671644320000,
-                        "modifiedBy": null,
-                        "modifiedDate": null
-                      },
-                      "groupFlag": false
-                    }
-                  ],
-                  "errorValue": "Not Applicable",
-                  "senderidsList": [
-                    "jitendra@kpostindia.com",
-                    "jksrivatsa@yahoo.com",
-                    "ysprasad@pioneergroups.co.in",
-                    "cloudsupport@amvionlabs.in",
-                    "kpostesting@gmail.com",
-                    "vijayakumargovindaraja@outlook.com",
-                    "cs778@onepl.kpost.in",
-                    "baskar.nov@gmail.com",
-                    "baskar1992@kpostindia.com",
-                    "jksrivatsa@gmail.com",
-                    "kpostredhat2022@gmail.com",
-                    "jitendra18101989@gmail.com",
-                    "premredhat1984@gmail.com",
-                    "ram@amvionlabs.in",
-                    "vp22081998@gmail.com",
-                    "senthilnathan@pioneergroups.co.in",
-                    "socanalyst4@amvionlabs.com"
-                  ],
-                  "errorCode": "Not Applicable",
-                  "groupList": [
-                    {
-                      "groupID": 987,
-                      "groupKpostID": "mgta573",
-                      "groupKpostName": "My Group Test API",
-                      "groupAdmin": "baskar1992@kpostindia.com",
-                      "isPrivateGroup": "Y",
-                      "activeStatus": "Y",
-                      "domainID": 5,
-                      "email": "mgta573@kpostindia.com",
-                      "passCode": "IpL0VvWun4k=",
-                      "createdDate": 1672735975000,
-                      "createdBy": "jitendra",
-                      "modifiedBy": null,
-                      "modifiedDate": null,
-                      "memberDetails": [
-                        {
-                          "id": 11047,
-                          "kpostID": "baskar1992@kpostindia.com",
-                          "hasAdminAccess": "Y",
-                          "privacyStatus": "Y",
-                          "remarks": "creaded by baskar",
-                          "createdBy": "jitendra",
-                          "createdDate": 1672735974000,
-                          "modifiedBy": null,
-                          "modifiedDate": 1672735977000
-                        },
-                        {
-                          "id": 11048,
-                          "kpostID": "jitendra@kpostindia.com",
-                          "hasAdminAccess": "Y",
-                          "privacyStatus": "Y",
-                          "remarks": "creaded by jitendra",
-                          "createdBy": "jitendra",
-                          "createdDate": 1672735974000,
-                          "modifiedBy": null,
-                          "modifiedDate": 1672735977000
-                        }
-                      ],
-                      "groupCreateAccess": true
-                    }
-                  ],
-                  "otherDomainContactsList": [],
-                  "urlPath": "postBoxContacts",
-                  "status": "SUCCESS"
                 }
+              },
+              "example": {
+                "lastFetchTime": 1682280626000
               }
             }
           }
@@ -1756,6 +1357,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R9",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -2221,6 +1823,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R12",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -2276,6 +1879,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R11",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -2331,6 +1935,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R10",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -2599,6 +2204,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R20",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -2614,6 +2220,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R8",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -3075,6 +2682,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R14",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -3126,6 +2734,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R42",
+        "x-method-source": "request-note",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3141,6 +2750,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R35",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -3221,13 +2831,15 @@
       }
     },
     "/common/unOpenedMailCountBySenderID/": {
-      "post": {
-        "operationId": "post-common-unOpenedMailCountBySenderID",
-        "summary": "POST /common/unOpenedMailCountBySenderID/",
+      "get": {
+        "operationId": "get-common-unOpenedMailCountBySenderID",
+        "summary": "GET /common/unOpenedMailCountBySenderID/",
         "tags": [
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R17",
+        "x-method-source": "request-note",
+        "x-method-note": "the request cell states GET and documents no payload, so it overrides the Method column (POST)",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -3342,6 +2954,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R28",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -3444,6 +3057,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R24",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -3503,6 +3117,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R44",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3511,13 +3126,15 @@
       }
     },
     "/draft/getAllDraftMails/": {
-      "post": {
-        "operationId": "post-draft-getAllDraftMails",
-        "summary": "POST /draft/getAllDraftMails/",
+      "get": {
+        "operationId": "get-draft-getAllDraftMails",
+        "summary": "GET /draft/getAllDraftMails/",
         "tags": [
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R25",
+        "x-method-source": "request-note",
+        "x-method-note": "the request cell states GET and documents no payload, so it overrides the Method column (POST)",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -3611,13 +3228,15 @@
       }
     },
     "/draft/getDraftMailsContacts/": {
-      "post": {
-        "operationId": "post-draft-getDraftMailsContacts",
-        "summary": "POST /draft/getDraftMailsContacts/",
+      "get": {
+        "operationId": "get-draft-getDraftMailsContacts",
+        "summary": "GET /draft/getDraftMailsContacts/",
         "tags": [
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R26",
+        "x-method-source": "request-note",
+        "x-method-note": "the request cell states GET and documents no payload, so it overrides the Method column (POST)",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -3662,6 +3281,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R27",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -3775,6 +3395,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R51",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3807,6 +3428,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R56",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3839,6 +3461,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R72",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3871,6 +3494,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R60",
+        "x-method-source": "request-note",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3886,6 +3510,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R38",
+        "x-method-source": "request-note",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3901,6 +3526,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R62",
+        "x-method-source": "request-note",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3916,6 +3542,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R69",
+        "x-method-source": "request-note",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3931,6 +3558,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R78",
+        "x-method-source": "request-note",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3946,6 +3574,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R68",
+        "x-method-source": "request-note",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3961,6 +3590,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R52",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -3997,6 +3627,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R55",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4033,6 +3664,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R71",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4176,6 +3808,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R64",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4220,6 +3853,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R65",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4260,6 +3894,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R63",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4312,6 +3947,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R67",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4360,6 +3996,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R66",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4396,6 +4033,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R70",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4428,6 +4066,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R61",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4460,6 +4099,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R77",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4485,13 +4125,15 @@
       }
     },
     "/readMail/download/{uuid}": {
-      "post": {
-        "operationId": "post-readMail-download",
-        "summary": "POST /readMail/download/{uuid}",
+      "get": {
+        "operationId": "get-readMail-download",
+        "summary": "GET /readMail/download/{uuid}",
         "tags": [
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R58",
+        "x-method-source": "request-note",
+        "x-method-note": "the request cell states GET and documents no payload, so it overrides the Method column (POST)",
         "parameters": [
           {
             "name": "uuid",
@@ -4517,6 +4159,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R49",
+        "x-method-source": "request-note",
         "parameters": [
           {
             "name": "uuid",
@@ -4542,6 +4185,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R34",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -4636,6 +4280,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R46",
+        "x-method-source": "method-column",
         "parameters": [
           {
             "name": "kmailID",
@@ -4661,6 +4306,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R57",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4699,6 +4345,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R50",
+        "x-method-source": "request-note",
         "parameters": [
           {
             "name": "uuid",
@@ -4724,6 +4371,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R30",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -4757,6 +4405,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R31",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -4926,6 +4575,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R74",
+        "x-method-source": "request-note",
         "parameters": [
           {
             "name": "fromAddress",
@@ -4951,6 +4601,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R33",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -5034,13 +4685,15 @@
       }
     },
     "/sentMail/loadOtherDomainMails/": {
-      "post": {
-        "operationId": "post-sentMail-loadOtherDomainMails",
-        "summary": "POST /sentMail/loadOtherDomainMails/",
+      "get": {
+        "operationId": "get-sentMail-loadOtherDomainMails",
+        "summary": "GET /sentMail/loadOtherDomainMails/",
         "tags": [
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R23",
+        "x-method-source": "request-note",
+        "x-method-note": "the request cell states GET and documents no payload, so it overrides the Method column (POST)",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -5335,6 +4988,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R73",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -5499,6 +5153,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R29",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -5581,6 +5236,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R47",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -5621,6 +5277,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R48",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"
@@ -5669,6 +5326,7 @@
           "Kmail"
         ],
         "x-excel-source": "KMAILAPI:R45",
+        "x-method-source": "method-column",
         "responses": {
           "200": {
             "description": "No response documented in the workbook"

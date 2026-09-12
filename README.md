@@ -118,3 +118,9 @@ Configuration is resolved in this order (first wins): real environment variables
 3. **merge-reports**: HTML, JUnit and the validation summary (published to the job summary), then the **quality gate**
 
 Configure `BASE_URL`, `API_BASE_URL`, `TEST_COMPANY_ID` and `MOCK_API=false` as variables. Configure `AUTH_PRINCIPALS`, `EXPIRED_TOKEN`, `DB_CONNECTION_STRING`, `APP_USERNAME` and `APP_PASSWORD` as secrets. Set them under _Settings → Environments_ for each environment.
+
+## Working notes
+
+[CLAUDE.md](CLAUDE.md) is the living record of this bench: the KPost application flow, the decisions
+taken so far, verified environment facts, and the current plan. Read it first, and update it when a
+flow changes.

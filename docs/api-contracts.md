@@ -9,11 +9,11 @@ Everything in `contracts/` and `openapi/` is **generated**. Nothing in them is h
 ## Commands
 
 ```bash
-npm run contract:excel      # convert the workbook → contracts + OpenAPI
+npm run contract:excel      # convert the newest "KPOST API (N).xlsx" in the repo root
 npm run contract:coverage   # prove every workbook endpoint reached the contracts (gate)
 npm run contract:gaps       # list what the workbook is still missing, for filling in
 
-npm run contract:excel -- "C:/path/KPOST API (6).xlsx"   # any workbook
+npm run contract:excel -- "C:/path/KPOST API (7).xlsx"   # or a specific workbook
 ```
 
 Run all three after every new dump, and commit the results: the diff shows exactly which endpoint
@@ -53,32 +53,123 @@ endpoints.
 
 ## Nothing invalid or duplicated is converted
 
-A row reaches the OpenAPI document **only** when it has a real path, a **known HTTP method**, is not
-superseded and is not a duplicate. Everything else stays in the `.contract.json` marked
-`usable: false` with its reasons, so the gap stays visible instead of being guessed at.
+A row reaches the OpenAPI document **only** when it has a real path and a method, is not superseded
+and is not a duplicate. Everything else stays in the `.contract.json` marked `usable: false` with
+its reasons, so the gap stays visible instead of being quietly dropped.
 
-| Exclusion                                      | Meaning                                                                                                                                           |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `method-unknown`                               | No Method column and no method stated in the row. **Never inferred** — a wrong verb produces failing tests that blame the API for the spreadsheet |
-| `superseded`                                   | Yellow (`#FFFF00`) fill = retired endpoint                                                                                                        |
-| `duplicate`                                    | Same method+path already taken from a more complete row (the one with request _and_ response wins)                                                |
-| `legacy-v1`                                    | A `devapi1`/non-`/v2` row whose `/v2` twin exists                                                                                                 |
-| `request-unparseable` / `response-unparseable` | The cell mixes prose into the JSON (`"type": 1- Daily, 2 - Weekly`), so no schema is inferred — the raw text is still kept                        |
+| Exclusion                                      | Meaning                                                                                                                                                   |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `superseded`                                   | Yellow (`#FFFF00`) fill = retired endpoint                                                                                                                |
+| `duplicate`                                    | Same method+path already taken from a more complete row (the one with request _and_ response wins)                                                        |
+| `legacy-v1`                                    | A `devapi1`/non-`/v2` row whose `/v2` twin exists                                                                                                         |
+| `method-unknown`                               | Neither the workbook nor the payload rule can settle the method. **Nothing currently hits this** — kept as the honest exit                                |
+| `request-unparseable` / `response-unparseable` | The cell mixes prose into the JSON (`"type": 1- Daily, 2 - Weekly`), so no schema is inferred — the raw text is still kept, and the endpoint stays usable |
 
-### Current numbers (`KPOST API (5).xlsx`)
+### Current numbers (`KPOST API (6).xlsx`)
 
-| Product     | Rows | Usable → OpenAPI | With request example | With response example |
-| ----------- | ---- | ---------------- | -------------------- | --------------------- |
-| `kpost-api` | 307  | **77**           | 6                    | 24                    |
-| `kmail-api` | 76   | **68**           | 40                   | 27                    |
+| Product     | Rows | Usable → OpenAPI | With request schema | With response schema |
+| ----------- | ---- | ---------------- | ------------------- | -------------------- |
+| `kpost-api` | 306  | **266**          | 165                 | 119                  |
+| `kmail-api` | 76   | **71**           | 44                  | 26                   |
 
-Excluded: 238 rows — 224 `method-unknown`, 24 `superseded`, 20 `request-unparseable`, 4 `duplicate`,
-4 `legacy-v1`, 1 `response-unparseable`. Zero duplicate paths or operationIds survive into the
-generated documents.
+Excluded: 45 rows — 24 `superseded` (yellow), 24 `duplicate`, 4 `legacy-v1`, 2 `unused-note`
+(a request cell that says `UNUSED` or `Not needed API changed in V2`); some rows carry more than one
+reason. **Nothing is excluded for a missing method.** Zero duplicate paths or operationIds survive
+into the generated documents.
 
-**The method gap dominates.** The KatchupAPI tab has no Method column, so 224 rows — including most
-of the documented request payloads — cannot yet become callable endpoints. Adding that one column
-converts them automatically on the next run.
+**Methods come from four places, in order — the first that applies wins.**
+
+1. **The request cell states a method and the payload agrees** — `GET METHOD` with no payload
+   documented. This wins **even over a Method column**, because on KMail the column predates tokens
+   while the `After Token Implemented` cell describes today's contract. 7 KMail rows resolve this
+   way (`C16 C17 C18 C23 C25 C26 C58`).
+2. **A Method column** (KDIARY, V2 TESTED APIS, KMAILAPI).
+3. **A stated method the payload contradicts** — used, but flagged for confirmation.
+4. **The owner's payload rule:** a documented request payload means POST, no payload means GET.
+
+**Only POST and GET exist in this API.** Confirmed by the owner, and corroborated before it was
+applied: of the 95 workbook rows that state a method, 80 say POST and 15 say GET — PUT, PATCH and
+DELETE appear nowhere, in no Method column and in no request note. An `updateX` or `deleteX`
+endpoint with a payload is therefore a POST. The derivation is limited to POST and GET; a workbook
+that later _states_ another verb is still honoured.
+
+| `methodSource`  | Count | Where it comes from                                                          |
+| --------------- | ----: | ---------------------------------------------------------------------------- |
+| `method-column` |    71 | a Method column on the tab                                                   |
+| `request-note`  |    76 | the request cell says so, and it outranks the column when the payload agrees |
+| `payload-rule`  |   190 | derived from the presence of a payload                                       |
+
+Provenance travels with every endpoint — `methodSource`, `methodOverrode` (what was displaced) and
+`methodDoubts` (still ambiguous) — and reaches the OpenAPI documents as `x-method-source`,
+`x-method-note` and `x-method-doubts`, so a derived method is never mistaken for a documented one.
+**Nothing currently carries a doubt.**
+
+### Yellow rows are unused, and are not added
+
+A yellow (`#FFFF00`) row is a retired endpoint: the owner's instruction is that these are not added,
+so they are excluded and no longer listed as something to confirm. A request cell that says the same
+in words (`UNUSED`, `Not needed API changed in V2`) retires its row too. They stay in the contract
+files as `usable: false`, so the decision is auditable rather than invisible.
+
+They are also **excluded from winning deduplication**. They used to: scoring ranked duplicates by
+completeness with an earliest-row tie-break, and a yellow row frequently beat the live row
+documenting the same path. The live row was then marked `duplicate-of <retired row>` and both were
+dropped — the endpoint disappeared from the contracts, invisibly, because the coverage audit sees
+both rows as contract records either way. Seven endpoints were affected: `/v2/kall/initiateKall`,
+`/v2/kall/getKallStatus`, `/v2/kall/clearKallBykallIds`, `/v2/kall/frequentKallContacts`,
+`/v2/kall/clearKallHistory`, `/v2/kall/todayKoolKall` and `/common/postBoxContacts`.
+
+### The workbook's vocabulary
+
+These cells are statements about the contract, not payloads, and reading them literally is what
+makes the method derivable:
+
+| Cell text                                   | Rows | Meaning                              |
+| ------------------------------------------- | ---: | ------------------------------------ |
+| `GET METHOD`                                |   79 | no request body                      |
+| `Not Required` / `NOT REQUIRED`             |    5 | no request body                      |
+| `multipart key : file`, `file (multipart…)` |    4 | a body, but a file upload not JSON   |
+| `UNUSED`, `Not needed API changed in V2`    |    2 | the row is stale — flagged, not used |
+
+**KMail's two request columns are two eras.** E is `Parameters / Request`; F is
+`After Token Implemented Parameters/Request`. F describes today's contract and wins — and F often
+says `GET METHOD` where E still shows a `{kpostUser}` body, because the user now comes from the JWT.
+Reporting those as "missing payload" was wrong: there is nothing to fill in.
+
+### Rows that document two endpoints
+
+Four rows hold two URLs. Their payloads pair positionally when there are two; when there is **one
+payload for two URLs it is shared** and flagged, because discarding it (the previous behaviour)
+reported both endpoints as having no payload at all.
+
+`KatchupAPI R88` is different: it reads `endKall url changed to endKoolKall` — one endpoint that
+moved. The last URL is taken as current and the old one is recorded as `replacedUrl`, which the
+coverage audit then recognises by name instead of waving it through as a stray mention.
+
+### Overriding a derived method
+
+The derived methods are correct unless the workbook says otherwise, so a Method column is now an
+**override**, not a prerequisite. The converter finds it **by its header**, not by a column letter,
+so adding one to a tab that has none is picked up on the next run with no code change:
+
+| Tab            | Method column | Status                                      |
+| -------------- | ------------- | ------------------------------------------- |
+| KatchupAPI     | **Q**         | none — add one here to override 192 derived |
+| Sheet3         | **H**         | none — add one here to override 15 derived  |
+| KDIARY         | C             | present                                     |
+| V2 TESTED APIS | B             | present                                     |
+| KMAILAPI       | C             | present                                     |
+
+**Append the column after the last used one; never insert it.** The other columns are addressed by
+letter, so inserting shifts them all. That mistake is caught rather than absorbed: every tab
+declares the headers it expects (`expect` in `TABS`), and a header that no longer matches stops the
+run with `layout changed on tab "<name>" — refusing to convert`, naming the column that moved. The
+alternative — reading the wrong cells and producing a plausible-looking contract — is far worse than
+a failed run.
+
+`contracts/excel-gaps.csv` carries a **FillCell** column naming the exact destination cell for every
+row that needs a method decision (`KatchupAPI!Q7`), taken from the same conversion report, so the
+list and the converter can never disagree about where the method belongs.
 
 ## Coverage — proving nothing was dropped
 

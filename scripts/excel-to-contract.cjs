@@ -21,14 +21,25 @@
  * `usable: false` with its reasons, so the gap is visible instead of guessed at:
  *
  *   - superseded        yellow (#FFFF00) fill = retired endpoint
- *   - method-unknown    no Method column and no method stated in the text (KatchupAPI mostly)
  *   - duplicate         same method+path already taken from a better row
  *   - legacy-v1         a devapi1/no-/v2 row whose /v2 twin exists
+ *   - method-unknown    neither the workbook nor the payload rule below can settle the method.
+ *                       Nothing currently hits this; it is kept as the honest exit.
  *   - request/response-unparseable  the cell mixes prose into the JSON, so no schema is inferred
+ *                       (the endpoint is still usable — only its schema is missing)
  *
- * Method is NEVER guessed from the presence of a body: a wrong verb produces failing tests that
- * blame the API for the spreadsheet. It is read from a Method column, or from an explicit
- * "GET METHOD"-style note in the row, or the row is excluded.
+ * ## How the HTTP method is decided, in order
+ *
+ *   1. the request cell states a method AND the payload agrees with it ("GET METHOD" with no
+ *      payload) — this wins even over a Method column, because on KMail the column predates
+ *      tokens while the "After Token Implemented" cell describes today's contract
+ *   2. a Method column
+ *   3. a stated method the payload contradicts — used, but flagged for confirmation
+ *   4. the owner's payload rule: a documented payload means POST, none means GET
+ *
+ * Every endpoint records which applied (`methodSource`), why a column was overridden
+ * (`methodNote`), and anything the rule might have got wrong (`methodDoubts`), so a derived
+ * method is never mistaken for a documented one. All three reach the OpenAPI as x-method-*.
  *
  * Schemas are INFERRED FROM EXAMPLES, so no property is marked `required` — an example cannot
  * prove a field is mandatory. Types come from the sample values; the sample itself is kept as
@@ -42,13 +53,27 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const SOURCE =
-  process.argv[2] ||
-  process.env.KPOST_WORKBOOK ||
-  'C:/Users/Administrator/Downloads/KPOST API (5).xlsx';
+/**
+ * The workbook lives in the repository, so a checkout has everything needed to regenerate the
+ * contracts. The highest-numbered "KPOST API (N).xlsx" wins, since that is how the dumps arrive.
+ */
+function newestWorkbook() {
+  const candidates = fs
+    .readdirSync(ROOT)
+    .filter((file) => /^KPOST API.*\.xlsx$/i.test(file) && !file.startsWith('~$'))
+    .map((file) => ({ file, version: Number(/\((\d+)\)/.exec(file)?.[1] ?? 0) }))
+    .sort((a, b) => b.version - a.version);
+  return candidates.length ? path.join(ROOT, candidates[0].file) : undefined;
+}
 
-if (!fs.existsSync(SOURCE)) {
-  console.error(`workbook not found: ${SOURCE}`);
+const SOURCE = process.argv[2] || process.env.KPOST_WORKBOOK || newestWorkbook();
+
+if (!SOURCE || !fs.existsSync(SOURCE)) {
+  console.error(
+    SOURCE
+      ? `workbook not found: ${SOURCE}`
+      : 'no workbook found: put "KPOST API (N).xlsx" in the repository root',
+  );
   console.error('usage: node scripts/excel-to-contract.cjs "<path to KPOST API (N).xlsx>"');
   process.exit(2);
 }
@@ -148,6 +173,7 @@ function rowsOf(sheetName) {
 const TABS = [
   {
     sheet: 'KatchupAPI',
+    expect: { J: 'Module', K: 'End Point', L: 'Request', N: 'Tester Response' },
     product: 'kpost-api',
     module: 'B',
     name: 'J',
@@ -158,6 +184,7 @@ const TABS = [
   },
   {
     sheet: 'KDIARY',
+    expect: { C: 'Method', D: 'URL Path', E: 'Parameters / Request', F: 'Sample Response' },
     product: 'kpost-api',
     module: 'B',
     url: 'D',
@@ -167,6 +194,7 @@ const TABS = [
   },
   {
     sheet: 'V2 TESTED APIS',
+    expect: { B: 'METHOD', C: 'URL', D: 'PARAMS', F: 'RESPONSE' },
     product: 'kpost-api',
     url: 'C',
     methodColumn: 'B',
@@ -175,6 +203,7 @@ const TABS = [
   },
   {
     sheet: 'Sheet3',
+    expect: { C: 'URL', D: 'PARAMS', F: 'RESPONSE' },
     product: 'kpost-api',
     url: 'C',
     methodColumn: null,
@@ -183,6 +212,7 @@ const TABS = [
   },
   {
     sheet: 'KMAILAPI',
+    expect: { C: 'Method', D: 'URL Path', G: 'Sample Response' },
     product: 'kmail-api',
     module: 'B',
     url: 'D',
@@ -209,7 +239,187 @@ const PRODUCTS = {
 };
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
-const METHOD_IN_TEXT = new RegExp(`\\b(${METHODS.join('|')})\\b\\s*(METHOD|method)?`);
+
+/* --------------------------------------------------- request cells and HTTP methods */
+
+/**
+ * What a request cell actually says. The workbook uses a small, consistent vocabulary that is not
+ * JSON, and reading it literally is what makes the method derivable:
+ *
+ *   "GET METHOD"                    the endpoint takes no body (79 rows on KatchupAPI)
+ *   "Not Required" / "NOT REQUIRED" the same thing, said differently
+ *   "Not needed API changed in V2"  the row is stale, not a live contract
+ *   "UNUSED"                        retired
+ *   "multipart key : file"          there IS a body, but a file upload rather than JSON
+ *
+ * KMail's two request columns mean different eras: E is pre-token, F is "After Token Implemented".
+ * F wins because it describes today's contract - and F very often says "GET METHOD" where E still
+ * shows a `{kpostUser}` payload, because the user now comes from the JWT. Reporting those as
+ * "missing payload" was wrong: there is nothing to fill in.
+ */
+const NO_BODY_NOTE =
+  /^\s*(not\s*(required|needed)|no\s*(payload|params?|body)?|none|nil|n\/?a|unused)\b/i;
+const RETIRED_NOTE = /\b(unused|not\s*needed|api\s*changed|no\s*longer|deprecated|removed)\b/i;
+const MULTIPART_NOTE = /\b(multipart|form-?data)\b/i;
+/** "GET METHOD" - the word METHOD is required, so a payload mentioning "post" is not a method. */
+const STATED_METHOD = new RegExp(`\\b(${METHODS.join('|')})\\s*METHOD\\b`, 'i');
+
+/**
+ * @returns {{kind: 'json'|'none'|'multipart'|'unparseable'|'unclear', statedMethod?: string,
+ *            retiredNote?: boolean, body?: object, raw?: string}}
+ */
+function classifyRequest(text) {
+  const trimmed = (text ?? '').trim();
+  const statedMethod = STATED_METHOD.exec(trimmed)?.[1]?.toUpperCase();
+  const retiredNote = !trimmed.includes('{') && RETIRED_NOTE.test(trimmed);
+  if (!trimmed) return { kind: 'none' };
+  if (trimmed.includes('{')) {
+    const parsed = parseBody(trimmed);
+    return parsed.ok
+      ? { kind: 'json', body: parsed.value, raw: parsed.raw, statedMethod }
+      : { kind: 'unparseable', raw: parsed.raw, statedMethod, retiredNote };
+  }
+  if (MULTIPART_NOTE.test(trimmed)) return { kind: 'multipart', statedMethod, retiredNote };
+  if (statedMethod || NO_BODY_NOTE.test(trimmed))
+    return { kind: 'none', statedMethod, retiredNote };
+  return { kind: 'unclear', statedMethod, retiredNote };
+}
+
+/**
+ * The HTTP method, with its provenance recorded so nothing has to be taken on trust.
+ *
+ * The workbook wins wherever it states a method. Where it does not, the rule given by the API
+ * owner applies: **a documented request payload means POST, no payload means GET.**
+ *
+ * ## This API uses only POST and GET
+ *
+ * Confirmed by the owner and corroborated by the workbook: across all 95 rows that state a method,
+ * the values are POST (80) and GET (15) - there is no PUT, PATCH or DELETE anywhere. So an
+ * `updateX` or `deleteX` endpoint with a payload is a **POST** here, and the rule is binary rather
+ * than a guess needing confirmation. A workbook that later states PUT or DELETE is still honoured;
+ * it is only the derivation that is limited to POST and GET.
+ *
+ * Everything is labelled `payload-rule` where it lands - the contract record, the OpenAPI
+ * (`x-method-source`) and the gap list - so a derived method is never mistaken for a documented
+ * one, and the only thing still flagged is a method the workbook contradicts itself about.
+ */
+function resolveMethod({ columnMethod, request }) {
+  const doubts = [];
+  const stated = METHODS.includes(request.statedMethod ?? '') ? request.statedMethod : undefined;
+  const hasBody =
+    request.kind === 'json' || request.kind === 'multipart' || request.kind === 'unparseable';
+
+  /*
+   * When the request cell states a method AND the payload agrees with it, the cell wins - even
+   * over a Method column that says otherwise. This is the owner's rule and it settles KMail's 7
+   * apparent contradictions: column C says POST from before tokens existed, while the
+   * "After Token Implemented" cell says `GET METHOD` and documents no payload. The later
+   * statement, corroborated by the absence of a payload, is the live contract.
+   *
+   * "Agrees" means: GET with no payload, or a body method with a payload. DELETE is accepted
+   * either way, since a DELETE legitimately has no body.
+   */
+  const statedAgreesWithPayload =
+    stated === 'GET' ? !hasBody : stated === 'DELETE' ? true : stated ? hasBody : false;
+
+  if (stated && statedAgreesWithPayload) {
+    return {
+      method: stated,
+      source: 'request-note',
+      doubts,
+      // The displaced value, kept as data so no reader has to parse the sentence below.
+      overrode: columnMethod && columnMethod !== stated ? columnMethod : undefined,
+      note:
+        columnMethod && columnMethod !== stated
+          ? `the request cell states ${stated} and documents ${
+              hasBody ? 'a payload' : 'no payload'
+            }, so it overrides the Method column (${columnMethod})`
+          : undefined,
+    };
+  }
+
+  // Only a stated method the payload contradicts is still a conflict worth a human decision.
+  if (columnMethod && stated && columnMethod !== stated) {
+    doubts.push(
+      `method-conflict: column says ${columnMethod}, request cell says ${stated}, and the cell ` +
+        `documents ${hasBody ? 'a payload' : 'no payload'}`,
+    );
+  }
+  if (columnMethod) return { method: columnMethod, source: 'method-column', doubts };
+  if (stated) {
+    doubts.push(
+      `the request cell says ${stated} but documents ${hasBody ? 'a payload' : 'no payload'}`,
+    );
+    return { method: stated, source: 'request-note', doubts };
+  }
+
+  if (!hasBody && request.kind !== 'none') return { method: null, source: 'unknown', doubts };
+
+  /*
+   * Binary by design. An earlier version flagged `updateX` as "might be PUT" and `deleteX` as
+   * "might be DELETE", which put 34 endpoints in front of the owner for no reason: this API has
+   * neither verb. A payload whose sample JSON is broken is still a payload, so it is still a POST -
+   * the broken sample is a schema gap (P3), not a method question.
+   */
+  return { method: hasBody ? 'POST' : 'GET', source: 'payload-rule', doubts };
+}
+
+/* ------------------------------------------------------------- layout verification */
+
+/**
+ * The layout above addresses cells by column LETTER, which holds only while the columns stay put.
+ * Inserting a column in the workbook shifts every letter after it, and the converter would then
+ * read the wrong cells and say nothing about it. Two protections:
+ *
+ *   1. verifyHeaders  - each labelled column must still carry its expected header, or we stop.
+ *   2. methodColumnOf - the Method column is found BY HEADER, so a Method column added to a tab
+ *                       that has none (KatchupAPI, Sheet3) is picked up with no code change.
+ *                       Append it after the last used column so no existing letter moves.
+ */
+const HEADER_SCAN_ROWS = 12;
+const METHOD_HEADER = /^(http\s*)?method$/i;
+const norm = (v) =>
+  String(v ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+/** The column whose header reads "Method", else the layout's column, else none. */
+function methodColumnOf(tab, rows) {
+  for (const { cells } of rows.slice(0, HEADER_SCAN_ROWS)) {
+    for (const [col, value] of Object.entries(cells)) {
+      if (METHOD_HEADER.test(norm(value))) return col;
+    }
+  }
+  return tab.methodColumn;
+}
+
+/** Stops the run when a labelled column no longer holds its header - a wrong column is silent. */
+function verifyHeaders(tab, rows) {
+  if (!tab.expect) return;
+  const expected = Object.entries(tab.expect);
+  const header = rows
+    .slice(0, HEADER_SCAN_ROWS)
+    .find((r) => expected.every(([col, text]) => norm(r.cells[col]) === norm(text)));
+  if (header) return;
+  const seen = expected
+    .map(([col, text]) => {
+      const found =
+        rows
+          .slice(0, HEADER_SCAN_ROWS)
+          .map((r) => r.cells[col])
+          .find((v) => String(v ?? '').trim()) ?? '';
+      return `${col}="${norm(found).slice(0, 30)}" (expected "${text}")`;
+    })
+    .join(', ');
+  console.error(`layout changed on tab "${tab.sheet}" - refusing to convert.`);
+  console.error(`  ${seen}`);
+  console.error(
+    '  A column was inserted or renamed, so the letters in TABS no longer point at the right',
+  );
+  console.error('  cells. Add new columns AFTER the last used one, or update TABS in this script.');
+  process.exit(3);
+}
 
 /* ------------------------------------------------------------------ cell helpers */
 
@@ -303,12 +513,54 @@ const operationIdFrom = (name, method, pathname) => {
   return `${method.toLowerCase()}-${tail}`.replace(/[^\w-]/g, '');
 };
 
+/** Column letters, so the gap report can name the exact cell to fill. */
+const colIndex = (letters) => [...letters].reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0);
+const colLetters = (index) => {
+  let out = '';
+  let n = index;
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = (n - rem - 1) / 26;
+  }
+  return out;
+};
+
+/** The first column after everything the tab uses - where a new column is safe to add. */
+function firstFreeColumn(rows) {
+  let max = 0;
+  for (const { cells } of rows) {
+    for (const col of Object.keys(cells)) max = Math.max(max, colIndex(col));
+  }
+  return colLetters(max + 1);
+}
+
 /* ------------------------------------------------------------------ extraction */
 
 const records = [];
+const tabLayouts = [];
 
 for (const tab of TABS) {
-  for (const { row, cells, yellow } of rowsOf(tab.sheet)) {
+  const tabRows = rowsOf(tab.sheet);
+  verifyHeaders(tab, tabRows);
+  const methodColumn = methodColumnOf(tab, tabRows);
+  if (methodColumn && methodColumn !== tab.methodColumn) {
+    console.log(`${tab.sheet}: reading HTTP method from column ${methodColumn} (found by header)`);
+  }
+  tabLayouts.push({
+    sheet: tab.sheet,
+    product: tab.product,
+    methodColumn,
+    methodColumnSource: !methodColumn
+      ? 'none'
+      : methodColumn === tab.methodColumn
+        ? 'layout'
+        : 'header',
+    // Where to put a Method column on a tab that has none: after everything already in use, so
+    // no existing column letter shifts.
+    firstFreeColumn: firstFreeColumn(tabRows),
+  });
+  for (const { row, cells, yellow } of tabRows) {
     const urlCell = (cells[tab.url] ?? '').trim();
     /*
      * The layout column is authoritative, with a fallback: some rows hold junk in it (R66 has
@@ -331,35 +583,68 @@ for (const tab of TABS) {
 
     const requestText = firstCell(cells, tab.request);
     const responseText = firstCell(cells, tab.response);
-    const explicitMethod = (cells[tab.methodColumn] ?? '').trim().toUpperCase();
-    const textMethod = METHOD_IN_TEXT.exec(requestText)?.[1]?.toUpperCase() ?? '';
-    const method = METHODS.includes(explicitMethod)
-      ? explicitMethod
-      : METHODS.includes(textMethod)
-        ? textMethod
-        : null;
+    const columnMethodCell = (cells[methodColumn] ?? '').trim().toUpperCase();
+    const columnMethod = METHODS.includes(columnMethodCell) ? columnMethodCell : undefined;
 
-    // A row documenting two endpoints pairs its URLs with its {...} blocks positionally.
+    /*
+     * "endKall url changed to endKoolKall" (KatchupAPI R88) is ONE endpoint that moved, not two.
+     * Splitting it produced a phantom /v2/kall/endKall. The last URL is the current one.
+     */
+    const urlChanged = /\b(url\s+)?changed\s+to\b/i.test(urlCell) && urls.length > 1;
+    const liveUrls = urlChanged ? [urls[urls.length - 1]] : urls;
+    const replacedUrl = urlChanged ? toPath(urls[0]) : undefined;
+
+    /*
+     * A row documenting two endpoints pairs its payloads with its URLs positionally. When there is
+     * only ONE payload for two URLs (R3: both fetchUserDetails variants; R88 before the fix), the
+     * old rule discarded it and both endpoints were reported as having no payload - which is what
+     * the workbook owner caught. The payload is now shared and labelled.
+     */
     const bodies = jsonBlocks(requestText);
-    for (const [index, url] of urls.entries()) {
+    const sharedPayload = liveUrls.length > 1 && bodies.length === 1;
+
+    for (const [index, url] of liveUrls.entries()) {
       const pathname = toPath(url);
       if (!/^\/[a-zA-Z]/.test(pathname)) continue;
 
       const ownRequestText =
-        urls.length === 1 ? requestText : bodies.length === urls.length ? bodies[index] : '';
-      const request = parseBody(ownRequestText);
+        liveUrls.length === 1
+          ? requestText
+          : bodies.length === liveUrls.length
+            ? bodies[index]
+            : sharedPayload
+              ? bodies[0]
+              : requestText;
+      const request = classifyRequest(ownRequestText);
       const response = parseBody(responseText);
+      const name = (cells[tab.name] ?? '').trim().split(/\s+/)[index] || undefined;
+      const resolved = resolveMethod({ columnMethod, request, name, path: pathname });
+      const method = resolved.method;
       /*
        * A row that only quotes a base URL in a notes column is not an endpoint: KMAILAPI R1 holds
        * the tab header "https://kmail5.kpostindia.com/kmail5/v2/" and documents nothing. A
        * fallback URL is accepted only when the row really describes a call.
        */
-      if (usedFallback && !method && !request.ok && !response.ok) continue;
+      if (usedFallback && !columnMethod && request.kind === 'none' && !response.ok) continue;
+      const doubts = [...resolved.doubts];
+      /*
+       * Not a doubt about the method - a note about the data. Keeping these out of methodDoubts
+       * is what lets "methods needing confirmation" mean exactly that.
+       */
+      const notes = [];
+      if (sharedPayload) {
+        notes.push('one payload is documented for the two endpoints in this row');
+      }
       const reasons = [];
+      /*
+       * Yellow fill = unused, confirmed by the owner: those endpoints are not added. A request
+       * cell that says so in words ("UNUSED", "Not needed API changed in V2") means the same
+       * thing, so it retires the row too rather than being reported as a gap to chase.
+       */
       if (yellow[tab.url] || yellow[tab.module]) reasons.push('superseded');
+      if (request.retiredNote) reasons.push('unused-note');
       if (!method) reasons.push('method-unknown');
-      if (!request.ok && request.reason === 'prose mixed into the JSON')
-        reasons.push('request-unparseable');
+      if (request.kind === 'unparseable') reasons.push('request-unparseable');
       if (!response.ok && response.reason === 'prose mixed into the JSON')
         reasons.push('response-unparseable');
 
@@ -368,13 +653,20 @@ for (const tab of TABS) {
         tab: tab.sheet,
         row,
         module: (cells[tab.module] ?? '').trim() || undefined,
-        name: (cells[tab.name] ?? '').trim().split(/\s+/)[index] || undefined,
+        name,
         method,
+        methodSource: resolved.source,
+        methodNote: resolved.note,
+        methodOverrode: resolved.overrode,
+        methodDoubts: doubts.length ? doubts : undefined,
+        dataNotes: notes.length ? notes : undefined,
+        requestKind: request.kind,
+        replacedUrl,
         path: pathname,
         sourceUrl: url,
         legacy:
           /devapi1/.test(url) || (!pathname.startsWith('/v2/') && tab.product === 'kpost-api'),
-        requestExample: request.ok ? request.value : undefined,
+        requestExample: request.kind === 'json' ? request.body : undefined,
         requestRaw: (request.raw ?? ownRequestText).trim() || undefined,
         responseExample: response.ok ? response.value : undefined,
         responseRaw: (response.raw ?? responseText).trim() || undefined,
@@ -406,23 +698,35 @@ for (const product of Object.keys(PRODUCTS)) {
     }
   }
 
-  /** Completeness decides which duplicate survives; ties keep the earliest row. */
+  /*
+   * Completeness decides which duplicate survives; ties keep the earliest row.
+   *
+   * A retired row must never win: KMAILAPI R5 ("Not needed API changed in V2") and R37 document
+   * the same path, and R5 won on an earlier-row tie-break. Retiring R5 as unused would then have
+   * taken the path out of the contracts altogether while R37 sat there marked "duplicate" - the
+   * endpoint would simply vanish, and the coverage audit could not see it because both rows are
+   * still contract records. Hence the heavy penalty rather than a filter.
+   */
+  const retired = (r) => r.reasons.includes('superseded') || r.reasons.includes('unused-note');
   const score = (r) =>
-    (r.requestExample ? 2 : 0) + (r.responseExample ? 2 : 0) + (r.legacy ? -1 : 0);
+    (r.requestExample ? 2 : 0) +
+    (r.responseExample ? 2 : 0) +
+    (r.legacy ? -1 : 0) -
+    (retired(r) ? 100 : 0);
   const best = new Map();
   for (const record of mine) {
     if (!record.method) continue;
     const key = `${record.method} ${record.path.replace(/\/+$/, '')}`;
     const incumbent = best.get(key);
     if (!incumbent || score(record) > score(incumbent)) {
-      if (incumbent) incumbent.reasons.push(`duplicate-of ${incumbent.tab}:R${record.row}`);
+      if (incumbent) incumbent.reasons.push(`duplicate-of ${record.tab}:R${record.row}`);
       best.set(key, record);
     } else {
       record.reasons.push(`duplicate-of ${incumbent.tab}:R${incumbent.row}`);
     }
   }
 
-  const blocking = new Set(['superseded', 'method-unknown', 'legacy-v1']);
+  const blocking = new Set(['superseded', 'unused-note', 'method-unknown', 'legacy-v1']);
   for (const record of mine) {
     record.usable =
       !record.reasons.some((r) => blocking.has(r) || r.startsWith('duplicate-of')) &&
@@ -490,6 +794,14 @@ for (const [product, meta] of Object.entries(PRODUCTS)) {
       summary: record.name || `${record.method} ${record.path}`,
       tags: record.module ? [record.module] : undefined,
       'x-excel-source': `${record.tab}:R${record.row}`,
+      /*
+       * Provenance travels with the document. A reader of the OpenAPI alone must be able to see
+       * that a method was derived from the payload rule rather than documented, and whether it is
+       * one of the ones awaiting confirmation.
+       */
+      'x-method-source': record.methodSource,
+      'x-method-note': record.methodNote,
+      'x-method-doubts': record.methodDoubts,
       parameters: [...record.path.matchAll(/\{(\w+)}/g)].map((m) => ({
         name: m[1],
         in: 'path',
@@ -522,6 +834,8 @@ for (const [product, meta] of Object.entries(PRODUCTS)) {
     }
     if (!operation.parameters.length) delete operation.parameters;
     if (!operation.tags) delete operation.tags;
+    if (!operation['x-method-doubts']) delete operation['x-method-doubts'];
+    if (!operation['x-method-note']) delete operation['x-method-note'];
 
     paths[record.path] ??= {};
     paths[record.path][record.method.toLowerCase()] = operation;
@@ -632,7 +946,19 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.join(contractsDir, '_conversion-report.json'),
-  `${JSON.stringify({ source: workbookName, generatedAt, summary, excluded }, null, 2)}\n`,
+  `${JSON.stringify(
+    {
+      source: workbookName,
+      // The audit reads this so it can never check a different workbook than the one converted.
+      sourcePath: path.resolve(SOURCE),
+      generatedAt,
+      summary,
+      tabs: tabLayouts,
+      excluded,
+    },
+    null,
+    2,
+  )}\n`,
 );
 
 /* ------------------------------------------------------------------ console summary */

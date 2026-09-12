@@ -22,14 +22,29 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const CONTRACTS = path.join(ROOT, 'contracts');
-const SOURCE =
-  process.argv[2] ||
-  process.env.KPOST_WORKBOOK ||
-  'C:/Users/Administrator/Downloads/KPOST API (5).xlsx';
+/*
+ * By default this audits the very workbook the contracts were built from, read out of the
+ * conversion report. Auditing a different file would compare two unrelated things and report
+ * either phantom misses or a false all-clear.
+ */
+const reportFile = path.join(CONTRACTS, '_conversion-report.json');
+const report = fs.existsSync(reportFile) ? JSON.parse(fs.readFileSync(reportFile, 'utf8')) : {};
+const SOURCE = process.argv[2] || process.env.KPOST_WORKBOOK || report.sourcePath;
 
-if (!fs.existsSync(SOURCE)) {
-  console.error(`workbook not found: ${SOURCE}`);
+if (!SOURCE || !fs.existsSync(SOURCE)) {
+  console.error(
+    SOURCE
+      ? `workbook not found: ${SOURCE}`
+      : 'no workbook recorded — run "npm run contract:excel" first, or pass the .xlsx path',
+  );
   process.exit(2);
+}
+if (report.source && path.basename(SOURCE) !== report.source) {
+  console.error(
+    `refusing to audit: the contracts were built from "${report.source}" but this run was given ` +
+      `"${path.basename(SOURCE)}". Re-run "npm run contract:excel" first, or audit the same file.`,
+  );
+  process.exit(3);
 }
 
 /* ------------------------------------------------------------------ read the workbook */
@@ -148,6 +163,8 @@ for (const [tab, product] of Object.entries(ENDPOINT_TABS)) {
 /* ------------------------------------------------------------------ what the contracts hold */
 
 const contractPaths = new Map();
+/** Old URL -> the row that says it changed. */
+const replacedPaths = new Map();
 for (const file of ['kpost-api.contract.json', 'kmail-api.contract.json']) {
   const full = path.join(CONTRACTS, file);
   if (!fs.existsSync(full)) {
@@ -157,6 +174,17 @@ for (const file of ['kpost-api.contract.json', 'kmail-api.contract.json']) {
   for (const record of JSON.parse(fs.readFileSync(full, 'utf8')).endpoints) {
     const key = `${record.product}${normalise(record.path)}`;
     contractPaths.set(key, [...(contractPaths.get(key) ?? []), `${record.tab}:R${record.row}`]);
+    /*
+     * "endKall url changed to endKoolKall" documents ONE endpoint that moved. The old URL is
+     * deliberately not a contract entry, so record why - otherwise this audit either fails on a
+     * correct decision or, worse, waves it through under the wrong explanation.
+     */
+    if (record.replacedUrl) {
+      replacedPaths.set(
+        `${record.product}${normalise(record.replacedUrl)}`,
+        `${record.tab}:R${record.row}`,
+      );
+    }
   }
 }
 
@@ -189,10 +217,28 @@ for (const entry of workbookEndpoints) {
     mentions.push({ ...entry, note: 'base URL, not an endpoint' });
     continue;
   }
-  const own = (rowCells(entry.tab, entry.row)[ENDPOINT_COLUMN[entry.tab]] ?? '').trim();
+  const replacedBy = replacedPaths.get(key);
+  if (replacedBy) {
+    mentions.push({
+      ...entry,
+      note: `superseded in-row ("url changed to"), current URL from ${replacedBy}`,
+    });
+    continue;
+  }
+  const endpointColumn = ENDPOINT_COLUMN[entry.tab];
+  const own = (rowCells(entry.tab, entry.row)[endpointColumn] ?? '').trim();
   const rowHasItsOwnEndpoint = /^https?:\/\//.test(own) || /^\/?[a-zA-Z][\w-]*\//.test(own);
-  if (rowHasItsOwnEndpoint) mentions.push({ ...entry, note: 'quoted in a notes column' });
-  else uncovered.push(entry);
+  // Say which it is: a note-column quote and a second URL sitting in the endpoint column itself
+  // are different situations, and calling both "notes" hid a real drop once already.
+  if (rowHasItsOwnEndpoint) {
+    mentions.push({
+      ...entry,
+      note:
+        entry.column === endpointColumn
+          ? "listed in the endpoint column beside the row's other endpoint"
+          : 'quoted in a notes column',
+    });
+  } else uncovered.push(entry);
 }
 
 /* ------------------------------------------------------------------ report */

@@ -1,67 +1,68 @@
 {
-  "source": "KPOST API (5).xlsx",
-  "generatedAt": "2026-09-12T03:47:32.552Z",
+  "source": "KPOST API (6).xlsx",
+  "sourcePath": "D:\\TEST-BENCH-AUTOMATIONS\\kpost-testbench_v2\\KPOST API (6).xlsx",
+  "generatedAt": "2026-09-12T06:41:53.484Z",
   "summary": {
     "kpost-api": {
-      "rows": 307,
-      "usable": 77,
-      "operations": 77,
-      "withRequest": 6,
-      "withResponse": 24
+      "rows": 306,
+      "usable": 266,
+      "operations": 266,
+      "withRequest": 165,
+      "withResponse": 119
     },
     "kmail-api": {
       "rows": 76,
-      "usable": 68,
-      "operations": 68,
-      "withRequest": 40,
-      "withResponse": 27
+      "usable": 71,
+      "operations": 71,
+      "withRequest": 44,
+      "withResponse": 26
     }
   },
+  "tabs": [
+    {
+      "sheet": "KatchupAPI",
+      "product": "kpost-api",
+      "methodColumn": null,
+      "methodColumnSource": "none",
+      "firstFreeColumn": "Q"
+    },
+    {
+      "sheet": "KDIARY",
+      "product": "kpost-api",
+      "methodColumn": "C",
+      "methodColumnSource": "layout",
+      "firstFreeColumn": "K"
+    },
+    {
+      "sheet": "V2 TESTED APIS",
+      "product": "kpost-api",
+      "methodColumn": "B",
+      "methodColumnSource": "layout",
+      "firstFreeColumn": "I"
+    },
+    {
+      "sheet": "Sheet3",
+      "product": "kpost-api",
+      "methodColumn": null,
+      "methodColumnSource": "none",
+      "firstFreeColumn": "H"
+    },
+    {
+      "sheet": "KMAILAPI",
+      "product": "kmail-api",
+      "methodColumn": "C",
+      "methodColumnSource": "layout",
+      "firstFreeColumn": "K"
+    }
+  ],
   "excluded": [
     {
       "product": "kpost-api",
       "tab": "KatchupAPI",
-      "row": 2,
-      "path": "/v2/profile/fetchUserDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
       "row": 3,
       "path": "/v2/profile/fetchUserDetails/",
       "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 3,
-      "path": "/v2/signupLogin/fetchUserDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 4,
-      "path": "/v2/signupLogin/userLogin/",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 5,
-      "path": "/v2/signupLogin/generateJWTokens/",
-      "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R2"
       ]
     },
     {
@@ -70,25 +71,7 @@
       "row": 6,
       "path": "/v2/common/msStatus/",
       "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 7,
-      "path": "/v2/common/forgotPasswordUpdate",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 7,
-      "path": "/v2/profile/changePassword",
-      "reasons": [
-        "method-unknown"
+        "duplicate-of V2 TESTED APIS:R6"
       ]
     },
     {
@@ -97,144 +80,8 @@
       "row": 8,
       "path": "/v2/common/sendOTP/",
       "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 8,
-      "path": "/v2/common/validateOTP/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 9,
-      "path": "/v2/common/forgotPasswordOTPOrSentKpostIDSms",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 10,
-      "path": "/v2/common/countries",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 11,
-      "path": "/v2/common/languages",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 12,
-      "path": "/v2/common/sendOTPtoMail/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 13,
-      "path": "/v2/common/validateMailOTP/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 14,
-      "path": "/v2/common/mobileNoExist/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 15,
-      "path": "/v2/signupLogin/kpostIdExist/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 16,
-      "path": "/v2/signupLogin/kpostIDsuggestionList/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 17,
-      "path": "/v2/signupLogin/signup/",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 18,
-      "path": "/v2/contacts/importPhoneContacts/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 19,
-      "path": "/v2/common/domain/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 20,
-      "path": "/v2/dashboard/homeDashboardMsgs/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 21,
-      "path": "/v2/dashboard/katchupDashboardMsg/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 22,
-      "path": "/kmail5/common/getKmailDashboardMsg/",
-      "reasons": [
-        "method-unknown"
+        "request-unparseable",
+        "duplicate-of V2 TESTED APIS:R8"
       ]
     },
     {
@@ -243,8 +90,7 @@
       "row": 23,
       "path": "/v2/dashboard/kallDashboard/",
       "reasons": [
-        "superseded",
-        "method-unknown"
+        "superseded"
       ]
     },
     {
@@ -259,42 +105,6 @@
     {
       "product": "kpost-api",
       "tab": "KatchupAPI",
-      "row": 25,
-      "path": "/v2/katchup/frequentlyAccessContacts",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 26,
-      "path": "/v2/contacts/addContact",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 27,
-      "path": "/v2/contacts/addContactReference/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 28,
-      "path": "/v2/contacts/getImportedPhoneContacts/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
       "row": 29,
       "path": "/v2/contacts/fetchAdditionalKatchupContacts/",
       "reasons": [
@@ -304,185 +114,12 @@
     {
       "product": "kpost-api",
       "tab": "KatchupAPI",
-      "row": 31,
-      "path": "/v2/katchup/getSharedMessageInfo/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 32,
-      "path": "/v2/contacts/myContacts/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 33,
-      "path": "/v2/contacts/myUnknownKatchupContacts/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 34,
-      "path": "/v2/contacts/myGroups/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 35,
-      "path": "/v2/contacts/myUnknownGroups/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 37,
-      "path": "/v2/katchup/sendMessage/",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 38,
-      "path": "/v2/katchup/saveKatchupMessages/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 39,
-      "path": "/v2/katchup/searchKatchUpMessage/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 40,
-      "path": "/v2/katchup/katchupMessagesForSelectedContactID/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 41,
-      "path": "/v2/katchup/markOrUnmarkImportantMessage/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 42,
-      "path": "/v2/katchup/recallMessage/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 43,
-      "path": "/v2/katchup/getReadStatusGroupMessage/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 44,
-      "path": "/v2/katchup/deleteKatchUpMessage/",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 45,
-      "path": "/v2/group/createUserGroup/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 46,
-      "path": "/v2/group/addUserToGroup/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 47,
-      "path": "/v2/group/removeGroupMember/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 48,
-      "path": "/v2/group/addOrRemoveAdminAccess/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 49,
-      "path": "/v2/group/leaveFromGroup/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 50,
-      "path": "/v2/katchup/sendKatchupMsgMultiPart/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
       "row": 51,
       "path": "/v2/kall/initiateKall",
       "reasons": [
         "superseded",
-        "method-unknown",
-        "request-unparseable"
+        "request-unparseable",
+        "duplicate-of KatchupAPI:R91"
       ]
     },
     {
@@ -501,7 +138,7 @@
       "path": "/v2/kall/getKallStatus",
       "reasons": [
         "superseded",
-        "method-unknown"
+        "duplicate-of KatchupAPI:R151"
       ]
     },
     {
@@ -510,7 +147,8 @@
       "row": 54,
       "path": "/v2/kall/frequentKallContacts",
       "reasons": [
-        "superseded"
+        "superseded",
+        "duplicate-of KatchupAPI:R92"
       ]
     },
     {
@@ -519,8 +157,7 @@
       "row": 55,
       "path": "/v2/kall/setKallStatus",
       "reasons": [
-        "superseded",
-        "method-unknown"
+        "superseded"
       ]
     },
     {
@@ -530,7 +167,7 @@
       "path": "/v2/kall/clearKallBykallIds",
       "reasons": [
         "superseded",
-        "method-unknown"
+        "duplicate-of KatchupAPI:R93"
       ]
     },
     {
@@ -539,7 +176,8 @@
       "row": 57,
       "path": "/v2/kall/clearKallHistory",
       "reasons": [
-        "superseded"
+        "superseded",
+        "duplicate-of KatchupAPI:R94"
       ]
     },
     {
@@ -548,8 +186,7 @@
       "row": 58,
       "path": "/v2/kall/katchupKall",
       "reasons": [
-        "superseded",
-        "method-unknown"
+        "superseded"
       ]
     },
     {
@@ -558,8 +195,7 @@
       "row": 59,
       "path": "/v2/kall/joinKatchupKall",
       "reasons": [
-        "superseded",
-        "method-unknown"
+        "superseded"
       ]
     },
     {
@@ -568,8 +204,7 @@
       "row": 60,
       "path": "/v2/kall/acceptKatchupKall",
       "reasons": [
-        "superseded",
-        "method-unknown"
+        "superseded"
       ]
     },
     {
@@ -578,8 +213,7 @@
       "row": 61,
       "path": "/v2/kall/addMemberKatchupKall",
       "reasons": [
-        "superseded",
-        "method-unknown"
+        "superseded"
       ]
     },
     {
@@ -588,8 +222,7 @@
       "row": 62,
       "path": "/v2/kall/cancelScheduleKall",
       "reasons": [
-        "superseded",
-        "method-unknown"
+        "superseded"
       ]
     },
     {
@@ -598,8 +231,7 @@
       "row": 63,
       "path": "/v2/kall/reScheduleKatchupKall",
       "reasons": [
-        "superseded",
-        "method-unknown"
+        "superseded"
       ]
     },
     {
@@ -609,89 +241,7 @@
       "path": "/v2/kall/reScheduleKatchupKall",
       "reasons": [
         "superseded",
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 66,
-      "path": "/v2/profile/updateProfileImage/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 68,
-      "path": "/v2/profile/getDigitalCard/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 71,
-      "path": "/kmail5/v2/translator/translation/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 72,
-      "path": "/v2/contacts/deleteContact/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 73,
-      "path": "/v2/contacts/blockOrUnBlockContact/",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 74,
-      "path": "/v2/contacts/getSearchDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 75,
-      "path": "/v2/profile/autoSearchWithName/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 76,
-      "path": "/v2/profile/advancedSearch/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 77,
-      "path": "/v2/contacts/globalSearch/",
-      "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R63"
       ]
     },
     {
@@ -700,7 +250,8 @@
       "row": 78,
       "path": "/v2/kall/todayKoolKall/",
       "reasons": [
-        "superseded"
+        "superseded",
+        "duplicate-of KatchupAPI:R89"
       ]
     },
     {
@@ -709,62 +260,7 @@
       "row": 79,
       "path": "/kmail5/v2/sentMail/postMailMultiPart/",
       "reasons": [
-        "superseded",
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 80,
-      "path": "/v2/common/getDesignation/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 81,
-      "path": "/v2/profile/updateDesignation",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 82,
-      "path": "/metaDee/aiMessage",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 83,
-      "path": "/v2/kall/scheduledKall",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 84,
-      "path": "/v2/kall/updateKallStatus",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 85,
-      "path": "/v2/kall/joinScheduleKall",
-      "reasons": [
-        "method-unknown"
+        "superseded"
       ]
     },
     {
@@ -773,1218 +269,52 @@
       "row": 86,
       "path": "/v2/kall/addMembersToKall",
       "reasons": [
-        "superseded",
-        "method-unknown"
+        "superseded"
       ]
     },
     {
       "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 87,
-      "path": "/v2/kall/reScheduleKall",
+      "tab": "V2 TESTED APIS",
+      "row": 5,
+      "path": "/v2/signupLogin/fetchUserDetails",
       "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R3"
       ]
     },
     {
       "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 88,
-      "path": "/v2/kall/endKall",
+      "tab": "V2 TESTED APIS",
+      "row": 7,
+      "path": "/v2/profile/changePassword",
       "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R7"
       ]
     },
     {
       "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 88,
-      "path": "/v2/kall/endKoolKall",
+      "tab": "V2 TESTED APIS",
+      "row": 8,
+      "path": "/v2/common/validateOTP/",
       "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R8"
       ]
     },
     {
       "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 89,
-      "path": "/v2/kall/todayKoolKall/",
+      "tab": "V2 TESTED APIS",
+      "row": 10,
+      "path": "/v2/signupLogin/signup/",
       "reasons": [
-        "duplicate-of KatchupAPI:R78"
+        "duplicate-of KatchupAPI:R17"
       ]
     },
     {
       "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 90,
-      "path": "/v2/kall/kallDashboard",
+      "tab": "V2 TESTED APIS",
+      "row": 11,
+      "path": "/v2/common/mobileNoExist/",
       "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 91,
-      "path": "/v2/kall/initiateKall",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 92,
-      "path": "/v2/kall/frequentKallContacts",
-      "reasons": [
-        "duplicate-of KatchupAPI:R54"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 93,
-      "path": "/v2/kall/clearKallBykallIds",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 94,
-      "path": "/v2/kall/clearKallHistory",
-      "reasons": [
-        "duplicate-of KatchupAPI:R57"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 95,
-      "path": "/v2/kall/endIndividualKall/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 96,
-      "path": "/v2/kall/contactInfo/",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 97,
-      "path": "/v2/kall/kallInfo",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 99,
-      "path": "/v2/katchup/sendBulkKatchupMsgMultiPart/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 100,
-      "path": "/v2/katchup/getBulkMessageInfo/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 101,
-      "path": "/v2/group/updateGroupProfileImage/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 102,
-      "path": "/v2/group/removeGroupProfileImage",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 104,
-      "path": "/v2/group/editGroupName",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 105,
-      "path": "/v2/profile/updateAboutYourself/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 106,
-      "path": "/v2/profile/updateContactInformation/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 107,
-      "path": "/v2/profile/saveOrUpdateCollegeDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 108,
-      "path": "/v2/profile/saveOrUpdateSchoolDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 109,
-      "path": "/v2/profile/saveOrUpdateUniversityDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 110,
-      "path": "/v2/profile/saveOrUpdateOtherActivity/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 111,
-      "path": "/v2/profile/saveOrUpdateExperienceDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 112,
-      "path": "/v2/profile/updateBasicInformation/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 113,
-      "path": "/v2/profile/uploadProfileAttachments",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 114,
-      "path": "/v2/profile/uploadCoverImage/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 117,
-      "path": "/v2/contacts/addMultipleContact",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 118,
-      "path": "/v2/katchup/forwardKatchupMessage/",
-      "reasons": [
-        "method-unknown",
-        "response-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 119,
-      "path": "/v2/katchup/getMessagesByReferenceMessageList",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 120,
-      "path": "/v2/katchup/getReferenceMSGDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 121,
-      "path": "/v2/profile/deactivateAccount/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 124,
-      "path": "/v2/profile/setDeviceAsPrimary/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 125,
-      "path": "/v2/profile/isDevicePrimaryOrNot/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 126,
-      "path": "/v2/profile/updateDeviceAsPrimary/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 130,
-      "path": "/v2/profile/setDeviceAsSecondary",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 131,
-      "path": "/v2/profile/updateDeviceAsSecondary",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 132,
-      "path": "/v2/aws/generate-presigned-url",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 133,
-      "path": "/kmail5/readMail/getKmailDetailsUsingKmailID/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 134,
-      "path": "/kmail5/v2/sentMail/postMail/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 136,
-      "path": "/v2/kall/scheduledRepeatKall",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 137,
-      "path": "/v2/kall/fetchScheduledRepeatKall",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 138,
-      "path": "/v2/aws/katchup/generate-presigned-url",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 139,
-      "path": "/v2/katchup/forwardKatchupMessageNew",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 140,
-      "path": "/v2/katchup/sendBulkKatchupMsg",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 141,
-      "path": "/v2/signupLogin/userLogout/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 143,
-      "path": "/v2/dashboard/homeDashboardNewMsgs",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 144,
-      "path": "/v2/aws/checkAttachmentS3/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 147,
-      "path": "/v2/profile/deleteCollegeDetail",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 148,
-      "path": "/v2/profile/deleteSchoolDetail",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 149,
-      "path": "/v2/profile/deleteUniversityDetail",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 150,
-      "path": "/v2/profile/deleteExperienceDetail",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 151,
-      "path": "/v2/kall/getKallStatus",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 152,
-      "path": "/v2/katchup/messageCountBetweenSenderAndReceiver/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 157,
-      "path": "/redbus/tripdetailsV2/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 159,
-      "path": "/redbus/availabletrips/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 160,
-      "path": "/redbus/destinations/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 161,
-      "path": "/redbus/tripdetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 162,
-      "path": "/redbus/blockTicket/{kpostId}",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 164,
-      "path": "/redbus/boardingPoint/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 165,
-      "path": "/v2/katchup/filterKatchUpMessage/",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 166,
-      "path": "/v2/signupLogin/setAccessCode",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 167,
-      "path": "/v2/kall/updateSenderAndReceiverKallStatus",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 168,
-      "path": "/v2/signupLogin/adminRegistration/",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 170,
-      "path": "/admin/addingUserByAdmin/",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 171,
-      "path": "/admin/resetPassword/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 172,
-      "path": "/admin/holdOrRelease/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 173,
-      "path": "/admin/createOrRemoveBackupAdmin/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 174,
-      "path": "/admin/terminateUser/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 176,
-      "path": "/v2/common/getCompanyDetails",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 177,
-      "path": "/common/updateCompanyLogo",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 179,
-      "path": "/admin/removeCompanyLogo",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 180,
-      "path": "/kmail5/v2/readMail/downloadODAttachment",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 182,
-      "path": "/v2/group/deleteGroup",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 183,
-      "path": "/v2/kmailSetting/saveOrUpdateCustomizedInstantReply",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 184,
-      "path": "/v2/kmailSetting/deleteCustomizedInstantReply",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 185,
-      "path": "/v2/profile/getUserProfileUsingKpostID/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 186,
-      "path": "/v2/kall/getKallStatusUsingKallID",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 187,
-      "path": "/v2/contacts/updateInviteStatus/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 188,
-      "path": "/v2/profile/shareUserDetails",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 189,
-      "path": "/v2/contacts/blockOrUnBlockMultipleContact",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 193,
-      "path": "/v2/katchup/reportAbuse",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 194,
-      "path": "/v2/katchup/forwardKatchupMultipleMsgs",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 195,
-      "path": "/v2/kall/modifyKallMembers",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 196,
-      "path": "/v2/katchup/forwardMessageBacktrackByMsgID",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 197,
-      "path": "/v2/admin/updateCompanyDetails",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 198,
-      "path": "/v2/admin/updateBankAccountDetails",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 199,
-      "path": "/v2/admin/createKpostIDAndDesignationSuggestion",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 200,
-      "path": "/v2/admin/updateRole",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 201,
-      "path": "/v2/common/getTotalCountByDate",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 202,
-      "path": "/v2/common/generateDomainAndUniqueName",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 203,
-      "path": "/v2/common/saveEnquiryDetails",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 205,
-      "path": "/v2/common/mobileNoExistInsideCompany/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 206,
-      "path": "/admin/displayNameSuggestion",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 208,
-      "path": "/v2/common/uniqueNameExist",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 209,
-      "path": "/v2/common/saveUnsubscriberDetails",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 210,
-      "path": "/v2/signupLogin/getLoginHistory",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 211,
-      "path": "/signupLoginForMediumAndLarge/adminUserLogin",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 212,
-      "path": "/v2/common/getCompanyDetailsByAdmin",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 213,
-      "path": "/v2/katchup/searchKatchUpMessageSubject",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 214,
-      "path": "/v2/profile/convertBase64ToImage",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 215,
-      "path": "/v2/profile/uploadImageToS3",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 217,
-      "path": "/v2/profile/updateSignatureImage",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 219,
-      "path": "/v2/katchup/sendMessageForForwardSelectedAttachment",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 221,
-      "path": "/generalSetting/fontSetting",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 223,
-      "path": "/generalSetting/changeTheme",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 224,
-      "path": "/generalSetting/katchupNotification",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 225,
-      "path": "/generalSetting/kmailNotification",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 226,
-      "path": "/generalSetting/kallNotification",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 229,
-      "path": "/v2/katchup/generateThumbnailUsingUUID",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 230,
-      "path": "/v2/common/updateFlutterAppVersion",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 231,
-      "path": "/v2/common/getCompanyDetailsByMobileNoAndproductId",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 232,
-      "path": "/v2/common/pinCode",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 233,
-      "path": "/v2/profile/getUserBasicDetailsUsingKpostID",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 234,
-      "path": "/ai/chatResponse",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 236,
-      "path": "/ai/messages/1",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 237,
-      "path": "/kword/create",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 238,
-      "path": "/kword/saveContent",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 242,
-      "path": "/kword/share",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 243,
-      "path": "/kpresentation/create",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 244,
-      "path": "/kpresentation/savePresentation",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 248,
-      "path": "/v2/common/getUserDetailsByMobNo",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 249,
-      "path": "/v2/profile/updatePrivacySettingDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 250,
-      "path": "/ai/messageAssist",
-      "reasons": [
-        "method-unknown",
-        "request-unparseable"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 251,
-      "path": "/v2/common/getKpostIdUsingModule",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 254,
-      "path": "/v2/common/getCitiesByRegionId/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 256,
-      "path": "/v2/knews/getSubCategoriesByCategoryId/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 257,
-      "path": "/v2/knews/getPublicationByLanguageId/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 259,
-      "path": "/v2/knews/updateKnewsSettings/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 262,
-      "path": "/kword/joinDocument",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 266,
-      "path": "/kword/update",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 267,
-      "path": "/kword/isConvertToKad",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 268,
-      "path": "/kword/deleteHeading",
-      "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R14"
       ]
     },
     {
@@ -1993,17 +323,7 @@
       "row": 10,
       "path": "/common/mobileNoExist/",
       "reasons": [
-        "method-unknown",
         "legacy-v1"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "Sheet3",
-      "row": 11,
-      "path": "/v2/common/mobileNoExist/",
-      "reasons": [
-        "method-unknown"
       ]
     },
     {
@@ -2012,17 +332,7 @@
       "row": 12,
       "path": "/signupLogin/signup/",
       "reasons": [
-        "method-unknown",
         "legacy-v1"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "Sheet3",
-      "row": 13,
-      "path": "/v2/signupLogin/signup/",
-      "reasons": [
-        "method-unknown"
       ]
     },
     {
@@ -2031,7 +341,7 @@
       "row": 14,
       "path": "/v2/common/sendOTP/",
       "reasons": [
-        "method-unknown"
+        "duplicate-of V2 TESTED APIS:R8"
       ]
     },
     {
@@ -2040,7 +350,6 @@
       "row": 15,
       "path": "/common/sendOTP/",
       "reasons": [
-        "method-unknown",
         "legacy-v1"
       ]
     },
@@ -2050,7 +359,7 @@
       "row": 16,
       "path": "/v2/common/validateOTP/",
       "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R8"
       ]
     },
     {
@@ -2059,7 +368,6 @@
       "row": 17,
       "path": "/common/validateOTP/",
       "reasons": [
-        "method-unknown",
         "legacy-v1"
       ]
     },
@@ -2069,7 +377,7 @@
       "row": 19,
       "path": "/v2/signupLogin/kpostIdExist/",
       "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R15"
       ]
     },
     {
@@ -2078,16 +386,7 @@
       "row": 20,
       "path": "/v2/signupLogin/kpostIdExist/",
       "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kpost-api",
-      "tab": "Sheet3",
-      "row": 21,
-      "path": "/v2/common/postalPinCode/",
-      "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R15"
       ]
     },
     {
@@ -2096,7 +395,7 @@
       "row": 22,
       "path": "/v2/common/sendOTPtoMail/",
       "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R12"
       ]
     },
     {
@@ -2105,7 +404,7 @@
       "row": 23,
       "path": "/v2/common/validateMailOTP/",
       "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R13"
       ]
     },
     {
@@ -2114,7 +413,7 @@
       "row": 24,
       "path": "/v2/signupLogin/kpostIDsuggestionList/",
       "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R16"
       ]
     },
     {
@@ -2123,7 +422,17 @@
       "row": 25,
       "path": "/v2/signupLogin/fetchUserDetails",
       "reasons": [
-        "method-unknown"
+        "duplicate-of KatchupAPI:R3"
+      ]
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 5,
+      "path": "/common/postBoxContacts/",
+      "reasons": [
+        "unused-note",
+        "duplicate-of KMAILAPI:R37"
       ]
     },
     {
@@ -2132,7 +441,8 @@
       "row": 7,
       "path": "/common/statusOfKmailsContacts/",
       "reasons": [
-        "superseded"
+        "superseded",
+        "unused-note"
       ]
     },
     {
@@ -2152,42 +462,6 @@
       "path": "/sentMail/postMailMultiPart/",
       "reasons": [
         "superseded"
-      ]
-    },
-    {
-      "product": "kmail-api",
-      "tab": "KMAILAPI",
-      "row": 37,
-      "path": "/common/postBoxContacts/",
-      "reasons": [
-        "duplicate-of KMAILAPI:R5"
-      ]
-    },
-    {
-      "product": "kmail-api",
-      "tab": "KMAILAPI",
-      "row": 39,
-      "path": "/common/deleteOtherDomainContact/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kmail-api",
-      "tab": "KMAILAPI",
-      "row": 40,
-      "path": "/common/editOtherDomainContactsDetails/",
-      "reasons": [
-        "method-unknown"
-      ]
-    },
-    {
-      "product": "kmail-api",
-      "tab": "KMAILAPI",
-      "row": 41,
-      "path": "/common/knownPostBoxContacts/",
-      "reasons": [
-        "method-unknown"
       ]
     },
     {

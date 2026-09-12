@@ -1,145 +1,140 @@
-# Excel gaps — what to fill in the workbook
+# Excel gaps — what to confirm or fill in the workbook
 
-Generated from the parsed contracts. 351 rows need something; open
-`contracts/excel-gaps.csv` in Excel for the full list (it has Tab + Row to find each cell).
+Generated from the parsed contracts. 233 rows need attention; open
+`contracts/excel-gaps.csv` in Excel for the full list — it has **Tab**, **Row** and **FillCell**,
+so every line names the cell it is talking about.
+
+## How the HTTP method is decided now
+
+Methods are no longer blocked on the workbook. The rule given by the API owner is applied:
+
+> **A documented request payload means POST. No payload means GET.**
+
+This API uses **only POST and GET** — no PUT, PATCH or DELETE (the workbook states a method 95
+times: 80 POST, 15 GET). So an `updateX` or `deleteX` endpoint with a payload is a POST, and the
+rule needs no confirming.
+
+The workbook still wins wherever it states a method — a Method column, or a `GET METHOD` note in
+the request cell — and the **MethodFrom** column records which applied:
+
+| MethodFrom | Meaning |
+| --- | --- |
+| `method-column` | the tab has a Method column and it was used |
+| `request-note` | the request cell says so in words (`GET METHOD`, `Not Required(Get method)`) |
+| `payload-rule` | derived from the presence of a payload, per the rule above |
+
+Typing a method into the **FillCell** cell overrides the derived one on the next run.
+
+**Yellow rows are unused and are not added** — 25 of them, excluded and not listed
+below. They stay in `*.contract.json` marked `usable: false` so the decision is auditable.
 
 | Priority | Meaning | Rows |
 | --- | --- | ---: |
-| P1 | **HTTP method missing** — blocks the endpoint entirely | 210 |
-| P2 | Request payload and/or sample response missing | 104 |
-| P3 | JSON cell has prose mixed in, so it cannot be parsed | 9 |
-| P4 | Duplicate or legacy row — confirm which is current | 4 |
-| P5 | Retired (yellow) — confirm out of scope | 24 |
+| P1 | **Confirm the HTTP method** — the workbook contradicts itself | 0 |
+| P2 | Request payload and/or sample response missing | 185 |
+| P3 | The JSON sample does not parse, so no schema is inferred | 27 |
+| P4 | Duplicate, legacy, or two endpoints in one row | 21 |
 
-## P1 — missing HTTP method, by module
+## Resolved without you: 7 rows where the request cell won
 
-| Module | Rows |
-| --- | ---: |
-| kpost-api · (no module) | 29 |
-| kpost-api · profile | 22 |
-| kpost-api · katchup | 19 |
-| kpost-api · Common | 14 |
-| kpost-api · common | 12 |
-| kpost-api · Admin | 12 |
-| kpost-api · Katchup | 8 |
-| kpost-api · Signup | 7 |
-| kpost-api · contacts | 7 |
-| kpost-api · Integration | 7 |
-| kpost-api · Kword | 7 |
-| kpost-api · KALLv2 | 6 |
-| kpost-api · group | 5 |
-| kpost-api · KALLv2  Kool Kall | 5 |
-| kpost-api · Profile | 5 |
-| kpost-api · General Setting | 5 |
-| kpost-api · Group | 4 |
-| kmail-api · Kmail | 3 |
-| kpost-api · Contacts | 3 |
-| kpost-api · KALL | 3 |
-| kpost-api · AI | 3 |
-| kpost-api · Knews | 3 |
-| kpost-api · dashboard | 2 |
-| kpost-api · AWS katchup | 2 |
-| kpost-api · Login | 2 |
-| kpost-api · kall | 2 |
-| kpost-api · Kmail | 2 |
-| kpost-api · KPresentation | 2 |
-| kpost-api · KALLv2  Kool Kall & individual Kool | 1 |
-| kpost-api · generatePresignedUrl KMAIL | 1 |
-| kpost-api · KMAIL READMAIL | 1 |
-| kpost-api · kmail SENTMAIL | 1 |
-| kpost-api · Dashboard | 1 |
-| kpost-api · Business,Institution sigunp | 1 |
-| kpost-api · KMail | 1 |
-| kpost-api · Kall | 1 |
-| kpost-api · signupLoginForMediumAndLarge | 1 |
+These are **not** gaps. The Method column disagreed with the request cell, and the cell
+agreed with the payload, so the cell was used — the column predates tokens, the cell
+describes today's contract:
 
-The CSV has a `SuggestedMethod` column (`GET?` / `POST?`) guessed from the endpoint name to speed
-this up. **It is a hint — confirm each one.** The converter never reads it.
+| Cell | Endpoint | Method used | Column said |
+| --- | --- | --- | --- |
+| `KMAILAPI!C16` | `/common/frequentKmailContact/` | **GET** | POST |
+| `KMAILAPI!C17` | `/common/unOpenedMailCountBySenderID/` | **GET** | POST |
+| `KMAILAPI!C18` | `/common/miscellaneousContacts/` | **GET** | POST |
+| `KMAILAPI!C23` | `/sentMail/loadOtherDomainMails/` | **GET** | POST |
+| `KMAILAPI!C25` | `/draft/getAllDraftMails/` | **GET** | POST |
+| `KMAILAPI!C26` | `/draft/getDraftMailsContacts/` | **GET** | POST |
+| `KMAILAPI!C58` | `/readMail/download/{uuid}` | **GET** | POST |
+
+## P1 — nothing to confirm
+
+Every method is either stated by the workbook or settled
+by the payload rule.
+
+
+### Where to type a correction
+
+Only needed where the derived method is wrong. Per tab:
+
+| Tab | P1 rows | Method column | Status |
+| --- | ---: | --- | --- |
+| KatchupAPI | 0 | **Q** | none — a column headed `Method` in Q would override the derived methods |
+| KDIARY | 0 | **C** | already there |
+| V2 TESTED APIS | 0 | **B** | already there |
+| Sheet3 | 0 | **H** | none — a column headed `Method` in H would override the derived methods |
+| KMAILAPI | 0 | **C** | already there |
+
+> **If you add that column (KatchupAPI → Q, Sheet3 → H), append it at the end — never insert it.**
+> The converter finds the Method column by its header, so appending it needs no code change.
+> Inserting one shifts every column letter after it — the converter then stops with a
+> "layout changed" error instead of reading the wrong cells.
 
 ## First 15 rows of each priority
 
-### P1 (210 rows)
+### P2 (185 rows)
 
-| Tab:Row | Path | Endpoint | Has req / res | Suggested | Action |
+| Tab:Row | Path | Method | From | Request / Response | Action |
 | --- | --- | --- | --- | --- | --- |
-| KMAILAPI:R39 | `/common/deleteOtherDomainContact/` | — | yes / no | POST? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KMAILAPI:R40 | `/common/editOtherDomainContactsDetails/` | — | yes / no | POST? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KMAILAPI:R41 | `/common/knownPostBoxContacts/` | — | yes / no | — | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R2 | `/v2/profile/fetchUserDetails/` | fetchUserDetails | yes / yes | GET? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R3 | `/v2/profile/fetchUserDetails/` | fetchUserDetails | no / yes | GET? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R3 | `/v2/signupLogin/fetchUserDetails/` | — | no / yes | GET? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R4 | `/v2/signupLogin/userLogin/` | userLogin | text only / yes | — | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R5 | `/v2/signupLogin/generateJWTokens/` | generateJWTokens | yes / yes | POST? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R6 | `/v2/common/msStatus/` | msStatus | no / text only | — | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R7 | `/v2/common/forgotPasswordUpdate` | forgotPasswordUpdate | yes / yes | POST? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R7 | `/v2/profile/changePassword` | changePassword | yes / yes | POST? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R8 | `/v2/common/sendOTP/` | sendOTP | text only / yes | POST? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R8 | `/v2/common/validateOTP/` | validateOTP | yes / yes | POST? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R9 | `/v2/common/forgotPasswordOTPOrSentKpostIDSms` | forgotPasswordOTPOrSentKpostIDSms | yes / yes | POST? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
-| KatchupAPI:R10 | `/v2/common/countries` | countries | text only / yes | GET? | Add the HTTP method (GET/POST/PUT/DELETE) for this row. |
+| KMAILAPI:R19 | `/common/convertMailAsPDF/` | POST | method-column | no payload / no | Add the request payload (the method column says POST) and a sample response. |
+| KMAILAPI:R30 | `/readMail/referenceMailContent/` | POST | method-column | payload / no | Add a sample response. |
+| KMAILAPI:R37 | `/common/postBoxContacts/` | POST | method-column | payload / no | Add a sample response. |
+| KMAILAPI:R38 | `/kmailSetting/getDigitalSignature` | GET | request-note | no payload / no | Add a sample response. |
+| KMAILAPI:R39 | `/common/deleteOtherDomainContact/` | POST | method-column | payload / no | Add a sample response. |
+| KMAILAPI:R40 | `/common/editOtherDomainContactsDetails/` | POST | method-column | payload / no | Add a sample response. |
+| KMAILAPI:R41 | `/common/knownPostBoxContacts/` | POST | method-column | payload / no | Add a sample response. |
+| KMAILAPI:R42 | `/common/statusOfKmailsContactsTotalCount/` | GET | request-note | no payload / no | Add a sample response. |
+| KMAILAPI:R45 | `/v2/sentMail/postMail/` | POST | method-column | payload / no | Add a sample response. |
+| KMAILAPI:R46 | `/readMail/getCopiesInfo/{kmailID}` | GET | method-column | no payload / no | Add a sample response. |
+| KMAILAPI:R47 | `/v2/aws/generate-presigned-url` | POST | method-column | payload / no | Add a sample response. |
+| KMAILAPI:R48 | `/v2/readMail/downloadODAttachment` | POST | method-column | payload / no | Add a sample response. |
+| KMAILAPI:R49 | `/readMail/downloadThumbnail/{uuid}` | GET | request-note | no payload / no | Add a sample response. |
+| KMAILAPI:R50 | `/readMail/mediaStreaming/{uuid}` | GET | request-note | no payload / no | Add a sample response. |
+| KMAILAPI:R51 | `/kmailSetting/deleteCustomizedInstantReply` | POST | method-column | payload / no | Add a sample response. |
 
-### P2 (104 rows)
+### P3 (27 rows)
 
-| Tab:Row | Path | Endpoint | Has req / res | Suggested | Action |
+| Tab:Row | Path | Method | From | Request / Response | Action |
 | --- | --- | --- | --- | --- | --- |
-| KMAILAPI:R5 | `/common/postBoxContacts/` | — | text only / yes | — | Add the request payload. |
-| KMAILAPI:R16 | `/common/frequentKmailContact/` | — | text only / yes | — | Add the request payload. |
-| KMAILAPI:R17 | `/common/unOpenedMailCountBySenderID/` | — | text only / yes | — | Add the request payload. |
-| KMAILAPI:R18 | `/common/miscellaneousContacts/` | — | text only / yes | — | Add the request payload. |
-| KMAILAPI:R19 | `/common/convertMailAsPDF/` | — | no / no | — | Add the request payload and a sample response. |
-| KMAILAPI:R23 | `/sentMail/loadOtherDomainMails/` | — | text only / yes | — | Add the request payload. |
-| KMAILAPI:R25 | `/draft/getAllDraftMails/` | — | text only / yes | — | Add the request payload. |
-| KMAILAPI:R26 | `/draft/getDraftMailsContacts/` | — | text only / yes | — | Add the request payload. |
-| KMAILAPI:R30 | `/readMail/referenceMailContent/` | — | yes / no | — | Add a sample response. |
-| KMAILAPI:R38 | `/kmailSetting/getDigitalSignature` | — | text only / no | — | Add a sample response. |
-| KMAILAPI:R42 | `/common/statusOfKmailsContactsTotalCount/` | — | text only / no | — | Add a sample response. |
-| KMAILAPI:R45 | `/v2/sentMail/postMail/` | — | yes / no | — | Add a sample response. |
-| KMAILAPI:R46 | `/readMail/getCopiesInfo/{kmailID}` | — | no / no | — | Add a sample response. |
-| KMAILAPI:R47 | `/v2/aws/generate-presigned-url` | — | yes / no | — | Add a sample response. |
-| KMAILAPI:R48 | `/v2/readMail/downloadODAttachment` | — | yes / no | — | Add a sample response. |
+| KMAILAPI:R15 | `/common/getAllImportantMails/` | POST | method-column | payload / text only | Fix the response sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KMAILAPI:R20 | `/common/selectedContactMails/` | POST | method-column | payload (sample broken) / no | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KMAILAPI:R24 | `/draft/draftMail/` | POST | method-column | payload (sample broken) / yes | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KMAILAPI:R31 | `/readMail/sentAndInboxMailContent/` | POST | method-column | payload (sample broken) / yes | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KMAILAPI:R43 | `/common/clearStatusOfKmailsContacts/` | POST | method-column | payload (sample broken) / no | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KMAILAPI:R44 | `/draft/draftMailMultiPart` | POST | method-column | payload (sample broken) / no | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KMAILAPI:R54 | `/common/clearStatusOfAllKmailsContacts` | POST | method-column | payload (sample broken) / no | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KatchupAPI:R4 | `/v2/signupLogin/userLogin/` | POST | payload-rule | payload (sample broken) / yes | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KatchupAPI:R17 | `/v2/signupLogin/signup/` | POST | payload-rule | payload (sample broken) / yes | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KatchupAPI:R37 | `/v2/katchup/sendMessage/` | POST | payload-rule | payload (sample broken) / yes | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KatchupAPI:R44 | `/v2/katchup/deleteKatchUpMessage/` | POST | payload-rule | payload (sample broken) / yes | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KatchupAPI:R70 | `/v2/katchup/downloadThumbnail/{uuid}` | GET | request-note | no payload / text only | Fix the response sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KatchupAPI:R73 | `/v2/contacts/blockOrUnBlockContact/` | POST | payload-rule | payload (sample broken) / no | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KatchupAPI:R96 | `/v2/kall/contactInfo/` | POST | payload-rule | payload (sample broken) / yes | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
+| KatchupAPI:R118 | `/v2/katchup/forwardKatchupMessage/` | POST | payload-rule | payload / text only | Fix the response sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
 
-### P3 (9 rows)
+### P4 (21 rows)
 
-| Tab:Row | Path | Endpoint | Has req / res | Suggested | Action |
+| Tab:Row | Path | Method | From | Request / Response | Action |
 | --- | --- | --- | --- | --- | --- |
-| KMAILAPI:R15 | `/common/getAllImportantMails/` | — | yes / text only | — | Fix the JSON — prose is mixed into it (response-unparseable). |
-| KMAILAPI:R20 | `/common/selectedContactMails/` | — | text only / no | — | Fix the JSON — prose is mixed into it (request-unparseable). |
-| KMAILAPI:R24 | `/draft/draftMail/` | — | text only / yes | — | Fix the JSON — prose is mixed into it (request-unparseable). |
-| KMAILAPI:R31 | `/readMail/sentAndInboxMailContent/` | — | text only / yes | — | Fix the JSON — prose is mixed into it (request-unparseable). |
-| KMAILAPI:R43 | `/common/clearStatusOfKmailsContacts/` | — | text only / no | — | Fix the JSON — prose is mixed into it (request-unparseable). |
-| KMAILAPI:R44 | `/draft/draftMailMultiPart` | — | text only / no | — | Fix the JSON — prose is mixed into it (request-unparseable). |
-| KMAILAPI:R54 | `/common/clearStatusOfAllKmailsContacts` | — | text only / no | — | Fix the JSON — prose is mixed into it (request-unparseable). |
-| KatchupAPI:R70 | `/v2/katchup/downloadThumbnail/{uuid}` | — | text only / text only | — | Fix the JSON — prose is mixed into it (response-unparseable). |
-| KDIARY:R5 | `/dairySchedule/createEvent` | — | no / text only | — | Fix the JSON — prose is mixed into it (response-unparseable). |
-
-### P4 (4 rows)
-
-| Tab:Row | Path | Endpoint | Has req / res | Suggested | Action |
-| --- | --- | --- | --- | --- | --- |
-| KMAILAPI:R37 | `/common/postBoxContacts/` | — | yes / no | — | Confirm which row is current (duplicate-of KMAILAPI:R5). |
-| KatchupAPI:R89 | `/v2/kall/todayKoolKall/` | — | text only / yes | — | Confirm which row is current (duplicate-of KatchupAPI:R78). |
-| KatchupAPI:R92 | `/v2/kall/frequentKallContacts` | — | text only / yes | — | Confirm which row is current (duplicate-of KatchupAPI:R54). |
-| KatchupAPI:R94 | `/v2/kall/clearKallHistory` | — | text only / yes | — | Confirm which row is current (duplicate-of KatchupAPI:R57). |
-
-### P5 (24 rows)
-
-| Tab:Row | Path | Endpoint | Has req / res | Suggested | Action |
-| --- | --- | --- | --- | --- | --- |
-| KMAILAPI:R7 | `/common/statusOfKmailsContacts/` | — | text only / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KMAILAPI:R21 | `/sentMail/postMail/` | — | text only / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KMAILAPI:R22 | `/sentMail/postMailMultiPart/` | — | yes / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KMAILAPI:R59 | `/kmailSetting/letterHeadUpload` | — | text only / no | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R23 | `/v2/dashboard/kallDashboard/` | — | yes / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R24 | `/v2/contacts/katchupContacts` | — | text only / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R29 | `/v2/contacts/fetchAdditionalKatchupContacts/` | — | text only / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R51 | `/v2/kall/initiateKall` | — | text only / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R52 | `/v2/kall/checkNewKall` | — | text only / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R53 | `/v2/kall/getKallStatus` | — | yes / yes | GET? | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R54 | `/v2/kall/frequentKallContacts` | — | text only / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R55 | `/v2/kall/setKallStatus` | — | yes / yes | POST? | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R56 | `/v2/kall/clearKallBykallIds` | — | yes / yes | POST? | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R57 | `/v2/kall/clearKallHistory` | — | text only / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
-| KatchupAPI:R58 | `/v2/kall/katchupKall` | — | yes / yes | — | None — retired (yellow). Confirm it can stay out of scope. |
+| KatchupAPI:R3 | `/v2/profile/fetchUserDetails/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R2). |
+| KatchupAPI:R3 | `/v2/signupLogin/fetchUserDetails/` | POST | payload-rule | payload / yes | one payload is documented for the two endpoints in this row — split the row so each endpoint has its own payload. |
+| KatchupAPI:R6 | `/v2/common/msStatus/` | GET | payload-rule | no payload / text only | Confirm which row is current (duplicate-of V2 TESTED APIS:R6). |
+| KatchupAPI:R8 | `/v2/common/sendOTP/` | POST | payload-rule | payload (sample broken) / yes | Confirm which row is current (duplicate-of V2 TESTED APIS:R8). |
+| Sheet3:R10 | `/common/mobileNoExist/` | POST | payload-rule | payload / yes | Confirm the v1 row is retired now that a /v2 row exists. |
+| Sheet3:R12 | `/signupLogin/signup/` | POST | payload-rule | payload / yes | Confirm the v1 row is retired now that a /v2 row exists. |
+| Sheet3:R14 | `/v2/common/sendOTP/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of V2 TESTED APIS:R8). |
+| Sheet3:R15 | `/common/sendOTP/` | GET | payload-rule | no payload / yes | Confirm the v1 row is retired now that a /v2 row exists. |
+| Sheet3:R16 | `/v2/common/validateOTP/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R8). |
+| Sheet3:R17 | `/common/validateOTP/` | GET | payload-rule | no payload / yes | Confirm the v1 row is retired now that a /v2 row exists. |
+| Sheet3:R19 | `/v2/signupLogin/kpostIdExist/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R15). |
+| Sheet3:R20 | `/v2/signupLogin/kpostIdExist/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R15). |
+| Sheet3:R22 | `/v2/common/sendOTPtoMail/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R12). |
+| Sheet3:R23 | `/v2/common/validateMailOTP/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R13). |
+| Sheet3:R24 | `/v2/signupLogin/kpostIDsuggestionList/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R16). |
 
 ## Gaps that are not per-row
 
