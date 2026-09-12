@@ -13,6 +13,14 @@ export interface RequestSpec {
   body?: unknown;
   /** Sent verbatim (used by malformed-JSON probes). Takes precedence over `body`. */
   rawBody?: string;
+  /**
+   * Multipart form fields, for file uploads.
+   *
+   * KPost's logo upload takes two parts: the image as `file`, and its JSON arguments as a form
+   * field literally named `text` - `text={"companyID":4}`. That is not something a JSON body can
+   * express, so it needs its own channel rather than being smuggled through `body`.
+   */
+  multipart?: Record<string, string | { name: string; mimeType: string; buffer: Buffer }>;
 }
 
 export interface ApiRequest {
@@ -23,6 +31,7 @@ export interface ApiRequest {
   headers: Record<string, string>;
   body?: unknown;
   rawBody?: string;
+  multipart?: RequestSpec['multipart'];
   correlationId: string;
   timeoutMs: number;
 }
@@ -86,9 +95,15 @@ export class RequestBuilder {
 
   build(): ApiRequest {
     const hasBody = this.spec.rawBody !== undefined || this.spec.body !== undefined;
+    /*
+     * A multipart request must NOT carry a content-type we chose: the boundary is generated when
+     * the request is sent, and a hand-written `multipart/form-data` header without it makes the
+     * server unable to parse the body.
+     */
+    const isMultipart = this.spec.multipart !== undefined;
     const headers: Record<string, string> = {
       accept: apiConfig.defaultContentType,
-      ...(hasBody ? { 'content-type': apiConfig.defaultContentType } : {}),
+      ...(hasBody && !isMultipart ? { 'content-type': apiConfig.defaultContentType } : {}),
       ...lowerCaseKeys(this.spec.headers ?? {}),
       ...this.extraHeaders,
       [apiConfig.correlationHeader]: this.correlation,
@@ -100,6 +115,7 @@ export class RequestBuilder {
       headers,
       body: this.spec.body,
       rawBody: this.spec.rawBody,
+      multipart: this.spec.multipart,
       correlationId: this.correlation,
       timeoutMs: this.timeout,
     };

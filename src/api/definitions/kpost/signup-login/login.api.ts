@@ -64,10 +64,31 @@ export const adminUserLoginApi = defineKpostEndpoint({
   tags: [...LOGIN_TAGS, 'business-tier'],
   destructive: false,
   /*
-   * The workbook's sample carries `"password": "0FPnV+OKhDGGXMkQjtj1eQ=="` - base64, where every
-   * other login sample is plaintext. Whether this endpoint expects an encrypted password is an
-   * open question with the API owner; the plaintext form is sent until it is answered, and the
-   * result is reported rather than guessed at.
+   * ## Two questions answered by probing this endpoint
+   *
+   * **The password is plaintext.** The workbook's sample carries
+   * `"password": "0FPnV+OKhDGGXMkQjtj1eQ=="` - base64, where every other login sample is plain -
+   * but `Qa@Passw0rd123` is accepted with 200. No encryption is required.
+   *
+   * **There is no `/v2` variant.** `/v2/signupLoginForMediumAndLarge/adminUserLogin` answers
+   * `401 "Authentication is required"`, which is what this gateway returns for any path it cannot
+   * route. The workbook's path is the real one - unlike the logo routes, where the sheet had
+   * dropped the prefix.
+   *
+   * ## It gates on the TIER, not the role - and says the wrong thing about it
+   *
+   *     BUSINESS_M  -> 200
+   *     BUSINESS_L  -> 200
+   *     BUSINESS_S  -> 403 "Not A Admin"
+   *
+   * `meera@m960s.kpost.in` is stored in the database with `role = admin`, so "Not A Admin" is
+   * false. Rejecting a Small business may well be intended - the endpoint is named
+   * *ForMediumAndLarge* - but then the message describes the wrong thing, and an integrator reading
+   * it will go looking for a permissions problem that does not exist. One of the two is a defect:
+   * either the tier check should accept an admin of a Small business, or the message should say the
+   * login is for Medium and Large enterprises. The owner decides which; the bench reports it.
+   *
+   * The primary request uses the BUSINESS_M principal, since Small is rejected by design.
    */
   request: () =>
     AUTH_PROFILES.kpost.loginRequest(

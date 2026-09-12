@@ -7,9 +7,10 @@ import { test } from '@fixtures';
  */
 test.describe('KPost common · company', () => {
   /*
-   * The two logo endpoints are excluded: they are not deployed on either host we have (the workbook
-   * points them at a third, `kpostapis.kpostindia.com`). Running them would report 404 on every
-   * case - noise about our configuration, not about KPost. See company.api.ts for the evidence.
+   * Nothing is excluded. The logo routes were corrected from the API owner's working calls, so they
+   * reach real handlers now — and what they report is a genuine finding rather than configuration
+   * noise: `downloadCompanyLogo` answers 500 to every request, including an unauthenticated one.
+   * See company.api.ts for the corrections and the evidence behind them.
    */
-  describeEndpointCases({ tags: ['common-company'], excludeTags: ['route-not-deployed'] });
+  describeEndpointCases({ tags: ['common-company'] });
 });

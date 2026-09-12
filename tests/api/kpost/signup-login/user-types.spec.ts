@@ -41,6 +41,7 @@ const TIERS: Tier[] = [
 interface LoginResponse {
   status?: string;
   statusCode?: number;
+  message?: string;
   accessToken?: string;
   refreshToken?: string;
   data?: { kpostID?: string; userType?: string; companyID?: number; mobileNumber?: string };
@@ -234,5 +235,62 @@ test.describe('KPost Signup & Login · concurrent logins', () => {
       failed.map((result) => `${result.userType}=${result.status}`),
       'no login should fail because another account logged in at the same moment',
     ).toEqual([]);
+  });
+});
+
+test.describe('KPost Signup & Login · the enterprise login and business tiers', () => {
+  test.describe.configure({ mode: 'default' });
+
+  /**
+   * `/signupLoginForMediumAndLarge/adminUserLogin` gates on the **tier**, not the role.
+   *
+   *     BUSINESS_M -> 200      BUSINESS_L -> 200      BUSINESS_S -> 403 "Not A Admin"
+   *
+   * `meera@m960s.kpost.in` is stored with `role = admin` in the database, so the message is
+   * false — whatever the intent of the restriction. This test pins the behaviour and the message
+   * separately, so a fix to either one is visible:
+   *
+   *  - Small being rejected is asserted as the current contract, not as correct.
+   *  - The message is asserted NOT to blame the role, which is the part that is demonstrably wrong.
+   */
+  test('a Medium business admin can use the enterprise login @api @signup-login @business-tier', async ({
+    endpoints,
+  }) => {
+    const { status, body } = await loginOnce(endpoints, {
+      userType: 'BUSINESS_M',
+      kpostId: testData.businessMKpostId,
+    });
+    expect(status, 'BUSINESS_M is the tier this endpoint exists for').toBe(200);
+    expect(body.accessToken, 'a token is issued').toBeTruthy();
+  });
+
+  test('a Small business is rejected, but not for the reason given @api @signup-login @business-tier', async ({
+    endpoints,
+  }) => {
+    const exchange = await endpoints.sendTo(
+      'signup-login-admin-user-login',
+      AUTH_PROFILES.kpost.loginRequest({
+        key: 'tier-small',
+        role: 'COMPANY_ADMIN',
+        username: testData.businessSKpostId,
+        password: testData.password,
+        userType: 'BUSINESS_S',
+      }),
+      { label: 'tier:business-s', auth: { header: undefined } },
+    );
+    const parsed = exchange.json();
+    const body = (parsed.ok ? parsed.value : {}) as LoginResponse;
+
+    // The current contract: Small does not get in through the enterprise login.
+    expect(exchange.status, 'BUSINESS_S is not admitted here').not.toBe(200);
+    /*
+     * The account IS an admin in the database, so a message that says otherwise sends the reader
+     * after a permissions problem that does not exist. If the restriction is intended, the message
+     * should name the tier.
+     */
+    expect(
+      body.message ?? '',
+      'the rejection must not claim the account is not an admin — it is one',
+    ).not.toMatch(/not a admin|not an admin/i);
   });
 });

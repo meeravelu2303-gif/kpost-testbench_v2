@@ -27,7 +27,9 @@ export class ApiClient {
       const response = await this.request.fetch(apiRequest.url, {
         method: apiRequest.method,
         headers: apiRequest.headers,
-        data,
+        // Playwright builds the boundary and encodes the parts; `data` and `multipart` are
+        // mutually exclusive, so only one is ever set.
+        ...(apiRequest.multipart ? { multipart: apiRequest.multipart } : { data }),
         timeout: apiRequest.timeoutMs,
         failOnStatusCode: false,
         maxRedirects: 0,

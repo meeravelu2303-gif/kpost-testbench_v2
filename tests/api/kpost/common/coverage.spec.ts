@@ -16,23 +16,34 @@ test.describe('KPost common · module coverage', () => {
 
   test('every definition matches the generated contract @framework', () => {
     for (const api of commonApis) {
-      const contract = workbookContract('kpost-api', api.method, api.path);
-      expect(contract.path, `${api.id} path`).toBe(api.path);
+      /*
+       * `contractPath` where the live API disagrees with the sheet: the schema still comes from the
+       * documented row, but the request goes to the real path. Asserting only `api.path` would make
+       * a corrected endpoint fail this test for being correct.
+       */
+      const documented = api.contractPath ?? api.path;
+      const contract = workbookContract('kpost-api', api.method, documented);
+      expect(contract.path, `${api.id} contract path`).toBe(documented);
     }
   });
 
   /**
-   * The common module is public with exactly one exception: `downloadCompanyLogo` requires a token,
-   * **on the API owner's word**.
+   * The common module is public except for the company-logo trio, which the API owner's working
+   * calls confirm require a Bearer token.
    *
-   * The bench's own evidence for it was wrong and is worth recording: the 401 it returns without a
-   * token is what this gateway answers for *any* unrouted path, so it proved nothing. The route is
-   * not deployed on either host we have (see company.api.ts), which is why the 401 appeared at all.
+   * An exact list, so an endpoint that starts *or* stops requiring a token fails this test rather
+   * than changing the module's security posture silently.
    *
-   * Asserted as an exact list rather than "at least these", so an endpoint that starts or stops
-   * requiring a token fails this test instead of changing the module's security posture silently.
+   * One earlier claim here was wrong and is worth remembering: the bench cited a 401 as proof that
+   * `downloadCompanyLogo` was protected. This gateway answers 401 to *any* unrouted path without a
+   * token, so that proved nothing - the route was simply absent at the path the workbook gave. The
+   * authority for these three is the owner's curl, not our probe.
    */
-  const REQUIRES_TOKEN = ['common-download-company-logo'];
+  const REQUIRES_TOKEN = [
+    'common-download-company-logo',
+    'common-update-company-logo',
+    'common-remove-company-logo',
+  ];
 
   test('the common module is public, except the endpoints listed here @framework', () => {
     const requiringAuth = commonApis

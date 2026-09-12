@@ -35,7 +35,13 @@ export const commonApis: EndpointDefinition[] = [
  * added to a future dump would sit untested and nothing would say so.
  */
 export function uncoveredCommonPaths(): string[] {
-  const covered = new Set(commonApis.map((api) => `${api.method} ${api.path}`));
+  // Both the live path and the workbook path it corrects, or a corrected route reads as untested.
+  const covered = new Set(
+    commonApis.flatMap((api) => [
+      `${api.method} ${api.path}`,
+      ...(api.contractPath ? [`${api.method} ${api.contractPath}`] : []),
+    ]),
+  );
   const documented: string[] = [];
 
   for (const path of contractPaths('kpost-api')) {

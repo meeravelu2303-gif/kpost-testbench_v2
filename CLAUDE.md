@@ -209,6 +209,257 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-12 — Answered: the `companyID`/`role` claims come from a different deployment, not a different account
+
+The open question from three entries above — _why does the owner's token carry `companyID` and
+`role` when none of ours do?_ — has an answer, and it is not about how our accounts were
+provisioned. **The reference token was not issued by the host we test against.**
+
+Two public checks settle it, both on `192.168.0.66:8989`:
+
+    POST /v2/signupLogin/kpostIdExist/   {kpostID:"pd@cake.kpost.in", …}   -> 200 "Available. can be used"
+    POST /v2/signupLogin/kpostIdExist/   {kpostID:"meera23m@kpost.in", …}  -> 400 "already exits!"
+    GET  /v2/common/getCompanyNameExistOnKpostAndKsmacc/cake               -> 200 "Available. Can be used"
+    GET  /v2/common/getCompanyNameExistOnKpostAndKsmacc/Meera 23 Medium Co -> 409 "already exists!"
+
+The token's subject `pd@cake.kpost.in` **does not exist here**, and neither does the company "cake"
+its domain is derived from. Its `companyID: 4` is likewise impossible to reconcile with this
+database, where companies are 1000008 and 1001605–1001607. So it is a token from another KPost
+deployment (the live one), signed by another auth service.
+
+**The claim set is a version progression of that auth service.** Three generations are visible in
+this repo's own history:
+
+    {sub, exp, iat}                                  workbook sample, karksrajan@…, Jan 2024
+    {sub, exp, deviceID, iat}                        our host, every account, every login route
+    {sub, companyID, role, exp, deviceID, iat}       the owner's live token, pd@cake.kpost.in
+
+`deviceID` was added, then `companyID` and `role`. Our host runs `1.0.48:220`
+(`getFlutterAppVersion`), and its auth service stops at the middle generation.
+
+**Exhaustively checked before concluding it** — 4 accounts × 2 login routes, every one 200 except
+where the tier gates it:
+
+| Account                   | `userLogin`                 | `adminUserLogin`            |
+| ------------------------- | --------------------------- | --------------------------- |
+| `meera960@kpostindia.com` | `{sub, exp, deviceID, iat}` | 403 "Not A Admin"           |
+| `meera23s@kpost.in`       | `{sub, exp, deviceID, iat}` | 403 "Not A Admin"           |
+| `meera23m@kpost.in`       | `{sub, exp, deviceID, iat}` | `{sub, exp, deviceID, iat}` |
+| `meera23l@kpost.in`       | `{sub, exp, deviceID, iat}` | `{sub, exp, deviceID, iat}` |
+
+Including the three accounts created two entries above through `adminRegistration` — provisioned the
+same way a real business admin is, and **still** no `companyID` claim, even though the login
+_response body_ carries `data.companyID` correctly (1001605 / 1001606 / 1001607). The company is
+known to the login service; it is simply not put into the JWT by this build.
+
+**So there is nothing to fix on our side, and nothing more to try.** No login route on this host
+mints those claims for any account, and an endpoint that reads the company from the token cannot
+work here regardless of which of our accounts calls it. Two things follow:
+
+- The `needs-admin-token` tag stays on the logo trio, but it now means "needs a deployment whose
+  auth service mints company claims", not "needs a better account".
+- This still is **not** the cause of the logo failures — `downloadCompanyLogo` 500s for the owner's
+  own `companyID: 4` token too (entry above). Two independent facts that looked like one.
+
+**For the owner:** the question worth asking the developers is whether `8989` is simply behind the
+live build, or whether the company/role claims are added by a login path that is not deployed here
+at all. Either answer is actionable; guessing between them is not.
+
+**A finding found on the way there.** `kpostIdExist` answers **500** when sent only `kpostID`:
+
+    {"data":"Error while checking KpostID duplication","urlPath":"/isKpostIdExits/","statusCode":500}
+
+With the full documented payload (`kpostID`, `firstName`, `lastName`, `mobileNumber`) the same
+request answers 200/400 correctly. A missing field is a client error, and every neighbouring
+endpoint returns `fieldErrors` for it — this one crashes instead. Note also that the `urlPath` in
+the error says `/isKpostIdExits/` while the success says `/kpostIdExist/`: two internal names for
+one route, and the misspelled one is what a caller sees when it breaks.
+
+### 2026-09-12 — Three accounts created; the registration flow discovered; personal signup blocked
+
+The owner asked for four fresh accounts. **Three exist**, created through the API rather than the
+database, which also reverse-engineered the registration flow the workbook does not document.
+
+| Type       | KPost ID            | Mobile     | companyID                    |
+| ---------- | ------------------- | ---------- | ---------------------------- |
+| BUSINESS_S | `meera23s@kpost.in` | 9000000927 | 1001605 "Meera 23 Small Co"  |
+| BUSINESS_M | `meera23m@kpost.in` | 9000000928 | 1001606 "Meera 23 Medium Co" |
+| BUSINESS_L | `meera23l@kpost.in` | 9000000930 | 1001607 "Meera 23 Large Co"  |
+
+All three log in and return their company. `.env` now points at them
+(`QA_BUSINESS_S/M/L_KPOST_ID`, `QA_ADMIN_KPOST_ID`, `QA_COMPANY_ID=1001605`,
+`QA_MOBILE_EXISTS=9000000927`).
+
+#### The registration sequence, which nothing documents
+
+    sendOTP        { countryID, mobileNumber, requestType: "signup" }
+    sendOTPtoMail  { otherEmail }
+    validateOTP    { otp: <bypass>, countryID, mobileNumber, sendDate }
+    validateMailOTP{ email, sendDate, otp: <bypass> }
+    adminRegistration { … }
+
+**Both OTPs must be sent AND validated.** Every earlier attempt failed with _"No OTP was found for
+the given mobileNumber/otherEmail"_ purely because the **mail** OTP had not been validated — the
+mobile one alone is not enough. `requestType` must be `"signup"`; `"business"` does not register an
+OTP the registration step can find.
+
+Two more rules the API enforces and the workbook omits:
+
+- **BUSINESS_L requires `maximumMembersCount` explicitly** (2000). S and M default it; L answers
+  `"Invalid maximumMembersCount for userType"` without it.
+- **`lastName` may not contain digits or symbols** — `"Personal23"` is rejected. Found through
+  `kpostIDsuggestionList`, which returns proper `fieldErrors`.
+
+A bonus observation: registering a Medium or Large business also mints a **KSMACC** identity
+(`"ksmaccID":"meera23m@ksmacc.in"`), which the Small tier does not get. Nothing in the workbook
+mentions KSMACC as a registration side effect.
+
+#### `meerapersonal23@kpostindia.com` could not be created — and why that is a finding
+
+`POST /v2/signupLogin/signup/` answers **`400 {"message":"Enter valid Credentials","data":"Not
+Applicable"}`** for every payload tried: with and without `countryID`, `userType`, `email`; with the
+workbook's own sample values; with both OTPs validated; with a digit-free last name; with the
+minimal field set. `@kpostindia.com` is confirmed to be the correct personal domain — the
+`/v2/common/domain/` endpoint returns exactly `["@kpostindia.com"]` for `userType: PERSONAL` — and
+the id was confirmed available by `kpostIdExist`.
+
+**The generic message is itself the problem.** Every neighbouring endpoint returns precise
+`fieldErrors` — `kpostID must start with a letter`, `lastName may not contain digits`,
+`Invalid maximumMembersCount for userType`. Personal signup alone collapses every cause into
+"Enter valid Credentials" with no field detail, which makes it impossible to integrate against: a
+client cannot tell the user what to fix, and a tester cannot tell a bad payload from a broken
+service. Worth filing on that ground alone, independently of whatever the underlying cause is.
+
+### 2026-09-12 — /v2 variants checked for the logo trio; the claims hypothesis disproven
+
+Tested every path variant for all three endpoints, including the **double slash** the owner's curls
+actually use (`https://host//v2/common/...`), in case it was significant:
+
+    GET  /v2/common/downloadCompanyLogo/{id}    -> 500 (empty body)      <- the real route
+    GET  //v2/common/downloadCompanyLogo/{id}   -> 400
+    GET  /common/downloadCompanyLogo/{id}       -> 404
+    GET  /v2/admin/downloadCompanyLogo/{id}     -> 404
+
+    POST /admin/removeCompanyLogo               -> 400 "Internal Server Error"   <- the real route
+    POST /v2/admin/removeCompanyLogo            -> 404
+    POST //v2/admin/removeCompanyLogo           -> 400 (generic handler)
+    POST /v2/common/removeCompanyLogo           -> 404
+
+So the corrected paths are right, `removeCompanyLogo` genuinely has **no** `/v2` form, and the
+double slash is incidental (a trailing slash on the owner's base URL). The 500/409/400 come from
+real handlers, not from routing.
+
+**The token-claims hypothesis was wrong, and the test that disproves it is worth keeping.** The
+owner's reference token (`companyID: 4`, `role: admin`, valid for another 21 hours) was sent to our
+host:
+
+    no token at all                              -> 500 (empty body)
+    our BUSINESS_S token                         -> 500 (empty body)
+    the owner's admin token, companyID 4         -> 500 (empty body)
+    the owner's admin token, companyID 1000008   -> 500 (empty body)
+
+Identical for every caller. So `downloadCompanyLogo` does not fail for want of claims — it fails for
+everyone, and it fails **before authenticating**, since an anonymous request must be 401 rather than 500. Two candidates remain: the route is broken on this host, or it 500s when the company has no
+logo — which would still be a defect, because a missing image is a 404. No company here has one,
+since `updateCompanyLogo` has never succeeded.
+
+Deciding between them means uploading a logo first. That is a write on a company using a token
+supplied for reference, so it waits for the owner's word rather than being done unasked.
+
+**Correction recorded.** The earlier entry in this log blamed the missing `companyID`/`role` claims.
+That was a plausible reading of two facts that turned out to be unrelated, and the definition's
+comment now says so explicitly. The claims difference is still real and still worth explaining —
+`adminUserLogin` does not add them even for an account the database marks `role = admin` — it is
+simply not the cause of these failures.
+
+### 2026-09-12 — No `/v2` for the enterprise login; it gates on tier and names the wrong reason
+
+Checked whether `adminUserLogin` had lost a `/v2` prefix the way the logo routes had.
+
+**It had not.** `/v2/signupLoginForMediumAndLarge/adminUserLogin` answers
+`401 "Authentication is required to access this resource."` — this gateway's reply for any path it
+cannot route, established earlier against a nonsense path. The workbook's path is the real one, so
+the 403 below comes from a real handler rather than a missing route.
+
+**The endpoint gates on the tier, not the role — and the message says otherwise.**
+
+    BUSINESS_M  -> 200
+    BUSINESS_L  -> 200
+    BUSINESS_S  -> 403 "Not A Admin"
+
+The owner supplied the database row for `meera@m960s.kpost.in`: `role = admin`, Managing Director of
+"Meera Small Co". The account **is** an admin, so "Not A Admin" is false. Restricting the endpoint
+to Medium and Large may well be intended — it is named _ForMediumAndLarge_ — but then the message
+describes the wrong thing, and an integrator reading it goes looking for a permissions problem that
+does not exist.
+
+One of the two is a defect and only the owner can say which: either the check should admit an admin
+of a Small business, or the message should name the tier. `tests/api/kpost/signup-login/user-types.spec.ts`
+pins them **separately**, so a fix to either is visible:
+
+- Small being rejected is asserted as the _current contract_, not as correct.
+- The message is asserted **not** to blame the role — the part that is demonstrably wrong. That
+  assertion fails today, deliberately.
+
+Also confirmed: the password is plaintext. The workbook's base64 sample
+(`0FPnV+OKhDGGXMkQjtj1eQ==`) is not a requirement; `Qa@Passw0rd123` is accepted with 200.
+
+**Still open:** no login we know of mints the `companyID` and `role` claims the logo endpoints read.
+The owner's working token has them (`pd@cake.kpost.in`, companyID 4, role admin); neither
+`userLogin` nor `adminUserLogin` produces them for our accounts.
+
+### 2026-09-12 — The logo trio corrected from the live application; multipart support added
+
+The API owner supplied working calls from the live app. **The workbook is wrong about all three
+paths** — it records them against `kpostapis.kpostindia.com` and **without the `/v2` prefix**, which
+is the whole reason the bench had been seeing 404s. It was calling paths that do not exist.
+
+    workbook                              live (corrected)
+    POST /common/updateCompanyLogo        POST /v2/common/updateCompanyLogo
+    GET  /common/downloadCompanyLogo/{id} GET  /v2/common/downloadCompanyLogo/{id}
+    POST /admin/removeCompanyLogo         POST /admin/removeCompanyLogo   (this one was right)
+
+`contractPath` is a new field on the definition: the schema is still read from the documented
+workbook row, while the request goes to the real path. Every use must cite its evidence. The
+coverage self-tests reconcile both, so a corrected route no longer reads as "untested" and its
+documented row no longer reads as "uncovered".
+
+**Multipart is now supported.** `RequestSpec.multipart` flows through the builder and client to
+Playwright's own multipart encoder, and the builder deliberately omits `content-type` for those
+requests — the boundary is generated at send time, and a hand-written `multipart/form-data` header
+without it makes the body unparseable.
+
+Three things the owner's calls revealed that no schema would have:
+
+- **The JSON arguments travel in a form field named `text`** — `text={"companyID":4}` — alongside
+  the image in `file`. The workbook documents `{ "companyID": 1 }` as if it were a JSON body, which
+  cannot carry an image at all.
+- **`removeCompanyLogo` spells it `companyId`** (lower-case d) where the rest of the product uses
+  `companyID`. Sent as the working call sends it; normalising it would hide the inconsistency.
+- **The token must carry `companyID` and `role` claims.** The owner's token decodes to
+  `{sub, companyID: 4, role: "admin", …}`. Ours carry only `{sub, exp, deviceID, iat}` — from
+  `userLogin` **and** from `adminUserLogin`. The company these endpoints act on comes from the
+  token, not the payload, so they cannot fully pass until we have an account whose login mints those
+  claims. Tagged `needs-admin-token`.
+
+#### What the corrected paths report
+
+| Endpoint                                  | Result                                                                                                                                                                     |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v2/common/downloadCompanyLogo/{id}` | **500 to every request — including with no token at all**, where 401 belongs. It fails before authenticating: 11 of its auth and error-shape cases fail on this one cause. |
+| `POST /v2/common/updateCompanyLogo`       | 409 with the correct multipart shape — the same "conflicts with the current state" this API returns from several handlers                                                  |
+| `POST /admin/removeCompanyLogo`           | 400 `"Internal Server Error"` — a 400 whose message says 500                                                                                                               |
+
+The download endpoint is the notable one: an unauthenticated caller gets a 500. That is both a
+defect and a monitoring problem, and it is exactly what the earlier false 401 had hidden.
+
+#### Two answers that came out of the same investigation
+
+- **`adminUserLogin` accepts a plaintext password** — 200 with `Qa@Passw0rd123`. The workbook's
+  base64 sample (`0FPnV+OKhDGGXMkQjtj1eQ==`) is not a requirement. That closes an open question.
+- **It is Medium/Large only.** `BUSINESS_S` is rejected with `403 "Not A Admin"`, exactly as the
+  endpoint's name implies — so the definition uses the BUSINESS_M principal.
+
 ### 2026-09-12 — The logo endpoints are not deployed here, and a false pass that hid it
 
 **What is wrong with `updateCompanyLogo`: the route does not exist on either host we have.**

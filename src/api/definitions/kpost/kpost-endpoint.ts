@@ -30,8 +30,17 @@ export interface KpostEndpointConfig {
   /** Stable id used in reports, filters and bug fingerprints. */
   id: string;
   method: HttpMethod;
-  /** Must match the generated contract exactly — a mismatch throws at import time. */
+  /** The path the endpoint is actually called on. */
   path: string;
+  /**
+   * The path the **workbook** documents, when the live API disagrees with it.
+   *
+   * Schemas and examples are still read from the workbook row, but the request goes to `path`.
+   * Needed because the sheet is wrong in places: it records the company-logo routes without their
+   * `/v2` prefix, and the bench spent a day reporting 404s that were the sheet's error, not the
+   * API's. Every use of this must cite the evidence for the correction.
+   */
+  contractPath?: string;
   summary: string;
   /** Bugzilla component candidates and test filters; `kpost-api` is added automatically. */
   tags?: readonly string[];
@@ -66,12 +75,13 @@ export interface KpostEndpointConfig {
  * than becoming a test that quietly validates nothing.
  */
 export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefinition {
-  const contract = workbookContract('kpost-api', config.method, config.path);
+  const contract = workbookContract('kpost-api', config.method, config.contractPath ?? config.path);
 
   return {
     id: config.id,
     method: config.method,
     path: config.path,
+    contractPath: config.contractPath,
     suite: 'kpost-api',
     responseContract: 'kpost',
     summary: config.summary,

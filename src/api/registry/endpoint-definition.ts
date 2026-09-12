@@ -34,6 +34,14 @@ export interface EndpointDefinition {
   /** OpenAPI-style template, e.g. `/users/{id}`. */
   path: string;
   /**
+   * The path the workbook documents, when it disagrees with the live API.
+   *
+   * Kept on the definition (not just consumed when building it) so the coverage self-tests can
+   * reconcile "what the sheet documents" with "what we actually call" - otherwise a corrected path
+   * looks like an uncovered endpoint and the real one looks undocumented.
+   */
+  contractPath?: string;
+  /**
    * Which KPost module this endpoint belongs to. Decides the base URL it is called on and,
    * when a defect is found, the Bugzilla product, component and owning developer.
    * Default: `kpost-api`. See src/config/ownership.config.ts.
