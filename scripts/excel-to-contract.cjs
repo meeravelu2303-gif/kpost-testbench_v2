@@ -310,9 +310,23 @@ const records = [];
 for (const tab of TABS) {
   for (const { row, cells, yellow } of rowsOf(tab.sheet)) {
     const urlCell = (cells[tab.url] ?? '').trim();
-    const urls = urlCell
+    /*
+     * The layout column is authoritative, with a fallback: some rows hold junk in it (R66 has
+     * " z", R95 is empty, R99 holds the JSON payload) while the real URL sits in the notes
+     * column. Without this, those endpoints are dropped silently — proven by
+     * scripts/contract-coverage.cjs, which scans every column independently.
+     */
+    const looksLikeEndpoint = (v) => /^https?:\/\//.test(v) || /^\/?[a-zA-Z][\w-]*\//.test(v);
+    const fallbackCell = looksLikeEndpoint(urlCell)
+      ? ''
+      : (Object.keys(cells)
+          .sort()
+          .map((col) => (cells[col] ?? '').trim())
+          .find((v) => /^https?:\/\//.test(v)) ?? '');
+    const usedFallback = !looksLikeEndpoint(urlCell) && Boolean(fallbackCell);
+    const urls = (looksLikeEndpoint(urlCell) ? urlCell : fallbackCell)
       .split(/\s+/)
-      .filter((u) => /^https?:\/\//.test(u) || /^\/?[a-zA-Z][\w-]*\//.test(u));
+      .filter((u) => looksLikeEndpoint(u));
     if (!urls.length) continue;
 
     const requestText = firstCell(cells, tab.request);
@@ -335,6 +349,12 @@ for (const tab of TABS) {
         urls.length === 1 ? requestText : bodies.length === urls.length ? bodies[index] : '';
       const request = parseBody(ownRequestText);
       const response = parseBody(responseText);
+      /*
+       * A row that only quotes a base URL in a notes column is not an endpoint: KMAILAPI R1 holds
+       * the tab header "https://kmail5.kpostindia.com/kmail5/v2/" and documents nothing. A
+       * fallback URL is accepted only when the row really describes a call.
+       */
+      if (usedFallback && !method && !request.ok && !response.ok) continue;
       const reasons = [];
       if (yellow[tab.url] || yellow[tab.module]) reasons.push('superseded');
       if (!method) reasons.push('method-unknown');

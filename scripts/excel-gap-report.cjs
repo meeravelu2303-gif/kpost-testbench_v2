@@ -65,8 +65,8 @@ for (const file of files) {
     const noResponse = !record.responseExample;
     const unparseable = reasons.filter((r) => r.endsWith('-unparseable'));
 
-    let priority = '';
-    let action = '';
+    let priority;
+    let action;
     if (superseded) {
       priority = 'P5';
       action = 'None — retired (yellow). Confirm it can stay out of scope.';
@@ -140,8 +140,13 @@ const cell = (value) => {
   const text = String(value ?? '');
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
-// A BOM so Excel reads it as UTF-8 (module names contain ↔ and —).
-const csv = `﻿${[COLUMNS.join(','), ...rows.map((r) => COLUMNS.map((c) => cell(r[c])).join(','))].join('\r\n')}\r\n`;
+// The byte-order mark is what makes Excel read the file as UTF-8 (module names contain arrows
+// and dashes). Written as an escape so the source carries no invisible character.
+const BOM = '﻿';
+const csv =
+  BOM +
+  [COLUMNS.join(','), ...rows.map((r) => COLUMNS.map((c) => cell(r[c])).join(','))].join('\r\n') +
+  '\r\n';
 fs.writeFileSync(path.join(CONTRACTS, 'excel-gaps.csv'), csv);
 
 /* ------------------------------------------------------------------ Markdown */

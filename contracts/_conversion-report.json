@@ -1,9 +1,9 @@
 {
   "source": "KPOST API (5).xlsx",
-  "generatedAt": "2026-09-12T03:34:07.291Z",
+  "generatedAt": "2026-09-12T03:47:32.552Z",
   "summary": {
     "kpost-api": {
-      "rows": 304,
+      "rows": 307,
       "usable": 77,
       "operations": 77,
       "withRequest": 6,
@@ -615,6 +615,15 @@
     {
       "product": "kpost-api",
       "tab": "KatchupAPI",
+      "row": 66,
+      "path": "/v2/profile/updateProfileImage/",
+      "reasons": [
+        "method-unknown"
+      ]
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
       "row": 68,
       "path": "/v2/profile/getDigitalCard/",
       "reasons": [
@@ -852,6 +861,15 @@
     {
       "product": "kpost-api",
       "tab": "KatchupAPI",
+      "row": 95,
+      "path": "/v2/kall/endIndividualKall/",
+      "reasons": [
+        "method-unknown"
+      ]
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
       "row": 96,
       "path": "/v2/kall/contactInfo/",
       "reasons": [
@@ -864,6 +882,15 @@
       "tab": "KatchupAPI",
       "row": 97,
       "path": "/v2/kall/kallInfo",
+      "reasons": [
+        "method-unknown"
+      ]
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 99,
+      "path": "/v2/katchup/sendBulkKatchupMsgMultiPart/",
       "reasons": [
         "method-unknown"
       ]

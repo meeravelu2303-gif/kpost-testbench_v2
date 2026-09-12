@@ -1,0 +1,303 @@
+{
+  "source": "KPOST API (5).xlsx",
+  "generatedAt": "2026-09-12T03:47:50.215Z",
+  "contractPaths": 356,
+  "workbookMentions": 673,
+  "summary": {
+    "KatchupAPI": {
+      "distinctPathsInWorkbook": 290,
+      "uncoveredMentions": 0
+    },
+    "KDIARY": {
+      "distinctPathsInWorkbook": 14,
+      "uncoveredMentions": 0
+    },
+    "V2 TESTED APIS": {
+      "distinctPathsInWorkbook": 8,
+      "uncoveredMentions": 0
+    },
+    "Sheet3": {
+      "distinctPathsInWorkbook": 14,
+      "uncoveredMentions": 0
+    },
+    "KMAILAPI": {
+      "distinctPathsInWorkbook": 80,
+      "uncoveredMentions": 0
+    }
+  },
+  "uncovered": [],
+  "mentionsOnly": [
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 2,
+      "column": "A",
+      "path": "/signuplogin/fetchnameanddesignation",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 6,
+      "column": "A",
+      "path": "/common/msstatus",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 7,
+      "column": "A",
+      "path": "/profile/changepassword",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 7,
+      "column": "A",
+      "path": "/v2/common/changepassword",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 9,
+      "column": "A",
+      "path": "/profile/forgotpwdoridoraccesscode",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 10,
+      "column": "A",
+      "path": "/common/countries",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 11,
+      "column": "A",
+      "path": "/common/languages",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 15,
+      "column": "A",
+      "path": "/signuplogin/kpostidexist",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 16,
+      "column": "A",
+      "path": "/signuplogin/kpostidsuggestionlist",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 18,
+      "column": "A",
+      "path": "/contacts/importphonecontacts",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 19,
+      "column": "A",
+      "path": "/common/domain",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 20,
+      "column": "A",
+      "path": "/dashboard/homedashboardmsgs",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 21,
+      "column": "A",
+      "path": "/dashboard/katchupdashboardmsg",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 22,
+      "column": "A",
+      "path": "/v2/dashboard/getkmaildashboardmsg",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 23,
+      "column": "A",
+      "path": "/kall/getkallhistory",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 24,
+      "column": "A",
+      "path": "/contacts/katchupcontacts",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 31,
+      "column": "A",
+      "path": "/getsharedmessageinfo",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 64,
+      "column": "A",
+      "path": "/v2/kall/removememberkatchupkall",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 65,
+      "column": "N",
+      "path": "/document/d/1ytnm_z9_vla7ghfdb2dlf1qmdi2lkj4e7idfn2sqkuc/edit",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 107,
+      "column": "A",
+      "path": "/v2/profile/updatecollegedetails",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 108,
+      "column": "A",
+      "path": "/v2/profile/updateschooldetails",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 109,
+      "column": "A",
+      "path": "/v2/profile/updateuniversitydetails",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 120,
+      "column": "A",
+      "path": "/v2/katchup/getreferencemessagesdetails",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 181,
+      "column": "A",
+      "path": "/v2/group/getgroupdetailsusinggroupkpostid/{groupkpostid}",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kpost-api",
+      "tab": "KatchupAPI",
+      "row": 233,
+      "column": "A",
+      "path": "/v2/profile/getuserbasicdetailsusingkpostid/{kpostid}",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 1,
+      "column": "A",
+      "path": "/kmail5/v2",
+      "note": "base URL, not an endpoint"
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 65,
+      "column": "F",
+      "path": "/profile_photo.png",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 65,
+      "column": "F",
+      "path": "/banner_image.png",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 67,
+      "column": "F",
+      "path": "/kpostindia",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 67,
+      "column": "F",
+      "path": "/company/kpostindia",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 71,
+      "column": "F",
+      "path": "/profile_photo.png",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 71,
+      "column": "F",
+      "path": "/banner_image.png",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 71,
+      "column": "F",
+      "path": "/kpostindia",
+      "note": "quoted in a notes column"
+    },
+    {
+      "product": "kmail-api",
+      "tab": "KMAILAPI",
+      "row": 71,
+      "column": "F",
+      "path": "/company/kpostindia",
+      "note": "quoted in a notes column"
+    }
+  ]
+}

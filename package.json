@@ -22,6 +22,7 @@
     "mock:api": "node mock-server/server.ts",
     "contract:excel": "node scripts/excel-to-contract.cjs",
     "contract:gaps": "node scripts/excel-gap-report.cjs",
+    "contract:coverage": "node scripts/contract-coverage.cjs",
     "bugs:preview": "cross-env BUGZILLA_DRY_RUN=true playwright test --project=api",
     "bugs:file": "cross-env BUGZILLA_DRY_RUN=false playwright test --project=api",
     "test:smoke": "playwright test --grep @smoke",

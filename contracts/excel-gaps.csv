@@ -49,6 +49,7 @@ P1,kpost-api,KatchupAPI,47,group,removeGroupMember,/v2/group/removeGroupMember/,
 P1,kpost-api,KatchupAPI,48,group,addOrRemoveAdminAccess,/v2/group/addOrRemoveAdminAccess/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,49,group,leaveFromGroup,/v2/group/leaveFromGroup/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,50,katchup,sendKatchupMsgMultiPart,/v2/katchup/sendKatchupMsgMultiPart/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,66,,updateProfileImage,/v2/profile/updateProfileImage/,,POST?,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,68,,getDigitalCard,/v2/profile/getDigitalCard/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,71,,,/kmail5/v2/translator/translation/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,72,,,/v2/contacts/deleteContact/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
@@ -69,8 +70,10 @@ P1,kpost-api,KatchupAPI,88,KALLv2  Kool Kall,,/v2/kall/endKoolKall,,,no,yes,Add 
 P1,kpost-api,KatchupAPI,90,KALLv2,,/v2/kall/kallDashboard,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,91,KALLv2,,/v2/kall/initiateKall,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,93,KALLv2,,/v2/kall/clearKallBykallIds,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,95,KALLv2,,/v2/kall/endIndividualKall/,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,96,KALLv2,,/v2/kall/contactInfo/,,,text only,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,97,KALLv2,,/v2/kall/kallInfo,,,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
+P1,kpost-api,KatchupAPI,99,Katchup,,/v2/katchup/sendBulkKatchupMsgMultiPart/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,100,Katchup,,/v2/katchup/getBulkMessageInfo/,,GET?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,101,Group,,/v2/group/updateGroupProfileImage/,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.
 P1,kpost-api,KatchupAPI,102,Group,,/v2/group/removeGroupProfileImage,,POST?,yes,yes,Add the HTTP method (GET/POST/PUT/DELETE) for this row.

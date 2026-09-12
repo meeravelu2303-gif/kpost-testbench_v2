@@ -1,11 +1,11 @@
 # Excel gaps — what to fill in the workbook
 
-Generated from the parsed contracts. 348 rows need something; open
+Generated from the parsed contracts. 351 rows need something; open
 `contracts/excel-gaps.csv` in Excel for the full list (it has Tab + Row to find each cell).
 
 | Priority | Meaning | Rows |
 | --- | --- | ---: |
-| P1 | **HTTP method missing** — blocks the endpoint entirely | 207 |
+| P1 | **HTTP method missing** — blocks the endpoint entirely | 210 |
 | P2 | Request payload and/or sample response missing | 104 |
 | P3 | JSON cell has prose mixed in, so it cannot be parsed | 9 |
 | P4 | Duplicate or legacy row — confirm which is current | 4 |
@@ -15,20 +15,20 @@ Generated from the parsed contracts. 348 rows need something; open
 
 | Module | Rows |
 | --- | ---: |
-| kpost-api · (no module) | 28 |
+| kpost-api · (no module) | 29 |
 | kpost-api · profile | 22 |
 | kpost-api · katchup | 19 |
 | kpost-api · Common | 14 |
 | kpost-api · common | 12 |
 | kpost-api · Admin | 12 |
+| kpost-api · Katchup | 8 |
 | kpost-api · Signup | 7 |
 | kpost-api · contacts | 7 |
 | kpost-api · Integration | 7 |
-| kpost-api · Katchup | 7 |
 | kpost-api · Kword | 7 |
+| kpost-api · KALLv2 | 6 |
 | kpost-api · group | 5 |
 | kpost-api · KALLv2  Kool Kall | 5 |
-| kpost-api · KALLv2 | 5 |
 | kpost-api · Profile | 5 |
 | kpost-api · General Setting | 5 |
 | kpost-api · Group | 4 |
@@ -58,7 +58,7 @@ this up. **It is a hint — confirm each one.** The converter never reads it.
 
 ## First 15 rows of each priority
 
-### P1 (207 rows)
+### P1 (210 rows)
 
 | Tab:Row | Path | Endpoint | Has req / res | Suggested | Action |
 | --- | --- | --- | --- | --- | --- |
