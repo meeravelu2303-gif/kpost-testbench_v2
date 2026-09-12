@@ -7,8 +7,9 @@ import { test } from '@fixtures';
  */
 test.describe('KPost common · company', () => {
   /*
-   * Nothing is excluded any more. downloadCompanyLogo needs a token, and Signup & Login now issues
-   * one, so the whole group runs - including the auth probes that only that endpoint can exercise.
+   * The two logo endpoints are excluded: they are not deployed on either host we have (the workbook
+   * points them at a third, `kpostapis.kpostindia.com`). Running them would report 404 on every
+   * case - noise about our configuration, not about KPost. See company.api.ts for the evidence.
    */
-  describeEndpointCases({ tags: ['common-company'] });
+  describeEndpointCases({ tags: ['common-company'], excludeTags: ['route-not-deployed'] });
 });

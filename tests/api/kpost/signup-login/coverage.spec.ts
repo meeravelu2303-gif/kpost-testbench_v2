@@ -48,7 +48,7 @@ test.describe('KPost Signup & Login · module coverage', () => {
       'signup-login-logout-all-devices': 'global',
       'signup-login-set-access-code': 'global',
       'signup-login-admin-registration': 'global',
-      'signup-login-signup': 'data',
+      'signup-login-signup': 'global',
     } as const;
     for (const [id, sideEffect] of Object.entries(gated)) {
       const api = signupLoginApis.find((candidate) => candidate.id === id);

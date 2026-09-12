@@ -209,6 +209,111 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-12 — The logo endpoints are not deployed here, and a false pass that hid it
+
+**What is wrong with `updateCompanyLogo`: the route does not exist on either host we have.**
+
+The workbook documents three logo endpoints as a trio — `updateCompanyLogo`,
+`downloadCompanyLogo`, `removeCompanyLogo` — all against **`kpostapis.kpostindia.com`**, a third
+host distinct from `devapi2` (every other row in the sheet), all marked module **Admin**. Probed:
+
+    POST /common/updateCompanyLogo     8989, token + JSON       -> 404
+    POST /common/updateCompanyLogo     8989, token + multipart  -> 404
+    GET  /common/downloadCompanyLogo   8989, token, any id      -> 404
+    both                               9595 (Admin)            -> 404 (Spring's default handler)
+
+Identical to `/common/definitelyNotARoute9f2a`. Not a defect, not a payload problem — the wrong
+host. Both are tagged `route-not-deployed` and excluded from the run; 80 cases reporting 404 would
+say nothing except that the bench is calling the wrong place. The definitions stay, so coverage
+still counts them and they return the moment the host is known.
+
+A second problem sits underneath, and would have bitten whatever we pointed at it: **the documented
+payload cannot carry a logo.** `{ "companyID": 1 }` has no image in it. Almost certainly multipart
+(`file` + `companyID`), the way the workbook's other upload rows say `multipart key : file` — but
+that is a guess and the sheet does not say.
+
+#### A false pass, corrected
+
+This gateway answers **401 to any unrouted path** without a token, and 404 with one — verified
+against a nonsense path. So "no token → 401" is the default for _everything_, and the bench had read
+it as proof that `downloadCompanyLogo` was protected. It was not evidence of anything: the same 401
+comes back for an endpoint that was never deployed.
+
+Worse, `authentication.missing-token` **passed** on that basis — a validator reporting a security
+property it had not verified, which is the most dangerous kind of green. All four auth probes
+(missing, invalid, malformed, expired) now skip with
+`endpoint answered 404: the route is unknown, so auth cannot be verified` when the primary call
+404s.
+
+The endpoint does still require a token — that is the API owner's word, and it stands. What changed
+is that the bench no longer claims to have proved it.
+
+**Lesson, and it generalises:** a negative probe that passes because of a _global_ default has
+verified nothing. Any 401/403/404 that an API returns uniformly cannot be used as evidence about a
+specific endpoint.
+
+### 2026-09-12 — forgotPasswordUpdate corrected, and two things learned about the flow
+
+The owner supplied the payload: `{ "kpostID": …, "forgotPassword": … }` — which is what the
+workbook documents and what the definition already sent. What was wrong were the _values_.
+
+**Now:** the spare account `meera962@kpostindia.com` (verified to log in — the family is 960
+primary / 961 victim / 962 spare), and the new password is **`QA_PASSWORD`, the standard one**.
+That makes the call idempotent: the spare keeps a credential we know, so the endpoint can be
+exercised as often as needed without locking anybody out. A random password would work once and
+leave an account nobody can log into.
+
+**Its 400 is a missing prerequisite, not a defect — and that is good news.** The live endpoint
+answers `400 "OTP validation failed"` until an OTP has been validated for that account, so **a
+password cannot be changed without one**. The earlier worry in this log — that an unauthenticated
+caller might take over an account through it — is answered: it cannot.
+
+But the step that satisfies it is **not** the documented `validateOTP`. Verified by hand:
+
+    forgotPasswordOTPOrSentKpostIDSms  -> 200 "OTP Sent to your registered mobile number"
+    validateOTP (bypass 123456)        -> 200 "OTP has been validated successfully."
+    forgotPasswordUpdate               -> 400 "OTP validation failed"   <- still
+
+So the flow keeps its own OTP state, reached by a call that is not in the workbook. Open with the
+API owner. Recorded in the definition so nobody files the 400 as a bug.
+
+**A finding from step 1:** `forgotPasswordOTPOrSentKpostIDSms` returns the account's **full mobile
+number in the clear** to an unauthenticated caller who supplies only a KPost ID:
+
+    {"mobileNumber":"9000000962","message":" OTP Sent to your registered mobile number",
+     "countryID":1,"statusCode":200,"status":"SUCCESS"}
+
+Anyone can turn a KPost ID into its registered phone number. The number is needed by the client to
+show "OTP sent to ••••••0962", but it should be masked for that, not returned whole.
+
+**Also:** registration is now `sideEffect: 'global'` at the owner's instruction — _do not create
+users frequently_. An account cannot be deleted through this API, so "data the tests own" was the
+wrong category: every run would leave a permanent `qabench*@kpost.in` behind. It runs only with
+`ALLOW_DESTRUCTIVE_TESTS=true`, and the coverage self-test asserts that so it cannot regress.
+
+### 2026-09-12 — KMail deregistered: scope is common and Signup & Login only
+
+`src/api/definitions/kmail.api.ts` auto-loaded endpoints from the KMail OpenAPI document as soon as
+`KMAIL_API_BASE_URL` was set. Configuring that host for reference therefore registered **15
+endpoints and 660 validation cases nobody asked for**, and they were counted in the totals next to
+the tests actually written — misleading about what the bench covers.
+
+The agreed order is one module at a time: common, then Signup & Login. KMail comes later. So
+registration is now an explicit decision rather than a side effect of setting an environment
+variable: the file exports an empty list and documents exactly how to turn it on, with the
+groundwork it will need (the `kmail` response contract, the loader options, and the fact that KMail
+answers 403 without a token).
+
+**Lesson worth keeping:** a module registers because someone decided to test it, never because a
+variable appeared in `.env`. The same trap exists for `ADMIN_API_BASE_URL` — Admin registers nothing
+today only because it has no contract, not because anything prevents it.
+
+Scope now, exactly:
+
+    common                32 endpoints   1 408 cases
+    signup & login        14 endpoints     616 cases
+    registry total        55  (46 under test + 9 bench mock fixtures)
+
 ### 2026-09-12 — Error shapes probed on every endpoint; the FRD's flow rules tested
 
 **Three new central validators**, so every endpoint is held to the error behaviour any HTTP API is

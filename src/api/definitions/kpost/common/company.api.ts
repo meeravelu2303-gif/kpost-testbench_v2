@@ -4,6 +4,22 @@ import { body, defineKpostEndpoint, pathParams } from '../kpost-endpoint';
 /**
  * Company lookups and the company logo.
  *
+ * ## The three logo endpoints are not on any host we have
+ *
+ * `updateCompanyLogo`, `downloadCompanyLogo` and `removeCompanyLogo` are a trio, all recorded in
+ * the workbook against **`kpostapis.kpostindia.com`** - a third host, distinct from `devapi2`
+ * (every other row) - and all marked module **Admin**. Probed on both hosts we do have:
+ *
+ *     POST /common/updateCompanyLogo    8989, token + JSON        -> 404
+ *     POST /common/updateCompanyLogo    8989, token + multipart   -> 404
+ *     GET  /common/downloadCompanyLogo  8989, token, any id       -> 404
+ *     both                              9595 (Admin)             -> 404 (Spring default)
+ *
+ * A 404 identical to `/common/definitelyNotARoute9f2a` - the routes are simply not deployed here.
+ * Tagged `route-not-deployed` and left out of the run: 80 cases reporting 404 would say nothing
+ * except that we are calling the wrong host. The definitions stay so coverage still counts them and
+ * they come back the moment the host is known.
+ *
  * Two of these take a company identifier straight from an untrusted caller and return that
  * company's record with no token at all — `getCompanyDetails` by mobile number,
  * `downloadCompanyLogo` by id. Whether that is acceptable is a product decision, but a bench that
@@ -72,7 +88,7 @@ export const updateCompanyLogoApi = defineKpostEndpoint({
   method: 'POST',
   path: '/common/updateCompanyLogo',
   summary: "Update a company's logo",
-  tags: [...COMPANY_TAGS, 'upload'],
+  tags: [...COMPANY_TAGS, 'upload', 'route-not-deployed'],
   /*
    * Overwrites an existing company's logo - state that company's users see, not data the tests
    * own. `global` keeps it out of a default run until a throwaway company is confirmed.
@@ -87,7 +103,7 @@ export const downloadCompanyLogoApi = defineKpostEndpoint({
   method: 'GET',
   path: '/common/downloadCompanyLogo/{companyID}',
   summary: "Download a company's logo",
-  tags: [...COMPANY_TAGS, 'binary', 'requires-token'],
+  tags: [...COMPANY_TAGS, 'binary', 'requires-token', 'route-not-deployed'],
   /*
    * Returns an image, not the KPost envelope. `envelope: false` switches off the JSON-shaped
    * checks (structure, schema, data conventions) while keeping status, headers, security,

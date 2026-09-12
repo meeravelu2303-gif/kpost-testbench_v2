@@ -109,13 +109,30 @@ export const forgotPasswordUpdateApi = defineKpostEndpoint({
   destructive: true,
   sideEffect: 'global',
   /*
-   * Deliberately NOT testData.kpostId: a successful call rewrites that account's password and
-   * every other suite logs in with it. QA_FORGOT_PASSWORD_KPOST_ID defaults to an address that
-   * does not exist, so an unconfigured run cannot change a real credential.
+   * Payload exactly as documented: `{ kpostID, forgotPassword }`.
+   *
+   * Two deliberate choices about the values:
+   *
+   *  - **A spare account**, never `testData.kpostId`. A successful call rewrites the password that
+   *    every other suite logs in with, and the whole run would then fail on authentication.
+   *    `QA_FORGOT_PASSWORD_KPOST_ID` is `meera962@kpostindia.com`, verified to exist.
+   *  - **The new password is the standard one.** Setting it to `QA_PASSWORD` makes the call
+   *    idempotent: the spare keeps a credential we know, so the endpoint can be exercised as often
+   *    as needed without locking anybody out or needing a reset afterwards. A random password would
+   *    work once and leave an account nobody can log into.
+   *
+   * ## Its current 400 is a missing prerequisite, not a defect
+   *
+   * The live endpoint answers `400 "OTP validation failed"` until an OTP has been validated for
+   * that account - which is the correct behaviour, and good news: the password cannot be changed
+   * without one. But the step that satisfies it is not the documented `validateOTP`: calling
+   * `forgotPasswordOTPOrSentKpostIDSms` and then `validateOTP` with the bypass code still leaves it
+   * at 400, so the flow keeps its own OTP state reached by some other call. Open with the API owner
+   * (see CLAUDE.md §9). Recorded here so the 400 is not filed as a bug.
    */
   request: body(() => ({
     kpostID: testData.forgotPasswordKpostId,
-    forgotPassword: `Qa!${Date.now().toString().slice(-8)}`,
+    forgotPassword: testData.password,
   })),
 });
 

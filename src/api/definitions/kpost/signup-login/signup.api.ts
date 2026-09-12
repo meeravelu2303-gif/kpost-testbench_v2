@@ -23,8 +23,15 @@ import { body, defineKpostEndpoint } from '../kpost-endpoint';
  */
 const SIGNUP_TAGS = ['signup-login', 'signup'] as const;
 
-/** A KPost ID that cannot already exist. */
-const newKpostId = (): string => `qa.bench.${randomUUID().slice(0, 8)}@kpost.in`;
+/**
+ * A KPost ID that cannot already exist, in the format the API accepts.
+ *
+ * No dots in the local part: `qa.bench.x@kpost.in` is rejected with
+ * `"kpostID must start with a letter or Invalid kpostID"`. The rule is undocumented - the
+ * workbook's own sample (`jitendra@tn.kpost.in`) happens to satisfy it, so the constraint was
+ * invisible until the bench sent something else. Letters first, then hex.
+ */
+const newKpostId = (): string => `qabench${randomUUID().replace(/-/g, '').slice(0, 10)}@kpost.in`;
 /** A mobile number in a reserved test range, so it can never be a real customer's. */
 const newMobile = (): string =>
   `98765${String(Math.floor(Math.random() * 100_000)).padStart(5, '0')}`;
@@ -37,12 +44,22 @@ export const signupApi = defineKpostEndpoint({
   summary: 'Register a personal account',
   tags: [...SIGNUP_TAGS, 'critical'],
   /*
-   * Creates a row the tests own, which is `data` rather than `global` - but it is still a write to
-   * a shared database, and each run leaves an account behind. Worth knowing when reviewing the
-   * environment; see the note above about the reserved ranges.
+   * `global`, not `data`, at the owner's instruction: **do not create users frequently.**
+   *
+   * An account cannot be deleted through this API, so "data the tests own" is the wrong category -
+   * every run would leave one behind permanently and the environment would fill with
+   * `qabench*@kpost.in`. Registration therefore runs only with ALLOW_DESTRUCTIVE_TESTS=true, when
+   * someone has decided to exercise it.
    */
   destructive: true,
-  sideEffect: 'data',
+  sideEffect: 'global',
+  /*
+   * **Registration is not callable in isolation.** With a well-formed, unused id the API still
+   * answers `400 "Enter valid Credentials"`, which points at an unmet prerequisite rather than a
+   * bad payload - almost certainly an OTP-verified mobile number (sendOTP -> validateOTP -> signup),
+   * matching the FRD's flow. Until that chain is wired, this endpoint's primary request is expected
+   * to fail and the failure is NOT a defect. Recorded here so nobody files it as one.
+   */
   request: body(() => ({
     kpostID: newKpostId(),
     firstName: 'QA',

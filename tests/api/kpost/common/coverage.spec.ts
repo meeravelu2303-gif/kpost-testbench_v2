@@ -22,8 +22,12 @@ test.describe('KPost common · module coverage', () => {
   });
 
   /**
-   * The common module is public with exactly one exception, confirmed by the API owner and by the
-   * live API: `downloadCompanyLogo` requires a token (401 without one, 401 with a bad one).
+   * The common module is public with exactly one exception: `downloadCompanyLogo` requires a token,
+   * **on the API owner's word**.
+   *
+   * The bench's own evidence for it was wrong and is worth recording: the 401 it returns without a
+   * token is what this gateway answers for *any* unrouted path, so it proved nothing. The route is
+   * not deployed on either host we have (see company.api.ts), which is why the 401 appeared at all.
    *
    * Asserted as an exact list rather than "at least these", so an endpoint that starts or stops
    * requiring a token fails this test instead of changing the module's security posture silently.
