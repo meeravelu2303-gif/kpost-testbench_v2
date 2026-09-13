@@ -17,10 +17,10 @@ import { decodeJwt, jwtSubject } from '@utils/jwt';
  * ## Live-safety rules obeyed here
  *
  *  - **Only our own accounts.** `QA_KPOST_ID` and `QA_VICTIM_KPOST_ID`, never a real customer id.
- *  - **At most one wrong-password attempt per account per run**, and this suite runs on ONE worker
- *    (`mode: 'serial'` below), so the attempts never overlap. A bench that locks its own QA account
- *    out stops every other module — the cost of a lockout is far higher than the value of a second
- *    negative case.
+ *  - **Every wrong-password attempt is paired with a good login in the same test**, and the live run
+ *    is `workers: 1`, so attempts never overlap. A bench that locks its own QA account out stops
+ *    every other module — the cost of a lockout is far higher than the value of a second negative
+ *    case, so each test cleans up after itself rather than relying on run order.
  *  - **A fresh session for the logout test.** It logs in on its own device id and logs *that* out,
  *    so the token every other test shares is untouched.
  */
@@ -28,6 +28,14 @@ import { decodeJwt, jwtSubject } from '@utils/jwt';
 /** The `message` field of a response body as a string, or '' — module scope so it is not test flow. */
 function bodyMessage(body: Record<string, unknown>): string {
   return typeof body.message === 'string' ? body.message : '';
+}
+
+/**
+ * KPost lower-cases the kpostID in the token `sub` (verified on live: `Qatesting@` → `qatesting@`).
+ * That is correct — an email identifier is case-insensitive — so identity is compared case-folded.
+ */
+function sameAccount(a: string | undefined, b: string): boolean {
+  return (a ?? '').toLowerCase() === b.toLowerCase();
 }
 
 /** A login exchange sent WITHOUT the engine's cached token — this is the credential under test. */
@@ -64,9 +72,14 @@ async function login(
 }
 
 test.describe('KPost Login · behaviour', () => {
-  // One worker, in order: the wrong-password cases must never race, and must always be followed by
-  // a successful login that confirms the account is not locked.
-  test.describe.configure({ mode: 'serial' });
+  /*
+   * `default`, not `serial`. Serial skips every later test after the first failure — and several of
+   * these assertions are *meant* to stay red (they report live defects), which would hide every
+   * finding after the first. Each test is self-contained (a wrong attempt is always paired with a
+   * good login in the same test), and the live run is `workers: 1`, so they still run one at a time.
+   * Findings use `expect.soft` so a single run surfaces all of them at once.
+   */
+  test.describe.configure({ mode: 'default' });
 
   test('the happy path issues a token whose subject is our account @api @signup-login', async ({
     endpoints,
@@ -76,9 +89,10 @@ test.describe('KPost Login · behaviour', () => {
     expect(status, 'our own credentials must log in').toBe(200);
     expect(String(body.status).toUpperCase(), 'application status').toBe('SUCCESS');
     expect(body.accessToken, 'an access token is issued').toBeTruthy();
-    expect(jwtSubject(String(body.accessToken)), 'token subject is our account').toBe(
-      testData.kpostId,
-    );
+    expect(
+      sameAccount(jwtSubject(String(body.accessToken)), testData.kpostId),
+      'token subject is our account (case-insensitive: the API lower-cases it)',
+    ).toBe(true);
   });
 
   test('the access token is a signed JWT that expires and hides no secret @api @signup-login @security', async ({
@@ -100,23 +114,28 @@ test.describe('KPost Login · behaviour', () => {
   test('a wrong password is rejected, and the account still logs in afterwards @api @signup-login @security', async ({
     endpoints,
   }) => {
-    // The one wrong-password attempt this run makes against the primary account.
+    // The one wrong-password attempt this test makes against the primary account.
     const wrong = await login(endpoints, testData.kpostId, 'DefinitelyNotMyPassword!9f2a');
 
-    expect(wrong.status, 'a wrong password must not authenticate').not.toBe(200);
-    expect(wrong.body.accessToken ?? null, 'no token on a failed login').toBeNull();
-    /*
-     * The live API answers 500 "Invalid Credential" here — a server fault for a client error. This
-     * asserts the correct contract (a 4xx) and stays red until it is fixed; see CLAUDE.md §8.
-     */
-    expect(
-      wrong.status,
-      'a rejected credential is a client error, not a server fault',
-    ).toBeLessThan(500);
-
-    // Immediately prove the account is NOT locked — the safety net for the attempt above.
+    // Safety net first, and HARD: the account must still work after a wrong attempt.
     const good = await login(endpoints, testData.kpostId, testData.password);
     expect(good.status, 'the account must still log in after one wrong attempt').toBe(200);
+
+    // No token is the one thing the API gets right here — assert it hard.
+    expect(wrong.body.accessToken ?? null, 'no token on a failed login').toBeNull();
+
+    /*
+     * THE FINDING (soft, so the run continues and reports every defect): on live, a wrong password
+     * answers **HTTP 200** `"Invalid Credential"` — the same status as success. A caller reading the
+     * HTTP status cannot tell a failed login from a successful one. It must be a 4xx (401). Soft so
+     * this stays red and reported without halting the suite. See docs and CLAUDE.md §8.
+     */
+    expect
+      .soft(wrong.status, 'a wrong password must not answer 2xx — it does (HTTP 200)')
+      .toBeGreaterThanOrEqual(400);
+    expect
+      .soft(wrong.status, 'a rejected credential is a client error, not a server fault')
+      .toBeLessThan(500);
   });
 
   test('login failure cannot distinguish a real account from an unknown one @api @signup-login @security', async ({
@@ -130,11 +149,16 @@ test.describe('KPost Login · behaviour', () => {
     const realButWrong = await login(endpoints, testData.kpostId, 'WrongPassword!9f2a');
     const doesNotExist = await login(endpoints, testData.kpostIdAbsent, 'WrongPassword!9f2a');
 
-    expect(realButWrong.status, 'same status for both').toBe(doesNotExist.status);
-    expect(
-      bodyMessage(realButWrong.body),
-      'same message, so the response cannot confirm an account exists',
-    ).toBe(bodyMessage(doesNotExist.body));
+    // Soft: a difference here is a finding (login reveals which accounts exist), not a reason to halt.
+    expect
+      .soft(realButWrong.status, 'same status for a real vs unknown account')
+      .toBe(doesNotExist.status);
+    expect
+      .soft(
+        bodyMessage(realButWrong.body),
+        'same message, so the response cannot confirm an account exists',
+      )
+      .toBe(bodyMessage(doesNotExist.body));
   });
 
   test('a session can be ended without harming the shared session @api @signup-login', async ({

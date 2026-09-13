@@ -4,18 +4,13 @@ import type { RequestSpec } from '@api/client/request-builder';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
- * Katchup **sends** — the endpoints that create a message.
+ * Katchup **sends** — the endpoints that create a message. One definition per distinct route;
+ * `sendMessage/` is a single endpoint whose `messageType` selects the shape (normal, secret,
+ * group…), so those shapes live in `sendShape()` and are driven by the lifecycle spec rather than
+ * registered separately (which would collide on the path).
  *
- * One route per endpoint: `sendMessage/` is a **single** endpoint whose behaviour changes with
- * `messageType` (normal, reply, edit, note, secret, group, copies…). Those are payload *shapes* of
- * one endpoint, not separate endpoints — registering them separately would collide on the path — so
- * the shapes live in `sendShape()` below and are exercised by the behaviour spec, while the registry
- * holds one definition per distinct route.
- *
- * All sends are `destructive` and reach a real inbox, so **none is `productionSafe` yet**: sending on
- * the live application waits on the owner's sign-off (`docs/katchup-flow.md` §6 Q4). Off the live
- * host they run against the mock. The payload mirrors the live web client (`docs/katchup-flow.md`
- * §3); codes come from `KATCHUP_MESSAGE_TYPE` / `KATCHUP_STATUS`.
+ * Every send is destructive and reaches a real inbox, so **none is `productionSafe`** until the
+ * owner signs off (`docs/katchup-flow.md` §6 Q4). Payload mirrors the live web client (flow doc §3).
  */
 const SEND_TAGS = ['katchup-send'] as const;
 

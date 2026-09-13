@@ -5,6 +5,7 @@ import { companyApis } from './companies.api';
 import { dictionaryApis } from './dictionary.api';
 import { healthCheckApi } from './health.api';
 import { commonApis } from './kpost/common/index';
+import { groupApis } from './kpost/group/index';
 import { katchupApis } from './kpost/katchup/index';
 import { signupLoginApis } from './kpost/signup-login/index';
 import { kmailApis } from './kmail.api';
@@ -30,6 +31,8 @@ export const apiRegistry = new ApiRegistry().register(
   ...signupLoginApis,
   // KPost Katchup - instant messaging. See docs/katchup-flow.md.
   ...katchupApis,
+  // KPost Group - group membership; underpins Katchup group messaging (FR-K06).
+  ...groupApis,
   // Admin module — Jaganathan Murthy. Loaded from its own spec when ADMIN_API_BASE_URL is set.
   ...adminApis,
   // KMail module — Jitendra Kumar. Loaded from its own spec when KMAIL_API_BASE_URL is set.

@@ -8,6 +8,13 @@ export class ProductionSafetyError extends Error {
 export interface SafetyFlags {
   isProduction: boolean;
   allowDestructive: boolean;
+  /**
+   * A caller explicitly authorizes THIS write on the live application. It unlocks a `data`-side-
+   * effect destructive endpoint only — `external` (real SMS/email) and `global` (shared state) are
+   * never unlocked this way — and the QA-identifier guard still confines it to accounts we own. Set
+   * per call by an owner-approved feature spec, never by the engine (so fuzzing stays blocked).
+   */
+  allowLiveWrite?: boolean;
 }
 
 /**
@@ -82,7 +89,19 @@ export function destructiveBlockReason(
    */
   const isLive = flags.isProduction && !endpoint.mockFixture;
 
-  if (isLive && !endpoint.productionSafe) {
+  /*
+   * A `data` write the caller has explicitly authorized for this run (an owner-approved feature
+   * spec). It bypasses the `productionSafe` gate below but nothing else: `external`/`global` stay
+   * blocked by the side-effect check further down, and the QA-identifier guard still confines the
+   * payload to accounts we own. The engine never sets this, so its probes remain blocked.
+   */
+  const liveWriteAuthorized =
+    isLive &&
+    flags.allowLiveWrite === true &&
+    endpoint.destructive === true &&
+    (endpoint.sideEffect ?? 'data') === 'data';
+
+  if (isLive && !endpoint.productionSafe && !liveWriteAuthorized) {
     return (
       `${endpoint.label} is not cleared for the live application ` +
       `(no productionSafe flag — see src/api/registry/endpoint-definition.ts)`

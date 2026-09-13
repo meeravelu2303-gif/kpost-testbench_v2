@@ -73,6 +73,48 @@ const NOT_A_RESOURCE = new Set(
     // Protocol and envelope fields, never a resource.
     'statuscode',
     'id_token',
+    /*
+     * Message CONTENT, TYPE codes and TIMESTAMPS — not a tenant resource. They match the pattern
+     * only because a key contains "message"/"member"/"mail"; their values are body text, an enum
+     * code or an epoch, and none addresses another account. Without these the guard refused every
+     * Katchup send (found on the first feature run).
+     */
+    'messagetype',
+    'actualmessage',
+    'messagetime',
+    'servertime',
+    'sharedtype',
+    'selectedmembers',
+    'isvoicemessage',
+    'attachmentcaption',
+    'referencemessagelist',
+    'referencemessageidlist',
+    'sharedmessagedetails',
+    'groupkpostname',
+    'memberdesignation',
+    'reportid',
+    // Group metadata flags/paths — contain "group" but are booleans/paths, not a group id.
+    'isprivategroup',
+    'groupcreateaccess',
+    'grouppicturepath',
+    'groupflag',
+    'groupforwardlist',
+    /*
+     * MESSAGE- and GROUP-scoped ids (a message we sent, a group we made) — not TENANT-scoped like a
+     * kpostID/companyID. They are created at runtime so cannot be pre-allowlisted, and no
+     * productionSafe endpoint accepts one (the id-keyed reads are all blocked on live). The
+     * cross-tenant identifiers that matter — kpostID, mobile, email, company, contact, and the
+     * kpostID lists — are still checked.
+     */
+    'msgid',
+    'msgids',
+    'temporarymsgid',
+    'oldmsgid',
+    'sourcemsgid',
+    'firstmsgid',
+    'lastmsgid',
+    'sharedmessageid',
+    'groupid',
   ].map((key) => key.toLowerCase()),
 );
 

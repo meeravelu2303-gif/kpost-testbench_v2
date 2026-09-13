@@ -3,13 +3,12 @@ import { body, pathParams } from '../kpost-endpoint';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
- * Katchup **reads** — everything that fetches without writing a message.
+ * Katchup **reads** — fetch without writing a message.
  *
- * The counts and the subject list need nothing but our own account, so they run on live. The
- * conversation reads are asked with `QA_VICTIM_KPOST_ID` — our own second account — so no identifier
- * naming a stranger is ever sent. The id-keyed share/reference reads need a real message id we do not
- * have on live yet; they stay registered (and blocked) so they run once a lifecycle test has created
- * one. See `docs/katchup-flow.md` §5.
+ * Counts and subjects need only our own account; conversation reads use `QA_VICTIM_KPOST_ID` (our
+ * second account), so no stranger's id is ever sent — these run on live. Id-keyed share/reference
+ * reads need a real message id we lack on live, so they stay registered and blocked until a
+ * lifecycle test creates one (`docs/katchup-flow.md` §5).
  */
 const READ_TAGS = ['katchup-read'] as const;
 
@@ -131,12 +130,8 @@ export const allReportMsgApi = defineKatchupEndpoint({
 });
 
 /*
- * ## Reads keyed by a message id — blocked on live until a lifecycle test creates one
- *
- * These need a real `msgID`/`sharedMessageId` that exists and is ours. On live we have no such id
- * until the send lifecycle has run, and a fabricated id would either 404 (useless) or, worse, name
- * somebody else's message (the guard refuses it). They stay registered so coverage counts them and
- * they run the moment a real id is available. `needs-message-id` marks them.
+ * Reads keyed by a real `msgID`/`sharedMessageId` we own. Blocked on live until a lifecycle test
+ * creates one — a fabricated id would 404 or name a stranger's message. Tagged `needs-message-id`.
  */
 export const readStatusGroupApi = defineKatchupEndpoint({
   id: 'katchup-read-status-group',

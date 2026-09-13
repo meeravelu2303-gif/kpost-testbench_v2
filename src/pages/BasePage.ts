@@ -11,7 +11,9 @@ export abstract class BasePage {
   constructor(protected readonly page: Page) {}
 
   async goto(): Promise<void> {
-    await this.page.goto(this.path);
+    // `domcontentloaded`, not the default `load`: a heavy live SPA can keep the load event pending
+    // on background requests long after the page is usable. Readiness is `expectLoaded()`'s job.
+    await this.page.goto(this.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await this.expectLoaded();
   }
 

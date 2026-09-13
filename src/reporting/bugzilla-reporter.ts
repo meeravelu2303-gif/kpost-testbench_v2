@@ -21,7 +21,7 @@ import { VALIDATION_REPORT_ATTACHMENT } from './report-attachment';
  * Files this run's defects into Bugzilla.
  *
  * Order of operations, and why:
- *   1. the RUN gate â€” a collapsed run files nothing, or a broken bench becomes 50 fake tickets
+ *   1. the RUN gate — a collapsed run files nothing, or a broken bench becomes 50 fake tickets
  *   2. candidates are built only from evidence the run produced (validation results, UI failures)
  *   3. the CANDIDATE gate drops infrastructure noise and claims their own evidence contradicts
  *   4. the filer dedupes against live Bugzilla and creates, comments, reopens or skips
@@ -68,13 +68,13 @@ export default class BugzillaReporter implements Reporter {
     try {
       await this.publish(result);
     } catch (error) {
-      console.log(`${LOG} skipped â€” ${error instanceof Error ? error.message : String(error)}`);
+      console.log(`${LOG} skipped — ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   private async publish(result: FullResult): Promise<void> {
     if (!this.config.enabled) {
-      console.log(`${LOG} BUGZILLA_URL / BUGZILLA_API_KEY not configured â€” no bugs filed`);
+      console.log(`${LOG} BUGZILLA_URL / BUGZILLA_API_KEY not configured — no bugs filed`);
       return;
     }
 
@@ -87,7 +87,7 @@ export default class BugzillaReporter implements Reporter {
       status: result.status,
     });
     if (!validity.valid) {
-      console.log(`${LOG} nothing filed â€” ${validity.reason}`);
+      console.log(`${LOG} nothing filed — ${validity.reason}`);
       this.write('filing.json', { skipped: true, reason: validity.reason });
       return;
     }
@@ -164,7 +164,7 @@ export default class BugzillaReporter implements Reporter {
 
   private report(outcome: FilingOutcome, rejected: number): void {
     const { counts } = outcome;
-    const mode = outcome.dryRun ? 'DRY RUN â€” would file' : 'filed';
+    const mode = outcome.dryRun ? 'DRY RUN — would file' : 'filed';
     console.log(
       `${LOG} ${mode} ${outcome.dryRun ? counts['would-file'] : counts.created}, ` +
         `commented ${counts.commented}, reopened ${counts.reopened}, adopted ${counts.adopted}, ` +
@@ -174,7 +174,7 @@ export default class BugzillaReporter implements Reporter {
     for (const entry of outcome.entries) {
       const bug = entry.bugId ? ` bug ${entry.bugId}` : '';
       console.log(
-        `${LOG}   ${entry.decision}${bug} [${entry.component}] ${entry.summary}${entry.reason ? ` â€” ${entry.reason}` : ''}`,
+        `${LOG}   ${entry.decision}${bug} [${entry.component}] ${entry.summary}${entry.reason ? ` — ${entry.reason}` : ''}`,
       );
     }
   }

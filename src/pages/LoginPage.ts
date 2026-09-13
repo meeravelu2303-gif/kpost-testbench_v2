@@ -25,6 +25,8 @@ export class LoginPage extends BasePage {
   // KPOST ID / mobile input: `id="username"`, placeholder "Enter KPOST ID / Mobile number".
   readonly loginIdInput = this.page.locator('#username');
   readonly submitButton = this.page.getByRole('button', { name: /^Submit$/i });
+  // The domain autocomplete portal that appears while typing an id — it overlays Submit.
+  readonly domainList = this.page.locator('.login__domain-list');
 
   // Step 2 — the password field (type=password) and the Login button.
   readonly passwordInput = this.page.locator('input[type="password"]');
@@ -37,25 +39,39 @@ export class LoginPage extends BasePage {
   }
 
   async expectLoaded(): Promise<void> {
-    await expect(this.loginIdInput).toBeVisible();
+    // The id input is disabled until the country list loads, so wait for it to be enabled.
+    await expect(this.loginIdInput).toBeEnabled({ timeout: 20_000 });
   }
 
   /** Step 1 only: enter an id and submit, without a password. */
   async enterLoginId(loginId: string): Promise<void> {
     await test.step(`Enter KPOST ID ${loginId}`, async () => {
+      await expect(this.loginIdInput, 'id field enabled once the country loads').toBeEnabled({
+        timeout: 30_000,
+      });
+
+      /*
+       * Typing an id with `@` pops a domain-autocomplete portal that overlays the Submit button, so
+       * clicking Submit is unreliable. The app submits step 1 on Enter in the id field
+       * (`handleKeyPress` -> `checkIsNumber`), which bypasses the overlay entirely — that is what a
+       * user does too. Escape first, to dismiss the portal, then Enter.
+       */
       await this.loginIdInput.fill(loginId);
-      await this.submitButton.click();
+      await this.loginIdInput.press('Escape');
+      await this.loginIdInput.press('Enter');
     });
   }
 
-  /** The whole flow: id -> Submit -> password -> Login. */
+  /** The whole flow: id -> Submit -> (fetchUserDetails) -> password -> Login. */
   async login(loginId: string, password: string): Promise<void> {
     await test.step(
       `Log in as ${loginId}`,
       async () => {
         await this.enterLoginId(loginId);
-        await this.passwordInput.waitFor({ state: 'visible' });
+        // Step 2 appears after fetchUserDetails resolves; the password field can be slow.
+        await this.passwordInput.waitFor({ state: 'visible', timeout: 20_000 });
         await this.passwordInput.fill(password);
+        await expect(this.loginButton).toBeEnabled();
         await this.loginButton.click();
       },
       { box: true },

@@ -145,6 +145,39 @@ const ALL_KPOST_PRINCIPALS: readonly (Principal & { account: keyof TestData })[]
     password: testData.password,
     userType: testData.userType,
   },
+  // Accounts 3-6: extra PERSONAL identities for group, Copy/Confidential-Copy and multi-recipient tests.
+  {
+    key: 'personal-3',
+    account: 'personal3KpostId',
+    role: 'USER',
+    username: testData.personal3KpostId,
+    password: testData.password,
+    userType: 'PERSONAL',
+  },
+  {
+    key: 'personal-4',
+    account: 'personal4KpostId',
+    role: 'USER',
+    username: testData.personal4KpostId,
+    password: testData.password,
+    userType: 'PERSONAL',
+  },
+  {
+    key: 'personal-5',
+    account: 'personal5KpostId',
+    role: 'USER',
+    username: testData.personal5KpostId,
+    password: testData.password,
+    userType: 'PERSONAL',
+  },
+  {
+    key: 'personal-6',
+    account: 'personal6KpostId',
+    role: 'USER',
+    username: testData.personal6KpostId,
+    password: testData.password,
+    userType: 'PERSONAL',
+  },
 ];
 
 /**

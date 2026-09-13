@@ -58,6 +58,15 @@ const schema = z.object({
   victimKpostId: z.string().min(3).default('qa.victim@kpost.in'),
   businessReceiverKpostId: z.string().min(3).default('qa.receiver@kpost.in'),
 
+  /**
+   * Extra PERSONAL accounts for group messaging, Copy/Confidential-Copy and multi-recipient tests.
+   * Six real accounts exist on live; these are 3-6 (1 is `kpostId`, 2 is `victimKpostId`).
+   */
+  personal3KpostId: z.string().min(3).default('qa.p3@kpost.in'),
+  personal4KpostId: z.string().min(3).default('qa.p4@kpost.in'),
+  personal5KpostId: z.string().min(3).default('qa.p5@kpost.in'),
+  personal6KpostId: z.string().min(3).default('qa.p6@kpost.in'),
+
   /** An account that does not exist — the "not found" path, and the enumeration probe. */
   kpostIdAbsent: z.string().min(3).default('no.such.user.9f2a@kpost.in'),
 
@@ -119,6 +128,10 @@ const SOURCES = {
   adminUserType: 'QA_ADMIN_USER_TYPE',
   victimKpostId: 'QA_VICTIM_KPOST_ID',
   businessReceiverKpostId: 'QA_BUSINESS_RECEIVER_KPOST_ID',
+  personal3KpostId: 'QA_PERSONAL_3_KPOST_ID',
+  personal4KpostId: 'QA_PERSONAL_4_KPOST_ID',
+  personal5KpostId: 'QA_PERSONAL_5_KPOST_ID',
+  personal6KpostId: 'QA_PERSONAL_6_KPOST_ID',
   kpostIdAbsent: 'QA_KPOST_ID_ABSENT',
   mobileExists: 'QA_MOBILE_EXISTS',
   mobileAbsent: 'QA_MOBILE_ABSENT',
@@ -177,6 +190,10 @@ const resolved = parsed.data;
 const IDENTITY_FIELDS = [
   'kpostId',
   'victimKpostId',
+  'personal3KpostId',
+  'personal4KpostId',
+  'personal5KpostId',
+  'personal6KpostId',
   'adminKpostId',
   'businessSKpostId',
   'businessMKpostId',
@@ -212,6 +229,20 @@ export function providedIdentityValues(): string[] {
 export function isProvided(field: keyof TestData): boolean {
   return field in provided;
 }
+
+/**
+ * The six PERSONAL account ids, in order. For group, Copy/Confidential-Copy and multi-recipient
+ * tests, which need several real accounts we own. On live all six are configured; off-live these are
+ * mock defaults.
+ */
+export const PERSONAL_ACCOUNTS: readonly string[] = [
+  resolved.kpostId,
+  resolved.victimKpostId,
+  resolved.personal3KpostId,
+  resolved.personal4KpostId,
+  resolved.personal5KpostId,
+  resolved.personal6KpostId,
+];
 
 /** `QA_*` names for identity values still falling back to a mock default. */
 export function defaultedIdentityFields(): string[] {

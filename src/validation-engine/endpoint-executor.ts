@@ -37,6 +37,12 @@ export interface SendOptions {
   method?: HttpMethod;
   /** Override the Content-Type, for the unsupported-media-type probe. */
   contentType?: string;
+  /**
+   * Explicitly authorize a `data` write to run on the live application (see SafetyFlags). Only an
+   * owner-approved feature spec sets this, per call; the engine never does, so its probes stay
+   * blocked. The QA-identifier guard still confines the payload to accounts we own.
+   */
+  allowLiveWrite?: boolean;
 }
 
 const MAX_ERROR_BODY_CHARS = 300;
@@ -76,7 +82,11 @@ export class EndpointExecutor {
     spec: RequestSpec,
     options: SendOptions,
   ): Promise<ApiResponseWrapper> {
-    const blocked = destructiveBlockReason(endpoint);
+    const blocked = destructiveBlockReason(endpoint, {
+      isProduction: env.IS_PRODUCTION,
+      allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
+      allowLiveWrite: options.allowLiveWrite,
+    });
     if (blocked) throw new ProductionSafetyError(blocked);
 
     /*

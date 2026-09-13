@@ -7,7 +7,6 @@ import { createDatabaseClient } from '@database/database-client';
 import { databaseValidationRegistry } from '@database/validations/index';
 import { EndpointExecutor } from '@engine/endpoint-executor';
 import { ValidationEngine, type ValidationEngineDeps } from '@engine/validation-engine';
-import { HomePage } from '@pages/HomePage';
 import { LoginPage } from '@pages/LoginPage';
 import { attachValidationReport } from '@reporting/report-attachment';
 import { businessRuleRegistry } from '@rules/index';
@@ -26,7 +25,6 @@ interface TestFixtures {
   /** Builds an engine; overrides let framework tests swap registries or reporting. */
   createValidationEngine: (overrides?: Partial<ValidationEngineDeps>) => ValidationEngine;
   validationEngine: ValidationEngine;
-  homePage: HomePage;
   loginPage: LoginPage;
 }
 
@@ -78,10 +76,6 @@ export const test = base.extend<TestFixtures>({
 
   validationEngine: async ({ createValidationEngine }, use) => {
     await use(createValidationEngine());
-  },
-
-  homePage: async ({ page }, use) => {
-    await use(new HomePage(page));
   },
 
   loginPage: async ({ page }, use) => {
