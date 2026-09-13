@@ -77,8 +77,8 @@ const MODULE_SCOPE: Record<string, Scope> = {
     note: 'S3 presigned URLs + attachment check/delete; generators run live',
   },
   kmail: {
-    status: 'backlog',
-    note: 'KMail — compose, drafts, read, settings, translation (own host kmail5)',
+    status: 'built',
+    note: 'KMail — reads live, compose/draft/settings write lifecycle (host kmail5, /kmail5/v2)',
   },
   translator: { status: 'backlog', note: 'translation (shared Katchup/KMail)' },
   admin: { status: 'needs-business', note: 'org/HR admin — needs a business company with members' },
@@ -101,10 +101,10 @@ const SCREENS: Array<{ route: string; spec: string | null; note: string }> = [
   { route: '/userprofile', spec: 'profile.spec.ts', note: 'profile + settings' },
   { route: '/settings', spec: 'settings.spec.ts', note: 'settings workspace' },
   { route: '/kdirectory', spec: null, note: 'out of scope per BRD §4.2' },
-  { route: '/kcloud', spec: null, note: 'backlog' },
-  { route: '/kbooking', spec: null, note: 'backlog / third-party' },
-  { route: '/knews', spec: null, note: 'external RSS' },
-  { route: '/e-commerce', spec: null, note: 'third-party; confirm scope' },
+  { route: '/kcloud', spec: 'auxiliary.spec.ts', note: 'smoke (no API)' },
+  { route: '/kbooking', spec: 'auxiliary.spec.ts', note: 'smoke (no API)' },
+  { route: '/knews', spec: 'auxiliary.spec.ts', note: 'smoke (external RSS)' },
+  { route: '/e-commerce', spec: 'auxiliary.spec.ts', note: 'smoke (third-party)' },
   { route: '/kdoc', spec: null, note: 'KOS "Coming Soon" today' },
   { route: '/usermanagement', spec: null, note: 'admin — needs a business account' },
 ];
@@ -121,7 +121,9 @@ test.describe('coverage ledger @framework', () => {
       apiRegistry
         .all()
         .filter((d: EndpointDefinition) => d.productionSafe && !d.mockFixture)
-        .map((d: EndpointDefinition) => d.path),
+        // include contractPath too — KMail's request path is prefixed (/kmail5/v2), while the
+        // documented path (what we bucket by) is the unprefixed contractPath.
+        .flatMap((d: EndpointDefinition) => [d.path, ...(d.contractPath ? [d.contractPath] : [])]),
     );
 
     const documented = [

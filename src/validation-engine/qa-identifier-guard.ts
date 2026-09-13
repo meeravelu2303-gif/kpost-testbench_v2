@@ -117,6 +117,31 @@ const NOT_A_RESOURCE = new Set(
     'firstmsgid',
     'lastmsgid',
     'sharedmessageid',
+    /*
+     * KMail runtime ids — a mail we sent, its transaction rows, a draft, a saluation/template we
+     * created. Runtime-scoped like a msgID, cannot be pre-allowlisted, and no productionSafe endpoint
+     * accepts a real one (id-keyed KMail reads are blocked `needs-id`). The tenant identifiers in a
+     * mail payload — the `selectedContact`/`toAddress`/recipient kpostIDs — stay checked.
+     */
+    'kmailid',
+    'kmailids',
+    'kmailnumber',
+    'transactionids',
+    'draftmailid',
+    'draftkmailid',
+    'saluationid',
+    'templateid',
+    // KMail content/enum/meta fields that match only via the "mail"/"msg"/"attachment" token — a
+    // subject, a body, a send timestamp, a type/priority/flag — not tenant resources.
+    'kmailstatusflag',
+    'msgtotranslate',
+    'kmailsubject',
+    'kmailcontent',
+    'kmailsenddate',
+    'kmailtype',
+    'kmailsendtype',
+    'attachmentflag',
+    'attachmentcaption',
     'groupid',
     // The auto-minted id of a group we created (`qab###@kpostindia.com`) — group-scoped and created
     // at runtime like `groupid`, so it cannot be pre-allowlisted; no productionSafe endpoint accepts

@@ -216,6 +216,41 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — KMail module (71 endpoints) — the big one; own host, own prefix, full flow on live
+
+The largest module — email — built in stages. Suite `kmail-api`, **host `kmail5.kpostindia.com` with
+a `/kmail5/v2` path prefix** (the owner supplied it; a first probe that omitted `/v2` had misled an
+earlier note toward devapi2). Registry 217 → **291**; runs-on-live 71 → **101**. Codes/flow analysed
+first in `docs/kmail-flow.md`; all three enums (`kmailType` 0–13, `kmailReceiverType` 1–3,
+`kmailPriority` 0–2) match the workbook.
+
+- **`defineKmailEndpoint`** — a parallel wrapper (own suite, `kmail` envelope, auth). 71 endpoints
+  hand-defined across read/send/draft/manage/settings; coverage self-test confirms 0 uncovered.
+- **~32 reads run on live**; the write lifecycle **passes 5/5**: compose a New mail (kmailID issued,
+  FR-M01) → mark-important → delete; the post-send action types; **the confidential recipient
+  (`bccList`) hidden from the TO/CC recipients — NFR-SEC02 confirmed on live**; draft save→delete;
+  the settings writes. Gated `KMAIL_LIFECYCLE`, `allowLiveWrite`, QA accounts only, self-cleaning.
+
+**The bug that mattered — Playwright drops a base-URL path.** With `KMAIL_API_BASE_URL` set to
+`…/kmail5/v2` and request paths starting `/`, `new URL('/common/…', base)` **discards `/kmail5/v2`**,
+so every KMail call silently hit `kmail5.kpostindia.com/common/…` and 404'd — masked because 404 is
+not a 401 and many validators tolerate a 404 body. Fixed: `KMAIL_API_BASE_URL` is the **origin**, and
+`defineKmailEndpoint` prepends `/kmail5/v2` to the request `path` while the schema/coverage lookup
+uses the unprefixed `contractPath`. Confirmed by the status-code validators flipping from fail to
+pass. (The ledger's `runsLive` was taught to count the prefixed path via `contractPath` too.)
+
+**Findings & the send contract:** the recipient model is `toAddress` (TO) + `ccList` (COPY) +
+`bccList` (CONFIDENTIAL, hidden). Compose (New) works; **Forward/Note/Comment/Clarify answer 500/404**
+sent as a New-shaped mail — they need type-specific fields (a reference / forward list), like Katchup's
+forward — recorded as findings. `getMailCredentials` (returns credentials, takes a password) is
+registered but **not driven on live**. Mail-OTP (`kmailType 12`) stays OTP-blocked.
+
+**Guard exemptions** for the KMail runtime ids (`kmailID`, `transactionIDs`, `draftMailID`,
+`saluationID`, `templateID`) and the content/meta fields the "mail"/"msg"/"attachment" token
+over-matched (`kmailSubject`, `kmailContent`, `kmailSendDate`, `kmailType`, `attachmentFlag`,
+`kmailStatusFlag`, `msgToTranslate`). Live-safety guards still green. The `/kmail` screen shell is
+covered by `tests/e2e/kmail.spec.ts`.
+
 ### 2026-09-13 — AWS module (4 endpoints) — S3 presigned URLs + attachment check/delete
 
 Fifth backlog module. `/v2/aws/*` — S3 presigned upload URLs and the attachment lifecycle. Registry
