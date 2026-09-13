@@ -15,6 +15,8 @@ import { body, defineKpostEndpoint } from '../kpost-endpoint';
  */
 export const msStatusApi = defineKpostEndpoint({
   id: 'common-ms-status',
+  // Live: Service status. No payload, no identifier, no write.
+  productionSafe: true,
   method: 'GET',
   path: '/v2/common/msStatus/',
   summary: 'Microservice health status',
@@ -29,6 +31,8 @@ export const msStatusApi = defineKpostEndpoint({
 
 export const flutterAppVersionApi = defineKpostEndpoint({
   id: 'common-flutter-app-version',
+  // Live: Reads the published version. The WRITE twin stays blocked.
+  productionSafe: true,
   method: 'GET',
   path: '/v2/common/getFlutterAppVersion/',
   summary: 'Current required mobile app version',
@@ -84,6 +88,8 @@ export const saveUnsubscriberDetailsApi = defineKpostEndpoint({
 
 export const totalCountByDateApi = defineKpostEndpoint({
   id: 'common-total-count-by-date',
+  // Live: Aggregate read keyed by a date, not by an identifier.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/getTotalCountByDate',
   summary: 'Usage totals for a date',

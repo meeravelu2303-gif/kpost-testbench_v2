@@ -6,8 +6,10 @@ import { authProfileFor } from '@config/auth-profile';
 import { authConfig, type Role } from '@config/auth.config';
 import { VALIDATION_PROFILES, type ValidationProfile } from '@config/constants';
 import { DEFAULT_SUITE, suiteFor, type SuiteOwnership } from '@config/ownership.config';
+import { env } from '@config/env';
 import { responseContract, type ResponseContract } from '@config/response-contract';
 import type { SideEffect } from './production-guard';
+import { productionExclusion } from './production-validators';
 import { thresholds } from '@config/thresholds.config';
 import type { Validator } from './validator';
 
@@ -98,6 +100,12 @@ export interface ResolvedEndpoint {
   pagination: boolean;
   requiredHeaders: readonly string[];
   sideEffect: SideEffect;
+  /** Cleared to run against the live application. Absent means blocked when TEST_ENV=production. */
+  productionSafe: boolean;
+  /** Cannot complete without a real OTP, so it is skipped on the live application. */
+  otpDependent?: 'sends' | 'consumes' | 'requires';
+  /** The bench's own fixture: always served by the mock, so the live rules do not apply to it. */
+  mockFixture: boolean;
   performance: { maxResponseTimeMs: number; maxPayloadBytes: number; timeoutMs: number };
   security: NonNullable<EndpointDefinition['security']>;
   validations: ValidationToggles;
@@ -154,6 +162,13 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
     responseSchema: definition.responseSchema,
     pagination: definition.pagination ?? false,
     sideEffect: definition.sideEffect ?? 'data',
+    /*
+     * Default false, deliberately. An endpoint reaches the live application only because somebody
+     * wrote the flag and said why - never because a default let it through.
+     */
+    productionSafe: definition.productionSafe ?? false,
+    otpDependent: definition.otpDependent,
+    mockFixture: definition.mockFixture ?? false,
     requiredHeaders: [...contract.requiredHeaders, ...(definition.headers?.required ?? [])],
     performance: {
       maxResponseTimeMs:
@@ -178,6 +193,15 @@ export function policyExclusion(
   validator: Pick<Validator, 'name' | 'toggle'>,
   endpoint: ResolvedEndpoint,
 ): string | undefined {
+  /*
+   * The live application first: a validator that modifies and re-sends the request is not run
+   * there at all, whatever the endpoint's own policy says. Checked before the per-endpoint
+   * toggles so that no endpoint configuration can re-enable it. See production-validators.ts.
+   */
+  if (env.IS_PRODUCTION && !endpoint.mockFixture) {
+    const excluded = productionExclusion(validator.name);
+    if (excluded) return excluded;
+  }
   if (endpoint.skipValidators.includes(validator.name)) {
     return `disabled for this endpoint (skipValidators includes "${validator.name}")`;
   }

@@ -58,6 +58,14 @@ export interface KpostEndpointConfig {
   destructive?: boolean;
   /** How far that effect reaches - `external` (SMS/email) and `global` never run by default. */
   sideEffect?: SideEffect;
+  /**
+   * Cleared to run against the LIVE application. Default deny: without it, `TEST_ENV=production`
+   * blocks the endpoint entirely. State the reason in a comment beside it - see
+   * `productionSafe` in src/api/registry/endpoint-definition.ts for what the flag asserts.
+   */
+  productionSafe?: boolean;
+  /** Needs a real OTP, so it is skipped on live. Reconciled against `npm run contract:otp`. */
+  otpDependent?: EndpointDefinition['otpDependent'];
   validations?: Partial<ValidationToggles>;
   skipValidators?: readonly string[];
   businessRules?: readonly string[];
@@ -97,6 +105,8 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     responseSchema: contract.responseSchema,
     destructive: config.destructive,
     sideEffect: config.sideEffect,
+    productionSafe: config.productionSafe,
+    otpDependent: config.otpDependent,
     validations: config.validations,
     skipValidators: config.skipValidators,
     businessRules: config.businessRules,

@@ -137,4 +137,39 @@ export interface EndpointDefinition {
    * a real SMS or email) or `global` (changes shared environment state). See production-guard.ts.
    */
   sideEffect?: SideEffect;
+  /**
+   * Cleared to run against the LIVE application.
+   *
+   * **Default deny.** With `TEST_ENV=production` an endpoint without this flag does not run at
+   * all — not its primary call, not its probes. A blocklist was considered and rejected: it fails
+   * silently the day somebody adds an endpoint, and the failure mode is a live request nobody
+   * reviewed.
+   *
+   * Setting it is an assertion about the endpoint, and the reviewer has to be able to check it:
+   *
+   *  - it neither writes nor deletes, OR every record it writes is one of our own QA accounts',
+   *  - every identifier it accepts is supplied by us and validated by the QA-identifier guard,
+   *  - it does not send an SMS or an email,
+   *  - it does not change state shared by other users of the live application.
+   *
+   * Cite the reason in a comment next to the flag. "It looked read-only" is not a reason —
+   * `getCompanyDetailsByAdmin` looks read-only and returns any company's record to an anonymous
+   * caller.
+   */
+  productionSafe?: boolean;
+  /**
+   * This endpoint cannot complete without a one-time password.
+   *
+   * The dev host has a bypass (`123456`); production does not, and must not. So these are skipped
+   * on live with the reason attached rather than failing 16 times over.
+   *
+   *   `sends`     delivers a real OTP by SMS or email — works, but costs money and reaches a person
+   *   `consumes`  its payload carries an `otp` field we cannot fill
+   *   `requires`  needs an OTP validated in an earlier step, though its own payload shows none
+   *
+   * The authoritative list is generated: `npm run contract:otp` writes
+   * `contracts/otp-dependent-endpoints.md`, and a framework test reconciles these flags against
+   * it, so an endpoint cannot quietly lose its flag when a workbook dump changes.
+   */
+  otpDependent?: 'sends' | 'consumes' | 'requires';
 }

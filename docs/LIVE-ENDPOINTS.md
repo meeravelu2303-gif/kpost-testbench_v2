@@ -1,0 +1,101 @@
+# Live endpoints — what we can and cannot test
+
+**GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`
+(`npm run test:framework`). Edit the endpoint definitions, not this file.
+
+Target: the live application (`devapi2.kpostindia.com`). Scope: **PERSONAL** accounts only —
+no business account exists on live yet.
+
+| | Count |
+| - | ----: |
+| **Runs on live** | **22** |
+| Blocked | 25 |
+| Total registered | 47 |
+
+---
+
+## Runs on live — 22
+
+Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
+Reaching this list requires `productionSafe: true` on the definition, which is a claim a
+reviewer can check against the comment beside it.
+
+| Method | Path | Module |
+| ------ | ---- | ------ |
+| `GET` | `/v2/common/countries` | common |
+| `POST` | `/v2/common/domain/` | common |
+| `POST` | `/v2/common/getCitiesByRegionId/` | common |
+| `POST` | `/v2/common/getDesignation/` | common |
+| `GET` | `/v2/common/getFlutterAppVersion/` | common |
+| `POST` | `/v2/common/getKpostIdUsingModule` | common |
+| `GET` | `/v2/common/getStates/` | common |
+| `POST` | `/v2/common/getTotalCountByDate` | common |
+| `POST` | `/v2/common/getUserDetailsByMobNo` | common |
+| `POST` | `/v2/common/languages` | common |
+| `POST` | `/v2/common/mobileNoExist/` | common |
+| `GET` | `/v2/common/msStatus/` | common |
+| `POST` | `/v2/common/pinCode` | common |
+| `POST` | `/v2/common/postalPinCode/` | common |
+| `POST` | `/v2/signupLogin/fetchUserDetails/` | Signup & Login |
+| `POST` | `/v2/signupLogin/generateJWTokens/` | Signup & Login |
+| `GET` | `/v2/signupLogin/getActiveSession` | Signup & Login |
+| `POST` | `/v2/signupLogin/getLoginHistory` | Signup & Login |
+| `POST` | `/v2/signupLogin/kpostIdExist/` | Signup & Login |
+| `POST` | `/v2/signupLogin/kpostIDsuggestionList/` | Signup & Login |
+| `GET` | `/v2/signupLogin/signup/` | Signup & Login |
+| `POST` | `/v2/signupLogin/userLogin/` | Signup & Login |
+
+---
+
+## Blocked on live — 25
+
+Not failures — these are refused before a request is sent, each for a stated reason.
+
+| Method | Path | Module | Why |
+| ------ | ---- | ------ | --- |
+| `POST` | `/v2/common/forgotPasswordOTPOrSentKpostIDSms` | common | OTP — sends a real OTP by SMS/email to a real recipient |
+| `POST` | `/v2/common/forgotPasswordUpdate` | common | OTP — needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/common/generateDomainAndUniqueName` | common | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/v2/common/mobileNoExistInsideCompany/` | common | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/v2/common/saveEnquiryDetails` | common | writes or deletes on the live application |
+| `POST` | `/v2/common/saveUnsubscriberDetails` | common | writes or deletes on the live application |
+| `POST` | `/v2/common/sendOTP/` | common | OTP — sends a real OTP by SMS/email to a real recipient |
+| `POST` | `/v2/common/sendOTPtoMail/` | common | OTP — sends a real OTP by SMS/email to a real recipient |
+| `POST` | `/v2/common/uniqueNameExist` | common | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/v2/common/updateFlutterAppVersion` | common | writes state shared by other users of the live application |
+| `POST` | `/v2/common/validateMailOTP/` | common | OTP — needs a real OTP in its payload; live has no bypass |
+| `POST` | `/v2/common/validateOTP/` | common | OTP — needs a real OTP in its payload; live has no bypass |
+| `POST` | `/admin/removeCompanyLogo` | common · company | writes state shared by other users of the live application |
+| `GET` | `/v2/common/downloadCompanyLogo/{companyID}` | common · company | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/v2/common/getCompanyDetails` | common · company | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/v2/common/getCompanyDetailsByAdmin` | common · company | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/v2/common/getCompanyDetailsByMobileNoAndproductId` | common · company | not cleared: needs a business account or company we do not have on live yet |
+| `GET` | `/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}` | common · company | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/v2/common/updateCompanyLogo` | common · company | writes state shared by other users of the live application |
+| `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | Signup & Login | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/v2/signupLogin/adminRegistration/` | Signup & Login | OTP — needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/signupLogin/setAccessCode` | Signup & Login | writes state shared by other users of the live application |
+| `POST` | `/v2/signupLogin/signup/` | Signup & Login | OTP — needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/signupLogin/userLogout/` | Signup & Login | writes state shared by other users of the live application |
+| `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Signup & Login | writes state shared by other users of the live application |
+
+---
+
+## What unblocks the rest
+
+**A business account on live** unblocks the company lookups and the business-tier login.
+They are blocked today because `QA_COMPANY_ID`, `QA_UNIQUE_NAME` and the business ids are
+deliberately unset: an unset identifier is absent from the QA-identifier guard’s allowlist,
+so anything naming a company is refused. That is the scope enforcing itself rather than
+depending on anyone remembering.
+
+**Nothing unblocks the OTP endpoints.** Live has no bypass, and it must not have one — a
+fixed OTP that always validates is an account-takeover key. They stay blocked permanently.
+
+**The destructive endpoints stay blocked by choice**, not by limitation: `updateFlutterAppVersion`
+changes what every mobile client is told to install, `saveEnquiryDetails` writes into a real
+sales table, and the logo trio acts on a company id taken from the payload rather than the
+token. Running them needs a decision, not a flag.
+
+Identity values still unset: QA_ADMIN_KPOST_ID, QA_BUSINESS_S_KPOST_ID, QA_BUSINESS_M_KPOST_ID, QA_BUSINESS_L_KPOST_ID, QA_BUSINESS_RECEIVER_KPOST_ID, QA_FORGOT_PASSWORD_KPOST_ID, QA_OTP_MOBILE, QA_OTP_EMAIL, QA_COMPANY_ID, QA_COMPANY_NAME, QA_UNIQUE_NAME.
+

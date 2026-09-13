@@ -23,6 +23,8 @@ const OTP_TAGS = ['common', 'common-otp', 'security-sensitive'] as const;
 
 export const sendOtpApi = defineKpostEndpoint({
   id: 'common-send-otp',
+  // Needs a real OTP and live has no bypass: contracts/otp-dependent-endpoints.md
+  otpDependent: 'sends',
   method: 'POST',
   path: '/v2/common/sendOTP/',
   summary: 'Send a signup OTP to a mobile number',
@@ -38,6 +40,8 @@ export const sendOtpApi = defineKpostEndpoint({
 
 export const validateOtpApi = defineKpostEndpoint({
   id: 'common-validate-otp',
+  // Needs a real OTP and live has no bypass: contracts/otp-dependent-endpoints.md
+  otpDependent: 'consumes',
   method: 'POST',
   path: '/v2/common/validateOTP/',
   summary: 'Validate a mobile OTP',
@@ -59,6 +63,8 @@ export const validateOtpApi = defineKpostEndpoint({
 
 export const sendOtpToMailApi = defineKpostEndpoint({
   id: 'common-send-otp-to-mail',
+  // Needs a real OTP and live has no bypass: contracts/otp-dependent-endpoints.md
+  otpDependent: 'sends',
   method: 'POST',
   path: '/v2/common/sendOTPtoMail/',
   summary: 'Send an OTP to an email address',
@@ -70,6 +76,8 @@ export const sendOtpToMailApi = defineKpostEndpoint({
 
 export const validateMailOtpApi = defineKpostEndpoint({
   id: 'common-validate-mail-otp',
+  // Needs a real OTP and live has no bypass: contracts/otp-dependent-endpoints.md
+  otpDependent: 'consumes',
   method: 'POST',
   path: '/v2/common/validateMailOTP/',
   summary: 'Validate an email OTP',
@@ -84,6 +92,8 @@ export const validateMailOtpApi = defineKpostEndpoint({
 
 export const forgotPasswordOtpApi = defineKpostEndpoint({
   id: 'common-forgot-password-otp',
+  // Needs a real OTP and live has no bypass: contracts/otp-dependent-endpoints.md
+  otpDependent: 'sends',
   method: 'POST',
   path: '/v2/common/forgotPasswordOTPOrSentKpostIDSms',
   summary: 'Send a password-reset OTP, or the KPost ID, by SMS',
@@ -95,6 +105,8 @@ export const forgotPasswordOtpApi = defineKpostEndpoint({
 
 export const forgotPasswordUpdateApi = defineKpostEndpoint({
   id: 'common-forgot-password-update',
+  // Needs a real OTP and live has no bypass: contracts/otp-dependent-endpoints.md
+  otpDependent: 'requires',
   method: 'POST',
   path: '/v2/common/forgotPasswordUpdate',
   summary: 'Set a new password after a successful OTP check',

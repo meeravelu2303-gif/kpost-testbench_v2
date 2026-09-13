@@ -31,6 +31,9 @@ const LOGIN_TAGS = ['signup-login', 'login', 'critical'] as const;
 
 export const userLoginApi = defineKpostEndpoint({
   id: 'signup-login-user-login',
+  // Live: Essential: every token comes from here. Logs in OUR account only.
+  // It creates a session row, which is what a login does - it changes nothing a customer owns.
+  productionSafe: true,
   requirements: ['FR-S09', 'FR-S10', 'NFR-SEC01'],
   method: 'POST',
   path: '/v2/signupLogin/userLogin/',
@@ -104,6 +107,8 @@ export const adminUserLoginApi = defineKpostEndpoint({
 
 export const generateJwTokensApi = defineKpostEndpoint({
   id: 'signup-login-generate-jwt',
+  // Live: Exchanges OUR OWN refresh token. Reads nothing belonging to anyone else.
+  productionSafe: true,
   requirements: ['FR-S10', 'NFR-SEC01'],
   method: 'POST',
   path: '/v2/signupLogin/generateJWTokens/',
@@ -127,6 +132,8 @@ export const generateJwTokensApi = defineKpostEndpoint({
 
 export const activeSessionApi = defineKpostEndpoint({
   id: 'signup-login-active-session',
+  // Live: Reads the CALLER'S sessions; the account comes from the token, not a payload.
+  productionSafe: true,
   requirements: ['FR-S11'],
   method: 'GET',
   path: '/v2/signupLogin/getActiveSession',
@@ -139,6 +146,8 @@ export const activeSessionApi = defineKpostEndpoint({
 
 export const loginHistoryApi = defineKpostEndpoint({
   id: 'signup-login-login-history',
+  // Live: Reads the CALLER'S history, keyed by a date. Account comes from the token.
+  productionSafe: true,
   requirements: ['FR-S11'],
   method: 'POST',
   path: '/v2/signupLogin/getLoginHistory',

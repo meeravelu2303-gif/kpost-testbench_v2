@@ -140,6 +140,13 @@ endpoint. Details: `docs/validation-framework.md`.
 
 **Profiles:** `SMOKE` → `REGRESSION` (default) → `SECURITY` → `FULL`.
 
+**Target: the LIVE application.** `TEST_ENV=production` activates three independent safety controls
+— an endpoint allowlist (`productionSafe`), a validator allowlist (no request-mutating probe runs)
+and the QA-identifier guard (no request may name a record we do not own). All three are default-deny
+and none can be switched off by configuration, including by `ALLOW_DESTRUCTIVE_TESTS`. See §8 and
+`tests/framework/live-safety.spec.ts`. **16 endpoints are OTP-gated and cannot run on live at all**
+(`npm run contract:otp`).
+
 **Verified state:** `npm run check` clean; **52 tests pass, 2 skip** (the module suites skip until
 their hosts are configured).
 
@@ -208,6 +215,233 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 ## 8. Decision log — what was done and why
 
 Newest first. Each entry records the decision, not just the change.
+
+### 2026-09-13 — Live accounts arrive; scope narrows to PERSONAL; 22 endpoints cleared
+
+The owner created **two PERSONAL accounts by hand on the live application** — the bench cannot make
+them, since both registration endpoints are OTP-gated. Scope is now **PERSONAL only**; business
+comes later.
+
+    PERSONAL  Qatesting@kpostindia.com    9944556677   primary
+    PERSONAL  Qatesting2@kpostindia.com   9876543211   counterparty
+
+#### The single reference: `docs/LIVE-ENDPOINTS.md`
+
+One file, **generated** from the definitions by `tests/framework/live-coverage.spec.ts`, listing
+what runs on live and what does not with a reason for each. Generated rather than written, because
+a hand-kept list of 47 endpoints is wrong within a week and then misleads — somebody reads "blocked"
+for something since cleared, or worse, the reverse.
+
+    Runs on live   22      read-only, no company, identifiers that are set in .env
+    Blocked        25      16 OTP-gated, 6 destructive, 3 needing a business account
+    Total          47
+
+#### An unset identifier is now a safety feature, not a gap
+
+The sharpest thing found this session. Every `QA_*` value feeds the QA-identifier guard's allowlist,
+and the schema defaults were written for the mock server's seed:
+
+    companyId  defaults to 1        <- company 1 is a REAL company on the live application
+
+So an unset `QA_COMPANY_ID` would have put `1` in the allowlist and told the guard that a stranger's
+company is ours to act on — **the safety control becoming the thing that authorises the damage.**
+
+The fix inverts it: the guard is built from values **explicitly set in `.env`**, never from a
+default. Business identifiers are therefore absent, nothing company-shaped is allowlisted, and every
+request naming a company is refused before it is sent. **The PERSONAL-only scope enforces itself**
+rather than depending on anyone remembering it. Only `QA_KPOST_ID` is required outright, because
+without it nothing can authenticate and every endpoint would report 401 — a configuration mistake
+dressed as an API defect, which is precisely what this bench exists not to produce.
+
+#### A real bug in the new guard, found by the bench's own self-tests
+
+The production allowlist blocked **`mockFixture` endpoints** — the bench's own mock-served
+fixtures — so five framework self-tests failed. They are routed to the bundled mock and physically
+cannot reach the live API, so the live rules must not apply to them. Left unfixed, configuring the
+bench for live would have silenced the suite that proves the engine works, at exactly the moment
+that proof matters most. `mockFixture` is now exempt from the allowlist, the OTP gate, the validator
+allowlist and the identifier guard.
+
+The old `production guard blocks destructive endpoints` test had been asserting guard semantics
+through `delete-user` — a fixture — so it was really testing the exemption rather than the rule. It
+now uses literal endpoints; the live rules are covered in `live-safety.spec.ts`.
+
+#### `newMobile()` was not a reserved range, and the comment said it was
+
+It generates `98765xxxxx`, described in the code as "a reserved test range, so it can never collide
+with a real customer's". **It is ordinary Indian mobile space** — and one of the new live QA accounts
+sits at 9876543211, which is how it came to light. On live, a random number there means lookups (and
+on the OTP endpoints, real SMS) aimed at strangers.
+
+Registration is OTP-gated and blocked on live, so the generator stays for dev use. But
+`kpostIdExist` — an enumeration surface — now sends the **configured** `QA_KPOST_ID_ABSENT` and
+`QA_MOBILE_ABSENT` instead of generated values. Those are known-unused and allowlisted, so the
+endpoint can run on live; a generated id would have been refused by the guard, correctly.
+
+#### Files removed
+
+- `contracts/otp-dependent-endpoints.csv` — the owner asked for a reference list, not a CSV. The
+  markdown is now the only output, and the framework test parses **its** tables, so the report and
+  the `otpDependent` flags still cannot drift apart.
+- `contracts/excel-gaps.new.csv` — a stray from an earlier run, referenced by nothing.
+
+Deliberately **kept**: `dictionary.api.ts` and `dictionary.openapi.json` look like leftovers and are
+not. They are the mock-backed fixtures the framework self-tests run against — the only way to verify
+the engine without a live host.
+
+#### Still open
+
+1. **No live request has been made yet.** The two accounts are unverified against `devapi2`; 22
+   endpoints are cleared but nothing has run. The first step is five login requests, read-only.
+2. **`kpostIDsuggestionList` is cleared but its payload is known to be incomplete** — it wants a
+   `kpostID` the workbook's sample omits. Expect a 400 on the first live run; it is a known gap, not
+   a new defect.
+3. **`QA_STATE_ID` / `QA_REGION_ID` / `QA_PINCODE` are still mock defaults** (1, 1, 600001). They
+   are reference data, not identifiers, so the guard permits them — but they may not exist on live,
+   and a 404 from `getCitiesByRegionId` would be our data rather than a defect. Read them from the
+   live `countries`/`getStates` responses on the first run.
+
+### 2026-09-12 — The target becomes the LIVE application; three safety controls built; no tests run
+
+**The owner's decision, taken with the risks on the table.** The dev host's code was changed by the
+developers in ways live's was not, so findings against it could not be trusted — every one was
+answerable with _"that's just the test environment."_ The concerns in the entry below were raised,
+restated and reaffirmed; this records the decision, not a disagreement.
+
+The dev host is **removed** from `.env.example` (192.168.0.66:8989/9595/9081). The live hostnames
+are deliberately left **empty** rather than guessed: pointing an endpoint at the wrong host produces
+404s that read as defects, which already cost a day once on the logo trio.
+
+**Nothing has been executed.** This entry is setup only. No request has been sent to the live
+application, and no test has been run against it.
+
+#### What is unsafe about this, stated once so it is on the record
+
+Account isolation does **not** confine this bench, because the risk is not per-account:
+
+- **~14 of 25 destructive endpoints take their target from the payload, not the token.** Measured,
+  not assumed: `removeCompanyLogo` accepts `{"companyId": 4}` and our tokens carry no `companyID`
+  claim, so the endpoint cannot scope itself to the caller. `admin/resetPassword` takes another
+  user's `kpostID`; `removeGroupMember` takes another user's `kpostID`; `clearKallBykallIds` takes
+  `[2,3]` — **low sequential integers**, exactly what the boundary probes generate.
+- **The probes are the danger, not the happy path.** `request.data-type` and `boundary-value` mutate
+  every field including ids. `security.injection` and `xss` would be _stored_ by any write endpoint.
+- **Damage would be silent.** One deleted message surfaces weeks later as a support ticket nobody
+  traces back to a test run. There is no reset, and accounts cannot be deleted through this API.
+- **Schemas and tables are not at risk** — no DDL is reachable and injection is inert. The exposure
+  is individual real records, which is harder to notice and harder to undo.
+
+#### Three controls, each independent, none switchable by configuration
+
+| #   | Control                                                                                                                                                                                                            | Where                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| 1   | **Endpoint allowlist.** `TEST_ENV=production` runs only definitions marked `productionSafe: true` — not their probes, not their setup calls. Default deny.                                                         | `endpoint-definition.ts`, `production-guard.ts` |
+| 2   | **Validator allowlist.** Every validator that modifies and re-sends a request is excluded. 23 of 47 are cleared; the rest are blocked **by name with a reason**. An unclassified validator is denied, not allowed. | `production-validators.ts`                      |
+| 3   | **QA-identifier guard.** Any request naming an identifier that is not a `QA_*` value is refused **before it is sent** — body, query and path, arrays element by element.                                           | `qa-identifier-guard.ts`                        |
+
+Control 3 is the one that matters, because it is the only one that addresses payload-targeted
+endpoints. It runs in `EndpointExecutor.send`, the single chokepoint every primary call, probe
+mutation and setup chain passes through.
+
+**`ALLOW_DESTRUCTIVE_TESTS` now grants nothing on production.** It used to return early for every
+destructive endpoint, so one inherited environment variable would have unlocked `forgotPasswordUpdate`,
+`removeCompanyLogo` and `updateFlutterAppVersion` against live. Off production it behaves exactly as
+before. A self-test pins this, because it is the most dangerous shape in the file.
+
+**A blocklist was considered and rejected** for controls 1 and 2: it admits everything nobody has
+thought about yet, and that is the set most likely to be dangerous.
+
+`tests/framework/live-safety.spec.ts` — **15 tests, all passing, no HTTP** — asserts each control,
+including that every registered validator is classified and that reference data (`countryID`) and
+bench-generated values (`sessionID`, `deviceID`) are _not_ treated as resources. A guard that
+refused those would be switched off within a day, which is how safety controls die.
+
+#### OTP dependency: 16 of 337 endpoints cannot run on live
+
+Live has no OTP bypass (dev accepts `123456`), so every OTP-gated flow is untestable until a real
+code reaches a real device. `npm run contract:otp` derives the list rather than trusting memory:
+
+| Category   | Count | Meaning                                                                  |
+| ---------- | ----: | ------------------------------------------------------------------------ |
+| `SENDS`    |     6 | delivers a real SMS/email — would _work_, at a cost, to a real recipient |
+| `CONSUMES` |     2 | payload carries an `otp` field we cannot fill                            |
+| `REQUIRES` |     8 | needs an OTP validated earlier, though its own payload shows none        |
+
+**`REQUIRES` is the category that matters**: nothing in those endpoints' contracts mentions an OTP,
+so they look clean and fail anyway. Three are **verified** (personal signup, `adminRegistration`,
+`forgotPasswordUpdate`); five are **inferred** and labelled as such — found by pairing every OTP
+sender with the action it exists to gate. The profile module has three senders
+(`sendAccountDeactivationOtp`, `sendPrimaryDeviceOtp`, `sendPrimaryOrSecondaryDeviceOtp`) and **no
+endpoint consumes their codes**, so `deactivateAccount` and the four device-designation endpoints
+must check them server-side. An inference is not a measurement, and the report says which is which.
+
+**The consequence: no account can be created on live by this bench.** Both registration endpoints
+are `REQUIRES`. The QA accounts must be created by hand or by the developers, and their credentials
+supplied afterwards — which is the next thing to settle.
+
+A finding on the way: `kpostIdExist` answers **500** `"Error while checking KpostID duplication"`
+when sent only `kpostID`, and 200/400 correctly with the full documented payload. Its error body
+also reports `urlPath: "/isKpostIdExits/"` where success reports `/kpostIdExist/` — two internal
+names for one route, and the misspelled one is what a caller sees when it breaks.
+
+#### The live hosts, and how they were established
+
+The workbook carries a full URL per row (`sourceUrl`), so the hosts are evidence rather than
+guesswork. Every candidate resolves in DNS:
+
+| Host                       | Rows | IP             | Verdict                                                 |
+| -------------------------- | ---: | -------------- | ------------------------------------------------------- |
+| `devapi2.kpostindia.com`   |  261 | 13.203.184.171 | **the live API.** The owner's own working curls go here |
+| `kmail5.kpostindia.com`    |    7 | 65.0.243.197   | **KMail**, paths prefixed `/kmail5/`                    |
+| `kpostapis.kpostindia.com` |   12 | 84.247.190.124 | stale. All module Admin; no working call ever used it   |
+| `kmail.kpostindia.com`     |    2 | 13.126.12.181  | older KMail spelling                                    |
+| `devapi1.kpostindia.com`   |    4 | 13.127.7.104   | all four rows already unusable                          |
+
+**The decisive evidence is the owner's own curls**, recovered from this conversation's history:
+
+    curl --location 'https://devapi2.kpostindia.com//v2/common/updateCompanyLogo'   <- "from live"
+    curl --location 'https://devapi2.kpostindia.com/admin/removeCompanyLogo'
+    curl --location 'https://devapi2.kpostindia.com//v2/common/downloadCompanyLogo/4'
+
+So two earlier conclusions are corrected:
+
+- **`kpostapis.kpostindia.com` is not the logo endpoints' host.** The workbook says it is, and this
+  log repeated that; the owner's working calls go to `devapi2`. It resolves to an unrelated IP.
+- **Admin is not a separate host.** `/admin/*` answers on `devapi2`, so `ADMIN_API_BASE_URL` points
+  there too rather than at a distinct deployment.
+
+This also finally explains the `companyID`/`role` claims: the reference token was minted by
+**devapi2**, and `192.168.0.66:8989` is a separate internal deployment one build behind it. Same
+product, different environments — not a provisioning difference in the accounts.
+
+    KPOST_API_BASE_URL=https://devapi2.kpostindia.com
+    ADMIN_API_BASE_URL=https://devapi2.kpostindia.com
+    KMAIL_API_BASE_URL=https://kmail5.kpostindia.com
+    BASE_URL=https://account.kpostindia.com/      (the live front end, 35.154.188.104)
+
+`TEST_ENV=production` is set, which is what arms the three controls; two preflight tests now assert
+that no module host is an internal address, that every one is `https`, and that destructive runs,
+live filing and parallel workers are all disarmed. They **ran rather than skipped**, which is the
+proof the posture is active.
+
+**One question the naming raises and only the owner can answer.** `devapi2` reads as a _development_
+host, yet it is what the owner calls the live application and it is where the working token came
+from. Meanwhile `api.kpostindia.com` resolves (3.33.152.147) and appears **nowhere in the workbook**.
+If that is the real production API, then `devapi2` is a shared dev server and the whole risk picture
+above is much milder. Worth settling before the first run, because it changes what "careful" means.
+
+#### Still blocked on the owner
+
+1. **Which host is the true production API** — `devapi2` (assumed, evidence above) or
+   `api.kpostindia.com` (resolves, undocumented). See the note above.
+2. **QA accounts on live.** Every `QA_*` id in `.env` was created on the retired internal host and
+   is **unverified against devapi2**; the company ids certainly do not carry over (internal numbers
+   companies 1001605–1001607, live's own reference account is companyID 4). This matters beyond
+   failing tests: the QA-identifier guard reads those values, so a stale id is the guard admitting
+   a value that belongs to somebody else. **And the bench cannot create them** — both registration
+   endpoints are OTP-gated and live has no bypass, so a person has to make them by hand.
+3. **Which endpoints get `productionSafe: true`.** None do yet, so a live run currently executes
+   nothing. That is the correct default and the next decision to make, endpoint by endpoint.
 
 ### 2026-09-12 — Answered: the `companyID`/`role` claims come from a different deployment, not a different account
 
@@ -1057,8 +1291,18 @@ repo) → `npm run contract:coverage` → `npm run contract:gaps`.
 6. **Business rules from the FRD** — activation-before-login (BR-S01), identifier uniqueness
    (BR-S02), subject mandatory (FR-K02), confidential-copy invisibility (NFR-SEC02),
    edited/recalled marker behaviour (BR-K03), reschedule status tag (BR-C01).
-7. **Admin module has no contract at all** (absent from the workbook, swagger deleted) — it needs a
-   contract before it can be tested.
+7. **Admin has a partial contract after all** — 9 usable `/admin/*` endpoints are in the KPost
+   contract (`addingUserByAdmin`, `resetPassword`, `holdOrRelease`, `createOrRemoveBackupAdmin`,
+   `terminateUser`, `userManagementDetails/{companyID}`, `removeCompanyLogo`,
+   `getBankAndCompanyDetails/{companyID}`, `displayNameSuggestion`), and they answer on `devapi2`,
+   not on a separate host. The earlier "no contract at all" referred to `admin-api` as a separate
+   product and was wrong about these rows.
+
+   What Admin actually needs is **members to act on**: every one of those endpoints takes a
+   `kpostID` belonging to somebody else in the company. With only a company admin, the sole
+   available test is self-destruction — `terminateUser` on your own account kills the company, and
+   it cannot be recreated through the API. So Admin waits on a business company with **three
+   members**, one of them expendable (see the account plan).
 
 ### UI bench (prerequisites gathered, not started)
 

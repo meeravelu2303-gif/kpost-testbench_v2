@@ -11,9 +11,12 @@ import { body, defineKpostEndpoint } from '../kpost-endpoint';
  * Reusing a fixed value would make the first run pass and every later run fail with "already
  * exists" — a test that reports a defect the second time it is used is worse than no test.
  *
- * The generated values stay inside a reserved range (`qa.bench.*@kpost.in`,
- * `98765xxxxx`) so the rows they leave behind are identifiable and can be cleaned up, and so a
- * generated number can never collide with a real customer's.
+ * The generated id is prefixed `qabench…@kpost.in`, so the rows it leaves behind are identifiable.
+ * **The generated mobile number is not in a reserved range**, despite what this comment used to
+ * say: `98765…` is ordinary Indian mobile space and one of the live QA accounts sits at
+ * 9876543211, so a generated number CAN collide with a real person's. That is tolerable only
+ * because registration is OTP-gated and blocked on the live application. The read-only lookups
+ * use `testData.mobileAbsent` — a configured, known-unused number — for exactly this reason.
  *
  * ## BR-S02, from the FRD
  *
@@ -32,12 +35,22 @@ const SIGNUP_TAGS = ['signup-login', 'signup'] as const;
  * invisible until the bench sent something else. Letters first, then hex.
  */
 const newKpostId = (): string => `qabench${randomUUID().replace(/-/g, '').slice(0, 10)}@kpost.in`;
-/** A mobile number in a reserved test range, so it can never be a real customer's. */
+/**
+ * A random mobile number, for REGISTRATION only — where each run needs an unused number.
+ *
+ * It is not a reserved range, whatever this comment used to claim: `98765…` is ordinary Indian
+ * mobile space, and one of the live QA accounts sits at 9876543211. On the live application a
+ * random number here would mean sending lookups — and, on the OTP endpoints, real SMS — to
+ * strangers. Registration is OTP-gated and blocked on live, so this stays for dev use only; the
+ * lookup endpoints use `testData.mobileAbsent` instead, which is a configured, known-unused value.
+ */
 const newMobile = (): string =>
   `98765${String(Math.floor(Math.random() * 100_000)).padStart(5, '0')}`;
 
 export const signupApi = defineKpostEndpoint({
   id: 'signup-login-signup',
+  // Registration needs both OTPs validated; live has no bypass, so it cannot run there.
+  otpDependent: 'requires',
   requirements: ['FR-S01', 'FR-S02', 'FR-S03', 'FR-S04', 'FR-S05', 'NFR-SEC03'],
   method: 'POST',
   path: '/v2/signupLogin/signup/',
@@ -86,6 +99,8 @@ export const signupApi = defineKpostEndpoint({
 
 export const signupGetApi = defineKpostEndpoint({
   id: 'signup-login-signup-get',
+  // Live: A GET on the signup path - answers 405. Harmless, and pins a stale row.
+  productionSafe: true,
   requirements: ['FR-S01'],
   method: 'GET',
   path: '/v2/signupLogin/signup/',
@@ -102,6 +117,8 @@ export const signupGetApi = defineKpostEndpoint({
 
 export const adminRegistrationApi = defineKpostEndpoint({
   id: 'signup-login-admin-registration',
+  // Registration needs both OTPs validated; live has no bypass, so it cannot run there.
+  otpDependent: 'requires',
   requirements: ['FR-S01', 'FR-S05'],
   method: 'POST',
   path: '/v2/signupLogin/adminRegistration/',
@@ -159,17 +176,26 @@ export const kpostIdExistApi = defineKpostEndpoint({
    * Asked with an id that does NOT exist, so the happy path is "available". The "already taken"
    * path is BR-S02 and is asserted explicitly in the spec, where the answer can be compared
    * against a real account instead of hoping the environment contains one.
+   *
+   * The values are the CONFIGURED absent ones, not freshly generated: a random `98765…` number is
+   * somebody's real mobile on the live application, and this endpoint is an enumeration surface.
+   * `QA_KPOST_ID_ABSENT` / `QA_MOBILE_ABSENT` are known-unused and are in the identifier guard's
+   * allowlist, so this runs on live; a generated id would be refused by that guard, correctly.
    */
   request: body(() => ({
-    kpostID: newKpostId(),
+    kpostID: testData.kpostIdAbsent,
     firstName: 'QA',
     lastName: 'Bench',
-    mobileNumber: newMobile(),
+    mobileNumber: testData.mobileAbsent,
   })),
+  // Reads only, with values that match nothing. See the note above on why they are configured.
+  productionSafe: true,
 });
 
 export const kpostIdSuggestionApi = defineKpostEndpoint({
   id: 'signup-login-kpost-id-suggestions',
+  // Live: Suggests ids from a first/last name. Names no existing record.
+  productionSafe: true,
   requirements: ['FR-S03'],
   method: 'POST',
   path: '/v2/signupLogin/kpostIDsuggestionList/',
@@ -185,6 +211,8 @@ export const kpostIdSuggestionApi = defineKpostEndpoint({
 
 export const fetchUserDetailsApi = defineKpostEndpoint({
   id: 'signup-login-fetch-user-details',
+  // Live: Reads OUR OWN profile, asked with QA_KPOST_ID.
+  productionSafe: true,
   requirements: ['FR-S09'],
   method: 'POST',
   path: '/v2/signupLogin/fetchUserDetails/',

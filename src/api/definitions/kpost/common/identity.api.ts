@@ -22,6 +22,8 @@ const IDENTITY_TAGS = ['common', 'common-identity', 'enumeration-surface'] as co
 
 export const mobileNoExistApi = defineKpostEndpoint({
   id: 'common-mobile-no-exist',
+  // Live: Read-only lookup, asked with QA_MOBILE_ABSENT (a known-unused number).
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/mobileNoExist/',
   summary: 'Check whether a mobile number is already registered',
@@ -48,6 +50,8 @@ export const mobileNoExistInsideCompanyApi = defineKpostEndpoint({
 
 export const userDetailsByMobileApi = defineKpostEndpoint({
   id: 'common-user-details-by-mobile',
+  // Live: Read-only lookup, asked with OUR OWN registered mobile.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/getUserDetailsByMobNo',
   summary: 'Fetch user details for a mobile number',
@@ -58,6 +62,8 @@ export const userDetailsByMobileApi = defineKpostEndpoint({
 
 export const kpostIdUsingModuleApi = defineKpostEndpoint({
   id: 'common-kpost-id-using-module',
+  // Live: Read-only; its only argument is a module code, not an identifier.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/getKpostIdUsingModule',
   summary: 'List KPost IDs subscribed to given modules',
@@ -83,6 +89,8 @@ export const uniqueNameExistApi = defineKpostEndpoint({
 
 export const domainApi = defineKpostEndpoint({
   id: 'common-domain',
+  // Live: Read-only; arguments are countryID and a user type. Owns nothing.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/domain/',
   summary: 'List domains available for a country and user type',

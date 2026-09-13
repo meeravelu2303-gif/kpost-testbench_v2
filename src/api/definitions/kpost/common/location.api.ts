@@ -13,6 +13,8 @@ const LOCATION_TAGS = ['common', 'common-reference', 'location'] as const;
 
 export const countriesApi = defineKpostEndpoint({
   id: 'common-countries',
+  // Live: Reference data. No identifier in the request at all.
+  productionSafe: true,
   method: 'GET',
   path: '/v2/common/countries',
   summary: 'List supported countries',
@@ -21,6 +23,8 @@ export const countriesApi = defineKpostEndpoint({
 
 export const statesApi = defineKpostEndpoint({
   id: 'common-states',
+  // Live: Reference data. No identifier in the request at all.
+  productionSafe: true,
   method: 'GET',
   path: '/v2/common/getStates/',
   summary: 'List states',
@@ -29,6 +33,8 @@ export const statesApi = defineKpostEndpoint({
 
 export const citiesByRegionApi = defineKpostEndpoint({
   id: 'common-cities-by-region',
+  // Live: Reference data, keyed by a region id (shared, not owned by anyone).
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/getCitiesByRegionId/',
   summary: 'List cities in a region',
@@ -39,6 +45,8 @@ export const citiesByRegionApi = defineKpostEndpoint({
 
 export const pinCodeApi = defineKpostEndpoint({
   id: 'common-pincode',
+  // Live: Reference data, keyed by a postal code.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/pinCode',
   summary: 'Look up a postcode',
@@ -49,6 +57,8 @@ export const pinCodeApi = defineKpostEndpoint({
 
 export const postalPinCodeApi = defineKpostEndpoint({
   id: 'common-postal-pincode',
+  // Live: Reference data, keyed by a postal code.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/postalPinCode/',
   summary: 'Look up postal details for a postcode',
@@ -59,6 +69,8 @@ export const postalPinCodeApi = defineKpostEndpoint({
 
 export const languagesApi = defineKpostEndpoint({
   id: 'common-languages',
+  // Live: Reference data, keyed by countryID.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/languages',
   summary: 'List languages available for a country',
@@ -69,6 +81,8 @@ export const languagesApi = defineKpostEndpoint({
 
 export const designationApi = defineKpostEndpoint({
   id: 'common-designation',
+  // Live: Reference data. No identifier in the request at all.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/getDesignation/',
   summary: 'Search job designations by prefix',

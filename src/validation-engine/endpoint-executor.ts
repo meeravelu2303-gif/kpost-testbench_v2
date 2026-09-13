@@ -18,6 +18,7 @@ import { deepMerge, getPath } from '@utils/json';
 import type { Logger } from '@utils/logger';
 import { maskString } from '@utils/masking';
 import { destructiveBlockReason, ProductionSafetyError } from './production-guard';
+import { assertQaOwnedIdentifiers } from './qa-identifier-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
 
 /** How a request authenticates: as a role, as a specific principal, or with a raw header. */
@@ -77,6 +78,19 @@ export class EndpointExecutor {
   ): Promise<ApiResponseWrapper> {
     const blocked = destructiveBlockReason(endpoint);
     if (blocked) throw new ProductionSafetyError(blocked);
+
+    /*
+     * Every request passes through here - primary calls, probe mutations and setup chains alike -
+     * which is the only place that can see the payload as it will actually be sent. On the live
+     * application an identifier we do not own is refused here, because several endpoints act on
+     * the id in the payload rather than on the caller (see qa-identifier-guard.ts).
+     */
+    assertQaOwnedIdentifiers(
+      { body: spec.body, query: spec.query, pathParams: spec.pathParams },
+      options.label ?? endpoint.label,
+      // A mock fixture goes to the bundled mock server, so its ids name nothing real.
+      env.IS_PRODUCTION && !endpoint.definition.mockFixture,
+    );
 
     const request = RequestBuilder.for(options.method ?? endpoint.method, endpoint.path)
       .withSpec(

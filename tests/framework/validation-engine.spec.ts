@@ -65,21 +65,47 @@ test.describe('Validation framework', { tag: '@framework' }, () => {
   });
 
   test('production guard blocks destructive endpoints unless explicitly allowed', () => {
-    const production = { isProduction: true, allowDestructive: false };
+    /*
+     * Literal endpoints, not registry ones. The registry's destructive endpoints are all
+     * `mockFixture: true`, and a fixture is exempt from the live rules by design — it is served by
+     * the bundled mock and cannot reach a real API. Using one here tested the exemption rather
+     * than the rule it is an exception to.
+     *
+     * The live-application rules (allowlist, OTP, and ALLOW_DESTRUCTIVE_TESTS granting nothing)
+     * are covered in tests/framework/live-safety.spec.ts.
+     */
+    const offLive = { isProduction: false, allowDestructive: false };
+
     expect(
-      destructiveBlockReason(resolveEndpoint(apiRegistry.get('delete-user')), production),
+      destructiveBlockReason(
+        { label: 'POST /x', destructive: true, sideEffect: 'external' },
+        offLive,
+      ),
+      'a real SMS needs the flag on every environment',
     ).toContain('ALLOW_DESTRUCTIVE_TESTS');
     expect(
+      destructiveBlockReason(
+        { label: 'POST /x', destructive: true, sideEffect: 'external' },
+        { ...offLive, allowDestructive: true },
+      ),
+      'and the flag unlocks it off the live application',
+    ).toBeUndefined();
+    expect(
+      destructiveBlockReason({ label: 'POST /x', destructive: true }, offLive),
+      'a test-owned data write needs no flag off the live application',
+    ).toBeUndefined();
+    expect(
+      destructiveBlockReason({ label: 'GET /x', destructive: false }, offLive),
+      'a read is never blocked',
+    ).toBeUndefined();
+
+    // A mock fixture is exempt even when the run is configured for the live application.
+    expect(
       destructiveBlockReason(resolveEndpoint(apiRegistry.get('delete-user')), {
-        ...production,
-        allowDestructive: true,
+        isProduction: true,
+        allowDestructive: false,
       }),
-    ).toBeUndefined();
-    expect(
-      destructiveBlockReason(resolveEndpoint(apiRegistry.get('get-user')), production),
-    ).toBeUndefined();
-    expect(
-      destructiveBlockReason(resolveEndpoint(apiRegistry.get('auth-login')), production),
+      'the bench’s own fixtures always run: they are served by the mock',
     ).toBeUndefined();
   });
 

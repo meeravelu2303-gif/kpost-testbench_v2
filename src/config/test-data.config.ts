@@ -149,8 +149,84 @@ const parsed = schema.safeParse(provided);
 if (!parsed.success) {
   throw new Error(`Invalid QA_* test data configuration:\n${z.prettifyError(parsed.error)}`);
 }
+// Narrowed once here: `parsed.data` inside a closure below would otherwise be possibly-undefined.
+const resolved = parsed.data;
 
-export const testData = parsed.data;
+/**
+ * Identifiers that name a record somebody could own. On the live application these must be
+ * configured explicitly — a default is not allowed to stand in for one.
+ *
+ * ## Why this is a hard failure and not a warning
+ *
+ * Every value here is loaded into the QA-identifier guard's allowlist, which is the control that
+ * stops a live request naming a record we do not own. The schema defaults were written for the
+ * mock server's seed, and two of them are actively dangerous against live:
+ *
+ *     companyId  defaults to 1        <- company 1 is a REAL company on the live application
+ *     kpostId    defaults to 'qa.bench@kpost.in'
+ *
+ * An unset `QA_COMPANY_ID` would therefore put `1` in the allowlist and tell the guard that a
+ * stranger's company is ours to act on — turning the safety control into the thing that authorises
+ * the damage. `describeTestData()` only *warns* about placeholders, which is right for a dev host
+ * and nowhere near enough here.
+ *
+ * Values NOT listed: passwords and user types (not identifiers), reference data (`countryId`,
+ * `stateId` — shared and read-only), and the `*Absent` fixtures, which are required to match
+ * nothing and so cannot name anyone's record.
+ */
+const IDENTITY_FIELDS = [
+  'kpostId',
+  'victimKpostId',
+  'adminKpostId',
+  'businessSKpostId',
+  'businessMKpostId',
+  'businessLKpostId',
+  'businessReceiverKpostId',
+  'forgotPasswordKpostId',
+  'mobileExists',
+  'otpMobile',
+  'otpEmail',
+  'companyId',
+  'companyName',
+  'uniqueName',
+] as const satisfies readonly (keyof z.infer<typeof schema>)[];
+
+/**
+ * Identity values that were set **explicitly** in `.env`, never a schema default.
+ *
+ * This is what the QA-identifier guard allowlists, and the distinction is the whole point: an
+ * unset identifier is **absent** from the allowlist rather than defaulted into it. So while no
+ * business account exists on live, `QA_COMPANY_ID` is unset, `1` never enters the allowlist, and
+ * any request naming a company is refused before it is sent. The scope enforces itself — nobody
+ * has to remember to keep business endpoints out of a PERSONAL-only run.
+ *
+ * `testData` keeps its defaults so the mock-backed suites still run with nothing configured.
+ */
+export function providedIdentityValues(): string[] {
+  return IDENTITY_FIELDS.filter((field) => field in provided).map((field) =>
+    String(resolved[field]),
+  );
+}
+
+/** `QA_*` names for identity values still falling back to a mock default. */
+export function defaultedIdentityFields(): string[] {
+  return IDENTITY_FIELDS.filter((field) => !(field in provided)).map((field) => SOURCES[field]);
+}
+
+/*
+ * Without a primary account nothing can authenticate, and every endpoint that needs a token would
+ * report 401 — a configuration mistake dressed up as an API defect, which is the failure this
+ * bench exists to avoid producing. Only the two values that make a run possible at all are
+ * required; the rest are allowed to be absent, because absence is safe by the design above.
+ */
+if (env.IS_PRODUCTION && !('kpostId' in provided)) {
+  throw new Error(
+    'QA_KPOST_ID must be set explicitly for a live run: the default is a mock value that does ' +
+      'not exist on the live application, and every authenticated endpoint would report 401.',
+  );
+}
+
+export const testData = resolved;
 export type TestData = typeof testData;
 
 /**
