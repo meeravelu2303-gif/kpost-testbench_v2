@@ -8,13 +8,13 @@ no business account exists on live yet.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **22** |
-| Blocked | 25 |
-| Total registered | 47 |
+| **Runs on live** | **20** |
+| Blocked | 22 |
+| Total registered | 42 |
 
 ---
 
-## Runs on live — 22
+## Runs on live — 20
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -40,14 +40,12 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/signupLogin/generateJWTokens/` | Signup & Login |
 | `GET` | `/v2/signupLogin/getActiveSession` | Signup & Login |
 | `POST` | `/v2/signupLogin/getLoginHistory` | Signup & Login |
-| `POST` | `/v2/signupLogin/kpostIdExist/` | Signup & Login |
-| `POST` | `/v2/signupLogin/kpostIDsuggestionList/` | Signup & Login |
-| `GET` | `/v2/signupLogin/signup/` | Signup & Login |
 | `POST` | `/v2/signupLogin/userLogin/` | Signup & Login |
+| `POST` | `/v2/signupLogin/userLogout/` | Signup & Login |
 
 ---
 
-## Blocked on live — 25
+## Blocked on live — 22
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -73,10 +71,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `GET` | `/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}` | common · company | not cleared: needs a business account or company we do not have on live yet |
 | `POST` | `/v2/common/updateCompanyLogo` | common · company | writes state shared by other users of the live application |
 | `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | Signup & Login | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/signupLogin/adminRegistration/` | Signup & Login | OTP — needs an OTP validated in an earlier step; live has no bypass |
 | `POST` | `/v2/signupLogin/setAccessCode` | Signup & Login | writes state shared by other users of the live application |
-| `POST` | `/v2/signupLogin/signup/` | Signup & Login | OTP — needs an OTP validated in an earlier step; live has no bypass |
-| `POST` | `/v2/signupLogin/userLogout/` | Signup & Login | writes state shared by other users of the live application |
 | `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Signup & Login | writes state shared by other users of the live application |
 
 ---

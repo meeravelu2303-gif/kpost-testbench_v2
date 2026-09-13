@@ -1,4 +1,4 @@
-import { AUTH_PROFILES } from '@config/auth-profile';
+import { AUTH_PROFILES, KPOST_DEVICE_IDENTITY } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { body, defineKpostEndpoint } from '../kpost-endpoint';
 
@@ -169,18 +169,31 @@ export const userLogoutApi = defineKpostEndpoint({
   method: 'POST',
   path: '/v2/signupLogin/userLogout/',
   summary: 'End the current session',
-  tags: [...LOGIN_TAGS, 'session'],
+  /*
+   * `session-ending` keeps this out of `describeEndpointCases`. The engine authenticates with the
+   * token provider's CACHED token — the one every later test in the run reuses — so a primary call
+   * here would log that session out and turn the rest of the report into 401s that look like auth
+   * defects. It is exercised only by `login-flow.spec.ts`, on a session opened for that test.
+   */
+  tags: [...LOGIN_TAGS, 'session', 'session-ending'],
   authentication: { required: true },
   /*
-   * Ends the session of the very account every other suite logs in with. Run in parallel it would
-   * invalidate tokens mid-flight and produce 401s all over the report that look like auth defects.
-   * `global` keeps it out of a default run.
+   * Live: ends ONLY the session named by the token and device it is sent with — one we opened
+   * ourselves, on our own account. That is a write the test owns (`data`), not shared state, and
+   * it carries no identifier the QA guard could mistake for somebody else's. Contrast
+   * `userLogoutFromAllDevices` below, which stays blocked.
    */
+  productionSafe: true,
   destructive: true,
-  sideEffect: 'global',
+  sideEffect: 'data',
   request: body(() => ({
     deviceType: 'Web',
-    deviceIdentity_Primary: '9f9d6bd8',
+    /*
+     * Lower-case `primary`, as the web client's own logout sends it (Header.js `handleLogout`). The
+     * workbook's sample spells it `deviceIdentity_Primary`; the working client is the better
+     * evidence of what the server reads. Flow tests override the value with their session's device.
+     */
+    deviceIdentity_primary: KPOST_DEVICE_IDENTITY,
     logouttime: new Date().toISOString().replace('T', ' ').slice(0, 19),
   })),
 });
@@ -193,7 +206,11 @@ export const logoutAllDevicesApi = defineKpostEndpoint({
   summary: 'End every session of the account',
   tags: [...LOGIN_TAGS, 'session'],
   authentication: { required: true },
-  // Worse than userLogout: it ends every session, including other testers' and the app's.
+  /*
+   * Blocked on live. It ends EVERY session of the account — including the owner's own manual
+   * sessions on these QA accounts in the browser or the mobile app — and nothing in the request
+   * scopes it to the bench. `userLogout` above proves FR-S12 without that collateral.
+   */
   destructive: true,
   sideEffect: 'global',
 });
@@ -219,7 +236,32 @@ export const setAccessCodeApi = defineKpostEndpoint({
   })),
 });
 
+export const fetchUserDetailsApi = defineKpostEndpoint({
+  id: 'signup-login-fetch-user-details',
+  // Live: reads OUR OWN account, asked with QA_KPOST_ID.
+  productionSafe: true,
+  requirements: ['FR-S09'],
+  method: 'POST',
+  path: '/v2/signupLogin/fetchUserDetails/',
+  /*
+   * Step 1 of the login SCREEN, not a signup endpoint: the web client calls it when the user enters
+   * a KPOST ID and presses Submit (Login.js `handleSubmit` -> `FetchKpostIDDetails`), and uses the
+   * answer to show the name card and to learn the account's userType for step 2. So it belongs to
+   * login, and it stays when signup is out of scope.
+   */
+  summary: 'Look up an account by KPOST ID — step 1 of the login screen',
+  tags: [...LOGIN_TAGS, 'pii'],
+  destructive: false,
+  /*
+   * Public, and it returns somebody's name from their KPOST ID alone. Legitimate for a login form;
+   * also an enumeration and PII surface, which the central information-disclosure and sensitive-data
+   * validators examine.
+   */
+  request: body(() => ({ kpostID: testData.kpostId, countryID: testData.countryId })),
+});
+
 export const loginApis = [
+  fetchUserDetailsApi,
   userLoginApi,
   adminUserLoginApi,
   generateJwTokensApi,

@@ -1,3 +1,6 @@
+// This spec GENERATES docs/LIVE-ENDPOINTS.md, so the "conditionals" it is flagged for are string
+// and data formatting (a table cell, a summary line, a filter), not branches guarding an assertion.
+/* eslint-disable playwright/no-conditional-in-test */
 import fs from 'node:fs';
 import path from 'node:path';
 import { apiRegistry } from '@api/definitions/index';
@@ -53,6 +56,11 @@ test.describe('live endpoint coverage @framework', () => {
         (a: EndpointDefinition, b: EndpointDefinition) =>
           moduleOf(a).localeCompare(moduleOf(b)) || a.path.localeCompare(b.path),
       );
+
+    const unset = defaultedIdentityFields();
+    const unsetIdentitySummary = unset.length
+      ? unset.join(', ')
+      : 'none — every identifier is configured';
 
     const runs = all.filter((d: EndpointDefinition) => !blockedReason(d));
     const blocked = all.filter((d: EndpointDefinition) => blockedReason(d));
@@ -115,11 +123,7 @@ test.describe('live endpoint coverage @framework', () => {
       'sales table, and the logo trio acts on a company id taken from the payload rather than the',
       'token. Running them needs a decision, not a flag.',
       '',
-      `Identity values still unset: ${
-        defaultedIdentityFields().length
-          ? defaultedIdentityFields().join(', ')
-          : 'none — every identifier is configured'
-      }.`,
+      `Identity values still unset: ${unsetIdentitySummary}.`,
       '',
     ];
 
@@ -135,24 +139,36 @@ test.describe('live endpoint coverage @framework', () => {
     ).toBeGreaterThan(0);
   });
 
-  test('every live-cleared endpoint is a read that owns nothing', () => {
+  test('every live-cleared endpoint is a read, or a named write to our own state', () => {
     /*
-     * `productionSafe` is a human claim, and this is the part of it a machine can check: a cleared
-     * endpoint must not be destructive and must not carry a side effect beyond its own request.
-     * The rest of the claim — "uses only identifiers we own" — is enforced at runtime by the
-     * QA-identifier guard, which sees the built payload rather than the definition.
+     * `productionSafe` is a human claim, and this is the part of it a machine can check.
+     *
+     * No cleared endpoint may reach beyond its own request (`external` or `global`). A cleared
+     * WRITE is allowed only by name, below, with the reason it touches nothing but our own state —
+     * so widening the live scope to a new write is a visible, reviewable change to this list rather
+     * than a flag flipped in a definition nobody re-reads. The rest of the claim — "uses only
+     * identifiers we own" — is enforced at runtime by the QA-identifier guard.
      */
+    const LIVE_OWN_WRITES: Record<string, string> = {
+      'signup-login-user-logout':
+        'ends only the session whose token and device it is sent with — one the test opened',
+    };
+
     const unsafe = apiRegistry
       .all()
+      .filter((d: EndpointDefinition) => d.productionSafe && !d.mockFixture)
       .filter(
         (d: EndpointDefinition) =>
-          d.productionSafe && (d.destructive === true || (d.sideEffect ?? 'data') !== 'data'),
+          (d.sideEffect ?? 'data') !== 'data' || (d.destructive === true && !LIVE_OWN_WRITES[d.id]),
       )
       .map(
         (d: EndpointDefinition) => `${d.id} (destructive=${d.destructive}, side=${d.sideEffect})`,
       );
 
-    expect(unsafe, 'a cleared endpoint must not write, send or change shared state').toEqual([]);
+    expect(
+      unsafe,
+      'a cleared endpoint must not send or change shared state, and a cleared write must be named',
+    ).toEqual([]);
   });
 
   test('no OTP-dependent endpoint is cleared for live', () => {

@@ -56,6 +56,12 @@ const NOT_A_RESOURCE = new Set(
     'productid',
     'moduleid',
     'module',
+    /*
+     * An account TIER (PERSONAL, BUSINESS_S/M/L), not an account. It matches the pattern only
+     * because it contains "user" — and treating it as an identifier refused every login on live,
+     * since `loginRO.userType: "PERSONAL"` is not a QA-owned value. Found before the first run.
+     */
+    'usertype',
     // Values this bench generates for itself.
     'sessionid',
     'deviceid',

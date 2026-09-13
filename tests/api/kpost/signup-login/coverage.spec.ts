@@ -1,5 +1,6 @@
 import { workbookContract } from '@api/contract/workbook-contract';
 import {
+  SIGNUP_OUT_OF_SCOPE,
   signupLoginApis,
   uncoveredSignupLoginPaths,
 } from '@api/definitions/kpost/signup-login/index';
@@ -41,19 +42,44 @@ test.describe('KPost Signup & Login · module coverage', () => {
     expect(thin, 'endpoints with fewer than 10 planned cases').toEqual([]);
   });
 
-  test('session-ending and account-creating endpoints are gated @framework', () => {
-    // Logging the shared QA account out mid-run would produce 401s that look like auth defects.
-    const gated = {
-      'signup-login-user-logout': 'global',
-      'signup-login-logout-all-devices': 'global',
-      'signup-login-set-access-code': 'global',
-      'signup-login-admin-registration': 'global',
-      'signup-login-signup': 'global',
-    } as const;
-    for (const [id, sideEffect] of Object.entries(gated)) {
+  test('endpoints that change a credential or end other sessions stay blocked on live @framework', () => {
+    /*
+     * `userLogoutFromAllDevices` also ends the owner's own manual sessions on these accounts;
+     * `setAccessCode` changes a credential. Neither is scoped to the bench, so both stay `global`.
+     */
+    for (const id of ['signup-login-logout-all-devices', 'signup-login-set-access-code']) {
       const api = signupLoginApis.find((candidate) => candidate.id === id);
-      expect(api?.destructive, `${id} must be destructive`).toBe(true);
-      expect(api?.sideEffect, `${id} side effect`).toBe(sideEffect);
+      expect(api?.sideEffect, `${id} must stay global`).toBe('global');
+      expect(api?.productionSafe ?? false, `${id} must not be cleared for live`).toBe(false);
     }
+  });
+
+  test('single-session logout never runs through the shared engine run @framework', () => {
+    /*
+     * The engine authenticates with the token provider's cached token. If `userLogout` ever lost
+     * its `session-ending` tag, `login.spec.ts` would log that shared session out and every later
+     * test in the run would report 401 — an outage the bench caused, filed as auth defects.
+     */
+    const logout = signupLoginApis.find((api) => api.id === 'signup-login-user-logout');
+    expect(logout?.tags, 'userLogout is excluded from describeEndpointCases').toContain(
+      'session-ending',
+    );
+    expect(logout?.sideEffect, 'it ends only the session it is sent with').toBe('data');
+  });
+
+  test('signup is out of scope, and only the named registration paths are excluded @framework', () => {
+    const ids = signupLoginApis.map((api) => api.id);
+    for (const removed of [
+      'signup-login-signup',
+      'signup-login-signup-get',
+      'signup-login-admin-registration',
+      'signup-login-kpost-id-exist',
+      'signup-login-kpost-id-suggestions',
+    ]) {
+      expect(ids, `${removed} is registration, out of scope`).not.toContain(removed);
+    }
+    // The login screen's step 1 is NOT signup, whatever its path looks like.
+    expect(ids).toContain('signup-login-fetch-user-details');
+    expect(SIGNUP_OUT_OF_SCOPE).toHaveLength(5);
   });
 });

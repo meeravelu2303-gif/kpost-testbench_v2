@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { RequestSpec } from '@api/client/request-builder';
 import { authConfig, type Principal, type Role } from './auth.config';
-import { testData } from './test-data.config';
+import { env } from './env';
+import { isProvided, testData, type TestData } from './test-data.config';
 
 /**
  * How an API issues tokens, declared once per API rather than once for the bench.
@@ -59,9 +60,18 @@ export interface AuthProfile {
  * freshly minted token. The workbook's own sample is a UUID, which is the clue we should have taken
  * literally the first time.
  */
+/**
+ * The device every token-provider login claims to be.
+ *
+ * Exported because logout is scoped by device: the web client sends `deviceIdentity_primary` with
+ * `userLogout`. A test that opens its own session and logs it out must use a DIFFERENT device, or
+ * it risks ending the shared session every other test is using — see `login-flow.spec.ts`.
+ */
+export const KPOST_DEVICE_IDENTITY = '9f9d6bd8-238f-11ed-b3e2-73ce62ed0e94';
+
 const DEVICE = {
   deviceType: 'Web',
-  deviceIdentity_primary: '9f9d6bd8-238f-11ed-b3e2-73ce62ed0e94',
+  deviceIdentity_primary: KPOST_DEVICE_IDENTITY,
   deviceIdentity_secondary: 'Desktop-Chrome',
   login_lattitude: 13.0476875,
   login_longitude: 80.2655737,
@@ -77,9 +87,10 @@ const DEVICE = {
  * `userType` matters: the same password logs a BUSINESS_S account in only when the tier is sent,
  * which is why it travels with the principal rather than being hard-coded in the request builder.
  */
-export const KPOST_PRINCIPALS: readonly Principal[] = [
+const ALL_KPOST_PRINCIPALS: readonly (Principal & { account: keyof TestData })[] = [
   {
     key: 'personal',
+    account: 'kpostId',
     role: 'USER',
     username: testData.kpostId,
     password: testData.password,
@@ -87,6 +98,7 @@ export const KPOST_PRINCIPALS: readonly Principal[] = [
   },
   {
     key: 'business-admin',
+    account: 'adminKpostId',
     role: 'COMPANY_ADMIN',
     username: testData.adminKpostId,
     password: testData.adminPassword,
@@ -99,6 +111,7 @@ export const KPOST_PRINCIPALS: readonly Principal[] = [
    */
   {
     key: 'business-s',
+    account: 'businessSKpostId',
     role: 'COMPANY_ADMIN',
     username: testData.businessSKpostId,
     password: testData.password,
@@ -106,6 +119,7 @@ export const KPOST_PRINCIPALS: readonly Principal[] = [
   },
   {
     key: 'business-m',
+    account: 'businessMKpostId',
     role: 'COMPANY_ADMIN',
     username: testData.businessMKpostId,
     password: testData.password,
@@ -113,6 +127,7 @@ export const KPOST_PRINCIPALS: readonly Principal[] = [
   },
   {
     key: 'business-l',
+    account: 'businessLKpostId',
     role: 'COMPANY_ADMIN',
     username: testData.businessLKpostId,
     password: testData.password,
@@ -124,12 +139,29 @@ export const KPOST_PRINCIPALS: readonly Principal[] = [
    */
   {
     key: 'victim',
+    account: 'victimKpostId',
     role: 'USER',
     username: testData.victimKpostId,
     password: testData.password,
     userType: testData.userType,
   },
 ];
+
+/**
+ * The principals the bench may log in as: only accounts whose id was set **explicitly** in `.env`.
+ *
+ * An unconfigured principal would log in with a mock default id (`qa.business.s@kpost.in`). On the
+ * live application that is not an account, so every endpoint asking for its role would report
+ * "Invalid Credential" — a missing account dressed up as an API defect — and the id belongs to
+ * nobody we know. Filtering here means a role with no account simply has no principal, and the
+ * validators that need one skip with that reason instead of failing.
+ *
+ * Off the live application nothing changes: the mock-backed suites keep every principal, because
+ * the defaults are exactly the mock server's seed.
+ */
+export const KPOST_PRINCIPALS: readonly Principal[] = ALL_KPOST_PRINCIPALS.filter(
+  (principal) => !env.IS_PRODUCTION || isProvided(principal.account),
+).map(({ account: _account, ...principal }) => principal);
 
 export const AUTH_PROFILES: Record<AuthProfile['id'], AuthProfile> = {
   /** The bench's own mock API, used by the framework self-tests. */

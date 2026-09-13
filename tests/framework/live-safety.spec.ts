@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { apiRegistry } from '@api/definitions/index';
 import type { EndpointDefinition } from '@api/registry/endpoint-definition';
+import { AUTH_PROFILES } from '@config/auth-profile';
 import { ROOT_DIR } from '@config/constants';
 import { env } from '@config/env';
 import { destructiveBlockReason, type GuardedEndpoint } from '@engine/production-guard';
@@ -223,6 +224,21 @@ test.describe('live-application safety @framework', () => {
       },
     });
     expect(foreign, 'reference and self-generated values must pass').toEqual([]);
+  });
+
+  test('the exact login payload the token provider sends passes the guard', () => {
+    /*
+     * Built by the real builder, not a hand-copied literal, so this breaks the moment a new field is
+     * added to the login request that the guard would refuse. That is how `userType` was caught:
+     * it contains "user", matched the identifier pattern, and would have refused every login on the
+     * live application — failing the whole run before a single endpoint was tested.
+     */
+    const principal = AUTH_PROFILES.kpost.principals[0]!;
+    const spec = AUTH_PROFILES.kpost.loginRequest(principal);
+    const foreign = foreignIdentifiers({ body: spec.body });
+    // Our own kpostID is QA-owned only when configured; everything else in the payload must pass.
+    const unexpected = foreign.filter((offence) => !offence.path.endsWith('kpostID'));
+    expect(unexpected, 'no field of the login payload is mistaken for a resource').toEqual([]);
   });
 
   test('path and query parameters are guarded too, not just the body', () => {

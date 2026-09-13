@@ -216,6 +216,72 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — Module-by-module plan; signup removed; Login step 1 written (API + screen)
+
+The owner set the order — **API and screen together, one module at a time: Login → Profile →
+Katchup → …** (full table in §9) — and took **signup out of scope**: the QA accounts exist, and both
+registration endpoints are OTP-gated on live anyway.
+
+#### The documents, re-read
+
+All five (`D:\Kpost Documents`) read again in full. They describe **exactly four modules** — Signup &
+Login, Katchup, Kall, KMail — as 55 FRs and 9 BRs. **Profile, Contacts, Group, KDiary and Settings
+appear in the workbook and the UI but in none of the documents**, so their tests are contract-driven
+and carry no FR ids. Worth stating so "Profile: 0 requirements" is not later read as a coverage gap.
+The 45-endpoint Profile module is the second-largest surface in the product and entirely
+undocumented — the single biggest specification gap the bench faces.
+
+#### Signup removed, not skipped
+
+Left registered-but-skipped, signup's five endpoints would still shape the totals and the reports.
+Deleted instead: `signup.api.ts`, `signup.spec.ts`, `flow-rules.spec.ts`, `user-types.spec.ts`. The
+registry drops 47 → **42** endpoints; `SIGNUP_OUT_OF_SCOPE` names the five excluded paths so a _new_
+`/signupLogin` endpoint still shows up as uncovered rather than being swallowed. Their findings stay
+in this log. `fetchUserDetails` **moved to `login.api.ts`**: it is the login screen's step 1
+(`FetchKpostIDDetails`), not signup.
+
+#### Login module: what was built
+
+- **`login.spec.ts`** — the engine's contract validators, once per endpoint, excluding
+  `session-ending`.
+- **`login-flow.spec.ts`** (new) — behaviour the engine cannot assert, all on our own accounts:
+  token subject/claims, a signed-and-expiring JWT with no secret in it, wrong-password rejection
+  **followed by a successful login** (the lockout safety net), the enumeration rule (a wrong
+  password and an unknown id answer alike), and single-session logout. Runs `serial` on one worker;
+  **one wrong-password attempt per account per run**.
+- **`tests/e2e/login.spec.ts`** (new) — the real two-step screen (`/login`), modelled on the live
+  UI source (`KPOST_REACTJS_2023_V1/src/components/auth/Login.js`), not guessed: unknown id toast,
+  advance to password step, wrong-password inline error, success → `/home`, header logout → `/login`.
+  `src/pages/LoginPage.ts` rewritten to the real component; it ships **no test-ids**, so every
+  locator is by role/label/text and says what it is anchored to.
+
+#### `userLogout` is now testable on live — safely
+
+It was `global` (blocked). But it ends **only the session named by the token and device it is sent
+with**, and the flow test opens a throwaway session on its own device id to log out, leaving the
+shared token untouched. So it is now `productionSafe`, `sideEffect: 'data'`, and tagged
+`session-ending` to keep it out of the shared engine run (whose cached token it would otherwise
+kill). `userLogoutFromAllDevices` stays blocked — it would end the owner's own manual sessions on
+these accounts. A named-write allowlist in `live-coverage.spec.ts` makes this the only cleared write,
+reviewably.
+
+#### Two live-safety fixes found while wiring this up
+
+- **`userType` was treated as a resource identifier.** It matches the guard's pattern only because
+  it contains "user", and `loginRO.userType: "PERSONAL"` is not a QA-owned value — so on live the
+  guard would have **refused every login**, failing the whole run before the first endpoint. Added
+  to `NOT_A_RESOURCE` (it is an account tier, not an account), and a new self-test builds the real
+  login payload and asserts the guard passes every field but our own kpostID — so a future added
+  field cannot reintroduce this silently.
+- **Principals are filtered on live.** An unconfigured principal logged in with a mock default id
+  (`qa.business.s@kpost.in`) — not an account on live, and not ours. `KPOST_PRINCIPALS` now drops
+  any principal whose account id is unset in `.env` when `TEST_ENV=production`, so business roles
+  simply have no principal (validators skip with that reason) until the accounts exist. Off live,
+  nothing changes.
+
+**State:** `npm run check` clean; **63 framework/coverage tests pass**; still no request sent to
+live.
+
 ### 2026-09-13 — Live accounts arrive; scope narrows to PERSONAL; 22 endpoints cleared
 
 The owner created **two PERSONAL accounts by hand on the live application** — the bench cannot make
@@ -1282,15 +1348,68 @@ is genuinely missing data, all of it in `contracts/excel-gaps.csv`, one row per 
 After any new dump: `npm run contract:excel` (no path needed — it takes the newest workbook in the
 repo) → `npm run contract:coverage` → `npm run contract:gaps`.
 
+### The module-by-module to-do (owner's order, 2026-09-13)
+
+API **and** screen, one module finished before the next starts. Signup is **out of scope**: the QA
+accounts were created by hand, and both registration endpoints are OTP-gated on live anyway. The
+per-endpoint status lives in `docs/LIVE-ENDPOINTS.md` (generated); this is the order and what each
+step needs.
+
+| #   | Module                                                                      | API endpoints (usable) | Screen                      | Documents cover it?         | Needs before it can finish                                                      |
+| --- | --------------------------------------------------------------------------- | ---------------------: | --------------------------- | --------------------------- | ------------------------------------------------------------------------------- |
+| 0   | Common (done)                                                               |                     33 | —                           | partly (reference data)     | 22 of its endpoints run on live; OTP and company ones are blocked, with reasons |
+| 1   | **Login & session**                                                         |        8 (+1 business) | `/login`, header logout     | FR-S09..S12, NFR-SEC01      | nothing — the two PERSONAL accounts are enough                                  |
+| 2   | **Profile**                                                                 |                     45 | `/userprofile`, `/settings` | **no** — workbook only      | a decision on which own-profile writes are acceptable on live; test images      |
+| 3   | **Katchup**                                                                 |                     36 | `/katchup`                  | FR-K01..K25, BR-K01..K03    | **more PERSONAL accounts** for group, Cc and confidential-copy (NFR-SEC02)      |
+| 4   | Contacts                                                                    |                     16 | inside Katchup/Kall         | no                          | the counterparty account                                                        |
+| 5   | Group                                                                       |                     11 | inside Katchup              | FR-K06 only                 | **≥3 PERSONAL accounts** (a group with one member proves nothing)               |
+| 6   | Kall                                                                        |                     20 | `/kall`                     | FR-C01..C09, BR-C01         | two accounts; calling itself is real-time and likely UI-only                    |
+| 7   | KMail                                                                       |      71 + 8 (`kmail5`) | `/kmail`                    | FR-M01..M09, BR-M01         | KMail host confirmed; external recipients must be our own mailboxes             |
+| 8   | KDiary (`dairySchedule`)                                                    |                     14 | —                           | no                          | —                                                                               |
+| 9   | Settings (`generalSetting`)                                                 |                      7 | `/settings`                 | no                          | —                                                                               |
+| 10  | Business & Admin                                                            |           13 + company | `/usermanagement`           | no                          | a business company with **three members**, one expendable                       |
+| —   | KDOC (`kword`, `kpresentation`, `delete`)                                   |                     19 | `/kdoc`                     | **out of scope** (BRD §4.2) | —                                                                               |
+| —   | Other (`redbus`, `knews`, `ecommerce`, `ai`, `aws`, `dashboard`, `metaDee`) |                     28 | various                     | no                          | owner to say whether in scope                                                   |
+| —   | Signup                                                                      |                      5 | `/signup`                   | FR-S01..S08                 | **out of scope** — accounts already exist; OTP-gated on live                    |
+
+**The documents only describe four modules** (Signup & Login, Katchup, Kall, KMail). Profile,
+Contacts, Group, KDiary and Settings exist in the workbook and the UI but in none of the five
+documents, so their tests are contract-driven and carry no FR ids. Worth knowing before anyone reads
+"Profile: 0 requirements covered" as a gap in the tests.
+
+#### Step 1 — Login & session: the plan
+
+Scope on live, PERSONAL only:
+
+- **API, engine-driven:** `fetchUserDetails` (the UI's step 1), `userLogin`, `generateJWTokens`,
+  `getActiveSession`, `getLoginHistory` — the read-only contract validators the live allowlist
+  permits.
+- **API, flow tests** (hand-written, own account only): wrong password, unknown id, wrong user type,
+  the enumeration rule (both failures answer alike), token claims, refresh token misuse, protected
+  endpoints without/with a bad token, and **logout on a session opened for the test**, proving that
+  token dies while the shared session survives.
+- **Screen:** the real two-step `/login` (KPOST ID → password), taken from the UI source
+  (`src/components/auth/Login.js`) rather than guessed: unknown id toast, wrong password message,
+  successful login lands on `/home`, header logout returns to `/login`.
+
+Deliberately not run on live: `userLogoutFromAllDevices` (would also end the owner's own manual
+sessions on these accounts), `setAccessCode` (changes a credential), `adminUserLogin` (business).
+
+Account-lockout precaution: **one** wrong-password attempt per account per run, always followed by a
+successful login, and never in parallel. A bench that locks its own QA account stops every module.
+
+Removed with signup: `signup.api.ts` (the five registration endpoints), `signup.spec.ts`,
+`flow-rules.spec.ts` (registers an account) and `user-types.spec.ts` (needs business accounts that
+do not exist on live; its PERSONAL cases move into the login flow tests). `fetchUserDetails` moves to
+`login.api.ts`, since the login screen calls it.
+
 ### Next
 
-4. Turn usable contract rows into **endpoint definitions with request factories**, module by module,
-   starting with Signup & Login (the gate to everything), then Katchup.
 5. Add **FR traceability**: tag each definition with the FR ids it exercises, and report coverage
    against the 55 FRs.
-6. **Business rules from the FRD** — activation-before-login (BR-S01), identifier uniqueness
-   (BR-S02), subject mandatory (FR-K02), confidential-copy invisibility (NFR-SEC02),
-   edited/recalled marker behaviour (BR-K03), reschedule status tag (BR-C01).
+6. **Business rules from the FRD** — subject mandatory (FR-K02), confidential-copy invisibility
+   (NFR-SEC02), edited/recalled marker behaviour (BR-K03), reschedule status tag (BR-C01).
+   (BR-S01/BR-S02 go with signup, out of scope.)
 7. **Admin has a partial contract after all** — 9 usable `/admin/*` endpoints are in the KPost
    contract (`addingUserByAdmin`, `resetPassword`, `holdOrRelease`, `createOrRemoveBackupAdmin`,
    `terminateUser`, `userManagementDetails/{companyID}`, `removeCompanyLogo`,

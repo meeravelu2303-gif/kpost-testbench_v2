@@ -208,6 +208,11 @@ export function providedIdentityValues(): string[] {
   );
 }
 
+/** True when `field` was set explicitly in `.env` rather than falling back to a mock default. */
+export function isProvided(field: keyof TestData): boolean {
+  return field in provided;
+}
+
 /** `QA_*` names for identity values still falling back to a mock default. */
 export function defaultedIdentityFields(): string[] {
   return IDENTITY_FIELDS.filter((field) => !(field in provided)).map((field) => SOURCES[field]);
