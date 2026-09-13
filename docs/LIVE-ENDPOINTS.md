@@ -8,13 +8,13 @@ no business account exists on live yet.
 
 |                  |  Count |
 | ---------------- | -----: |
-| **Runs on live** | **30** |
-| Blocked          |     59 |
-| Total registered |     89 |
+| **Runs on live** | **42** |
+| Blocked          |     92 |
+| Total registered |    134 |
 
 ---
 
-## Runs on live — 30
+## Runs on live — 42
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -52,10 +52,22 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/signupLogin/getLoginHistory`                     | Login & session |
 | `POST` | `/v2/signupLogin/userLogin/`                          | Login & session |
 | `POST` | `/v2/signupLogin/userLogout/`                         | Login & session |
+| `POST` | `/v2/profile/advancedSearch/`                         | Profile         |
+| `POST` | `/v2/profile/autoSearchWithName/`                     | Profile         |
+| `GET`  | `/v2/profile/downloadCoverImage/{kpostID}`            | Profile         |
+| `GET`  | `/v2/profile/downloadFullProfileImage/{kpostID}`      | Profile         |
+| `GET`  | `/v2/profile/downloadProfileImage/{kpostID}`          | Profile         |
+| `GET`  | `/v2/profile/fetchUserDetails/`                       | Profile         |
+| `POST` | `/v2/profile/getDigitalCard/`                         | Profile         |
+| `GET`  | `/v2/profile/getlanguages/`                           | Profile         |
+| `GET`  | `/v2/profile/getSignatureImage`                       | Profile         |
+| `POST` | `/v2/profile/getUserBasicDetailsUsingKpostID`         | Profile         |
+| `POST` | `/v2/profile/getUserProfileUsingKpostID/`             | Profile         |
+| `GET`  | `/v2/profile/isDevicePrimaryOrNot/`                   | Profile         |
 
 ---
 
-## Blocked on live — 59
+## Blocked on live — 92
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -80,6 +92,17 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/common/getCompanyDetailsByMobileNoAndproductId`               | common · company | not cleared: needs a business account or company we do not have on live yet |
 | `GET`  | `/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}`     | common · company | not cleared: needs a business account or company we do not have on live yet |
 | `POST` | `/v2/common/updateCompanyLogo`                                     | common · company | writes state shared by other users of the live application                  |
+| `POST` | `/v2/group/addOrRemoveAdminAccess/`                                | Group            | writes or deletes on the live application                                   |
+| `POST` | `/v2/group/addUserToGroup/`                                        | Group            | writes or deletes on the live application                                   |
+| `POST` | `/v2/group/createUserGroup/`                                       | Group            | writes or deletes on the live application                                   |
+| `POST` | `/v2/group/deleteGroup`                                            | Group            | writes or deletes on the live application                                   |
+| `GET`  | `/v2/group/downloadGroupFullProfileImage/{groupKpostID}/{kpostID}` | Group            | not cleared: needs a business account or company we do not have on live yet |
+| `GET`  | `/v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID}`     | Group            | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/v2/group/editGroupName`                                          | Group            | writes or deletes on the live application                                   |
+| `POST` | `/v2/group/leaveFromGroup/`                                        | Group            | writes or deletes on the live application                                   |
+| `POST` | `/v2/group/removeGroupMember/`                                     | Group            | writes or deletes on the live application                                   |
+| `POST` | `/v2/group/removeGroupProfileImage`                                | Group            | writes or deletes on the live application                                   |
+| `POST` | `/v2/group/updateGroupProfileImage/`                               | Group            | writes or deletes on the live application                                   |
 | `POST` | `/v2/katchup/deleteKatchUpMessage/`                                | Katchup          | writes or deletes on the live application                                   |
 | `GET`  | `/v2/katchup/download/{uuid}`                                      | Katchup          | not cleared: needs a business account or company we do not have on live yet |
 | `GET`  | `/v2/katchup/downloadAttachment/{uuid}`                            | Katchup          | not cleared: needs a business account or company we do not have on live yet |
@@ -109,17 +132,39 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/signupLoginForMediumAndLarge/adminUserLogin`                     | Login & session  | not cleared: needs a business account or company we do not have on live yet |
 | `POST` | `/v2/signupLogin/setAccessCode`                                    | Login & session  | writes state shared by other users of the live application                  |
 | `GET`  | `/v2/signupLogin/userLogoutFromAllDevices/`                        | Login & session  | writes state shared by other users of the live application                  |
-| `POST` | `/v2/group/addOrRemoveAdminAccess/`                                | other            | writes or deletes on the live application                                   |
-| `POST` | `/v2/group/addUserToGroup/`                                        | other            | writes or deletes on the live application                                   |
-| `POST` | `/v2/group/createUserGroup/`                                       | other            | writes or deletes on the live application                                   |
-| `POST` | `/v2/group/deleteGroup`                                            | other            | writes or deletes on the live application                                   |
-| `GET`  | `/v2/group/downloadGroupFullProfileImage/{groupKpostID}/{kpostID}` | other            | not cleared: needs a business account or company we do not have on live yet |
-| `GET`  | `/v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID}`     | other            | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/group/editGroupName`                                          | other            | writes or deletes on the live application                                   |
-| `POST` | `/v2/group/leaveFromGroup/`                                        | other            | writes or deletes on the live application                                   |
-| `POST` | `/v2/group/removeGroupMember/`                                     | other            | writes or deletes on the live application                                   |
-| `POST` | `/v2/group/removeGroupProfileImage`                                | other            | writes or deletes on the live application                                   |
-| `POST` | `/v2/group/updateGroupProfileImage/`                               | other            | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/changePassword`                                       | Profile          | writes state shared by other users of the live application                  |
+| `POST` | `/v2/profile/convertBase64ToImage`                                 | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/deactivateAccount/`                                   | Profile          | OTP — needs an OTP validated in an earlier step; live has no bypass         |
+| `POST` | `/v2/profile/deleteCollegeDetail`                                  | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/deleteExperienceDetail`                               | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/deleteSchoolDetail`                                   | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/deleteUniversityDetail`                               | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/forgotPasswordOrKpostID/`                             | Profile          | OTP — sends a real OTP by SMS/email to a real recipient                     |
+| `GET`  | `/v2/profile/removeCoverImage/`                                    | Profile          | writes or deletes on the live application                                   |
+| `GET`  | `/v2/profile/removeProfileImage/`                                  | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/saveOrUpdateCollegeDetails/`                          | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/saveOrUpdateExperienceDetails/`                       | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/saveOrUpdateOtherActivity/`                           | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/saveOrUpdateSchoolDetails/`                           | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/saveOrUpdateUniversityDetails/`                       | Profile          | writes or deletes on the live application                                   |
+| `GET`  | `/v2/profile/sendAccountDeactivationOtp/`                          | Profile          | OTP — sends a real OTP by SMS/email to a real recipient                     |
+| `GET`  | `/v2/profile/sendPrimaryDeviceOtp/`                                | Profile          | OTP — sends a real OTP by SMS/email to a real recipient                     |
+| `GET`  | `/v2/profile/sendPrimaryOrSecondaryDeviceOtp/{requestType}`        | Profile          | OTP — sends a real OTP by SMS/email to a real recipient                     |
+| `POST` | `/v2/profile/setDeviceAsPrimary/`                                  | Profile          | OTP — needs an OTP validated in an earlier step; live has no bypass         |
+| `POST` | `/v2/profile/setDeviceAsSecondary`                                 | Profile          | OTP — needs an OTP validated in an earlier step; live has no bypass         |
+| `POST` | `/v2/profile/shareUserDetails`                                     | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/updateAboutYourself/`                                 | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/updateBasicInformation/`                              | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/updateContactInformation/`                            | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/updateDesignation`                                    | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/updateDeviceAsPrimary/`                               | Profile          | OTP — needs an OTP validated in an earlier step; live has no bypass         |
+| `POST` | `/v2/profile/updateDeviceAsSecondary`                              | Profile          | OTP — needs an OTP validated in an earlier step; live has no bypass         |
+| `POST` | `/v2/profile/updatePrivacySettingDetails/`                         | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/updateProfileImage/`                                  | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/updateSignatureImage`                                 | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/uploadCoverImage/`                                    | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/uploadImageToS3`                                      | Profile          | writes or deletes on the live application                                   |
+| `POST` | `/v2/profile/uploadProfileAttachments`                             | Profile          | writes or deletes on the live application                                   |
 
 ---
 

@@ -41,6 +41,14 @@ export interface KpostEndpointConfig {
    * API's. Every use of this must cite the evidence for the correction.
    */
   contractPath?: string;
+  /**
+   * The method the **workbook** documents, when the live API disagrees. Like `contractPath`, the
+   * schema is still read from the documented (method, path) row, while the request uses `method`.
+   * Needed where the sheet's derived verb is wrong: `/v2/profile/fetchUserDetails/` is documented
+   * POST but the live API answers only GET (405 on POST) — a documentation defect, recorded on the
+   * definition. Every use must cite its evidence.
+   */
+  contractMethod?: HttpMethod;
   summary: string;
   /** Bugzilla component candidates and test filters; `kpost-api` is added automatically. */
   tags?: readonly string[];
@@ -83,13 +91,18 @@ export interface KpostEndpointConfig {
  * than becoming a test that quietly validates nothing.
  */
 export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefinition {
-  const contract = workbookContract('kpost-api', config.method, config.contractPath ?? config.path);
+  const contract = workbookContract(
+    'kpost-api',
+    config.contractMethod ?? config.method,
+    config.contractPath ?? config.path,
+  );
 
   return {
     id: config.id,
     method: config.method,
     path: config.path,
     contractPath: config.contractPath,
+    contractMethod: config.contractMethod,
     suite: 'kpost-api',
     responseContract: 'kpost',
     summary: config.summary,

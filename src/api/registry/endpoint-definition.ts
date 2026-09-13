@@ -42,6 +42,12 @@ export interface EndpointDefinition {
    */
   contractPath?: string;
   /**
+   * The method the workbook documents, when the live API answers a different verb. The schema is
+   * read from the documented (method, path) row while requests use `method`. See `contractMethod`
+   * in kpost-endpoint.ts — used where a derived verb is wrong (e.g. profile fetchUserDetails).
+   */
+  contractMethod?: HttpMethod;
+  /**
    * Which KPost module this endpoint belongs to. Decides the base URL it is called on and,
    * when a defect is found, the Bugzilla product, component and owning developer.
    * Default: `kpost-api`. See src/config/ownership.config.ts.

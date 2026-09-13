@@ -7,6 +7,7 @@ import { healthCheckApi } from './health.api';
 import { commonApis } from './kpost/common/index';
 import { groupApis } from './kpost/group/index';
 import { katchupApis } from './kpost/katchup/index';
+import { profileApis } from './kpost/profile/index';
 import { signupLoginApis } from './kpost/signup-login/index';
 import { kmailApis } from './kmail.api';
 import { userApis } from './users.api';
@@ -33,6 +34,8 @@ export const apiRegistry = new ApiRegistry().register(
   ...katchupApis,
   // KPost Group - group membership; underpins Katchup group messaging (FR-K06).
   ...groupApis,
+  // KPost Profile - the account owner's own profile (undocumented module).
+  ...profileApis,
   // Admin module — Jaganathan Murthy. Loaded from its own spec when ADMIN_API_BASE_URL is set.
   ...adminApis,
   // KMail module — Jitendra Kumar. Loaded from its own spec when KMAIL_API_BASE_URL is set.

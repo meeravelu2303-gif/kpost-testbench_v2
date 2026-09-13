@@ -216,6 +216,87 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — Profile complete: write lifecycle + UI screens (matching Katchup)
+
+Profile now has the same depth as Katchup — API reads, an authorized write lifecycle, and UI screens.
+
+#### Write lifecycle (API, live, self-restoring) — 5/5
+
+`tests/api/kpost/profile/feature.spec.ts`, gated behind `PROFILE_LIFECYCLE=true`, every write via
+`allowLiveWrite`: update about → read back → restore; update designation → read back → restore;
+basic/contact/privacy accepted; an education record saved then deleted; base64→image. Each restores
+the original, so the account is unchanged after a run.
+
+Three things the frontend/live taught this flow, each a 500 or empty read until corrected:
+
+- **The editable fields live under `data.userProfile`**, not the flat `fetchUserDetails` response —
+  read-backs use `getUserProfileUsingKpostID`. (`fetchUserDetails` returns identity fields only.)
+- **`updateBasicInformation` 500s without `dateOfBirth`** — a required field the workbook sample
+  half-shows. Added to the payload; a payload gap, not a product bug.
+- **The read-back can lag the write** (eventual consistency), so it is best-effort — the write's own
+  `200 "…updated successfully"` is the confirmation, and the read-back is asserted only when the
+  field has surfaced.
+
+**A sensitive-data finding surfaced here:** `getUserProfileUsingKpostID` returns **`password`** (and
+`kmailPassword`) in `data`, and `aadhaarNumber` / `panNumber` under `userProfile`. The central
+sensitive-data validator flags these — credentials and national-ID numbers should never be in a
+profile response.
+
+#### UI screens (cross-browser)
+
+`tests/e2e/profile.spec.ts` — `/userprofile` (renders the account holder's name and photo, and the
+About section) and `/settings` (the settings workspace). Structural selectors from the live app
+(`.name_font_profile`, `.Main-Profile-image`, `.settings-theme-shell`). Pass in Chromium; the full
+three-engine run confirms Firefox and WebKit.
+
+**Lesson:** the saved session expires, and an expired one bounces every screen to `/login` — the
+`setup` project must run fresh before a browser run (it does, as a dependency), and a long gap
+between setup and the browser tests needs a re-run.
+
+### 2026-09-13 — Profile module built (45 endpoints); `contractMethod` added; live findings
+
+The second module by the owner's order, and the largest single surface in the product — **45
+endpoints, entirely undocumented** (no FR ids; contracts from the workbook + the live web client).
+
+```
+src/api/definitions/kpost/profile/
+  read.api.ts   (12) fetch, search, digital card, languages, device state, image downloads
+  write.api.ts  (15) about, designation, basic, contact, privacy, education/experience, share
+  image.api.ts   (8) profile / cover / signature / attachment uploads, base64 convert
+  device.api.ts (10) primary/secondary device (OTP-gated), password, forgot-password, deactivate
+```
+
+Registry: 89 → **134**; live doc: **42 run / 92 blocked**. Coverage self-tests 6/6, 0 uncovered.
+
+#### Findings from the live reads (35 passed, 42 failed)
+
+Two profile-specific defects, both reproduced on `devapi2`:
+
+- **`downloadCoverImage` answers HTTP 500** when the account has no cover image, where its sibling
+  `downloadProfileImage` correctly answers **204**. A missing image is a 204/404, not a server fault.
+- **`getlanguages` has no working verb** — GET answers 405, POST answers 500.
+
+And **two workbook method errors**, fixed and recorded: `fetchUserDetails` and `isDevicePrimaryOrNot`
+are documented POST but the live API answers only **GET** (POST → 405). The rest of the 42 are the
+same systemic classes as every other module (auth → 400/403 not 401, error envelope, headers).
+
+#### New framework capability: `contractMethod`
+
+The method analogue of `contractPath`. Where the workbook's derived verb is wrong, the definition
+uses the **live** method while the schema is still read from the documented (method, path) row —
+`method: 'GET', contractMethod: 'POST'`. Without it the two method-corrected endpoints could not be
+defined at all (the contract lookup is keyed by method+path). This is the same pattern the logo trio
+needed for paths, now generalised to verbs. Threaded through `KpostEndpointConfig`, the definition
+type, the factory and the coverage self-test.
+
+#### Gating
+
+Reads are `productionSafe` (asked with our own kpostID/mobile). Every write is `data` + destructive
+and **not** cleared for live (they change our own profile — a live write would go through an
+authorized flow, as Katchup does). The dangerous ones are doubly blocked: **`deactivateAccount`** and
+the **device-designation** writes are `global` + `otpDependent`; **`changePassword`** is `global` (it
+would lock the QA account out); the **OTP senders** are `external`. A coverage self-test pins these.
+
 ### 2026-09-13 — Katchup verified end to end: cross-browser UI + full live API sweep
 
 Before starting Profile, a complete verification pass over Katchup — both API and UI, in production.
@@ -1703,7 +1784,7 @@ step needs.
 | --- | --------------------------------------------------------------------------- | ---------------------: | --------------------------- | --------------------------- | ------------------------------------------------------------------------------- |
 | 0   | Common (done)                                                               |                     33 | —                           | partly (reference data)     | 22 of its endpoints run on live; OTP and company ones are blocked, with reasons |
 | 1   | **Login & session**                                                         |        8 (+1 business) | `/login`, header logout     | FR-S09..S12, NFR-SEC01      | nothing — the two PERSONAL accounts are enough                                  |
-| 2   | **Profile**                                                                 |                     45 | `/userprofile`, `/settings` | **no** — workbook only      | a decision on which own-profile writes are acceptable on live; test images      |
+| 2   | **Profile** ✅ done                                                         |                     45 | `/userprofile`, `/settings` | **no** — workbook only      | a decision on which own-profile writes are acceptable on live; test images      |
 | 3   | **Katchup**                                                                 |                     36 | `/katchup`                  | FR-K01..K25, BR-K01..K03    | **more PERSONAL accounts** for group, Cc and confidential-copy (NFR-SEC02)      |
 | 4   | Contacts                                                                    |                     16 | inside Katchup/Kall         | no                          | the counterparty account                                                        |
 | 5   | Group                                                                       |                     11 | inside Katchup              | FR-K06 only                 | **≥3 PERSONAL accounts** (a group with one member proves nothing)               |
