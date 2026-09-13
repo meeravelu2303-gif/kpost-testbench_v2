@@ -216,6 +216,91 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — Katchup module built (36 endpoints, API + screen); message types verified
+
+The third module, at the owner's direction (Profile deferred behind it). The owner supplied the
+`status`, `messageType` and `shareType` enumerations; **all three already matched the workbook's
+Types tab exactly** (`katchupStatus`, `katchupMessageType`, `katchupShareType` in
+`contracts/kpost-types.json`, exposed as `KATCHUP_STATUS` / `KATCHUP_MESSAGE_TYPE` /
+`KATCHUP_SHARE_TYPE`). So the codes were already captured; what was new was verifying them against
+the live web client and writing the flow down. Full analysis: **`docs/katchup-flow.md`**.
+
+#### The send contract came from the live client, not the workbook
+
+The workbook documents no body for `sendMessage`. The real payload was read out of the React app
+(`KatchupMessage.js` `temp`), so the bench sends what the product sends — recorded in the flow doc §3
+and built once in `send.api.ts` `sendShape()`, which the lifecycle spec reuses for every messageType
+variant. Note: the multipart send path is **commented out** in the current build; `SendMessage`
+(JSON) is what runs, so the JSON route is primary.
+
+#### Three discrepancies found while verifying (flow doc §2, for the owner)
+
+1. **`recallMessage`**: workbook sample `{msgID, status:5}` — but the live client sends
+   `{msgID, groupFlag:false}`, and `status:5` is not even a valid `katchupStatus` (0–4). The
+   definition follows the client; the sample is stale.
+2. The display labels `messageType 2` as "Forward" while the contract says `2 = Share` and forward is
+   `15/16`. A UI display quirk; send codes are authoritative.
+3. **Subject cannot be tested through the UI** for FR-K02: the client auto-defaults an empty subject
+   to `"General"` and never sends blank. Whether the **API** rejects an empty subject is a real open
+   question — the lifecycle spec sends `subject: ""` directly to find out (reject OR default is the
+   contract; storing blank is the finding).
+
+#### Structure — one route per endpoint, variants are payload shapes
+
+```
+src/api/definitions/kpost/katchup/
+  katchup-endpoint.ts   defaults authentication:{required:true} + the katchup tag
+  read.api.ts   (16)  counts, conversation, search, shares, read receipts
+  send.api.ts    (5)  sendMessage, multipart, bulk ×2, forward-selected-attachment
+  manage.api.ts  (9)  recall, delete, mark, save, report, forwards
+  attachments.api.ts (6)  download ×3, thumbnail, streaming, generate
+tests/api/kpost/katchup/  read/send/manage/attachments (engine) + coverage + lifecycle
+tests/e2e/katchup.spec.ts  the screen
+```
+
+`sendMessage/` is **one** endpoint; secret / group / copies / reply / edit are `messageType`
+variants of it, so they are payload shapes in the lifecycle spec, not separate registrations (which
+would collide on the path — the registry enforces unique method+path per module).
+
+#### Live scope — the module is heavily gated, correctly
+
+Two PERSONAL accounts, so of 36 endpoints **10 reads run on live** (counts, subjects, conversation
+and search against our own second account) and 26 are blocked with reasons:
+
+- **every send is `data`+destructive and NOT `productionSafe`** — it reaches a real inbox, and even a
+  1:1 to our own second account waits on the owner's sign-off (flow doc §6 Q4). A coverage self-test
+  asserts no Katchup write is ever cleared for live.
+- **group / Cc / confidential-copy / bulk** need ≥3 PERSONAL accounts (`needs-group`,
+  `needs-recipients`); confidential-copy (NFR-SEC02) needs a bystander to be hidden from.
+- **recall / delete / mark / report / forward and the attachment routes** need a real `msgID` / `uuid`
+  the caller owns (`needs-message-id`, `needs-attachment`) — which only the lifecycle test can mint.
+
+The **1:1 lifecycle** (send → read back → recall → delete, between our own accounts) is the one place
+a real message is created; it cleans up after itself and is gated behind `KATCHUP_LIFECYCLE=true` so it
+never runs on live by accident. It also produces the `msgID` the id-keyed endpoints need.
+
+Registry: 42 → **78** endpoints; live doc: **30 run on live, 48 blocked**. `npm run check` clean; 56
+framework + 7 Katchup-coverage tests pass; **nothing sent to live**.
+
+#### On "the live app has bugs — find and file them" (owner)
+
+Confirmed the intent, and worth stating the split plainly because it shapes what runs where:
+
+- **On the live application** the bench runs only the ~18 **non-mutating** validators per cleared
+  endpoint (status, schema, headers, security-headers, sensitive-data, performance). Those find
+  real, fileable bugs — exactly the class already found by hand (login 500, forgotPassword full-mobile
+  leak, `kpostIdExist` 500, downloadCompanyLogo 500). Both **screens** and **APIs** are covered:
+  UI specs assert the real flows, API specs the contracts.
+- **The aggressive probes** — injection, XSS, null/type/boundary fuzzing, cross-tenant access — are
+  where the _other_ class of bug is found (null accepted as a number, wrong type accepted, a client
+  error answered 500). Those **mutate and re-send**, so they must not be aimed at a live conversation;
+  they run against the mock and, when there is one, a staging/dev host. This is not a limitation of
+  effort but of where it is safe to fuzz. Filing stays **dry-run** (`BUGZILLA_DRY_RUN=true`) until the
+  owner confirms which findings are known.
+
+The honest consequence: to fuzz Katchup's writes for the injection/validation class of bug, we need a
+host where writing is safe. On live we get the observational class. Both are real; neither is skipped.
+
 ### 2026-09-13 — Module-by-module plan; signup removed; Login step 1 written (API + screen)
 
 The owner set the order — **API and screen together, one module at a time: Login → Profile →

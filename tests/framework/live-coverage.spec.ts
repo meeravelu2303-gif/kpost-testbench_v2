@@ -41,7 +41,8 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
 
 function moduleOf(definition: EndpointDefinition): string {
   const tags = definition.tags ?? [];
-  if (tags.includes('signup-login')) return 'Signup & Login';
+  if (tags.includes('signup-login')) return 'Login & session';
+  if (tags.includes('katchup')) return 'Katchup';
   if (tags.includes('common-company')) return 'common · company';
   if (tags.includes('common')) return 'common';
   return 'other';
