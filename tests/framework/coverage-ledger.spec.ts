@@ -72,7 +72,10 @@ const MODULE_SCOPE: Record<string, Scope> = {
     note: 'KOS/KWord — document CRUD; reads live, writes gated (API-only)',
   },
   ai: { status: 'built', note: 'KOS K-AI — sessions read live; generation metered/external' },
-  aws: { status: 'backlog', note: 'S3 presigned URLs (attachments)' },
+  aws: {
+    status: 'built',
+    note: 'S3 presigned URLs + attachment check/delete; generators run live',
+  },
   kmail: {
     status: 'backlog',
     note: 'KMail — compose, drafts, read, settings, translation (own host kmail5)',

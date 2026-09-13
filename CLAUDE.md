@@ -216,6 +216,27 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — AWS module (4 endpoints) — S3 presigned URLs + attachment check/delete
+
+Fifth backlog module. `/v2/aws/*` — S3 presigned upload URLs and the attachment lifecycle. Registry
+212 → **217**; runs-on-live 68 → **71**. All 4 exercised on live.
+
+- **3 reads run on live** — the two presigned-URL generators (they take only file metadata, write
+  nothing persistent, name no one) and `checkAttachmentS3` (its default `attachmentsUuid: []` names
+  nothing). Generators first run: **11 pass, 15 findings**.
+- **`deleteAttachmentFromS3` in the lifecycle** — `generate-presigned` mints a uuid, then delete
+  removes that key. Gated `AWS_LIFECYCLE=true`, `allowLiveWrite`.
+
+**A finding:** **`generate-presigned-url` returns a raw presigned S3 URL string, not the documented
+JSON** — the uuid is the filename in its path (`…/<uuid>.pdf?…`), so the lifecycle parses it out of
+the URL. `response.schema`/envelope validators flag the plain-text body.
+
+**Guard exemptions:** `uuid` and `attachmentsUuid` — a runtime S3 attachment id the generator mints,
+exempt like `msgID`/`docId` (runtime-scoped, no productionSafe endpoint accepts a real one). Note the
+boundary the guard enforces: `allowLiveWrite` authorizes only **destructive** writes, so a read keyed
+by a real runtime uuid (`checkAttachmentS3` against a specific id) cannot be driven on live — the same
+honest boundary as the Katchup attachment downloads. Live-safety guards still green.
+
 ### 2026-09-13 — KOS module (18 endpoints) — KWord documents + K-AI; AI generation held for the owner
 
 Fourth backlog module. `/kword/*` (KWord documents) + `/ai/*` (K-AI). The KOS screen renders

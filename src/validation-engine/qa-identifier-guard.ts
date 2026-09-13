@@ -152,6 +152,13 @@ const NOT_A_RESOURCE = new Set(
      * KWord op is gated). The tenant kpostIDs in a doc's share/join payload stay checked.
      */
     'docid',
+    /*
+     * An S3 attachment uuid we generated (`generate-presigned-url` mints it) — runtime-scoped like a
+     * msgID/docId, cannot be pre-allowlisted, and no productionSafe endpoint accepts one (every
+     * attachment op is gated / needs-attachment). `attachmentsuuid` is the array form.
+     */
+    'uuid',
+    'attachmentsuuid',
     // KWord document CONTENT/TYPE fields — a title, a subject line, a document-type name — not
     // resources. They match only because the key contains "doc"/"document".
     'doctitle',

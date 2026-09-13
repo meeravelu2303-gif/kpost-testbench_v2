@@ -8,13 +8,13 @@ no business account exists on live yet.
 
 |                  |  Count |
 | ---------------- | -----: |
-| **Runs on live** | **68** |
-| Blocked          |    144 |
-| Total registered |    212 |
+| **Runs on live** | **71** |
+| Blocked          |    145 |
+| Total registered |    216 |
 
 ---
 
-## Runs on live — 68
+## Runs on live — 71
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -22,6 +22,8 @@ reviewer can check against the comment beside it.
 
 | Method | Path                                                  | Module          |
 | ------ | ----------------------------------------------------- | --------------- |
+| `POST` | `/v2/aws/checkAttachmentS3/`                          | AWS             |
+| `POST` | `/v2/aws/generate-presigned-url`                      | AWS             |
 | `GET`  | `/v2/common/countries`                                | common          |
 | `POST` | `/v2/common/domain/`                                  | common          |
 | `POST` | `/v2/common/getCitiesByRegionId/`                     | common          |
@@ -50,6 +52,7 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/kall/kallDashboard`                              | Kall            |
 | `POST` | `/v2/kall/kallInfo`                                   | Kall            |
 | `GET`  | `/v2/kall/todayKoolKall/`                             | Kall            |
+| `POST` | `/v2/aws/katchup/generate-presigned-url`              | Katchup         |
 | `POST` | `/v2/katchup/filterKatchUpMessage/`                   | Katchup         |
 | `GET`  | `/v2/katchup/frequentlyAccessContacts`                | Katchup         |
 | `GET`  | `/v2/katchup/getAllReportMsg`                         | Katchup         |
@@ -93,12 +96,13 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 144
+## Blocked on live — 145
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
 | Method | Path                                                               | Module           | Why                                                                         |
 | ------ | ------------------------------------------------------------------ | ---------------- | --------------------------------------------------------------------------- |
+| `GET`  | `/v2/aws/deleteAttachmentFromS3/{uuid}`                            | AWS              | writes or deletes on the live application                                   |
 | `POST` | `/v2/common/forgotPasswordOTPOrSentKpostIDSms`                     | common           | OTP — sends a real OTP by SMS/email to a real recipient                     |
 | `POST` | `/v2/common/forgotPasswordUpdate`                                  | common           | OTP — needs an OTP validated in an earlier step; live has no bypass         |
 | `POST` | `/v2/common/generateDomainAndUniqueName`                           | common           | not cleared: needs a business account or company we do not have on live yet |

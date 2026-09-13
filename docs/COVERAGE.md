@@ -9,9 +9,9 @@ cannot drift from what is actually tested.
 |                               |   Count |
 | ----------------------------- | ------: |
 | Documented (workbook, usable) |     334 |
-| **Registered & tested**       | **212** |
-| — of those, run on live       |      68 |
-| In "built" modules            |     214 |
+| **Registered & tested**       | **217** |
+| — of those, run on live       |      72 |
+| In "built" modules            |     218 |
 
 | Module                         | Documented | Tested | Live | Status         | Note                                                                   |
 | ------------------------------ | ---------: | -----: | ---: | -------------- | ---------------------------------------------------------------------- |
@@ -26,9 +26,9 @@ cannot drift from what is actually tested.
 | `group`                        |         11 |     11 |    0 | built          | group membership (FR-K06)                                              |
 | `generalsetting`               |          7 |      7 |    2 | built          | Settings — theme/font/notifications; reads live, writes gated          |
 | `ai`                           |          4 |      4 |    1 | built          | KOS K-AI — sessions read live; generation metered/external             |
+| `aws`                          |          4 |      4 |    3 | built          | S3 presigned URLs + attachment check/delete; generators run live       |
 | `dashboard`                    |          3 |      3 |    3 | built          | home recent-messages panel                                             |
-| `kmail`                        |         80 |      0 |    0 | backlog        | KMail — compose, drafts, read, settings, translation (own host kmail5) |
-| `aws`                          |          4 |      0 |    0 | backlog        | S3 presigned URLs (attachments)                                        |
+| `kmail`                        |         80 |      1 |    1 | backlog        | KMail — compose, drafts, read, settings, translation (own host kmail5) |
 | `other`                        |          1 |      0 |    0 | backlog        | unprefixed paths — review individually                                 |
 | `admin`                        |         13 |      1 |    0 | needs-business | org/HR admin — needs a business company with members                   |
 | `signuploginformediumandlarge` |          1 |      1 |    0 | needs-business | business-tier admin login                                              |
@@ -47,7 +47,7 @@ cannot drift from what is actually tested.
 - `/v2/signupLogin/kpostIDsuggestionList/`
 - `/v2/signupLogin/signup/`
 
-**`kmail`** (80) — backlog
+**`kmail`** (79) — backlog
 
 - `/kmail5/common/getKmailDashboardMsg/`
 - `/kmail5/readMail/getKmailDetailsUsingKmailID/`
@@ -126,16 +126,8 @@ cannot drift from what is actually tested.
 - `/sentMail/loadOtherDomainMails/`
 - `/sentMail/postBulkMail`
 - `/translator/translation/`
-- `/v2/aws/generate-presigned-url`
 - `/v2/readMail/downloadODAttachment`
 - `/v2/sentMail/postMail/`
-
-**`aws`** (4) — backlog
-
-- `/v2/aws/checkAttachmentS3/`
-- `/v2/aws/deleteAttachmentFromS3/{uuid}`
-- `/v2/aws/generate-presigned-url`
-- `/v2/aws/katchup/generate-presigned-url`
 
 **`other`** (1) — backlog
 
