@@ -216,6 +216,137 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — KDiary module (14 endpoints) — schedules/events/reports; the id field is `eventID`
+
+Third backlog module. `/dairySchedule/*` — the caller's own diary. **The workbook documents no
+payload for any of the 14 endpoints**, so every shape came from the live client (`Diary.js`,
+`ECommerce.js`) or was inferred and noted. Registry 180 → **194**; runs-on-live 61 → **66**. The
+`kdiaryRemarks` enum (0 None … 6 Delete) is already in the Types tab.
+
+- **5 reads run on live** — `getTodaySchedules`, `getEvents`, `getTodayReport` (GET) + `getEventDate`,
+  `getEventSelectedDate` (POST, date from the create field). First run: **22 pass, 40 findings**.
+- **Write lifecycle on live** — `createEvent` works and issues an id; `deleteEvent {eventID}` works
+  (the lifecycle self-cleans, verified 0 orphans after). Gated `KDIARY_LIFECYCLE=true`, `allowLiveWrite`.
+
+**What the live run taught (and a real finding):**
+
+- **The id field is `eventID`, not `scheduleID`.** The create response returns `{eventID: 481, …}`.
+  My first inferred `scheduleID` made every id-keyed write 400/500 and left orphan events — caught by
+  reading `getEvents` back, corrected to `eventID`, and the orphans (481, 482) deleted. Lesson: for a
+  module the workbook documents no payloads for, read one entity back before trusting the id field.
+- **`updateScheduleRemarks` answers HTTP 500** and **`addparticipants` answers 400** even with the
+  correct `eventID`. The 400 is likely a deeper payload gap (these bodies are undocumented); the
+  **500 is a finding** — a server error where a 4xx belongs. `expect.soft`, recorded, payloads flagged
+  inferred so it is not mis-filed as solved.
+
+No standalone `/kdiary` screen — the route is commented out in `MenuRoutes.js`; the diary is reached
+from inside Katchup, so no screen spec.
+
+### 2026-09-13 — Settings module (7 endpoints) + a dedicated `/settings` screen
+
+Second backlog module (owner: one at a time). `/generalSetting/*` — the caller's own preferences,
+the safest writes in the bench (cosmetic, own-account, no other user or shared state). Registry
+173 → **180**; runs-on-live 59 → **61**. Payloads: theme/font from the live client
+(`Services/ThemeSettings.js`) + workbook; the three notification toggles document no body, so a
+minimal `{enable}` is sent and the empty-body/null probes carry the rest.
+
+- **2 reads run on live** — `getPersonalize`, `getAllNotification`. First run: **8 pass, 18 findings**
+  (systemic classes).
+- **Write lifecycle 2/2 on live**, self-restoring: font + theme change → restore; the three
+  notification toggles off → restore on. Gated `SETTINGS_LIFECYCLE=true`, each write `allowLiveWrite`.
+- **`tests/e2e/settings.spec.ts`** — the `/settings` screen promoted out of `profile.spec.ts` into
+  its own spec: the two-panel workspace (`.settings-theme-shell`) and the section nav
+  (`General Settings`/`Profile Creation`), cross-browser.
+
+**A guard exemption the theme write forced:** `changeTheme` sends `katchupChatStyle`,
+`katchupChatTheme`, `katchupChatBackgroundThemeWallpaper` and `kpostLayoutTheme` — appearance values
+that match the identifier guard only because the key contains "katchup"/"kpost". They are cosmetic
+settings on the caller's own account, not tenant resources, so they are exempt in
+`qa-identifier-guard.ts` (the same class as the kall enum fields). Live-safety guards still green.
+
+### 2026-09-13 — Contacts module (16 endpoints) — first backlog module, all on personal accounts
+
+First module off the coverage-ledger backlog (owner: one at a time, personal accounts only, Admin
+deferred). Contacts is the address book the messaging/calling/mail modules all act on. 16 usable
+endpoints (2 superseded rows correctly retired); payloads from the live client
+(`Services/Contacts.js`, `BlockContact.js`). Registry 157 → **173**; runs-on-live 51 → **59**.
+
+- **8 reads run on live** — `myContacts`, `myUnknownKatchupContacts`, `myGroups`, `myUnknownGroups`,
+  `getImportedPhoneContacts`, `getblockContactDetails`, `globalSearch`, `getSearchDetails`. First run:
+  **50 pass, 53 findings** (the same systemic classes as every module). Every POST read carries
+  `destructive: false`; the guard confirms no read is grep-dropped.
+- **Write lifecycle 2/2 on live**, self-restoring: add → verify in `myContacts` → add reference →
+  delete; and block → bulk-block → unblock (single + bulk). `{contactID, isBlocked}` is the live
+  client's block shape (the workbook documents no body). Gated `CONTACTS_LIFECYCLE=true`, each write
+  `allowLiveWrite`, targeting our own second account so the identifier guard permits it.
+- **2 writes stay off-live** — `importPhoneContacts` (carries phone numbers, can match/notify) and
+  `updateInviteStatus` (an invite action) are contract-validated off-live only, not driven on live.
+
+No standalone `/contacts` screen — the contact list/search lives inside the Katchup and Kall screens,
+already asserted there. Ledger updated: `contacts` → built.
+
+### 2026-09-13 — Coverage ledger: completeness made measurable and self-checking
+
+The goal is complete coverage — every endpoint, every screen, nothing missed. You cannot _claim_
+that; you have to _measure_ it. `tests/framework/coverage-ledger.spec.ts` generates **`docs/COVERAGE.md`**
+by reconciling the registry against both generated contracts (kpost-api + kmail-api). It buckets
+every documented path into a module, each module carrying an explicit **scope decision**
+(`built` / `backlog` / `needs-business` / `external` / `out-of-scope`), and it **fails the build** if
+a module prefix is unclassified or a registered endpoint is in no contract — so nothing can be
+silently uncovered or silently invented.
+
+**The measured picture:** 334 documented (KPost + KMail), **157 registered & tested**, 51 run on
+live. The 7 built modules are at 100% of their in-scope slice (profile 45/45, katchup 36/36, common
+32/32, kall 20/20, group 11/11, dashboard 3/3, signuplogin 8/12 — the 4 are signup, out of scope).
+Screens: 8/15 routes.
+
+**The backlog, in build order (no special account needed):** contacts 16 → generalsetting/Settings 7
+→ dairyschedule/KDiary 14 → kword+ai/KOS 18 → aws 4 → **kmail 80** (own host). **Needs a business
+account:** admin 13 + business-tier login + company lookups. **Owner scope call:** redbus 8,
+ecommerce 2, metadee 1 (third-party?), knews 6 (external RSS), kpresentation/KDOC 4 (out of scope per
+BRD §4.2). Screens still to add: settings (own spec), kcloud, kbooking, kdoc, usermanagement.
+
+The ledger is the definition of done: complete = every `backlog` module built, every buildable screen
+speced, and every `needs-business`/`out-of-scope` item either unblocked or recorded as a decision.
+
+### 2026-09-13 — The frontend becomes the UI source of truth; `docs/ui-screens.md`; shell + KMail screens
+
+The owner pointed at the React source (`D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1`). It is to the UI
+what the Excel workbook is to the API — the authoritative map of screens, controls and the
+icon→action→API wiring. Mined it into **`docs/ui-screens.md`**: per screen, the stable selectors
+present at initial load, and each control (`icon-KP_*`) → what it does → which endpoint it calls, plus
+the app-shape facts a test must respect. So e2e tests now anchor on a documented map instead of
+selectors reverse-engineered per module.
+
+Facts worth keeping from the map:
+
+- **Viewport ≥ 1200px** or the nav rail and side columns are hidden (`d-none d-xl-*`). The browser
+  projects default to 1280 — do not shrink below 1200.
+- **`/katchup`, `/kall`, `/home`, `/kmail` embed `<Knews>`/`<Ecommerce>` as empty-state fillers** in
+  the right columns, so those selectors appear before a chat/mail is opened — not the screen's own
+  content.
+- **`localStorage.katchup_chat_variant_v1`** (`bubble`/`classic`) swaps which `KatchupMessage` mounts.
+- The **`icon-KP_*` name encodes intent** (`icon-KP_04-Katchup`, `icon-KP_05-Kall`); the key is
+  `src/Assets/icons/icomoon/style.css`. Every screen's header is `.<icon>.Katchup_Icon` +
+  `.Katchup_Name` — a reliable "this screen mounted" anchor.
+- The source's `ServiceURL.js` points at **LAN IPs** (a dev build); the deployed live UI talks to
+  `devapi2`/`kmail5`, so UI tests intercept by **path**, never origin.
+
+**Scope chosen: screen + controls, read-only, cross-browser** (owner's call) — assert each screen
+renders and its real controls/icons are present and wired, no writes through the UI.
+
+New tests, verified on the live app:
+
+- **`tests/e2e/shell.spec.ts`** — the shared Header: the user chip, and the nav rail linking to every
+  core module (`icon-KP_01-Home`, `_03-KMail`, `_04-Katchup`, `_05-Kall`, `_15-Settings`). One test
+  covering the entry point to every screen.
+- **`tests/e2e/kmail.spec.ts`** — the KMail screen (`.kmail-layout-shell`).
+
+Full cross-browser e2e (Chromium/Firefox/WebKit): **39 passed**, 3 flaky-then-green (the documented
+live-SPA throttle flake `retries:2` absorbs). The existing selectors (`.kall-layout-shell`,
+`.settings-theme-shell`, `.name_font_profile`, `.header-user-pill`) already passing on live confirmed
+the map matches the deployment, so the new selectors were trustworthy before running — and did pass.
+
 ### 2026-09-13 — Kall module (20 endpoints, API + screen); runtime-id guard policy extended to calls
 
 The calling module, built to the Katchup/Profile bar: `/v2/kall/*` — **20 usable endpoints** (the
@@ -244,8 +375,44 @@ guard confirms none is silently dropped.
 Every write is destructive and **not `productionSafe`**: a call rings a real device / notifies
 participants, and the clear endpoints delete the log. They are exercised through
 `tests/api/kpost/kall/feature.spec.ts` — gated `KALL_LIFECYCLE=true`, each write `allowLiveWrite`,
-self-cleaning (end → `clearKallBykallIds`). Built and green off-live; **running it on live needs the
-owner's sign-off** because `initiateKall` rings a real device — exactly as Katchup's sends waited.
+self-cleaning.
+
+#### The full write lifecycle ran on live (owner-authorized) — every endpoint exercised
+
+Three orchestrated flows in `feature.spec.ts` exercise **all 12 writes and both `kallID`-keyed
+reads** (fed the real id the flow creates), so every one of the 20 Kall endpoints has now been hit
+on live, not just contract-validated:
+
+- **Direct-call flow — fully passes.** `initiateKall` → `getKallStatus` → `getKallStatusUsingKallID`
+  → `updateKallStatus` → `updateSenderAndReceiverKallStatus` → `endIndividualKall` →
+  `clearKallBykallIds`, every step 200, cleaned up. The two status reads work once fed a real id.
+- **BR-C01 confirmed on live.** `scheduledKall` → `reScheduleKall` keeps the same `kallID` and the
+  sender status moves **6 (Scheduled) → 7 (ReScheduled)** — seen in the `todayKoolKall` row
+  (`senderKallStatus: 7`). `modifyKallMembers` (add a third account) is also accepted.
+- **Finding cluster — three scheduled-call endpoints answer HTTP 500:** `joinScheduleKall`,
+  `endKoolKall`, and `scheduledRepeatKall`. Server errors on client-reachable paths (a 4xx belongs).
+  `scheduledKall`, `reScheduleKall` and `modifyKallMembers` on the same call all succeed, so it is
+  those three operations specifically — worth one ticket for the Kool-call subsystem. `expect.soft`,
+  so all three surface in one run.
+
+Cleanup verified after the run: **0 active (not-deleted) calls** on all three accounts; every test
+call shows `deletedBySender: true` (the app's own delete state).
+
+Two fixes the live run forced, both real:
+
+- **The end/join/status payloads echo the kall's row id as a bare `{id: <kallID>}`.** A bare `id`
+  matches the identifier guard and is not a `QA_*` value, so the guard refused it (correctly, by its
+  rules) and the first run left orphan calls. Exempted the **exact** key `id` in
+  `qa-identifier-guard.ts` — it is a runtime row id, and this API names every cross-tenant target with
+  a QUALIFIED key (`kpostID`/`companyID`/…), never a bare `id` (asserted: no `productionSafe` endpoint
+  sends one, and `companyID`/`kpostID` beside an `id` stay refused).
+- **Cleanup moved into a `finally` and switched to `clearKallHistory`** (a GET, so no id to guard,
+  clears the caller's whole log) for **both** parties — so a mid-flow failure can no longer leave an
+  orphan. Verified after the run: the direct-call log reads "No Data" and every scheduled test call
+  shows `deletedBySender: true` (the app's own delete state).
+
+`initiateKall` rings a real device, so the lifecycle stays gated behind `KALL_LIFECYCLE=true` and off
+the default run.
 
 #### The QA-identifier guard trips on `kall*` — the same trap Katchup's content fields hit
 

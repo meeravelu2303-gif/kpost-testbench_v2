@@ -1,5 +1,5 @@
-// An orchestrated multi-step call lifecycle (initiate → status → end → clean up), not simple
-// assertions; the conditionals guard optional steps and best-effort cleanup of real live data.
+// An orchestrated multi-step call lifecycle (initiate → status → members → end → clean up), not
+// simple assertions; the conditionals guard optional steps and best-effort cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
@@ -19,9 +19,17 @@ import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
  * on a default run. Findings use `expect.soft` so one run reports every defect.
  *
  * A call cannot connect headlessly (no WebRTC peer), so these assert the API contract of the flow —
- * a call is placed and issues an id, its status transitions, it ends, and the log clears — not that
- * audio flows. Coverage: the direct-call lifecycle (FR-C05/C06/C08) and the scheduled-call
- * lifecycle including the reschedule status tag Scheduled → Rescheduled (BR-C01).
+ * a call is placed and issues an id, its status transitions, members change, it ends, and the log
+ * clears — not that audio flows. Together the three tests exercise **every** Kall write and the two
+ * `kallID`-keyed status reads (fed the real id the flow creates):
+ *
+ *   direct-call    initiate → getKallStatus → getKallStatusUsingKallID → updateKallStatus →
+ *                  updateSenderAndReceiverKallStatus → endIndividualKall → clearKallBykallIds
+ *                  (FR-C05/C06/C08)
+ *   scheduled-call scheduledKall → getKallStatusUsingKallID → modifyKallMembers → joinScheduleKall →
+ *                  reScheduleKall (BR-C01: Scheduled → Rescheduled) → endKoolKall
+ *                  (FR-C01/C03/C04/C07/C08)
+ *   repeat         scheduledRepeatKall (FR-C02)
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -31,8 +39,9 @@ const principal = (key: string): Principal => {
   return found;
 };
 
-const A = principal('personal'); // caller     Qatesting@
-const B = principal('victim'); // callee/joiner Qatesting2@
+const A = principal('personal'); // caller           Qatesting@
+const B = principal('victim'); // callee / joiner     Qatesting2@
+const C = principal('personal-3'); // added member    Qatesting3@
 
 /** The kallID from a create response, across the shapes the API might use. */
 function extractKallId(body: Record<string, unknown>): number | undefined {
@@ -48,20 +57,21 @@ function extractKallId(body: Record<string, unknown>): number | undefined {
   return undefined;
 }
 
-/** Clear specific calls from the caller's own log. Never throws. */
-async function clearByIds(
-  endpoints: EndpointExecutor,
-  as: Principal,
-  kallIds: number[],
-): Promise<void> {
-  if (!kallIds.length) return;
-  await endpoints
-    .sendTo(
-      'kall-clear-by-ids',
-      { body: { kallIds } },
-      { label: 'feature:kall:cleanup', auth: { principal: as }, allowLiveWrite: true },
-    )
-    .catch(() => undefined);
+/**
+ * Clear a principal's entire call history. `clearKallHistory` is a GET (no body, so no id to guard)
+ * that wipes the caller's own log — the safety net that removes anything a failed step left behind.
+ * Called for every party in a `finally`, so no run can leave an orphan call on the accounts.
+ */
+async function clearHistory(endpoints: EndpointExecutor, who: Principal[]): Promise<void> {
+  for (const as of who) {
+    await endpoints
+      .sendTo(
+        'kall-clear-history',
+        {},
+        { label: `feature:kall:cleanup:${as.key}`, auth: { principal: as }, allowLiveWrite: true },
+      )
+      .catch(() => undefined);
+  }
 }
 
 test.describe('KPost Kall · feature flow', () => {
@@ -71,72 +81,147 @@ test.describe('KPost Kall · feature flow', () => {
     'places/schedules real calls; set KALL_LIFECYCLE=true (owner sign-off, docs/kall-flow.md §5)',
   );
 
-  test('a normal call is placed, issues an id, transitions status and ends (FR-C05/C08) @api @kall', async ({
+  test('direct call: place → read status (both ways) → transition → end → clear (FR-C05/C08) @api @kall', async ({
     endpoints,
   }) => {
-    const placed = await endpoints.sendTo(
-      'kall-initiate',
-      { body: initiateShape({ receiver: B.username }) },
-      { label: 'feature:kall:initiate', auth: { principal: A }, allowLiveWrite: true },
-    );
-    expect.soft(placed.status, 'placing a call succeeds').toBeLessThan(300);
-
-    const placedJson = placed.json();
-    const body = (placedJson.ok ? placedJson.value : {}) as Record<string, unknown>;
-    const kallID = extractKallId(body);
-    expect.soft(kallID, 'the placed call issues a kallID').toBeTruthy();
-
-    if (kallID) {
-      const cancelled = await endpoints.sendTo(
-        'kall-update-status',
-        { body: { id: kallID, kallStatus: KALL_STATUS.cancelled, kallID } },
-        { label: 'feature:kall:cancel', auth: { principal: A }, allowLiveWrite: true },
+    try {
+      const placed = await endpoints.sendTo(
+        'kall-initiate',
+        { body: initiateShape({ receiver: B.username }) },
+        { label: 'feature:kall:initiate', auth: { principal: A }, allowLiveWrite: true },
       );
-      expect.soft(cancelled.status, 'the status transition is accepted').toBeLessThan(300);
+      expect.soft(placed.status, 'placing a call succeeds').toBeLessThan(300);
 
-      const ended = await endpoints.sendTo(
-        'kall-end-individual',
-        { body: { kallID } },
-        { label: 'feature:kall:end', auth: { principal: A }, allowLiveWrite: true },
-      );
-      expect.soft(ended.status, 'ending the call is accepted').toBeLessThan(300);
+      const placedJson = placed.json();
+      const body = (placedJson.ok ? placedJson.value : {}) as Record<string, unknown>;
+      const kallID = extractKallId(body);
+      expect.soft(kallID, 'the placed call issues a kallID').toBeTruthy();
 
-      await clearByIds(endpoints, A, [kallID]);
+      if (kallID) {
+        // The two kallID-keyed reads, fed the real id the call just created.
+        const byPair = await endpoints.sendTo(
+          'kall-get-status',
+          { body: { sender: A.username, receiver: B.username, kallID } },
+          { label: 'feature:kall:get-status', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(byPair.status, 'getKallStatus reads the call').toBeLessThan(300);
+
+        const byId = await endpoints.sendTo(
+          'kall-get-status-by-id',
+          { body: { kpostID: A.username, kallID } },
+          { label: 'feature:kall:get-status-by-id', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(byId.status, 'getKallStatusUsingKallID reads the call').toBeLessThan(300);
+
+        const cancelled = await endpoints.sendTo(
+          'kall-update-status',
+          { body: { id: kallID, kallStatus: KALL_STATUS.cancelled, kallID } },
+          { label: 'feature:kall:cancel', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(cancelled.status, 'updateKallStatus is accepted').toBeLessThan(300);
+
+        const both = await endpoints.sendTo(
+          'kall-update-sender-receiver-status',
+          { body: { sender: A.username, kallStatus: KALL_STATUS.cancelled, kallID } },
+          { label: 'feature:kall:sender-receiver', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(both.status, 'updateSenderAndReceiverKallStatus is accepted').toBeLessThan(300);
+
+        const ended = await endpoints.sendTo(
+          'kall-end-individual',
+          { body: { kallID } },
+          { label: 'feature:kall:end', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(ended.status, 'endIndividualKall is accepted').toBeLessThan(300);
+
+        const cleared = await endpoints.sendTo(
+          'kall-clear-by-ids',
+          { body: { kallIds: [kallID] } },
+          { label: 'feature:kall:clear-by-ids', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(cleared.status, 'clearKallBykallIds is accepted').toBeLessThan(300);
+      }
+    } finally {
+      await clearHistory(endpoints, [A, B]);
     }
   });
 
-  test('a scheduled call reschedules keeping its id, status tag Scheduled → Rescheduled (BR-C01) @api @kall', async ({
+  test('scheduled call: schedule → modify members → join → reschedule (BR-C01) → end (FR-C01/C03/C04/C07) @api @kall', async ({
     endpoints,
   }) => {
-    const scheduled = await endpoints.sendTo(
-      'kall-scheduled',
-      { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
-      { label: 'feature:kall:schedule', auth: { principal: A }, allowLiveWrite: true },
-    );
-    expect.soft(scheduled.status, 'scheduling a call succeeds').toBeLessThan(300);
-
-    const scheduledJson = scheduled.json();
-    const body = (scheduledJson.ok ? scheduledJson.value : {}) as Record<string, unknown>;
-    const kallID = extractKallId(body);
-    expect.soft(kallID, 'the scheduled call issues a kallID').toBeTruthy();
-
-    if (kallID) {
-      const rescheduled = await endpoints.sendTo(
-        'kall-reschedule',
-        { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
-        { label: 'feature:kall:reschedule', auth: { principal: A }, allowLiveWrite: true },
+    try {
+      const scheduled = await endpoints.sendTo(
+        'kall-scheduled',
+        { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
+        { label: 'feature:kall:schedule', auth: { principal: A }, allowLiveWrite: true },
       );
-      // BR-C01: the same entry (kallID) is kept; the status tag moves to Rescheduled.
-      expect.soft(rescheduled.status, 'the reschedule is accepted').toBeLessThan(300);
+      expect.soft(scheduled.status, 'scheduling a call succeeds').toBeLessThan(300);
 
-      const ended = await endpoints.sendTo(
-        'kall-end-kool',
-        { body: { id: kallID, kallID } },
-        { label: 'feature:kall:end-kool', auth: { principal: A }, allowLiveWrite: true },
+      const scheduledJson = scheduled.json();
+      const body = (scheduledJson.ok ? scheduledJson.value : {}) as Record<string, unknown>;
+      const kallID = extractKallId(body);
+      expect.soft(kallID, 'the scheduled call issues a kallID').toBeTruthy();
+
+      if (kallID) {
+        const byId = await endpoints.sendTo(
+          'kall-get-status-by-id',
+          { body: { kpostID: A.username, kallID } },
+          { label: 'feature:kall:sched-status', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(byId.status, 'the scheduled call is readable by id').toBeLessThan(300);
+
+        // FR-C07: add a third member to the scheduled call.
+        const modified = await endpoints.sendTo(
+          'kall-modify-members',
+          { body: { kallID, addingUserIds: [C.username], removingUserIds: [] } },
+          { label: 'feature:kall:modify-members', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(modified.status, 'modifyKallMembers is accepted').toBeLessThan(300);
+
+        // FR-C04: the invitee joins.
+        const joined = await endpoints.sendTo(
+          'kall-join-schedule',
+          { body: { id: kallID, kallID } },
+          { label: 'feature:kall:join', auth: { principal: B }, allowLiveWrite: true },
+        );
+        expect.soft(joined.status, 'joinScheduleKall is accepted').toBeLessThan(300);
+
+        // BR-C01: the same entry (kallID) is kept; the status tag moves to Rescheduled.
+        const rescheduled = await endpoints.sendTo(
+          'kall-reschedule',
+          { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
+          { label: 'feature:kall:reschedule', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(rescheduled.status, 'reScheduleKall is accepted').toBeLessThan(300);
+
+        const ended = await endpoints.sendTo(
+          'kall-end-kool',
+          { body: { id: kallID, kallID } },
+          { label: 'feature:kall:end-kool', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(ended.status, 'endKoolKall is accepted').toBeLessThan(300);
+      }
+    } finally {
+      await clearHistory(endpoints, [A, B, C]);
+    }
+  });
+
+  test('a repeating scheduled call is created (FR-C02) @api @kall', async ({ endpoints }) => {
+    try {
+      const repeat = await endpoints.sendTo(
+        'kall-scheduled-repeat',
+        {
+          body: scheduleShape({
+            repeatType: 1,
+            repeatedDate: JSON.stringify({ start_date: '2026-09-14', end_date: '2026-09-20' }),
+            kallDetails: [{ receiver: B.username }],
+          }),
+        },
+        { label: 'feature:kall:repeat', auth: { principal: A }, allowLiveWrite: true },
       );
-      expect.soft(ended.status, 'ending the scheduled call is accepted').toBeLessThan(300);
-
-      await clearByIds(endpoints, A, [kallID]);
+      expect.soft(repeat.status, 'scheduledRepeatKall is accepted').toBeLessThan(300);
+    } finally {
+      await clearHistory(endpoints, [A, B]);
     }
   });
 });

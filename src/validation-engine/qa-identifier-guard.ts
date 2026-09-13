@@ -141,6 +141,26 @@ const NOT_A_RESOURCE = new Set(
      */
     'kallid',
     'kallids',
+    /*
+     * Appearance/preference values on the theme write (`changeTheme`). They match the pattern only
+     * because the key contains "katchup"/"kpost"; their values are a style name (`bubble`), a colour
+     * theme (`sunset`) or a layout (`purple`) — a cosmetic setting on the caller's own account, not a
+     * tenant resource. Without these the guard refuses the theme write.
+     */
+    'katchupchatstyle',
+    'katchupchattheme',
+    'katchupchatbackgroundthemewallpaper',
+    'kpostlayouttheme',
+    /*
+     * A **bare** `id` — the row id of the resource, echoed back in a write body (`updateKallStatus`,
+     * `joinScheduleKall`, `endKoolKall` all send `{id: <the kall we created>, kallID: <same>}`). It
+     * is the same runtime-scoped kall id as `kallID`, just under the primary-key name. Exempting the
+     * EXACT key `id` is surgical: this API names every cross-tenant target with a QUALIFIED key
+     * (`kpostID`, `companyID`, `contactID`, `groupID`, `kallID`, `msgID`), never a bare `id`, and no
+     * `productionSafe` endpoint sends one (asserted below and by the kall coverage self-test). A
+     * qualified `…id` key such as `companyid`/`kpostid` is unaffected — only exact `id` matches here.
+     */
+    'id',
   ].map((key) => key.toLowerCase()),
 );
 

@@ -8,6 +8,9 @@ import { commonApis } from './kpost/common/index';
 import { groupApis } from './kpost/group/index';
 import { katchupApis } from './kpost/katchup/index';
 import { kallApis } from './kpost/kall/index';
+import { contactsApis } from './kpost/contacts/index';
+import { settingsApis } from './kpost/settings/index';
+import { kdiaryApis } from './kpost/kdiary/index';
 import { dashboardApis } from './kpost/dashboard/index';
 import { profileApis } from './kpost/profile/index';
 import { signupLoginApis } from './kpost/signup-login/index';
@@ -38,6 +41,12 @@ export const apiRegistry = new ApiRegistry().register(
   ...groupApis,
   // KPost Kall - voice/video calling. See docs/kall-flow.md (FR-C01..C09, BR-C01).
   ...kallApis,
+  // KPost Contacts - the address book the messaging/calling/mail modules act on.
+  ...contactsApis,
+  // KPost Settings - the caller's own preferences (theme, font, notifications).
+  ...settingsApis,
+  // KPost KDiary - the caller's diary schedules, events and reports.
+  ...kdiaryApis,
   // KPost Profile - the account owner's own profile (undocumented module).
   ...profileApis,
   // KPost Dashboard - the Home recent-messages panel (undocumented module).

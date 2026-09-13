@@ -49,6 +49,9 @@ function moduleOf(definition: EndpointDefinition): string {
   if (tags.includes('signup-login')) return 'Login & session';
   if (tags.includes('katchup')) return 'Katchup';
   if (tags.includes('kall')) return 'Kall';
+  if (tags.includes('contacts')) return 'Contacts';
+  if (tags.includes('settings')) return 'Settings';
+  if (tags.includes('kdiary')) return 'KDiary';
   if (tags.includes('profile')) return 'Profile';
   if (tags.includes('group')) return 'Group';
   if (tags.includes('common-company')) return 'common · company';

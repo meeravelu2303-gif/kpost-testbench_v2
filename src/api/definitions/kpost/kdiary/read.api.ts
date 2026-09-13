@@ -1,0 +1,69 @@
+import { body } from '../kpost-endpoint';
+import { defineKdiaryEndpoint } from './kdiary-endpoint';
+
+/**
+ * KDiary **reads** — today's schedules, all events, today's report, and events by date. Each reads
+ * only the caller's own diary, so all run on live. The date the client sends matches the create
+ * field name (`scheduleStartDateAndTime`); the workbook documents no body, so the empty-body and
+ * null probes also carry the load. POST reads state `destructive: false` (the grep-drop trap).
+ */
+const READ_TAGS = ['kdiary-read'] as const;
+
+export const todaySchedulesApi = defineKdiaryEndpoint({
+  id: 'kdiary-today-schedules',
+  method: 'GET',
+  path: '/dairySchedule/getTodaySchedules',
+  summary: "Today's diary schedules for the caller",
+  tags: [...READ_TAGS, 'schedule'],
+  productionSafe: true,
+});
+
+export const getEventsApi = defineKdiaryEndpoint({
+  id: 'kdiary-get-events',
+  method: 'GET',
+  path: '/dairySchedule/getEvents',
+  summary: 'All diary events for the caller',
+  tags: [...READ_TAGS, 'event'],
+  productionSafe: true,
+});
+
+export const todayReportApi = defineKdiaryEndpoint({
+  id: 'kdiary-today-report',
+  method: 'GET',
+  path: '/dairySchedule/getTodayReport',
+  summary: "Today's diary report for the caller",
+  tags: [...READ_TAGS, 'report'],
+  productionSafe: true,
+});
+
+export const getEventDateApi = defineKdiaryEndpoint({
+  id: 'kdiary-get-event-date',
+  method: 'POST',
+  path: '/dairySchedule/getEventDate',
+  summary: 'Dates that have diary events (for a month view)',
+  tags: [...READ_TAGS, 'event'],
+  destructive: false,
+  productionSafe: true,
+  request: body(() => ({ scheduleStartDateAndTime: '2026-09-14' })),
+  note: 'workbook documents no body; date field inferred from the create payload',
+});
+
+export const getEventSelectedDateApi = defineKdiaryEndpoint({
+  id: 'kdiary-get-event-selected-date',
+  method: 'POST',
+  path: '/dairySchedule/getEventSelectedDate',
+  summary: "The caller's diary events on a selected date",
+  tags: [...READ_TAGS, 'event'],
+  destructive: false,
+  productionSafe: true,
+  request: body(() => ({ scheduleStartDateAndTime: '2026-09-14' })),
+  note: 'workbook documents no body; date field inferred from the create payload',
+});
+
+export const kdiaryReadApis = [
+  todaySchedulesApi,
+  getEventsApi,
+  todayReportApi,
+  getEventDateApi,
+  getEventSelectedDateApi,
+];

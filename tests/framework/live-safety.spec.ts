@@ -215,6 +215,21 @@ test.describe('live-application safety @framework', () => {
     expect(foreign.map((offence) => offence.path)).toEqual(['body.memberKpostIdList[0]']);
   });
 
+  test('a bare `id` is exempt (an echoed row id), but a qualified id is still checked', () => {
+    /*
+     * `updateKallStatus`/`endKoolKall` echo the kall's row id as `{id: <our kall>}`. A bare `id` is
+     * exempt (a runtime row id; this API names cross-tenant targets with a QUALIFIED key). The
+     * exemption must be surgical: `companyID`/`kpostID` beside it stay refused, or it would be a hole.
+     */
+    const foreign = foreignIdentifiers({
+      body: { id: 41307, companyID: 4, kpostID: 'x@y.kpost.in' },
+    });
+    expect(foreign.map((offence) => offence.path).sort()).toEqual([
+      'body.companyID',
+      'body.kpostID',
+    ]);
+  });
+
   test('reference data and bench-generated values are not treated as resources', () => {
     /*
      * If these were flagged, every request would be refused and somebody would switch the guard

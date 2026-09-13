@@ -84,14 +84,30 @@ Two PERSONAL accounts, so of 20 endpoints:
   device / notifies participants, and the clear endpoints delete the log. They are exercised only
   through `tests/api/kpost/kall/feature.spec.ts`, gated behind **`KALL_LIFECYCLE=true`**, each write
   carrying `allowLiveWrite: true` (the authorized-write control Katchup and Profile use), self-cleaning
-  (end → `clearKallBykallIds`). **Owner sign-off is needed before the lifecycle runs on live**, because
-  `initiateKall` rings a real device — the flow is built and green off-live; running it on live is the
-  owner's call, exactly as Katchup's sends waited.
+  (a `finally` that calls `clearKallHistory` for both parties, so no failed step leaves an orphan).
+
+**The full lifecycle ran on live (owner-authorized)** — three flows exercise all 12 writes and both
+`kallID`-keyed reads, so every Kall endpoint has been hit on live. Results:
+
+- **Direct-call flow fully passes** — `initiateKall` → `getKallStatus` → `getKallStatusUsingKallID`
+  → `updateKallStatus` → `updateSenderAndReceiverKallStatus` → `endIndividualKall` →
+  `clearKallBykallIds`, every step 200, cleaned up.
+- **BR-C01 confirmed** — `scheduledKall` → `reScheduleKall` keeps the `kallID`; sender status moves
+  `6 Scheduled → 7 ReScheduled`. `modifyKallMembers` also accepted.
+- **Finding cluster — `joinScheduleKall`, `endKoolKall`, `scheduledRepeatKall` all → HTTP 500.**
+  Server errors on client-reachable paths (a 4xx belongs). `scheduledKall`/`reScheduleKall`/
+  `modifyKallMembers` on the same call succeed, so it is those three operations specifically.
+- **Cleanup verified** — 0 active (not-deleted) calls on all three accounts afterward.
 
 A call cannot connect headlessly (there is no second WebRTC peer), so the lifecycle asserts the API
 contract of the flow — a call is placed and issues an id, its status transitions, it ends, the log
 clears — not that audio flows. TTS-style client behaviours (the in-call window, the Jitsi iframe) are
 UI-only and live in the screen test.
+
+**A guard note from the live run:** the end/join/status payloads echo the kall's row id as a bare
+`{id: <kallID>}`. A bare `id` matches the identifier guard and is not a `QA_*` value, so the exact
+key `id` is exempt in `qa-identifier-guard.ts` — a runtime row id, and this API names every
+cross-tenant target with a qualified key (`kpostID`/`companyID`/…), never a bare `id`.
 
 ## 6. The screen
 
@@ -102,11 +118,11 @@ the UI is not automated (it rings a device); that behaviour is the API lifecycle
 
 ## 7. Open questions for the owner
 
-1. **Sign-off to run the write lifecycle on live** (`KALL_LIFECYCLE=true`) — it places and schedules
-   real calls between our own QA accounts and cleans up after itself, but `initiateKall` rings a real
-   device.
-2. **The `initiateKall` / `scheduledKall` response shape** — the lifecycle extracts the new `kallID`
-   defensively (`data.kallID`, `data.id`, `data[0].kallID`); the exact field is confirmed on the first
-   authorized live write.
+1. ~~Sign-off to run the write lifecycle on live.~~ **Done** — authorized and run; results in §5.
+2. **`joinScheduleKall`, `endKoolKall` and `scheduledRepeatKall` all return HTTP 500** (§5) — the
+   Kool-call subsystem, where `scheduledKall`/`reScheduleKall`/`modifyKallMembers` on the same call
+   succeed. Are these real defects (a 4xx belongs), or do they need a precondition the flow skips
+   (e.g. a real Jitsi session for join)? One ticket once confirmed.
 3. **Does `clearKallBykallIds` verify caller ownership** of each `kallID`, or delete by id globally?
-   It matters for how strongly the log-clear is scoped; the lifecycle only ever passes ids it created.
+   Cleanup uses `clearKallHistory` (token-scoped) instead, so this is no longer on the critical path,
+   but it matters for how strongly the by-id clear is scoped.
