@@ -1,6 +1,4 @@
-// An orchestrated settings lifecycle (read → change → restore), not simple assertions; the
-// conditionals guard optional steps and restore of the account's real preferences.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+// An orchestrated settings lifecycle (read → change → restore), not simple assertions.
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';

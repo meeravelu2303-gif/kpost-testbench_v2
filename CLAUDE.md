@@ -216,6 +216,71 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — KOS module (18 endpoints) — KWord documents + K-AI; AI generation held for the owner
+
+Fourth backlog module. `/kword/*` (KWord documents) + `/ai/*` (K-AI). The KOS screen renders
+"Coming Soon", so this is **API-only**. Registry 194 → **212**; runs-on-live 66 → **68**. Payloads
+from the live client (`KWord.js`, `KAI.js`); the workbook documents none.
+
+- **2 reads run on live** — `getAllKWordDocs` (document list), `getAISessions`. First run: **12 pass,
+  11 findings**. 5 doc/session-keyed reads are `needs-doc-id` (exercised by the lifecycle).
+- **KWord write lifecycle on live** — create → saveContent → update → deleteHeading → convertToKad →
+  share → join → the doc-keyed reads → exit → delete, self-cleaning. Gated `KOS_LIFECYCLE=true`.
+- **The two K-AI generation endpoints (`chatResponse`, `messageAssist`) call a real, billed AI
+  service.** The owner authorized one run each, so they are `data` (the caller's own AI request),
+  **not `productionSafe`**, `metered`-tagged, and driven only by a test gated behind a **second** flag
+  `KOS_AI_LIVE=true` (above `KOS_LIFECYCLE`) — a normal run never bills the service. Run once on live
+  (owner-authorized): both returned a valid response (~5–10s of real generation). A coverage self-test
+  pins that no `metered` endpoint is ever `productionSafe`.
+
+**What the live run taught (findings + a payload correction):**
+
+- **`createDoc` is `{titleOfDocument, subject, documentType, convertToKad, initiatedBy}`** and returns
+  the new id at **`data.id`** — my first inferred `{docTitle}` answered **HTTP 500**
+  ("Error while creating document"). Corrected from `KWord.js`. The 500 on a bad payload (vs a 400)
+  is itself a finding, recorded.
+
+**Guard exemptions the "doc" over-match forced** — `IDENTIFIER_KEY` matches any key containing "doc",
+so KWord content/id fields tripped it. Added to `NOT_A_RESOURCE` as runtime-ids / content (same class
+as the katchup content fields and the msgid/kallid runtime ids): **`docid`** (a doc UUID we created),
+**`doctitle`/`titleofdocument`/`documenttype`** (a document's title/type text). The tenant kpostIDs in
+a doc's share/join payload stay checked. Live-safety guards still 19/19 green.
+
+### 2026-09-13 — Live write-flow sweep: every finished module's writes driven on live, QA-only
+
+The owner asked to bring the finished modules to 100% live coverage — every write endpoint driven
+through a real self-cleaning flow, on QA accounts only, never touching another user's data. Done
+across all ten:
+
+| Module   | Live write coverage after the sweep                                                                        |
+| -------- | ---------------------------------------------------------------------------------------------------------- |
+| Kall     | 12/12 (already)                                                                                            |
+| Settings | 5/5 (already)                                                                                              |
+| KDiary   | 9/9 — `updateScheduleRemarks` fixed (`{eventIds:[id]}`); 6 frontend-unused endpoints exercised as findings |
+| Contacts | 8/8 — added `addMultiple`, `importPhoneContacts` (own number), `updateInviteStatus` (own number)           |
+| Profile  | all `data`-writes — added the 5 image uploads, 2 removes, `shareUserDetails`                               |
+| Katchup  | send variants (multipart/bulk) + forward variants added; core flow already live                            |
+| Group    | 9/9 — new `group/feature.spec.ts`: create → add → admin → rename → image → leave → remove → delete         |
+
+**Guard exemptions the sweep forced** — all runtime-scoped ids under keys the pattern flags, added to
+`qa-identifier-guard.ts` `NOT_A_RESOURCE` with the same reasoning as `msgid`/`kallid`/`groupid` (a
+runtime id we created, group/row-scoped, not a tenant resource; no productionSafe endpoint accepts
+one; the tenant kpostIDs beside them stay checked): **`groupkpostid`** (the auto-minted id of a group
+we made), **`ids`** (a bare membership-row-id array — the plural of the already-exempt bare `id`).
+Live-safety guards still 19/19 green.
+
+**What stays off-live, by design (safety, not a gap):**
+
+- **Katchup attachment retrieval** (`download`/`thumbnail`/`stream`/`generate`) and `forwardBacktrack`
+  are reads keyed by a real attachment `uuid` / forwarded `msgID`, which only a completed S3 upload
+  or forward produces. Off-live contract-validated; a fabricated uuid is (correctly) guard-refused.
+- **Profile OTP/device/password/deactivate/forgot-password** — would SMS real people or lock/destroy
+  our own account. Correctly blocked-with-reason.
+- **Group image downloads** — reads keyed by the runtime `groupKpostID`.
+
+Every finished module now: all reads on live, all safe writes driven on live self-cleaning, all
+unsafe writes blocked-with-reason, `npm run check` clean, 59 framework guards green.
+
 ### 2026-09-13 — KDiary module (14 endpoints) — schedules/events/reports; the id field is `eventID`
 
 Third backlog module. `/dairySchedule/*` — the caller's own diary. **The workbook documents no

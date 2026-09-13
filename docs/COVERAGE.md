@@ -9,9 +9,9 @@ cannot drift from what is actually tested.
 |                               |   Count |
 | ----------------------------- | ------: |
 | Documented (workbook, usable) |     334 |
-| **Registered & tested**       | **194** |
-| — of those, run on live       |      66 |
-| In "built" modules            |     196 |
+| **Registered & tested**       | **212** |
+| — of those, run on live       |      68 |
+| In "built" modules            |     214 |
 
 | Module                         | Documented | Tested | Live | Status         | Note                                                                   |
 | ------------------------------ | ---------: | -----: | ---: | -------------- | ---------------------------------------------------------------------- |
@@ -21,13 +21,13 @@ cannot drift from what is actually tested.
 | `kall`                         |         20 |     20 |    6 | built          | calling — full API + write lifecycle + screen                          |
 | `contacts`                     |         16 |     16 |    8 | built          | address book — reads live, writes gated lifecycle                      |
 | `dairyschedule`                |         14 |     14 |    5 | built          | KDiary — schedules/events/reports; reads live, writes gated            |
+| `kword`                        |         14 |     14 |    1 | built          | KOS/KWord — document CRUD; reads live, writes gated (API-only)         |
 | `signuplogin`                  |         12 |      8 |    6 | built          | login & session; signup out of scope (OTP-gated)                       |
 | `group`                        |         11 |     11 |    0 | built          | group membership (FR-K06)                                              |
 | `generalsetting`               |          7 |      7 |    2 | built          | Settings — theme/font/notifications; reads live, writes gated          |
+| `ai`                           |          4 |      4 |    1 | built          | KOS K-AI — sessions read live; generation metered/external             |
 | `dashboard`                    |          3 |      3 |    3 | built          | home recent-messages panel                                             |
 | `kmail`                        |         80 |      0 |    0 | backlog        | KMail — compose, drafts, read, settings, translation (own host kmail5) |
-| `kword`                        |         14 |      0 |    0 | backlog        | KOS/KWord documents (KOS screen "Coming Soon" today)                   |
-| `ai`                           |          4 |      0 |    0 | backlog        | KOS AI chat                                                            |
 | `aws`                          |          4 |      0 |    0 | backlog        | S3 presigned URLs (attachments)                                        |
 | `other`                        |          1 |      0 |    0 | backlog        | unprefixed paths — review individually                                 |
 | `admin`                        |         13 |      1 |    0 | needs-business | org/HR admin — needs a business company with members                   |
@@ -129,30 +129,6 @@ cannot drift from what is actually tested.
 - `/v2/aws/generate-presigned-url`
 - `/v2/readMail/downloadODAttachment`
 - `/v2/sentMail/postMail/`
-
-**`kword`** (14) — backlog
-
-- `/kword/create`
-- `/kword/delete?docId={docId}`
-- `/kword/deleteHeading`
-- `/kword/documents/`
-- `/kword/documents/{docId}`
-- `/kword/exitDocument/{docId}`
-- `/kword/getAccessActivity/{docId}`
-- `/kword/getAllRevision/{docId}`
-- `/kword/isConvertToKad`
-- `/kword/joinDocument`
-- `/kword/presence/{docId}`
-- `/kword/saveContent`
-- `/kword/share`
-- `/kword/update`
-
-**`ai`** (4) — backlog
-
-- `/ai/chatResponse`
-- `/ai/messageAssist`
-- `/ai/messages/1`
-- `/ai/sessions`
 
 **`aws`** (4) — backlog
 

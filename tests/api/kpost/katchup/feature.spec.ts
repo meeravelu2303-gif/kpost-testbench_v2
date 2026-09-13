@@ -419,4 +419,61 @@ test.describe('KPost Katchup · feature flow', () => {
 
     await cleanup(endpoints, A, seed.msgID);
   });
+
+  test('send variants (multipart, bulk) and forward variants, all self-cleaning @api @katchup', async ({
+    endpoints,
+  }) => {
+    const created: number[] = [];
+    const drive = async (id: string, bodyOrEmpty: Record<string, unknown>, label: string) => {
+      const ex = await endpoints.sendTo(
+        id,
+        Object.keys(bodyOrEmpty).length ? { body: bodyOrEmpty } : {},
+        { label: `feature:${label}`, auth: { principal: A }, allowLiveWrite: true },
+      );
+      const parsed = ex.json();
+      const row = firstRow((parsed.ok ? parsed.value : {}) as Record<string, unknown>);
+      if (typeof row?.msgID === 'number') created.push(row.msgID);
+      return ex.status;
+    };
+
+    try {
+      // A source message the forwards reference.
+      const seed = await send(endpoints, A, { receiver: B.username, subject: 'QA variants' });
+      if (seed.msgID) created.push(seed.msgID);
+
+      // Send variants — each uses the endpoint's own request factory (multipart / bulk shapes).
+      for (const [id, label] of [
+        ['katchup-send-multipart', 'send-multipart'],
+        ['katchup-send-bulk', 'send-bulk'],
+        ['katchup-send-bulk-multipart', 'send-bulk-multipart'],
+      ] as Array<[string, string]>) {
+        const status = await drive(id, {}, label);
+        expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+      }
+
+      // Forward variants — reference the seed message / our own second account.
+      for (const [id, bodyObj, label] of [
+        [
+          'katchup-forward-message-new',
+          { msgID: seed.msgID ?? 0, groupFlag: false },
+          'forward-new',
+        ],
+        [
+          'katchup-forward-multiple',
+          { forwardReceiverList: [B.username], groupForwardList: [] },
+          'forward-multiple',
+        ],
+        [
+          'katchup-send-forward-selected-attachment',
+          { forwardReceiverList: [B.username], msgID: seed.msgID ?? 0 },
+          'forward-selected-attachment',
+        ],
+      ] as Array<[string, Record<string, unknown>, string]>) {
+        const status = await drive(id, bodyObj, label);
+        expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+      }
+    } finally {
+      for (const msgID of created) await cleanup(endpoints, A, msgID);
+    }
+  });
 });

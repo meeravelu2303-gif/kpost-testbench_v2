@@ -8,13 +8,13 @@ no business account exists on live yet.
 
 |                  |  Count |
 | ---------------- | -----: |
-| **Runs on live** | **66** |
-| Blocked          |    128 |
-| Total registered |    194 |
+| **Runs on live** | **68** |
+| Blocked          |    144 |
+| Total registered |    212 |
 
 ---
 
-## Runs on live — 66
+## Runs on live — 68
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -65,6 +65,8 @@ reviewer can check against the comment beside it.
 | `POST` | `/dairySchedule/getEventSelectedDate`                 | KDiary          |
 | `GET`  | `/dairySchedule/getTodayReport`                       | KDiary          |
 | `GET`  | `/dairySchedule/getTodaySchedules`                    | KDiary          |
+| `GET`  | `/ai/sessions`                                        | KOS             |
+| `GET`  | `/kword/documents/`                                   | KOS             |
 | `POST` | `/v2/signupLogin/fetchUserDetails/`                   | Login & session |
 | `POST` | `/v2/signupLogin/generateJWTokens/`                   | Login & session |
 | `GET`  | `/v2/signupLogin/getActiveSession`                    | Login & session |
@@ -91,7 +93,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 128
+## Blocked on live — 144
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -184,6 +186,22 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/dairySchedule/saveReport`                                        | KDiary           | writes or deletes on the live application                                   |
 | `POST` | `/dairySchedule/updateEvent`                                       | KDiary           | writes or deletes on the live application                                   |
 | `POST` | `/dairySchedule/updateScheduleRemarks`                             | KDiary           | writes or deletes on the live application                                   |
+| `POST` | `/ai/chatResponse`                                                 | KOS              | writes or deletes on the live application                                   |
+| `POST` | `/ai/messageAssist`                                                | KOS              | writes or deletes on the live application                                   |
+| `GET`  | `/ai/messages/{sessionId}`                                         | KOS              | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/kword/create`                                                    | KOS              | writes or deletes on the live application                                   |
+| `GET`  | `/kword/delete`                                                    | KOS              | writes or deletes on the live application                                   |
+| `POST` | `/kword/deleteHeading`                                             | KOS              | writes or deletes on the live application                                   |
+| `GET`  | `/kword/documents/{docId}`                                         | KOS              | not cleared: needs a business account or company we do not have on live yet |
+| `GET`  | `/kword/exitDocument/{docId}`                                      | KOS              | writes or deletes on the live application                                   |
+| `GET`  | `/kword/getAccessActivity/{docId}`                                 | KOS              | not cleared: needs a business account or company we do not have on live yet |
+| `GET`  | `/kword/getAllRevision/{docId}`                                    | KOS              | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/kword/isConvertToKad`                                            | KOS              | writes or deletes on the live application                                   |
+| `POST` | `/kword/joinDocument`                                              | KOS              | writes or deletes on the live application                                   |
+| `GET`  | `/kword/presence/{docId}`                                          | KOS              | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/kword/saveContent`                                               | KOS              | writes or deletes on the live application                                   |
+| `POST` | `/kword/share`                                                     | KOS              | writes or deletes on the live application                                   |
+| `POST` | `/kword/update`                                                    | KOS              | writes or deletes on the live application                                   |
 | `POST` | `/signupLoginForMediumAndLarge/adminUserLogin`                     | Login & session  | not cleared: needs a business account or company we do not have on live yet |
 | `POST` | `/v2/signupLogin/setAccessCode`                                    | Login & session  | writes state shared by other users of the live application                  |
 | `GET`  | `/v2/signupLogin/userLogoutFromAllDevices/`                        | Login & session  | writes state shared by other users of the live application                  |

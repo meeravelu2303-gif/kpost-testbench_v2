@@ -67,8 +67,11 @@ const MODULE_SCOPE: Record<string, Scope> = {
     note: 'Settings — theme/font/notifications; reads live, writes gated',
   },
   kmailsetting: { status: 'backlog', note: 'KMail settings (signature, instant reply)' },
-  kword: { status: 'backlog', note: 'KOS/KWord documents (KOS screen "Coming Soon" today)' },
-  ai: { status: 'backlog', note: 'KOS AI chat' },
+  kword: {
+    status: 'built',
+    note: 'KOS/KWord — document CRUD; reads live, writes gated (API-only)',
+  },
+  ai: { status: 'built', note: 'KOS K-AI — sessions read live; generation metered/external' },
   aws: { status: 'backlog', note: 'S3 presigned URLs (attachments)' },
   kmail: {
     status: 'backlog',

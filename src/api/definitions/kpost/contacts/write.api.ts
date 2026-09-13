@@ -7,12 +7,11 @@ import { defineContactsEndpoint } from './contacts-endpoint';
  * contacts, and update an invite status.
  *
  * Every one modifies the caller's own address book and **none is `productionSafe`**. The
- * account-targeting writes (add/delete/block, single and bulk, and the reference) target our own
- * second account, so the identifier guard permits them; they run through the gated feature flow
- * (`KALL`-style, `CONTACTS_LIFECYCLE=true`) with `allowLiveWrite`, self-restoring. `importPhoneContacts`
- * and `updateInviteStatus` carry phone numbers / an invite action, so they stay contract-validated
- * off-live and are not driven on the live application. Payloads mirror the live client
- * (`Services/Contacts.js`, `BlockContact.js`).
+ * account-targeting writes target our own second account, so the identifier guard permits them; all
+ * run through the gated feature flow (`CONTACTS_LIFECYCLE=true`) with `allowLiveWrite`, self-restoring.
+ * `importPhoneContacts` and `updateInviteStatus` carry phone numbers / an invite action, so the flow
+ * drives them with **only our own number** — no other user's data is touched. Payloads mirror the
+ * live client (`Services/Contacts.js`, `BlockContact.js`).
  */
 const WRITE_TAGS = ['contacts-write'] as const;
 
@@ -96,10 +95,7 @@ export const importPhoneContactsApi = defineContactsEndpoint({
   path: '/v2/contacts/importPhoneContacts/',
   summary: "Import the device's phone contacts",
   tags: [...WRITE_TAGS, 'import'],
-  /*
-   * Carries phone numbers and can match/notify them, so it stays off-live (contract-validated only).
-   * The payload uses our own number to keep the guard satisfied when it does run off-live.
-   */
+  // Carries phone numbers, so the flow imports ONLY our own number — no stranger is matched/notified.
   destructive: true,
   request: body(() => ({
     deviceID: 'qa-bench-device',
@@ -107,7 +103,7 @@ export const importPhoneContactsApi = defineContactsEndpoint({
     countryCode: '91',
     phoneContacts: [{ name: 'QA', mobileNumber: testData.mobileExists }],
   })),
-  note: 'carries phone numbers; not driven on live',
+  note: 'carries phone numbers; driven live with our own number only',
 });
 
 export const updateInviteStatusApi = defineContactsEndpoint({
@@ -118,7 +114,7 @@ export const updateInviteStatusApi = defineContactsEndpoint({
   tags: [...WRITE_TAGS, 'invite'],
   destructive: true,
   request: body(() => ({ mobileNumber: testData.mobileExists })),
-  note: 'invite action; not driven on live',
+  note: 'invite action; driven live with our own number only',
 });
 
 export const contactsWriteApis = [

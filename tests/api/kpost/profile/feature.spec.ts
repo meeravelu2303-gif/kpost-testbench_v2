@@ -207,4 +207,45 @@ test.describe('KPost Profile · write lifecycle', () => {
     );
     expect.soft(status, 'convert base64 accepted').toBeLessThan(400);
   });
+
+  test('every image write (upload / cover / signature / attachments) then remove, on our own profile @api @profile', async ({
+    endpoints,
+  }) => {
+    /*
+     * The remaining profile writes, all on our OWN account with a 1x1 PNG: the multipart uploads use
+     * each endpoint's own request factory (empty override → the definition's multipart body), the
+     * removes are GETs. Uploading then removing leaves the profile as it was. `expect.soft` so a
+     * per-endpoint 500 (e.g. the known downloadCoverImage-family 500) is recorded, not fatal.
+     */
+    const raw = async (id: string, label: string): Promise<number> => {
+      const ex = await endpoints.sendTo(
+        id,
+        {},
+        { label: `profile:${label}`, auth: { principal: A }, allowLiveWrite: true },
+      );
+      return ex.status;
+    };
+
+    for (const [id, label] of [
+      ['profile-update-image', 'upload-profile-image'],
+      ['profile-upload-cover', 'upload-cover'],
+      ['profile-update-signature', 'upload-signature'],
+      ['profile-upload-attachments', 'upload-attachments'],
+      ['profile-upload-image-s3', 'upload-s3'],
+      ['profile-remove-image', 'remove-image'],
+      ['profile-remove-cover', 'remove-cover'],
+    ] as Array<[string, string]>) {
+      const status = await raw(id, label);
+      expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+    }
+
+    // share-user-details — shares our own profile by our own kpostID.
+    const shared = await write(
+      endpoints,
+      'profile-share-user-details',
+      { kpostID: testData.kpostId },
+      'share',
+    );
+    expect.soft(shared, 'shareUserDetails returns a status').toBeLessThan(600);
+  });
 });

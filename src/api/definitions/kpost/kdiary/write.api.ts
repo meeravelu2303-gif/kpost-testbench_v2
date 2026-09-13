@@ -93,8 +93,8 @@ export const addParticipantsApi = defineKdiaryEndpoint({
   summary: 'Add participants to a diary schedule',
   tags: [...WRITE_TAGS, 'participants'],
   destructive: true,
-  request: body(() => ({ eventID: 0, participants: [testData.victimKpostId] })),
-  note: 'needs a real eventID; participants are our own accounts',
+  request: body(() => ({ eventIds: [0], participants: [testData.victimKpostId] })),
+  note: 'frontend-unused; shape mirrors updateScheduleRemarks (eventIds array)',
 });
 
 export const updateRemarksApi = defineKdiaryEndpoint({
@@ -103,10 +103,12 @@ export const updateRemarksApi = defineKdiaryEndpoint({
   path: '/dairySchedule/updateScheduleRemarks',
   summary: 'Set the remarks/status on a diary schedule',
   tags: [...WRITE_TAGS, 'remarks'],
-  // `remarks` is a kdiaryRemarks code (1 = Completed). Needs a real eventID.
+  /*
+   * The live client's shape (Diary.js): `{eventIds: [id], remarks, remarksDescription}` — `eventIds`
+   * is a plural ARRAY. `remarks` is a kdiaryRemarks code (1 = Completed).
+   */
   destructive: true,
-  request: body(() => ({ eventID: 0, remarks: 1, remarksDescription: 'Completed by QA' })),
-  note: 'needs a real eventID; remarks is a kdiaryRemarks code',
+  request: body(() => ({ eventIds: [0], remarks: 1, remarksDescription: 'Completed by QA' })),
 });
 
 export const saveReportApi = defineKdiaryEndpoint({

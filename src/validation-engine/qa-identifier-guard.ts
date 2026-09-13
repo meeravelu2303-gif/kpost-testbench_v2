@@ -118,6 +118,11 @@ const NOT_A_RESOURCE = new Set(
     'lastmsgid',
     'sharedmessageid',
     'groupid',
+    // The auto-minted id of a group we created (`qab###@kpostindia.com`) — group-scoped and created
+    // at runtime like `groupid`, so it cannot be pre-allowlisted; no productionSafe endpoint accepts
+    // one (every group op is gated). The tenant ids in a group payload — the member kpostIDs — stay
+    // checked.
+    'groupkpostid',
     /*
      * KALL enum codes, the bench-generated session string, and the call timestamps. They match the
      * pattern only because the key contains "kall"; their values are an enum (`kallMode: 0`,
@@ -142,6 +147,17 @@ const NOT_A_RESOURCE = new Set(
     'kallid',
     'kallids',
     /*
+     * The id of a KWord document we created (a UUID). Doc-scoped and created at runtime like a
+     * groupID/msgID, so it cannot be pre-allowlisted; no productionSafe endpoint accepts one (every
+     * KWord op is gated). The tenant kpostIDs in a doc's share/join payload stay checked.
+     */
+    'docid',
+    // KWord document CONTENT/TYPE fields — a title, a subject line, a document-type name — not
+    // resources. They match only because the key contains "doc"/"document".
+    'doctitle',
+    'titleofdocument',
+    'documenttype',
+    /*
      * Appearance/preference values on the theme write (`changeTheme`). They match the pattern only
      * because the key contains "katchup"/"kpost"; their values are a style name (`bubble`), a colour
      * theme (`sunset`) or a layout (`purple`) — a cosmetic setting on the caller's own account, not a
@@ -161,6 +177,10 @@ const NOT_A_RESOURCE = new Set(
      * qualified `…id` key such as `companyid`/`kpostid` is unaffected — only exact `id` matches here.
      */
     'id',
+    // The plural of a bare `id`: a runtime row-id array (`addOrRemoveAdminAccess` sends `ids:[…]` of
+    // membership rows). Same surgical exemption as `id` — qualified keys (`kpostIDs`, `contactIDs`)
+    // stay checked.
+    'ids',
   ].map((key) => key.toLowerCase()),
 );
 

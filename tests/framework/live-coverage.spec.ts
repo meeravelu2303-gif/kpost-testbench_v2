@@ -52,6 +52,7 @@ function moduleOf(definition: EndpointDefinition): string {
   if (tags.includes('contacts')) return 'Contacts';
   if (tags.includes('settings')) return 'Settings';
   if (tags.includes('kdiary')) return 'KDiary';
+  if (tags.includes('kos')) return 'KOS';
   if (tags.includes('profile')) return 'Profile';
   if (tags.includes('group')) return 'Group';
   if (tags.includes('common-company')) return 'common · company';

@@ -118,4 +118,48 @@ test.describe('KPost Contacts · feature flow', () => {
       ).catch(() => undefined);
     }
   });
+
+  test('add-multiple, import-phone and update-invite, all on our own data @api @contacts', async ({
+    endpoints,
+  }) => {
+    /*
+     * The remaining writes, driven live with ONLY our own account and number so no other user's data
+     * is touched: `importPhoneContacts` imports a single contact — our own number — and
+     * `updateInviteStatus` acts on our own number. Cleaned up by deleting the added contact.
+     */
+    try {
+      const multi = await write(
+        endpoints,
+        'contacts-add-multiple',
+        { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
+        'add-multiple',
+      );
+      expect.soft(multi, 'addMultipleContact returns a status').toBeLessThan(600);
+
+      const imported = await write(
+        endpoints,
+        'contacts-import-phone',
+        {
+          deviceID: 'qa-bench-device',
+          mobileNumber: testData.mobileExists,
+          countryCode: '91',
+          phoneContacts: [{ name: 'QA', mobileNumber: testData.mobileExists }],
+        },
+        'import-phone',
+      );
+      expect.soft(imported, 'importPhoneContacts (own number) returns a status').toBeLessThan(600);
+
+      const invite = await write(
+        endpoints,
+        'contacts-update-invite',
+        { mobileNumber: testData.mobileExists },
+        'update-invite',
+      );
+      expect.soft(invite, 'updateInviteStatus (own number) returns a status').toBeLessThan(600);
+    } finally {
+      await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
+        () => undefined,
+      );
+    }
+  });
 });

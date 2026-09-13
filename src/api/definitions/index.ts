@@ -11,6 +11,7 @@ import { kallApis } from './kpost/kall/index';
 import { contactsApis } from './kpost/contacts/index';
 import { settingsApis } from './kpost/settings/index';
 import { kdiaryApis } from './kpost/kdiary/index';
+import { kosApis } from './kpost/kos/index';
 import { dashboardApis } from './kpost/dashboard/index';
 import { profileApis } from './kpost/profile/index';
 import { signupLoginApis } from './kpost/signup-login/index';
@@ -47,6 +48,8 @@ export const apiRegistry = new ApiRegistry().register(
   ...settingsApis,
   // KPost KDiary - the caller's diary schedules, events and reports.
   ...kdiaryApis,
+  // KPost KOS - the office suite: KWord documents and K-AI (screen "Coming Soon").
+  ...kosApis,
   // KPost Profile - the account owner's own profile (undocumented module).
   ...profileApis,
   // KPost Dashboard - the Home recent-messages panel (undocumented module).
