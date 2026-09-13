@@ -216,6 +216,63 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — Katchup verified end to end: cross-browser UI + full live API sweep
+
+Before starting Profile, a complete verification pass over Katchup — both API and UI, in production.
+
+#### Cross-browser UI (Chromium, Firefox, WebKit)
+
+The e2e suite runs in all three engines. Getting there fixed real things:
+
+- **Consolidated the login-screen checks into one navigation.** Each separate test navigated to
+  `/login` fresh, and the country-list endpoint rate-limits after repeated loads — so the later
+  tests could not render the form (worst in the slower engines). One test now walks
+  unknown-id → valid-id → wrong-password with a single load, mirroring a real session and staying
+  reliable in every engine.
+- **A reload-retry in the login page object** for the country throttle, and Enter-to-submit (a
+  domain-autocomplete portal overlays the Submit button).
+- **The Subject field is not a reliable landing-page assertion.** `.fw_Msg_subject` mounts only
+  inside an open conversation, and the landing DOM differs by engine (present in Chromium/WebKit,
+  absent in Firefox). The UI check now asserts the **compose entry point** (`icon-KP_02-Write-Letter`),
+  which is on the workspace in every engine; the Subject differentiator itself (BR-K01) is proven by
+  the API feature flow, where every message is verified to carry its subject.
+- **Two retries** on browser projects: a live SPA over a throttling third-party host flakes ~1 test
+  per full run, rotating between engines; retries absorb that without masking a real break (which
+  fails all three attempts).
+
+Also: the `home.spec.ts`/`HomePage.ts` Playwright template was deleted, `.auth/user.json` is a
+single shared session so **browser runs must be sequential** on a live account (a parallel run races
+the login), and browsers are already installed.
+
+#### Full live API sweep — every live-safe endpoint checked in production
+
+Ran the whole KPost API suite against `devapi2`: **172 passed, 68 failed, 1652 skipped**.
+
+- **172 passed** — the read-side validators (status, schema, headers, sensitive-data, performance,
+  valid-token) across the 30 live-safe endpoints in every module.
+- **68 failed** — the **findings**, and they collapse to the same handful of systemic classes now
+  confirmed across _every_ authenticated endpoint, not just login: auth failures answer 400/403 not
+  401 (`authentication.*`), error bodies do not follow the envelope (`response.error-format`), the
+  status code is wrong on some (`response.status-code`), and CSP/referrer headers are missing
+  (`security.security-headers`). `authentication.valid-token` did **not** fail (a valid token is
+  accepted everywhere — the earlier worry was a grep matching test names, not failures).
+- **1652 skipped** — blocked writes (correctly: real SMS, OTP-gated, another tenant's data) and the
+  aggressive probes that only run off-live. The Katchup writes are covered separately by the gated
+  feature flow (10/10 on live).
+
+**A real test bug this sweep caught:** `attachments.spec.ts` filtered the tag `katchup-attachments`
+(plural) while the endpoints are tagged `katchup-attachment` — `describeEndpointCases` threw on the
+mismatch, which would have left 6 attachment endpoints silently untested. The throw is the
+safeguard working; fixed the tag.
+
+#### What "all endpoints checked in production" means, precisely
+
+Every one of the 89 endpoints is exercised: **reads in production** (172 cases green + 68 findings),
+**writes off-live with full fuzzing**, and **Katchup writes in production** through the authorized
+feature flow. The 59 "blocked on live" are blocked by design — real SMS, OTP with no bypass, or a
+company/account we do not own — which is a safety property, not a coverage gap. Filing stays
+**dry-run** until the owner confirms which findings are known.
+
 ### 2026-09-13 — Katchup complete: UI screens run on live; all message-action types covered
 
 Finished Katchup for both **API and UI**. The browser project now runs against the live front end

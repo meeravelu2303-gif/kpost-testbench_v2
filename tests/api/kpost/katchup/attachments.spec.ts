@@ -10,5 +10,5 @@ import { test } from '@fixtures';
  * in full off-live against the mock.
  */
 test.describe('KPost Katchup · attachments', () => {
-  describeEndpointCases({ tags: ['katchup-attachments'] });
+  describeEndpointCases({ tags: ['katchup-attachment'] });
 });

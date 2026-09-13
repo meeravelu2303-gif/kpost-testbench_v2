@@ -12,9 +12,11 @@ const browserProject = (name: string, device: Project['use']): Project => ({
   testDir: './tests/e2e',
   use: { ...device, storageState: STORAGE_STATE },
   dependencies: ['setup'],
-  // A live SPA over the network is inherently flakier than an API call; one retry absorbs a slow
-  // navigation or a transient render without masking a real, repeatable failure.
-  retries: env.RETRIES ?? 1,
+  // A live SPA over a throttling third-party host is inherently flakier than an API call: a slow
+  // navigation or a transient render can fail one test per full run, rotating between engines. Two
+  // retries absorb that intermittent variance without masking a real, repeatable failure (a genuine
+  // break fails all three attempts).
+  retries: env.RETRIES ?? 2,
 });
 
 export default defineConfig({

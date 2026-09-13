@@ -2,16 +2,23 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * The login **screen** on the live front end — the two-step KPOST flow.
+ * The login **screen** on the live front end — the two-step KPOST flow, across all browsers.
  *
  * Modelled on `src/components/auth/Login.js` (KPOST_REACTJS_2023_V1). The component ships no
- * `data-testid` hooks and the app is a heavy live SPA, so assertions target **stable states** (which
- * step is shown, which URL) rather than transient toasts, which auto-dismiss and race the test.
+ * `data-testid` hooks, so assertions target **stable states** (which step is shown, which URL),
+ * not transient toasts.
  *
- * These log in from scratch, so they run in a fresh logged-out context (not the session `setup`
- * saved), and only when a real account is configured. `@ui` tests get a retry (see the config).
+ * ## One navigation, not four
+ *
+ * Loading `/login` fetches the country list from an endpoint that **rate-limits after repeated fresh
+ * loads** — and each separate test navigates fresh, so a suite of four login tests exhausts the
+ * limit and the later ones cannot even render the form (worst in the slower engines). So the screen
+ * behaviours are checked in a **single test with one navigation**, walking the real flow: unknown id
+ * does not advance → a valid id advances → a wrong password is rejected. That both mirrors a real
+ * session and keeps the suite reliable in Chromium, Firefox and WebKit.
  */
 test.describe('KPost login screen', { tag: '@ui' }, () => {
+  // Log OUT: the login screen must be tested from a fresh session, not the one `setup` saved.
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test.skip(
@@ -19,30 +26,30 @@ test.describe('KPost login screen', { tag: '@ui' }, () => {
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  test('an unknown KPOST ID does not advance to the password step @ui', async ({
+  test('the two-step flow rejects the unknown, advances the valid, and refuses a bad password @ui', async ({
     loginPage,
     page,
   }) => {
     await loginPage.goto();
+
+    // 1) An unknown KPOST ID must NOT advance to the password step.
     await loginPage.enterLoginId(testData.kpostIdAbsent);
+    await expect(
+      loginPage.passwordInput,
+      'an unknown id does not reach the password step',
+    ).toBeHidden();
 
-    // A real account advances to the password field; an unknown one must not. Asserting the stable
-    // absence of step 2 is reliable where catching the "doesn't exist" toast is not.
-    await expect(page.locator('input[type="password"]')).toBeHidden();
-  });
-
-  test('a valid id advances to the password step @ui', async ({ loginPage }) => {
-    await loginPage.goto();
+    // 2) A valid id advances to the password step (fetchUserDetails resolves). Step 1 is still
+    //    active after the unknown id, so re-enter without a fresh navigation.
     await loginPage.enterLoginId(testData.kpostId);
+    await expect(loginPage.passwordInput, 'a valid id advances to the password').toBeVisible({
+      timeout: 20_000,
+    });
 
-    await expect(loginPage.passwordInput).toBeVisible({ timeout: 20_000 });
-    await expect(loginPage.loginButton).toBeVisible();
-  });
-
-  test('a wrong password keeps the user on the login screen @ui', async ({ loginPage, page }) => {
-    await loginPage.login(testData.kpostId, 'DefinitelyNotMyPassword!9f2a');
-
-    // The stable signal of rejection: the inline error appears and we never leave /login.
+    // 3) A wrong password is rejected: inline error, and we never leave /login.
+    await loginPage.passwordInput.fill('DefinitelyNotMyPassword!9f2a');
+    await expect(loginPage.loginButton).toBeEnabled();
+    await loginPage.loginButton.click();
     await expect(loginPage.inlineError, 'a wrong password shows the inline error').toBeVisible({
       timeout: 15_000,
     });
@@ -51,7 +58,6 @@ test.describe('KPost login screen', { tag: '@ui' }, () => {
 
   /*
    * That a CORRECT login reaches /home is proven by the `setup` project (it logs in with this same
-   * account before every browser run), so it is not duplicated here — repeating a full fresh-context
-   * login just throttles the country-load endpoint and adds flake for no extra coverage.
+   * account through this same page object before every browser run), so it is not duplicated here.
    */
 });

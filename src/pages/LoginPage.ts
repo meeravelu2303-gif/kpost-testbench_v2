@@ -39,16 +39,33 @@ export class LoginPage extends BasePage {
   }
 
   async expectLoaded(): Promise<void> {
-    // The id input is disabled until the country list loads, so wait for it to be enabled.
-    await expect(this.loginIdInput).toBeEnabled({ timeout: 20_000 });
+    await this.waitForCountryReady();
+  }
+
+  /**
+   * Wait for the id field to become enabled — it is disabled until the country list loads.
+   *
+   * That list comes from an endpoint that rate-limits after repeated fresh loads (worst in the
+   * slower engines), so a first wait can time out even though the page is fine. One reload gives the
+   * throttle a moment to clear and reloads the country list, which turns a flaky failure into a
+   * reliable pass across Chromium, Firefox and WebKit.
+   */
+  private async waitForCountryReady(): Promise<void> {
+    try {
+      await expect(this.loginIdInput).toBeEnabled({ timeout: 20_000 });
+    } catch {
+      await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await expect(
+        this.loginIdInput,
+        'id field enabled once the country list loads (after one reload)',
+      ).toBeEnabled({ timeout: 30_000 });
+    }
   }
 
   /** Step 1 only: enter an id and submit, without a password. */
   async enterLoginId(loginId: string): Promise<void> {
     await test.step(`Enter KPOST ID ${loginId}`, async () => {
-      await expect(this.loginIdInput, 'id field enabled once the country loads').toBeEnabled({
-        timeout: 30_000,
-      });
+      await this.waitForCountryReady();
 
       /*
        * Typing an id with `@` pops a domain-autocomplete portal that overlays the Submit button, so
