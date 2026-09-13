@@ -216,6 +216,48 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — Dashboard module (Home screen); a POST-read `@destructive` grep trap fixed
+
+The Home screen's recent-messages panel: `/v2/dashboard/*` — 3 authenticated reads
+(`homeDashboardMsgs`, `katchupDashboardMsg`, `homeDashboardNewMsgs`), payloads from the live client.
+Registry: 134 → **137**. Coverage 4/4, live reads 24 pass + findings, `/home` UI cross-browser.
+
+#### A real framework trap this caught: a POST read silently dropped on live
+
+The dashboard reads are **POST**, and `destructive` defaults to **true for POST/PUT/PATCH/DELETE**.
+So without an explicit `destructive: false`, `tagsFor` tagged every one of their tests `@destructive`,
+and the production `grepInvert(@destructive)` **removed all 132 of them** — the module collected
+**zero tests** while every coverage self-test passed (coverage checks the raw definition, where
+`destructive ?? false` is false; the _resolved_ endpoint defaults it to true). The symptom was
+baffling: `describeEndpointCases` found the 3 endpoints and built 132 cases (proven by hand), yet
+Playwright reported "0 tests". The fix is one line per endpoint (`destructive: false`), and the
+lesson generalises: **a POST/GET read must state `destructive: false`, or it vanishes from a
+production run.**
+
+#### The guard was built, and it found the trap had already bitten ten more reads
+
+A new assertion in `tests/framework/live-coverage.spec.ts` — _"a cleared READ does not resolve to
+destructive"_ — takes every `productionSafe`, non-`mockFixture` endpoint, resolves it, and fails on
+any whose resolved `destructive` is true (excepting the one named cleared write, `userLogout`). It
+turned the dashboard's baffling symptom into a mechanical check, and immediately caught **ten POST
+reads that had been silently dropped from every live run since they were written**: five in Katchup
+(`conversation`, `message-count`, `search-message`, `search-subject`, `filter-message`) and five in
+Profile (`user-profile-by-kpostid`, `user-basic-by-kpostid`, `digital-card`, `auto-search`,
+`advanced-search`). All ten now carry `destructive: false` and run on live. `docs/LIVE-ENDPOINTS.md`
+went **42 → 45** as the dashboard trio joined; the Katchup/Profile ten were already counted as
+"runs on live" by the generator (which reads the raw definition) even though the engine had been
+dropping them — the exact split-brain the guard closes. The guard is green.
+
+#### Findings
+
+- **The dashboard responses do not use the standard `{status:"SUCCESS"}` envelope** — `response.structure`
+  fails on all three. They return the message payload in a different shape; whether that is intended
+  or a contract inconsistency is for the owner.
+- **A sensitive-data false positive**, recorded so it is not filed: `secretMessageExpireTimeAsLong`
+  is flagged because the field _name_ contains "secret" — it is a timestamp, not a leaked secret. The
+  validator matches on field-name substrings; this is the same over-match class as the identifier
+  guard, and a candidate allowlist entry.
+
 ### 2026-09-13 — Profile complete: write lifecycle + UI screens (matching Katchup)
 
 Profile now has the same depth as Katchup — API reads, an authorized write lifecycle, and UI screens.

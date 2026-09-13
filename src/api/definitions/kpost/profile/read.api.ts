@@ -26,6 +26,8 @@ export const fetchUserDetailsApi = defineProfileEndpoint({
 
 export const userProfileByKpostIdApi = defineProfileEndpoint({
   id: 'profile-user-profile-by-kpostid',
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   method: 'POST',
   path: '/v2/profile/getUserProfileUsingKpostID/',
   summary: 'Fetch a profile by KPost ID',
@@ -36,6 +38,8 @@ export const userProfileByKpostIdApi = defineProfileEndpoint({
 
 export const userBasicByKpostIdApi = defineProfileEndpoint({
   id: 'profile-user-basic-by-kpostid',
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   method: 'POST',
   path: '/v2/profile/getUserBasicDetailsUsingKpostID',
   summary: 'Fetch basic profile details by mobile number',
@@ -46,6 +50,8 @@ export const userBasicByKpostIdApi = defineProfileEndpoint({
 
 export const digitalCardApi = defineProfileEndpoint({
   id: 'profile-digital-card',
+  // POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   method: 'POST',
   path: '/v2/profile/getDigitalCard/',
   summary: "Fetch a contact's digital card",
@@ -56,6 +62,8 @@ export const digitalCardApi = defineProfileEndpoint({
 
 export const autoSearchApi = defineProfileEndpoint({
   id: 'profile-auto-search',
+  // POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   method: 'POST',
   path: '/v2/profile/autoSearchWithName/',
   summary: 'Search profiles by name',
@@ -66,6 +74,8 @@ export const autoSearchApi = defineProfileEndpoint({
 
 export const advancedSearchApi = defineProfileEndpoint({
   id: 'profile-advanced-search',
+  // POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   method: 'POST',
   path: '/v2/profile/advancedSearch/',
   summary: 'Advanced profile search',

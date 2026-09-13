@@ -7,6 +7,7 @@ import { healthCheckApi } from './health.api';
 import { commonApis } from './kpost/common/index';
 import { groupApis } from './kpost/group/index';
 import { katchupApis } from './kpost/katchup/index';
+import { dashboardApis } from './kpost/dashboard/index';
 import { profileApis } from './kpost/profile/index';
 import { signupLoginApis } from './kpost/signup-login/index';
 import { kmailApis } from './kmail.api';
@@ -36,6 +37,8 @@ export const apiRegistry = new ApiRegistry().register(
   ...groupApis,
   // KPost Profile - the account owner's own profile (undocumented module).
   ...profileApis,
+  // KPost Dashboard - the Home recent-messages panel (undocumented module).
+  ...dashboardApis,
   // Admin module — Jaganathan Murthy. Loaded from its own spec when ADMIN_API_BASE_URL is set.
   ...adminApis,
   // KMail module — Jitendra Kumar. Loaded from its own spec when KMAIL_API_BASE_URL is set.

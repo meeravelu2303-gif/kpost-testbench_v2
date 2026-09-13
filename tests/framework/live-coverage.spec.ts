@@ -7,6 +7,7 @@ import { apiRegistry } from '@api/definitions/index';
 import type { EndpointDefinition } from '@api/registry/endpoint-definition';
 import { ROOT_DIR } from '@config/constants';
 import { defaultedIdentityFields } from '@config/test-data.config';
+import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /**
@@ -181,5 +182,29 @@ test.describe('live endpoint coverage @framework', () => {
       .map((d: EndpointDefinition) => d.id);
 
     expect(contradictory, 'OTP endpoints cannot run on live, cleared or not').toEqual([]);
+  });
+
+  test('a cleared READ does not resolve to destructive (or grepInvert drops it on live)', () => {
+    /*
+     * `destructive` defaults to true for POST/PUT/PATCH/DELETE. A cleared endpoint that is a read
+     * but forgets `destructive: false` therefore RESOLVES to destructive, gets the `@destructive`
+     * test tag, and is silently removed by the production `grepInvert` — the whole endpoint collects
+     * zero engine tests while every other check passes. (The dashboard POST reads hit exactly this.)
+     *
+     * The intentional cleared writes (userLogout) run through a flow, not `describeEndpointCases`,
+     * and are exempt by name here — the same list the test above uses.
+     */
+    const LIVE_CLEARED_WRITES = new Set(['signup-login-user-logout']);
+    const dropped = apiRegistry
+      .all()
+      .filter((d: EndpointDefinition) => d.productionSafe && !d.mockFixture)
+      .filter((d: EndpointDefinition) => !LIVE_CLEARED_WRITES.has(d.id))
+      .filter((d: EndpointDefinition) => resolveEndpoint(d).destructive)
+      .map((d: EndpointDefinition) => d.id);
+
+    expect(
+      dropped,
+      'these are productionSafe reads that resolve to destructive — add `destructive: false`',
+    ).toEqual([]);
   });
 });

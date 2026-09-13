@@ -55,6 +55,8 @@ export const frequentContactsApi = defineKatchupEndpoint({
 
 export const conversationApi = defineKatchupEndpoint({
   id: 'katchup-conversation',
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   requirements: ['FR-K07'],
   method: 'POST',
   path: '/v2/katchup/katchupMessagesForSelectedContactID/',
@@ -75,6 +77,8 @@ export const conversationApi = defineKatchupEndpoint({
 
 export const messageCountApi = defineKatchupEndpoint({
   id: 'katchup-message-count',
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   method: 'POST',
   path: '/v2/katchup/messageCountBetweenSenderAndReceiver/',
   summary: 'How many messages exist between the caller and a contact',
@@ -85,6 +89,8 @@ export const messageCountApi = defineKatchupEndpoint({
 
 export const searchMessageApi = defineKatchupEndpoint({
   id: 'katchup-search-message',
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   method: 'POST',
   path: '/v2/katchup/searchKatchUpMessage/',
   summary: "Full-text search across the caller's messages",
@@ -96,6 +102,8 @@ export const searchMessageApi = defineKatchupEndpoint({
 
 export const searchSubjectApi = defineKatchupEndpoint({
   id: 'katchup-search-subject',
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   method: 'POST',
   path: '/v2/katchup/searchKatchUpMessageSubject',
   summary: "Search the caller's messages with one contact by subject",
@@ -106,6 +114,8 @@ export const searchSubjectApi = defineKatchupEndpoint({
 
 export const filterMessageApi = defineKatchupEndpoint({
   id: 'katchup-filter-message',
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   method: 'POST',
   path: '/v2/katchup/filterKatchUpMessage/',
   summary: 'Filter the caller messages (attachments, important, …)',

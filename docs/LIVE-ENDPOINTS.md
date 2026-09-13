@@ -8,13 +8,13 @@ no business account exists on live yet.
 
 |                  |  Count |
 | ---------------- | -----: |
-| **Runs on live** | **42** |
+| **Runs on live** | **45** |
 | Blocked          |     92 |
-| Total registered |    134 |
+| Total registered |    137 |
 
 ---
 
-## Runs on live — 42
+## Runs on live — 45
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -52,6 +52,9 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/signupLogin/getLoginHistory`                     | Login & session |
 | `POST` | `/v2/signupLogin/userLogin/`                          | Login & session |
 | `POST` | `/v2/signupLogin/userLogout/`                         | Login & session |
+| `POST` | `/v2/dashboard/homeDashboardMsgs/`                    | other           |
+| `POST` | `/v2/dashboard/homeDashboardNewMsgs`                  | other           |
+| `POST` | `/v2/dashboard/katchupDashboardMsg/`                  | other           |
 | `POST` | `/v2/profile/advancedSearch/`                         | Profile         |
 | `POST` | `/v2/profile/autoSearchWithName/`                     | Profile         |
 | `GET`  | `/v2/profile/downloadCoverImage/{kpostID}`            | Profile         |
