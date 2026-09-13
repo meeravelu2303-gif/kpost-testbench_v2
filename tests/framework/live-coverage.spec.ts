@@ -37,6 +37,10 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
   }
   if (definition.sideEffect === 'external') return 'sends a real SMS or email';
   if (definition.destructive) return 'writes or deletes on the live application';
+  const tags = definition.tags ?? [];
+  if (tags.some((tag) => /^needs-(message-id|kall-id|group|attachment)$/.test(tag))) {
+    return 'needs a real message/call/group id that only a write flow creates';
+  }
   return 'not cleared: needs a business account or company we do not have on live yet';
 }
 
@@ -44,6 +48,7 @@ function moduleOf(definition: EndpointDefinition): string {
   const tags = definition.tags ?? [];
   if (tags.includes('signup-login')) return 'Login & session';
   if (tags.includes('katchup')) return 'Katchup';
+  if (tags.includes('kall')) return 'Kall';
   if (tags.includes('profile')) return 'Profile';
   if (tags.includes('group')) return 'Group';
   if (tags.includes('common-company')) return 'common · company';

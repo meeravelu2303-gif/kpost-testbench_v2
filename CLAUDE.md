@@ -216,6 +216,63 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-13 — Kall module (20 endpoints, API + screen); runtime-id guard policy extended to calls
+
+The calling module, built to the Katchup/Profile bar: `/v2/kall/*` — **20 usable endpoints** (the
+converter correctly retired 16 superseded duplicates), the two call flows analysed first in
+`docs/kall-flow.md`. Registry: 137 → **157**; live doc: **51 run / 106 blocked**. Coverage 7/7,
+`/kall` UI cross-browser.
+
+**The codes were already right.** All four enums the owner supplied — `kallStatus` (0–11),
+`kallType` (0–1), `kallMode` (0–5), `kallRepeatType` (0–3) — match the workbook's Types tab exactly,
+same as Katchup. Pinned in the coverage self-test so a renumber fails loudly.
+
+#### Structure — reads run on live, writes gated
+
+    read.api.ts   (8)  kallDashboard, todayKoolKall, frequentKallContacts, kallInfo, contactInfo,
+                       fetchScheduledRepeatKall  → 6 run on live · getKallStatus[UsingKallID] → needs-kall-id
+    direct.api.ts (6)  initiateKall, updateKallStatus, updateSenderAndReceiverKallStatus,
+                       endIndividualKall, clearKallBykallIds, clearKallHistory
+    schedule.api.ts(6) scheduledKall, reScheduleKall, joinScheduleKall, endKoolKall,
+                       scheduledRepeatKall, modifyKallMembers
+
+First live run of the 6 reads: **36 pass, 44 findings** — the same systemic classes confirmed across
+every module (auth failures 400/403 not 401, missing CSP/referrer headers, error envelope). Every
+POST read carries `destructive: false` (the grep trap the Dashboard entry documents); the framework
+guard confirms none is silently dropped.
+
+Every write is destructive and **not `productionSafe`**: a call rings a real device / notifies
+participants, and the clear endpoints delete the log. They are exercised through
+`tests/api/kpost/kall/feature.spec.ts` — gated `KALL_LIFECYCLE=true`, each write `allowLiveWrite`,
+self-cleaning (end → `clearKallBykallIds`). Built and green off-live; **running it on live needs the
+owner's sign-off** because `initiateKall` rings a real device — exactly as Katchup's sends waited.
+
+#### The QA-identifier guard trips on `kall*` — the same trap Katchup's content fields hit
+
+Every `kall*` key (`kallSession`, `kallMode`, `kallStatus`, `kallID`) matches the guard's
+`IDENTIFIER_KEY` because it contains "kall", so without exemptions the guard **refuses every Kall read
+on live**. The enum/session/timestamp fields are exempt (not resources), and — the decision that
+matters — **`kallID`/`kallIds` are exempt as runtime-scoped ids, handled exactly like `msgID`**: a
+call we placed is kall-scoped, not tenant-scoped, created at runtime (so cannot be pre-allowlisted),
+and no `productionSafe` endpoint accepts one. That is what lets the gated lifecycle clean up the
+kallIDs it created (via `allowLiveWrite`), the same way Katchup's lifecycle deletes by `msgID`. The
+**tenant** ids a kall payload also carries — the participant kpostIDs in `addingUserIds` /
+`kallDetails[].receiver` — stay checked, so `modifyKallMembers` still cannot target a stranger.
+
+Two live-safety self-tests were reconciled to this: the `{kallIds:[2,3]}` test now asserts the
+exemption (with a still-guarded kpostID list proving element-by-element checking survives), and a
+**pre-existing stale test** that expected `groupID` to be flagged (it has been exempt since the group
+module) was corrected — `groupID`, like `kallID`, is a runtime-scoped id. A new coverage self-test
+runs `foreignIdentifiers` over every cleared Kall read's built payload, so a future added field cannot
+silently get the reads refused on live.
+
+#### A doc-accuracy fix caught here
+
+`blockedReason` in the live-coverage generator labelled every non-destructive, non-cleared endpoint
+"needs a business account" — wrong for the `needs-kall-id` reads (and Katchup's `needs-message-id`
+reads all along). It now recognises the `needs-*` tags and says "needs a real message/call/group id
+that only a write flow creates".
+
 ### 2026-09-13 — Dashboard module (Home screen); a POST-read `@destructive` grep trap fixed
 
 The Home screen's recent-messages panel: `/v2/dashboard/*` — 3 authenticated reads

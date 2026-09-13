@@ -187,23 +187,32 @@ test.describe('live-application safety @framework', () => {
     expect(foreign.map((offence) => offence.path)).toEqual(['body.companyId']);
   });
 
-  test('bulk id arrays are checked element by element', () => {
+  test('bulk id arrays of tenant identifiers are checked element by element', () => {
     /*
-     * `clearKallBykallIds` takes low sequential integers, which is the most dangerous shape in
-     * the API: the boundary probes try exactly 0, 1, -1 and small values.
+     * A list of another user's kpostIDs — the shape `removeGroupMember` / `modifyKallMembers` take —
+     * is checked element by element, so a fuzzer cannot slip a stranger's account into one element.
      */
-    const foreign = foreignIdentifiers({ body: { kallIds: [2, 3] } });
-    expect(foreign.map((offence) => offence.path)).toEqual(['body.kallIds[0]', 'body.kallIds[1]']);
+    const foreign = foreignIdentifiers({
+      body: { addingUserIds: ['jitendra9@kpostindia.com', 'limson@kpostindia.com'] },
+    });
+    expect(foreign.map((offence) => offence.path)).toEqual([
+      'body.addingUserIds[0]',
+      'body.addingUserIds[1]',
+    ]);
   });
 
-  test("another user's kpostID in a nested list is rejected", () => {
+  test('runtime-scoped ids (kallIds, groupID) are exempt; the tenant kpostID beside them is not', () => {
+    /*
+     * `kallIds` and `groupID` name a call we placed and a group we made — runtime-scoped, created
+     * during a flow, so they cannot be pre-allowlisted and are exempt like `msgID` (a fuzzer never
+     * reaches them: no productionSafe endpoint accepts one). The kpostID list beside them is a TENANT
+     * identifier and stays checked, so `modifyKallMembers`/`removeGroupMember` cannot target a
+     * stranger even though their kallID/groupID rides along.
+     */
     const foreign = foreignIdentifiers({
-      body: { memberKpostIdList: ['jitendra9@kpostindia.com'], groupID: 1141 },
+      body: { kallIds: [2, 3], groupID: 1141, memberKpostIdList: ['jitendra9@kpostindia.com'] },
     });
-    expect(foreign.map((offence) => offence.path).sort()).toEqual([
-      'body.groupID',
-      'body.memberKpostIdList[0]',
-    ]);
+    expect(foreign.map((offence) => offence.path)).toEqual(['body.memberKpostIdList[0]']);
   });
 
   test('reference data and bench-generated values are not treated as resources', () => {

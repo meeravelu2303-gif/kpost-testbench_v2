@@ -15,9 +15,12 @@ import { ProductionSafetyError } from './production-guard';
  *     admin/resetPassword          {"kpostID":"priya@rkveg.kpost.in","companyID":1,…}
  *     v2/group/removeGroupMember   {"memberKpostIdList":["jitendra9@kpostindia.com"],"groupID":1141}
  *     v2/contacts/deleteContact    {"contactID":"prakas168@kpostindia.com"}
- *     v2/kall/clearKallBykallIds   {"kallIds":[2,3]}
  *
  * Logging in as a QA account constrains none of those. Only inspecting the outgoing payload does.
+ * The **tenant** identifiers above (a kpostID, a company, a contact) are what the guard checks; the
+ * **runtime-scoped** ids a payload also carries — a `msgID` we sent, a `groupID` we made, a `kallID`
+ * we placed — are exempt below, because they are created at runtime (so cannot be pre-allowlisted)
+ * and no `productionSafe` endpoint accepts one. See `NOT_A_RESOURCE`.
  *
  * The immediate danger is the negative probes: `request.data-type` and `request.boundary-value`
  * mutate every field, id fields included, so a fuzzer turns `companyID: 1001605` into `0`, `-1` or
@@ -115,6 +118,29 @@ const NOT_A_RESOURCE = new Set(
     'lastmsgid',
     'sharedmessageid',
     'groupid',
+    /*
+     * KALL enum codes, the bench-generated session string, and the call timestamps. They match the
+     * pattern only because the key contains "kall"; their values are an enum (`kallMode: 0`,
+     * `kallStatus: 6`, `kallType: 1`), a session string we mint, or an epoch — none addresses another
+     * account. Without these the guard refuses every Kall read on live (the same class as the Katchup
+     * content fields above).
+     */
+    'kallsession',
+    'kallmode',
+    'kallstatus',
+    'kalltype',
+    'kallstarttime',
+    'kallendtime',
+    /*
+     * A kall is a runtime-created, kall-scoped resource (a call we placed or scheduled), not a
+     * TENANT resource like a kpostID/company. Its id cannot be pre-allowlisted, and no productionSafe
+     * endpoint accepts one — every kallID-keyed read (`getKallStatus`, `getKallStatusUsingKallID`) is
+     * blocked on live (`needs-kall-id`), and every write that acts on a kallID is gated. The
+     * cross-tenant identifiers a kall payload also carries — the participant kpostIDs in
+     * `addingUserIds`/`removingUserIds`/`kallDetails[].receiver` — are still checked.
+     */
+    'kallid',
+    'kallids',
   ].map((key) => key.toLowerCase()),
 );
 
