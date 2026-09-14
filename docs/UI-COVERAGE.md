@@ -33,11 +33,17 @@ Every screen inherits the **full check catalogue** below. Covered: **6** screens
 | Navigation | `navigation.spec.ts` | nav-rail icon → route, for every destination |
 | Login validation | `login.spec.ts` | empty id / unknown id / valid id advances / wrong password → inline error |
 | Screen shell | `shell.spec.ts` | header + nav rail on every screen |
-| Katchup compose | `katchup-compose.spec.ts` | open a chat → open composer → enter Subject (BR-K01) + message (no send, safe) |
+| Katchup compose | `katchup-compose.spec.ts` | open a chat → open composer → enter Subject (BR-K01) + message; gated send + recall (green) |
+| Katchup message actions | `katchup-actions.spec.ts` | sender bell menu → Delete (confirm) and Edit (resend + Edited marker, BR-K03), self-cleaning (gated) |
+| Settings theme | `settings-theme.spec.ts` | Personalize → change KPost layout theme → Apply → verify active → restore original (gated, self-restoring) |
 
 ## Deep write flows (planned — gated, need live tuning)
 
-- Katchup composer SEND: send the message (gated, self-cleaning) → verify it appears → recall
-- KMail composer: open → recipient/subject validation → send (gated) → drafts
-- Settings theme/font: change through the UI → verify applied → restore
+- Katchup group / confidential-copy / attachments (needs 3 QA accounts + recording)
+- KMail composer: open → recipient/subject → send (gated) → verify in Sent → delete; reply, drafts
+- Settings font + notifications: change through the UI → verify applied → restore (theme is built)
+- Profile: Edit Profile → change About → Update → verify → restore
+- Contacts: search → add → block → unblock → remove (inside the Katchup rail)
+- Kall: schedule → verify in log → reschedule (status flips) → delete (direct-call ring stays UI-only)
+- KDiary: create event → verify → delete (reached from inside Katchup)
 
