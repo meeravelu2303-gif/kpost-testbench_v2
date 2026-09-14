@@ -37,6 +37,14 @@ export interface SuiteOwnership {
     version: string;
     /** Used when a tag/screen maps to no component; must itself exist in the product. */
     fallbackComponent: string;
+    /**
+     * Where a PLATFORM-WIDE (systemic) defect is filed — a shared gateway/auth-filter fault that is
+     * not specific to any one module (missing security headers, the auth filter answering 400/403
+     * instead of 401). These are all security/auth concerns, so on KPost API they go to the real
+     * `Authentication V2` component rather than the generic catch-all. Must exist in the product;
+     * defaults to `fallbackComponent` when unset.
+     */
+    systemicComponent?: string;
     /** Swagger tag (or UI screen) → Bugzilla component, when the names differ. */
     componentByTag: Record<string, string>;
   };
@@ -164,6 +172,9 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       product: 'KPost API',
       version: 'unspecified',
       fallbackComponent: 'kpost-webservice-application',
+      // Platform-wide auth/security defects (missing headers, wrong auth status codes) → the real
+      // security component, never the generic catch-all.
+      systemicComponent: 'Authentication V2',
       componentByTag: KPOST_COMPONENT_BY_TAG,
     },
     baseUrl: env.KPOST_API_BASE_URL ?? env.API_BASE_URL,

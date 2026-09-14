@@ -69,7 +69,7 @@ export interface BugzillaConfig {
   dryRun: boolean;
   maxFile: number;
   fileUiFailures: boolean;
-  /** Prefix of the dedupe tag written into every summary: `[KPV2-XXXXXX]`. */
+  /** Prefix of the dedupe tag written into every summary: `[KP-XXXXXX]`. */
   tagPrefix: string;
   timeoutMs: number;
 }
@@ -86,7 +86,7 @@ export function readBugzillaConfig(): BugzillaConfig {
     dryRun: env.BUGZILLA_DRY_RUN,
     maxFile: env.BUGZILLA_MAX_FILE,
     fileUiFailures: env.BUGZILLA_FILE_UI_FAILURES,
-    tagPrefix: 'KPV2',
+    tagPrefix: 'KP',
     timeoutMs: 20_000,
   };
 }

@@ -2,7 +2,13 @@ import { apiRegistry } from '@api/definitions/index';
 import { ApiRegistry } from '@api/registry/api-registry';
 import { readBugzillaConfig } from '@config/bugzilla.config';
 import { env } from '@config/env';
-import { SUITES, componentFor, suiteFor, type SuiteId } from '@config/ownership.config';
+import {
+  KNOWN_COMPONENTS,
+  SUITES,
+  componentFor,
+  suiteFor,
+  type SuiteId,
+} from '@config/ownership.config';
 import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 import { candidateFromUiFailure, candidatesFromReport } from '../../src/bug-tracker/bug-candidate';
@@ -120,6 +126,75 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
       component: 'WriteMail',
       assignee: 'ayyappan@kpostindia.com',
     });
+  });
+
+  test('a platform-wide auth/security defect files on the real security component, not the catch-all', () => {
+    const config = readBugzillaConfig();
+    const report = reportWith('kpost-api', ['kpost-api', 'dashboard', 'dashboard-read']);
+    // Make the finding systemic — the shared auth filter answering 403 instead of 401.
+    report.results[0] = {
+      ...report.results[0]!,
+      validatorName: 'authentication.missing-token',
+      category: 'AUTHENTICATION',
+      message: '1/1 missing-token cases failed: no Authorization header (expected [401], got 403)',
+    };
+    const candidate = candidatesFromReport(report, { baseURL: 'http://api' }, config)[0]!;
+
+    expect(candidate.component, 'a platform-wide fault → the real security component').toBe(
+      'Authentication V2',
+    );
+    expect(candidate.component, 'never the generic catch-all').not.toBe(
+      'kpost-webservice-application',
+    );
+    expect(
+      KNOWN_COMPONENTS['kpost-api']?.has(candidate.component),
+      'and it exists in the product',
+    ).toBe(true);
+  });
+
+  test('every configured systemic component actually exists in its product', () => {
+    for (const suite of Object.values(SUITES)) {
+      const systemic = suite.bugzilla.systemicComponent;
+      if (!systemic) continue;
+      expect(
+        KNOWN_COMPONENTS[suite.id]?.has(systemic),
+        `${suite.id} systemicComponent "${systemic}" must be a real component`,
+      ).toBe(true);
+    }
+  });
+
+  test('a multi-case validator renders a clean case → code Expected/Actual, not a masked blob', () => {
+    const config = readBugzillaConfig();
+    const report = reportWith('kpost-api', ['kpost-api', 'dashboard']);
+    report.results[0] = {
+      ...report.results[0]!,
+      validatorName: 'authentication.malformed-token',
+      category: 'AUTHENTICATION',
+      message: '3/3 malformed-token cases failed',
+      // The confusing raw top-level shape — masking turns half of it into "***".
+      expected: { 'empty token': '***', 'not a JWT': [401] },
+      actual: { 'empty token': '***', 'not a JWT': 400 },
+      details: [
+        { name: 'empty token', status: 'FAILED', expected: [401], actual: 403 },
+        { name: 'Basic credentials', status: 'FAILED', expected: [401], actual: 403 },
+        { name: 'not a JWT', status: 'FAILED', expected: [401], actual: 400 },
+      ],
+    };
+    const candidate = candidatesFromReport(report, { baseURL: 'http://api' }, config)[0]!;
+
+    // Expected box: one clean line per case, the real code, and the FULL static label — a validator
+    // case name like "Basic credentials" is not user data, so it must not be masked to "Basic ***".
+    expect(candidate.expected).toContain('empty token');
+    expect(candidate.expected).toContain('Basic credentials');
+    expect(candidate.expected).toContain('401');
+    expect(candidate.expected).not.toContain('***');
+    // Actual box: the real observed codes, per case.
+    expect(candidate.actual).toContain('empty token');
+    expect(candidate.actual).toContain('403');
+    expect(candidate.actual).toContain('400');
+    expect(candidate.actual).not.toContain('***');
+    // One line per failed case, reading as an aligned diff.
+    expect(candidate.actual.split('\n')).toHaveLength(3);
   });
 
   test('an unmapped area falls back to the module catch-all, never to another module', () => {

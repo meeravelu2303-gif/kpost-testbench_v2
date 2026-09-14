@@ -45,7 +45,7 @@ function isSystemicFinding(validatorName: string, message: string): boolean {
  * per-test configuration. See src/config/ownership.config.ts.
  */
 export interface BugCandidate {
-  /** Dedupe tag, e.g. `KPV2-A1B2C3`. Written into the summary as `[KPV2-A1B2C3]`. */
+  /** Dedupe tag, e.g. `KP-A1B2C3`. Written into the summary as `[KP-A1B2C3]`. */
   id: string;
   source: 'api' | 'ui';
   /** Owning module. */
@@ -104,6 +104,40 @@ const text = (value: unknown): string => {
   if (value === undefined || value === null) return '(none)';
   return maskString(typeof value === 'string' ? value : JSON.stringify(value, null, 2));
 };
+
+/** A single expected/actual value as a short human string: `[401]` → `401`, `[400,401]` → `400 or 401`. */
+const oneValue = (value: unknown): string => {
+  if (value === undefined || value === null) return '(none)';
+  if (Array.isArray(value)) return value.map((v) => String(v)).join(' or ');
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return maskString(typeof value === 'string' ? value : JSON.stringify(value));
+};
+
+/**
+ * A READABLE Expected/Actual for a multi-case validator (the auth-token probes, error-shape, …).
+ *
+ * Those validators report a per-case `details` array, and their top-level expected/actual are a
+ * mixed object where masking turns half the entries into a meaningless `"empty token": "***"`. So
+ * when there are failing sub-cases, build one aligned line PER FAILED CASE — `case → code` — so the
+ * ticket's green (Expected) and red (Actual) boxes read as a clean, line-by-line diff. Falls back to
+ * the raw expected/actual when a validator has no sub-cases (a single-shot check like status-code).
+ */
+function renderExpectedActual(result: ValidationResult): { expected: string; actual: string } {
+  const failed = (result.details ?? []).filter((d) => d.status === 'FAILED');
+  if (failed.length > 0) {
+    const width = Math.min(Math.max(...failed.map((d) => d.name.length)), 40);
+    // The case NAME is a static validator label ("Basic credentials", "missing Bearer scheme"), not
+    // user data — show it in full. Only the VALUE is mask-checked (via oneValue), and status codes
+    // are numbers, so nothing is masked here.
+    const row = (name: string, value: unknown): string =>
+      `${name.slice(0, 40).padEnd(width)}  →  ${oneValue(value)}`;
+    return {
+      expected: failed.map((d) => row(d.name, d.expected)).join('\n'),
+      actual: failed.map((d) => row(d.name, d.actual)).join('\n'),
+    };
+  }
+  return { expected: text(result.expected), actual: text(result.actual) };
+}
 
 /** Words from a spec path and test title, used to find the UI screen's component. */
 function screenTokens(file: string, title: string): string[] {
@@ -170,18 +204,21 @@ function fromValidationResult(
     category: categoryFor(result.category),
     classification: result.validatorName,
     product: suite.bugzilla.product,
-    // A cross-cutting gateway/auth fault has no single owning component — the catch-all is its home.
-    component: systemic ? suite.bugzilla.fallbackComponent : componentFor(suite, report.tags),
+    // A cross-cutting gateway/auth fault → the product's real platform-security component (KPost:
+    // Authentication V2), never the generic catch-all. Falls back only if none is configured.
+    component: systemic
+      ? (suite.bugzilla.systemicComponent ?? suite.bugzilla.fallbackComponent)
+      : componentFor(suite, report.tags),
     version: suite.bugzilla.version,
     assignee: suite.owner.email,
     ownerName: suite.owner.name,
     endpoint: result.endpoint,
-    expected: text(result.expected),
-    actual: text(result.actual),
+    ...renderExpectedActual(result),
     /** What the endpoint actually replied, quoted the way the existing tickets here do. */
     responseBody: report.primary?.body?.trim() ? report.primary.body : undefined,
     responseStatus: report.primary?.status,
-    repro: `VALIDATION_PROFILE=${report.profile} npx playwright test --project=api --grep "${result.endpointId}"`,
+    // No internal test-bench command in the ticket — the developer has the app, not our repo. The
+    // curl below is the runnable, application-level way to reproduce.
     curl: buildCurl({
       method: report.method,
       /*
@@ -260,26 +297,29 @@ export function candidateFromUiFailure(
     title: input.title,
     message: input.message,
   });
+  // The component doubles as the screen name for the reproduction steps.
+  const component = componentFor(suite, screenTokens(input.file, input.title));
   return {
     id,
     source: 'ui',
     suiteId: suite.id,
     title: `${input.title}: ${maskString(input.message)}`,
+    // Application-level, for a developer who has the app but not our test repo: no internal file path
+    // or test command — the screen, the browser, and what went wrong.
     narrative:
-      `The browser test "${input.title}" (${input.file}) failed on ${input.browser} against the ` +
-      `${suite.label}. The evidence is the assertion failure below, plus the Playwright trace and ` +
-      `screenshot kept with the run's HTML report.`,
+      `A front-end (UI) defect on the ${suite.label} at ${input.baseURL}, seen in ${input.browser}. ` +
+      `To reproduce: sign in with a test account and open the ${component} screen, then exercise ` +
+      `"${input.title}". Expected vs Actual are below.`,
     severity: 'HIGH',
     category: 'Functional',
     classification: 'UI Test Failure',
     product: suite.bugzilla.product,
-    component: componentFor(suite, screenTokens(input.file, input.title)),
+    component,
     version: suite.bugzilla.version,
     assignee: suite.owner.email,
     ownerName: suite.owner.name,
-    expected: 'The test completes its assertions successfully.',
+    expected: 'The screen renders and behaves as expected.',
     actual: maskString(input.message),
-    repro: `npx playwright test ${input.file} --project=${input.browser} -g "${input.title}"`,
     browsers: [input.browser],
     occurrences: 1,
     environment: input.environment,
@@ -290,7 +330,7 @@ export function candidateFromUiFailure(
     evidence: maskSensitive({
       module: suite.label,
       repository: suite.repository,
-      file: input.file,
+      screen: component,
       title: input.title,
       browser: input.browser,
       error: input.fullMessage,

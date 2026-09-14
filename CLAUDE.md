@@ -216,6 +216,72 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-14 — Tickets are application-level: no internal test-bench repo path or command
+
+A filed UI bug exposed our own test repo — the spec file path `tests/e2e/…` and a
+`npx playwright test …` reproduce command. The developer (Ayyappan/Jagan/Jitendra) has the
+application, not our bench, so that is both useless to them and a leak of our internals. Fixed so a
+ticket describes the defect from the **product's** point of view:
+
+- **UI bugs** (`candidateFromUiFailure`): the narrative now names the **screen** (the component) and
+  the **app URL** with sign-in-and-reproduce steps — no spec file path, no test command; the evidence
+  drops the internal `file` too.
+- **API bugs** (`fromValidationResult`): the internal `npx playwright --grep` repro line is gone — the
+  **curl** was always the runnable, application-level reproduction, and it stays.
+
+A framework test asserts a UI ticket contains no `tests/e2e` path and no `npx playwright`, and instead
+carries the app URL and screen. `npm run check` clean; 66 framework tests pass.
+
+### 2026-09-14 — Tickets explain themselves: What this means / Why it matters / How to fix
+
+So a developer opening a bug in Bugzilla understands it without asking, every ticket now carries a
+plain-language guidance block, keyed by the validator that found it (`src/bug-tracker/guidance.ts`):
+**What this means** (the defect in plain terms), **Why it matters** (the real consequence), **How to
+fix** (a concrete fix). Covers security-headers, the auth-token family, error-format, status-code,
+response-structure, sensitive-data, content-type, response-time and the input-validation family; a
+validator with no specific advice simply omits the section (no filler). `buildDescription` emits it
+between the narrative and Expected/Actual as anchored lines; the Bugzilla-UI (`DescriptionReport.tsx`)
+renders it as a "For the developer" card with the fix highlighted. `npm run check` clean; 65 framework
+tests pass.
+
+### 2026-09-14 — Bug evidence made readable; tag prefix `KP`; ascending UI sort
+
+Reviewing a filed bug, the owner found the Expected/Actual unreadable — a multi-case validator (the
+7 auth-token probes) dumped a masked JSON object where `"empty token": "***"` and `"Basic ***"` say
+nothing. Fixed at the source: `renderExpectedActual` in `bug-candidate.ts` builds, for any validator
+with a per-case `details` array, one aligned line **per failed case** — `case → code` — for the green
+Expected box and the red Actual box, so they read as a line-by-line diff. The static case labels
+(`Basic credentials`, `missing Bearer scheme`) are shown in full (they are validator labels, not user
+data, so they are not mask-checked); only values are, and status codes are numbers. Single-shot
+validators (status-code) keep their raw expected/actual. Applies to every bug, current and future.
+The Bugzilla-UI Expected/Actual panels were made **monospace** (`DescriptionReport.tsx`) so the
+aligned columns line up.
+
+Two smaller owner requests in the same pass: the dedupe **tag prefix is now `KP`** (`[KP-05D529]`,
+was `KPV2`) — the hash after the dash is unchanged, but existing `[KPV2-…]` tickets must be deleted
+before a re-run or they will be re-filed as `[KP-…]`; and the Bugzilla-UI bug list now defaults to
+**id ascending** (All Bugs / My Bugs / Advanced Search) instead of `importance`, so KPA-001, 002, 003…
+read in order. `npm run check` clean; 64 framework tests pass.
+
+### 2026-09-14 — Systemic bugs routed to a real component (not the catch-all); UI sort fixed
+
+The first single-file filing verification (dashboard reads) filed 6 KPost API bugs correctly, but the
+**4 platform-wide (systemic) ones landed on `kpost-webservice-application`**, the generic catch-all —
+the owner wants every bug on one of the 27 real components. Systemic findings are all
+security/auth-filter faults (missing security headers, the auth filter answering 400/403 instead of
+401), so they now file on the real **`Authentication V2`** component: a new `bugzilla.systemicComponent`
+per suite (KPost API → `Authentication V2`), used by `fromValidationResult` instead of the fallback.
+Framework tests pin that a systemic candidate routes there and that every configured
+`systemicComponent` exists in its product. (The 2 endpoint-specific dashboard bugs already routed to
+`Dashboard V2` correctly.) To move the four already-filed ones, a re-run won't (dedup comments), so
+they are corrected in place with a one-off `PUT component` — or deleted and re-filed.
+
+Also fixed the **Bugzilla-UI default sort**: it was `importance` (severity order), which interleaves
+bug ids and reads as "misaligned". Changed the default to **`id` descending** (newest bug first) in
+`BUGZILLA-UI/frontend/src/lib/useBugFilters.ts` — the backend already maps `id → bug_id`, so it is a
+real, stable order with the just-filed bugs at the top. `npm run check` clean; **63 framework tests
+pass**.
+
 ### 2026-09-14 — Input validation turned on for live READS; a runbook; `flow:*` commands
 
 The owner's instruction: test the full application flow on the six QA accounts, cover **every

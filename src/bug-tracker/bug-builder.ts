@@ -1,6 +1,7 @@
 import { BUGZILLA_LIMITS, BUGZILLA_PRIORITY, BUGZILLA_SEVERITY } from '@config/bugzilla.config';
 import { normalizeForFingerprint } from './bug-fingerprint';
 import type { BugCandidate } from './bug-candidate';
+import { developerGuidance } from './guidance';
 
 /**
  * Turns a candidate into the exact ticket shape this Bugzilla expects.
@@ -36,7 +37,7 @@ function clamp(value: string, label: string): string {
   return `${value.slice(0, BUGZILLA_LIMITS.snippet)}\n… [${label} truncated — ${value.length} characters total; the full text is in the attached evidence file]`;
 }
 
-/** `[KPV2-A1B2C3] title`, trimmed to Bugzilla's 255-character summary column, tag intact. */
+/** `[KP-A1B2C3] title`, trimmed to Bugzilla's 255-character summary column, tag intact. */
 export function buildSummary(candidate: BugCandidate): string {
   const tag = `[${candidate.id}]`;
   const title = candidate.title.replace(/\s+/g, ' ').trim();
@@ -78,6 +79,19 @@ export function buildDescription(candidate: BugCandidate): string {
     '',
     candidate.narrative,
   ];
+  // Self-explanatory ticket: what the defect is, why it matters, and how to fix it — so a developer
+  // opening it in Bugzilla understands it without asking. Anchored so the UI renders it as a section.
+  const guidance = developerGuidance(candidate.classification);
+  if (guidance) {
+    lines.push(
+      '',
+      `What this means: ${guidance.meaning}`,
+      '',
+      `Why it matters: ${guidance.why}`,
+      '',
+      `How to fix: ${guidance.fix}`,
+    );
+  }
   if (candidate.occurrences > 1) {
     lines.push('', `Observed ${candidate.occurrences} times in this run.`);
   }

@@ -236,7 +236,7 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
     '---',
     '',
     `Severity floor: **${process.env.BUGZILLA_MIN_SEVERITY ?? 'MEDIUM'}** · ` +
-      `dedupe: a re-run comments on the existing \`[KPV2-…]\` ticket instead of duplicating.`,
+      `dedupe: a re-run comments on the existing \`[KP-…]\` ticket instead of duplicating.`,
     '',
   );
 

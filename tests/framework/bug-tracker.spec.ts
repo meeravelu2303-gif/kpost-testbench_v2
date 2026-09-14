@@ -232,6 +232,20 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(description).toContain('tb-9');
   });
 
+  test('the ticket teaches the developer: what it means, why it matters, how to fix', () => {
+    const headers = buildDescription(candidate({ classification: 'security.security-headers' }));
+    expect(headers, 'explains the defect').toContain('What this means:');
+    expect(headers, 'and how to fix it').toContain('How to fix:');
+    expect(headers, 'with a concrete fix').toContain('Content-Security-Policy');
+
+    const auth = buildDescription(candidate({ classification: 'authentication.missing-token' }));
+    expect(auth, 'auth bugs explain the 401 contract').toContain('HTTP 401');
+
+    // A validator with no specific guidance simply omits the section — no filler.
+    const none = buildDescription(candidate({ classification: 'common.url' }));
+    expect(none).not.toContain('What this means:');
+  });
+
   test('a platform-wide fault on many endpoints is one consolidated ticket listing them', () => {
     // Same systemic id (endpoint excluded), two different endpoints — must merge into one.
     const headers = (endpoint: string): BugCandidate =>
@@ -378,6 +392,33 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(merged, 'the browser must not be part of the identity').toHaveLength(1);
     expect(merged[0]?.browsers).toEqual(['chromium', 'firefox', 'webkit']);
     expect(merged[0]?.occurrences).toBe(3);
+  });
+
+  test('a UI ticket is application-level: no internal repo path or test command', () => {
+    const ui = candidateFromUiFailure(
+      {
+        file: 'tests/e2e/kmail.spec.ts',
+        title: 'the KMail screen loads for a signed-in user',
+        message: 'expected the compose button to be visible',
+        fullMessage: 'expected the compose button to be visible',
+        browser: 'chromium',
+        environment: 'production',
+        baseURL: 'https://account.kpostindia.com',
+        build: 'local',
+        testRunId: 'run-1',
+        observedAt: '2026-09-14T10:00:00.000Z',
+      },
+      config,
+    );
+    const desc = buildDescription(ui);
+
+    // The developer has the app, not our test bench — so no internal file path or run command.
+    expect(desc, 'no internal test file path').not.toContain('tests/e2e');
+    expect(desc, 'no internal test command').not.toContain('npx playwright');
+    // Instead: the app URL and the screen (component), so it is reproducible in the product.
+    expect(desc).toContain('account.kpostindia.com');
+    expect(ui.component, 'routes to the KMail screen component').toBe('KMail');
+    expect(desc).toContain('KMail screen');
   });
 
   test('a new defect is filed once, with evidence attached', async () => {
