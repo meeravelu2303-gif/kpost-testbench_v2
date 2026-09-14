@@ -38,6 +38,11 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
     spec: 'katchup-actions.spec.ts',
     note: 'sender bell menu → Delete (confirm) and Edit (resend + Edited marker, BR-K03), self-cleaning (gated)',
   },
+  {
+    flow: 'Settings theme',
+    spec: 'settings-theme.spec.ts',
+    note: 'Personalize → change KPost layout theme → Apply → verify active → restore original (gated, self-restoring)',
+  },
 ];
 
 /**
@@ -47,7 +52,7 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
 const PLANNED_FLOWS = [
   'Katchup group / confidential-copy / attachments (needs 3 QA accounts + recording)',
   'KMail composer: open → recipient/subject → send (gated) → verify in Sent → delete; reply, drafts',
-  'Settings theme/font: change through the UI → verify applied → restore (safe, self-restoring)',
+  'Settings font + notifications: change through the UI → verify applied → restore (theme is built)',
   'Profile: Edit Profile → change About → Update → verify → restore',
   'Contacts: search → add → block → unblock → remove (inside the Katchup rail)',
   'Kall: schedule → verify in log → reschedule (status flips) → delete (direct-call ring stays UI-only)',

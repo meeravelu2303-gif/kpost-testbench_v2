@@ -78,18 +78,21 @@ UI flow: `/kmail` → compose → recipient (2nd QA mailbox) + subject + body �
 delete/recall. `WriteMail.js` is a large component — record it fresh; the API contract is the truth
 for field names. Also: reply, forward, draft save/delete, folders.
 
-## 4. Settings — theme/font · `Settings/Personalize/Personalize.js` (plan, SAFE self-restoring)
+## 4. Settings — theme · `settings-theme.spec.ts` (BUILT, gated, high-confidence)
 
-Gate: `SETTINGS_UI_LIFECYCLE=true`. The safest UI write (cosmetic, own-account) and already API-backed
-(`changeTheme` 2/2 green). Mined selectors:
+Gate: `SETTINGS_UI_LIFECYCLE=true`. The safest UI write (cosmetic, own-account, self-restoring) and
+already API-backed (`changeTheme` 2/2 green). The selectors are unusually stable for this app, so it
+needs little tuning: the swatches are real `<button class="k-color-swatch" aria-label="<theme>">`, the
+selected one carries `k-color-swatch--active` + a `✓` (`.k-color-swatch-check`), the commit button is
+labelled **"Apply Theme"**, and the section opens from the **"Personalize"** nav item.
 
-- layout-theme swatches: `KPOST_LAYOUT_THEME_OPTIONS.map(...)`, the selected one carries
-  `.k-color-swatch-check` (a `✓` span); click a swatch to select
-- chat variant buttons: "classic" / "bubble" (writes `localStorage.katchup_chat_variant_v1`)
-- apply button: label **"Apply Theme"** (→ "Applying...") — `getByRole('button', {name:/Apply Theme/i})`
+Built flow (self-restoring, never hard-codes the theme): open Personalize → read the `--active` swatch's
+`aria-label` (the original) → click a **different** swatch → Apply Theme → assert the chosen swatch is
+now `--active` → click the original by its `aria-label` → Apply Theme → assert the original is `--active`.
 
-Flow: read the currently-selected swatch (has `.k-color-swatch-check`) → click a **different** swatch →
-Apply Theme → assert applied (layout token / class on root) → **restore the original swatch** → Apply.
+Still to add here: **font** and the three **notification** toggles (change → verify → restore) — same
+gate, same self-restoring shape. Chat variant buttons ("Classic" is disabled; "Bubble" active) are a
+`localStorage` write only.
 
 ## 5. Profile — edit · `UserProfile/UserProfile.js`, `Settings/About/*` (plan, self-restoring)
 
