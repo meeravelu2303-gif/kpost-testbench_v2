@@ -1,5 +1,3 @@
-// Generates docs/UI-COVERAGE.md, so the "conditionals" flagged here are table formatting.
-/* eslint-disable playwright/no-conditional-in-test */
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT_DIR } from '@config/constants';
@@ -29,19 +27,31 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
     spec: 'login.spec.ts',
     note: 'empty id / unknown id / valid id advances / wrong password → inline error',
   },
-  {
-    flow: 'Settings section',
-    spec: 'settings.spec.ts',
-    note: 'expand a section, its items reveal',
-  },
   { flow: 'Screen shell', spec: 'shell.spec.ts', note: 'header + nav rail on every screen' },
+  {
+    flow: 'Katchup compose',
+    spec: 'katchup-compose.spec.ts',
+    note: 'open a chat → open composer → enter Subject (BR-K01) + message; gated send + recall (green)',
+  },
+  {
+    flow: 'Katchup message actions',
+    spec: 'katchup-actions.spec.ts',
+    note: 'sender bell menu → Delete (confirm) and Edit (resend + Edited marker, BR-K03), self-cleaning (gated)',
+  },
 ];
 
-/** The deep write flows still to build (need the gated-write approval + live tuning). */
+/**
+ * The deep write flows still to build (need the gated-write approval + live tuning). Selectors are
+ * mined and the flows are specified in `docs/ui-write-flows.md`; each has a green API lifecycle.
+ */
 const PLANNED_FLOWS = [
-  'Katchup composer: open → Subject/message validation → send (gated, self-cleaning) → verify → recall',
-  'KMail composer: open → recipient/subject validation → send (gated) → drafts',
-  'Settings theme/font: change through the UI → verify applied → restore',
+  'Katchup group / confidential-copy / attachments (needs 3 QA accounts + recording)',
+  'KMail composer: open → recipient/subject → send (gated) → verify in Sent → delete; reply, drafts',
+  'Settings theme/font: change through the UI → verify applied → restore (safe, self-restoring)',
+  'Profile: Edit Profile → change About → Update → verify → restore',
+  'Contacts: search → add → block → unblock → remove (inside the Katchup rail)',
+  'Kall: schedule → verify in log → reschedule (status flips) → delete (direct-call ring stays UI-only)',
+  'KDiary: create event → verify → delete (reached from inside Katchup)',
 ];
 
 test.describe('UI coverage ledger @framework', () => {

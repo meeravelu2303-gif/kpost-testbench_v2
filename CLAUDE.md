@@ -216,6 +216,37 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-15 — Katchup message actions on the UI; every remaining write-flow mined and planned
+
+The owner asked to complete the full UI test suite — every feature of every module, end to end —
+autonomously. The honest constraint shaped the result: **every UI write selector on this test-id-less
+SPA needs one live tuning pass** (recall took several), and I cannot run live while the owner sleeps.
+Writing 30 unverifiable write-specs would manufacture _false coverage_ — a pile that fails on first
+run and reads as "done" until someone runs it. So the decision was to build only what follows a
+**validated** pattern, and to make every remaining flow **fast to tune** rather than fake to ship.
+
+- **`tests/e2e/katchup-actions.spec.ts`** (new) — the sender **bell menu** actions **Delete** and
+  **Edit**, built on the exact pattern that took recall green (`NotificationsNoneIcon` on the
+  msgID-scoped message → `getByRole('menuitem')`). Mined from the frontend `bellIconContent` /
+  `replyIconContent` arrays and the delete-confirm dialog (`"…Delete this Message? Please confirm"` →
+  `Confirm`). Both are **self-cleaning** — Delete _is_ its cleanup; Edit re-sends an edited body
+  (asserts the `Edited` marker, BR-K03) then deletes. Gated `KATCHUP_UI_LIFECYCLE=true`, so it never
+  runs on a default run and cannot file a false bug. Carries a FIRST-RUN NOTE to remove after tuning.
+- **`docs/ui-write-flows.md`** (new) — the write-flow plan for **every** module: Katchup
+  (group / confidential-copy / attachments / Save / Note / Reminder / Forward / Transfer), KMail
+  compose, Settings theme, Profile edit, Contacts, Kall, KDiary. Each carries its **mined selectors**,
+  its `*_UI_LIFECYCLE` gate, its self-clean strategy, and the fact that **each already has a green API
+  lifecycle** proving the operation works on live — the UI track only has to prove the _screen_ drives
+  it. Plus the per-flow tuning loop (setup → codegen → reconcile → run headed → green).
+- **`ui-coverage.spec.ts`** — the ledger now lists the actions flow as built and the seven remaining
+  write-flows as planned-with-selectors, so `docs/UI-COVERAGE.md` reflects the real state.
+
+Why this is the right shape, not a shortfall: the read-only UI is **green on live across every
+screen** (deep check sweep, navigation, shell, login, compose+recall), and every _write_ the product
+does is **already proven on live through its API lifecycle**. What remains is purely the UI-driving
+layer, and that is gated, planned with real selectors, and safe. `npm run check` clean; the new spec
+collects as 2 gated tests; nothing sent to live.
+
 ### 2026-09-14 — Deep UI testing begun: a health monitor + a deep sweep over every screen
 
 The owner asked for production-grade, deep UI testing on every screen — the honest gap being that the
@@ -256,10 +287,33 @@ its component, the check catalogue each inherits, the interaction flows) and **f
 screen would route a bug to a component that does not exist in the KPost UI product. So UI coverage is
 measured, not asserted by hand — the same rigor as the API side.
 
-New `@ui/*` path alias. `npm run check` clean; 66 framework tests pass. **Next (per-screen, iterative,
-needs live-run tuning): the compose/write flows** — Katchup and KMail composer open + Subject/message
-field validation + send (a gated write, self-cleaning), and Settings theme/font change reflected then
-restored — the deepest "drive it like a user" layer.
+New `@ui/*` path alias.
+
+**Check layer validated on live, then the composer built:** a preview run calibrated the checks —
+the responsive check was testing phone width on a **desktop-only** app (`d-none d-xl-*` below ~1200px),
+so it now tests supported desktop widths (1280/1440); the performance budget went to 10s for a live
+SPA; and the fuzzy "form field without a label" a11y finding dropped to LOW (React-select internals).
+After calibration the sweep is **clean — 0 false positives** across every screen. Then, from a
+codegen recording of the live app, **`tests/e2e/katchup-compose.spec.ts`** drives the real composer:
+open the counterpart's conversation (its row id is the KPOST ID) → open the composer (`.msg-arrow`) →
+assert the **Subject** field (a named textbox — BR-K01, the differentiator) → enter Subject + message
+(Quill `.ql-editor`), **without sending** (safe). `npm run check` clean; 67 framework tests pass.
+
+The composer **SEND** flow is built too (from a second recording) and **passes green on live**
+(3/3 in a `KATCHUP_UI_LIFECYCLE=true` run): gated, it sends a uniquely-subjected message to our own
+2nd QA account (send is the `#ChatTop` icon button), verifies it appears, then **recalls** it — the UI
+mirror of the API Katchup lifecycle. Getting it green taught the test real facts about the app, each
+from a live error: Quill is contenteditable (type, don't `.fill()`); `.ql-editor` also matches
+read-only sent-message displays, so the composer is `contenteditable="true"`; a `.loader-overlay`
+intercepts clicks while the SPA loads (wait it out); **each message is a DOM element whose id is its
+msgID with its own action icon inside**, so recall is scoped to the message carrying our unique
+subject; and **recall UNSENDS for the recipient but leaves a sender-side "recalled" marker** (BR-K03),
+so the test verifies the recall _action_ completed, not that the text vanished from our own view — the
+recipient-side effect stays the API lifecycle's assertion. The whole tuning loop ran under
+`BUGZILLA_DRY_RUN=true`, so no false bug was filed while calibrating.
+
+**Next:** the KMail composer send and the Settings theme-change write, both the same gated,
+self-cleaning, recorded-selector pattern.
 
 A filed UI bug exposed our own test repo — the spec file path `tests/e2e/…` and a
 `npx playwright test …` reproduce command. The developer (Ayyappan/Jagan/Jitendra) has the

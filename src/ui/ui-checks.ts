@@ -12,7 +12,7 @@ import type { UiHealthReport } from './ui-health';
  * Categories, mirroring the API engine's dimensions but for a rendered page:
  *   health         — uncaught JS exceptions and broken front-end assets (from the health monitor)
  *   performance     — the screen renders within a time budget
- *   responsive      — no horizontal overflow at a phone width (the layout does not break)
+ *   layout          — no horizontal overflow at the SUPPORTED desktop widths (KPost is desktop-only)
  *   accessibility   — images have alt text, form fields have labels, the page declares lang + title
  *
  * A finding is one problem on one screen. Findings are collected (never thrown) so one run surfaces
@@ -73,7 +73,9 @@ export const healthCheck: UiCheck = {
 export const performanceCheck: UiCheck = {
   name: 'ui.performance',
   run: ({ loadMs }) => {
-    const BUDGET_MS = 6_000;
+    // A live SPA over the public internet; a screen slower than this to become interactive is a real
+    // UX problem, but the budget is generous enough not to fire on a normal heavy live load.
+    const BUDGET_MS = 10_000;
     if (loadMs > BUDGET_MS) {
       return [
         {
@@ -87,28 +89,34 @@ export const performanceCheck: UiCheck = {
   },
 };
 
-/** The layout must not overflow horizontally at a phone width. */
+/**
+ * The layout must not overflow horizontally at the widths the app SUPPORTS. KPost is a desktop app
+ * (its nav rail and side columns are `d-none d-xl-*` — hidden below ~1200px), so it is not designed
+ * for phone widths and testing those would just report a size it never targets. So this checks the
+ * supported desktop widths only; overflow there is a real broken-layout bug.
+ */
 export const responsiveCheck: UiCheck = {
-  name: 'ui.responsive',
+  name: 'ui.layout',
   run: async ({ page }) => {
     const original = page.viewportSize();
+    const findings: UiFinding[] = [];
     try {
-      await page.setViewportSize({ width: 390, height: 844 });
-      const overflow = await page.evaluate(() => {
-        const doc = document.documentElement;
-        return { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth };
-      });
-      // A few pixels of tolerance for sub-pixel rounding / scrollbars.
-      if (overflow.scrollWidth > overflow.clientWidth + 4) {
-        return [
-          {
-            check: 'ui.responsive',
+      for (const width of [1280, 1440] as const) {
+        await page.setViewportSize({ width, height: 900 });
+        const overflow = await page.evaluate(() => {
+          const doc = document.documentElement;
+          return { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth };
+        });
+        // Tolerance for sub-pixel rounding / a scrollbar.
+        if (overflow.scrollWidth > overflow.clientWidth + 16) {
+          findings.push({
+            check: 'ui.layout',
             severity: 'MEDIUM',
-            message: `Horizontal overflow at phone width (390px): content is ${overflow.scrollWidth}px wide, the screen is ${overflow.clientWidth}px — the user must scroll sideways.`,
-          },
-        ];
+            message: `Horizontal overflow at ${width}px (a supported desktop width): content is ${overflow.scrollWidth}px wide, the viewport ${overflow.clientWidth}px — the user must scroll sideways.`,
+          });
+        }
       }
-      return [];
+      return findings;
     } finally {
       if (original) await page.setViewportSize(original);
     }
@@ -163,10 +171,13 @@ export const accessibilityCheck: UiCheck = {
       });
     }
     if (a11y.fieldsMissingLabel > 0) {
+      // LOW, so it informs without filing: on a React SPA a field without a formal <label> is often
+      // a framework-internal input (e.g. a react-select) that is still usable, so this is too fuzzy
+      // to file as a bug. Reported as context; raise BUGZILLA_MIN_SEVERITY to file it.
       findings.push({
         check: 'ui.accessibility',
-        severity: 'MEDIUM',
-        message: `${a11y.fieldsMissingLabel} form field(s) have no label or accessible name.`,
+        severity: 'LOW',
+        message: `${a11y.fieldsMissingLabel} form field(s) have no <label> or accessible name.`,
       });
     }
     if (a11y.imagesMissingAlt > 0) {

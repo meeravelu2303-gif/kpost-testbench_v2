@@ -23,7 +23,7 @@ Every screen inherits the **full check catalogue** below. Covered: **6** screens
 
 - `ui.health`
 - `ui.performance`
-- `ui.responsive`
+- `ui.layout`
 - `ui.accessibility`
 
 ## Interaction flows (built)
@@ -32,12 +32,12 @@ Every screen inherits the **full check catalogue** below. Covered: **6** screens
 | ---- | ---- | -------------- |
 | Navigation | `navigation.spec.ts` | nav-rail icon → route, for every destination |
 | Login validation | `login.spec.ts` | empty id / unknown id / valid id advances / wrong password → inline error |
-| Settings section | `settings.spec.ts` | expand a section, its items reveal |
 | Screen shell | `shell.spec.ts` | header + nav rail on every screen |
+| Katchup compose | `katchup-compose.spec.ts` | open a chat → open composer → enter Subject (BR-K01) + message (no send, safe) |
 
 ## Deep write flows (planned — gated, need live tuning)
 
-- Katchup composer: open → Subject/message validation → send (gated, self-cleaning) → verify → recall
+- Katchup composer SEND: send the message (gated, self-cleaning) → verify it appears → recall
 - KMail composer: open → recipient/subject validation → send (gated) → drafts
 - Settings theme/font: change through the UI → verify applied → restore
 
