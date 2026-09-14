@@ -260,15 +260,44 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
 
   test('componentFor: the module tag wins, a foreign sub-tag cannot steal the ticket', () => {
     const kpost = suiteFor('kpost-api');
-    // A Kall endpoint whose read is tagged `contacts` still belongs to Kall.
-    expect(componentFor(kpost, ['kall', 'read', 'contacts'])).toBe(
+    // Realistic tags: the factory prepends the suite tag `kpost-api`, THEN the module tag.
+    expect(componentFor(kpost, ['kpost-api', 'katchup', 'katchup-read', 'badge'])).toBe(
+      'Katchup Messaging V2',
+    );
+    // A Kall endpoint whose read is tagged `contacts` still belongs to Kall, not Contacts.
+    expect(componentFor(kpost, ['kpost-api', 'kall', 'kall-read', 'contacts'])).toBe(
       'Kall (Voice/Video) V2 - current',
     );
     // A within-module hyphenated refinement still overrides the module default.
-    expect(componentFor(kpost, ['common', 'common-company'])).toBe('Company Administration');
-    expect(componentFor(kpost, ['katchup', 'read'])).toBe('Katchup Messaging V2');
+    expect(componentFor(kpost, ['kpost-api', 'common', 'common-company'])).toBe(
+      'Company Administration',
+    );
+    expect(componentFor(kpost, ['kpost-api', 'profile', 'profile-read', 'pii'])).toBe(
+      'User Profile V2',
+    );
     // An unmapped module falls back to the catch-all rather than misrouting.
-    expect(componentFor(kpost, ['brandnew', 'read'])).toBe('kpost-webservice-application');
+    expect(componentFor(kpost, ['kpost-api', 'brandnew', 'brandnew-read'])).toBe(
+      'kpost-webservice-application',
+    );
+  });
+
+  test('componentFor: KMail routes by area, and a sub-area tag beats its area default', () => {
+    const kmail = suiteFor('kmail-api');
+    const T = (extra: string[]): string[] => ['kmail-api', 'kmail', ...extra];
+    // A bare sub-area tag names the component, overriding the per-file area default.
+    expect(componentFor(kmail, T(['kmail-read', 'contacts']))).toBe('Contacts & Sync');
+    expect(componentFor(kmail, T(['kmail-read', 'content']))).toBe('Read Mail & Attachments');
+    expect(componentFor(kmail, T(['kmail-read', 'status']))).toBe('Mailbox, Folders & Follow-up');
+    expect(componentFor(kmail, T(['kmail-read', 'translate']))).toBe('Translation');
+    // With no sub-area tag, the file's area default applies.
+    expect(componentFor(kmail, T(['kmail-read']))).toBe('Read Mail & Attachments');
+    expect(componentFor(kmail, T(['kmail-send', 'critical']))).toBe('Sent Mail - Compose & Send');
+    expect(componentFor(kmail, T(['kmail-draft']))).toBe('Draft Mail');
+    expect(componentFor(kmail, T(['kmail-settings', 'settings']))).toBe(
+      'KMail Settings - Signature & Letterhead',
+    );
+    // An unknown area falls back to the KMail catch-all, never another product.
+    expect(componentFor(kmail, T(['kmail-unknownarea']))).toBe('kmail-application');
   });
 
   test('the in-bench bug report states the run, the filing, and the routing', () => {

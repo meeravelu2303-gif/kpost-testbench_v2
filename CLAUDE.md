@@ -216,6 +216,43 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-14 — Component routing made correct against the 27 live components; a regression caught
+
+The owner created **27 components** in the KPost API Bugzilla product (plus 9 KMail, 25 Admin, 12 UI)
+and asked to verify every bug routes to the right one. Read the live instance — the 27 match
+`KNOWN_COMPONENTS` exactly — and read the **BUGZILLA-UI** project (`D:\TEST-BENCH-AUTOMATIONS\BUGZILLA-UI`,
+a React SPA + Node BFF over Bugzilla's REST API; components are plain Bugzilla components, category
+rides on `[cat:Xxx]` in the status whiteboard, which the bench already writes). **Bugzilla is empty
+now** (the owner deleted all bugs), so this is about routing the _next_ run correctly, not migrating.
+
+Two real routing bugs found and fixed, plus a guard so they cannot recur:
+
+- **KMail filed everything to the `kmail-application` catch-all.** KMail routes by functional AREA
+  (Sent / Draft / Read / Mailbox / Contacts / Storage / Translation / Settings), but every endpoint is
+  tagged `['kmail-api', 'kmail', 'kmail-<area>', '<sub-area>']` and the old `KMAIL_COMPONENT_BY_TAG`
+  keyed on dead Swagger-style names (`'Sent Mail'`) no endpoint carries. Replaced it with a real
+  tag→component map (area defaults + bare sub-area overrides) and gave `componentFor` a **kmail-api
+  branch**: a bare sub-area tag (`contacts`, `status`, `content`, …) names the component and wins over
+  the `kmail-<area>` default. Result: 70 KMail endpoints → **7 real components, zero catch-all**.
+- **A regression in my own KPost fix:** `componentFor` was keying the module on `tags[0]`, but every
+  factory prepends the **suite** tag, so `tags[0]` is `'kpost-api'`, not the module — sending **174
+  KPost endpoints to the catch-all**. (My unit test used unrealistic tags without the prefix, so it
+  passed.) Fixed by skipping `SUITE_LEVEL_TAGS` (`kpost-api`/`admin-api`/`kmail-api`/`kmail`) before
+  taking the module tag; the hyphenated-refinement rule (`common-company` → Company Administration)
+  and the foreign-bare-tag guard (a Kall read tagged `contacts` stays on Kall) are unchanged. Result:
+  216 KPost endpoints → **14 real components, zero catch-all**. The unit tests now use realistic
+  prefixed tags.
+- **A guard + a map you can read:** `tests/framework/component-routing.spec.ts` resolves `componentFor`
+  for every registered endpoint, **fails if any routes to a component that does not exist** in its
+  product (`KNOWN_COMPONENTS`, exported for this), and writes **`docs/COMPONENT-ROUTING.md`** — a
+  component → endpoint-count map per product. So a typo or a renamed component is caught mechanically.
+
+Also **relaxed the first-live-run dry-run guard**: `live-safety.spec.ts` no longer forces
+`BUGZILLA_DRY_RUN=true` on production — the environment is profiled and the owner opted into
+auto-filing, so armed filing is intentional; what stays hard-disarmed is destructive mutation
+(`ALLOW_DESTRUCTIVE_TESTS=false`) and parallelism (serial run). `npm run check` clean; **64 framework
+tests pass**, including the live-Bugzilla component-default check.
+
 ### 2026-09-13 — KMail module (71 endpoints) — the big one; own host, own prefix, full flow on live
 
 The largest module — email — built in stages. Suite `kmail-api`, **host `kmail5.kpostindia.com` with

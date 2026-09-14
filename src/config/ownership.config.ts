@@ -96,16 +96,41 @@ const KPOST_COMPONENT_BY_TAG: Record<string, string> = {
 };
 
 /**
- * KMail's Swagger tags and its Bugzilla components were named separately, so they need an
- * explicit map. KPost API and Admin components were created FROM their Swagger tags, so their
- * names already match and only the exceptions are listed.
+ * KMail routes by functional **area**, not by module: every KMail endpoint is tagged
+ * `['kmail-api', 'kmail', 'kmail-<area>', '<sub-area>?', …]`, so the module tag is generic and the
+ * component comes from the area / sub-area tags. Two tiers:
+ *
+ * - **`kmail-<area>`** — the per-file default (read / send / draft / manage / settings), used when an
+ *   endpoint carries no finer tag.
+ * - **bare sub-area tags** — a specific endpoint's component (`contacts`, `status`, `content`, …);
+ *   these WIN over the area default (see `componentFor`'s kmail-api branch).
+ *
+ * `external` is deliberately unmapped: it means other-domain *mails* on one endpoint and other-domain
+ * *contacts* on another, so it falls back to the endpoint's area rather than being mis-filed.
+ * Targets are the exact live component names of the KMail API product (read 2026-09-14).
  */
 const KMAIL_COMPONENT_BY_TAG: Record<string, string> = {
-  'Sent Mail': 'Sent Mail - Compose & Send',
-  'Sent Mail (Legacy Path)': 'Sent Mail - Compose & Send',
-  'Mailbox & Contacts': 'Mailbox, Folders & Follow-up',
-  'KMail Settings': 'KMail Settings - Signature & Letterhead',
-  Contacts: 'Contacts & Sync',
+  // Area defaults (the per-file tag).
+  'kmail-read': 'Read Mail & Attachments',
+  'kmail-send': 'Sent Mail - Compose & Send',
+  'kmail-draft': 'Draft Mail',
+  'kmail-manage': 'Mailbox, Folders & Follow-up',
+  'kmail-settings': 'KMail Settings - Signature & Letterhead',
+  // Sub-area tags — a specific endpoint's component, overriding its area default.
+  content: 'Read Mail & Attachments',
+  attachment: 'Read Mail & Attachments',
+  'read-receipt': 'Read Mail & Attachments',
+  thread: 'Read Mail & Attachments',
+  subject: 'Read Mail & Attachments',
+  status: 'Mailbox, Folders & Follow-up',
+  important: 'Mailbox, Folders & Follow-up',
+  dashboard: 'Mailbox, Folders & Follow-up',
+  badge: 'Mailbox, Folders & Follow-up',
+  contacts: 'Contacts & Sync',
+  draft: 'Draft Mail',
+  settings: 'KMail Settings - Signature & Letterhead',
+  bulk: 'Sent Mail - Compose & Send',
+  translate: 'Translation',
 };
 
 /** UI screens → components of the KPost UI product. */
@@ -206,21 +231,51 @@ export function apiSuites(): SuiteOwnership[] {
  * The Bugzilla component for a defect, from the endpoint's tags (or a UI screen name).
  * Tags usually ARE the component name; the map covers the modules where they differ.
  */
+/**
+ * Generic suite-level tags every factory prepends (the suite id, plus KMail's `kmail`). They are
+ * NOT module tags, so component routing skips them when it looks for the module a defect belongs to.
+ */
+const SUITE_LEVEL_TAGS = new Set<string>(['kpost-api', 'admin-api', 'kmail-api', 'kmail']);
+
 export function componentFor(suite: SuiteOwnership, tags: readonly string[]): string {
   const lookup = (tag: string): string | undefined =>
     suite.bugzilla.componentByTag[tag] ?? suite.bugzilla.componentByTag[tag.toLowerCase()];
+  const firstMapped = (list: readonly string[]): string | undefined => {
+    for (const tag of list) {
+      const component = lookup(tag);
+      if (component) return component;
+    }
+    return undefined;
+  };
+  // A tag that is already a component name (KPost API, Admin and the ownership tests use this).
+  const known = KNOWN_COMPONENTS[suite.id];
+  const directKnown = (): string | undefined => tags.find((tag) => known?.has(tag));
+
+  if (suite.id === 'kmail-api') {
+    /*
+     * KMail routes by functional AREA, not by module: tags[0] is the generic `kmail-api`, so the
+     * component comes from the area / sub-area tags. A bare sub-area tag (`contacts`, `status`,
+     * `content`, `draft`, …) names the component and WINS over the per-file `kmail-<area>` default;
+     * with neither, the module catch-all. (`kmail` itself is bare-but-unmapped, so it is skipped.)
+     */
+    const subArea = firstMapped(tags.filter((tag) => !tag.startsWith('kmail-')));
+    const area = firstMapped(tags.filter((tag) => tag.startsWith('kmail-')));
+    return subArea ?? area ?? directKnown() ?? suite.bugzilla.fallbackComponent;
+  }
 
   if (suite.kind === 'api') {
     /*
-     * For an API endpoint the FIRST tag is always the module tag (every factory writes
-     * `['<module>', ...rest]`), and it is authoritative. A shorter sub-tag that happens to be
-     * ANOTHER module's name must not steal it — a Kall endpoint tagged `[kall, read, contacts]`
-     * belongs to Kall, not to Contacts. So the module tag sets the component, and only a
-     * *hyphenated* refinement (`common-company` refines `common`, `business-tier` refines the
-     * enterprise login) may override it. Bare foreign module names are never refinements.
+     * KPost / Admin: after the generic suite tag every factory writes the MODULE tag first
+     * (`['kpost-api', '<module>', '<module>-<area>', ...]`), and it is authoritative. A bare sub-tag
+     * that happens to be ANOTHER module's name must not steal it — a Kall endpoint tagged
+     * `[..., kall, kall-read, contacts]` belongs to Kall, not to Contacts. So the module tag sets the
+     * component, and only a *hyphenated* refinement (`common-company` refines `common`,
+     * `business-tier` refines the enterprise login) may override it.
      */
-    const moduleComponent = tags[0] ? lookup(tags[0]) : undefined;
-    const refinement = tags
+    const routing = tags.filter((tag) => !SUITE_LEVEL_TAGS.has(tag));
+    const moduleTag = routing[0];
+    const moduleComponent = moduleTag ? lookup(moduleTag) : undefined;
+    const refinement = routing
       .filter((tag) => tag.includes('-'))
       .map((tag) => ({ tag, component: lookup(tag) }))
       .filter((entry): entry is { tag: string; component: string } => Boolean(entry.component))
@@ -239,10 +294,7 @@ export function componentFor(suite: SuiteOwnership, tags: readonly string[]): st
     if (match) return match.component;
   }
 
-  // A tag that is already a component name (KPost API and Admin were built that way).
-  const known = KNOWN_COMPONENTS[suite.id];
-  const direct = tags.find((tag) => known?.has(tag));
-  return direct ?? suite.bugzilla.fallbackComponent;
+  return directKnown() ?? suite.bugzilla.fallbackComponent;
 }
 
 /**
@@ -250,7 +302,7 @@ export function componentFor(suite: SuiteOwnership, tags: readonly string[]): st
  * Only used to recognise a tag that is already a component name; the filer still validates
  * every component against Bugzilla before filing, so a stale entry here cannot lose a ticket.
  */
-const KNOWN_COMPONENTS: Partial<Record<SuiteId, Set<string>>> = {
+export const KNOWN_COMPONENTS: Partial<Record<SuiteId, Set<string>>> = {
   'kpost-api': new Set([
     'Authentication - Medium & Large Enterprise',
     'Authentication V2',

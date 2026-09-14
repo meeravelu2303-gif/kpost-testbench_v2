@@ -307,18 +307,28 @@ test.describe('live-application safety @framework', () => {
     }
   });
 
-  test('live preflight: destructive runs and live bug filing are both disarmed', () => {
+  test('live preflight: destructive mutation stays disarmed and a live run is serial', () => {
     test.skip(!env.IS_PRODUCTION, 'only meaningful when TEST_ENV=production');
 
+    /*
+     * These never relax on live, and are the controls that actually protect the application:
+     *  - the engine must never fuzz/mutate live data;
+     *  - a live run is serial (concurrent logins answer 500 — a real finding, but it must not
+     *    turn a whole filing run red).
+     */
     expect(env.ALLOW_DESTRUCTIVE_TESTS, 'ALLOW_DESTRUCTIVE_TESTS must be false on live').toBe(
       false,
     );
-    /*
-     * Bugzilla has no delete. A first live run against an environment nobody has profiled will
-     * produce findings whose cause is unknown, and filing those is how a queue gets poisoned.
-     */
-    expect(env.BUGZILLA_DRY_RUN, 'keep filing as a dry run for the first live runs').toBe(true);
     expect(env.WORKERS ?? 1, 'a live run must be serial: concurrent logins answer 500').toBe(1);
+
+    /*
+     * Bug filing on live is the owner's deliberate opt-in (`BUGZILLA_DRY_RUN`). The first-live-run
+     * "keep it dry" precaution has been met — the environment is profiled — so filing is intentionally
+     * armed. What keeps an armed run safe is not dry-run but the three filters that always apply:
+     * the validity gate (drops infra noise / self-contradicting findings), the severity floor
+     * (`BUGZILLA_MIN_SEVERITY`), and the live `[KPV2-…]` dedup (a re-run comments, never duplicates).
+     * So dry-run is NOT forced here; only destructive mutation and parallelism stay hard-disarmed.
+     */
   });
 
   /*

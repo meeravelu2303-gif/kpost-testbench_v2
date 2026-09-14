@@ -18,3 +18,4 @@ package-lock.json
 # and stay checked.
 docs/COVERAGE.md
 docs/LIVE-ENDPOINTS.md
+docs/COMPONENT-ROUTING.md
