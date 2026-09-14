@@ -199,7 +199,9 @@ export function policyExclusion(
    * toggles so that no endpoint configuration can re-enable it. See production-validators.ts.
    */
   if (env.IS_PRODUCTION && !endpoint.mockFixture) {
-    const excluded = productionExclusion(validator.name);
+    // A read endpoint (destructive === false) additionally clears the input-validation fuzzers:
+    // a read persists nothing, and the identifier guard still confines every mutation to our data.
+    const excluded = productionExclusion(validator.name, { destructive: endpoint.destructive });
     if (excluded) return excluded;
   }
   if (endpoint.skipValidators.includes(validator.name)) {

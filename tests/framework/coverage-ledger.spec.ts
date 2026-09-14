@@ -131,6 +131,21 @@ test.describe('coverage ledger @framework', () => {
       ...contractPaths('kmail-api').map((p) => ({ suite: 'kmail-api', path: p })),
     ];
 
+    /*
+     * The workbook documents some endpoints under two path spellings — a legacy `/kmail5/…` or a
+     * bare `/kmailSetting/…` alongside the `/v2/…` form we register under. They are the SAME
+     * endpoint, so a literal string compare reports the second spelling as "uncovered" when it is
+     * fully tested. Canonicalise both sides — drop a leading `/kmail5` and `/v2` and a trailing
+     * slash — so a covered endpoint matches whichever spelling the ledger walks.
+     */
+    const canon = (p: string): string =>
+      p
+        .replace(/^\/kmail5(?=\/)/, '')
+        .replace(/^\/v2(?=\/)/, '')
+        .replace(/\/+$/, '');
+    const registeredCanon = new Set([...registered].map(canon));
+    const runsLiveCanon = new Set([...runsLive].map(canon));
+
     // Bucket every documented path by module.
     const modules = new Map<
       string,
@@ -142,9 +157,9 @@ test.describe('coverage ledger @framework', () => {
       if (!MODULE_SCOPE[mod]) unclassified.add(mod);
       const bucket = modules.get(mod) ?? { total: 0, registered: 0, live: 0, uncovered: [] };
       bucket.total += 1;
-      if (registered.has(p)) {
+      if (registered.has(p) || registeredCanon.has(canon(p))) {
         bucket.registered += 1;
-        if (runsLive.has(p)) bucket.live += 1;
+        if (runsLive.has(p) || runsLiveCanon.has(canon(p))) bucket.live += 1;
       } else {
         bucket.uncovered.push(p);
       }

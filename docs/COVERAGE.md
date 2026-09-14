@@ -9,13 +9,13 @@ cannot drift from what is actually tested.
 | | Count |
 | - | ----: |
 | Documented (workbook, usable) | 334 |
-| **Registered & tested** | **291** |
-| — of those, run on live | 103 |
+| **Registered & tested** | **295** |
+| — of those, run on live | 104 |
 | In "built" modules | 298 |
 
 | Module | Documented | Tested | Live | Status | Note |
 | ------ | ---------: | -----: | ---: | ------ | ---- |
-| `kmail` | 80 | 75 | 32 | built | KMail — reads live, compose/draft/settings write lifecycle (host kmail5, /kmail5/v2) |
+| `kmail` | 80 | 79 | 33 | built | KMail — reads live, compose/draft/settings write lifecycle (host kmail5, /kmail5/v2) |
 | `profile` | 45 | 45 | 12 | built | profile — full API + write lifecycle + screens |
 | `katchup` | 36 | 36 | 10 | built | messaging — full API + write lifecycle + screen |
 | `common` | 32 | 32 | 14 | built | reference data, identity, company, OTP (OTP writes gated) |
@@ -40,13 +40,9 @@ cannot drift from what is actually tested.
 
 ### Uncovered documented paths (the backlog, module by module)
 
-**`kmail`** (5) — built
+**`kmail`** (1) — built
 
-- `/kmail5/common/getKmailDashboardMsg/`
-- `/kmail5/readMail/getKmailDetailsUsingKmailID/`
 - `/kmail5/v2/kmailData/getKloudUsedData`
-- `/v2/kmailSetting/deleteCustomizedInstantReply`
-- `/v2/kmailSetting/saveOrUpdateCustomizedInstantReply`
 
 **`signuplogin`** (4) — built
 

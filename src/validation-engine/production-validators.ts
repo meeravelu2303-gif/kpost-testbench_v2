@@ -119,13 +119,54 @@ export const PRODUCTION_BLOCKED_VALIDATORS: Readonly<Record<string, string>> = {
 const ALLOWED = new Set(PRODUCTION_SAFE_VALIDATORS);
 
 /**
+ * Input-validation fuzzers that are SAFE on a **non-destructive (read) endpoint** on live, and only
+ * there. The reasoning — and why this is confined to reads:
+ *
+ *  - A read cannot **persist** a mutated value, so fuzzing its input changes no data: nothing is
+ *    created, updated or deleted. (A write could persist junk, so these stay blocked on writes.)
+ *  - The `qa-identifier-guard` runs on every one of these mutated requests and **refuses any that
+ *    names a record outside our QA accounts**, so a fuzzed id field can never read another user's
+ *    data — the request is dropped before it is sent.
+ *
+ * Deliberately NOT here, even for reads: `security.injection` / `security.xss` (a successful
+ * injection could turn a "read" into a DELETE/DROP that touches real data), the `authorization.*`
+ * cross-tenant probes (they target other users by design), and `security.rate-limit` /
+ * `performance.timeout` / `performance.payload-size` (they abuse the shared live service and degrade
+ * it for real users). Those need a dev/staging host.
+ */
+const READ_SAFE_FUZZERS = new Set<string>([
+  'request.null-value',
+  'request.data-type',
+  'request.boundary-value',
+  'request.enum',
+  'request.empty-value',
+  'request.empty-body',
+  'request.format',
+  'request.required-fields',
+  'request.unknown-fields',
+  'request.invalid-payload',
+  'request.malformed-json',
+  'request.method-not-allowed',
+  'request.unsupported-media-type',
+]);
+
+/**
  * Why this validator cannot run against the live application, or undefined when it may.
+ *
+ * `endpoint.destructive === false` (a read) additionally clears the input-validation fuzzers — see
+ * READ_SAFE_FUZZERS. Called without an endpoint (or for a write), those stay blocked.
  *
  * An unclassified validator is denied with a message saying so, rather than allowed — a validator
  * nobody has reviewed is exactly the one not to run on production.
  */
-export function productionExclusion(validatorName: string): string | undefined {
+export function productionExclusion(
+  validatorName: string,
+  endpoint?: { destructive?: boolean },
+): string | undefined {
   if (ALLOWED.has(validatorName)) return undefined;
+  // A read endpoint clears the input-validation fuzzers: no data can change, and the identifier
+  // guard still refuses any mutated payload that names a record we do not own.
+  if (endpoint?.destructive === false && READ_SAFE_FUZZERS.has(validatorName)) return undefined;
 
   const known = PRODUCTION_BLOCKED_VALIDATORS[validatorName];
   if (known) return `not run against the live application: ${known}`;

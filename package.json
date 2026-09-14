@@ -26,6 +26,8 @@
     "contract:otp": "node scripts/otp-dependency-report.cjs",
     "bugs:preview": "cross-env BUGZILLA_DRY_RUN=true MOCK_API=false playwright test --project=api --project=chromium",
     "bugs:file": "cross-env BUGZILLA_DRY_RUN=false MOCK_API=false playwright test --project=api --project=chromium",
+    "flow:preview": "cross-env BUGZILLA_DRY_RUN=true MOCK_API=false KATCHUP_LIFECYCLE=true KALL_LIFECYCLE=true KMAIL_LIFECYCLE=true PROFILE_LIFECYCLE=true CONTACTS_LIFECYCLE=true GROUP_LIFECYCLE=true SETTINGS_LIFECYCLE=true KDIARY_LIFECYCLE=true KOS_LIFECYCLE=true AWS_LIFECYCLE=true playwright test --project=api --project=chromium --workers=1",
+    "flow:file": "cross-env BUGZILLA_DRY_RUN=false MOCK_API=false KATCHUP_LIFECYCLE=true KALL_LIFECYCLE=true KMAIL_LIFECYCLE=true PROFILE_LIFECYCLE=true CONTACTS_LIFECYCLE=true GROUP_LIFECYCLE=true SETTINGS_LIFECYCLE=true KDIARY_LIFECYCLE=true KOS_LIFECYCLE=true AWS_LIFECYCLE=true playwright test --project=api --project=chromium --workers=1",
     "test:smoke": "playwright test --grep @smoke",
     "test:regression": "playwright test --grep @regression",
     "test:headed": "playwright test --headed",

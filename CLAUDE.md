@@ -216,6 +216,50 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-14 — Input validation turned on for live READS; a runbook; `flow:*` commands
+
+The owner's instruction: test the full application flow on the six QA accounts, cover **every
+process**, and the one hard rule — **never touch another real user's data**. Three things came from it.
+
+- **The owner's rule is already the QA-identifier guard.** It refuses any request naming a record
+  outside our QA accounts, before it is sent, and it runs on every probe mutation (it sits in
+  `EndpointExecutor.send`). So "never touch another user" is enforced in code, not by choice — which
+  is what makes it safe to raise coverage.
+- **Input validation now runs on live READ endpoints.** The mutating input-validation validators
+  were blocked wholesale on live; that was too blunt. A **read persists nothing**, and the guard
+  refuses any mutated value that names a foreign record — so fuzzing a read's input is safe and finds
+  the wrong-handling class (null accepted as a number, wrong type accepted, malformed rejected or
+  not) on live. `productionExclusion(name, { destructive })` now clears `READ_SAFE_FUZZERS`
+  (null/data-type/boundary/enum/empty/format/required/unknown-fields/invalid-payload/malformed-json/
+  method-not-allowed/unsupported-media-type) **only when the endpoint is non-destructive**. They stay
+  blocked on writes (persist junk), and `security.injection`/`xss` stay blocked even on reads (a
+  successful injection could turn a read into a DELETE), as do the cross-tenant and service-abuse
+  probes (they target other users or degrade the shared live service). Live-safety self-tests pin
+  both directions.
+- **What still needs a dev host** (unchanged, and honest): fuzzing **writes**, the **attack** class,
+  and the **OTP** flows. The write **processes** are fully covered by the lifecycle flows on the six
+  accounts; only malformed-write _inputs_ want a throwaway host.
+
+Also added the operator guide **`docs/RUNBOOK.md`** (verify the bench → dry-preview → full run →
+read results → boundaries → safety rules) and two commands: **`npm run flow:preview`** /
+**`npm run flow:file`** — the complete end-to-end run (all reads incl. live read-fuzzing, all ten
+write lifecycles, UI screens), serial, self-cleaning, filed to the right developer. `npm run check`
+clean; **65 framework tests pass**.
+
+**Coverage made accurate.** The ledger was reporting KMail "uncovered" paths that are actually the
+same endpoints documented under a second spelling (`/kmailSetting/…` vs `/v2/…`, legacy `/kmail5/…`).
+The compare is now prefix-insensitive (drop a leading `/kmail5` / `/v2` and trailing slash on both
+sides), so registered-&-tested reads **295** (was 291 with the double-counts) and the only genuine
+personal-scope gaps left are: `getKloudUsedData` (Storage Quota — **not in the usable contract**,
+needs a workbook row) and the four signup endpoints (OTP, out of scope). Every other built-module
+endpoint is covered on the six personal accounts.
+
+**Open with the owner:** more QA accounts are offered. Six PERSONAL accounts already cover the
+personal-scope flows (group/Cc/confidential need ≥3 — satisfied). The one thing that unlocks new
+coverage is a **BUSINESS company with three members (one expendable)** — that is what the Admin
+module needs (`terminateUser`/`resetPassword`/`holdOrRelease` act on other members), and it cannot be
+exercised with PERSONAL accounts.
+
 ### 2026-09-14 — Component routing made correct against the 27 live components; a regression caught
 
 The owner created **27 components** in the KPost API Bugzilla product (plus 9 KMail, 25 Admin, 12 UI)

@@ -159,15 +159,50 @@ test.describe('live-application safety @framework', () => {
     expect(mutating, 'these send requests no real client would make').toEqual([]);
   });
 
-  test('the injection and fuzzing validators are excluded by name', () => {
+  test('the injection and cross-tenant validators are excluded on live, read or write', () => {
+    // These can never run on live: injection could turn a read into a destructive write, and the
+    // cross-tenant/abuse probes target other users or degrade the shared service.
     for (const name of [
       'security.injection',
       'security.xss',
-      'request.boundary-value',
-      'request.data-type',
+      'security.information-disclosure',
+      'security.rate-limit',
       'authorization.cross-resource-access',
+      'performance.timeout',
     ]) {
-      expect(productionExclusion(name), `${name} must be excluded on live`).toBeTruthy();
+      expect(
+        productionExclusion(name, { destructive: false }),
+        `${name} blocked on reads`,
+      ).toBeTruthy();
+      expect(
+        productionExclusion(name, { destructive: true }),
+        `${name} blocked on writes`,
+      ).toBeTruthy();
+    }
+  });
+
+  test('input-validation fuzzers run on live READS but stay blocked on writes', () => {
+    // A read persists nothing and the identifier guard confines every mutation to our own data, so
+    // fuzzing a read's input is safe and finds the wrong-handling class (null/type/boundary/…).
+    for (const name of [
+      'request.null-value',
+      'request.data-type',
+      'request.boundary-value',
+      'request.enum',
+      'request.required-fields',
+      'request.malformed-json',
+      'request.unsupported-media-type',
+    ]) {
+      expect(
+        productionExclusion(name, { destructive: false }),
+        `${name} must run on a live read`,
+      ).toBeUndefined();
+      expect(
+        productionExclusion(name, { destructive: true }),
+        `${name} must stay blocked on a live write`,
+      ).toBeTruthy();
+      // Called without an endpoint (the older signature), they stay blocked — safe default.
+      expect(productionExclusion(name), `${name} blocked with no endpoint context`).toBeTruthy();
     }
   });
 
