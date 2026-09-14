@@ -4,7 +4,37 @@ import { componentFor, suiteFor, type SuiteId } from '@config/ownership.config';
 import type { Severity, ValidationReport, ValidationResult } from '@engine/validation-result';
 import { maskSensitive, maskString } from '@utils/masking';
 import { buildCurl } from './curl';
-import { apiFingerprint, uiFingerprint } from './bug-fingerprint';
+import { apiFingerprint, systemicFingerprint, uiFingerprint } from './bug-fingerprint';
+
+/**
+ * Validators whose failure is ONE platform-wide root cause, not an endpoint's own bug: a defect in
+ * the shared API gateway (security headers missing) or the shared auth filter (a bad token answered
+ * 400/403 instead of 401, or with a body that is not the error envelope). These are filed as a
+ * SINGLE consolidated ticket across every endpoint that shows them — see `systemicFingerprint`.
+ *
+ * Everything else stays per-endpoint on purpose: the same validator failing on two endpoints is
+ * usually two different fixes (a 500 here, a 404 there), so those remain distinct tickets.
+ */
+const SYSTEMIC_VALIDATORS = new Set<string>([
+  'security.security-headers',
+  'authentication.missing-token',
+  'authentication.invalid-token',
+  'authentication.malformed-token',
+  'authentication.expired-token',
+  'security.jwt',
+]);
+
+function isSystemicFinding(validatorName: string, message: string): boolean {
+  if (SYSTEMIC_VALIDATORS.has(validatorName)) return true;
+  /*
+   * `response.error-format` is mixed: when it reports the negative-probe (auth-rejection) envelopes
+   * it is describing the shared auth filter — one platform-wide fault. When it reports a malformed
+   * PRIMARY response it is that endpoint's own bug. The engine already separates the two into
+   * distinct results, and only the endpoint-specific one names "primary (" in its message.
+   */
+  if (validatorName === 'response.error-format') return !message.includes('primary (');
+  return false;
+}
 
 /**
  * A defect ready to be filed — derived from evidence the run already produced, never invented.
@@ -53,6 +83,10 @@ export interface BugCandidate {
   observedAt: string;
   /** Full, unabridged evidence for the ticket attachment. */
   evidence: Record<string, unknown>;
+  /** A platform-wide fault (gateway/auth filter) — filed once, listing every endpoint it hits. */
+  systemic?: boolean;
+  /** For a systemic defect: every endpoint the same fault was observed on, listed in the ticket. */
+  affectedEndpoints?: string[];
 }
 
 /** The path out of an endpoint label like "POST /v2/common/validateOTP/". */
@@ -101,28 +135,43 @@ function fromValidationResult(
   config: BugzillaConfig,
 ): BugCandidate {
   const suite = suiteFor(report.suite);
-  const id = apiFingerprint({
-    prefix: config.tagPrefix,
-    endpointId: result.endpointId,
-    validatorName: result.validatorName,
-    message: result.message,
-  });
+  const systemic = isSystemicFinding(result.validatorName, result.message);
+  const id = systemic
+    ? systemicFingerprint({
+        prefix: config.tagPrefix,
+        validatorName: result.validatorName,
+        message: result.message,
+      })
+    : apiFingerprint({
+        prefix: config.tagPrefix,
+        endpointId: result.endpointId,
+        validatorName: result.validatorName,
+        message: result.message,
+      });
   return {
     id,
     source: 'api',
     suiteId: suite.id,
-    title: `${result.endpoint}: ${maskString(result.message)}`,
-    narrative:
-      `The centralized validation engine ran "${result.validatorName}" against ${result.endpoint} ` +
-      `in the ${suite.label} under the ${report.profile} profile, and the endpoint did not satisfy it. ` +
-      `Category ${result.category}, severity ${result.severity}. ` +
-      `Every request of this run carries a correlation ID, so the exchange can be traced in the ` +
-      `application logs (see below).`,
+    title: systemic
+      ? `Platform-wide — ${maskString(result.message)}`
+      : `${result.endpoint}: ${maskString(result.message)}`,
+    narrative: systemic
+      ? `The centralized validation engine ran "${result.validatorName}" and found the same failure ` +
+        `on ${result.endpoint} that it finds across the ${suite.label}: this is ONE shared root cause ` +
+        `(the API gateway or the auth filter), not a defect specific to this endpoint. It affects ` +
+        `every endpoint listed below, and one fix resolves all of them — filed as a single ticket so ` +
+        `the queue is not flooded with near-duplicates. Category ${result.category}, severity ${result.severity}.`
+      : `The centralized validation engine ran "${result.validatorName}" against ${result.endpoint} ` +
+        `in the ${suite.label} under the ${report.profile} profile, and the endpoint did not satisfy it. ` +
+        `Category ${result.category}, severity ${result.severity}. ` +
+        `Every request of this run carries a correlation ID, so the exchange can be traced in the ` +
+        `application logs (see below).`,
     severity: result.severity,
     category: categoryFor(result.category),
     classification: result.validatorName,
     product: suite.bugzilla.product,
-    component: componentFor(suite, report.tags),
+    // A cross-cutting gateway/auth fault has no single owning component — the catch-all is its home.
+    component: systemic ? suite.bugzilla.fallbackComponent : componentFor(suite, report.tags),
     version: suite.bugzilla.version,
     assignee: suite.owner.email,
     ownerName: suite.owner.name,
@@ -164,6 +213,8 @@ function fromValidationResult(
     build: report.build,
     testRunId: report.testRunId,
     observedAt: result.timestamp,
+    systemic,
+    affectedEndpoints: systemic ? [result.endpoint] : undefined,
     evidence: maskSensitive({
       module: suite.label,
       repository: suite.repository,
@@ -256,12 +307,26 @@ export function mergeCandidates(candidates: readonly BugCandidate[]): BugCandida
   for (const candidate of candidates) {
     const existing = merged.get(candidate.id);
     if (!existing) {
-      merged.set(candidate.id, { ...candidate });
+      merged.set(candidate.id, {
+        ...candidate,
+        // Clone the list so accumulating onto the merged copy never mutates the source candidate.
+        affectedEndpoints: candidate.affectedEndpoints
+          ? [...candidate.affectedEndpoints]
+          : undefined,
+      });
       continue;
     }
     existing.occurrences += candidate.occurrences;
     const browsers = new Set([...(existing.browsers ?? []), ...(candidate.browsers ?? [])]);
     if (browsers.size) existing.browsers = [...browsers].sort();
+    // A systemic defect's ticket lists every endpoint the same fault was seen on.
+    if (candidate.affectedEndpoints?.length) {
+      const endpoints = new Set([
+        ...(existing.affectedEndpoints ?? []),
+        ...candidate.affectedEndpoints,
+      ]);
+      existing.affectedEndpoints = [...endpoints].sort();
+    }
   }
   return [...merged.values()];
 }

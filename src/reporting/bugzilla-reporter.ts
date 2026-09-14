@@ -15,6 +15,7 @@ import { env } from '../config/env';
 import { suiteFor } from '../config/ownership.config';
 import { createLogger } from '../utils/logger';
 import type { ValidationReport } from '../validation-engine/validation-result';
+import { buildBugReportConsole, buildBugReportMarkdown } from './bug-report';
 import { VALIDATION_REPORT_ATTACHMENT } from './report-attachment';
 
 /**
@@ -73,25 +74,9 @@ export default class BugzillaReporter implements Reporter {
   }
 
   private async publish(result: FullResult): Promise<void> {
-    if (!this.config.enabled) {
-      console.log(`${LOG} BUGZILLA_URL / BUGZILLA_API_KEY not configured — no bugs filed`);
-      return;
-    }
-
+    // Candidates and the validity gate need no Bugzilla connection, so they are computed on every
+    // run — the in-bench bug report is written even when filing is off (dry run, no host).
     const tests = this.suite?.allTests() ?? [];
-    const executed = tests.filter((test) => test.results.length > 0).length;
-    const validity = assessRunValidity({
-      executed,
-      collected: tests.length,
-      loadErrors: this.loadErrors,
-      status: result.status,
-    });
-    if (!validity.valid) {
-      console.log(`${LOG} nothing filed — ${validity.reason}`);
-      this.write('filing.json', { skipped: true, reason: validity.reason });
-      return;
-    }
-
     const candidates = mergeCandidates([...this.apiCandidates(), ...this.uiCandidates(tests)]);
     const gate = applyValidityGate(candidates);
     this.write('candidates.json', {
@@ -106,24 +91,48 @@ export default class BugzillaReporter implements Reporter {
       })),
     });
 
-    for (const { candidate, reason } of gate.rejected) {
-      this.log.info(`not filed (${candidate.id}): ${reason}`);
-    }
-    if (!gate.filed.length) {
-      console.log(
-        `${LOG} no valid defects to file (${gate.rejected.length} candidate(s) rejected by the validity gate)`,
+    // Decide whether filing may run, and why not when it may not.
+    const executed = tests.filter((test) => test.results.length > 0).length;
+    const validity = assessRunValidity({
+      executed,
+      collected: tests.length,
+      loadErrors: this.loadErrors,
+      status: result.status,
+    });
+
+    let outcome: FilingOutcome | undefined;
+    let notFiledReason: string | undefined;
+    if (!this.config.enabled) {
+      notFiledReason = 'BUGZILLA_URL / BUGZILLA_API_KEY not configured';
+    } else if (!validity.valid) {
+      notFiledReason = `run gate blocked filing — ${validity.reason}`;
+    } else if (!gate.filed.length) {
+      notFiledReason = `no valid defects (${gate.rejected.length} rejected by the validity gate)`;
+    } else {
+      const filer = new BugzillaFiler(
+        new BugzillaClient(this.config, this.log),
+        this.config,
+        this.log,
       );
-      return;
+      outcome = await filer.file(gate.filed);
+      this.write('filing.json', { ...outcome, rejected: gate.rejected.length });
     }
 
-    const filer = new BugzillaFiler(
-      new BugzillaClient(this.config, this.log),
-      this.config,
-      this.log,
-    );
-    const outcome = await filer.file(gate.filed);
-    this.write('filing.json', { ...outcome, rejected: gate.rejected.length });
-    this.report(outcome, gate.rejected.length);
+    // The clear, in-bench bug report — always written, always the source of truth for a run.
+    const reportInput = {
+      environment: env.TEST_ENV,
+      runStatus: result.status,
+      testRunId: env.TEST_RUN_ID,
+      build: env.BUILD_ID,
+      generatedAt: new Date().toISOString(),
+      validationReports: this.validationReports,
+      merged: candidates,
+      rejected: gate.rejected,
+      outcome,
+      notFiledReason,
+    };
+    this.writeText('REPORT.md', buildBugReportMarkdown(reportInput));
+    console.log(`\n${buildBugReportConsole(reportInput)}`);
   }
 
   private apiCandidates(): BugCandidate[] {
@@ -162,28 +171,15 @@ export default class BugzillaReporter implements Reporter {
     });
   }
 
-  private report(outcome: FilingOutcome, rejected: number): void {
-    const { counts } = outcome;
-    const mode = outcome.dryRun ? 'DRY RUN — would file' : 'filed';
-    console.log(
-      `${LOG} ${mode} ${outcome.dryRun ? counts['would-file'] : counts.created}, ` +
-        `commented ${counts.commented}, reopened ${counts.reopened}, adopted ${counts.adopted}, ` +
-        `${counts['judged-skip']} judged-skip, ${counts.capped} capped, ${counts.failed} failed, ` +
-        `${rejected} rejected by the validity gate. Details: reports/bugs/filing.json`,
-    );
-    for (const entry of outcome.entries) {
-      const bug = entry.bugId ? ` bug ${entry.bugId}` : '';
-      console.log(
-        `${LOG}   ${entry.decision}${bug} [${entry.component}] ${entry.summary}${entry.reason ? ` — ${entry.reason}` : ''}`,
-      );
-    }
+  private write(file: string, payload: unknown): void {
+    this.writeText(file, JSON.stringify(payload, null, 2));
   }
 
-  private write(file: string, payload: unknown): void {
+  private writeText(file: string, content: string): void {
     try {
       const dir = path.join(process.cwd(), 'reports', 'bugs');
       mkdirSync(dir, { recursive: true });
-      writeFileSync(path.join(dir, file), JSON.stringify(payload, null, 2));
+      writeFileSync(path.join(dir, file), content);
     } catch (error) {
       this.log.warn(`could not write reports/bugs/${file}: ${(error as Error).message}`);
     }

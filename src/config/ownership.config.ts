@@ -78,6 +78,21 @@ const KPOST_COMPONENT_BY_TAG: Record<string, string> = {
   // Company records, the logo and business registration.
   'common-company': 'Company Administration',
   company: 'Company Administration',
+  // The feature modules built since — each maps its module tag to the component that already
+  // exists in this Bugzilla (see KNOWN_COMPONENTS). Without these every one of their defects
+  // landed on the `kpost-webservice-application` catch-all.
+  katchup: 'Katchup Messaging V2',
+  kall: 'Kall (Voice/Video) V2 - current',
+  contacts: 'Contacts Directory V2',
+  dashboard: 'Dashboard V2',
+  group: 'Groups V2',
+  profile: 'User Profile V2',
+  settings: 'General Settings',
+  kdiary: 'Kdiary - Schedules, Events & Reports',
+  aws: 'Integration - AWS S3 Pre-signed URLs',
+  kos: 'KWord Documents',
+  kword: 'KWord Documents',
+  ai: 'Integration - AI Assistant',
 };
 
 /**
@@ -192,23 +207,38 @@ export function apiSuites(): SuiteOwnership[] {
  * Tags usually ARE the component name; the map covers the modules where they differ.
  */
 export function componentFor(suite: SuiteOwnership, tags: readonly string[]): string {
-  /*
-   * The MOST SPECIFIC tag wins, not the first one listed.
-   *
-   * An endpoint carries both a module tag and a group tag - `['common', 'common-company']` - and
-   * iterating in order let the generic one win, so every company defect landed on the generic
-   * utilities component. Longest matching key = most specific: `common-company` beats `common`,
-   * and `business-tier` beats `login` for the enterprise sign-in endpoint.
-   */
-  const matches = tags
-    .map((tag) => ({
-      tag,
-      component:
-        suite.bugzilla.componentByTag[tag] ?? suite.bugzilla.componentByTag[tag.toLowerCase()],
-    }))
-    .filter((entry): entry is { tag: string; component: string } => Boolean(entry.component))
-    .sort((a, b) => b.tag.length - a.tag.length);
-  if (matches[0]) return matches[0].component;
+  const lookup = (tag: string): string | undefined =>
+    suite.bugzilla.componentByTag[tag] ?? suite.bugzilla.componentByTag[tag.toLowerCase()];
+
+  if (suite.kind === 'api') {
+    /*
+     * For an API endpoint the FIRST tag is always the module tag (every factory writes
+     * `['<module>', ...rest]`), and it is authoritative. A shorter sub-tag that happens to be
+     * ANOTHER module's name must not steal it — a Kall endpoint tagged `[kall, read, contacts]`
+     * belongs to Kall, not to Contacts. So the module tag sets the component, and only a
+     * *hyphenated* refinement (`common-company` refines `common`, `business-tier` refines the
+     * enterprise login) may override it. Bare foreign module names are never refinements.
+     */
+    const moduleComponent = tags[0] ? lookup(tags[0]) : undefined;
+    const refinement = tags
+      .filter((tag) => tag.includes('-'))
+      .map((tag) => ({ tag, component: lookup(tag) }))
+      .filter((entry): entry is { tag: string; component: string } => Boolean(entry.component))
+      .sort((a, b) => b.tag.length - a.tag.length)[0]?.component;
+    if (refinement) return refinement;
+    if (moduleComponent) return moduleComponent;
+  } else {
+    /*
+     * UI "tags" are unordered screen tokens (from the spec path + title), so there is no module
+     * tag to anchor on — the most specific (longest) matching key wins.
+     */
+    const match = tags
+      .map((tag) => ({ tag, component: lookup(tag) }))
+      .filter((entry): entry is { tag: string; component: string } => Boolean(entry.component))
+      .sort((a, b) => b.tag.length - a.tag.length)[0];
+    if (match) return match.component;
+  }
+
   // A tag that is already a component name (KPost API and Admin were built that way).
   const known = KNOWN_COMPONENTS[suite.id];
   const direct = tags.find((tag) => known?.has(tag));

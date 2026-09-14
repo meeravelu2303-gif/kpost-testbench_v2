@@ -51,6 +51,23 @@ export function apiFingerprint(input: {
 }
 
 /**
+ * Identity of a PLATFORM-WIDE defect: one shared root cause that surfaces on every endpoint — a
+ * missing gateway header, the auth filter answering the wrong status. The endpoint is deliberately
+ * EXCLUDED (the opposite of `apiFingerprint`), so the same fault across sixty endpoints collapses
+ * to ONE ticket that lists them, instead of sixty near-duplicates that bury the endpoint-specific
+ * bugs. Two different symptoms (2/5 headers vs 5/5 headers) still hash apart, because the message
+ * differs — so a real distinction is never merged away.
+ */
+export function systemicFingerprint(input: {
+  prefix: string;
+  validatorName: string;
+  message: string;
+}): string {
+  const key = `platform|${input.validatorName}|${normalizeForFingerprint(input.message)}`;
+  return `${input.prefix}-${digest(key)}`;
+}
+
+/**
  * Identity of a UI defect: spec file plus test title plus the normalised first error line.
  * The browser project is deliberately excluded, so one fault across three browsers is one
  * ticket that lists them (`[browser:…]`), not three.

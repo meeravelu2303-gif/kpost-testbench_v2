@@ -81,6 +81,15 @@ export function buildDescription(candidate: BugCandidate): string {
   if (candidate.occurrences > 1) {
     lines.push('', `Observed ${candidate.occurrences} times in this run.`);
   }
+  if (candidate.affectedEndpoints && candidate.affectedEndpoints.length > 1) {
+    // A single platform-wide fault: name every endpoint it was seen on, so triage can confirm the
+    // one shared fix covers them all rather than hunting for the scope.
+    lines.push(
+      '',
+      `Affects ${candidate.affectedEndpoints.length} endpoints — one shared fix resolves all of them:`,
+      ...candidate.affectedEndpoints.map((endpoint) => `  - ${endpoint}`),
+    );
+  }
   if (candidate.browsers?.length) {
     lines.push('', `Browsers affected: ${candidate.browsers.join(', ')}.`);
   }

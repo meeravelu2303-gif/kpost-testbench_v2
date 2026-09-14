@@ -561,6 +561,58 @@ silently get the reads refused on live.
 reads all along). It now recognises the `needs-*` tags and says "needs a real message/call/group id
 that only a write flow creates".
 
+### 2026-09-14 — First live KPost-API filing flooded one queue; systemic findings now consolidate
+
+The first real filing run (`BUGZILLA_DRY_RUN=false`, KPost-API only) worked — **376 tickets created,
+all correctly to `KPost API` → Jaganathan Murthy**. But it was the cascade §3 warns about made real:
+the 376 collapse to **29 distinct classes, and ~290 of them are 6 platform-wide faults repeated once
+per endpoint** — security headers missing (~73), the auth filter answering 400/403 instead of 401
+across missing/invalid/malformed/unsigned-token (~184), and the error envelope on auth rejections
+(~38). The ~85 genuinely endpoint-specific bugs (real 500s, timeouts, sensitive-data) were buried.
+
+Two root causes, both fixed:
+
+- **The fingerprint is per-endpoint by design** (`bug-fingerprint.ts`) — right for a 500 here vs a
+  404 there, wrong for one gateway/auth fault that shows on every endpoint. Added
+  **`systemicFingerprint`** (endpoint EXCLUDED) and a `SYSTEMIC_VALIDATORS` set
+  (`security.security-headers`, the four `authentication.*-token` validators, `security.jwt`, and
+  `response.error-format` **only** when it is reporting the auth-rejection envelopes, not a malformed
+  primary — the message names `primary (` only in the latter). A systemic finding files as **one
+  consolidated ticket that lists every endpoint it hit** (`affectedEndpoints`, merged in
+  `mergeCandidates`, rendered by `buildDescription`). Everything else stays per-endpoint. A KMail or
+  UI run of this size now yields ~4 platform tickets + the real ones, not ~300.
+- **338 of 376 landed on the `kpost-webservice-application` catch-all** — the modules built this
+  session were never added to `componentByTag`. Mapped katchup/kall/contacts/dashboard/group/
+  profile/settings/kdiary/aws/kos/ai to their live components, and rewrote **`componentFor`** to be
+  **module-first for API suites**: `tags[0]` (always the module tag) sets the component, and only a
+  _hyphenated_ refinement (`common-company`) may override it — so a Kall read tagged `contacts` can
+  no longer be stolen into the Contacts component by the old longest-match rule.
+
+**The owner then cleared Bugzilla and asked for a single automatic setup** — run the tests, valid
+non-duplicate bugs file themselves, and a clear report lives in the bench — no manual cleanup step.
+So the one-off consolidate-and-resolve script was **removed**, and the setup is now:
+
+- **One command, all three developers.** `npm run bugs:file`
+  (`BUGZILLA_DRY_RUN=false MOCK_API=false playwright test --project=api --project=chromium`) runs the
+  live API suite (KPost API → Jagan, KMail API → Jitendra, routed by suite) and the UI (→ Ayyappan)
+  in one pass and files everything valid. `npm run bugs:preview` is the same, dry-run. The confusing
+  `:all` / `:200` / `:consolidate` variants are gone.
+- **"All bugs file" needs no cap.** `BUGZILLA_MAX_FILE` defaults to **0**, and the filer only caps
+  when `maxFile > 0` — so 0 means **unlimited**, not zero (the earlier "0 = files nothing" diagnosis
+  was wrong; the real blocker then was a stale `MOCK_API=true` / `DRY_RUN=true`). Valid-only is
+  enforced by the severity floor (`BUGZILLA_MIN_SEVERITY=MEDIUM`) and the validity gate; no-duplicate
+  by the `[KPV2-…]` live dedup (re-run comments, never re-files) plus the systemic consolidation.
+- **A clear in-bench report, written every run** — `reports/bugs/REPORT.md` (+ a concise console
+  block), by `src/reporting/bug-report.ts`. It states: endpoints tested / checks passed·failed·skipped;
+  distinct valid defects (and how many were consolidated from how many endpoints); **filed-by-developer**
+  table; every ticket with its bug number, severity and endpoints; and the findings **not** filed with
+  the reason. Written even on a dry run or with no host configured, so "what did this run find and file"
+  never needs the scrollback. The 376-line per-bug console dump is gone.
+
+Generated `docs/COVERAGE.md` and `docs/LIVE-ENDPOINTS.md` added to `.prettierignore` (they regenerate
+every framework run, like the contracts). `npm run check` clean; 17 bug-tracker + 7 ownership/coverage
+framework tests green, including the live-Bugzilla component-default check.
+
 ### 2026-09-13 — Dashboard module (Home screen); a POST-read `@destructive` grep trap fixed
 
 The Home screen's recent-messages panel: `/v2/dashboard/*` — 3 authenticated reads

@@ -17,7 +17,10 @@ import {
   assessRunValidity,
   candidateRejection,
 } from '../../src/bug-tracker/validity-gate';
+import type { FilingOutcome } from '../../src/bug-tracker/bugzilla-filer';
 import { readBugzillaConfig, type BugzillaConfig } from '../../src/config/bugzilla.config';
+import { componentFor, suiteFor } from '../../src/config/ownership.config';
+import { buildBugReportConsole, buildBugReportMarkdown } from '../../src/reporting/bug-report';
 import { createLogger } from '../../src/utils/logger';
 import { expect, test } from '@fixtures';
 
@@ -227,6 +230,100 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
       expect(description, `the UI parses on the "${anchor}" anchor`).toContain(anchor);
     }
     expect(description).toContain('tb-9');
+  });
+
+  test('a platform-wide fault on many endpoints is one consolidated ticket listing them', () => {
+    // Same systemic id (endpoint excluded), two different endpoints — must merge into one.
+    const headers = (endpoint: string): BugCandidate =>
+      candidate({
+        id: 'KPV2-SYS001',
+        systemic: true,
+        affectedEndpoints: [endpoint],
+        endpoint,
+        title: 'Platform-wide — 2/5 security headers failed: content-security-policy (missing)',
+        classification: 'security.security-headers',
+        component: 'kpost-webservice-application',
+      });
+    const merged = mergeCandidates([headers('POST /v2/aws/x'), headers('POST /v2/contacts/y')]);
+
+    expect(merged, 'the endpoint is not part of a systemic ticket identity').toHaveLength(1);
+    expect(merged[0]?.affectedEndpoints).toEqual(['POST /v2/aws/x', 'POST /v2/contacts/y']);
+    expect(merged[0]?.occurrences).toBe(2);
+
+    const description = buildDescription(merged[0]!);
+    expect(description, 'the ticket names every endpoint the shared fault hit').toContain(
+      'Affects 2 endpoints',
+    );
+    expect(description).toContain('POST /v2/aws/x');
+    expect(description).toContain('POST /v2/contacts/y');
+  });
+
+  test('componentFor: the module tag wins, a foreign sub-tag cannot steal the ticket', () => {
+    const kpost = suiteFor('kpost-api');
+    // A Kall endpoint whose read is tagged `contacts` still belongs to Kall.
+    expect(componentFor(kpost, ['kall', 'read', 'contacts'])).toBe(
+      'Kall (Voice/Video) V2 - current',
+    );
+    // A within-module hyphenated refinement still overrides the module default.
+    expect(componentFor(kpost, ['common', 'common-company'])).toBe('Company Administration');
+    expect(componentFor(kpost, ['katchup', 'read'])).toBe('Katchup Messaging V2');
+    // An unmapped module falls back to the catch-all rather than misrouting.
+    expect(componentFor(kpost, ['brandnew', 'read'])).toBe('kpost-webservice-application');
+  });
+
+  test('the in-bench bug report states the run, the filing, and the routing', () => {
+    const outcome: FilingOutcome = {
+      dryRun: false,
+      entries: [
+        {
+          id: 'KPV2-ABC123',
+          decision: 'created',
+          bugId: 10,
+          summary: '[KPV2-ABC123] POST /users: expected 400/422, got 500',
+          product: 'KPost API',
+          component: 'User Profile V2',
+          assignee: 'jagan@kpost.in',
+          severity: 'HIGH',
+        },
+      ],
+      counts: {
+        created: 1,
+        commented: 0,
+        reopened: 0,
+        adopted: 0,
+        'judged-skip': 0,
+        'would-file': 0,
+        capped: 0,
+        failed: 0,
+      },
+    };
+    const input = {
+      environment: 'production',
+      runStatus: 'passed',
+      testRunId: 'run-1',
+      build: 'local',
+      generatedAt: '2026-09-14T00:00:00.000Z',
+      validationReports: [],
+      merged: [candidate()],
+      rejected: [
+        { candidate: candidate({ id: 'KPV2-NOISE1' }), reason: 'severity LOW below the floor' },
+      ],
+      outcome,
+    };
+
+    const md = buildBugReportMarkdown(input);
+    expect(md, 'names the run stats section').toContain('Endpoints tested');
+    expect(md, 'routes the ticket to its developer').toContain('Jaganathan Murthy');
+    expect(md, 'shows the bug number').toContain('#10');
+    expect(md, 'is transparent about what was not filed').toContain('NOT filed');
+    expect(buildBugReportConsole(input)).toContain('KPost API → Jaganathan Murthy: 1');
+
+    const notFiled = buildBugReportMarkdown({
+      ...input,
+      outcome: undefined,
+      notFiledReason: 'no host',
+    });
+    expect(notFiled, 'a blocked run says why nothing filed').toContain('Not filed:');
   });
 
   test('one fault seen on three browsers is one ticket listing them', () => {
