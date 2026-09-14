@@ -216,7 +216,50 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
-### 2026-09-14 — Tickets are application-level: no internal test-bench repo path or command
+### 2026-09-14 — Deep UI testing begun: a health monitor + a deep sweep over every screen
+
+The owner asked for production-grade, deep UI testing on every screen — the honest gap being that the
+existing e2e tests are render-only smoke ("does the screen mount?"), which is why they find no UI
+bugs while the (deep) API suite finds many. First layer built:
+
+- **`src/ui/ui-health.ts`** — a UI health monitor attached to a page: it collects **uncaught JS
+  exceptions** (`pageerror`), **broken front-end assets** (the app's own js/css/img/font that 4xx/5xx),
+  **failed KPost API calls** the screen made, and console errors. Scoped to KPost hosts (third-party
+  noise ignored). Only a JS crash or a broken asset FAILS a screen (the low-noise, genuinely-UI
+  signals); a failed API call is surfaced as context, since the backend owns it and the API suite
+  already files it — so a UI ticket is never a mis-routed backend bug.
+- **`src/ui/screens.ts`** — the screen registry: every authenticated screen (home, katchup, kall,
+  kmail, userprofile, settings) with its ready selectors and the key controls it must render.
+- **`src/ui/ui-checks.ts`** — the centralized UI **check catalogue**, the front-end analogue of the
+  API validators: **health** (JS crash / broken asset), **performance** (render budget),
+  **responsive** (no horizontal overflow at a phone width), **accessibility** (alt text, form labels,
+  `lang`, `title`). Each check is written once and runs on every screen; adding a check applies it
+  everywhere, exactly like an API validator. MEDIUM+ findings file; LOW (e.g. missing alt) is logged.
+- **`tests/e2e/screens.spec.ts`** — a deep sweep: for each screen, in the reused session, it
+  navigates, asserts the screen mounted, asserts **every key control is present** (not an empty
+  shell), and runs the **whole check catalogue** — cross-browser. A failure files to KPost UI →
+  Ayyappan on the screen's component. Read-only.
+- **`tests/e2e/navigation.spec.ts`** — an **interaction** flow: clicks each nav-rail destination from
+  Home and asserts the route opens, exercising the real routing a user does.
+
+**Interaction flows deepened (read-only, safe):**
+
+- **Login** — the single-navigation flow now validates four states: **empty id** does not advance,
+  unknown id does not advance, valid id advances to the password step, wrong password shows the inline
+  error and stays on `/login`.
+- **Settings** — a real interaction: click the **Profile Creation** section header and assert it
+  expands to reveal its items (Basic Information).
+
+**Measurable & self-checking (the production-grade part):** `tests/framework/ui-coverage.spec.ts` is
+the front-end analogue of the coverage ledger — it generates **`docs/UI-COVERAGE.md`** (every screen,
+its component, the check catalogue each inherits, the interaction flows) and **fails the build** if a
+screen would route a bug to a component that does not exist in the KPost UI product. So UI coverage is
+measured, not asserted by hand — the same rigor as the API side.
+
+New `@ui/*` path alias. `npm run check` clean; 66 framework tests pass. **Next (per-screen, iterative,
+needs live-run tuning): the compose/write flows** — Katchup and KMail composer open + Subject/message
+field validation + send (a gated write, self-cleaning), and Settings theme/font change reflected then
+restored — the deepest "drive it like a user" layer.
 
 A filed UI bug exposed our own test repo — the spec file path `tests/e2e/…` and a
 `npx playwright test …` reproduce command. The developer (Ayyappan/Jagan/Jitendra) has the

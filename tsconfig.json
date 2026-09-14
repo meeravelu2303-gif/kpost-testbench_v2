@@ -26,6 +26,7 @@
       "@pages/*": ["./src/pages/*"],
       "@reporting/*": ["./src/reporting/*"],
       "@rules/*": ["./src/business-rules/*"],
+      "@ui/*": ["./src/ui/*"],
       "@utils/*": ["./src/utils/*"],
       "@validators/*": ["./src/validators/*"]
     }

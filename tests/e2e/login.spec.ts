@@ -32,6 +32,13 @@ test.describe('KPost login screen', { tag: '@ui' }, () => {
   }) => {
     await loginPage.goto();
 
+    // 0) An EMPTY id must not advance — the form validates the required field.
+    await loginPage.enterLoginId('');
+    await expect(
+      loginPage.passwordInput,
+      'an empty id does not reach the password step',
+    ).toBeHidden();
+
     // 1) An unknown KPOST ID must NOT advance to the password step.
     await loginPage.enterLoginId(testData.kpostIdAbsent);
     await expect(
