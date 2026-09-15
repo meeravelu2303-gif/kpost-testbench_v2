@@ -105,8 +105,12 @@ export async function openBellMenu(page: Page, message: Locator): Promise<void> 
   // Bring the message into view first — a message low in a scrollable thread is not hoverable until
   // scrolled to (the bell action only appears on hover).
   await message.scrollIntoViewIfNeeded().catch(() => undefined);
-  await message.hover();
-  await message.getByTestId('NotificationsNoneIcon').first().click();
+  // Hover reveals the bell, but a still-rendering thread churns the message's layout so a strict hover
+  // can never satisfy the "stable" actionability check (seen as a 15s timeout on Transfer). Hover is
+  // therefore best-effort, and the bell is clicked with `force`: the click handler is attached
+  // regardless of the hover-reveal opacity, and `force` skips the stability wait that was flaking.
+  await message.hover().catch(() => undefined);
+  await message.getByTestId('NotificationsNoneIcon').first().click({ force: true });
 }
 
 /** Locate the sent message carrying `subject` (with its own bell trigger). */

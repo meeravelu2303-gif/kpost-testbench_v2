@@ -99,6 +99,11 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
     note: 'own profile → About section edit pencil → Update → verify → restore (gated, self-restoring)',
   },
   {
+    flow: 'Profile actions',
+    spec: 'profile-actions.spec.ts',
+    note: 'three-dot menu (Change Picture/Share/Logout) + About/Experience/Education sections (green) · Experience add (gated)',
+  },
+  {
     flow: 'Settings theme',
     spec: 'settings-theme.spec.ts',
     note: 'Personalize → change KPost layout theme → Apply → verify active → restore original (gated, self-restoring)',

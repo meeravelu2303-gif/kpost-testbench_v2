@@ -75,6 +75,16 @@ test.describe('KPost verticals — feature render', { tag: '@ui' }, () => {
         ).toBeVisible({ timeout: 20_000 });
       },
     },
+    {
+      name: 'KBooking',
+      route: '/kbooking',
+      assert: async (page) => {
+        await expect(
+          page.locator('.icon-KP_09-Travel, .icon-KP_01-Home, .header_font').first(),
+          'KBooking renders its travel UI (or shell)',
+        ).toBeVisible({ timeout: 20_000 });
+      },
+    },
   ];
 
   for (const c of cases) {

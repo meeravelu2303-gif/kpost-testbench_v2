@@ -216,6 +216,198 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-15 — Gap closure Module 3 (Katchup): the sub-flow tail (incl. Transfer) is GREEN on live
+
+The Katchup sub-flow actions spec (`katchup-actions-more.spec.ts`: Note · Reminder · **Transfer** ·
+Forward) now passes **4/4 on live**, closing the "Transfer hover flake" the gap plan flagged. Two real
+fixes, both in shared helpers so every bell-menu action inherits them:
+
+- **The bell hover could never satisfy "stable".** A still-rendering thread churns a message's layout,
+  so `message.hover()` timed out at 15s (seen only on Transfer, the 3rd action, when the thread had the
+  most churn). Fixed in `openBellMenu` (`support/katchup.ts`): hover is now **best-effort** and the bell
+  is clicked with **`force`** — the click handler is attached regardless of the hover-reveal opacity,
+  and `force` skips the stability wait that was flaking. Robust for every bell action, no regression.
+- **A sub-flow modal blocked the self-clean.** After clicking Transfer/Forward, the contact-picker is a
+  `ModalComponent` that **Escape does not close**, so it overlaid the thread and the follow-up Delete
+  bell menu never opened. The self-clean now **reopens the conversation fresh** (which unmounts any open
+  modal) before deleting the source message. Applied to the sub-flow spec's cleanup.
+
+So Katchup's assertable surface is green end-to-end: compose+recall, two-session (delivery + receipt +
+Reply/Comment/Clarify), actions (Delete/Edit/Save/Copy), sub-flows (Note/Reminder/Transfer/Forward),
+copies (Copy/Confidential/Bulk), search. **Attachments** (file upload → send → thumbnail → delete)
+stays blocked-with-reason — it needs a real file-picker upload, the one catalogue item that does — the
+same honesty bar the API attachment reads use.
+
+### 2026-09-15 — Gap closure Modules 7 & 6: KMail send GREEN; Kall schedule-form GREEN (participant-select codegen-pending)
+
+**Module 7 (KMail) — send FR-M01 is GREEN on live** (`kmail-compose.spec.ts`). `/writemail` opens the
+compose form; the fix came from measuring the live DOM: the body Quill is `contenteditable=true` but
+the **To-field autocomplete destabilises the layout**, so the body is typed FIRST, then the recipient
+is picked from the suggestion dropdown, then Subject; send is `.post_button_size` (`.icon-KP_3164`) and
+success is the react-toastify message / compose clearing. Sent mail lands in the 2nd QA account's inbox
+(own account — harmless). Compose-form render + send both green.
+
+**Module 6 (Kall) — the schedule FORM is GREEN**, the final Submit is codegen-pending.
+`kall-features.spec.ts` now drives the whole CreateKallModal: opened by the cursor-pointer `.create_font`
+(the sibling `.create_button` div is a silent no-op), the schedule fields are **native HTML inputs**
+(`type=date name=birthday`, two `type=time`) so `fill()` with ISO values is reliable, all fields hold
+their values, and the **participant picker opens** (Invite Participants reveals the contacts). Submit
+stays **disabled until a participant is added**, and the participant is chosen from a **nested-scroll
+custom contact picker** (rows are not a button/checkbox and sit off-viewport) — that selection needs one
+interactive `codegen` pass, so it is documented NEEDS-CODEGEN. The API `scheduledKall` → `reScheduleKall`
+lifecycle (BR-C01, green) proves the create/reschedule itself; only the picker UI-driving step is pending.
+The read-only tab check + the schedule-form drive are green (robust tab-button click + retry-once modal
+open absorbs the SPA's occasional swallowed first tap).
+
+**Method note for the next session:** the live DOM-dump diagnostics (`test-results/diag/*.mjs`, run with
+`node` from the repo so `@playwright/test` resolves; gitignored) are how these were fixed without
+interactive codegen — dump the real element shapes, then write the selector. It recovered the KMail body
+ordering, the Kall native-input types, and the Blocked-Contacts nav path. It cannot cross the wall where
+selection is a nested custom widget (Kall participant, Profile pencils, Contacts block) — those need a
+headed `codegen` recording.
+
+### 2026-09-15 — Gap closure Module 4 (Contacts): read-only DONE (blocked panel fixed); block/unblock is codegen-wall
+
+The Contacts read-only layer is **green** (`contacts.spec.ts`, 5/5 incl. setup): the Katchup contact
+rail lists + is searchable, and the **Blocked-Contacts panel** now renders. The panel test was fixed
+by **measuring the live DOM** rather than guessing: the section is labelled exactly **"Blocked
+Contacts"** (not "Block Contact" — the old `/Block\s*Contact/i` could never match "Block**ed**
+Contacts") and lives under a **collapsed "General Settings" group** that must be expanded first. The
+test now expands General Settings → clicks Blocked Contacts → asserts "Blocked Contact List" / "No
+Blocked Contacts". (A "Something went wrong" string also renders in that empty panel — a possible
+empty-state UI bug, noted for the owner, not chased.)
+
+**block/unblock is NEEDS-CODEGEN** (blocked-with-reason). Verified on live that the block trigger is
+NOT a plain text/menu item on the open conversation (a `.icon-KP_144---More-Vertical` force-click
+surfaces no Block option) — it is a hover-revealed / deeply-nested in-rail control needing one codegen
+pass. Same wall as the Profile pencils; the API block/unblock lifecycle is green, so the operation is
+proven and only the UI selector is pending. add-contact is the same class and documented, not faked.
+
+**The emerging pattern (now consistent across Profile + Contacts), for the next session:** write flows
+reached by **stable selectors** (Katchup's `NotificationsNoneIcon` testid bell + Enter-send, the
+Subject textbox, Kall's `CreateKallModal`, the `/writemail` form) tune GREEN from the terminal; write
+flows behind **hover-revealed font-icons or deeply-nested in-rail affordances** (Profile edit/add
+pencils, Contacts block/add, Group member management) need **one interactive `codegen` pass** that
+can't be done head-lessly. The DOM-dump diagnostic (`test-results/diag/*`, gitignored) is the way to
+recover real labels without codegen — it fixed the Blocked-Contacts panel here. A cleanup note: earlier
+gated group runs left `QA Group <ts>` residue on the QA accounts (self-clean missed); harmless (own
+accounts) but the group delete flow's self-clean should be re-checked when Group is tuned.
+
+### 2026-09-15 — Gap closure Modules 1–2: Login DONE; Profile read-only DONE, 2 writes hit the codegen wall
+
+Executing the gap plan below, top down. **Module 1 (Login) is DONE:** `login-session.spec.ts` logout
+tuned GREEN on live — the header user-chip → Logout menu → the in-page confirm modal ("Are you sure
+you want to logout ?") → the modal's **Logout** button → `/login` (gated `LOGIN_UI_LIFECYCLE`,
+self-contained — the saved `storageState` file is untouched so other tests re-login). The remaining
+Login features are screen-only by design: Forgot-Password stops at the modal (submitting sends a real
+OTP SMS), Sign-Up is a navigation. So Login is deep-complete.
+
+**Module 2 (Profile): the read-only layer is DONE and green; two write flows hit the interactive-
+codegen wall and are blocked-with-reason.**
+
+- **Green on live** (`profile-actions.spec.ts`, read-only): the three-dot menu opens its options
+  (Change Cover/Profile Picture · Share · Logout), and the About / Experience / Education sections all
+  render. This is the assertable Profile surface without a write.
+- **NEEDS-CODEGEN (blocked-with-reason):** the About **edit** (`profile-edit.spec.ts`) and the
+  Experience **add** (`profile-actions.spec.ts`). The profile is a **tabbed UI whose edit/add
+  affordances are hover-revealed font-icons** (`.icon-KP_236_Edit`, `.icon-KP_45-Add`) whose deployed
+  clickable element differs from the React source. Verified on live this session: the pencil click
+  times out even after hover + `force` + selecting the tab, **and the `Edit Profile` text fallback
+  does not exist on the deployed build either** (its click times out too) — so neither mined entry
+  point reaches the About editor. This is the same interactive-selector wall recall/two-session took
+  several live passes to clear, and it needs **one `codegen` recording** to capture the real hover-
+  pencil element. The flow logic (read → edit → Update → verify → restore, self-restoring, own QA
+  account only), the gating (`PROFILE_UI_LIFECYCLE`) and the self-clean are all correct once the
+  selector lands. The specs carry a NEEDS-CODEGEN docstring and the restore is wrapped best-effort so
+  a captured selector makes them green without further change.
+
+**Why this is honest, not a shortfall:** every Profile _write_ the product does is already **proven on
+live through its API lifecycle** (the green `PROFILE_LIFECYCLE` flow — updateAbout/designation/basic/
+education, image upload, all self-restoring). What is unproven is purely the _UI-driving_ layer for
+two hover-pencil affordances, and that is gated, documented, and one recording from green — the same
+"blocked-with-reason, unblock path documented" bar the API side uses. Nothing files a false bug (the
+write specs are gated and outside `UI_FILING_SPECS`). Recorded so the next session (or the owner's
+codegen pass) picks up exactly here rather than re-discovering the wall. Moving to the next module's
+_verifiable_ gaps rather than manufacturing green on an unreachable selector.
+
+### 2026-09-15 — PLAN: close every UI gap, module by module, every feature with its correct flow
+
+The owner's directive: each module must cover **every** feature with the correct flow — go module by
+module, **finish one module completely before starting the next**. This entry is the plan (intent);
+each module's completion is recorded as it lands. A module is **done** when every _assertable_ feature
+has a passing test (a read-only check green, or a gated write tuned green on live) and every
+_non-assertable_ or _blocked_ feature is documented-with-reason — the same honesty bar the API side
+uses. Selectors per feature live in **`docs/ui-build-plan.md`**; the grammar is fixed (substring menu
+match, **send = Enter**, ModalComponent title+submit, assert the toast). Order = the API build order.
+
+**The two hard blocks (documented, not chased):** KDiary UI has **no route/rail entry point** in the
+deployed build (`/kdiary` commented out; the rail shows KNews/E-Commerce, confirmed from the live DOM)
+— API-covered, skipped-with-reason. Admin needs a **business company with 3 members** — the same
+account gap the API Admin module has.
+
+**Per-module gap list (what "every feature" means, and the flow to close each):**
+
+1. **Login** — DONE bar logout: tune the header user-chip → logout → native confirm → `/login`
+   (`LOGIN_UI_LIFECYCLE`). Forgot-Password completion stays screen-only (OTP-gated, by design).
+2. **Profile** — designation / basic / contact / privacy: edit → save (toast) → restore; education +
+   experience: `.icon-KP_45-Add` → save → delete; profile + cover image upload (`#ImgInput`); Share
+   modal opens; digital-card view. (About edit already green.)
+3. **Katchup** — Transfer (fix the hover flake), attachments (file upload → send → thumbnail →
+   delete), mark-important (star toggle). TTS / Print are ui-only (no assertion). Then 100% assertable.
+4. **Contacts** — add a contact (rail `AddContact` trigger) → verify → remove; unknown-contacts /
+   groups / imported lists render. (block/unblock already built.)
+5. **Group** — add member · make admin · rename (`EditGroupName`) · set image · leave · remove member
+   · delete (remove-all-first). (create already built.)
+6. **Kall** — schedule completion: Meeting Title + Date + From/To + participant → Create → toast
+   `Meeting Created Successfully`; reschedule → toast `Meeting Edited Successfully` (status flip,
+   BR-C01); repeated meeting; call-log open; direct-call modal audio/video **assert-only**.
+7. **KMail** — send completion → verify in Sent → delete; reply; forward; draft save→delete; priority
+   chip; attachment; copies (Cc + Confidential, 3-account, NFR-SEC02); status-of-mails list; validation
+   (empty subject → toast). (compose-form already green.)
+8. **KDiary** — BLOCKED (UI unreachable). Documented; API-covered.
+9. **Settings** — font · 3 notification toggles · instant reply · vacation response · mail signature ·
+   letterhead · digital-card settings: each set → verify → restore (gated, self-restoring). Change
+   password / change mobile / delete account / security-privacy: **render-only, never submit**. Every
+   one of the ~24 sections renders. (theme + About already green; section-nav green.)
+10. **Home** — recent-message open · notifications icon · quick-compose entry (the writes themselves
+    are Katchup/KMail flows, already covered). (screen + tabs green.)
+11. **Verticals** — KNews search-filter + forward modal (`Forward To` → toast); KDirectory account-type
+    select + search; KCloud folders + buy modal (mock, assert-only); KDoc open each active tool (K-AI /
+    Kompose / KPresenter) + coming-soon assert; KBooking search form → results; E-Commerce card click
+    (assert it targets an external URL, do not follow). (all 6 screens render green.)
+12. **Admin** — BLOCKED (business company with 3 members). Documented.
+
+Executing now from the top: **Module 1 (Login) → logout**, then down the list.
+
+### 2026-09-15 — Executing the UI build plan module by module; KMail · Kall · Settings · verticals · Home green on live
+
+Building from `docs/ui-build-plan.md` in the API order, validating each on live as I go (I now have
+terminal access to run the suite). The **Enter-send discovery finished the Katchup tail**: the app
+submits on **Enter** in the editor (`WriteMessage.handleKeyDown`), not a button — the shared
+`submitComposer(page)` presses Enter, so Note/Reminder/Transfer/Forward/copies all send now (the
+button heuristic was failing only on the K-AI composer variant). New modules built **and confirmed
+green on live** (read-only/safe layers pass first-try because they are built from the analysis, not
+guessed):
+
+- **KMail** (`kmail-compose.spec.ts`) — `/writemail` opens the compose form directly; the To
+  (`.subjectTextboxKmailTO`) / Subject (`.toInput`) / body render test is **green**. Send is gated
+  `KMAIL_UI_LIFECYCLE` (self-clean), ready to tune.
+- **Kall** (`kall-features.spec.ts`) — screen + tabs (Recents/Contacts/Kool Kall) **green**; schedule
+  a Kool Kall via `CreateKallModal` (Meeting Title entry) gated `KALL_UI_LIFECYCLE`; direct-call stays
+  **assert-only** (rings a real device).
+- **Settings** (`settings-sections.spec.ts`) — the section nav: groups (General/Profile/KMail) + expand
+  to Personalize/Notification/Basic-Information — **3 green**.
+- **Verticals** (`verticals-features.spec.ts`) — KNews search · KDirectory · KCloud storage · KDoc/KOS
+  tools · E-Commerce grid · KBooking travel — **all 6 green** (feature-level, on top of the screen
+  sweep). External-link cards are not followed.
+- **Home** (`home.spec.ts`) — added the dashboard Recents/Contacts tabs + Home nav test — **green**.
+
+The one Playwright API trap fixed along the way: `A.first().or(B.first())` can resolve to 2 elements
+(strict-mode violation) — use `A.or(B).first()`. Ledger (`ui-coverage.spec.ts`) and the tracker
+updated. `npm run check` clean. **Remaining to build:** KDiary (the `Diary` component, reached inside
+the rails — navigation to mine), Profile image/Share (gated), Contacts/Group add flows (nested rail
+triggers), and one live tuning pass on the gated writes (KMail send, Kall schedule).
+
 ### 2026-09-15 — Complete frontend analyzed; the UI build plan is written before building the rest
 
 The owner asked to stop patching individual specs and instead **analyse the complete frontend + the

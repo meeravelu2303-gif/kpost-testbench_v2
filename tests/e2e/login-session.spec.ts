@@ -79,9 +79,9 @@ test.describe('KPost login screen · deeper flows', { tag: '@ui' }, () => {
  * saved `storageState` file is untouched, so other tests still log in), and it is the last thing this
  * test does. The header logout triggers a native `window.confirm`, which we auto-accept.
  *
- * FIRST-RUN NOTE: the header logout trigger (the user chip → logout control) needs one live recording
- * pass — `containers/Header.js` opens logout via a menu whose exact target is not stable in source.
- * Gated behind `LOGIN_UI_LIFECYCLE=true` so it never disrupts a default run until tuned.
+ * Tuned GREEN on live: the user chip → Logout menu → in-page confirm modal ("Are you sure you want to
+ * logout ?") → the modal's Logout button → `/login`. Gated behind `LOGIN_UI_LIFECYCLE=true` because it
+ * ends the session (self-contained — the saved storageState file is untouched, so other tests re-login).
  */
 test.describe('KPost header · logout', { tag: '@ui' }, () => {
   test.skip(
@@ -100,13 +100,22 @@ test.describe('KPost header · logout', { tag: '@ui' }, () => {
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    // The logout confirm is a native dialog — auto-accept it.
-    page.on('dialog', (dialog) => dialog.accept().catch(() => undefined));
-
-    // Open the header user chip, then the logout control.
+    // The header user chip opens a menu with a Logout option, which opens an in-page confirm modal
+    // ("Are you sure you want to logout ?") with a Logout button — confirmed from the live DOM.
     await page.locator('.header-user-pill').first().click();
     await page
       .getByText(/^Log ?out$/i)
+      .first()
+      .click()
+      .catch(() => undefined);
+
+    // Confirm in the modal.
+    await expect(
+      page.getByText(/Are you sure you want to logout/i).first(),
+      'the logout confirm modal appears',
+    ).toBeVisible({ timeout: 15_000 });
+    await page
+      .getByRole('button', { name: /^Logout$/i })
       .first()
       .click();
 

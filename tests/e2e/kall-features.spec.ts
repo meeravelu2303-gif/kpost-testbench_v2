@@ -44,11 +44,22 @@ test.describe('KPost Kall · schedule a Kool Kall (write)', { tag: '@ui' }, () =
   );
 
   /**
-   * FIRST-RUN NOTE: the CreateKallModal date/time pickers and participant selection need one live
-   * recording pass. This drives the reliable entry (open modal → Meeting Title accepted) and attempts
-   * the rest; the schedule is verified by the toast `t("Meeting Created Successfully")`.
+   * The CreateKallModal is opened by the cursor-pointer `.create_font` "Create" control (the sibling
+   * `.create_button` div is a silent no-op), and its schedule fields are **native HTML inputs**
+   * (`type=date name=birthday`, two `type=time` From/To) — `fill()` with ISO values is reliable, no
+   * custom picker. This drives and verifies the whole schedule form green: modal → Meeting Title →
+   * future Date → From/To times → the participant picker OPENS (Invite Participants reveals the
+   * contacts). Submit stays disabled until a participant is added.
+   *
+   * NEEDS-CODEGEN — the final Submit: the participant is chosen from a **nested-scroll custom contact
+   * picker** (the rows are not a plain button/checkbox and sit in an off-viewport scroll container), so
+   * selecting one and enabling Submit needs one interactive `codegen` pass. The API Kall lifecycle
+   * (`scheduledKall` → `reScheduleKall`, BR-C01, green on live) proves the schedule create/reschedule
+   * itself works — only the participant-picker UI-driving step is pending.
    */
-  test('open the schedule modal, name a meeting, and submit @ui', async ({ page }) => {
+  test('the schedule modal opens and accepts the meeting details (title + future date + time) @ui', async ({
+    page,
+  }) => {
     const title = `QA UI kall ${Date.now()}`;
     await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await page
@@ -56,40 +67,50 @@ test.describe('KPost Kall · schedule a Kool Kall (write)', { tag: '@ui' }, () =
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
+    // Switch to the Kool Kall TAB (the nav button, not the "Today's Kool Kalls" heading).
     await page
-      .getByText(/Kool Kall/i)
+      .getByRole('button', { name: /Kool Kall/i })
       .first()
       .click()
       .catch(() => undefined);
-    await page
-      .locator('.create_button, .create_font')
-      .first()
-      .click()
-      .catch(() =>
-        page
-          .getByText(/^Create$/i)
-          .first()
-          .click(),
-      );
 
-    // The CreateKallModal opens with a Meeting Title field — the reliable entry assertion.
-    const titleField = page
-      .getByRole('textbox', { name: /Meeting Title/i })
-      .or(page.getByPlaceholder(/Enter Meeting Title/i))
-      .first();
+    // Open the CreateKallModal via the cursor-pointer `.create_font`. Wait for it, and retry the open
+    // once if the first click does not surface the modal (the SPA occasionally swallows the first tap).
+    const modal = page.locator('.modal-content');
+    const titleField = modal.locator('input[placeholder="Enter Meeting Title"]').first();
+    const createBtn = page.locator('.create_font').first();
+    await expect(createBtn, 'the Create control is present on the Kool Kall tab').toBeVisible({
+      timeout: 20_000,
+    });
+    await createBtn.click({ force: true });
+    if (!(await titleField.isVisible().catch(() => false))) {
+      await createBtn.click({ force: true });
+    }
     await expect(titleField, 'the schedule modal opens with a Meeting Title field').toBeVisible({
       timeout: 15_000,
     });
-    await titleField.fill(title);
-    await expect(titleField, 'the Meeting Title accepts text').toHaveValue(title);
 
-    // Best-effort submit (date/time defaults may be required; the toast
-    // `t("Meeting Created Successfully")` confirms it on a full run — asserted once the picker sub-flow
-    // is tuned). The reliable assertion here is the modal entry + Meeting Title above.
-    await page
-      .getByRole('button', { name: /Create|Save|Submit|Done/i })
+    // Native date/time inputs — a future date keeps the schedule valid.
+    await titleField.fill(title);
+    await modal.locator('input[name="birthday"]').first().fill('2026-12-31');
+    const times = modal.locator('input[type="time"]');
+    await times.nth(0).fill('10:00');
+    await times.nth(1).fill('10:30');
+
+    // The fields hold their values (the schedule form is driven correctly).
+    await expect(titleField, 'the Meeting Title accepts text').toHaveValue(title);
+    await expect(modal.locator('input[name="birthday"]').first()).toHaveValue('2026-12-31');
+    await expect(times.nth(0)).toHaveValue('10:00');
+
+    // The participant picker opens (Invite Participants reveals the contact list) — the last step before
+    // Submit; selecting a contact from it is the codegen-pending piece documented above.
+    await modal
+      .getByText(/Invite Participants/i)
       .first()
-      .click()
-      .catch(() => undefined);
+      .click({ force: true });
+    await expect(
+      page.getByText(/^Qa Tester2$/i).first(),
+      'the participant picker lists selectable contacts',
+    ).toBeVisible({ timeout: 15_000 });
   });
 });

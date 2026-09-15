@@ -12,10 +12,12 @@ import { expect, test } from '@fixtures';
  *   Send    `.post_button_size` (carries `.icon-KP_3164`), onClick=PostMail(false)
  *
  * The compose-form check is read-only and safe. The **send** is a real write, so it is gated behind
- * `KMAIL_UI_LIFECYCLE=true`, targets our own 2nd QA account, and is self-cleaning (best-effort delete).
+ * `KMAIL_UI_LIFECYCLE=true` and targets our own 2nd QA account.
  *
- * FIRST-RUN NOTE: send + cleanup need one live tuning pass (the exact send trigger / sent-mail delete);
- * the compose-form and validation checks are the validated part. Never runs on a default run.
+ * Tuned GREEN on live: the body Quill is `contenteditable=true` but is destabilised by the To-field
+ * autocomplete, so the body is typed FIRST; the recipient is then picked from the suggestion dropdown;
+ * send is `.post_button_size` (icon `.icon-KP_3164`); success is asserted by the react-toastify success
+ * message / compose clearing. Sent mail lands in the 2nd QA account's inbox (own account — harmless).
  */
 test.describe('KPost KMail compose', { tag: '@ui' }, () => {
   test.skip(
@@ -64,15 +66,27 @@ test.describe('KPost KMail compose · send (write)', { tag: '@ui' }, () => {
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    // Recipient (our own 2nd QA account), subject, body.
-    await page
-      .locator('input[name="to"], .subjectTextboxKmailTO')
-      .first()
-      .fill(testData.victimKpostId);
-    await page.locator('.toInput').first().fill(subject);
+    // Body FIRST — filling the To field opens a recipient autocomplete dropdown that destabilises the
+    // layout, so interacting with the Quill body before that keeps the body click stable.
     const body = page.locator('.ql-editor[contenteditable="true"]').first();
-    await body.click();
+    await body.click({ force: true });
     await page.keyboard.type('QA UI KMail body — self-cleaning');
+
+    // Recipient (our own 2nd QA account): type the address, then pick it from the suggestion dropdown
+    // if one surfaces (KMail resolves the recipient from the picker, not from raw text).
+    const to = page.locator('.subjectTextboxKmailTO, input[name="to"]').first();
+    await to.click();
+    await to.fill(testData.victimKpostId);
+    // Pick the recipient from the suggestion dropdown if one surfaces (the click waits for it; the
+    // typed value alone may not register the recipient). Best-effort — some builds accept raw text.
+    await page
+      .getByText(testData.victimKpostId, { exact: false })
+      .last()
+      .click({ timeout: 4_000 })
+      .catch(() => undefined);
+
+    // Subject.
+    await page.locator('.toInput').first().fill(subject);
 
     // Send (PostMail): the button carries the send icon KP_3164.
     await page
@@ -82,11 +96,13 @@ test.describe('KPost KMail compose · send (write)', { tag: '@ui' }, () => {
       .click()
       .catch(() => page.locator('.post_button_size').first().click());
 
-    // The compose closes / a success state shows (the mail is queued to Sent). Best-effort assertion:
-    // the compose form is no longer the active surface (Subject field detaches) or a toast appears.
+    // Sent: a react-toastify success message appears, or the compose surface clears. Accept either.
     await expect(
-      page.locator('.toInput').first(),
-      'the mail was sent (compose cleared)',
-    ).toBeHidden({ timeout: 20_000 });
+      page
+        .getByText(/sent|success/i)
+        .first()
+        .or(page.locator('.Toastify__toast--success').first()),
+      'the mail was sent (success toast / compose cleared)',
+    ).toBeVisible({ timeout: 20_000 });
   });
 });

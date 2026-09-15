@@ -46,14 +46,14 @@ test.describe('KPost Contacts — read-only', { tag: '@ui' }, () => {
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    // Open the Blocked-Contacts section and confirm its panel renders (Settings/BlockedContact).
-    await page
-      .getByText(/Block\s*Contact/i)
-      .first()
-      .click()
-      .catch(() => undefined);
+    // The section lives under the collapsed "General Settings" group and is labelled exactly
+    // "Blocked Contacts" (confirmed from the live DOM) — expand the group, then open the section.
+    await page.getByText('General Settings', { exact: true }).first().click();
+    await page.getByText('Blocked Contacts', { exact: true }).first().click();
+
+    // The panel renders its list header ("Blocked Contact List • NN") or the empty state.
     await expect(
-      page.getByText(/Blocked Contact List|Block\s*Contact/i).first(),
+      page.getByText(/Blocked Contact List|No Blocked Contacts/i).first(),
       'the blocked-contacts panel renders',
     ).toBeVisible({ timeout: 20_000 });
   });
@@ -70,10 +70,14 @@ test.describe('KPost Contacts — block / unblock (write)', { tag: '@ui' }, () =
   );
 
   /**
-   * FIRST-RUN NOTE: the block/unblock trigger is in the contact's profile/options inside the Katchup
-   * rail (`BlockContact.js`, `handleBlock` → `BlockContactService {contactID, isBlocked}`). The exact
-   * affordance (a contact-row menu / profile Block button) needs one recording pass; this drives the
-   * plausible flow (open the contact → Block → Unblock) and self-restores.
+   * NEEDS-CODEGEN: the block/unblock trigger lives in the contact's profile/options inside the Katchup
+   * rail (`BlockContact.js`, `handleBlock` → `BlockContactService {contactID, isBlocked}`). Verified on
+   * live this session that the affordance is NOT a plain text/menu item on the open conversation (a
+   * `.icon-KP_144---More-Vertical` force-click surfaces no Block option) — it is a hover-revealed /
+   * deeply-nested in-rail control whose deployed selector needs one interactive `codegen` pass to
+   * capture. The flow (open the contact → Block → confirm → Unblock, self-restoring) and gating are
+   * correct once the selector lands. The API Contacts block/unblock lifecycle is green, so the operation
+   * itself is proven — only the UI-driving selector is pending. Gated, so it never runs by default.
    */
   test('block then unblock the 2nd QA account, leaving it unblocked @ui', async ({ page }) => {
     await openConversation(page, testData.victimKpostId);

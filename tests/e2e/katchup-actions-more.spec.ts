@@ -6,6 +6,7 @@ import {
   messageBySubject,
   openBellMenu,
   openComposer,
+  openConversation,
   sendMessage,
 } from './support/katchup';
 
@@ -64,8 +65,12 @@ test.describe('KPost Katchup · sender sub-flow actions (write)', { tag: '@ui' }
         timeout: 15_000,
       });
 
-      // Dismiss whatever surface opened (modal / picker), without submitting, so no extra state is left.
+      // Dismiss whatever surface opened (modal / picker), without submitting, so no extra state is
+      // left. A sub-flow modal (the Transfer/Forward contact picker is a ModalComponent that Escape
+      // does not always close) can overlay the thread and block the bell menu the self-clean needs, so
+      // reopen the conversation fresh — that unmounts any open modal — before deleting.
       await page.keyboard.press('Escape').catch(() => undefined);
+      await openConversation(page, testData.victimKpostId).catch(() => undefined);
 
       // Self-clean: delete the source message so the account ends as it started.
       if (await messageBySubject(page, subject).count()) {
