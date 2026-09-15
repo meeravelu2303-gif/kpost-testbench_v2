@@ -45,6 +45,31 @@ const LOG = '[bugzilla]';
  */
 const UI_FILING_SPECS = new Set(['screens.spec.ts', 'navigation.spec.ts', 'shell.spec.ts']);
 
+/**
+ * Deterministic filing order so Bugzilla ids come out **ascending by module** — KPost API first, then
+ * Admin, then KMail, then UI — and within a module by component, then endpoint, then summary. Without
+ * this, parallel test completion would file candidates in a random order and the bug ids would not
+ * track the modules. (Running one module per command reinforces the same ordering across runs.)
+ */
+const SUITE_FILING_ORDER: Record<string, number> = {
+  'kpost-api': 0,
+  'admin-api': 1,
+  'kmail-api': 2,
+  'kpost-ui': 3,
+};
+
+function orderedForFiling(candidates: readonly BugCandidate[]): BugCandidate[] {
+  return [...candidates].sort((a, b) => {
+    const suite = (SUITE_FILING_ORDER[a.suiteId] ?? 9) - (SUITE_FILING_ORDER[b.suiteId] ?? 9);
+    if (suite !== 0) return suite;
+    const component = a.component.localeCompare(b.component);
+    if (component !== 0) return component;
+    const endpoint = (a.endpoint ?? '').localeCompare(b.endpoint ?? '');
+    if (endpoint !== 0) return endpoint;
+    return a.title.localeCompare(b.title);
+  });
+}
+
 export default class BugzillaReporter implements Reporter {
   private readonly config = readBugzillaConfig();
   private readonly log = createLogger('bugzilla');
@@ -126,7 +151,8 @@ export default class BugzillaReporter implements Reporter {
         this.config,
         this.log,
       );
-      outcome = await filer.file(gate.filed);
+      // File in a deterministic module order so the created bug ids are ascending (KPost → KMail → UI).
+      outcome = await filer.file(orderedForFiling(gate.filed));
       this.write('filing.json', { ...outcome, rejected: gate.rejected.length });
     }
 
