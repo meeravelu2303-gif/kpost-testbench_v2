@@ -45,21 +45,29 @@ Counts are grounded in the frontend routes (`MenuRoutes.js`) and components
 (`D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1`). "Tests" ≈ Playwright test cases (a flow + its variations);
 the 4 checks per screen are additional and automatic. Estimates, refined as each module is built.
 
-| #   | Module                 | Screen(s) / route                                                  |  Features |  Est. tests | Status                                    |
-| --- | ---------------------- | ------------------------------------------------------------------ | --------: | ----------: | ----------------------------------------- |
-| 1   | **Katchup**            | `/katchup`                                                         |        25 |       30–35 | 🟡 5 built (3 green, 2 to tune)           |
-| 2   | **Settings**           | `/settings` (24 sections)                                          |        24 |       20–24 | 🟡 1 built (theme), screen done           |
-| 3   | **Profile**            | `/userprofile`, `/digital-card`                                    |        11 |       12–14 | 🟡 screen done, writes to build           |
-| 4   | **Contacts**           | inside `/katchup`, `/kall`                                         |         7 |        8–10 | 🔴 not started                            |
-| 5   | **Group**              | inside `/katchup`                                                  |         8 |        9–10 | 🔴 not started                            |
-| 6   | **Kall**               | `/kall`, `/koolkall/:id`                                           |        10 |       10–12 | 🟡 screen done, flows to build            |
-| 7   | **KMail**              | `/kmail`, `/writemail`                                             |        15 |       18–20 | 🟡 screen done, flows to build            |
-| 8   | **KDiary**             | `/kdiary` (+ inside Katchup)                                       |         6 |         6–8 | 🔴 not started                            |
-| 9   | **Home / Dashboard**   | `/home`                                                            |         5 |         5–6 | 🟡 screen done, flows to build            |
-| 10  | **Login & session**    | `/login`, header logout                                            |         8 |         6–8 | 🟢 mostly done (4 states)                 |
-|     | **In-scope total**     |                                                                    |   **119** | **124–147** |                                           |
-| —   | Admin / UserManagement | `/usermanagement`                                                  |        10 |       10–12 | ⏸ needs a business company (3 members)    |
-| —   | Verticals              | `/kcloud` `/kbooking` `/knews` `/e-commerce` `/kdirectory` `/kdoc` | 6 screens |        6–12 | ⏸ owner scope call (screen-smoke vs deep) |
+**Order = the API build order** (owner's call). **Every module gets DEEP coverage** — including the
+verticals (owner's call), not screen-smoke.
+
+| #   | Module                 | Screen(s) / route                       | Features | Est. tests | Status                          |
+| --- | ---------------------- | --------------------------------------- | -------: | ---------: | ------------------------------- |
+| 1   | **Login & session**    | `/login`, `/signup`, header logout      |       10 |       8–10 | 🟢 deep-complete (logout to tune) |
+| 2   | **Profile**            | `/userprofile`, `/digital-card`         |       11 |      12–14 | 🟡 screen done, writes to build |
+| 3   | **Katchup**            | `/katchup`                              |       25 |      30–35 | 🟡 5 built (3 green, 2 to tune) |
+| 4   | **Contacts**           | inside `/katchup`, `/kall`              |        7 |       8–10 | 🔴 not started                  |
+| 5   | **Group**              | inside `/katchup`                       |        8 |       9–10 | 🔴 not started                  |
+| 6   | **Kall**               | `/kall`, `/koolkall/:id`                |       10 |      10–12 | 🟡 screen done, flows to build  |
+| 7   | **KMail**              | `/kmail`, `/writemail`                  |       15 |      18–20 | 🟡 screen done, flows to build  |
+| 8   | **KDiary**             | `/kdiary` (+ inside Katchup)            |        6 |        6–8 | 🔴 not started                  |
+| 9   | **Settings**           | `/settings` (24 sections)               |       24 |      20–24 | 🟡 1 built (theme), screen done |
+| 10  | **Home / Dashboard**   | `/home`                                 |        5 |        5–6 | 🟡 screen done, flows to build  |
+| 11  | **Admin / UserMgmt**   | `/usermanagement`                       |       10 |      10–12 | ⏸ needs a business company (3 members) |
+| 12  | **KDoc / KPresentation** | `/kdoc`                               |        8 |       8–10 | 🔴 deep (owner will share APIs) |
+| 13  | **KCloud**             | `/kcloud`                               |        6 |       6–8  | 🔴 deep                         |
+| 14  | **K-Booking**          | `/kbooking`                             |        6 |       6–8  | 🔴 deep                         |
+| 15  | **KNews**              | `/knews`                                |        5 |       5–6  | 🔴 deep                         |
+| 16  | **K-ECommerce**        | `/e-commerce`                           |        6 |       6–8  | 🔴 deep                         |
+| 17  | **Kdirectory**         | `/kdirectory`                           |        5 |       5–6  | 🔴 deep                         |
+|     | **Total**              |                                         | **~167** | **~150–190** |                               |
 
 Legend: 🟢 done · 🟡 partially built · 🔴 not started · ⏸ blocked/deferred.
 
@@ -144,31 +152,31 @@ DeleteAccount, OtherMail, OtherActivities, KnewsSettings, BusinessSettings, Sett
 - [ ] Recent-messages panel renders + opens a conversation
 - [ ] Quick compose entry · notifications · nav rail (shell)
 
-### 10. Login & session — `/login` (mostly done)
+### 1. Login & session — `/login` (DEEP-COMPLETE bar the logout tuning pass)
 
-- [x] Empty id / unknown id / valid id advances / wrong password → inline error
-- [x] Successful login → `/home`; header logout → `/login`
-- [ ] Forgot-password flow (screen only; OTP-gated) · access code screen
+- [x] Empty id / unknown id / valid id advances / wrong password → inline error _(green)_
+- [x] Successful login → `/home` _(proven by `setup`)_
+- [x] Session guard: an unauthenticated user on an authenticated route → `/login` _(`login-session.spec.ts`)_
+- [x] Forgot-Password link opens the reset modal _(safe — no OTP requested, `login-session.spec.ts`)_
+- [x] Sign-Up link leaves `/login` for registration _(`login-session.spec.ts`)_
+- [ ] Header logout → `/login` _(built, gated `LOGIN_UI_LIFECYCLE`, needs one tuning pass — native confirm)_
+- [—] Forgot-Password completion / access code — **OTP-gated on live, screen-only by design**
 
 ---
 
-## Execution order (recommended)
+## Execution order (owner's call — the API build order, every module deep)
 
-**Katchup first** — it is the flagship (the differentiators), we already have momentum and validated
-selectors, and finishing it proves the full per-module loop end-to-end (build → tune → file valid
-bugs). Then, in value order: **Settings → Profile → Contacts → Group → Kall → KMail → KDiary → Home**,
-and **Login** just needs its two remaining screens. **Admin** and the **verticals** are deferred
-(business accounts / owner scope call).
-
-Each module is finished — all five layers, valid bugs filed — before the next begins.
+**Login → Profile → Katchup → Contacts → Group → Kall → KMail → KDiary → Settings → Home → Admin →
+KDoc → KCloud → K-Booking → KNews → K-ECommerce → Kdirectory.** Each module is finished — all five
+layers, valid bugs filed — before the next begins. **Currently on Module 1 (Login).**
 
 ---
 
 ## What blocks nothing vs what needs you
 
-- **Needs nothing** — Katchup (core), Settings, Profile, Kall, KMail, KDiary, Home, Login: the 6 QA
-  accounts are enough. I build + you run one tuning pass per module.
+- **Needs nothing** — Login, Profile, Katchup (core), Contacts, Group, Kall, KMail, KDiary, Settings,
+  Home, and the verticals: the 6 QA accounts are enough. I build + you run one tuning pass per module.
 - **Needs the tuning pass** — every write flow needs one live headed run to confirm selectors (a
   2-minute `codegen` fixes any that are off). This is the only thing I cannot do alone.
-- **Deferred** — Admin (a business company with 3 members, one expendable); the verticals
-  (KDoc/KCloud/KBooking/KNews/E-Commerce/Kdirectory — you decide screen-smoke vs deep coverage).
+- **Deferred** — Admin (needs a business company with 3 members, one expendable). KDoc goes deep once
+  the owner shares the KPresentation/KDoc APIs; its screen coverage starts now regardless.

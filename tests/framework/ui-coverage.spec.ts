@@ -27,6 +27,11 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
     spec: 'login.spec.ts',
     note: 'empty id / unknown id / valid id advances / wrong password → inline error',
   },
+  {
+    flow: 'Login & session (deep)',
+    spec: 'login-session.spec.ts',
+    note: 'session guard redirect · Forgot-Password modal (no OTP) · Sign-Up link · logout (gated)',
+  },
   { flow: 'Screen shell', spec: 'shell.spec.ts', note: 'header + nav rail on every screen' },
   {
     flow: 'Katchup compose',

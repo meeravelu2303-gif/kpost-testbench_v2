@@ -32,6 +32,7 @@ Every screen inherits the **full check catalogue** below. Covered: **6** screens
 | ---- | ---- | -------------- |
 | Navigation | `navigation.spec.ts` | nav-rail icon → route, for every destination |
 | Login validation | `login.spec.ts` | empty id / unknown id / valid id advances / wrong password → inline error |
+| Login & session (deep) | `login-session.spec.ts` | session guard redirect · Forgot-Password modal (no OTP) · Sign-Up link · logout (gated) |
 | Screen shell | `shell.spec.ts` | header + nav rail on every screen |
 | Katchup compose | `katchup-compose.spec.ts` | open a chat → open composer → enter Subject (BR-K01) + message; gated send + recall (green) |
 | Katchup message actions | `katchup-actions.spec.ts` | sender bell menu → Delete (confirm) and Edit (resend + Edited marker, BR-K03), self-cleaning (gated) |
