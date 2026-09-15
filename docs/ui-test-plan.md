@@ -51,7 +51,7 @@ verticals (owner's call), not screen-smoke.
 | #   | Module                 | Screen(s) / route                       | Features | Est. tests | Status                          |
 | --- | ---------------------- | --------------------------------------- | -------: | ---------: | ------------------------------- |
 | 1   | **Login & session**    | `/login`, `/signup`, header logout      |       10 |       8–10 | 🟢 deep-complete (logout to tune) |
-| 2   | **Profile**            | `/userprofile`, `/digital-card`         |       11 |      12–14 | 🟡 screen done, writes to build |
+| 2   | **Profile**            | `/userprofile`, `/digital-card`         |       11 |      12–14 | 🟡 screen deep + About-edit built |
 | 3   | **Katchup**            | `/katchup`                              |       25 |      30–35 | 🟡 5 built (3 green, 2 to tune) |
 | 4   | **Contacts**           | inside `/katchup`, `/kall`              |        7 |       8–10 | 🔴 not started                  |
 | 5   | **Group**              | inside `/katchup`                       |        8 |       9–10 | 🔴 not started                  |
@@ -108,12 +108,13 @@ DeleteAccount, OtherMail, OtherActivities, KnewsSettings, BusinessSettings, Sett
 - [ ] Each remaining section: renders + its safe write where one exists (read-only for
       ChangePassword/ChangeMobNumber/DeleteAccount — assert the form, never submit)
 
-### 3. Profile — `/userprofile`
+### 2. Profile — `/userprofile`
 
-- [ ] Edit About → Update → verify → restore
-- [ ] Designation · Basic info · Contact info · Privacy → save → restore
-- [ ] Education / Experience: add → verify → delete
-- [ ] Profile image · Cover image · Signature upload
+- [x] Screen: name, photo, About, self-actions (Edit Profile / Share / Change-photo) _(`profile.spec.ts`)_
+- [x] Edit About → Update → verify → restore _(built, gated `PROFILE_UI_LIFECYCLE`, tune)_
+- [ ] Designation · Basic info · Contact info · Privacy → save → restore (same `#section` pencil pattern)
+- [ ] Education / Experience: add (`.icon-KP_45-Add`) → verify → delete
+- [ ] Profile image · Cover image · Signature upload (`.pChangePic_btn`)
 - [ ] Digital card view (`/digital-card/:id`)
 
 ### 4. Contacts — inside `/katchup`, `/kall`

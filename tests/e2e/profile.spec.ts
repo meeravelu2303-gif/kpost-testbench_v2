@@ -43,6 +43,28 @@ test.describe('KPost Profile screens', { tag: '@ui' }, () => {
     });
   });
 
+  test('the OWN profile shows the self-actions: Edit Profile, Share and Change-photo @ui', async ({
+    page,
+  }) => {
+    await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+    await page
+      .locator('.loader-overlay')
+      .waitFor({ state: 'hidden', timeout: 30_000 })
+      .catch(() => undefined);
+
+    // On the account holder's OWN profile the self-actions render (UserProfile.js selfProfile branch):
+    // "Edit Profile", the share button (icon-KP_120-KShare) and the change-photo button
+    // (icon-KP_67-Camera) — the entry points to every profile write.
+    await expect(
+      page.getByText(/^Edit Profile$/i).first(),
+      'the Edit Profile control is present on the own profile',
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(
+      page.locator('.pShare_btn, .pChangePic_btn').first(),
+      'the share / change-photo controls are present',
+    ).toBeVisible();
+  });
+
   test('the settings screen loads with its navigation @ui', async ({ page }) => {
     await page.goto('/settings', { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await expect(page, 'an authenticated user reaches settings').toHaveURL(/\/settings/);

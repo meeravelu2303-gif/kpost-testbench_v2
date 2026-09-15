@@ -44,6 +44,11 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
     note: 'sender bell menu → Delete (confirm) and Edit (resend + Edited marker, BR-K03), self-cleaning (gated)',
   },
   {
+    flow: 'Profile edit',
+    spec: 'profile-edit.spec.ts',
+    note: 'own profile → About section edit pencil → Update → verify → restore (gated, self-restoring)',
+  },
+  {
     flow: 'Settings theme',
     spec: 'settings-theme.spec.ts',
     note: 'Personalize → change KPost layout theme → Apply → verify active → restore original (gated, self-restoring)',

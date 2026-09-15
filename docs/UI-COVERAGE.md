@@ -36,6 +36,7 @@ Every screen inherits the **full check catalogue** below. Covered: **6** screens
 | Screen shell | `shell.spec.ts` | header + nav rail on every screen |
 | Katchup compose | `katchup-compose.spec.ts` | open a chat → open composer → enter Subject (BR-K01) + message; gated send + recall (green) |
 | Katchup message actions | `katchup-actions.spec.ts` | sender bell menu → Delete (confirm) and Edit (resend + Edited marker, BR-K03), self-cleaning (gated) |
+| Profile edit | `profile-edit.spec.ts` | own profile → About section edit pencil → Update → verify → restore (gated, self-restoring) |
 | Settings theme | `settings-theme.spec.ts` | Personalize → change KPost layout theme → Apply → verify active → restore original (gated, self-restoring) |
 
 ## Deep write flows (planned — gated, need live tuning)
