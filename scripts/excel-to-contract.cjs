@@ -80,15 +80,6 @@ if (!SOURCE || !fs.existsSync(SOURCE)) {
 
 /* ------------------------------------------------------------------ workbook reading */
 
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'kpost-xlsx-'));
-const zip = path.join(TMP, 'workbook.zip'); // Expand-Archive insists on a .zip extension.
-fs.copyFileSync(SOURCE, zip);
-execFileSync('powershell', [
-  '-NoProfile',
-  '-Command',
-  `Expand-Archive -LiteralPath '${zip}' -DestinationPath '${TMP}' -Force`,
-]);
-
 const read = (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '');
 const decode = (s) =>
   s
@@ -102,66 +93,100 @@ const decode = (s) =>
 const textOf = (xml) =>
   [...xml.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((m) => decode(m[1])).join('');
 
-const shared = [
-  ...read(path.join(TMP, 'xl', 'sharedStrings.xml')).matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g),
-].map((m) => textOf(m[1]));
+/**
+ * Unzip a .xlsx and return its sheet list plus a `rowsOf(sheetName)` reader. Factored into a
+ * function so the converter can read MORE THAN ONE workbook with one parser — the KPost workbook
+ * (KatchupAPI + KDIARY + … + KMAILAPI + Types) and the separate Admin module workbook. Each
+ * workbook expands into its own temp directory; the yellow-fill (superseded) styling is per-book.
+ */
+function openWorkbook(sourcePath) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kpost-xlsx-'));
+  const zip = path.join(tmp, 'workbook.zip'); // Expand-Archive insists on a .zip extension.
+  fs.copyFileSync(sourcePath, zip);
+  execFileSync('powershell', [
+    '-NoProfile',
+    '-Command',
+    `Expand-Archive -LiteralPath '${zip}' -DestinationPath '${tmp}' -Force`,
+  ]);
 
-const stylesXml = read(path.join(TMP, 'xl', 'styles.xml'));
-const fills = [
-  ...(/<fills\b[^>]*>([\s\S]*?)<\/fills>/.exec(stylesXml)?.[1] ?? '').matchAll(
-    /<fill>([\s\S]*?)<\/fill>/g,
-  ),
-].map((m) => /FFFF00/i.test(m[1]));
-const xfFillIds = [
-  ...(/<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/.exec(stylesXml)?.[1] ?? '').matchAll(
-    /<xf\b([^>]*?)\/?>/g,
-  ),
-].map((m) => Number(/fillId="(\d+)"/.exec(m[1])?.[1] ?? 0));
-/** Yellow fill = superseded. It lives in styles.xml, never on the cell itself. */
-const isYellow = (styleIndex) => Boolean(fills[xfFillIds[Number(styleIndex) || 0]]);
+  const shared = [
+    ...read(path.join(tmp, 'xl', 'sharedStrings.xml')).matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g),
+  ].map((m) => textOf(m[1]));
 
-const rels = {};
-for (const m of read(path.join(TMP, 'xl', '_rels', 'workbook.xml.rels')).matchAll(
-  /Id="([^"]+)"[^>]*Target="([^"]+)"/g,
-)) {
-  rels[m[1]] = m[2];
-}
-const sheets = [
-  ...read(path.join(TMP, 'xl', 'workbook.xml')).matchAll(
-    /<sheet\b[^>]*name="([^"]+)"[^>]*r:id="([^"]+)"/g,
-  ),
-].map((m) => ({ name: decode(m[1]), target: rels[m[2]] }));
+  const stylesXml = read(path.join(tmp, 'xl', 'styles.xml'));
+  const fills = [
+    ...(/<fills\b[^>]*>([\s\S]*?)<\/fills>/.exec(stylesXml)?.[1] ?? '').matchAll(
+      /<fill>([\s\S]*?)<\/fill>/g,
+    ),
+  ].map((m) => /FFFF00/i.test(m[1]));
+  const xfFillIds = [
+    ...(/<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/.exec(stylesXml)?.[1] ?? '').matchAll(
+      /<xf\b([^>]*?)\/?>/g,
+    ),
+  ].map((m) => Number(/fillId="(\d+)"/.exec(m[1])?.[1] ?? 0));
+  /** Yellow fill = superseded. It lives in styles.xml, never on the cell itself. */
+  const isYellow = (styleIndex) => Boolean(fills[xfFillIds[Number(styleIndex) || 0]]);
 
-function rowsOf(sheetName) {
-  const sheet = sheets.find((s) => s.name === sheetName);
-  if (!sheet) return [];
-  const xml = read(path.join(TMP, 'xl', String(sheet.target).replace(/^\/?xl\//, '')));
-  const rows = [];
-  for (const rowMatch of xml.matchAll(/<row\b([^>]*)>([\s\S]*?)<\/row>/g)) {
-    const rowNum = Number(/r="(\d+)"/.exec(rowMatch[1])?.[1] ?? 0);
-    const cells = {};
-    const yellow = {};
-    // Self-closing cells need their own alternative FIRST, or a greedy pattern swallows
-    // the following cells and every column after it shifts.
-    for (const c of rowMatch[2].matchAll(/<c\b([^>]*?)\/>|<c\b([^>]*?)>([\s\S]*?)<\/c>/g)) {
-      const attrs = c[1] ?? c[2] ?? '';
-      const inner = c[3] ?? '';
-      const col = /r="([A-Z]+)\d+"/.exec(attrs)?.[1];
-      if (!col) continue;
-      const type = /t="([^"]+)"/.exec(attrs)?.[1];
-      const raw = /<v>([\s\S]*?)<\/v>/.exec(inner)?.[1];
-      let value = '';
-      if (type === 's' && raw !== undefined) value = shared[Number(raw)] ?? '';
-      else if (type === 'inlineStr' || inner.includes('<t')) value = textOf(inner);
-      else if (raw !== undefined) value = decode(raw);
-      if (!String(value).trim()) continue;
-      cells[col] = String(value);
-      if (isYellow(/s="(\d+)"/.exec(attrs)?.[1])) yellow[col] = true;
-    }
-    if (Object.keys(cells).length) rows.push({ row: rowNum, cells, yellow });
+  const rels = {};
+  for (const m of read(path.join(tmp, 'xl', '_rels', 'workbook.xml.rels')).matchAll(
+    /Id="([^"]+)"[^>]*Target="([^"]+)"/g,
+  )) {
+    rels[m[1]] = m[2];
   }
-  return rows;
+  const sheets = [
+    ...read(path.join(tmp, 'xl', 'workbook.xml')).matchAll(
+      /<sheet\b[^>]*name="([^"]+)"[^>]*r:id="([^"]+)"/g,
+    ),
+  ].map((m) => ({ name: decode(m[1]), target: rels[m[2]] }));
+
+  function rowsOf(sheetName) {
+    const sheet = sheets.find((s) => s.name === sheetName);
+    if (!sheet) return [];
+    const xml = read(path.join(tmp, 'xl', String(sheet.target).replace(/^\/?xl\//, '')));
+    const rows = [];
+    for (const rowMatch of xml.matchAll(/<row\b([^>]*)>([\s\S]*?)<\/row>/g)) {
+      const rowNum = Number(/r="(\d+)"/.exec(rowMatch[1])?.[1] ?? 0);
+      const cells = {};
+      const yellow = {};
+      // Self-closing cells need their own alternative FIRST, or a greedy pattern swallows
+      // the following cells and every column after it shifts.
+      for (const c of rowMatch[2].matchAll(/<c\b([^>]*?)\/>|<c\b([^>]*?)>([\s\S]*?)<\/c>/g)) {
+        const attrs = c[1] ?? c[2] ?? '';
+        const inner = c[3] ?? '';
+        const col = /r="([A-Z]+)\d+"/.exec(attrs)?.[1];
+        if (!col) continue;
+        const type = /t="([^"]+)"/.exec(attrs)?.[1];
+        const raw = /<v>([\s\S]*?)<\/v>/.exec(inner)?.[1];
+        let value = '';
+        if (type === 's' && raw !== undefined) value = shared[Number(raw)] ?? '';
+        else if (type === 'inlineStr' || inner.includes('<t')) value = textOf(inner);
+        else if (raw !== undefined) value = decode(raw);
+        if (!String(value).trim()) continue;
+        cells[col] = String(value);
+        if (isYellow(/s="(\d+)"/.exec(attrs)?.[1])) yellow[col] = true;
+      }
+      if (Object.keys(cells).length) rows.push({ row: rowNum, cells, yellow });
+    }
+    return rows;
+  }
+
+  return { sheets, rowsOf };
 }
+
+/**
+ * The two source workbooks. KPost + KMail live in one book (the `KPOST API (N).xlsx` dump); the
+ * Admin module has its own `Admin_module.xlsx`. Each TAB below names the workbook it belongs to
+ * (default `kpost`); a missing Admin book simply produces no admin-api output rather than failing.
+ */
+const adminSourcePath = path.join(ROOT, 'Admin_module.xlsx');
+const WORKBOOK_PATHS = { kpost: SOURCE, admin: adminSourcePath };
+const WORKBOOKS = {
+  kpost: openWorkbook(SOURCE),
+  admin: fs.existsSync(adminSourcePath) ? openWorkbook(adminSourcePath) : null,
+};
+
+// The Types tab and other kpost-only lookups read the KPost workbook directly.
+const { sheets, rowsOf } = WORKBOOKS.kpost;
 
 /* ------------------------------------------------------------------ tab layouts */
 
@@ -222,6 +247,23 @@ const TABS = [
     request: ['F', 'E'],
     response: ['G'],
   },
+  {
+    // The Admin module workbook (Admin_module.xlsx). One sheet, no header row: row 1 declares the
+    // base URL ("AdminURL - https://adminmodule.kpostindia.com/") and every following row is
+    // A=Method, B=URL (`{AdminURL}/route`), C=Request payload. There is no response column.
+    // No `expect` guard because the sheet has no header row to anchor on; the layout is fixed.
+    sheet: 'API Services',
+    workbook: 'admin',
+    product: 'admin-api',
+    url: 'B',
+    methodColumn: 'A',
+    request: ['C'],
+    response: [],
+    // Strip the `{AdminURL}` server placeholder from the front of every URL; a stray `{AdminURL}`
+    // left mid-path (the workbook uses it in place of path-param values on two rows) becomes a
+    // numbered path parameter so the path stays valid.
+    basePlaceholder: 'AdminURL',
+  },
 ];
 
 const PRODUCTS = {
@@ -236,6 +278,20 @@ const PRODUCTS = {
     description: 'KMail module API, maintained in its own repository.',
     defaultServer: 'https://kmail5.kpostindia.com/kmail5/v2',
   },
+  'admin-api': {
+    title: 'KPost Admin API',
+    description:
+      'KPost Admin module API — organisation setup: tier attributes/variables, locations, ' +
+      'workplace hierarchy, HR setup tiers, role posting and employee details.',
+    defaultServer: 'https://adminmodule.kpostindia.com',
+  },
+};
+
+/** Which source workbook each product's rows come from, for the per-product `source` label. */
+const PRODUCT_WORKBOOK = {
+  'kpost-api': 'kpost',
+  'kmail-api': 'kpost',
+  'admin-api': 'admin',
 };
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
@@ -527,6 +583,21 @@ const toPath = (url) => {
   return p.replace(/\/{2,}/g, '/');
 };
 
+/**
+ * Some workbooks write a base-URL placeholder in front of every route (Admin: `{AdminURL}/route`)
+ * instead of a real host. The leading placeholder is the server base, so it is dropped; any further
+ * `{Placeholder}` left in the path was used in place of a path-param VALUE, so it becomes a numbered
+ * path parameter (`{param1}`, `{param2}`) rather than a duplicate, invalid one.
+ */
+const stripBasePlaceholder = (value, placeholder) => {
+  if (!placeholder || !value) return value;
+  const one = `\\{${placeholder}\\}`;
+  let v = value.replace(new RegExp(`^\\s*${one}\\/?`), '/');
+  let n = 0;
+  v = v.replace(new RegExp(one, 'g'), () => `{param${(n += 1)}}`);
+  return v;
+};
+
 const operationIdFrom = (name, method, pathname) => {
   const fromName = (name || '').trim().split(/\s+/)[0];
   if (fromName && /^[A-Za-z][\w-]*$/.test(fromName)) return fromName;
@@ -563,7 +634,9 @@ const records = [];
 const tabLayouts = [];
 
 for (const tab of TABS) {
-  const tabRows = rowsOf(tab.sheet);
+  const workbook = WORKBOOKS[tab.workbook ?? 'kpost'];
+  if (!workbook) continue; // e.g. the Admin workbook is absent — no admin-api output, no failure.
+  const tabRows = workbook.rowsOf(tab.sheet);
   verifyHeaders(tab, tabRows);
   const methodColumn = methodColumnOf(tab, tabRows);
   if (methodColumn && methodColumn !== tab.methodColumn) {
@@ -583,7 +656,7 @@ for (const tab of TABS) {
     firstFreeColumn: firstFreeColumn(tabRows),
   });
   for (const { row, cells, yellow } of tabRows) {
-    const urlCell = (cells[tab.url] ?? '').trim();
+    const urlCell = stripBasePlaceholder((cells[tab.url] ?? '').trim(), tab.basePlaceholder);
     /*
      * The layout column is authoritative, with a fallback: some rows hold junk in it (R66 has
      * " z", R95 is empty, R99 holds the JSON payload) while the real URL sits in the notes
@@ -778,6 +851,8 @@ const summary = {};
 
 for (const [product, meta] of Object.entries(PRODUCTS)) {
   const mine = byProduct[product] ?? [];
+  // Each product names the workbook its rows actually came from (Admin has its own file).
+  const wbName = path.basename(WORKBOOK_PATHS[PRODUCT_WORKBOOK[product]] ?? SOURCE);
   const usable = mine
     .filter((r) => r.usable)
     .sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
@@ -786,7 +861,7 @@ for (const [product, meta] of Object.entries(PRODUCTS)) {
     path.join(contractsDir, `${product}.contract.json`),
     `${JSON.stringify(
       {
-        source: workbookName,
+        source: wbName,
         product: meta.title,
         generatedAt,
         counts: {
@@ -870,10 +945,10 @@ for (const [product, meta] of Object.entries(PRODUCTS)) {
         openapi: '3.1.0',
         info: {
           title: meta.title,
-          version: workbookName,
+          version: wbName,
           description:
             `${meta.description}\n\n` +
-            `GENERATED from "${workbookName}" by scripts/excel-to-contract.cjs — do not edit by hand.\n` +
+            `GENERATED from "${wbName}" by scripts/excel-to-contract.cjs — do not edit by hand.\n` +
             'Only rows with a real path and a known HTTP method are included; superseded (yellow), ' +
             'duplicate and legacy rows are excluded and listed in contracts/_conversion-report.json.\n' +
             'Schemas are inferred from the documented examples, so no property is marked required, ' +

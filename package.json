@@ -26,6 +26,8 @@
     "contract:otp": "node scripts/otp-dependency-report.cjs",
     "bugs:preview": "cross-env BUGZILLA_DRY_RUN=true MOCK_API=false playwright test --project=api --project=chromium",
     "bugs:file": "cross-env BUGZILLA_DRY_RUN=false MOCK_API=false playwright test --project=api --project=chromium",
+    "bugs:preview:api": "cross-env BUGZILLA_DRY_RUN=true MOCK_API=false playwright test --project=api",
+    "bugs:file:api": "cross-env BUGZILLA_DRY_RUN=false MOCK_API=false playwright test --project=api",
     "bugs:preview:kpost": "cross-env BUGZILLA_DRY_RUN=true MOCK_API=false playwright test --project=api --grep @kpost-api --workers=1",
     "bugs:file:kpost": "cross-env BUGZILLA_DRY_RUN=false MOCK_API=false playwright test --project=api --grep @kpost-api --workers=1",
     "bugs:preview:kmail": "cross-env BUGZILLA_DRY_RUN=true MOCK_API=false playwright test --project=api --grep @kmail-api --workers=1",

@@ -1,225 +1,180 @@
-# Run commands — how to run the tests and file bugs to Bugzilla
+# Run commands
 
-Everything runs from the repo root (`D:\TEST-BENCH-AUTOMATIONS\kpost-testbench_v2`) in **PowerShell**.
+Run everything from the repo root (`D:\TEST-BENCH-AUTOMATIONS\kpost-testbench_v2`) in **PowerShell**.
+
+There are only two kinds of command:
+
+- **Run the tests** — runs the checks, shows pass/fail, **files no bugs**. For seeing that things work.
+- **File the bugs** — runs the checks **and creates the valid, non-duplicate bugs in Bugzilla**.
+
+Each kind comes in an **API** flavour and a **UI** flavour, plus a **run-all**. That's the whole file.
 
 ---
 
-## ⭐ If you only read one thing
+## 1. Run the tests (no bugs filed)
 
-To find API bugs on the live app and file them to Bugzilla:
+Use these to just run the checks and see the result. Nothing is written to Bugzilla.
+
+| What              | Command                 |
+| ----------------- | ----------------------- |
+| **API tests**     | `npm run test:api`      |
+| **UI tests**      | `npm run test:chromium` |
+| **Run all tests** | `npm run test`          |
+
+Narrower API runs, if you want one module:
+
+| What           | Command              |
+| -------------- | -------------------- |
+| KPost API only | `npm run test:kpost` |
+| KMail API only | `npm run test:kmail` |
+
+---
+
+## 2. File the bugs to Bugzilla
+
+**Always preview first, then file.** `preview` finds the bugs and writes the report but creates
+nothing; `file` creates the tickets. They are otherwise identical. Filing **cannot be undone**
+(Bugzilla has no delete), so read the report in between.
+
+### 2a. API bugs → Jaganathan (KPost) + Jitendra (KMail)
 
 ```powershell
-npm run bugs:preview     # 1. dry run — finds bugs, files NOTHING. Read reports/bugs/REPORT.md
-npm run bugs:file        # 2. files the valid, non-duplicate bugs to Bugzilla
+npm run bugs:preview:api     # 1. find API bugs, file NOTHING — then read reports/bugs/REPORT.md
+npm run bugs:file:api        # 2. file the valid API bugs
 ```
 
-That's it. Everything below is detail on what those do and the other options.
-
----
-
-## ⭐⭐ Run all APIs IN ORDER — KPost first, then KMail (ascending bug ids)
-
-This is the recommended way to file: run **KPost API first** (its bugs get the lower ids), then
-**KMail API** (higher ids), so the Bugzilla list reads top-to-bottom by module. Each module runs
-**serial** (`--workers=1`) and files in a **deterministic order** (by component, then endpoint), so
-the ids come out ascending, not random.
+Want them filed **in order** — KPost first (lower ids), then KMail (higher ids)? Use the per-module
+commands instead (each is serial, so the ids come out ascending):
 
 ```powershell
-# 1) KPOST API — preview, read the report, then file
-npm run bugs:preview:kpost
-#    ...read reports/bugs/REPORT.md...
+npm run bugs:preview:kpost   # KPost API — preview, read REPORT.md, then file
 npm run bugs:file:kpost
-
-# 2) KMAIL API — preview, read the report, then file
-npm run bugs:preview:kmail
-#    ...read reports/bugs/REPORT.md...
+npm run bugs:preview:kmail   # KMail API — preview, read REPORT.md, then file
 npm run bugs:file:kmail
 ```
 
-Result: KPost API bugs are created first (e.g. ids 100, 101, 102 …), then KMail API bugs after them
-(103, 104 …) — ascending, grouped by module, valid and non-duplicate. Re-running either step later
-**comments** on the existing tickets instead of duplicating.
-
-> Each run writes a fresh `reports/bugs/REPORT.md` for that module, so read it between the KPost and
-> KMail steps. The Bugzilla UI already lists bugs id-ascending, so they line up in order.
-
----
-
-## ⭐⭐⭐ Test EVERYTHING end-to-end on live (reads + writes) and file bugs
-
-The two commands above (`bugs:*`) run only the **read-side** checks. To also exercise every **write
-lifecycle** (Katchup send/recall/delete, KMail compose/delete, Profile edit, Kall, Contacts, Group,
-Settings, KDiary, KOS, AWS — all on the QA accounts, self-cleaning) in one end-to-end run:
+### 2b. UI bugs → Ayyappan
 
 ```powershell
-npm run flow:preview     # runs EVERYTHING on live, files NOTHING — read reports/bugs/REPORT.md
-npm run flow:file        # runs EVERYTHING on live, files the valid bugs
+npm run bugs:preview:ui      # 1. find UI bugs, file NOTHING — then read reports/bugs/REPORT.md
+npm run bugs:file:ui         # 2. file the valid UI bugs
 ```
 
-`flow:file` runs KPost API + KMail API (reads **and** writes) + the UI screen sweep, serial, and files
-the valid bugs — still **ascending by module** (KPost ids first, then KMail, then UI), because the
-reporter sorts candidates by module before filing. This is the fullest live run. ~10–15 min.
-
-**The hard ceiling — what CANNOT run on live, no matter the command (by design, for safety):**
-
-- **OTP flows** (signup, forgot-password, device changes) — they send real SMS; live has no bypass.
-- **Aggressive fuzzing probes** (injection, XSS, boundary/type mutation) — they mutate and re-send, so
-  they only run against the local mock / a staging host, never live.
-- Anything naming **another real user's data** — refused by the QA-identifier guard before it is sent.
-
-So "all test cases on live" = **every read-side check + every write lifecycle** on the QA accounts.
-The OTP and fuzzing classes are the only ones held back, and that is a safety property, not a gap —
-they are covered off-live against the mock.
-
 ---
 
-## 1. The mental model (what actually happens)
-
-When you run a command, three things happen in order:
-
-1. **Tests run** against the **live** app (`devapi2` for KPost API, `kmail5` for KMail, and/or the UI
-   at `account.kpostindia.com`). Each endpoint/screen is checked by many validators.
-2. Every failed check becomes a **candidate bug**. The bench then **filters** them (see §4) so only
-   real, valid, non-duplicate ones survive.
-3. If filing is **armed** (`bugs:file`), the survivors are **created in Bugzilla**, routed to the
-   right developer. If filing is **dry** (`bugs:preview`), nothing is created — you just get a report.
-
-**`DRY_RUN` is the switch.** `preview` = dry (files nothing). `file` = armed (creates tickets).
-The two commands are otherwise identical.
-
----
-
-## 2. Command reference — pick the row you want
-
-| Command                      | What it runs                                                       | Files to Bugzilla?  | ~Time   |
-| ---------------------------- | ------------------------------------------------------------------ | :-----------------: | ------- |
-| `npm run bugs:preview`       | API (KPost + KMail) **+ UI screen sweep**, all at once             |  **No** (dry run)   | ~5 min  |
-| `npm run bugs:file`          | API (KPost + KMail) **+ UI screen sweep**, all at once             |       **Yes**       | ~5 min  |
-| `npm run bugs:preview:kpost` | **KPost API only**, serial (ordered)                               |  **No** (dry run)   | ~3 min  |
-| `npm run bugs:file:kpost`    | **KPost API only** — files FIRST (lower ids)                       |       **Yes**       | ~3 min  |
-| `npm run bugs:preview:kmail` | **KMail API only**, serial (ordered)                               |  **No** (dry run)   | ~2 min  |
-| `npm run bugs:file:kmail`    | **KMail API only** — files AFTER KPost (higher ids)                |       **Yes**       | ~2 min  |
-| `npm run test:kpost`         | KPost API endpoints only (no filing)                               | No (dry by default) | ~3 min  |
-| `npm run test:kmail`         | KMail API endpoints only (no filing)                               | No (dry by default) | ~2 min  |
-| `npm run flow:preview`       | API + **all write lifecycles** (send/recall/delete on QA accounts) |       **No**        | ~10 min |
-| `npm run flow:file`          | API + **all write lifecycles**                                     |       **Yes**       | ~10 min |
-
-Notes:
-
-- `bugs:*` runs the **read-side** validators (status codes, schemas, security headers, sensitive-data,
-  performance, auth) — the ones that are safe on live. This is where the fileable bugs come from.
-- `flow:*` **also** drives every write flow (Katchup send/recall, KMail compose, etc.) on the **QA
-  accounts only**, self-cleaning. More coverage, but slower and serial. Use it when you want the write
-  paths exercised too, not just reads.
-- `test:kpost` / `test:kmail` are for running **one module** quickly; they are **dry by default** (no
-  filing) unless you add the env vars from §5.
-
----
-
-## 3. First-time walkthrough (do this once, in order)
+## 3. Run all — API + UI together, and file
 
 ```powershell
-# a) Confirm the bench is healthy (no live calls, ~15s)
-npm run check
-npm run test:framework
-
-# b) DRY RUN — find the bugs, file nothing (~5 min)
-npm run bugs:preview
-
-# c) Read what it found — open this file:
-#      reports/bugs/REPORT.md
-#    It lists every valid defect grouped by developer, with evidence.
-
-# d) When you are happy with the report, FILE for real (~5 min)
-npm run bugs:file
-
-# e) Check Bugzilla — the tickets are now there, routed to the right developer.
+npm run bugs:preview         # 1. API + UI, find everything, file NOTHING — read reports/bugs/REPORT.md
+npm run bugs:file            # 2. API + UI, file all the valid bugs (KPost ids first, then KMail, then UI)
 ```
 
-**Do (b) → (c) → (d) every time.** Never skip the preview: filing **cannot be undone** (Bugzilla has
-no delete — the worst case is resolving a wrong ticket as INVALID by hand).
+This is the one-shot "test everything and file" command. ~5 min.
 
 ---
 
-## 4. What counts as a "valid bug" (why you can trust it)
+## 4. The full end-to-end run (also drives the write flows)
 
-`bugs:file` creates a ticket only if **all** of these are true. Anything dropped is listed in
-`REPORT.md` **with the reason**, so nothing is silently hidden:
-
-| Filter         | Rule                                                                                                                                     |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Severity floor | MEDIUM or higher (`BUGZILLA_MIN_SEVERITY=MEDIUM`). LOW findings are reported, not filed.                                                 |
-| Validity gate  | Infrastructure cascades and self-contradicting evidence are dropped.                                                                     |
-| No duplicates  | Live search on the `[KP-XXXXXX]` tag: already open → **comment**; resolved INVALID → **never re-file**; fixed but back → **reopen**.     |
-| Run gate       | If the run collapsed (< 50% of tests produced a result), **nothing** files.                                                              |
-| Consolidation  | One platform-wide fault (e.g. missing security headers on every endpoint) = **one** ticket listing all affected endpoints, not hundreds. |
-
-**Routing:** KPost API → Jaganathan Murthy · KMail API → Jitendra Kumar · UI → Ayyappan Ashok — each
-on its exact component.
-
----
-
-## 5. Advanced: build your own command
-
-Every command above is just `playwright test` with a few env vars. The two that matter:
-
-- `BUGZILLA_DRY_RUN` — `true` = file nothing (preview), `false` = file for real.
-- `MOCK_API` — `false` = hit the live API (always use false for real runs).
-
-Examples (PowerShell):
+Sections 1–3 run the **read-side** checks (status codes, schemas, security headers, sensitive-data,
+performance, auth) — the safe-on-live checks that produce the fileable bugs. To **also** exercise every
+**write lifecycle** (Katchup send/recall/delete, KMail compose, Profile edit, Kall, Contacts, Group,
+Settings, KDiary, KOS, AWS — all on the QA accounts, self-cleaning):
 
 ```powershell
-# API ONLY (skip the UI screen sweep), dry run
-npx cross-env BUGZILLA_DRY_RUN=true MOCK_API=false playwright test --project=api
-
-# API ONLY, file for real
-npx cross-env BUGZILLA_DRY_RUN=false MOCK_API=false playwright test --project=api
-
-# One module (KPost API) and file it
-npx cross-env BUGZILLA_DRY_RUN=false MOCK_API=false playwright test --project=api --grep "@kpost-api"
+npm run flow:preview         # API reads + writes + UI sweep, file NOTHING — read reports/bugs/REPORT.md
+npm run flow:file            # same, and file the valid bugs
 ```
 
-The reporter reads `.env` for the rest (`TEST_ENV=production`, `BUGZILLA_URL`, `BUGZILLA_API_KEY`).
+API only (no UI), reads + writes:
+
+```powershell
+npm run flow:preview:api
+npm run flow:file:api
+```
+
+This is the fullest live run (~10–15 min, serial).
 
 ---
 
-## 6. After a run — where to look
+## Quick reference — every command
+
+| Goal                             | Preview (files nothing)                 | File for real                        |
+| -------------------------------- | --------------------------------------- | ------------------------------------ |
+| **API** — run tests              | `npm run test:api`                      | —                                    |
+| **API** — file bugs              | `npm run bugs:preview:api`              | `npm run bugs:file:api`              |
+| **API** — file, KPost then KMail | `npm run bugs:preview:kpost` / `:kmail` | `npm run bugs:file:kpost` / `:kmail` |
+| **UI** — run tests               | `npm run test:chromium`                 | —                                    |
+| **UI** — file bugs               | `npm run bugs:preview:ui`               | `npm run bugs:file:ui`               |
+| **ALL** — API + UI, file         | `npm run bugs:preview`                  | `npm run bugs:file`                  |
+| **ALL** — reads + writes + UI    | `npm run flow:preview`                  | `npm run flow:file`                  |
+
+---
+
+## After any run — where the results are
 
 | File                             | What it is                                                                         |
 | -------------------------------- | ---------------------------------------------------------------------------------- |
 | `reports/bugs/REPORT.md`         | **The main output.** Every valid defect by developer + everything dropped and why. |
-| `reports/bugs/filing.json`       | The full ticket text for each candidate (useful on a dry run).                     |
-| Bugzilla (`http://192.168.0.50`) | The created tickets (after `bugs:file`).                                           |
-| `npx playwright show-report`     | The full Playwright HTML report — per-test detail, traces, screenshots.            |
+| `reports/bugs/filing.json`       | The full ticket text for each candidate (useful on a preview run).                 |
+| Bugzilla (`http://192.168.0.50`) | The created tickets (after a `:file` command).                                     |
+| `npm run report`                 | The full Playwright HTML report — per-test detail, traces, screenshots.            |
 
 ---
 
-## 7. Prerequisites (already set — just confirm in `.env`)
+## What "a valid bug" means (why you can trust `:file`)
+
+A ticket is created only if **all** of these hold; anything dropped is listed in `REPORT.md` **with the
+reason**, so nothing is hidden:
+
+| Filter         | Rule                                                                                                                          |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Severity floor | MEDIUM or higher. LOW findings are reported, not filed.                                                                       |
+| Validity gate  | Infrastructure cascades and self-contradicting evidence are dropped.                                                          |
+| No duplicates  | Live `[KP-XXXXXX]` tag search: already open → **comment**; resolved INVALID → **never re-file**; fixed but back → **reopen**. |
+| Run gate       | If the run collapsed (< 50% of tests produced a result), **nothing** files.                                                   |
+| Consolidation  | One platform-wide fault (e.g. missing headers everywhere) = **one** ticket listing all endpoints.                             |
+
+**Routing:** KPost API → Jaganathan Murthy · KMail API → Jitendra Kumar · UI → Ayyappan Ashok, each on
+its exact component.
+
+---
+
+## What never runs on live (safety, by design)
+
+No command sends these to the live app, whatever you run:
+
+- **OTP flows** (signup, forgot-password, device changes) — they send real SMS; live has no bypass.
+- **Aggressive fuzzing** (injection, XSS, boundary/type mutation) — they mutate and re-send, so they run
+  only against the local mock / a staging host.
+- Anything naming **another real user's data** — refused by the QA-identifier guard before it is sent.
+
+Every write flow targets the **QA accounts only** and cleans up after itself.
+
+---
+
+## Prerequisites — confirm once in `.env`
 
 ```
 TEST_ENV=production            # targets live + arms the 3 safety controls (do not change)
 MOCK_API=false                 # hit the real API
 BUGZILLA_URL=http://192.168.0.50/rest
-BUGZILLA_API_KEY=<a 40-char key>   # REQUIRED to file — without it, nothing files
+BUGZILLA_API_KEY=<a 40-char key>   # REQUIRED to file — if empty, a :file command runs but files nothing (and says so)
 BUGZILLA_MIN_SEVERITY=MEDIUM   # the valid-only floor
 ```
 
-If `BUGZILLA_API_KEY` is empty, `bugs:file` runs but files nothing (and says so).
+Healthcheck (no live calls, ~15s): `npm run check` then `npm run test:framework`.
 
 ---
 
-## 8. The UI tests (separate from API filing)
+## Note on the gated UI feature flows
 
-The API commands above already include the **UI screen sweep** (`screens.spec.ts` — the 9 checks on
-every screen), which is the part that finds and files UI bugs. The **UI feature/write flows**
-(Katchup send, recall, two-session, etc.) are **gated** and only run when you set their flag — they do
-**not** file bugs (they are functional tests, not bug-finders):
+The UI **write/feature** specs (Katchup send, recall, two-session, KMail send, Kall schedule, …) are
+**gated** behind their own `*_UI_LIFECYCLE` flags and are **not** part of any command above — they are
+functional tests, not bug-finders, so they never file to Bugzilla. Run one on demand like:
 
 ```powershell
-# run a gated UI write flow (headed, dry — never files), e.g. the two-session recipient actions:
 $env:KATCHUP_UI_LIFECYCLE="true"; $env:BUGZILLA_DRY_RUN="true"
 npx playwright test --project=chromium tests/e2e/katchup-two-session.spec.ts
 ```
 
-So: **`bugs:file` handles UI bug-filing** (via the screen sweep). The gated feature specs are for
-verifying the flows work, run on demand, and never touch Bugzilla.
+UI bug-filing is handled by `bugs:file:ui` (the screen sweep), not by these gated specs.

@@ -68,6 +68,7 @@ Only needed where the derived method is wrong. Per tab:
 | V2 TESTED APIS | 0 | **B** | already there |
 | Sheet3 | 0 | **H** | none — a column headed `Method` in H would override the derived methods |
 | KMAILAPI | 0 | **C** | already there |
+| API Services | 0 | **A** | already there |
 
 > **If you add that column (KatchupAPI → Q, Sheet3 → H), append it at the end — never insert it.**
 > The converter finds the Method column by its header, so appending it needs no code change.

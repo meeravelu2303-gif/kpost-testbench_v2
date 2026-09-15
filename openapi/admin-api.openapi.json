@@ -1,0 +1,1234 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "KPost Admin API",
+    "version": "Admin_module.xlsx",
+    "description": "KPost Admin module API — organisation setup: tier attributes/variables, locations, workplace hierarchy, HR setup tiers, role posting and employee details.\n\nGENERATED from \"Admin_module.xlsx\" by scripts/excel-to-contract.cjs — do not edit by hand.\nOnly rows with a real path and a known HTTP method are included; superseded (yellow), duplicate and legacy rows are excluded and listed in contracts/_conversion-report.json.\nSchemas are inferred from the documented examples, so no property is marked required, and the workbook documents no status codes or auth requirements."
+  },
+  "servers": [
+    {
+      "url": "https://adminmodule.kpostindia.com"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/adminTierAttribute/delete": {
+      "post": {
+        "operationId": "post-adminTierAttribute-delete",
+        "summary": "POST /adminTierAttribute/delete",
+        "x-excel-source": "API Services:R6",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "id": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierAttribute/getAttributeByCompanyId": {
+      "post": {
+        "operationId": "post-adminTierAttribute-getAttributeByCompanyId",
+        "summary": "POST /adminTierAttribute/getAttributeByCompanyId",
+        "x-excel-source": "API Services:R3",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierAttribute/save": {
+      "post": {
+        "operationId": "post-adminTierAttribute-save",
+        "summary": "POST /adminTierAttribute/save",
+        "x-excel-source": "API Services:R4",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "attributeName": {
+                    "type": "string"
+                  },
+                  "createdBy": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "attributeName": "Department",
+                "createdBy": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierAttribute/update": {
+      "post": {
+        "operationId": "post-adminTierAttribute-update",
+        "summary": "POST /adminTierAttribute/update",
+        "x-excel-source": "API Services:R5",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "attributeName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": 1,
+                "companyId": 1,
+                "attributeName": "Department"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/delete": {
+      "post": {
+        "operationId": "post-adminTierVariable-delete",
+        "summary": "POST /adminTierVariable/delete",
+        "x-excel-source": "API Services:R10",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "id": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/getAdminTierVariable": {
+      "post": {
+        "operationId": "post-adminTierVariable-getAdminTierVariable",
+        "summary": "POST /adminTierVariable/getAdminTierVariable",
+        "x-excel-source": "API Services:R7",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "parentVariableId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "parentVariableId": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/save": {
+      "post": {
+        "operationId": "post-adminTierVariable-save",
+        "summary": "POST /adminTierVariable/save",
+        "x-excel-source": "API Services:R8",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "attributeId": {
+                    "type": "integer"
+                  },
+                  "variableName": {
+                    "type": "string"
+                  },
+                  "parentVariableId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "attributeId": 1,
+                "variableName": "Sales",
+                "parentVariableId": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/update": {
+      "post": {
+        "operationId": "post-adminTierVariable-update",
+        "summary": "POST /adminTierVariable/update",
+        "x-excel-source": "API Services:R9",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "attributeId": {
+                    "type": "integer"
+                  },
+                  "variableName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": 1,
+                "companyId": 1,
+                "attributeId": 1,
+                "variableName": "Sales"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/country/getAddressUsingPincodeAndCountry/{param1}/{param2}": {
+      "get": {
+        "operationId": "get-country-getAddressUsingPincodeAndCountry",
+        "summary": "GET /country/getAddressUsingPincodeAndCountry/{param1}/{param2}",
+        "x-excel-source": "API Services:R11",
+        "x-method-source": "method-column",
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "param2",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/employeeDetails/delete": {
+      "post": {
+        "operationId": "post-employeeDetails-delete",
+        "summary": "POST /employeeDetails/delete",
+        "x-excel-source": "API Services:R36",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "id": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employeeDetails/getEmployeeDetails": {
+      "get": {
+        "operationId": "get-employeeDetails-getEmployeeDetails",
+        "summary": "GET /employeeDetails/getEmployeeDetails",
+        "x-excel-source": "API Services:R35",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        }
+      }
+    },
+    "/employeeDetails/save": {
+      "post": {
+        "operationId": "post-employeeDetails-save",
+        "summary": "POST /employeeDetails/save",
+        "x-excel-source": "API Services:R33",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "employeeName": {
+                    "type": "string"
+                  },
+                  "mobileNo": {
+                    "type": "string"
+                  },
+                  "emailId": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "employeeName": "Sample Employee",
+                "mobileNo": "9999999999",
+                "emailId": "employee@example.com"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employeeDetails/update": {
+      "post": {
+        "operationId": "post-employeeDetails-update",
+        "summary": "POST /employeeDetails/update",
+        "x-excel-source": "API Services:R34",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "employeeName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": 1,
+                "companyId": 1,
+                "employeeName": "Sample Employee"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierAttribute/delete": {
+      "post": {
+        "operationId": "post-hrSetUpTierAttribute-delete",
+        "summary": "POST /hrSetUpTierAttribute/delete",
+        "x-excel-source": "API Services:R21",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "id": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierAttribute/getAttributeByCompanyId": {
+      "post": {
+        "operationId": "post-hrSetUpTierAttribute-getAttributeByCompanyId",
+        "summary": "POST /hrSetUpTierAttribute/getAttributeByCompanyId",
+        "x-excel-source": "API Services:R18",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "companyId": "1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierAttribute/save": {
+      "post": {
+        "operationId": "post-hrSetUpTierAttribute-save",
+        "summary": "POST /hrSetUpTierAttribute/save",
+        "x-excel-source": "API Services:R19",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "attributeName": {
+                    "type": "string"
+                  },
+                  "createdBy": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "attributeName": "Grade",
+                "createdBy": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierAttribute/update": {
+      "post": {
+        "operationId": "post-hrSetUpTierAttribute-update",
+        "summary": "POST /hrSetUpTierAttribute/update",
+        "x-excel-source": "API Services:R20",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "attributeName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": 1,
+                "companyId": 1,
+                "attributeName": "Grade"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierVariable/getAllReportingHrTierVariableHierarchy": {
+      "post": {
+        "operationId": "post-hrSetUpTierVariable-getAllReportingHrTierVariableHierarchy",
+        "summary": "POST /hrSetUpTierVariable/getAllReportingHrTierVariableHierarchy",
+        "x-excel-source": "API Services:R27",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "id": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierVariable/getHrSetUpTierVariable": {
+      "post": {
+        "operationId": "post-hrSetUpTierVariable-getHrSetUpTierVariable",
+        "summary": "POST /hrSetUpTierVariable/getHrSetUpTierVariable",
+        "x-excel-source": "API Services:R24",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "string"
+                  },
+                  "parentVariableId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": "1",
+                "parentVariableId": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierVariable/save": {
+      "post": {
+        "operationId": "post-hrSetUpTierVariable-save",
+        "summary": "POST /hrSetUpTierVariable/save",
+        "x-excel-source": "API Services:R30",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "attributeId": {
+                    "type": "integer"
+                  },
+                  "variableName": {
+                    "type": "string"
+                  },
+                  "parentVariableId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "attributeId": 1,
+                "variableName": "Manager",
+                "parentVariableId": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierVariable/update": {
+      "post": {
+        "operationId": "post-hrSetUpTierVariable-update",
+        "summary": "POST /hrSetUpTierVariable/update",
+        "x-excel-source": "API Services:R28",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "attributeId": {
+                    "type": "integer"
+                  },
+                  "variableName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": 1,
+                "companyId": 1,
+                "attributeId": 1,
+                "variableName": "Manager"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/delete": {
+      "post": {
+        "operationId": "post-location-delete",
+        "summary": "POST /location/delete",
+        "x-excel-source": "API Services:R15",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "id": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/getAllLocation": {
+      "post": {
+        "operationId": "post-location-getAllLocation",
+        "summary": "POST /location/getAllLocation",
+        "x-excel-source": "API Services:R12",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/getLocation": {
+      "post": {
+        "operationId": "post-location-getLocation",
+        "summary": "POST /location/getLocation",
+        "x-excel-source": "API Services:R16",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "attributeId": {
+                    "type": "integer"
+                  },
+                  "variableId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "attributeId": 1,
+                "variableId": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/getLocationById": {
+      "post": {
+        "operationId": "post-location-getLocationById",
+        "summary": "POST /location/getLocationById",
+        "x-excel-source": "API Services:R26",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "id": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/save": {
+      "post": {
+        "operationId": "post-location-save",
+        "summary": "POST /location/save",
+        "x-excel-source": "API Services:R14",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "locationName": {
+                    "type": "string"
+                  },
+                  "addressLine1": {
+                    "type": "string"
+                  },
+                  "pincode": {
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "locationName": "Chennai",
+                "addressLine1": "Sample address",
+                "pincode": "600001",
+                "country": "India"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/update": {
+      "post": {
+        "operationId": "post-location-update",
+        "summary": "POST /location/update",
+        "x-excel-source": "API Services:R17",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "locationName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": 1,
+                "companyId": 1,
+                "locationName": "Chennai"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/delete": {
+      "post": {
+        "operationId": "post-rolePosting-delete",
+        "summary": "POST /rolePosting/delete",
+        "x-excel-source": "API Services:R23",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "id": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getEmployeeByCompanyId": {
+      "post": {
+        "operationId": "post-rolePosting-getEmployeeByCompanyId",
+        "summary": "POST /rolePosting/getEmployeeByCompanyId",
+        "x-excel-source": "API Services:R39",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getRolePostingByCompanyId": {
+      "post": {
+        "operationId": "post-rolePosting-getRolePostingByCompanyId",
+        "summary": "POST /rolePosting/getRolePostingByCompanyId",
+        "x-excel-source": "API Services:R22",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getSuspendOrTerminateEmployee": {
+      "post": {
+        "operationId": "post-rolePosting-getSuspendOrTerminateEmployee",
+        "summary": "POST /rolePosting/getSuspendOrTerminateEmployee",
+        "x-excel-source": "API Services:R41",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "status": "SUSPENDED"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/save": {
+      "post": {
+        "operationId": "post-rolePosting-save",
+        "summary": "POST /rolePosting/save",
+        "x-excel-source": "API Services:R32",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "employeeId": {
+                    "type": "integer"
+                  },
+                  "hrVariableId": {
+                    "type": "integer"
+                  },
+                  "locationId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1,
+                "employeeId": 1,
+                "hrVariableId": 1,
+                "locationId": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/suspendOrTerminateEmployee": {
+      "post": {
+        "operationId": "post-rolePosting-suspendOrTerminateEmployee",
+        "summary": "POST /rolePosting/suspendOrTerminateEmployee",
+        "x-excel-source": "API Services:R40",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "employeeId": {
+                    "type": "integer"
+                  },
+                  "companyId": {
+                    "type": "integer"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "employeeId": 1,
+                "companyId": 1,
+                "status": "SUSPENDED",
+                "reason": "Sample reason"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/update": {
+      "post": {
+        "operationId": "post-rolePosting-update",
+        "summary": "POST /rolePosting/update",
+        "x-excel-source": "API Services:R38",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "employeeId": {
+                    "type": "integer"
+                  },
+                  "rolePostingId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "id": 1,
+                "employeeId": 1,
+                "rolePostingId": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workplaceHierarchy/getWorkPlaceHierarchy": {
+      "post": {
+        "operationId": "post-workplaceHierarchy-getWorkPlaceHierarchy",
+        "summary": "POST /workplaceHierarchy/getWorkPlaceHierarchy",
+        "x-excel-source": "API Services:R13",
+        "x-method-source": "method-column",
+        "responses": {
+          "200": {
+            "description": "No response documented in the workbook"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "companyId": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
