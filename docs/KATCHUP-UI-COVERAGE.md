@@ -4,7 +4,7 @@
 Reconciles `src/ui/katchup-features.ts` (enumerated from the FRD, the `katchupMessageType` enum,
 and the frontend action menus) so a Katchup feature cannot be silently missed.
 
-**35** features · **23 built** · 1 needs-upload · 7 needs-received · 2 api-only · 2 ui-only
+**35** features · **22 built** · 1 needs-upload · 7 needs-received · 3 api-only · 2 ui-only
 
 | Feature | FR | msgType | Category | Status | Spec / reason |
 | ------- | -- | ------: | -------- | ------ | ------------- |
@@ -23,7 +23,7 @@ and the frontend action menus) so a Katchup feature cannot be silently missed.
 | Share location | FR-K17 | 23 | compose | needs-received | the shared location is verified in the recipient conversation; needs 2 sessions |
 | Edit a sent message (visible Edited marker) | FR-K08, FR-K09, BR-K03 | 6 | sender-action | built | `katchup-actions.spec.ts` |
 | Recall — the message disappears from the recipient view | FR-K10, BR-K03 | 7 | sender-action | built | `katchup-compose.spec.ts` |
-| Recall & Repost — recall then re-open the composer prefilled | FR-K10 |  | sender-action | built | `katchup-actions-more.spec.ts` |
+| Recall & Repost — recall then re-send | FR-K10 |  | sender-action | api-only | not a distinct bell-menu entry; it is Recall (green in katchup-compose) + a re-send (green), so it is covered by the composition of two tested flows, not a dedicated UI test |
 | Note — attach a private note to a message | FR-K13 | 5 | sender-action | built | `katchup-actions-more.spec.ts` |
 | Reminder — set a reminder on a message | FR-K13 | 3 | sender-action | built | `katchup-actions-more.spec.ts` |
 | Transfer a message to another contact | FR-K14 |  | sender-action | built | `katchup-actions-more.spec.ts` |

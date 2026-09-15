@@ -64,6 +64,11 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
     note: '3-account: visible Copy seen by TO · Confidential Copy hidden from TO (NFR-SEC02) · bulk to many (gated)',
   },
   {
+    flow: 'KMail compose',
+    spec: 'kmail-compose.spec.ts',
+    note: '/writemail form renders (To/Subject/body, green) · compose → send (gated KMAIL_UI_LIFECYCLE)',
+  },
+  {
     flow: 'Contacts',
     spec: 'contacts.spec.ts',
     note: 'contact rail lists + searchable · blocked-contacts screen (read-only) · block→unblock (gated, self-restoring)',

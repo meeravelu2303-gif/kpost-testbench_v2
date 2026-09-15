@@ -12,6 +12,7 @@ import {
   openReceivedConversation,
   receivedMessageBySubject,
   sendMessage,
+  submitComposer,
 } from './support/katchup';
 
 /**
@@ -42,14 +43,9 @@ const RECIPIENT_ACTIONS: ReadonlyArray<{ id: string; menu: RegExp }> = [
   { id: 'Clarify', menu: /Clarify/i },
 ];
 
-/** Send the composer's current message (the `#ChatTop` icon button). */
+/** Send the composer's current message by pressing Enter (the app's native send trigger). */
 async function clickSend(page: Page): Promise<void> {
-  await page
-    .locator('#ChatTop')
-    .getByRole('button', { disabled: false })
-    .filter({ hasText: /^$/ })
-    .first()
-    .click();
+  await submitComposer(page);
 }
 
 test.describe('KPost Katchup · two-session (sender + receiver)', { tag: '@ui' }, () => {

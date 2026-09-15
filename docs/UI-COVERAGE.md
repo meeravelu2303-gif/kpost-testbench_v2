@@ -52,6 +52,7 @@ Every screen inherits the **full check catalogue** below. Covered: **13** screen
 | Katchup search | `katchup-search.spec.ts` | type in the search box → the conversation list filters to the match (read-only, safe) |
 | Katchup two-session | `katchup-two-session.spec.ts` | account 1 sends → account 2 (own context) receives + Reply/Comment/Clarify + read receipt (gated, self-clean) |
 | Katchup Copy / Confidential / Bulk | `katchup-copies.spec.ts` | 3-account: visible Copy seen by TO · Confidential Copy hidden from TO (NFR-SEC02) · bulk to many (gated) |
+| KMail compose | `kmail-compose.spec.ts` | /writemail form renders (To/Subject/body, green) · compose → send (gated KMAIL_UI_LIFECYCLE) |
 | Contacts | `contacts.spec.ts` | contact rail lists + searchable · blocked-contacts screen (read-only) · block→unblock (gated, self-restoring) |
 | Group | `group.spec.ts` | create-group modal → Group Name + member → submit → delete (gated, self-cleaning) |
 | Profile edit | `profile-edit.spec.ts` | own profile → About section edit pencil → Update → verify → restore (gated, self-restoring) |

@@ -182,11 +182,12 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
   },
   {
     id: 'recall-repost',
-    name: 'Recall & Repost — recall then re-open the composer prefilled',
+    name: 'Recall & Repost — recall then re-send',
     fr: ['FR-K10'],
     category: 'sender-action',
-    status: 'built',
-    spec: 'katchup-actions-more.spec.ts',
+    status: 'api-only',
+    reason:
+      'not a distinct bell-menu entry; it is Recall (green in katchup-compose) + a re-send (green), so it is covered by the composition of two tested flows, not a dedicated UI test',
   },
   {
     id: 'note',

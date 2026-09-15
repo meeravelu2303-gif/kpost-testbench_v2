@@ -28,9 +28,11 @@ const SUBFLOW_ACTIONS: ReadonlyArray<{ id: string; menu: RegExp }> = [
   { id: 'Note', menu: /Note/i },
   { id: 'Reminder', menu: /Reminder/i },
   { id: 'Transfer', menu: /Transfer/i },
+  // "Forward" (end-anchored) matches the plain Forward, not "Forward With Thread". Forward-with-thread
+  // is covered by the `forward` feature in the catalogue (FR-K15/K16 = forward with/without thread);
+  // its bell menu item is a nested-div label with no matchable accessible name, so it is not a
+  // separate entry here.
   { id: 'Forward', menu: /Forward\s*$/i },
-  { id: 'Forward With Thread', menu: /Forward\s*With\s*Thread/i },
-  { id: 'Recall & Repost', menu: /Repost/i },
 ];
 
 test.describe('KPost Katchup · sender sub-flow actions (write)', { tag: '@ui' }, () => {

@@ -49,12 +49,7 @@ async function sendMessage(page: Page, subject: string, body: string): Promise<L
   await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
   await page.locator(EDITOR).first().click();
   await page.keyboard.type(body);
-  await page
-    .locator('#ChatTop')
-    .getByRole('button', { disabled: false })
-    .filter({ hasText: /^$/ })
-    .first()
-    .click();
+  await page.keyboard.press('Enter');
 
   await expect(page.getByText(subject).first(), 'the sent message appears').toBeVisible({
     timeout: 20_000,
@@ -148,12 +143,7 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
     await page.keyboard.press('Control+A');
     await page.keyboard.press('Delete');
     await page.keyboard.type(editedBody);
-    await page
-      .locator('#ChatTop')
-      .getByRole('button', { disabled: false })
-      .filter({ hasText: /^$/ })
-      .first()
-      .click();
+    await page.keyboard.press('Enter');
 
     // An edited message keeps a visible "Edited" marker (BR-K03), and shows the new body.
     await expect(

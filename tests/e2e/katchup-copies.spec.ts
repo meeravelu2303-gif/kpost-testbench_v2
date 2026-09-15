@@ -84,12 +84,7 @@ test.describe(
         await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
         await page.locator('.ql-editor[contenteditable="true"]').first().click();
         await page.keyboard.type('QA UI Cc — self-cleaning');
-        await page
-          .locator('#ChatTop')
-          .getByRole('button', { disabled: false })
-          .filter({ hasText: /^$/ })
-          .first()
-          .click();
+        await page.keyboard.press('Enter');
 
         // Account 3 (the Copy) receives the message.
         await gotoKatchup(acct3);
@@ -123,12 +118,7 @@ test.describe(
         await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
         await page.locator('.ql-editor[contenteditable="true"]').first().click();
         await page.keyboard.type('QA UI Confidential — self-cleaning');
-        await page
-          .locator('#ChatTop')
-          .getByRole('button', { disabled: false })
-          .filter({ hasText: /^$/ })
-          .first()
-          .click();
+        await page.keyboard.press('Enter');
 
         // Account 3 (the confidential copy) DOES receive it.
         await gotoKatchup(acct3);
@@ -164,12 +154,7 @@ test.describe(
         await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
         await page.locator('.ql-editor[contenteditable="true"]').first().click();
         await page.keyboard.type('QA UI bulk — self-cleaning');
-        await page
-          .locator('#ChatTop')
-          .getByRole('button', { disabled: false })
-          .filter({ hasText: /^$/ })
-          .first()
-          .click();
+        await page.keyboard.press('Enter');
 
         await gotoKatchup(acct2);
         await expect(

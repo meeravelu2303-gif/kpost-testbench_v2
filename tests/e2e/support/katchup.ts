@@ -73,17 +73,22 @@ export function receivedMessageBySubject(page: Page, subject: string): Locator {
     .last();
 }
 
+/**
+ * Submit the composer by pressing **Enter** in the editor — the app's own send trigger
+ * (`WriteMessage.js` `handleKeyDown`: Enter without Shift → `handleKatchupSubmit`). This is immune to
+ * the composer's button layout (the send icon moves / is disabled-until-ready in the K-AI variant),
+ * so it works in every composer state. Assumes the editor is focused (type into it first).
+ */
+export async function submitComposer(page: Page): Promise<void> {
+  await page.keyboard.press('Enter');
+}
+
 /** Send a uniquely-subjected message to the 2nd QA account and return the sent-message element. */
 export async function sendMessage(page: Page, subject: string, body: string): Promise<Locator> {
   await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
   await page.locator(EDITOR).first().click();
   await page.keyboard.type(body);
-  await page
-    .locator('#ChatTop')
-    .getByRole('button', { disabled: false })
-    .filter({ hasText: /^$/ })
-    .first()
-    .click();
+  await submitComposer(page);
 
   await expect(page.getByText(subject).first(), 'the sent message appears').toBeVisible({
     timeout: 20_000,
@@ -97,6 +102,9 @@ export async function sendMessage(page: Page, subject: string, body: string): Pr
 
 /** Open the sender action (bell) menu on a specific sent message. */
 export async function openBellMenu(page: Page, message: Locator): Promise<void> {
+  // Bring the message into view first — a message low in a scrollable thread is not hoverable until
+  // scrolled to (the bell action only appears on hover).
+  await message.scrollIntoViewIfNeeded().catch(() => undefined);
   await message.hover();
   await message.getByTestId('NotificationsNoneIcon').first().click();
 }

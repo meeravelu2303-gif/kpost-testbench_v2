@@ -216,6 +216,40 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-15 — Complete frontend analyzed; the UI build plan is written before building the rest
+
+The owner asked to stop patching individual specs and instead **analyse the complete frontend + the
+KPost documents, plan it, then build the UI systematically**. Done: a full read of the React source
+(`KPOST_REACTJS_2023_V1`, all modules) reconciled with the documents (§1–4: the four documented
+modules as 55 FRs + 9 BRs) into **`docs/ui-build-plan.md`** — per module, the real selectors, the test
+approach (gated / self-cleaning / multi-account), FR traceability, and status. It is the authoritative
+map for finishing the UI, the front-end analogue of the Excel workbook for the API.
+
+**What the full analysis established (facts that change the plan):**
+
+- **Routing surprises.** `/kdiary` is **commented out** and `/writemail` renders `Kmail` (the
+  standalone `WriteMail` is unrouted). So the **KDiary UI is the `Diary` component** reached from
+  inside the Katchup/KMail/Kall/Home rails — testable after all. `/kdoc` renders `KOS` (K-AI, Kompose,
+  KPresenter active; five sub-tools "Coming Soon").
+- **The whole UI is i18n + icon-font, almost no `data-testid`.** Every control is a `t("…")` string or
+  an `icon-KP_*` class; every modal is `common/ModalComponent` (title = `Title` prop, submit = a
+  `Button` in `Content`); flow completion is a **react-toastify** message. So the test grammar is:
+  match visible text / icon class, drive the ModalComponent, assert the toast. The Katchup tuning
+  already proved the two hard cases (menu items match by **substring** past the icon glyph; **send =
+  press Enter**), and those patterns carry to every module.
+- **Concrete build targets now exist** for KMail (`WriteMailPage`: To `.subjectTextboxKmailTO`, Subject
+  `.toInput`, body `t("Type your mail here")`, Send `.post_button_size`/`.icon-KP_3164`, Save-Draft
+  `.icon-KP_95-Write-Mail-Temp`), Kall (`CreateKallModal` schedule / `KallModal` direct-call
+  assert-only), KDiary (`Diary` "+ Add" → `.DiarySaveBtn` → toast), Settings (~24 sections, each a
+  render + a safe self-restoring write), and the verticals — all captured in the plan.
+
+**The build order (API order, every module deep), and the definition of done** are in the plan:
+Katchup (done) → KMail → Kall → KDiary → Settings → Profile → Contacts → Group → Home → verticals →
+Admin (blocked on a business company with three members — the same account gap the API Admin module
+has). Each module is finished — screen + the 9-check sweep + every feature flow (gated, self-cleaning)
+
+- valid bugs filed — before the next. Executing from this plan next, starting with **KMail**.
+
 ### 2026-09-15 — UI write flows tuned GREEN on live; false-bug guard; ordered filing + run commands
 
 The owner ran the gated UI write flows on live and we tuned them to green together. Four selector
