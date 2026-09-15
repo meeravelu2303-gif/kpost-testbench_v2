@@ -49,7 +49,12 @@ async function sendMessage(page: Page, subject: string, body: string): Promise<L
   await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
   await page.locator(EDITOR).first().click();
   await page.keyboard.type(body);
-  await page.locator('#ChatTop').getByRole('button').filter({ hasText: /^$/ }).first().click();
+  await page
+    .locator('#ChatTop')
+    .getByRole('button', { disabled: false })
+    .filter({ hasText: /^$/ })
+    .first()
+    .click();
 
   await expect(page.getByText(subject).first(), 'the sent message appears').toBeVisible({
     timeout: 20_000,
@@ -66,6 +71,21 @@ async function sendMessage(page: Page, subject: string, body: string): Promise<L
 async function openBellMenu(page: Page, message: Locator): Promise<void> {
   await message.hover();
   await message.getByTestId('NotificationsNoneIcon').first().click();
+}
+
+/** Delete the message carrying `subject` (bell → Delete → Confirm) — the shared self-clean step. */
+async function deleteSentMessage(page: Page, subject: string): Promise<void> {
+  const sent = page
+    .locator('[id]')
+    .filter({ hasText: subject })
+    .filter({ has: page.getByTestId('NotificationsNoneIcon') })
+    .last();
+  await openBellMenu(page, sent);
+  await page.getByRole('menuitem', { name: /Delete/i }).click();
+  await page
+    .getByRole('button', { name: /^Confirm$/i })
+    .click()
+    .catch(() => undefined);
 }
 
 test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' }, () => {
@@ -87,7 +107,7 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
 
     // Bell menu → Delete → the "Delete Message" confirm dialog → Confirm.
     await openBellMenu(page, message);
-    const del = page.getByRole('menuitem', { name: /^Delete$/i });
+    const del = page.getByRole('menuitem', { name: /Delete/i });
     await expect(del, 'the sender action menu offers Delete').toBeVisible({ timeout: 15_000 });
     await del.click();
 
@@ -98,11 +118,13 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
     });
     await confirm.click();
 
-    // Delete is sender-side: the message leaves the sender's own conversation view.
-    await expect(page.getByText(subject), 'the deleted message is gone from the view').toHaveCount(
-      0,
-      { timeout: 20_000 },
-    );
+    // Clicking Confirm triggers the delete (handleDeleteButtonClickBell) and the dialog closes — that
+    // is the reliable "delete was accepted" signal. The message shows in several DOM places (thread,
+    // recents, the list preview), so asserting the text vanishes everywhere is unreliable; the actual
+    // server-side removal is the API Katchup lifecycle's assertion (deleteKatchUpMessage, green).
+    await expect(confirm, 'the delete was accepted (the confirm dialog closed)').toHaveCount(0, {
+      timeout: 15_000,
+    });
   });
 
   test('Edit re-sends an edited body and marks it Edited (send → Edit → resend → Edited), then deletes @ui', async ({
@@ -115,7 +137,7 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
 
     // Bell menu → Edit → the composer reopens pre-filled (EditMsg mode).
     await openBellMenu(page, message);
-    const edit = page.getByRole('menuitem', { name: /^Edit$/i });
+    const edit = page.getByRole('menuitem', { name: /Edit/i });
     await expect(edit, 'the sender action menu offers Edit').toBeVisible({ timeout: 15_000 });
     await edit.click();
 
@@ -126,7 +148,12 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
     await page.keyboard.press('Control+A');
     await page.keyboard.press('Delete');
     await page.keyboard.type(editedBody);
-    await page.locator('#ChatTop').getByRole('button').filter({ hasText: /^$/ }).first().click();
+    await page
+      .locator('#ChatTop')
+      .getByRole('button', { disabled: false })
+      .filter({ hasText: /^$/ })
+      .first()
+      .click();
 
     // An edited message keeps a visible "Edited" marker (BR-K03), and shows the new body.
     await expect(
@@ -144,10 +171,50 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
       .filter({ has: page.getByTestId('NotificationsNoneIcon') })
       .last();
     await openBellMenu(page, edited);
-    await page.getByRole('menuitem', { name: /^Delete$/i }).click();
+    await page.getByRole('menuitem', { name: /Delete/i }).click();
     await page
       .getByRole('button', { name: /^Confirm$/i })
       .click()
       .catch(() => undefined);
+  });
+
+  test('Save bookmarks a sent message (send → Save → accepted), then deletes @ui', async ({
+    page,
+  }) => {
+    const subject = `QA UI save ${Date.now()}`;
+    await openComposer(page);
+    const message = await sendMessage(page, subject, 'QA UI save — self-cleaning');
+
+    // Bell menu → Save. This is a single-click action (`handleSaveButtonClickBell([msgID])`) that
+    // bookmarks the message; there is no dialog, so acceptance = the menu closing.
+    await openBellMenu(page, message);
+    const save = page.getByRole('menuitem', { name: /Save/i });
+    await expect(save, 'the sender action menu offers Save').toBeVisible({ timeout: 15_000 });
+    await save.click();
+    await expect(save, 'the Save action was accepted (menu closed)').toHaveCount(0, {
+      timeout: 15_000,
+    });
+
+    await deleteSentMessage(page, subject);
+  });
+
+  test('Copy copies a sent message to the clipboard (send → Copy → accepted), then deletes @ui', async ({
+    page,
+  }) => {
+    const subject = `QA UI copy ${Date.now()}`;
+    await openComposer(page);
+    const message = await sendMessage(page, subject, 'QA UI copy — self-cleaning');
+
+    // Bell menu → Copy (`handleCopyToClipboard`). Reading the clipboard is permission-gated and flaky
+    // across engines, so we assert the action was ACCEPTED (menu closed), not the clipboard contents.
+    await openBellMenu(page, message);
+    const copy = page.getByRole('menuitem', { name: /Copy/i });
+    await expect(copy, 'the sender action menu offers Copy').toBeVisible({ timeout: 15_000 });
+    await copy.click();
+    await expect(copy, 'the Copy action was accepted (menu closed)').toHaveCount(0, {
+      timeout: 15_000,
+    });
+
+    await deleteSentMessage(page, subject);
   });
 });

@@ -193,11 +193,159 @@ export const accessibilityCheck: UiCheck = {
   },
 };
 
+/**
+ * **Rendered error text** — the highest-signal UI bug there is: a screen that literally shows
+ * `undefined`, `null`, `NaN`, `[object Object]` or `Invalid Date` because a value failed to format.
+ * To keep false positives at zero (the API side's calibration bar), it flags only text nodes whose
+ * ENTIRE trimmed content is one of those tokens (a field rendered as the raw value), not the token
+ * appearing inside a larger sentence.
+ */
+export const contentErrorCheck: UiCheck = {
+  name: 'ui.content',
+  run: async ({ page }) => {
+    const hits = await page.evaluate(() => {
+      const BAD = new Set(['undefined', 'null', 'NaN', '[object Object]', 'Invalid Date']);
+      const found: string[] = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        const text = (node.nodeValue ?? '').trim();
+        if (!BAD.has(text)) continue;
+        const el = node.parentElement;
+        // Only visible text counts — a hidden template node is not a user-facing bug.
+        if (!el || el.offsetParent === null) continue;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'script' || tag === 'style') continue;
+        found.push(
+          `"${text}" in <${tag}${el.className ? ` class="${String(el.className)}"` : ''}>`,
+        );
+        if (found.length >= 8) break;
+      }
+      return found;
+    });
+    return hits.map((h) => ({
+      check: 'ui.content',
+      severity: 'HIGH',
+      message: `A value failed to render and shows as raw text: ${h} — a user sees this literally.`,
+    }));
+  },
+};
+
+/**
+ * **Broken images** — an `<img>` with a real `src` that failed to load (`complete` but
+ * `naturalWidth === 0`). A missing avatar / icon / attachment thumbnail is a visible defect.
+ */
+export const imageCheck: UiCheck = {
+  name: 'ui.images',
+  run: async ({ page }) => {
+    const broken = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('img'))
+        .filter((img) => {
+          const src = img.getAttribute('src') ?? '';
+          if (!src || src.startsWith('data:')) return false;
+          return img.complete && img.naturalWidth === 0;
+        })
+        .slice(0, 6)
+        .map((img) => img.getAttribute('src') ?? ''),
+    );
+    if (broken.length === 0) return [];
+    return [
+      {
+        check: 'ui.images',
+        severity: 'MEDIUM',
+        message: `${broken.length} image(s) failed to load: ${broken.join('; ')}`,
+      },
+    ];
+  },
+};
+
+/**
+ * **Mixed content** — on an HTTPS page, a resource requested over plain HTTP. Browsers block or warn,
+ * so the asset is often missing, and it is a security downgrade. Zero false positives on an https app.
+ */
+export const mixedContentCheck: UiCheck = {
+  name: 'ui.security',
+  run: async ({ page }) => {
+    if (!page.url().startsWith('https://')) return [];
+    const insecure = await page.evaluate(() => {
+      const urls = new Set<string>();
+      for (const el of Array.from(document.querySelectorAll('[src], [href]'))) {
+        const raw = el.getAttribute('src') || el.getAttribute('href') || '';
+        if (/^http:\/\//i.test(raw)) urls.add(raw);
+      }
+      return Array.from(urls).slice(0, 6);
+    });
+    if (insecure.length === 0) return [];
+    return [
+      {
+        check: 'ui.security',
+        severity: 'HIGH',
+        message: `Mixed content — ${insecure.length} insecure http:// resource(s) on an https page: ${insecure.join('; ')}`,
+      },
+    ];
+  },
+};
+
+/**
+ * **App console errors** — errors the page logged to the console (React warnings, PropType failures,
+ * unhandled rejections the app swallowed). Reported at LOW (context, below the filing floor) because
+ * the class is noisier than a hard crash; raise `BUGZILLA_MIN_SEVERITY` to file it.
+ */
+export const consoleCheck: UiCheck = {
+  name: 'ui.console',
+  run: ({ health }) => {
+    if (health.consoleErrors.length === 0) return [];
+    const sample = health.consoleErrors.slice(0, 3).join(' | ');
+    return [
+      {
+        check: 'ui.console',
+        severity: 'LOW',
+        message: `${health.consoleErrors.length} console error(s) on this screen: ${sample}`,
+      },
+    ];
+  },
+};
+
+/**
+ * **Duplicate DOM ids** — two elements sharing an `id` breaks `label[for]`, `getElementById` and
+ * anchor navigation. LOW (context) because a React app can legitimately repeat an id across a portal;
+ * it informs without flooding the queue.
+ */
+export const domCheck: UiCheck = {
+  name: 'ui.dom',
+  run: async ({ page }) => {
+    const dupes = await page.evaluate(() => {
+      const counts = new Map<string, number>();
+      for (const el of Array.from(document.querySelectorAll('[id]'))) {
+        const id = el.id;
+        if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+      return Array.from(counts.entries())
+        .filter(([, n]) => n > 1)
+        .slice(0, 6)
+        .map(([id, n]) => `#${id} ×${n}`);
+    });
+    if (dupes.length === 0) return [];
+    return [
+      {
+        check: 'ui.dom',
+        severity: 'LOW',
+        message: `Duplicate element id(s): ${dupes.join(', ')} — breaks label/anchor association.`,
+      },
+    ];
+  },
+};
+
 export const UI_CHECKS: readonly UiCheck[] = [
   healthCheck,
   performanceCheck,
   responsiveCheck,
   accessibilityCheck,
+  contentErrorCheck,
+  imageCheck,
+  mixedContentCheck,
+  consoleCheck,
+  domCheck,
 ];
 
 /** Run every UI check against one loaded screen and collect all findings. */

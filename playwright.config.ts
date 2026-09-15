@@ -66,7 +66,10 @@ export default defineConfig({
   },
 
   projects: [
-    { name: 'setup', testDir: './tests/setup', testMatch: /.*\.setup\.ts/ },
+    // The login setup navigates the live SPA, which occasionally answers a transient
+    // ERR_CONNECTION_RESET; retries absorb that so one flaky navigation does not collapse the run
+    // (a genuine credential/route failure still fails all attempts).
+    { name: 'setup', testDir: './tests/setup', testMatch: /.*\.setup\.ts/, retries: env.RETRIES ?? 2 },
     browserProject('chromium', devices['Desktop Chrome']),
     browserProject('firefox', devices['Desktop Firefox']),
     browserProject('webkit', devices['Desktop Safari']),

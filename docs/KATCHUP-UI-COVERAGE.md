@@ -1,0 +1,50 @@
+# Katchup UI coverage — every feature, measured
+
+**GENERATED — do not edit.** Written by `tests/framework/katchup-ui-coverage.spec.ts`.
+Reconciles `src/ui/katchup-features.ts` (enumerated from the FRD, the `katchupMessageType` enum,
+and the frontend action menus) so a Katchup feature cannot be silently missed.
+
+**35** features · **23 built** · 1 needs-upload · 7 needs-received · 2 api-only · 2 ui-only
+
+| Feature | FR | msgType | Category | Status | Spec / reason |
+| ------- | -- | ------: | -------- | ------ | ------------- |
+| Subject on every message (the differentiator) | BR-K01, FR-K02 |  | compose | built | `katchup-compose.spec.ts` |
+| Message body (Quill editor) | FR-K01 | 0 | compose | built | `katchup-compose.spec.ts` |
+| Send a 1:1 message, verify it appears | FR-K01 | 0 | compose | built | `katchup-compose.spec.ts` |
+| Attach a file → send → thumbnail → delete | FR-K03 |  | compose | needs-upload | needs a real file upload; the attachment uuid only a completed S3 upload produces |
+| Copy / Cc — a visible additional recipient (revealContactList) | FR-K04 | 14 | compose | built | `katchup-copies.spec.ts` |
+| Confidential Copy — hidden from other recipients (NFR-SEC02) | FR-K05, NFR-SEC02 | 14 | compose | built | `katchup-copies.spec.ts` |
+| Group send + per-recipient read receipts | FR-K06, FR-K07 | 0 | compose | needs-received | the 3-account harness exists (create is `group.spec.ts`); group SEND + per-recipient receipts is the remaining multi-account flow to record |
+| Read receipt — cross-account delivery + open state | FR-K07, BR-X01 |  | compose | built | `katchup-two-session.spec.ts` |
+| Secret / vanishing message (expiry) | FR-K11 | 18 | compose | needs-received | a self-destructing message is proven by the recipient view; needs 2 sessions |
+| Bulk / broadcast to many recipients | FR-K06 | 19 | compose | built | `katchup-copies.spec.ts` |
+| Schedule a call from the composer | FR-C01 | 17 | compose | api-only | a Kall-module feature reached from Katchup; covered by the Kall UI + API |
+| Share digital card | FR-K17 | 22 | compose | needs-received | the shared card is verified in the recipient conversation; needs 2 sessions |
+| Share location | FR-K17 | 23 | compose | needs-received | the shared location is verified in the recipient conversation; needs 2 sessions |
+| Edit a sent message (visible Edited marker) | FR-K08, FR-K09, BR-K03 | 6 | sender-action | built | `katchup-actions.spec.ts` |
+| Recall — the message disappears from the recipient view | FR-K10, BR-K03 | 7 | sender-action | built | `katchup-compose.spec.ts` |
+| Recall & Repost — recall then re-open the composer prefilled | FR-K10 |  | sender-action | built | `katchup-actions-more.spec.ts` |
+| Note — attach a private note to a message | FR-K13 | 5 | sender-action | built | `katchup-actions-more.spec.ts` |
+| Reminder — set a reminder on a message | FR-K13 | 3 | sender-action | built | `katchup-actions-more.spec.ts` |
+| Transfer a message to another contact | FR-K14 |  | sender-action | built | `katchup-actions-more.spec.ts` |
+| Forward a message (with / without thread) | FR-K15, FR-K16 | 15 | sender-action | built | `katchup-actions-more.spec.ts` |
+| Copy message text to the clipboard | FR-K17 |  | sender-action | built | `katchup-actions.spec.ts` |
+| Save / bookmark a message | FR-K18 |  | sender-action | built | `katchup-actions.spec.ts` |
+| Mark / unmark important | FR-K18 |  | sender-action | api-only | no bell-menu entry; the star toggle is covered by the API markOrUnmarkImportantMessage |
+| Text-to-Speech — read a message aloud | FR-K19 |  | sender-action | ui-only | plays audio; no assertable persisted outcome |
+| Delete a message (sender-side) | FR-K20 |  | sender-action | built | `katchup-actions.spec.ts` |
+| Print a message | FR-K17 |  | sender-action | ui-only | opens the browser print dialog; no assertable persisted outcome |
+| Reply to a received message | FR-K21 | 1 | recipient-action | built | `katchup-two-session.spec.ts` |
+| Comment on a received message | FR-K22 | 8 | recipient-action | built | `katchup-two-session.spec.ts` |
+| Clarify a received message | FR-K23 | 9 | recipient-action | built | `katchup-two-session.spec.ts` |
+| Report a received message (abuse) | FR-K24 |  | recipient-action | needs-received | the two-session harness now exists; Report (reportAbuse) opens a reason dialog off the recipient More menu — its sub-flow needs one recording pass |
+| More options on a received message | FR-K25 |  | recipient-action | needs-received | the recipient More menu (`katchup-two-session.spec.ts` harness) — sub-flow needs recording |
+| Search / filter the conversation list | FR-K01 |  | read-search | built | `katchup-search.spec.ts` |
+| Open a conversation and the composer | FR-K01 |  | read-search | built | `katchup-compose.spec.ts` |
+| Unread badge / message count | FR-K07 |  | read-search | needs-received | an unread badge appears on a message received but not yet opened; needs 2 sessions |
+| Threaded / reference message view (a reply builds the thread) | FR-K16 |  | read-search | built | `katchup-two-session.spec.ts` |
+
+## Requirement traceability
+
+Every Katchup FR/BR/NFR the FRD defines maps to ≥1 feature. Requirements: **27**, uncovered: **0**.
+

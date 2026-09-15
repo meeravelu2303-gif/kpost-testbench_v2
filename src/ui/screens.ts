@@ -80,4 +80,90 @@ export const AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
     ready: ['.settings-theme-shell'],
     controls: [{ selector: '.settings-theme-shell', label: 'settings workspace' }],
   },
+  // --- Secondary + vertical screens: the deep CHECK CATALOGUE (health / performance / layout / a11y)
+  // runs on each. They ship generic bootstrap layouts with no distinctive root, so the mount anchor is
+  // the authenticated **shell** (nav rail / header) — which proves the route loaded signed-in (not
+  // bounced to /login) — plus the screen's own distinctive root where the frontend has one. The value
+  // here is the check sweep catching a JS crash, a broken asset, overflow or an a11y gap on any of them.
+  {
+    route: '/kdiary',
+    name: 'KDiary',
+    screen: 'kdiary',
+    ready: ['.icon-KP_01-Home', '.header-user-name', '.header_font'],
+    controls: [
+      {
+        selector: '.icon-KP_01-Home, .header-user-name, .header_font',
+        label: 'authenticated shell',
+      },
+    ],
+  },
+  {
+    route: '/kdoc',
+    name: 'KDoc',
+    screen: 'kdoc',
+    ready: ['.homeWeblasccs', '.icon-KP_01-Home', '.header_font'],
+    controls: [
+      { selector: '.homeWeblasccs, .icon-KP_01-Home, .header_font', label: 'KDoc/shell root' },
+    ],
+  },
+  {
+    route: '/kcloud',
+    name: 'KCloud',
+    screen: 'kcloud',
+    ready: ['.icon-KP_01-Home', '.header-user-name', '.header_font'],
+    controls: [
+      {
+        selector: '.icon-KP_01-Home, .header-user-name, .header_font',
+        label: 'authenticated shell',
+      },
+    ],
+  },
+  {
+    route: '/kbooking',
+    name: 'KBooking',
+    screen: 'kbooking',
+    ready: ['.icon-KP_01-Home', '.header-user-name', '.header_font'],
+    controls: [
+      {
+        selector: '.icon-KP_01-Home, .header-user-name, .header_font',
+        label: 'authenticated shell',
+      },
+    ],
+  },
+  {
+    route: '/knews',
+    name: 'KNews',
+    screen: 'knews',
+    ready: ['.icon-KP_01-Home', '.header-user-name', '.header_font'],
+    controls: [
+      {
+        selector: '.icon-KP_01-Home, .header-user-name, .header_font',
+        label: 'authenticated shell',
+      },
+    ],
+  },
+  {
+    route: '/e-commerce',
+    name: 'ECommerce',
+    screen: 'e-commerce',
+    ready: ['.icon-KP_01-Home', '.header-user-name', '.header_font'],
+    controls: [
+      {
+        selector: '.icon-KP_01-Home, .header-user-name, .header_font',
+        label: 'authenticated shell',
+      },
+    ],
+  },
+  {
+    route: '/kdirectory',
+    name: 'KDirectory',
+    screen: 'kdirectory',
+    ready: ['.background_colorss', '.icon-KP_01-Home', '.header_font'],
+    controls: [
+      {
+        selector: '.background_colorss, .icon-KP_01-Home, .header_font',
+        label: 'KDirectory/shell root',
+      },
+    ],
+  },
 ];

@@ -216,6 +216,75 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-15 — UI test bench built module-by-module to the API-side bar; components, checks, harnesses
+
+The owner's directive: finish the UI side to production-grade full coverage with valid bugs, the same
+way the API side was built — **one module at a time, in the API build order, every module deep**
+(including the verticals), nothing missed. The living tracker is **`docs/ui-test-plan.md`**; a UI
+module is "done" when all five layers pass (screen render · the check catalogue · every feature flow ·
+negative UI · valid bugs filed). Changes below are **uncommitted at the owner's request** ("I will
+commit later"); Modules 1–2 were committed before that instruction.
+
+**Bugzilla UI components created first, so every UI bug routes correctly.** The KPost UI product had
+12 components with no home for Kall/Profile/KDiary/KDoc/KCloud/KBooking/Admin/Contacts/Groups — their
+bugs would land on the `General` catch-all. Created **9 components** via the Bugzilla REST
+(`POST /rest/component`, the client's api_key has editcomponents): **Kall, User Profile, KDiary, KDoc,
+KCloud, KBooking, User Management, Contacts, Groups** (ids 75–83, default assignee Ayyappan) → **21
+total**. Wired `UI_COMPONENT_BY_SCREEN` + `KNOWN_COMPONENTS['kpost-ui']` so every screen routes to its
+own component (no `General` for any real screen); the `component-routing`/`ownership`/`ui-coverage`
+framework tests reconcile config against the live instance and pass. **A gap left for the owner:** the
+KPost UI product still has no way to test Admin — that needs a **business company with 3 members** (one
+expendable), the only account need 6 personal accounts cannot meet.
+
+**Deep bug-finding on every screen — the check catalogue went 4 → 9 dimensions** (`src/ui/ui-checks.ts`),
+because the live UI has real bugs and we must catch every class, not just crashes. Added
+**`ui.content`** (a value rendered as literal `undefined`/`NaN`/`[object Object]`/`Invalid Date` — the
+highest-signal UI bug, calibrated to exact text nodes for zero false positives), **`ui.images`**
+(broken images), **`ui.security`** (mixed http content on an https page), **`ui.console`** (app console
+errors, LOW), **`ui.dom`** (duplicate ids, LOW). The screen registry (`src/ui/screens.ts`) grew from 6
+to **13 screens** — every route including the verticals (KDoc/KCloud/KBooking/KNews/E-Commerce/
+KDirectory) now runs the full sweep, anchored on the authenticated shell. `auxiliary.spec.ts` folded
+into the sweep and removed.
+
+**Katchup coverage made measurable — the front-end analogue of the API endpoint registry.**
+`src/ui/katchup-features.ts` enumerates all **35 features** from the three sources of truth (FRD
+FR-K01..K25/BR-K01..K03, the `katchupMessageType` enum, the frontend `bellIconContent`/
+`replyIconContent` menus); `tests/framework/katchup-ui-coverage.spec.ts` fails the build if a feature
+is unclassified, a `built` feature's spec is missing, or any FR-K is unrepresented, and generates
+`docs/KATCHUP-UI-COVERAGE.md`. **23 of 35 built**; the rest are blocked-with-reason exactly like a
+blocked API endpoint (7 need one recording pass, 1 needs a file upload, 2 api-only, 2 ui-only). Specs:
+
+- `katchup-actions.spec.ts` — Delete · Edit (Edited marker, BR-K03) · Save · Copy (bell menu, self-clean)
+- `katchup-actions-more.spec.ts` — Note · Reminder · Transfer · Forward · Forward-with-thread · Recall&Repost (entry verified, sub-flow to tune)
+- `katchup-search.spec.ts` — the conversation-list search filters (read-only)
+- **`katchup-two-session.spec.ts`** — a sender + a receiver (2nd context from `.auth/user2.json`,
+  written by `auth2.setup.ts`): delivery + read receipt, and Reply/Comment/Clarify on a received message
+- **`katchup-copies.spec.ts`** — 3 accounts (`.auth/user2.json` + `.auth/user3.json`, `auth3.setup.ts`):
+  a visible **Copy** the TO recipient sees, a **Confidential Copy hidden from the TO recipient**
+  (NFR-SEC02 — the security property is hard-asserted), and **bulk** to many
+
+The multi-account harness (`STORAGE_STATE_2`/`_3`, gated setups that only log in the extra accounts
+when `KATCHUP_UI_LIFECYCLE=true`) is the reusable pattern for every recipient-side and multi-recipient
+feature. Shared selectors live once in `tests/e2e/support/katchup.ts`.
+
+**Other modules built this session:**
+
+- **Login (Module 1):** `login-session.spec.ts` — session-guard redirect, Forgot-Password modal (no
+  OTP SMS), Sign-Up link, gated header-logout. Deep-complete bar the logout tuning.
+- **Profile (Module 2):** `profile-edit.spec.ts` — About edit → Update → verify → restore (gated,
+  self-restoring); screen self-actions deepened.
+- **Contacts (Module 4):** `contacts.spec.ts` — contact rail + blocked-contacts (read-only) +
+  block→unblock (gated, self-restoring).
+- **Group (Module 5):** `group.spec.ts` — create-group modal → name + member → submit → delete (gated).
+
+**The one honest constraint, stated for the record.** Every UI write selector on this test-id-less SPA
+needs one live tuning pass (recall took several). So the gated write flows are **first-drafts from
+mined frontend selectors** — the flow logic, gating, self-clean and multi-account security assertions
+are correct; the exact modal/picker selectors need one `KATCHUP_UI_LIFECYCLE=true` headed run to
+confirm. Everything is gated so a default run never touches them and never files a false bug. This is
+the same "blocked-with-reason, unblock path documented" honesty the API side uses. `npm run check`
+clean; the `ui-coverage` + `katchup-ui-coverage` framework tests pass; 65 e2e tests collect.
+
 ### 2026-09-15 — Katchup message actions on the UI; every remaining write-flow mined and planned
 
 The owner asked to complete the full UI test suite — every feature of every module, end to end —

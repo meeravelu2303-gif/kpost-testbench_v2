@@ -33,6 +33,18 @@ import { VALIDATION_REPORT_ATTACHMENT } from './report-attachment';
 const BROWSER_PROJECTS = new Set(['chromium', 'firefox', 'webkit']);
 const LOG = '[bugzilla]';
 
+/**
+ * Only the **observational** UI specs may file bugs: the deep screen sweep (`screens.spec.ts` — 9
+ * checks on every screen, calibrated to zero false positives) and the structural smoke
+ * (`navigation`/`shell` — a route that will not open or a missing shell is a real defect). The
+ * interaction / write-flow specs (the gated `*_UI_LIFECYCLE` feature tests, compose, search, login,
+ * two-session, copies, contacts, group, profile-edit, settings-theme, …) are FUNCTIONAL tests whose
+ * failures during the build/tuning phase are selector issues, not app defects — filing those would
+ * put false bugs on the developer's queue. Their failures still surface in the Playwright report for
+ * human triage; they are simply never auto-filed.
+ */
+const UI_FILING_SPECS = new Set(['screens.spec.ts', 'navigation.spec.ts', 'shell.spec.ts']);
+
 export default class BugzillaReporter implements Reporter {
   private readonly config = readBugzillaConfig();
   private readonly log = createLogger('bugzilla');
@@ -148,6 +160,8 @@ export default class BugzillaReporter implements Reporter {
       const project = test.parent.project()?.name ?? '';
       // Only consistently failing browser tests: a flaky pass-on-retry is not solid evidence.
       if (!BROWSER_PROJECTS.has(project) || test.outcome() !== 'unexpected') return [];
+      // Only the observational specs file; a feature/write-flow selector failure is not a defect.
+      if (!UI_FILING_SPECS.has(path.basename(test.location.file))) return [];
       const failure = [...test.results].reverse().find((attempt) => attempt.error?.message);
       const message = stripAnsi(failure?.error?.message ?? '');
       if (!message) return [];

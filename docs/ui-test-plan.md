@@ -16,9 +16,13 @@ Same rigor as an API module. A UI module is done when all five layers pass:
 
 1. **Screen render** — the route loads authenticated, and **every key control is present** (not an
    empty shell). Cross-browser (Chromium/Firefox/WebKit). _(read-only, safe)_
-2. **Check catalogue** — every screen inherits the 4 UI checks automatically (`ui.health`,
-   `ui.performance`, `ui.layout`, `ui.accessibility`) — the front-end analogue of the API validators.
-   _(read-only, safe)_
+2. **Check catalogue** — every screen inherits **9 bug-finding checks** automatically, the front-end
+   analogue of the API validators, so the deep sweep catches every class of UI bug on the live app:
+   `ui.health` (JS crash / broken asset), `ui.performance`, `ui.layout`, `ui.accessibility`,
+   **`ui.content`** (a value rendered as literal `undefined` / `NaN` / `[object Object]` — the
+   highest-signal UI bug), **`ui.images`** (broken images), **`ui.security`** (mixed http content on
+   an https page), **`ui.console`** (app console errors), **`ui.dom`** (duplicate ids). _(read-only,
+   safe)_
 3. **Feature flows** — every real interaction the module offers is driven like a user: the happy path
    **and** its variations. Writes are **gated** (`*_UI_LIFECYCLE`) and **self-cleaning** (the account
    ends as it started), targeting only the 6 QA accounts. This is the bulk of the work.
@@ -48,28 +52,46 @@ the 4 checks per screen are additional and automatic. Estimates, refined as each
 **Order = the API build order** (owner's call). **Every module gets DEEP coverage** — including the
 verticals (owner's call), not screen-smoke.
 
-| #   | Module                 | Screen(s) / route                       | Features | Est. tests | Status                          |
-| --- | ---------------------- | --------------------------------------- | -------: | ---------: | ------------------------------- |
-| 1   | **Login & session**    | `/login`, `/signup`, header logout      |       10 |       8–10 | 🟢 deep-complete (logout to tune) |
-| 2   | **Profile**            | `/userprofile`, `/digital-card`         |       11 |      12–14 | 🟡 screen deep + About-edit built |
-| 3   | **Katchup**            | `/katchup`                              |       25 |      30–35 | 🟡 5 built (3 green, 2 to tune) |
-| 4   | **Contacts**           | inside `/katchup`, `/kall`              |        7 |       8–10 | 🔴 not started                  |
-| 5   | **Group**              | inside `/katchup`                       |        8 |       9–10 | 🔴 not started                  |
-| 6   | **Kall**               | `/kall`, `/koolkall/:id`                |       10 |      10–12 | 🟡 screen done, flows to build  |
-| 7   | **KMail**              | `/kmail`, `/writemail`                  |       15 |      18–20 | 🟡 screen done, flows to build  |
-| 8   | **KDiary**             | `/kdiary` (+ inside Katchup)            |        6 |        6–8 | 🔴 not started                  |
-| 9   | **Settings**           | `/settings` (24 sections)               |       24 |      20–24 | 🟡 1 built (theme), screen done |
-| 10  | **Home / Dashboard**   | `/home`                                 |        5 |        5–6 | 🟡 screen done, flows to build  |
-| 11  | **Admin / UserMgmt**   | `/usermanagement`                       |       10 |      10–12 | ⏸ needs a business company (3 members) |
-| 12  | **KDoc / KPresentation** | `/kdoc`                               |        8 |       8–10 | 🔴 deep (owner will share APIs) |
-| 13  | **KCloud**             | `/kcloud`                               |        6 |       6–8  | 🔴 deep                         |
-| 14  | **K-Booking**          | `/kbooking`                             |        6 |       6–8  | 🔴 deep                         |
-| 15  | **KNews**              | `/knews`                                |        5 |       5–6  | 🔴 deep                         |
-| 16  | **K-ECommerce**        | `/e-commerce`                           |        6 |       6–8  | 🔴 deep                         |
-| 17  | **Kdirectory**         | `/kdirectory`                           |        5 |       5–6  | 🔴 deep                         |
-|     | **Total**              |                                         | **~167** | **~150–190** |                               |
+| #   | Module                   | Screen(s) / route                  | Features |   Est. tests | Status                                           |
+| --- | ------------------------ | ---------------------------------- | -------: | -----------: | ------------------------------------------------ |
+| 1   | **Login & session**      | `/login`, `/signup`, header logout |       10 |         8–10 | 🟢 deep-complete (logout to tune)                |
+| 2   | **Profile**              | `/userprofile`, `/digital-card`    |       11 |        12–14 | 🟡 screen deep + About-edit built                |
+| 3   | **Katchup**              | `/katchup`                         |       35 |        30–35 | 🟢 measured: 20 built / 15 blocked-w-reason      |
+| 4   | **Contacts**             | inside `/katchup`, `/kall`         |        7 |         8–10 | 🟡 read-only + block/unblock built (add to tune) |
+| 5   | **Group**                | inside `/katchup`                  |        8 |         9–10 | 🟡 create/rename/delete built (send to tune)     |
+| 6   | **Kall**                 | `/kall`, `/koolkall/:id`           |       10 |        10–12 | 🟡 screen done, flows to build                   |
+| 7   | **KMail**                | `/kmail`, `/writemail`             |       15 |        18–20 | 🟡 screen done, flows to build                   |
+| 8   | **KDiary**               | `/kdiary` (+ inside Katchup)       |        6 |          6–8 | 🔴 not started                                   |
+| 9   | **Settings**             | `/settings` (24 sections)          |       24 |        20–24 | 🟡 1 built (theme), screen done                  |
+| 10  | **Home / Dashboard**     | `/home`                            |        5 |          5–6 | 🟡 screen done, flows to build                   |
+| 11  | **Admin / UserMgmt**     | `/usermanagement`                  |       10 |        10–12 | ⏸ needs a business company (3 members)           |
+| 12  | **KDoc / KPresentation** | `/kdoc`                            |        8 |         8–10 | 🟡 deep check-sweep; flows need APIs             |
+| 13  | **KCloud**               | `/kcloud`                          |        6 |          6–8 | 🟡 deep check-sweep on the screen                |
+| 14  | **K-Booking**            | `/kbooking`                        |        6 |          6–8 | 🟡 deep check-sweep on the screen                |
+| 15  | **KNews**                | `/knews`                           |        5 |          5–6 | 🟡 deep check-sweep on the screen                |
+| 16  | **K-ECommerce**          | `/e-commerce`                      |        6 |          6–8 | 🟡 deep check-sweep on the screen                |
+| 17  | **Kdirectory**           | `/kdirectory`                      |        5 |          5–6 | 🟡 deep check-sweep on the screen                |
+|     | **Total**                |                                    | **~167** | **~150–190** |                                                  |
 
 Legend: 🟢 done · 🟡 partially built · 🔴 not started · ⏸ blocked/deferred.
+
+**All 13 authenticated screens are now in the deep check sweep** (`src/ui/screens.ts` →
+`screens.spec.ts`): every screen — core and vertical — is navigated and run through the full check
+catalogue (health / performance / layout / a11y), filing MEDIUM+ findings. The verticals use the
+authenticated **shell** as the mount anchor (they ship generic bootstrap layouts); their feature
+_flows_ still need building (KDoc waits on the owner's KPresentation/KDoc APIs).
+
+**✅ Bugzilla components — created and wired (2026-09-15).** The KPost UI product now has **21
+components** (was 12). Nine were created so every screen/module routes to its own component (parity
+with the API product's 27): **Kall, User Profile, KDiary, KDoc, KCloud, KBooking, User Management,
+Contacts, Groups** (ids 75–83, default assignee Ayyappan). `UI_COMPONENT_BY_SCREEN` and
+`KNOWN_COMPONENTS['kpost-ui']` map every screen to its dedicated component — **no `General`
+catch-all for any real screen**. The `component-routing`, `ownership` and `ui-coverage` framework
+tests (which reconcile config against the live Bugzilla) all pass.
+
+Full KPost UI component set: Accessibility · Auth · Contacts · General · Groups · Home · Kall ·
+Katchup · KBooking · KCloud · KDiary · KDirectory · KDoc · KEcommerce · KMail · KNews · KPay ·
+Settings · User Management · User Profile · WriteMail.
 
 ---
 
@@ -80,19 +102,20 @@ Legend: 🟢 done · 🟡 partially built · 🔴 not started · ⏸ blocked/def
 The differentiators live here (subject on every message, rich post-send control, read receipts).
 **Sender bell menu** and **recipient reply menu** are the two action sets (BR-K02).
 
-- [ ] Compose: Subject (BR-K01) + body — _(green)_
-- [ ] Send 1:1 → verify appears — _(green)_
-- [ ] Recall (unsend, FR-K10/BR-K03) — _(green)_
-- [ ] Delete (sender-side) — _(built, tune)_
-- [ ] Edit + `Edited` marker (BR-K03) — _(built, tune)_
-- [ ] Recall & Repost · Note · Reminder · Transfer
-- [ ] Forward · Forward-with-thread
-- [ ] Copy · Save · mark-important · Text-to-Speech
-- [ ] Recipient actions: Reply · Comment · Clarify · Report · More
-- [ ] Confidential Copy hidden from other recipients (NFR-SEC02, needs 3 QA accts)
-- [ ] Group send + per-recipient read receipts (FR-K06/K07)
-- [ ] Attachments: attach → send → thumbnail → delete
-- [ ] Search message / search subject; conversation open + switch; contact rail
+**Katchup coverage is now measured, not hand-listed** — the authoritative per-feature status lives in
+**`docs/KATCHUP-UI-COVERAGE.md`** (generated from `src/ui/katchup-features.ts`, reconciled by
+`tests/framework/katchup-ui-coverage.spec.ts`, which fails the build if a feature is unclassified or an
+FR-K id is unrepresented). Snapshot: **35 features · 20 built · 15 blocked-with-reason.**
+
+- **Built (20):** compose (subject/body/send), sender bell actions (Delete · Edit · Save · Copy · Note ·
+  Reminder · Transfer · Forward · Forward-with-thread · Recall&Repost), recipient actions
+  (Reply · Comment · Clarify), read receipts + threads (two-session), search. Specs:
+  `katchup-compose` · `katchup-actions` · `katchup-actions-more` · `katchup-search` ·
+  `katchup-two-session`.
+- **Blocked-with-reason (15):** 6 `needs-received` (secret · share-card · share-location · Report ·
+  More · unread-badge — harness exists, sub-flows need recording), 4 `needs-accounts` (Cc ·
+  confidential-copy · group · bulk — need ≥3 QA accounts), 1 `needs-upload` (attachments), 2 `api-only`
+  (schedule-call · mark-important), 2 `ui-only` (Text-to-Speech · Print).
 
 ### 2. Settings — `/settings` (24 sections; safest writes, self-restoring)
 
@@ -119,9 +142,11 @@ DeleteAccount, OtherMail, OtherActivities, KnewsSettings, BusinessSettings, Sett
 
 ### 4. Contacts — inside `/katchup`, `/kall`
 
-- [ ] Search a QA account → add → verify in list → remove
-- [ ] Block → verify → Unblock
-- [ ] Unknown Katchup contacts list · My groups list · imported phone contacts (read-only)
+- [x] Contact rail lists contacts + searchable (read-only) — `contacts.spec.ts`
+- [x] Blocked-Contacts screen renders (read-only) — `contacts.spec.ts`
+- [x] Block → verify → Unblock (gated `CONTACTS_UI_LIFECYCLE`, self-restoring, tune) — `contacts.spec.ts`
+- [ ] Add contact (the `AddContact.js` rail flow) — needs one recording pass (deeply nested trigger)
+- [—] Unknown contacts / groups / imported phone contacts — read-only lists, covered by the rail render
 
 ### 5. Group — inside `/katchup`
 

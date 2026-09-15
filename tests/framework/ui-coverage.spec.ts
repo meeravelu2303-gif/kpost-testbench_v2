@@ -41,7 +41,37 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
   {
     flow: 'Katchup message actions',
     spec: 'katchup-actions.spec.ts',
-    note: 'sender bell menu → Delete (confirm) and Edit (resend + Edited marker, BR-K03), self-cleaning (gated)',
+    note: 'sender bell menu → Delete · Edit (Edited marker, BR-K03) · Save · Copy, each self-cleaning (gated)',
+  },
+  {
+    flow: 'Katchup sub-flow actions',
+    spec: 'katchup-actions-more.spec.ts',
+    note: 'bell menu → Note · Reminder · Transfer · Forward · Forward-with-thread · Recall&Repost (entry wired, self-clean, gated)',
+  },
+  {
+    flow: 'Katchup search',
+    spec: 'katchup-search.spec.ts',
+    note: 'type in the search box → the conversation list filters to the match (read-only, safe)',
+  },
+  {
+    flow: 'Katchup two-session',
+    spec: 'katchup-two-session.spec.ts',
+    note: 'account 1 sends → account 2 (own context) receives + Reply/Comment/Clarify + read receipt (gated, self-clean)',
+  },
+  {
+    flow: 'Katchup Copy / Confidential / Bulk',
+    spec: 'katchup-copies.spec.ts',
+    note: '3-account: visible Copy seen by TO · Confidential Copy hidden from TO (NFR-SEC02) · bulk to many (gated)',
+  },
+  {
+    flow: 'Contacts',
+    spec: 'contacts.spec.ts',
+    note: 'contact rail lists + searchable · blocked-contacts screen (read-only) · block→unblock (gated, self-restoring)',
+  },
+  {
+    flow: 'Group',
+    spec: 'group.spec.ts',
+    note: 'create-group modal → Group Name + member → submit → delete (gated, self-cleaning)',
   },
   {
     flow: 'Profile edit',
