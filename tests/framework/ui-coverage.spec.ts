@@ -69,6 +69,21 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
     note: '/writemail form renders (To/Subject/body, green) · compose → send (gated KMAIL_UI_LIFECYCLE)',
   },
   {
+    flow: 'Kall features',
+    spec: 'kall-features.spec.ts',
+    note: 'screen + tabs (green) · schedule a Kool Kall via CreateKallModal (gated KALL_UI_LIFECYCLE)',
+  },
+  {
+    flow: 'Settings sections',
+    spec: 'settings-sections.spec.ts',
+    note: 'nav groups + expand General Settings / Profile Creation to their items (read-only, green)',
+  },
+  {
+    flow: 'Verticals features',
+    spec: 'verticals-features.spec.ts',
+    note: 'KNews search · KDirectory · KCloud storage · KDoc/KOS tools · E-Commerce grid render (green)',
+  },
+  {
     flow: 'Contacts',
     spec: 'contacts.spec.ts',
     note: 'contact rail lists + searchable · blocked-contacts screen (read-only) · block→unblock (gated, self-restoring)',
