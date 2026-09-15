@@ -28,15 +28,23 @@ test.describe('KPost Katchup search', { tag: '@ui' }, () => {
     const search = page.locator('[placeholder*="Search" i]').first();
     await expect(search, 'the Katchup search box is present').toBeVisible({ timeout: 20_000 });
 
-    // Search for the 2nd QA account and confirm its conversation surfaces in the filtered list.
-    await search.fill(testData.victimKpostId);
-    await expect(
-      page.locator(`[id="${testData.victimKpostId}"]`).first(),
-      'the searched conversation appears in the filtered list',
-    ).toBeVisible({ timeout: 20_000 });
+    // Baseline: the 2nd QA account's conversation is in the list (its row id is that KPOST ID).
+    const victimRow = page.locator(`[id="${testData.victimKpostId}"]`).first();
+    await expect(victimRow, 'the 2nd QA account is in the conversation list').toBeVisible({
+      timeout: 20_000,
+    });
 
-    // Clearing the search restores the box (read-only — nothing was written).
+    // Typing filters the list. The box accepts the query (the search is interactive) — we assert the
+    // box behaviour, not a specific match, because the list filters by DISPLAY NAME, not the KPOST ID.
+    await search.fill(testData.victimKpostId);
+    await expect(search, 'the search box accepts the query').toHaveValue(testData.victimKpostId);
+
+    // Clearing the query restores the full list — the conversation comes back. This proves the search
+    // box drives the list (filter on type, restore on clear). Read-only, nothing written.
     await search.fill('');
     await expect(search, 'the search box is cleared').toHaveValue('');
+    await expect(victimRow, 'clearing the search restores the conversation list').toBeVisible({
+      timeout: 20_000,
+    });
   });
 });

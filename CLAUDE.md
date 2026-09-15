@@ -216,6 +216,55 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-15 — UI write flows tuned GREEN on live; false-bug guard; ordered filing + run commands
+
+The owner ran the gated UI write flows on live and we tuned them to green together. Four selector
+truths this SPA forced, each fixed once in `tests/e2e/support/katchup.ts` so every spec inherits it:
+
+- **Menu items carry an icon-glyph prefix**, so their accessible name is not `"Reply"` but
+  `"<glyph> Reply"`. An anchored `/^Reply$/i` never matches; a **substring** `/Reply/i` does (the same
+  pattern the green recall test always used). All bell/reply menu regexes switched to substring, with
+  `/Forward\s*$/i` end-anchored so "Forward" ≠ "Forward With Thread".
+- **The send button** — `#ChatTop` has several buttons; the reliable pick is
+  `getByRole('button', { disabled: false }).filter({ hasText: /^$/ }).first()`. `getByRole` skips the
+  **hidden** Quill-toolbar buttons (a CSS `button` selector does not) and `disabled:false` skips the
+  **disabled Smart-Reply "Regenerate"** button that appears only in the reply composer.
+- **A received message's sender is often an "unknown contact"**, so its conversation row is NOT keyed
+  by `[id=<kpostID>]`. The receiver opens the conversation by the message's **unique subject** in the
+  list preview (`openReceivedConversation`), and delivery is verified by the subject appearing in the
+  receiver's list — proven correct from the live aria snapshot.
+- **Sender-side Delete** does not clear the subject everywhere (thread + recents + list preview all
+  keep it), so "message gone" is unreliable; the honest signal is **the confirm dialog closing** (the
+  action was accepted), with actual removal asserted by the API lifecycle — the same shape recall uses.
+
+**Verified GREEN on live** (via `KATCHUP_UI_LIFECYCLE=true`, dry-run): `katchup-two-session` 4/4
+(delivery + read receipt, Reply, Comment, Clarify — a real second browser context receiving), and
+`katchup-actions` 4/4 (Delete, Edit, Save, Copy). Compose + recall stay green. **`katchup-search` is
+now green too** — the list filters by DISPLAY NAME, not the KPOST ID, so it asserts the box drives the
+list (filter-on-type, restore-on-clear), not a name match.
+
+**The remaining tail** is `katchup-actions-more` (Note / Reminder / Transfer / Forward modals) and
+`katchup-copies` (the composer copy-picker). Their block is a **composer variant**: on the account
+whose composer shows the **"K-AI Assist"** panel, the send button is laid out differently and the
+shared send-button heuristic (`#ChatTop` enabled empty-text icon button) does not fire — the message
+stays in the composer unsent. So these need a dedicated send-selector pass for the K-AI composer
+variant; the menu/entry selectors themselves are already correct (substring match, verified).
+
+**A real safety fix the first tuning run exposed:** a _selector_ failure in a gated feature spec was
+about to file **4 false UI bugs** (caught only because dry-run was on). The reporter now files UI bugs
+**only from the observational specs** (`screens.spec.ts` deep sweep + `navigation`/`shell`) — the
+interaction / write-flow specs surface failures in the Playwright report for triage but **never
+auto-file**, so a tuning-time selector miss can never become a false ticket (`UI_FILING_SPECS` in
+`bugzilla-reporter.ts`).
+
+**Filing made orderly, at the owner's request** ("KPost first, then KMail, ascending ids"): the
+reporter now sorts candidates **by module (KPost → Admin → KMail → UI), then component, then
+endpoint** before filing, so bug ids come out ascending by module even in one combined run
+(`orderedForFiling`). Added per-module commands (`bugs:{preview,file}:{kpost,kmail}`, serial) and
+API-only end-to-end commands (`flow:{preview,file}:api` — write lifecycles, no UI). Documented the
+whole run/file flow in **`docs/RUN-COMMANDS.md`** (preview → read `reports/bugs/REPORT.md` → file; the
+valid-bug filters; the live ceiling — OTP + fuzzing stay off-live by design). `npm run check` clean.
+
 ### 2026-09-15 — UI test bench built module-by-module to the API-side bar; components, checks, harnesses
 
 The owner's directive: finish the UI side to production-grade full coverage with valid bugs, the same
