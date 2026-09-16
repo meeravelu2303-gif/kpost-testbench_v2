@@ -74,7 +74,10 @@ test.describe('Validation framework', { tag: '@framework' }, () => {
      * The live-application rules (allowlist, OTP, and ALLOW_DESTRUCTIVE_TESTS granting nothing)
      * are covered in tests/framework/live-safety.spec.ts.
      */
-    const offLive = { isProduction: false, allowDestructive: false };
+    // Off the live application means requests go to the bundled mock (mockApi:true) — where the SMS
+    // kill-switch does not fire, so the normal side-effect rule applies. Against a REAL host an SMS
+    // sender is unconditionally blocked (see live-safety.spec.ts).
+    const offLive = { isProduction: false, allowDestructive: false, mockApi: true };
 
     expect(
       destructiveBlockReason(

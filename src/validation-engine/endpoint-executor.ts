@@ -86,6 +86,9 @@ export class EndpointExecutor {
       isProduction: env.IS_PRODUCTION,
       allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
       allowLiveWrite: options.allowLiveWrite,
+      // Threads the mock/real-host signal so the SMS/OTP kill-switch blocks OTP senders against a
+      // real host in EVERY mode, while still letting them run against the bundled mock.
+      mockApi: env.MOCK_API,
     });
     if (blocked) throw new ProductionSafetyError(blocked);
 

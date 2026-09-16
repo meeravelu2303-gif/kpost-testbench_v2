@@ -228,6 +228,26 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-16 — SMS/OTP kill-switch: the bench can never send an OTP/SMS against a real host
+
+The owner reported the Nettyfish SMS gateway draining — OTPs sent every second to many different
+mobile numbers from many different IPs. **Investigated and cleared the bench:** no bench/Playwright
+process was running, zero connections to `devapi2` (the `sendOTP` host) from this machine
+(`192.168.0.50`), and no `sendOTP` in any run artifact — the pattern (different numbers + different
+IPs) is **external SMS-pumping/bombing abuse** of the public, unauthenticated, unthrottled
+`/v2/common/sendOTP/` endpoint (a real KPost API vulnerability: needs CAPTCHA + per-number/global rate
+limits + a country allowlist server-side). The bench was never the source.
+
+**Even so, added an absolute SMS/OTP kill-switch** so the bench can never contribute: the FIRST check
+in `destructiveBlockReason()` blocks any endpoint that delivers a real OTP/SMS/e-mail
+(`otpDependent`, `sideEffect: 'external'`, OR a path/label matching `otp|sms|forgotpassword|…` as a
+backstop for a mis-flagged one) **against any real host, in EVERY mode** — production, dev, local — and
+**no flag** (`allowDestructive`, `allowLiveWrite`, a wrong `TEST_ENV`) can unlock it. It runs only
+against the bundled mock (`mockApi: true`, which sends no real SMS). Threaded `mockApi` through
+`SafetyFlags` and the executor. Two new `live-safety.spec.ts` guards pin it (every registered OTP/SMS
+sender is refused on a real host); the older tests that used `sendOTP`/external as examples were
+updated to the stronger behaviour. `npm run check` clean; **73 framework guards pass**.
+
 ### 2026-09-16 — `docs/BLOCKED-ENDPOINTS.md` rebuilt: module-by-module, covered-vs-truly-off-live
 
 The owner asked which endpoints are TRULY not tested on live (vs merely off the default run).

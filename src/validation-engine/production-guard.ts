@@ -15,6 +15,11 @@ export interface SafetyFlags {
    * per call by an owner-approved feature spec, never by the engine (so fuzzing stays blocked).
    */
   allowLiveWrite?: boolean;
+  /**
+   * True when requests go to the bundled mock server (`MOCK_API=true`), which cannot send a real
+   * SMS/email. False means a real host — where the SMS/OTP kill-switch below applies in EVERY mode.
+   */
+  mockApi?: boolean;
 }
 
 /**
@@ -69,8 +74,28 @@ export function destructiveBlockReason(
   flags: SafetyFlags = {
     isProduction: env.IS_PRODUCTION,
     allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
+    mockApi: env.MOCK_API,
   },
 ): string | undefined {
+  /*
+   * ## SMS / OTP kill-switch — the FIRST check, un-bypassable, in EVERY mode
+   *
+   * An endpoint that delivers a real OTP / SMS / e-mail (`otpDependent`, or `sideEffect: 'external'`)
+   * must NEVER be sent to a real host — not on production, not on dev, not on any run — because it
+   * costs money and exhausts the SMS gateway. The only safe target is the bundled mock. No flag
+   * (`allowDestructive`, `allowLiveWrite`, a wrong `TEST_ENV`) can unlock it. This sits above every
+   * other check so nothing downstream can reach an SMS sender against a real host.
+   */
+  const realHost = !endpoint.mockFixture && flags.mockApi !== true;
+  // A path/label backstop: even if an endpoint were mis-flagged (no `otpDependent`/`external`), any
+  // OTP / SMS / send-code / forgot-password path is caught here so it can NEVER send against a real host.
+  const looksLikeSmsSender = /otp|sms|sendcode|forgotpassword|sentkpostidsms/i.test(endpoint.label);
+  if (
+    realHost &&
+    (endpoint.otpDependent || endpoint.sideEffect === 'external' || looksLikeSmsSender)
+  ) {
+    return `${endpoint.label}: sends a real OTP/SMS/e-mail — BLOCKED against any real host (SMS kill-switch); it may run only against the bundled mock`;
+  }
   /*
    * ## On the live application, default deny
    *
