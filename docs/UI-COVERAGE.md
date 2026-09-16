@@ -59,6 +59,7 @@ Every screen inherits the **full check catalogue** below. Covered: **13** screen
 | Contacts | `contacts.spec.ts` | contact rail lists + searchable · blocked-contacts screen (read-only) · block→unblock (gated, self-restoring) |
 | Group | `group.spec.ts` | create-group modal → Group Name + member → submit → delete (gated, self-cleaning) |
 | Profile edit | `profile-edit.spec.ts` | own profile → About section edit pencil → Update → verify → restore (gated, self-restoring) |
+| Profile actions | `profile-actions.spec.ts` | three-dot menu (Change Picture/Share/Logout) + About/Experience/Education sections (green) · Experience add (gated) |
 | Settings theme | `settings-theme.spec.ts` | Personalize → change KPost layout theme → Apply → verify active → restore original (gated, self-restoring) |
 
 ## Deep write flows (planned — gated, need live tuning)

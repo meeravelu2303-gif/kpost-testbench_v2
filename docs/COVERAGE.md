@@ -8,13 +8,14 @@ cannot drift from what is actually tested.
 
 | | Count |
 | - | ----: |
-| Documented (workbook, usable) | 334 |
-| **Registered & tested** | **295** |
-| — of those, run on live | 104 |
-| In "built" modules | 298 |
+| Documented (workbook, usable) | 446 |
+| **Registered & tested** | **333** |
+| — of those, run on live | 115 |
+| In "built" modules | 423 |
 
 | Module | Documented | Tested | Live | Status | Note |
 | ------ | ---------: | -----: | ---: | ------ | ---- |
+| `admin` | 125 | 39 | 11 | built | Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here |
 | `kmail` | 80 | 79 | 33 | built | KMail — reads live, compose/draft/settings write lifecycle (host kmail5, /kmail5/v2) |
 | `profile` | 45 | 45 | 12 | built | profile — full API + write lifecycle + screens |
 | `katchup` | 36 | 36 | 10 | built | messaging — full API + write lifecycle + screen |
@@ -30,7 +31,6 @@ cannot drift from what is actually tested.
 | `aws` | 4 | 4 | 3 | built | S3 presigned URLs + attachment check/delete; generators run live |
 | `dashboard` | 3 | 3 | 3 | built | home recent-messages panel |
 | `other` | 1 | 0 | 0 | backlog | unprefixed paths — review individually |
-| `admin` | 13 | 1 | 0 | needs-business | org/HR admin — needs a business company with members |
 | `signuploginformediumandlarge` | 1 | 1 | 0 | needs-business | business-tier admin login |
 | `knews` | 6 | 0 | 0 | external | external RSS feeds, not the KPost API |
 | `redbus` | 8 | 0 | 0 | out-of-scope | third-party travel booking; confirm scope with owner |
@@ -39,6 +39,95 @@ cannot drift from what is actually tested.
 | `metadee` | 1 | 0 | 0 | out-of-scope | third-party; confirm scope with owner |
 
 ### Uncovered documented paths (the backlog, module by module)
+
+**`admin`** (86) — built
+
+- `/admin/addingUserByAdmin/`
+- `/admin/createOrRemoveBackupAdmin/`
+- `/admin/displayNameSuggestion`
+- `/admin/getBankAndCompanyDetails/{companyID}`
+- `/admin/holdOrRelease/`
+- `/admin/resetPassword/`
+- `/admin/terminateUser/`
+- `/admin/userManagementDetails/{companyID}`
+- `/v2/admin/createKpostIDAndDesignationSuggestion`
+- `/v2/admin/updateBankAccountDetails`
+- `/v2/admin/updateCompanyDetails`
+- `/v2/admin/updateRole`
+- `/workplaceHierarchy/update`
+- `/workplaceHierarchy/save`
+- `/workplaceHierarchy/delete`
+- `/variable/update`
+- `/variable/save`
+- `/variable/getVariable`
+- `/variable/delete`
+- `/userDetails/validateOTP`
+- `/userDetails/update`
+- `/userDetails/signUp`
+- `/userDetails/sendOTP`
+- `/userDetails/save`
+- `/userDetails/resetPassword`
+- `/userDetails/registration`
+- `/userDetails/login`
+- `/userDetails/generateUserIdSuggestions`
+- `/userDetails/createCommunicationId`
+- `/userDetails/checkAvailability`
+- `/rolePosting/softDelete`
+- `/rolePosting/getRolePostingById`
+- `/rolePosting/getEmployeeDetailsByLastHrvariableId`
+- `/rolePosting/getAssignedRolePostingEmployeeByCompanyId`
+- `/project/saveAllProject`
+- `/productPurchase/save`
+- `/productMaster/save`
+- `/productEmployeeMapping/save`
+- `/productEmployeeMapping/saveKpostIdForKams`
+- `/productEmployeeMapping/getMappedEmployeeByCompanyIdAndProductId`
+- `/productEmployeeMapping/getKpostIDsByCompanyIdAndProductId`
+- `/location/getReportingLocationName`
+- `/hrVariable/update`
+- `/hrVariable/save`
+- `/hrVariable/getVariable`
+- `/hrVariable/delete`
+- `/hrTier/update`
+- `/hrTier/save`
+- `/hrTier/getAttribute`
+- `/hrTier/getAttributeByCompanyId`
+- `/hrTier/delete`
+- `/hrSetUpTierAttribute/getAttribute`
+- `/holiday/saveHoliday`
+- `/employeeRoleMapping/save`
+- `/employeeDetails/getTransferOrPromotionDetails`
+- `/designation/update`
+- `/designation/save`
+- `/designation/getDesignationByCompanyIdAndDepartmentId`
+- `/designation/delete`
+- `/designation/abbreviationAndCodeCreation`
+- `/department/update`
+- `/department/save`
+- `/department/getDepartmentByCompanyId`
+- `/department/delete`
+- `/department/abbreviationAndCodeCreation`
+- `/demo/createDemoRequest`
+- `/country/save`
+- `/attribute/update`
+- `/attribute/save`
+- `/attribute/getAttribute`
+- `/attribute/getAttributeByCompanyId`
+- `/attribute/delete`
+- `/adminTierAttribute/getAttribute`
+- `/adminDetails/save`
+- `/workplaceHierarchy/getOrganization`
+- `/userDetails/getAllUser/{companyId}`
+- `/project/fetchAllProject`
+- `/productPurchase/getPurchaseProductByCompanyId`
+- `/productMaster/productList/{companyId}`
+- `/holiday/getHoliday`
+- `/demo/fetchDemoRequest`
+- `/country/getAddressUsingPincode/{pincode}`
+- `/country/countryList`
+- `/adminTierVariable/getAllVariable`
+- `/`
+- `/userDetails/delete/{id}`
 
 **`kmail`** (1) — built
 
@@ -54,21 +143,6 @@ cannot drift from what is actually tested.
 **`other`** (1) — backlog
 
 - `/delete?presentationId={presentationId}`
-
-**`admin`** (12) — needs-business
-
-- `/admin/addingUserByAdmin/`
-- `/admin/createOrRemoveBackupAdmin/`
-- `/admin/displayNameSuggestion`
-- `/admin/getBankAndCompanyDetails/{companyID}`
-- `/admin/holdOrRelease/`
-- `/admin/resetPassword/`
-- `/admin/terminateUser/`
-- `/admin/userManagementDetails/{companyID}`
-- `/v2/admin/createKpostIDAndDesignationSuggestion`
-- `/v2/admin/updateBankAccountDetails`
-- `/v2/admin/updateCompanyDetails`
-- `/v2/admin/updateRole`
 
 **`knews`** (6) — external
 

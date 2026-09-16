@@ -1,7 +1,7 @@
 {
   "source": "KPOST API (6).xlsx",
   "sourcePath": "D:\\TEST-BENCH-AUTOMATIONS\\kpost-testbench_v2\\KPOST API (6).xlsx",
-  "generatedAt": "2026-09-15T12:24:15.120Z",
+  "generatedAt": "2026-09-15T16:48:55.313Z",
   "summary": {
     "kpost-api": {
       "rows": 306,
@@ -16,13 +16,6 @@
       "operations": 71,
       "withRequest": 44,
       "withResponse": 26
-    },
-    "admin-api": {
-      "rows": 39,
-      "usable": 35,
-      "operations": 35,
-      "withRequest": 35,
-      "withResponse": 0
     }
   },
   "tabs": [
@@ -60,13 +53,6 @@
       "methodColumn": "C",
       "methodColumnSource": "layout",
       "firstFreeColumn": "K"
-    },
-    {
-      "sheet": "API Services",
-      "product": "admin-api",
-      "methodColumn": "A",
-      "methodColumnSource": "layout",
-      "firstFreeColumn": "D"
     }
   ],
   "excluded": [
@@ -485,42 +471,6 @@
       "path": "/kmailSetting/letterHeadUpload",
       "reasons": [
         "superseded"
-      ]
-    },
-    {
-      "product": "admin-api",
-      "tab": "API Services",
-      "row": 25,
-      "path": "/location/getLocation",
-      "reasons": [
-        "duplicate-of API Services:R16"
-      ]
-    },
-    {
-      "product": "admin-api",
-      "tab": "API Services",
-      "row": 29,
-      "path": "/hrSetUpTierVariable/getHrSetUpTierVariable",
-      "reasons": [
-        "duplicate-of API Services:R24"
-      ]
-    },
-    {
-      "product": "admin-api",
-      "tab": "API Services",
-      "row": 31,
-      "path": "/hrSetUpTierAttribute/getAttributeByCompanyId",
-      "reasons": [
-        "duplicate-of API Services:R18"
-      ]
-    },
-    {
-      "product": "admin-api",
-      "tab": "API Services",
-      "row": 37,
-      "path": "/country/getAddressUsingPincodeAndCountry/{param1}/{param2}",
-      "reasons": [
-        "duplicate-of API Services:R11"
       ]
     }
   ]

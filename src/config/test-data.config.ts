@@ -82,6 +82,17 @@ const schema = z.object({
   uniqueName: z.string().min(1).default('qabench'),
   domain: z.string().min(1).default('kpost.in'),
 
+  /**
+   * The Admin module (`admin-api`) is driven by the BUSINESS_M/L admins; every admin payload carries
+   * the caller's own `companyId`, which is the `companyID` claim in the business-admin login token.
+   * Discovered on the first live login (decode the token) and set here so the guard allowlists it.
+   * Defaults are placeholders — unset on live means the value is not allowlisted and any admin call
+   * naming a company is refused, the same self-enforcing scope the personal accounts use.
+   */
+  businessSCompanyId: z.coerce.number().int().positive().default(1),
+  businessMCompanyId: z.coerce.number().int().positive().default(1),
+  businessLCompanyId: z.coerce.number().int().positive().default(1),
+
   /** Location ids for the states/cities/postcode lookups. */
   stateId: z.coerce.number().int().positive().default(1),
   regionId: z.coerce.number().int().positive().default(1),
@@ -140,6 +151,9 @@ const SOURCES = {
   companyNameAbsent: 'QA_COMPANY_NAME_ABSENT',
   uniqueName: 'QA_UNIQUE_NAME',
   domain: 'QA_DOMAIN',
+  businessSCompanyId: 'QA_BUSINESS_S_COMPANY_ID',
+  businessMCompanyId: 'QA_BUSINESS_M_COMPANY_ID',
+  businessLCompanyId: 'QA_BUSINESS_L_COMPANY_ID',
   stateId: 'QA_STATE_ID',
   regionId: 'QA_REGION_ID',
   pinCode: 'QA_PINCODE',
@@ -206,6 +220,9 @@ const IDENTITY_FIELDS = [
   'companyId',
   'companyName',
   'uniqueName',
+  'businessSCompanyId',
+  'businessMCompanyId',
+  'businessLCompanyId',
 ] as const satisfies readonly (keyof z.infer<typeof schema>)[];
 
 /**

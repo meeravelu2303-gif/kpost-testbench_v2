@@ -8,13 +8,13 @@ no business account exists on live yet.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **101** |
-| Blocked | 185 |
-| Total registered | 286 |
+| **Runs on live** | **112** |
+| Blocked | 212 |
+| Total registered | 324 |
 
 ---
 
-## Runs on live — 101
+## Runs on live — 112
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -22,6 +22,17 @@ reviewer can check against the comment beside it.
 
 | Method | Path | Module |
 | ------ | ---- | ------ |
+| `POST` | `/adminTierAttribute/getAttributeByCompanyId` | Admin |
+| `POST` | `/adminTierVariable/getAdminTierVariable` | Admin |
+| `GET` | `/country/getAddressUsingPincodeAndCountry/{pincode}/{country}` | Admin |
+| `POST` | `/employeeDetails/getEmployeeDetails` | Admin |
+| `POST` | `/hrSetUpTierAttribute/getAttributeByCompanyId` | Admin |
+| `POST` | `/hrSetUpTierVariable/getHrSetUpTierVariable` | Admin |
+| `POST` | `/location/getAllLocation` | Admin |
+| `POST` | `/rolePosting/getEmployeeByCompanyId` | Admin |
+| `POST` | `/rolePosting/getRolePostingByCompanyId` | Admin |
+| `POST` | `/rolePosting/getSuspendOrTerminateEmployee` | Admin |
+| `POST` | `/workplaceHierarchy/getWorkPlaceHierarchy` | Admin |
 | `POST` | `/v2/aws/checkAttachmentS3/` | AWS |
 | `POST` | `/v2/aws/generate-presigned-url` | AWS |
 | `GET` | `/v2/common/countries` | common |
@@ -126,12 +137,39 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 185
+## Blocked on live — 212
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
 | Method | Path | Module | Why |
 | ------ | ---- | ------ | --- |
+| `POST` | `/adminTierAttribute/delete` | Admin | writes or deletes on the live application |
+| `POST` | `/adminTierAttribute/save` | Admin | writes or deletes on the live application |
+| `POST` | `/adminTierAttribute/update` | Admin | writes or deletes on the live application |
+| `POST` | `/adminTierVariable/delete` | Admin | writes or deletes on the live application |
+| `POST` | `/adminTierVariable/getAllReportingVariableHierarchy` | Admin | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/adminTierVariable/save` | Admin | writes or deletes on the live application |
+| `POST` | `/adminTierVariable/update` | Admin | writes or deletes on the live application |
+| `POST` | `/employeeDetails/delete` | Admin | writes or deletes on the live application |
+| `POST` | `/employeeDetails/save` | Admin | writes or deletes on the live application |
+| `POST` | `/employeeDetails/update` | Admin | writes or deletes on the live application |
+| `POST` | `/hrSetUpTierAttribute/delete` | Admin | writes or deletes on the live application |
+| `POST` | `/hrSetUpTierAttribute/save` | Admin | writes or deletes on the live application |
+| `POST` | `/hrSetUpTierAttribute/update` | Admin | writes or deletes on the live application |
+| `POST` | `/hrSetUpTierVariable/delete` | Admin | writes or deletes on the live application |
+| `POST` | `/hrSetUpTierVariable/getAllReportingHrTierVariableHierarchy` | Admin | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/hrSetUpTierVariable/save` | Admin | writes or deletes on the live application |
+| `POST` | `/hrSetUpTierVariable/update` | Admin | writes or deletes on the live application |
+| `POST` | `/location/delete` | Admin | writes or deletes on the live application |
+| `POST` | `/location/getLocation` | Admin | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/location/getLocationById` | Admin | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/location/save` | Admin | writes or deletes on the live application |
+| `POST` | `/location/update` | Admin | writes or deletes on the live application |
+| `POST` | `/rolePosting/delete` | Admin | writes or deletes on the live application |
+| `POST` | `/rolePosting/getRolePostingByCompanyIdAndEmployeeId` | Admin | not cleared: needs a business account or company we do not have on live yet |
+| `POST` | `/rolePosting/save` | Admin | writes or deletes on the live application |
+| `POST` | `/rolePosting/suspendOrTerminateEmployee` | Admin | writes or deletes on the live application |
+| `POST` | `/rolePosting/update` | Admin | writes or deletes on the live application |
 | `GET` | `/v2/aws/deleteAttachmentFromS3/{uuid}` | AWS | writes or deletes on the live application |
 | `POST` | `/v2/common/forgotPasswordOTPOrSentKpostIDSms` | common | OTP — sends a real OTP by SMS/email to a real recipient |
 | `POST` | `/v2/common/forgotPasswordUpdate` | common | OTP — needs an OTP validated in an earlier step; live has no bypass |
@@ -336,5 +374,5 @@ changes what every mobile client is told to install, `saveEnquiryDetails` writes
 sales table, and the logo trio acts on a company id taken from the payload rather than the
 token. Running them needs a decision, not a flag.
 
-Identity values still unset: QA_ADMIN_KPOST_ID, QA_BUSINESS_S_KPOST_ID, QA_BUSINESS_M_KPOST_ID, QA_BUSINESS_L_KPOST_ID, QA_BUSINESS_RECEIVER_KPOST_ID, QA_FORGOT_PASSWORD_KPOST_ID, QA_OTP_MOBILE, QA_OTP_EMAIL, QA_COMPANY_ID, QA_COMPANY_NAME, QA_UNIQUE_NAME.
+Identity values still unset: QA_ADMIN_KPOST_ID, QA_BUSINESS_RECEIVER_KPOST_ID, QA_FORGOT_PASSWORD_KPOST_ID, QA_OTP_MOBILE, QA_OTP_EMAIL, QA_COMPANY_ID, QA_COMPANY_NAME, QA_UNIQUE_NAME.
 

@@ -216,6 +216,181 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-15 — Admin contract regenerated from the LIVE OpenAPI (112 ops); Excel dropped as the source
+
+The owner asked to "make the perfect one" — so the `admin-api` contract now comes from the **live
+service's own OpenAPI** (`adminmodule.kpostindia.com/v3/api-docs`, springdoc-generated from the
+controllers' Swagger annotations), not the simplified `Admin_module.xlsx`. **`scripts/fetch-admin-contract.cjs`**
+(`npm run contract:admin`) fetches it, **dereferences every `$ref`** (the bench's validators need inline
+JSON Schema), and writes `openapi/admin-api.openapi.json` — **112 operations, 38 schemas**, accurate
+methods and types (`companyId` string, ids 24-hex ObjectIds, bulk writes as arrays). The raw source is
+cached to `contracts/admin-api.source.json` for an offline regen. **The Excel is no longer a source:**
+the admin tab + `admin-api` product were removed from `excel-to-contract.cjs`, so `contract:excel` no
+longer touches admin; the stale `contracts/admin-api.contract.json` was deleted.
+
+**Definitions realigned to the real contract** (all 35 resolve against it, verified at load): the country
+reference path is `{pincode}/{country}` and `getEmployeeDetails` is a plain **POST** (the Excel had wrong
+param names and a GET — the `contractMethod` hack is gone). The live reads re-ran green: 11 reads on
+BUSINESS_M (company 1067), same real findings, and the earlier `request.data-type` guard noise is gone
+now that the schema types `companyId` as a string. `npm run check` clean; 68 framework tests pass.
+
+**Scope settled by the owner: "the product having endpoints only."** So coverage targets the endpoints
+the **product actually uses**, read from the frontend service files (`ADMIN_HR_MODULES_25/src/Services/
+AdminSetup.js` + `HumanResources.js`): **38 endpoints**, all now defined (added the 3 the product calls
+that were missing — `adminTierVariable/getAllReportingVariableHierarchy`, `hrSetUpTierVariable/delete`,
+`rolePosting/getRolePostingByCompanyIdAndEmployeeId`). The other ~74 in the 112-op contract are **not
+wired into the product** (product/project/holiday/demo/userDetails + tier-sibling controllers), so they
+are out of scope, not backlog — the ledger note records this. The full 112-op contract stays as the
+authoritative API reference; the bench tests the product's 38.
+
+### 2026-09-15 — Admin module LIVE: 11 reads run on `adminmodule`; the live OpenAPI is authoritative; real bugs found
+
+Ran the `admin-api` reads on the live Admin module (`adminmodule.kpostindia.com`) as the BUSINESS_M
+admin — **they authenticate and return 200, and find real, correctly-routed bugs**. Several things the
+live run + the backend codebase (`D:\KPOST_PROJECTS\Admin_Module`) corrected, each measured not assumed:
+
+**Auth — plain `userLogin`, not `adminUserLogin`.** All three business admins log in via `userLogin`
+(the default), and the live token carries `companyID` + `role: admin`; `adminUserLogin` answers **403**
+for these accounts. So the per-principal `loginEndpointId` override was **removed** from business-m/l —
+they use the default login. Discovered company ids (decoded from the token): **S = 1066, M = 1067,
+L = 1075**, set in `.env` (`QA_BUSINESS_{S,M,L}_COMPANY_ID`) so the guard allowlists our own company.
+`ADMIN_API_BASE_URL` corrected `devapi2` → **`https://adminmodule.kpostindia.com`** (it had been an
+unused placeholder; the core `/admin/*` routes are `kpost-api` on devapi2, a different surface).
+
+**The response envelope is `admin`, measured from the backend source (`ApiResponseEnvelope.java`):**
+`{ value, status, statusCode, urlPath, error?, message? }` — the payload key is **`value`** (like KMail,
+not `data`), and any handled failure returns **HTTP 500** (even "not found"). Ids are MongoDB
+**ObjectIds** (24-hex) and **`companyId` is a string** ("1067"), not the KPost core's integers. Added the
+`admin` profile to `response-contract.ts`; the read payloads send `companyId` as a string; `getEmployeeDetails`
+is **POST** (the Excel mis-documented GET), fixed via `contractMethod`.
+
+**The live service publishes an accurate OpenAPI** at `https://adminmodule.kpostindia.com/v3/api-docs`
+— **112 operations, 38 schemas** (springdoc, generated from the backend's rich Swagger annotations). The
+`Admin_module.xlsx` (35 rows, integer companyId, no arrays) is a **simplified/inaccurate subset**. The
+live api-docs is the authoritative contract; **next step is to regenerate `admin-api` from it** (handling
+`$ref` schemas) rather than the Excel — the "measure not guess" correction. For now the Excel-generated
+paths are correct enough to run the reads (paths match; only method/type/envelope needed fixing).
+
+**Findings on live (11 reads, consolidated, filed to KPost Admin → Jaganathan in a real run):**
+
+- **CRITICAL — auth not enforced on a missing/malformed token.** No `Authorization` header, an empty
+  token, or a non-Bearer scheme → **200** (or 500), not 401. The `AuthenticationFilter` only rejects a
+  token that is present-but-invalid; a missing one passes through unauthenticated (confirmed in source).
+- **HIGH — error responses are plain text, not the envelope.** The filter writes `"Invalid token"` with
+  no `Content-Type` and no JSON body, so `response.error-format` fails across the auth-rejection cases.
+- **MEDIUM — missing security headers** (CSP, referrer-policy, HSTS) — the same systemic class as the core.
+- **MEDIUM — input validation**: `companyId: null` and an empty `{}` body are accepted with 200.
+- **`rolePosting/getSuspendOrTerminateEmployee` answers 500** to several probes (server error where a
+  4xx/401 belongs).
+
+11 reads ran; the 3 id-keyed reads (`getLocation`, `getLocationById`, the HR reporting hierarchy)
+correctly skipped (needs a runtime ObjectId a write creates). `npm run check` clean. Nothing filed
+(dry-run). **Next:** regenerate the contract from the live api-docs; then the gated write lifecycle on
+BUSINESS_M and the `kpostadmin.kpostindia.com` UI. Company users for M/L to come from the owner.
+
+### 2026-09-15 — `admin-api` suite REGISTERED (35 endpoints); tier-aware login + companyId guard wired
+
+Built the `admin-api` suite on the already-existing scaffolding (ownership, components, env var, spec
+file, business principals were all in place). Offline build **verified**: `npm run check` clean, **68
+framework tests pass** (component-routing, coverage-ledger, live-coverage all green), and the 35
+endpoints collect as contract tests under "Admin API".
+
+**What was added:**
+
+- **`defineAdminEndpoint`** (`src/api/definitions/admin/admin-endpoint.ts`) — parallel to
+  `defineKmailEndpoint` but **no path prefix** (the host serves at root), `suite: 'admin-api'`,
+  post-login, `responseContract: 'kpost'` **as an assumption** (the workbook has 0 admin response
+  samples; same-vendor envelope until the first live read confirms it, then measure an `admin` profile
+  if it differs — the way `kmail` was measured).
+- **35 definitions** in `src/api/definitions/admin/{workplace,hr,roles,employee}.api.ts`, grouped by
+  the org-build flow (`docs/admin-flow.md`). **11 productionSafe reads** (the `get*ByCompanyId` /
+  hierarchy / employee-list / address reads — company-scoped, safe on live); **24 gated writes/needs-id**
+  (all `save/update/delete`, role assign, suspend/terminate — destructive, `sideEffect: 'data'`, gated).
+  Every POST read carries `destructive: false` (the grep-drop trap). `admin.api.ts` re-exports
+  `./admin`; `uncoveredAdminPaths()` = 0.
+- **`workbook-contract.ts`** — imported `admin-api.openapi.json` into `DOCUMENTS` (the one line that
+  makes `workbookContract('admin-api', …)` resolve).
+- **Component routing** — `ADMIN_COMPONENT_BY_TAG` (slug→component) wired into `SUITES['admin-api']`;
+  each endpoint carries one slug tag (`workplace-tier-attribute`, `hr-tier-variable`, `role-posting`,
+  `employee`, …) that routes to its real `KPost Admin` component.
+- **Auth (the module is BUSINESS_M/L-only, SSO):** two mechanisms. (1) A per-principal
+  **`loginEndpointId`** override (`Principal` schema + executor `login()`): `business-m`/`business-l`
+  authenticate via **`adminUserLogin`** (the enterprise login), the same token then works on the Admin
+  module. (2) A per-endpoint **`authentication.principalKey`** (`business-m`) because several principals
+  share `COMPANY_ADMIN` — `defineAdminEndpoint` defaults to it, and the executor's new `principalFor()`
+  resolves it. So admin-api always runs as the BUSINESS_M admin.
+- **`companyId` guard:** added `QA_BUSINESS_{S,M,L}_COMPANY_ID` (schema + SOURCES + IDENTITY_FIELDS), so
+  the caller's own company id enters the allowlist once discovered; payloads fill `companyId` from
+  `testData.businessMCompanyId`. Unset → not allowlisted → any admin call is refused on live (the same
+  self-enforcing scope the personal accounts use).
+
+**A ledger nuance, made honest:** the core-app `/admin/*` routes (KPost API's business-admin ops =
+BUSINESS_S in-app user management) bucket to the same `admin` module by path segment, so the module
+shows 35 admin-api (built) + ~12 core `/admin/*` (the remaining slice), the note says so.
+
+**Owner pointed at the Admin codebases** (backend `D:\KPOST_PROJECTS\Admin_Module`, frontend
+`D:\KPOST_PROJECTS\ADMIN_HR_MODULES_25`) — to be used next to confirm the real response envelope, the
+exact auth, and any payload fields before the first live run.
+
+**Next (live phase):** add the four business accounts + `ADMIN_API_BASE_URL` to `.env`; discover each
+`companyID` from the login token (decode) and set `QA_BUSINESS_*_COMPANY_ID`; run the 11 live reads on
+BUSINESS_M (confirming the envelope + the `adminTier*`=workplace / `hrSetUpTier*`=HR mapping); then the
+gated self-cleaning write lifecycle and the `kpostadmin.kpostindia.com` UI.
+
+### 2026-09-15 — Admin module FLOW captured (owner walkthrough); business accounts arrive — Admin unblocked
+
+The owner explained the Admin module's process and provided the live business accounts, so the module
+can now be tested. Full detail in **`docs/admin-flow.md`**; the decisions that shape the bench:
+
+**There are TWO different "admin" surfaces — not to be conflated:**
+
+- **BUSINESS_S** creates its members **in-app**, no OTP: `account.kpostindia.com/usermanagement` →
+  Business User Management (licenses) → **Add New Channels** → **Add Manually / Bulk-Upload Excel** →
+  data → Add. This is the **core app** (`kpost-api`), not the Admin module.
+- **BUSINESS_M and BUSINESS_L** use an **"Admin / HR Setup"** nav item that **opens a new tab** at
+  **UI `https://kpostadmin.kpostindia.com/`**, backed by **API `https://adminmodule.kpostindia.com`** —
+  this is the dedicated **`admin-api`** product (the 35 endpoints from `Admin_module.xlsx`). So the new
+  `admin-api` is the **M/L Admin/HR-Setup module**, distinct from the `/admin/*` business-admin routes on
+  `devapi2`.
+
+**Signup:** Personal / Business (S/M/L) / Institutions / Governments. Business → category (Small ≤250,
+Medium >250–2000, Large >1500 — the M/L range copy overlaps, a possible UI finding) → company + admin
+details → mints the company-admin KPost ID.
+
+**The Admin/HR-Setup build is a strict ordered sequence** (each step feeds the next), which maps
+onto the `admin-api` endpoints: (1) **Work Place Setup** tier→variables (`adminTierAttribute` /
+`adminTierVariable`); (2) **Work Place Location Setup** (`location/*`, tree `workplaceHierarchy`);
+(3) **HR Breakdown Setup** tier→variables (`hrSetUpTierAttribute` / `hrSetUpTierVariable`);
+(4) **Role Posting Setup** — map roles to a workplace (`rolePosting/*`); (5) **Employee Data**
+(`employeeDetails/*`, address via `country/getAddressUsingPincodeAndCountry`); (6) **Assign Role
+Posting** — **one role per employee** (4 jr devs → 4 distinct roles). The step→endpoint mapping is
+inferred from naming (`adminTier*` = workplace, `hrSetUpTier*` = HR) and is confirmed on first live read.
+
+**Business accounts (owner-created, live; on `@kpost.in`, passwords in `.env`):**
+
+- **BUSINESS_S** — `sma.qa@kpost.in` (QA Small Technologies) with **3 members** created
+  (`qasmjadetr.qa@`, `qasmsesode.qa@`, `qasmwede.qa@`).
+- **BUSINESS_M** — `qam.qt@kpost.in` (QA Test Medium Technologies), **admin only** (members to be built
+  through the Admin/HR module).
+- **BUSINESS_L** — `qal.qtl@kpost.in` (mob 8899774454), **admin only**, same Admin/HR flow as M
+  (company users for M and L to be supplied by the owner).
+
+**This closes the long-standing Admin blocker** ("needs a business company with ≥3 members"):
+BUSINESS_S now has members, and BUSINESS_M is a clean slate to drive the whole Admin/HR create-sequence
+end-to-end and self-clean.
+
+**Auth & ids — answered by the owner (2026-09-15):** (1) **the same KPost login token authenticates the
+admin module** — SSO, no separate login. So `admin-api` reuses the KPost login: BUSINESS_M/L via
+`adminUserLogin` (the Medium/Large enterprise login), BUSINESS_S via `userLogin`; that Bearer token
+works unchanged on `adminmodule.kpostindia.com`. On **live** the business-admin token carries the
+`companyID` claim (production auth mints it; the old internal `:8989` host did not). (2) **`companyId`
+comes from the token, not a typed value** — payloads fill `companyId` from the decoded `companyID` claim,
+so a request always targets the caller's own company; the QA-identifier guard must allow a `companyId`
+equal to the principal's own token `companyID` (discover each numeric id on first login, record as
+`QA_BUSINESS_{S,M,L}_COMPANY_ID`). Next: register `admin-api` (definitions + suite), live reads, the
+gated self-cleaning write lifecycle on BUSINESS_M, and the `kpostadmin.kpostindia.com` UI. Filing routes
+to **KPost Admin → Jaganathan**. Full detail in `docs/admin-flow.md`.
+
 ### 2026-09-15 — Admin module workbook converted to OpenAPI, its own product `admin-api`
 
 The owner added **`Admin_module.xlsx`** (the Admin module APIs) and asked to convert it to an OpenAPI

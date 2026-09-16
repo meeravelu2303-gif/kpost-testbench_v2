@@ -83,7 +83,7 @@ export interface ResponseContract {
   idFormat: { pattern: RegExp; description: string };
 }
 
-export type ResponseContractId = 'standard' | 'kpost' | 'kmail';
+export type ResponseContractId = 'standard' | 'kpost' | 'kmail' | 'admin';
 
 /**
  * KPost's live envelope. `looseObject` keeps it open — a response may carry its own top-level
@@ -149,6 +149,37 @@ const kmailSuccessEnvelope = z.looseObject({
   urlPath: z.string().optional(),
 });
 
+/**
+ * The **Admin module** envelope — measured from the backend source, not the Excel (which documents no
+ * response at all). Every controller returns `Map<String,Object>` built from `KPOSTConstants`
+ * (`ApiResponseEnvelope.java`, `D:\KPOST_PROJECTS\Admin_Module`):
+ *
+ *     { "value": <payload>, "status": "SUCCESS", "statusCode": 200, "urlPath": "save",
+ *       "error": <exception message, on FAILURE>, "message": <note, some endpoints> }
+ *
+ * Two things distinguish it from the KPost core envelope, both confirmed in the controllers:
+ *  - **the payload key is `value`, not `data`** (like KMail), and
+ *  - **any handled failure returns HTTP 500** with `status: FAILURE`, `statusCode: 500` — including
+ *    "document not found". So a client error answered 500 is the module's contract, not a defect the
+ *    bench should be surprised by (it is still a finding: a 4xx belongs where a 500 is returned).
+ *
+ * Ids are MongoDB **ObjectIds** (24-hex strings), and `companyId` is a **string** — unlike the KPost
+ * core's auto-increment integers.
+ */
+const adminSuccessEnvelope = z.looseObject({
+  status: z.string().regex(/^success$/i, 'status must be SUCCESS'),
+  statusCode: z.number().int().optional(),
+  urlPath: z.string().optional(),
+});
+
+const adminErrorEnvelope = z.looseObject({
+  status: z.string().regex(/^(failure|error)$/i, 'error status must be FAILURE'),
+  statusCode: z.number().int().min(400).max(599),
+  urlPath: z.string().optional(),
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
+
 export const RESPONSE_CONTRACTS: Record<ResponseContractId, ResponseContract> = {
   /** The bench's own reference contract, used by the mock-backed framework self-tests. */
   standard: {
@@ -191,6 +222,24 @@ export const RESPONSE_CONTRACTS: Record<ResponseContractId, ResponseContract> = 
     echoesCorrelationId: false,
     // Integers, in a string or a number: `{"countryID": 1}` and `{"fieldCount": "6"}` both occur.
     idFormat: { pattern: /^\d+$/, description: 'a positive integer' },
+  },
+
+  /** The Admin module, measured from the backend source (`ApiResponseEnvelope.java`). */
+  admin: {
+    id: 'admin',
+    description: 'Admin envelope: status/statusCode/urlPath with the payload under `value`',
+    success: adminSuccessEnvelope,
+    error: adminErrorEnvelope,
+    dataKey: 'value',
+    schemaTarget: 'body',
+    metadata: false,
+    errorStatusInBody: true,
+    errorStatusField: 'statusCode',
+    requiredHeaders: [],
+    expectedStatus: { GET: [200], POST: [200], PUT: [200], PATCH: [200], DELETE: [200] },
+    echoesCorrelationId: false,
+    // MongoDB ObjectIds — 24 hex characters, not the KPost core's integers.
+    idFormat: { pattern: /^[0-9a-fA-F]{24}$/, description: 'a 24-character hex ObjectId' },
   },
 
   /** The KMail module, measured from its own documented samples. */

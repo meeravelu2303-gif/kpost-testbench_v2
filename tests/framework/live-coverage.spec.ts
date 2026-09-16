@@ -46,6 +46,7 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
 
 function moduleOf(definition: EndpointDefinition): string {
   const tags = definition.tags ?? [];
+  if (tags.includes('admin-api')) return 'Admin';
   if (tags.includes('signup-login')) return 'Login & session';
   if (tags.includes('katchup')) return 'Katchup';
   if (tags.includes('kall')) return 'Kall';

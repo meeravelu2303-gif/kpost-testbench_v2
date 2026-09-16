@@ -1,0 +1,4961 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "servers": [
+    {
+      "url": "http://adminmodule.kpostindia.com",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/workplaceHierarchy/update": {
+      "post": {
+        "tags": [
+          "work-place-hierarchy-controller"
+        ],
+        "operationId": "updateWorkPlaceHierarchy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkPlaceHierarchyEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workplaceHierarchy/save": {
+      "post": {
+        "tags": [
+          "work-place-hierarchy-controller"
+        ],
+        "operationId": "saveVariable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkPlaceHierarchyEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workplaceHierarchy/getWorkPlaceHierarchy": {
+      "post": {
+        "tags": [
+          "work-place-hierarchy-controller"
+        ],
+        "operationId": "getWorkplaceHierarchy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkPlaceHierarchyEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workplaceHierarchy/delete": {
+      "post": {
+        "tags": [
+          "work-place-hierarchy-controller"
+        ],
+        "operationId": "deleteWorkPlaceHierarchy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkPlaceHierarchyEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/variable/update": {
+      "post": {
+        "tags": [
+          "variable-controller"
+        ],
+        "operationId": "updateVariable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/variable/save": {
+      "post": {
+        "tags": [
+          "variable-controller"
+        ],
+        "operationId": "saveVariable_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/VariableEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/variable/getVariable": {
+      "post": {
+        "tags": [
+          "variable-controller"
+        ],
+        "operationId": "getVariable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/variable/delete": {
+      "post": {
+        "tags": [
+          "variable-controller"
+        ],
+        "operationId": "deleteVariable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/validateOTP": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "validateOTP",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpValidation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/update": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "updateDepartment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserDetailsEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/signUp": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "signUp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSignUp"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/sendOTP": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "sendOTP",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileValidationRO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/save": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "saveUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserDetailsEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/resetPassword": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "resetPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSignUp"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/registration": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "userRegistration",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/login": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSignUp"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/generateUserIdSuggestions": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "generateUserIdSuggestions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSignUp"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/createCommunicationId": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "createCommunicationId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunicationIdCreation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/checkAvailability": {
+      "post": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "checkAvailability",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSignUp"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/update": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/suspendOrTerminateEmployee": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "suspendOrTerminateEmployee",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingRequestObject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/softDelete": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "softDelete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/save": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "save",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RolePostingRequestObject"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getSuspendOrTerminateEmployee": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "getSuspendOrTerminateEmployee",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingRequestObject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getRolePostingById": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "getRolePostingById",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getRolePostingByCompanyId": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "getRolePostingByCompanyId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingRequestObject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getRolePostingByCompanyIdAndEmployeeId": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "getRolePostingByCompanyIdAndEmployeeId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingRequestObject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getEmployeeDetailsByLastHrvariableId": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "getEmployeeDetailsByLastHrvariableId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingRequestObject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getEmployeeByCompanyId": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "getEmployeeByCompanyId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingRequestObject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/getAssignedRolePostingEmployeeByCompanyId": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "getAssignedRolePostingEmployeeByCompanyId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingRequestObject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rolePosting/delete": {
+      "post": {
+        "tags": [
+          "role-posting-set-up-controller"
+        ],
+        "operationId": "delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePostingEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/project/saveAllProject": {
+      "post": {
+        "tags": [
+          "project-details-controller"
+        ],
+        "operationId": "saveAllProject",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ProjectDetailsEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productPurchase/save": {
+      "post": {
+        "tags": [
+          "product-purchase-controller"
+        ],
+        "operationId": "saveProductList",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductPurchase"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productMaster/save": {
+      "post": {
+        "tags": [
+          "product-controller"
+        ],
+        "operationId": "saveProductList_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ProductMaster"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productEmployeeMapping/save": {
+      "post": {
+        "tags": [
+          "product-employee-mapping-controller"
+        ],
+        "operationId": "saveProductEmployeeMapping",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ProductEmployeeMapping"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productEmployeeMapping/saveKpostIdForKams": {
+      "post": {
+        "tags": [
+          "product-employee-mapping-controller"
+        ],
+        "operationId": "saveKpostIdForKams",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductEmployeeMapping"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productEmployeeMapping/getMappedEmployeeByCompanyIdAndProductId": {
+      "post": {
+        "tags": [
+          "product-employee-mapping-controller"
+        ],
+        "operationId": "getMappedEmployeeByCompanyIdAndProductId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductEmployeeMapping"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productEmployeeMapping/getKpostIDsByCompanyIdAndProductId": {
+      "post": {
+        "tags": [
+          "product-employee-mapping-controller"
+        ],
+        "operationId": "getKpostIDsByCompanyIdAndProductId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductEmployeeMapping"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/update": {
+      "post": {
+        "tags": [
+          "location-controller"
+        ],
+        "operationId": "updateVariable_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/save": {
+      "post": {
+        "tags": [
+          "location-controller"
+        ],
+        "operationId": "saveVariable_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LocationEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/getReportingLocationName": {
+      "post": {
+        "tags": [
+          "location-controller"
+        ],
+        "operationId": "getReportingLocationName",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/getLocation": {
+      "post": {
+        "tags": [
+          "location-controller"
+        ],
+        "operationId": "getLocation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/getLocationById": {
+      "post": {
+        "tags": [
+          "location-controller"
+        ],
+        "operationId": "getLocationById",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/getAllLocation": {
+      "post": {
+        "tags": [
+          "location-controller"
+        ],
+        "operationId": "getAllLocation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/delete": {
+      "post": {
+        "tags": [
+          "location-controller"
+        ],
+        "operationId": "deleteVariable_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrVariable/update": {
+      "post": {
+        "tags": [
+          "hr-variable-controller"
+        ],
+        "operationId": "updateVariable_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrVariable/save": {
+      "post": {
+        "tags": [
+          "hr-variable-controller"
+        ],
+        "operationId": "saveVariable_3",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrVariable/getVariable": {
+      "post": {
+        "tags": [
+          "hr-variable-controller"
+        ],
+        "operationId": "getVariable_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrVariable/delete": {
+      "post": {
+        "tags": [
+          "hr-variable-controller"
+        ],
+        "operationId": "deleteVariable_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrTier/update": {
+      "post": {
+        "tags": [
+          "hr-tier-controller"
+        ],
+        "operationId": "updateAttribute",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrTierEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrTier/save": {
+      "post": {
+        "tags": [
+          "hr-tier-controller"
+        ],
+        "operationId": "saveAttribute",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HrTierEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrTier/getAttribute": {
+      "post": {
+        "tags": [
+          "hr-tier-controller"
+        ],
+        "operationId": "getAttribute",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrTierEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrTier/getAttributeByCompanyId": {
+      "post": {
+        "tags": [
+          "hr-tier-controller"
+        ],
+        "operationId": "getAttributeByCompanyId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrTierEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrTier/delete": {
+      "post": {
+        "tags": [
+          "hr-tier-controller"
+        ],
+        "operationId": "deleteAttribute",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrTierEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierVariable/update": {
+      "post": {
+        "tags": [
+          "hr-set-up-tier-variable-controller"
+        ],
+        "operationId": "updateAdminTierVariable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrSetUpTierVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierVariable/save": {
+      "post": {
+        "tags": [
+          "hr-set-up-tier-variable-controller"
+        ],
+        "operationId": "saveAdminTierVariable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HrSetUpTierVariableEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierVariable/getHrSetUpTierVariable": {
+      "post": {
+        "tags": [
+          "hr-set-up-tier-variable-controller"
+        ],
+        "operationId": "getAdminTierVariable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrSetUpTierVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierVariable/getAllReportingHrTierVariableHierarchy": {
+      "post": {
+        "tags": [
+          "hr-set-up-tier-variable-controller"
+        ],
+        "operationId": "getAllReportingHrTierVariableHierarchy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrSetUpTierVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierVariable/delete": {
+      "post": {
+        "tags": [
+          "hr-set-up-tier-variable-controller"
+        ],
+        "operationId": "deleteAdminTierVariable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrSetUpTierVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierAttribute/update": {
+      "post": {
+        "tags": [
+          "hr-tier-set-up-attribute-controller"
+        ],
+        "operationId": "updateAttribute_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrSetUpTierAttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierAttribute/save": {
+      "post": {
+        "tags": [
+          "hr-tier-set-up-attribute-controller"
+        ],
+        "operationId": "saveAttribute_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HrSetUpTierAttributeEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierAttribute/getAttribute": {
+      "post": {
+        "tags": [
+          "hr-tier-set-up-attribute-controller"
+        ],
+        "operationId": "getAttribute_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrSetUpTierAttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierAttribute/getAttributeByCompanyId": {
+      "post": {
+        "tags": [
+          "hr-tier-set-up-attribute-controller"
+        ],
+        "operationId": "getAttributeByCompanyId_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrSetUpTierAttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hrSetUpTierAttribute/delete": {
+      "post": {
+        "tags": [
+          "hr-tier-set-up-attribute-controller"
+        ],
+        "operationId": "deleteAttribute_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HrSetUpTierAttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/holiday/saveHoliday": {
+      "post": {
+        "tags": [
+          "holiday-controller"
+        ],
+        "operationId": "addHoliday",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HolidayEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employeeRoleMapping/save": {
+      "post": {
+        "tags": [
+          "employee-role-mapping-controller"
+        ],
+        "operationId": "save_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmployeeRoleMappingEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employeeDetails/update": {
+      "post": {
+        "tags": [
+          "employee-details-controller"
+        ],
+        "operationId": "update_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmployeeDetailsEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employeeDetails/save": {
+      "post": {
+        "tags": [
+          "employee-details-controller"
+        ],
+        "operationId": "save_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmployeeDetailsEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employeeDetails/getTransferOrPromotionDetails": {
+      "post": {
+        "tags": [
+          "employee-details-controller"
+        ],
+        "operationId": "getTransferOrPromotionDetails",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employeeDetails/getEmployeeDetails": {
+      "post": {
+        "tags": [
+          "employee-details-controller"
+        ],
+        "operationId": "getEmployeeDetails",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmployeeDetailsEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employeeDetails/delete": {
+      "post": {
+        "tags": [
+          "employee-details-controller"
+        ],
+        "operationId": "delete_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmployeeDetailsEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designation/update": {
+      "post": {
+        "tags": [
+          "designation-controller"
+        ],
+        "operationId": "updateDesignation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designation/save": {
+      "post": {
+        "tags": [
+          "designation-controller"
+        ],
+        "operationId": "saveDesignation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Designation"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designation/getDesignationByCompanyIdAndDepartmentId": {
+      "post": {
+        "tags": [
+          "designation-controller"
+        ],
+        "operationId": "getDesignationByCompanyIdAndDepartmentId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designation/delete": {
+      "post": {
+        "tags": [
+          "designation-controller"
+        ],
+        "operationId": "deleteDesignation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designation/abbreviationAndCodeCreation": {
+      "post": {
+        "tags": [
+          "designation-controller"
+        ],
+        "operationId": "abbreviationAndCodeCreation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/department/update": {
+      "post": {
+        "tags": [
+          "department-controller"
+        ],
+        "operationId": "updateDepartment_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/department/save": {
+      "post": {
+        "tags": [
+          "department-controller"
+        ],
+        "operationId": "saveDepartment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Department"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/department/getDepartmentByCompanyId": {
+      "post": {
+        "tags": [
+          "department-controller"
+        ],
+        "operationId": "getDepartmentByCompanyId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/department/delete": {
+      "post": {
+        "tags": [
+          "department-controller"
+        ],
+        "operationId": "deleteAttribute_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/department/abbreviationAndCodeCreation": {
+      "post": {
+        "tags": [
+          "department-controller"
+        ],
+        "operationId": "abbreviationAndCodeCreation_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/demo/createDemoRequest": {
+      "post": {
+        "tags": [
+          "demo-request-controller"
+        ],
+        "operationId": "createDemoRequest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoRequestEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/country/save": {
+      "post": {
+        "tags": [
+          "country-controller"
+        ],
+        "operationId": "saveCountryList",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CountryEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attribute/update": {
+      "post": {
+        "tags": [
+          "attribute-controller"
+        ],
+        "operationId": "updateAttribute_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attribute/save": {
+      "post": {
+        "tags": [
+          "attribute-controller"
+        ],
+        "operationId": "saveAttribute_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AttributeEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attribute/getAttribute": {
+      "post": {
+        "tags": [
+          "attribute-controller"
+        ],
+        "operationId": "getAttribute_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attribute/getAttributeByCompanyId": {
+      "post": {
+        "tags": [
+          "attribute-controller"
+        ],
+        "operationId": "getAttributeByCompanyId_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attribute/delete": {
+      "post": {
+        "tags": [
+          "attribute-controller"
+        ],
+        "operationId": "deleteAttribute_3",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/update": {
+      "post": {
+        "tags": [
+          "admin-tier-variable-controller"
+        ],
+        "operationId": "updateAdminTierVariable_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTierVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/save": {
+      "post": {
+        "tags": [
+          "admin-tier-variable-controller"
+        ],
+        "operationId": "saveAdminTierVariable_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AdminTierVariableEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/getAllReportingVariableHierarchy": {
+      "post": {
+        "tags": [
+          "admin-tier-variable-controller"
+        ],
+        "operationId": "getAllReportingVariableHierarchy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTierVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/getAdminTierVariable": {
+      "post": {
+        "tags": [
+          "admin-tier-variable-controller"
+        ],
+        "operationId": "getAdminTierVariable_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTierVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/delete": {
+      "post": {
+        "tags": [
+          "admin-tier-variable-controller"
+        ],
+        "operationId": "deleteAdminTierVariable_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTierVariableEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierAttribute/update": {
+      "post": {
+        "tags": [
+          "admin-tier-attribute-controller"
+        ],
+        "operationId": "updateAttribute_3",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTierAttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierAttribute/save": {
+      "post": {
+        "tags": [
+          "admin-tier-attribute-controller"
+        ],
+        "operationId": "saveAttribute_3",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AdminTierAttributeEntity"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierAttribute/getAttribute": {
+      "post": {
+        "tags": [
+          "admin-tier-attribute-controller"
+        ],
+        "operationId": "getAttribute_3",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTierAttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierAttribute/getAttributeByCompanyId": {
+      "post": {
+        "tags": [
+          "admin-tier-attribute-controller"
+        ],
+        "operationId": "getAttributeByCompanyId_3",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTierAttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierAttribute/delete": {
+      "post": {
+        "tags": [
+          "admin-tier-attribute-controller"
+        ],
+        "operationId": "deleteAttribute_4",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTierAttributeEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminDetails/save": {
+      "post": {
+        "tags": [
+          "admin-details-controller"
+        ],
+        "operationId": "save_3",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminDetailsEntity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workplaceHierarchy/getOrganization": {
+      "get": {
+        "tags": [
+          "work-place-hierarchy-controller"
+        ],
+        "operationId": "getOrganizationTypes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/getAllUser/{companyId}": {
+      "get": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "getAllUser",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/project/fetchAllProject": {
+      "get": {
+        "tags": [
+          "project-details-controller"
+        ],
+        "operationId": "fetchAllProject",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productPurchase/getPurchaseProductByCompanyId": {
+      "get": {
+        "tags": [
+          "product-purchase-controller"
+        ],
+        "operationId": "getPurchaseProductByCompanyId",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productMaster/productList/{companyId}": {
+      "get": {
+        "tags": [
+          "product-controller"
+        ],
+        "operationId": "getProductListByCompany",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/holiday/getHoliday": {
+      "get": {
+        "tags": [
+          "holiday-controller"
+        ],
+        "operationId": "getHoliday",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/demo/fetchDemoRequest": {
+      "get": {
+        "tags": [
+          "demo-request-controller"
+        ],
+        "operationId": "fetchDemoRequest",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/country/getAddressUsingPincodeAndCountry/{pincode}/{country}": {
+      "get": {
+        "tags": [
+          "country-controller"
+        ],
+        "operationId": "getAddressDetailsUsingPinCodeAndCountry",
+        "parameters": [
+          {
+            "name": "pincode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/country/getAddressUsingPincode/{pincode}": {
+      "get": {
+        "tags": [
+          "country-controller"
+        ],
+        "operationId": "getAddressDetailsUsingPinCode",
+        "parameters": [
+          {
+            "name": "pincode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/country/countryList": {
+      "get": {
+        "tags": [
+          "country-controller"
+        ],
+        "operationId": "getCountry",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminTierVariable/getAllVariable": {
+      "get": {
+        "tags": [
+          "admin-tier-variable-controller"
+        ],
+        "operationId": "getAllVariable",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "admin-module-application"
+        ],
+        "operationId": "indexpage",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userDetails/delete/{id}": {
+      "delete": {
+        "tags": [
+          "user-details-controller"
+        ],
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "WorkPlaceHierarchyEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "attributeId": {
+            "type": "string"
+          },
+          "variableId": {
+            "type": "string"
+          },
+          "parentAttributeId": {
+            "type": "string"
+          },
+          "parentVariableId": {
+            "type": "string"
+          },
+          "reportingAttributeId": {
+            "type": "string"
+          },
+          "reportingVariableId": {
+            "type": "string"
+          },
+          "reportingParentAttributeId": {
+            "type": "string"
+          },
+          "reportingParentVariableId": {
+            "type": "string"
+          },
+          "workplaceJson": {
+            "type": "string"
+          },
+          "reportingJson": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "VariableEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "attributeId": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "variableName": {
+            "type": "string"
+          },
+          "parentVariableId": {
+            "type": "string"
+          },
+          "parentAttributeId": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "OtpValidation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "dialCode": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mobileNumber": {
+            "type": "string"
+          },
+          "otp": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "sendDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expireDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "otpValidationStatus": {
+            "type": "string"
+          },
+          "otpExpireStatus": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "userID": {
+            "type": "string"
+          }
+        }
+      },
+      "UserDetailsEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "userID": {
+            "type": "string"
+          },
+          "variableIds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
+          },
+          "reportingVariableIds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "mobileNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "UserSignUp": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "mobileNumber": {
+            "type": "string"
+          },
+          "emailID": {
+            "type": "string"
+          },
+          "userID": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestType": {
+            "type": "string"
+          }
+        }
+      },
+      "MobileValidationRO": {
+        "type": "object",
+        "properties": {
+          "dialCode": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mobileNumber": {
+            "type": "string"
+          },
+          "requestType": {
+            "type": "string"
+          },
+          "userID": {
+            "type": "string"
+          }
+        }
+      },
+      "UserRegistration": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "typeOfOrganization": {
+            "type": "string"
+          },
+          "organizationName": {
+            "type": "string"
+          },
+          "userID": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "userDesignation": {
+            "type": "string"
+          },
+          "contactNumber": {
+            "type": "string"
+          },
+          "contactEmailID": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "pincode": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "noOfEmployee": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "noOfUserLicenses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "logo": {
+            "type": "string"
+          }
+        }
+      },
+      "CommunicationIdCreation": {
+        "type": "object",
+        "properties": {
+          "department": {
+            "type": "string"
+          },
+          "designation": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        }
+      },
+      "AdditionalInformation": {
+        "type": "object",
+        "properties": {
+          "nationality": {
+            "type": "string"
+          },
+          "citizenship": {
+            "type": "string"
+          },
+          "panCard": {
+            "type": "string"
+          }
+        }
+      },
+      "Education": {
+        "type": "object",
+        "properties": {
+          "qualification": {
+            "type": "string"
+          },
+          "instituteName": {
+            "type": "string"
+          },
+          "percentage": {
+            "type": "string"
+          },
+          "yearOfGraduation": {
+            "type": "string"
+          },
+          "attachment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "EmployeeDetailsEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "personalInformationObj": {
+            "$ref": "#/components/schemas/PersonalInformation"
+          },
+          "residentialObj": {
+            "$ref": "#/components/schemas/Residential"
+          },
+          "mailingObj": {
+            "$ref": "#/components/schemas/Mailing"
+          },
+          "employmentObj": {
+            "$ref": "#/components/schemas/Employment"
+          },
+          "educationObj": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Education"
+            }
+          },
+          "workExpObj": {
+            "$ref": "#/components/schemas/WorkExperience"
+          },
+          "additionalObj": {
+            "$ref": "#/components/schemas/AdditionalInformation"
+          },
+          "promotionDetails": {
+            "type": "string"
+          },
+          "transferDetails": {
+            "type": "string"
+          },
+          "locationName": {
+            "type": "string"
+          }
+        }
+      },
+      "Employment": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "hrJson": {
+            "type": "string"
+          },
+          "reportingHrJson": {
+            "type": "string"
+          },
+          "designatedReportingPerson": {
+            "type": "string"
+          },
+          "employmentStatus": {
+            "type": "string"
+          },
+          "dateOfJoining": {
+            "type": "string"
+          }
+        }
+      },
+      "ExperienceDetails": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "jobTitle": {
+            "type": "string"
+          },
+          "fromDate": {
+            "type": "string"
+          },
+          "toDate": {
+            "type": "string"
+          },
+          "employmentStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "Mailing": {
+        "type": "object",
+        "properties": {
+          "mailingCountry": {
+            "type": "string"
+          },
+          "mailingZipCode": {
+            "type": "string"
+          },
+          "mailingState": {
+            "type": "string"
+          },
+          "mailingCity": {
+            "type": "string"
+          },
+          "mailingArea": {
+            "type": "string"
+          },
+          "mailingAddressLine1": {
+            "type": "string"
+          },
+          "mailingAddressLine2": {
+            "type": "string"
+          }
+        }
+      },
+      "PersonalInformation": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "dob": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "maritalStatus": {
+            "type": "string"
+          },
+          "landline": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "alternativeMobileNo": {
+            "type": "string"
+          },
+          "emailAddress": {
+            "type": "string"
+          },
+          "alternativeEmailAddress": {
+            "type": "string"
+          },
+          "nationality": {
+            "type": "string"
+          },
+          "disability": {
+            "type": "boolean"
+          },
+          "typeOfDisability": {
+            "type": "string"
+          },
+          "attachment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Residential": {
+        "type": "object",
+        "properties": {
+          "residentialCountry": {
+            "type": "string"
+          },
+          "residentialZipCode": {
+            "type": "string"
+          },
+          "residentialState": {
+            "type": "string"
+          },
+          "residentialCity": {
+            "type": "string"
+          },
+          "residentialArea": {
+            "type": "string"
+          },
+          "residentialAddressLine1": {
+            "type": "string"
+          },
+          "residentialAddressLine2": {
+            "type": "string"
+          }
+        }
+      },
+      "RolePostingEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "lastWorkplaceTierId": {
+            "type": "string"
+          },
+          "lastWorkplaceVariableId": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "workplaceJson": {
+            "type": "string"
+          },
+          "workplaceLocationId": {
+            "type": "string"
+          },
+          "lastHrTierId": {
+            "type": "string"
+          },
+          "lastHrVariableId": {
+            "type": "string"
+          },
+          "hrJson": {
+            "type": "string"
+          },
+          "reportingWorkplaceJson": {
+            "type": "string"
+          },
+          "reportingHrJson": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "countryId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "kpostID": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "activeStatus": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "remarks": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "rejoiningDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ksmaccID": {
+            "type": "string"
+          },
+          "ksmaccCompanyID": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ksmaccDisplayName": {
+            "type": "string"
+          },
+          "locationName": {
+            "type": "string"
+          },
+          "workplaceLocationJson": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "userType": {
+            "type": "string"
+          },
+          "requestType": {
+            "type": "string"
+          },
+          "employeeDetails": {
+            "$ref": "#/components/schemas/EmployeeDetailsEntity"
+          },
+          "isPromoted": {
+            "type": "boolean"
+          },
+          "isTransfered": {
+            "type": "boolean"
+          },
+          "promotionDetails": {
+            "type": "string"
+          },
+          "transferDetails": {
+            "type": "string"
+          },
+          "isKpostIDRequired": {
+            "type": "boolean"
+          },
+          "isMapped": {
+            "type": "boolean"
+          },
+          "isHoldOrRelease": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WorkExperience": {
+        "type": "object",
+        "properties": {
+          "isExperienced": {
+            "type": "string"
+          },
+          "totalExp": {
+            "type": "string"
+          },
+          "experienceDetails": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExperienceDetails"
+            }
+          }
+        }
+      },
+      "RolePostingRequestObject": {
+        "type": "object",
+        "properties": {
+          "adminKsmaccID": {
+            "type": "string"
+          },
+          "rolePostingId": {
+            "type": "string"
+          },
+          "lastWorkplaceTierId": {
+            "type": "string"
+          },
+          "lastWorkplaceVariableId": {
+            "type": "string"
+          },
+          "workplaceJson": {
+            "type": "string"
+          },
+          "workplaceLocationId": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workplaceLocaID": {
+            "type": "string"
+          },
+          "lastHrTierId": {
+            "type": "string"
+          },
+          "lastHrVariableId": {
+            "type": "string"
+          },
+          "hrJson": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "reportingWorkplaceJson": {
+            "type": "string"
+          },
+          "reportingHrJson": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "countryId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "userType": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "remarks": {
+            "type": "string"
+          },
+          "requestType": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "kpostID": {
+            "type": "string"
+          },
+          "rejoiningDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ksmaccDisplayName": {
+            "type": "string"
+          }
+        }
+      },
+      "ProjectDetailsEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "ProductPurchase": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "productType": {
+            "type": "string"
+          },
+          "subscriptionType": {
+            "type": "string"
+          },
+          "subscriptionDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProductMaster": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "productCode": {
+            "type": "string"
+          },
+          "productDescription": {
+            "type": "string"
+          },
+          "productLogo": {
+            "type": "string"
+          },
+          "isPurchased": {
+            "type": "boolean"
+          },
+          "productPurchase": {
+            "$ref": "#/components/schemas/ProductPurchase"
+          }
+        }
+      },
+      "ProductEmployeeMapping": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "rolePostingId": {
+            "type": "string"
+          },
+          "kpostId": {
+            "type": "string"
+          }
+        }
+      },
+      "LocationEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "attributeId": {
+            "type": "string"
+          },
+          "variableId": {
+            "type": "string"
+          },
+          "workPlaceLocation": {
+            "type": "string"
+          },
+          "reportingWorkplaceLocation": {
+            "type": "string"
+          },
+          "reportingWorkplaceLocationId": {
+            "type": "string"
+          },
+          "locationName": {
+            "type": "string"
+          },
+          "pincode": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "addressLine2": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "countryId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "countryName": {
+            "type": "string"
+          }
+        }
+      },
+      "HrVariableEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "attributeId": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "variableName": {
+            "type": "string"
+          },
+          "parentVariableId": {
+            "type": "string"
+          },
+          "parentAttributeId": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "HrTierEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "attributeName": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "HrSetUpTierVariableEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "attributeId": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "variableName": {
+            "type": "string"
+          },
+          "parentVariableId": {
+            "type": "string"
+          },
+          "parentAttributeId": {
+            "type": "string"
+          },
+          "reportingJson": {
+            "type": "string"
+          },
+          "reportingAttributeId": {
+            "type": "string"
+          },
+          "reportingVariableId": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "HrSetUpTierAttributeEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "attributeName": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "HolidayEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "holidayType": {
+            "type": "string"
+          },
+          "countryId": {
+            "type": "string"
+          },
+          "companyID": {
+            "type": "string"
+          },
+          "stateName": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "holidayDescription": {
+            "type": "string"
+          },
+          "repeatType": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "EmployeeRoleMappingEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "rolePostingId": {
+            "type": "string"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "Designation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "departmentId": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "parentDesignationId": {
+            "type": "string"
+          },
+          "designationName": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "departmentIdList": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Department": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "departmentName": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "DemoRequestEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nameOfUser": {
+            "type": "string"
+          },
+          "contactEmailId": {
+            "type": "string"
+          },
+          "contactMobileNumber": {
+            "type": "string"
+          },
+          "preferredDateAndTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "projectList": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "projectDetailsMap": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CountryEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "countryName": {
+            "type": "string"
+          },
+          "dialCode": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string"
+          }
+        }
+      },
+      "AttributeEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "attributeName": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminTierVariableEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "attributeId": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "variableName": {
+            "type": "string"
+          },
+          "parentVariableId": {
+            "type": "string"
+          },
+          "parentAttributeId": {
+            "type": "string"
+          },
+          "reportingJson": {
+            "type": "string"
+          },
+          "reportingAttributeId": {
+            "type": "string"
+          },
+          "reportingVariableId": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminTierAttributeEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "attributeName": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminDetailsEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "dob": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "kpostID": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

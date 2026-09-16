@@ -174,16 +174,12 @@ function openWorkbook(sourcePath) {
 }
 
 /**
- * The two source workbooks. KPost + KMail live in one book (the `KPOST API (N).xlsx` dump); the
- * Admin module has its own `Admin_module.xlsx`. Each TAB below names the workbook it belongs to
- * (default `kpost`); a missing Admin book simply produces no admin-api output rather than failing.
+ * Source workbooks, keyed so a TAB can name the book it belongs to. KPost + KMail share one book
+ * (the `KPOST API (N).xlsx` dump). (The Admin module is not here — it comes from the live service's
+ * own OpenAPI via `scripts/fetch-admin-contract.cjs`.)
  */
-const adminSourcePath = path.join(ROOT, 'Admin_module.xlsx');
-const WORKBOOK_PATHS = { kpost: SOURCE, admin: adminSourcePath };
-const WORKBOOKS = {
-  kpost: openWorkbook(SOURCE),
-  admin: fs.existsSync(adminSourcePath) ? openWorkbook(adminSourcePath) : null,
-};
+const WORKBOOK_PATHS = { kpost: SOURCE };
+const WORKBOOKS = { kpost: openWorkbook(SOURCE) };
 
 // The Types tab and other kpost-only lookups read the KPost workbook directly.
 const { sheets, rowsOf } = WORKBOOKS.kpost;
@@ -247,23 +243,9 @@ const TABS = [
     request: ['F', 'E'],
     response: ['G'],
   },
-  {
-    // The Admin module workbook (Admin_module.xlsx). One sheet, no header row: row 1 declares the
-    // base URL ("AdminURL - https://adminmodule.kpostindia.com/") and every following row is
-    // A=Method, B=URL (`{AdminURL}/route`), C=Request payload. There is no response column.
-    // No `expect` guard because the sheet has no header row to anchor on; the layout is fixed.
-    sheet: 'API Services',
-    workbook: 'admin',
-    product: 'admin-api',
-    url: 'B',
-    methodColumn: 'A',
-    request: ['C'],
-    response: [],
-    // Strip the `{AdminURL}` server placeholder from the front of every URL; a stray `{AdminURL}`
-    // left mid-path (the workbook uses it in place of path-param values on two rows) becomes a
-    // numbered path parameter so the path stays valid.
-    basePlaceholder: 'AdminURL',
-  },
+  // The Admin module is NOT converted from Excel: the live service publishes its own accurate OpenAPI
+  // (112 ops) at /v3/api-docs, which `scripts/fetch-admin-contract.cjs` (npm run contract:admin) turns
+  // into openapi/admin-api.openapi.json. The `Admin_module.xlsx` was a simplified/inaccurate subset.
 ];
 
 const PRODUCTS = {
@@ -278,20 +260,12 @@ const PRODUCTS = {
     description: 'KMail module API, maintained in its own repository.',
     defaultServer: 'https://kmail5.kpostindia.com/kmail5/v2',
   },
-  'admin-api': {
-    title: 'KPost Admin API',
-    description:
-      'KPost Admin module API — organisation setup: tier attributes/variables, locations, ' +
-      'workplace hierarchy, HR setup tiers, role posting and employee details.',
-    defaultServer: 'https://adminmodule.kpostindia.com',
-  },
 };
 
 /** Which source workbook each product's rows come from, for the per-product `source` label. */
 const PRODUCT_WORKBOOK = {
   'kpost-api': 'kpost',
   'kmail-api': 'kpost',
-  'admin-api': 'admin',
 };
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];

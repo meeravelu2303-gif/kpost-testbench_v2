@@ -4,6 +4,20 @@
 (`npm run test:framework`). It resolves `componentFor` for every registered endpoint and checks
 each target exists in the live product, so tickets can never route to a non-existent component.
 
+## KPost Admin (38 endpoints)
+
+| Component | Endpoints |
+| --------- | --------: |
+| Role Postings | 8 |
+| Workplace Locations | 6 |
+| Workplace Tier — Variables (Nodes) | 5 |
+| HR Set-Up Tier — Variables (Nodes) | 5 |
+| Workplace Tier — Attributes (Levels) | 4 |
+| HR Set-Up Tier — Levels | 4 |
+| Employee Master Data | 4 |
+| Workplace Hierarchy Links | 1 |
+| Country & Address Reference Data | 1 |
+
 ## KMail API (70 endpoints)
 
 | Component | Endpoints |

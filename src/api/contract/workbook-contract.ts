@@ -1,3 +1,4 @@
+import adminOpenApi from '../../../openapi/admin-api.openapi.json' with { type: 'json' };
 import kmailOpenApi from '../../../openapi/kmail-api.openapi.json' with { type: 'json' };
 import kpostOpenApi from '../../../openapi/kpost-api.openapi.json' with { type: 'json' };
 import type { SuiteId } from '@config/ownership.config';
@@ -34,6 +35,7 @@ export interface WorkbookContract {
 const DOCUMENTS: Partial<Record<SuiteId, unknown>> = {
   'kpost-api': kpostOpenApi,
   'kmail-api': kmailOpenApi,
+  'admin-api': adminOpenApi,
 };
 
 function operation(suite: SuiteId, method: HttpMethod, path: string): Record<string, unknown> {

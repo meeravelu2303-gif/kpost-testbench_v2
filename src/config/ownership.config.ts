@@ -141,6 +141,23 @@ const KMAIL_COMPONENT_BY_TAG: Record<string, string> = {
   translate: 'Translation',
 };
 
+/**
+ * Admin module tags → components of the `KPost Admin` product. Each admin endpoint carries one slug
+ * tag naming the org-setup resource it belongs to (see `src/api/definitions/admin/`); the slug maps
+ * to the exact live component name. Targets read from the live instance (2026-09-12).
+ */
+const ADMIN_COMPONENT_BY_TAG: Record<string, string> = {
+  'workplace-tier-attribute': 'Workplace Tier — Attributes (Levels)',
+  'workplace-tier-variable': 'Workplace Tier — Variables (Nodes)',
+  'workplace-location': 'Workplace Locations',
+  'workplace-hierarchy': 'Workplace Hierarchy Links',
+  'hr-tier-attribute': 'HR Set-Up Tier — Levels',
+  'hr-tier-variable': 'HR Set-Up Tier — Variables (Nodes)',
+  'role-posting': 'Role Postings',
+  employee: 'Employee Master Data',
+  'country-address': 'Country & Address Reference Data',
+};
+
 /** UI screens → components of the KPost UI product. */
 const UI_COMPONENT_BY_SCREEN: Record<string, string> = {
   login: 'Auth',
@@ -201,11 +218,11 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       product: 'KPost Admin',
       version: 'unspecified',
       fallbackComponent: 'admin-module-application',
-      componentByTag: {},
+      componentByTag: ADMIN_COMPONENT_BY_TAG,
     },
     baseUrl: env.ADMIN_API_BASE_URL ?? env.API_BASE_URL,
-    // No spec: the Admin module is absent from the KPost API workbook, and its swagger file
-    // was removed as unreliable. Endpoints are hand-written until a contract exists.
+    // Contract generated from `Admin_module.xlsx` → `openapi/admin-api.openapi.json` by
+    // `scripts/excel-to-contract.cjs`; definitions live in `src/api/definitions/admin/`.
     specFile: undefined,
   },
   'kmail-api': {

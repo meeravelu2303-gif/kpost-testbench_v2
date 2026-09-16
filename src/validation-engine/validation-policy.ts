@@ -84,6 +84,7 @@ export interface ResolvedEndpoint {
   authentication: {
     required: boolean;
     role: Role;
+    principalKey?: string;
     failureStatus: Record<AuthFailureMode, readonly number[]>;
   };
   authorization: {
@@ -147,6 +148,7 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
     authentication: {
       required: definition.authentication?.required ?? true,
       role: primaryRole,
+      principalKey: definition.authentication?.principalKey,
       failureStatus: { ...authConfig.failureStatus, ...definition.authentication?.failureStatus },
     },
     authorization: {

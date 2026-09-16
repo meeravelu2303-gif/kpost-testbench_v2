@@ -80,6 +80,12 @@ export interface EndpointDefinition {
     required?: boolean;
     /** Role used for the primary request. Default: authConfig.defaultRole or the first allowed role. */
     role?: Role;
+    /**
+     * The exact principal (by `key`) to authenticate the primary request as, when a role alone is
+     * ambiguous. The Admin module is driven by a specific business tier (`business-m`) though several
+     * principals share the `COMPANY_ADMIN` role, so the endpoint names the one it needs.
+     */
+    principalKey?: string;
     failureStatus?: Partial<Record<AuthFailureMode, readonly number[]>>;
   };
 

@@ -21,6 +21,7 @@
     "test:integration": "playwright test --project=integration",
     "mock:api": "node mock-server/server.ts",
     "contract:excel": "node scripts/excel-to-contract.cjs",
+    "contract:admin": "node scripts/fetch-admin-contract.cjs",
     "contract:gaps": "node scripts/excel-gap-report.cjs",
     "contract:coverage": "node scripts/contract-coverage.cjs",
     "contract:otp": "node scripts/otp-dependency-report.cjs",

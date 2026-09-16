@@ -31,6 +31,8 @@ const KMAIL_PREFIXES = new Set([
 /** The module a documented path belongs to. The kmail-api suite and every KMail prefix fold to one. */
 function moduleKey(suite: string, p: string): string {
   if (suite === 'kmail-api') return 'kmail';
+  // The Admin module is its own suite; every route folds to one module rather than by path segment.
+  if (suite === 'admin-api') return 'admin';
   const m = p.match(/^\/(?:v2\/)?([a-zA-Z0-9]+)\//);
   const mod = m?.[1]?.toLowerCase() ?? 'other';
   return KMAIL_PREFIXES.has(mod) ? 'kmail' : mod;
@@ -81,7 +83,10 @@ const MODULE_SCOPE: Record<string, Scope> = {
     note: 'KMail — reads live, compose/draft/settings write lifecycle (host kmail5, /kmail5/v2)',
   },
   translator: { status: 'backlog', note: 'translation (shared Katchup/KMail)' },
-  admin: { status: 'needs-business', note: 'org/HR admin — needs a business company with members' },
+  admin: {
+    status: 'built',
+    note: 'Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here',
+  },
   redbus: { status: 'out-of-scope', note: 'third-party travel booking; confirm scope with owner' },
   ecommerce: { status: 'out-of-scope', note: 'third-party commerce; confirm scope with owner' },
   metadee: { status: 'out-of-scope', note: 'third-party; confirm scope with owner' },
@@ -129,6 +134,7 @@ test.describe('coverage ledger @framework', () => {
     const documented = [
       ...contractPaths('kpost-api').map((p) => ({ suite: 'kpost-api', path: p })),
       ...contractPaths('kmail-api').map((p) => ({ suite: 'kmail-api', path: p })),
+      ...contractPaths('admin-api').map((p) => ({ suite: 'admin-api', path: p })),
     ];
 
     /*

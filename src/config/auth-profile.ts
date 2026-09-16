@@ -124,6 +124,9 @@ const ALL_KPOST_PRINCIPALS: readonly (Principal & { account: keyof TestData })[]
     username: testData.businessMKpostId,
     password: testData.password,
     userType: 'BUSINESS_M',
+    // Verified on live (2026-09-15): these accounts log in via plain `userLogin` (the default) and the
+    // token carries companyID + role:admin, which also authenticates the Admin module. `adminUserLogin`
+    // answers 403 for them — so no `loginEndpointId` override.
   },
   {
     key: 'business-l',

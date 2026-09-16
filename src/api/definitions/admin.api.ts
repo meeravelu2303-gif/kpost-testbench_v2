@@ -1,12 +1,9 @@
-import type { EndpointDefinition } from '../registry/endpoint-definition';
-
 /**
- * Admin module — a separate repository and service, maintained by Jaganathan Murthy.
- * Its defects file into the `KPost Admin` Bugzilla product.
+ * Admin module — a separate service (`admin-api`) on its own host `adminmodule.kpostindia.com`,
+ * maintained by Jaganathan Murthy; its defects file into the `KPost Admin` Bugzilla product.
  *
- * No endpoints yet, and deliberately so: the Admin module is **not in the KPost API workbook**,
- * which is the authoritative contract, and its swagger file was removed for being unreliable.
- * Guessing endpoints from an untrusted spec produces failures that blame the API for the
- * document. Add definitions here (or a contract for the module) when one exists.
+ * The endpoints come from `Admin_module.xlsx` (converted to `openapi/admin-api.openapi.json`), and
+ * the module is reached by BUSINESS_M/L admins from "Admin / HR Setup". Definitions live under
+ * `./admin/`; this file re-exports them, mirroring how `kmail.api.ts` re-exports `./kmail`.
  */
-export const adminApis: EndpointDefinition[] = [];
+export { adminApis, uncoveredAdminPaths } from './admin';

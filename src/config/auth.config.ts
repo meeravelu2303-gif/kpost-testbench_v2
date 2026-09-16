@@ -18,6 +18,12 @@ const PrincipalSchema = z.object({
    * a tiered account only when its tier is sent, so it belongs to the principal.
    */
   userType: z.string().min(1).optional(),
+  /**
+   * The login endpoint to authenticate this principal at, overriding the auth profile's default.
+   * BUSINESS_M/L admins log in via `adminUserLogin` (Medium/Large enterprise login), not `userLogin`
+   * — the same token then works on the Admin module. Absent for ordinary accounts.
+   */
+  loginEndpointId: z.string().min(1).optional(),
 });
 export type Principal = z.infer<typeof PrincipalSchema>;
 

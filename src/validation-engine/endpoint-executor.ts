@@ -137,6 +137,26 @@ export class EndpointExecutor {
     return principal;
   }
 
+  /**
+   * The principal to run `endpoint`'s primary request as: the exact one it names by key when it does
+   * (the Admin module names `business-m`, since several principals share COMPANY_ADMIN), else a
+   * principal for the role.
+   */
+  private principalFor(endpoint: ResolvedEndpoint, roleOverride?: Role): Principal {
+    const key = endpoint.authentication.principalKey;
+    if (key) {
+      const profile = authProfileFor(endpoint.definition);
+      const principal = profile.principals.find((p) => p.key === key);
+      if (!principal)
+        throw new Error(
+          `No ${profile.id} principal with key "${key}" (set its QA_* account in .env; see ` +
+            'src/config/auth-profile.ts)',
+        );
+      return principal;
+    }
+    return this.principal(roleOverride ?? endpoint.authentication.role, endpoint);
+  }
+
   /** Runs another registered endpoint as test setup and returns its response `data`. */
   async call<T = Record<string, unknown>>(endpointId: string, overrides?: RequestSpec): Promise<T> {
     const endpoint = resolveEndpoint(this.apiRegistry.get(endpointId));
@@ -177,9 +197,7 @@ export class EndpointExecutor {
     if (!auth && !endpoint.authentication.required) return undefined;
     const profile = authProfileFor(endpoint.definition);
     const principal =
-      auth && 'principal' in auth
-        ? auth.principal
-        : this.principal(auth?.role ?? endpoint.authentication.role, endpoint);
+      auth && 'principal' in auth ? auth.principal : this.principalFor(endpoint, auth?.role);
     return `${profile.scheme} ${await this.tokens.tokenFor(principal, profile)}`;
   }
 
@@ -188,7 +206,10 @@ export class EndpointExecutor {
    * sent to the live API would be rejected as invalid and read like an API defect.
    */
   private async login(principal: Principal, profile: AuthProfile): Promise<string> {
-    const endpoint = resolveEndpoint(this.apiRegistry.get(profile.loginEndpointId));
+    // A principal may name its own login endpoint (BUSINESS_M/L → adminUserLogin); else the profile's.
+    const endpoint = resolveEndpoint(
+      this.apiRegistry.get(principal.loginEndpointId ?? profile.loginEndpointId),
+    );
     const exchange = await this.send(endpoint, profile.loginRequest(principal), {
       label: 'setup:login',
       auth: { header: undefined },
