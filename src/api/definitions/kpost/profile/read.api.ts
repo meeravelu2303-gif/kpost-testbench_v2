@@ -26,6 +26,8 @@ export const fetchUserDetailsApi = defineProfileEndpoint({
 
 export const userProfileByKpostIdApi = defineProfileEndpoint({
   id: 'profile-user-profile-by-kpostid',
+  // KDirectory "view full profile" (FR-KD-005) — opening a directory entry's full profile.
+  requirements: ['FR-KD-005'],
   // A POST read: destructive defaults true for POST, which would grep-drop it on live.
   destructive: false,
   method: 'POST',

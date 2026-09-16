@@ -235,6 +235,9 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       product: 'KMail API',
       version: '5.0',
       fallbackComponent: 'kmail-application',
+      // Platform-wide KMail faults (security headers, auth-filter status, error envelope) consolidate
+      // here instead of the catch-all — the KMail parallel to KPost's 'Authentication V2'.
+      systemicComponent: 'Authentication & Gateway',
       componentByTag: KMAIL_COMPONENT_BY_TAG,
     },
     baseUrl: env.KMAIL_API_BASE_URL ?? env.API_BASE_URL,
@@ -399,6 +402,7 @@ export const KNOWN_COMPONENTS: Partial<Record<SuiteId, Set<string>>> = {
     'Workplace Tier — Variables (Nodes)',
   ]),
   'kmail-api': new Set([
+    'Authentication & Gateway',
     'Contacts & Sync',
     'Draft Mail',
     'KMail Settings - Signature & Letterhead',

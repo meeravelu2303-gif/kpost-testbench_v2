@@ -3,7 +3,7 @@
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
-import { KMAIL_TYPE } from '@api/schemas/kpost-types';
+import { KMAIL_PRIORITY, KMAIL_TYPE } from '@api/schemas/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';
@@ -110,6 +110,54 @@ test.describe('KPost KMail · feature flow', () => {
     } finally {
       await del(endpoints, A, sent.transactionIDs);
     }
+  });
+
+  test('the To: field takes a single recipient; extra people go to Cc (FR-KM-005) @api @kmail', async ({
+    endpoints,
+  }) => {
+    /*
+     * FR-KM-005 — Enforce Single Recipient in To:. The mail model carries exactly ONE `toAddress`
+     * (a string, not a list); additional recipients ride in `ccList`. This asserts the model
+     * structurally (the contract) AND drives a real send with one TO + one Cc.
+     */
+    const shape = mailShape({ toAddress: B.username, ccList: [C.username] });
+    expect
+      .soft(typeof shape.toAddress, 'the To: field is a single address, not a list (FR-KM-005)')
+      .toBe('string');
+    expect
+      .soft(Array.isArray(shape.ccList), 'additional recipients ride in the Cc list')
+      .toBe(true);
+
+    const subject = `QA Single-TO ${Date.now()}`;
+    const sent = await send(
+      endpoints,
+      A,
+      { toAddress: B.username, ccList: [C.username], kmailSubject: subject },
+      'single-recipient',
+    );
+    expect.soft(sent.status, 'a single-TO + Cc send is accepted').toBeLessThan(300);
+    expect.soft(sent.kmailID, 'a kmailID is issued').toBeTruthy();
+    await del(endpoints, A, sent.transactionIDs);
+  });
+
+  test('a high-priority mail carries its priority flag (FR-KM-010 / FR-KM-011) @api @kmail', async ({
+    endpoints,
+  }) => {
+    const subject = `QA Priority ${Date.now()}`;
+    const sent = await send(
+      endpoints,
+      A,
+      { toAddress: B.username, kmailSubject: subject, priority: KMAIL_PRIORITY.high },
+      'priority',
+    );
+    expect.soft(sent.status, 'a high-priority send is accepted').toBeLessThan(300);
+    const r = row(sent.body);
+    if (r.priority != null) {
+      expect
+        .soft(Number(r.priority), 'the high-priority flag is carried back (FR-KM-011)')
+        .toBe(KMAIL_PRIORITY.high);
+    }
+    await del(endpoints, A, sent.transactionIDs);
   });
 
   test('the post-send action types are each accepted (Reply/Forward/Note/Comment/Clarify) @api @kmail', async ({

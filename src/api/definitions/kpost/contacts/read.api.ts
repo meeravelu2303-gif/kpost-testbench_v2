@@ -14,6 +14,9 @@ const READ_TAGS = ['contacts-read'] as const;
 
 export const myContactsApi = defineContactsEndpoint({
   id: 'contacts-my-contacts',
+  // KDirectory directory listing + total count (FR-KD-001/004) — the org directory is the same
+  // contacts surface (see docs/requirements-frd.md § KDirectory).
+  requirements: ['FR-KD-001', 'FR-KD-004'],
   method: 'POST',
   path: '/v2/contacts/myContacts/',
   summary: "The caller's known contacts",
@@ -77,6 +80,8 @@ export const blockedContactsApi = defineContactsEndpoint({
 
 export const globalSearchApi = defineContactsEndpoint({
   id: 'contacts-global-search',
+  // KDirectory search-by-name + entry details (FR-KD-002/003).
+  requirements: ['FR-KD-002', 'FR-KD-003'],
   method: 'POST',
   path: '/v2/contacts/globalSearch/',
   summary: 'Search all KPost users by name/filters',

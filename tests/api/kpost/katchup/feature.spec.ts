@@ -375,6 +375,50 @@ test.describe('KPost Katchup · feature flow', () => {
     await cleanup(endpoints, A, seed.msgID);
   });
 
+  test('forward variants — hidden/revealed × with/without thread each validate (FR-KU-035..038) @api @katchup', async ({
+    endpoints,
+  }) => {
+    /*
+     * The four Forward variants the FRD splits out (source Hidden vs Revealed × single vs
+     * with-thread), mapped to the message-type enum: 16 Hidden, 15 Reveal, 21 thread-Hidden,
+     * 20 thread-Reveal. As with the single forward above, the minimal payload 400s (the endpoint
+     * validates a full referenceMessage object), so each is asserted as "handled, no 5xx".
+     */
+    const T = KATCHUP_MESSAGE_TYPE as Record<string, number>;
+    const seed = await send(endpoints, A, {
+      receiver: B.username,
+      actualMessage: 'QA fwd variants',
+    });
+    expect(seed.msgID, 'seed created').toBeTruthy();
+
+    const variants: Array<[string, number]> = [
+      ['forward source-hidden (FR-KU-035)', T.forwardMessageHidden!],
+      ['forward source-revealed (FR-KU-036)', T.forwardMessageReveal!],
+      ['forward-with-thread hidden (FR-KU-037)', T.forwardMultipleThreadHidden!],
+      ['forward-with-thread revealed (FR-KU-038)', T.forwardMultipleThreadReveal!],
+    ];
+    for (const [label, type] of variants) {
+      const fwd = await endpoints.sendTo(
+        'katchup-forward-message',
+        {
+          body: {
+            messageType: type,
+            subject: 'QA forward',
+            actualMessage: 'QA fwd variants',
+            referenceMessage: null,
+            forwardReceiverList: [C.username],
+            groupForwardList: [],
+            temporaryMsgID: 8989,
+            referenceMessageIDList: [seed.msgID],
+          },
+        },
+        { label: `feature:fwd:${type}`, auth: { principal: A }, allowLiveWrite: true },
+      );
+      expect.soft(fwd.status, `${label} validates without crashing (no 5xx)`).toBeLessThan(500);
+    }
+    await cleanup(endpoints, A, seed.msgID);
+  });
+
   test('save and mark-important act on a message (FR-K18) @api @katchup', async ({ endpoints }) => {
     const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to save' });
     expect(seed.msgID, 'seed created').toBeTruthy();

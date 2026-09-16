@@ -228,6 +228,30 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-16 — Perfect filing setup: correct components on ALL products; KMail systemic component added
+
+Before the owner's KPost+KMail filing run (dev team waiting), verified every bug routes to the CORRECT
+component on all four products, and closed the one asymmetry:
+
+- **Live-verified components (queried `192.168.0.50`):** KPost API **27** (bench routes to 14), KMail
+  API **9→10** (routes to 7 + systemic), KPost UI **~22** (routes by screen), KPost Admin **25**
+  (routes to 9). Every routing target exists; **zero endpoints hit any catch-all**.
+- **Correctness, not just existence:** `component-routing.spec.ts` now emits the full **endpoint →
+  component** map in `docs/COMPONENT-ROUTING.md` (was counts-only), so routing is auditable per
+  endpoint. Spot-checked: all `admin-*` + `common-company-*` + the logo trio → **Company
+  Administration**; auth/OTP/login → **Authentication V2**; M/L login → its own component; KMail
+  drafts → **Draft Mail**, signatures → **Settings**; UI kmail → **KMail**, kdirectory → **KDirectory**.
+- **KMail systemic component added** (`Authentication & Gateway`, Bugzilla component id 84, KMail API,
+  assignee Jitendra) and wired as `SUITES['kmail-api'].bugzilla.systemicComponent` + `KNOWN_COMPONENTS`.
+  KMail's platform-wide faults (headers, auth-filter status, error envelope) now consolidate there
+  instead of the `kmail-application` catch-all — the parallel to KPost's `Authentication V2`. The
+  ownership guard ("every configured systemic component exists in its product") passes against live.
+
+Two guards keep this true on every run: `component-routing` fails the build if any endpoint routes to
+a non-existent component; `ownership` reconciles config against the LIVE Bugzilla so drift on either
+side fails. Dedup re-confirmed: 187 KPost + 81 KMail bugs all carry `[KP-]`, so a re-run comments,
+never duplicates. `npm run check` clean; 71 framework guards pass. The bench is filing-ready.
+
 ### 2026-09-16 — NEW DOCS: 6 per-module FRDs (153 FRs); KDirectory in scope; Katchup gains Disappearing Messages
 
 The owner added **six standalone per-module FRDs** to `D:\Kpost Documents` (all 2026-09-16), each split
@@ -312,8 +336,20 @@ before touching flows, per the working agreement. Executing the to-do from item 
   fields already in `sendShape()`. Needs one `KATCHUP_LIFECYCLE=true` live run to confirm GREEN. The
   UI lock-icon compose flow + the `src/ui/katchup-features.ts` catalogue remap (still old `FR-K*`) are
   the follow-up. `npm run check` clean; framework guards pass.
-- **Items 5–9 pending** — KMail single-recipient BR (FR-KM-005), Group min-one-admin BR (FR-GM-014),
-  KDirectory coverage, Forward hidden/revealed variants, then resume Phase C (admin UI).
+- **Item 5 DONE (API)** — KMail `kmail/feature.spec.ts`: single-recipient To: (FR-KM-005, one
+  `toAddress` + `ccList`) and high-priority flag (FR-KM-010/011, `KMAIL_PRIORITY.high`), gated.
+- **Item 6 DONE (API)** — Group `group/feature.spec.ts`: promote→demote a co-admin (FR-GM-012/013)
+  and the **min-one-admin BR (FR-GM-014)** — the sole admin's exit is asserted blocked (a 2xx is a
+  recorded finding: the rule would be UI-only), gated.
+- **Item 7 DONE** — KDirectory reconciled onto the existing directory surface (no new module):
+  `contacts-my-contacts`→FR-KD-001/004, `contacts-global-search`→FR-KD-002/003,
+  `profile-user-profile-by-kpostid`→FR-KD-005; FR-KD-006 (cross-module launch UI) stays PARTIAL.
+- **Item 8 DONE (API)** — Katchup forward variants (FR-KU-035..038): all four hidden/revealed ×
+  with/without-thread types (15/16/20/21) driven in `katchup/feature.spec.ts`, gated.
+- **Traceability now 29/165 FR ids tagged; 6 documented legacy.** `npm run check` clean throughout.
+- **Item 9 pending** — one batched `*_LIFECYCLE` live run to confirm the new gated tests GREEN
+  (items 4/5/6/8), then build **Phase C** (the `kpostadmin.kpostindia.com` admin UI harness — env +
+  `STORAGE_STATE_ADMIN` plumbing already in; SSO seeding measured from `Callback.js`).
 
 ### 2026-09-16 — PLAN + build: Phase C — the Admin/HR-Setup UI (`kpostadmin.kpostindia.com`)
 

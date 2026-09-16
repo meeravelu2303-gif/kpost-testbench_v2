@@ -110,4 +110,65 @@ test.describe('KPost Group · feature flow', () => {
       }
     }
   });
+
+  test('promote then demote a co-admin, and the sole admin cannot exit (FR-GM-012/013/014) @api @group @security', async ({
+    endpoints,
+  }) => {
+    /*
+     * FR-GM-012 Add Admin / FR-GM-013 Remove Admin, and the crown BR FR-GM-014: a group must always
+     * retain at least one active admin, so the sole admin is blocked from exiting. We create A(admin)
+     * + B(member), promote B, demote B (leaving A sole admin), then A tries to exit — which the rule
+     * must block. If the backend allows it (200), that is a real finding: the BR is UI-only.
+     */
+    let groupID: number | undefined;
+    let groupKpostID: string | undefined;
+    try {
+      const created = await as(endpoints, A, 'group-create', createBody(), 'create');
+      groupKpostID = created.data.groupKpostID as string | undefined;
+      groupID = created.data.groupID as number | undefined;
+      expect.soft(groupKpostID, 'a groupKpostID is returned').toBeTruthy();
+      if (!(groupID && groupKpostID)) return;
+
+      // FR-GM-012 — promote B to co-admin.
+      const promote = await as(
+        endpoints,
+        A,
+        'group-admin-access',
+        { kpostIDs: [testData.victimKpostId], ids: [0], groupID, hasAdminAccess: 'Y' },
+        'promote-admin',
+      );
+      expect.soft(promote.status, 'promote to admin is accepted (FR-GM-012)').toBeLessThan(300);
+
+      // FR-GM-013 — demote B back to a regular member.
+      const demote = await as(
+        endpoints,
+        A,
+        'group-admin-access',
+        { kpostIDs: [testData.victimKpostId], ids: [0], groupID, hasAdminAccess: 'N' },
+        'demote-admin',
+      );
+      expect.soft(demote.status, 'demote from admin is accepted (FR-GM-013)').toBeLessThan(300);
+
+      // FR-GM-014 — A is now the SOLE admin; exiting must be blocked (min-one-admin rule).
+      const exit = await as(
+        endpoints,
+        A,
+        'group-leave',
+        { id: '0', groupID, groupKpostID },
+        'sole-admin-exit',
+      );
+      expect
+        .soft(
+          exit.status,
+          'the sole admin must NOT be able to exit the group (FR-GM-014); a 2xx here is a finding — the rule is UI-only',
+        )
+        .toBeGreaterThanOrEqual(400);
+    } finally {
+      if (groupID) {
+        await as(endpoints, A, 'group-delete', { groupID }, 'cleanup-delete').catch(
+          () => undefined,
+        );
+      }
+    }
+  });
 });

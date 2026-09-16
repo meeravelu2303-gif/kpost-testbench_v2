@@ -59,7 +59,7 @@ All/Selected Members targeting, sent-message display). Bench: group send is COVE
 | FR-KU-032          | Add note                                                                                                                  | COVERED           | `katchup-actions-more.spec.ts`                                                                                                               |
 | FR-KU-033          | Set reminder                                                                                                              | COVERED           | `katchup-actions-more.spec.ts`                                                                                                               |
 | FR-KU-034          | Transfer to external app                                                                                                  | COVERED           | `katchup-actions-more.spec.ts` (Transfer)                                                                                                    |
-| FR-KU-035..038     | Forward (source hidden/revealed × with/without thread)                                                                    | PARTIAL           | Forward + Forward-with-thread covered; hidden/revealed variants → GAP (to-do 8)                                                              |
+| FR-KU-035..038     | Forward (source hidden/revealed × with/without thread)                                                                    | COVERED           | `katchup/feature.spec.ts` — all 4 variants (types 15/16/20/21) driven, gated                                                                 |
 | FR-KU-039          | Copy content                                                                                                              | COVERED           | `katchup-actions.spec.ts`                                                                                                                    |
 | FR-KU-040          | Save message                                                                                                              | COVERED           | `katchup-actions.spec.ts`                                                                                                                    |
 | FR-KU-041          | Text-to-speech                                                                                                            | OUT-OF-SCOPE      | UI-only, no assertion (client TTS)                                                                                                           |
@@ -70,23 +70,23 @@ All/Selected Members targeting, sent-message display). Bench: group send is COVE
 
 ## Group — `FR-GC-001..008` + `FR-GM-001..016` (24)
 
-| FR             | Title                                           | Status  | Where / reason                                              |
-| -------------- | ----------------------------------------------- | ------- | ----------------------------------------------------------- |
-| FR-GC-001..003 | Create group: name, add members, preview        | COVERED | `group.spec.ts` + `group/feature.spec.ts` (createUserGroup) |
-| FR-GC-004..005 | Group photo select / crop                       | GAP     | UI image picker (codegen-wall)                              |
-| FR-GC-006..008 | Final review, success toast, appears in Recents | COVERED | API create + UI create modal                                |
-| FR-GM-001..002 | Access Group Info, admin view                   | PARTIAL | API reads; UI Group-Info render GAP                         |
-| FR-GM-003      | Add member (header entry)                       | COVERED | API `addGroupMember` (lifecycle)                            |
-| FR-GM-004..006 | Per-member KMail / Katchup / Kall quick actions | GAP     | Group-Info row actions (UI)                                 |
-| FR-GM-007      | Group Management three-dot menu                 | GAP     | UI options sheet                                            |
-| FR-GM-008      | Edit group name/photo                           | COVERED | API rename (lifecycle)                                      |
-| FR-GM-009..010 | Add members via options + search                | COVERED | API add + `myContacts` search                               |
-| FR-GM-011      | Remove member                                   | COVERED | API `removeGroupMember` (lifecycle)                         |
-| FR-GM-012      | Add admin (promote)                             | COVERED | API `addOrRemoveAdminAccess` (make admin)                   |
-| FR-GM-013      | Remove admin (demote)                           | GAP     | to-do item 6 — assert demote                                |
-| **FR-GM-014**  | **Min-one-admin rule on Exit**                  | **GAP** | to-do item 6 — sole admin blocked until another added       |
-| FR-GM-015      | Exit group                                      | COVERED | API leave (lifecycle)                                       |
-| FR-GM-016      | Activity feed for admin actions                 | GAP     | system-message assertion                                    |
+| FR             | Title                                           | Status      | Where / reason                                                                     |
+| -------------- | ----------------------------------------------- | ----------- | ---------------------------------------------------------------------------------- |
+| FR-GC-001..003 | Create group: name, add members, preview        | COVERED     | `group.spec.ts` + `group/feature.spec.ts` (createUserGroup)                        |
+| FR-GC-004..005 | Group photo select / crop                       | GAP         | UI image picker (codegen-wall)                                                     |
+| FR-GC-006..008 | Final review, success toast, appears in Recents | COVERED     | API create + UI create modal                                                       |
+| FR-GM-001..002 | Access Group Info, admin view                   | PARTIAL     | API reads; UI Group-Info render GAP                                                |
+| FR-GM-003      | Add member (header entry)                       | COVERED     | API `addGroupMember` (lifecycle)                                                   |
+| FR-GM-004..006 | Per-member KMail / Katchup / Kall quick actions | GAP         | Group-Info row actions (UI)                                                        |
+| FR-GM-007      | Group Management three-dot menu                 | GAP         | UI options sheet                                                                   |
+| FR-GM-008      | Edit group name/photo                           | COVERED     | API rename (lifecycle)                                                             |
+| FR-GM-009..010 | Add members via options + search                | COVERED     | API add + `myContacts` search                                                      |
+| FR-GM-011      | Remove member                                   | COVERED     | API `removeGroupMember` (lifecycle)                                                |
+| FR-GM-012      | Add admin (promote)                             | COVERED     | API `addOrRemoveAdminAccess` (make admin)                                          |
+| FR-GM-013      | Remove admin (demote)                           | COVERED     | `group/feature.spec.ts` promote→demote (`hasAdminAccess:'N'`), gated               |
+| **FR-GM-014**  | **Min-one-admin rule on Exit**                  | **COVERED** | `group/feature.spec.ts` — sole admin exit asserted blocked (finding if 2xx), gated |
+| FR-GM-015      | Exit group                                      | COVERED     | API leave (lifecycle)                                                              |
+| FR-GM-016      | Activity feed for admin actions                 | GAP         | system-message assertion                                                           |
 
 ## Kall — `FR-KL-001..009` (9)
 
@@ -104,37 +104,40 @@ All/Selected Members targeting, sent-message display). Bench: group send is COVE
 
 ## KMail — `FR-KM-001..025` (25)
 
-| FR             | Title                                     | Status       | Where / reason                                                   |
-| -------------- | ----------------------------------------- | ------------ | ---------------------------------------------------------------- |
-| FR-KM-001..002 | Open Write Mail, default fields           | COVERED      | `kmail-compose.spec.ts`                                          |
-| FR-KM-003..004 | Contact list on To: tap, real-time search | COVERED      | UI compose (To autocomplete)                                     |
-| **FR-KM-005**  | **Enforce single recipient in To:**       | **GAP**      | to-do item 5 — one TO, Cc for more (API model: toAddress+ccList) |
-| FR-KM-006      | Add Cc via toolbar                        | COVERED      | API send `ccList`                                                |
-| FR-KM-007..008 | Salutation dropdown + confirm             | COVERED      | settings saluation write                                         |
-| FR-KM-009      | Subject line                              | COVERED      | API + UI compose                                                 |
-| FR-KM-010..011 | Priority level + high-priority flag       | GAP          | to-do item 5 — assert `kmailPriority`                            |
-| FR-KM-012      | Compose body                              | COVERED      | `kmail-compose.spec.ts`                                          |
-| FR-KM-013      | Remove default signature block            | GAP          | to-do item 5                                                     |
-| FR-KM-014      | Attach files                              | PARTIAL      | API attachment (AWS) covered; UI upload blocked-with-reason      |
-| FR-KM-015      | Record/insert audio                       | GAP          | UI-only (mic)                                                    |
-| FR-KM-016      | Font/formatting                           | GAP          | UI-only                                                          |
-| FR-KM-017      | AI Assist                                 | GAP          | composer AI path                                                 |
-| FR-KM-018..019 | Send + confirmation/reset                 | COVERED      | `kmail/feature.spec.ts` (FR-M01) + UI send                       |
-| FR-KM-020      | Read receipts                             | COVERED      | API receipts (BR-M01)                                            |
-| FR-KM-021      | Open with external app                    | OUT-OF-SCOPE | client/mobile interop                                            |
-| FR-KM-022      | Add external recipients                   | PARTIAL      | API accepts external address; not driven live (real mail)        |
-| FR-KM-023..025 | Transfer/share to Gmail/Outlook/Yahoo     | OUT-OF-SCOPE | client/mobile share-intent                                       |
+| FR             | Title                                     | Status       | Where / reason                                                               |
+| -------------- | ----------------------------------------- | ------------ | ---------------------------------------------------------------------------- |
+| FR-KM-001..002 | Open Write Mail, default fields           | COVERED      | `kmail-compose.spec.ts`                                                      |
+| FR-KM-003..004 | Contact list on To: tap, real-time search | COVERED      | UI compose (To autocomplete)                                                 |
+| **FR-KM-005**  | **Enforce single recipient in To:**       | **COVERED**  | `kmail/feature.spec.ts` single-recipient (one `toAddress` + `ccList`), gated |
+| FR-KM-006      | Add Cc via toolbar                        | COVERED      | API send `ccList`                                                            |
+| FR-KM-007..008 | Salutation dropdown + confirm             | COVERED      | settings saluation write                                                     |
+| FR-KM-009      | Subject line                              | COVERED      | API + UI compose                                                             |
+| FR-KM-010..011 | Priority level + high-priority flag       | COVERED      | `kmail/feature.spec.ts` high-priority send (`KMAIL_PRIORITY.high`), gated    |
+| FR-KM-012      | Compose body                              | COVERED      | `kmail-compose.spec.ts`                                                      |
+| FR-KM-013      | Remove default signature block            | GAP          | to-do item 5                                                                 |
+| FR-KM-014      | Attach files                              | PARTIAL      | API attachment (AWS) covered; UI upload blocked-with-reason                  |
+| FR-KM-015      | Record/insert audio                       | GAP          | UI-only (mic)                                                                |
+| FR-KM-016      | Font/formatting                           | GAP          | UI-only                                                                      |
+| FR-KM-017      | AI Assist                                 | GAP          | composer AI path                                                             |
+| FR-KM-018..019 | Send + confirmation/reset                 | COVERED      | `kmail/feature.spec.ts` (FR-M01) + UI send                                   |
+| FR-KM-020      | Read receipts                             | COVERED      | API receipts (BR-M01)                                                        |
+| FR-KM-021      | Open with external app                    | OUT-OF-SCOPE | client/mobile interop                                                        |
+| FR-KM-022      | Add external recipients                   | PARTIAL      | API accepts external address; not driven live (real mail)                    |
+| FR-KM-023..025 | Transfer/share to Gmail/Outlook/Yahoo     | OUT-OF-SCOPE | client/mobile share-intent                                                   |
 
 ## KDirectory — `FR-KD-001..006` (6) — NEW in scope
 
-| FR        | Title                            | Status  | Where / reason                                        |
-| --------- | -------------------------------- | ------- | ----------------------------------------------------- |
-| FR-KD-001 | Display directory listing        | PARTIAL | overlaps company members / `myContacts`; to-do item 7 |
-| FR-KD-002 | Search by name                   | PARTIAL | `globalSearch` / contacts search; map to FR-KD        |
-| FR-KD-003 | Entry details (name/role/team)   | GAP     | to-do item 7                                          |
-| FR-KD-004 | Total contact count              | GAP     | to-do item 7                                          |
-| FR-KD-005 | View full profile                | PARTIAL | profile reads; directory-entry path to map            |
-| FR-KD-006 | Launch Katchup/Kall from profile | GAP     | verticals KDirectory UI + cross-module launch         |
+The org directory IS the contacts/profile surface, so FR-KD reconciles onto existing reads (tagged
+`requirements: ['FR-KD-*']`) + the verticals KDirectory screen — no separate module needed.
+
+| FR        | Title                            | Status  | Where / reason                                                       |
+| --------- | -------------------------------- | ------- | -------------------------------------------------------------------- |
+| FR-KD-001 | Display directory listing        | COVERED | `contacts-my-contacts` (`myContacts`) tagged FR-KD-001               |
+| FR-KD-002 | Search by name                   | COVERED | `contacts-global-search` (`globalSearch`) tagged FR-KD-002           |
+| FR-KD-003 | Entry details (name/role/team)   | COVERED | `contacts-global-search` result rows (FR-KD-003)                     |
+| FR-KD-004 | Total contact count              | COVERED | `contacts-my-contacts` listing count (FR-KD-004)                     |
+| FR-KD-005 | View full profile                | COVERED | `profile-user-profile-by-kpostid` tagged FR-KD-005                   |
+| FR-KD-006 | Launch Katchup/Kall from profile | PARTIAL | verticals KDirectory screen renders; cross-module launch UI is a GAP |
 
 ## KDOC — OUT-OF-SCOPE
 

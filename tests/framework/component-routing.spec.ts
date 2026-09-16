@@ -73,6 +73,13 @@ test.describe('component routing @framework', () => {
         lines.push(`| ${component} | ${ids.length} |`);
       }
       lines.push('');
+      // Per-endpoint detail, so routing CORRECTNESS (not just existence) is auditable at a glance.
+      lines.push(`### ${suite.bugzilla.product} — endpoint → component`, '');
+      for (const [component, ids] of [...perSuite.entries()].sort()) {
+        lines.push(`**${component}**`, '');
+        for (const id of [...ids].sort()) lines.push(`- \`${id}\``);
+        lines.push('');
+      }
     }
     if (onCatchAll.length) {
       lines.push(
