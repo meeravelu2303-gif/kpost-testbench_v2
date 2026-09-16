@@ -228,6 +228,7 @@ const IDENTITY_FIELDS = [
   'otpEmail',
   'companyId',
   'companyName',
+  'companyNameAbsent',
   'uniqueName',
   'businessSCompanyId',
   'businessMCompanyId',

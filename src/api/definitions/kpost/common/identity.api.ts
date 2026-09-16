@@ -37,14 +37,17 @@ export const mobileNoExistApi = defineKpostEndpoint({
 
 export const mobileNoExistInsideCompanyApi = defineKpostEndpoint({
   id: 'common-mobile-no-exist-in-company',
+  // Live: read-only membership check on OUR OWN business company (BUSINESS_M, company 1067) with the
+  // admin's own mobile — both allowlisted, so it runs on live and exercises the business surface.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/mobileNoExistInsideCompany/',
   summary: 'Check whether a mobile number is registered inside a company',
   tags: IDENTITY_TAGS,
   destructive: false,
   request: body(() => ({
-    mobileNumber: testData.mobileAbsent,
-    companyID: testData.companyId,
+    mobileNumber: testData.businessMMobile,
+    companyID: testData.businessMCompanyId,
   })),
 });
 
@@ -75,6 +78,8 @@ export const kpostIdUsingModuleApi = defineKpostEndpoint({
 
 export const uniqueNameExistApi = defineKpostEndpoint({
   id: 'common-unique-name-exist',
+  // Live: read-only availability check with a known-absent, allowlisted company name — names no one.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/uniqueNameExist',
   summary: 'Check whether a company unique name is taken',
@@ -102,6 +107,8 @@ export const domainApi = defineKpostEndpoint({
 
 export const generateDomainAndUniqueNameApi = defineKpostEndpoint({
   id: 'common-generate-domain-and-unique-name',
+  // Live: read-only suggestion for OUR kpostID + a known-absent, allowlisted company name.
+  productionSafe: true,
   method: 'POST',
   path: '/v2/common/generateDomainAndUniqueName',
   summary: 'Suggest a domain and unique name for a company',

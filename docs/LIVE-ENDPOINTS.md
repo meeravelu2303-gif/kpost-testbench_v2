@@ -3,18 +3,19 @@
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`
 (`npm run test:framework`). Edit the endpoint definitions, not this file.
 
-Target: the live application (`devapi2.kpostindia.com`). Scope: **PERSONAL** accounts only —
-no business account exists on live yet.
+Target: the live application (`devapi2.kpostindia.com`). Scope: PERSONAL accounts plus the
+BUSINESS_S/M/L company accounts (company reads + user-management now run on live).
+A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **119** |
-| Blocked | 217 |
+| **Runs on live** | **123** |
+| Blocked | 213 |
 | Total registered | 336 |
 
 ---
 
-## Runs on live — 119
+## Runs on live — 123
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -37,6 +38,7 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/aws/generate-presigned-url` | AWS |
 | `GET` | `/v2/common/countries` | common |
 | `POST` | `/v2/common/domain/` | common |
+| `POST` | `/v2/common/generateDomainAndUniqueName` | common |
 | `POST` | `/v2/common/getCitiesByRegionId/` | common |
 | `POST` | `/v2/common/getDesignation/` | common |
 | `GET` | `/v2/common/getFlutterAppVersion/` | common |
@@ -46,9 +48,11 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/common/getUserDetailsByMobNo` | common |
 | `POST` | `/v2/common/languages` | common |
 | `POST` | `/v2/common/mobileNoExist/` | common |
+| `POST` | `/v2/common/mobileNoExistInsideCompany/` | common |
 | `GET` | `/v2/common/msStatus/` | common |
 | `POST` | `/v2/common/pinCode` | common |
 | `POST` | `/v2/common/postalPinCode/` | common |
+| `POST` | `/v2/common/uniqueNameExist` | common |
 | `POST` | `/admin/displayNameSuggestion` | common · company |
 | `GET` | `/admin/getBankAndCompanyDetails/{companyID}` | common · company |
 | `GET` | `/admin/userManagementDetails/{companyID}` | common · company |
@@ -56,6 +60,7 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/common/getCompanyDetails` | common · company |
 | `POST` | `/v2/common/getCompanyDetailsByAdmin` | common · company |
 | `POST` | `/v2/common/getCompanyDetailsByMobileNoAndproductId` | common · company |
+| `GET` | `/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}` | common · company |
 | `GET` | `/kmail5/v2/common/frequentKmailContact/` | Contacts |
 | `POST` | `/kmail5/v2/common/knownPostBoxContacts/` | Contacts |
 | `GET` | `/kmail5/v2/common/miscellaneousContacts/` | Contacts |
@@ -144,229 +149,225 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 217
+## Blocked on live — 213
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
 | Method | Path | Module | Why |
 | ------ | ---- | ------ | --- |
-| `POST` | `/adminTierAttribute/delete` | Admin | writes or deletes on the live application |
-| `POST` | `/adminTierAttribute/save` | Admin | writes or deletes on the live application |
-| `POST` | `/adminTierAttribute/update` | Admin | writes or deletes on the live application |
-| `POST` | `/adminTierVariable/delete` | Admin | writes or deletes on the live application |
-| `POST` | `/adminTierVariable/getAllReportingVariableHierarchy` | Admin | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/adminTierVariable/save` | Admin | writes or deletes on the live application |
-| `POST` | `/adminTierVariable/update` | Admin | writes or deletes on the live application |
-| `POST` | `/employeeDetails/delete` | Admin | writes or deletes on the live application |
-| `POST` | `/employeeDetails/save` | Admin | writes or deletes on the live application |
-| `POST` | `/employeeDetails/update` | Admin | writes or deletes on the live application |
-| `POST` | `/hrSetUpTierAttribute/delete` | Admin | writes or deletes on the live application |
-| `POST` | `/hrSetUpTierAttribute/save` | Admin | writes or deletes on the live application |
-| `POST` | `/hrSetUpTierAttribute/update` | Admin | writes or deletes on the live application |
-| `POST` | `/hrSetUpTierVariable/delete` | Admin | writes or deletes on the live application |
-| `POST` | `/hrSetUpTierVariable/getAllReportingHrTierVariableHierarchy` | Admin | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/hrSetUpTierVariable/save` | Admin | writes or deletes on the live application |
-| `POST` | `/hrSetUpTierVariable/update` | Admin | writes or deletes on the live application |
-| `POST` | `/location/delete` | Admin | writes or deletes on the live application |
-| `POST` | `/location/getLocation` | Admin | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/location/getLocationById` | Admin | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/location/save` | Admin | writes or deletes on the live application |
-| `POST` | `/location/update` | Admin | writes or deletes on the live application |
-| `POST` | `/rolePosting/delete` | Admin | writes or deletes on the live application |
-| `POST` | `/rolePosting/getRolePostingByCompanyIdAndEmployeeId` | Admin | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/rolePosting/save` | Admin | writes or deletes on the live application |
-| `POST` | `/rolePosting/suspendOrTerminateEmployee` | Admin | writes or deletes on the live application |
-| `POST` | `/rolePosting/update` | Admin | writes or deletes on the live application |
-| `GET` | `/v2/aws/deleteAttachmentFromS3/{uuid}` | AWS | writes or deletes on the live application |
-| `POST` | `/v2/common/forgotPasswordOTPOrSentKpostIDSms` | common | OTP — sends a real OTP by SMS/email to a real recipient |
-| `POST` | `/v2/common/forgotPasswordUpdate` | common | OTP — needs an OTP validated in an earlier step; live has no bypass |
-| `POST` | `/v2/common/generateDomainAndUniqueName` | common | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/common/mobileNoExistInsideCompany/` | common | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/common/saveEnquiryDetails` | common | writes or deletes on the live application |
-| `POST` | `/v2/common/saveUnsubscriberDetails` | common | writes or deletes on the live application |
-| `POST` | `/v2/common/sendOTP/` | common | OTP — sends a real OTP by SMS/email to a real recipient |
-| `POST` | `/v2/common/sendOTPtoMail/` | common | OTP — sends a real OTP by SMS/email to a real recipient |
-| `POST` | `/v2/common/uniqueNameExist` | common | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/common/updateFlutterAppVersion` | common | writes state shared by other users of the live application |
-| `POST` | `/v2/common/validateMailOTP/` | common | OTP — needs a real OTP in its payload; live has no bypass |
-| `POST` | `/v2/common/validateOTP/` | common | OTP — needs a real OTP in its payload; live has no bypass |
-| `POST` | `/admin/addingUserByAdmin/` | common · company | writes state shared by other users of the live application |
-| `POST` | `/admin/createOrRemoveBackupAdmin/` | common · company | writes state shared by other users of the live application |
-| `POST` | `/admin/holdOrRelease/` | common · company | writes state shared by other users of the live application |
-| `POST` | `/admin/removeCompanyLogo` | common · company | writes state shared by other users of the live application |
-| `POST` | `/admin/resetPassword/` | common · company | writes state shared by other users of the live application |
-| `POST` | `/admin/terminateUser/` | common · company | writes state shared by other users of the live application |
-| `POST` | `/v2/admin/updateBankAccountDetails` | common · company | writes state shared by other users of the live application |
-| `POST` | `/v2/admin/updateCompanyDetails` | common · company | writes state shared by other users of the live application |
-| `POST` | `/v2/admin/updateRole` | common · company | writes state shared by other users of the live application |
-| `GET` | `/v2/common/downloadCompanyLogo/{companyID}` | common · company | not cleared: needs a business account or company we do not have on live yet |
-| `GET` | `/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}` | common · company | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/common/updateCompanyLogo` | common · company | writes state shared by other users of the live application |
-| `POST` | `/v2/contacts/addContact` | Contacts | writes or deletes on the live application |
-| `POST` | `/v2/contacts/addContactReference/` | Contacts | writes or deletes on the live application |
-| `POST` | `/v2/contacts/addMultipleContact` | Contacts | writes or deletes on the live application |
-| `POST` | `/v2/contacts/blockOrUnBlockContact/` | Contacts | writes or deletes on the live application |
-| `POST` | `/v2/contacts/blockOrUnBlockMultipleContact` | Contacts | writes or deletes on the live application |
-| `POST` | `/v2/contacts/deleteContact/` | Contacts | writes or deletes on the live application |
-| `POST` | `/v2/contacts/importPhoneContacts/` | Contacts | writes or deletes on the live application |
-| `POST` | `/v2/contacts/updateInviteStatus/` | Contacts | writes or deletes on the live application |
-| `POST` | `/v2/group/addOrRemoveAdminAccess/` | Group | writes or deletes on the live application |
-| `POST` | `/v2/group/addUserToGroup/` | Group | writes or deletes on the live application |
-| `POST` | `/v2/group/createUserGroup/` | Group | writes or deletes on the live application |
-| `POST` | `/v2/group/deleteGroup` | Group | writes or deletes on the live application |
-| `GET` | `/v2/group/downloadGroupFullProfileImage/{groupKpostID}/{kpostID}` | Group | needs a real message/call/group id that only a write flow creates |
-| `GET` | `/v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID}` | Group | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/group/editGroupName` | Group | writes or deletes on the live application |
-| `POST` | `/v2/group/leaveFromGroup/` | Group | writes or deletes on the live application |
-| `POST` | `/v2/group/removeGroupMember/` | Group | writes or deletes on the live application |
-| `POST` | `/v2/group/removeGroupProfileImage` | Group | writes or deletes on the live application |
-| `POST` | `/v2/group/updateGroupProfileImage/` | Group | writes or deletes on the live application |
-| `POST` | `/v2/kall/clearKallBykallIds` | Kall | writes or deletes on the live application |
-| `GET` | `/v2/kall/clearKallHistory` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/endIndividualKall/` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/endKoolKall` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/getKallStatus` | Kall | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/kall/getKallStatusUsingKallID` | Kall | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/kall/initiateKall` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/joinScheduleKall` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/modifyKallMembers` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/reScheduleKall` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/scheduledKall` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/scheduledRepeatKall` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/updateKallStatus` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/kall/updateSenderAndReceiverKallStatus` | Kall | writes or deletes on the live application |
-| `POST` | `/v2/katchup/deleteKatchUpMessage/` | Katchup | writes or deletes on the live application |
-| `GET` | `/v2/katchup/download/{uuid}` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `GET` | `/v2/katchup/downloadAttachment/{uuid}` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `GET` | `/v2/katchup/downloadFromS3/{uuid}` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `GET` | `/v2/katchup/downloadThumbnail/{uuid}` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/katchup/forwardKatchupMessage/` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/forwardKatchupMessageNew` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/forwardKatchupMultipleMsgs` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/forwardMessageBacktrackByMsgID` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/katchup/generateThumbnailUsingUUID` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/getBulkMessageInfo/` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/katchup/getMessagesByReferenceMessageList` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/katchup/getReadStatusGroupMessage/` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/katchup/getReferenceMSGDetails/` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `GET` | `/v2/katchup/getSharedMessageDetails/{msgID}` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/katchup/getSharedMessageInfo/` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/katchup/markOrUnmarkImportantMessage/` | Katchup | writes or deletes on the live application |
-| `GET` | `/v2/katchup/mediaStreaming/{uuid}` | Katchup | needs a real message/call/group id that only a write flow creates |
-| `POST` | `/v2/katchup/recallMessage/` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/reportAbuse` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/saveKatchupMessages/` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/sendBulkKatchupMsg` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/sendBulkKatchupMsgMultiPart/` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/sendKatchupMsgMultiPart/` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/sendMessage/` | Katchup | writes or deletes on the live application |
-| `POST` | `/v2/katchup/sendMessageForForwardSelectedAttachment` | Katchup | writes or deletes on the live application |
-| `POST` | `/dairySchedule/addparticipants` | KDiary | writes or deletes on the live application |
-| `POST` | `/dairySchedule/createEvent` | KDiary | writes or deletes on the live application |
-| `POST` | `/dairySchedule/createSchedule` | KDiary | writes or deletes on the live application |
-| `POST` | `/dairySchedule/deleteEvent` | KDiary | writes or deletes on the live application |
-| `POST` | `/dairySchedule/editReport` | KDiary | writes or deletes on the live application |
-| `POST` | `/dairySchedule/editScheduleEvent` | KDiary | writes or deletes on the live application |
-| `POST` | `/dairySchedule/saveReport` | KDiary | writes or deletes on the live application |
-| `POST` | `/dairySchedule/updateEvent` | KDiary | writes or deletes on the live application |
-| `POST` | `/dairySchedule/updateScheduleRemarks` | KDiary | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/common/addOtherDomainContacts/` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/common/clearStatusOfAllKmailsContacts` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/common/clearStatusOfKmailsContacts/` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/common/convertMailAsPDF/` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/common/deleteKmailWithDeletedBy/` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/common/deleteOtherDomainContact/` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/common/editOtherDomainContactsDetails/` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/common/kmailGroupReadStatus/` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kmail5/v2/common/replyNotRequiredByReceiver/` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kmail5/v2/common/replyNotRequiredBySender/` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kmail5/v2/common/setKmailAsImportant/` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/draft/deleteDraftMail/` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/draft/draftMail/` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/draft/draftMailMultiPart` | KMail | writes or deletes on the live application |
-| `GET` | `/kmail5/v2/readMail/download/{uuid}` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kmail5/v2/readMail/downloadODAttachment` | KMail | writes or deletes on the live application |
-| `GET` | `/kmail5/v2/readMail/downloadThumbnail/{uuid}` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kmail5/v2/readMail/draftMailContent` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `GET` | `/kmail5/v2/readMail/getCopiesInfo/{kmailID}` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kmail5/v2/readMail/getKmailDetailsUsingKmailID` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `GET` | `/kmail5/v2/readMail/mediaStreaming/{uuid}` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kmail5/v2/readMail/sentAndInboxMailContent/` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `GET` | `/kmail5/v2/sentMail/bulkMail/status/{fromAddress}` | KMail | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kmail5/v2/sentMail/getMailCredentials/` | KMail | writes state shared by other users of the live application |
-| `POST` | `/kmail5/v2/sentMail/postBulkMail` | KMail | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/sentMail/postMail/` | KMail | writes or deletes on the live application |
-| `POST` | `/ai/chatResponse` | KOS | writes or deletes on the live application |
-| `POST` | `/ai/messageAssist` | KOS | writes or deletes on the live application |
-| `GET` | `/ai/messages/{sessionId}` | KOS | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kword/create` | KOS | writes or deletes on the live application |
-| `GET` | `/kword/delete` | KOS | writes or deletes on the live application |
-| `POST` | `/kword/deleteHeading` | KOS | writes or deletes on the live application |
-| `GET` | `/kword/documents/{docId}` | KOS | not cleared: needs a business account or company we do not have on live yet |
-| `GET` | `/kword/exitDocument/{docId}` | KOS | writes or deletes on the live application |
-| `GET` | `/kword/getAccessActivity/{docId}` | KOS | not cleared: needs a business account or company we do not have on live yet |
-| `GET` | `/kword/getAllRevision/{docId}` | KOS | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kword/isConvertToKad` | KOS | writes or deletes on the live application |
-| `POST` | `/kword/joinDocument` | KOS | writes or deletes on the live application |
-| `GET` | `/kword/presence/{docId}` | KOS | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/kword/saveContent` | KOS | writes or deletes on the live application |
-| `POST` | `/kword/share` | KOS | writes or deletes on the live application |
-| `POST` | `/kword/update` | KOS | writes or deletes on the live application |
-| `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | Login & session | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/signupLogin/setAccessCode` | Login & session | writes state shared by other users of the live application |
-| `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Login & session | writes state shared by other users of the live application |
-| `POST` | `/v2/profile/changePassword` | Profile | writes state shared by other users of the live application |
-| `POST` | `/v2/profile/convertBase64ToImage` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/deactivateAccount/` | Profile | OTP — needs an OTP validated in an earlier step; live has no bypass |
-| `POST` | `/v2/profile/deleteCollegeDetail` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/deleteExperienceDetail` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/deleteSchoolDetail` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/deleteUniversityDetail` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/forgotPasswordOrKpostID/` | Profile | OTP — sends a real OTP by SMS/email to a real recipient |
-| `GET` | `/v2/profile/removeCoverImage/` | Profile | writes or deletes on the live application |
-| `GET` | `/v2/profile/removeProfileImage/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/saveOrUpdateCollegeDetails/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/saveOrUpdateExperienceDetails/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/saveOrUpdateOtherActivity/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/saveOrUpdateSchoolDetails/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/saveOrUpdateUniversityDetails/` | Profile | writes or deletes on the live application |
-| `GET` | `/v2/profile/sendAccountDeactivationOtp/` | Profile | OTP — sends a real OTP by SMS/email to a real recipient |
-| `GET` | `/v2/profile/sendPrimaryDeviceOtp/` | Profile | OTP — sends a real OTP by SMS/email to a real recipient |
-| `GET` | `/v2/profile/sendPrimaryOrSecondaryDeviceOtp/{requestType}` | Profile | OTP — sends a real OTP by SMS/email to a real recipient |
-| `POST` | `/v2/profile/setDeviceAsPrimary/` | Profile | OTP — needs an OTP validated in an earlier step; live has no bypass |
-| `POST` | `/v2/profile/setDeviceAsSecondary` | Profile | OTP — needs an OTP validated in an earlier step; live has no bypass |
-| `POST` | `/v2/profile/shareUserDetails` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/updateAboutYourself/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/updateBasicInformation/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/updateContactInformation/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/updateDesignation` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/updateDeviceAsPrimary/` | Profile | OTP — needs an OTP validated in an earlier step; live has no bypass |
-| `POST` | `/v2/profile/updateDeviceAsSecondary` | Profile | OTP — needs an OTP validated in an earlier step; live has no bypass |
-| `POST` | `/v2/profile/updatePrivacySettingDetails/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/updateProfileImage/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/updateSignatureImage` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/uploadCoverImage/` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/uploadImageToS3` | Profile | writes or deletes on the live application |
-| `POST` | `/v2/profile/uploadProfileAttachments` | Profile | writes or deletes on the live application |
-| `POST` | `/generalSetting/changeTheme` | Settings | writes or deletes on the live application |
-| `POST` | `/generalSetting/fontSetting` | Settings | writes or deletes on the live application |
-| `POST` | `/generalSetting/kallNotification` | Settings | writes or deletes on the live application |
-| `POST` | `/generalSetting/katchupNotification` | Settings | writes or deletes on the live application |
-| `POST` | `/generalSetting/kmailNotification` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/deleteCustomizedInstantReply` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/deleteCustomizedSaluation` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/deleteLetterHead` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateCustomizedInstantReply` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateCustomizedSaluations` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignature` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureCompanyData` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureGraphics` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignaturePersonalData` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureSocialMediaLink` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureStyle` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureTemplateId` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/setLetterHead` | Settings | writes or deletes on the live application |
-| `POST` | `/kmail5/v2/kmailSetting/updateMailCountDaysLimit` | Settings | writes or deletes on the live application |
+| `POST` | `/adminTierAttribute/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/adminTierAttribute/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/adminTierAttribute/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/adminTierVariable/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/adminTierVariable/getAllReportingVariableHierarchy` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
+| `POST` | `/adminTierVariable/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/adminTierVariable/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/employeeDetails/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/employeeDetails/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/employeeDetails/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/hrSetUpTierAttribute/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/hrSetUpTierAttribute/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/hrSetUpTierAttribute/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/hrSetUpTierVariable/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/hrSetUpTierVariable/getAllReportingHrTierVariableHierarchy` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
+| `POST` | `/hrSetUpTierVariable/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/hrSetUpTierVariable/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/location/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/location/getLocation` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
+| `POST` | `/location/getLocationById` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
+| `POST` | `/location/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/location/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/rolePosting/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/rolePosting/getRolePostingByCompanyIdAndEmployeeId` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
+| `POST` | `/rolePosting/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/rolePosting/suspendOrTerminateEmployee` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/rolePosting/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/v2/aws/deleteAttachmentFromS3/{uuid}` | AWS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/common/forgotPasswordOTPOrSentKpostIDSms` | common | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
+| `POST` | `/v2/common/forgotPasswordUpdate` | common | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/common/saveEnquiryDetails` | common | OFF-LIVE by choice: persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle |
+| `POST` | `/v2/common/saveUnsubscriberDetails` | common | OFF-LIVE by choice: persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle |
+| `POST` | `/v2/common/sendOTP/` | common | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
+| `POST` | `/v2/common/sendOTPtoMail/` | common | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
+| `POST` | `/v2/common/updateFlutterAppVersion` | common | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/common/validateMailOTP/` | common | OFF-LIVE (OTP): needs a real OTP in its payload; live has no bypass |
+| `POST` | `/v2/common/validateOTP/` | common | OFF-LIVE (OTP): needs a real OTP in its payload; live has no bypass |
+| `POST` | `/admin/addingUserByAdmin/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/createOrRemoveBackupAdmin/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/holdOrRelease/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/removeCompanyLogo` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/resetPassword/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/terminateUser/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/admin/updateBankAccountDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/admin/updateCompanyDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/admin/updateRole` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `GET` | `/v2/common/downloadCompanyLogo/{companyID}` | common · company | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
+| `POST` | `/v2/common/updateCompanyLogo` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/contacts/addContact` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/contacts/addContactReference/` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/contacts/addMultipleContact` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/contacts/blockOrUnBlockContact/` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/contacts/blockOrUnBlockMultipleContact` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/contacts/deleteContact/` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/contacts/importPhoneContacts/` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/contacts/updateInviteStatus/` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/group/addOrRemoveAdminAccess/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/group/addUserToGroup/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/group/createUserGroup/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/group/deleteGroup` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/v2/group/downloadGroupFullProfileImage/{groupKpostID}/{kpostID}` | Group | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID}` | Group | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/group/editGroupName` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/group/leaveFromGroup/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/group/removeGroupMember/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/group/removeGroupProfileImage` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/group/updateGroupProfileImage/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/clearKallBykallIds` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/v2/kall/clearKallHistory` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/endIndividualKall/` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/endKoolKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/getKallStatus` | Kall | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/kall/getKallStatusUsingKallID` | Kall | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/kall/initiateKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/joinScheduleKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/modifyKallMembers` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/reScheduleKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/scheduledKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/scheduledRepeatKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/updateKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/kall/updateSenderAndReceiverKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/deleteKatchUpMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/v2/katchup/download/{uuid}` | Katchup | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `GET` | `/v2/katchup/downloadAttachment/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/v2/katchup/downloadFromS3/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/v2/katchup/downloadThumbnail/{uuid}` | Katchup | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/v2/katchup/forwardKatchupMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/forwardKatchupMessageNew` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/forwardKatchupMultipleMsgs` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/forwardMessageBacktrackByMsgID` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/katchup/generateThumbnailUsingUUID` | Katchup | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/v2/katchup/getBulkMessageInfo/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/katchup/getMessagesByReferenceMessageList` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/katchup/getReadStatusGroupMessage/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/katchup/getReferenceMSGDetails/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/v2/katchup/getSharedMessageDetails/{msgID}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/katchup/getSharedMessageInfo/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/katchup/markOrUnmarkImportantMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/v2/katchup/mediaStreaming/{uuid}` | Katchup | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/v2/katchup/recallMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/reportAbuse` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/saveKatchupMessages/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/sendBulkKatchupMsg` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/sendBulkKatchupMsgMultiPart/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/sendKatchupMsgMultiPart/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/sendMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/sendMessageForForwardSelectedAttachment` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/addparticipants` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/createEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/createSchedule` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/deleteEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/editReport` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/editScheduleEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/saveReport` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/updateEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/updateScheduleRemarks` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/common/addOtherDomainContacts/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/common/clearStatusOfAllKmailsContacts` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/common/clearStatusOfKmailsContacts/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/common/convertMailAsPDF/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/common/deleteKmailWithDeletedBy/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/common/deleteOtherDomainContact/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/common/editOtherDomainContactsDetails/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/common/kmailGroupReadStatus/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `POST` | `/kmail5/v2/common/replyNotRequiredByReceiver/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `POST` | `/kmail5/v2/common/replyNotRequiredBySender/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `POST` | `/kmail5/v2/common/setKmailAsImportant/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/draft/deleteDraftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/draft/draftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/draft/draftMailMultiPart` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/kmail5/v2/readMail/download/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/kmail5/v2/readMail/downloadODAttachment` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/kmail5/v2/readMail/downloadThumbnail/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/kmail5/v2/readMail/draftMailContent` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `GET` | `/kmail5/v2/readMail/getCopiesInfo/{kmailID}` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/kmail5/v2/readMail/getKmailDetailsUsingKmailID` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `GET` | `/kmail5/v2/readMail/mediaStreaming/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/kmail5/v2/readMail/sentAndInboxMailContent/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `GET` | `/kmail5/v2/sentMail/bulkMail/status/{fromAddress}` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `POST` | `/kmail5/v2/sentMail/getMailCredentials/` | KMail | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/kmail5/v2/sentMail/postBulkMail` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/sentMail/postMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/ai/chatResponse` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/ai/messageAssist` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/ai/messages/{sessionId}` | KOS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/kword/create` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/kword/delete` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kword/deleteHeading` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/kword/documents/{docId}` | KOS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/kword/exitDocument/{docId}` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/kword/getAccessActivity/{docId}` | KOS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/kword/getAllRevision/{docId}` | KOS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/kword/isConvertToKad` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kword/joinDocument` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/kword/presence/{docId}` | KOS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/kword/saveContent` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kword/share` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kword/update` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | Login & session | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
+| `POST` | `/v2/signupLogin/setAccessCode` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/profile/changePassword` | Profile | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/profile/convertBase64ToImage` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/deactivateAccount/` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/profile/deleteCollegeDetail` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/deleteExperienceDetail` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/deleteSchoolDetail` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/deleteUniversityDetail` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/forgotPasswordOrKpostID/` | Profile | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
+| `GET` | `/v2/profile/removeCoverImage/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/v2/profile/removeProfileImage/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/saveOrUpdateCollegeDetails/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/saveOrUpdateExperienceDetails/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/saveOrUpdateOtherActivity/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/saveOrUpdateSchoolDetails/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/saveOrUpdateUniversityDetails/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/v2/profile/sendAccountDeactivationOtp/` | Profile | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
+| `GET` | `/v2/profile/sendPrimaryDeviceOtp/` | Profile | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
+| `GET` | `/v2/profile/sendPrimaryOrSecondaryDeviceOtp/{requestType}` | Profile | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
+| `POST` | `/v2/profile/setDeviceAsPrimary/` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/profile/setDeviceAsSecondary` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/profile/shareUserDetails` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/updateAboutYourself/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/updateBasicInformation/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/updateContactInformation/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/updateDesignation` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/updateDeviceAsPrimary/` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/profile/updateDeviceAsSecondary` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/profile/updatePrivacySettingDetails/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/updateProfileImage/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/updateSignatureImage` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/uploadCoverImage/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/uploadImageToS3` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/uploadProfileAttachments` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/generalSetting/changeTheme` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/generalSetting/fontSetting` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/generalSetting/kallNotification` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/generalSetting/katchupNotification` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/generalSetting/kmailNotification` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/deleteCustomizedInstantReply` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/deleteCustomizedSaluation` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/deleteLetterHead` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateCustomizedInstantReply` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateCustomizedSaluations` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignature` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureCompanyData` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureGraphics` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignaturePersonalData` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureSocialMediaLink` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureStyle` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureTemplateId` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/setLetterHead` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kmail5/v2/kmailSetting/updateMailCountDaysLimit` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 
 ---
 

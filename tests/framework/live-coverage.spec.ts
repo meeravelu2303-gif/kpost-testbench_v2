@@ -29,19 +29,61 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
       consumes: 'needs a real OTP in its payload; live has no bypass',
       requires: 'needs an OTP validated in an earlier step; live has no bypass',
     }[definition.otpDependent];
-    return `OTP — ${detail}`;
+    return `OFF-LIVE (OTP): ${detail}`;
   }
   if (definition.productionSafe) return undefined;
+  const p = definition.path;
+  // Attachment/media reads keyed by a real S3 uuid — need a real file upload, which no lifecycle
+  // does yet (the one genuine file-upload coverage gap). Not downloadCompanyLogo ({companyID}).
+  if (
+    /\/(download|downloadThumbnail|mediaStreaming)\/\{uuid\}|generateThumbnailUsingUUID/i.test(p)
+  ) {
+    return 'OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap';
+  }
   if (definition.sideEffect === 'global') {
-    return 'writes state shared by other users of the live application';
+    return 'OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle)';
   }
-  if (definition.sideEffect === 'external') return 'sends a real SMS or email';
-  if (definition.destructive) return 'writes or deletes on the live application';
+  if (definition.sideEffect === 'external') {
+    return 'OFF-LIVE by choice: sends a real SMS or email to a real recipient';
+  }
+  if (definition.destructive) {
+    // Public writes that persist a real shared record (enquiry / unsubscribe) have no lifecycle.
+    if (/\/common\/save(Enquiry|Unsubscriber)/i.test(p)) {
+      return 'OFF-LIVE by choice: persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle';
+    }
+    return 'COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning';
+  }
   const tags = definition.tags ?? [];
-  if (tags.some((tag) => /^needs-(message-id|kall-id|group|attachment)$/.test(tag))) {
-    return 'needs a real message/call/group id that only a write flow creates';
+  // Reads keyed by a RUNTIME id — a message/call/group/attachment/mail/document id that only a
+  // completed write produces. Detected by tag OR by a runtime-id path param. NOT a business-account
+  // block: these are covered by the gated lifecycle flows that create the id first.
+  const RUNTIME_ID_PATH = /\{(uuid|docId|sessionId|kmailID|msgID|eventID)\}/i;
+  if (
+    tags.some((tag) => /^needs-(message-id|kall-id|group|attachment)$/.test(tag)) ||
+    RUNTIME_ID_PATH.test(definition.path)
+  ) {
+    return 'COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints';
   }
-  return 'not cleared: needs a business account or company we do not have on live yet';
+  // The admin reporting/location reads keyed by a runtime ObjectId a create mints (covered by the
+  // admin lifecycle, not a business-account block).
+  if (
+    /getLocation|getLocationById|Reporting\w*Hierarchy|RolePostingByCompanyIdAndEmployeeId/.test(
+      definition.path,
+    )
+  ) {
+    return 'COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints';
+  }
+  // KMail reads that need a real mail/kmailID (the id is in the body, not the path) — covered by the
+  // KMail lifecycle, not a business-account block.
+  if (/readMail|kmailGroupReadStatus|replyNotRequired|bulkMail\/status/.test(definition.path)) {
+    return 'COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints';
+  }
+  return 'OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s)';
+}
+
+/** Split the blocked set: truly not driven on live vs covered on live by a gated lifecycle. */
+function isTrulyOffLive(reason: string): boolean {
+  return reason.startsWith('OFF-LIVE');
 }
 
 function moduleOf(definition: EndpointDefinition): string {
@@ -90,8 +132,9 @@ test.describe('live endpoint coverage @framework', () => {
       '**GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`',
       '(`npm run test:framework`). Edit the endpoint definitions, not this file.',
       '',
-      `Target: the live application (\`devapi2.kpostindia.com\`). Scope: **PERSONAL** accounts only —`,
-      'no business account exists on live yet.',
+      `Target: the live application (\`devapi2.kpostindia.com\`). Scope: PERSONAL accounts plus the`,
+      'BUSINESS_S/M/L company accounts (company reads + user-management now run on live).',
+      'A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.',
       '',
       '| | Count |',
       '| - | ----: |',
@@ -146,6 +189,76 @@ test.describe('live endpoint coverage @framework', () => {
     const outPath = path.join(ROOT_DIR, 'docs', 'LIVE-ENDPOINTS.md');
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
+
+    // This file lists ONLY the endpoints NOT tested on the live application. The other blocked
+    // endpoints (writes + runtime-id reads) ARE tested on live via the gated lifecycle flows, so they
+    // are deliberately excluded here — listing them would misrepresent them as untested.
+    const coveredCount = blocked.filter((d) => !isTrulyOffLive(blockedReason(d) ?? '')).length;
+    const offLive = blocked.filter((d) => isTrulyOffLive(blockedReason(d) ?? ''));
+
+    // A short category label for the count table (derived from the reason).
+    const category = (d: EndpointDefinition): string => {
+      const r = blockedReason(d) ?? '';
+      if (r.includes('OTP')) return 'OTP — no bypass on live (permanent)';
+      if (r.includes('uploaded attachment'))
+        return 'Attachment file-upload — the one REAL coverage gap';
+      if (r.includes('SMS or email')) return 'Real SMS / email to a real recipient';
+      if (r.includes('shared record')) return 'Public record write (enquiry / unsubscribe)';
+      if (r.includes('shared by the whole environment')) return 'Shared / global write (by choice)';
+      return 'Needs setup we lack (business login 403, company logo 500)';
+    };
+    const catCounts = new Map<string, number>();
+    for (const d of offLive) catCounts.set(category(d), (catCounts.get(category(d)) ?? 0) + 1);
+
+    const stripReason = (d: EndpointDefinition): string =>
+      (blockedReason(d) ?? '').replace(/^OFF-LIVE[^:]*:\s*/, '');
+
+    const modules = new Map<string, EndpointDefinition[]>();
+    for (const d of offLive) modules.set(moduleOf(d), [...(modules.get(moduleOf(d)) ?? []), d]);
+
+    const blockedLines = [
+      '# Endpoints NOT tested on the live application',
+      '',
+      '**GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`.',
+      '',
+      `**${offLive.length} of ${all.length}** registered endpoints are **not driven against the live app**.`,
+      `The rest ARE tested on live: **${runs.length}** on the default run + **${coveredCount}** via the`,
+      'gated self-cleaning lifecycle flows (`npm run flow:file:api`). This file lists ONLY the not-tested.',
+      '',
+      'They are not silent gaps — each is refused for a permanent constraint or a deliberate safety',
+      'choice, and every one is still contract-validated OFF live.',
+      '',
+      '## Count by category',
+      '',
+      '| Category | Count |',
+      '| -------- | ----: |',
+      ...[...catCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, n]) => `| ${cat} | ${n} |`),
+      `| **Total not tested on live** | **${offLive.length}** |`,
+      '',
+      '---',
+      '',
+      '## The endpoints, module by module',
+      '',
+      ...[...modules.entries()]
+        .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
+        .flatMap(([module, eps]) => [
+          `### ${module} (${eps.length})`,
+          '',
+          '| Method | Path | Why not tested on live |',
+          '| ------ | ---- | ---------------------- |',
+          ...eps
+            .slice()
+            .sort((a, b) => a.path.localeCompare(b.path))
+            .map((d) => `| \`${d.method}\` | \`${d.path}\` | ${stripReason(d)} |`),
+          '',
+        ]),
+    ];
+    fs.writeFileSync(
+      path.join(ROOT_DIR, 'docs', 'BLOCKED-ENDPOINTS.md'),
+      `${blockedLines.join('\n')}\n`,
+    );
 
     // Every endpoint lands in exactly one list, so the file can never omit one silently.
     expect(runs.length + blocked.length, 'every endpoint is classified').toBe(all.length);

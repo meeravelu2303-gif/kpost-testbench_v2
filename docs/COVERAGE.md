@@ -10,7 +10,7 @@ cannot drift from what is actually tested.
 | - | ----: |
 | Documented (workbook, usable) | 446 |
 | **Registered & tested** | **345** |
-| — of those, run on live | 122 |
+| — of those, run on live | 126 |
 | In "built" modules | 423 |
 
 | Module | Documented | Tested | Live | Status | Note |
@@ -19,7 +19,7 @@ cannot drift from what is actually tested.
 | `kmail` | 80 | 79 | 33 | built | KMail — reads live, compose/draft/settings write lifecycle (host kmail5, /kmail5/v2) |
 | `profile` | 45 | 45 | 12 | built | profile — full API + write lifecycle + screens |
 | `katchup` | 36 | 36 | 10 | built | messaging — full API + write lifecycle + screen |
-| `common` | 32 | 32 | 17 | built | reference data, identity, company, OTP (OTP writes gated) |
+| `common` | 32 | 32 | 21 | built | reference data, identity, company, OTP (OTP writes gated) |
 | `kall` | 20 | 20 | 6 | built | calling — full API + write lifecycle + screen |
 | `contacts` | 16 | 16 | 8 | built | address book — reads live, writes gated lifecycle |
 | `dairyschedule` | 14 | 14 | 5 | built | KDiary — schedules/events/reports; reads live, writes gated |

@@ -228,6 +228,81 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-16 — `docs/BLOCKED-ENDPOINTS.md` rebuilt: module-by-module, covered-vs-truly-off-live
+
+The owner asked which endpoints are TRULY not tested on live (vs merely off the default run).
+`blockedReason()` now classifies every blocked endpoint as **COVERED via lifecycle** or **OFF-LIVE**.
+`docs/BLOCKED-ENDPOINTS.md` was refocused to list **ONLY the not-tested-on-live endpoints** (41), with
+a count-by-category table and a module-by-module breakdown; the lifecycle-covered ones are excluded
+(listing them would misrepresent them as untested). The two coverage tiers behind it:
+
+- **Part A — covered on live via the gated lifecycle (172):** every destructive write (driven by its
+  module `*_LIFECYCLE`, self-cleaning) and runtime-id read (message/call/group/mail/document/ObjectId,
+  minted by a write flow). Off the DEFAULT run only because that run fuzzes every field. Run with
+  `npm run flow:file:api`.
+- **Part B — TRULY off the live app (41):** OTP (no bypass), global/shared writes by choice (account
+  provisioning `addingUserByAdmin`/`terminateUser`/`resetPassword`, company data, app version, password),
+  real SMS/email, public record writes (`saveEnquiry`/`saveUnsubscriber`), the **attachment file-upload
+  gap** (~8: `download`/`downloadThumbnail`/`mediaStreaming`/`generateThumbnailUsingUUID` — need a real
+  S3 upload the bench does not do yet — the ONE genuine coverage gap), and 2 needs-setup reads
+  (`adminUserLogin` 403, `downloadCompanyLogo` 500). All contract-validated off live.
+
+So of 336 registered: **123 run on the default live run, 172 covered via lifecycle, 41 truly off-live**
+— and the only real gap is attachment file-upload. `npm run check` clean; 71 framework guards pass.
+
+### 2026-09-16 — Business/company reads enabled on live; blocked-endpoint reasons made honest; new file
+
+The owner asked why so many endpoints skip on live now that business accounts exist, to enable the
+company tests, and to list the blocked endpoints clearly in one file. Three things:
+
+- **4 company/business reads enabled on live** (`productionSafe`), using allowlisted BUSINESS_M data:
+  `mobileNoExistInsideCompany` (admin's mobile in company 1067 — a real membership check),
+  `uniqueNameExist`, `generateDomainAndUniqueName`, `getCompanyNameExistOnKpostAndKsmacc` (a
+  known-absent, now-allowlisted company name). Added `companyNameAbsent` to `IDENTITY_FIELDS` so the
+  guard permits it. **Runs-on-live 119 → 123**, blocked 217 → 213.
+- **The "needs a business account" catch-all was mostly WRONG** — it lumped 27 endpoints, but the real
+  reasons are: **25 need a runtime id** (message/mail/document/attachment from a write), **7 KMail
+  mail/kmailID reads**, **5 admin ObjectId reads**, and only **2 genuinely need setup we lack**
+  (business-tier `adminUserLogin`, which our M/L accounts answer 403 — a finding; and the company-logo
+  download, a known 500). `blockedReason()` in `live-coverage.spec.ts` now categorises accurately by
+  runtime-id path/tag, so the false "needs a business account" impression is gone. The writes (144),
+  OTP (15) and runtime-id reads (37) are all **covered by the gated lifecycle flows**, not gaps.
+- **New file `docs/BLOCKED-ENDPOINTS.md`** — the single clear list of everything that does NOT run on
+  live, grouped by reason with a summary table, generated every framework run. `REPORT.md` also gained
+  a per-reason skip breakdown (earlier this day).
+
+`npm run check` clean; 71 framework guards pass. So the business/company account surface is now tested
+on live (company reads + Phase-A/B admin + user-management), and what stays blocked is documented,
+grouped, and honest — almost all covered by lifecycle flows rather than by a missing business account.
+
+### 2026-09-16 — KPost-API filing review: 2 false-positive classes fixed; report explains skips + dedup
+
+Reviewing the owner's KPost-API preview (`reports/bugs/REPORT.md`, 200 would-file), found and fixed
+two false-positive classes that would have filed **5 invalid CRITICALs**, and answered the "will it
+duplicate?" question with a live cross-check:
+
+- **Sensitive-data false positive** — `secretMessageExpireTimeAsLong` (a disappearing-message epoch
+  timestamp) was flagged as an exposed secret because the field name contains "secret". Added
+  `BENIGN_SECRET_FIELD` to `security.sensitive-data.validator.ts` excluding the disappearing-message
+  domain (`secret{Message,Timestamp,Icon,Option,Scheduled,Delete,Timers,Expire}…`); genuine
+  `secretKey`/`clientSecret`/`secretToken` still flag. Kills 3 CRITICALs (dashboard ×2, katchup ×1).
+- **Image-download 204 false positive** — `downloadProfileImage`/`downloadFullProfileImage` return
+  **204 when the account has no image**, which is correct; the status validator expected 200. Added
+  `expectedStatus: [200, 204]` to both. `downloadCoverImage` stays red (its **500** on no-image IS the
+  real bug). Kills 2 CRITICALs.
+- **Dedup proven, not assumed** — cross-referenced the report's 200 `[KP-]` tags against the 187 live
+  KPost bugs: **173 already exist → will be COMMENTED (reproduced), 27 are new → CREATED.** The dry-run
+  "would-file 200" is misleading because **preview skips the dedup search**; only the live `bugs:file`
+  dedups. (4 of the 5 false positives already sit in Bugzilla from a prior run — owner to mark INVALID;
+  the 1 new one is now prevented.)
+- **Report now explains the skips** — `bug-report.ts` buckets the ~15k SKIPPED checks by reason
+  (write/destructive endpoint · mutating-attack probe · OTP · needs-runtime-id · N/A-endpoint) in a
+  "Why N checks skipped" table, so the large skip count reads as the production safety controls at
+  work, not a coverage gap.
+
+`npm run check` clean; 71 framework guards pass. Next `bugs:preview:kpost` regenerates the report
+without the 5 false positives (200→~196 would-file, 27→26 new) and with the skip breakdown.
+
 ### 2026-09-16 — Perfect filing setup: correct components on ALL products; KMail systemic component added
 
 Before the owner's KPost+KMail filing run (dev team waiting), verified every bug routes to the CORRECT

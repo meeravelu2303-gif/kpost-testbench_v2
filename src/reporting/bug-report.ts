@@ -61,6 +61,46 @@ function runTotals(reports: readonly ValidationReport[]): RunTotals {
   };
 }
 
+/**
+ * Buckets each SKIPPED check by WHY it was skipped, so the report explains the large skip count
+ * (the three production safety controls at work), not just its size. Order matters — the first
+ * pattern that matches wins, so specific reasons (OTP, needs-id) are tested before generic ones.
+ */
+const SKIP_BUCKETS: readonly (readonly [string, RegExp])[] = [
+  ['OTP-gated — no OTP bypass on the live app', /\botp\b/i],
+  [
+    'Needs a runtime id (message / call / group) only a write flow creates',
+    /needs[- ]a real|needs-[a-z]+-id|only a write flow|a real .*id that/i,
+  ],
+  [
+    'Mutating / attack probe — unsafe to send at the live app',
+    /mutat|inject|\bxss\b|\battack\b|cross[- ]tenant|second tenant|string fields to attack|fuzz|escalat/i,
+  ],
+  [
+    'Write / destructive endpoint — not run on the live app',
+    /real sms|real email|real otp|shared by the whole environment|test_env=production|allow_destructive|not cleared for live|productionsafe/i,
+  ],
+  [
+    'Not applicable to this endpoint (no schema / principal / rate-limit / token)',
+    /no request schema|no response|documents no error|no principal|no rate limit|disabled for this endpoint|no expired token|no json responses|every role is allowed/i,
+  ],
+];
+
+/** Skip counts grouped by reason, most first, for the report's "why skipped" section. */
+function skipBreakdown(reports: readonly ValidationReport[]): { label: string; count: number }[] {
+  const skipped = reports.flatMap((r) => r.results).filter((r) => r.status === 'SKIPPED');
+  const counts = new Map<string, number>();
+  for (const r of skipped) {
+    const msg = r.message ?? '';
+    const hit = SKIP_BUCKETS.find(([, re]) => re.test(msg));
+    const label = hit ? hit[0] : 'Other';
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 /** One row per developer: product, owner, how many tickets this run put on their queue. */
 function byDeveloper(
   input: BugReportInput,
@@ -145,6 +185,18 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
     `| — warnings | ${t.warnings} |`,
     `| — skipped (blocked on live, by design) | ${t.skipped} |`,
     '',
+    ...(t.skipped
+      ? [
+          `**Why ${t.skipped} checks skipped** — the three production safety controls, not a coverage gap.`,
+          'Each has a reason (see `docs/LIVE-ENDPOINTS.md`); the write PROCESSES are covered separately by',
+          'the gated self-cleaning lifecycle flows (`*_LIFECYCLE`), off during a filing run.',
+          '',
+          '| Reason skipped | Count |',
+          '| -------------- | ----: |',
+          ...skipBreakdown(input.validationReports).map((b) => `| ${b.label} | ${b.count} |`),
+          '',
+        ]
+      : []),
     '## 2. Defects',
     '',
     `The ${t.failed} failed checks collapse to **${distinct} distinct defects** (one ticket each; a`,

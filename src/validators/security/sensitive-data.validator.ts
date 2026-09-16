@@ -4,6 +4,16 @@ import { walkJson } from '@utils/json';
 
 const SENSITIVE_KEY =
   /pass(word|wd)?(hash)?$|^pwd$|secret|api[-_]?key|private[-_]?key|^ssn$|credit[-_]?card|card[-_]?number|^cvv$|^pin$|refresh[-_]?token|access[-_]?token|^token$/i;
+
+/**
+ * KPost's **disappearing-message** ("secret message") domain fields match `secret` but are
+ * timestamps, flags, options and icons — NOT credentials. Flagging `secretMessageExpireTimeAsLong`
+ * (a Long epoch) as an exposed secret is a false positive (recorded in CLAUDE.md), so these are
+ * excluded here globally. Genuinely credential-like `secret` fields (`secretKey`, `clientSecret`,
+ * `secretToken`) do NOT match this and stay flagged.
+ */
+const BENIGN_SECRET_FIELD =
+  /^secret(message|timestamp|icon|option|scheduled?|delete|timers?|expire)/i;
 const JWT_VALUE = /^eyJ[\w-]+\.[\w-]+\.[\w-]*$/;
 const PRIVATE_KEY_VALUE = /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/;
 const CARD_CANDIDATE = /^\d{13,19}$/;
@@ -20,7 +30,7 @@ function passesLuhn(digits: string): boolean {
 
 function findingFor(key: string, value: unknown): string | undefined {
   if (value === null || value === undefined || value === '') return undefined;
-  if (SENSITIVE_KEY.test(key)) return 'sensitive field name';
+  if (SENSITIVE_KEY.test(key) && !BENIGN_SECRET_FIELD.test(key)) return 'sensitive field name';
   if (typeof value !== 'string') return undefined;
   if (JWT_VALUE.test(value)) return 'JWT value';
   if (PRIVATE_KEY_VALUE.test(value)) return 'private key';

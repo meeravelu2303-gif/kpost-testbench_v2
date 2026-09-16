@@ -58,6 +58,8 @@ export const companyDetailsByMobileAndProductApi = defineKpostEndpoint({
 
 export const companyNameExistApi = defineKpostEndpoint({
   id: 'common-company-name-exist',
+  // Live: read-only existence check with a known-absent, allowlisted company name (names no one).
+  productionSafe: true,
   method: 'GET',
   path: '/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}',
   summary: 'Check whether a company name exists on KPost or KSMACC',

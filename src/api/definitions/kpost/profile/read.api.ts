@@ -127,6 +127,9 @@ export const downloadProfileImageApi = defineProfileEndpoint({
   productionSafe: true,
   envelope: false,
   contentType: 'image/png',
+  // 204 (no image present) is a CORRECT response, not a defect — the QA account may have no image.
+  // Only 200 (image) or 204 (none) are valid; a 500 here would (rightly) still fail.
+  expectedStatus: [200, 204],
   request: pathParams(() => ({ kpostID: testData.kpostId })),
 });
 
@@ -139,6 +142,8 @@ export const downloadFullProfileImageApi = defineProfileEndpoint({
   productionSafe: true,
   envelope: false,
   contentType: 'image/png',
+  // 204 (no image) is correct — see downloadProfileImage above.
+  expectedStatus: [200, 204],
   request: pathParams(() => ({ kpostID: testData.kpostId })),
 });
 
