@@ -8,13 +8,13 @@ no business account exists on live yet.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **112** |
-| Blocked | 212 |
-| Total registered | 324 |
+| **Runs on live** | **119** |
+| Blocked | 217 |
+| Total registered | 336 |
 
 ---
 
-## Runs on live — 112
+## Runs on live — 119
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -49,6 +49,13 @@ reviewer can check against the comment beside it.
 | `GET` | `/v2/common/msStatus/` | common |
 | `POST` | `/v2/common/pinCode` | common |
 | `POST` | `/v2/common/postalPinCode/` | common |
+| `POST` | `/admin/displayNameSuggestion` | common · company |
+| `GET` | `/admin/getBankAndCompanyDetails/{companyID}` | common · company |
+| `GET` | `/admin/userManagementDetails/{companyID}` | common · company |
+| `POST` | `/v2/admin/createKpostIDAndDesignationSuggestion` | common · company |
+| `POST` | `/v2/common/getCompanyDetails` | common · company |
+| `POST` | `/v2/common/getCompanyDetailsByAdmin` | common · company |
+| `POST` | `/v2/common/getCompanyDetailsByMobileNoAndproductId` | common · company |
 | `GET` | `/kmail5/v2/common/frequentKmailContact/` | Contacts |
 | `POST` | `/kmail5/v2/common/knownPostBoxContacts/` | Contacts |
 | `GET` | `/kmail5/v2/common/miscellaneousContacts/` | Contacts |
@@ -137,7 +144,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 212
+## Blocked on live — 217
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -183,11 +190,16 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/common/updateFlutterAppVersion` | common | writes state shared by other users of the live application |
 | `POST` | `/v2/common/validateMailOTP/` | common | OTP — needs a real OTP in its payload; live has no bypass |
 | `POST` | `/v2/common/validateOTP/` | common | OTP — needs a real OTP in its payload; live has no bypass |
+| `POST` | `/admin/addingUserByAdmin/` | common · company | writes state shared by other users of the live application |
+| `POST` | `/admin/createOrRemoveBackupAdmin/` | common · company | writes state shared by other users of the live application |
+| `POST` | `/admin/holdOrRelease/` | common · company | writes state shared by other users of the live application |
 | `POST` | `/admin/removeCompanyLogo` | common · company | writes state shared by other users of the live application |
+| `POST` | `/admin/resetPassword/` | common · company | writes state shared by other users of the live application |
+| `POST` | `/admin/terminateUser/` | common · company | writes state shared by other users of the live application |
+| `POST` | `/v2/admin/updateBankAccountDetails` | common · company | writes state shared by other users of the live application |
+| `POST` | `/v2/admin/updateCompanyDetails` | common · company | writes state shared by other users of the live application |
+| `POST` | `/v2/admin/updateRole` | common · company | writes state shared by other users of the live application |
 | `GET` | `/v2/common/downloadCompanyLogo/{companyID}` | common · company | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/common/getCompanyDetails` | common · company | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/common/getCompanyDetailsByAdmin` | common · company | not cleared: needs a business account or company we do not have on live yet |
-| `POST` | `/v2/common/getCompanyDetailsByMobileNoAndproductId` | common · company | not cleared: needs a business account or company we do not have on live yet |
 | `GET` | `/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}` | common · company | not cleared: needs a business account or company we do not have on live yet |
 | `POST` | `/v2/common/updateCompanyLogo` | common · company | writes state shared by other users of the live application |
 | `POST` | `/v2/contacts/addContact` | Contacts | writes or deletes on the live application |

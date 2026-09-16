@@ -34,7 +34,7 @@ export const userLoginApi = defineKpostEndpoint({
   // Live: Essential: every token comes from here. Logs in OUR account only.
   // It creates a session row, which is what a login does - it changes nothing a customer owns.
   productionSafe: true,
-  requirements: ['FR-S09', 'FR-S10', 'NFR-SEC01'],
+  requirements: ['FR-SL-026', 'NFR-SEC01'],
   method: 'POST',
   path: '/v2/signupLogin/userLogin/',
   summary: 'Exchange KPost credentials for an access token',
@@ -60,7 +60,7 @@ export const userLoginApi = defineKpostEndpoint({
 
 export const adminUserLoginApi = defineKpostEndpoint({
   id: 'signup-login-admin-user-login',
-  requirements: ['FR-S09', 'FR-S10'],
+  requirements: ['FR-SL-026'],
   method: 'POST',
   path: '/signupLoginForMediumAndLarge/adminUserLogin',
   summary: 'Log in an administrator of a medium or large business',
@@ -109,7 +109,7 @@ export const generateJwTokensApi = defineKpostEndpoint({
   id: 'signup-login-generate-jwt',
   // Live: Exchanges OUR OWN refresh token. Reads nothing belonging to anyone else.
   productionSafe: true,
-  requirements: ['FR-S10', 'NFR-SEC01'],
+  requirements: ['FR-SL-026', 'NFR-SEC01'],
   method: 'POST',
   path: '/v2/signupLogin/generateJWTokens/',
   summary: 'Exchange a refresh token for a new access token',
@@ -240,7 +240,7 @@ export const fetchUserDetailsApi = defineKpostEndpoint({
   id: 'signup-login-fetch-user-details',
   // Live: reads OUR OWN account, asked with QA_KPOST_ID.
   productionSafe: true,
-  requirements: ['FR-S09'],
+  requirements: ['FR-SL-024'],
   method: 'POST',
   path: '/v2/signupLogin/fetchUserDetails/',
   /*

@@ -17,7 +17,7 @@ const ABSENT_UUID = '00000000-0000-4000-8000-000000000000';
 
 export const downloadApi = defineKatchupEndpoint({
   id: 'katchup-download',
-  requirements: ['FR-K03'],
+  requirements: ['FR-KU-016'],
   method: 'GET',
   path: '/v2/katchup/download/{uuid}',
   summary: 'Download a message attachment',
@@ -30,7 +30,7 @@ export const downloadApi = defineKatchupEndpoint({
 
 export const downloadAttachmentApi = defineKatchupEndpoint({
   id: 'katchup-download-attachment',
-  requirements: ['FR-K03'],
+  requirements: ['FR-KU-016'],
   method: 'GET',
   path: '/v2/katchup/downloadAttachment/{uuid}',
   summary: 'Download an attachment (alternate route)',
@@ -43,7 +43,7 @@ export const downloadAttachmentApi = defineKatchupEndpoint({
 
 export const downloadFromS3Api = defineKatchupEndpoint({
   id: 'katchup-download-from-s3',
-  requirements: ['FR-K03'],
+  requirements: ['FR-KU-016'],
   method: 'GET',
   path: '/v2/katchup/downloadFromS3/{uuid}',
   summary: 'Download an attachment stored in S3',

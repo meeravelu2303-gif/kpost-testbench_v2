@@ -52,7 +52,7 @@ export interface KpostEndpointConfig {
   summary: string;
   /** Bugzilla component candidates and test filters; `kpost-api` is added automatically. */
   tags?: readonly string[];
-  /** FRD requirement ids this endpoint exercises, e.g. ['FR-S09', 'BR-S01']. */
+  /** FRD requirement ids this endpoint exercises, e.g. ['FR-SL-026', 'NFR-SEC01']. */
   requirements?: readonly string[];
   request?: RequestFactory;
   /** Public endpoints need no token. Default for this module: no authentication required. */

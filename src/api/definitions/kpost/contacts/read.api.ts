@@ -36,7 +36,7 @@ export const myUnknownContactsApi = defineContactsEndpoint({
 
 export const myGroupsApi = defineContactsEndpoint({
   id: 'contacts-my-groups',
-  requirements: ['FR-K06'],
+  requirements: ['FR-GM-002'],
   method: 'POST',
   path: '/v2/contacts/myGroups/',
   summary: "The caller's groups",

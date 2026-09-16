@@ -30,7 +30,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 | Sent Mail - Compose & Send | 4 |
 | Translation | 1 |
 
-## KPost API (216 endpoints)
+## KPost API (228 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
@@ -38,12 +38,12 @@ each target exists in the live product, so tickets can never route to a non-exis
 | Katchup Messaging V2 | 36 |
 | Common Reference Data & Utilities V2 | 20 |
 | Kall (Voice/Video) V2 - current | 20 |
+| Company Administration | 19 |
 | KWord Documents | 18 |
 | Contacts Directory V2 | 16 |
 | Authentication V2 | 14 |
 | Kdiary - Schedules, Events & Reports | 14 |
 | Groups V2 | 11 |
-| Company Administration | 7 |
 | General Settings | 7 |
 | Integration - AWS S3 Pre-signed URLs | 4 |
 | Dashboard V2 | 3 |

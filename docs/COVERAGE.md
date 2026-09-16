@@ -9,17 +9,17 @@ cannot drift from what is actually tested.
 | | Count |
 | - | ----: |
 | Documented (workbook, usable) | 446 |
-| **Registered & tested** | **333** |
-| — of those, run on live | 115 |
+| **Registered & tested** | **345** |
+| — of those, run on live | 122 |
 | In "built" modules | 423 |
 
 | Module | Documented | Tested | Live | Status | Note |
 | ------ | ---------: | -----: | ---: | ------ | ---- |
-| `admin` | 125 | 39 | 11 | built | Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here |
+| `admin` | 125 | 51 | 15 | built | Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here |
 | `kmail` | 80 | 79 | 33 | built | KMail — reads live, compose/draft/settings write lifecycle (host kmail5, /kmail5/v2) |
 | `profile` | 45 | 45 | 12 | built | profile — full API + write lifecycle + screens |
 | `katchup` | 36 | 36 | 10 | built | messaging — full API + write lifecycle + screen |
-| `common` | 32 | 32 | 14 | built | reference data, identity, company, OTP (OTP writes gated) |
+| `common` | 32 | 32 | 17 | built | reference data, identity, company, OTP (OTP writes gated) |
 | `kall` | 20 | 20 | 6 | built | calling — full API + write lifecycle + screen |
 | `contacts` | 16 | 16 | 8 | built | address book — reads live, writes gated lifecycle |
 | `dairyschedule` | 14 | 14 | 5 | built | KDiary — schedules/events/reports; reads live, writes gated |
@@ -40,20 +40,8 @@ cannot drift from what is actually tested.
 
 ### Uncovered documented paths (the backlog, module by module)
 
-**`admin`** (86) — built
+**`admin`** (74) — built
 
-- `/admin/addingUserByAdmin/`
-- `/admin/createOrRemoveBackupAdmin/`
-- `/admin/displayNameSuggestion`
-- `/admin/getBankAndCompanyDetails/{companyID}`
-- `/admin/holdOrRelease/`
-- `/admin/resetPassword/`
-- `/admin/terminateUser/`
-- `/admin/userManagementDetails/{companyID}`
-- `/v2/admin/createKpostIDAndDesignationSuggestion`
-- `/v2/admin/updateBankAccountDetails`
-- `/v2/admin/updateCompanyDetails`
-- `/v2/admin/updateRole`
 - `/workplaceHierarchy/update`
 - `/workplaceHierarchy/save`
 - `/workplaceHierarchy/delete`

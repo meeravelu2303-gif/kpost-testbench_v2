@@ -20,6 +20,13 @@ process.env.TEST_RUN_ID ||= `run-${randomUUID()}`;
 const EnvSchema = z.object({
   TEST_ENV: z.enum(['local', 'dev', 'qa', 'staging', 'production']).default('local'),
   BASE_URL: z.url().default('https://playwright.dev'),
+  /**
+   * The Admin/HR-Setup UI origin (`kpostadmin.kpostindia.com`), a SEPARATE front end from the main
+   * KPost app (`BASE_URL`). Backed by `ADMIN_API_BASE_URL` (adminmodule). SSO: the same KPost login
+   * token is planted in this origin's localStorage (`accessToken` + `AuthUser` + `companyID`), the
+   * way the app's own `Callback.js` does. Only the `admin-ui` Playwright project uses it.
+   */
+  ADMIN_UI_BASE_URL: z.url().optional(),
   API_BASE_URL: z.url().optional(),
   /**
    * Per-module API base URLs. KPost is one product built from separately maintained modules

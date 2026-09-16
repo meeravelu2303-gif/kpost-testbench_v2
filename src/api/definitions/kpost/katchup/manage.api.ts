@@ -18,7 +18,7 @@ const MANAGE_TAGS = ['katchup-manage'] as const;
 
 export const recallMessageApi = defineKatchupEndpoint({
   id: 'katchup-recall-message',
-  requirements: ['FR-K10', 'BR-K03'],
+  requirements: ['FR-KU-028', 'FR-KU-028'],
   method: 'POST',
   path: '/v2/katchup/recallMessage/',
   summary: "Recall a sent message, removing it from the recipient's view",
@@ -32,7 +32,7 @@ export const recallMessageApi = defineKatchupEndpoint({
 
 export const deleteMessageApi = defineKatchupEndpoint({
   id: 'katchup-delete-message',
-  requirements: ['FR-K20'],
+  requirements: ['FR-KU-042'],
   method: 'POST',
   path: '/v2/katchup/deleteKatchUpMessage/',
   summary: 'Delete a sent message',
@@ -58,7 +58,7 @@ export const markImportantApi = defineKatchupEndpoint({
 
 export const saveMessagesApi = defineKatchupEndpoint({
   id: 'katchup-save-messages',
-  requirements: ['FR-K18'],
+  requirements: ['FR-KU-040'],
   method: 'POST',
   path: '/v2/katchup/saveKatchupMessages/',
   summary: 'Save (bookmark) one or more messages',
@@ -71,7 +71,7 @@ export const saveMessagesApi = defineKatchupEndpoint({
 
 export const reportAbuseApi = defineKatchupEndpoint({
   id: 'katchup-report-abuse',
-  requirements: ['FR-K24'],
+  requirements: ['FR-KU-047'],
   method: 'POST',
   path: '/v2/katchup/reportAbuse',
   summary: 'Report a received message as abusive',
@@ -96,7 +96,7 @@ export const reportAbuseApi = defineKatchupEndpoint({
  */
 export const forwardMessageApi = defineKatchupEndpoint({
   id: 'katchup-forward-message',
-  requirements: ['FR-K15'],
+  requirements: ['FR-KU-035'],
   method: 'POST',
   path: '/v2/katchup/forwardKatchupMessage/',
   summary: 'Forward a message (reveal sender)',
@@ -114,7 +114,7 @@ export const forwardMessageApi = defineKatchupEndpoint({
 
 export const forwardMessageNewApi = defineKatchupEndpoint({
   id: 'katchup-forward-message-new',
-  requirements: ['FR-K15', 'FR-K16'],
+  requirements: ['FR-KU-035', 'FR-KU-037'],
   method: 'POST',
   path: '/v2/katchup/forwardKatchupMessageNew',
   summary: 'Forward a message (newer path, reveal/hidden)',
@@ -132,7 +132,7 @@ export const forwardMessageNewApi = defineKatchupEndpoint({
 
 export const forwardMultipleApi = defineKatchupEndpoint({
   id: 'katchup-forward-multiple',
-  requirements: ['FR-K16'],
+  requirements: ['FR-KU-037'],
   method: 'POST',
   path: '/v2/katchup/forwardKatchupMultipleMsgs',
   summary: 'Forward several messages at once',

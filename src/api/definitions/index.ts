@@ -4,6 +4,7 @@ import { loginApi } from './auth.api';
 import { companyApis } from './companies.api';
 import { dictionaryApis } from './dictionary.api';
 import { healthCheckApi } from './health.api';
+import { adminUserManagementApis } from './kpost/admin/user-management.api';
 import { commonApis } from './kpost/common/index';
 import { groupApis } from './kpost/group/index';
 import { katchupApis } from './kpost/katchup/index';
@@ -35,6 +36,8 @@ export const apiRegistry = new ApiRegistry().register(
   ...dictionaryApis,
   // KPost common module - public endpoints, no token required.
   ...commonApis,
+  // Business-admin / User Management (/admin/* on devapi2) - reads live, member writes gated.
+  ...adminUserManagementApis,
   // KPost Signup & Login - the gate, and the source of every module's token.
   ...signupLoginApis,
   // KPost Katchup - instant messaging. See docs/katchup-flow.md.

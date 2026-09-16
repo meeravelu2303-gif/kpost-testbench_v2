@@ -420,6 +420,51 @@ test.describe('KPost Katchup · feature flow', () => {
     await cleanup(endpoints, A, seed.msgID);
   });
 
+  test('a disappearing / secret message is accepted in both modes (FR-KU-017..024) @api @katchup @security', async ({
+    endpoints,
+  }) => {
+    /*
+     * Disappearing / Secret Messages — the compose lock-icon feature (Katchup FRD FR-KU-017..024).
+     * The frontend composer (WriteMessage.js) offers two modes and adds two fields to the normal send:
+     *   DeleteAfterRead     → isVanished: true            (vanishes once the recipient opens it)
+     *   DeleteAsPerSchedule → secretMessageExpireTime: ms (auto-deletes at that future time)
+     * Both fields already exist in sendShape(); this proves the API accepts and carries them.
+     */
+
+    // Mode 1 — Disappear After Reading.
+    const afterRead = await send(endpoints, A, {
+      receiver: B.username,
+      actualMessage: `QA vanish-after-read ${Date.now()}`,
+      isVanished: true,
+      secretMessageExpireTime: null,
+    });
+    expect.soft(afterRead.status, 'disappear-after-reading send is accepted').toBeLessThan(300);
+    expect.soft(afterRead.msgID, 'a msgID is issued for the vanishing message').toBeTruthy();
+    const row1 = firstRow(afterRead.body);
+    if (row1 && 'isVanished' in row1) {
+      expect.soft(row1.isVanished, 'the message is flagged as vanishing (isVanished)').toBeTruthy();
+    }
+
+    // Mode 2 — Disappear As Per Schedule (auto-delete at a future time, one hour out).
+    const expireAt = Date.now() + 60 * 60 * 1000;
+    const scheduled = await send(endpoints, A, {
+      receiver: B.username,
+      actualMessage: `QA vanish-scheduled ${Date.now()}`,
+      isVanished: false,
+      secretMessageExpireTime: expireAt,
+    });
+    expect.soft(scheduled.status, 'disappear-as-per-schedule send is accepted').toBeLessThan(300);
+    const row2 = firstRow(scheduled.body);
+    if (row2 && row2.secretMessageExpireTime != null) {
+      expect
+        .soft(Number(row2.secretMessageExpireTime), 'the scheduled expiry is carried back')
+        .toBeGreaterThan(Date.now());
+    }
+
+    await cleanup(endpoints, A, afterRead.msgID);
+    await cleanup(endpoints, A, scheduled.msgID);
+  });
+
   test('send variants (multipart, bulk) and forward variants, all self-cleaning @api @katchup', async ({
     endpoints,
   }) => {

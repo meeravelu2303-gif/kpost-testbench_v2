@@ -47,7 +47,7 @@ export function mailShape(overrides: Record<string, unknown> = {}): Record<strin
 
 export const postMailApi = defineKmailEndpoint({
   id: 'kmail-post-mail',
-  requirements: ['FR-M01', 'BR-M01'],
+  requirements: ['FR-KM-018', 'FR-KM-020'],
   method: 'POST',
   path: '/sentMail/postMail/',
   contractPath: '/v2/sentMail/postMail/',
@@ -59,7 +59,7 @@ export const postMailApi = defineKmailEndpoint({
 
 export const postBulkMailApi = defineKmailEndpoint({
   id: 'kmail-post-bulk',
-  requirements: ['FR-M01'],
+  requirements: ['FR-KM-018'],
   method: 'POST',
   path: '/sentMail/postBulkMail',
   summary: 'Send a bulk mail to many recipients',

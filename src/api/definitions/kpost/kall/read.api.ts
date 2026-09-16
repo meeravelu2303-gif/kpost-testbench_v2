@@ -17,7 +17,7 @@ const READ_TAGS = ['kall-read'] as const;
 
 export const kallDashboardApi = defineKallEndpoint({
   id: 'kall-dashboard',
-  requirements: ['FR-C08'],
+  requirements: ['FR-KL-008'],
   method: 'POST',
   path: '/v2/kall/kallDashboard',
   summary: 'Recent calls for the caller — the Kall home panel',
@@ -30,7 +30,7 @@ export const kallDashboardApi = defineKallEndpoint({
 
 export const todayKoolKallApi = defineKallEndpoint({
   id: 'kall-today-kool',
-  requirements: ['FR-C02'],
+  requirements: ['FR-KL-002'],
   method: 'GET',
   path: '/v2/kall/todayKoolKall/',
   summary: "Today's scheduled (Kool) calls for the caller",
@@ -49,7 +49,7 @@ export const frequentKallContactsApi = defineKallEndpoint({
 
 export const kallInfoApi = defineKallEndpoint({
   id: 'kall-info',
-  requirements: ['FR-C08'],
+  requirements: ['FR-KL-008'],
   method: 'POST',
   path: '/v2/kall/kallInfo',
   summary: 'The call history with one contact',
@@ -80,7 +80,7 @@ export const contactInfoApi = defineKallEndpoint({
 
 export const fetchScheduledRepeatKallApi = defineKallEndpoint({
   id: 'kall-fetch-scheduled-repeat',
-  requirements: ['FR-C02'],
+  requirements: ['FR-KL-002'],
   method: 'POST',
   path: '/v2/kall/fetchScheduledRepeatKall',
   summary: "The caller's repeating scheduled calls from a start date",
@@ -97,7 +97,7 @@ export const fetchScheduledRepeatKallApi = defineKallEndpoint({
  */
 export const getKallStatusApi = defineKallEndpoint({
   id: 'kall-get-status',
-  requirements: ['FR-C08'],
+  requirements: ['FR-KL-008'],
   method: 'POST',
   path: '/v2/kall/getKallStatus',
   summary: 'The status of one call between a sender and receiver',
@@ -112,7 +112,7 @@ export const getKallStatusApi = defineKallEndpoint({
 
 export const getKallStatusUsingKallIdApi = defineKallEndpoint({
   id: 'kall-get-status-by-id',
-  requirements: ['FR-C08'],
+  requirements: ['FR-KL-008'],
   method: 'POST',
   path: '/v2/kall/getKallStatusUsingKallID',
   summary: 'The status of one call by its id',

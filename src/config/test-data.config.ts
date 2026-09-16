@@ -93,6 +93,12 @@ const schema = z.object({
   businessMCompanyId: z.coerce.number().int().positive().default(1),
   businessLCompanyId: z.coerce.number().int().positive().default(1),
 
+  /** BUSINESS_M company members (of company 1067), for employee/role-posting reads and writes. */
+  businessMUser1KpostId: z.string().min(3).default('qa.m.user1@kpost.in'),
+  businessMUser2KpostId: z.string().min(3).default('qa.m.user2@kpost.in'),
+  /** The BUSINESS_M admin's registered mobile — resolves company 1067 in the company-lookup reads. */
+  businessMMobile: z.string().min(6).default('9000000004'),
+
   /** Location ids for the states/cities/postcode lookups. */
   stateId: z.coerce.number().int().positive().default(1),
   regionId: z.coerce.number().int().positive().default(1),
@@ -154,6 +160,9 @@ const SOURCES = {
   businessSCompanyId: 'QA_BUSINESS_S_COMPANY_ID',
   businessMCompanyId: 'QA_BUSINESS_M_COMPANY_ID',
   businessLCompanyId: 'QA_BUSINESS_L_COMPANY_ID',
+  businessMUser1KpostId: 'QA_BUSINESS_M_USER_1_KPOST_ID',
+  businessMUser2KpostId: 'QA_BUSINESS_M_USER_2_KPOST_ID',
+  businessMMobile: 'QA_BUSINESS_M_MOBILE',
   stateId: 'QA_STATE_ID',
   regionId: 'QA_REGION_ID',
   pinCode: 'QA_PINCODE',
@@ -223,6 +232,9 @@ const IDENTITY_FIELDS = [
   'businessSCompanyId',
   'businessMCompanyId',
   'businessLCompanyId',
+  'businessMUser1KpostId',
+  'businessMUser2KpostId',
+  'businessMMobile',
 ] as const satisfies readonly (keyof z.infer<typeof schema>)[];
 
 /**

@@ -5,7 +5,7 @@ import { defineKallEndpoint } from './kall-endpoint';
 
 /**
  * Kall **scheduled-call (Kool Kall)** writes — scheduling a call for later, rescheduling it
- * (BR-C01: the status tag moves `Scheduled → Rescheduled` while the entry keeps its identity),
+ * (FR-KL-004: the status tag moves `Scheduled → Rescheduled` while the entry keeps its identity),
  * joining, ending, repeat scheduling, and modifying the member list.
  *
  * Every one is a write and **none is `productionSafe`**: scheduling notifies the participants and
@@ -41,7 +41,7 @@ export function scheduleShape(overrides: Record<string, unknown> = {}): Record<s
 
 export const scheduledKallApi = defineKallEndpoint({
   id: 'kall-scheduled',
-  requirements: ['FR-C01', 'FR-C02'],
+  requirements: ['FR-KL-001', 'FR-KL-002'],
   method: 'POST',
   path: '/v2/kall/scheduledKall',
   summary: 'Schedule a call (Kool Kall) for later',
@@ -53,13 +53,13 @@ export const scheduledKallApi = defineKallEndpoint({
 
 export const reScheduleKallApi = defineKallEndpoint({
   id: 'kall-reschedule',
-  requirements: ['FR-C03', 'BR-C01'],
+  requirements: ['FR-KL-003', 'FR-KL-004'],
   method: 'POST',
   path: '/v2/kall/reScheduleKall',
   summary: 'Reschedule an existing scheduled call (Scheduled → Rescheduled)',
   tags: [...SCHEDULE_TAGS, 'critical'],
   /*
-   * BR-C01: the entry keeps its identity (its `kallID`) while the status tag moves to Rescheduled.
+   * FR-KL-004: the entry keeps its identity (its `kallID`) while the status tag moves to Rescheduled.
    * Needs a real `kallID` from `scheduledKall`, so it is exercised by the lifecycle flow.
    */
   destructive: true,
@@ -69,7 +69,7 @@ export const reScheduleKallApi = defineKallEndpoint({
 
 export const joinScheduleKallApi = defineKallEndpoint({
   id: 'kall-join-schedule',
-  requirements: ['FR-C04'],
+  requirements: ['FR-KL-004'],
   method: 'POST',
   path: '/v2/kall/joinScheduleKall',
   summary: 'Join a scheduled call',
@@ -81,7 +81,7 @@ export const joinScheduleKallApi = defineKallEndpoint({
 
 export const endKoolKallApi = defineKallEndpoint({
   id: 'kall-end-kool',
-  requirements: ['FR-C08'],
+  requirements: ['FR-KL-008'],
   method: 'POST',
   path: '/v2/kall/endKoolKall',
   summary: 'End a scheduled (Kool) call',
@@ -93,7 +93,7 @@ export const endKoolKallApi = defineKallEndpoint({
 
 export const scheduledRepeatKallApi = defineKallEndpoint({
   id: 'kall-scheduled-repeat',
-  requirements: ['FR-C02'],
+  requirements: ['FR-KL-002'],
   method: 'POST',
   path: '/v2/kall/scheduledRepeatKall',
   summary: 'Create a repeating scheduled call',
@@ -114,7 +114,7 @@ export const scheduledRepeatKallApi = defineKallEndpoint({
 
 export const modifyKallMembersApi = defineKallEndpoint({
   id: 'kall-modify-members',
-  requirements: ['FR-C07'],
+  requirements: ['FR-KL-007'],
   method: 'POST',
   path: '/v2/kall/modifyKallMembers',
   summary: 'Add or remove members on a scheduled call',

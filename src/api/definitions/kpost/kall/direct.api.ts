@@ -37,7 +37,7 @@ export function initiateShape(overrides: Record<string, unknown> = {}): Record<s
 
 export const initiateKallApi = defineKallEndpoint({
   id: 'kall-initiate',
-  requirements: ['FR-C05', 'FR-C06'],
+  requirements: ['FR-KL-005', 'FR-KL-006'],
   method: 'POST',
   path: '/v2/kall/initiateKall',
   summary: 'Place a normal (ad-hoc) call',
@@ -53,7 +53,7 @@ export const initiateKallApi = defineKallEndpoint({
 
 export const updateKallStatusApi = defineKallEndpoint({
   id: 'kall-update-status',
-  requirements: ['FR-C08', 'BR-C01'],
+  requirements: ['FR-KL-008', 'FR-KL-004'],
   method: 'POST',
   path: '/v2/kall/updateKallStatus',
   summary: 'Move a call to a new status (connected, declined, cancelled…)',
@@ -65,7 +65,7 @@ export const updateKallStatusApi = defineKallEndpoint({
 
 export const updateSenderAndReceiverKallStatusApi = defineKallEndpoint({
   id: 'kall-update-sender-receiver-status',
-  requirements: ['FR-C08'],
+  requirements: ['FR-KL-008'],
   method: 'POST',
   path: '/v2/kall/updateSenderAndReceiverKallStatus',
   summary: 'Set a call status for both sender and receiver',
@@ -81,7 +81,7 @@ export const updateSenderAndReceiverKallStatusApi = defineKallEndpoint({
 
 export const endIndividualKallApi = defineKallEndpoint({
   id: 'kall-end-individual',
-  requirements: ['FR-C08'],
+  requirements: ['FR-KL-008'],
   method: 'POST',
   path: '/v2/kall/endIndividualKall/',
   summary: 'End an ongoing normal call',

@@ -19,9 +19,11 @@ export const companyDetailsApi = defineKpostEndpoint({
   summary: "Fetch a company's details by mobile number",
   tags: [...COMPANY_TAGS, 'enumeration-surface'],
   destructive: false,
+  productionSafe: true,
   // The workbook documents this one as a NUMBER while getCompanyDetailsByAdmin uses a string.
-  // Sent exactly as documented — normalising it here would hide a real inconsistency.
-  request: body(() => ({ mobileNumber: Number(testData.mobileExists) })),
+  // Sent exactly as documented — normalising it here would hide a real inconsistency. The BUSINESS_M
+  // admin's mobile resolves our OWN company (1067) on live.
+  request: body(() => ({ mobileNumber: Number(testData.businessMMobile) })),
 });
 
 export const companyDetailsByAdminApi = defineKpostEndpoint({
@@ -36,7 +38,8 @@ export const companyDetailsByAdminApi = defineKpostEndpoint({
    * every such endpoint at once once auth is documented.
    */
   destructive: false,
-  request: body(() => ({ mobileNumber: testData.mobileExists })),
+  productionSafe: true,
+  request: body(() => ({ mobileNumber: testData.businessMMobile })),
 });
 
 export const companyDetailsByMobileAndProductApi = defineKpostEndpoint({
@@ -46,8 +49,9 @@ export const companyDetailsByMobileAndProductApi = defineKpostEndpoint({
   summary: "Fetch a company's details by mobile number and product",
   tags: COMPANY_TAGS,
   destructive: false,
+  productionSafe: true,
   request: body(() => ({
-    mobileNumber: testData.mobileExists,
+    mobileNumber: testData.businessMMobile,
     productId: testData.productObjectId,
   })),
 });

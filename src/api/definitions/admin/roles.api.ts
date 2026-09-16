@@ -58,7 +58,6 @@ export const adminRolesApis: EndpointDefinition[] = [
     tags: ['role-posting'],
     // Keyed by a runtime employeeId a write creates — not driven on live standalone.
     request: body(() => ({ companyId: companyId(), employeeId: 1 })),
-    destructive: false,
   }),
 
   // ---- writes (gated) ------------------------------------------------------------------------

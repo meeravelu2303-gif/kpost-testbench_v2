@@ -31,7 +31,7 @@ const member = (kpostID: string, admin = false): Record<string, unknown> => ({
 
 export const createGroupApi = defineGroupEndpoint({
   id: 'group-create',
-  requirements: ['FR-K06'],
+  requirements: ['FR-GC-006'],
   method: 'POST',
   path: '/v2/group/createUserGroup/',
   summary: 'Create a group (returns its groupKpostID)',
@@ -67,7 +67,7 @@ export const addUserToGroupApi = defineGroupEndpoint({
 
 export const removeGroupMemberApi = defineGroupEndpoint({
   id: 'group-remove-member',
-  requirements: ['FR-K06'],
+  requirements: ['FR-GC-006'],
   method: 'POST',
   path: '/v2/group/removeGroupMember/',
   summary: 'Remove members from a group',

@@ -35,7 +35,7 @@ export const unopenedTotalCountApi = defineKatchupEndpoint({
 
 export const messagesSubjectApi = defineKatchupEndpoint({
   id: 'katchup-messages-subject',
-  requirements: ['FR-K01'],
+  requirements: ['FR-KU-003'],
   method: 'GET',
   path: '/v2/katchup/getKatchupMessagesSubject',
   summary: "Subjects of the caller's Katchup conversations",
@@ -130,7 +130,7 @@ export const filterMessageApi = defineKatchupEndpoint({
 
 export const allReportMsgApi = defineKatchupEndpoint({
   id: 'katchup-all-report-msg',
-  requirements: ['FR-K24'],
+  requirements: ['FR-KU-047'],
   method: 'GET',
   path: '/v2/katchup/getAllReportMsg',
   summary: 'Messages the caller has reported',

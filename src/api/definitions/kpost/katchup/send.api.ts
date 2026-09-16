@@ -57,7 +57,7 @@ const sendBody =
 
 export const sendMessageApi = defineKatchupEndpoint({
   id: 'katchup-send-message',
-  requirements: ['FR-K01', 'FR-K02', 'BR-K01', 'FR-K07'],
+  requirements: ['FR-KU-003', 'FR-KU-003', 'FR-KU-003', 'FR-K07'],
   method: 'POST',
   path: '/v2/katchup/sendMessage/',
   summary: 'Send a Katchup message — the primary send path',
@@ -75,7 +75,7 @@ export const sendMessageApi = defineKatchupEndpoint({
 
 export const sendMultipartApi = defineKatchupEndpoint({
   id: 'katchup-send-multipart',
-  requirements: ['FR-K03'],
+  requirements: ['FR-KU-016'],
   method: 'POST',
   path: '/v2/katchup/sendKatchupMsgMultiPart/',
   summary: 'Send a message with attachments (multipart)',
@@ -100,7 +100,7 @@ export const sendMultipartApi = defineKatchupEndpoint({
 
 export const bulkMessageApi = defineKatchupEndpoint({
   id: 'katchup-send-bulk',
-  requirements: ['FR-K06'],
+  requirements: ['FR-GMSG-005'],
   method: 'POST',
   path: '/v2/katchup/sendBulkKatchupMsg',
   summary: 'Send one message to many recipients (bulk)',
@@ -127,7 +127,7 @@ export const bulkMessageApi = defineKatchupEndpoint({
 
 export const bulkMultipartApi = defineKatchupEndpoint({
   id: 'katchup-send-bulk-multipart',
-  requirements: ['FR-K03', 'FR-K06'],
+  requirements: ['FR-KU-016', 'FR-GMSG-005'],
   method: 'POST',
   path: '/v2/katchup/sendBulkKatchupMsgMultiPart/',
   summary: 'Bulk send with attachments (multipart)',
@@ -156,7 +156,7 @@ export const bulkMultipartApi = defineKatchupEndpoint({
 
 export const forwardSelectedAttachmentApi = defineKatchupEndpoint({
   id: 'katchup-send-forward-selected-attachment',
-  requirements: ['FR-K15'],
+  requirements: ['FR-KU-035'],
   method: 'POST',
   path: '/v2/katchup/sendMessageForForwardSelectedAttachment',
   summary: 'Forward selected attachments from a message',

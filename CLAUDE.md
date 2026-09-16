@@ -34,15 +34,19 @@ built-in traceability.
 
 ### Modules
 
-| Module           | Role                                                                           | Bench suite            |
-| ---------------- | ------------------------------------------------------------------------------ | ---------------------- |
-| Signup & Login   | Registration, activation, authenticated access — the gate to everything else   | `kpost-api`            |
-| Katchup          | Instant messaging: subject, attachments, group, message actions, read receipts | `kpost-api`            |
-| Kall             | Voice/video: scheduling, rescheduling, direct calls, call log                  | `kpost-api`            |
-| KMail            | Email: compose, read receipts, external interoperability                       | `kmail-api` (own repo) |
-| Admin module     | Organisation / HR / product administration                                     | `admin-api` (own repo) |
-| KPost UI         | React front end over all of the above                                          | `kpost-ui`             |
-| KDirectory, KDOC | **Out of scope** per BRD §4.2 and PRD §3.2                                     | —                      |
+| Module         | Role                                                                           | Bench suite              |
+| -------------- | ------------------------------------------------------------------------------ | ------------------------ |
+| Signup & Login | Registration, activation, authenticated access — the gate to everything else   | `kpost-api`              |
+| Katchup        | Instant messaging: subject, attachments, group, message actions, read receipts | `kpost-api`              |
+| Kall           | Voice/video: scheduling, rescheduling, direct calls, call log                  | `kpost-api`              |
+| KMail          | Email: compose, read receipts, external interoperability                       | `kmail-api` (own repo)   |
+| KDirectory     | Organisation directory: listing, search, profile, launch Katchup/Kall          | `kpost-api` + `kpost-ui` |
+| Admin module   | Organisation / HR / product administration                                     | `admin-api` (own repo)   |
+| KPost UI       | React front end over all of the above                                          | `kpost-ui`               |
+| KDOC           | **Out of scope** per BRD §4.2 (no per-module FRD supplied)                     | —                        |
+
+KDirectory moved **into scope** on 2026-09-16 when it gained its own FRD (`FR-KD-001..006`); it overlaps
+the existing contacts/company reads + the verticals directory screen. KDOC remains out of scope.
 
 ## 2. Application flow (what the bench must exercise)
 
@@ -96,15 +100,23 @@ the API.
 
 ## 4. Requirement traceability
 
-The FRD v2.0 defines **55 functional requirements and 9 business rules**:
+**Source of truth (2026-09-16): the six per-module FRDs** in `D:\Kpost Documents` (see §8), ≈165 FRs (incl. FR-GMSG Group Messaging)
+across six modules. These supersede the old FullSuite FRD (55 FRs/4 modules). The `requirements` field
+on each definition now carries the new `FR-xx-NNN` ids; the map lives in `docs/requirements-frd.md`.
 
-| Module         |             FRs | BRs | Bench suite |
-| -------------- | --------------: | --: | ----------- |
-| Signup & Login | 12 (FR-S01–S12) |   2 | `kpost-api` |
-| Katchup        | 25 (FR-K01–K25) |   3 | `kpost-api` |
-| Kall           |  9 (FR-C01–C09) |   1 | `kpost-api` |
-| KMail          |  9 (FR-M01–M09) |   1 | `kmail-api` |
-| Cross-module   |               — |   2 | both        |
+| Module         |                                  FRs | Bench suite      | Scope note                                            |
+| -------------- | -----------------------------------: | ---------------- | ----------------------------------------------------- |
+| Signup & Login |                  32 (FR-SL-001..032) | `kpost-api`+`ui` | login built; signup (001–022) out-of-scope (OTP)      |
+| Katchup        |                  57 (FR-KU-001..057) | `kpost-api`+`ui` | built bar Disappearing (017–024) + AI-assist + attach |
+| Group          | 24 (FR-GC-001..008 / FR-GM-001..016) | `kpost-api`+`ui` | lifecycle green; min-one-admin BR (GM-014) to assert  |
+| Kall           |                   9 (FR-KL-001..009) | `kpost-api`+`ui` | built (was FR-C01..C09)                               |
+| KMail          |                  25 (FR-KM-001..025) | `kmail-api`+`ui` | built; single-recipient BR (KM-005) to assert         |
+| KDirectory     |                   6 (FR-KD-001..006) | `kpost-api`+`ui` | NEW in scope; overlaps contacts/company reads         |
+| KDOC           |                                    — | —                | out of scope (no FRD, BRD §4.2)                       |
+
+Old→new id crosswalk (historic entries in §8 use the old scheme): Signup `FR-S01..S12`→`FR-SL-*`,
+Katchup `FR-K01..K25`/`BR-K01..03`→`FR-KU-*`, Kall `FR-C01..C09`/`BR-C01`→`FR-KL-*`, KMail
+`FR-M01..M09`/`BR-M01`→`FR-KM-*`.
 
 Non-functional requirements that already map onto validators we run: JWT required on authenticated
 operations (NFR-SEC01 → authentication validators), confidential-copy invisibility (NFR-SEC02 →
@@ -112,8 +124,8 @@ cross-resource access), password strength (NFR-SEC03 → request validators), au
 (NFR-R01), no silent data loss when a dependent service fails (NFR-R02), message latency (NFR-P01 →
 the response-time budget, which is a functional check, not load testing).
 
-**Mapped so far:** every Signup & Login endpoint carries the FRD ids it exercises (`requirements`
-on the definition). Katchup, Kall and KMail are still unmapped.
+**Mapping status (2026-09-16):** re-tagging to the new scheme is to-do item 3 in the §8 entry above;
+`docs/requirements-frd.md` (item 2) is the measured FR→coverage ledger.
 
 ## 5. What the bench is today
 
@@ -215,6 +227,223 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 ## 8. Decision log — what was done and why
 
 Newest first. Each entry records the decision, not just the change.
+
+### 2026-09-16 — NEW DOCS: 6 per-module FRDs (153 FRs); KDirectory in scope; Katchup gains Disappearing Messages
+
+The owner added **six standalone per-module FRDs** to `D:\Kpost Documents` (all 2026-09-16), each split
+out of the consolidated FullSuite FRD and expanded from its own User Manual — they **supersede the thin
+FullSuite summary** (55 FRs/4 modules) as the requirement source of truth:
+
+| Doc                                  | Module                                 | FR scheme                           | Count |
+| ------------------------------------ | -------------------------------------- | ----------------------------------- | ----- |
+| `KPOST_FRD_Module1_SignupLogin_v1.7` | Signup & Login                         | `FR-SL-001..032`                    | 32    |
+| `KPOST_FRD_Katchup_v1.9`             | Katchup (+ Group Messaging §8, 12 FRs) | `FR-KU-001..057`                    | 57    |
+| `KPOST_FRD_Group_v1.0`               | Katchup — Group Creation & Management  | `FR-GC-001..008` + `FR-GM-001..016` | 24    |
+| `KPOST_FRD_Module3_Kall_v1.0`        | Kall                                   | `FR-KL-001..009`                    | 9     |
+| `KPOST_FRD_Module4_KMail_v1.8`       | KMail                                  | `FR-KM-001..025`                    | 25    |
+| `KPOST_FRD_Module5_KDirectory_v1.0`  | KDirectory                             | `FR-KD-001..006`                    | 6     |
+
+**≈165 FRs across SIX modules (Katchup includes FR-GMSG Group Messaging, 12)** (Signup & Login, Katchup, Kall, KMail, KDirectory, KDOC), not four.
+Text extracted with a PowerShell `System.IO.Compression` reader (the .docx are 8–21 MB — images; the
+text is small). Two scope-shifting facts and the module-by-module delta vs the bench:
+
+**SCOPE CHANGE — KDirectory is now IN scope.** It has its own FRD (6 FRs: listing, search-by-name,
+entry details name/role/team, total count, view full profile, launch Katchup/Kall from a profile). §1
+still called it out-of-scope per BRD §4.2 — corrected. It overlaps the bench's existing contacts/company
+member reads and the verticals `KDirectory` UI screen, so it is mostly a mapping + a focused screen/read
+pass, not a new module build. **KDOC stays out of scope** — no per-module FRD was supplied (only
+referenced), and BRD §4.2 still excludes it.
+
+**FUNCTIONAL GAP — Katchup Disappearing / Secret Messages (FR-KU-017..024, 8 FRs).** A compose-toolbar
+**Confidential Message (lock) icon** → a bottom sheet with **‘Disappear After Reading’** and **‘Disappear
+As Per Schedule’**, a countdown timer, and backend **auto-deletion / disappearing-message enforcement**.
+This maps to the API's secret-message expiry (the `secretMessageExpireTimeAsLong` field already seen on
+dashboard reads) and is **distinct from Confidential Copy** (NFR-SEC02, the hidden-recipient feature the
+bench already proves). The bench's 35-feature Katchup catalogue does **not** cover it — a real gap.
+
+**The delta, module by module (bench = what we have; to-do = the line items below):**
+
+- **Signup & Login (32)** — login (FR-SL-023..026, 032) is built; signup (FR-SL-001..022) stays
+  out-of-scope (OTP-gated, accounts made by hand); the device/permission FRs (FR-SL-027..031) are mobile
+  app permissions (notification/contacts/battery/primary-device) — web-untestable or OTP-gated. Action:
+  FR-map the login ones; record the 22 signup FRs as documented-out-of-scope (not a coverage gap).
+- **Katchup (57)** — compose/subject/copies/confidential-copy/edit/recall/repost/note/reminder/transfer/
+  forward/reply/comment/clarify/report/delete are built. **Gaps:** Disappearing Messages (FR-KU-017..024),
+  the four Forward hidden/revealed × with/without-thread variants (FR-KU-035..038 / 050..053), AI-Assist
+  compose (FR-KU-008) & AI reply (FR-KU-044), attachments (already blocked-with-reason: file upload).
+- **Group (24)** — create→add→admin→rename→image→leave→remove→delete lifecycle is green (API) + create UI.
+  **Gaps/BRs:** the **minimum-one-admin rule on Exit (FR-GM-014)** — sole admin blocked until another is
+  added — not asserted; **Remove Admin / demote (FR-GM-013)**; Group-Info per-member KMail/Katchup/Kall
+  quick actions (FR-GM-004..006); the ≥1-member-to-create constraint.
+- **Kall (9)** — fully built; just re-tag `requirements` from the old FR-C ids to `FR-KL-001..009`.
+- **KMail (25)** — fully built. **BRs to assert:** **single-recipient To: field (FR-KM-005)** (one TO,
+  Cc for more); priority-flag (FR-KM-010/011); remove-default-signature (FR-KM-013). External interop
+  (FR-KM-021..025: open-with / Gmail/Outlook/Yahoo) is client/mobile — UI-only, likely untestable.
+- **KDirectory (6)** — NEW in scope; cover listing/search/details/count as reads + the profile→launch UI.
+
+**TO-DO (ordered, execute line by line):**
+
+1. CLAUDE.md §1 modules table + §4 traceability rewritten to the 6-module / 153-FR / FR-xx scheme (this pass).
+2. `docs/requirements-frd.md` (new) — the authoritative FR→endpoint/spec map, generated-or-maintained, one row per FR with its coverage state, so "153 FRs, N covered" is measured not claimed.
+3. FR-traceability on definitions: re-tag Kall→`FR-KL-*`, KMail→`FR-KM-*`, Group→`FR-GC/GM-*`, Katchup→`FR-KU-*`, login→`FR-SL-*`; a framework test fails if an FR is unmapped or names a nonexistent id.
+4. Katchup **Disappearing Messages** — verify the secret-message API shape on live (expiry field), add the API lifecycle (send secret → expiry set → read-back), gated; add the UI compose flow (lock icon → mode → send) blocked-with-reason if selector-walled.
+5. KMail **FR-KM-005 single-recipient BR** + priority-flag assertions (API/UI).
+6. Group **FR-GM-014 min-one-admin BR** + Remove-Admin, asserted in the gated group lifecycle.
+7. KDirectory — reconcile against contacts/company reads; add the listing/search/profile coverage + the verticals screen assertion mapped to FR-KD-*.
+8. Forward hidden/revealed × thread variants (FR-KU-035..038/050..053) — extend the Katchup lifecycle.
+9. Re-run `npm run check`; regenerate coverage docs; then resume Phase C (admin UI).
+
+Nothing in the bench was changed in this entry beyond CLAUDE.md — this records the analysis and the plan
+before touching flows, per the working agreement. Executing the to-do from item 1.
+
+**Progress (2026-09-16, same day):**
+
+- **Items 1–2 DONE** — CLAUDE.md (§1/§4/§8) + `docs/requirements-frd.md` (the FR→coverage map, all
+  ~165 FRs incl. the 7th sub-scheme `FR-GMSG` Group Messaging found on re-check).
+- **Item 3 DONE** — `src/config/frd-requirements.ts` (canonical FR registry, 165 ids) +
+  `tests/framework/requirements-traceability.spec.ts` (guard: every `requirements` id must be a known
+  FR/NFR/pending-legacy; the legacy list must stay honest). Migrated Kall `FR-C→FR-KL` (clean 1:1),
+  and the confident Katchup/KMail/login/group tags to the new scheme. **24/165 FR ids referenced;
+  6 legacy remain**, each with a documented reason (no clean new-scheme FR: Katchup count/receipt,
+  KMail draft/delete, company-logo, session/logout). Guard green.
+- **Item 4 DONE (API)** — Katchup **Disappearing / Secret Messages** (FR-KU-017..024): a gated
+  `katchup/feature.spec.ts` test drives BOTH modes measured from the frontend (`WriteMessage.js`):
+  DeleteAfterRead (`isVanished:true`) and DeleteAsPerSchedule (`secretMessageExpireTime:<epoch>`); both
+  fields already in `sendShape()`. Needs one `KATCHUP_LIFECYCLE=true` live run to confirm GREEN. The
+  UI lock-icon compose flow + the `src/ui/katchup-features.ts` catalogue remap (still old `FR-K*`) are
+  the follow-up. `npm run check` clean; framework guards pass.
+- **Items 5–9 pending** — KMail single-recipient BR (FR-KM-005), Group min-one-admin BR (FR-GM-014),
+  KDirectory coverage, Forward hidden/revealed variants, then resume Phase C (admin UI).
+
+### 2026-09-16 — PLAN + build: Phase C — the Admin/HR-Setup UI (`kpostadmin.kpostindia.com`)
+
+KMail + KPost reconciled as end-to-end complete to the production bar (KMail API 79/80 — the 1 gap,
+`kmailData/getKloudUsedData`, is not in the usable contract and needs a workbook row, not code; reads
+live, writes gated+green incl. NFR-SEC02; UI screen+compose green). So the owner's next step: **build
+the Admin module UI production-grade** — Phase C, the only remaining admin surface (Phase A write
+lifecycle + Phase B business-admin reads are already GREEN).
+
+**Intent.** The Admin/HR-Setup UI is a SEPARATE React front end (`kpostadmin.kpostindia.com`, CoreUI
+template) from the main app, backed by `adminmodule`. **SSO is the same KPost token planted in this
+origin's localStorage** — measured from the app's own `Callback.js`: it reads `?token=`, writes
+`accessToken`, GETs `devapi2/v2/profile/getUserProfile/` and writes `AuthUser` = `data.data` and
+`companyID` = `data.data.companyID`, then routes to `/dashboard`. Real routes (from `src/routes.js`):
+`/dashboard`, `/workplace-setup`, `/workplace-location-setup`, `/hr-breakdown-setup`,
+`/role-posting-setup`, `/employee-data`, `/employee-management`, `/assign-role-posting`.
+
+**Build.** (1) `ADMIN_UI_BASE_URL` (env+`.env`) + `STORAGE_STATE_ADMIN` (`.auth/admin.json`).
+(2) `tests/setup/auth-admin.setup.ts` — logs in BUSINESS_M, fetches `getUserProfile`, seeds the three
+localStorage keys on the `kpostadmin` origin exactly as `Callback.js` does, saves the state; gated
+`ADMIN_UI_LIFECYCLE=true` (else an anonymous state, so a normal run skips it). (3) `tests/e2e-admin/`
+screen sweep — the 6 setup screens + dashboard render read-only (the write sequence is proven by the
+Phase A API lifecycle; driving the UI create-flow is gated and comes after the screens are green).
+(4) `admin-ui` Playwright project — its own `baseURL`+`storageState`, `testDir ./tests/e2e-admin`
+(kept out of the chromium glob), `dependencies: ['setup']`. Do-not-touch rule stands: own QA company
+(1067) only, read-only screens first.
+
+### 2026-09-16 — KPost-app company-admin coverage: company reads live + the User Management UI GREEN
+
+Finishing the company/admin surface on the **main KPost app** (the personal-only bench had skipped it):
+
+- **API — company-lookup reads enabled on live.** `getCompanyDetails` / `getCompanyDetailsByAdmin` /
+  `getCompanyDetailsByMobileNoAndproductId` now send the **BUSINESS_M admin's mobile**
+  (`QA_BUSINESS_M_MOBILE=9988775544` → `businessMMobile`, allowlisted) and are `productionSafe`, so they
+  resolve our OWN company (1067) and run live: `getCompanyDetails` answers 200 with a valid envelope.
+  Finding on the way: **`getCompanyDetails` answers HTTP 500 on `{mobileNumber: null}` and on `{}`** —
+  a client error returned as a server error.
+- **UI — the BUSINESS_S User Management screen is GREEN** (`tests/e2e/usermanagement.spec.ts`, 6/6 incl.
+  setup). New harness: **`tests/setup/auth-business.setup.ts`** logs in the BUSINESS_S admin
+  (`sma.qa@kpost.in`) and saves `.auth/business.json` (`STORAGE_STATE_BUSINESS`), gated
+  `BUSINESS_UI_LIFECYCLE=true` (the reusable pattern for company-admin UI, mirroring the auth2/auth3
+  multi-account harness). The spec asserts the Business User Management workspace, the licence/channel
+  summary and the member list render, and that **Add New Channels** opens its "Add Communication
+  Channels" chooser (Add Manually / Bulk-Upload). It stops there — completing the add **provisions a real
+  member account** (`addingUserByAdmin`, external), which is covered gated at the API level.
+
+`npm run check` clean; 68 framework tests pass. The KPost-app company/admin coverage (API + UI) is done
+bar the member-write flows (gated by design). **Next: the admin module URL** (`kpostadmin.kpostindia.com`
+Admin/HR-Setup UI) — Phase C proper.
+
+### 2026-09-16 — Phase B: kpost-api business-admin / User Management registered; reads LIVE, member writes gated
+
+Registered the deferred `/admin/*` business-admin surface (`src/api/definitions/kpost/admin/user-management.api.ts`,
+14 endpoints), payloads measured from `KPOST_REACTJS_2023_V1` (`Services/Setting.js` +
+`components/UserManagement/UserManagement.js`). They authenticate as the **BUSINESS_M** admin
+(`principalKey: 'business-m'`, company 1067) and route to **Company Administration**.
+
+- **Reads run on live** and find bugs (34 pass, 33 findings — the same systemic auth/header classes):
+  `userManagementDetails/{companyID}` (the company's members), `getBankAndCompanyDetails/{companyID}`,
+  and the id/name suggestions. `productionSafe`, own-company only.
+- **Member writes are `global` and blocked-with-reason** — they **provision or permanently destroy real
+  accounts**: `addingUserByAdmin` mints a KPost login (external), `terminateUser` is irreversible,
+  `resetPassword`/`holdOrRelease`/`createOrRemoveBackupAdmin` and the `/v2/admin/update{Company,Bank,Role}`
+  ops change shared state. No expendable member exists to act on safely, so — like profile's
+  `changePassword`/`deactivate` — they are contract-covered off-live and never driven on live by default.
+
+`npm run check` clean; 68 framework tests pass; component-routing green. The `/admin/*` paths bucket to
+the `admin` module in the coverage ledger (alongside the admin-api module). **Next: Phase C** — the admin
+UI (`kpostadmin.kpostindia.com` Admin/HR-Setup, and the BUSINESS_S in-app User Management).
+
+### 2026-09-16 — Phase A DONE: the admin write lifecycle is GREEN on live (BUSINESS_M, self-cleaning)
+
+`tests/api/admin/feature.spec.ts` runs the full org-build on `adminmodule.kpostindia.com` as the
+BUSINESS_M admin and **passes end-to-end, self-cleaning**: workplace tier→variable→location → HR
+tier→variable → employee create/update, every step read back, then deleted in reverse dependency order.
+This exercises **18 of the 22 admin writes** and **all 5 id-keyed reads** (`getLocation`, `getLocationById`,
+both reporting hierarchies, `getRolePostingByCompanyIdAndEmployeeId`) with the **real ObjectIds** the flow
+mints. Gated `ADMIN_LIFECYCLE=true`; every write carries `allowLiveWrite`. Payloads measured from the
+frontend (`ADMIN_HR_MODULES_25/src/Services/{AdminSetup,HumanResources}.js`).
+
+**Facts the build pinned down (measured, not guessed):**
+
+- **tier/variable/location saves are ARRAYS**; the created id is at `value[i].id` (single saves at
+  `value.id`). Branch on the envelope `status`, not the HTTP code.
+- **The id-keyed reads must NOT set `destructive: false`** — like Kall's `needs-*-id` reads, they default
+  to `destructive: true` for POST, so they are `@destructive` (grep-dropped on a default run, since a
+  fabricated ObjectId would 404) yet `allowLiveWrite`-authorized inside the lifecycle. Setting
+  `destructive: false` had them blocked by the production guard (`allowLiveWrite` clears only destructive
+  writes). Fixed.
+- **FINDING — `employeeDetails/save` NPEs (HTTP 500) when `employmentObj` is missing**:
+  `Cannot invoke "…Employment.setEmployeeId(String)" because …getEmploymentObj() is null`. A missing
+  required field should be a 400, not a server-error NPE. Sending `employmentObj: {}` makes it 200; the
+  500-on-missing-field is a real ticket.
+
+**The account-provisioning writes stay behind a SECOND flag.** `rolePosting/save` (allocate) and the
+assign (`rolePosting/update` reallocate) **mint a real KPost + KSMACC account via external services**
+(`RolePostingSetUpServiceImpl.sendKPostUserRequest` → login.ksmacc.in) that cannot be cleanly deleted,
+and `suspendOrTerminateEmployee` pushes back to those services — so, like KOS's metered AI, they are held
+behind `ADMIN_ROLE_POSTING_LIVE=true` (above `ADMIN_LIFECYCLE`), owner-authorized, never on a normal run.
+Their id-keyed READ (`getRolePostingByCompanyIdAndEmployeeId`) is covered by the lifecycle without minting.
+
+`npm run check` clean. **Next: Phase B** (kpost-api `/admin/*` business ops on the seeded members) then
+**Phase C** (the `kpostadmin.kpostindia.com` UI + the BUSINESS_S user-management UI).
+
+### 2026-09-16 — PLAN: cover the BUSINESS/company surface end-to-end (API + UI) — the deferred half
+
+The bench tested only PERSONAL accounts; the business/company surface was deferred (§9 item 7: "Admin
+waits on a business company with three members"). That block is now lifted — **BUSINESS_S has 3 members,
+BUSINESS_M has 2** (`itsdjd1n.qt@`, `itsdjnjd.qt@`), BUSINESS_L admin-only. So we cover it all, in three
+phases, to the same production bar (measured payloads, gated self-cleaning writes, valid bugs):
+
+- **Phase A — `admin-api` write lifecycle** (BUSINESS_M, company 1067). The full org-build sequence on
+  `adminmodule.kpostindia.com`, self-cleaning: workplace tier→variable→location → HR tier→variable →
+  employee → role posting (assign) → suspend/terminate a throwaway → delete all in reverse. Exercises
+  the 22 gated writes + the id-keyed reads (`getLocation`, `getLocationById`, reporting hierarchies,
+  `getRolePostingByCompanyIdAndEmployeeId`) with real ObjectIds. Payloads measured from the frontend
+  (`ADMIN_HR_MODULES_25/src/Services/AdminSetup.js` + `HumanResources.js`), not guessed.
+- **Phase B — the kpost-api business/admin endpoints** (deferred, now buildable): the `/admin/*` ops
+  (`addingUserByAdmin`, `resetPassword`, `holdOrRelease`, `createOrRemoveBackupAdmin`, `terminateUser`,
+  `userManagementDetails/{companyID}`, `getBankAndCompanyDetails/{companyID}`, `displayNameSuggestion`),
+  the business-tier login (`adminUserLogin` — note: these live M/L accounts answer it 403 and log in via
+  `userLogin` instead, itself a finding), and the company lookups (`getCompanyDetailsByAdmin/ByMobile`).
+  Reads on the business companies; writes gated + only on an EXPENDABLE member we can re-create, never
+  the seeded ones.
+- **Phase C — the admin UI end-to-end**: the Admin/HR-Setup UI (`kpostadmin.kpostindia.com`, M/L, SSO
+  via the same `accessToken` in localStorage — confirmed in `APIService.js`) driven through the create
+  sequence; and the BUSINESS_S in-app **User Management** UI (`account.kpostindia.com/usermanagement`).
+
+Executing A → B → C. Do-not-touch rule stands: writes only on our own QA companies / expendable members,
+self-cleaning; the seeded members are read-only fixtures.
 
 ### 2026-09-15 — Admin contract regenerated from the LIVE OpenAPI (112 ops); Excel dropped as the source
 

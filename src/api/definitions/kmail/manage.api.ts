@@ -69,7 +69,7 @@ export const convertPdfApi = defineKmailEndpoint({
 
 export const addOtherDomainContactApi = defineKmailEndpoint({
   id: 'kmail-add-od-contact',
-  requirements: ['FR-M08'],
+  requirements: ['FR-KM-022'],
   method: 'POST',
   path: '/common/addOtherDomainContacts/',
   summary: 'Add a non-KPost (external) mail contact',
