@@ -14,10 +14,11 @@ import {
 import { authConfig, type Principal, type Role } from '@config/auth.config';
 import { suiteFor } from '@config/ownership.config';
 import { env } from '@config/env';
+import { newCorrelationId } from '@utils/correlation';
 import { deepMerge, getPath } from '@utils/json';
 import type { Logger } from '@utils/logger';
 import { maskString } from '@utils/masking';
-import { type FlowFinding, isServerError } from './flow-finding';
+import { type BusinessRuleFinding, type FlowFinding, isServerError } from './flow-finding';
 import { destructiveBlockReason, ProductionSafetyError } from './production-guard';
 import { assertQaOwnedIdentifiers } from './qa-identifier-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
@@ -58,6 +59,37 @@ export class EndpointExecutor {
    * developer would otherwise never see. Only 5xx: a 4xx might be our payload, so it is never filed.
    */
   readonly flowFindings: FlowFinding[] = [];
+
+  /**
+   * Documented BUSINESS-RULE violations a gated feature flow CONFIRMED on live (reschedule created a
+   * new id, a recalled message stayed visible, …). A spec calls `recordBusinessRuleViolation` only for
+   * a real rule violation — never a bench/selector failure — and the `endpoints` fixture files them.
+   */
+  readonly businessRuleFindings: BusinessRuleFinding[] = [];
+
+  /**
+   * Record a confirmed business-rule violation for filing. Call this ONLY when the response/state
+   * proves the rule is broken (e.g. `rescheduledId !== kallID` for BR-C01), not on a bench failure.
+   */
+  recordBusinessRuleViolation(input: {
+    endpointId: string;
+    ruleId: string;
+    rule: string;
+    expected: unknown;
+    actual: unknown;
+    request?: RequestSpec;
+    correlationId?: string;
+  }): void {
+    this.businessRuleFindings.push({
+      endpoint: resolveEndpoint(this.apiRegistry.get(input.endpointId)),
+      ruleId: input.ruleId,
+      rule: input.rule,
+      expected: input.expected,
+      actual: input.actual,
+      request: input.request ?? {},
+      correlationId: input.correlationId ?? newCorrelationId('br'),
+    });
+  }
 
   constructor(
     private readonly clients: ApiClientPool,

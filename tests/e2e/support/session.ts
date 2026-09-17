@@ -15,7 +15,22 @@ import { test } from '@fixtures';
  */
 export async function skipIfSignedOut(page: Page): Promise<void> {
   await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 }).catch(() => {});
-  if (/\/login/i.test(page.url())) {
+
+  // The SPA validates the session CLIENT-SIDE and only THEN redirects to /login, so checking the URL
+  // right after `domcontentloaded` is too early (it still reads /home). Wait for the app to settle:
+  // race the login form against the authenticated shell, then decide on whichever appears.
+  const loginForm = page
+    .getByText('Sign in to your account', { exact: false })
+    .or(page.locator('[placeholder*="KPOST ID" i]'))
+    .first();
+  const appShell = page.locator('.icon-KP_01-Home, .header_font, .homeWeblasccs').first();
+  await Promise.race([
+    loginForm.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {}),
+    appShell.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {}),
+  ]);
+
+  const signedOut = /\/login/i.test(page.url()) || (await loginForm.isVisible().catch(() => false));
+  if (signedOut) {
     test.skip(
       true,
       'session bounced to /login (invalid/expired/racey) — re-run `setup` and retry; not a UI defect',

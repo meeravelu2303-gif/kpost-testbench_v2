@@ -1,6 +1,12 @@
 import { apiRegistry } from '@api/definitions/index';
 import { resolveEndpoint } from '@engine/validation-policy';
-import { flowFindingReports, isServerError, type FlowFinding } from '@engine/flow-finding';
+import {
+  businessRuleFindingReports,
+  flowFindingReports,
+  isServerError,
+  type BusinessRuleFinding,
+  type FlowFinding,
+} from '@engine/flow-finding';
 import { candidatesFromReport, mergeCandidates } from '../../src/bug-tracker/bug-candidate';
 import { applyValidityGate } from '../../src/bug-tracker/validity-gate';
 import { readBugzillaConfig } from '../../src/config/bugzilla.config';
@@ -57,5 +63,25 @@ test.describe('lifecycle flow findings file through the same safe pipeline @fram
     );
     expect(rerun[0]?.id).toBe(candidates[0]?.id);
     expect(mergeCandidates([...candidates, ...rerun]), 'never files a duplicate').toHaveLength(1);
+  });
+
+  test('a business-rule violation → ONE valid, [KP-]-tagged candidate that dedupes per (endpoint, rule)', () => {
+    const brFinding: BusinessRuleFinding = {
+      endpoint,
+      ruleId: 'BR-C01',
+      rule: 'Rescheduling must keep the same kallID.',
+      expected: 'same kallID (5)',
+      actual: 'a new kallID (9)',
+      request: { body: { kallID: 5 } },
+      correlationId: 'tb-br-test',
+    };
+    const candidates = businessRuleFindingReports([brFinding, brFinding]).flatMap((r) =>
+      candidatesFromReport(r, ctx, config),
+    );
+    expect(candidates, 'one ticket per (endpoint, rule)').toHaveLength(1);
+    expect(candidates[0]?.id, 'a stable [KP-] dedupe tag').toMatch(/^KP-[0-9A-F]+$/);
+    expect(candidates[0]?.classification, 'classified by the rule').toBe('business-rule.br-c01');
+    const gate = applyValidityGate(candidates);
+    expect(gate.filed, 'a confirmed rule violation is valid and fileable').toHaveLength(1);
   });
 });

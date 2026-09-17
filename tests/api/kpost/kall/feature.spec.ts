@@ -186,13 +186,52 @@ test.describe('KPost Kall · feature flow', () => {
         );
         expect.soft(joined.status, 'joinScheduleKall is accepted').toBeLessThan(300);
 
-        // BR-C01: the same entry (kallID) is kept; the status tag moves to Rescheduled.
+        // BR-C01: rescheduling must KEEP the same entry (kallID) and only move its status tag to
+        // Rescheduled. Assert this against the RESPONSE, not just "accepted": if reScheduleKall
+        // returns a NEW kallID, it created a second call instead of updating the original — the
+        // BR-C01 violation. (The old test only checked status < 300, so it missed exactly this.)
         const rescheduled = await endpoints.sendTo(
           'kall-reschedule',
           { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
           { label: 'feature:kall:reschedule', auth: { principal: A }, allowLiveWrite: true },
         );
         expect.soft(rescheduled.status, 'reScheduleKall is accepted').toBeLessThan(300);
+
+        const rescheduledJson = rescheduled.json();
+        const rescheduledBody = (rescheduledJson.ok ? rescheduledJson.value : {}) as Record<
+          string,
+          unknown
+        >;
+        const rescheduledId = extractKallId(rescheduledBody);
+        if (rescheduledId !== undefined) {
+          if (rescheduledId !== kallID) {
+            // CONFIRMED BR-C01 violation — file it to the developer, not just a soft assert.
+            endpoints.recordBusinessRuleViolation({
+              endpointId: 'kall-reschedule',
+              ruleId: 'BR-C01',
+              rule: 'Rescheduling a call must keep the same call (kallID) and only move its status to Rescheduled — it must not create a new call.',
+              expected: `the same kallID (${kallID})`,
+              actual: `a new kallID (${rescheduledId}) — a second call was created`,
+              request: { body: { kallID } },
+            });
+          }
+          expect
+            .soft(
+              String(rescheduledId),
+              'BR-C01: reschedule must keep the SAME kallID — a new id means it created a second call instead of updating the original',
+            )
+            .toBe(String(kallID));
+        }
+        // BR-C01 / FR-KL-003: the status tag must move to ReScheduled (7). Measured shape:
+        // data[0].senderKallStatus. (On the current build it stays 6 = Scheduled — part of the defect.)
+        const row = Array.isArray(rescheduledBody.data)
+          ? (rescheduledBody.data[0] as Record<string, unknown> | undefined)
+          : undefined;
+        if (row?.senderKallStatus !== undefined) {
+          expect
+            .soft(row.senderKallStatus, 'BR-C01: reschedule sets the status tag to ReScheduled (7)')
+            .toBe(7);
+        }
 
         const ended = await endpoints.sendTo(
           'kall-end-kool',

@@ -228,6 +228,74 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-17 — PLAN: business-rule coverage for every endpoint, measured and filed (the reschedule gap, systematised)
+
+The reschedule bug (below) exposed a class problem: the engine tests every endpoint for every _validator_
+type (status, schema, auth, security, input-validation, error-shape) — comprehensive and filing — but
+the **business rules** (the product's _logic_: reschedule keeps the id, recall removes the message,
+confidential copy stays hidden, an existing id is rejected, min-one-admin on exit, …) are asserted
+unevenly in the feature specs, and some only check "accepted" (HTTP <300) instead of the rule. The owner
+wants every documented business rule tested against the real behaviour, for every endpoint, and filed.
+
+**Plan (execute in order):**
+
+1. **Re-read the six FRDs** (source of truth) and extract EVERY testable business rule per module
+   (sub-agent, from the raw `.docx`). Reconcile with the flow docs (`docs/*-flow.md`) already mined.
+2. **The format — a catalog + a guard.** `docs/business-rules.md`: one row per rule — `id` (BR-/FR-),
+   module, the rule (one MUST-sentence), the endpoint/action it constrains, **how it is verified** (the
+   concrete response/state check), test status, and the spec that owns it. A framework guard
+   (`business-rules-coverage.spec.ts`) fails if a catalogued rule is untested or unmapped — so coverage
+   is measured, not claimed (the same rigour as the endpoint coverage ledger).
+3. **Verify against the RESPONSE, measured not guessed.** Each rule's assertion checks what the rule
+   constrains (the response id, the read-back state, the hidden field) — NEVER just "accepted." Response
+   shapes are measured from one gated live run per module first, then asserted, so no guessed field name
+   files a false bug (the discipline the whole bench runs on).
+4. **File business-rule violations.** A feature-spec BR check that fails on live must reach the developer,
+   like the 5xx `flow-finding` mechanism — a `recordBusinessRuleFinding` that files a BR violation through
+   the SAME safe pipeline (product-scoped dedup, validity gate, routed to the module's developer). A
+   selector/bench failure still surfaces without filing; only a confirmed rule violation files.
+5. **Execute module by module** (weakest first): Kall → the Katchup/KMail/Group gaps → Profile/Contacts/
+   Settings/KDiary/Admin. Each: measure → assert the rule → confirm on live → file.
+
+Do-not-regress: every strengthened assertion checks the RESPONSE the rule constrains; a comment never
+substitutes for an assertion (the reschedule lesson). `npm run check` stays clean throughout.
+
+**Progress (2026-09-17):**
+
+- **Step 1 DONE** — a sub-agent re-read all six FRDs (+ BRD/SRS/PRD/FSD) and extracted every testable
+  business rule per module. It corrected two assumed rules: "one role per employee" and "last name no
+  digits" are **not** in the documents (only "names as on official ID"), so they are not catalogued.
+- **Step 2 DONE** — `docs/business-rules.md`, the catalog: every rule with its endpoint/action, the
+  concrete response/state check, and a honest test-status (✅ verified / 🟡 partial / ⬜ to-do / ⛔ OTP-
+  out-of-scope). It is the tracker for the rest.
+- **Step 4 DONE** — the filing enabler: `BusinessRuleFinding` + `businessRuleFindingReports`
+  (`flow-finding.ts`) and `EndpointExecutor.recordBusinessRuleViolation(...)`; the `endpoints` fixture
+  drains them alongside the 5xx flow findings, so a CONFIRMED rule violation files through the same safe
+  pipeline (product-scoped dedupe, validity gate, developer routing). `flow-finding.spec.ts` pins that a
+  BR violation → one valid `[KP-]` candidate, classified `business-rule.<id>`, deduped per (endpoint,
+  rule). **80 framework guards pass.**
+- **BR-C01 wired to FILE** — the Kall reschedule test now records a real violation (new kallID) so it
+  reaches the developer, not just a soft assert.
+- **Step 5 IN PROGRESS** — implementing the ⬜/🟡 rules module by module, measured-then-asserted; each
+  needs a gated live run to measure the response shape first.
+
+### 2026-09-17 — BR-C01 was NOT actually asserted: the Kall reschedule test missed a new-kallID bug
+
+The owner reported a real defect: `reScheduleKall` **creates a new kallID instead of updating the
+existing call** (a BR-C01 violation — reschedule must keep the same entry and only move the status tag
+to Rescheduled). The bench had NOT caught it, and the earlier decision-log claim "BR-C01 confirmed —
+same kallID kept" was **wrong about the automated test**: the reschedule step only asserted
+`rescheduled.status < 300` ("accepted") and passed the same kallID in the REQUEST — it never checked
+the RESPONSE, so an endpoint returning a new kallID still passed. The "same id" was a manual eyeball
+during one live run, not something the test verified. A comment claimed a rule the assertion did not
+enforce — the most dangerous kind of green.
+
+Fixed `tests/api/kpost/kall/feature.spec.ts`: after reschedule it now extracts the response's kallID
+(`extractKallId`) and asserts it **equals the original** — so a new id fails the test with a clear
+BR-C01 message. `npm run check` clean. Needs one `KALL_LIFECYCLE=true` live run to confirm the defect
+and produce the finding. Lesson: a business-rule assertion must check the RESPONSE the rule constrains,
+never just that the call was accepted — and a comment is not a test.
+
 ### 2026-09-17 — Session-guard the observational UI specs: a bounced session no longer files false bugs
 
 A `bugs:preview:ui` run produced **8 would-file UI bugs** — all "nav icon missing" / "control missing"

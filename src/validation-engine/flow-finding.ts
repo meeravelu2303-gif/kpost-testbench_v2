@@ -87,3 +87,76 @@ export function flowFindingReports(findings: readonly FlowFinding[]): Validation
     };
   });
 }
+
+/**
+ * A documented BUSINESS RULE a gated flow found violated on live — the product's logic, not a crash or
+ * a schema fault: reschedule created a new id instead of keeping it (BR-C01), a recalled message stayed
+ * visible (BR-K03), a confidential copy leaked (NFR-SEC02), an existing id was reported available
+ * (BR-S02), … These are 2xx-but-wrong-behaviour defects the engine's validators cannot see; a feature
+ * spec detects them by comparing the RESPONSE/state to the rule, and records one here ONLY when it is a
+ * CONFIRMED violation (never a bench/selector/sequencing failure — that stays a plain test failure).
+ * It then files through the same safe pipeline as any finding (product-scoped dedupe, validity gate,
+ * routed to the module's developer).
+ */
+export interface BusinessRuleFinding {
+  endpoint: ResolvedEndpoint;
+  /** The rule id, e.g. `BR-C01`, `NFR-SEC02`, `FR-KM-005`. */
+  ruleId: string;
+  /** The rule as a one-sentence MUST-statement. */
+  rule: string;
+  expected: unknown;
+  actual: unknown;
+  request: RequestSpec;
+  correlationId: string;
+}
+
+/** One consolidated `ValidationReport` per distinct (endpoint, rule) violation, for the reporter. */
+export function businessRuleFindingReports(
+  findings: readonly BusinessRuleFinding[],
+): ValidationReport[] {
+  const byKey = new Map<string, BusinessRuleFinding>();
+  for (const f of findings) {
+    const key = `${f.endpoint.id}|${f.ruleId}`;
+    if (!byKey.has(key)) byKey.set(key, f);
+  }
+  return [...byKey.values()].map((f) => {
+    const now = new Date().toISOString();
+    const validator = `business-rule.${f.ruleId.toLowerCase()}`;
+    return {
+      endpointId: f.endpoint.id,
+      endpoint: f.endpoint.label,
+      method: f.endpoint.method,
+      request: maskSensitive(f.request),
+      requiresAuth: f.endpoint.authentication.required,
+      tags: f.endpoint.tags,
+      suite: f.endpoint.suite.id,
+      profile: env.VALIDATION_PROFILE,
+      environment: env.TEST_ENV,
+      build: env.BUILD_ID,
+      testRunId: env.TEST_RUN_ID,
+      correlationId: f.correlationId,
+      startedAt: now,
+      durationMs: 0,
+      results: [
+        {
+          validationId: newCorrelationId('br'),
+          validatorName: validator,
+          category: 'BUSINESS_RULE',
+          endpointId: f.endpoint.id,
+          endpoint: f.endpoint.label,
+          method: f.endpoint.method,
+          expected: f.expected,
+          actual: f.actual,
+          status: 'FAILED',
+          message: `${f.ruleId} violated — ${f.rule}`,
+          durationMs: 0,
+          timestamp: now,
+          severity: 'HIGH',
+          correlationId: f.correlationId,
+        },
+      ],
+      summary: { total: 1, passed: 0, failed: 1, warnings: 0, skipped: 0 },
+      gate: { passed: false, blocking: [validator] },
+    };
+  });
+}
