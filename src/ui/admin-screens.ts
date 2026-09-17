@@ -106,7 +106,9 @@ export const ADMIN_SCREENS: readonly AdminScreenDef[] = [
     route: '/employee-data',
     name: 'Employee Data',
     title: 'Employee Data',
-    controls: [{ selector: ADD_VIEW, label: 'Add / View icon control' }],
+    // The Add/View icon row here is role-conditional (renders only for role===1), so it is not a
+    // reliable mount control; the `.title-font` heading proves the screen loaded. Verified on live.
+    controls: [],
   },
   {
     route: '/assign-role-posting',
