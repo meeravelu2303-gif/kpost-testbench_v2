@@ -39,7 +39,14 @@ export interface UiHealthReport {
 
 /** Hosts that are the KPost application (front end + its APIs), vs third-party/analytics noise. */
 function appHosts(): string[] {
-  return [env.BASE_URL, env.KPOST_API_BASE_URL, env.KMAIL_API_BASE_URL, env.API_BASE_URL]
+  return [
+    env.BASE_URL,
+    env.KPOST_API_BASE_URL,
+    env.KMAIL_API_BASE_URL,
+    env.API_BASE_URL,
+    env.ADMIN_UI_BASE_URL,
+    env.ADMIN_API_BASE_URL,
+  ]
     .filter((u): u is string => Boolean(u))
     .map((u) => {
       try {

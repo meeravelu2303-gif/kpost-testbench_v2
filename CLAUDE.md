@@ -228,6 +228,42 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-17 — Phase C BUILT: the Admin/HR-Setup UI harness (`kpostadmin.kpostindia.com`)
+
+The owner asked to finish the Admin module to the KPost bar — both APIs and e2e UI. The Admin **API**
+was already end-to-end (Phase A write lifecycle GREEN, Phase B business-admin, engine contract tests on
+every registered admin endpoint). The gap was the **UI**, now built — the admin analogue of the KPost
+`screens.spec.ts` deep sweep:
+
+- **`tests/setup/auth-admin.setup.ts`** — the admin UI is a separate CoreUI SPA with **no login screen**;
+  it is SSO'd by the same KPost token planted in `localStorage`, exactly as its own `Callback.js` does.
+  The setup mints a BUSINESS_M token via the API, GETs `/v2/profile/getUserProfile/`, and seeds
+  `accessToken` + `AuthUser` + `companyID` (+ the CoreUI theme key) on the admin origin. Gated
+  `ADMIN_UI_LIFECYCLE=true`; otherwise it saves an anonymous state and the specs self-skip.
+- **`admin-ui` Playwright project** — its own `baseURL` (`ADMIN_UI_BASE_URL`), `storageState`
+  (`.auth/admin.json`), `testDir ./tests/e2e-admin`, `dependencies: ['setup']` — kept out of the main
+  browser glob.
+- **`src/ui/admin-screens.ts`** — the screen registry, **selectors mined from the frontend source**
+  (`ADMIN_HR_MODULES_25/src`, via a sub-agent): all 8 routed screens (dashboard, workplace-setup,
+  workplace-location-setup, hr-breakdown-setup, role-posting-setup, employee-data, assign-role-posting,
+  employee-management), each proven by its `.title-font` heading (or its Tier/Variable tabs for
+  `/hr-breakdown-setup`, whose heading text is a copy-paste bug — "Work Place Setup"), plus the shell
+  (`.sidebar-nav`, `.header.header-sticky`) and each screen's key controls (tabs, the `.boderIcon`
+  Add/View icon control). **The app ships NO `data-testid`**, so all selectors are text/className.
+- **`tests/e2e-admin/admin-screens.spec.ts`** — the deep sweep: navigate → assert mounted → assert
+  shell + controls → run the whole `ui-checks` catalogue (JS crash / broken asset / render budget /
+  responsive / a11y). Reuses the KPost UI infra; `ui-health.ts` now includes the admin hosts so a
+  broken admin asset is caught. Deliberately **NOT in `UI_FILING_SPECS`** — a selector miss surfaces
+  for triage but never files against the wrong product (admin-UI bug routing to KPost Admin is a
+  follow-up).
+
+`npm run check` clean; **79 framework guards pass**; the admin-ui project **self-skips** on a normal run
+(8 screen tests skipped, the anonymous states saved). Like the KPost UI, the mined selectors need **one
+`ADMIN_UI_LIFECYCLE=true` live tuning pass** to confirm GREEN on the deployed build — the flow logic,
+gating and SSO seed are correct; only the exact selectors want one headed confirmation. Two product
+findings already captured from the source: `/hr-breakdown-setup`'s heading says "Work Place Setup", and
+two sidebar links (`/MenuPrivilege`, `/PostalCodeLibrary`) are dead (no matching route).
+
 ### 2026-09-17 — 7 false-positive KPost tickets marked INVALID; secret-message benign pattern completed
 
 The owner asked to mark the invalid open KPost tickets INVALID. Queried the live KPost API product,

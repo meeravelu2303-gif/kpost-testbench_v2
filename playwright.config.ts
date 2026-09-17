@@ -1,5 +1,5 @@
 import { defineConfig, devices, type Project } from '@playwright/test';
-import { STORAGE_STATE, TAGS, TIMEOUTS } from './src/config/constants';
+import { STORAGE_STATE, STORAGE_STATE_ADMIN, TAGS, TIMEOUTS } from './src/config/constants';
 import { env } from './src/config/env';
 
 const VALIDATION_REPORTER = './src/reporting/validation-reporter.ts';
@@ -78,6 +78,20 @@ export default defineConfig({
     browserProject('chromium', devices['Desktop Chrome']),
     browserProject('firefox', devices['Desktop Firefox']),
     browserProject('webkit', devices['Desktop Safari']),
+    // The Admin/HR-Setup UI is a SEPARATE SPA (kpostadmin.kpostindia.com) on its own origin, SSO'd
+    // by the session `auth-admin.setup.ts` seeds. Its own baseURL + storageState + testDir keep it
+    // out of the main-app browser glob; it self-skips unless ADMIN_UI_LIFECYCLE seeds a real session.
+    {
+      name: 'admin-ui',
+      testDir: './tests/e2e-admin',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: env.ADMIN_UI_BASE_URL,
+        storageState: STORAGE_STATE_ADMIN,
+      },
+      dependencies: ['setup'],
+      retries: env.RETRIES ?? 2,
+    },
     { name: 'api', testDir: './tests/api' },
     { name: 'integration', testDir: './tests/integration' },
     { name: 'framework', testDir: './tests/framework' },
