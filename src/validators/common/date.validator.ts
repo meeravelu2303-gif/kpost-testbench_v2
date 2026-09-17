@@ -40,6 +40,10 @@ export const dateValidator = createFieldConventionValidator({
     'Date fields are valid ISO-8601 (date-only or GMT/UTC date-time), audit dates ordered and not in the future',
   field: apiConfig.dataConventions.date.field,
   check: (value, { key }) => {
+    // An absent optional date (empty string / null) is not a MALFORMED date — a field like an
+    // ongoing experience's end date is legitimately blank. Whether it should be present at all is
+    // the schema/required check's job, not the format check's. Skip it here.
+    if (value === '' || value === null || value === undefined) return undefined;
     if (typeof value !== 'string' || !ISO_8601.test(value) || Number.isNaN(Date.parse(value))) {
       return 'not a valid ISO-8601 date (date-only or GMT/UTC date-time)';
     }

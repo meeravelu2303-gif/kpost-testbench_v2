@@ -242,7 +242,10 @@ date-time with `Z` / `±HH:MM` / `±HHMM` OR **no** offset (treated as UTC). It 
 malformed values (`Sep 17 2026`, `17/09/2026`, epoch numbers, unparseable dates — verified), and the
 real date defects still fire: audit dates out of order (`createdAt > updatedAt`) or in the future. So
 this removes the cosmetic false positives without weakening the meaningful checks — the KMail
-`common.date` tickets (e.g. #215) and the admin experience-date finding no longer file. `npm run check`
+`common.date` tickets (e.g. #215) and the admin experience-date finding no longer file. Also **skip an
+absent optional date** (empty string / null — an ongoing experience's end date is legitimately blank;
+presence is the schema check's job, not the format check's). The one admin `common.date` ticket already
+filed under the old strict rule (**#306 `[KP-1DA918]`**) was marked INVALID with a comment. `npm run check`
 clean. (The best-practice note stands: ideally the API appends `Z` so the value is self-describing for
 non-UI consumers — but that is the team's call, and the bench no longer files it as a defect.)
 
