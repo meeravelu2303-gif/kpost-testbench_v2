@@ -4,6 +4,7 @@ import { AUTHENTICATED_SCREENS } from '@ui/screens';
 import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { skipIfSignedOut } from './support/session';
 
 /**
  * Deep UI sweep across EVERY authenticated screen — the front-end analogue of the API engine's
@@ -25,6 +26,12 @@ test.describe('KPost deep UI sweep — every screen', { tag: '@ui' }, () => {
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',
   );
+
+  // A bounced session bounces every screen to /login → the sweep would file false "missing control"
+  // bugs. Skip (not fail/file) when signed out; a session problem is not a UI defect.
+  test.beforeEach(async ({ page }) => {
+    await skipIfSignedOut(page);
+  });
 
   for (const screen of AUTHENTICATED_SCREENS) {
     test(`${screen.name} screen — controls, health, performance, responsive, a11y @ui`, async ({

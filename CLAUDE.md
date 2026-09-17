@@ -228,6 +228,23 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-17 — Session-guard the observational UI specs: a bounced session no longer files false bugs
+
+A `bugs:preview:ui` run produced **8 would-file UI bugs** — all "nav icon missing" / "control missing"
+/ nav-click timeouts. The screenshot proved the cause: the app had **bounced to `/login`** (the saved
+session was invalidated between `setup` and the run — the token was valid 30 days, so it was a
+server-side session kill, most likely the single-session / `sessionID`-keyed login being displaced by
+a later login as the same `qatesting@` account during the session). With no app rendered, every screen
+"failed" — 8 FALSE bugs about to hit the UI developer's queue.
+
+The observational specs (`screens`/`navigation`/`shell`) FILE bugs, and nothing stopped them filing
+when signed out (the code even commented "a stale session bounces to /login" but did not guard it).
+Added `tests/e2e/support/session.ts` `skipIfSignedOut(page)` and a `beforeEach` in all three: it goes
+to `/home` and, if the app redirects to `/login`, **SKIPs** the test with a clear reason (re-run
+`setup`) instead of failing — a session problem is not a UI defect and must never become a ticket.
+`npm run check` clean. Practical note: run `bugs:preview:ui` standalone / not right after an API run
+that logs in as the same account, or the UI session gets displaced.
+
 ### 2026-09-17 — `common.date` aligned to the API's GMT/UTC contract (was a false-positive class)
 
 The API team confirmed their **timezone design**: timestamps are stored/returned in **GMT/UTC** (one

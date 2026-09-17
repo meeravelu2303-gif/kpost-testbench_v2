@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { NAV_LINKS } from '@ui/screens';
 import { expect, test } from '@fixtures';
+import { skipIfSignedOut } from './support/session';
 
 /**
  * Navigation flow — the first UI **interaction** test (a real user action, not a scripted `goto`):
@@ -13,6 +14,9 @@ test.describe('KPost navigation — the nav rail routes correctly', { tag: '@ui'
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',
   );
+  test.beforeEach(async ({ page }) => {
+    await skipIfSignedOut(page);
+  });
 
   for (const link of NAV_LINKS) {
     test(`clicking ${link.name} in the nav rail opens ${link.route} @ui`, async ({ page }) => {

@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { skipIfSignedOut } from './support/session';
 
 /**
  * The shared **Header shell** that wraps every authenticated screen (`containers/Header.js`), across
@@ -14,6 +15,9 @@ test.describe('KPost app shell', { tag: '@ui' }, () => {
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',
   );
+  test.beforeEach(async ({ page }) => {
+    await skipIfSignedOut(page);
+  });
 
   test('the signed-in header shows the user chip @ui', async ({ page }) => {
     await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
