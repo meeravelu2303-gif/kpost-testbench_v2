@@ -228,6 +228,24 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-17 — `common.date` aligned to the API's GMT/UTC contract (was a false-positive class)
+
+The API team confirmed their **timezone design**: timestamps are stored/returned in **GMT/UTC** (one
+common base time) and the UI converts to local for display — a correct, standard approach. The
+`common.date` validator required an EXPLICIT `Z`/offset, so it flagged two legitimate shapes as bugs:
+(1) **date-only** calendar values (`2022-05-01`, an employee experience/start date — a calendar date
+has no time or timezone), and (2) **GMT date-times without an explicit offset** (UTC by the team's
+contract, e.g. KMail `lastFetchDate`, `createdDate`). Both were false positives.
+
+Relaxed the check to the API's actual contract: accept a date-only value, and a `T`- or space-separated
+date-time with `Z` / `±HH:MM` / `±HHMM` OR **no** offset (treated as UTC). It still rejects genuinely
+malformed values (`Sep 17 2026`, `17/09/2026`, epoch numbers, unparseable dates — verified), and the
+real date defects still fire: audit dates out of order (`createdAt > updatedAt`) or in the future. So
+this removes the cosmetic false positives without weakening the meaningful checks — the KMail
+`common.date` tickets (e.g. #215) and the admin experience-date finding no longer file. `npm run check`
+clean. (The best-practice note stands: ideally the API appends `Z` so the value is self-describing for
+non-UI consumers — but that is the team's call, and the bench no longer files it as a defect.)
+
 ### 2026-09-17 — Phase C BUILT: the Admin/HR-Setup UI harness (`kpostadmin.kpostindia.com`)
 
 The owner asked to finish the Admin module to the KPost bar — both APIs and e2e UI. The Admin **API**

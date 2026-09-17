@@ -4,7 +4,17 @@ import type { CheckDetail } from '@engine/validation-result';
 import { isPlainObject, walkJson } from '@utils/json';
 import { createFieldConventionValidator } from './field-convention';
 
-const ISO_8601 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+/**
+ * A valid API date. The KPost APIs standardise on **GMT/UTC** — the server returns a common UTC time
+ * and the UI converts it for display (confirmed by the API team) — so a timezone-less date-time is UTC
+ * by contract, not an ambiguous value, and is accepted. What is accepted:
+ *   - a **date-only** calendar value (`2022-05-01`) — an experience/birth/start date has no time or
+ *     timezone, and requiring one was a false positive;
+ *   - a **date-time**, `T`- or space-separated, with an explicit `Z` / `±HH:MM` / `±HHMM` offset OR
+ *     none (treated as UTC per the API's GMT convention).
+ * Real defects are still caught: an unparseable value (below), an out-of-order or future audit date.
+ */
+const ISO_8601 = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/;
 /** Audit timestamps describe the past; other dates (expiresAt, dueDate) may be in the future. */
 const AUDIT_FIELD = /^(createdAt|updatedAt|deletedAt)$/;
 
@@ -27,11 +37,11 @@ export const dateValidator = createFieldConventionValidator({
   name: 'common.date',
   noun: 'date',
   description:
-    'Date fields are ISO-8601 with timezone, audit dates are not in the future and ordered',
+    'Date fields are valid ISO-8601 (date-only or GMT/UTC date-time), audit dates ordered and not in the future',
   field: apiConfig.dataConventions.date.field,
   check: (value, { key }) => {
     if (typeof value !== 'string' || !ISO_8601.test(value) || Number.isNaN(Date.parse(value))) {
-      return 'not an ISO-8601 date-time with timezone';
+      return 'not a valid ISO-8601 date (date-only or GMT/UTC date-time)';
     }
     return AUDIT_FIELD.test(key) && Date.parse(value) > Date.now() + thresholds.clockSkewMs
       ? 'audit timestamp is in the future'
