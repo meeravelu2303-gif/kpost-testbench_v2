@@ -75,6 +75,7 @@ interface StubBug {
   is_open: boolean;
   resolution?: string;
   whiteboard?: string;
+  product?: string;
 }
 
 /** A Bugzilla whose search returns `bugs`, recording every request made to it. */
@@ -241,8 +242,16 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     const auth = buildDescription(candidate({ classification: 'authentication.missing-token' }));
     expect(auth, 'auth bugs explain the 401 contract').toContain('HTTP 401');
 
+    // The common.* data-shape validators (which dominate KMail's findings) also teach the developer,
+    // so a KMail ticket is as self-explanatory as a KPost one.
+    for (const validator of ['common.api-error', 'common.id', 'common.date', 'common.boolean']) {
+      const desc = buildDescription(candidate({ classification: validator }));
+      expect(desc, `${validator} explains itself`).toContain('What this means:');
+      expect(desc, `${validator} says how to fix it`).toContain('How to fix:');
+    }
+
     // A validator with no specific guidance simply omits the section — no filler.
-    const none = buildDescription(candidate({ classification: 'common.url' }));
+    const none = buildDescription(candidate({ classification: 'response.schema' }));
     expect(none).not.toContain('What this means:');
   });
 
@@ -445,6 +454,48 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
 
     expect(outcome.counts.commented).toBe(1);
     expect(outcome.counts.created, 'a second run must never create a duplicate').toBe(0);
+    expect(calls.some((c) => c.url.includes('/comment'))).toBe(true);
+  });
+
+  test('the same tag on a SIBLING product is not matched — the finding files in its own product', async () => {
+    // A platform-wide fault files one ticket per product, so the same [KP-] tag can sit on a KPost
+    // ticket AND a KMail ticket. A finding for one product must never comment on / reopen the other's.
+    const calls = stubBugzilla([
+      {
+        id: 9,
+        summary: '[KPV2-ABC123] Platform-wide — 3/6 security headers failed',
+        is_open: true,
+        product: 'KPost API',
+      },
+    ]);
+    const outcome = await filer().file([
+      candidate({
+        product: 'KPost UI',
+        component: 'General',
+        suiteId: 'kpost-ui',
+        assignee: 'ayyappan@kpostindia.com',
+        ownerName: 'Ayyappan Ashok',
+      }),
+    ]);
+
+    expect(outcome.counts.commented, 'must NOT comment on the sibling-product ticket').toBe(0);
+    expect(outcome.counts.created, 'files its own ticket in its own product').toBe(1);
+    expect(calls.some((c) => c.url.includes('/comment'))).toBe(false);
+  });
+
+  test('the same tag in the SAME product still comments (no duplicate)', async () => {
+    const calls = stubBugzilla([
+      {
+        id: 10,
+        summary: '[KPV2-ABC123] POST /users: expected 400/422, got 500',
+        is_open: true,
+        product: 'KPost API',
+      },
+    ]);
+    const outcome = await filer().file([candidate({ product: 'KPost API' })]);
+
+    expect(outcome.counts.commented, 'same product, same tag → comment').toBe(1);
+    expect(outcome.counts.created).toBe(0);
     expect(calls.some((c) => c.url.includes('/comment'))).toBe(true);
   });
 

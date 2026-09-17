@@ -228,6 +228,74 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-17 — 7 false-positive KPost tickets marked INVALID; secret-message benign pattern completed
+
+The owner asked to mark the invalid open KPost tickets INVALID. Queried the live KPost API product,
+identified **7 false positives** (each verified not to name a real secret) and marked them
+RESOLVED/INVALID with an explanatory comment for the developer, so dedup never re-files them:
+
+- **5 `secretMessage*` sensitive-data** (#83, #92, #93, #132, #291) — the disappearing-message
+  timestamp/id fields flagged only because the name contains "secret".
+- **2 image-download 204** (#160 `downloadFullProfileImage`, #161 `downloadProfileImage`) — 204 is the
+  correct "no image" response; the status check had expected 200 (already fixed via `expectedStatus`).
+
+**A real validator gap the owner's note exposed.** The secret-message feature has two modes (Katchup
+FRD FR-KU-017..024): **Disappear As Per Schedule** carries a time (`secretMessageExpireTime*`, an epoch
+— stays until that time) and **Disappear After Reading** carries none (`isVanished` — stays until read,
+then vanishes). `BENIGN_SECRET_FIELD` only matched the camelCase form, so the snake_case
+`secret_message_msgIDs` (#291) was **still being flagged**. Fixed the pattern to allow an optional
+separator (`^secret[_-]?(message|…)`), so both camelCase and snake_case disappearing-message fields are
+benign, while real `secret*` credentials (`secretKey`, `secret_key`, `clientSecret`, `secretToken`)
+stay flagged. New guard `tests/framework/sensitive-data.spec.ts` pins both directions. `npm run check`
+clean. So this class of false positive can no longer be filed, in either field-name form.
+
+### 2026-09-17 — Developer guidance added for the `common.*` validators, so KMail tickets self-explain
+
+The owner noticed KPost tickets carry the "For the developer" block (What this means / Why it matters /
+How to fix) but KMail tickets do not. Cause: `developerGuidance` is keyed by VALIDATOR, and covered
+only the security/auth/response-envelope/input-validation validators — which dominate KPost's findings.
+KMail's findings are mostly the **`common.*` data-shape validators** (`common.id`, `common.date`,
+`common.api-error`, `common.email`, `common.url`, `common.boolean`) that check the returned data (id
+format, ISO-8601 dates, error envelope, valid email/URL, real booleans), and those had **no guidance
+entry** — so those tickets omitted the block. Not a product difference; a validator-coverage gap.
+
+Added guidance for all six `common.*` validators (`guidance.ts`), each with an accurate meaning/why/fix
+matched to what the validator asserts. Now a KMail ticket is as self-explanatory as a KPost one, and
+KPost's own `common.api-error`/`common.date` tickets (24 of the 189) gain the block too. This is
+description text only — **no fingerprint/tag change, so no dedup impact and no duplicates**. Already-filed
+tickets keep their original description (a re-file comments, it does not rewrite the first comment), so
+the block appears on newly-created tickets going forward. The `teaches the developer` guard now pins the
+common family too. `npm run check` clean; **78 framework guards pass**.
+
+### 2026-09-17 — Dedup is now PRODUCT-scoped, so a KMail finding never collapses onto a KPost ticket
+
+The owner caught a cross-product mix: a **platform-wide (systemic)** fault gets a product-AGNOSTIC tag
+(`systemicFingerprint` = `platform|validator|message`, endpoint excluded), so the same gateway/auth
+fault on KPost and KMail computes the SAME `[KP-]` tag. The dedup search (`findByTag`) then matched
+the tag across products, so a KMail systemic finding could comment on / reopen a KPost ticket (and the
+KPost run had been doing the reverse). Verified on live: KMail already has **11** systemic tickets
+(#219–#229) under those shared tags, and `[KP-6A62DD]` (security-headers) exists **only** as KMail
+#219 — KPost's copy has been collapsing onto it.
+
+**First tried the wrong fix — scoping the fingerprint by product.** Reverted it: KMail's 11 systemic
+tickets are already filed under the old tags, so changing the tag would orphan them and **duplicate all
+11** on the next KMail run — exactly the duplication the owner forbids.
+
+**The safe fix: scope the MATCH, not the tag.** `BugzillaFiler.process()` now filters `findByTag`
+results to bugs whose `product` equals the candidate's product before deciding comment/reopen/skip
+(`BUG_FIELDS` already returns `product`). No tag changes → nothing filed is orphaned or duplicated;
+a finding only ever dedupes against its OWN product's tickets, and if the tag exists only under a
+sibling product it correctly CREATES the missing ticket in the right product. Two guards pin it (a
+sibling-product tag is not matched → files its own ticket; a same-product tag still comments → no
+duplicate). `npm run check` clean; **78 framework guards pass**.
+
+**Consequence, recorded honestly:** the KPost filing that already ran (old unscoped dedup) commented
+its 2 collision systemic findings (security-headers `[KP-6A62DD]`, auth-500 `[KP-AFF1DB]`) onto the
+KMail tickets #219/#223. Going forward this is fixed; a future KPost run will CREATE those 2 as its own
+KPost tickets (a correction, not a duplicate — KPost never had them). KMail is now safe to file: its 11
+systemic + endpoint findings comment on their own KMail tickets, create the genuinely new ones, and
+never touch a KPost ticket.
+
 ### 2026-09-17 — Lifecycle flows now FILE their server-error findings (safely) — the developer sees them
 
 The owner's question: if a gated lifecycle flow finds a bug but only records it in CLAUDE.md, how does

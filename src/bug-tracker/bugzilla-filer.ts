@@ -184,7 +184,17 @@ export class BugzillaFiler {
       return this.entry(candidate, 'failed', { reason: `dedupe search failed: ${found.error}` });
     }
 
-    const open = found.bugs.find((bug) => bug.is_open);
+    // Match only tickets in the candidate's OWN product. A platform-wide fault files one ticket PER
+    // product (the same `[KP-]` tag can exist on both a KPost and a KMail ticket), so a KMail finding
+    // must dedupe onto the KMail ticket and never comment on / reopen the KPost one. The tag is
+    // unchanged, so nothing already filed is orphaned or duplicated — only the CHOICE of which
+    // ticket to match is product-scoped. If the tag exists only under a sibling product, this
+    // correctly falls through to CREATE the missing ticket in the right product.
+    const bugs = found.bugs.filter(
+      (bug) => bug.product === undefined || bug.product === candidate.product,
+    );
+
+    const open = bugs.find((bug) => bug.is_open);
     if (open) {
       const result = await this.client.addComment(open.id, buildReproducedComment(candidate));
       return 'error' in result
@@ -192,7 +202,7 @@ export class BugzillaFiler {
         : this.entry(candidate, 'commented', { bugId: open.id });
     }
 
-    const judged = found.bugs.find((bug) =>
+    const judged = bugs.find((bug) =>
       JUDGED_NOT_A_DEFECT.has((bug.resolution ?? '').toUpperCase()),
     );
     if (judged) {
@@ -202,7 +212,7 @@ export class BugzillaFiler {
       });
     }
 
-    const resolved = found.bugs.find((bug) => bug.resolution);
+    const resolved = bugs.find((bug) => bug.resolution);
     if (resolved) {
       const result = await this.client.reopen(
         resolved.id,

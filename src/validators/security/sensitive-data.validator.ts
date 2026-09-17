@@ -6,14 +6,18 @@ const SENSITIVE_KEY =
   /pass(word|wd)?(hash)?$|^pwd$|secret|api[-_]?key|private[-_]?key|^ssn$|credit[-_]?card|card[-_]?number|^cvv$|^pin$|refresh[-_]?token|access[-_]?token|^token$/i;
 
 /**
- * KPost's **disappearing-message** ("secret message") domain fields match `secret` but are
- * timestamps, flags, options and icons — NOT credentials. Flagging `secretMessageExpireTimeAsLong`
- * (a Long epoch) as an exposed secret is a false positive (recorded in CLAUDE.md), so these are
- * excluded here globally. Genuinely credential-like `secret` fields (`secretKey`, `clientSecret`,
- * `secretToken`) do NOT match this and stay flagged.
+ * KPost's **disappearing / secret message** domain fields match `secret` but are timestamps, flags,
+ * options, icons and id lists — NOT credentials. The feature has TWO modes (per the Katchup FRD,
+ * FR-KU-017..024, and `docs/katchup-flow.md`): **Disappear As Per Schedule** carries a time
+ * (`secretMessageExpireTime` / `…AsLong`, an epoch), so the message stays until that time; **Disappear
+ * After Reading** carries no time (`isVanished`), so it stays until read then vanishes. Both, plus the
+ * id list `secret_message_msgIDs`, are ordinary metadata the client needs — flagging them as an exposed
+ * secret is a false positive (see CLAUDE.md). The name may be camelCase (`secretMessage…`) or snake_case
+ * (`secret_message_…`), so an optional separator is allowed. Genuinely credential-like `secret` fields
+ * (`secretKey`, `secret_key`, `clientSecret`, `secretToken`) do NOT match and stay flagged.
  */
 const BENIGN_SECRET_FIELD =
-  /^secret(message|timestamp|icon|option|scheduled?|delete|timers?|expire)/i;
+  /^secret[_-]?(message|timestamp|icon|option|scheduled?|delete|timers?|expire)/i;
 const JWT_VALUE = /^eyJ[\w-]+\.[\w-]+\.[\w-]*$/;
 const PRIVATE_KEY_VALUE = /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/;
 const CARD_CANDIDATE = /^\d{13,19}$/;
@@ -28,7 +32,7 @@ function passesLuhn(digits: string): boolean {
   return sum % 10 === 0;
 }
 
-function findingFor(key: string, value: unknown): string | undefined {
+export function findingFor(key: string, value: unknown): string | undefined {
   if (value === null || value === undefined || value === '') return undefined;
   if (SENSITIVE_KEY.test(key) && !BENIGN_SECRET_FIELD.test(key)) return 'sensitive field name';
   if (typeof value !== 'string') return undefined;

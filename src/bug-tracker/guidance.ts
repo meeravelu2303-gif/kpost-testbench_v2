@@ -56,6 +56,41 @@ const EXACT: Record<string, Guidance> = {
     why: 'Slow responses hurt the user experience and often signal an inefficient query or a missing index.',
     fix: 'Profile the slow path and optimise it — check for N+1 queries, missing indexes, or unbounded result sets.',
   },
+  'common.api-error': {
+    meaning:
+      'An error response returned a 5xx (server error) where a client error (4xx) belongs, or the code inside the body does not match the HTTP status (see Expected vs Actual).',
+    why: 'A 5xx pages the on-call team for what is often a client mistake, and a body/HTTP status mismatch breaks the client error handling and monitoring that read the status.',
+    fix: 'Return a 4xx for a client error (5xx only for a genuine server fault), and make the status code in the body match the HTTP status.',
+  },
+  'common.id': {
+    meaning:
+      'An ID field (`id`, `*Id`) is not in the platform ID format (a positive integer) — the evidence names the field.',
+    why: 'Clients, joins and caches key on the ID format; a wrong-typed or malformed ID breaks references and parsing across the app.',
+    fix: 'Return IDs in the documented format (a positive integer), consistently on every endpoint.',
+  },
+  'common.date': {
+    meaning:
+      'A date field is not an ISO-8601 timestamp with a timezone (or an audit date is in the future / out of order) — see the evidence.',
+    why: 'Clients parse and display dates by the ISO-8601 contract; a timezone-less or non-standard date is shown wrong, and a future or unordered audit date signals a data bug.',
+    fix: 'Serialize dates as ISO-8601 with an explicit timezone offset, and ensure createdAt ≤ updatedAt with no future audit timestamps.',
+  },
+  'common.email': {
+    meaning: 'An email field contains a value that is not a syntactically valid email address.',
+    why: 'Mail is sent to these addresses; an invalid one bounces or fails silently, and a malformed address can indicate corrupted data.',
+    fix: 'Validate and store a well-formed address, and return it in valid form.',
+  },
+  'common.url': {
+    meaning:
+      'A URL field is not an absolute http(s) URL (it is relative, empty or malformed) — see the evidence.',
+    why: 'Clients follow these URLs directly (images, attachments, links); a relative or malformed URL breaks the link for every user.',
+    fix: 'Return an absolute http(s) URL.',
+  },
+  'common.boolean': {
+    meaning:
+      'A flag field (`is*`, `has*`, `enabled`, …) is a string or number ("true", 1) instead of a real JSON boolean.',
+    why: 'Clients test these as booleans, and a string like "false" is truthy in most languages — so the flag reads inverted and the feature behaves backwards.',
+    fix: 'Serialize flag fields as JSON booleans (true/false), never strings or numbers.',
+  },
 };
 
 const AUTH: Guidance = {
