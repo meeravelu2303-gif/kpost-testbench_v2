@@ -41,6 +41,9 @@ export function mailShape(overrides: Record<string, unknown> = {}): Record<strin
     ccList: [] as string[],
     bccList: [] as string[],
     attachmentCaption: null,
+    // Documented field — empty for a text mail (no attachment). Included so the payload matches the
+    // contract in full and the API does not flag a missing field.
+    attachmentUuid: [] as string[],
     ...overrides,
   };
 }

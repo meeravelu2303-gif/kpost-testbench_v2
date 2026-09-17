@@ -228,6 +228,73 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-17 — Full payload audit: every documented field checked against every endpoint; a regression guard
+
+The KMail-signature false bug (below) was one instance of a class: a hardcoded partial request the API
+validates and answers an error the bench reads as a defect. The owner asked to audit **every**
+endpoint's payload against its contract. Built `tests/framework/payload-audit.spec.ts` — it builds
+each non-fixture endpoint's real request from its own factory and compares the sent keys (body + query
+
+- pathParams, case-insensitive) against the documented request fields, generating `docs/PAYLOAD-AUDIT.md`.
+
+**The signal that matters is the documented request _example_, not the schema.** Splitting "missing"
+that way collapsed 57 raw rows to the real risk:
+
+- **Missing from the EXAMPLE** (the payload the product actually sends) = the false-bug class. Further
+  filtered by **`productionSafe`**, because only a live-running endpoint auto-files a bug: a gated write
+  is blocked by the production guard on the default run, and its real payload (with runtime ids) is
+  built by its `*_LIFECYCLE` spec, not the static factory. That left **7 → 0**.
+- **Missing from the SCHEMA only** (no example) = almost all the admin springdoc DTO, which lists every
+  optional field while the measured frontend sends a subset. Correct, not a defect.
+
+**The 7 live risks resolved:** 3 were audit false-positives now handled in the audit itself (a GET has
+no request body, so a stale POST-era example does not describe fields it should send — `fetchUserDetails`,
+`isDevicePrimaryOrNot`; and `userLogout` sends `deviceIdentity_primary` where the example says
+`deviceIdentity_Primary`, a casing difference the working client wins — hence case-insensitive compare).
+The other 4 were completed with QA-safe values: `advancedSearch` (+empty pincode/state/city/country),
+`getSearchDetails` (+empty province/state/city — an `areaName` lookup ignores them), and the two admin
+name suggestions (+`companyName` from the allowlisted `testData.companyName`). Empty/allowlisted values,
+so no real person or place is named and the QA-identifier guard still passes.
+
+**The guard so it can't regress — TWO tiers, because a bad write contaminates other endpoints.** The
+owner's sharpening: a wrong/incomplete payload sent to ONE endpoint can, on the **shared monolithic DB
+with circular module dependencies (§3)**, persist bad data a DIFFERENT endpoint later reads — so it
+surfaces elsewhere and looks like that endpoint's bug. A write's payload is safety-critical, not
+cosmetic. So the guard now accounts for **every** payload gap, read or write:
+
+- **Tier 1 (live false-bug risk):** no `productionSafe` endpoint may omit a documented-example field
+  (`LIVE_OMISSIONS`, currently empty). One that does auto-files a false bug on the default run.
+- **Tier 2 (contamination risk):** every GATED write / needs-id read that omits an example field must
+  be recorded in `GATED_WRITE_OMISSIONS` **with the reason it is safe** — the field is supplied at
+  runtime by the endpoint's `*_LIFECYCLE` spec (a real msgID/ObjectId/draftID no static value can
+  replace), or the authoritative frontend client deliberately omits the stale workbook field (adding
+  it back is itself the wrong payload — `recall` proves it). All 18 current gated omissions are
+  recorded. A NEW gated write that under-sends fails the build until it is completed or examined.
+- A stale-entry check keeps both allowlists honest (an id that no longer under-sends must be removed).
+
+So no payload gap — anywhere — can reach the bench unexamined. `npm run check` clean; **74 framework
+guards pass** (was 73). Lesson generalised: the false-bug risk is "runs on live AND omits a documented
+field"; the contamination risk is "a write with a wrong/incomplete payload persists bad data others
+read" — and both are now mechanically caught, not trusted to review.
+
+### 2026-09-16 — KMail signature payloads completed to the documented contract (was causing false bugs)
+
+A developer questioned a filed bug on `saveOrUpdateMailSignaturePersonalData`: the bench sent only
+`{firstName,lastName,designation}` while the documented payload (KMAILAPI tab / `openapi/kmail-api.openapi.json`)
+is `{firstName,lastName,designation,emailId,mobileNumber,alternateMobile}` — the API validated the
+missing fields and answered an error, so the "bug" was our incomplete request, not a product defect.
+
+Audited every KMail settings endpoint against the generated contract and completed the **5** whose
+hardcoded literal was a subset of the documented fields (`src/api/definitions/kmail/settings.api.ts`):
+`sig-personal` (+emailId/mobileNumber/alternateMobile), `sig-company` (+addressLine1/2), `sig-graphics`
+(+bannerUrl/bannerLinkingTo), `sig-social` (+instagram/linkedIn/youTube), `sig-full` (+company/graphics/
+style/social sub-objects). Values are **QA-safe and allowlisted** — `mobileNumber`=`testData.mobileExists`,
+`emailId`=`testData.otpEmail` (never a real person's contact, so the QA-identifier guard still passes).
+Also completed the send payload (`mailShape`) with the one missing documented field, `attachmentUuid`.
+The other KMail writes (postMail, drafts, saluation, instant-reply) were already complete. `npm run check`
+clean; 73 framework guards pass. Lesson: a hardcoded partial payload files a false bug — a definition's
+request must carry every documented field, checked against the generated contract.
+
 ### 2026-09-16 — SMS/OTP kill-switch: the bench can never send an OTP/SMS against a real host
 
 The owner reported the Nettyfish SMS gateway draining — OTPs sent every second to many different
@@ -3460,6 +3527,13 @@ centralized UI validators, mirroring the API engine.
   Anything the rule cannot settle is recorded as a gap, not guessed.
 - **A bench that cannot run must be loud, never clean.** Zero findings from a collapsed run is a
   false clean, so the run gate blocks filing.
+- **A payload is safety-critical, never cosmetic.** An endpoint's request must carry every field the
+  documented _example_ sends (checked against the generated contract), because a missing field files a
+  false bug and — on the shared monolithic DB (§3) — a wrong/incomplete WRITE persists bad data that a
+  DIFFERENT endpoint later reads, so the fault surfaces elsewhere. Never guess a value: send what the
+  authoritative frontend client sends (the workbook example is secondary and may be stale — `recall`).
+  `tests/framework/payload-audit.spec.ts` enforces this: every payload gap must be sent or recorded
+  with a reason (runtime/lifecycle-supplied, or a deliberate frontend-authoritative omission).
 - **Secrets** come from the environment only, and are masked in logs, reports and tickets.
 - `npm run check` (typecheck + lint + format) must pass before anything is considered done.
 - Tests describe **which** endpoint is tested; the engine owns **how**.

@@ -106,7 +106,15 @@ export const searchDetailsApi = defineContactsEndpoint({
   // Reference data (area names), not a person. Harmless read.
   destructive: false,
   productionSafe: true,
-  request: body(() => ({ requestType: 'areaName', country: 'INDIA' })),
+  // The documented cascade fields (province/state/city) are sent empty so the payload matches the
+  // contract — an `areaName` lookup ignores them, but a strict presence check cannot then 400 us.
+  request: body(() => ({
+    requestType: 'areaName',
+    country: 'INDIA',
+    provienceName: '',
+    state: '',
+    city: '',
+  })),
 });
 
 export const contactsReadApis = [

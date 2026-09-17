@@ -1,3 +1,4 @@
+import { testData } from '@config/test-data.config';
 import { body } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint } from './kmail-endpoint';
 
@@ -67,35 +68,59 @@ export const deleteLetterHeadApi = w(
   { id: '' },
   'needs a real letterhead id',
 );
+/*
+ * The COMPLETE documented payloads (KMAILAPI tab / openapi/kmail-api.openapi.json), reused by the
+ * "full" signature below. Missing fields here previously caused false bugs — the API validated the
+ * absent `emailId`/`mobileNumber` (etc.) and answered an error. Values are QA-safe and allowlisted:
+ * `mobileNumber` uses our QA mobile, `emailId` our QA e-mail — never a real person's contact.
+ */
+const SIG_PERSONAL = {
+  firstName: 'QA',
+  lastName: 'Tester',
+  designation: 'QA Engineer',
+  emailId: testData.otpEmail,
+  mobileNumber: testData.mobileExists,
+  alternateMobile: '',
+};
+const SIG_COMPANY = {
+  companyName: 'QA Co',
+  website: 'https://kpostindia.com',
+  addressLine1: 'QA Bench Address Line 1',
+  addressLine2: 'QA Bench Address Line 2',
+};
+const SIG_GRAPHICS = { photoUrl: '', bannerUrl: '', bannerLinkingTo: '' };
+const SIG_STYLE = { color: '#1A73E8', fontStyle: 'Arial, sans-serif' };
+const SIG_SOCIAL = { twitter: '', facebook: '', instagram: '', linkedIn: '', youTube: '' };
+
 export const sigPersonalApi = w(
   'kmail-sig-personal',
   '/kmailSetting/saveOrUpdateMailSignaturePersonalData',
   'Signature — personal data',
-  { firstName: 'QA', lastName: 'Tester', designation: 'QA' },
+  { ...SIG_PERSONAL },
 );
 export const sigCompanyApi = w(
   'kmail-sig-company',
   '/kmailSetting/saveOrUpdateMailSignatureCompanyData',
   'Signature — company data',
-  { companyName: 'QA Co', website: 'https://kpostindia.com' },
+  { ...SIG_COMPANY },
 );
 export const sigGraphicsApi = w(
   'kmail-sig-graphics',
   '/kmailSetting/saveOrUpdateMailSignatureGraphics',
   'Signature — graphics',
-  { photoUrl: '' },
+  { ...SIG_GRAPHICS },
 );
 export const sigStyleApi = w(
   'kmail-sig-style',
   '/kmailSetting/saveOrUpdateMailSignatureStyle',
   'Signature — style',
-  { color: '#1A73E8', fontStyle: 'Arial, sans-serif' },
+  { ...SIG_STYLE },
 );
 export const sigSocialApi = w(
   'kmail-sig-social',
   '/kmailSetting/saveOrUpdateMailSignatureSocialMediaLink',
   'Signature — social links',
-  { twitter: '', facebook: '' },
+  { ...SIG_SOCIAL },
 );
 export const sigTemplateApi = w(
   'kmail-sig-template',
@@ -107,7 +132,13 @@ export const sigFullApi = w(
   'kmail-sig-full',
   '/kmailSetting/saveOrUpdateMailSignature',
   'Signature — full',
-  { personalData: { firstName: 'QA', lastName: 'Tester', designation: 'QA' } },
+  {
+    personalData: { ...SIG_PERSONAL },
+    companyData: { ...SIG_COMPANY },
+    graphics: { ...SIG_GRAPHICS },
+    style: { ...SIG_STYLE },
+    socialMedialink: { ...SIG_SOCIAL },
+  },
 );
 export const countDaysLimitApi = w(
   'kmail-count-days-limit-update',

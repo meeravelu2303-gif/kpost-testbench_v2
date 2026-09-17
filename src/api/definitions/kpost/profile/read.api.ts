@@ -83,6 +83,10 @@ export const advancedSearchApi = defineProfileEndpoint({
   summary: 'Advanced profile search',
   tags: [...READ_TAGS, 'search', 'enumeration-surface'],
   productionSafe: true,
+  // Every documented filter is sent so the payload matches the contract in full (an empty filter is
+  // a no-op, exactly like omitting it, but a strict presence check on the API cannot then 400 us —
+  // the missing-field class that filed a false bug on the KMail signature). Values are empty, so no
+  // real person or place is named.
   request: body(() => ({
     fullName: 'qa',
     mobileNumber: '',
@@ -90,6 +94,10 @@ export const advancedSearchApi = defineProfileEndpoint({
     ageFrom: null,
     ageTo: null,
     profession: null,
+    pincode: '',
+    state: '',
+    city: '',
+    country: '',
   })),
 });
 

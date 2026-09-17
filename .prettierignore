@@ -20,6 +20,8 @@ package-lock.json
 docs/COVERAGE.md
 docs/LIVE-ENDPOINTS.md
 docs/COMPONENT-ROUTING.md
+docs/BLOCKED-ENDPOINTS.md
+docs/PAYLOAD-AUDIT.md
 
 docs/UI-COVERAGE.md
 docs/KATCHUP-UI-COVERAGE.md

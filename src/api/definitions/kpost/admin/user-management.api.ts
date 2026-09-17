@@ -60,7 +60,13 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Suggest a KPost ID for a new member (no persistence)',
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
-    request: body(() => ({ designation: 'QA Tester', companyID: companyId() })),
+    // `companyName` is documented; sent from the allowlisted QA value so the guard permits it and the
+    // payload matches the contract in full. No persistence — a suggestion cannot corrupt anything.
+    request: body(() => ({
+      designation: 'QA Tester',
+      companyID: companyId(),
+      companyName: testData.companyName,
+    })),
     destructive: false,
     productionSafe: true,
   }),
@@ -71,7 +77,11 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Suggest a display name for a new member (no persistence)',
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
-    request: body(() => ({ companyID: companyId(), designation: 'QA Tester' })),
+    request: body(() => ({
+      companyID: companyId(),
+      designation: 'QA Tester',
+      companyName: testData.companyName,
+    })),
     destructive: false,
     productionSafe: true,
   }),
