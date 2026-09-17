@@ -6,6 +6,7 @@ import { env } from '@config/env';
 import { createDatabaseClient } from '@database/database-client';
 import { databaseValidationRegistry } from '@database/validations/index';
 import { EndpointExecutor } from '@engine/endpoint-executor';
+import { flowFindingReports } from '@engine/flow-finding';
 import { ValidationEngine, type ValidationEngineDeps } from '@engine/validation-engine';
 import { LoginPage } from '@pages/LoginPage';
 import { attachValidationReport } from '@reporting/report-attachment';
@@ -51,8 +52,14 @@ export const test = base.extend<TestFixtures>({
     await pool.dispose();
   },
 
-  endpoints: async ({ apiClients, log }, use) => {
-    await use(new EndpointExecutor(apiClients, apiRegistry, log));
+  endpoints: async ({ apiClients, log }, use, testInfo) => {
+    const executor = new EndpointExecutor(apiClients, apiRegistry, log);
+    await use(executor);
+    // After the flow runs, file any server error a gated write hit — otherwise a lifecycle-only bug
+    // reaches no developer (it lived only in the test log). Only 5xx are collected (see flow-finding).
+    for (const report of flowFindingReports(executor.flowFindings)) {
+      await attachValidationReport(testInfo, report);
+    }
   },
 
   createValidationEngine: async ({ apiClients, log, playwright }, use, testInfo) => {

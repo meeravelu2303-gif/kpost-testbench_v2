@@ -228,6 +228,52 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-17 — Lifecycle flows now FILE their server-error findings (safely) — the developer sees them
+
+The owner's question: if a gated lifecycle flow finds a bug but only records it in CLAUDE.md, how does
+the developer ever learn about it? They don't — CLAUDE.md is the bench's notebook, not their queue. So
+lifecycle findings now file to Bugzilla, but under a **narrow, safe rule** that preserves every
+existing guarantee.
+
+**The rule — only a `5xx` from a gated write files.** A server that crashes is the developer's defect
+no matter what we sent: even a malformed or incomplete request must be answered with a 4xx, never a 500. A `4xx` might be OUR payload (the contamination risk), and a bench/sequencing failure is our
+fault — so neither is ever turned into a ticket. The feature spec's own `expect.soft` still surfaces
+those for triage. This makes the real crashes visible (`employeeDetails/save` NPE 500, the three
+scheduled-call 500s, `updateScheduleRemarks` 500, …) without opening a false-bug door.
+
+**How, and why it inherits every protection:** the `EndpointExecutor` collects any 5xx from an
+`allowLiveWrite` call at the single `send()` chokepoint (after the production guard, kill-switch and
+QA-identifier guard have already passed — it only reads the response, sends nothing new).
+`src/validation-engine/flow-finding.ts` turns each distinct erroring endpoint into a normal
+`ValidationReport` (validator `flow.server-error`, CRITICAL, with the curl + response body), and the
+`endpoints` fixture attaches it at test end. From there it travels the **same** pipeline as an engine
+bug — so it is automatically **deduped** (a stable `[KP-]` fingerprint → a re-run comments, never
+duplicates), **gated** (the validity gate; below-floor/no-evidence/self-contradicting are rejected),
+consolidated per endpoint, and routed to the right developer. `tests/framework/flow-finding.spec.ts`
+pins all three: one valid `[KP-]`-tagged candidate per erroring endpoint, stable across runs (dedupe),
+and a 4xx is never a finding. `npm run check` clean; **76 framework guards pass** (was 74). So
+`flow:file:api` now files genuine write crashes too, and still cannot file a duplicate, an invalid, or
+a false bug.
+
+### 2026-09-17 — False-bug class fixed: request-body fuzzing no longer runs on a live GET
+
+Reviewing the owner's KPost filing report, `GET /v2/profile/fetchUserDetails/` and
+`GET /v2/profile/isDevicePrimaryOrNot/` were filing ~7 invalid tickets — `request.null-value`,
+`request.data-type`, `request.invalid-payload` and `request.malformed-json` all reported "expected
+400, got 200". Both are **method-corrected GETs** (`method: 'GET'`, `contractMethod: 'POST'`): they
+keep the POST-era `requestSchema` for documentation, so the body fuzzers fired and sent a body with a
+GET — which the server correctly **ignores**, answering 200. A 200 there means "the body was ignored",
+not "invalid input was accepted", so the finding was a false positive.
+
+Fixed centrally: `carriesRequestBody(endpoint)` (= method ≠ GET) in `request-mutation.ts` now gates the
+body section of every schema-driven request validator and `malformed-json`, so a GET's body is never
+fuzzed (its query/path still are). The other body validators (`empty-body`, `unsupported-media-type`)
+already skipped correctly via `request.body === undefined`. Verified on live: the two GETs now report
+only the real systemic findings (missing security headers, auth filter answering 403/400 not 401), and
+the request-fuzz false positives are gone. `npm run check` clean. So a re-run files ~7 fewer (invalid)
+tickets. The rest of the KPost report is valid: systemic auth/header/error-envelope (consolidated),
+input-validation-not-enforced, and genuine server errors (500/400 on reads).
+
 ### 2026-09-17 — Full payload audit: every documented field checked against every endpoint; a regression guard
 
 The KMail-signature false bug (below) was one instance of a class: a hardcoded partial request the API

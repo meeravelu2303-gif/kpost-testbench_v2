@@ -55,6 +55,16 @@ export function sectionSchema(
   return section === 'query' ? endpoint.querySchema : endpoint.pathParamsSchema;
 }
 
+/**
+ * Whether the endpoint's LIVE method carries a request body. A GET/HEAD does not: the server ignores
+ * any body sent with one, so a body fuzzer's "got 200" means "the body was ignored", not "invalid
+ * input was accepted" — a false positive. A method-corrected GET keeps a POST-era `requestSchema` for
+ * documentation, but its body must not be fuzzed. Body-section request validators gate on this.
+ */
+export function carriesRequestBody(endpoint: ResolvedEndpoint): boolean {
+  return endpoint.method !== 'GET';
+}
+
 export function schemaType(schema: JsonSchema): string | undefined {
   return typeof schema.type === 'string' ? schema.type : undefined;
 }
@@ -143,6 +153,9 @@ async function buildCases(
   const cases: ProbeCase[] = [];
 
   for (const section of sections) {
+    // A GET/HEAD carries no request body, so a body sent with it is ignored — fuzzing it produces
+    // false positives (a 200 means "ignored", not "invalid input accepted"). Query/path still apply.
+    if (section === 'body' && !carriesRequestBody(context.endpoint)) continue;
     const schema = sectionSchema(context.endpoint, section);
     if (!schema) continue;
     const values: unknown = base[SPEC_KEY[section]];
@@ -193,9 +206,13 @@ export function createRequestValidator(options: RequestValidatorOptions): Valida
     profiles: PROFILE_SETS.DEEP,
     stage: 'probe',
     appliesTo: (context) =>
-      options.sections.some((section) => sectionSchema(context.endpoint, section))
+      options.sections.some(
+        (section) =>
+          (section !== 'body' || carriesRequestBody(context.endpoint)) &&
+          sectionSchema(context.endpoint, section),
+      )
         ? true
-        : `endpoint defines no ${options.sections.join('/')} schema`,
+        : `no fuzzable ${options.sections.join('/')} schema (a GET carries no request body)`,
     check: async (context) =>
       runProbes(
         context,

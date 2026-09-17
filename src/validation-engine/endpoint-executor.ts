@@ -17,6 +17,7 @@ import { env } from '@config/env';
 import { deepMerge, getPath } from '@utils/json';
 import type { Logger } from '@utils/logger';
 import { maskString } from '@utils/masking';
+import { type FlowFinding, isServerError } from './flow-finding';
 import { destructiveBlockReason, ProductionSafetyError } from './production-guard';
 import { assertQaOwnedIdentifiers } from './qa-identifier-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
@@ -50,6 +51,13 @@ const MAX_ERROR_BODY_CHARS = 300;
 /** Executes registered endpoints: builds requests, attaches credentials, enforces prod safety. */
 export class EndpointExecutor {
   readonly tokens: TokenProvider;
+
+  /**
+   * Server errors (5xx) seen while a gated lifecycle flow drove a real write (`allowLiveWrite`).
+   * Drained by the `endpoints` fixture at test end and filed to Bugzilla — a lifecycle crash the
+   * developer would otherwise never see. Only 5xx: a 4xx might be our payload, so it is never filed.
+   */
+  readonly flowFindings: FlowFinding[] = [];
 
   constructor(
     private readonly clients: ApiClientPool,
@@ -121,7 +129,27 @@ export class EndpointExecutor {
         ? { ...endpoint.suite, id: `${endpoint.suite.id}:mock`, baseUrl: env.API_BASE_URL }
         : endpoint.suite,
     );
-    return client.execute(request, options.label);
+    const exchange = await client.execute(request, options.label);
+
+    // A server error while an owner-authorized lifecycle flow drove a real write is a fileable
+    // product defect (a server must never 5xx — even bad input warrants a 4xx). Collected here, at
+    // the one chokepoint every flow call passes through, and filed by the fixture. A 4xx is NOT
+    // collected: it might be our payload, and the feature spec's own assertions surface it.
+    if (
+      options.allowLiveWrite &&
+      isServerError(exchange.status) &&
+      !endpoint.definition.mockFixture
+    ) {
+      this.flowFindings.push({
+        endpoint,
+        method: options.method ?? endpoint.method,
+        status: exchange.status,
+        body: exchange.bodyText,
+        request: spec,
+        correlationId: exchange.correlationId,
+      });
+    }
+    return exchange;
   }
 
   /** Sends a literal request to a registered endpoint (no request factory involved). */

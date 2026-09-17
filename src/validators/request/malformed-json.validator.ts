@@ -2,6 +2,7 @@ import { apiConfig } from '@config/api.config';
 import { runProbes } from '@engine/probe';
 import { PROFILE_SETS } from '@engine/validation-policy';
 import { defineValidator } from '@engine/validator';
+import { carriesRequestBody } from './request-mutation';
 
 const MALFORMED_BODIES: Record<string, string> = {
   'truncated JSON': '{"field": ',
@@ -18,7 +19,11 @@ export const malformedJsonValidator = defineValidator({
   profiles: PROFILE_SETS.DEEP_AND_SECURITY,
   stage: 'probe',
   appliesTo: (context) =>
-    context.endpoint.requestSchema ? true : 'endpoint accepts no request body',
+    !carriesRequestBody(context.endpoint)
+      ? 'a GET carries no request body — a malformed body sent with it is ignored, not parsed'
+      : context.endpoint.requestSchema
+        ? true
+        : 'endpoint accepts no request body',
   check: (context) =>
     runProbes(
       context,
