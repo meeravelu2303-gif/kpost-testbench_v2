@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import {
   buildDescription,
   buildSummary,
@@ -79,7 +82,10 @@ interface StubBug {
 }
 
 /** A Bugzilla whose search returns `bugs`, recording every request made to it. */
-function stubBugzilla(bugs: StubBug[], options: { searchFails?: boolean } = {}) {
+function stubBugzilla(
+  bugs: StubBug[],
+  options: { searchFails?: boolean; existingAttachments?: string[] } = {},
+) {
   const calls: { url: string; method: string; body: unknown }[] = [];
   globalThis.fetch = ((input: string | URL, init?: { method?: string; body?: string }) => {
     const url = String(input);
@@ -115,6 +121,11 @@ function stubBugzilla(bugs: StubBug[], options: { searchFails?: boolean } = {}) 
       if (options.searchFails)
         return Promise.resolve(json({ error: true, message: 'search exploded' }));
       return Promise.resolve(json({ bugs }));
+    }
+    const attachGet = url.match(/\/bug\/(\d+)\/attachment/);
+    if (method === 'GET' && attachGet) {
+      const names = (options.existingAttachments ?? []).map((file_name) => ({ file_name }));
+      return Promise.resolve(json({ bugs: { [attachGet[1]!]: names } }));
     }
     if (method === 'POST' && /\/bug\?/.test(url)) return Promise.resolve(json({ id: 4242 }));
     return Promise.resolve(json({ id: 1 }));
@@ -421,9 +432,12 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     );
     const desc = buildDescription(ui);
 
-    // The developer has the app, not our test bench — so no internal file path or run command.
+    // The developer has the app, not our test bench — so no internal file path, run command, or the
+    // name of our frontend repository.
     expect(desc, 'no internal test file path').not.toContain('tests/e2e');
     expect(desc, 'no internal test command').not.toContain('npx playwright');
+    expect(desc, 'no internal repo name').not.toContain('KPOST_REACTJS_2023_V1');
+    expect(desc, 'no repository field at all').not.toContain('"repository"');
     // Instead: the app URL and the screen (component), so it is reproducible in the product.
     expect(desc).toContain('account.kpostindia.com');
     expect(ui.component, 'routes to the KMail screen component').toBe('KMail');
@@ -443,6 +457,68 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(
       calls.some((c) => c.url.includes('/attachment')),
       'the evidence file is attached',
+    ).toBe(true);
+  });
+
+  test('a filed UI bug gets its screenshot + video attached as proof', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'proof-'));
+    const shot = path.join(dir, 'shot.png');
+    const vid = path.join(dir, 'clip.webm');
+    writeFileSync(shot, Buffer.from([0x89, 0x50, 0x4e, 0x47])); // PNG magic bytes
+    writeFileSync(vid, Buffer.from([0x1a, 0x45, 0xdf, 0xa3])); // WebM magic bytes
+
+    const calls = stubBugzilla([]);
+    await filer().file([
+      candidate({
+        id: 'KP-UIPROOF',
+        source: 'ui',
+        proof: [
+          { path: shot, contentType: 'image/png', label: 'Screenshot (chromium)' },
+          { path: vid, contentType: 'video/webm', label: 'Video (chromium)' },
+        ],
+      }),
+    ]);
+
+    const attachBodies = calls
+      .filter((c) => c.method === 'POST' && c.url.includes('/attachment'))
+      .map((c) => c.body as { content_type?: string });
+    const types = attachBodies.map((b) => b.content_type);
+    expect(types, 'the screenshot is attached as an image').toContain('image/png');
+    expect(types, 'the video is attached').toContain('video/webm');
+  });
+
+  test('proof is not re-attached when it is already on the ticket (idempotent re-run)', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'proof-'));
+    const shot = path.join(dir, 'shot.png');
+    writeFileSync(shot, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+
+    // The ticket is OPEN and already carries this proof file from a previous run.
+    const calls = stubBugzilla(
+      [{ id: 7, summary: '[KP-UIPROOF] the profile screen', is_open: true, product: 'KPost UI' }],
+      { existingAttachments: ['KP-UIPROOF-screenshot-chromium-.png'] },
+    );
+    await filer().file([
+      candidate({
+        id: 'KP-UIPROOF',
+        source: 'ui',
+        product: 'KPost UI',
+        component: 'General',
+        assignee: 'ayyappan@kpostindia.com',
+        title: 'the profile screen',
+        proof: [{ path: shot, contentType: 'image/png', label: 'Screenshot (chromium)' }],
+      }),
+    ]);
+
+    const imageUploads = calls.filter(
+      (c) =>
+        c.method === 'POST' &&
+        c.url.includes('/attachment') &&
+        (c.body as { content_type?: string }).content_type === 'image/png',
+    );
+    expect(imageUploads, 'the already-attached screenshot is not uploaded again').toHaveLength(0);
+    expect(
+      calls.some((c) => c.url.includes('/comment')),
+      'it still comments',
     ).toBe(true);
   });
 

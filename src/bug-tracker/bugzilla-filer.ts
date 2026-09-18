@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { JUDGED_NOT_A_DEFECT, type BugzillaConfig } from '@config/bugzilla.config';
 import { SUITES, suiteFor } from '@config/ownership.config';
 import type { Logger } from '@utils/logger';
@@ -32,6 +34,15 @@ import type { BugzillaClient, ProductMetadata } from './bugzilla-client';
  * is verified; an unverifiable account means the field is omitted and Bugzilla's component
  * default assignee takes it, rather than the create being refused.
  */
+
+/**
+ * Largest proof file uploaded to a ticket. Screenshots are tiny; a UI video is usually 1–10 MB. The
+ * cap keeps one giant recording from stalling the filer or exceeding Bugzilla's limit — over it, the
+ * file is skipped with a warning (the screenshot still attaches). Bugzilla's own `maxattachmentsize`
+ * may be lower; a rejected upload only warns and never fails the run.
+ */
+const MAX_PROOF_MB = 25;
+const MAX_PROOF_BYTES = MAX_PROOF_MB * 1024 * 1024;
 
 export type FilingDecision =
   | 'created'
@@ -197,6 +208,7 @@ export class BugzillaFiler {
     const open = bugs.find((bug) => bug.is_open);
     if (open) {
       const result = await this.client.addComment(open.id, buildReproducedComment(candidate));
+      if (!('error' in result)) await this.attachProof(open.id, candidate);
       return 'error' in result
         ? this.entry(candidate, 'failed', { reason: result.error, bugId: open.id })
         : this.entry(candidate, 'commented', { bugId: open.id });
@@ -218,6 +230,7 @@ export class BugzillaFiler {
         resolved.id,
         buildReopenComment(candidate, String(resolved.resolution)),
       );
+      if (!('error' in result)) await this.attachProof(resolved.id, candidate);
       return 'error' in result
         ? this.entry(candidate, 'failed', { reason: result.error, bugId: resolved.id })
         : this.entry(candidate, 'reopened', { bugId: resolved.id });
@@ -235,7 +248,47 @@ export class BugzillaFiler {
       summary: `Evidence for ${candidate.id}`,
       body: buildEvidenceAttachment(candidate),
     });
+    await this.attachProof(created.id, candidate);
     return this.entry(candidate, 'created', { bugId: created.id });
+  }
+
+  /**
+   * Uploads a UI defect's proof — its screenshot(s) and video(s) — to the bug, so the ticket carries
+   * visible evidence, not just prose. Idempotent: it skips any proof already attached (by file name),
+   * so re-running never piles up duplicate screenshots on a ticket it comments on. A missing or
+   * oversized file only warns; the bug itself is already filed. API defects carry no proof here — for
+   * them the curl + response body in the description is the reproduction.
+   */
+  private async attachProof(bugId: number, candidate: BugCandidate): Promise<void> {
+    const proof = candidate.proof ?? [];
+    if (!proof.length) return;
+    const existing = await this.client.attachmentNames(bugId);
+    for (const item of proof) {
+      const ext = path.extname(item.path) || '';
+      const slug = item.label.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      const fileName = `${candidate.id}-${slug}${ext}`;
+      if (existing.has(fileName)) continue; // already attached on a previous run
+      let data: Buffer;
+      try {
+        data = readFileSync(item.path);
+      } catch {
+        this.log.warn(`bug ${bugId}: proof file not found — ${item.path}`);
+        continue;
+      }
+      if (data.length > MAX_PROOF_BYTES) {
+        this.log.warn(
+          `bug ${bugId}: proof "${item.label}" is ${Math.round(data.length / 1024 / 1024)} MB, ` +
+            `over the ${MAX_PROOF_MB} MB cap — skipped.`,
+        );
+        continue;
+      }
+      await this.client.attachFile(bugId, {
+        fileName,
+        summary: `${item.label} — proof for ${candidate.id}`,
+        data,
+        contentType: item.contentType,
+      });
+    }
   }
 
   /**

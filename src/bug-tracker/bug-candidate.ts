@@ -83,6 +83,12 @@ export interface BugCandidate {
   observedAt: string;
   /** Full, unabridged evidence for the ticket attachment. */
   evidence: Record<string, unknown>;
+  /**
+   * Binary proof to attach to the ticket — a UI failure's screenshot and video, so the developer
+   * SEES the defect. File paths on disk (Playwright's `test-results/…`), uploaded by the filer when
+   * the bug is created. API defects carry no proof here (their curl + response body is the proof).
+   */
+  proof?: ProofFile[];
   /** A platform-wide fault (gateway/auth filter) — filed once, listing every endpoint it hits. */
   systemic?: boolean;
   /** For a systemic defect: every endpoint the same fault was observed on, listed in the ticket. */
@@ -254,7 +260,6 @@ function fromValidationResult(
     affectedEndpoints: systemic ? [result.endpoint] : undefined,
     evidence: maskSensitive({
       module: suite.label,
-      repository: suite.repository,
       validator: result.validatorName,
       category: result.category,
       severity: result.severity,
@@ -270,6 +275,16 @@ function fromValidationResult(
   };
 }
 
+/** A binary artifact to attach to a ticket as proof (a screenshot or a video on disk). */
+export interface ProofFile {
+  /** Absolute or cwd-relative path to the file on disk. */
+  path: string;
+  /** MIME type, e.g. `image/png` or `video/webm`. */
+  contentType: string;
+  /** Human label shown as the attachment description, e.g. `Screenshot (chromium)`. */
+  label: string;
+}
+
 export interface UiFailureInput {
   file: string;
   title: string;
@@ -283,6 +298,8 @@ export interface UiFailureInput {
   build: string;
   testRunId: string;
   observedAt: string;
+  /** Screenshot / video captured for this failure, uploaded to the ticket as proof. */
+  proof?: ProofFile[];
 }
 
 /** Turns a browser test failure into a candidate for the UI module and its developer. */
@@ -328,13 +345,15 @@ export function candidateFromUiFailure(
     testRunId: input.testRunId,
     observedAt: input.observedAt,
     evidence: maskSensitive({
+      // The product-level module only — never our internal repo name or test paths (a developer has
+      // the app, not our bench, and our repo layout is not their concern).
       module: suite.label,
-      repository: suite.repository,
       screen: component,
       title: input.title,
       browser: input.browser,
       error: input.fullMessage,
     }),
+    proof: input.proof,
   };
 }
 
@@ -359,6 +378,10 @@ export function mergeCandidates(candidates: readonly BugCandidate[]): BugCandida
     existing.occurrences += candidate.occurrences;
     const browsers = new Set([...(existing.browsers ?? []), ...(candidate.browsers ?? [])]);
     if (browsers.size) existing.browsers = [...browsers].sort();
+    // Keep every browser's proof (screenshot + video), so the ticket shows the defect in each.
+    if (candidate.proof?.length) {
+      existing.proof = [...(existing.proof ?? []), ...candidate.proof];
+    }
     // A systemic defect's ticket lists every endpoint the same fault was seen on.
     if (candidate.affectedEndpoints?.length) {
       const endpoints = new Set([

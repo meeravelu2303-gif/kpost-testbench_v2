@@ -228,6 +228,48 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-18 — UI bugs now carry visual proof: the failure screenshot + video attach to the ticket
+
+The owner wanted every VALID UI bug to carry its **screenshot and video** as proof in Bugzilla, so the
+developer SEES the defect, not just reads prose. Playwright already captures both on a UI failure
+(`screenshot: 'only-on-failure'`, `video: 'retain-on-failure'`); nothing uploaded them. Wired it end to
+end:
+
+- **`ProofFile`** (`bug-candidate.ts`) — a `{path, contentType, label}` per artifact; `candidateFromUiFailure`
+  carries `proof`, and `mergeCandidates` unions proof across browsers (so a defect seen in 3 engines
+  attaches all three).
+- **The reporter** (`bugzilla-reporter.ts`) reads the failing test's `screenshot` / `video` attachments
+  and sets `proof` on the UI candidate. API candidates carry no proof (their curl + response body IS the
+  reproduction).
+- **The client** gained `attachFile` (binary, real `content_type` — `image/png` / `video/webm`) and
+  `attachmentNames` (existing attachments on a bug).
+- **The filer** uploads proof after **create, reopen AND comment**, and is **idempotent** — it skips any
+  proof already on the ticket (matched by file name), so re-runs never pile up duplicate screenshots.
+  Missing/oversized files only warn (cap `MAX_PROOF_MB = 25`); a rejected upload never fails the run.
+  Because it also runs on the comment path, an already-open ticket filed before this feature (e.g. #339)
+  gets its proof on the next `bugs:file:ui`, without duplicating.
+- Only VALID, filed bugs get proof (the filer only runs on candidates that pass the validity gate) — the
+  owner's "valid bug proof only".
+
+Guards in `bug-tracker.spec.ts`: a filed UI bug attaches `image/png` + `video/webm`; and proof already on
+a ticket is not re-uploaded on a re-run (idempotent). Note Bugzilla's own `maxattachmentsize` may reject a
+large video — that only warns; the screenshot (tiny) always lands. `npm run check` clean; framework green.
+
+### 2026-09-18 — Tickets no longer leak our internal frontend repo name
+
+The owner reviewed filed UI bug #339 and objected to the evidence block naming our repository
+(`"repository": "KPOST_REACTJS_2023_V1"`). Same principle as the 2026-09-14 fix that stripped test
+file paths / `npx playwright` commands: a developer has the app, not our bench, and our repo layout is
+not their concern (and it is an internal-detail leak). Removed the `repository` field from BOTH the UI
+(`candidateFromUiFailure`) and API (`fromValidationResult`) evidence in `bug-candidate.ts`; the
+product-level `module` label stays (it is product-facing, not internal). `suite.repository` is now
+unused in any ticket. Strengthened the guard `bug-tracker.spec.ts` ("a UI ticket is application-level")
+to also assert the rendered description contains neither `KPOST_REACTJS_2023_V1` nor a `"repository"`
+field, so it can never regress. `npm run check` clean; framework guards pass. Note: the fix applies to
+all FUTURE tickets; already-filed #339 keeps the repo name in its first comment (Bugzilla comment 0 is
+not editable via REST) — clean it in the Bugzilla UI or delete+re-file if the owner wants #339 itself
+corrected.
+
 ### 2026-09-18 — One neat run report after every run: `reports/RUN-SUMMARY.{md,json}` (API + UI, execution health)
 
 The owner asked for a clear, satisfying report after every run — how many endpoints tested and how many

@@ -177,6 +177,42 @@ export class BugzillaClient {
       );
   }
 
+  /** Existing attachment file names on a bug, so proof is never uploaded twice on a re-run. */
+  async attachmentNames(bugId: number): Promise<Set<string>> {
+    const result = await this.call('GET', `/bug/${bugId}/attachment?include_fields=file_name`);
+    if (!result.ok || !result.json) return new Set();
+    const bugs = (result.json as { bugs?: Record<string, { file_name?: string }[]> }).bugs ?? {};
+    const list = bugs[String(bugId)] ?? [];
+    return new Set(list.map((a) => a.file_name).filter((n): n is string => Boolean(n)));
+  }
+
+  /**
+   * Uploads a binary proof file (a UI screenshot or video) to a bug, so the developer SEES the
+   * defect. A failure only warns — the bug itself is already filed, and a missing screenshot must
+   * never fail the run. Returns whether it attached, so the caller can report proof coverage.
+   */
+  async attachFile(
+    bugId: number,
+    file: { fileName: string; summary: string; data: Buffer; contentType: string },
+  ): Promise<boolean> {
+    const result = await this.call('POST', `/bug/${bugId}/attachment`, {
+      ids: [bugId],
+      data: file.data.toString('base64'),
+      file_name: file.fileName,
+      summary: file.summary,
+      content_type: file.contentType,
+    });
+    if (!result.ok) {
+      this.log.warn(
+        `bug ${bugId} filed, but proof "${file.fileName}" did not attach ` +
+          `(${Math.round(file.data.length / 1024)} KB): ${describeFailure(result)} ` +
+          `— check Bugzilla's max attachment size.`,
+      );
+      return false;
+    }
+    return true;
+  }
+
   private async call(
     method: 'GET' | 'POST' | 'PUT',
     pathAndQuery: string,

@@ -6,6 +6,7 @@ import {
   candidatesFromReport,
   mergeCandidates,
   type BugCandidate,
+  type ProofFile,
 } from '../bug-tracker/bug-candidate';
 import { BugzillaClient } from '../bug-tracker/bugzilla-client';
 import { BugzillaFiler, type FilingOutcome } from '../bug-tracker/bugzilla-filer';
@@ -204,6 +205,7 @@ export default class BugzillaReporter implements Reporter {
             build: env.BUILD_ID,
             testRunId: env.TEST_RUN_ID,
             observedAt: new Date().toISOString(),
+            proof: proofFrom(failure?.attachments, project),
           },
           this.config,
         ),
@@ -236,4 +238,25 @@ function firstLine(message: string): string {
   return (message.split('\n').find((line) => line.trim().length > 0) ?? 'Assertion failed')
     .trim()
     .slice(0, MAX);
+}
+
+/**
+ * The screenshot and video Playwright captured for a failed UI test, as proof to attach to the
+ * ticket. Playwright records these on failure (`screenshot: 'only-on-failure'`, `video:
+ * 'retain-on-failure'`); each attachment carries the file `path` and `contentType`.
+ */
+function proofFrom(
+  attachments: readonly { name: string; path?: string; contentType: string }[] | undefined,
+  browser: string,
+): ProofFile[] {
+  const proof: ProofFile[] = [];
+  for (const a of attachments ?? []) {
+    if (!a.path) continue;
+    if (a.name === 'screenshot') {
+      proof.push({ path: a.path, contentType: a.contentType, label: `Screenshot (${browser})` });
+    } else if (a.name === 'video') {
+      proof.push({ path: a.path, contentType: a.contentType, label: `Video (${browser})` });
+    }
+  }
+  return proof;
 }
