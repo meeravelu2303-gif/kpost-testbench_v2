@@ -196,8 +196,12 @@ export function buildReproducedComment(candidate: BugCandidate): string {
   return (
     `Reproduced by kpost-testbench_v2 on ${candidate.observedAt} ` +
     `(${candidate.environment}, build ${candidate.build}, run ${candidate.testRunId}).\n` +
+    `Host: ${candidate.baseURL}\n` +
     `Check: ${candidate.classification}. Observed ${candidate.occurrences} time(s) this run.` +
-    (candidate.correlationId ? `\nCorrelation ID: ${candidate.correlationId}` : '')
+    (candidate.correlationId ? `\nCorrelation ID: ${candidate.correlationId}` : '') +
+    // The current, runnable reproduction against the host actually tested — so the ticket carries an
+    // up-to-date command even when its original description was filed against an older host.
+    (candidate.curl ? `\n\ncurl (current host):\n${candidate.curl}` : '')
   ).slice(0, BUGZILLA_LIMITS.comment);
 }
 

@@ -20,6 +20,14 @@ export interface SafetyFlags {
    * SMS/email. False means a real host — where the SMS/OTP kill-switch below applies in EVERY mode.
    */
   mockApi?: boolean;
+  /**
+   * Deep write-fuzzing on a disposable TEST DB. When both this and `testDbMode` are set, the engine
+   * may run its fuzzers on a `data`-side-effect WRITE endpoint (which persists junk — hence test-DB
+   * only). It never unlocks `external`/`global`/OTP writes, and the QA-identifier guard stays armed.
+   */
+  writeFuzz?: boolean;
+  /** The target is a throwaway test database (see env `TEST_DB_MODE`); required for `writeFuzz`. */
+  testDbMode?: boolean;
 }
 
 /**
@@ -75,6 +83,8 @@ export function destructiveBlockReason(
     isProduction: env.IS_PRODUCTION,
     allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
     mockApi: env.MOCK_API,
+    writeFuzz: env.WRITE_FUZZ,
+    testDbMode: env.TEST_DB_MODE,
   },
 ): string | undefined {
   /*
@@ -126,7 +136,22 @@ export function destructiveBlockReason(
     endpoint.destructive === true &&
     (endpoint.sideEffect ?? 'data') === 'data';
 
-  if (isLive && !endpoint.productionSafe && !liveWriteAuthorized) {
+  /*
+   * Deep write-fuzzing on a disposable TEST DB. Lets the ENGINE run a `data`-side-effect destructive
+   * write (so its fuzzers/attack probes exercise the write's input validation) — which persists junk,
+   * so it requires BOTH `writeFuzz` and `testDbMode`. It opens ONLY `data` writes: `external` (SMS/
+   * account provisioning) is still blocked by the kill-switch above and the side-effect check below,
+   * `global` by the side-effect check, OTP by the OTP check — and the QA-identifier guard still
+   * confines every id to accounts we own. Never set against a shared/real database.
+   */
+  const writeFuzzAuthorized =
+    isLive &&
+    flags.writeFuzz === true &&
+    flags.testDbMode === true &&
+    endpoint.destructive === true &&
+    (endpoint.sideEffect ?? 'data') === 'data';
+
+  if (isLive && !endpoint.productionSafe && !liveWriteAuthorized && !writeFuzzAuthorized) {
     return (
       `${endpoint.label} is not cleared for the live application ` +
       `(no productionSafe flag — see src/api/registry/endpoint-definition.ts)`

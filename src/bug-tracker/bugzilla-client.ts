@@ -201,6 +201,15 @@ export class BugzillaClient {
       );
   }
 
+  /** A bug's first comment (its description) — used to read a systemic ticket's affected-endpoint list. */
+  async firstComment(bugId: number): Promise<string | undefined> {
+    const result = await this.call('GET', `/bug/${bugId}/comment`);
+    if (!result.ok || !result.json) return undefined;
+    const bugs = (result.json as { bugs?: Record<string, { comments?: { text?: string }[] }> })
+      .bugs;
+    return bugs?.[String(bugId)]?.comments?.[0]?.text;
+  }
+
   /** Existing attachment file names on a bug, so proof is never uploaded twice on a re-run. */
   async attachmentNames(bugId: number): Promise<Set<string>> {
     const result = await this.call('GET', `/bug/${bugId}/attachment?include_fields=file_name`);

@@ -228,6 +228,62 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-18 — Systemic bugs verify against their OWN endpoints (auth bugs stayed open despite being fixed)
+
+The owner seeded the missing QA accounts into the testingapi test DB (personal + Nebius Solutions co 242
++ North Star co 1034; kpostIDs resolved by `getUserDetailsByMobNo` / `getCompanyDetails`, member lists by
+admin `userManagementDetails/{companyID}`; `.env` updated). With login working, the auth probes finally
+RAN (185 passed vs 0 before), and a resolve pass closed 21 more genuinely-fixed bugs (spot-checked by curl).
+
+But the owner noticed the **authentication** tickets stayed open although auth is fixed. Investigated:
+auth is now correctly enforced (**401 on missing token**) on essentially every endpoint — the ONLY holdouts
+are 3 image downloads (`downloadProfileImage/FullProfileImage/CoverImage`) which return **500** (a separate
+crash bug, not an auth-status issue). The systemic auto-resolve checked the validator class **globally**, so
+those 3 endpoints dragged EVERY systemic auth ticket open — even ones like #8 whose own endpoints
+(`getActiveSession`, `getLoginHistory`) are genuinely fixed.
+
+**Fix:** a systemic ticket is now verified against **the endpoints IT lists** (`parseAffectedEndpoints`
+reads the description's "Affects N endpoints" + "Representative endpoint"), not globally. If the class no
+longer fails on any of the ticket's OWN endpoints → close it; the unrelated failure is a different ticket.
+Falls back to the global check when a ticket has no endpoint list. `classifyResolve` gained the optional
+`affectedEndpoints`; the reporter fetches each systemic bug's description (`client.firstComment`). Guards in
+`verify-resolve.spec.ts` (own-endpoints-fixed closes even when the class fails elsewhere; the image ticket
+stays open; the parser). `npm run check` clean; framework green. Re-running the resolve now closes the auth
+tickets whose endpoints are verified fixed on testingapi.
+
+### 2026-09-18 — Deep write-fuzz (`WRITE_FUZZ`), resolve-only status pass, testingapi curls on comments
+
+Finishing the production-grade end-to-end on the disposable test DB, plus the owner's status-update pass.
+
+- **Resolve-only status pass.** The owner wanted to first close what the developers already fixed, without
+  filing anything new. `BUGZILLA_RESOLVE_ONLY` (+ `resolve:kpost` command) runs the verify pass and marks
+  the verified-fixed bugs RESOLVED/FIXED but files/comments nothing. Ran it against **testingapi**:
+  **22 auto-closed** (each with a "Verified fixed … against testingapi" comment), 180 kept open, **0 new
+  tickets** (total stayed 211). (The owner also manually closed 3 systemic error-format bugs #1–#3 — if
+  those still fail on testingapi, a later run auto-reopens them.)
+- **Kept-open verdict.** The auto-resolve now records `confirmedFailing` (the run exercised the exact check
+  on THIS host and it still failed — a real defect on this URL) vs `notVerified` (a write/OTP endpoint not
+  exercised this run), so REPORT.md §3b states, per host, which open bugs are confirmed-on-testingapi vs
+  unverified.
+- **testingapi curls on tickets.** The old 204 bugs were filed against devapi2, so their description curls
+  say devapi2 (Bugzilla comment 0 is not editable via REST). `buildReproducedComment` now includes the
+  current `Host:` + a runnable **testingapi** curl, so the next filing run stamps every still-failing ticket
+  with an up-to-date testingapi reproduction beneath the old one.
+- **`WRITE_FUZZ` — deep write-fuzzing on the disposable test DB.** The owner confirmed the DB is
+  automation-only, so writes may be fuzzed. `WRITE_FUZZ` (requires `TEST_DB_MODE`) opens the ENGINE to run
+  its fuzzers/attack probes on **`data`-side-effect WRITE** endpoints — input-validation, injection,
+  malformed payloads on writes. **Hard boundaries (guarded + tested):** it opens ONLY `data` writes;
+  `external` (SMS/account-provisioning via ksmacc), `global` (shared state), and OTP writes stay blocked by
+  the kill-switch / side-effect checks; the QA-identifier guard still confines every id to our own accounts;
+  it needs BOTH flags or nothing opens. `deepfuzz:{preview,file}:kpost` commands. **Caveat (recorded):**
+  engine writes are NOT self-cleaning, so a deepfuzz run leaves junk/orphans in the DB — fine on a
+  disposable DB, **reset/reseed it after a deepfuzz run**. `npm run check` clean; **102 framework guards
+  pass** (incl. the new write-fuzz boundary test + 23 live-safety).
+
+The production-grade end-to-end for KPost API on testingapi is now: `alltypes:*` (all types on reads +
+functional writes, valid-only) and `deepfuzz:*` (adds write-fuzzing on the disposable DB), both with
+cascade consolidation, build-independent dedup, auto-resolve, and testingapi-stamped comments.
+
 ### 2026-09-18 — Production-grade on the test DB: cascade consolidation + all-test-types mode
 
 The owner pointed KPost API at a **test DB** and wants "every test type on every endpoint" but "valid

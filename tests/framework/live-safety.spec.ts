@@ -462,4 +462,52 @@ test.describe('live-application safety @framework', () => {
       'these are OTP-blocked on live but carry no otpDependent flag — they would fail 40 cases each',
     ).toEqual([]);
   });
+
+  test('deep write-fuzz opens ONLY data writes, and never external/global/OTP', () => {
+    const fuzz = {
+      isProduction: true,
+      allowDestructive: false,
+      mockApi: false,
+      writeFuzz: true,
+      testDbMode: true,
+    };
+    const dataWrite: GuardedEndpoint = {
+      label: 'createEvent',
+      destructive: true,
+      sideEffect: 'data',
+    };
+    const externalWrite: GuardedEndpoint = {
+      label: 'addingUserByAdmin',
+      destructive: true,
+      sideEffect: 'external',
+    };
+    const globalWrite: GuardedEndpoint = {
+      label: 'updateAppVersion',
+      destructive: true,
+      sideEffect: 'global',
+    };
+    const otpWrite: GuardedEndpoint = {
+      label: 'sendOTP',
+      destructive: true,
+      sideEffect: 'data',
+      otpDependent: 'sends',
+    };
+
+    // A `data` write is opened for the engine to fuzz on the disposable test DB.
+    expect(destructiveBlockReason(dataWrite, fuzz), 'a data write is fuzzable').toBeUndefined();
+    // Everything dangerous stays blocked, even with write-fuzz on.
+    expect(destructiveBlockReason(externalWrite, fuzz), 'external stays blocked').toBeTruthy();
+    expect(destructiveBlockReason(globalWrite, fuzz), 'global stays blocked').toBeTruthy();
+    expect(destructiveBlockReason(otpWrite, fuzz), 'OTP/SMS stays blocked').toBeTruthy();
+
+    // Without BOTH flags, write-fuzz does not open a data write on the live app.
+    expect(
+      destructiveBlockReason(dataWrite, { ...fuzz, testDbMode: false }),
+      'writeFuzz needs testDbMode too',
+    ).toBeTruthy();
+    expect(
+      destructiveBlockReason(dataWrite, { ...fuzz, writeFuzz: false }),
+      'no writeFuzz → a data write stays blocked on live',
+    ).toBeTruthy();
+  });
 });

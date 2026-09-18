@@ -176,6 +176,11 @@ export function productionExclusion(
   // kill-switch is untouched. Writes stay gated — covered by the self-cleaning lifecycle flows — so
   // nothing persists junk into the shared schema. Only ever set against a real test DB.
   if (env.TEST_DB_MODE && endpoint?.destructive === false) return undefined;
+  // DEEP WRITE-FUZZ on the disposable test DB: run the full matrix on WRITE endpoints too, so input
+  // validation, injection and malformed payloads are exercised on writes. This persists junk, so it
+  // needs both flags; the QA-guard still refuses any request naming a record we do not own, and the
+  // endpoint gate (production-guard) only opens `data` writes — never external/global/OTP.
+  if (env.WRITE_FUZZ && env.TEST_DB_MODE) return undefined;
 
   const known = PRODUCTION_BLOCKED_VALIDATORS[validatorName];
   if (known) return `not run against the live application: ${known}`;

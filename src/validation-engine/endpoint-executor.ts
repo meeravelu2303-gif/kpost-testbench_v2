@@ -129,6 +129,9 @@ export class EndpointExecutor {
       // Threads the mock/real-host signal so the SMS/OTP kill-switch blocks OTP senders against a
       // real host in EVERY mode, while still letting them run against the bundled mock.
       mockApi: env.MOCK_API,
+      // Deep write-fuzz on a disposable test DB (both required); opens only `data` writes.
+      writeFuzz: env.WRITE_FUZZ,
+      testDbMode: env.TEST_DB_MODE,
     });
     if (blocked) throw new ProductionSafetyError(blocked);
 

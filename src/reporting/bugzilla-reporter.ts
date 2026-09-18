@@ -12,7 +12,11 @@ import {
 import { BugzillaClient } from '../bug-tracker/bugzilla-client';
 import { BugzillaFiler, type FilingOutcome } from '../bug-tracker/bugzilla-filer';
 import { applyValidityGate, assessRunValidity } from '../bug-tracker/validity-gate';
-import { buildRunIndex, classifyResolve } from '../bug-tracker/verify-resolve';
+import {
+  buildRunIndex,
+  classifyResolve,
+  parseAffectedEndpoints,
+} from '../bug-tracker/verify-resolve';
 import type { ResolveSummary } from './bug-report';
 import { readBugzillaConfig } from '../config/bugzilla.config';
 import { env } from '../config/env';
@@ -152,7 +156,11 @@ export default class BugzillaReporter implements Reporter {
     } else if (!validity.valid) {
       notFiledReason = `run gate blocked filing — ${validity.reason}`;
     } else {
-      if (gate.filed.length) {
+      if (this.config.resolveOnly) {
+        // Reconcile-only pass: close what the developers already fixed, file no new tickets.
+        notFiledReason =
+          'resolve-only mode — verified-fixed bugs are being closed; no new tickets filed';
+      } else if (gate.filed.length) {
         const filer = new BugzillaFiler(client, this.config, this.log);
         // File in module order so created bug ids are ascending (KPost → KMail → UI).
         outcome = await filer.file(orderedForFiling(gate.filed));
@@ -198,7 +206,15 @@ export default class BugzillaReporter implements Reporter {
     candidates: readonly BugCandidate[],
     dryRun: boolean,
   ): Promise<ResolveSummary> {
-    const summary: ResolveSummary = { resolved: [], keptOpen: 0, checked: 0, failed: 0, dryRun };
+    const summary: ResolveSummary = {
+      resolved: [],
+      keptOpen: 0,
+      checked: 0,
+      failed: 0,
+      confirmedFailing: 0,
+      notVerified: 0,
+      dryRun,
+    };
     const index = buildRunIndex(this.validationReports);
     const reproduced = new Set(candidates.map((c) => c.id.replace(/^\[|\]$/g, '')));
     const products = [
@@ -212,9 +228,24 @@ export default class BugzillaReporter implements Reporter {
       }
       for (const bug of found.bugs) {
         summary.checked += 1;
-        const decision = classifyResolve(bug, index, reproduced);
+        // A systemic (platform-wide) ticket is verified against ITS OWN endpoints, not globally — so a
+        // ticket whose endpoints are fixed closes even if the same class still fails on an unrelated
+        // endpoint (which is a different ticket). Read those from the description.
+        let affected: string[] | undefined;
+        if (/platform-wide/i.test(bug.summary)) {
+          const description = await client.firstComment(bug.id);
+          if (description) affected = parseAffectedEndpoints(description);
+        }
+        const decision = classifyResolve(bug, index, reproduced, affected);
         if (decision.action !== 'resolve') {
           summary.keptOpen += 1;
+          // Split kept-open bugs: did the run confirm the fault still fails on THIS host, or was the
+          // check simply not exercised (a write/OTP endpoint) so it stays unverified on this URL?
+          if (/still fail|fails somewhere|reproduced/i.test(decision.reason)) {
+            summary.confirmedFailing += 1;
+          } else {
+            summary.notVerified += 1;
+          }
           continue;
         }
         if (dryRun) {

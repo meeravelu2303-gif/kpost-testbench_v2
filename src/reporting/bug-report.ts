@@ -39,6 +39,13 @@ export interface ResolveSummary {
   keptOpen: number;
   checked: number;
   failed: number;
+  /**
+   * Split of the kept-open bugs: `confirmedFailing` = the run exercised the exact check on THIS
+   * host and it still failed (a real defect on this URL); `notVerified` = the check did not run this
+   * run (a write/OTP endpoint, or unparseable), so it could not be confirmed on this host.
+   */
+  confirmedFailing: number;
+  notVerified: number;
   /** True on a preview run — the list is what WOULD be closed; nothing was written to Bugzilla. */
   dryRun: boolean;
 }
@@ -268,9 +275,10 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
     lines.push(
       `## 3b. Auto-resolved (verified fixed)${r.dryRun ? ' — PREVIEW' : ''}`,
       '',
-      `Checked **${r.checked}** open bench-filed bugs; **${r.resolved.length}** ${verb} ` +
-        `(their exact endpoint+validator ran and passed this run); ` +
-        `**${r.keptOpen}** stayed open (still failing, or not exercised this run)` +
+      `Checked **${r.checked}** open bench-filed bugs against this host; **${r.resolved.length}** ${verb} ` +
+        `(their exact endpoint+validator ran and passed this run). Of the **${r.keptOpen}** that stayed open: ` +
+        `**${r.confirmedFailing}** are CONFIRMED still failing on this host, and **${r.notVerified}** were ` +
+        `NOT exercised this run (a write/OTP endpoint) so they are unverified on this host` +
         (r.failed ? `; ${r.failed} could not be updated` : '') +
         `.${r.dryRun ? ' Run the non-dry filing command to apply these.' : ' A later run reopens any that recur.'}`,
       '',

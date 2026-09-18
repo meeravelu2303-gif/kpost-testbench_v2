@@ -107,14 +107,34 @@ export interface ResolveDecision {
 const ENDPOINT_RE = /\]\s*(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+?):/i;
 
 /**
- * Decides whether one open bench bug was verified fixed this run. A systemic (platform-wide) bug is
- * fixed only when its validator class ran and no longer fails ANYWHERE; an endpoint-specific bug is
- * fixed only when its own (endpoint, validator) ran and passed.
+ * The endpoints a systemic ticket lists in its description ("Affects N endpoints — …\n  - GET /x\n …"),
+ * plus the "Representative endpoint:" line — the scope to verify that ticket against.
+ */
+export function parseAffectedEndpoints(description: string): string[] {
+  const eps = new Set<string>();
+  for (const m of description.matchAll(/^\s*-\s+(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+)\s*$/gim)) {
+    eps.add(`${m[1]} ${m[2]}`);
+  }
+  const rep = description.match(
+    /Representative endpoint:\s*(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+)/i,
+  );
+  if (rep) eps.add(`${rep[1]} ${rep[2]}`);
+  return [...eps];
+}
+
+/**
+ * Decides whether one open bench bug was verified fixed this run. An endpoint-specific bug is fixed
+ * only when its own (endpoint, validator) ran and passed. A systemic (platform-wide) bug is verified
+ * against the endpoints IT LISTS (`affectedEndpoints`, parsed from its description) — a platform fault
+ * that no longer fails on any of the ticket's own endpoints is fixed FOR THAT TICKET, even if the same
+ * class still fails on an unrelated endpoint (that unrelated failure is a different ticket). Only when
+ * the ticket's affected endpoints are unknown does it fall back to the global "fails nowhere" check.
  */
 export function classifyResolve(
   bug: BugSummary,
   index: RunIndex,
   reproducedTags: ReadonlySet<string>,
+  affectedEndpoints?: readonly string[],
 ): ResolveDecision {
   const systemic = /platform-wide/i.test(bug.summary);
   const validator = normalizeValidator(bug.summary);
@@ -134,6 +154,35 @@ export function classifyResolve(
   }
 
   if (systemic) {
+    const own = (affectedEndpoints ?? []).map(normalizeEndpoint);
+    if (own.length) {
+      // Verify against the ticket's OWN endpoints — the accurate scope.
+      const tested = own.filter((ep) => index.ranEndpoint.has(ep));
+      if (!tested.length) {
+        return {
+          action: 'keep',
+          reason: `none of the ticket's ${own.length} endpoint(s) were exercised this run`,
+          validator,
+          systemic,
+        };
+      }
+      const stillFailing = tested.filter((ep) => index.failedPair.has(`${ep}||${validator}`));
+      if (stillFailing.length) {
+        return {
+          action: 'keep',
+          reason: `"${validator}" still fails on ${stillFailing[0]}`,
+          validator,
+          systemic,
+        };
+      }
+      return {
+        action: 'resolve',
+        reason: `"${validator}" ran and passed on all ${tested.length} of this ticket's endpoint(s)`,
+        validator,
+        systemic,
+      };
+    }
+    // No affected-endpoint list available — fall back to the global class check.
     if (!index.ranClass.has(validator)) {
       return {
         action: 'keep',

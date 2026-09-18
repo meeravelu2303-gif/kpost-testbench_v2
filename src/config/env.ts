@@ -70,6 +70,11 @@ const EnvSchema = z.object({
    * it only acts on a real filing run (never a dry run) and never touches a human-judged resolution.
    */
   BUGZILLA_AUTO_RESOLVE: z.stringbool().default(true),
+  /**
+   * Resolve-only: close the verified-fixed bugs but do NOT file or comment new ones. For a pass that
+   * only reconciles "what the developers already fixed" without adding tickets yet.
+   */
+  BUGZILLA_RESOLVE_ONLY: z.stringbool().default(false),
 
   VALIDATION_PROFILE: z.enum(VALIDATION_PROFILES).default('REGRESSION'),
   ALLOW_DESTRUCTIVE_TESTS: z.stringbool().default(false),
@@ -80,6 +85,13 @@ const EnvSchema = z.object({
    * flows. Off by default — only set it when the host genuinely points at a test DB.
    */
   TEST_DB_MODE: z.stringbool().default(false),
+  /**
+   * Deep write-fuzzing: run the engine's fuzzers/attack probes directly on `data`-side-effect WRITE
+   * endpoints (not just reads), so bad input, injection and malformed payloads are tested on writes
+   * too. This PERSISTS junk into the schema, so it is only for a disposable test DB — it requires
+   * `TEST_DB_MODE=true`, never unlocks `external`/`global`/OTP writes, and the QA-guard stays armed.
+   */
+  WRITE_FUZZ: z.stringbool().default(false),
 
   HEADLESS: z.stringbool().default(true),
   WORKERS: z.coerce.number().int().positive().optional(),

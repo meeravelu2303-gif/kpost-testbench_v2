@@ -1,5 +1,9 @@
 import type { BugSummary } from '../../src/bug-tracker/bugzilla-client';
-import { buildRunIndex, classifyResolve } from '../../src/bug-tracker/verify-resolve';
+import {
+  buildRunIndex,
+  classifyResolve,
+  parseAffectedEndpoints,
+} from '../../src/bug-tracker/verify-resolve';
 import type {
   ValidationReport,
   ValidationResult,
@@ -109,6 +113,46 @@ test.describe('auto-resolve verification', () => {
       '[KP-SYS001] Platform-wide — 6/6 security headers failed: content-security-policy';
     expect(classifyResolve(bug(summary), cleared, NONE).action).toBe('resolve');
     expect(classifyResolve(bug(summary), still, NONE).action).toBe('keep');
+  });
+
+  test('a systemic bug closes when ITS OWN endpoints pass, even if the class fails elsewhere @framework', () => {
+    // getActiveSession + getLoginHistory now pass missing-token; the same class still fails on an
+    // UNRELATED image endpoint. The ticket for the two session endpoints must still close.
+    const index = buildRunIndex([
+      report([
+        result('GET /v2/signupLogin/getActiveSession', 'authentication.missing-token', 'PASSED'),
+      ]),
+      report([
+        result('POST /v2/signupLogin/getLoginHistory', 'authentication.missing-token', 'PASSED'),
+      ]),
+      report([
+        result('GET /v2/profile/downloadProfileImage', 'authentication.missing-token', 'FAILED'),
+      ]),
+    ]);
+    const summary =
+      '[KP-SES001] Platform-wide — missing-token cases failed: no Authorization header';
+    const affected = [
+      'GET /v2/signupLogin/getActiveSession',
+      'POST /v2/signupLogin/getLoginHistory',
+    ];
+    expect(classifyResolve(bug(summary), index, NONE, affected).action, 'own endpoints fixed').toBe(
+      'resolve',
+    );
+    // A ticket that IS the image endpoint stays open (its own endpoint still fails).
+    const imgAffected = ['GET /v2/profile/downloadProfileImage'];
+    expect(classifyResolve(bug(summary), index, NONE, imgAffected).action).toBe('keep');
+  });
+
+  test('parseAffectedEndpoints reads the description list and representative endpoint @framework', () => {
+    const desc =
+      'Representative endpoint: GET /v2/signupLogin/getActiveSession\n\n' +
+      'Affects 2 endpoints — one shared fix resolves all of them:\n' +
+      '  - GET /v2/signupLogin/getActiveSession\n' +
+      '  - POST /v2/signupLogin/getLoginHistory\n';
+    expect(parseAffectedEndpoints(desc).sort()).toEqual([
+      'GET /v2/signupLogin/getActiveSession',
+      'POST /v2/signupLogin/getLoginHistory',
+    ]);
   });
 
   test('never auto-resolves an environmental (response-time) bug @framework', () => {
