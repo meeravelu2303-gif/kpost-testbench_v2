@@ -26,7 +26,7 @@ What each one does:
 - **`kpost`** — every KPost API endpoint, **all test types** (status, schema, auth, security, injection/XSS, performance, every input fuzzer) on the disposable **testingapi** test DB, plus the self-cleaning **write lifecycle flows** (Katchup, Kall, Profile, Contacts, Group, Settings, KDiary, KOS, AWS) — the full application flow.
 - **`kmail`** — every KMail API endpoint: the full read matrix + the KMail compose/draft/settings write lifecycle.
 - **`admin`** — every Admin API endpoint: reads + the org-build write lifecycle (needs the business accounts).
-- **`ui`** — the whole UI: every screen (deep sweep) + every feature flow (Katchup, KMail, Kall, Settings, Group, Contacts, KDiary, Profile), with proof screenshots/videos on a `:file` run.
+- **`ui`** — the whole UI on **all three browsers (Chromium, Firefox, WebKit)**, run sequentially: every screen (deep sweep) + every feature flow (Katchup, KMail, Kall, Settings, Group, Contacts, KDiary, Profile), with proof screenshots/videos on a `:file` run. The report breaks results down **per browser**, and each filed bug records the **browser name** (whiteboard `[browser:…]` + a "Browsers affected" line), so a WebKit-only or Firefox-only defect is unmistakable.
 - **`all`** — `kpost`, then `kmail`, then `ui`, in order (separate runs, so the API login never displaces the UI session).
 
 Each run writes the single report (see §4). All are serial (`--workers=1`).

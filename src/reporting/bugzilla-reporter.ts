@@ -52,7 +52,14 @@ const LOG = '[bugzilla]';
  * put false bugs on the developer's queue. Their failures still surface in the Playwright report for
  * human triage; they are simply never auto-filed.
  */
-const UI_FILING_SPECS = new Set(['screens.spec.ts', 'navigation.spec.ts', 'shell.spec.ts']);
+const UI_FILING_SPECS = new Set([
+  'screens.spec.ts',
+  'navigation.spec.ts',
+  'shell.spec.ts',
+  // The interaction sweep files too: its signals (a JS crash, a broken asset, or a frozen main
+  // thread during real use) are selector-INDEPENDENT — a real defect, never a tuning miss.
+  'interactions.spec.ts',
+]);
 
 /**
  * Deterministic filing order so Bugzilla ids come out **ascending by module** — KPost API first, then

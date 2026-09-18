@@ -122,3 +122,25 @@ export function healthFailures(report: UiHealthReport): string[] {
     ...report.brokenResources.map((r) => `broken resource ${r.status}: ${r.url}`),
   ];
 }
+
+/**
+ * Is the page's main JS thread responsive, or hung? A queued `page.evaluate` cannot run while the
+ * renderer is blocked by a long task / infinite loop, so racing a trivial evaluate against a timeout
+ * detects the "screen hangs" class directly: if the probe does not return within the budget, the UI
+ * is frozen. Used after an interaction to catch a hang the static render checks never see.
+ */
+export async function isResponsive(page: Page, budgetMs = 8000): Promise<boolean> {
+  const probe = page
+    .evaluate(() => true)
+    .then(() => true)
+    .catch(() => true); // an evaluate error (navigation, closed) is not a hang
+  const hung = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), budgetMs));
+  return Promise.race([probe, hung]);
+}
+
+/** POST/PUT/PATCH/DELETE app-API calls that failed — the calls a USER ACTION triggers (a send, a
+ * save). Unlike a background GET poll, a failed write on a deliberate action is the defect the user
+ * feels ("I sent a message and nothing happened"), so it is a fileable signal, not just context. */
+export function failedUserActions(report: UiHealthReport): FailedCall[] {
+  return report.failedApiCalls.filter((c) => c.method !== 'GET' && c.method !== 'HEAD');
+}

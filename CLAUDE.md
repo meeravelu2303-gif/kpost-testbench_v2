@@ -228,6 +228,44 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-18 — UI: 3-browser runs; interaction sweep + hang detector + continuous-send catch the bugs the static sweep missed
+
+The owner reported real UI defects the bench was NOT catching — the search bar misbehaving, the screen
+hanging, and (notably) **not being able to send a second message without refreshing the page**, plus
+crashes. Root cause: the deep UI sweep (`screens.spec.ts`) is **read-only** — it loads each screen and
+checks it at rest, so defects that only appear **in use** (a click that crashes, a search that freezes
+the tab, a send that dies until refresh) are invisible to it. Fixed by adding the interaction layer,
+and by running all browsers so browser-specific breakage is caught.
+
+- **`npm run ui` now runs Chromium + Firefox + WebKit** (was Chromium only), serial. Every filed UI
+  bug already records the browser (`buildWhiteboard` → `[cat:…][browser:chromium,firefox,webkit]`,
+  and a "Browsers affected" description line), and the report breaks results down per browser. The
+  **BUGZILLA-UI** already parses `[browser:…]`, shows a Browser row in the bug, and offers a browser
+  filter gated on browser-tagged bugs — verified, no change needed there.
+- **`src/ui/ui-health.ts` gained a hang detector** — `isResponsive(page)` races a trivial
+  `page.evaluate` against a timeout: a frozen main thread cannot answer, so a "screen hangs" is caught
+  directly. Plus `failedUserActions()` — a failed POST/PUT on a deliberate action (a send that fails)
+  is now a fileable signal, not just context (the API suite sends fresh each time and would never
+  reproduce "the 2nd send in a session fails").
+- **`tests/e2e/interactions.spec.ts` (new, FILES)** — the counterpart to the static sweep: on Home,
+  Katchup, Kall, KMail and Settings it drives real, non-destructive use (type in the search box, scroll,
+  open a conversation, Escape) under the health monitor, then checks the page did not crash, break an
+  asset, or **freeze**. Every interaction is best-effort (a missing control is skipped, never failed),
+  so the signals are selector-INDEPENDENT — a crash/freeze is unambiguous and cannot be a false bug.
+  Added to `UI_FILING_SPECS`, so these file (with the browser name).
+- **`tests/e2e/katchup-continuous.spec.ts` (new, gated `KATCHUP_UI_LIFECYCLE`)** — reproduces the
+  reported defect directly: opens a conversation and sends **five messages in one session with a real
+  gap between them and NO reload**, failing if any send does not go through (the message never appears,
+  or its send API call fails) or the screen freezes. Self-cleaning. Runs under `npm run ui` on all three
+  browsers.
+
+`npm run check` clean; **106 framework guards pass**; the new specs collect (5 interaction screens + 1
+continuous-send, ×3 browsers). Honest caveat, recorded: the interaction sweep's crash/freeze/broken-asset
+signals fire immediately and reliably; the selector-dependent parts (search-result correctness, the
+continuous-send open/send selectors) still want **one live tuning pass** on the deployed build to be
+sure they exercise the exact controls — but they can only SKIP or SURFACE on a selector gap, never file a
+false bug. Run `npm run install:browsers` once before the first 3-browser run.
+
 ### 2026-09-18 — One command per surface, one command doc (`docs/COMMANDS.md`); scripts rationalised 60 → 31
 
 The owner wanted a clear, single command per surface (KPost API / KMail / Admin / UI) and all commands
