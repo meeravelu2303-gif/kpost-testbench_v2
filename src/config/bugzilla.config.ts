@@ -69,6 +69,8 @@ export interface BugzillaConfig {
   dryRun: boolean;
   maxFile: number;
   fileUiFailures: boolean;
+  /** Auto-close a bench-filed bug this run verified as fixed (see env `BUGZILLA_AUTO_RESOLVE`). */
+  autoResolve: boolean;
   /** Prefix of the dedupe tag written into every summary: `[KP-XXXXXX]`. */
   tagPrefix: string;
   timeoutMs: number;
@@ -86,6 +88,7 @@ export function readBugzillaConfig(): BugzillaConfig {
     dryRun: env.BUGZILLA_DRY_RUN,
     maxFile: env.BUGZILLA_MAX_FILE,
     fileUiFailures: env.BUGZILLA_FILE_UI_FAILURES,
+    autoResolve: env.BUGZILLA_AUTO_RESOLVE,
     tagPrefix: 'KP',
     timeoutMs: 20_000,
   };

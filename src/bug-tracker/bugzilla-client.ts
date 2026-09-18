@@ -152,6 +152,30 @@ export class BugzillaClient {
     return result.ok ? { ok: true } : { error: describeFailure(result) };
   }
 
+  /** Marks a bug RESOLVED/FIXED, recording why (the run that verified the fix). */
+  async resolveFixed(bugId: number, comment: string): Promise<{ ok: true } | { error: string }> {
+    const result = await this.call('PUT', `/bug/${bugId}`, {
+      status: 'RESOLVED',
+      resolution: 'FIXED',
+      comment: { body: comment },
+    });
+    return result.ok ? { ok: true } : { error: describeFailure(result) };
+  }
+
+  /** Every OPEN bug of a product that carries our dedupe tag (`[<prefix>-…]`) — the auto-resolve set. */
+  async openBenchBugs(
+    product: string,
+    tagPrefix: string,
+  ): Promise<{ bugs: BugSummary[] } | { error: string }> {
+    const result = await this.call(
+      'GET',
+      `/bug?product=${encodeURIComponent(product)}&resolution=---&include_fields=${BUG_FIELDS}&limit=0`,
+    );
+    if (!result.ok) return { error: describeFailure(result) };
+    const tag = new RegExp(`\\[${tagPrefix}-[0-9A-F]{6}\\]`, 'i');
+    return { bugs: readBugs(result.json).filter((bug) => bug.is_open && tag.test(bug.summary)) };
+  }
+
   /** Appends the dedupe tag to an adopted ticket's whiteboard so later runs find it by tag. */
   async appendWhiteboard(bugId: number, existing: string, tag: string): Promise<void> {
     if (existing.includes(tag)) return;

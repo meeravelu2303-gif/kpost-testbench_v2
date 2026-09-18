@@ -64,6 +64,12 @@ const EnvSchema = z.object({
   BUGZILLA_MAX_FILE: z.coerce.number().int().min(0).default(0),
   /** File failures from the browser (UI) suites as well. */
   BUGZILLA_FILE_UI_FAILURES: z.stringbool().default(true),
+  /**
+   * Auto-close a bench-filed bug that this run VERIFIED as fixed — its exact endpoint+validator ran
+   * and passed, and the fault did not reproduce. Marked RESOLVED/FIXED with a comment. Default on;
+   * it only acts on a real filing run (never a dry run) and never touches a human-judged resolution.
+   */
+  BUGZILLA_AUTO_RESOLVE: z.stringbool().default(true),
 
   VALIDATION_PROFILE: z.enum(VALIDATION_PROFILES).default('REGRESSION'),
   ALLOW_DESTRUCTIVE_TESTS: z.stringbool().default(false),

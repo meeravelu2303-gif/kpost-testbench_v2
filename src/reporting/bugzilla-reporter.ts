@@ -11,6 +11,8 @@ import {
 import { BugzillaClient } from '../bug-tracker/bugzilla-client';
 import { BugzillaFiler, type FilingOutcome } from '../bug-tracker/bugzilla-filer';
 import { applyValidityGate, assessRunValidity } from '../bug-tracker/validity-gate';
+import { buildRunIndex, classifyResolve } from '../bug-tracker/verify-resolve';
+import type { ResolveSummary } from './bug-report';
 import { readBugzillaConfig } from '../config/bugzilla.config';
 import { env } from '../config/env';
 import { suiteFor } from '../config/ownership.config';
@@ -138,23 +140,30 @@ export default class BugzillaReporter implements Reporter {
       status: result.status,
     });
 
+    const client = this.config.enabled ? new BugzillaClient(this.config, this.log) : undefined;
     let outcome: FilingOutcome | undefined;
     let notFiledReason: string | undefined;
-    if (!this.config.enabled) {
+    let resolved: ResolveSummary | undefined;
+    if (!this.config.enabled || !client) {
       notFiledReason = 'BUGZILLA_URL / BUGZILLA_API_KEY not configured';
     } else if (!validity.valid) {
       notFiledReason = `run gate blocked filing — ${validity.reason}`;
-    } else if (!gate.filed.length) {
-      notFiledReason = `no valid defects (${gate.rejected.length} rejected by the validity gate)`;
     } else {
-      const filer = new BugzillaFiler(
-        new BugzillaClient(this.config, this.log),
-        this.config,
-        this.log,
-      );
-      // File in a deterministic module order so the created bug ids are ascending (KPost → KMail → UI).
-      outcome = await filer.file(orderedForFiling(gate.filed));
-      this.write('filing.json', { ...outcome, rejected: gate.rejected.length });
+      if (gate.filed.length) {
+        const filer = new BugzillaFiler(client, this.config, this.log);
+        // File in module order so created bug ids are ascending (KPost → KMail → UI).
+        outcome = await filer.file(orderedForFiling(gate.filed));
+        this.write('filing.json', { ...outcome, rejected: gate.rejected.length });
+      } else {
+        notFiledReason = `no valid defects (${gate.rejected.length} rejected by the validity gate)`;
+      }
+      // Auto-close bugs this run VERIFIED as fixed — independent of whether anything was filed, so a
+      // clean run (nothing to file) still closes what the developers already fixed. On a DRY run it
+      // only REPORTS what it would close (a reviewable preview); it writes to Bugzilla only for real.
+      if (this.config.autoResolve) {
+        resolved = await this.autoResolve(client, candidates, this.config.dryRun);
+        this.write('resolved.json', resolved);
+      }
     }
 
     // The clear, in-bench bug report — always written, always the source of truth for a run.
@@ -169,9 +178,61 @@ export default class BugzillaReporter implements Reporter {
       rejected: gate.rejected,
       outcome,
       notFiledReason,
+      resolved,
     };
     this.writeText('REPORT.md', buildBugReportMarkdown(reportInput));
     console.log(`\n${buildBugReportConsole(reportInput)}`);
+  }
+
+  /**
+   * Closes every OPEN bench-filed bug this run VERIFIED as fixed (its endpoint+validator ran and
+   * passed and the fault did not reproduce). Only touches products actually tested this run, and only
+   * bugs carrying our tag; a human-judged resolution is never reopened here. If the bench is wrong, a
+   * later run reopens the ticket — so a wrong close is self-correcting, never a lost defect.
+   */
+  private async autoResolve(
+    client: BugzillaClient,
+    candidates: readonly BugCandidate[],
+    dryRun: boolean,
+  ): Promise<ResolveSummary> {
+    const summary: ResolveSummary = { resolved: [], keptOpen: 0, checked: 0, failed: 0, dryRun };
+    const index = buildRunIndex(this.validationReports);
+    const reproduced = new Set(candidates.map((c) => c.id.replace(/^\[|\]$/g, '')));
+    const products = [
+      ...new Set(this.validationReports.map((r) => suiteFor(r.suite).bugzilla.product)),
+    ];
+    for (const product of products) {
+      const found = await client.openBenchBugs(product, this.config.tagPrefix);
+      if ('error' in found) {
+        this.log.warn(`auto-resolve: could not list ${product} bugs — ${found.error}`);
+        continue;
+      }
+      for (const bug of found.bugs) {
+        summary.checked += 1;
+        const decision = classifyResolve(bug, index, reproduced);
+        if (decision.action !== 'resolve') {
+          summary.keptOpen += 1;
+          continue;
+        }
+        if (dryRun) {
+          // Preview only — record what WOULD be closed, write nothing to Bugzilla.
+          summary.resolved.push({ bugId: bug.id, reason: decision.reason, summary: bug.summary });
+          continue;
+        }
+        const comment =
+          `Verified fixed by test run ${env.TEST_RUN_ID} against ${env.TEST_ENV}: ${decision.reason}. ` +
+          `The bench no longer reproduces this fault, so it is auto-resolved. ` +
+          `(If it recurs, the next run will reopen this ticket automatically.)`;
+        const res = await client.resolveFixed(bug.id, comment);
+        if ('error' in res) {
+          summary.failed += 1;
+          this.log.warn(`auto-resolve: bug ${bug.id} not updated — ${res.error}`);
+        } else {
+          summary.resolved.push({ bugId: bug.id, reason: decision.reason, summary: bug.summary });
+        }
+      }
+    }
+    return summary;
   }
 
   private apiCandidates(): BugCandidate[] {

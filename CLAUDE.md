@@ -228,6 +228,34 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-18 — Auto-resolve: a run closes bugs it VERIFIED fixed (developers stopped updating Bugzilla)
+
+The owner: the developers fixed most KPost API bugs but never updated Bugzilla, so ~204 sit open. They
+want each run to (a) file only genuinely-new bugs (dedup — already true) AND (b) **auto-close a bug it no
+longer reproduces**. Built it, gated on real proof so it can't wrongly close a live defect.
+
+**The safety rule.** A bug is auto-resolved ONLY when the exact check that filed it — its
+`(endpoint, validator)` — actually **RAN this run and did not fail**. If the endpoint was skipped or that
+validator did not execute, the run proved nothing → the bug stays open. Verification is at the
+`(endpoint, validator)` level, NOT the `[KP-]` tag, so a "fingerprint shift" (the build changes an error
+message, the tag changes, the fault looks gone) can't fool it. Self-correcting: if the bench is ever
+wrong, a later run REOPENS the ticket — worst case is a temporary wrong-close the next run undoes, never
+a lost defect. Environmental classes (`response.time`) and unparseable ones are never auto-resolved. A
+systemic (platform-wide) bug closes only when its class ran and no longer fails on ANY endpoint.
+
+**Build.** `src/bug-tracker/verify-resolve.ts` (pure: `buildRunIndex` + `classifyResolve`, shared
+validator/endpoint normalization); client `resolveFixed` (PUT RESOLVED/FIXED) + `openBenchBugs` (open,
+tag-carrying bugs per product); the reporter runs the pass after filing, only for products actually tested
+this run, only on bugs carrying our tag, never touching a human-judged resolution. **Previewable:** on a
+DRY run it REPORTS what it would close (REPORT.md §3b + `resolved.json`) and writes nothing; on a real
+filing run it applies and comments each close with the run id. Env `BUGZILLA_AUTO_RESOLVE` (default on);
+`autoResolve` on `BugzillaConfig`. Guards in `verify-resolve.spec.ts` (7) + `bug-tracker.spec.ts`: still-
+failing / not-tested / validator-skipped / environmental / reproduced all stay open; systemic closes only
+when cleared everywhere. `npm run check` clean; framework green.
+
+**Workflow for the owner:** `bugs:preview:kpost` shows "3b. Auto-resolved — PREVIEW" (what would close);
+review it; then `bugs:file:kpost` files new bugs AND closes the verified-fixed ones in one pass.
+
 ### 2026-09-18 — UI bugs now carry visual proof: the failure screenshot + video attach to the ticket
 
 The owner wanted every VALID UI bug to carry its **screenshot and video** as proof in Bugzilla, so the

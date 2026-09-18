@@ -29,6 +29,18 @@ export interface BugReportInput {
   outcome?: FilingOutcome;
   /** Why nothing was filed, when `outcome` is absent (or filing was a dry run). */
   notFiledReason?: string;
+  /** Bugs auto-closed because this run verified them fixed (absent on a dry run). */
+  resolved?: ResolveSummary;
+}
+
+/** Result of the auto-resolve pass: bugs closed because this run verified them fixed. */
+export interface ResolveSummary {
+  resolved: { bugId: number; reason: string; summary: string }[];
+  keptOpen: number;
+  checked: number;
+  failed: number;
+  /** True on a preview run — the list is what WOULD be closed; nothing was written to Bugzilla. */
+  dryRun: boolean;
 }
 
 const OWNER_BY_PRODUCT = new Map(
@@ -144,11 +156,17 @@ export function buildBugReportConsole(input: BugReportInput): string {
   const rows = byDeveloper(input)
     .map((d) => `  • ${d.product} → ${d.owner}: ${d.count}`)
     .join('\n');
+  const resolvedLine =
+    input.resolved && input.resolved.resolved.length
+      ? `\nAuto-resolved (verified fixed): ${input.resolved.resolved.length} bug(s) ` +
+        (input.resolved.dryRun ? 'WOULD be closed (preview)' : 'closed')
+      : '';
   return [
     line,
     'BUG REPORT — kpost-testbench_v2',
     line,
     headline(input),
+    resolvedLine,
     rows ? `\nBy developer:\n${rows}` : '',
     `\nFull report: reports/bugs/REPORT.md`,
     line,
@@ -241,6 +259,33 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
     );
   } else {
     lines.push(`**Not filed:** ${input.notFiledReason ?? 'filing did not run'}.`, '');
+  }
+
+  // 3b. Auto-resolved — bugs this run verified fixed (closed, or would-close on a preview).
+  if (input.resolved) {
+    const r = input.resolved;
+    const verb = r.dryRun ? 'WOULD be closed' : 'were verified fixed and marked **RESOLVED/FIXED**';
+    lines.push(
+      `## 3b. Auto-resolved (verified fixed)${r.dryRun ? ' — PREVIEW' : ''}`,
+      '',
+      `Checked **${r.checked}** open bench-filed bugs; **${r.resolved.length}** ${verb} ` +
+        `(their exact endpoint+validator ran and passed this run); ` +
+        `**${r.keptOpen}** stayed open (still failing, or not exercised this run)` +
+        (r.failed ? `; ${r.failed} could not be updated` : '') +
+        `.${r.dryRun ? ' Run the non-dry filing command to apply these.' : ' A later run reopens any that recur.'}`,
+      '',
+    );
+    if (r.resolved.length) {
+      lines.push(
+        '| Bug | Why it was closed |',
+        '| --- | ----------------- |',
+        ...r.resolved
+          .slice(0, 100)
+          .map((x) => `| #${x.bugId} | ${x.reason.replace(/\|/g, '\\|')} |`),
+        '',
+      );
+      if (r.resolved.length > 100) lines.push(`…and ${r.resolved.length - 100} more.`, '');
+    }
   }
 
   // 4. Every ticket
