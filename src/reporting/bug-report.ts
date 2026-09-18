@@ -9,8 +9,9 @@ import type { ValidationReport } from '../validation-engine/validation-result';
  * It answers, in one place: how many endpoints were tested, how many checks ran and how many
  * passed / failed / skipped; how many DISTINCT valid defects that collapsed to; which were filed to
  * Bugzilla and to which developer; and which findings were NOT filed, with the reason. It is the
- * readable companion to filing.json (raw) and summary.md (per-endpoint), so "what did this run
- * find and file" never needs the console scrollback.
+ * readable companion to filing.json (raw); the neat execution-health report (endpoints, pass/fail/
+ * skip by module, and the UI) is `reports/RUN-SUMMARY.md`. So "what did this run find and file"
+ * never needs the console scrollback.
  */
 
 export interface BugReportInput {

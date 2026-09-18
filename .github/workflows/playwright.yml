@@ -120,9 +120,9 @@ jobs:
           name: bug-filing-${{ github.run_attempt }}
           path: reports/bugs
           retention-days: 30
-      - name: Publish validation summary
-        if: ${{ hashFiles('reports/validation/summary.md') != '' }}
-        run: cat reports/validation/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish run summary
+        if: ${{ hashFiles('reports/RUN-SUMMARY.md') != '' }}
+        run: cat reports/RUN-SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         with:
           name: playwright-report-${{ github.run_attempt }}

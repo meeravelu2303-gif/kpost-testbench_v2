@@ -524,7 +524,7 @@ On failure, each result also carries `expected`, `actual`, per-case `details` an
 FAILED  SECURITY  security.jwt  HIGH  7ms  1/1 JWT checks failed: unsigned alg=none token rejected (expected [401], got 200)
 ```
 
-The run-level summary goes to `reports/validation/summary.json` (for tooling) and `summary.md` (for the CI job summary). It includes environment, build, test run ID, per-endpoint counts, gate status and every failure with its correlation ID.
+The run-level summary goes to `reports/validation/summary.json` (for tooling and the CI quality gate): environment, build, test run ID, per-endpoint counts, gate status and every failure with its correlation ID. The neat human-readable run report — API pass/fail/skip/warn by module & category, top failing checks, worst endpoints, and the UI results — is the single `reports/RUN-SUMMARY.md` (also `.json`), written by the run-summary reporter and used for the CI job summary.
 
 ## 17. Adding a completely new API
 

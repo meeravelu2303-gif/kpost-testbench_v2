@@ -78,53 +78,15 @@ export default class ValidationReporter implements Reporter {
 
     const outputDir = this.options.outputDir ?? path.join(process.cwd(), 'reports', 'validation');
     mkdirSync(outputDir, { recursive: true });
+    // Only the machine-readable summary.json is written here (the CI quality gate + dashboards read
+    // it). The human-readable run report is the single, neat `reports/RUN-SUMMARY.md` written by the
+    // run-summary reporter — a per-endpoint Markdown table here would just duplicate it, so it is not
+    // written.
     writeFileSync(path.join(outputDir, 'summary.json'), JSON.stringify(summary, null, 2));
-    writeFileSync(path.join(outputDir, 'summary.md'), toMarkdown(summary, reports));
     console.log(
       `\nValidation summary: ${summary.totals.endpoints} endpoints, ${summary.totals.validations} validations — ` +
         `${summary.totals.passed} passed, ${summary.totals.failed} failed, ${summary.totals.warnings} warnings, ${summary.totals.skipped} skipped. ` +
-        `Quality gate: ${summary.qualityGate.passed ? 'PASSED' : 'FAILED'} (${path.relative(process.cwd(), outputDir)}/summary.md)`,
+        `Quality gate: ${summary.qualityGate.passed ? 'PASSED' : 'FAILED'} (reports/RUN-SUMMARY.md)`,
     );
   }
-}
-
-function toMarkdown(
-  summary: {
-    totals: Record<string, number>;
-    qualityGate: { passed: boolean };
-    environment: string;
-    build: string;
-    testRunId: string;
-  },
-  reports: ValidationReport[],
-): string {
-  const lines = [
-    '# API validation summary',
-    '',
-    `Environment **${summary.environment}** · build **${summary.build}** · run \`${summary.testRunId}\` · quality gate **${summary.qualityGate.passed ? 'PASSED' : 'FAILED'}**`,
-    '',
-    '| Endpoint | Profile | Passed | Failed | Warnings | Skipped | Gate |',
-    '| --- | --- | ---: | ---: | ---: | ---: | --- |',
-    ...reports.map(
-      (r) =>
-        `| ${r.endpoint} | ${r.profile} | ${r.summary.passed} | ${r.summary.failed} | ${r.summary.warnings} | ${r.summary.skipped} | ${r.gate.passed ? '✅' : '❌'} |`,
-    ),
-  ];
-  const failures = reports.flatMap((r) => r.results.filter((x) => x.status === 'FAILED'));
-  if (failures.length) {
-    lines.push(
-      '',
-      '## Failures',
-      '',
-      '| Endpoint | Validator | Severity | Message | Correlation ID |',
-      '| --- | --- | --- | --- | --- |',
-    );
-    lines.push(
-      ...failures.map(
-        (f) =>
-          `| ${f.endpoint} | ${f.validatorName} | ${f.severity} | ${f.message.replace(/\|/g, '\\|')} | \`${f.correlationId}\` |`,
-      ),
-    );
-  }
-  return `${lines.join('\n')}\n`;
 }

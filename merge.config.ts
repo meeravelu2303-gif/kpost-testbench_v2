@@ -7,6 +7,8 @@ export default defineConfig({
     ['html', { open: 'never' }],
     ['junit', { outputFile: 'junit-report/results.xml' }],
     ['./src/reporting/validation-reporter.ts'],
+    // The single neat run report (API + UI), written from the complete merged run.
+    ['./src/reporting/run-summary-reporter.ts'],
     // Bugs are filed here, once, from the complete merged run — never from an individual shard.
     ['./src/reporting/bugzilla-reporter.ts'],
   ],

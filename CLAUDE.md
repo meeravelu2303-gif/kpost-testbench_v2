@@ -228,6 +228,47 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-18 — One neat run report after every run: `reports/RUN-SUMMARY.{md,json}` (API + UI, execution health)
+
+The owner asked for a clear, satisfying report after every run — how many endpoints tested and how many
+checks passed / failed / skipped / warned, and the SAME for the UI tests. The two existing reports did
+not answer that at a glance: `reports/validation/summary.md` is a ~1 MB per-endpoint table (accurate but
+unreadable), and `reports/bugs/REPORT.md` is bug/filing-centric (distinct defects, tickets), not
+execution health — and **neither has any UI numbers** (the validation reporters only see API validation
+attachments; the UI runs as Playwright browser tests whose outcomes went unreported).
+
+**Intent:** add ONE concise, combined dashboard, written on every run, that reports execution health and
+covers both surfaces — separate from the bug report (which stays the source of truth for what was FILED).
+
+**Build:** `src/reporting/run-summary.ts` (pure builder + Markdown/console renderers, unit-tested) and
+`src/reporting/run-summary-reporter.ts` (a thin Playwright `Reporter`). It writes
+`reports/RUN-SUMMARY.json` (structured) and `reports/RUN-SUMMARY.md` (neat), and prints a short console
+block. Contents: headline totals; **API** checks by module (kpost/admin/kmail) and by category, the top
+failing validators (so the systemic noise collapses to its real size), and the endpoints with the most
+failures; **UI** by project (chromium/firefox/webkit/admin-ui) and by spec with pass/fail/skip/flaky, and
+the actual UI failures. API numbers come from the validation-report attachments (check-level pass/fail/
+skip/warn); UI numbers come from Playwright test outcomes (test-level), each labelled so the two are never
+conflated. Registered in `playwright.config.ts` for both CI and local. Never throws / never changes the
+exit code. `npm run check` must stay clean.
+
+**Done (2026-09-18):** built `src/reporting/run-summary.ts` + `run-summary-reporter.ts`, registered in
+`playwright.config.ts` (CI + local) and `merge.config.ts`; unit test `tests/framework/run-summary.spec.ts`
+(3 tests, green). Two things the build surfaced and fixed:
+
+- **Duplicate rows / inflated counts.** The report aggregates by DISTINCT `suite+endpoint` (an endpoint
+  produces several reports in a run — multiple test blocks, or a retry), and the reporter keeps the
+  **latest attempt per test** (like the validation reporter). Reconstructing the last run showed the real
+  distinct-endpoint count is **75**, not the 396 report-rows the old totals implied — the same endpoint
+  had been listed up to 10× (e.g. `homeDashboardNewMsgs`). Now one row per endpoint.
+- **No duplicate report FILES (owner: "dont contain the duplicate report files").** The giant
+  `reports/validation/summary.md` (~1 MB per-endpoint table, also the CI job summary) was the unreadable
+  duplicate of the new neat report. Stopped writing it — the human report is now the single
+  `reports/RUN-SUMMARY.md`; `reports/validation/summary.json` stays (machine-readable, feeds the CI
+  quality gate). Pointed the CI job summary (`playwright.yml`) at `RUN-SUMMARY.md`, and updated
+  `docs/RUNBOOK.md` / `docs/validation-framework.md` / the `bug-report.ts` header accordingly. So the
+  reports are now: **`RUN-SUMMARY.md`** (execution health, human) · **`bugs/REPORT.md`** (defects filed,
+  human) · the `.json` companions (machine) — no overlapping human reports. `npm run check` clean.
+
 ### 2026-09-17 — PLAN: business-rule coverage for every endpoint, measured and filed (the reschedule gap, systematised)
 
 The reschedule bug (below) exposed a class problem: the engine tests every endpoint for every _validator_
