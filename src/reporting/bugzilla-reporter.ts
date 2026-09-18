@@ -4,6 +4,7 @@ import type { FullResult, Reporter, Suite, TestCase, TestResult } from '@playwri
 import {
   candidateFromUiFailure,
   candidatesFromReport,
+  consolidateCascades,
   mergeCandidates,
   type BugCandidate,
   type ProofFile,
@@ -117,7 +118,9 @@ export default class BugzillaReporter implements Reporter {
     // Candidates and the validity gate need no Bugzilla connection, so they are computed on every
     // run — the in-bench bug report is written even when filing is off (dry run, no host).
     const tests = this.suite?.allTests() ?? [];
-    const candidates = mergeCandidates([...this.apiCandidates(), ...this.uiCandidates(tests)]);
+    const candidates = consolidateCascades(
+      mergeCandidates([...this.apiCandidates(), ...this.uiCandidates(tests)]),
+    );
     const gate = applyValidityGate(candidates);
     this.write('candidates.json', {
       testRunId: env.TEST_RUN_ID,

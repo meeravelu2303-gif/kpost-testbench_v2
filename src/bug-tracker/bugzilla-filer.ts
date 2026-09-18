@@ -15,7 +15,8 @@ import {
   summaryPhrase,
 } from './bug-builder';
 import type { BugCandidate } from './bug-candidate';
-import type { BugzillaClient, ProductMetadata } from './bugzilla-client';
+import type { BugSummary, BugzillaClient, ProductMetadata } from './bugzilla-client';
+import { normalizeEndpoint, normalizeValidator } from './verify-resolve';
 
 /**
  * Decides what to do with each candidate and does it.
@@ -95,6 +96,12 @@ interface FilingTarget {
 export class BugzillaFiler {
   /** Verified Bugzilla accounts, so one lookup per developer per run. */
   private readonly knownAssignees = new Map<string, boolean>();
+  /** Existing open bench bugs indexed by `${product}||${endpoint|SYSTEMIC}||${validator}`. */
+  private readonly faultIndex = new Map<string, BugSummary>();
+  /** Tags of every open bench bug, for the dry-run preview's would-comment vs would-create split. */
+  private readonly openTags = new Set<string>();
+  /** Bugs already adopted this run, so two candidates never comment on the same ticket. */
+  private readonly faultUsed = new Set<number>();
 
   constructor(
     private readonly client: BugzillaClient,
@@ -112,6 +119,10 @@ export class BugzillaFiler {
 
     const products = [...new Set(Object.values(SUITES).map((suite) => suite.bugzilla.product))];
     const metadata = await this.client.productMetadata(products);
+    // Build-independent dedup: index existing open bugs by (endpoint, validator) so a fault whose
+    // message SHIFTED across builds (new `[KP-]` tag) still finds its ticket and comments, never
+    // duplicates. Only the products this run actually files to.
+    await this.loadExisting([...new Set(candidates.map((c) => c.product))]);
     let created = 0;
 
     for (const candidate of candidates) {
@@ -123,7 +134,8 @@ export class BugzillaFiler {
       const prepared: BugCandidate = { ...candidate, component: target.component };
 
       if (this.config.dryRun) {
-        outcome.entries.push(this.entry(prepared, 'would-file'));
+        // Accurate preview: would this CREATE, or comment/adopt an existing ticket?
+        outcome.entries.push(this.previewEntry(prepared));
         continue;
       }
       if (this.config.maxFile > 0 && created >= this.config.maxFile) {
@@ -142,6 +154,55 @@ export class BugzillaFiler {
 
     for (const entry of outcome.entries) outcome.counts[entry.decision] += 1;
     return outcome;
+  }
+
+  /** Loads existing open bench bugs and indexes them by (endpoint, validator) + tag. */
+  private async loadExisting(products: string[]): Promise<void> {
+    this.faultIndex.clear();
+    this.openTags.clear();
+    this.faultUsed.clear();
+    for (const product of products) {
+      const found = await this.client.openBenchBugs(product, this.config.tagPrefix);
+      if ('error' in found) {
+        this.log.warn(`dedup: could not list open ${product} bugs — ${found.error}`);
+        continue;
+      }
+      for (const bug of found.bugs) {
+        const tag = bug.summary.match(/\[([A-Z]+-[0-9A-F]{6})\]/i)?.[1];
+        if (tag) this.openTags.add(tag.toUpperCase());
+        const key = faultKeyFromSummary(product, bug.summary);
+        if (key && !this.faultIndex.has(key)) this.faultIndex.set(key, bug);
+      }
+    }
+  }
+
+  /** An existing open bug for the SAME (endpoint, validator) as this candidate, if not yet used. */
+  private matchFault(candidate: BugCandidate): BugSummary | undefined {
+    const key = candidateFaultKey(candidate);
+    if (!key) return undefined;
+    const bug = this.faultIndex.get(key);
+    if (!bug || this.faultUsed.has(bug.id)) return undefined;
+    return bug;
+  }
+
+  /** The would-be decision for the dry-run preview: comment (tag or fault match) vs create. */
+  private previewEntry(candidate: BugCandidate): FilingEntry {
+    const tag = candidate.id.replace(/^\[|\]$/g, '').toUpperCase();
+    if (this.openTags.has(tag)) {
+      return this.entry(candidate, 'commented', {
+        reason: 'existing ticket (same tag) — would comment',
+      });
+    }
+    const fault = this.matchFault(candidate);
+    if (fault) {
+      this.faultUsed.add(fault.id);
+      return this.entry(candidate, 'adopted', {
+        bugId: fault.id,
+        reason:
+          'same (endpoint, validator) under a shifted fingerprint — would comment, not duplicate',
+      });
+    }
+    return this.entry(candidate, 'would-file');
   }
 
   /** Validates product, component, version and assignee against the live instance. */
@@ -236,6 +297,13 @@ export class BugzillaFiler {
         : this.entry(candidate, 'reopened', { bugId: resolved.id });
     }
 
+    // Build-independent dedup: a fault whose message shifted across builds (so its `[KP-]` tag no
+    // longer matches) still finds its existing ticket by (endpoint, validator) and comments on it,
+    // tagging it so the next run matches by tag directly. This is what stops a re-run against a
+    // DIFFERENT build (devapi2 → testingapi) from duplicating every fault under a new tag.
+    const faultAdopted = await this.adoptByFault(candidate);
+    if (faultAdopted) return faultAdopted;
+
     const adopted = await this.adoptExisting(candidate);
     if (adopted) return adopted;
 
@@ -292,6 +360,26 @@ export class BugzillaFiler {
   }
 
   /**
+   * Comments on the existing OPEN bug for the SAME (endpoint, validator) as this candidate, when the
+   * `[KP-]` tag no longer matches because the build changed the error message. Tags the ticket with
+   * the new tag so the next run dedupes by tag directly.
+   */
+  private async adoptByFault(candidate: BugCandidate): Promise<FilingEntry | undefined> {
+    const match = this.matchFault(candidate);
+    if (!match) return undefined;
+    this.faultUsed.add(match.id);
+    const comment = await this.client.addComment(match.id, buildReproducedComment(candidate));
+    if ('error' in comment)
+      return this.entry(candidate, 'failed', { reason: comment.error, bugId: match.id });
+    await this.client.appendWhiteboard(match.id, match.whiteboard ?? '', candidate.id);
+    await this.attachProof(match.id, candidate);
+    return this.entry(candidate, 'adopted', {
+      bugId: match.id,
+      reason: 'same (endpoint, validator) fault under a shifted fingerprint',
+    });
+  }
+
+  /**
    * Finds an OPEN ticket describing the same fault that simply predates our tag (for example one
    * filed by the previous bench or by a human), comments on it and tags it, so this run does not
    * add a second ticket for a problem the team already tracks.
@@ -344,4 +432,27 @@ export class BugzillaFiler {
       ...extra,
     };
   }
+}
+
+/**
+ * A build-independent fault key from a bug SUMMARY: `${product}||${endpoint|SYSTEMIC}||${validator}`.
+ * Undefined when the validator or endpoint can't be pinned down confidently — a weak signal must
+ * never merge two different faults into one ticket, so we would rather file than wrongly dedup.
+ */
+function faultKeyFromSummary(product: string, summary: string): string | undefined {
+  const validator = normalizeValidator(summary);
+  if (validator === 'other' || validator === 'response.time') return undefined;
+  if (/platform-wide/i.test(summary)) return `${product}||SYSTEMIC||${validator}`;
+  const m = summary.match(/\]\s*(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+?):/i);
+  if (!m) return undefined;
+  return `${product}||${normalizeEndpoint(`${m[1]} ${m[2]}`)}||${validator}`;
+}
+
+/** The same key from a candidate, so a finding matches its existing ticket across a build change. */
+function candidateFaultKey(candidate: BugCandidate): string | undefined {
+  const validator = normalizeValidator(candidate.classification || candidate.title);
+  if (validator === 'other' || validator === 'response.time') return undefined;
+  if (candidate.systemic) return `${candidate.product}||SYSTEMIC||${validator}`;
+  if (!candidate.endpoint) return undefined;
+  return `${candidate.product}||${normalizeEndpoint(candidate.endpoint)}||${validator}`;
 }

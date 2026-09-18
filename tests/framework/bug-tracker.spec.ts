@@ -460,6 +460,54 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     ).toBe(true);
   });
 
+  test('build-independent dedup: a shifted-tag fault comments on the existing bug, no duplicate', async () => {
+    // An existing open bug for POST /v2/common/pinCode + null-value, filed against the OLD build.
+    const calls = stubBugzilla([
+      {
+        id: 50,
+        summary:
+          '[KPV2-0AD111] POST /v2/common/pinCode: body.postalCode: null value (expected 400, got 500)',
+        is_open: true,
+        product: 'KPost API',
+      },
+    ]);
+    // The SAME fault on the new build — different message → different tag — must NOT create a dup.
+    const outcome = await filer().file([
+      candidate({
+        id: 'KPV2-0BC222',
+        endpoint: 'POST /v2/common/pinCode',
+        classification: 'request.null-value',
+        title: 'POST /v2/common/pinCode: body.postalCode null value (expected 400/422, got 200)',
+      }),
+    ]);
+
+    expect(outcome.counts.created, 'no duplicate is created across the build change').toBe(0);
+    expect(outcome.counts.adopted, 'it adopts the existing ticket').toBe(1);
+    expect(outcome.entries[0]?.bugId).toBe(50);
+    expect(calls.some((c) => c.url.includes('/bug/50/comment'))).toBe(true);
+  });
+
+  test('build-independent dedup: a genuinely new (endpoint,validator) still files', async () => {
+    const calls = stubBugzilla([
+      {
+        id: 50,
+        summary: '[KPV2-0AD111] POST /v2/common/pinCode: body.postalCode: null value',
+        is_open: true,
+        product: 'KPost API',
+      },
+    ]);
+    const outcome = await filer().file([
+      candidate({
+        id: 'KPV2-0BC999',
+        endpoint: 'POST /v2/common/brandNewEndpoint',
+        classification: 'response.status-code',
+        title: 'POST /v2/common/brandNewEndpoint: expected 200, got 500',
+      }),
+    ]);
+    expect(outcome.counts.created, 'a real new fault is still filed').toBe(1);
+    expect(calls.some((c) => c.method === 'POST' && /\/bug\?/.test(c.url))).toBe(true);
+  });
+
   test('a filed UI bug gets its screenshot + video attached as proof', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'proof-'));
     const shot = path.join(dir, 'shot.png');

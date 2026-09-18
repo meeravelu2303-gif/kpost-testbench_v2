@@ -228,6 +228,62 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-18 — Production-grade on the test DB: cascade consolidation + all-test-types mode
+
+The owner pointed KPost API at a **test DB** and wants "every test type on every endpoint" but "valid
+bugs only." A `full:preview:kpost` (reads + all KPost write lifecycles) showed the truth: **0 duplicates**
+(the new build-independent dedup works — 18 comment + 7 adopt), **22 would auto-close**, but **62 would-
+create across only 19 endpoints** — i.e. cascade noise (one hung/500 endpoint tripping every check) plus
+one flaky `response.time` (a 10s timeout). Two changes:
+
+- **Cascade consolidation** (`consolidateCascades`, `bug-candidate.ts`, run after `mergeCandidates`): when
+  an endpoint's primary response is a **5xx or timeout**, its response-reading checks (structure/schema/
+  content-type/error-format/metadata/pagination/headers + `common.*` + perf) are SYMPTOMS of one root
+  cause, so they fold into a single anchor ticket (the status-code / server-error finding) instead of 6.
+  A **timeout** collapses the whole endpoint to one (even the input-validation probes time out); a **5xx**
+  keeps the independent input-validation findings (they send their own request) and folds only the
+  body-readers. Systemic tickets are untouched. 7 guards in `cascade-consolidation.spec.ts`.
+- **Flaky perf never files** — `candidateRejection` now drops a standalone `performance.response-time`/
+  `timeout`/`response.time` (environmental; a real hang still surfaces as the endpoint's 5xx anchor).
+- **`TEST_DB_MODE` (all test types)** — a new env flag. On a test DB it clears `productionExclusion` for
+  **READ** endpoints, so the full matrix runs: injection, XSS, rate-limit, performance, every fuzzer —
+  not just the read-safe subset. **Two controls stay armed and are NOT relaxed by it:** the QA-identifier
+  guard (cross-tenant probes are still refused, never sent) and the OTP/SMS kill-switch. Writes stay gated
+  (covered by the self-cleaning lifecycle), so nothing persists junk into the shared schema. Commands
+  `alltypes:{preview,file}:kpost` set it alongside all KPost lifecycles. Off by default; live-safety
+  guards (22) still pass.
+
+`npm run check` clean; framework green (cascade 7 + resolve 7 + dedup/proof/filing). So a re-run now:
+files only genuinely-new faults (no duplicates), consolidates cascades (clean report), auto-closes
+verified-fixed, and — with `alltypes:*` — exercises every test type on every read endpoint, valid-only.
+
+### 2026-09-18 — Build-independent dedup: a re-run against a DIFFERENT build no longer duplicates
+
+The owner pointed the KPost API at `testingapi.kpostindia.com` (a new build on a test DB). A dry
+`bugs:preview:kpost` there showed **65 "new" bugs** would be created — but analysis found **58 of them
+were the SAME faults as existing open bugs**, just with a different `[KP-]` tag. Cause: the old 204 bugs
+were filed against **devapi2**; the new build returns slightly different error messages/status, and the
+dedup tag is a HASH OF THE MESSAGE, so the tag shifts and tag-based dedup can't see it's the same fault.
+The owner (rightly) stopped the filing run — "I want valid bugs only." The run had NOT filed yet (filing
+happens at the very end), so nothing was written.
+
+**Fix — dedup by (endpoint, validator), not just the tag.** `BugzillaFiler` now loads the open bench
+bugs once at the start of `file()` and indexes them by `${product}||${endpoint|SYSTEMIC}||${validator}`
+(shared `normalizeEndpoint`/`normalizeValidator` from `verify-resolve.ts`). Before it CREATES, it checks
+that index: a finding whose tag no longer matches but whose (endpoint, validator) does → **comments on
+the existing ticket** and appends the new tag to its whiteboard (so the next run matches by tag directly,
+converging). A weak signal (unparseable validator, or `response.time`) is never used to merge, so two
+different faults can't collapse into one ticket — it would rather file than wrongly dedup. The **dry-run
+preview is now accurate**: `previewEntry` classifies each candidate as would-comment (same tag),
+would-adopt (shifted tag, same fault) or would-create (genuinely new), so the report the owner reviews
+shows the REAL new-ticket count, not the inflated tag-shifted number. Guards in `bug-tracker.spec.ts`: a
+shifted-tag fault adopts (0 created); a genuinely-new (endpoint, validator) still files. `npm run check`
+clean; 33 filing/resolve framework tests pass.
+
+**So a re-run against testingapi now:** files only the genuinely-new faults, comments on the rest (no
+duplicates across the build change), and auto-closes the ones it verified fixed. Combined with the
+auto-resolve (below), one `flow:file:api` reconciles Bugzilla to the new build's true state.
+
 ### 2026-09-18 — Auto-resolve: a run closes bugs it VERIFIED fixed (developers stopped updating Bugzilla)
 
 The owner: the developers fixed most KPost API bugs but never updated Bugzilla, so ~204 sit open. They

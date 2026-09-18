@@ -73,6 +73,13 @@ const EnvSchema = z.object({
 
   VALIDATION_PROFILE: z.enum(VALIDATION_PROFILES).default('REGRESSION'),
   ALLOW_DESTRUCTIVE_TESTS: z.stringbool().default(false),
+  /**
+   * The target is a throwaway TEST DATABASE, so the full test-type matrix (injection, XSS,
+   * rate-limit, performance, every fuzzer) may run on READ endpoints. The QA-identifier guard and the
+   * OTP/SMS kill-switch stay armed regardless; writes stay covered by the self-cleaning lifecycle
+   * flows. Off by default — only set it when the host genuinely points at a test DB.
+   */
+  TEST_DB_MODE: z.stringbool().default(false),
 
   HEADLESS: z.stringbool().default(true),
   WORKERS: z.coerce.number().int().positive().optional(),

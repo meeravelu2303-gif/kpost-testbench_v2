@@ -101,6 +101,13 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
     return `severity ${candidate.severity} is below the filing floor`;
   }
 
+  // A standalone response-time/timeout finding is environmental — the same endpoint is fast on the
+  // next run — so it is never filed on its own. A genuine timeout still surfaces as the endpoint's
+  // 5xx/error ticket (the cascade anchor), which is not a performance validator.
+  if (/^performance\.(response-time|timeout)$|^response\.time$/.test(candidate.classification)) {
+    return 'a response-time / timeout check is environmental (it flaps between runs), not a filed defect';
+  }
+
   const evidence = `${candidate.actual}`;
   const claim = `${candidate.title} ${candidate.narrative}`;
 

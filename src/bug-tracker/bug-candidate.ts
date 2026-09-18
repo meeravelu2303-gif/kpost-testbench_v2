@@ -393,3 +393,89 @@ export function mergeCandidates(candidates: readonly BugCandidate[]): BugCandida
   }
   return [...merged.values()];
 }
+
+/**
+ * Validators that read the primary response — they cannot pass once the endpoint returns a 5xx or
+ * times out, so on a broken endpoint they are SYMPTOMS of one root cause, not distinct defects.
+ */
+const CASCADE_DEPENDENT = new Set([
+  'response.structure',
+  'response.schema',
+  'response.content-type',
+  'response.error-format',
+  'response.metadata',
+  'response.pagination',
+  'response.headers',
+  'response.time',
+  'common.api-error',
+  'common.boolean',
+  'common.date',
+  'common.email',
+  'common.id',
+  'common.url',
+  'performance.response-time',
+  'performance.timeout',
+  'performance.payload-size',
+]);
+
+const looksLikeTimeout = (c: BugCandidate): boolean =>
+  /timeout|timed out|exceeds budget|\bms exceeds\b/i.test(`${c.actual} ${c.title}`);
+
+/**
+ * Collapses a per-endpoint CASCADE into one ticket: when an endpoint's primary response is a 5xx or
+ * a timeout, every response-reading check on it fails as a consequence — filing 6 tickets for one
+ * broken endpoint is noise. Keeps the real anchor (the status-code / server-error finding) plus any
+ * INDEPENDENT findings (input-validation probes send their own request; a security-header/auth check
+ * is not about the body), and folds the dependent symptoms into the anchor's narrative. A TIMEOUT
+ * takes the whole endpoint down (even the independent probes time out), so it collapses to one.
+ * Systemic (platform-wide) candidates are never touched.
+ */
+export function consolidateCascades(candidates: readonly BugCandidate[]): BugCandidate[] {
+  const byEndpoint = new Map<string, BugCandidate[]>();
+  const passthrough: BugCandidate[] = [];
+  for (const c of candidates) {
+    if (c.systemic || !c.endpoint) {
+      passthrough.push(c);
+      continue;
+    }
+    const group = byEndpoint.get(c.endpoint) ?? [];
+    group.push(c);
+    byEndpoint.set(c.endpoint, group);
+  }
+
+  const kept: BugCandidate[] = [...passthrough];
+  for (const [endpoint, group] of byEndpoint) {
+    const timedOut = group.some(looksLikeTimeout);
+    const serverError = group.some((c) => (c.responseStatus ?? 0) >= 500);
+    if (!timedOut && !serverError) {
+      kept.push(...group); // endpoint responds fine; these are genuinely distinct findings
+      continue;
+    }
+    // Pick the anchor: the status-code finding, else the first.
+    const anchor =
+      group.find((c) => c.classification === 'response.status-code') ??
+      group.find((c) => !CASCADE_DEPENDENT.has(c.classification)) ??
+      group[0]!;
+    // On a timeout the whole endpoint is down → fold everything. On a 5xx, keep independent findings.
+    const independents = timedOut
+      ? []
+      : group.filter((c) => c !== anchor && !CASCADE_DEPENDENT.has(c.classification));
+    const folded = group.filter((c) => c !== anchor && !independents.includes(c));
+    if (folded.length) {
+      const names = [...new Set(folded.map((c) => c.classification))].sort();
+      const cause = timedOut ? 'times out' : `returns HTTP ${anchor.responseStatus ?? '5xx'}`;
+      kept.push({
+        ...anchor,
+        narrative:
+          `${anchor.narrative}\n\nThis endpoint ${cause}, so ${folded.length} dependent check(s) ` +
+          `also failed as a consequence of the same root cause and are consolidated here rather than ` +
+          `filed separately: ${names.join(', ')}.`,
+        evidence: { ...anchor.evidence, cascadeConsolidated: names, endpoint },
+      });
+    } else {
+      kept.push(anchor);
+    }
+    kept.push(...independents);
+  }
+  return kept;
+}

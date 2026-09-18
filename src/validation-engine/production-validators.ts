@@ -29,6 +29,8 @@
  * on live, the guard refuses the request rather than trusting this list to be complete.
  */
 
+import { env } from '@config/env';
+
 /**
  * Validators cleared for the live application.
  *
@@ -167,6 +169,13 @@ export function productionExclusion(
   // A read endpoint clears the input-validation fuzzers: no data can change, and the identifier
   // guard still refuses any mutated payload that names a record we do not own.
   if (endpoint?.destructive === false && READ_SAFE_FUZZERS.has(validatorName)) return undefined;
+  // TEST-DB MODE: the target is a throwaway test database, so the FULL test-type matrix — injection,
+  // XSS, rate-limit, performance, every fuzzer — may run on a READ endpoint. Two controls stay armed
+  // regardless (they are not switched off by this): the QA-identifier guard still refuses any request
+  // that names a record we do not own (so cross-tenant probes are dropped, not sent), and the OTP/SMS
+  // kill-switch is untouched. Writes stay gated — covered by the self-cleaning lifecycle flows — so
+  // nothing persists junk into the shared schema. Only ever set against a real test DB.
+  if (env.TEST_DB_MODE && endpoint?.destructive === false) return undefined;
 
   const known = PRODUCTION_BLOCKED_VALIDATORS[validatorName];
   if (known) return `not run against the live application: ${known}`;
