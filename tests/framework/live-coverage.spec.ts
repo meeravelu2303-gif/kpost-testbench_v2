@@ -223,7 +223,7 @@ test.describe('live endpoint coverage @framework', () => {
       '',
       `**${offLive.length} of ${all.length}** registered endpoints are **not driven against the live app**.`,
       `The rest ARE tested on live: **${runs.length}** on the default run + **${coveredCount}** via the`,
-      'gated self-cleaning lifecycle flows (`npm run flow:file:api`). This file lists ONLY the not-tested.',
+      'gated self-cleaning lifecycle flows (`npm run kpost:file`). This file lists ONLY the not-tested.',
       '',
       'They are not silent gaps — each is refused for a permanent constraint or a deliberate safety',
       'choice, and every one is still contract-validated OFF live.',

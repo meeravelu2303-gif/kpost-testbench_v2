@@ -74,7 +74,7 @@ the app.
 ## 3. Dry preview on live (drive everything, write nothing lasting, file nothing)
 
 ```bash
-npm run flow:preview
+npm run all
 ```
 
 This runs the **complete flow** against the live app — all reads, all 10 write lifecycles
@@ -90,7 +90,7 @@ The write flows self-clean, so this leaves your QA accounts unchanged.
 ## 4. The full run — writes + filing
 
 ```bash
-npm run flow:file
+npm run all:file
 ```
 
 Same complete flow, and it **files** valid non-duplicate bugs to Bugzilla, each on its correct
@@ -100,7 +100,8 @@ component and developer. Serial. Self-cleaning. This is the production-grade end
 - The metered K-AI calls stay **off** (they cost money). To include them once, prefix
   `KOS_AI_LIVE=true`.
 
-For a lighter run (reads + UI + filing, no write flows) use `npm run bugs:file` instead.
+To run just one surface, use `npm run kpost:file` / `kmail:file` / `admin:file` / `ui:file`. The full
+command list is in `docs/COMMANDS.md`.
 
 ---
 

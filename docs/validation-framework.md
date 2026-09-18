@@ -591,17 +591,18 @@ Everything else still runs. The report shows the disabled ones as `SKIPPED — d
 
 ## 20. Commands
 
-```bash
-npm run test:api:smoke        # SMOKE      – fast happy-path contract checks
-npm run test:api:regression   # REGRESSION – + negative probes, business rules, DB (default)
-npm run test:api:security     # SECURITY   – injection, XSS, JWT, rate limiting, leakage
-npm run test:api:full         # FULL       – everything
-npm run test:framework        # framework self-tests
-npm run test:integration      # cross-endpoint workflows
-npm test                      # UI + API + integration + framework
+The complete, canonical list is in **[`docs/COMMANDS.md`](COMMANDS.md)** — one command per surface
+(`kpost` / `kmail` / `admin` / `ui` / `all`, each with a `:file` twin). The most common:
 
-# any profile / environment / subset
-VALIDATION_PROFILE=SECURITY TEST_ENV=staging npx playwright test --project=api --grep @users
+```bash
+npm run kpost            # KPost API — all test types on the test DB + write flows (files nothing)
+npm run kpost:file       # same, and file valid bugs
+npm run kmail            # KMail API      npm run admin   # Admin API      npm run ui   # UI e2e
+npm run test:framework   # framework self-tests
+npm test                 # plain run against the local mock
+
+# A specific validation profile / environment / subset (the profiles still exist as an axis):
+VALIDATION_PROFILE=SECURITY npx playwright test --project=api --grep @kpost-api
 npx playwright test --project=api --grep @critical
 ```
 

@@ -150,14 +150,14 @@ The same fault on several browsers or tests is merged into one ticket that recor
 ## 7. Commands
 
 ```bash
-npm run bugs:preview    # dry run: prints exactly what would be filed, and to whom
-npm run bugs:file       # files for real (BUGZILLA_DRY_RUN=false)
+npm run kpost    # dry run: prints exactly what would be filed, and to whom
+npm run kpost:file       # files for real (BUGZILLA_DRY_RUN=false)
 
-BUGZILLA_MAX_FILE=5 npm run bugs:file   # stage a rollout
+BUGZILLA_MAX_FILE=5 npm run kpost:file   # stage a rollout
 
-npm run test:kpost      # one module at a time
+npm run kpost      # one module at a time
 npm run test:admin
-npm run test:kmail
+npm run kmail
 ```
 
 Every run writes `reports/REPORT.json` — its `bugs` object holds the accepted and rejected candidates (with reasons) and, when filing ran, what happened to each (including the assignee). The human-readable form is Part 2 of `reports/REPORT.md`.
@@ -189,7 +189,7 @@ Two instance facts worth knowing:
 ## 10. Operating it
 
 - **Start in dry run.** Read `reports/REPORT.json`, confirm the tickets and their owners, then lift the flag — ideally with `BUGZILLA_MAX_FILE=5` first.
-- **Prove dedupe on your own instance:** run `npm run bugs:file` twice. The second run must report `commented`, never `created`.
+- **Prove dedupe on your own instance:** run `npm run kpost:file` twice. The second run must report `commented`, never `created`.
 - **To stop filing immediately:** unset `BUGZILLA_API_KEY`, or set `BUGZILLA_DRY_RUN=true`.
 - **Rotate the API key** if it has ever been pasted into a chat, ticket or log.
 - **A ticket that is not a defect:** resolve it `INVALID` (or `WONTFIX`). The bench never re-files it.

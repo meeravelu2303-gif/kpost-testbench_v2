@@ -228,6 +228,33 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-18 — One command per surface, one command doc (`docs/COMMANDS.md`); scripts rationalised 60 → 31
+
+The owner wanted a clear, single command per surface (KPost API / KMail / Admin / UI) and all commands
+in ONE readable file. The `package.json` had ~60 scripts across overlapping families (`bugs:*`,
+`prodgrade:*`, `flow:*`, `full:*`, `alltypes:*`, `deepfuzz:*`, `test:api:*`, `test:smoke/regression/…`)
+— powerful but confusing. Collapsed to **31**, with one obvious command per surface:
+
+- **`npm run kpost`** — KPost API, all test types on the disposable testingapi DB (`TEST_DB_MODE`) +
+  the write lifecycle flows. **`kmail`** — KMail API (read matrix + lifecycle). **`admin`** — Admin API
+  (reads + org-build lifecycle). **`ui`** — the whole UI e2e (screens + feature flows). **`all`** —
+  kpost, then kmail, then ui (separate runs, so the API login never displaces the UI session).
+- Each has a **`:file`** twin that also files valid bugs + auto-resolves fixed ones (the plain form is
+  dry-run — files nothing). Plus **`kpost:deep`/`:file`** (write-fuzzing, disposable DB only) and
+  **`resolve`** (close verified-fixed bugs, file nothing new).
+- Naming rule: `<surface>` runs & reports, `<surface>:file` also files. Consistent across all surfaces.
+- KMail/Admin deliberately do NOT set `TEST_DB_MODE` (their hosts are not confirmed disposable, and
+  `TEST_DB_MODE` enables injection/XSS on reads) — they run the safe read matrix + lifecycle. Only
+  KPost (testingapi, disposable) gets the full matrix and the deep write-fuzz tier.
+
+**One command doc.** Created **`docs/COMMANDS.md`** — the single, neat reference (run-one-surface table,
+deep tier, resolve, where the report is, utilities, the always-on safety notes). Deleted the redundant
+`docs/RUN-COMMANDS.md` and `docs/PRODUCTION-GRADE-RUN.md`; repointed `README.md` and `docs/RUNBOOK.md`
+to `COMMANDS.md` and off the removed command names. Kept the utility scripts (check, test:framework,
+test, test:headed, report, codegen, mock:api, install:browsers, contract:\*). `npm run check` clean;
+the new commands select correctly (`kpost` → the KPost API matrix, `ui` → the chromium e2e). Nothing
+committed.
+
 ### 2026-09-18 — One report per run (`reports/REPORT.{md,json}`); three reporters collapsed to one; dead files removed
 
 The owner asked for a single neat report after each run — one `.md` + one `.json`, no scatter — and a
@@ -309,7 +336,8 @@ those fields. So a later edit that drops or renames a field (the exact regressio
 bug) fails the build, the same way `payload-audit` guards the example-documented endpoints. Both are
 green; `npm run check` clean; **106 framework guards pass** (was 104).
 
-**The production-grade run — `prodgrade:*` (docs/PRODUCTION-GRADE-RUN.md).** Scope KPost API + KMail
+**The production-grade run** (commands since renamed to `kpost`/`kmail`/`admin`/`ui`/`all` — see
+`docs/COMMANDS.md`). Scope KPost API + KMail
 API + UI e2e (owner's call; admin-api stays its own gated flow). Default is **preview** (dry-run:
 runs everything, writes the report, files nothing); `:file` arms filing + auto-resolve. Tiers:
 `prodgrade:api:{preview,file}` (full read matrix via `TEST_DB_MODE` + the write lifecycles),

@@ -4,7 +4,7 @@
 
 **41 of 336** registered endpoints are **not driven against the live app**.
 The rest ARE tested on live: **123** on the default run + **172** via the
-gated self-cleaning lifecycle flows (`npm run flow:file:api`). This file lists ONLY the not-tested.
+gated self-cleaning lifecycle flows (`npm run kpost:file`). This file lists ONLY the not-tested.
 
 They are not silent gaps — each is refused for a permanent constraint or a deliberate safety
 choice, and every one is still contract-validated OFF live.

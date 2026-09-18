@@ -77,24 +77,22 @@ With `TEST_ENV=local` and no `API_BASE_URL`, Playwright starts the bundled mock 
 
 ## Running tests
 
-| Command                       | What it does                                                     |
-| ----------------------------- | ---------------------------------------------------------------- |
-| `npm test`                    | Everything (UI + API + integration + framework)                  |
-| `npm run test:api:smoke`      | API contracts, `SMOKE` profile (happy-path checks, fast)         |
-| `npm run test:api:regression` | API + integration, `REGRESSION` profile (negative probes, rules) |
-| `npm run test:api:security`   | API, `SECURITY` profile (injection, XSS, JWT, rate limit, ...)   |
-| `npm run test:api:full`       | API + integration, every validator                               |
-| `npm run test:framework`      | Framework self-tests                                             |
-| `npm run test:integration`    | Cross-endpoint workflows                                         |
-| `npm run test:chromium`       | UI tests on Chromium only                                        |
-| `npm run test:smoke`          | Tests tagged `@smoke`                                            |
-| `npm run mock:api`            | Start the mock API manually                                      |
-| `npm run bugs:preview`        | Dry run: print the bugs a run would file into Bugzilla           |
-| `npm run bugs:file`           | File them for real (deduplicated against the live instance)      |
-| `npm run report`              | Open the last HTML report                                        |
-| `npm run check`               | Typecheck + lint + format check (CI gate)                        |
+**Every command is in one place — [`docs/COMMANDS.md`](docs/COMMANDS.md).** One command per surface,
+each with a `:file` variant that also files bugs. The essentials:
 
-Every run also writes a single report — `reports/REPORT.md` (human) and `reports/REPORT.json` (structured) — covering execution health (results per endpoint and validator, with correlation IDs) and the bug report.
+| Command                        | What it does                                                                |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `npm run kpost` / `kpost:file` | KPost API — all test types + write flows on the test DB (run / run + file). |
+| `npm run kmail` / `kmail:file` | KMail API — read matrix + write lifecycle.                                  |
+| `npm run admin` / `admin:file` | Admin API — reads + org-build lifecycle.                                    |
+| `npm run ui` / `ui:file`       | UI end-to-end — every screen + feature flow.                                |
+| `npm run all` / `all:file`     | KPost, then KMail, then UI.                                                 |
+| `npm run resolve`              | Close verified-fixed bugs in Bugzilla; file nothing new.                    |
+| `npm run test:framework`       | The bench's own self-tests.                                                 |
+| `npm run check`                | Typecheck + lint + format check (CI gate).                                  |
+
+Every run writes a single report — `reports/REPORT.md` (human: execution health + bugs) and
+`reports/REPORT.json` (structured). See `docs/COMMANDS.md` for the full list and the safety notes.
 
 ## Environments
 
