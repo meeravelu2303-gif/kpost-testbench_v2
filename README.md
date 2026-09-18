@@ -94,7 +94,7 @@ With `TEST_ENV=local` and no `API_BASE_URL`, Playwright starts the bundled mock 
 | `npm run report`              | Open the last HTML report                                        |
 | `npm run check`               | Typecheck + lint + format check (CI gate)                        |
 
-Every API run also writes `reports/validation/summary.{json,md}`. These list the results per endpoint and per validator, with correlation IDs.
+Every run also writes a single report — `reports/REPORT.md` (human) and `reports/REPORT.json` (structured) — covering execution health (results per endpoint and validator, with correlation IDs) and the bug report.
 
 ## Environments
 

@@ -39,7 +39,7 @@ nothing; `file` creates the tickets. They are otherwise identical. Filing **cann
 ### 2a. API bugs → Jaganathan (KPost) + Jitendra (KMail)
 
 ```powershell
-npm run bugs:preview:api     # 1. find API bugs, file NOTHING — then read reports/bugs/REPORT.md
+npm run bugs:preview:api     # 1. find API bugs, file NOTHING — then read reports/REPORT.md
 npm run bugs:file:api        # 2. file the valid API bugs
 ```
 
@@ -56,7 +56,7 @@ npm run bugs:file:kmail
 ### 2b. UI bugs → Ayyappan
 
 ```powershell
-npm run bugs:preview:ui      # 1. find UI bugs, file NOTHING — then read reports/bugs/REPORT.md
+npm run bugs:preview:ui      # 1. find UI bugs, file NOTHING — then read reports/REPORT.md
 npm run bugs:file:ui         # 2. file the valid UI bugs
 ```
 
@@ -65,7 +65,7 @@ npm run bugs:file:ui         # 2. file the valid UI bugs
 ## 3. Run all — API + UI together, and file
 
 ```powershell
-npm run bugs:preview         # 1. API + UI, find everything, file NOTHING — read reports/bugs/REPORT.md
+npm run bugs:preview         # 1. API + UI, find everything, file NOTHING — read reports/REPORT.md
 npm run bugs:file            # 2. API + UI, file all the valid bugs (KPost ids first, then KMail, then UI)
 ```
 
@@ -81,7 +81,7 @@ performance, auth) — the safe-on-live checks that produce the fileable bugs. T
 Settings, KDiary, KOS, AWS — all on the QA accounts, self-cleaning):
 
 ```powershell
-npm run flow:preview         # API reads + writes + UI sweep, file NOTHING — read reports/bugs/REPORT.md
+npm run flow:preview         # API reads + writes + UI sweep, file NOTHING — read reports/REPORT.md
 npm run flow:file            # same, and file the valid bugs
 ```
 
@@ -112,12 +112,12 @@ This is the fullest live run (~10–15 min, serial).
 
 ## After any run — where the results are
 
-| File                             | What it is                                                                         |
-| -------------------------------- | ---------------------------------------------------------------------------------- |
-| `reports/bugs/REPORT.md`         | **The main output.** Every valid defect by developer + everything dropped and why. |
-| `reports/bugs/filing.json`       | The full ticket text for each candidate (useful on a preview run).                 |
-| Bugzilla (`http://192.168.0.50`) | The created tickets (after a `:file` command).                                     |
-| `npm run report`                 | The full Playwright HTML report — per-test detail, traces, screenshots.            |
+| File                             | What it is                                                                                                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reports/REPORT.md`              | **The main output.** Part 1 execution health (pass/fail/skip by module + UI), Part 2 the bug report (every valid defect by developer + everything dropped and why). |
+| `reports/REPORT.json`            | The structured companion: run summary + quality gate + the `bugs` object (full candidate text, useful on a preview run).                                            |
+| Bugzilla (`http://192.168.0.50`) | The created tickets (after a `:file` command).                                                                                                                      |
+| `npm run report`                 | The full Playwright HTML report — per-test detail, traces, screenshots.                                                                                             |
 
 ---
 

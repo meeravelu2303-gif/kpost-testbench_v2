@@ -72,7 +72,7 @@ src/
 │   └── index.ts                  # ← THE registration point
 ├── business-rules/               # business-rule.ts · users/ · companies/ · index.ts
 ├── database/                     # database-client · repositories/ · db-assertions · validations/
-├── reporting/                    # report-formatter · report-attachment · validation-reporter
+├── reporting/                    # bugzilla-reporter (writes the single REPORT.md/json + files bugs) · run-summary · bug-report · report-formatter · report-attachment
 ├── fixtures/ data/ pages/ utils/
 openapi/                          # OpenAPI 3.1 documents
 mock-server/                      # local stand-in for the KPost API
@@ -524,7 +524,7 @@ On failure, each result also carries `expected`, `actual`, per-case `details` an
 FAILED  SECURITY  security.jwt  HIGH  7ms  1/1 JWT checks failed: unsigned alg=none token rejected (expected [401], got 200)
 ```
 
-The run-level summary goes to `reports/validation/summary.json` (for tooling and the CI quality gate): environment, build, test run ID, per-endpoint counts, gate status and every failure with its correlation ID. The neat human-readable run report — API pass/fail/skip/warn by module & category, top failing checks, worst endpoints, and the UI results — is the single `reports/RUN-SUMMARY.md` (also `.json`), written by the run-summary reporter and used for the CI job summary.
+Every run writes exactly two files: `reports/REPORT.md` (human) and `reports/REPORT.json` (structured), both by the single reporter (`src/reporting/bugzilla-reporter.ts`). `REPORT.md` has two parts — Part 1 execution health (API pass/fail/skip/warn by module & category, top failing checks, worst endpoints, UI results) and Part 2 the bug report (distinct valid defects, filed-by-developer, what was not filed and why). `REPORT.json` carries the run summary, the CI quality gate (environment, build, test run ID, per-endpoint counts, gate status, blocking endpoints) and the `bugs` object (candidates, filing outcome, resolve summary). It is used for the CI job summary and the quality gate.
 
 ## 17. Adding a completely new API
 

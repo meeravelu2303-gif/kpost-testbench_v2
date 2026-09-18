@@ -228,12 +228,107 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-18 — One report per run (`reports/REPORT.{md,json}`); three reporters collapsed to one; dead files removed
+
+The owner asked for a single neat report after each run — one `.md` + one `.json`, no scatter — and a
+production-grade folder with the unused files removed. Two changes.
+
+**Reporting collapsed to ONE Markdown + ONE JSON.** The bench had three reporters writing six+ files:
+`run-summary-reporter` → `reports/RUN-SUMMARY.{md,json}` (execution health), `validation-reporter` →
+`reports/validation/summary.json` (CI gate), and `bugzilla-reporter` → `reports/bugs/{REPORT.md,
+candidates.json,filing.json,resolved.json}` (bugs). Merged them into the **bugzilla-reporter** (it
+already captured the suite + validation attachments and does the filing), which now writes exactly:
+
+- **`reports/REPORT.md`** — Part 1 execution health (endpoints, pass/fail/skip/warn per module + per UI
+  project, top failing checks, worst endpoints) via `renderRunSummaryMarkdown`, then Part 2 the bug
+  report (distinct valid defects, filed-by-developer, not-filed reasons, auto-resolved) via
+  `buildBugReportMarkdown`.
+- **`reports/REPORT.json`** — `{ meta, api, ui, qualityGate, bugs }`: the run summary + the CI quality
+  gate (`passed`, `blockingEndpoints`) + the `bugs` object (candidates, filing outcome, resolve
+  summary, rejected-with-reason) — everything the old `candidates/filing/resolved/summary.json` held.
+
+Deleted `run-summary-reporter.ts` and `validation-reporter.ts` (unused after the merge) and the now-dead
+`renderRunSummaryConsole`; kept `run-summary.ts` (the builder, still unit-tested) and `bug-report.ts`.
+`playwright.config.ts` (local `[list, html, bugzilla]`; CI shard `[blob, github, list]`) and
+`merge.config.ts` (`[html, junit, bugzilla]`) updated; the CI workflow now publishes `reports/REPORT.md`
+to the step summary and reads `reports/REPORT.json` for the quality gate. Docs (RUNBOOK, RUN-COMMANDS,
+validation-framework, bug-filing, README, PRODUCTION-GRADE-RUN) repointed to the single files.
+
+**Dead files removed.** `src/api/definitions/module-endpoints.ts` (the old OpenAPI-spec loader —
+`loadModuleEndpoints`/`isLoadableSpec`, dead since modules became hand-defined) and the stray
+`reports/bugs/_*.log` run-debris. A repo-wide orphan scan found nothing else unused; the folder
+structure was already production-grade. `Admin_module.xlsx` is kept (owner data, still referenced).
+
+Verified: `npm run check` clean; **106 framework guards pass**; a run writes exactly `reports/REPORT.md`
+
+- `reports/REPORT.json` and nothing else. Nothing committed (owner commits).
+
+### 2026-09-18 — Payloads verified against the real frontend/backend; a production-grade run for API + UI
+
+Two owner asks: (1) make sure every KPost + KMail endpoint sends the **correct payload** and is tested
+from every angle, and (2) stand up a **complete production-grade** run covering all API test types +
+full UI e2e. Both were mostly a matter of hardening and orchestration on the existing bench, plus
+closing a real payload gap the previous audit could not see.
+
+**"Every angle" was already structural.** `describeEndpointCases` generates one Playwright case **per
+central validator** for every registered endpoint (status, schema, the four auth-token probes,
+injection, XSS, sensitive-data, performance, and the whole request-fuzzer family) plus business rules
+and DB checks. Registering a validator adds a case to all 345 endpoints; no per-endpoint spec is
+needed. So the test-matrix side needed nothing new.
+
+**The payload gap the audit couldn't see.** `payload-audit.spec.ts` verifies each request against the
+workbook's documented _example_, so it is blind to the **35 endpoints the workbook documents no body
+for** (29 KPost + 6 KMail) — their bodies were built from the frontend and had no automated check. A
+source audit of the real KPost React app (`KPOST_REACTJS_2023_V1`, which also holds the KMail UI) and
+the KMail Java backend (`Kpost_Kmail_5.0`) found genuine defects, each now fixed with the field name
+and reason recorded in the definition:
+
+- **`kmail-selected-contact-mails`** (a `productionSafe` LIVE read) under-sent — it sent only
+  `{selectedContact}` where the app pages with `fetchMailType`, `groupFlag`, `lastKmailID`,
+  `firstKmailID`, `count`. A live under-send is the exact false-bug shape.
+- **`kmail-mail-content`** sent only `{kmailID}`; the backend dereferences `selectedContact.toLowerCase()`
+  UNGUARDED (`ReadKmailController.java:179`), so the omission would NPE a 500 that looks like a product
+  bug. Now sends the full row `{kmailID, kmailNumber, kmailType, selectedContact, groupFlag}`.
+- **`katchup-delete-message`** sent `{msgID}` but the client field is `messageIds` (an ARRAY) — the
+  wrong shape can leave a message undeleted (orphan). Fixed the definition and the lifecycle cleanup.
+- **`kdiary-add-participants`** sent `{eventIds:[…]}` (an array, mirroring updateScheduleRemarks) but
+  the client field is `eventID` (SINGULAR) — this is what produced the endpoint's 400 "finding". Fixed
+  the definition and the lifecycle step; `updateScheduleRemarks` itself already matched the client, so
+  its 500 is a real bug (correctly).
+- **`kdiary-get-event-selected-date`** (a `productionSafe` read) added the client's `scheduleEndDateAndTime:null`.
+- **`kos-ai-assist`** (`/ai/messageAssist`) sent `{prompt, aiType}` — that is `chatResponse`'s shape;
+  `messageAssist` sends `{message, prompt, requestType:"REPLY"}`.
+
+Nine KPost routes (getLoginHistory, the three notification toggles, several diary/report endpoints,
+uploadProfileAttachments, updateSignatureImage) are **not called by any frontend** — documented-but-
+unused workbook endpoints whose bodies are necessarily inferred; recorded as such, not changed.
+
+**The guard so it can't regress — `tests/framework/frontend-payload.spec.ts`.** It pins the exact
+field set each no-example endpoint's authoritative client sends and asserts the bench sends at least
+those fields. So a later edit that drops or renames a field (the exact regression that files a false
+bug) fails the build, the same way `payload-audit` guards the example-documented endpoints. Both are
+green; `npm run check` clean; **106 framework guards pass** (was 104).
+
+**The production-grade run — `prodgrade:*` (docs/PRODUCTION-GRADE-RUN.md).** Scope KPost API + KMail
+API + UI e2e (owner's call; admin-api stays its own gated flow). Default is **preview** (dry-run:
+runs everything, writes the report, files nothing); `:file` arms filing + auto-resolve. Tiers:
+`prodgrade:api:{preview,file}` (full read matrix via `TEST_DB_MODE` + the write lifecycles),
+`prodgrade:api:deep:{preview,file}` (adds `WRITE_FUZZ` + `ALLOW_DESTRUCTIVE_TESTS` so the fuzz/attack
+matrix runs on `data` WRITES too — persists junk, disposable test DB only; the kill-switch,
+QA-guard and the `external`/`global` block stay armed), `prodgrade:ui:{preview,file}` (every screen +
+every feature flow). API and UI are **separate invocations on purpose**: an API run logs in as the QA
+account and would displace the UI's single browser session, after which the UI specs safely SKIP (the
+session guard never lets that become a false bug). `prodgrade:{preview,file}` runs the API pass then
+the UI pass. Nothing was executed against the live target in this pass — the setup is wired, guarded
+and documented for the owner to run.
+
 ### 2026-09-18 — Systemic bugs verify against their OWN endpoints (auth bugs stayed open despite being fixed)
 
 The owner seeded the missing QA accounts into the testingapi test DB (personal + Nebius Solutions co 242
-+ North Star co 1034; kpostIDs resolved by `getUserDetailsByMobNo` / `getCompanyDetails`, member lists by
-admin `userManagementDetails/{companyID}`; `.env` updated). With login working, the auth probes finally
-RAN (185 passed vs 0 before), and a resolve pass closed 21 more genuinely-fixed bugs (spot-checked by curl).
+
+- North Star co 1034; kpostIDs resolved by `getUserDetailsByMobNo` / `getCompanyDetails`, member lists by
+  admin `userManagementDetails/{companyID}`; `.env` updated). With login working, the auth probes finally
+  RAN (185 passed vs 0 before), and a resolve pass closed 21 more genuinely-fixed bugs (spot-checked by curl).
 
 But the owner noticed the **authentication** tickets stayed open although auth is fixed. Investigated:
 auth is now correctly enforced (**401 on missing token**) on essentially every endpoint — the ONLY holdouts

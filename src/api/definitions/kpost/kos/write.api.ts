@@ -156,8 +156,15 @@ export const aiMessageAssistApi = defineKosEndpoint({
   tags: [...WRITE_TAGS, 'ai', 'metered'],
   destructive: true,
   sideEffect: 'data',
-  request: body(() => ({ prompt: 'Summarise: QA bench test.', aiType: 'general' })),
-  note: 'metered AI call — gated behind KOS_AI_LIVE; body inferred',
+  // Live client (AI_Common.js GeneratePropmt / SmartReplySuggestions): the shape is
+  // {message, prompt, requestType:"REPLY"} — NOT {prompt, aiType} (that is chatResponse's shape).
+  // Verified against the frontend, 2026-09-18.
+  request: body(() => ({
+    message: 'QA bench conversation context.',
+    prompt: 'Reply politely.',
+    requestType: 'REPLY',
+  })),
+  note: 'live-client payload {message, prompt, requestType}; metered AI — gated behind KOS_AI_LIVE',
 });
 
 export const kosWriteApis = [

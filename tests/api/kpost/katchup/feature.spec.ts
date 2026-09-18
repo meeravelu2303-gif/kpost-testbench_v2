@@ -86,7 +86,7 @@ async function cleanup(endpoints: EndpointExecutor, as: Principal, msgID?: numbe
   await endpoints
     .sendTo(
       'katchup-delete-message',
-      { body: { msgID, groupFlag: false } },
+      { body: { messageIds: [msgID], groupFlag: false } },
       { label: 'feature:cleanup', auth: { principal: as }, allowLiveWrite: true },
     )
     .catch(() => undefined);

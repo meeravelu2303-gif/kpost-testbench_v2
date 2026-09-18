@@ -12,11 +12,12 @@ import { scheduleShape } from '@api/definitions/kpost/kdiary/write.api';
  * KDiary **feature flow** — every diary WRITE, end to end on a real host, self-cleaning. Gated
  * `KDIARY_LIFECYCLE=true`, each write `allowLiveWrite`, all on our own account.
  *
- * `createEvent`, `deleteEvent` and `updateScheduleRemarks` (`{eventIds:[id], …}`) are the client's
- * real shapes. The rest (`createSchedule`, `updateEvent`, `editScheduleEvent`, `addparticipants`,
- * `saveReport`, `editReport`) are **not called anywhere in the frontend** — documented-but-unused
- * endpoints — so their bodies are best-effort and a 4xx/5xx from them is a finding on an unused
- * route, not a regression. `expect.soft` reports every one.
+ * `createEvent`, `deleteEvent`, `updateScheduleRemarks` (`{eventIds:[id], …}`) and `addparticipants`
+ * (`{eventID, participants}`, singular) are the client's real shapes (verified against the frontend,
+ * 2026-09-18). The rest (`createSchedule`, `updateEvent`, `editScheduleEvent`, `saveReport`,
+ * `editReport`) are **not called anywhere in the frontend** — documented-but-unused endpoints — so
+ * their bodies are best-effort and a 4xx/5xx from them is a finding on an unused route, not a
+ * regression. `expect.soft` reports every one.
  *
  * Cleanup is exhaustive: a `finally` reads `getEvents` and deletes every QA-titled event by
  * `eventID`, so no run can leave an orphan on the account.
@@ -106,7 +107,7 @@ test.describe('KPost KDiary · feature flow', () => {
           ['kdiary-edit-schedule-event', scheduleShape({ eventID }), 'edit-schedule-event'],
           [
             'kdiary-add-participants',
-            { eventIds: [eventID], participants: [testData.victimKpostId] },
+            { eventID, participants: [testData.victimKpostId] },
             'participants',
           ],
           [
@@ -118,7 +119,9 @@ test.describe('KPost KDiary · feature flow', () => {
           ['kdiary-edit-report', { eventID, report: 'QA bench report edited' }, 'edit-report'],
         ];
         // The client-used endpoints must succeed; the frontend-unused ones may 4xx/5xx (findings).
-        // `participants` (addparticipants) is frontend-unused, so it is finding-tolerant like the rest.
+        // `addparticipants` now carries the client field shape (`{eventID, participants}`) but the
+        // exact participant-object form is not fully pinned, so it stays finding-tolerant (not in
+        // `clientUsed`) — a 4xx there is reported, not a hard failure of the flow.
         const clientUsed = new Set(['remarks']);
         for (const [id, bodyObj, label] of steps) {
           const r = await write(endpoints, id, bodyObj, label);

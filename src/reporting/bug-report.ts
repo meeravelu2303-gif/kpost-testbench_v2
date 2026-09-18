@@ -4,14 +4,14 @@ import { SUITES } from '../config/ownership.config';
 import type { ValidationReport } from '../validation-engine/validation-result';
 
 /**
- * THE bug report that lives inside the bench — `reports/bugs/REPORT.md`, written on every run.
+ * The BUG-REPORT section of the single run report — the second half of `reports/REPORT.md` (its
+ * structured form is the `bugs` object in `reports/REPORT.json`), written on every run.
  *
  * It answers, in one place: how many endpoints were tested, how many checks ran and how many
  * passed / failed / skipped; how many DISTINCT valid defects that collapsed to; which were filed to
- * Bugzilla and to which developer; and which findings were NOT filed, with the reason. It is the
- * readable companion to filing.json (raw); the neat execution-health report (endpoints, pass/fail/
- * skip by module, and the UI) is `reports/RUN-SUMMARY.md`. So "what did this run find and file"
- * never needs the console scrollback.
+ * Bugzilla and to which developer; and which findings were NOT filed, with the reason. The
+ * execution-health half of the same file (endpoints, pass/fail/skip by module, and the UI) is
+ * rendered by `run-summary.ts`. So "what did this run find and file" never needs the console scrollback.
  */
 
 export interface BugReportInput {
@@ -175,7 +175,7 @@ export function buildBugReportConsole(input: BugReportInput): string {
     headline(input),
     resolvedLine,
     rows ? `\nBy developer:\n${rows}` : '',
-    `\nFull report: reports/bugs/REPORT.md`,
+    `\nFull report: reports/REPORT.md`,
     line,
   ]
     .filter(Boolean)

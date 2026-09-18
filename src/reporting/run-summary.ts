@@ -1,17 +1,17 @@
 import type { ValidationReport, ValidationStatus } from '../validation-engine/validation-result';
 
 /**
- * THE at-a-glance run report — `reports/RUN-SUMMARY.{md,json}`, written on every run.
+ * The EXECUTION-HEALTH section of the single run report — `reports/REPORT.md` (+ `REPORT.json`),
+ * written on every run by the reporter.
  *
  * It answers, in one screen: how many endpoints were tested and how many checks passed / failed /
  * skipped / warned, broken down by module and by category, with the top failing validators (so the
  * systemic noise collapses to its real size) and the worst endpoints; and the SAME for the UI —
  * per browser project and per spec, with the real failures.
  *
- * This is EXECUTION HEALTH, deliberately separate from `reports/bugs/REPORT.md` (which owns "what
- * distinct defects were found and filed"). API numbers are check-level (from the validation-report
- * attachments); UI numbers are test-level (from Playwright outcomes) — each is labelled so the two
- * counts are never conflated.
+ * This is EXECUTION HEALTH; the bug report (distinct defects found and filed) is the section that
+ * follows it in the same file. API numbers are check-level (from the validation-report attachments);
+ * UI numbers are test-level (from Playwright outcomes) — each labelled so the two are never conflated.
  */
 
 /** One UI/browser test outcome, as seen by the Playwright reporter. */
@@ -265,37 +265,13 @@ export function buildRunSummary(input: RunSummaryInput): RunSummary {
 const pct = (part: number, whole: number): string =>
   whole === 0 ? '—' : `${Math.round((part / whole) * 100)}%`;
 
-export function renderRunSummaryConsole(s: RunSummary): string {
-  const line = '─'.repeat(72);
-  const c = s.api.checks;
-  const parts = [
-    line,
-    'RUN SUMMARY — kpost-testbench_v2',
-    line,
-    `Environment ${s.meta.environment} · run ${s.meta.testRunId} · ${s.meta.generatedAt}`,
-    '',
-    `API : ${s.api.endpoints} endpoints · ${c.total} checks — ` +
-      `${c.passed} passed / ${c.failed} failed / ${c.warnings} warn / ${c.skipped} skipped`,
-  ];
-  if (s.ui.ran) {
-    const u = s.ui.tests;
-    parts.push(
-      `UI  : ${u.total} tests — ${u.passed} passed / ${u.failed} failed / ${u.skipped} skipped / ${u.flaky} flaky`,
-    );
-  } else {
-    parts.push('UI  : not run this pass');
-  }
-  parts.push('', 'Full report: reports/RUN-SUMMARY.md', line);
-  return parts.join('\n');
-}
-
 export function renderRunSummaryMarkdown(s: RunSummary): string {
   const c = s.api.checks;
   const L: string[] = [
     '# Run summary — kpost-testbench_v2',
     '',
-    '**GENERATED — do not edit.** Written on every run. Execution health for this run; for the',
-    'distinct defects found and filed see `reports/bugs/REPORT.md`.',
+    '**GENERATED — do not edit.** Written on every run. Part 1 is execution health; the bug report',
+    '(distinct defects found and filed) follows below in the same file.',
     '',
     `Environment **${s.meta.environment}** · run \`${s.meta.testRunId}\` · build **${s.meta.build}** · ` +
       `status **${s.meta.runStatus}** · ${s.meta.generatedAt}`,
@@ -428,7 +404,7 @@ export function renderRunSummaryMarkdown(s: RunSummary): string {
   L.push(
     '---',
     '',
-    'Companion reports: `reports/bugs/REPORT.md` (defects filed) · `reports/RUN-SUMMARY.json` (this, structured).',
+    '_Structured data for this run: `reports/REPORT.json`. The bug report follows._',
     '',
   );
   return `${L.join('\n')}\n`;

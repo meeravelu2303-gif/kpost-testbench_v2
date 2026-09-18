@@ -56,8 +56,12 @@ export const getEventSelectedDateApi = defineKdiaryEndpoint({
   tags: [...READ_TAGS, 'event'],
   destructive: false,
   productionSafe: true,
-  request: body(() => ({ scheduleStartDateAndTime: '2026-09-14' })),
-  note: 'workbook documents no body; date field inferred from the create payload',
+  // Live client (Diary.js GetDiaryScheduleBySelectedDate): the date range is start + (null) end.
+  request: body(() => ({
+    scheduleStartDateAndTime: '2026-09-14',
+    scheduleEndDateAndTime: null,
+  })),
+  note: 'body matches the live client (start date + null end); verified against the frontend',
 });
 
 export const kdiaryReadApis = [

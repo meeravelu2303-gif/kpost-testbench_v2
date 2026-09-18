@@ -39,9 +39,11 @@ export const deleteMessageApi = defineKatchupEndpoint({
   tags: [...MANAGE_TAGS, 'sender-action', 'needs-message-id'],
   destructive: true,
   sideEffect: 'data',
-  // The workbook documents no body; the lifecycle test supplies the real msgID it created.
-  request: body(() => ({ msgID: 0, groupFlag: false })),
-  note: 'workbook has no payload; needs a real owned msgID',
+  // Live client (Katchup.js DeleteMessage): the field is `messageIds` (an ARRAY), not `msgID`.
+  // Sending `msgID` is the wrong shape and can leave the message undeleted (orphan). Verified
+  // against the frontend, 2026-09-18. The lifecycle test supplies the real msgID it created.
+  request: body(() => ({ messageIds: [0], groupFlag: false })),
+  note: 'live-client payload {messageIds:[...], groupFlag}; needs a real owned msgID',
 });
 
 export const markImportantApi = defineKatchupEndpoint({

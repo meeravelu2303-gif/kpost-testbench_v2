@@ -93,8 +93,12 @@ export const addParticipantsApi = defineKdiaryEndpoint({
   summary: 'Add participants to a diary schedule',
   tags: [...WRITE_TAGS, 'participants'],
   destructive: true,
-  request: body(() => ({ eventIds: [0], participants: [testData.victimKpostId] })),
-  note: 'frontend-unused; shape mirrors updateScheduleRemarks (eventIds array)',
+  // Live client (Diary.js AddDiaryScheduleParticipants): the field is `eventID` (SINGULAR), not the
+  // `eventIds` array of updateScheduleRemarks — the earlier array shape is what produced the 400 on
+  // this endpoint. Verified against the frontend, 2026-09-18. `participants` is a list the app maps
+  // from selected contacts; a QA kpostID exercises the path.
+  request: body(() => ({ eventID: 0, participants: [testData.victimKpostId] })),
+  note: 'live-client payload {eventID, participants}; needs a real eventID from createEvent',
 });
 
 export const updateRemarksApi = defineKdiaryEndpoint({

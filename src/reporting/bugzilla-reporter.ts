@@ -25,6 +25,7 @@ import { createLogger } from '../utils/logger';
 import type { ValidationReport } from '../validation-engine/validation-result';
 import { buildBugReportConsole, buildBugReportMarkdown } from './bug-report';
 import { VALIDATION_REPORT_ATTACHMENT } from './report-attachment';
+import { buildRunSummary, renderRunSummaryMarkdown, type UiTestRecord } from './run-summary';
 
 /**
  * Files this run's defects into Bugzilla.
@@ -126,17 +127,6 @@ export default class BugzillaReporter implements Reporter {
       mergeCandidates([...this.apiCandidates(), ...this.uiCandidates(tests)]),
     );
     const gate = applyValidityGate(candidates);
-    this.write('candidates.json', {
-      testRunId: env.TEST_RUN_ID,
-      environment: env.TEST_ENV,
-      generatedAt: new Date().toISOString(),
-      accepted: gate.filed,
-      rejected: gate.rejected.map(({ candidate, reason }) => ({
-        id: candidate.id,
-        summary: candidate.title,
-        reason,
-      })),
-    });
 
     // Decide whether filing may run, and why not when it may not.
     const executed = tests.filter((test) => test.results.length > 0).length;
@@ -164,7 +154,6 @@ export default class BugzillaReporter implements Reporter {
         const filer = new BugzillaFiler(client, this.config, this.log);
         // File in module order so created bug ids are ascending (KPost → KMail → UI).
         outcome = await filer.file(orderedForFiling(gate.filed));
-        this.write('filing.json', { ...outcome, rejected: gate.rejected.length });
       } else {
         notFiledReason = `no valid defects (${gate.rejected.length} rejected by the validity gate)`;
       }
@@ -173,17 +162,20 @@ export default class BugzillaReporter implements Reporter {
       // only REPORTS what it would close (a reviewable preview); it writes to Bugzilla only for real.
       if (this.config.autoResolve) {
         resolved = await this.autoResolve(client, candidates, this.config.dryRun);
-        this.write('resolved.json', resolved);
       }
     }
 
-    // The clear, in-bench bug report — always written, always the source of truth for a run.
+    // The single, in-bench report — ONE Markdown + ONE JSON, always written, the source of truth
+    // for a run. The Markdown carries execution health (endpoints, pass/fail/skip by module + UI)
+    // followed by the bug report (distinct defects, filed-by-developer, not-filed reasons); the JSON
+    // is the structured companion (run summary + quality gate + bug candidates/filing/resolved).
+    const generatedAt = new Date().toISOString();
     const reportInput = {
       environment: env.TEST_ENV,
       runStatus: result.status,
       testRunId: env.TEST_RUN_ID,
       build: env.BUILD_ID,
-      generatedAt: new Date().toISOString(),
+      generatedAt,
       validationReports: this.validationReports,
       merged: candidates,
       rejected: gate.rejected,
@@ -191,8 +183,62 @@ export default class BugzillaReporter implements Reporter {
       notFiledReason,
       resolved,
     };
-    this.writeText('REPORT.md', buildBugReportMarkdown(reportInput));
+    const runSummary = buildRunSummary({
+      environment: env.TEST_ENV,
+      build: env.BUILD_ID,
+      testRunId: env.TEST_RUN_ID,
+      runStatus: result.status,
+      generatedAt,
+      profiles: [...new Set(this.validationReports.map((r) => r.profile))],
+      validationReports: this.validationReports,
+      uiTests: this.uiTestRecords(tests),
+    });
+    const combined = {
+      meta: runSummary.meta,
+      api: runSummary.api,
+      ui: runSummary.ui,
+      // The CI quality gate reads this: a run is green only when every endpoint passed its gate.
+      qualityGate: {
+        passed: this.validationReports.every((r) => r.gate.passed),
+        blockingEndpoints: this.validationReports
+          .filter((r) => !r.gate.passed)
+          .map((r) => r.endpoint),
+      },
+      bugs: {
+        distinctDefects: gate.filed.length,
+        candidates: gate.filed,
+        rejected: gate.rejected.map(({ candidate, reason }) => ({
+          id: candidate.id,
+          summary: candidate.title,
+          reason,
+        })),
+        filing: outcome ?? null,
+        resolved: resolved ?? null,
+        notFiledReason: notFiledReason ?? null,
+      },
+    };
+    const markdown = `${renderRunSummaryMarkdown(runSummary)}\n${buildBugReportMarkdown(reportInput)}`;
+    this.writeReport('REPORT.json', JSON.stringify(combined, null, 2));
+    this.writeReport('REPORT.md', markdown);
     console.log(`\n${buildBugReportConsole(reportInput)}`);
+  }
+
+  /** Every browser (UI) test's outcome, for the execution-health section of the report. */
+  private uiTestRecords(tests: readonly TestCase[]): UiTestRecord[] {
+    const records: UiTestRecord[] = [];
+    for (const test of tests) {
+      const project = test.parent.project()?.name ?? '';
+      if (!BROWSER_PROJECTS.has(project) && project !== 'admin-ui') continue;
+      const failure = [...test.results].reverse().find((attempt) => attempt.error?.message);
+      records.push({
+        project,
+        spec: path.basename(test.location.file),
+        title: test.title,
+        outcome: test.outcome(),
+        message: failure?.error?.message ? stripAnsi(failure.error.message).trim() : undefined,
+      });
+    }
+    return records;
   }
 
   /**
@@ -308,17 +354,13 @@ export default class BugzillaReporter implements Reporter {
     });
   }
 
-  private write(file: string, payload: unknown): void {
-    this.writeText(file, JSON.stringify(payload, null, 2));
-  }
-
-  private writeText(file: string, content: string): void {
+  private writeReport(file: string, content: string): void {
     try {
-      const dir = path.join(process.cwd(), 'reports', 'bugs');
+      const dir = path.join(process.cwd(), 'reports');
       mkdirSync(dir, { recursive: true });
       writeFileSync(path.join(dir, file), content);
     } catch (error) {
-      this.log.warn(`could not write reports/bugs/${file}: ${(error as Error).message}`);
+      this.log.warn(`could not write reports/${file}: ${(error as Error).message}`);
     }
   }
 }

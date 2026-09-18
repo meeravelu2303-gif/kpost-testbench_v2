@@ -64,7 +64,7 @@ Filer .............. live Bugzilla search per candidate, then:
                        nothing found      → create, assign, attach evidence
                        search failed      → file nothing
    ▼
-reports/bugs/{candidates,filing}.json + console summary
+reports/REPORT.json + console summary
 ```
 
 Implementation: [`src/bug-tracker/`](../src/bug-tracker/), reporter in [`src/reporting/bugzilla-reporter.ts`](../src/reporting/bugzilla-reporter.ts). Nothing in this path can fail a run or change its exit code.
@@ -110,7 +110,7 @@ A bench that cannot run must be loud, never clean. If every spec fails to import
 
 Only `FAILED` validations become candidates: a `WARNING` is not a defect, and a `SKIPPED` check means nothing was verified. Flaky tests (passed on retry) are not filed either.
 
-Every rejection is printed and written to `reports/bugs/candidates.json`. A gate nobody can see is a gate nobody can correct.
+Every rejection is printed and written to `reports/REPORT.json`. A gate nobody can see is a gate nobody can correct.
 
 ## 5. How duplicates are prevented
 
@@ -160,7 +160,7 @@ npm run test:admin
 npm run test:kmail
 ```
 
-Every run writes `reports/bugs/candidates.json` (accepted and rejected, with reasons) and `reports/bugs/filing.json` (what happened to each, including the assignee).
+Every run writes `reports/REPORT.json` — its `bugs` object holds the accepted and rejected candidates (with reasons) and, when filing ran, what happened to each (including the assignee). The human-readable form is Part 2 of `reports/REPORT.md`.
 
 ## 8. CI
 
@@ -188,7 +188,7 @@ Two instance facts worth knowing:
 
 ## 10. Operating it
 
-- **Start in dry run.** Read `reports/bugs/candidates.json`, confirm the tickets and their owners, then lift the flag — ideally with `BUGZILLA_MAX_FILE=5` first.
+- **Start in dry run.** Read `reports/REPORT.json`, confirm the tickets and their owners, then lift the flag — ideally with `BUGZILLA_MAX_FILE=5` first.
 - **Prove dedupe on your own instance:** run `npm run bugs:file` twice. The second run must report `commented`, never `created`.
 - **To stop filing immediately:** unset `BUGZILLA_API_KEY`, or set `BUGZILLA_DRY_RUN=true`.
 - **Rotate the API key** if it has ever been pasted into a chat, ticket or log.

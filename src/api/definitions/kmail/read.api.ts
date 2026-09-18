@@ -218,7 +218,17 @@ export const selectedContactMailsApi = contactRead(
   'kmail-selected-contact-mails',
   '/common/selectedContactMails/',
   'Mail thread with a contact',
-  { selectedContact: testData.victimKpostId },
+  // Full live-client body (Kmail.js getKmailChat / KmailMessage.fetchMail): the thread read pages
+  // by count and by first/last kmailID. Sending only `selectedContact` under-sends what the app
+  // sends; verified against the frontend (2026-09-18), the backend reads all of these.
+  {
+    selectedContact: testData.victimKpostId,
+    fetchMailType: 'A',
+    groupFlag: false,
+    lastKmailID: null,
+    firstKmailID: null,
+    count: 50,
+  },
   ['thread'],
 );
 export const translationApi = contactRead(
@@ -351,8 +361,18 @@ export const mailContentApi = idRead(
   'POST',
   '/readMail/sentAndInboxMailContent/',
   'Sent/inbox mail content',
-  body(() => ({ kmailID: 0 })),
-  'needs a real kmailID',
+  // Full live-client body (MessageContainer MailObj / KmailMessage.showMailMessage). The backend
+  // dereferences `selectedContact.toLowerCase()` UNGUARDED (ReadKmailController.java:179): omitting
+  // it NPEs a 500, which would look like a product bug — so the bench sends the whole row the app
+  // sends (verified against the frontend + backend, 2026-09-18).
+  body(() => ({
+    kmailID: 0,
+    kmailNumber: 0,
+    kmailType: 'Received',
+    selectedContact: testData.victimKpostId,
+    groupFlag: false,
+  })),
+  'needs a real kmailID; full row shape avoids the backend selectedContact NPE',
   ['content'],
 );
 

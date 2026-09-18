@@ -81,8 +81,7 @@ This runs the **complete flow** against the live app — all reads, all 10 write
 (create → act → clean up), and the UI screens — **serial** (`--workers=1`), but files **nothing**.
 Use it to confirm the flows drive cleanly and to review what _would_ be filed. Check:
 
-- `reports/RUN-SUMMARY.md` — the neat at-a-glance run report: endpoints, pass/fail/skip/warn by module and category, top failing checks, and the UI results.
-- `reports/bugs/REPORT.md` — endpoints tested, valid defects, what would file, by developer.
+- `reports/REPORT.md` — the single run report: Part 1 execution health (endpoints, pass/fail/skip/warn by module and category, top failing checks, UI results) and Part 2 the bug report (valid defects, what would file, by developer).
 
 The write flows self-clean, so this leaves your QA accounts unchanged.
 
@@ -107,16 +106,14 @@ For a lighter run (reads + UI + filing, no write flows) use `npm run bugs:file` 
 
 ## 5. Read the results
 
-| File                              | What it tells you                                                                                                       |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `reports/RUN-SUMMARY.md`          | The neat run report: API pass/fail/skip/warn by module & category, top failing checks, worst endpoints, and UI results. |
-| `reports/RUN-SUMMARY.json`        | The same, structured for tooling.                                                                                       |
-| `reports/bugs/REPORT.md`          | The bug report: run totals, valid defects, filed-by-developer, every ticket, and what was rejected (with the reason).   |
-| `reports/validation/summary.json` | Machine-readable per-endpoint results + failures (feeds the CI quality gate).                                           |
-| `docs/COMPONENT-ROUTING.md`       | Every endpoint → its Bugzilla component (regenerated each framework run).                                               |
-| `docs/COVERAGE.md`                | Every documented endpoint & screen, with its scope decision.                                                            |
-| `docs/LIVE-ENDPOINTS.md`          | What runs on live vs blocked, with the reason.                                                                          |
-| Bugzilla                          | The filed tickets themselves, on their components, assigned to the developer.                                           |
+| File                        | What it tells you                                                                                                                                                                                                                                                 |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reports/REPORT.md`         | The single run report — Part 1 execution health (API pass/fail/skip/warn by module & category, top failing checks, worst endpoints, UI results) + Part 2 the bug report (valid defects, filed-by-developer, every ticket, and what was rejected with the reason). |
+| `reports/REPORT.json`       | The structured companion: run summary + quality gate + the `bugs` object (candidates, filing, resolve). Feeds the CI quality gate.                                                                                                                                |
+| `docs/COMPONENT-ROUTING.md` | Every endpoint → its Bugzilla component (regenerated each framework run).                                                                                                                                                                                         |
+| `docs/COVERAGE.md`          | Every documented endpoint & screen, with its scope decision.                                                                                                                                                                                                      |
+| `docs/LIVE-ENDPOINTS.md`    | What runs on live vs blocked, with the reason.                                                                                                                                                                                                                    |
+| Bugzilla                    | The filed tickets themselves, on their components, assigned to the developer.                                                                                                                                                                                     |
 
 `npx playwright show-report` opens the HTML report (traces/screenshots for UI failures).
 

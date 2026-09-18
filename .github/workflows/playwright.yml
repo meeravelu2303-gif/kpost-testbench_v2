@@ -115,14 +115,16 @@ jobs:
           BUGZILLA_DRY_RUN: ${{ vars.BUGZILLA_DRY_RUN || 'true' }}
         run: npx playwright merge-reports --config merge.config.ts ./all-blob-reports
       - uses: actions/upload-artifact@v7
-        if: ${{ hashFiles('reports/bugs/*.json') != '' }}
+        if: ${{ hashFiles('reports/REPORT.json') != '' }}
         with:
-          name: bug-filing-${{ github.run_attempt }}
-          path: reports/bugs
+          name: run-report-${{ github.run_attempt }}
+          path: |
+            reports/REPORT.md
+            reports/REPORT.json
           retention-days: 30
-      - name: Publish run summary
-        if: ${{ hashFiles('reports/RUN-SUMMARY.md') != '' }}
-        run: cat reports/RUN-SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish run report
+        if: ${{ hashFiles('reports/REPORT.md') != '' }}
+        run: cat reports/REPORT.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         with:
           name: playwright-report-${{ github.run_attempt }}
@@ -133,17 +135,12 @@ jobs:
           name: junit-report-${{ github.run_attempt }}
           path: junit-report
           retention-days: 14
-      - uses: actions/upload-artifact@v7
-        with:
-          name: validation-report-${{ github.run_attempt }}
-          path: reports/validation
-          retention-days: 30
       - name: Quality gate
-        if: ${{ hashFiles('reports/validation/summary.json') != '' }}
+        if: ${{ hashFiles('reports/REPORT.json') != '' }}
         run: |
           node -e "
-            const s = require('./reports/validation/summary.json');
-            console.log('Validations:', JSON.stringify(s.totals));
+            const s = require('./reports/REPORT.json');
+            console.log('Checks:', JSON.stringify(s.api.checks));
             if (!s.qualityGate.passed) {
               console.error('Quality gate FAILED for: ' + s.qualityGate.blockingEndpoints.join(', '));
               process.exit(1);
