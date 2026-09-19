@@ -10,7 +10,7 @@ cannot drift from what is actually tested.
 | - | ----: |
 | Documented (workbook, usable) | 446 |
 | **Registered & tested** | **349** |
-| — of those, run on live | 121 |
+| — of those, run on live | 119 |
 | In "built" modules | 423 |
 
 | Module | Documented | Tested | Live | Status | Note |
@@ -22,14 +22,14 @@ cannot drift from what is actually tested.
 | `common` | 32 | 32 | 21 | built | reference data, identity, company, OTP (OTP writes gated) |
 | `kall` | 20 | 20 | 6 | built | calling — full API + write lifecycle + screen |
 | `contacts` | 16 | 16 | 8 | built | address book — reads live, writes gated lifecycle |
-| `dairyschedule` | 14 | 14 | 5 | built | KDiary — schedules/events/reports; reads live, writes gated |
+| `dairyschedule` | 14 | 14 | 4 | built | KDiary — schedules/events/reports; reads live, writes gated |
 | `kword` | 14 | 14 | 0 | built | KOS/KWord — document CRUD; reads live, writes gated (API-only) |
 | `signuplogin` | 12 | 12 | 8 | built | login & session; signup out of scope (OTP-gated) |
 | `group` | 11 | 11 | 0 | built | group membership (FR-K06) |
 | `generalsetting` | 7 | 7 | 2 | built | Settings — theme/font/notifications; reads live, writes gated |
 | `ai` | 4 | 4 | 1 | built | KOS K-AI — sessions read live; generation metered/external |
 | `aws` | 4 | 4 | 3 | built | S3 presigned URLs + attachment check/delete; generators run live |
-| `dashboard` | 3 | 3 | 3 | built | home recent-messages panel |
+| `dashboard` | 3 | 3 | 2 | built | home recent-messages panel |
 | `other` | 1 | 0 | 0 | backlog | unprefixed paths — review individually |
 | `signuploginformediumandlarge` | 1 | 1 | 0 | needs-business | business-tier admin login |
 | `knews` | 6 | 0 | 0 | external | external RSS feeds, not the KPost API |

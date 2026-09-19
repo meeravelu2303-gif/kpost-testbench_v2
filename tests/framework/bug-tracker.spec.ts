@@ -213,6 +213,32 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
       ),
       'a missing rate limit is the finding, not throttling of our run',
     ).toBeUndefined();
+
+    // A gateway 5xx (502/503/504) or a no-response/timeout is a transient upstream failure — dropped.
+    expect(
+      candidateRejection(
+        candidate({ title: 'GET /x: expected [401], got 502', actual: 'HTTP 502' }),
+      ),
+      'a 502 means the gateway could not reach the app — not an auth defect',
+    ).toContain('transient upstream');
+    expect(
+      candidateRejection(candidate({ responseStatus: 504, actual: 'HTTP 504' })),
+      'a 504 gateway timeout is transient',
+    ).toContain('transient upstream');
+    expect(
+      candidateRejection(
+        candidate({
+          title: 'POST /x: no HTTP response',
+          actual: 'apiRequestContext.fetch: Timeout 10000ms exceeded',
+        }),
+      ),
+      'a no-response/timeout is transient — the app did not answer',
+    ).toContain('transient upstream');
+    // But a genuine APP 500 (an NPE the app itself returned) is a real crash and still files.
+    expect(
+      candidateRejection(candidate({ title: 'GET /x: expected 200, got 500', actual: 'HTTP 500' })),
+      'an app 500 is a real server crash, not a gateway failure',
+    ).toBeUndefined();
   });
 
   test('the ticket matches the conventions Bugzilla and the Bug Tracker UI expect', () => {

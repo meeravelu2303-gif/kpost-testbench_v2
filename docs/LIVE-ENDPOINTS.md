@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **118** |
-| Blocked | 223 |
+| **Runs on live** | **116** |
+| Blocked | 225 |
 | Total registered | 341 |
 
 ---
 
-## Runs on live — 118
+## Runs on live — 116
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -86,7 +86,6 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/katchup/messageCountBetweenSenderAndReceiver/` | Katchup |
 | `POST` | `/v2/katchup/searchKatchUpMessage/` | Katchup |
 | `POST` | `/v2/katchup/searchKatchUpMessageSubject` | Katchup |
-| `POST` | `/dairySchedule/getEventDate` | KDiary |
 | `GET` | `/dairySchedule/getEvents` | KDiary |
 | `POST` | `/dairySchedule/getEventSelectedDate` | KDiary |
 | `GET` | `/dairySchedule/getTodayReport` | KDiary |
@@ -118,7 +117,6 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/signupLogin/userLogin/` | Login & session |
 | `POST` | `/v2/signupLogin/userLogout/` | Login & session |
 | `POST` | `/v2/dashboard/homeDashboardMsgs/` | other |
-| `POST` | `/v2/dashboard/homeDashboardNewMsgs` | other |
 | `POST` | `/v2/dashboard/katchupDashboardMsg/` | other |
 | `POST` | `/v2/profile/advancedSearch/` | Profile |
 | `POST` | `/v2/profile/autoSearchWithName/` | Profile |
@@ -144,7 +142,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 223
+## Blocked on live — 225
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -267,6 +265,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/dairySchedule/deleteEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/editReport` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/editScheduleEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/getEventDate` | KDiary | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/dairySchedule/saveReport` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/updateEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/updateScheduleRemarks` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -321,6 +320,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/signupLogin/setAccessCode` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/signupLogin/signup/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/dashboard/homeDashboardNewMsgs` | other | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/profile/changePassword` | Profile | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/profile/convertBase64ToImage` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/profile/deactivateAccount/` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |

@@ -108,6 +108,24 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
     return 'a response-time / timeout check is environmental (it flaps between runs), not a filed defect';
   }
 
+  // A GATEWAY 5xx (502/503/504) or a no-HTTP-response/timeout means the UPSTREAM never answered — the
+  // API gateway could not reach the app, or the request timed out. That is transient/environmental and
+  // proves nothing about the endpoint: its real behaviour (200, or a real 4xx/500 the app returns) shows
+  // up on a healthy run, and probing it several times confirms whether it reproduces. So it is never
+  // filed. NB: a genuine app 500/501 (the app itself returning a server error, e.g. an NPE) is a real
+  // crash and is NOT dropped here — only gateway-level failures (502/503/504) and non-responses are.
+  // (Raw socket errors — ECONNREFUSED / ENOTFOUND / socket hang up — are caught below by BENCH_FAULT.)
+  const transient = `${candidate.actual} ${candidate.title} ${candidate.narrative}`;
+  if (
+    candidate.responseStatus === 502 ||
+    candidate.responseStatus === 503 ||
+    candidate.responseStatus === 504 ||
+    /\bgot 50[234]\b/i.test(transient) ||
+    /no HTTP response|apiRequestContext\.fetch|Timeout\s*\d+\s*ms exceeded/i.test(transient)
+  ) {
+    return 'a gateway 5xx (502/503/504) or a no-response/timeout is a transient upstream failure (the app did not respond), not a product defect';
+  }
+
   const evidence = `${candidate.actual}`;
   const claim = `${candidate.title} ${candidate.narrative}`;
 

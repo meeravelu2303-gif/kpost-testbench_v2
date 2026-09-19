@@ -2,8 +2,8 @@
 
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`.
 
-**50 of 341** registered endpoints are **not driven against the live app**.
-The rest ARE tested on live: **118** on the default run + **173** via the
+**52 of 341** registered endpoints are **not driven against the live app**.
+The rest ARE tested on live: **116** on the default run + **173** via the
 gated self-cleaning lifecycle flows (`npm run kpost:file`). This file lists ONLY the not-tested.
 
 They are not silent gaps — each is refused for a permanent constraint or a deliberate safety
@@ -15,10 +15,10 @@ choice, and every one is still contract-validated OFF live.
 | -------- | ----: |
 | OTP — no bypass on live (permanent) | 17 |
 | Shared / global write (by choice) | 15 |
-| Needs setup we lack (business login 403, company logo 500) | 9 |
+| Needs setup we lack (business login 403, company logo 500) | 11 |
 | Attachment file-upload — the one REAL coverage gap | 7 |
 | Public record write (enquiry / unsubscribe) | 2 |
-| **Total not tested on live** | **50** |
+| **Total not tested on live** | **52** |
 
 ---
 
@@ -113,9 +113,21 @@ choice, and every one is still contract-validated OFF live.
 | ------ | ---- | ---------------------- |
 | `POST` | `/testkmail/v2/common/postBoxContacts/` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 
+### KDiary (1)
+
+| Method | Path | Why not tested on live |
+| ------ | ---- | ---------------------- |
+| `POST` | `/dairySchedule/getEventDate` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
+
 ### KOS (1)
 
 | Method | Path | Why not tested on live |
 | ------ | ---- | ---------------------- |
 | `GET` | `/kword/documents/` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
+
+### other (1)
+
+| Method | Path | Why not tested on live |
+| ------ | ---- | ---------------------- |
+| `POST` | `/v2/dashboard/homeDashboardNewMsgs` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 
