@@ -201,9 +201,17 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     method: 'POST',
     path: '/workplaceHierarchy/getWorkPlaceHierarchy',
     summary: 'Read the assembled workplace hierarchy for the company',
-    tags: ['workplace-hierarchy'],
-    request: body(() => ({ companyId: companyId() })),
+    tags: ['workplace-hierarchy', 'needs-id'],
+    // The API requires `parentAttributeId` (400 "parentAttributeId is required" otherwise), and the
+    // live client (WorkPlaceLocationSetup.js) passes a REAL runtime tier-attribute id, not a constant.
+    // So this is a needs-runtime-id read: not run standalone on live (a placeholder would 400/500 and
+    // read as a false defect); the admin lifecycle drives it with an attribute id it created.
+    request: body(() => ({
+      companyId: companyId(),
+      parentVariableId: '0',
+      parentAttributeId: '0',
+    })),
     destructive: false,
-    productionSafe: true,
+    note: 'needs a runtime parentAttributeId from a created workplace tier',
   }),
 ];

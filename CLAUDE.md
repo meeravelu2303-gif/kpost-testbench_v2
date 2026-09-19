@@ -228,6 +228,53 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-19 — KMail path prefix made configurable; test host confirmed at `/testkmail/v2`
+
+Before running KMail on the new test host, caught that the KMail path prefix was **hardcoded** to the
+old prod value `/kmail5/v2`, while the test host is `testkmail.kpostindia.com/testkmail/`. Running as-is
+would have sent every KMail request to `/kmail5/v2/...` (Playwright drops the base-URL path for an
+absolute request path) → 404 everywhere → a flood of false bugs. Made it configurable: env
+`KMAIL_PATH_PREFIX` (default `/kmail5/v2`), read by `defineKmailEndpoint`; `KMAIL_API_BASE_URL` stays the
+origin. An unauthenticated probe was useless (the gateway 401s **every** path), so confirmed with a
+single AUTHENTICATED read: `GET /testkmail/v2/common/getSaluations/` → **200**, all 14 checks pass — so
+the test prefix is `/testkmail/v2` and KMail auth works on the test env. `.env` sets
+`KMAIL_PATH_PREFIX=/testkmail/v2`. `npm run check` clean; 106 guards pass. Lesson reinforced: a 401 an
+API returns uniformly proves nothing about a route — only an authenticated 200-vs-404 does.
+
+### 2026-09-19 — First `npm run admin` on the test env: 10 false positives found and fixed (valid-bugs-only)
+
+The owner ran `npm run admin` (dry) and asked whether every finding is valid. Reviewed all 47 would-file
+tickets: **~37 valid, 10 false positives — now fixed so they can never file.**
+
+- **8 × `common.id` false positives.** The validator held every `*Id` field to the admin ObjectId
+  format (`/^[0-9a-fA-F]{24}$/`), but the live responses mix ObjectIds with **numeric/coded business
+  ids** — `companyId: "242"`, `countryId: 1`, `employeeId: "EMP3411ES"` — and a **`"0"` sentinel** for
+  "no parent / no reference" (`parentAttributeId`/`parentVariableId`/`reportingWorkplaceLocationId`).
+  Fixed `id.validator.ts`: exempt the business-id field names (`companyId|countryId|employeeId|
+ksmaccCompanyID`) and treat `""`/`"0"` as "no id", so only genuine platform-id fields are checked.
+- **2 × CRITICAL "expected 200, got 400" false positives.** Both were our own incomplete request, and
+  the API correctly answered a 400 with a clear field error: `getWorkPlaceHierarchy` → "parentAttributeId
+  is required" and `getSuspendOrTerminateEmployee` → "requestType is required". Verified against the admin
+  frontend: `getSuspendOrTerminateEmployee` takes `requestType: 'suspend'` (fixed the payload, stays a
+  live read); `getWorkPlaceHierarchy` takes a **real runtime tier-attribute id** from a dropdown, so it
+  is a needs-runtime-id read — reclassified `needs-id` (not standalone `productionSafe`), driven by the
+  admin lifecycle.
+- **The remaining ~37 are real:** the systemic auth-filter findings (wrong status + plain-text non-JSON
+  body on missing/bad token, consolidated to ~9 tickets), missing HSTS, and input-validation-not-enforced
+  (the admin backend has no `@Valid`, so null / empty-body / malformed-JSON are accepted with 200 where a
+  400 belongs). Auto-resolve also correctly previewed closing 9 already-fixed bugs.
+- **Framework preflight relaxed for the test env.** `live-safety.spec.ts` failed because
+  `ADMIN_API_BASE_URL=http://192.168.0.38:9595` (the on-prem test admin box) tripped the old "no internal
+  address / must be https" rule — written for a public live target. The target is now a deliberate TEST
+  environment that legitimately includes internal/http hosts, so those checks are now WARNINGS (the hard
+  check that a host is SET stays; the harm-preventing controls — destructive disarm, OTP kill-switch,
+  QA guard — are asserted separately and unchanged).
+
+Nothing was filed (dry run). `npm run check` clean; **106 framework guards pass**. A re-run of
+`npm run admin` will now show those 10 gone. Lesson: even on a test env, "valid bugs only" means a
+per-class review of the first real run — the reliable classes (auth/headers/input-validation) were real;
+the id-format and happy-path-400 classes were bench-side and are now fixed at the source.
+
 ### 2026-09-18 — Every host is now a TEST environment: deep coverage opened up across KMail, Admin and the UI writes
 
 The owner pointed the WHOLE stack at test hosts — `.env` now has `KMAIL_API_BASE_URL=testkmail…`,

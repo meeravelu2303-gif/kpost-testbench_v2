@@ -46,7 +46,9 @@ export const adminRolesApis: EndpointDefinition[] = [
     path: '/rolePosting/getSuspendOrTerminateEmployee',
     summary: 'List suspended / terminated employees',
     tags: ['role-posting'],
-    request: body(() => ({ companyId: companyId(), status: 'SUSPENDED' })),
+    // The API requires `requestType` (a 400 "requestType is required" otherwise). The live client
+    // (Revoke.js/Suspend.js) sends `requestType: 'suspend'` for this list read.
+    request: body(() => ({ companyId: companyId(), requestType: 'suspend' })),
     destructive: false,
     productionSafe: true,
   }),

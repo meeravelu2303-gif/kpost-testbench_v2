@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **123** |
-| Blocked | 213 |
+| **Runs on live** | **122** |
+| Blocked | 214 |
 | Total registered | 336 |
 
 ---
 
-## Runs on live — 123
+## Runs on live — 122
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -33,7 +33,6 @@ reviewer can check against the comment beside it.
 | `POST` | `/rolePosting/getEmployeeByCompanyId` | Admin |
 | `POST` | `/rolePosting/getRolePostingByCompanyId` | Admin |
 | `POST` | `/rolePosting/getSuspendOrTerminateEmployee` | Admin |
-| `POST` | `/workplaceHierarchy/getWorkPlaceHierarchy` | Admin |
 | `POST` | `/v2/aws/checkAttachmentS3/` | AWS |
 | `POST` | `/v2/aws/generate-presigned-url` | AWS |
 | `GET` | `/v2/common/countries` | common |
@@ -149,7 +148,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 213
+## Blocked on live — 214
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -182,6 +181,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/rolePosting/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/rolePosting/suspendOrTerminateEmployee` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/rolePosting/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/workplaceHierarchy/getWorkPlaceHierarchy` | Admin | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `GET` | `/v2/aws/deleteAttachmentFromS3/{uuid}` | AWS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/common/forgotPasswordOTPOrSentKpostIDSms` | common | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
 | `POST` | `/v2/common/forgotPasswordUpdate` | common | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |

@@ -36,6 +36,13 @@ const EnvSchema = z.object({
   KPOST_API_BASE_URL: z.url().optional(),
   ADMIN_API_BASE_URL: z.url().optional(),
   KMAIL_API_BASE_URL: z.url().optional(),
+  /**
+   * The path prefix KMail serves under, prepended to every KMail request path (the base URL is the
+   * origin — Playwright drops a base-URL path for an absolute request path). Prod is `/kmail5/v2`;
+   * the test host `testkmail.kpostindia.com` serves under `/testkmail/v2`. Set it to match the host,
+   * or every KMail call 404s and reads as a false bug.
+   */
+  KMAIL_PATH_PREFIX: z.string().default('/kmail5/v2'),
   /** Start and target the bundled mock KPost API. Defaults to on for `local` without API_BASE_URL. */
   MOCK_API: z.stringbool().optional(),
   MOCK_API_PORT: z.coerce.number().int().positive().default(4010),
