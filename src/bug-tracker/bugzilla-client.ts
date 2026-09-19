@@ -162,6 +162,20 @@ export class BugzillaClient {
     return result.ok ? { ok: true } : { error: describeFailure(result) };
   }
 
+  /**
+   * Marks a bug RESOLVED/INVALID, recording why — for a finding judged NOT a product defect (a
+   * bench-payload artefact, a transient environmental failure, …). The live filer then skips it via
+   * `findByTag` / `judgedBenchBugs`, so a re-run never re-files the same false positive.
+   */
+  async resolveInvalid(bugId: number, comment: string): Promise<{ ok: true } | { error: string }> {
+    const result = await this.call('PUT', `/bug/${bugId}`, {
+      status: 'RESOLVED',
+      resolution: 'INVALID',
+      comment: { body: comment },
+    });
+    return result.ok ? { ok: true } : { error: describeFailure(result) };
+  }
+
   /** Every OPEN bug of a product that carries our dedupe tag (`[<prefix>-…]`) — the auto-resolve set. */
   async openBenchBugs(
     product: string,

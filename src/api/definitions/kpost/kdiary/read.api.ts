@@ -43,17 +43,18 @@ export const getEventDateApi = defineKdiaryEndpoint({
   method: 'POST',
   path: '/dairySchedule/getEventDate',
   summary: 'Dates that have diary events (for a month view)',
-  tags: [...READ_TAGS, 'event'],
+  tags: [...READ_TAGS, 'event', 'needs-id'],
   destructive: false,
-  productionSafe: true,
-  // The field is a DATE-TIME: the frontend (Diary.js `toDateTimeQueryValue`) sends `${date}T${time}`
-  // (e.g. 2026-09-01T00:00:00). A date-only value leaves the time component null and the API NPEs
-  // (500 "Value must not be null"). Sends a full month range in the client's datetime format.
+  // NOT run standalone: no frontend calls `getEventDate` (the app uses `getEvents` +
+  // `getEventSelectedDate`), so its body is inferred. It answers 500 "Value must not be null" for
+  // BOTH date-only and full datetime payloads (curl-verified 2026-09-19) — an unknown required field
+  // is missing, not the date format — so an "expected 200, got 500" here is our incomplete payload,
+  // not a confirmed product defect. Confirm the real payload with the dev before treating it as a bug.
   request: body(() => ({
     scheduleStartDateAndTime: '2026-09-01T00:00:00',
     scheduleEndDateAndTime: '2026-09-30T00:00:00',
   })),
-  note: 'date-time field: send YYYY-MM-DDT00:00:00 (date-only → 500 "Value must not be null")',
+  note: 'frontend-unused; inferred body 500s "Value must not be null" for any date format — payload unconfirmed, not a standalone read',
 });
 
 export const getEventSelectedDateApi = defineKdiaryEndpoint({
