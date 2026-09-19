@@ -228,6 +228,64 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-18 — Every host is now a TEST environment: deep coverage opened up across KMail, Admin and the UI writes
+
+The owner pointed the WHOLE stack at test hosts — `.env` now has `KMAIL_API_BASE_URL=testkmail…`,
+`BASE_URL=https://test.kpostindia.com/` (UI), KPost already on `testingapi`, all over a disposable test
+DB — and said to stop holding back: cover every kind of test, miss nothing, better than manual testers.
+So the caution that was there for shared/real hosts is lifted where it was only about product safety
+(never where it protects Bugzilla quality or the run itself):
+
+- **KMail + Admin get the full matrix.** `npm run kmail` / `npm run admin` now set `TEST_DB_MODE`
+  (injection/XSS/rate-limit/perf/every fuzzer on reads), not just the safe read subset — they were
+  held back only because their hosts were not confirmed disposable, which they now are. Added
+  `kmail:deep`/`admin:deep` (+`:file`) that also `WRITE_FUZZ` the write endpoints, matching `kpost:deep`.
+  So all three API products now have a standard (all-types + lifecycle) and a deep (write-fuzz) tier.
+- **The UI crawler now exercises writes.** Its denylist shrank from "every committing/destructive
+  control" to `OPERATIONAL_BLOCK` — only logout / deactivate / terminate / delete-account, i.e. the
+  controls that would end its session or destroy the account and abort the run. Everything else (send,
+  save, create, delete a message/contact, block…) is now clicked, so the crawl covers the write paths
+  too, and `fuzzInputs` feeds edge values into the fields those writes read. It still Escapes after each
+  click and returns on navigation, so it never gets stuck. It leaves test data behind by design —
+  reset the DB periodically (same rule as `*:deep`).
+- **What stays armed regardless** — because these protect against harm or noise, not "production": the
+  OTP/SMS kill-switch (never texts a real person from any host), `external` writes (real SMS/email)
+  stay blocked, and filing still only files RELIABLE signals (a crash/freeze/render-corruption), never
+  a false bug from a selector miss — Bugzilla quality does not depend on the target being live.
+
+`npm run check` clean; **106 framework guards pass**. Flagged for the first KMail run:
+`KMAIL_API_BASE_URL` now carries a `/testkmail/` path — if every KMail check 404s, the base URL needs
+to be the origin (the bench prepends the KMail path prefix itself).
+
+### 2026-09-18 — Deep UI coverage: a safe systematic crawler (every control + input fuzzing) on every screen
+
+The owner wants the UI tested at a deep level, everything, better than a manual tester. A manual tester
+finds bugs by USING every part of the app and noticing when something breaks; the scalable way to beat
+that is to automate the using-and-noticing across the whole surface. Built `src/ui/ui-crawler.ts` +
+`tests/e2e/crawl.spec.ts` (in `UI_FILING_SPECS`):
+
+- **It clicks every safe control on every screen.** `crawlScreen(page, route)` discovers the controls
+  the screen actually renders (buttons, menu items, tabs, links, `icon-KP_*`, contact/thread rows) and
+  exercises up to 24 of them, and after each click checks the page did not **crash** (health monitor),
+  **freeze** (`isResponsive`), or **render a raw `undefined`/`NaN`/`[object Object]`** (the calibrated
+  content scan). Generic — no per-feature selectors, so it covers everything and cannot rot; its signals
+  are selector-INDEPENDENT, so it files only REAL defects, never a false one from a missing selector.
+- **It fuzzes every input** — `fuzzInputs` fills each field/editor with edge values (a 4000-char string,
+  emoji/unicode, `<script>…`, injection-shaped text, a huge number, whitespace, special characters) and
+  watches for the same crash/freeze/corruption. This is the deep input-handling angle.
+- **Safety — zero write risk on the live QA accounts.** It NEVER clicks a destructive/committing control
+  (a `DESTRUCTIVE` denylist: send/submit/save/delete/logout/confirm/pay/block/leave/recall/…), never
+  clicks OK/Yes, presses Escape after every click to close menus/dialogs without committing, and returns
+  if a click navigates away. Filling never submits. So it does the read-only half of testing broadly;
+  the commit/destroy half stays with the gated lifecycle flows.
+
+So the UI now has four layers, all filing with the browser name on all three browsers: the static screen
+sweep (at rest), the interaction sweep (search/scroll/open), the **systematic crawl (every control +
+input fuzz)**, and the targeted scenarios (continuous-send). `npm run check` clean; **106 framework
+guards pass**; the crawl collects on all 13 screens. Same honest caveat: the crash/freeze/render signals
+fire reliably; the crawler's REACH (how many controls it can reach behind hover-only affordances) is what
+one live tuning pass would widen — it can only ever under-cover, never false-file.
+
 ### 2026-09-18 — UI: 3-browser runs; interaction sweep + hang detector + continuous-send catch the bugs the static sweep missed
 
 The owner reported real UI defects the bench was NOT catching — the search bar misbehaving, the screen

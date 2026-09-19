@@ -10,13 +10,14 @@ import { isResponsive } from './ui-health';
  * still healthy — did it crash, freeze, or render a raw `undefined`/`NaN`/`[object Object]`? Those are
  * selector-INDEPENDENT signals, so a crawl can only ever report a REAL defect, never a false one.
  *
- * ## Safety — why this cannot damage the live QA accounts
- * It clicks only **non-destructive** controls: anything whose visible text/aria/class matches the
- * DESTRUCTIVE denylist (send, submit, save, delete, logout, confirm, pay, block, leave, …) is skipped,
- * and it NEVER clicks a confirm/OK/Yes. It presses Escape after every click to close any menu/dialog
- * without committing it, and if a click navigates away it returns. So it opens, expands, views and
- * types — the read-only half of testing — and leaves the commit/destroy half to the gated lifecycle
- * flows. The result: broad "every control, every screen" coverage with zero write risk.
+ * ## Safety — the target is a disposable TEST environment, so it exercises writes too
+ * Everything (`test.kpostindia.com`, the test APIs, the test DB) is throwaway, so the crawler is free
+ * to click write controls (send, save, create, delete a message/contact) — that is deeper coverage,
+ * and any junk it leaves is reset with the DB. The ONLY controls it refuses are the ones that would
+ * abort its OWN run or destroy its login (`OPERATIONAL_BLOCK`: logout, deactivate/terminate/delete the
+ * account) — not for product safety, but so the crawl can keep going and the account survives to be
+ * re-tested. It still Escapes after each click and returns if it navigates away, so it never gets
+ * stuck. Result: broad "every control, every screen" coverage including the write paths.
  */
 
 export interface CrawlFinding {
@@ -27,9 +28,13 @@ export interface CrawlFinding {
   message: string;
 }
 
-/** Visible text/aria/class of a control that must NEVER be clicked (it commits or destroys state). */
-const DESTRUCTIVE =
-  /(log\s?out|sign\s?out|delete|remove|discard|\bsend\b|submit|\breply\b|forward|\bsave\b|update|confirm|\bok\b|\byes\b|apply|\bpay\b|\bbuy\b|purchase|checkout|subscribe|unsubscribe|terminate|deactivate|suspend|\bblock\b|unblock|\bban\b|\bleave\b|\bexit\b|recall|\breport\b|archive|invite|provision|register|change password|reset)/i;
+/**
+ * The ONLY controls the crawler refuses — the ones that would end its session or destroy the test
+ * account, aborting the rest of the run. This is operational (keep going, survive to re-test), NOT
+ * product safety: on the disposable test environment every other write is fair game and desirable.
+ */
+const OPERATIONAL_BLOCK =
+  /(log\s?out|sign\s?out|deactivate|terminate|delete\s+(my\s+)?account|close\s+account|remove\s+account)/i;
 
 /** How many controls to exercise per screen — bounds runtime across three browsers. */
 const MAX_CLICKS = 24;
@@ -45,10 +50,83 @@ async function describe(loc: Locator): Promise<string> {
       loc.getAttribute('class').catch(() => null),
       loc.getAttribute('title').catch(() => null),
     ]);
-    return [text, aria, title, cls].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+    return [text, aria, title, cls]
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
   } catch {
     return '';
   }
+}
+
+/**
+ * Edge-case values fed into every input — the deep input-handling angle. If any of these crashes,
+ * freezes, or corrupts the render, that is a real defect (bad length handling, an unescaped value, a
+ * number parse that throws). Filling never submits, so it stays safe on the live QA accounts.
+ */
+const EDGE_VALUES = [
+  'a'.repeat(4000), // very long — length/overflow handling
+  '😀🔥💯 unicode ćafé', // multibyte / emoji
+  '<script>alert(1)</script>', // must be escaped, never executed
+  "'; DROP TABLE users;--", // injection-shaped text
+  '99999999999999999999999999', // huge number
+  '   ', // whitespace only
+  `!@#$%^&*(){}[]|\\:;"'<>?,./~`, // special characters
+];
+
+/** Fill each visible input/editor with edge values and watch for a crash/freeze/render corruption. */
+async function fuzzInputs(page: Page, route: string): Promise<CrawlFinding[]> {
+  const findings: CrawlFinding[] = [];
+  const inputs = page.locator(
+    [
+      'input:visible:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"])',
+      'textarea:visible',
+      '[contenteditable="true"]:visible',
+    ].join(', '),
+  );
+  const n = Math.min(await inputs.count().catch(() => 0), 12);
+  for (let i = 0; i < n; i += 1) {
+    const inp = inputs.nth(i);
+    for (const value of EDGE_VALUES.slice(0, 4)) {
+      const ok = await inp
+        .fill(value, { timeout: 1500 })
+        .then(() => true)
+        .catch(async () => {
+          // A contenteditable editor is not a form input; type into it instead.
+          try {
+            await inp.click({ timeout: 1000 });
+            await page.keyboard.type(value.slice(0, 300));
+            return true;
+          } catch {
+            return false;
+          }
+        });
+      if (!ok) break; // this input is not fillable here — move on
+      await page.waitForTimeout(150);
+      if (!(await isResponsive(page, 6000))) {
+        findings.push({
+          check: 'ui.hang',
+          severity: 'HIGH',
+          message: `The screen FROZE after entering an edge value into input #${i + 1}.`,
+        });
+        return findings;
+      }
+      for (const leak of await rawValueLeaks(page)) {
+        findings.push({
+          check: 'ui.content',
+          severity: 'HIGH',
+          message: `A value rendered as raw "${leak}" after typing into input #${i + 1}.`,
+        });
+      }
+    }
+    await inp.fill('', { timeout: 1000 }).catch(() => undefined); // clear so the next test starts fresh
+    if (!page.url().includes(route)) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
+    }
+  }
+  return findings;
 }
 
 /** Text nodes rendered as a raw failed value — the same calibrated tokens as the ui.content check. */
@@ -82,7 +160,8 @@ async function rawValueLeaks(page: Page): Promise<string[]> {
  * findings and never throws — a screen with no safe controls simply returns no findings.
  */
 export async function crawlScreen(page: Page, route: string): Promise<CrawlFinding[]> {
-  const findings: CrawlFinding[] = [];
+  // First the deep input angle — fill every field with edge values and watch for a break.
+  const findings: CrawlFinding[] = await fuzzInputs(page, route);
   // Candidate controls: buttons, menu items, tabs, links, icon-font controls, contact/thread rows.
   const candidates = page.locator(
     [
@@ -101,7 +180,9 @@ export async function crawlScreen(page: Page, route: string): Promise<CrawlFindi
   for (let i = 0; i < total && clicked < MAX_CLICKS; i += 1) {
     const loc = candidates.nth(i);
     const label = await describe(loc);
-    if (!label || DESTRUCTIVE.test(label)) continue; // never touch a committing/destructive control
+    // Skip only the controls that would log us out / destroy the account and abort the run; every
+    // other write is fair game on the disposable test environment.
+    if (!label || OPERATIONAL_BLOCK.test(label)) continue;
 
     try {
       await loc.click({ timeout: 2500 });

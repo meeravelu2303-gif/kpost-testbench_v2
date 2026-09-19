@@ -24,26 +24,44 @@ Always run the plain command first, read `reports/REPORT.md`, then run `:file`. 
 What each one does:
 
 - **`kpost`** — every KPost API endpoint, **all test types** (status, schema, auth, security, injection/XSS, performance, every input fuzzer) on the disposable **testingapi** test DB, plus the self-cleaning **write lifecycle flows** (Katchup, Kall, Profile, Contacts, Group, Settings, KDiary, KOS, AWS) — the full application flow.
-- **`kmail`** — every KMail API endpoint: the full read matrix + the KMail compose/draft/settings write lifecycle.
-- **`admin`** — every Admin API endpoint: reads + the org-build write lifecycle (needs the business accounts).
-- **`ui`** — the whole UI on **all three browsers (Chromium, Firefox, WebKit)**, run sequentially: every screen (deep sweep) + every feature flow (Katchup, KMail, Kall, Settings, Group, Contacts, KDiary, Profile), with proof screenshots/videos on a `:file` run. The report breaks results down **per browser**, and each filed bug records the **browser name** (whiteboard `[browser:…]` + a "Browsers affected" line), so a WebKit-only or Firefox-only defect is unmistakable.
+- **`kmail`** — every KMail API endpoint on the **test** host, **all test types** (`TEST_DB_MODE`) + the compose/draft/settings write lifecycle.
+- **`admin`** — every Admin API endpoint, **all test types** + the org-build write lifecycle (needs the business accounts).
+- **`ui`** — the whole UI on **all three browsers (Chromium, Firefox, WebKit)**, run sequentially, in four layers:
+  1. **static screen sweep** — every screen at rest (crash, broken asset, render budget, responsive, a11y, raw `undefined`/`NaN`);
+  2. **interaction sweep** — search, scroll, open a conversation, and a **hang detector**, on every screen;
+  3. **systematic crawl** — clicks **every control** on every screen (including write actions, since the
+     target is the disposable test app) and **fuzzes every input** (long strings, emoji, `<script>`,
+     injection-shaped, huge numbers) watching for a crash/freeze/corruption — the automated "better than a
+     manual tester" pass;
+  4. **targeted scenarios** — e.g. continuous-send (five messages in one session, no refresh).
+
+  The crawl exercises real write paths on the test environment; the only thing it refuses is a control that
+  would log it out or delete the account (so the run can finish). It leaves test data behind — **reset the
+  test DB periodically.** The report breaks results down **per browser**, and each filed bug records the
+  **browser name** (`[browser:…]` + a "Browsers affected" line), so a WebKit- or Firefox-only defect is
+  unmistakable.
+
 - **`all`** — `kpost`, then `kmail`, then `ui`, in order (separate runs, so the API login never displaces the UI session).
 
 Each run writes the single report (see §4). All are serial (`--workers=1`).
 
 ---
 
-## 2. Deep write-fuzzing — KPost only, disposable DB
+## 2. Deep write-fuzzing — the whole disposable test DB
 
-`kpost` (above) fuzzes **reads** and drives writes through their safe lifecycle. To also run the
-fuzz/attack matrix **on write endpoints** (it persists junk, so only on the throwaway test DB):
+The plain commands fuzz **reads** and drive writes through their safe lifecycle. The `:deep` tier also
+runs the fuzz/attack matrix **on write endpoints** (bad input, injection, malformed payloads on the
+writes themselves). It **persists junk**, so it is for the throwaway test DBs only:
 
 | Run (files nothing)  | File the bugs             |
 | -------------------- | ------------------------- |
 | `npm run kpost:deep` | `npm run kpost:deep:file` |
+| `npm run kmail:deep` | `npm run kmail:deep:file` |
+| `npm run admin:deep` | `npm run admin:deep:file` |
 
-The OTP/SMS kill-switch, the QA-identifier guard, and the block on `external`/`global` writes stay
-armed even here. Reset/reseed the test DB after a deep run.
+The OTP/SMS kill-switch and the QA-identifier guard stay armed even here, and `external` writes (real
+SMS/email) stay blocked. **Reset/reseed the test DB after a deep run**, and after a full `npm run ui`
+(the UI crawler exercises real writes on the test app — see §1 layer 3).
 
 ---
 

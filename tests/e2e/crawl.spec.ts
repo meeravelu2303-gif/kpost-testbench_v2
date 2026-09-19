@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-conditional-in-test */
 import { testData } from '@config/test-data.config';
 import { AUTHENTICATED_SCREENS } from '@ui/screens';
 import { crawlScreen } from '@ui/ui-crawler';
