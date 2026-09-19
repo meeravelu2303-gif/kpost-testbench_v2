@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **122** |
-| Blocked | 214 |
+| **Runs on live** | **119** |
+| Blocked | 217 |
 | Total registered | 336 |
 
 ---
 
-## Runs on live — 122
+## Runs on live — 119
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -60,10 +60,9 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/common/getCompanyDetailsByAdmin` | common · company |
 | `POST` | `/v2/common/getCompanyDetailsByMobileNoAndproductId` | common · company |
 | `GET` | `/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}` | common · company |
-| `GET` | `/kmail5/v2/common/frequentKmailContact/` | Contacts |
-| `POST` | `/kmail5/v2/common/knownPostBoxContacts/` | Contacts |
-| `GET` | `/kmail5/v2/common/miscellaneousContacts/` | Contacts |
-| `POST` | `/kmail5/v2/common/postBoxContacts/` | Contacts |
+| `GET` | `/testkmail/v2/common/frequentKmailContact/` | Contacts |
+| `POST` | `/testkmail/v2/common/knownPostBoxContacts/` | Contacts |
+| `GET` | `/testkmail/v2/common/miscellaneousContacts/` | Contacts |
 | `GET` | `/v2/contacts/getblockContactDetails` | Contacts |
 | `GET` | `/v2/contacts/getImportedPhoneContacts/` | Contacts |
 | `POST` | `/v2/contacts/getSearchDetails/` | Contacts |
@@ -94,25 +93,23 @@ reviewer can check against the comment beside it.
 | `POST` | `/dairySchedule/getEventSelectedDate` | KDiary |
 | `GET` | `/dairySchedule/getTodayReport` | KDiary |
 | `GET` | `/dairySchedule/getTodaySchedules` | KDiary |
-| `POST` | `/kmail5/v2/common/getAllImportantMails/` | KMail |
-| `POST` | `/kmail5/v2/common/getAllMailCount` | KMail |
-| `POST` | `/kmail5/v2/common/getBulkKmailDashboardMsg` | KMail |
-| `POST` | `/kmail5/v2/common/getKmailDashboardMsg/` | KMail |
-| `GET` | `/kmail5/v2/common/getSaluations/` | KMail |
-| `POST` | `/kmail5/v2/common/mailSubjectSelectedContact/` | KMail |
-| `POST` | `/kmail5/v2/common/replyNotReceived/` | KMail |
-| `POST` | `/kmail5/v2/common/replyNotSent/` | KMail |
-| `POST` | `/kmail5/v2/common/selectedContactMails/` | KMail |
-| `POST` | `/kmail5/v2/common/sentMailNotOpened/` | KMail |
-| `GET` | `/kmail5/v2/common/statusOfKmailsContactsTotalCount/` | KMail |
-| `POST` | `/kmail5/v2/common/statusOfKmailsContactsWithCount/` | KMail |
-| `GET` | `/kmail5/v2/common/unOpenedMailCountBySenderID/` | KMail |
-| `GET` | `/kmail5/v2/draft/getAllDraftMails/` | KMail |
-| `GET` | `/kmail5/v2/draft/getDraftMailsContacts/` | KMail |
-| `POST` | `/kmail5/v2/draft/getDraftMailsForSelectedContact/` | KMail |
-| `POST` | `/kmail5/v2/readMail/referenceMailContent/` | KMail |
-| `GET` | `/kmail5/v2/sentMail/loadOtherDomainMails/` | KMail |
-| `POST` | `/kmail5/v2/translator/translation/` | KMail |
+| `POST` | `/testkmail/v2/common/getAllImportantMails/` | KMail |
+| `POST` | `/testkmail/v2/common/getAllMailCount` | KMail |
+| `POST` | `/testkmail/v2/common/getKmailDashboardMsg/` | KMail |
+| `GET` | `/testkmail/v2/common/getSaluations/` | KMail |
+| `POST` | `/testkmail/v2/common/mailSubjectSelectedContact/` | KMail |
+| `POST` | `/testkmail/v2/common/replyNotReceived/` | KMail |
+| `POST` | `/testkmail/v2/common/replyNotSent/` | KMail |
+| `POST` | `/testkmail/v2/common/selectedContactMails/` | KMail |
+| `POST` | `/testkmail/v2/common/sentMailNotOpened/` | KMail |
+| `GET` | `/testkmail/v2/common/statusOfKmailsContactsTotalCount/` | KMail |
+| `POST` | `/testkmail/v2/common/statusOfKmailsContactsWithCount/` | KMail |
+| `GET` | `/testkmail/v2/common/unOpenedMailCountBySenderID/` | KMail |
+| `GET` | `/testkmail/v2/draft/getAllDraftMails/` | KMail |
+| `GET` | `/testkmail/v2/draft/getDraftMailsContacts/` | KMail |
+| `POST` | `/testkmail/v2/draft/getDraftMailsForSelectedContact/` | KMail |
+| `GET` | `/testkmail/v2/sentMail/loadOtherDomainMails/` | KMail |
+| `POST` | `/testkmail/v2/translator/translation/` | KMail |
 | `GET` | `/ai/sessions` | KOS |
 | `GET` | `/kword/documents/` | KOS |
 | `POST` | `/v2/signupLogin/fetchUserDetails/` | Login & session |
@@ -138,17 +135,17 @@ reviewer can check against the comment beside it.
 | `GET` | `/v2/profile/isDevicePrimaryOrNot/` | Profile |
 | `GET` | `/generalSetting/getAllNotification` | Settings |
 | `GET` | `/generalSetting/getPersonalize` | Settings |
-| `GET` | `/kmail5/v2/common/getInstantReply/` | Settings |
-| `GET` | `/kmail5/v2/kmailSetting/getAllLetterHead` | Settings |
-| `GET` | `/kmail5/v2/kmailSetting/getDigitalSignature` | Settings |
-| `GET` | `/kmail5/v2/kmailSetting/getLetterHead` | Settings |
-| `GET` | `/kmail5/v2/kmailSetting/getLetterHeadTemplate` | Settings |
-| `GET` | `/kmail5/v2/kmailSetting/getMailCountDaysLimit` | Settings |
-| `GET` | `/kmail5/v2/kmailSetting/getMailSignature` | Settings |
+| `GET` | `/testkmail/v2/common/getInstantReply/` | Settings |
+| `GET` | `/testkmail/v2/kmailSetting/getAllLetterHead` | Settings |
+| `GET` | `/testkmail/v2/kmailSetting/getDigitalSignature` | Settings |
+| `GET` | `/testkmail/v2/kmailSetting/getLetterHead` | Settings |
+| `GET` | `/testkmail/v2/kmailSetting/getLetterHeadTemplate` | Settings |
+| `GET` | `/testkmail/v2/kmailSetting/getMailCountDaysLimit` | Settings |
+| `GET` | `/testkmail/v2/kmailSetting/getMailSignature` | Settings |
 
 ---
 
-## Blocked on live — 214
+## Blocked on live — 217
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -203,6 +200,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/admin/updateRole` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `GET` | `/v2/common/downloadCompanyLogo/{companyID}` | common · company | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/common/updateCompanyLogo` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/testkmail/v2/common/postBoxContacts/` | Contacts | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/contacts/addContact` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/contacts/addContactReference/` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/contacts/addMultipleContact` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -271,32 +269,34 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/dairySchedule/saveReport` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/updateEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/updateScheduleRemarks` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/common/addOtherDomainContacts/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/common/clearStatusOfAllKmailsContacts` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/common/clearStatusOfKmailsContacts/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/common/convertMailAsPDF/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/common/deleteKmailWithDeletedBy/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/common/deleteOtherDomainContact/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/common/editOtherDomainContactsDetails/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/common/kmailGroupReadStatus/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
-| `POST` | `/kmail5/v2/common/replyNotRequiredByReceiver/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
-| `POST` | `/kmail5/v2/common/replyNotRequiredBySender/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
-| `POST` | `/kmail5/v2/common/setKmailAsImportant/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/draft/deleteDraftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/draft/draftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/draft/draftMailMultiPart` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `GET` | `/kmail5/v2/readMail/download/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
-| `POST` | `/kmail5/v2/readMail/downloadODAttachment` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `GET` | `/kmail5/v2/readMail/downloadThumbnail/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
-| `POST` | `/kmail5/v2/readMail/draftMailContent` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
-| `GET` | `/kmail5/v2/readMail/getCopiesInfo/{kmailID}` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/kmail5/v2/readMail/getKmailDetailsUsingKmailID` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
-| `GET` | `/kmail5/v2/readMail/mediaStreaming/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
-| `POST` | `/kmail5/v2/readMail/sentAndInboxMailContent/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
-| `GET` | `/kmail5/v2/sentMail/bulkMail/status/{fromAddress}` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
-| `POST` | `/kmail5/v2/sentMail/getMailCredentials/` | KMail | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/kmail5/v2/sentMail/postBulkMail` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/sentMail/postMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/common/addOtherDomainContacts/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/common/clearStatusOfAllKmailsContacts` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/common/clearStatusOfKmailsContacts/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/common/convertMailAsPDF/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/common/deleteKmailWithDeletedBy/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/common/deleteOtherDomainContact/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/common/editOtherDomainContactsDetails/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/common/getBulkKmailDashboardMsg` | KMail | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
+| `POST` | `/testkmail/v2/common/kmailGroupReadStatus/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `POST` | `/testkmail/v2/common/replyNotRequiredByReceiver/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `POST` | `/testkmail/v2/common/replyNotRequiredBySender/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `POST` | `/testkmail/v2/common/setKmailAsImportant/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/draft/deleteDraftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/draft/draftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/draft/draftMailMultiPart` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/testkmail/v2/readMail/download/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/testkmail/v2/readMail/downloadODAttachment` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/testkmail/v2/readMail/downloadThumbnail/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/testkmail/v2/readMail/draftMailContent` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `GET` | `/testkmail/v2/readMail/getCopiesInfo/{kmailID}` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/testkmail/v2/readMail/getKmailDetailsUsingKmailID` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `GET` | `/testkmail/v2/readMail/mediaStreaming/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/testkmail/v2/readMail/referenceMailContent/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `POST` | `/testkmail/v2/readMail/sentAndInboxMailContent/` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `GET` | `/testkmail/v2/sentMail/bulkMail/status/{fromAddress}` | KMail | COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints |
+| `POST` | `/testkmail/v2/sentMail/getMailCredentials/` | KMail | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/testkmail/v2/sentMail/postBulkMail` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/sentMail/postMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/ai/chatResponse` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/ai/messageAssist` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/ai/messages/{sessionId}` | KOS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -354,20 +354,20 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/generalSetting/kallNotification` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/generalSetting/katchupNotification` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/generalSetting/kmailNotification` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/deleteCustomizedInstantReply` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/deleteCustomizedSaluation` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/deleteLetterHead` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateCustomizedInstantReply` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateCustomizedSaluations` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignature` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureCompanyData` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureGraphics` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignaturePersonalData` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureSocialMediaLink` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureStyle` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/saveOrUpdateMailSignatureTemplateId` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/setLetterHead` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/kmail5/v2/kmailSetting/updateMailCountDaysLimit` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/deleteCustomizedInstantReply` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/deleteCustomizedSaluation` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/deleteLetterHead` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/saveOrUpdateCustomizedInstantReply` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/saveOrUpdateCustomizedSaluations` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/saveOrUpdateMailSignature` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/saveOrUpdateMailSignatureCompanyData` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/saveOrUpdateMailSignatureGraphics` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/saveOrUpdateMailSignaturePersonalData` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/saveOrUpdateMailSignatureSocialMediaLink` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/saveOrUpdateMailSignatureStyle` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/saveOrUpdateMailSignatureTemplateId` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/setLetterHead` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/testkmail/v2/kmailSetting/updateMailCountDaysLimit` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 
 ---
 

@@ -35,10 +35,10 @@ spec (`*_LIFECYCLE`), not by the static factory audited here.
 | `POST /v2/katchup/getMessagesByReferenceMessageList` (`katchup-messages-by-reference`) | messageType |
 | `POST /v2/katchup/sendBulkKatchupMsg` (`katchup-send-bulk`) | mapDetails |
 | `POST /v2/katchup/recallMessage/` (`katchup-recall-message`) | status |
-| `POST /kmail5/v2/readMail/draftMailContent` (`kmail-draft-content`) | senderUniqueMailID |
-| `POST /kmail5/v2/draft/deleteDraftMail/` (`kmail-draft-delete`) | kmailSendDate |
-| `POST /kmail5/v2/common/editOtherDomainContactsDetails/` (`kmail-edit-od-contact`) | referenceName |
-| `POST /kmail5/v2/readMail/downloadODAttachment` (`kmail-download-od-attachment`) | targetFileName |
+| `POST /testkmail/v2/readMail/draftMailContent` (`kmail-draft-content`) | senderUniqueMailID |
+| `POST /testkmail/v2/draft/deleteDraftMail/` (`kmail-draft-delete`) | kmailSendDate |
+| `POST /testkmail/v2/common/editOtherDomainContactsDetails/` (`kmail-edit-od-contact`) | referenceName |
+| `POST /testkmail/v2/readMail/downloadODAttachment` (`kmail-download-od-attachment`) | targetFileName |
 
 ## C — Missing from the schema only (no example — review, usually correct)
 

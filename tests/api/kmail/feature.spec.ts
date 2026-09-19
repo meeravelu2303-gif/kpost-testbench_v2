@@ -112,6 +112,53 @@ test.describe('KPost KMail · feature flow', () => {
     }
   });
 
+  test('read the composed mail back through every kmailID-keyed endpoint @api @kmail', async ({
+    endpoints,
+  }) => {
+    // Exercises the needs-id READS on live with a REAL kmailID the compose mints — the coverage the
+    // static run cannot reach (a fabricated id would 404/500 and read as a false bug). A 5xx from any
+    // of these is a genuine crash and files via the flow-finding pipeline; a 4xx does not.
+    const subject = `QA Mail ${Date.now()}`;
+    const sent = await send(
+      endpoints,
+      A,
+      { toAddress: B.username, kmailSubject: subject },
+      'compose-readback',
+    );
+    expect.soft(sent.kmailID, 'a kmailID is issued').toBeTruthy();
+    try {
+      if (sent.kmailID) {
+        const id = sent.kmailID;
+        const reads: Array<[string, Record<string, unknown>]> = [
+          [
+            'kmail-mail-content',
+            {
+              kmailID: id,
+              kmailNumber: 0,
+              kmailType: 'Sent',
+              selectedContact: B.username,
+              groupFlag: false,
+            },
+          ],
+          ['kmail-details-by-id', { kmailIDs: [id] }],
+          ['kmail-reply-not-req-sender', { selectedContact: B.username, kmailID: id }],
+          ['kmail-reply-not-req-receiver', { selectedContact: B.username, kmailID: id }],
+          ['kmail-group-read-status', { kmailID: id }],
+        ];
+        for (const [epId, reqBody] of reads) {
+          const ex = await endpoints.sendTo(
+            epId,
+            { body: reqBody },
+            { label: `kmail:readback:${epId}`, auth: { principal: A }, allowLiveWrite: true },
+          );
+          expect.soft(ex.status, `${epId} reads the mail without a server error`).toBeLessThan(500);
+        }
+      }
+    } finally {
+      await del(endpoints, A, sent.transactionIDs);
+    }
+  });
+
   test('the To: field takes a single recipient; extra people go to Cc (FR-KM-005) @api @kmail', async ({
     endpoints,
   }) => {

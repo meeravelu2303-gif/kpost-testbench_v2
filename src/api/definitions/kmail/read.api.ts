@@ -118,6 +118,12 @@ const contactRead = (
   summary: string,
   bodyObj: Record<string, unknown>,
   tags: string[] = [],
+  opts: {
+    productionSafe?: boolean;
+    expectedStatus?: number[];
+    note?: string;
+    timeoutMs?: number;
+  } = {},
 ) =>
   defineKmailEndpoint({
     id,
@@ -126,8 +132,13 @@ const contactRead = (
     summary,
     tags: [...R, ...tags],
     destructive: false,
-    productionSafe: true,
+    // A read that needs a real runtime id (a kmailID / reference-mail id) is NOT run standalone on
+    // live — a placeholder body 400s and reads as a false bug; it is driven by the lifecycle instead.
+    productionSafe: opts.productionSafe ?? true,
+    expectedStatus: opts.expectedStatus,
     request: body(() => bodyObj),
+    note: opts.note,
+    performance: opts.timeoutMs ? { timeoutMs: opts.timeoutMs } : undefined,
   });
 
 export const dashboardApi = contactRead(
@@ -178,6 +189,8 @@ export const draftsForContactApi = contactRead(
   'Drafts for a contact',
   { toAddress: testData.victimKpostId },
   ['draft'],
+  // 204 (no content) is a valid response when the contact has no drafts — not a defect.
+  { expectedStatus: [200, 204] },
 );
 export const statusWithCountApi = contactRead(
   'kmail-status-with-count',
@@ -191,7 +204,11 @@ export const postBoxContactsApi = contactRead(
   '/common/postBoxContacts/',
   'Post-box contacts',
   { lastFetchTime: Date.now() },
-  ['contacts'],
+  ['contacts', 'needs-id'],
+  {
+    productionSafe: false,
+    note: 'returns Spring 404 (route not mapped) on the test build — confirm it exists there',
+  },
 );
 export const knownPostBoxContactsApi = contactRead(
   'kmail-known-postbox-contacts',
@@ -212,7 +229,10 @@ export const bulkDashboardApi = contactRead(
   '/common/getBulkKmailDashboardMsg',
   'Bulk mail dashboard',
   { kmailID: null },
-  ['bulk'],
+  ['bulk', 'needs-id'],
+  // The API rejects an empty body ("Request body should not be empty"); it needs a real kmailID the
+  // frontend supplies from a loaded bulk mail — a runtime id, so not run standalone on live.
+  { productionSafe: false, note: 'needs a real kmailID; empty body 400s' },
 );
 export const selectedContactMailsApi = contactRead(
   'kmail-selected-contact-mails',
@@ -237,13 +257,19 @@ export const translationApi = contactRead(
   'Translate mail content',
   { langFrom: 'en', langTo: 'hi', msgToTranslate: 'QA bench message' },
   ['translate'],
+  // Calls an external translation service, so it is legitimately slow — the default 10s timeout was
+  // being hit, and the timeouts polluted the auth-probe messages into duplicate tickets. A generous
+  // timeout lets it complete so the checks (incl. the auth-bypass finding) report cleanly, once.
+  { timeoutMs: 30_000 },
 );
 export const referenceMailContentApi = contactRead(
   'kmail-reference-content',
   '/readMail/referenceMailContent/',
   'Reference mail content',
   { referenceMails: [] as number[] },
-  ['content'],
+  ['content', 'needs-id'],
+  // Empty `referenceMails` → 400 Bad Request; it needs real reference-mail ids from a loaded mail.
+  { productionSafe: false, note: 'needs real referenceMails ids from a loaded mail' },
 );
 
 /** Reads keyed by a real kmailID / uuid — blocked until a lifecycle mail exists (needs-id). */

@@ -44,8 +44,14 @@ export const dateValidator = createFieldConventionValidator({
     // ongoing experience's end date is legitimately blank. Whether it should be present at all is
     // the schema/required check's job, not the format check's. Skip it here.
     if (value === '' || value === null || value === undefined) return undefined;
+    // An **epoch timestamp** (millis or seconds) is a valid, unambiguous time, and the KPost/KMail
+    // APIs return most dates that way (e.g. `kmailSendDate: 1767010050000`). It is not a malformed
+    // date, so accept a positive finite number; only a NaN / non-positive number is a real defect.
+    if (typeof value === 'number') {
+      return Number.isFinite(value) && value > 0 ? undefined : 'not a valid date (epoch expected)';
+    }
     if (typeof value !== 'string' || !ISO_8601.test(value) || Number.isNaN(Date.parse(value))) {
-      return 'not a valid ISO-8601 date (date-only or GMT/UTC date-time)';
+      return 'not a valid ISO-8601 date (date-only, GMT/UTC date-time, or an epoch number)';
     }
     return AUDIT_FIELD.test(key) && Date.parse(value) > Date.now() + thresholds.clockSkewMs
       ? 'audit timestamp is in the future'

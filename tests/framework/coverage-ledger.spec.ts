@@ -80,7 +80,7 @@ const MODULE_SCOPE: Record<string, Scope> = {
   },
   kmail: {
     status: 'built',
-    note: 'KMail — reads live, compose/draft/settings write lifecycle (host kmail5, /kmail5/v2)',
+    note: 'KMail — test host testkmail (/testkmail/v2). 27 reads all-types on kmail; 28 data writes fuzzed on kmail:deep; 14 needs-id reads via KMAIL_LIFECYCLE (attachment downloads need a real S3 upload — off-live); getKloudUsedData not in the usable contract',
   },
   translator: { status: 'backlog', note: 'translation (shared Katchup/KMail)' },
   admin: {

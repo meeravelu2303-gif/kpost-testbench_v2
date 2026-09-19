@@ -33,6 +33,21 @@ function isSystemicFinding(validatorName: string, message: string): boolean {
    * distinct results, and only the endpoint-specific one names "primary (" in its message.
    */
   if (validatorName === 'response.error-format') return !message.includes('primary (');
+  /*
+   * `security.information-disclosure` is mixed too: a disclosed **technology header** (a versioned
+   * `Server` header, `X-Powered-By`, …) is a shared-gateway property present on every response — one
+   * platform-wide fault, so consolidate it. A **body** leak (a stack trace, SQL, a file path, a
+   * credential) is that endpoint's own bug and must stay a distinct ticket, never folded away.
+   */
+  if (validatorName === 'security.information-disclosure') {
+    const headerDisclosure =
+      /server header|powered-by|x-powered|technology header|via header/i.test(message);
+    const bodyLeak =
+      /stack|traceback|\bsql\b|file path|filepath|\/usr\/|\/var\/|credential|secret key|private key/i.test(
+        message,
+      );
+    return headerDisclosure && !bodyLeak;
+  }
   return false;
 }
 

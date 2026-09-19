@@ -228,6 +228,59 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-19 — First `npm run kmail` on the test env: 6 false-positive classes found and fixed
+
+The owner ran `npm run kmail` (dry) — 67 would-file. Per-class review found ~40 were false or
+over-multiplied; fixed at the source (nothing filed):
+
+- **`security.information-disclosure` × ~29 → 1.** Every ticket was the SAME "versioned Server header"
+  (a shared-gateway header on every response), filed per-endpoint. Made it **systemic** in
+  `isSystemicFinding` (consolidate) — but only for a technology-**header** disclosure; a **body** leak
+  (stack/SQL/path/credential) stays per-endpoint, never folded away.
+- **`common.date` × 20 → 0.** KMail returns dates as **epoch millis** (`kmailSendDate: 1767010050000`),
+  a valid timestamp; the validator flagged every number as "not ISO-8601". Now accepts a positive
+  finite number as a valid epoch date.
+- **`postBoxContacts` × ~8 → 0.** Returns a Spring `404 "Not Found"` — the **route isn't mapped on the
+  test build** (its sibling `knownPostBoxContacts` works). Reclassified needs-id / not-productionSafe
+  with a note to confirm the route exists on test; all its downstream 404 findings drop.
+- **`getBulkKmailDashboardMsg` (400 "body should not be empty")** and **`referenceMailContent` (400)** —
+  need a real runtime kmailID / reference-mail ids; the empty placeholder bodies 400. Reclassified
+  needs-id (not standalone).
+- **`getDraftMailsForSelectedContact` (204)** — 204 = no drafts for the contact, a valid empty response;
+  added `expectedStatus: [200, 204]`.
+
+**Still valid (the real defects):** ~13 **"expected 200, got 500"** (genuine KMail-envelope server
+crashes on reads — a read must never 500), the input-validation-not-enforced class (null/empty-body/
+malformed accepted with 200), and one consolidated Server-header disclosure. Two borderline to confirm
+with the dev: `translator/translation` accepts a request with **no/invalid token** (200) — real if that
+endpoint is meant to be authenticated, a non-issue if it is deliberately public.
+
+`npm run check` clean; **106 framework guards pass**. A re-run of `npm run kmail` will now show ~40
+fewer tickets (the false classes gone). Same lesson as admin: the reliable classes (500s, input
+validation, systemic headers) were real; the format/route/payload classes were bench-side or
+over-multiplied, now fixed.
+
+**Second `npm run kmail` (67 → 33): the fixes landed, one new noise cluster fixed.** common.date,
+postBoxContacts, bulk/reference, the 204 are all gone; info-disclosure consolidated 29 → 3 groups.
+The new noise was the **`translator/translation`** endpoint (~10 tickets): it calls an external
+translation service and was hitting the default 10s timeout, and the timeouts polluted the auth-probe
+messages into **4 duplicate malformed-token tickets + a timeout ticket**. Gave it a 30s timeout
+(`contactRead` gained a `timeoutMs` opt) so it completes and its checks report once. Translation also
+**accepts no-token / Basic / wrong-scheme → 200** (returns a valid translation) while every other KMail
+endpoint enforces 401 — a real auth-bypass finding to confirm (it may be a deliberately public utility).
+
+**Coverage completeness (owner: "test all, every endpoint").** Measured the 70 registered KMail
+endpoints: **27 live reads** (full test-type matrix on `npm run kmail`), **28 `data` writes** (fuzzed
+by `npm run kmail:deep`), **14 needs-id reads**, **1 global** (`getMailCredentials`, blocked — returns
+credentials). Closed the needs-id gap where possible: the lifecycle now composes a mail and **reads it
+back through every kmailID-keyed endpoint** (`mail-content`, `details-by-id`, `reply-not-required`
+sender/receiver, `group-read-status`) with the real minted id. The honest residual boundary: the
+GET needs-id reads keyed by a real id (`copies-info`, `bulk-status`) and the **attachment downloads**
+(`download`/`downloadThumbnail`/`mediaStreaming` — need a real S3 upload) stay contract-validated
+off-live, and `getKloudUsedData` needs a workbook row (not in the usable contract). So **every KMail
+endpoint is exercised**: reads all-types, writes fuzzed, kmailID reads via the lifecycle — run
+`npm run kmail:deep` for the complete pass. `npm run check` clean; 106 guards pass.
+
 ### 2026-09-19 — KMail path prefix made configurable; test host confirmed at `/testkmail/v2`
 
 Before running KMail on the new test host, caught that the KMail path prefix was **hardcoded** to the
