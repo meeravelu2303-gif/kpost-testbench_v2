@@ -53,11 +53,14 @@ export const validateOtpApi = defineKpostEndpoint({
    * HTTP 500 instead of a 4xx.
    */
   destructive: false,
+  // Payload matches the WORKING live call (owner-verified curl 2026-09-19): { otp, countryID,
+  // mobileNumber }. The earlier `sendDate: Date.now()` (a 13-digit epoch) pushed it into a failure
+  // path that answered 500 — a bench-payload artifact, not a product defect. `mobileNumber` is the
+  // configured QA number (set QA_MOBILE_EXISTS to a number the bypass validates on the test env).
   request: body(() => ({
     otp: testData.bypassOtp,
     countryID: testData.countryId,
     mobileNumber: testData.mobileExists,
-    sendDate: Date.now(),
   })),
 });
 
@@ -83,9 +86,9 @@ export const validateMailOtpApi = defineKpostEndpoint({
   summary: 'Validate an email OTP',
   tags: OTP_TAGS,
   destructive: false,
+  // Matches the working validateOTP shape (no `sendDate` epoch, which triggered a 500 failure path).
   request: body(() => ({
     email: testData.otpEmail,
-    sendDate: Date.now(),
     otp: Number(testData.bypassOtp),
   })),
 });

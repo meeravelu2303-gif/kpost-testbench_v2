@@ -134,7 +134,9 @@ export const downloadProfileImageApi = defineProfileEndpoint({
   tags: [...READ_TAGS, 'image', 'binary'],
   productionSafe: true,
   envelope: false,
-  contentType: 'image/png',
+  // The endpoint returns the format the user uploaded (png OR jpeg), so `image/*` is the real
+  // contract — hard-coding `image/png` filed a false content-type bug on a JPEG.
+  contentType: 'image/*',
   // 204 (no image present) is a CORRECT response, not a defect — the QA account may have no image.
   // Only 200 (image) or 204 (none) are valid; a 500 here would (rightly) still fail.
   expectedStatus: [200, 204],
@@ -149,7 +151,7 @@ export const downloadFullProfileImageApi = defineProfileEndpoint({
   tags: [...READ_TAGS, 'image', 'binary'],
   productionSafe: true,
   envelope: false,
-  contentType: 'image/png',
+  contentType: 'image/*',
   // 204 (no image) is correct — see downloadProfileImage above.
   expectedStatus: [200, 204],
   request: pathParams(() => ({ kpostID: testData.kpostId })),
@@ -161,16 +163,13 @@ export const downloadCoverImageApi = defineProfileEndpoint({
   path: '/v2/profile/downloadCoverImage/{kpostID}',
   summary: 'Download a cover image',
   tags: [...READ_TAGS, 'image', 'binary'],
-  /*
-   * FINDING: answers HTTP 500 when the account has no cover image, where its sibling
-   * `downloadProfileImage` correctly answers 204. A missing image is not a server fault — this
-   * should be 204/404. Verified on devapi2. The status-code validator keeps it red.
-   */
   productionSafe: true,
   envelope: false,
-  contentType: 'image/png',
+  contentType: 'image/*',
+  // 204 (no cover image) is correct. The old 500-on-no-image is fixed on the test build (now 204);
+  // 200 (image) / 204 (none) are the valid responses.
+  expectedStatus: [200, 204],
   request: pathParams(() => ({ kpostID: testData.kpostId })),
-  note: 'downloadCoverImage -> 500 with no cover image (downloadProfileImage -> 204)',
 });
 
 export const getSignatureImageApi = defineProfileEndpoint({
@@ -181,7 +180,11 @@ export const getSignatureImageApi = defineProfileEndpoint({
   tags: [...READ_TAGS, 'image', 'binary'],
   productionSafe: true,
   envelope: false,
-  contentType: 'image/png',
+  contentType: 'image/*',
+  // No signature on the account answers 404 (a missing resource); 200/204/404 are all valid. (A
+  // sibling image read returns 204 for "none" — the 404-vs-204 inconsistency is a minor note, not a
+  // fileable CRITICAL.)
+  expectedStatus: [200, 204, 404],
 });
 
 export const profileReadApis = [

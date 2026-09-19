@@ -4,7 +4,7 @@
 
 **0** endpoints that run on live (`productionSafe`) omit a field present in
 the documented request *example* — the actual false-bug queue, because only a live-running
-endpoint auto-files a bug. A further **18** example-missing endpoints are GATED writes (payload supplied by their lifecycle spec with
+endpoint auto-files a bug. A further **20** example-missing endpoints are GATED writes (payload supplied by their lifecycle spec with
 runtime ids — not fuzzed on live), and **0** omit only *schema-declared* fields with no example (mostly the admin entity DTO — the
 springdoc schema lists every optional field; the measured frontend sends a subset).
 
@@ -29,6 +29,8 @@ spec (`*_LIFECYCLE`), not by the static factory audited here.
 | `POST /v2/admin/updateBankAccountDetails` (`admin-update-bank-account`) | accountNumber, accountHolderName, ifscCode, bankName, branch |
 | `POST /v2/profile/updateContactInformation/` (`profile-update-contact`) | addressLine2, alternateMobileno, landLineNumber |
 | `POST /admin/resetPassword/` (`admin-reset-password`) | companyID, userType |
+| `POST /v2/common/validateOTP/` (`common-validate-otp`) | sendDate |
+| `POST /v2/common/validateMailOTP/` (`common-validate-mail-otp`) | sendDate |
 | `POST /v2/common/saveEnquiryDetails` (`common-save-enquiry-details`) | timeToContact |
 | `POST /admin/holdOrRelease/` (`admin-hold-or-release`) | activeStatus |
 | `POST /v2/admin/updateRole` (`admin-update-role`) | role |

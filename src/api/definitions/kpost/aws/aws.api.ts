@@ -49,12 +49,12 @@ export const checkAttachmentApi = defineAwsEndpoint({
   path: '/v2/aws/checkAttachmentS3/',
   summary: 'Check whether attachments exist in S3',
   tags: ['attachment'],
-  // A read; the default empty `attachmentsUuid` names nothing, so it runs on live harmlessly. (A
-  // check against a real uuid would need a write-authorized call, which the guard reserves for
-  // destructive endpoints — this endpoint is a read.)
+  // A read. An EMPTY `attachmentsUuid` array is rejected with 400 "attachmentsUuid is required", so
+  // it sends one known-absent uuid: the S3 check answers "does not exist" (200) without naming a real
+  // attachment. `attachmentsUuid` is guard-exempt (a runtime S3 id), so this runs on live harmlessly.
   destructive: false,
   productionSafe: true,
-  request: body(() => ({ attachmentsUuid: [] as string[] })),
+  request: body(() => ({ attachmentsUuid: ['qa-nonexistent-attachment-0000'] })),
 });
 
 export const deleteAttachmentApi = defineAwsEndpoint({

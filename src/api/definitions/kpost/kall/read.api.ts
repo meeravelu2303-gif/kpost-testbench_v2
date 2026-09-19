@@ -70,12 +70,14 @@ export const contactInfoApi = defineKallEndpoint({
   summary: "Contact details for the caller's call contacts",
   tags: [...READ_TAGS, 'contacts'],
   /*
-   * The workbook documents no payload, so the central empty-body and null probes carry the load. It
-   * reads our own contacts, so it owns nothing and is cleared for live.
+   * The workbook documents no payload, but the API rejects an empty body with 400 "Malformed or
+   * missing request body" — it needs a `contactID`. Sends our OWN second account (allowlisted), so
+   * it reads our own contact and is cleared for live.
    */
   destructive: false,
   productionSafe: true,
-  note: 'workbook documents no request body',
+  request: body(() => ({ contactID: testData.victimKpostId, kallID: null })),
+  note: 'needs a contactID in the body (empty body 400s "Malformed or missing request body")',
 });
 
 export const fetchScheduledRepeatKallApi = defineKallEndpoint({

@@ -47,7 +47,6 @@ test.describe('Signup & OTP lifecycle (test gateway)', { tag: '@api' }, () => {
           otp: OTP,
           countryID: testData.countryId,
           mobileNumber: testData.signupMobile,
-          sendDate: Date.now(),
         },
       },
       { label: 'feature:otp:validate-mobile' },
@@ -63,7 +62,7 @@ test.describe('Signup & OTP lifecycle (test gateway)', { tag: '@api' }, () => {
     expect.soft(sendMail.status, 'sendOTPtoMail accepted').toBeLessThan(500);
     const validateMail = await endpoints.sendTo(
       'common-validate-mail-otp',
-      { body: { email: testData.otpEmail, sendDate: Date.now(), otp: Number(OTP) } },
+      { body: { email: testData.otpEmail, otp: Number(OTP) } },
       { label: 'feature:otp:validate-mail' },
     );
     expect.soft(validateMail.status, 'validateMailOTP accepted the bypass code').toBeLessThan(500);
@@ -96,7 +95,6 @@ test.describe('Signup & OTP lifecycle (test gateway)', { tag: '@api' }, () => {
           otp: OTP,
           countryID: testData.countryId,
           mobileNumber: testData.mobileExists,
-          sendDate: Date.now(),
         },
       },
       { label: 'feature:otp:forgot-validate' },

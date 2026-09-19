@@ -2,8 +2,8 @@
 
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`.
 
-**47 of 341** registered endpoints are **not driven against the live app**.
-The rest ARE tested on live: **121** on the default run + **173** via the
+**49 of 341** registered endpoints are **not driven against the live app**.
+The rest ARE tested on live: **119** on the default run + **173** via the
 gated self-cleaning lifecycle flows (`npm run kpost:file`). This file lists ONLY the not-tested.
 
 They are not silent gaps — each is refused for a permanent constraint or a deliberate safety
@@ -15,10 +15,10 @@ choice, and every one is still contract-validated OFF live.
 | -------- | ----: |
 | OTP — no bypass on live (permanent) | 17 |
 | Shared / global write (by choice) | 15 |
+| Needs setup we lack (business login 403, company logo 500) | 8 |
 | Attachment file-upload — the one REAL coverage gap | 7 |
-| Needs setup we lack (business login 403, company logo 500) | 6 |
 | Public record write (enquiry / unsubscribe) | 2 |
-| **Total not tested on live** | **47** |
+| **Total not tested on live** | **49** |
 
 ---
 
@@ -69,6 +69,27 @@ choice, and every one is still contract-validated OFF live.
 | `POST` | `/v2/common/validateMailOTP/` | needs a real OTP in its payload; live has no bypass |
 | `POST` | `/v2/common/validateOTP/` | needs a real OTP in its payload; live has no bypass |
 
+### Login & session (6)
+
+| Method | Path | Why not tested on live |
+| ------ | ---- | ---------------------- |
+| `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
+| `POST` | `/v2/signupLogin/adminRegistration/` | needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/signupLogin/generateJWTokens/` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
+| `POST` | `/v2/signupLogin/setAccessCode` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/signupLogin/signup/` | needs an OTP validated in an earlier step; live has no bypass |
+| `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+
+### Katchup (5)
+
+| Method | Path | Why not tested on live |
+| ------ | ---- | ---------------------- |
+| `GET` | `/v2/katchup/download/{uuid}` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `GET` | `/v2/katchup/downloadThumbnail/{uuid}` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/v2/katchup/generateThumbnailUsingUUID` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `GET` | `/v2/katchup/getKatchupMessagesSubject` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
+| `GET` | `/v2/katchup/mediaStreaming/{uuid}` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+
 ### KMail (5)
 
 | Method | Path | Why not tested on live |
@@ -78,25 +99,6 @@ choice, and every one is still contract-validated OFF live.
 | `GET` | `/testkmail/v2/readMail/downloadThumbnail/{uuid}` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
 | `GET` | `/testkmail/v2/readMail/mediaStreaming/{uuid}` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
 | `POST` | `/testkmail/v2/sentMail/getMailCredentials/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
-
-### Login & session (5)
-
-| Method | Path | Why not tested on live |
-| ------ | ---- | ---------------------- |
-| `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
-| `POST` | `/v2/signupLogin/adminRegistration/` | needs an OTP validated in an earlier step; live has no bypass |
-| `POST` | `/v2/signupLogin/setAccessCode` | writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/v2/signupLogin/signup/` | needs an OTP validated in an earlier step; live has no bypass |
-| `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
-
-### Katchup (4)
-
-| Method | Path | Why not tested on live |
-| ------ | ---- | ---------------------- |
-| `GET` | `/v2/katchup/download/{uuid}` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
-| `GET` | `/v2/katchup/downloadThumbnail/{uuid}` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
-| `POST` | `/v2/katchup/generateThumbnailUsingUUID` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
-| `GET` | `/v2/katchup/mediaStreaming/{uuid}` | needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
 
 ### Admin (2)
 

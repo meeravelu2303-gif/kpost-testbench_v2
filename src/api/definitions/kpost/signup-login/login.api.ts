@@ -107,13 +107,19 @@ export const adminUserLoginApi = defineKpostEndpoint({
 
 export const generateJwTokensApi = defineKpostEndpoint({
   id: 'signup-login-generate-jwt',
-  // Live: Exchanges OUR OWN refresh token. Reads nothing belonging to anyone else.
-  productionSafe: true,
+  /*
+   * Exchanges a refresh token for a new access token. On testingapi the login response does not
+   * expose a `refreshToken` where the chain can read it, so the endpoint answers 400 "refreshToken
+   * is required" — a precondition, not a defect. Not run standalone (that 400 would read as a false
+   * CRITICAL); confirm with the dev where the login returns the refresh token, then drive it from a
+   * lifecycle. Left `needs-id` until then.
+   */
   requirements: ['FR-SL-026', 'NFR-SEC01'],
   method: 'POST',
   path: '/v2/signupLogin/generateJWTokens/',
   summary: 'Exchange a refresh token for a new access token',
-  tags: [...LOGIN_TAGS, 'token-refresh'],
+  tags: [...LOGIN_TAGS, 'token-refresh', 'needs-id'],
+  note: 'needs a runtime refreshToken the login must expose (empty → 400 "refreshToken is required")',
   destructive: false,
   /*
    * Needs a real refresh token, which only a login produces. `helpers.call` runs the login

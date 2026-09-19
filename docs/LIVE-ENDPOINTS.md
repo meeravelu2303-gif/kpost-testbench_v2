@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **121** |
-| Blocked | 220 |
+| **Runs on live** | **119** |
+| Blocked | 222 |
 | Total registered | 341 |
 
 ---
 
-## Runs on live — 121
+## Runs on live — 119
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -80,7 +80,6 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/katchup/filterKatchUpMessage/` | Katchup |
 | `GET` | `/v2/katchup/frequentlyAccessContacts` | Katchup |
 | `GET` | `/v2/katchup/getAllReportMsg` | Katchup |
-| `GET` | `/v2/katchup/getKatchupMessagesSubject` | Katchup |
 | `GET` | `/v2/katchup/getUnopenedMessagesAndKmailsTotalCount/` | Katchup |
 | `GET` | `/v2/katchup/getUnopenedMessagesCount/` | Katchup |
 | `POST` | `/v2/katchup/katchupMessagesForSelectedContactID/` | Katchup |
@@ -112,7 +111,6 @@ reviewer can check against the comment beside it.
 | `GET` | `/ai/sessions` | KOS |
 | `GET` | `/kword/documents/` | KOS |
 | `POST` | `/v2/signupLogin/fetchUserDetails/` | Login & session |
-| `POST` | `/v2/signupLogin/generateJWTokens/` | Login & session |
 | `GET` | `/v2/signupLogin/getActiveSession` | Login & session |
 | `POST` | `/v2/signupLogin/getLoginHistory` | Login & session |
 | `POST` | `/v2/signupLogin/kpostIdExist/` | Login & session |
@@ -147,7 +145,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 220
+## Blocked on live — 222
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -248,6 +246,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/katchup/forwardMessageBacktrackByMsgID` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/generateThumbnailUsingUUID` | Katchup | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
 | `POST` | `/v2/katchup/getBulkMessageInfo/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/v2/katchup/getKatchupMessagesSubject` | Katchup | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/katchup/getMessagesByReferenceMessageList` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/getReadStatusGroupMessage/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/getReferenceMSGDetails/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -318,6 +317,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/kword/update` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | Login & session | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/signupLogin/adminRegistration/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/signupLogin/generateJWTokens/` | Login & session | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/signupLogin/setAccessCode` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/signupLogin/signup/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |

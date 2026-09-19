@@ -56,6 +56,12 @@ const LIVE_OMISSIONS: Record<string, string> = {};
  * a wrong/incomplete write payload can never reach the bench unexamined.
  */
 const GATED_WRITE_OMISSIONS: Record<string, string> = {
+  // The workbook example documents `sendDate`, but the owner-verified WORKING live curl (2026-09-19)
+  // sends { otp, countryID, mobileNumber } WITHOUT it — a `sendDate: Date.now()` epoch pushed the API
+  // into a failure path that answered 500. Deliberately omitted to match the real, working contract.
+  'common-validate-otp':
+    'workbook `sendDate` omitted — the working live curl does not send it (a sendDate epoch 500s)',
+  'common-validate-mail-otp': 'workbook `sendDate` omitted — matches the working validateOTP shape',
   // Katchup forwards/bulk — the reference-message object + source msgIDs are minted by the running
   // conversation and supplied by the KATCHUP_LIFECYCLE spec; a static value would be a fabricated id.
   'katchup-forward-message':

@@ -56,6 +56,8 @@ export const getEventSelectedDateApi = defineKdiaryEndpoint({
   tags: [...READ_TAGS, 'event'],
   destructive: false,
   productionSafe: true,
+  // 204 (no events on the selected date) is a valid empty response, not a defect.
+  expectedStatus: [200, 204],
   // Live client (Diary.js GetDiaryScheduleBySelectedDate): the date range is start + (null) end.
   request: body(() => ({
     scheduleStartDateAndTime: '2026-09-14',

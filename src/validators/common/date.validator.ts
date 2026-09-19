@@ -44,6 +44,10 @@ export const dateValidator = createFieldConventionValidator({
     // ongoing experience's end date is legitimately blank. Whether it should be present at all is
     // the schema/required check's job, not the format check's. Skip it here.
     if (value === '' || value === null || value === undefined) return undefined;
+    // A STRUCTURED value under a `*Date`-named field is not a date scalar — e.g. Kall's
+    // `repeatedDate: { start_date, end_date }` is a range object. The date-format check does not apply
+    // to an object/array (that name collision is not a malformed date), so skip it.
+    if (typeof value === 'object') return undefined;
     // An **epoch timestamp** (millis or seconds) is a valid, unambiguous time, and the KPost/KMail
     // APIs return most dates that way (e.g. `kmailSendDate: 1767010050000`). It is not a malformed
     // date, so accept a positive finite number; only a NaN / non-positive number is a real defect.

@@ -39,9 +39,13 @@ export const messagesSubjectApi = defineKatchupEndpoint({
   method: 'GET',
   path: '/v2/katchup/getKatchupMessagesSubject',
   summary: "Subjects of the caller's Katchup conversations",
-  tags: [...READ_TAGS, 'subject'],
-  // Our own subjects; the Subject field is the module's differentiator (BR-K01).
-  productionSafe: true,
+  tags: [...READ_TAGS, 'subject', 'needs-id'],
+  // On testingapi this route answers 404 "No matching endpoint for this request" — the gateway does
+  // not route it on this build. Not run standalone (a 404 would read as a false CRITICAL); confirm
+  // with the dev whether it is deployed on the test env. The Subject differentiator (BR-K01) is
+  // otherwise proven by the Katchup feature flow.
+  destructive: false,
+  note: 'testingapi answers 404 "No matching endpoint" — confirm the route is deployed on the test build',
 });
 
 export const frequentContactsApi = defineKatchupEndpoint({

@@ -228,6 +228,31 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-19 — First full KPost run reviewed: false-positive classes fixed (incl. the validateOTP lesson)
+
+The first full `npm run kpost` (OTP flows included) found 161 fileable. Per-class review + the owner's
+working curls found ~15 false positives, fixed at the source so a re-run files valid-only:
+
+- **`validateOTP` 500 — the key lesson.** The owner proved with a live curl that validateOTP WORKS
+  (`{otp,countryID,mobileNumber}` → 200). The bench added `sendDate: Date.now()` (a 13-digit epoch) which
+  pushed the API into a 500 failure path — a **bench-payload artifact, not a product defect**. Removed
+  `sendDate` from validateOTP + validateMailOTP (recorded in `GATED_WRITE_OMISSIONS`). **Generalised
+  lesson: a PRIMARY "expected 200, got 500/400" can be the bench's payload, not a real crash — check the
+  response body (a `"X is required"`/`"malformed"` message = bench payload/false; a generic 500/NPE = real).**
+- **`common.date` on a non-scalar** — `kall.repeatedDate` is an object `{start_date,end_date}`; the date
+  check now skips objects/arrays.
+- **Image content-type** — the downloads return the uploaded format (jpeg); `contentType` now accepts
+  `image/*` (validator gained `type/*` wildcard support). 204/404 = no image → added to `expectedStatus`.
+- **`getEventSelectedDate` 204** = no events that day → `expectedStatus [200,204]`.
+- **`generateJWTokens`** — needs a runtime refreshToken the login must expose (empty → 400 "required");
+  marked `needs-id` until the source is confirmed. **`getKatchupMessagesSubject`** — 404 "No matching
+  endpoint" on testingapi (route not deployed) → `needs-id` with a confirm-note. **`checkAttachmentS3`** —
+  empty array 400s "required" → sends one known-absent uuid (200 "not found"). **`kall/contactInfo`** —
+  empty body 400s "malformed" → sends `{contactID}` (our own).
+
+`npm run check` clean; **107 framework guards pass**. The valid core stands (systemic auth/headers/
+disclosure, real read-500 crashes, input-validation-not-enforced) — a re-run drops the ~15 false ones.
+
 ### 2026-09-19 — OTP test gateway: signup + all OTP flows unlocked on the disposable test DB
 
 The owner confirmed testingapi's OTP subsystem is a **TEST GATEWAY** (no real SMS/e-mail; `123456`
