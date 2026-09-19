@@ -29,9 +29,12 @@ export const mobileNoExistApi = defineKpostEndpoint({
   summary: 'Check whether a mobile number is already registered',
   tags: IDENTITY_TAGS,
   destructive: false,
+  // The API rejects an empty companyID with 400 "companyID is required". `0` = no specific company
+  // (a personal mobile-exists check), which names no real company (guard-safe sentinel).
   request: body(() => ({
     countryID: testData.countryId,
     mobileNumber: testData.mobileAbsent,
+    companyID: 0,
   })),
 });
 

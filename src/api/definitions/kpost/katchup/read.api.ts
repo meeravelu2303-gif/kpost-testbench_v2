@@ -125,11 +125,13 @@ export const filterMessageApi = defineKatchupEndpoint({
   summary: 'Filter the caller messages (attachments, important, …)',
   tags: [...READ_TAGS, 'search'],
   /*
-   * The workbook documents no payload, so the central empty-body and null probes carry the load.
-   * A filter over our own messages owns nothing, so it is cleared for live.
+   * The API rejects an empty body with 400 "Malformed or missing request body" — it needs a filter
+   * context. Sends the same {selectedContact, groupFlag} shape the conversation reads use (our own
+   * second account), so it filters our own messages and owns nothing.
    */
   productionSafe: true,
-  note: 'workbook documents no request body',
+  request: body(() => ({ selectedContact: testData.victimKpostId, groupFlag: false })),
+  note: 'needs a filter body (empty body 400s "Malformed or missing request body")',
 });
 
 export const allReportMsgApi = defineKatchupEndpoint({

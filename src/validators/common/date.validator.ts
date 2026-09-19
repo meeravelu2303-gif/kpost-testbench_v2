@@ -48,6 +48,9 @@ export const dateValidator = createFieldConventionValidator({
     // `repeatedDate: { start_date, end_date }` is a range object. The date-format check does not apply
     // to an object/array (that name collision is not a malformed date), so skip it.
     if (typeof value === 'object') return undefined;
+    // The same range value serialized as a STRING (`'{"start_date":...}'` / a JSON array) — a
+    // structured value under a `*Date`-named key, not a date scalar. Skip it too.
+    if (typeof value === 'string' && /^\s*[[{]/.test(value)) return undefined;
     // An **epoch timestamp** (millis or seconds) is a valid, unambiguous time, and the KPost/KMail
     // APIs return most dates that way (e.g. `kmailSendDate: 1767010050000`). It is not a malformed
     // date, so accept a positive finite number; only a NaN / non-positive number is a real defect.

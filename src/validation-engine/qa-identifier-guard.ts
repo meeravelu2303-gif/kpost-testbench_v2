@@ -249,6 +249,9 @@ function qaOwnedValues(): Set<string> {
      */
     testData.signupKpostId,
     testData.signupMobile,
+    // `0` = the "no specific company" sentinel some public lookups require (e.g. mobileNoExist's
+    // companyID for a personal check). It names no real company, so it is safe to allowlist.
+    '0',
   ];
   return new Set(owned.map((value) => String(value).trim().toLowerCase()).filter(Boolean));
 }

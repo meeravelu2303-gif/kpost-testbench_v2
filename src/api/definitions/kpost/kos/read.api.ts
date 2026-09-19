@@ -15,8 +15,10 @@ export const listDocumentsApi = defineKosEndpoint({
   method: 'GET',
   path: '/kword/documents/',
   summary: "The caller's KWord documents",
-  tags: [...READ_TAGS, 'kword'],
-  productionSafe: true,
+  tags: [...READ_TAGS, 'kword', 'needs-id'],
+  // testingapi answers 404 "No matching endpoint for this request" — the KWord route is not deployed
+  // on the test build. Not run standalone (a 404 reads as a false CRITICAL); confirm with the dev.
+  note: 'testingapi 404 "No matching endpoint" — KWord route not deployed on the test build',
 });
 
 export const aiSessionsApi = defineKosEndpoint({

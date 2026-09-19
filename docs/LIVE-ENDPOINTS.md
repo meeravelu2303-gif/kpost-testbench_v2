@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **119** |
-| Blocked | 222 |
+| **Runs on live** | **118** |
+| Blocked | 223 |
 | Total registered | 341 |
 
 ---
 
-## Runs on live — 119
+## Runs on live — 118
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -109,7 +109,6 @@ reviewer can check against the comment beside it.
 | `GET` | `/testkmail/v2/sentMail/loadOtherDomainMails/` | KMail |
 | `POST` | `/testkmail/v2/translator/translation/` | KMail |
 | `GET` | `/ai/sessions` | KOS |
-| `GET` | `/kword/documents/` | KOS |
 | `POST` | `/v2/signupLogin/fetchUserDetails/` | Login & session |
 | `GET` | `/v2/signupLogin/getActiveSession` | Login & session |
 | `POST` | `/v2/signupLogin/getLoginHistory` | Login & session |
@@ -145,7 +144,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 222
+## Blocked on live — 223
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -305,6 +304,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/kword/create` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/kword/delete` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kword/deleteHeading` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/kword/documents/` | KOS | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `GET` | `/kword/documents/{docId}` | KOS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/kword/exitDocument/{docId}` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/kword/getAccessActivity/{docId}` | KOS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |

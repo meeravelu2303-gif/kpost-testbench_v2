@@ -10,7 +10,7 @@ cannot drift from what is actually tested.
 | - | ----: |
 | Documented (workbook, usable) | 446 |
 | **Registered & tested** | **349** |
-| — of those, run on live | 122 |
+| — of those, run on live | 121 |
 | In "built" modules | 423 |
 
 | Module | Documented | Tested | Live | Status | Note |
@@ -23,7 +23,7 @@ cannot drift from what is actually tested.
 | `kall` | 20 | 20 | 6 | built | calling — full API + write lifecycle + screen |
 | `contacts` | 16 | 16 | 8 | built | address book — reads live, writes gated lifecycle |
 | `dairyschedule` | 14 | 14 | 5 | built | KDiary — schedules/events/reports; reads live, writes gated |
-| `kword` | 14 | 14 | 1 | built | KOS/KWord — document CRUD; reads live, writes gated (API-only) |
+| `kword` | 14 | 14 | 0 | built | KOS/KWord — document CRUD; reads live, writes gated (API-only) |
 | `signuplogin` | 12 | 12 | 8 | built | login & session; signup out of scope (OTP-gated) |
 | `group` | 11 | 11 | 0 | built | group membership (FR-K06) |
 | `generalsetting` | 7 | 7 | 2 | built | Settings — theme/font/notifications; reads live, writes gated |

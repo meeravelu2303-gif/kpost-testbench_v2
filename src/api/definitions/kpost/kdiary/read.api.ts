@@ -34,6 +34,8 @@ export const todayReportApi = defineKdiaryEndpoint({
   summary: "Today's diary report for the caller",
   tags: [...READ_TAGS, 'report'],
   productionSafe: true,
+  // 404 "No report found for today" is a valid empty state (the caller has no diary report today).
+  expectedStatus: [200, 404],
 });
 
 export const getEventDateApi = defineKdiaryEndpoint({
@@ -44,8 +46,13 @@ export const getEventDateApi = defineKdiaryEndpoint({
   tags: [...READ_TAGS, 'event'],
   destructive: false,
   productionSafe: true,
-  request: body(() => ({ scheduleStartDateAndTime: '2026-09-14' })),
-  note: 'workbook documents no body; date field inferred from the create payload',
+  // With only a start date the API NPEs (500 "Value must not be null") — the month view needs a
+  // start AND end. Sends a full month range so both are non-null.
+  request: body(() => ({
+    scheduleStartDateAndTime: '2026-09-01',
+    scheduleEndDateAndTime: '2026-09-30',
+  })),
+  note: 'needs start + end date (start alone → 500 "Value must not be null")',
 });
 
 export const getEventSelectedDateApi = defineKdiaryEndpoint({
