@@ -62,6 +62,11 @@ const UI_FILING_SPECS = new Set([
   // The systematic crawl files for the same reason: it clicks every safe control and reports only
   // crashes / freezes / raw-value renders — unambiguous defects, never a false bug from a selector.
   'crawl.spec.ts',
+  // Keyboard navigation and network resilience file too: their signals are selector-INDEPENDENT — a
+  // screen you cannot Tab into (WCAG 2.1.1), or one that crashes/freezes when the network drops — a
+  // real defect, never a tuning miss. (axe-a11y and visual regression are review-only, not here.)
+  'keyboard-nav.spec.ts',
+  'network-resilience.spec.ts',
 ]);
 
 /**
