@@ -145,6 +145,31 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         expect.soft(statusOf(wpReport), 'workplace reporting hierarchy read').toMatch(/success/i);
       }
 
+      // Exercise the workplace tier attribute + variable UPDATE writes.
+      if (wpAttrId) {
+        const wpAttrUpd = await call(
+          endpoints,
+          'admin-workplace-tier-attribute-update',
+          { id: wpAttrId, companyId: cid(), attributeName: name('WP Tier edited') },
+          'wp-attr-update',
+        );
+        expect.soft(statusOf(wpAttrUpd), 'workplace tier attribute updated').toMatch(/success/i);
+      }
+      if (wpVarId) {
+        const wpVarUpd = await call(
+          endpoints,
+          'admin-workplace-tier-variable-update',
+          {
+            id: wpVarId,
+            companyId: cid(),
+            attributeId: wpAttrId,
+            variableName: name('WP Var edited'),
+          },
+          'wp-var-update',
+        );
+        expect.soft(statusOf(wpVarUpd), 'workplace tier variable updated').toMatch(/success/i);
+      }
+
       // ---- Work Place Location Setup ---------------------------------------------------------
       if (wpAttrId && wpVarId) {
         const loc = await call(
@@ -192,6 +217,15 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
             'loc-by-id',
           );
           expect.soft(statusOf(locById), 'location by id read').toMatch(/success/i);
+
+          // Exercise the location UPDATE write.
+          const locUpd = await call(
+            endpoints,
+            'admin-workplace-location-update',
+            { id: locId, companyId: cid(), locationName: name('Location edited') },
+            'loc-update',
+          );
+          expect.soft(statusOf(locUpd), 'workplace location updated').toMatch(/success/i);
         }
       }
 
@@ -250,6 +284,31 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           'hr-var-reporting',
         );
         expect.soft(statusOf(hrReport), 'HR reporting hierarchy read').toMatch(/success/i);
+      }
+
+      // Exercise the HR tier attribute + variable UPDATE writes.
+      if (hrAttrId) {
+        const hrAttrUpd = await call(
+          endpoints,
+          'admin-hr-tier-attribute-update',
+          { id: hrAttrId, companyId: cid(), attributeName: name('HR Tier edited') },
+          'hr-attr-update',
+        );
+        expect.soft(statusOf(hrAttrUpd), 'HR tier attribute updated').toMatch(/success/i);
+      }
+      if (hrVarId) {
+        const hrVarUpd = await call(
+          endpoints,
+          'admin-hr-tier-variable-update',
+          {
+            id: hrVarId,
+            companyId: cid(),
+            attributeId: hrAttrId,
+            variableName: name('HR Var edited'),
+          },
+          'hr-var-update',
+        );
+        expect.soft(statusOf(hrVarUpd), 'HR tier variable updated').toMatch(/success/i);
       }
 
       // ---- Employee Data (side-effect-free Mongo record) -------------------------------------

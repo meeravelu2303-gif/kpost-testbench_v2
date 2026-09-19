@@ -164,48 +164,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
-                  "variableId": {
-                    "type": "string"
-                  },
-                  "parentAttributeId": {
-                    "type": "string"
-                  },
-                  "parentVariableId": {
-                    "type": "string"
-                  },
-                  "reportingAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingVariableId": {
-                    "type": "string"
-                  },
-                  "reportingParentAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingParentVariableId": {
-                    "type": "string"
-                  },
-                  "workplaceJson": {
-                    "type": "string"
-                  },
-                  "reportingJson": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
+                  "companyId": {
                     "type": "string"
                   }
                 }
@@ -1124,6 +1089,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -1132,333 +1098,11 @@
                   "id": {
                     "type": "string"
                   },
-                  "lastWorkplaceTierId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceVariableId": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
                   "employeeId": {
                     "type": "string"
                   },
-                  "workplaceJson": {
+                  "rolePostingId": {
                     "type": "string"
-                  },
-                  "workplaceLocationId": {
-                    "type": "string"
-                  },
-                  "lastHrTierId": {
-                    "type": "string"
-                  },
-                  "lastHrVariableId": {
-                    "type": "string"
-                  },
-                  "hrJson": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceJson": {
-                    "type": "string"
-                  },
-                  "reportingHrJson": {
-                    "type": "string"
-                  },
-                  "countryCode": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "kpostID": {
-                    "type": "string"
-                  },
-                  "displayName": {
-                    "type": "string"
-                  },
-                  "activeStatus": {
-                    "type": "boolean"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "remarks": {
-                    "type": "string"
-                  },
-                  "duration": {
-                    "type": "string"
-                  },
-                  "rejoiningDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "ksmaccID": {
-                    "type": "string"
-                  },
-                  "ksmaccCompanyID": {
-                    "type": "integer",
-                    "format": "int64"
-                  },
-                  "ksmaccDisplayName": {
-                    "type": "string"
-                  },
-                  "locationName": {
-                    "type": "string"
-                  },
-                  "workplaceLocationJson": {
-                    "type": "string"
-                  },
-                  "companyName": {
-                    "type": "string"
-                  },
-                  "userType": {
-                    "type": "string"
-                  },
-                  "requestType": {
-                    "type": "string"
-                  },
-                  "employeeDetails": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "companyId": {
-                        "type": "string"
-                      },
-                      "personalInformationObj": {
-                        "type": "object",
-                        "properties": {
-                          "firstName": {
-                            "type": "string"
-                          },
-                          "lastName": {
-                            "type": "string"
-                          },
-                          "dob": {
-                            "type": "string"
-                          },
-                          "gender": {
-                            "type": "string"
-                          },
-                          "maritalStatus": {
-                            "type": "string"
-                          },
-                          "landline": {
-                            "type": "string"
-                          },
-                          "mobile": {
-                            "type": "string"
-                          },
-                          "alternativeMobileNo": {
-                            "type": "string"
-                          },
-                          "emailAddress": {
-                            "type": "string"
-                          },
-                          "alternativeEmailAddress": {
-                            "type": "string"
-                          },
-                          "nationality": {
-                            "type": "string"
-                          },
-                          "disability": {
-                            "type": "boolean"
-                          },
-                          "typeOfDisability": {
-                            "type": "string"
-                          },
-                          "attachment": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          }
-                        }
-                      },
-                      "residentialObj": {
-                        "type": "object",
-                        "properties": {
-                          "residentialCountry": {
-                            "type": "string"
-                          },
-                          "residentialZipCode": {
-                            "type": "string"
-                          },
-                          "residentialState": {
-                            "type": "string"
-                          },
-                          "residentialCity": {
-                            "type": "string"
-                          },
-                          "residentialArea": {
-                            "type": "string"
-                          },
-                          "residentialAddressLine1": {
-                            "type": "string"
-                          },
-                          "residentialAddressLine2": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "mailingObj": {
-                        "type": "object",
-                        "properties": {
-                          "mailingCountry": {
-                            "type": "string"
-                          },
-                          "mailingZipCode": {
-                            "type": "string"
-                          },
-                          "mailingState": {
-                            "type": "string"
-                          },
-                          "mailingCity": {
-                            "type": "string"
-                          },
-                          "mailingArea": {
-                            "type": "string"
-                          },
-                          "mailingAddressLine1": {
-                            "type": "string"
-                          },
-                          "mailingAddressLine2": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "employmentObj": {
-                        "type": "object",
-                        "properties": {
-                          "employeeId": {
-                            "type": "string"
-                          },
-                          "hrJson": {
-                            "type": "string"
-                          },
-                          "reportingHrJson": {
-                            "type": "string"
-                          },
-                          "designatedReportingPerson": {
-                            "type": "string"
-                          },
-                          "employmentStatus": {
-                            "type": "string"
-                          },
-                          "dateOfJoining": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "educationObj": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "qualification": {
-                              "type": "string"
-                            },
-                            "instituteName": {
-                              "type": "string"
-                            },
-                            "percentage": {
-                              "type": "string"
-                            },
-                            "yearOfGraduation": {
-                              "type": "string"
-                            },
-                            "attachment": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        }
-                      },
-                      "workExpObj": {
-                        "type": "object",
-                        "properties": {
-                          "isExperienced": {
-                            "type": "string"
-                          },
-                          "totalExp": {
-                            "type": "string"
-                          },
-                          "experienceDetails": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "company": {
-                                  "type": "string"
-                                },
-                                "jobTitle": {
-                                  "type": "string"
-                                },
-                                "fromDate": {
-                                  "type": "string"
-                                },
-                                "toDate": {
-                                  "type": "string"
-                                },
-                                "employmentStatus": {
-                                  "type": "string"
-                                }
-                              }
-                            }
-                          }
-                        }
-                      },
-                      "additionalObj": {
-                        "type": "object",
-                        "properties": {
-                          "nationality": {
-                            "type": "string"
-                          },
-                          "citizenship": {
-                            "type": "string"
-                          },
-                          "panCard": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "promotionDetails": {
-                        "type": "string"
-                      },
-                      "transferDetails": {
-                        "type": "string"
-                      },
-                      "locationName": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "isPromoted": {
-                    "type": "boolean"
-                  },
-                  "isTransfered": {
-                    "type": "boolean"
-                  },
-                  "promotionDetails": {
-                    "type": "string"
-                  },
-                  "transferDetails": {
-                    "type": "string"
-                  },
-                  "isKpostIDRequired": {
-                    "type": "boolean"
-                  },
-                  "isMapped": {
-                    "type": "boolean"
-                  },
-                  "isHoldOrRelease": {
-                    "type": "boolean"
                   }
                 }
               }
@@ -1481,93 +1125,22 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "adminKsmaccID": {
-                    "type": "string"
-                  },
-                  "rolePostingId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceTierId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceVariableId": {
-                    "type": "string"
-                  },
-                  "workplaceJson": {
-                    "type": "string"
-                  },
-                  "workplaceLocationId": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "workplaceLocaID": {
-                    "type": "string"
-                  },
-                  "lastHrTierId": {
-                    "type": "string"
-                  },
-                  "lastHrVariableId": {
-                    "type": "string"
-                  },
-                  "hrJson": {
+                  "employeeId": {
                     "type": "string"
                   },
                   "companyId": {
                     "type": "string"
                   },
-                  "reportingWorkplaceJson": {
-                    "type": "string"
-                  },
-                  "reportingHrJson": {
-                    "type": "string"
-                  },
-                  "employeeId": {
-                    "type": "string"
-                  },
-                  "companyName": {
-                    "type": "string"
-                  },
-                  "countryCode": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "userType": {
-                    "type": "string"
-                  },
-                  "displayName": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "remarks": {
-                    "type": "string"
-                  },
                   "requestType": {
                     "type": "string"
                   },
-                  "duration": {
-                    "type": "string"
-                  },
-                  "kpostID": {
-                    "type": "string"
-                  },
-                  "rejoiningDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "ksmaccDisplayName": {
+                  "reason": {
                     "type": "string"
                   }
                 }
@@ -1948,97 +1521,23 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "adminKsmaccID": {
-                      "type": "string"
-                    },
-                    "rolePostingId": {
-                      "type": "string"
-                    },
-                    "lastWorkplaceTierId": {
-                      "type": "string"
-                    },
-                    "lastWorkplaceVariableId": {
-                      "type": "string"
-                    },
-                    "workplaceJson": {
-                      "type": "string"
-                    },
-                    "workplaceLocationId": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "workplaceLocaID": {
-                      "type": "string"
-                    },
-                    "lastHrTierId": {
-                      "type": "string"
-                    },
-                    "lastHrVariableId": {
-                      "type": "string"
-                    },
-                    "hrJson": {
-                      "type": "string"
-                    },
-                    "companyId": {
-                      "type": "string"
-                    },
-                    "reportingWorkplaceJson": {
-                      "type": "string"
-                    },
-                    "reportingHrJson": {
-                      "type": "string"
-                    },
-                    "employeeId": {
-                      "type": "string"
-                    },
-                    "companyName": {
-                      "type": "string"
-                    },
-                    "countryCode": {
-                      "type": "integer",
-                      "format": "int32"
-                    },
-                    "countryId": {
-                      "type": "integer",
-                      "format": "int32"
-                    },
-                    "userType": {
-                      "type": "string"
-                    },
-                    "displayName": {
-                      "type": "string"
-                    },
-                    "reason": {
-                      "type": "string"
-                    },
-                    "remarks": {
-                      "type": "string"
-                    },
-                    "requestType": {
-                      "type": "string"
-                    },
-                    "duration": {
-                      "type": "string"
-                    },
-                    "kpostID": {
-                      "type": "string"
-                    },
-                    "rejoiningDate": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "ksmaccDisplayName": {
-                      "type": "string"
-                    }
+                "type": "object",
+                "properties": {
+                  "companyId": {
+                    "type": "string"
+                  },
+                  "employeeId": {
+                    "type": "string"
+                  },
+                  "hrVariableId": {
+                    "type": "string"
+                  },
+                  "locationId": {
+                    "type": "string"
                   }
                 }
               }
@@ -2061,93 +1560,16 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "adminKsmaccID": {
-                    "type": "string"
-                  },
-                  "rolePostingId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceTierId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceVariableId": {
-                    "type": "string"
-                  },
-                  "workplaceJson": {
-                    "type": "string"
-                  },
-                  "workplaceLocationId": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "workplaceLocaID": {
-                    "type": "string"
-                  },
-                  "lastHrTierId": {
-                    "type": "string"
-                  },
-                  "lastHrVariableId": {
-                    "type": "string"
-                  },
-                  "hrJson": {
-                    "type": "string"
-                  },
                   "companyId": {
                     "type": "string"
                   },
-                  "reportingWorkplaceJson": {
-                    "type": "string"
-                  },
-                  "reportingHrJson": {
-                    "type": "string"
-                  },
-                  "employeeId": {
-                    "type": "string"
-                  },
-                  "companyName": {
-                    "type": "string"
-                  },
-                  "countryCode": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "userType": {
-                    "type": "string"
-                  },
-                  "displayName": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "remarks": {
-                    "type": "string"
-                  },
                   "requestType": {
-                    "type": "string"
-                  },
-                  "duration": {
-                    "type": "string"
-                  },
-                  "kpostID": {
-                    "type": "string"
-                  },
-                  "rejoiningDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "ksmaccDisplayName": {
                     "type": "string"
                   }
                 }
@@ -2528,93 +1950,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "adminKsmaccID": {
-                    "type": "string"
-                  },
-                  "rolePostingId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceTierId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceVariableId": {
-                    "type": "string"
-                  },
-                  "workplaceJson": {
-                    "type": "string"
-                  },
-                  "workplaceLocationId": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "workplaceLocaID": {
-                    "type": "string"
-                  },
-                  "lastHrTierId": {
-                    "type": "string"
-                  },
-                  "lastHrVariableId": {
-                    "type": "string"
-                  },
-                  "hrJson": {
-                    "type": "string"
-                  },
                   "companyId": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceJson": {
-                    "type": "string"
-                  },
-                  "reportingHrJson": {
-                    "type": "string"
-                  },
-                  "employeeId": {
-                    "type": "string"
-                  },
-                  "companyName": {
-                    "type": "string"
-                  },
-                  "countryCode": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "userType": {
-                    "type": "string"
-                  },
-                  "displayName": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "remarks": {
-                    "type": "string"
-                  },
-                  "requestType": {
-                    "type": "string"
-                  },
-                  "duration": {
-                    "type": "string"
-                  },
-                  "kpostID": {
-                    "type": "string"
-                  },
-                  "rejoiningDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "ksmaccDisplayName": {
                     "type": "string"
                   }
                 }
@@ -2638,93 +1980,16 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "adminKsmaccID": {
-                    "type": "string"
-                  },
-                  "rolePostingId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceTierId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceVariableId": {
-                    "type": "string"
-                  },
-                  "workplaceJson": {
-                    "type": "string"
-                  },
-                  "workplaceLocationId": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "workplaceLocaID": {
-                    "type": "string"
-                  },
-                  "lastHrTierId": {
-                    "type": "string"
-                  },
-                  "lastHrVariableId": {
-                    "type": "string"
-                  },
-                  "hrJson": {
-                    "type": "string"
-                  },
                   "companyId": {
                     "type": "string"
                   },
-                  "reportingWorkplaceJson": {
-                    "type": "string"
-                  },
-                  "reportingHrJson": {
-                    "type": "string"
-                  },
                   "employeeId": {
-                    "type": "string"
-                  },
-                  "companyName": {
-                    "type": "string"
-                  },
-                  "countryCode": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "userType": {
-                    "type": "string"
-                  },
-                  "displayName": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "remarks": {
-                    "type": "string"
-                  },
-                  "requestType": {
-                    "type": "string"
-                  },
-                  "duration": {
-                    "type": "string"
-                  },
-                  "kpostID": {
-                    "type": "string"
-                  },
-                  "rejoiningDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "ksmaccDisplayName": {
                     "type": "string"
                   }
                 }
@@ -2858,93 +2123,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "adminKsmaccID": {
-                    "type": "string"
-                  },
-                  "rolePostingId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceTierId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceVariableId": {
-                    "type": "string"
-                  },
-                  "workplaceJson": {
-                    "type": "string"
-                  },
-                  "workplaceLocationId": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "workplaceLocaID": {
-                    "type": "string"
-                  },
-                  "lastHrTierId": {
-                    "type": "string"
-                  },
-                  "lastHrVariableId": {
-                    "type": "string"
-                  },
-                  "hrJson": {
-                    "type": "string"
-                  },
                   "companyId": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceJson": {
-                    "type": "string"
-                  },
-                  "reportingHrJson": {
-                    "type": "string"
-                  },
-                  "employeeId": {
-                    "type": "string"
-                  },
-                  "companyName": {
-                    "type": "string"
-                  },
-                  "countryCode": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "userType": {
-                    "type": "string"
-                  },
-                  "displayName": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "remarks": {
-                    "type": "string"
-                  },
-                  "requestType": {
-                    "type": "string"
-                  },
-                  "duration": {
-                    "type": "string"
-                  },
-                  "kpostID": {
-                    "type": "string"
-                  },
-                  "rejoiningDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "ksmaccDisplayName": {
                     "type": "string"
                   }
                 }
@@ -3078,6 +2263,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -3085,334 +2271,6 @@
                 "properties": {
                   "id": {
                     "type": "string"
-                  },
-                  "lastWorkplaceTierId": {
-                    "type": "string"
-                  },
-                  "lastWorkplaceVariableId": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "employeeId": {
-                    "type": "string"
-                  },
-                  "workplaceJson": {
-                    "type": "string"
-                  },
-                  "workplaceLocationId": {
-                    "type": "string"
-                  },
-                  "lastHrTierId": {
-                    "type": "string"
-                  },
-                  "lastHrVariableId": {
-                    "type": "string"
-                  },
-                  "hrJson": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceJson": {
-                    "type": "string"
-                  },
-                  "reportingHrJson": {
-                    "type": "string"
-                  },
-                  "countryCode": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "kpostID": {
-                    "type": "string"
-                  },
-                  "displayName": {
-                    "type": "string"
-                  },
-                  "activeStatus": {
-                    "type": "boolean"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "remarks": {
-                    "type": "string"
-                  },
-                  "duration": {
-                    "type": "string"
-                  },
-                  "rejoiningDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "ksmaccID": {
-                    "type": "string"
-                  },
-                  "ksmaccCompanyID": {
-                    "type": "integer",
-                    "format": "int64"
-                  },
-                  "ksmaccDisplayName": {
-                    "type": "string"
-                  },
-                  "locationName": {
-                    "type": "string"
-                  },
-                  "workplaceLocationJson": {
-                    "type": "string"
-                  },
-                  "companyName": {
-                    "type": "string"
-                  },
-                  "userType": {
-                    "type": "string"
-                  },
-                  "requestType": {
-                    "type": "string"
-                  },
-                  "employeeDetails": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "companyId": {
-                        "type": "string"
-                      },
-                      "personalInformationObj": {
-                        "type": "object",
-                        "properties": {
-                          "firstName": {
-                            "type": "string"
-                          },
-                          "lastName": {
-                            "type": "string"
-                          },
-                          "dob": {
-                            "type": "string"
-                          },
-                          "gender": {
-                            "type": "string"
-                          },
-                          "maritalStatus": {
-                            "type": "string"
-                          },
-                          "landline": {
-                            "type": "string"
-                          },
-                          "mobile": {
-                            "type": "string"
-                          },
-                          "alternativeMobileNo": {
-                            "type": "string"
-                          },
-                          "emailAddress": {
-                            "type": "string"
-                          },
-                          "alternativeEmailAddress": {
-                            "type": "string"
-                          },
-                          "nationality": {
-                            "type": "string"
-                          },
-                          "disability": {
-                            "type": "boolean"
-                          },
-                          "typeOfDisability": {
-                            "type": "string"
-                          },
-                          "attachment": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          }
-                        }
-                      },
-                      "residentialObj": {
-                        "type": "object",
-                        "properties": {
-                          "residentialCountry": {
-                            "type": "string"
-                          },
-                          "residentialZipCode": {
-                            "type": "string"
-                          },
-                          "residentialState": {
-                            "type": "string"
-                          },
-                          "residentialCity": {
-                            "type": "string"
-                          },
-                          "residentialArea": {
-                            "type": "string"
-                          },
-                          "residentialAddressLine1": {
-                            "type": "string"
-                          },
-                          "residentialAddressLine2": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "mailingObj": {
-                        "type": "object",
-                        "properties": {
-                          "mailingCountry": {
-                            "type": "string"
-                          },
-                          "mailingZipCode": {
-                            "type": "string"
-                          },
-                          "mailingState": {
-                            "type": "string"
-                          },
-                          "mailingCity": {
-                            "type": "string"
-                          },
-                          "mailingArea": {
-                            "type": "string"
-                          },
-                          "mailingAddressLine1": {
-                            "type": "string"
-                          },
-                          "mailingAddressLine2": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "employmentObj": {
-                        "type": "object",
-                        "properties": {
-                          "employeeId": {
-                            "type": "string"
-                          },
-                          "hrJson": {
-                            "type": "string"
-                          },
-                          "reportingHrJson": {
-                            "type": "string"
-                          },
-                          "designatedReportingPerson": {
-                            "type": "string"
-                          },
-                          "employmentStatus": {
-                            "type": "string"
-                          },
-                          "dateOfJoining": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "educationObj": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "qualification": {
-                              "type": "string"
-                            },
-                            "instituteName": {
-                              "type": "string"
-                            },
-                            "percentage": {
-                              "type": "string"
-                            },
-                            "yearOfGraduation": {
-                              "type": "string"
-                            },
-                            "attachment": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        }
-                      },
-                      "workExpObj": {
-                        "type": "object",
-                        "properties": {
-                          "isExperienced": {
-                            "type": "string"
-                          },
-                          "totalExp": {
-                            "type": "string"
-                          },
-                          "experienceDetails": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "company": {
-                                  "type": "string"
-                                },
-                                "jobTitle": {
-                                  "type": "string"
-                                },
-                                "fromDate": {
-                                  "type": "string"
-                                },
-                                "toDate": {
-                                  "type": "string"
-                                },
-                                "employmentStatus": {
-                                  "type": "string"
-                                }
-                              }
-                            }
-                          }
-                        }
-                      },
-                      "additionalObj": {
-                        "type": "object",
-                        "properties": {
-                          "nationality": {
-                            "type": "string"
-                          },
-                          "citizenship": {
-                            "type": "string"
-                          },
-                          "panCard": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "promotionDetails": {
-                        "type": "string"
-                      },
-                      "transferDetails": {
-                        "type": "string"
-                      },
-                      "locationName": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "isPromoted": {
-                    "type": "boolean"
-                  },
-                  "isTransfered": {
-                    "type": "boolean"
-                  },
-                  "promotionDetails": {
-                    "type": "string"
-                  },
-                  "transferDetails": {
-                    "type": "string"
-                  },
-                  "isKpostIDRequired": {
-                    "type": "boolean"
-                  },
-                  "isMapped": {
-                    "type": "boolean"
-                  },
-                  "isHoldOrRelease": {
-                    "type": "boolean"
                   }
                 }
               }
@@ -3779,6 +2637,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -3787,56 +2646,10 @@
                   "id": {
                     "type": "string"
                   },
-                  "attributeId": {
-                    "type": "string"
-                  },
-                  "variableId": {
-                    "type": "string"
-                  },
-                  "workPlaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocationId": {
-                    "type": "string"
-                  },
-                  "locationName": {
-                    "type": "string"
-                  },
-                  "pincode": {
-                    "type": "string"
-                  },
-                  "state": {
-                    "type": "string"
-                  },
-                  "city": {
-                    "type": "string"
-                  },
-                  "area": {
-                    "type": "string"
-                  },
-                  "addressLine1": {
-                    "type": "string"
-                  },
-                  "addressLine2": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
-                    "type": "string"
-                  },
                   "companyId": {
                     "type": "string"
                   },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryName": {
+                  "locationName": {
                     "type": "string"
                   }
                 }
@@ -3860,6 +2673,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -3867,59 +2681,19 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "attributeId": {
-                      "type": "string"
-                    },
-                    "variableId": {
-                      "type": "string"
-                    },
-                    "workPlaceLocation": {
-                      "type": "string"
-                    },
-                    "reportingWorkplaceLocation": {
-                      "type": "string"
-                    },
-                    "reportingWorkplaceLocationId": {
+                    "companyId": {
                       "type": "string"
                     },
                     "locationName": {
                       "type": "string"
                     },
-                    "pincode": {
-                      "type": "string"
-                    },
-                    "state": {
-                      "type": "string"
-                    },
-                    "city": {
-                      "type": "string"
-                    },
-                    "area": {
-                      "type": "string"
-                    },
                     "addressLine1": {
                       "type": "string"
                     },
-                    "addressLine2": {
+                    "pincode": {
                       "type": "string"
                     },
-                    "abbreviation": {
-                      "type": "string"
-                    },
-                    "code": {
-                      "type": "string"
-                    },
-                    "companyId": {
-                      "type": "string"
-                    },
-                    "countryId": {
-                      "type": "integer",
-                      "format": "int32"
-                    },
-                    "countryName": {
+                    "country": {
                       "type": "string"
                     }
                   }
@@ -4025,64 +2799,19 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id": {
+                  "companyId": {
                     "type": "string"
                   },
                   "attributeId": {
                     "type": "string"
                   },
                   "variableId": {
-                    "type": "string"
-                  },
-                  "workPlaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocationId": {
-                    "type": "string"
-                  },
-                  "locationName": {
-                    "type": "string"
-                  },
-                  "pincode": {
-                    "type": "string"
-                  },
-                  "state": {
-                    "type": "string"
-                  },
-                  "city": {
-                    "type": "string"
-                  },
-                  "area": {
-                    "type": "string"
-                  },
-                  "addressLine1": {
-                    "type": "string"
-                  },
-                  "addressLine2": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryName": {
                     "type": "string"
                   }
                 }
@@ -4106,64 +2835,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
-                  "variableId": {
-                    "type": "string"
-                  },
-                  "workPlaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocationId": {
-                    "type": "string"
-                  },
-                  "locationName": {
-                    "type": "string"
-                  },
-                  "pincode": {
-                    "type": "string"
-                  },
-                  "state": {
-                    "type": "string"
-                  },
-                  "city": {
-                    "type": "string"
-                  },
-                  "area": {
-                    "type": "string"
-                  },
-                  "addressLine1": {
-                    "type": "string"
-                  },
-                  "addressLine2": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryName": {
                     "type": "string"
                   }
                 }
@@ -4187,64 +2865,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
-                  "variableId": {
-                    "type": "string"
-                  },
-                  "workPlaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocationId": {
-                    "type": "string"
-                  },
-                  "locationName": {
-                    "type": "string"
-                  },
-                  "pincode": {
-                    "type": "string"
-                  },
-                  "state": {
-                    "type": "string"
-                  },
-                  "city": {
-                    "type": "string"
-                  },
-                  "area": {
-                    "type": "string"
-                  },
-                  "addressLine1": {
-                    "type": "string"
-                  },
-                  "addressLine2": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
-                    "type": "string"
-                  },
                   "companyId": {
-                    "type": "string"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryName": {
                     "type": "string"
                   }
                 }
@@ -4268,64 +2895,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
-                  "variableId": {
-                    "type": "string"
-                  },
-                  "workPlaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocation": {
-                    "type": "string"
-                  },
-                  "reportingWorkplaceLocationId": {
-                    "type": "string"
-                  },
-                  "locationName": {
-                    "type": "string"
-                  },
-                  "pincode": {
-                    "type": "string"
-                  },
-                  "state": {
-                    "type": "string"
-                  },
-                  "city": {
-                    "type": "string"
-                  },
-                  "area": {
-                    "type": "string"
-                  },
-                  "addressLine1": {
-                    "type": "string"
-                  },
-                  "addressLine2": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "countryId": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "countryName": {
                     "type": "string"
                   }
                 }
@@ -4757,6 +3333,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -4765,34 +3342,13 @@
                   "id": {
                     "type": "string"
                   },
-                  "attributeId": {
-                    "type": "string"
-                  },
                   "companyId": {
                     "type": "string"
                   },
+                  "attributeId": {
+                    "type": "string"
+                  },
                   "variableName": {
-                    "type": "string"
-                  },
-                  "parentVariableId": {
-                    "type": "string"
-                  },
-                  "parentAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingJson": {
-                    "type": "string"
-                  },
-                  "reportingAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingVariableId": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -4816,6 +3372,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -4823,38 +3380,17 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "id": {
+                    "companyId": {
                       "type": "string"
                     },
                     "attributeId": {
-                      "type": "string"
-                    },
-                    "companyId": {
                       "type": "string"
                     },
                     "variableName": {
                       "type": "string"
                     },
                     "parentVariableId": {
-                      "type": "string"
-                    },
-                    "parentAttributeId": {
-                      "type": "string"
-                    },
-                    "reportingJson": {
-                      "type": "string"
-                    },
-                    "reportingAttributeId": {
-                      "type": "string"
-                    },
-                    "reportingVariableId": {
-                      "type": "string"
-                    },
-                    "abbreviation": {
-                      "type": "string"
-                    },
-                    "code": {
-                      "type": "string"
+                      "type": "integer"
                     }
                   }
                 }
@@ -4878,43 +3414,17 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
                   "companyId": {
                     "type": "string"
                   },
-                  "variableName": {
-                    "type": "string"
-                  },
                   "parentVariableId": {
-                    "type": "string"
-                  },
-                  "parentAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingJson": {
-                    "type": "string"
-                  },
-                  "reportingAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingVariableId": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
-                    "type": "string"
+                    "type": "integer"
                   }
                 }
               }
@@ -4937,42 +3447,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "variableName": {
-                    "type": "string"
-                  },
-                  "parentVariableId": {
-                    "type": "string"
-                  },
-                  "parentAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingJson": {
-                    "type": "string"
-                  },
-                  "reportingAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingVariableId": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -4996,42 +3477,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "variableName": {
-                    "type": "string"
-                  },
-                  "parentVariableId": {
-                    "type": "string"
-                  },
-                  "parentAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingJson": {
-                    "type": "string"
-                  },
-                  "reportingAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingVariableId": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -5055,6 +3507,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -5067,12 +3520,6 @@
                     "type": "string"
                   },
                   "attributeName": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -5096,6 +3543,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -5103,20 +3551,14 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string"
-                    },
                     "companyId": {
                       "type": "string"
                     },
                     "attributeName": {
                       "type": "string"
                     },
-                    "abbreviation": {
-                      "type": "string"
-                    },
-                    "code": {
-                      "type": "string"
+                    "createdBy": {
+                      "type": "integer"
                     }
                   }
                 }
@@ -5181,24 +3623,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "type": "string"
-                  },
                   "companyId": {
-                    "type": "string"
-                  },
-                  "attributeName": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -5222,24 +3653,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "attributeName": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -5357,6 +3777,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -5368,212 +3789,7 @@
                   "companyId": {
                     "type": "string"
                   },
-                  "personalInformationObj": {
-                    "type": "object",
-                    "properties": {
-                      "firstName": {
-                        "type": "string"
-                      },
-                      "lastName": {
-                        "type": "string"
-                      },
-                      "dob": {
-                        "type": "string"
-                      },
-                      "gender": {
-                        "type": "string"
-                      },
-                      "maritalStatus": {
-                        "type": "string"
-                      },
-                      "landline": {
-                        "type": "string"
-                      },
-                      "mobile": {
-                        "type": "string"
-                      },
-                      "alternativeMobileNo": {
-                        "type": "string"
-                      },
-                      "emailAddress": {
-                        "type": "string"
-                      },
-                      "alternativeEmailAddress": {
-                        "type": "string"
-                      },
-                      "nationality": {
-                        "type": "string"
-                      },
-                      "disability": {
-                        "type": "boolean"
-                      },
-                      "typeOfDisability": {
-                        "type": "string"
-                      },
-                      "attachment": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  },
-                  "residentialObj": {
-                    "type": "object",
-                    "properties": {
-                      "residentialCountry": {
-                        "type": "string"
-                      },
-                      "residentialZipCode": {
-                        "type": "string"
-                      },
-                      "residentialState": {
-                        "type": "string"
-                      },
-                      "residentialCity": {
-                        "type": "string"
-                      },
-                      "residentialArea": {
-                        "type": "string"
-                      },
-                      "residentialAddressLine1": {
-                        "type": "string"
-                      },
-                      "residentialAddressLine2": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "mailingObj": {
-                    "type": "object",
-                    "properties": {
-                      "mailingCountry": {
-                        "type": "string"
-                      },
-                      "mailingZipCode": {
-                        "type": "string"
-                      },
-                      "mailingState": {
-                        "type": "string"
-                      },
-                      "mailingCity": {
-                        "type": "string"
-                      },
-                      "mailingArea": {
-                        "type": "string"
-                      },
-                      "mailingAddressLine1": {
-                        "type": "string"
-                      },
-                      "mailingAddressLine2": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "employmentObj": {
-                    "type": "object",
-                    "properties": {
-                      "employeeId": {
-                        "type": "string"
-                      },
-                      "hrJson": {
-                        "type": "string"
-                      },
-                      "reportingHrJson": {
-                        "type": "string"
-                      },
-                      "designatedReportingPerson": {
-                        "type": "string"
-                      },
-                      "employmentStatus": {
-                        "type": "string"
-                      },
-                      "dateOfJoining": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "educationObj": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "qualification": {
-                          "type": "string"
-                        },
-                        "instituteName": {
-                          "type": "string"
-                        },
-                        "percentage": {
-                          "type": "string"
-                        },
-                        "yearOfGraduation": {
-                          "type": "string"
-                        },
-                        "attachment": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "workExpObj": {
-                    "type": "object",
-                    "properties": {
-                      "isExperienced": {
-                        "type": "string"
-                      },
-                      "totalExp": {
-                        "type": "string"
-                      },
-                      "experienceDetails": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "company": {
-                              "type": "string"
-                            },
-                            "jobTitle": {
-                              "type": "string"
-                            },
-                            "fromDate": {
-                              "type": "string"
-                            },
-                            "toDate": {
-                              "type": "string"
-                            },
-                            "employmentStatus": {
-                              "type": "string"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "additionalObj": {
-                    "type": "object",
-                    "properties": {
-                      "nationality": {
-                        "type": "string"
-                      },
-                      "citizenship": {
-                        "type": "string"
-                      },
-                      "panCard": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "promotionDetails": {
-                    "type": "string"
-                  },
-                  "transferDetails": {
-                    "type": "string"
-                  },
-                  "locationName": {
+                  "employeeName": {
                     "type": "string"
                   }
                 }
@@ -5597,223 +3813,22 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "type": "string"
-                  },
                   "companyId": {
                     "type": "string"
                   },
-                  "personalInformationObj": {
-                    "type": "object",
-                    "properties": {
-                      "firstName": {
-                        "type": "string"
-                      },
-                      "lastName": {
-                        "type": "string"
-                      },
-                      "dob": {
-                        "type": "string"
-                      },
-                      "gender": {
-                        "type": "string"
-                      },
-                      "maritalStatus": {
-                        "type": "string"
-                      },
-                      "landline": {
-                        "type": "string"
-                      },
-                      "mobile": {
-                        "type": "string"
-                      },
-                      "alternativeMobileNo": {
-                        "type": "string"
-                      },
-                      "emailAddress": {
-                        "type": "string"
-                      },
-                      "alternativeEmailAddress": {
-                        "type": "string"
-                      },
-                      "nationality": {
-                        "type": "string"
-                      },
-                      "disability": {
-                        "type": "boolean"
-                      },
-                      "typeOfDisability": {
-                        "type": "string"
-                      },
-                      "attachment": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  },
-                  "residentialObj": {
-                    "type": "object",
-                    "properties": {
-                      "residentialCountry": {
-                        "type": "string"
-                      },
-                      "residentialZipCode": {
-                        "type": "string"
-                      },
-                      "residentialState": {
-                        "type": "string"
-                      },
-                      "residentialCity": {
-                        "type": "string"
-                      },
-                      "residentialArea": {
-                        "type": "string"
-                      },
-                      "residentialAddressLine1": {
-                        "type": "string"
-                      },
-                      "residentialAddressLine2": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "mailingObj": {
-                    "type": "object",
-                    "properties": {
-                      "mailingCountry": {
-                        "type": "string"
-                      },
-                      "mailingZipCode": {
-                        "type": "string"
-                      },
-                      "mailingState": {
-                        "type": "string"
-                      },
-                      "mailingCity": {
-                        "type": "string"
-                      },
-                      "mailingArea": {
-                        "type": "string"
-                      },
-                      "mailingAddressLine1": {
-                        "type": "string"
-                      },
-                      "mailingAddressLine2": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "employmentObj": {
-                    "type": "object",
-                    "properties": {
-                      "employeeId": {
-                        "type": "string"
-                      },
-                      "hrJson": {
-                        "type": "string"
-                      },
-                      "reportingHrJson": {
-                        "type": "string"
-                      },
-                      "designatedReportingPerson": {
-                        "type": "string"
-                      },
-                      "employmentStatus": {
-                        "type": "string"
-                      },
-                      "dateOfJoining": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "educationObj": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "qualification": {
-                          "type": "string"
-                        },
-                        "instituteName": {
-                          "type": "string"
-                        },
-                        "percentage": {
-                          "type": "string"
-                        },
-                        "yearOfGraduation": {
-                          "type": "string"
-                        },
-                        "attachment": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "workExpObj": {
-                    "type": "object",
-                    "properties": {
-                      "isExperienced": {
-                        "type": "string"
-                      },
-                      "totalExp": {
-                        "type": "string"
-                      },
-                      "experienceDetails": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "company": {
-                              "type": "string"
-                            },
-                            "jobTitle": {
-                              "type": "string"
-                            },
-                            "fromDate": {
-                              "type": "string"
-                            },
-                            "toDate": {
-                              "type": "string"
-                            },
-                            "employmentStatus": {
-                              "type": "string"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "additionalObj": {
-                    "type": "object",
-                    "properties": {
-                      "nationality": {
-                        "type": "string"
-                      },
-                      "citizenship": {
-                        "type": "string"
-                      },
-                      "panCard": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "promotionDetails": {
+                  "employeeName": {
                     "type": "string"
                   },
-                  "transferDetails": {
+                  "mobileNo": {
                     "type": "string"
                   },
-                  "locationName": {
+                  "emailId": {
                     "type": "string"
                   }
                 }
@@ -5864,223 +3879,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "type": "string"
-                  },
                   "companyId": {
-                    "type": "string"
-                  },
-                  "personalInformationObj": {
-                    "type": "object",
-                    "properties": {
-                      "firstName": {
-                        "type": "string"
-                      },
-                      "lastName": {
-                        "type": "string"
-                      },
-                      "dob": {
-                        "type": "string"
-                      },
-                      "gender": {
-                        "type": "string"
-                      },
-                      "maritalStatus": {
-                        "type": "string"
-                      },
-                      "landline": {
-                        "type": "string"
-                      },
-                      "mobile": {
-                        "type": "string"
-                      },
-                      "alternativeMobileNo": {
-                        "type": "string"
-                      },
-                      "emailAddress": {
-                        "type": "string"
-                      },
-                      "alternativeEmailAddress": {
-                        "type": "string"
-                      },
-                      "nationality": {
-                        "type": "string"
-                      },
-                      "disability": {
-                        "type": "boolean"
-                      },
-                      "typeOfDisability": {
-                        "type": "string"
-                      },
-                      "attachment": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  },
-                  "residentialObj": {
-                    "type": "object",
-                    "properties": {
-                      "residentialCountry": {
-                        "type": "string"
-                      },
-                      "residentialZipCode": {
-                        "type": "string"
-                      },
-                      "residentialState": {
-                        "type": "string"
-                      },
-                      "residentialCity": {
-                        "type": "string"
-                      },
-                      "residentialArea": {
-                        "type": "string"
-                      },
-                      "residentialAddressLine1": {
-                        "type": "string"
-                      },
-                      "residentialAddressLine2": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "mailingObj": {
-                    "type": "object",
-                    "properties": {
-                      "mailingCountry": {
-                        "type": "string"
-                      },
-                      "mailingZipCode": {
-                        "type": "string"
-                      },
-                      "mailingState": {
-                        "type": "string"
-                      },
-                      "mailingCity": {
-                        "type": "string"
-                      },
-                      "mailingArea": {
-                        "type": "string"
-                      },
-                      "mailingAddressLine1": {
-                        "type": "string"
-                      },
-                      "mailingAddressLine2": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "employmentObj": {
-                    "type": "object",
-                    "properties": {
-                      "employeeId": {
-                        "type": "string"
-                      },
-                      "hrJson": {
-                        "type": "string"
-                      },
-                      "reportingHrJson": {
-                        "type": "string"
-                      },
-                      "designatedReportingPerson": {
-                        "type": "string"
-                      },
-                      "employmentStatus": {
-                        "type": "string"
-                      },
-                      "dateOfJoining": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "educationObj": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "qualification": {
-                          "type": "string"
-                        },
-                        "instituteName": {
-                          "type": "string"
-                        },
-                        "percentage": {
-                          "type": "string"
-                        },
-                        "yearOfGraduation": {
-                          "type": "string"
-                        },
-                        "attachment": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "workExpObj": {
-                    "type": "object",
-                    "properties": {
-                      "isExperienced": {
-                        "type": "string"
-                      },
-                      "totalExp": {
-                        "type": "string"
-                      },
-                      "experienceDetails": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "company": {
-                              "type": "string"
-                            },
-                            "jobTitle": {
-                              "type": "string"
-                            },
-                            "fromDate": {
-                              "type": "string"
-                            },
-                            "toDate": {
-                              "type": "string"
-                            },
-                            "employmentStatus": {
-                              "type": "string"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "additionalObj": {
-                    "type": "object",
-                    "properties": {
-                      "nationality": {
-                        "type": "string"
-                      },
-                      "citizenship": {
-                        "type": "string"
-                      },
-                      "panCard": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "promotionDetails": {
-                    "type": "string"
-                  },
-                  "transferDetails": {
-                    "type": "string"
-                  },
-                  "locationName": {
                     "type": "string"
                   }
                 }
@@ -6104,223 +3909,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "personalInformationObj": {
-                    "type": "object",
-                    "properties": {
-                      "firstName": {
-                        "type": "string"
-                      },
-                      "lastName": {
-                        "type": "string"
-                      },
-                      "dob": {
-                        "type": "string"
-                      },
-                      "gender": {
-                        "type": "string"
-                      },
-                      "maritalStatus": {
-                        "type": "string"
-                      },
-                      "landline": {
-                        "type": "string"
-                      },
-                      "mobile": {
-                        "type": "string"
-                      },
-                      "alternativeMobileNo": {
-                        "type": "string"
-                      },
-                      "emailAddress": {
-                        "type": "string"
-                      },
-                      "alternativeEmailAddress": {
-                        "type": "string"
-                      },
-                      "nationality": {
-                        "type": "string"
-                      },
-                      "disability": {
-                        "type": "boolean"
-                      },
-                      "typeOfDisability": {
-                        "type": "string"
-                      },
-                      "attachment": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  },
-                  "residentialObj": {
-                    "type": "object",
-                    "properties": {
-                      "residentialCountry": {
-                        "type": "string"
-                      },
-                      "residentialZipCode": {
-                        "type": "string"
-                      },
-                      "residentialState": {
-                        "type": "string"
-                      },
-                      "residentialCity": {
-                        "type": "string"
-                      },
-                      "residentialArea": {
-                        "type": "string"
-                      },
-                      "residentialAddressLine1": {
-                        "type": "string"
-                      },
-                      "residentialAddressLine2": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "mailingObj": {
-                    "type": "object",
-                    "properties": {
-                      "mailingCountry": {
-                        "type": "string"
-                      },
-                      "mailingZipCode": {
-                        "type": "string"
-                      },
-                      "mailingState": {
-                        "type": "string"
-                      },
-                      "mailingCity": {
-                        "type": "string"
-                      },
-                      "mailingArea": {
-                        "type": "string"
-                      },
-                      "mailingAddressLine1": {
-                        "type": "string"
-                      },
-                      "mailingAddressLine2": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "employmentObj": {
-                    "type": "object",
-                    "properties": {
-                      "employeeId": {
-                        "type": "string"
-                      },
-                      "hrJson": {
-                        "type": "string"
-                      },
-                      "reportingHrJson": {
-                        "type": "string"
-                      },
-                      "designatedReportingPerson": {
-                        "type": "string"
-                      },
-                      "employmentStatus": {
-                        "type": "string"
-                      },
-                      "dateOfJoining": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "educationObj": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "qualification": {
-                          "type": "string"
-                        },
-                        "instituteName": {
-                          "type": "string"
-                        },
-                        "percentage": {
-                          "type": "string"
-                        },
-                        "yearOfGraduation": {
-                          "type": "string"
-                        },
-                        "attachment": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "workExpObj": {
-                    "type": "object",
-                    "properties": {
-                      "isExperienced": {
-                        "type": "string"
-                      },
-                      "totalExp": {
-                        "type": "string"
-                      },
-                      "experienceDetails": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "company": {
-                              "type": "string"
-                            },
-                            "jobTitle": {
-                              "type": "string"
-                            },
-                            "fromDate": {
-                              "type": "string"
-                            },
-                            "toDate": {
-                              "type": "string"
-                            },
-                            "employmentStatus": {
-                              "type": "string"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "additionalObj": {
-                    "type": "object",
-                    "properties": {
-                      "nationality": {
-                        "type": "string"
-                      },
-                      "citizenship": {
-                        "type": "string"
-                      },
-                      "panCard": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "promotionDetails": {
-                    "type": "string"
-                  },
-                  "transferDetails": {
-                    "type": "string"
-                  },
-                  "locationName": {
                     "type": "string"
                   }
                 }
@@ -7096,6 +4691,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -7104,34 +4700,13 @@
                   "id": {
                     "type": "string"
                   },
-                  "attributeId": {
-                    "type": "string"
-                  },
                   "companyId": {
                     "type": "string"
                   },
+                  "attributeId": {
+                    "type": "string"
+                  },
                   "variableName": {
-                    "type": "string"
-                  },
-                  "parentVariableId": {
-                    "type": "string"
-                  },
-                  "parentAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingJson": {
-                    "type": "string"
-                  },
-                  "reportingAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingVariableId": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -7155,6 +4730,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -7162,38 +4738,17 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "id": {
+                    "companyId": {
                       "type": "string"
                     },
                     "attributeId": {
-                      "type": "string"
-                    },
-                    "companyId": {
                       "type": "string"
                     },
                     "variableName": {
                       "type": "string"
                     },
                     "parentVariableId": {
-                      "type": "string"
-                    },
-                    "parentAttributeId": {
-                      "type": "string"
-                    },
-                    "reportingJson": {
-                      "type": "string"
-                    },
-                    "reportingAttributeId": {
-                      "type": "string"
-                    },
-                    "reportingVariableId": {
-                      "type": "string"
-                    },
-                    "abbreviation": {
-                      "type": "string"
-                    },
-                    "code": {
-                      "type": "string"
+                      "type": "integer"
                     }
                   }
                 }
@@ -7217,42 +4772,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "variableName": {
-                    "type": "string"
-                  },
-                  "parentVariableId": {
-                    "type": "string"
-                  },
-                  "parentAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingJson": {
-                    "type": "string"
-                  },
-                  "reportingAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingVariableId": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -7276,43 +4802,17 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
                   "companyId": {
                     "type": "string"
                   },
-                  "variableName": {
-                    "type": "string"
-                  },
                   "parentVariableId": {
-                    "type": "string"
-                  },
-                  "parentAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingJson": {
-                    "type": "string"
-                  },
-                  "reportingAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingVariableId": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
-                    "type": "string"
+                    "type": "integer"
                   }
                 }
               }
@@ -7335,42 +4835,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
-                  },
-                  "attributeId": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "variableName": {
-                    "type": "string"
-                  },
-                  "parentVariableId": {
-                    "type": "string"
-                  },
-                  "parentAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingJson": {
-                    "type": "string"
-                  },
-                  "reportingAttributeId": {
-                    "type": "string"
-                  },
-                  "reportingVariableId": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -7394,6 +4865,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -7406,12 +4878,6 @@
                     "type": "string"
                   },
                   "attributeName": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -7435,6 +4901,7 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -7442,20 +4909,14 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string"
-                    },
                     "companyId": {
                       "type": "string"
                     },
                     "attributeName": {
                       "type": "string"
                     },
-                    "abbreviation": {
-                      "type": "string"
-                    },
-                    "code": {
-                      "type": "string"
+                    "createdBy": {
+                      "type": "integer"
                     }
                   }
                 }
@@ -7520,24 +4981,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "type": "string"
-                  },
                   "companyId": {
-                    "type": "string"
-                  },
-                  "attributeName": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }
@@ -7561,24 +5011,13 @@
           }
         },
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "id": {
-                    "type": "string"
-                  },
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "attributeName": {
-                    "type": "string"
-                  },
-                  "abbreviation": {
-                    "type": "string"
-                  },
-                  "code": {
                     "type": "string"
                   }
                 }

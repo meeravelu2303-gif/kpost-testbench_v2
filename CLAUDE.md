@@ -228,6 +228,47 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-19 — Admin OpenAPI request bodies rewritten to the owner's PDF (contract now matches reality)
+
+The owner added **`Admin_module - API Services.pdf`** to the repo root (the authoritative admin payloads)
+and asked to update `openapi/admin-api.openapi.json` to match it. The openapi was generated from the live
+springdoc api-docs, which types every admin request with a broad shared DTO (e.g. `getEmployeeByCompanyId`
+listed 13 fields when the real payload is `{ companyId }`) — the root cause of the DTO-fuzz false bugs.
+
+Built **`scripts/apply-admin-pdf-payloads.cjs`** (deterministic + idempotent): it rewrites the request
+body of all **38 bench-used endpoints** to the PDF's exact fields, preserving the measured structural
+reality (tier/variable/location SAVES are ARRAYS of the object; everything else an object; GET country
+reference has no body). Chained into `npm run contract:admin` (so a regen from api-docs re-applies it) and
+exposed as `npm run contract:admin:pdf`. The other ~74 springdoc paths (not wired into the product) are
+left untouched. This makes the WRITE fuzzing accurate too (my earlier code-level `requestSchema` override
+only fixed the reads), so `admin:deep` no longer fuzzes phantom DTO fields on writes. `npm run check`
+clean; **106 framework guards pass** (all 38 still resolve against the patched contract). Two doc-vs-live
+notes recorded on the definitions, not in the contract: `getWorkPlaceHierarchy` needs a runtime
+`parentAttributeId` the PDF omits; `getSuspendOrTerminateEmployee`'s real `requestType` enum is unconfirmed.
+
+### 2026-09-19 — Admin coverage completed: all 38 endpoints covered; the 5 UPDATE writes were untested
+
+Audited admin coverage endpoint-by-endpoint. All 38 registered (contract ledger 0 uncovered). Tiers:
+**9 productionSafe reads** get the full validator matrix on `npm run admin`; **7 needs-id reads** are
+driven by the lifecycle with real minted ids (6 of 7 — `getSuspendOrTerminateEmployee` is blocked on the
+unknown `requestType` enum); **22 writes** are lifecycle-driven / fuzzed. The gap the audit found: the
+**5 tier/variable/location UPDATE writes** (`adminTierAttribute/update`, `adminTierVariable/update`,
+`hrSetUpTierAttribute/update`, `hrSetUpTierVariable/update`, `location/update`) were **not exercised** by
+the lifecycle — only saves + deletes were (employee/update was the only update driven). Closed it: the
+`feature.spec.ts` lifecycle now does create→read-back→**update**→delete for every workplace/HR
+tier+variable and the location, so all 19 `data` writes are functionally exercised, self-cleaning.
+
+**Remaining coverage boundaries (deliberate, documented — not gaps):** the 4 `rolePosting/*`
+provisioning writes (`save`/`update`/`delete`/`suspendOrTerminateEmployee`) **mint or touch real
+KPost+KSMACC accounts that cannot be cleaned up**, so they are gated behind `ADMIN_ROLE_POSTING_LIVE`
+(owner-authorized) and covered by `admin:deep` fuzz for input-validation only — never driven functionally
+by default. `getSuspendOrTerminateEmployee` waits on the real enum value from the dev.
+
+**How to run for full coverage:** `npm run admin` = 9 reads full matrix + all 19 data writes exercised
+functionally (+ needs-id reads). `npm run admin:deep` = adds the full fuzz/attack matrix (input-validation,
+injection, malformed) on the data writes (persists junk — disposable DB, reset after). `npm run check`
+clean; **106 framework guards pass**.
+
 ### 2026-09-19 — Admin false-bug root cause fixed: reads fuzzed the full DTO schema; 22 tickets closed INVALID
 
 The owner supplied **`Admin_module - API Services.pdf`** (authoritative admin payloads) after noticing
@@ -247,6 +288,7 @@ body-shape probes (empty-body / malformed-JSON / array-instead-of-object) still 
 real body, so they stay.
 
 **Source 2 — two reads had genuinely wrong/incomplete payloads (confirmed from the 400 bodies):**
+
 - `workplaceHierarchy/getWorkPlaceHierarchy` → with `{ companyId }` the host answers **400
   "parentAttributeId is required"** — the PDF is INCOMPLETE for this one; it needs a REAL runtime
   `parentAttributeId`. Reverted to **not productionSafe** (`needs-id`), driven by the lifecycle.
@@ -255,19 +297,30 @@ real body, so they stay.
   earlier 'suspend'). Reverted to **not productionSafe**; note added to confirm the real value with the
   dev. (`suspendOrTerminateEmployee` write also corrected: field `status` → `requestType`.)
 
-**Cleanup — 22 already-filed false admin tickets closed RESOLVED/INVALID** (owner-authorized), each with
-an explanatory comment: 19 phantom-DTO-field input-validation (#304 #313 #314 #316 #318 #320 #321 #323
-#328 #329 #331 #335 #337 #353 #355 #358 #359 #361 #362), 1 environmental response-time (#317), 2
-`common.id`-on-business-id false positives (#332 companyId, #338 reportingWorkplaceLocationId — already
-fixed in the id validator). **KPost Admin open bugs 43 → 21**, all valid/borderline: 8 systemic
-auth-filter (non-JSON error + wrong status on missing token — real, though over-multiplied), 1 missing
-HSTS, 4 body-shape input-validation (empty/malformed/array body accepted 200 — real "no input
-validation"), 9 media-type (JSON accepted as text/plain — low-value hardening nit, candidate WONTFIX).
+**Cleanup — the KPost Admin queue was swept to VALID-ONLY (owner-authorized), 78 total → 6 open:**
 
-`npm run check` clean; **106 framework guards pass**. A re-run of `npm run admin` now files only the real
-classes; the DTO-fuzz false positives and the two payload CRITICALs cannot re-file. Note kept: the PDF
-shows `getEmployeeDetails` as GET while the live api-docs types it POST (kept POST — auto-generated
-contract is method-authoritative — flagged to the owner).
+- **22 RESOLVED/INVALID** — 19 phantom-DTO-field input-validation (#304 #313 #314 #316 #318 #320 #321
+  #323 #328 #329 #331 #335 #337 #353 #355 #358 #359 #361 #362), 1 environmental response-time (#317),
+  2 `common.id`-on-business-id (#332 companyId, #338 reportingWorkplaceLocationId — fixed in the id validator).
+- **9 RESOLVED/WONTFIX** — media-type (JSON accepted as text/plain → 200/403; lenient content-type,
+  safe, low-value): #348 #352 #354 #356 #357 #363 #364 #365 #366.
+- **8 RESOLVED/INVALID** — token-scoped body findings (companyId missing/null, empty-body, array,
+  malformed-JSON → 200): #349 #350 #351 #360 #388 #389 #390 #391. **Verified NOT a leak**: with any of
+  those the response is scoped to the caller's OWN company (companyId 242) — the read derives scope from
+  the auth token, not the body, so "expected 400" is the wrong premise. Only `getEmployeeDetails` and
+  `getRolePostingByCompanyId` are lenient this way (the other 6 reads correctly 400 on a missing
+  companyId); recorded as safe/by-design, reopen if the team wants strict body validation for consistency.
+
+**6 VALID remain open — the real defects for Jagan:** 5 error-envelope (#340 #343 #344 #347 #387 — auth
+IS enforced, but the 401/403 error responses are plain text, not the JSON envelope; one shared gateway
+root cause) + 1 missing HSTS (#341). Auto-resolve had already closed #342/#345/#346 (endpoints now
+enforce auth cleanly).
+
+`npm run check` clean; **106 framework guards pass**. The INVALID/WONTFIX resolutions stop these classes
+re-filing (dedup respects them on this host). Note kept: the PDF shows `getEmployeeDetails` as GET while
+the live api-docs types it POST (kept POST — auto-generated contract is method-authoritative — flagged to
+the owner); and `getSuspendOrTerminateEmployee`'s real `requestType` enum is still unknown (both 'suspend'
+and 'SUSPENDED' rejected) — confirm with the dev.
 
 ### 2026-09-19 — Translation endpoint's negative-auth + disclosure probes skipped (unbounded external latency)
 
