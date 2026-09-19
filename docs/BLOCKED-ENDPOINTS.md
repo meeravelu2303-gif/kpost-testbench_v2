@@ -2,8 +2,8 @@
 
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`.
 
-**44 of 336** registered endpoints are **not driven against the live app**.
-The rest ARE tested on live: **119** on the default run + **173** via the
+**45 of 336** registered endpoints are **not driven against the live app**.
+The rest ARE tested on live: **118** on the default run + **173** via the
 gated self-cleaning lifecycle flows (`npm run kpost:file`). This file lists ONLY the not-tested.
 
 They are not silent gaps — each is refused for a permanent constraint or a deliberate safety
@@ -16,9 +16,9 @@ choice, and every one is still contract-validated OFF live.
 | OTP — no bypass on live (permanent) | 15 |
 | Shared / global write (by choice) | 15 |
 | Attachment file-upload — the one REAL coverage gap | 7 |
-| Needs setup we lack (business login 403, company logo 500) | 5 |
+| Needs setup we lack (business login 403, company logo 500) | 6 |
 | Public record write (enquiry / unsubscribe) | 2 |
-| **Total not tested on live** | **44** |
+| **Total not tested on live** | **45** |
 
 ---
 
@@ -96,10 +96,11 @@ choice, and every one is still contract-validated OFF live.
 | `POST` | `/v2/signupLogin/setAccessCode` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 
-### Admin (1)
+### Admin (2)
 
 | Method | Path | Why not tested on live |
 | ------ | ---- | ---------------------- |
+| `POST` | `/rolePosting/getSuspendOrTerminateEmployee` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/workplaceHierarchy/getWorkPlaceHierarchy` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 
 ### Contacts (1)

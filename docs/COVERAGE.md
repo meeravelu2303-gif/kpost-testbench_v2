@@ -10,12 +10,12 @@ cannot drift from what is actually tested.
 | - | ----: |
 | Documented (workbook, usable) | 446 |
 | **Registered & tested** | **345** |
-| — of those, run on live | 122 |
+| — of those, run on live | 121 |
 | In "built" modules | 423 |
 
 | Module | Documented | Tested | Live | Status | Note |
 | ------ | ---------: | -----: | ---: | ------ | ---- |
-| `admin` | 125 | 51 | 14 | built | Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here |
+| `admin` | 125 | 51 | 13 | built | Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here |
 | `kmail` | 80 | 79 | 30 | built | KMail — test host testkmail (/testkmail/v2). 27 reads all-types on kmail; 28 data writes fuzzed on kmail:deep; 14 needs-id reads via KMAIL_LIFECYCLE (attachment downloads need a real S3 upload — off-live); getKloudUsedData not in the usable contract |
 | `profile` | 45 | 45 | 12 | built | profile — full API + write lifecycle + screens |
 | `katchup` | 36 | 36 | 10 | built | messaging — full API + write lifecycle + screen |

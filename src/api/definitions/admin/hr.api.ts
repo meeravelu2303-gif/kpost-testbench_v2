@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import { body } from '../kpost/kpost-endpoint';
-import { defineAdminEndpoint } from './admin-endpoint';
+import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
  * Admin module — **HR Breakdown Setup** (step 3 of the org-build). See `docs/admin-flow.md` §4.
@@ -26,6 +26,7 @@ export const adminHrApis: EndpointDefinition[] = [
     tags: ['hr-tier-attribute'],
     // Documented as a string; sent as documented (a 400 on the number would be the real contract).
     request: body(() => ({ companyId: companyId() })),
+    requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
   }),
@@ -73,6 +74,7 @@ export const adminHrApis: EndpointDefinition[] = [
     tags: ['hr-tier-variable'],
     // parentVariableId 0 = root; companyId documented as a string on this read.
     request: body(() => ({ companyId: companyId(), parentVariableId: 0 })),
+    requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
   }),

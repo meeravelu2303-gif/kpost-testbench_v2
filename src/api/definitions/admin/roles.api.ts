@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import { body } from '../kpost/kpost-endpoint';
-import { defineAdminEndpoint } from './admin-endpoint';
+import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
  * Admin module — **Role Posting Setup** (step 4: map roles to a workplace) and **Assign Role
@@ -27,6 +27,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     summary: 'List role postings for the company',
     tags: ['role-posting'],
     request: body(() => ({ companyId: companyId() })),
+    requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
   }),
@@ -37,6 +38,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     summary: 'List employees available for role assignment',
     tags: ['role-posting'],
     request: body(() => ({ companyId: companyId() })),
+    requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
   }),
@@ -45,12 +47,16 @@ export const adminRolesApis: EndpointDefinition[] = [
     method: 'POST',
     path: '/rolePosting/getSuspendOrTerminateEmployee',
     summary: 'List suspended / terminated employees',
-    tags: ['role-posting'],
-    // The API requires `requestType` (a 400 "requestType is required" otherwise). The live client
-    // (Revoke.js/Suspend.js) sends `requestType: 'suspend'` for this list read.
-    request: body(() => ({ companyId: companyId(), requestType: 'suspend' })),
+    tags: ['role-posting', 'needs-id'],
+    // Verified on the test host (2026-09-19): even with the PDF's `{ companyId, requestType:
+    // "SUSPENDED" }` the backend answers 400 `"requestType is Empty or Invalid"` — so "SUSPENDED"
+    // is NOT the accepted enum value (nor was the earlier 'suspend'). The correct value is unknown
+    // (likely "SUSPEND"/"TERMINATE" or a code — confirm with the dev). Until confirmed this is NOT
+    // productionSafe: a standalone call 400s and reads as a false CRITICAL. Driven by the lifecycle,
+    // which knows the real value, or re-enable once the dev confirms the enum.
+    request: body(() => ({ companyId: companyId(), requestType: 'SUSPENDED' })),
     destructive: false,
-    productionSafe: true,
+    note: 'requestType enum "SUSPENDED" rejected (400 "requestType is Empty or Invalid") — confirm the real value with the dev',
   }),
   defineAdminEndpoint({
     id: 'admin-role-posting-by-company-and-employee',
@@ -105,10 +111,12 @@ export const adminRolesApis: EndpointDefinition[] = [
     summary: 'Suspend or terminate an employee (expendable QA member only)',
     tags: ['role-posting'],
     // DANGEROUS: only ever an expendable member the lifecycle created — never a seeded member.
+    // Authoritative payload (owner's PDF, 2026-09-19): { employeeId, companyId, requestType, reason }.
+    // The field is `requestType` (not `status`), value UPPERCASE "SUSPENDED".
     request: body(() => ({
       employeeId: 1,
       companyId: companyId(),
-      status: 'SUSPENDED',
+      requestType: 'SUSPENDED',
       reason: 'QA lifecycle',
     })),
     destructive: true,

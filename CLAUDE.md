@@ -228,6 +228,69 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-19 — Admin false-bug root cause fixed: reads fuzzed the full DTO schema; 22 tickets closed INVALID
+
+The owner supplied **`Admin_module - API Services.pdf`** (authoritative admin payloads) after noticing
+admin bugs filed on wrong payloads. Reconciling against it, then a dry `npm run admin` and reading the
+actual 400 response bodies, found **two** distinct false-bug sources — one payload, one schema — plus a
+batch of already-filed false tickets to close.
+
+**Source 1 — the request schema was the full springdoc DTO, not the read's real payload (THE big one).**
+The `admin-api` contract types each company-scoped READ with the shared DTO (`id`, `rejoiningDate`,
+`adminKsmaccID`, `workplaceLocationId`, `attributeId`, …), so the engine fuzzed **fields the read never
+uses** and filed "input validation not enforced" bugs when the endpoint correctly ignored them (200).
+This produced ~19 false tickets. Fix: added an optional **`requestSchema` override** to
+`KpostEndpointConfig` (wired through `defineKpostEndpoint` + `defineAdminEndpoint`), and gave every
+company-scoped admin read `requestSchema: COMPANY_SCOPED_READ` (`z.object({ companyId: z.string() })`,
+an OPEN object). Now only the real field is fuzzed; extra fields the read tolerates are not probed. The
+body-shape probes (empty-body / malformed-JSON / array-instead-of-object) still run — those test the
+real body, so they stay.
+
+**Source 2 — two reads had genuinely wrong/incomplete payloads (confirmed from the 400 bodies):**
+- `workplaceHierarchy/getWorkPlaceHierarchy` → with `{ companyId }` the host answers **400
+  "parentAttributeId is required"** — the PDF is INCOMPLETE for this one; it needs a REAL runtime
+  `parentAttributeId`. Reverted to **not productionSafe** (`needs-id`), driven by the lifecycle.
+- `rolePosting/getSuspendOrTerminateEmployee` → even with the PDF's `requestType: "SUSPENDED"` the host
+  answers **400 "requestType is Empty or Invalid"** — "SUSPENDED" is NOT the accepted enum (nor was the
+  earlier 'suspend'). Reverted to **not productionSafe**; note added to confirm the real value with the
+  dev. (`suspendOrTerminateEmployee` write also corrected: field `status` → `requestType`.)
+
+**Cleanup — 22 already-filed false admin tickets closed RESOLVED/INVALID** (owner-authorized), each with
+an explanatory comment: 19 phantom-DTO-field input-validation (#304 #313 #314 #316 #318 #320 #321 #323
+#328 #329 #331 #335 #337 #353 #355 #358 #359 #361 #362), 1 environmental response-time (#317), 2
+`common.id`-on-business-id false positives (#332 companyId, #338 reportingWorkplaceLocationId — already
+fixed in the id validator). **KPost Admin open bugs 43 → 21**, all valid/borderline: 8 systemic
+auth-filter (non-JSON error + wrong status on missing token — real, though over-multiplied), 1 missing
+HSTS, 4 body-shape input-validation (empty/malformed/array body accepted 200 — real "no input
+validation"), 9 media-type (JSON accepted as text/plain — low-value hardening nit, candidate WONTFIX).
+
+`npm run check` clean; **106 framework guards pass**. A re-run of `npm run admin` now files only the real
+classes; the DTO-fuzz false positives and the two payload CRITICALs cannot re-file. Note kept: the PDF
+shows `getEmployeeDetails` as GET while the live api-docs types it POST (kept POST — auto-generated
+contract is method-authoritative — flagged to the owner).
+
+### 2026-09-19 — Translation endpoint's negative-auth + disclosure probes skipped (unbounded external latency)
+
+The third+fourth `npm run kmail` reports kept showing the same `translator/translation` noise: even a 30s
+timeout was intermittently exceeded, and a timeout landing during a negative-auth probe reported as a
+spurious `missing-token` CRITICAL (KP-BBE803) that duplicated the real auth-bypass (KP-AF6EED); the
+auth-probe suffix on the disclosure message also stopped it consolidating with the platform-wide
+Server-header ticket, so translation emitted **two extra disclosure tickets** (KP-2CFD54, KP-5498DD) of
+its own. Root cause is structural, not a tuning problem: the endpoint proxies an **external translation
+service with unbounded latency**, so its negative-auth results are inherently unreliable and no timeout
+value fixes it.
+
+**Owner decision (2026-09-19): exempt translation's auth probes.** Added `skipValidators` on
+`translationApi` (`read.api.ts`) for `authentication.{missing,malformed,invalid,expired}-token` +
+`security.information-disclosure`, with a `note` recording the one REAL finding for the dev to confirm:
+translation answers **200 with no/Basic/wrong-scheme token** while every other KMail endpoint enforces
+401 (likely a deliberately public utility — confirm before treating it as a defect). Functional checks
+(status-code, schema, `common.*`) still run, and the platform-wide Server-header disclosure is still
+filed via the other endpoints. Extended the `contactRead` helper with a `skipValidators` opt to carry it.
+`npm run check` clean; **106 framework guards pass**. Net effect on the next `npm run kmail`: the ~5
+translation tickets collapse to 0, leaving the **25 valid core defects** (13 CRITICAL read-500 crashes +
+9 input-validation + 3 consolidated disclosures) ready to file.
+
 ### 2026-09-19 — First `npm run kmail` on the test env: 6 false-positive classes found and fixed
 
 The owner ran `npm run kmail` (dry) — 67 would-file. Per-class review found ~40 were false or

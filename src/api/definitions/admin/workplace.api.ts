@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import { body } from '../kpost/kpost-endpoint';
-import { defineAdminEndpoint } from './admin-endpoint';
+import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
  * Admin module — **Work Place Setup** (step 1 of the org-build) and **Work Place Location Setup**
@@ -30,6 +30,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     summary: 'List workplace tier attributes (levels) for the company',
     tags: ['workplace-tier-attribute'],
     request: body(() => ({ companyId: companyId() })),
+    requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
   }),
@@ -77,6 +78,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     tags: ['workplace-tier-variable'],
     // parentVariableId 0 = the root level, so this reads without a runtime id.
     request: body(() => ({ companyId: companyId(), parentVariableId: 0 })),
+    requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
   }),
@@ -138,6 +140,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     summary: 'List all workplace locations for the company',
     tags: ['workplace-location'],
     request: body(() => ({ companyId: companyId() })),
+    requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
   }),
@@ -202,16 +205,17 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/workplaceHierarchy/getWorkPlaceHierarchy',
     summary: 'Read the assembled workplace hierarchy for the company',
     tags: ['workplace-hierarchy', 'needs-id'],
-    // The API requires `parentAttributeId` (400 "parentAttributeId is required" otherwise), and the
-    // live client (WorkPlaceLocationSetup.js) passes a REAL runtime tier-attribute id, not a constant.
-    // So this is a needs-runtime-id read: not run standalone on live (a placeholder would 400/500 and
-    // read as a false defect); the admin lifecycle drives it with an attribute id it created.
+    // Verified on the test host (2026-09-19): with ONLY `{ companyId }` (the owner's PDF payload) the
+    // live backend answers 400 `"parentAttributeId is required"` — so the PDF is INCOMPLETE for this
+    // one endpoint; it genuinely needs a REAL runtime `parentAttributeId` (a created workplace tier).
+    // So it is NOT productionSafe (a standalone call 400s and reads as a false CRITICAL); the admin
+    // lifecycle drives it with an attribute id it created. Left the placeholder fields for the lifecycle.
     request: body(() => ({
       companyId: companyId(),
       parentVariableId: '0',
       parentAttributeId: '0',
     })),
     destructive: false,
-    note: 'needs a runtime parentAttributeId from a created workplace tier',
+    note: 'needs a runtime parentAttributeId from a created workplace tier (confirmed 400 without it)',
   }),
 ];

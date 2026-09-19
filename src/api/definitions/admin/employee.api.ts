@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import { body, pathParams } from '../kpost/kpost-endpoint';
-import { defineAdminEndpoint } from './admin-endpoint';
+import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
  * Admin module — **Employee Data** (step 5: create the employee record) and the pincode→address
@@ -22,6 +22,7 @@ export const adminEmployeeApis: EndpointDefinition[] = [
     summary: "Read the company's employee master data",
     tags: ['employee'],
     request: body(() => ({ companyId: companyId() })),
+    requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
   }),

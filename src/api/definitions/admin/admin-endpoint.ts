@@ -1,6 +1,17 @@
+import { z } from 'zod';
 import { workbookContract } from '../../contract/workbook-contract';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import type { KpostEndpointConfig } from '../kpost/kpost-endpoint';
+
+/**
+ * The MEASURED payload of a company-scoped admin READ: only `companyId` (a string). The generated
+ * `admin-api` contract types these reads with the shared springdoc DTO (`id`, `rejoiningDate`,
+ * `adminKsmaccID`, `workplaceLocationId`, …), so without this override the engine fuzzes DTO fields
+ * the read ignores and files false "input validation" bugs. An OPEN object, so a read that also sends
+ * a filter (`parentVariableId`) may carry it without triggering an unknown-field probe. Pass it via
+ * `requestSchema` on the read's definition.
+ */
+export const COMPANY_SCOPED_READ = z.object({ companyId: z.string() });
 
 /**
  * An **Admin module** endpoint. The Admin/HR-Setup module is its own suite (`admin-api`) on its own
@@ -49,7 +60,7 @@ export function defineAdminEndpoint(config: KpostEndpointConfig): EndpointDefini
     envelope: config.envelope,
     contentType: config.contentType,
     request: config.request,
-    requestSchema: contract.requestSchema,
+    requestSchema: config.requestSchema ?? contract.requestSchema,
     responseSchema: contract.responseSchema,
     destructive: config.destructive,
     sideEffect: config.sideEffect,

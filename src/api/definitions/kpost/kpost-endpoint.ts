@@ -2,6 +2,7 @@ import type { SideEffect } from '@engine/production-guard';
 import type { ValidationToggles } from '@engine/validation-policy';
 import type { HttpMethod, RequestSpec } from '../../client/request-builder';
 import { workbookContract } from '../../contract/workbook-contract';
+import type { ContractSchema } from '../../schema/contract-schema';
 import type { EndpointDefinition, RequestFactory } from '../../registry/endpoint-definition';
 
 /**
@@ -50,6 +51,16 @@ export interface KpostEndpointConfig {
    */
   contractMethod?: HttpMethod;
   summary: string;
+  /**
+   * Overrides the contract's request schema for THIS endpoint. Use it when the documented/generated
+   * schema is broader than what the endpoint actually accepts — e.g. an admin READ whose real payload
+   * is `{ companyId }` but whose contract is the shared springdoc DTO (`id`, `rejoiningDate`,
+   * `adminKsmaccID`, …). Fuzzing the full DTO on such a read files false "input validation" bugs on
+   * fields the endpoint ignores; a tight schema fuzzes only the real fields. An OPEN `z.object({...})`
+   * still lets the endpoint receive extra fields without an unknown-field probe (the contract permits
+   * them). Every use must reflect the endpoint's MEASURED payload, not a guess.
+   */
+  requestSchema?: ContractSchema;
   /** Bugzilla component candidates and test filters; `kpost-api` is added automatically. */
   tags?: readonly string[];
   /** FRD requirement ids this endpoint exercises, e.g. ['FR-SL-026', 'NFR-SEC01']. */
@@ -114,7 +125,7 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     envelope: config.envelope,
     contentType: config.contentType,
     request: config.request,
-    requestSchema: contract.requestSchema,
+    requestSchema: config.requestSchema ?? contract.requestSchema,
     responseSchema: contract.responseSchema,
     destructive: config.destructive,
     sideEffect: config.sideEffect,
