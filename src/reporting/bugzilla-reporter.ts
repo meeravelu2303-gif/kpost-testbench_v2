@@ -59,6 +59,9 @@ const UI_FILING_SPECS = new Set([
   // The interaction sweep files too: its signals (a JS crash, a broken asset, or a frozen main
   // thread during real use) are selector-INDEPENDENT — a real defect, never a tuning miss.
   'interactions.spec.ts',
+  // The systematic crawl files for the same reason: it clicks every safe control and reports only
+  // crashes / freezes / raw-value renders — unambiguous defects, never a false bug from a selector.
+  'crawl.spec.ts',
 ]);
 
 /**
