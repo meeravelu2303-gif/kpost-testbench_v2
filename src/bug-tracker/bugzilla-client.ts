@@ -1,4 +1,4 @@
-import type { BugzillaConfig } from '@config/bugzilla.config';
+import { JUDGED_NOT_A_DEFECT, type BugzillaConfig } from '@config/bugzilla.config';
 import { isPlainObject } from '@utils/json';
 import type { Logger } from '@utils/logger';
 
@@ -174,6 +174,30 @@ export class BugzillaClient {
     if (!result.ok) return { error: describeFailure(result) };
     const tag = new RegExp(`\\[${tagPrefix}-[0-9A-F]{6}\\]`, 'i');
     return { bugs: readBugs(result.json).filter((bug) => bug.is_open && tag.test(bug.summary)) };
+  }
+
+  /**
+   * Every bug of a product with our tag that a HUMAN closed as not-a-defect
+   * (INVALID/WONTFIX/WORKSFORME/DUPLICATE). The live filer skips these via `findByTag`; loading them
+   * lets the DRY-RUN preview show `judged-skip` too, so a re-run's preview never reads "would-file" for
+   * a fault someone already judged. Whiteboard is included so an adopted (shifted) tag is caught.
+   */
+  async judgedBenchBugs(
+    product: string,
+    tagPrefix: string,
+  ): Promise<{ bugs: BugSummary[] } | { error: string }> {
+    const resolutions = [...JUDGED_NOT_A_DEFECT].map((r) => `resolution=${r}`).join('&');
+    const result = await this.call(
+      'GET',
+      `/bug?product=${encodeURIComponent(product)}&${resolutions}&include_fields=${BUG_FIELDS}&limit=0`,
+    );
+    if (!result.ok) return { error: describeFailure(result) };
+    const tag = new RegExp(`${tagPrefix}-[0-9A-F]{6}`, 'i');
+    return {
+      bugs: readBugs(result.json).filter(
+        (bug) => tag.test(bug.summary) || tag.test(bug.whiteboard ?? ''),
+      ),
+    };
   }
 
   /** Appends the dedupe tag to an adopted ticket's whiteboard so later runs find it by tag. */

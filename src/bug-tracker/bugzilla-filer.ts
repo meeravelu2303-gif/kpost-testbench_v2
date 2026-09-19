@@ -100,6 +100,8 @@ export class BugzillaFiler {
   private readonly faultIndex = new Map<string, BugSummary>();
   /** Tags of every open bench bug, for the dry-run preview's would-comment vs would-create split. */
   private readonly openTags = new Set<string>();
+  /** Tags a human closed as not-a-defect (INVALID/WONTFIX/…), so the preview shows judged-skip. */
+  private readonly judgedTags = new Set<string>();
   /** Bugs already adopted this run, so two candidates never comment on the same ticket. */
   private readonly faultUsed = new Set<number>();
 
@@ -160,18 +162,32 @@ export class BugzillaFiler {
   private async loadExisting(products: string[]): Promise<void> {
     this.faultIndex.clear();
     this.openTags.clear();
+    this.judgedTags.clear();
     this.faultUsed.clear();
+    const tagRe = /([A-Z]+-[0-9A-F]{6})/gi;
     for (const product of products) {
       const found = await this.client.openBenchBugs(product, this.config.tagPrefix);
       if ('error' in found) {
         this.log.warn(`dedup: could not list open ${product} bugs — ${found.error}`);
+      } else {
+        for (const bug of found.bugs) {
+          const tag = bug.summary.match(/\[([A-Z]+-[0-9A-F]{6})\]/i)?.[1];
+          if (tag) this.openTags.add(tag.toUpperCase());
+          const key = faultKeyFromSummary(product, bug.summary);
+          if (key && !this.faultIndex.has(key)) this.faultIndex.set(key, bug);
+        }
+      }
+      // Judged (human-closed not-a-defect) tags, so the preview never says "would-file" for a fault
+      // the live run would skip. Collect every tag from the summary AND whiteboard (adopted tags).
+      const judged = await this.client.judgedBenchBugs(product, this.config.tagPrefix);
+      if ('error' in judged) {
+        this.log.warn(`dedup: could not list judged ${product} bugs — ${judged.error}`);
         continue;
       }
-      for (const bug of found.bugs) {
-        const tag = bug.summary.match(/\[([A-Z]+-[0-9A-F]{6})\]/i)?.[1];
-        if (tag) this.openTags.add(tag.toUpperCase());
-        const key = faultKeyFromSummary(product, bug.summary);
-        if (key && !this.faultIndex.has(key)) this.faultIndex.set(key, bug);
+      for (const bug of judged.bugs) {
+        for (const m of `${bug.summary} ${bug.whiteboard ?? ''}`.matchAll(tagRe)) {
+          if (m[1]) this.judgedTags.add(m[1].toUpperCase());
+        }
       }
     }
   }
@@ -188,6 +204,11 @@ export class BugzillaFiler {
   /** The would-be decision for the dry-run preview: comment (tag or fault match) vs create. */
   private previewEntry(candidate: BugCandidate): FilingEntry {
     const tag = candidate.id.replace(/^\[|\]$/g, '').toUpperCase();
+    if (this.judgedTags.has(tag)) {
+      return this.entry(candidate, 'judged-skip', {
+        reason: 'closed as not-a-defect (INVALID/WONTFIX) — would skip, not re-file',
+      });
+    }
     if (this.openTags.has(tag)) {
       return this.entry(candidate, 'commented', {
         reason: 'existing ticket (same tag) — would comment',
