@@ -38,7 +38,11 @@ test.describe('KPost keyboard navigation — every screen', { tag: '@ui' }, () =
         const active = await page.evaluate(() => {
           const el = document.activeElement;
           return el
-            ? { tag: el.tagName, editable: (el as HTMLElement).isContentEditable, tabindex: el.getAttribute('tabindex') }
+            ? {
+                tag: el.tagName,
+                editable: (el as HTMLElement).isContentEditable,
+                tabindex: el.getAttribute('tabindex'),
+              }
             : { tag: 'NONE', editable: false, tabindex: null };
         });
         if (interactive.has(active.tag) || active.editable || (active.tabindex ?? '') !== '') {

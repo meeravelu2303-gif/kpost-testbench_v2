@@ -51,10 +51,16 @@ test.describe('KPost accessibility (axe-core WCAG) — every screen', { tag: '@u
 
       // Soft so one screen's issues don't hide another's; only the worst tiers gate visibility.
       expect
-        .soft(critical, `${screen.name}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`)
+        .soft(
+          critical,
+          `${screen.name}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`,
+        )
         .toEqual([]);
       expect
-        .soft(serious, `${screen.name}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`)
+        .soft(
+          serious,
+          `${screen.name}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`,
+        )
         .toEqual([]);
     });
   }

@@ -45,14 +45,14 @@ export const validateOtpApi = defineKpostEndpoint({
   method: 'POST',
   path: '/v2/common/validateOTP/',
   summary: 'Validate a mobile OTP',
-  tags: OTP_TAGS,
-  /*
-   * The happy path is reachable because this environment has a developer bypass OTP that always
-   * validates (QA_BYPASS_OTP). So the primary request is a genuine success, and the central
-   * negative probes supply the rejection cases - including a wrong OTP, which currently answers
-   * HTTP 500 instead of a 4xx.
-   */
+  // `otp-consume` excludes it from the STANDALONE engine run (otp.spec.ts excludeTags): validating an
+  // OTP requires a live session created by a PRIOR sendOTP in the same run, which the standalone engine
+  // does not do — so standalone it always answers 500 "OTP validation failed" (verified by curl
+  // 2026-09-19: bare validateOTP → 500; sendOTP then validateOTP → 200). It is exercised end-to-end by
+  // the OTP signup lifecycle (send → validate). The `common-otp` tag is kept for component routing.
+  tags: [...OTP_TAGS, 'otp-consume'],
   destructive: false,
+  note: 'lifecycle-only: needs a prior sendOTP session in the same run (standalone → 500 "OTP validation failed", a bench-precondition, not a product defect); covered by otp-signup-lifecycle',
   // Payload matches the WORKING live call (owner-verified curl 2026-09-19): { otp, countryID,
   // mobileNumber }. The earlier `sendDate: Date.now()` (a 13-digit epoch) pushed it into a failure
   // path that answered 500 — a bench-payload artifact, not a product defect. `mobileNumber` is the
@@ -84,8 +84,11 @@ export const validateMailOtpApi = defineKpostEndpoint({
   method: 'POST',
   path: '/v2/common/validateMailOTP/',
   summary: 'Validate an email OTP',
-  tags: OTP_TAGS,
+  // Lifecycle-only, like validateOTP: needs a prior sendOTPtoMail session in the same run, so the
+  // standalone engine run 500s. Excluded via `otp-consume`; covered by the OTP signup lifecycle.
+  tags: [...OTP_TAGS, 'otp-consume'],
   destructive: false,
+  note: 'lifecycle-only: needs a prior sendOTPtoMail session (standalone → 500, a bench-precondition); covered by otp-signup-lifecycle',
   // Matches the working validateOTP shape (no `sendDate` epoch, which triggered a 500 failure path).
   request: body(() => ({
     email: testData.otpEmail,

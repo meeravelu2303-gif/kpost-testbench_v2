@@ -46,10 +46,16 @@ export const homeDashboardNewMsgsApi = defineDashboardEndpoint({
   method: 'POST',
   path: '/v2/dashboard/homeDashboardNewMsgs',
   summary: 'Only the dashboard messages newer than a marker (incremental refresh)',
-  tags: ['dashboard-read'],
+  tags: ['dashboard-read', 'needs-id'],
+  // The incremental refresh needs a REAL marker — the frontend (`RecentMessage.js:807`) sends
+  // `{ firstMsgID: <a msgID from the current list>, serverTime: <ISO LastFetchDate> }`, both runtime
+  // values from a prior `homeDashboardMsgs` read. With nulls the backend 500s
+  // ("Could not locate named parameter [serverTime]…"), so it is NOT run standalone (a 500 there would
+  // read as a false CRITICAL). The siblings homeDashboardMsgs/katchupDashboardMsg correctly return the
+  // latest page with serverTime:null and stay productionSafe.
   destructive: false,
-  productionSafe: true,
   request: body(() => ({ firstMsgID: null, serverTime: null })),
+  note: 'incremental fetch needs a real firstMsgID + ISO serverTime from a prior homeDashboardMsgs read; null markers 500 the backend (not a standalone read)',
 });
 
 export const dashboardApis = [

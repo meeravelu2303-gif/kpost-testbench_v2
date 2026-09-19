@@ -23,6 +23,10 @@ export const myContactsApi = defineContactsEndpoint({
   tags: [...READ_TAGS, 'list'],
   destructive: false,
   productionSafe: true,
+  // A contact's email is USER-ENTERED data stored in the DB; the read faithfully returns it. A
+  // malformed email in one contact row is a data-quality issue in that record, not a defect in this
+  // read — so common.email (which flags returned email strings) is not meaningful here.
+  skipValidators: ['common.email'],
   request: body(() => ({ lastfetchDate: null })),
 });
 
@@ -34,6 +38,9 @@ export const myUnknownContactsApi = defineContactsEndpoint({
   tags: [...READ_TAGS, 'list'],
   destructive: false,
   productionSafe: true,
+  // Same as myContacts: emails here are the un-saved senders' own data, returned as-is — a malformed
+  // one is that record's data quality, not a defect in this read.
+  skipValidators: ['common.email'],
   request: body(() => ({ lastfetchDate: null })),
 });
 

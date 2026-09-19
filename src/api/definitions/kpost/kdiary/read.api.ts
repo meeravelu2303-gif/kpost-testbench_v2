@@ -46,13 +46,14 @@ export const getEventDateApi = defineKdiaryEndpoint({
   tags: [...READ_TAGS, 'event'],
   destructive: false,
   productionSafe: true,
-  // With only a start date the API NPEs (500 "Value must not be null") — the month view needs a
-  // start AND end. Sends a full month range so both are non-null.
+  // The field is a DATE-TIME: the frontend (Diary.js `toDateTimeQueryValue`) sends `${date}T${time}`
+  // (e.g. 2026-09-01T00:00:00). A date-only value leaves the time component null and the API NPEs
+  // (500 "Value must not be null"). Sends a full month range in the client's datetime format.
   request: body(() => ({
-    scheduleStartDateAndTime: '2026-09-01',
-    scheduleEndDateAndTime: '2026-09-30',
+    scheduleStartDateAndTime: '2026-09-01T00:00:00',
+    scheduleEndDateAndTime: '2026-09-30T00:00:00',
   })),
-  note: 'needs start + end date (start alone → 500 "Value must not be null")',
+  note: 'date-time field: send YYYY-MM-DDT00:00:00 (date-only → 500 "Value must not be null")',
 });
 
 export const getEventSelectedDateApi = defineKdiaryEndpoint({
