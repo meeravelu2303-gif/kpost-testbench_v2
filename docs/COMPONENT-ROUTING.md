@@ -190,7 +190,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `kmail-translation`
 
-## KPost API (228 endpoints)
+## KPost API (233 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
@@ -199,20 +199,21 @@ each target exists in the live product, so tickets can never route to a non-exis
 | Common Reference Data & Utilities V2 | 20 |
 | Kall (Voice/Video) V2 - current | 20 |
 | Company Administration | 19 |
+| Authentication V2 | 18 |
 | KWord Documents | 18 |
 | Contacts Directory V2 | 16 |
-| Authentication V2 | 14 |
 | Kdiary - Schedules, Events & Reports | 14 |
 | Groups V2 | 11 |
 | General Settings | 7 |
 | Integration - AWS S3 Pre-signed URLs | 4 |
 | Dashboard V2 | 3 |
-| Authentication - Medium & Large Enterprise | 1 |
+| Authentication - Medium & Large Enterprise | 2 |
 
 ### KPost API — endpoint → component
 
 **Authentication - Medium & Large Enterprise**
 
+- `signup-login-admin-registration`
 - `signup-login-admin-user-login`
 
 **Authentication V2**
@@ -226,9 +227,13 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `signup-login-active-session`
 - `signup-login-fetch-user-details`
 - `signup-login-generate-jwt`
+- `signup-login-kpost-id-exist`
+- `signup-login-kpost-id-suggestions`
 - `signup-login-login-history`
 - `signup-login-logout-all-devices`
 - `signup-login-set-access-code`
+- `signup-login-signup`
+- `signup-login-signup-get`
 - `signup-login-user-login`
 - `signup-login-user-logout`
 

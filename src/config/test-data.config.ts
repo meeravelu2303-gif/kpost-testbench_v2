@@ -70,6 +70,15 @@ const schema = z.object({
   /** An account that does not exist — the "not found" path, and the enumeration probe. */
   kpostIdAbsent: z.string().min(3).default('no.such.user.9f2a@kpost.in'),
 
+  /**
+   * A KPost ID + mobile reserved for REGISTRATION on the disposable test DB (OTP_TEST_GATEWAY). Kept
+   * separate from `kpostIdAbsent` so a signup does not make the enumeration read ("is it available?")
+   * see it as taken. Allowlisted by the QA-identifier guard. On a fresh/reset test DB a signup
+   * succeeds; on a re-run it is "already exists" (BR-SL / BR-S02) — both are valid assertions.
+   */
+  signupKpostId: z.string().min(3).default('qabench.signup@kpost.in'),
+  signupMobile: z.string().min(6).default('9000000777'),
+
   /** A mobile number that IS registered. */
   mobileExists: z.string().min(6).default('9000000949'),
   /** A mobile number that is NOT registered. */
@@ -150,6 +159,8 @@ const SOURCES = {
   personal5KpostId: 'QA_PERSONAL_5_KPOST_ID',
   personal6KpostId: 'QA_PERSONAL_6_KPOST_ID',
   kpostIdAbsent: 'QA_KPOST_ID_ABSENT',
+  signupKpostId: 'QA_SIGNUP_KPOST_ID',
+  signupMobile: 'QA_SIGNUP_MOBILE',
   mobileExists: 'QA_MOBILE_EXISTS',
   mobileAbsent: 'QA_MOBILE_ABSENT',
   companyId: 'QA_COMPANY_ID',

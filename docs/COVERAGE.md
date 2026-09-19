@@ -9,8 +9,8 @@ cannot drift from what is actually tested.
 | | Count |
 | - | ----: |
 | Documented (workbook, usable) | 446 |
-| **Registered & tested** | **345** |
-| — of those, run on live | 121 |
+| **Registered & tested** | **349** |
+| — of those, run on live | 124 |
 | In "built" modules | 423 |
 
 | Module | Documented | Tested | Live | Status | Note |
@@ -24,7 +24,7 @@ cannot drift from what is actually tested.
 | `contacts` | 16 | 16 | 8 | built | address book — reads live, writes gated lifecycle |
 | `dairyschedule` | 14 | 14 | 5 | built | KDiary — schedules/events/reports; reads live, writes gated |
 | `kword` | 14 | 14 | 1 | built | KOS/KWord — document CRUD; reads live, writes gated (API-only) |
-| `signuplogin` | 12 | 8 | 6 | built | login & session; signup out of scope (OTP-gated) |
+| `signuplogin` | 12 | 12 | 9 | built | login & session; signup out of scope (OTP-gated) |
 | `group` | 11 | 11 | 0 | built | group membership (FR-K06) |
 | `generalsetting` | 7 | 7 | 2 | built | Settings — theme/font/notifications; reads live, writes gated |
 | `ai` | 4 | 4 | 1 | built | KOS K-AI — sessions read live; generation metered/external |
@@ -120,13 +120,6 @@ cannot drift from what is actually tested.
 **`kmail`** (1) — built
 
 - `/kmail5/v2/kmailData/getKloudUsedData`
-
-**`signuplogin`** (4) — built
-
-- `/v2/signupLogin/adminRegistration/`
-- `/v2/signupLogin/kpostIdExist/`
-- `/v2/signupLogin/kpostIDsuggestionList/`
-- `/v2/signupLogin/signup/`
 
 **`other`** (1) — backlog
 

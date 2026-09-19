@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **118** |
-| Blocked | 218 |
-| Total registered | 336 |
+| **Runs on live** | **121** |
+| Blocked | 220 |
+| Total registered | 341 |
 
 ---
 
-## Runs on live — 118
+## Runs on live — 121
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -115,6 +115,9 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/signupLogin/generateJWTokens/` | Login & session |
 | `GET` | `/v2/signupLogin/getActiveSession` | Login & session |
 | `POST` | `/v2/signupLogin/getLoginHistory` | Login & session |
+| `POST` | `/v2/signupLogin/kpostIdExist/` | Login & session |
+| `POST` | `/v2/signupLogin/kpostIDsuggestionList/` | Login & session |
+| `GET` | `/v2/signupLogin/signup/` | Login & session |
 | `POST` | `/v2/signupLogin/userLogin/` | Login & session |
 | `POST` | `/v2/signupLogin/userLogout/` | Login & session |
 | `POST` | `/v2/dashboard/homeDashboardMsgs/` | other |
@@ -144,7 +147,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 218
+## Blocked on live — 220
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -314,7 +317,9 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/kword/share` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kword/update` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | Login & session | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
+| `POST` | `/v2/signupLogin/adminRegistration/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `POST` | `/v2/signupLogin/setAccessCode` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/signupLogin/signup/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/profile/changePassword` | Profile | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/profile/convertBase64ToImage` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |

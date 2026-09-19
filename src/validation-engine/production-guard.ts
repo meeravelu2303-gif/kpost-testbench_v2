@@ -28,6 +28,13 @@ export interface SafetyFlags {
   writeFuzz?: boolean;
   /** The target is a throwaway test database (see env `TEST_DB_MODE`); required for `writeFuzz`. */
   testDbMode?: boolean;
+  /**
+   * The target env's OTP subsystem is a TEST GATEWAY (no real SMS/e-mail; `123456` validates). When
+   * set together with `testDbMode`, it lifts the OTP/SMS kill-switch for `otpDependent` endpoints ONLY
+   * (see env `OTP_TEST_GATEWAY`), so signup/registration/device/forgot-password/validate flows run on
+   * the disposable test DB. Never unlocks a non-`otpDependent` write; the QA-identifier guard stays armed.
+   */
+  otpTestGateway?: boolean;
 }
 
 /**
@@ -85,6 +92,7 @@ export function destructiveBlockReason(
     mockApi: env.MOCK_API,
     writeFuzz: env.WRITE_FUZZ,
     testDbMode: env.TEST_DB_MODE,
+    otpTestGateway: env.OTP_TEST_GATEWAY,
   },
 ): string | undefined {
   /*
@@ -100,11 +108,37 @@ export function destructiveBlockReason(
   // A path/label backstop: even if an endpoint were mis-flagged (no `otpDependent`/`external`), any
   // OTP / SMS / send-code / forgot-password path is caught here so it can NEVER send against a real host.
   const looksLikeSmsSender = /otp|sms|sendcode|forgotpassword|sentkpostidsms/i.test(endpoint.label);
+  const isOtpFlow = Boolean(endpoint.otpDependent) || looksLikeSmsSender;
+  /*
+   * A few `otpDependent` writes would destroy the RUNNING session — deactivate our own account, or
+   * displace it by re-designating the primary device. Blind engine fuzzing of those on `kpost:deep`
+   * would break the run (every later login fails) and, for deactivate, take the QA account offline.
+   * So they stay blocked even on the test gateway; a deliberate lifecycle on a throwaway account is
+   * the right way to exercise them, not the fuzzer. (Secondary-device + registration are fine.)
+   */
+  const isSessionDestroyer =
+    /deactivat|delete\s*account|close\s*account|setdeviceasprimary|updatedeviceasprimary/i.test(
+      endpoint.label,
+    );
+  /*
+   * ## TEST-GATEWAY unlock for the OTP flows
+   *
+   * On a disposable test DB whose OTP subsystem is a CONFIRMED test gateway (`OTP_TEST_GATEWAY=true`,
+   * no real SMS/e-mail, `123456` validates), the OTP flows are opened end to end — signup, registration,
+   * device designation, forgot-password, validate. It requires BOTH flags (`otpTestGateway` AND
+   * `testDbMode`, the disposable-DB contract, exactly like WRITE_FUZZ) and opens ONLY `otpDependent` /
+   * SMS endpoints (never a session-destroyer, never a non-OTP `external`/`global` write). The
+   * QA-identifier guard is a SEPARATE control and stays armed, so every id is still confined to us.
+   */
+  const otpTestAuthorized =
+    flags.otpTestGateway === true && flags.testDbMode === true && isOtpFlow && !isSessionDestroyer;
+
   if (
     realHost &&
-    (endpoint.otpDependent || endpoint.sideEffect === 'external' || looksLikeSmsSender)
+    (endpoint.otpDependent || endpoint.sideEffect === 'external' || looksLikeSmsSender) &&
+    !otpTestAuthorized
   ) {
-    return `${endpoint.label}: sends a real OTP/SMS/e-mail — BLOCKED against any real host (SMS kill-switch); it may run only against the bundled mock`;
+    return `${endpoint.label}: sends a real OTP/SMS/e-mail — BLOCKED against any real host (SMS kill-switch); it may run only against the bundled mock or a confirmed test gateway (OTP_TEST_GATEWAY+TEST_DB_MODE)`;
   }
   /*
    * ## On the live application, default deny
@@ -151,7 +185,13 @@ export function destructiveBlockReason(
     endpoint.destructive === true &&
     (endpoint.sideEffect ?? 'data') === 'data';
 
-  if (isLive && !endpoint.productionSafe && !liveWriteAuthorized && !writeFuzzAuthorized) {
+  if (
+    isLive &&
+    !endpoint.productionSafe &&
+    !liveWriteAuthorized &&
+    !writeFuzzAuthorized &&
+    !otpTestAuthorized
+  ) {
     return (
       `${endpoint.label} is not cleared for the live application ` +
       `(no productionSafe flag — see src/api/registry/endpoint-definition.ts)`
@@ -165,7 +205,7 @@ export function destructiveBlockReason(
    * and 16 endpoints reporting it would bury the findings that matter. `sends` is blocked for the
    * opposite reason — it *would* succeed, and deliver a real message.
    */
-  if (isLive && endpoint.otpDependent) {
+  if (isLive && endpoint.otpDependent && !otpTestAuthorized) {
     return `${endpoint.label} ${OTP_REASONS[endpoint.otpDependent]} (npm run contract:otp)`;
   }
 
@@ -185,7 +225,8 @@ export function destructiveBlockReason(
   const sideEffect = endpoint.sideEffect ?? 'data';
 
   if (isLive) {
-    if (sideEffect !== 'data') {
+    // The OTP/signup flows (external/global) are authorized on the disposable test gateway above.
+    if (sideEffect !== 'data' && !otpTestAuthorized) {
       return (
         `${endpoint.label} ${REASONS[sideEffect]} and TEST_ENV=production ` +
         `(ALLOW_DESTRUCTIVE_TESTS does not apply to the live application)`

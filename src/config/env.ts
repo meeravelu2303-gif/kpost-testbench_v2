@@ -99,6 +99,16 @@ const EnvSchema = z.object({
    * `TEST_DB_MODE=true`, never unlocks `external`/`global`/OTP writes, and the QA-guard stays armed.
    */
   WRITE_FUZZ: z.stringbool().default(false),
+  /**
+   * The target env's OTP subsystem is a **TEST GATEWAY** — `sendOTP`/`sendOTPtoMail` create the OTP
+   * record but deliver **no real SMS/e-mail**, and `123456` (`QA_BYPASS_OTP`) always validates. When
+   * set together with `TEST_DB_MODE=true`, it lifts the OTP/SMS kill-switch for `otpDependent`
+   * endpoints ONLY (signup, registration, device designation, forgot-password, deactivate, validate),
+   * so those flows run end to end on the disposable test DB. It changes nothing for a non-`otpDependent`
+   * endpoint, and the QA-identifier guard stays armed. **Set it ONLY when the OTP gateway is genuinely a
+   * test gateway** — against a real gateway it would send real messages. Off by default.
+   */
+  OTP_TEST_GATEWAY: z.stringbool().default(false),
 
   HEADLESS: z.stringbool().default(true),
   WORKERS: z.coerce.number().int().positive().optional(),

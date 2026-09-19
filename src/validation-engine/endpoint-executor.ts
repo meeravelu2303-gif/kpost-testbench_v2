@@ -132,6 +132,8 @@ export class EndpointExecutor {
       // Deep write-fuzz on a disposable test DB (both required); opens only `data` writes.
       writeFuzz: env.WRITE_FUZZ,
       testDbMode: env.TEST_DB_MODE,
+      // OTP test-gateway (with TEST_DB_MODE): opens the OTP/signup flows on the disposable test DB.
+      otpTestGateway: env.OTP_TEST_GATEWAY,
     });
     if (blocked) throw new ProductionSafetyError(blocked);
 

@@ -242,6 +242,13 @@ function qaOwnedValues(): Set<string> {
     testData.kpostIdAbsent,
     testData.mobileAbsent,
     testData.companyNameAbsent,
+    /*
+     * The reserved REGISTRATION identity (OTP_TEST_GATEWAY, disposable test DB). A signup creates a
+     * brand-new account — it names no existing user — and these values are ours to use, so they are
+     * allowlisted like the absent fixtures. Off the test env the OTP flows are blocked upstream anyway.
+     */
+    testData.signupKpostId,
+    testData.signupMobile,
   ];
   return new Set(owned.map((value) => String(value).trim().toLowerCase()).filter(Boolean));
 }

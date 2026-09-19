@@ -228,6 +228,37 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-19 — OTP test gateway: signup + all OTP flows unlocked on the disposable test DB
+
+The owner confirmed testingapi's OTP subsystem is a **TEST GATEWAY** (no real SMS/e-mail; `123456`
+validates) and asked to cover every KPost endpoint, skipping nothing. So the SMS/OTP kill-switch — which
+hard-blocked ~15 OTP-gated endpoints + signup in EVERY mode — was given a controlled unlock.
+
+**`OTP_TEST_GATEWAY` flag (with `TEST_DB_MODE`, the disposable-DB contract, exactly like WRITE_FUZZ).**
+When both are set, `production-guard.ts` clears an `otpDependent`/SMS endpoint through all four blocks
+(kill-switch, productionSafe gate, OTP skip, side-effect gate). It opens ONLY `otpDependent`/SMS
+endpoints — a non-OTP `external`/`global` write is untouched — and the QA-identifier guard stays armed.
+**Critical carve-out:** SESSION-DESTROYERS stay blocked even on the gateway (`deactivateAccount`,
+`setDeviceAsPrimary`, `updateDeviceAsPrimary`) — blind fuzzing them on `kpost:deep` would take the QA
+account offline / displace its session mid-run; a deliberate lifecycle on a throwaway account is the way
+to exercise those, not the fuzzer.
+
+**Signup re-added.** `signup.api.ts` (deleted when signup was out-of-scope) is back with the 5 endpoints
+(signup, signup-GET, adminRegistration, kpostIdExist, kpostIDsuggestionList), payloads from the workbook.
+Registration uses reserved, allowlisted `testData.signupKpostId`/`signupMobile` (env `QA_SIGNUP_*`, kept
+separate from the absent fixtures so a signup doesn't make the "is it available?" read see it as taken).
+`SIGNUP_OUT_OF_SCOPE` is now empty. **`otp-signup-lifecycle.spec.ts`** drives the chains end to end
+(sendOTP → validateOTP → sendOTPtoMail → validateMailOTP → signup; forgot-password → validate → update),
+gated on `OTP_TEST_GATEWAY`+`TEST_DB_MODE`.
+
+**Commands:** `OTP_TEST_GATEWAY=true` added to all four `kpost*` scripts. So `npm run kpost` drives the
+OTP/signup flows + runs the full matrix on the non-destructive OTP reads (validateOTP); `npm run kpost:deep`
+adds the write-fuzz matrix on the OTP writes too (senders, registration). `.env` carries the flag +
+`QA_SIGNUP_*` + a `QA_FORGOT_PASSWORD_KPOST_ID` note. Guards: `live-safety.spec.ts` pins the unlock (opens
+on both flags, still blocked without TEST_DB_MODE, non-OTP writes stay blocked, session-destroyers stay
+blocked). `npm run check` clean; **107 framework guards pass** (was 106); signup coverage 0 uncovered.
+Reset the disposable DB between full runs (a signup cannot be deleted → a re-run is "already exists").
+
 ### 2026-09-19 — Admin OpenAPI request bodies rewritten to the owner's PDF (contract now matches reality)
 
 The owner added **`Admin_module - API Services.pdf`** to the repo root (the authoritative admin payloads)

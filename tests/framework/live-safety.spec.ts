@@ -124,6 +124,83 @@ test.describe('live-application safety @framework', () => {
     }
   });
 
+  test('OTP test-gateway: OTP_TEST_GATEWAY + TEST_DB_MODE opens the OTP flows, and NOTHING else', () => {
+    const otpSender: GuardedEndpoint = {
+      label: 'POST /v2/common/sendOTP/',
+      destructive: true,
+      otpDependent: 'sends',
+      sideEffect: 'external',
+    };
+    const registration: GuardedEndpoint = {
+      label: 'POST /v2/signupLogin/adminRegistration/',
+      destructive: true,
+      otpDependent: 'requires',
+      sideEffect: 'global',
+    };
+    const gateway = {
+      isProduction: true,
+      allowDestructive: false,
+      mockApi: false,
+      otpTestGateway: true,
+      testDbMode: true,
+    };
+
+    // BOTH flags → the OTP/signup flows are cleared on the disposable test gateway.
+    expect(
+      destructiveBlockReason(otpSender, gateway),
+      'sendOTP runs on the test gateway',
+    ).toBeUndefined();
+    expect(
+      destructiveBlockReason(registration, gateway),
+      'registration runs on the test gateway',
+    ).toBeUndefined();
+
+    // The flag WITHOUT TEST_DB_MODE does NOT unlock — the disposable-DB contract is required (as WRITE_FUZZ).
+    expect(
+      destructiveBlockReason(otpSender, { ...gateway, testDbMode: false }),
+      'no TEST_DB_MODE → OTP sender still blocked',
+    ).toMatch(/kill-switch|OTP|SMS/i);
+
+    // The gateway flag opens ONLY otpDependent/SMS endpoints — a non-OTP external/global write stays blocked.
+    const nonOtpExternal: GuardedEndpoint = {
+      label: 'POST /admin/addingUserByAdmin',
+      destructive: true,
+      sideEffect: 'external',
+    };
+    const nonOtpGlobal: GuardedEndpoint = {
+      label: 'POST /v2/common/updateFlutterAppVersion',
+      destructive: true,
+      sideEffect: 'global',
+    };
+    expect(
+      destructiveBlockReason(nonOtpExternal, gateway),
+      'a non-OTP external write is NOT opened by the gateway flag',
+    ).toBeTruthy();
+    expect(
+      destructiveBlockReason(nonOtpGlobal, gateway),
+      'a non-OTP global write is NOT opened by the gateway flag',
+    ).toBeTruthy();
+
+    // Session-destroyers stay blocked even on the gateway — the fuzzer must not deactivate our own
+    // account or displace its session by re-designating the primary device.
+    for (const destroyer of [
+      'POST /v2/profile/deactivateAccount/',
+      'POST /v2/profile/setDeviceAsPrimary/',
+      'POST /v2/profile/updateDeviceAsPrimary/',
+    ]) {
+      const ep: GuardedEndpoint = {
+        label: destroyer,
+        destructive: true,
+        sideEffect: 'global',
+        otpDependent: 'requires',
+      };
+      expect(
+        destructiveBlockReason(ep, gateway),
+        `${destroyer} must stay blocked even on the OTP test gateway`,
+      ).toBeTruthy();
+    }
+  });
+
   test('every registered OTP/SMS sender is blocked against a real host', () => {
     // No definition can slip through: every OTP sender in the real registry is refused on a real host.
     const senders = apiRegistry
