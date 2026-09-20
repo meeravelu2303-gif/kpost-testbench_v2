@@ -106,8 +106,7 @@ export const test = base.extend<TestFixtures>({
    * passing feature (the failure is reported on its own dimension), and a cleanup problem is never
    * an application defect. Nothing here reaches Bugzilla.
    */
-  // eslint-disable-next-line no-empty-pattern
-  resources: async ({}, use, testInfo) => {
+  resources: async ({ endpoints }, use, testInfo) => {
     const { id: testCaseId } = deriveTestCaseId({
       file: testInfo.file,
       titlePath: testInfo.titlePath,
@@ -118,17 +117,27 @@ export const test = base.extend<TestFixtures>({
 
     await use(coordinator);
 
-    const summary = await coordinator.cleanupAll();
-    if (summary.status === 'NOT_REQUIRED') return;
+    /*
+     * Every request a cleanup operation makes is marked `cleanup` for the duration, so a teardown
+     * 5xx is recorded on the cleanup dimension instead of becoming a product-defect candidate
+     * (Phase 3.1). Marking it HERE rather than in each closure is deliberate: a closure that forgets
+     * the flag is how the original defect arose, and this boundary cannot be forgotten.
+     */
+    const summary = await endpoints.withPhase('cleanup', () => coordinator.cleanupAll());
+    const serverErrors = endpoints.cleanupFindings;
+    if (summary.status === 'NOT_REQUIRED' && serverErrors.length === 0) return;
     // Reported on its own dimension — never merged into the test's status, never sent to Bugzilla.
     testInfo.annotations.push({
       type: 'cleanup-status',
       description:
         `${summary.status}: ${summary.cleaned}/${summary.registered} cleaned` +
-        (summary.failed ? `, ${summary.failed} failed` : ''),
+        (summary.failed ? `, ${summary.failed} failed` : '') +
+        (serverErrors.length ? `, ${serverErrors.length} server error(s) during cleanup` : ''),
     });
     await testInfo.attach('cleanup-summary', {
-      body: JSON.stringify(summary, null, 2),
+      // `serverErrors` keeps a 5xx during teardown VISIBLE. It is reported here and nowhere else:
+      // it is not a FlowFinding, so it never reaches the Bugzilla pipeline.
+      body: JSON.stringify({ ...summary, serverErrors }, null, 2),
       contentType: 'application/json',
     });
   },

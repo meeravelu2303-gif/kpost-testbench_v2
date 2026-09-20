@@ -70,7 +70,12 @@ export type CleanupStatus = 'SUCCESS' | 'FAILED' | 'NOT_REQUIRED';
 
 /** Why a cleanup did not succeed — a category a human can act on, plus a safe message. */
 export type CleanupErrorCategory =
-  'no-handler' | 'operation-threw' | 'not-owned' | 'ledger-rejected';
+  | 'no-handler'
+  | 'operation-threw'
+  /** The operation ran and returned, but its response does not confirm the resource is gone. */
+  | 'operation-failed'
+  | 'not-owned'
+  | 'ledger-rejected';
 
 export interface CleanupFailure {
   kind: string;
@@ -215,9 +220,21 @@ export class CleanupCoordinator {
 
     this.attempted += 1;
     try {
-      const result = await operation(record);
-      this.options.ledger.markCleanupSucceeded(record, summarizeResult(result));
-      this.cleaned += 1;
+      /*
+       * A cleanup operation can fail in two ways, and both must land on CLEANUP_FAILED: it can
+       * THROW, or it can RETURN a response that does not confirm the deletion. The second is the
+       * common one — every cleanup closure in this repo returns the delete's HTTP status rather than
+       * throwing — and treating a returned 500 as success would record "the resource is gone" when
+       * the host said it crashed. See `interpretCleanupResult`.
+       */
+      const verdict = interpretCleanupResult(await operation(record));
+      if (verdict.cleaned) {
+        this.options.ledger.markCleanupSucceeded(record, verdict.summary);
+        this.cleaned += 1;
+      } else {
+        this.options.ledger.markCleanupFailed(record, verdict.reason);
+        this.fail(record, operationName, 'operation-failed', verdict.reason);
+      }
     } catch (error) {
       const message = describeError(error);
       this.options.ledger.markCleanupFailed(record, message);
@@ -275,14 +292,68 @@ function describeError(error: unknown): string {
   return String(error);
 }
 
-/** A short, safe note of what the operation returned — a status code is the useful case. */
-function summarizeResult(result: unknown): string {
-  if (result === undefined || result === null) return 'deleted';
-  if (typeof result === 'number') return `deleted (${result})`;
-  if (typeof result === 'string') return redactForJournal(result).slice(0, 120);
+/** Whether the operation's return value CONFIRMS the resource is gone, and a safe note either way. */
+type CleanupVerdict = { cleaned: true; summary: string } | { cleaned: false; reason: string };
+
+/**
+ * A returned HTTP status, judged.
+ *
+ * `CLEANED` is terminal and means "the resource is gone" — so it may only be recorded when the host
+ * actually said so. Anything else stays `CLEANUP_FAILED`, which is both honest and *retryable*
+ * (`CLEANUP_FAILED → CLEANUP_PENDING` is a legal transition; `CLEANED` is a dead end). Recording an
+ * unconfirmed deletion as CLEANED would therefore also foreclose the recovery pass.
+ *
+ * A 4xx is a failure for the same reason as a 5xx, not a lesser one: the host REJECTED the delete,
+ * so nothing was removed. The distinction between "rejected" and "crashed" is preserved in the
+ * reason text, which is what a human triaging the cleanup summary needs.
+ */
+function httpVerdict(status: number): CleanupVerdict {
+  if (status >= 200 && status < 300) return { cleaned: true, summary: `deleted (${status})` };
+  if (status === 0) {
+    return { cleaned: false, reason: 'no HTTP response — the delete never reached the host' };
+  }
+  return {
+    cleaned: false,
+    reason: `the host answered HTTP ${status} — the resource is NOT confirmed deleted`,
+  };
+}
+
+/**
+ * What a cleanup operation's RETURN VALUE says about the resource.
+ *
+ * The contract it formalises is the one the closures already follow: **a returned number, or an
+ * object carrying a numeric `status`, is the delete's HTTP status** — every cleanup closure in this
+ * repo returns exactly that, and the previous code already rendered it as `deleted (<status>)`. The
+ * only change is that the status is now judged rather than merely quoted.
+ *
+ * Everything else keeps its old meaning, so no existing or future closure has to learn a new rule:
+ * returning nothing (the throw-on-failure style) is success, and a string is a caller-supplied note.
+ * Nobody has to remember special handling for a 5xx — the boundary does it once, for every operation.
+ */
+function interpretCleanupResult(result: unknown): CleanupVerdict {
+  if (result === undefined || result === null) return { cleaned: true, summary: 'deleted' };
+  if (typeof result === 'number' && isHttpStatus(result)) return httpVerdict(result);
+  if (typeof result === 'string') {
+    return { cleaned: true, summary: redactForJournal(result).slice(0, 120) };
+  }
   if (typeof result === 'object' && 'status' in result) {
     const { status } = result;
-    if (typeof status === 'number') return `deleted (${status})`;
+    if (typeof status === 'number' && isHttpStatus(status)) return httpVerdict(status);
   }
-  return 'deleted';
+  return { cleaned: true, summary: 'deleted' };
+}
+
+/**
+ * Whether a returned number is an HTTP status at all.
+ *
+ * The range check is not a heuristic — HTTP defines status codes as 100–599 — and it matters,
+ * because a number is an easy thing to return by accident: `cleanup: () => list.push(id)` yields the
+ * array's LENGTH. Without this, such a closure would report a spurious cleanup failure, and the
+ * boundary would have introduced a new footgun while fixing another.
+ *
+ * `0` is included deliberately: it is the bench's own sentinel for "no HTTP response"
+ * (`ApiResponseWrapper` sets it on a transport failure), so it must be judged, not ignored.
+ */
+function isHttpStatus(value: number): boolean {
+  return value === 0 || (Number.isInteger(value) && value >= 100 && value <= 599);
 }

@@ -223,10 +223,9 @@ test.describe('QA-identifier guard · runtime-owned resources', () => {
       body: { messageIds: [msgID], groupFlag: false },
     });
 
-    expect(
-      foreignIdentifiers(payload(OWNED_MESSAGE_ID)),
-      'before tracking: refused',
-    ).toHaveLength(1);
+    expect(foreignIdentifiers(payload(OWNED_MESSAGE_ID)), 'before tracking: refused').toHaveLength(
+      1,
+    );
 
     ledgerOwningOneMessage();
 

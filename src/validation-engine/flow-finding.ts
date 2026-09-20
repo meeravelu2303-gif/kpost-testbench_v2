@@ -28,9 +28,47 @@ export interface FlowFinding {
   correlationId: string;
 }
 
+/**
+ * A server error observed while the framework was CLEANING UP, not while the test was acting.
+ *
+ * Phase 3 §12. It is deliberately a different type from `FlowFinding`, and deliberately has **no**
+ * `…Reports()` converter: a `FlowFinding` becomes a `ValidationReport` and travels the whole Bugzilla
+ * pipeline, and a teardown delete must never do that. Two reasons, both measured:
+ *
+ *  - a cleanup call runs AFTER the test's assertions, so its response says nothing about the
+ *    behaviour under test — `testStatus` and `cleanupStatus` are independent dimensions (Phase 2.5),
+ *    and folding a teardown 5xx into the functional pipeline collapses them; and
+ *  - cleanup runs last, when the environment is most likely to be mid-teardown, session-displaced or
+ *    rate-limited, so it is the weakest possible evidence of an application defect.
+ *
+ * It is NOT suppression. The record is kept, surfaced on the `cleanup-summary` attachment and
+ * annotated on the test, so a failing teardown stays visible — it simply stays on the cleanup
+ * dimension instead of becoming a product defect. Deciding whether one of these IS a defect needs the
+ * evidence and classification work of Phase 3.2+, and needs a test that exercises the delete as its
+ * ACTION rather than as a side effect.
+ */
+export interface CleanupServerError {
+  /** Endpoint id, e.g. `katchup-delete-message`. */
+  endpointId: string;
+  /** `METHOD /path`, for the report. */
+  endpoint: string;
+  method: HttpMethod;
+  status: number;
+  /** The `SendOptions.label` of the call, e.g. `feature:cleanup`. */
+  label: string;
+  correlationId: string;
+  /** Truncated and masked — this is reported, so it must be safe to read. */
+  body: string;
+}
+
 /** HTTP 5xx and above — a server fault, never the caller's. */
 export function isServerError(status: number): boolean {
   return status >= 500;
+}
+
+/** Keeps a cleanup body short and safe; it is attached to the test, so it must never carry a secret. */
+export function describeCleanupBody(body: string): string {
+  return maskString(body.slice(0, 300));
 }
 
 const FLOW_VALIDATOR = 'flow.server-error';

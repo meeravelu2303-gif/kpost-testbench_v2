@@ -18,13 +18,41 @@ import { newCorrelationId } from '@utils/correlation';
 import { deepMerge, getPath } from '@utils/json';
 import type { Logger } from '@utils/logger';
 import { maskString } from '@utils/masking';
-import { type BusinessRuleFinding, type FlowFinding, isServerError } from './flow-finding';
+import {
+  describeCleanupBody,
+  type BusinessRuleFinding,
+  type CleanupServerError,
+  type FlowFinding,
+  isServerError,
+} from './flow-finding';
 import { destructiveBlockReason, ProductionSafetyError } from './production-guard';
 import { assertQaOwnedIdentifiers } from './qa-identifier-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
 
 /** How a request authenticates: as a role, as a specific principal, or with a raw header. */
 export type AuthMode = { role: Role } | { principal: Principal } | { header: string | undefined };
+
+/**
+ * Which part of the test lifecycle a request belongs to.
+ *
+ * Phase 3 §12/§14. Before this, every call through the chokepoint looked alike, so a teardown delete
+ * that 5xx'd was indistinguishable from the behaviour under test and became a product-defect
+ * candidate (`FlowFinding`). The phase is what separates them.
+ *
+ * **Exactly three, and deliberately no more.** The Phase 3 design sketched five; the other two are
+ * not warranted by the architecture as it stands, and an unused phase is a value nobody sets
+ * correctly:
+ *
+ *  - a **probe** already identifies itself through `SendOptions.label`
+ *    (`authentication.missing-token`, …) and is engine-internal — the engine never sets
+ *    `allowLiveWrite`, so a probe cannot reach the flow-finding branch at all; and
+ *  - a **verification** read is indistinguishable from an action for every decision made here: both
+ *    are the behaviour under test, and both should report a server error.
+ *
+ * Add a fourth only when a decision actually needs to tell it apart from these three.
+ */
+export const EXCHANGE_PHASES = ['precondition', 'action', 'cleanup'] as const;
+export type ExchangePhase = (typeof EXCHANGE_PHASES)[number];
 
 export interface SendOptions {
   /** Identifies the exchange in logs and reports, e.g. `authentication.missing-token`. */
@@ -45,6 +73,13 @@ export interface SendOptions {
    * blocked. The QA-identifier guard still confines the payload to accounts we own.
    */
   allowLiveWrite?: boolean;
+  /**
+   * Which part of the lifecycle this call belongs to. Defaults to `action`, so every existing call
+   * site keeps its exact behaviour. An ambient scope opened with `withPhase()` takes precedence,
+   * because the framework sets that at a boundary it owns (the cleanup fixture) and a closure running
+   * inside it cannot opt back out.
+   */
+  phase?: ExchangePhase;
 }
 
 const MAX_ERROR_BODY_CHARS = 300;
@@ -78,6 +113,18 @@ export class EndpointExecutor {
    * a real rule violation — never a bench/selector failure — and the `endpoints` fixture files them.
    */
   readonly businessRuleFindings: BusinessRuleFinding[] = [];
+
+  /**
+   * Server errors seen while the framework was CLEANING UP (`phase: 'cleanup'`).
+   *
+   * Kept apart from `flowFindings` on purpose: these are reported on the cleanup dimension and never
+   * become a product-defect candidate. Surfaced by the `resources` fixture on the `cleanup-summary`
+   * attachment, so a failing teardown stays visible — see `CleanupServerError`.
+   */
+  readonly cleanupFindings: CleanupServerError[] = [];
+
+  /** The phase of an open `withPhase()` scope, if any. */
+  private ambientPhase: ExchangePhase | undefined;
 
   /**
    * Record a confirmed business-rule violation for filing. Call this ONLY when the response/state
@@ -134,6 +181,14 @@ export class EndpointExecutor {
     spec: RequestSpec,
     options: SendOptions,
   ): Promise<ApiResponseWrapper> {
+    /*
+     * An ambient scope wins over a per-call value: `withPhase()` is opened by the framework at a
+     * boundary it owns (the cleanup fixture), so a closure running inside cleanup cannot opt itself
+     * back into `action`. Absent both, everything is an action — which is exactly what every call
+     * site did before this field existed.
+     */
+    const phase: ExchangePhase = this.ambientPhase ?? options.phase ?? 'action';
+
     const blocked = destructiveBlockReason(endpoint, {
       isProduction: env.IS_PRODUCTION,
       allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
@@ -189,21 +244,63 @@ export class EndpointExecutor {
     // product defect (a server must never 5xx — even bad input warrants a 4xx). Collected here, at
     // the one chokepoint every flow call passes through, and filed by the fixture. A 4xx is NOT
     // collected: it might be our payload, and the feature spec's own assertions surface it.
+    //
+    // ...unless the framework was CLEANING UP. A teardown delete runs after the assertions, on the
+    // cleanup dimension, and its response says nothing about the behaviour under test — so it is
+    // recorded as a cleanup server error and reported there, never as a product defect.
     if (
       options.allowLiveWrite &&
       isServerError(exchange.status) &&
       !endpoint.definition.mockFixture
     ) {
-      this.flowFindings.push({
-        endpoint,
-        method: options.method ?? endpoint.method,
-        status: exchange.status,
-        body: exchange.bodyText,
-        request: spec,
-        correlationId: exchange.correlationId,
-      });
+      if (phase === 'cleanup') {
+        this.cleanupFindings.push({
+          endpointId: endpoint.id,
+          endpoint: endpoint.label,
+          method: options.method ?? endpoint.method,
+          status: exchange.status,
+          label: options.label,
+          correlationId: exchange.correlationId,
+          body: describeCleanupBody(exchange.bodyText),
+        });
+      } else {
+        this.flowFindings.push({
+          endpoint,
+          method: options.method ?? endpoint.method,
+          status: exchange.status,
+          body: exchange.bodyText,
+          request: spec,
+          correlationId: exchange.correlationId,
+        });
+      }
     }
     return exchange;
+  }
+
+  /** The phase every request is attributed to right now, absent a per-call override. */
+  get phase(): ExchangePhase {
+    return this.ambientPhase ?? 'action';
+  }
+
+  /**
+   * Runs `fn` with every request inside it attributed to `phase`.
+   *
+   * This is how the cleanup boundary is marked: the `resources` fixture wraps `cleanupAll()`, so
+   * EVERY request a cleanup operation makes is cleanup traffic — including the ones inside helpers
+   * that know nothing about phases. Relying on each cleanup closure to pass the flag would work only
+   * until somebody writes a new one and forgets, which is precisely how the original defect arose.
+   *
+   * Restores the previous phase in a `finally`, so a throwing operation cannot leave the executor
+   * stuck in cleanup for the rest of the test.
+   */
+  async withPhase<T>(phase: ExchangePhase, fn: () => Promise<T>): Promise<T> {
+    const previous = this.ambientPhase;
+    this.ambientPhase = phase;
+    try {
+      return await fn();
+    } finally {
+      this.ambientPhase = previous;
+    }
   }
 
   /** Sends a literal request to a registered endpoint (no request factory involved). */
