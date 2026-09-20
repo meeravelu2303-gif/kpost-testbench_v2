@@ -2,8 +2,8 @@ import { env } from '@config/env';
 // An orchestrated multi-step feature flow (send → read → recall → clean up), not simple assertions;
 // the conditionals guard optional steps and best-effort cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
-import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
+import { currentSlot } from '../../../../src/test-data/index';
 import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/schemas/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
@@ -22,18 +22,13 @@ import { sendShape } from '@api/definitions/kpost/katchup/send.api';
  * Confidential-Copy secrecy rule (FR-K05 / NFR-SEC02) — the one that needs four distinct people.
  */
 
-const K = AUTH_PROFILES.kpost;
-const principal = (key: string): Principal => {
-  const found = K.principals.find((p) => p.key === key);
-  if (!found) throw new Error(`principal "${key}" is not configured`);
-  return found;
-};
-
-// The four roles the security test needs: sender, TO, visible Copy, hidden Confidential-Copy.
-const A = principal('personal'); // sender          Qatesting@
-const B = principal('victim'); // TO recipient      Qatesting2@
-const C = principal('personal-3'); // visible Copy   Qatesting3@
-const D = principal('personal-4'); // confidential   Qatesting4@
+/*
+ * The four people this flow needs, from the account pool rather than by name: sender, TO recipient,
+ * visible Copy, hidden Confidential-Copy. The pool hands this worker's logical slot four session
+ * accounts nobody else may log in as, which is what keeps a parallel run from signing this test out
+ * mid-flow. Slot 0 resolves to the same four accounts this spec has always used.
+ */
+const [A, B, C, D] = currentSlot().principals(4) as [Principal, Principal, Principal, Principal];
 
 interface Sent {
   status: number;

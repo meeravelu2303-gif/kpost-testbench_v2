@@ -11,6 +11,7 @@ import { ValidationEngine, type ValidationEngineDeps } from '@engine/validation-
 import { LoginPage } from '@pages/LoginPage';
 import { attachValidationReport } from '@reporting/report-attachment';
 import { businessRuleRegistry } from '@rules/index';
+import { accountPool, type SlotAccounts } from '../test-data/index';
 import { newCorrelationId } from '@utils/correlation';
 import { createLogger, type Logger } from '@utils/logger';
 import { validationRegistry } from '@validators/index';
@@ -23,6 +24,11 @@ interface TestFixtures {
   apiClients: ApiClientPool;
   /** Calls registered endpoints directly (integration tests, setup). */
   endpoints: EndpointExecutor;
+  /**
+   * The accounts this worker's logical slot owns (Phase 2.3). A spec asks the fixture instead of
+   * naming a principal, so two workers can never log in as the same account.
+   */
+  accounts: SlotAccounts;
   /** Builds an engine; overrides let framework tests swap registries or reporting. */
   createValidationEngine: (overrides?: Partial<ValidationEngineDeps>) => ValidationEngine;
   validationEngine: ValidationEngine;
@@ -63,6 +69,16 @@ export const test = base.extend<TestFixtures>({
     ]) {
       await attachValidationReport(testInfo, report);
     }
+  },
+
+  /*
+   * Account ownership is positional: the slot is Playwright's `parallelIndex`, which a replacement
+   * worker inherits after a crash — unlike `workerIndex`, which would hand a restarted worker a
+   * different slice. The pool itself enforces disjointness; this fixture only says which slot.
+   */
+  // eslint-disable-next-line no-empty-pattern
+  accounts: async ({}, use, testInfo) => {
+    await use(accountPool.slot(testInfo.parallelIndex));
   },
 
   createValidationEngine: async ({ apiClients, log, playwright }, use, testInfo) => {

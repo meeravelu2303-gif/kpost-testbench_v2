@@ -234,6 +234,57 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-20 — Phase 2.3: the account pool — session ownership by logical slot
+
+Third step of the approved Phase 2 design (§17.3). **Intent:** make the session collision that
+produces false bugs _structurally impossible_, and give the bench one place that decides who a test
+may log in as. **Parallelism is NOT enabled by this step** — every live profile still runs one worker.
+
+**The failure being designed out.** A KPost account allows ONE active session; a second login
+displaces the first. Two workers on the same account sign each other out, and the victim sees
+401/403 on calls that were fine a moment ago — which reads as an application defect and can reach a
+developer as a false bug. Ten specs picked their own principals by key, so nothing could see it coming.
+
+- **`src/test-data/account-pool.ts`** — a fixed **positional partition**: slot _i_ owns accounts
+  `[i·n, i·n+n)`. No leasing, no lock files, no heartbeats: two slots cannot collide by construction,
+  which a unit test proves, and a crashed worker's replacement inherits the SAME slot, so there is
+  nothing to reclaim. **Slot identity is `parallelIndex`, never `workerIndex`** (the latter changes on
+  restart).
+- **Inventory is configuration, never a constant.** The session inventory is every configured
+  principal with `role: USER` and tier `PERSONAL`, in `auth-profile.ts` declaration order — which
+  already yields `personal, victim, personal-3..6`. **No account name and no count appear in the
+  pool**: adding `QA_PERSONAL_7_*` plus its principal raises capacity on its own. Verified at
+  simulated inventories of 6, 10 and 20.
+- **Capacity = floor(inventory ÷ accounts-per-slot)**, with the per-slot size taken from the run
+  profile's `accounts.sessionPerWorker` (declared in Phase 2.1). Over-capacity is **refused with the
+  arithmetic**, never clamped and never wrapped around to slot 0 — silently reusing accounts is
+  exactly the collision this exists to prevent.
+- **Account classes:** session (exclusive — we log in as it), reference (named in a payload only),
+  mutable (a session account whose state a test changes, so it owes a restoration). Business tiers are
+  requested by key (`named('business-m')`), never partitioned: a BUSINESS_M admin cannot stand in for
+  a BUSINESS_S one. An unconfigured key fails as a **configuration gap, not a defect**.
+- **Credentials cannot leak by accident.** `principal` is non-enumerable and every pooled object has a
+  redacting `toJSON`, so `JSON.stringify(account)` / `{...account}` yields key, role and tier only —
+  no username, no password. Pool errors name accounts by key. Guards assert all of it.
+- **`AccountPoolError`** is a distinct type, so a capacity/configuration failure is never mistaken for
+  an application assertion failure (§19 of the design). Nothing about Bugzilla changed.
+- **Integration at the fixture boundary:** an `accounts` fixture resolves `testInfo.parallelIndex` →
+  slot. The **Katchup (4 accounts) and Kall (3 accounts)** lifecycles now take their people from the
+  pool instead of a private `principal(key)` helper; **slot 0 resolves to exactly the accounts they
+  used before**, pinned by a guard, so a single-worker live run is unchanged.
+
+**Legacy account consumers remaining (documented, Phase 4):** kmail, group, profile, contacts, kdiary,
+kos, aws and admin lifecycle specs still use their own `AUTH_PROFILES.kpost.principals.find(...)`
+lookup — all single- or two-account flows. They are correct today and migrate alongside the ledger.
+
+**Verified (no KPost host contacted — the pool is a pure partition over configured principals):**
+`npm run check` clean (32 pre-existing warnings, unchanged); **195 framework guards, 191 pass / 4
+skip** (23 new); profiles 31, stable-ids 21, Bugzilla regression 43, live-safety 28 — all unchanged
+and green; both migrated specs still collect their 16 tests.
+
+**NOT implemented here:** resource ledger, durable journal, cleanup framework, lifecycle migration
+beyond the two specs, broad parallel execution, Bugzilla changes, defect-confidence gate.
+
 ### 2026-09-20 — Phase 2.2: stable test-case ids (`TC-…`), separate from every existing identity
 
 Second step of the approved Phase 2 design (§17.2). **Intent:** give every check an identity that
@@ -4558,9 +4609,9 @@ explicitly allowed.
 
 The authoritative plan is the 10-phase roadmap in `docs/PRODUCTION-READINESS-AUDIT.md` §12, refined
 for Phase 2 by `docs/PHASE-2-DESIGN.md` (§17 implementation order). **Phase 1 is DONE**;
-**Phase 2.1 (named profiles + unified runner)** and **Phase 2.2 (stable test-case ids)** are DONE
-(§8). **Next: Phase 2.3** — the account pool (§17.3), then the resource ledger + durable journal
-(§17.4). Owner decisions that gate later phases are in
+**Phase 2.1 (profiles + runner)**, **2.2 (stable test-case ids)** and **2.3 (account pool + session
+isolation)** are DONE (§8). **Next: Phase 2.4** — the resource ledger + durable journal (§17.4).
+Owner decisions that gate later phases are in
 the audit's §13 (read-only DB access, more QA accounts, a self-hosted CI runner, the CI gate policy,
 the RBAC matrix, `data-testid`).
 

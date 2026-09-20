@@ -209,6 +209,32 @@ flowchart LR
   S2["slot 2 claim(size=3)"] --> ERR["refused: pool exhausted<br/>(names the capacity and the fix)"]
 ```
 
+> **Implementation note (Phase 2.3, delivered).** Built as designed. What the repository changed
+> about the plan:
+>
+> 1. **The session inventory derives itself.** It is every configured principal with
+>    `role === 'USER'` and tier `PERSONAL`, in `auth-profile.ts` declaration order — which already
+>    yields `personal, victim, personal-3..6`. So slot 0 keeps today's accounts with **no account
+>    name or count written into the pool**; adding a principal raises capacity by itself.
+> 2. **The per-slot size comes from the run profile** (`accounts.sessionPerWorker`, declared in
+>    Phase 2.1), falling back to the whole inventory for a single-slot legacy run.
+> 3. **The API is `slot(index, size?)`** returning `SlotAccounts` (`sessions`, `session(i)`,
+>    `principals(n)`, `keys()`), plus `named(key)` for business tiers, `capacityFor`/`assertCapacity`.
+>    No claim/release call exists: with a positional partition there is nothing to release, which was
+>    the reason for choosing it.
+> 4. **Credentials cannot leak by accident:** `principal` is a non-enumerable property and every
+>    pooled object has a redacting `toJSON`, so `JSON.stringify` of an account or a slot yields keys,
+>    role and tier only.
+> 5. **Failures are `AccountPoolError`**, a distinct type, so a capacity or configuration problem is
+>    never mistaken for an application assertion failure.
+>
+> Files: `src/test-data/account-pool.ts`, `src/test-data/index.ts` (configured singleton +
+> `currentSlot()`), `accounts` fixture in `src/fixtures/index.ts`,
+> `tests/framework/account-pool.spec.ts` (23 guards). Migrated: the Katchup and Kall lifecycles.
+> **Still on the old lookup (documented, Phase 4):** the kmail, group, profile, contacts, kdiary,
+> kos, aws and admin lifecycle specs. Parallelism is **not** enabled: every live profile stays at one
+> worker.
+
 ### 5.5 API sketch
 
 ```ts

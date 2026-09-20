@@ -2,8 +2,8 @@ import { env } from '@config/env';
 // An orchestrated multi-step call lifecycle (initiate → status → members → end → clean up), not
 // simple assertions; the conditionals guard optional steps and best-effort cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
-import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
+import { currentSlot } from '../../../../src/test-data/index';
 import { KALL_STATUS } from '@api/schemas/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
@@ -33,16 +33,12 @@ import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
  *   repeat         scheduledRepeatKall (FR-C02)
  */
 
-const K = AUTH_PROFILES.kpost;
-const principal = (key: string): Principal => {
-  const found = K.principals.find((p) => p.key === key);
-  if (!found) throw new Error(`principal "${key}" is not configured`);
-  return found;
-};
-
-const A = principal('personal'); // caller           Qatesting@
-const B = principal('victim'); // callee / joiner     Qatesting2@
-const C = principal('personal-3'); // added member    Qatesting3@
+/*
+ * Caller, callee/joiner and the member added mid-call — from the account pool, so no other worker
+ * can log in as them and displace this flow's sessions. Slot 0 resolves to the same three accounts
+ * this spec has always used.
+ */
+const [A, B, C] = currentSlot().principals(3) as [Principal, Principal, Principal];
 
 /** The kallID from a create response, across the shapes the API might use. */
 function extractKallId(body: Record<string, unknown>): number | undefined {
