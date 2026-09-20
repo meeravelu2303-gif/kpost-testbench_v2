@@ -49,3 +49,31 @@ export {
   DEFAULT_EVIDENCE_FILE,
   type EvidenceSink,
 } from './evidence-journal';
+
+/**
+ * Phase 3.3 — the root-cause classifier. Still observational: it classifies, and nothing reads a
+ * classification back into Bugzilla filing.
+ */
+export {
+  CLASSIFIER_VERSION,
+  FAILURE_CLASSES,
+  REASON_CODES,
+  VIOLATION_TYPES,
+  violationTypeOf,
+  type ClassificationResult,
+  type EvidenceReference,
+  type FailureClass,
+  type MissingEvidence,
+  type ReasonCode,
+  type ViolationType,
+} from './classification';
+
+export {
+  classifyFailure,
+  decidingExchange,
+  expectedStatuses,
+  type ContractExpectation,
+  type FailureInput,
+} from './classifier';
+
+export { decidingCorrelationIds, observationsFromReport, type Observation } from './observation';

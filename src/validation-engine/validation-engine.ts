@@ -180,6 +180,12 @@ export class ValidationEngine {
        */
       evidence: selectEvidence(executor.exchangeEvidence, results),
       reachability: reachabilityOf(executor.exchangeEvidence),
+      // The endpoint's own declared contract, so a later classifier can separate an application
+      // breaking it from a check disagreeing with it (Phase 3.3).
+      contract: {
+        expectedStatus: resolved.expectedStatus,
+        maxResponseTimeMs: resolved.performance.maxResponseTimeMs,
+      },
     };
     await this.deps.onReport?.(report);
     return report;

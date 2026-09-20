@@ -10,6 +10,7 @@ export default defineConfig({
     // bugs once, from the complete merged run, never from an individual shard.
     // Evidence is persisted by its own reporter, independently of defect filing (Phase 3.2).
     ['./src/reporting/evidence-reporter.ts'],
+    ['./src/reporting/observation-reporter.ts'],
     ['./src/reporting/bugzilla-reporter.ts'],
   ],
 });

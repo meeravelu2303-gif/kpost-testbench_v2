@@ -139,6 +139,20 @@ export interface ValidationReport {
   evidence?: ExchangeEvidence[];
   /** Whether the application demonstrably handled an exchange for this endpoint (Phase 3.2). */
   reachability?: ReachabilityWitness;
+  /**
+   * What this endpoint's own registered contract declares (Phase 3.3).
+   *
+   * Carried so the classifier can tell "the application broke its contract" from "the check
+   * disagreed with the contract" without resolving the registry itself — which is what keeps the
+   * classifier a pure function. Optional, so an older report still parses.
+   */
+  contract?: {
+    expectedStatus: readonly number[];
+    /** The endpoint's latency budget, so a performance observation can name what it was judged against. */
+    maxResponseTimeMs?: number;
+    /** Reserved: the configuration declaring a capability intentionally unsupported. */
+    declaredUnsupported?: boolean;
+  };
 }
 
 type OutcomeExtras = Omit<ValidationOutcome, 'status' | 'message'>;
