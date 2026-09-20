@@ -3,6 +3,7 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 import { ROOT_DIR, VALIDATION_PROFILES } from './constants';
+import { applyProfile, assertTargetAllowed, runProfile } from './run-profiles';
 
 const testEnv = process.env.TEST_ENV || 'local';
 
@@ -14,12 +15,28 @@ const testEnv = process.env.TEST_ENV || 'local';
  */
 const dryRunFromCommand = process.env.BUGZILLA_DRY_RUN;
 
+/*
+ * The environment as the COMMAND supplied it, captured before any file is loaded. Both the dry-run
+ * rule above and the run profile below need to tell "the operator asked for this" apart from "a file
+ * happened to contain it".
+ */
+const commandEnv: Readonly<Record<string, string | undefined>> = { ...process.env };
+
 // Earlier files win, and dotenv never overrides variables already set (e.g. CI secrets),
 // so precedence is: process env > .env.<TEST_ENV> > .env
 dotenv.config({
   path: [path.join(ROOT_DIR, `.env.${testEnv}`), path.join(ROOT_DIR, '.env')],
   quiet: true,
 });
+
+/*
+ * Apply the named run profile (docs/COMMANDS.md, docs/PHASE-2-DESIGN.md §8). It fills in what the
+ * command did not state and overrides the `.env` files, so a mode means the same thing on every
+ * machine. With no RUN_PROFILE — every legacy npm script, and a bare `npx playwright test` — the
+ * default profile contributes nothing and behaviour is exactly what it was before profiles existed.
+ */
+const activeProfile = runProfile(process.env.RUN_PROFILE);
+const appliedProfileEnv = applyProfile(activeProfile, commandEnv, process.env);
 
 // Generated once in the Playwright main process; workers inherit it, so every worker,
 // log line and report entry of one run shares the same ID.
@@ -91,6 +108,8 @@ const EnvSchema = z.object({
    */
   BUGZILLA_RESOLVE_ONLY: z.stringbool().default(false),
 
+  /** Named execution profile (config/run-profiles.json); set by `scripts/bench.cjs`. */
+  RUN_PROFILE: z.string().optional(),
   VALIDATION_PROFILE: z.enum(VALIDATION_PROFILES).default('REGRESSION'),
   ALLOW_DESTRUCTIVE_TESTS: z.stringbool().default(false),
   /**
@@ -205,8 +224,38 @@ const dryRun = resolveDryRun(data.BUGZILLA_DRY_RUN, dryRunFromCommand);
 if (dryRun.forced) process.env.BUGZILLA_DRY_RUN = 'true';
 const filingArmedByFile = dryRun.forced;
 
+/*
+ * The environment guard for a PROFILED run: a profile may not be pointed at a production-looking
+ * host, nor at a target its kind forbids. It runs HERE — at configuration load, before any test
+ * executes — and no flag turns it off.
+ *
+ * It deliberately does NOT apply to the `default` profile, which is what every legacy npm command and
+ * every ad-hoc `npx playwright test` use: Phase 2.1 is additive and may not change what an existing
+ * command does. Those paths keep the protections they always had (the production guard, the OTP/SMS
+ * kill-switch and the QA-identifier guard, all unchanged). Extending the host check to them is a
+ * deliberate behaviour change and needs its own approval.
+ */
+if (activeProfile.name !== 'default') {
+  assertTargetAllowed(activeProfile, {
+    hosts: {
+      KPOST_API_BASE_URL: data.KPOST_API_BASE_URL,
+      KMAIL_API_BASE_URL: data.KMAIL_API_BASE_URL,
+      ADMIN_API_BASE_URL: data.ADMIN_API_BASE_URL,
+      API_BASE_URL: data.API_BASE_URL,
+      BASE_URL: data.BASE_URL,
+      ADMIN_UI_BASE_URL: data.ADMIN_UI_BASE_URL,
+    },
+    mockApi,
+  });
+}
+
 export const env = Object.freeze({
   ...data,
+  /** The resolved run profile — what this run IS. Consumers read it instead of guessing from flags. */
+  PROFILE: activeProfile,
+  RUN_PROFILE: activeProfile.name,
+  /** What the profile contributed (command-supplied values are absent). Reported, never secret. */
+  PROFILE_ENV: Object.freeze(appliedProfileEnv),
   BUGZILLA_DRY_RUN: dryRun.dryRun,
   /** True when a `.env` file set BUGZILLA_DRY_RUN=false and it was ignored (reported once per run). */
   BUGZILLA_DRY_RUN_FORCED: filingArmedByFile,

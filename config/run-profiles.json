@@ -1,0 +1,227 @@
+{
+  "comment": [
+    "THE authoritative registry of named run profiles (Phase 2 §17.1).",
+    "Data, not code, so the TypeScript framework and the CJS runner (scripts/bench.cjs) read the",
+    "SAME definitions instead of each keeping its own copy. Validated by a zod schema at startup",
+    "(src/config/run-profiles.ts) — a malformed profile fails the run immediately with the path to",
+    "the offending field.",
+    "Each profile reproduces exactly what its package.json command already sets; the legacy commands",
+    "are unchanged and a framework guard fails if the two ever drift.",
+    "Fields:",
+    "  targetKind   offline = no host and no mock | mock = bundled mock server | test = configured KPost test hosts",
+    "  projects     Playwright projects to run (must include a dependency project such as 'setup')",
+    "  grep         tag filter applied to the run",
+    "  testFilter   positional Playwright file filter",
+    "  flags        environment this mode sets; NEVER a secret, NEVER a host",
+    "  lifecycles   gated write flows this mode opens",
+    "  execution    mode + maxWorkers (the PROVEN ceiling; the default is always 1)",
+    "  accounts     what the mode needs from the account inventory — DECLARATIVE ONLY in Phase 2.1;",
+    "               the account pool that consumes it is a later step (§17.3)",
+    "  cleanup      what removes this mode's data today: not-applicable | spec-managed",
+    "  filing       never | command-armed (only `--file`) | resolve-only"
+  ],
+  "profiles": {
+    "framework": {
+      "description": "The bench's own guards. No network, no accounts.",
+      "targetKind": "offline",
+      "projects": ["framework"],
+      "flags": {},
+      "lifecycles": [],
+      "execution": { "mode": "parallel-safe", "maxWorkers": 8 },
+      "accounts": { "sessionPerWorker": 0, "businessKeys": [] },
+      "cleanup": "not-applicable",
+      "filing": "never"
+    },
+    "mock": {
+      "description": "Every project against the bundled mock API.",
+      "targetKind": "mock",
+      "projects": ["setup", "api", "framework", "chromium"],
+      "flags": { "MOCK_API": "true" },
+      "lifecycles": [],
+      "execution": { "mode": "parallel-safe", "maxWorkers": 4 },
+      "accounts": { "sessionPerWorker": 0, "businessKeys": [] },
+      "cleanup": "not-applicable",
+      "filing": "never"
+    },
+    "kpost": {
+      "description": "KPost API — all test types on the test DB + the write lifecycles.",
+      "targetKind": "test",
+      "projects": ["api"],
+      "grep": "@kpost-api",
+      "validationProfile": "FULL",
+      "flags": { "MOCK_API": "false", "TEST_DB_MODE": "true", "OTP_TEST_GATEWAY": "true" },
+      "lifecycles": [
+        "KATCHUP_LIFECYCLE",
+        "KALL_LIFECYCLE",
+        "PROFILE_LIFECYCLE",
+        "CONTACTS_LIFECYCLE",
+        "GROUP_LIFECYCLE",
+        "SETTINGS_LIFECYCLE",
+        "KDIARY_LIFECYCLE",
+        "KOS_LIFECYCLE",
+        "AWS_LIFECYCLE"
+      ],
+      "execution": { "mode": "sequential", "maxWorkers": 1 },
+      "accounts": { "sessionPerWorker": 4, "businessKeys": [] },
+      "cleanup": "spec-managed",
+      "filing": "command-armed"
+    },
+    "kpost-deep": {
+      "description": "KPost API + write-fuzzing on data writes. Disposable test DB only — persists junk.",
+      "targetKind": "test",
+      "requiresDisposableTarget": true,
+      "projects": ["api"],
+      "grep": "@kpost-api",
+      "validationProfile": "FULL",
+      "flags": {
+        "MOCK_API": "false",
+        "TEST_DB_MODE": "true",
+        "OTP_TEST_GATEWAY": "true",
+        "WRITE_FUZZ": "true",
+        "ALLOW_DESTRUCTIVE_TESTS": "true"
+      },
+      "lifecycles": [
+        "KATCHUP_LIFECYCLE",
+        "KALL_LIFECYCLE",
+        "PROFILE_LIFECYCLE",
+        "CONTACTS_LIFECYCLE",
+        "GROUP_LIFECYCLE",
+        "SETTINGS_LIFECYCLE",
+        "KDIARY_LIFECYCLE",
+        "KOS_LIFECYCLE",
+        "AWS_LIFECYCLE"
+      ],
+      "execution": { "mode": "sequential", "maxWorkers": 1 },
+      "accounts": { "sessionPerWorker": 4, "businessKeys": [] },
+      "cleanup": "spec-managed",
+      "filing": "command-armed"
+    },
+    "kmail": {
+      "description": "KMail API — all test types + the compose/draft/settings lifecycle.",
+      "targetKind": "test",
+      "projects": ["api"],
+      "grep": "@kmail-api",
+      "validationProfile": "FULL",
+      "flags": { "MOCK_API": "false", "TEST_DB_MODE": "true" },
+      "lifecycles": ["KMAIL_LIFECYCLE"],
+      "execution": { "mode": "sequential", "maxWorkers": 1 },
+      "accounts": { "sessionPerWorker": 2, "businessKeys": [] },
+      "cleanup": "spec-managed",
+      "filing": "command-armed"
+    },
+    "kmail-deep": {
+      "description": "KMail API + write-fuzzing on data writes. Disposable test DB only.",
+      "targetKind": "test",
+      "requiresDisposableTarget": true,
+      "projects": ["api"],
+      "grep": "@kmail-api",
+      "validationProfile": "FULL",
+      "flags": {
+        "MOCK_API": "false",
+        "TEST_DB_MODE": "true",
+        "WRITE_FUZZ": "true",
+        "ALLOW_DESTRUCTIVE_TESTS": "true"
+      },
+      "lifecycles": ["KMAIL_LIFECYCLE"],
+      "execution": { "mode": "sequential", "maxWorkers": 1 },
+      "accounts": { "sessionPerWorker": 2, "businessKeys": [] },
+      "cleanup": "spec-managed",
+      "filing": "command-armed"
+    },
+    "admin": {
+      "description": "Admin API — all test types + the org-build lifecycle (BUSINESS_M).",
+      "targetKind": "test",
+      "projects": ["api"],
+      "grep": "@admin-api",
+      "validationProfile": "FULL",
+      "flags": { "MOCK_API": "false", "TEST_DB_MODE": "true" },
+      "lifecycles": ["ADMIN_LIFECYCLE"],
+      "execution": { "mode": "sequential", "maxWorkers": 1 },
+      "accounts": { "sessionPerWorker": 0, "businessKeys": ["business-m"] },
+      "cleanup": "spec-managed",
+      "filing": "command-armed"
+    },
+    "admin-deep": {
+      "description": "Admin API + write-fuzzing on data writes. Disposable test DB only.",
+      "targetKind": "test",
+      "requiresDisposableTarget": true,
+      "projects": ["api"],
+      "grep": "@admin-api",
+      "validationProfile": "FULL",
+      "flags": {
+        "MOCK_API": "false",
+        "TEST_DB_MODE": "true",
+        "WRITE_FUZZ": "true",
+        "ALLOW_DESTRUCTIVE_TESTS": "true",
+        "ADMIN_ROLE_POSTING_LIVE": "false"
+      },
+      "lifecycles": ["ADMIN_LIFECYCLE"],
+      "execution": { "mode": "sequential", "maxWorkers": 1 },
+      "accounts": { "sessionPerWorker": 0, "businessKeys": ["business-m"] },
+      "cleanup": "spec-managed",
+      "filing": "command-armed"
+    },
+    "ui": {
+      "description": "The whole UI e2e on Chromium, Firefox and WebKit, with the UI write flows.",
+      "targetKind": "test",
+      "projects": ["setup", "chromium", "firefox", "webkit"],
+      "flags": { "MOCK_API": "false" },
+      "lifecycles": [
+        "KATCHUP_LIFECYCLE",
+        "LOGIN_UI_LIFECYCLE",
+        "PROFILE_UI_LIFECYCLE",
+        "KATCHUP_UI_LIFECYCLE",
+        "CONTACTS_UI_LIFECYCLE",
+        "GROUP_UI_LIFECYCLE",
+        "KALL_UI_LIFECYCLE",
+        "KMAIL_UI_LIFECYCLE",
+        "KDIARY_UI_LIFECYCLE",
+        "SETTINGS_UI_LIFECYCLE",
+        "BUSINESS_UI_LIFECYCLE"
+      ],
+      "execution": { "mode": "sequential", "maxWorkers": 1 },
+      "accounts": { "sessionPerWorker": 3, "businessKeys": ["business-s"] },
+      "cleanup": "spec-managed",
+      "filing": "command-armed"
+    },
+    "visual": {
+      "description": "Pixel-baseline comparison only (needs committed baselines).",
+      "targetKind": "test",
+      "projects": ["setup", "chromium", "firefox", "webkit"],
+      "testFilter": "visual.spec.ts",
+      "flags": { "MOCK_API": "false", "VISUAL_REGRESSION": "true" },
+      "lifecycles": [],
+      "execution": { "mode": "sequential", "maxWorkers": 1 },
+      "accounts": { "sessionPerWorker": 1, "businessKeys": [] },
+      "cleanup": "not-applicable",
+      "filing": "never"
+    },
+    "resolve": {
+      "description": "Close Bugzilla bugs this run verifies fixed; file nothing new.",
+      "targetKind": "test",
+      "projects": ["api"],
+      "grep": "@kpost-api",
+      "validationProfile": "FULL",
+      "flags": {
+        "MOCK_API": "false",
+        "BUGZILLA_RESOLVE_ONLY": "true",
+        "BUGZILLA_AUTO_RESOLVE": "true"
+      },
+      "lifecycles": [
+        "KATCHUP_LIFECYCLE",
+        "KALL_LIFECYCLE",
+        "PROFILE_LIFECYCLE",
+        "CONTACTS_LIFECYCLE",
+        "GROUP_LIFECYCLE",
+        "SETTINGS_LIFECYCLE",
+        "KDIARY_LIFECYCLE",
+        "KOS_LIFECYCLE",
+        "AWS_LIFECYCLE"
+      ],
+      "execution": { "mode": "sequential", "maxWorkers": 1 },
+      "accounts": { "sessionPerWorker": 4, "businessKeys": [] },
+      "cleanup": "spec-managed",
+      "filing": "resolve-only"
+    }
+  }
+}

@@ -1,9 +1,36 @@
 import { defineConfig, devices, type Project } from '@playwright/test';
 import { STORAGE_STATE, STORAGE_STATE_ADMIN, TAGS, TIMEOUTS } from './src/config/constants';
 import { env } from './src/config/env';
+import { resolveWorkers } from './src/config/run-profiles';
 
 const BUGZILLA_REPORTER = './src/reporting/bugzilla-reporter.ts';
 const MOCK_API_STARTUP_TIMEOUT_MS = 30_000;
+
+/**
+ * True when a named run profile was selected (`npm run bench -- --profile …`). Without one the
+ * `default` profile contributes nothing: every legacy npm script and a bare `npx playwright test`
+ * behave exactly as they did before profiles existed.
+ */
+const PROFILED = env.PROFILE.name !== 'default';
+
+/**
+ * The projects this run may use. A profile names them, so `--profile kpost` cannot accidentally run
+ * the browser suites; with no profile, every project is defined as before.
+ */
+function selectProjects(all: Project[]): Project[] {
+  if (!PROFILED || !env.PROFILE.projects.length) return all;
+  const wanted = new Set(env.PROFILE.projects);
+  const selected = all.filter((project) => project.name && wanted.has(project.name));
+  const missing = env.PROFILE.projects.filter(
+    (name) => !all.some((project) => project.name === name),
+  );
+  if (missing.length) {
+    throw new Error(
+      `Run profile "${env.PROFILE.name}" names unknown Playwright project(s): ${missing.join(', ')}.`,
+    );
+  }
+  return selected;
+}
 
 /** UI projects reuse the session saved by the `setup` project. */
 const browserProject = (name: string, device: Project['use']): Project => ({
@@ -27,7 +54,17 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: env.CI,
   retries: env.RETRIES ?? (env.CI ? 2 : 0),
-  workers: env.WORKERS ?? (env.CI ? '50%' : undefined),
+  /*
+   * With a run profile, the worker count is the profile's — defaulting to 1 and REFUSED (never
+   * clamped) above the count that mode has been proven safe for. Without one, this is exactly the
+   * previous expression, so every legacy command keeps its behaviour.
+   */
+  workers: PROFILED
+    ? resolveWorkers(env.PROFILE, env.WORKERS)
+    : (env.WORKERS ?? (env.CI ? '50%' : undefined)),
+
+  // The profile's tag filter (e.g. `@kpost-api`); a `--grep` on the command line overrides it.
+  grep: env.PROFILE.grep ? new RegExp(env.PROFILE.grep) : undefined,
 
   // Never run data-mutating tests against production unless explicitly allowed.
   grepInvert:
@@ -64,7 +101,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
 
-  projects: [
+  projects: selectProjects([
     // The login setup navigates the live SPA, which occasionally answers a transient
     // ERR_CONNECTION_RESET; retries absorb that so one flaky navigation does not collapse the run
     // (a genuine credential/route failure still fails all attempts).
@@ -94,5 +131,5 @@ export default defineConfig({
     { name: 'api', testDir: './tests/api' },
     { name: 'integration', testDir: './tests/integration' },
     { name: 'framework', testDir: './tests/framework' },
-  ],
+  ]),
 });

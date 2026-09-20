@@ -234,6 +234,57 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-20 — Phase 2.1: named run profiles + the unified runner (`npm run bench`)
+
+First implementation step of the approved Phase 2 design (`docs/PHASE-2-DESIGN.md` §17.1), after the
+as-built review in `docs/TEST-BENCH-CONTEXT.md`. **Intent (recorded first, per the working
+agreement):** give a run mode a name and a definition, and one entry point to run it — without
+changing a single existing command, and without implementing any later Phase 2 step.
+
+- **`config/run-profiles.json` — the authoritative registry.** Data, not code, so the TypeScript
+  framework and the CJS runner read the SAME definitions. 11 profiles: `framework`, `mock`, `kpost`,
+  `kpost-deep`, `kmail`, `kmail-deep`, `admin`, `admin-deep`, `ui`, `visual`, `resolve`. Each states
+  projects, tag filter, validation profile, flags, gated write flows, target kind, proven worker
+  ceiling, account needs, cleanup expectation and filing rule. **No `smoke` profile** — `@smoke` is on
+  one endpoint, so it would be a mode that runs nothing (a guard asserts it stays absent).
+- **`src/config/run-profiles.ts` — typed loader + pure resolution.** A zod schema validates the
+  registry **at import**, so a malformed profile fails immediately naming the field. Exposes
+  `runProfile`, `profileOverlay`, `resolveWorkers`, `assertTargetAllowed`. It reads no environment and
+  opens nothing: every function takes its inputs, so the whole model is testable offline.
+- **Precedence `command > profile > .env`,** implemented the way Phase 1 implemented the filing rule:
+  `env.ts` captures the command environment before dotenv, then applies the overlay. With no
+  `RUN_PROFILE` the default profile contributes nothing, so **every legacy command and a bare
+  `npx playwright test` behave exactly as before** (verified: the default collection is still 6292 api
+  / 148×3 browsers / 8 admin-ui / 5 setup).
+- **Environment guard (`assertTargetAllowed`).** A profile refuses to start when a configured host
+  looks like production (`api|account|kmail5|www.kpostindia.com`), when the host is not recognisable
+  as a test deployment (testingapi/testkmail/test/dev/staging/qa, localhost or a private LAN
+  address), or when the target kind and `MOCK_API` disagree. It runs at configuration load — before
+  any test — and **has no override flag**. The existing production guard, OTP kill-switch and
+  QA-identifier guard are untouched and still apply.
+- **`scripts/bench.cjs` — the runner.** Resolves and validates, then execs Playwright; it contains no
+  execution logic of its own. `--profile`, `--file`, `--workers`, `--grep`, `--list-profiles`,
+  `--print` (resolve and print, run nothing), and passthrough after `--`. Exit codes propagate; a
+  signal death is a failure, not a pass.
+- **Worker semantics, deliberately conservative.** Default **1 for every profile**; a request above
+  the mode's ceiling is **refused with the reason, never clamped**. Only `framework` (8) and `mock`
+  (4) have a ceiling above 1, and neither touches an account. Nothing claims account-safe parallelism
+  — there is no account isolation yet.
+- **Backward compatibility.** `package.json` gained exactly one script (`bench`); all 38 existing
+  scripts are byte-identical. An **equivalence guard** asserts each profile resolves to the same
+  environment its legacy command sets, so the two cannot drift before the legacy scripts are switched
+  over in a later step.
+
+**Verified:** `npm run check` clean (32 pre-existing warnings, unchanged); **151 framework guards, 147
+pass / 4 skip** (31 new in `run-profiles.spec.ts`); `npm run bench -- --profile framework --workers 4`
+runs the guards at 4 workers and exits 0; an unknown profile exits 2 before Playwright starts. The
+`.env.example` guard from Phase 1 caught the new `RUN_PROFILE` key immediately — documented, and green.
+**No KPost host was contacted:** every new test is a pure function or the runner's `--print` mode.
+
+**NOT implemented in this step (later Phase 2 work):** account pool, stable test-case IDs, resource
+ledger, durable journal, cleanup framework, parallel workers, lifecycle migration, reporting changes,
+Bugzilla changes.
+
 ### 2026-09-19 — Production-readiness audit; Phase 1 (bench correctness & safety) done
 
 The owner asked for a complete, evidence-based audit before any further code work. It is in
@@ -4460,10 +4511,10 @@ explicitly allowed.
 
 ### Production-readiness roadmap (2026-09-19)
 
-The authoritative plan is the 10-phase roadmap in `docs/PRODUCTION-READINESS-AUDIT.md` §12.
-**Phase 1 (bench correctness & safety) is DONE** (§8). **Next: Phase 2** — one runner CLI with typed
-run profiles, auto-derived tags + stable test-case ids, a fixture-owned test-data ledger with
-guaranteed teardown, and the account-pool abstraction. Owner decisions that gate later phases are in
+The authoritative plan is the 10-phase roadmap in `docs/PRODUCTION-READINESS-AUDIT.md` §12, refined
+for Phase 2 by `docs/PHASE-2-DESIGN.md` (§17 implementation order). **Phase 1 is DONE**;
+**Phase 2.1 (named profiles + unified runner) is DONE** (§8). **Next: Phase 2.2** — stable
+test-case ids, then the account pool (§17.3), then the resource ledger + durable journal (§17.4). Owner decisions that gate later phases are in
 the audit's §13 (read-only DB access, more QA accounts, a self-hosted CI runner, the CI gate policy,
 the RBAC matrix, `data-testid`).
 

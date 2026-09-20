@@ -53,6 +53,44 @@ silently dropped. Each run writes the single report (see §4). All are serial (`
 
 ---
 
+## 1b. The unified runner (`npm run bench`) — new, additive
+
+Every mode above is also a **named profile** (`config/run-profiles.json`), runnable through one
+command. The legacy commands in §1 are unchanged and keep working exactly as before; the runner is
+an addition, not a replacement.
+
+```
+npm run bench -- --list-profiles          # what exists, and what each mode is
+npm run bench -- --profile kpost          # same mode as `npm run kpost`
+npm run bench -- --profile kpost --file   # ... and arm bug filing for this run
+npm run bench -- --profile framework --workers 4
+npm run bench -- --profile kmail --print  # resolve and print the command; run nothing
+npm run bench -- --profile ui -- --headed # anything after `--` goes to Playwright
+```
+
+Profiles: `framework`, `mock`, `kpost`, `kpost-deep`, `kmail`, `kmail-deep`, `admin`, `admin-deep`,
+`ui`, `visual`, `resolve`. Each states its projects, tag filter, validation profile, flags, gated
+write flows, proven worker ceiling, account needs and filing rule.
+
+**What the runner guarantees**
+
+| Rule       | Behaviour                                                                                                                                       |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Precedence | command environment **>** profile **>** `.env` file                                                                                             |
+| Filing     | a profile can never arm it; only `--file` can, and only for a filing-capable profile                                                            |
+| Workers    | default **1** everywhere; a request above the mode's proven ceiling is **refused, not clamped**                                                 |
+| Target     | a profile refuses to start against a production-looking host, or the wrong kind of target — checked before any test runs, with no override flag |
+| Failure    | an unknown profile, a bad `--workers`, or a disallowed `--file` fails with a clear message and exit code 2, before Playwright starts            |
+
+**Implemented now:** profile registry, resolution and validation; the unified runner; the
+target/environment guard; worker ceilings; backward-compatible legacy commands.
+
+**Planned for later phases (not implemented):** account pool and slot allocation, stable test-case
+IDs, the resource ledger and durable journal, cleanup reporting, and any increase in live
+parallelism. See `docs/PHASE-2-DESIGN.md`.
+
+---
+
 ## 2. Deep write-fuzzing — the whole disposable test DB
 
 The plain commands fuzz **reads** and drive writes through their safe lifecycle. The `:deep` tier also
