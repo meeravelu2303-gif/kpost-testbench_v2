@@ -65,7 +65,7 @@ async function send(
     resources.track({
       kind: 'katchup-message',
       id: msgID,
-      describe: `message from `,
+      describe: `message from ${as.key}`,
       cleanup: () => deleteMessage(endpoints, as, msgID),
     });
   }

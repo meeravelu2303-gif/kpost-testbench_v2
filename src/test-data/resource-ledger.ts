@@ -13,6 +13,7 @@ import {
   type ResourceEvent,
   type ResourceJournalSink,
 } from './resource-journal';
+import { rememberOwnedResource } from './owned-resources';
 
 /**
  * The one place that knows what this run created.
@@ -130,6 +131,12 @@ export class ResourceLedger {
       updatedAt: null,
     };
     this.records.set(key, record);
+    /*
+     * Ownership is published the moment the resource exists, so the QA-identifier guard can tell a
+     * message this run created from one belonging to somebody else. Registration is the only way an
+     * id gets in — see owned-resources.ts.
+     */
+    rememberOwnedResource(identity);
     this.appendEvent('registered', record);
     return record;
   }

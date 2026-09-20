@@ -547,6 +547,46 @@ the bench never reads (`QA_BUSINESS_M_USER_3/4_KPOST_ID`, the four `QA_BUSINESS_
 The owner's own `.env` still says `BUGZILLA_DRY_RUN=false`; it is now harmless, but setting it to
 `true` avoids the notice.
 
+### 2026-09-20 — Runtime-owned identifiers: the guard learns `messageIds` instead of being switched off
+
+The Phase 2.5 gated live verification exposed a long-standing leak: **Katchup message cleanup had
+never worked on a real host.** The delete endpoint's real field is `messageIds` (plural, an array —
+the shape the live client sends), and the QA-identifier guard refused every such request, because a
+message id the API mints at runtime can never be a `QA_*` value in `.env`. The old lifecycle wrapped
+the delete in `.catch(() => undefined)`, so 18 orphan messages accumulated invisibly; Phase 2.5
+removed the swallow and the journal showed 18 × `CLEANUP_FAILED`.
+
+**The obvious fix was rejected.** Adding `messageids` to `NOT_A_RESOURCE` — the treatment `msgid`,
+`kallid` and `groupid` already get — would switch the check off for the field entirely, so a
+stranger's message id under the same key would sail through the safety boundary. That is a real
+weakening, not a theoretical one: `messageIds` is an ARRAY, exactly the shape a fuzzer or a
+copy-pasted payload puts foreign ids into.
+
+**Instead the guard learned the field's semantics.** A third category, `RUNTIME_RESOURCE_FIELD`,
+sits between "checked against `.env`" and "exempt": a field listed there is checked against **what
+this run actually created**, read from the Phase 2.4 resource ledger. `src/test-data/owned-resources.ts`
+is the registry — written only by `ResourceLedger.register()`, at the moment the resource comes into
+existence, so ownership is never inferred from a payload, a response or a naming convention. The
+guard consults it in `isOwnedValue`, per value, so an array is still judged element by element.
+
+The result is strictly stronger than either alternative: an owned message id passes, a foreign one is
+refused, and a MIXED array is refused on the foreign element. Nothing else moved —
+`NOT_A_RESOURCE` is byte-identical, every tenant key (`kpostID`, `companyID`, `contactID`,
+`memberKpostIdList`) behaves as before, and the same value under a tenant key is still refused.
+Ownership is per KIND and per process, so a tracked group does not license a message of the same
+number and a worker never sees another worker's ids (it can only ever refuse too much).
+
+`tests/framework/owned-resource-guard.spec.ts` (10 guards) pins all of it. **Live verification on
+testingapi (workers=1, dry-run):** 21 resources registered, **21 CLEANED, 0 CLEANUP_FAILED** (was
+3/18), all `deleted (200)`, LIFO correct in all 3 multi-resource tests, no double cleanup, both
+profile restores green. `npm run check` clean; 261 framework guards (was 251).
+
+Two things left deliberately untouched and reported instead of patched: the **18 pre-existing
+orphans** (811422–811443) stay on the QA account — no sweeper, no mass delete — and the
+**disappearing-message send** still refuses on `secretMessageExpireTime` (a 13-digit epoch matching
+the pattern only because the key contains "message"; the same class as the already-exempt
+`messagetime`/`kallstarttime`). That refusal predates this change and is a separate decision.
+
 ### 2026-09-19 — First full KPost run reviewed: false-positive classes fixed (incl. the validateOTP lesson)
 
 The first full `npm run kpost` (OTP flows included) found 161 fileable. Per-class review + the owner's

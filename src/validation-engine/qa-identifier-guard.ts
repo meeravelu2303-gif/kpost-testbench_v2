@@ -1,4 +1,5 @@
 import { providedIdentityValues, testData } from '@config/test-data.config';
+import { ownsResource } from '../test-data/owned-resources';
 import { ProductionSafetyError } from './production-guard';
 
 /**
@@ -34,6 +35,13 @@ import { ProductionSafetyError } from './production-guard';
  * name in `NOT_A_RESOURCE` below. That way a new id field added to a payload is guarded by default
  * and the burden falls on whoever exempts it — the reverse arrangement silently admits every field
  * nobody thought about.
+ *
+ * A third case sits between the two: a **runtime** resource id (a message this run just sent) is a
+ * real resource, so exempting its field would be wrong, yet its value cannot be written into `.env`
+ * in advance. Those fields are listed in `RUNTIME_RESOURCE_FIELD` and checked against what the
+ * resource ledger says this run created — owned ids pass, a stranger's id under the same key does
+ * not. That is what lets the Katchup cleanup delete its own messages without opening `messageIds`
+ * to every id in the database.
  *
  * It applies to EVERY real host — the live app and the test deployments alike (see
  * `targetsRealHost` in endpoint-executor.ts). A disposable test DB is still shared with the
@@ -223,6 +231,27 @@ const NOT_A_RESOURCE = new Set(
   ].map((key) => key.toLowerCase()),
 );
 
+/**
+ * Keys whose value is a **runtime resource id**, checked against what this run actually created.
+ *
+ * The third answer to a problem that previously had only two bad ones. A runtime id — a message the
+ * API minted when we sent it — cannot be pre-allowlisted in `.env`, so the guard would refuse it; the
+ * only escape was to put the whole field in `NOT_A_RESOURCE` (as `msgid`/`kallid`/`groupid` are), and
+ * that switches the check off for the field entirely, admitting a stranger's id under the same key.
+ *
+ * A field listed here keeps its protection instead: its value is allowed only when the resource
+ * ledger says THIS RUN created it, under one of the kinds named. A foreign id is still refused, and
+ * an array naming one owned and one foreign id is refused on the foreign element — so a payload
+ * cannot smuggle a stranger's record in beside one of ours.
+ *
+ * `messageIds` is the plural field `katchup-delete-message` really takes (`{messageIds:[…],
+ * groupFlag}` — the shape the live client sends, `manage.api.ts`). Singular `msgID` and the other
+ * message-scoped keys keep their existing `NOT_A_RESOURCE` treatment; nothing about them changes.
+ */
+const RUNTIME_RESOURCE_FIELD = new Map<string, readonly string[]>([
+  ['messageids', ['katchup-message']],
+]);
+
 /** Keys whose value names a record that could belong to somebody else. */
 const IDENTIFIER_KEY =
   /(^|[^a-z])(id|ids)$|kpost|mobile|email|company|contact|group|member|msg|message|kall|katchup|mail|doc|presentation|attachment|uuid|account|user/i;
@@ -268,6 +297,16 @@ interface Offence {
   value: unknown;
 }
 
+/**
+ * Whether this one value is ours: a `QA_*` identity from `.env`, or — for a runtime-id field — a
+ * resource this run created and holds in its ledger. Anything else is somebody else's.
+ */
+function isOwnedValue(key: string, value: string | number, owned: Set<string>): boolean {
+  if (owned.has(String(value).trim().toLowerCase())) return true;
+  const kinds = RUNTIME_RESOURCE_FIELD.get(key.toLowerCase());
+  return kinds !== undefined && kinds.some((kind) => ownsResource(kind, value));
+}
+
 function walk(node: unknown, trail: string, owned: Set<string>, found: Offence[]): void {
   if (Array.isArray(node)) {
     node.forEach((item, index) => walk(item, `${trail}[${index}]`, owned, found));
@@ -279,12 +318,12 @@ function walk(node: unknown, trail: string, owned: Set<string>, found: Offence[]
       const isIdentifier = IDENTIFIER_KEY.test(key) && !NOT_A_RESOURCE.has(key.toLowerCase());
 
       if (isIdentifier && (typeof value === 'string' || typeof value === 'number')) {
-        if (!owned.has(String(value).trim().toLowerCase())) found.push({ path: here, value });
+        if (!isOwnedValue(key, value, owned)) found.push({ path: here, value });
       } else if (isIdentifier && Array.isArray(value)) {
         // `{"kallIds":[2,3]}` and `{"memberKpostIdList":[…]}` — each element is a target.
         value.forEach((item, index) => {
           if (typeof item === 'string' || typeof item === 'number') {
-            if (!owned.has(String(item).trim().toLowerCase())) {
+            if (!isOwnedValue(key, item, owned)) {
               found.push({ path: `${here}[${index}]`, value: item });
             }
           } else {
@@ -384,7 +423,9 @@ export function assertQaOwnedIdentifiers(
   throw new ProductionSafetyError(
     `${label}: refusing to send a request to a real KPost host that names ` +
       `${foreign.length} identifier(s) we do not own:\n${detail}${more}\n` +
-      `Every identifier must be a QA_* value from .env. If one of these is legitimately not a ` +
-      `resource identifier, add it to NOT_A_RESOURCE in qa-identifier-guard.ts with a reason.`,
+      `Every identifier must be a QA_* value from .env, or — for a runtime-id field — a resource ` +
+      `this run created and tracked in its ledger (see RUNTIME_RESOURCE_FIELD). If one of these ` +
+      `is legitimately not a resource identifier, add it to NOT_A_RESOURCE in ` +
+      `qa-identifier-guard.ts with a reason.`,
   );
 }

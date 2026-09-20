@@ -61,6 +61,18 @@ export {
   type ResourceEvent,
   type ResourceJournalSink,
 } from './resource-journal';
+/**
+ * What this run created, published for the QA-identifier guard so a runtime-id field (a Katchup
+ * `messageIds`) can name our own resources and still refuse a stranger's. Written only by the
+ * ledger's `register()`.
+ */
+export {
+  forgetOwnedResources,
+  ownedResourceIds,
+  ownerOfResource,
+  ownsResource,
+  rememberOwnedResource,
+} from './owned-resources';
 export {
   allowedTransitionsFrom,
   canTransition,
