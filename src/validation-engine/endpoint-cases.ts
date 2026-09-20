@@ -5,6 +5,7 @@ import { env } from '@config/env';
 import { describeTestData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { formatReport } from '@reporting/report-formatter';
+import { apiTestCaseId, TEST_CASE_ID_ANNOTATION } from '@reporting/test-case-id';
 import { validationRegistry } from '@validators/index';
 import { ProductionSafetyError } from './production-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
@@ -134,6 +135,19 @@ export function describeEndpointCases(
           `${planned.name} — ${planned.description}`,
           { tag: tagsFor(endpoint) },
           async ({ validationEngine }) => {
+            /*
+             * The case's STABLE identity, recorded as an annotation so it reaches the Playwright
+             * report and the case registry even when the engine produced no result (a skip). It is
+             * the same id `buildResult` puts on every ValidationResult — derived, never generated.
+             */
+            test.info().annotations.push({
+              type: TEST_CASE_ID_ANNOTATION,
+              description: apiTestCaseId({
+                suiteId: endpoint.suite.id,
+                endpointId: endpoint.id,
+                validatorName: planned.name,
+              }),
+            });
             if (planned.skipReason) {
               test.skip(true, planned.skipReason);
               return;

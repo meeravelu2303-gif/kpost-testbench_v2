@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { VALIDATION_PROFILES, type ValidationProfile } from '@config/constants';
+import { apiTestCaseId } from '@reporting/test-case-id';
 import type { ValidationContext } from './validation-context';
 import type { ValidationToggle } from './validation-policy';
 import type {
@@ -67,6 +68,12 @@ export function buildResult(
 ): ValidationResult {
   return {
     validationId: randomUUID(),
+    // The stable identity of the CHECK, alongside (never replacing) this execution's validationId.
+    testCaseId: apiTestCaseId({
+      suiteId: context.endpoint.suite.id,
+      endpointId: context.endpoint.id,
+      validatorName: meta.name,
+    }),
     validatorName: meta.name,
     category: meta.category,
     endpointId: context.endpoint.id,

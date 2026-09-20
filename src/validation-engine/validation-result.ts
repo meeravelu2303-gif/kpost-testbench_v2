@@ -57,7 +57,14 @@ export interface ValidationOutcome {
 
 /** The single result format produced by every validator, business rule and DB validation. */
 export interface ValidationResult {
+  /** Identity of THIS execution — a fresh UUID per result. Never an identity across runs. */
   validationId: string;
+  /**
+   * Identity of the CHECK itself (`TC-API-…`), stable across runs, workers, machines, browsers and
+   * profiles — see `src/reporting/test-case-id.ts`. Optional so a historical report that predates
+   * Phase 2.2 still parses; every result the engine produces now carries one.
+   */
+  testCaseId?: string;
   validatorName: string;
   category: ValidationCategory;
   endpointId: string;

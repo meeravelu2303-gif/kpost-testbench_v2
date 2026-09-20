@@ -384,6 +384,24 @@ nothing about origin.
 
 ## 7. Stable test-case id strategy
 
+> **Implementation note (Phase 2.2, delivered).** Built as designed, with three clarifications the
+> repository forced:
+>
+> 1. **The surface token comes from the spec PATH, not the Playwright project** (`tests/e2e/` → `UI`,
+>    `tests/e2e-admin/` → `ADMINUI`, `tests/api/` → `API`, `tests/framework/` → `FW`, …). Using the
+>    project would have made the same test three different cases on Chromium/Firefox/WebKit, which
+>    contradicts §10 and the bench's own `uiFingerprint`, where the browser is deliberately excluded.
+> 2. **Generated API cases carry their id as a Playwright annotation** (`test-case-id`), so the id is
+>    present even when the case is skipped and no result exists. The same id is set on every
+>    `ValidationResult` by `buildResult`, so both sides agree by construction.
+> 3. **The case registry is identity-only for now** (`reports/cases.jsonl`: id, project, spec, title,
+>    status, duration, and — for generated cases — the matching `validationId`, endpoint and
+>    validator). Accounts and cleanup status join it in their own phases.
+>
+> Files: `src/reporting/test-case-id.ts` (pure derivation + collision detection),
+> `src/reporting/case-registry.ts` (per-run rows), `tests/framework/test-case-id.spec.ts` (21 guards).
+> **Not** wired into Bugzilla: no ticket description, summary or fingerprint changed in this phase.
+
 ### 7.1 Derivation
 
 | Case type                                   | Id                                                                      | Stable while…                                    |

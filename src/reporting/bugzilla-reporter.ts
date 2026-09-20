@@ -24,6 +24,7 @@ import { suiteFor } from '../config/ownership.config';
 import { createLogger } from '../utils/logger';
 import type { ValidationReport } from '../validation-engine/validation-result';
 import { buildBugReportConsole, buildBugReportMarkdown } from './bug-report';
+import { CaseRegistry } from './case-registry';
 import { VALIDATION_REPORT_ATTACHMENT } from './report-attachment';
 import { buildRunSummary, renderRunSummaryMarkdown, type UiTestRecord } from './run-summary';
 
@@ -98,6 +99,8 @@ export default class BugzillaReporter implements Reporter {
   private readonly config = readBugzillaConfig();
   private readonly log = createLogger('bugzilla');
   private readonly validationReports: ValidationReport[] = [];
+  /** Stable test-case identity per executed case (Phase 2.2) — reporting only. */
+  private readonly cases = new CaseRegistry();
   private suite: Suite | undefined;
   private loadErrors = 0;
 
@@ -113,7 +116,10 @@ export default class BugzillaReporter implements Reporter {
     this.loadErrors += 1;
   }
 
-  onTestEnd(_test: TestCase, result: TestResult): void {
+  onTestEnd(test: TestCase, result: TestResult): void {
+    // Identity only: one row per finished case, keyed by its stable id. It feeds reports/cases.jsonl
+    // and touches nothing in the candidate/filing path below.
+    this.cases.add(test, result);
     for (const attachment of result.attachments) {
       if (attachment.name !== VALIDATION_REPORT_ATTACHMENT || !attachment.body) continue;
       try {
@@ -241,6 +247,7 @@ export default class BugzillaReporter implements Reporter {
     const markdown = `${renderRunSummaryMarkdown(runSummary)}\n${buildBugReportMarkdown(reportInput)}`;
     this.writeReport('REPORT.json', JSON.stringify(combined, null, 2));
     this.writeReport('REPORT.md', markdown);
+    this.writeCaseRegistry();
     console.log(`\n${buildBugReportConsole(reportInput)}`);
   }
 
@@ -373,6 +380,28 @@ export default class BugzillaReporter implements Reporter {
         ),
       ];
     });
+  }
+
+  /**
+   * The run's case registry (`reports/cases.jsonl`), plus a loud warning if two different test
+   * definitions resolved to one stable id — which would report two checks as one. It never picks a
+   * winner; the authoritative gate is the offline guard in `tests/framework/test-case-id.spec.ts`.
+   */
+  private writeCaseRegistry(): void {
+    this.cases.enrichFromValidationReports(this.validationReports);
+    const collisions = this.cases.collisions();
+    for (const collision of collisions) {
+      this.log.warn(
+        `stable test-case id collision: ${collision.id} ← ` +
+          collision.conflicting.map((c) => c.source).join('  |  '),
+      );
+    }
+    if (collisions.length) {
+      console.log(
+        `${LOG} ${collisions.length} stable test-case id collision(s) — see the warnings above.`,
+      );
+    }
+    this.writeReport('cases.jsonl', this.cases.toJsonl());
   }
 
   private writeReport(file: string, content: string): void {

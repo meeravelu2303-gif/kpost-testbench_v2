@@ -234,6 +234,51 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-20 — Phase 2.2: stable test-case ids (`TC-…`), separate from every existing identity
+
+Second step of the approved Phase 2 design (§17.2). **Intent:** give every check an identity that
+survives a re-run, a different worker, a different machine and a different profile — without touching
+the three identities the bench already has.
+
+| Identity       | Answers                               | Where it lives           | Changed? |
+| -------------- | ------------------------------------- | ------------------------ | -------- |
+| `validationId` | which EXECUTION produced this result  | random UUID per result   | no       |
+| `[KP-XXXXXX]`  | which DEFECT was found                | the Bugzilla summary     | **no**   |
+| correlation id | which HTTP exchange                   | request/response headers | no       |
+| **`TC-…`** NEW | which CHECK, across runs and machines | reports + `cases.jsonl`  | added    |
+
+- **`src/reporting/test-case-id.ts`** — one authoritative derivation, pure and typed.
+  Generated API cases: `TC-API-<suite>-<endpoint>-<validator>`
+  (`TC-API-kpost-api-common-languages-response.status-code`). Hand-written specs:
+  `TC-<SURFACE>-<spec>-<slugged titles>-<hash6>`, derived from the spec path and title path — **no
+  author has to invent an id**; `explicitTestCaseId()` pins one for a case that must survive a rename.
+  Ids are capped at 100 chars (truncate + digest) so they fit a report row.
+- **What is deliberately NOT in the identity:** run id, worker/parallel index, browser project, run
+  profile, machine, host URL, timestamps, account ids, credentials, and every result value. The
+  **surface token comes from the spec PATH, never the Playwright project** — the same UI test on three
+  engines is ONE case, which is the rule `uiFingerprint` already applies to defects.
+- **Wiring, narrow on purpose:** `buildResult` puts the id on every `ValidationResult` (alongside, never
+  replacing, `validationId`); `describeEndpointCases` annotates each generated case so the id exists
+  even when the case skips; `CaseRegistry` (new) writes `reports/cases.jsonl` — one identity row per
+  executed case, enriched from the validation reports.
+- **The Bugzilla boundary, tested byte-for-byte.** A `TC-…` never enters a summary, a fingerprint input
+  or the `(endpoint, validator)` fault index. Guards pin the exact pre-Phase-2.2 fingerprints
+  (`KP-183BBD`, `KP-1FCD09`, `KP-3D6538`) and assert that a candidate built from a result carrying a
+  test-case id has an identical tag, title and evidence. Dedup, adoption and auto-resolve are untouched.
+- **Collision detection.** `detectCollisions`/`assertNoCollisions` name BOTH sides and never pick a
+  winner. The authoritative gate is offline: a guard derives ids for **every** registered endpoint ×
+  validator (>1000 cases) and asserts uniqueness. The reporter also warns at run end.
+- **Migration safety:** `testCaseId` is optional on `ValidationResult`, so a report written before this
+  phase still parses; nothing ever derives a stable id from a runtime UUID.
+
+**Verified (no KPost host contacted — every test is a pure function, a stub, or the bundled mock):**
+`npm run check` clean (32 pre-existing warnings, unchanged); **172 framework guards, 168 pass / 4 skip**
+(21 new); the 43 Bugzilla filing/resolve/cascade guards pass unchanged; a framework run writes
+`reports/cases.jsonl` with 169 deterministic ids.
+
+**NOT implemented here:** account pool, resource ledger, durable journal, cleanup framework, parallel
+workers, lifecycle migration, Bugzilla changes.
+
 ### 2026-09-20 — Phase 2.1: named run profiles + the unified runner (`npm run bench`)
 
 First implementation step of the approved Phase 2 design (`docs/PHASE-2-DESIGN.md` §17.1), after the
@@ -4513,8 +4558,9 @@ explicitly allowed.
 
 The authoritative plan is the 10-phase roadmap in `docs/PRODUCTION-READINESS-AUDIT.md` §12, refined
 for Phase 2 by `docs/PHASE-2-DESIGN.md` (§17 implementation order). **Phase 1 is DONE**;
-**Phase 2.1 (named profiles + unified runner) is DONE** (§8). **Next: Phase 2.2** — stable
-test-case ids, then the account pool (§17.3), then the resource ledger + durable journal (§17.4). Owner decisions that gate later phases are in
+**Phase 2.1 (named profiles + unified runner)** and **Phase 2.2 (stable test-case ids)** are DONE
+(§8). **Next: Phase 2.3** — the account pool (§17.3), then the resource ledger + durable journal
+(§17.4). Owner decisions that gate later phases are in
 the audit's §13 (read-only DB access, more QA accounts, a self-hosted CI runner, the CI gate policy,
 the RBAC matrix, `data-testid`).
 
