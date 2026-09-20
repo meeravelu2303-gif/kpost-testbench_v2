@@ -18,6 +18,7 @@ import { newCorrelationId } from '@utils/correlation';
 import { deepMerge, getPath } from '@utils/json';
 import type { Logger } from '@utils/logger';
 import { maskString } from '@utils/masking';
+import { captureExchange, withOrigin, type ExchangeEvidence } from '../failure-analysis/index';
 import {
   describeCleanupBody,
   type BusinessRuleFinding,
@@ -85,6 +86,14 @@ export interface SendOptions {
 const MAX_ERROR_BODY_CHARS = 300;
 
 /**
+ * Evidence bounds per executor. The engine builds one executor per endpoint run, so this caps a
+ * single endpoint's exchanges; a lifecycle spec shares one executor for the whole test, which is the
+ * case the cap really exists for.
+ */
+const MAX_EVIDENCE_RECORDS = 500;
+const MAX_EVIDENCE_ERRORS = 5;
+
+/**
  * Whether a request to `endpoint` reaches a real KPost host (live OR a test deployment), rather than
  * the bundled mock. The QA-identifier guard applies to every real host, not only to
  * `TEST_ENV=production`: a disposable test DB is still shared with the developers and the other QA
@@ -125,6 +134,30 @@ export class EndpointExecutor {
 
   /** The phase of an open `withPhase()` scope, if any. */
   private ambientPhase: ExchangePhase | undefined;
+
+  /**
+   * Evidence for every exchange this executor made (Phase 3.2) — observational only.
+   *
+   * Bounded by `MAX_EVIDENCE_RECORDS` so a long lifecycle cannot grow without limit; once the cap is
+   * reached, capture stops and `evidenceOverflow` counts what was not kept, because a silently
+   * truncated record set would be worse than a visibly incomplete one.
+   */
+  readonly exchangeEvidence: ExchangeEvidence[] = [];
+
+  /** Exchanges not captured because the cap was reached. */
+  evidenceOverflow = 0;
+
+  /** Capture failures. Evidence never fails a request, so these are counted and reported instead. */
+  readonly evidenceErrors: string[] = [];
+
+  /** The stable test case this executor is running for, when the caller knows it. */
+  private testCaseId: string | undefined;
+
+  /** Tells the executor which test case its exchanges belong to, so evidence can carry it. */
+  forTestCase(testCaseId: string): this {
+    this.testCaseId = testCaseId;
+    return this;
+  }
 
   /**
    * Record a confirmed business-rule violation for filing. Call this ONLY when the response/state
@@ -240,6 +273,13 @@ export class EndpointExecutor {
     );
     const exchange = await client.execute(request, options.label);
 
+    /*
+     * Evidence is recorded for EVERY exchange, before anything judges it (Phase 3.2). It is
+     * observational: it changes no result, and a failure to capture it must never change one
+     * either — hence the try/catch that counts rather than throws.
+     */
+    this.captureEvidence(exchange, endpoint, phase);
+
     // A server error while an owner-authorized lifecycle flow drove a real write is a fileable
     // product defect (a server must never 5xx — even bad input warrants a 4xx). Collected here, at
     // the one chokepoint every flow call passes through, and filed by the fixture. A 4xx is NOT
@@ -275,6 +315,43 @@ export class EndpointExecutor {
       }
     }
     return exchange;
+  }
+
+  /**
+   * Records what one exchange looked like, with its origin attributed.
+   *
+   * Total by construction: every failure path counts and continues. Evidence exists to explain a
+   * result, so it must never be able to create one.
+   */
+  private captureEvidence(
+    exchange: ApiResponseWrapper,
+    endpoint: ResolvedEndpoint,
+    phase: ExchangePhase,
+  ): void {
+    try {
+      if (this.exchangeEvidence.length >= MAX_EVIDENCE_RECORDS) {
+        this.evidenceOverflow += 1;
+        return;
+      }
+      this.exchangeEvidence.push(
+        withOrigin(
+          captureExchange(exchange, {
+            runId: env.TEST_RUN_ID,
+            phase,
+            endpointId: endpoint.id,
+            endpoint: endpoint.label,
+            suite: endpoint.suite.id,
+            ...(this.testCaseId ? { testCaseId: this.testCaseId } : {}),
+          }),
+        ),
+      );
+    } catch (error) {
+      if (this.evidenceErrors.length < MAX_EVIDENCE_ERRORS) {
+        this.evidenceErrors.push(
+          `${endpoint.id}/${exchange.label}: ${(error as Error).message}`.slice(0, 200),
+        );
+      }
+    }
   }
 
   /** The phase every request is attributed to right now, absent a per-call override. */

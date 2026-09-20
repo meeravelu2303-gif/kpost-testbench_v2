@@ -4,6 +4,12 @@ import { env } from './src/config/env';
 import { resolveWorkers } from './src/config/run-profiles';
 
 const BUGZILLA_REPORTER = './src/reporting/bugzilla-reporter.ts';
+/**
+ * Evidence is a TEST-EXECUTION artifact, so it is persisted by its own reporter rather than by the
+ * one that files defects (Phase 3.2). It therefore runs whether Bugzilla is configured, dry-run,
+ * candidate-free, or not registered at all.
+ */
+const EVIDENCE_REPORTER = './src/reporting/evidence-reporter.ts';
 const MOCK_API_STARTUP_TIMEOUT_MS = 30_000;
 
 /**
@@ -75,7 +81,7 @@ export default defineConfig({
   // merged report (merge.config.ts), so two shards can never file the same defect twice.
   reporter: env.CI
     ? [['blob'], ['github'], ['list']]
-    : [['list'], ['html', { open: 'never' }], [BUGZILLA_REPORTER]],
+    : [['list'], ['html', { open: 'never' }], [EVIDENCE_REPORTER], [BUGZILLA_REPORTER]],
 
   // Local stand-in for the KPost API (MOCK_API=true, the default for TEST_ENV=local).
   webServer: env.MOCK_API

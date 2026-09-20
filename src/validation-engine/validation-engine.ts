@@ -10,6 +10,8 @@ import type { DatabaseClient } from '@database/database-client';
 import type { DatabaseValidationRegistry } from '@database/database-validation';
 import type { Logger } from '@utils/logger';
 import { maskSensitive, maskString } from '@utils/masking';
+import { reachabilityOf, type ExchangeEvidence } from '../failure-analysis/index';
+import { apiTestCaseId } from '@reporting/test-case-id';
 import { EndpointExecutor } from './endpoint-executor';
 import {
   EngineValidationContext,
@@ -111,6 +113,21 @@ export class ValidationEngine {
 
     const planned = this.plan(resolved, profile);
     for (const validator of planned) {
+      /*
+       * Attribute the exchanges this validator is about to make to ITS stable case id (Phase 2.2) —
+       * the same id `buildResult` stamps on the result, derived by the same function, never invented.
+       *
+       * The PRIMARY exchange above is deliberately left unattributed: it is sent once and shared by
+       * every validator for this endpoint, so naming any one of their test cases as its owner would
+       * be a fiction. Legitimately-unassociated traffic is recorded as such.
+       */
+      executor.forTestCase(
+        apiTestCaseId({
+          suiteId: resolved.suite.id,
+          endpointId: resolved.id,
+          validatorName: validator.name,
+        }),
+      );
       const result = await this.execute(validator, context, blocked);
       results.push(result);
       if (result.status === 'FAILED') log.warn(`${validator.name} FAILED: ${result.message}`);
@@ -155,6 +172,14 @@ export class ValidationEngine {
       results: maskSensitive(results),
       summary: summarize(results),
       gate: { passed: blocking.length === 0, blocking: blocking.map((r) => r.validatorName) },
+      /*
+       * Phase 3.2 — observational only. Kept bounded by carrying the PRIMARY exchange (the
+       * reachability witness) plus only the exchanges a FAILED check actually judged, matched by
+       * correlation id. A green endpoint's probe evidence is of no use to a later classifier and
+       * would multiply a full run's report size for nothing.
+       */
+      evidence: selectEvidence(executor.exchangeEvidence, results),
+      reachability: reachabilityOf(executor.exchangeEvidence),
     };
     await this.deps.onReport?.(report);
     return report;
@@ -237,4 +262,28 @@ export class ValidationEngine {
       });
     });
   }
+}
+
+/**
+ * The evidence worth carrying on a report: the PRIMARY exchange, plus every exchange a FAILED check
+ * judged, matched by correlation id.
+ *
+ * The primary is always kept because it is the reachability witness — the contrast that lets a later
+ * phase tell "this endpoint answers, but this one probe did not reach it" from "nothing here
+ * answers". Everything else is kept only when a failure actually referenced it, which keeps a green
+ * run's reports the size they are today.
+ */
+function selectEvidence(
+  evidence: readonly ExchangeEvidence[],
+  results: readonly ValidationResult[],
+): ExchangeEvidence[] {
+  const referenced = new Set<string>();
+  for (const result of results) {
+    if (result.status !== 'FAILED') continue;
+    referenced.add(result.correlationId);
+    for (const detail of result.details ?? []) {
+      if (detail.status === 'FAILED' && detail.correlationId) referenced.add(detail.correlationId);
+    }
+  }
+  return evidence.filter((record) => record.primary || referenced.has(record.correlationId));
 }

@@ -1,4 +1,5 @@
 import type { HttpMethod, RequestSpec } from '@api/client/request-builder';
+import type { ExchangeEvidence, ReachabilityWitness } from '../failure-analysis/index';
 import type { ValidationProfile } from '@config/constants';
 import type { SuiteId } from '@config/ownership.config';
 
@@ -124,6 +125,20 @@ export interface ValidationReport {
   summary: ValidationSummary;
   /** Quality gate: FAILED results whose severity is configured as blocking. */
   gate: { passed: boolean; blocking: string[] };
+  /**
+   * Evidence for the exchanges this endpoint made (Phase 3.2) — observational only.
+   *
+   * Optional, so a report written before Phase 3.2 still parses, exactly as `testCaseId` was made
+   * optional in Phase 2.2. **Nothing in the Bugzilla pipeline reads it**: candidates are built from
+   * `results`, and adding a field the fingerprint functions never see cannot change a tag.
+   *
+   * Correlation is by `correlationId`, which every `ValidationResult` and every failing
+   * `CheckDetail` already carries — so a later classifier can find the exact exchange a check judged
+   * without parsing any prose.
+   */
+  evidence?: ExchangeEvidence[];
+  /** Whether the application demonstrably handled an exchange for this endpoint (Phase 3.2). */
+  reachability?: ReachabilityWitness;
 }
 
 type OutcomeExtras = Omit<ValidationOutcome, 'status' | 'message'>;

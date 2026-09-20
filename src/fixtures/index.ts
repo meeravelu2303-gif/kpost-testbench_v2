@@ -9,7 +9,7 @@ import { EndpointExecutor } from '@engine/endpoint-executor';
 import { businessRuleFindingReports, flowFindingReports } from '@engine/flow-finding';
 import { ValidationEngine, type ValidationEngineDeps } from '@engine/validation-engine';
 import { LoginPage } from '@pages/LoginPage';
-import { attachValidationReport } from '@reporting/report-attachment';
+import { attachExchangeEvidence, attachValidationReport } from '@reporting/report-attachment';
 import { businessRuleRegistry } from '@rules/index';
 import {
   accountPool,
@@ -72,6 +72,19 @@ export const test = base.extend<TestFixtures>({
 
   endpoints: async ({ apiClients, log }, use, testInfo) => {
     const executor = new EndpointExecutor(apiClients, apiRegistry, log);
+    /*
+     * Every exchange this test makes is attributed to the test's STABLE case id (Phase 2.2), so
+     * evidence can be correlated across runs. Derived, never invented — the same derivation the
+     * cleanup fixture and the case registry use.
+     */
+    executor.forTestCase(
+      deriveTestCaseId({
+        file: testInfo.file,
+        titlePath: testInfo.titlePath,
+        projectName: testInfo.project.name,
+        pinned: testInfo.annotations.find((a) => a.type === TEST_CASE_ID_ANNOTATION)?.description,
+      }).id,
+    );
     await use(executor);
     // After the flow runs, file (a) any server error a gated write hit and (b) any CONFIRMED
     // business-rule violation it detected — otherwise a lifecycle-only bug reaches no developer.
@@ -81,6 +94,13 @@ export const test = base.extend<TestFixtures>({
     ]) {
       await attachValidationReport(testInfo, report);
     }
+    /*
+     * Evidence for exchanges the engine never saw — this spec's own calls, and everything the
+     * CLEANUP phase did. Attached last, after the `resources` fixture has finished tearing down, so
+     * cleanup exchanges are included rather than dying with the worker. It is evidence only: a
+     * cleanup 5xx is still not a FlowFinding and still reaches no Bugzilla candidate.
+     */
+    await attachExchangeEvidence(testInfo, executor.exchangeEvidence);
   },
 
   /*
