@@ -109,10 +109,26 @@ export class ValidationEngine {
     });
     const blocked = new Set<string>();
 
-    for (const validator of this.plan(resolved, profile)) {
+    const planned = this.plan(resolved, profile);
+    for (const validator of planned) {
       const result = await this.execute(validator, context, blocked);
       results.push(result);
       if (result.status === 'FAILED') log.warn(`${validator.name} FAILED: ${result.message}`);
+    }
+    // A validator outside the active profile is RECORDED as skipped, never silently omitted — so
+    // the report states "injection: not in profile REGRESSION" instead of not mentioning it.
+    for (const validator of this.deps.validators.all()) {
+      if (planned.includes(validator)) continue;
+      results.push(
+        buildResult(
+          validator,
+          context,
+          outcome.skipped(
+            `not in validation profile ${profile} (runs in ${validator.profiles.join('/')})`,
+          ),
+          0,
+        ),
+      );
     }
 
     const blocking = results.filter(

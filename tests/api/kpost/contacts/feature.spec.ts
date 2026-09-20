@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated address-book lifecycle (add → verify → block → unblock → delete), not simple
 // assertions; the conditionals guard optional steps and restore of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
@@ -47,10 +48,7 @@ async function contactPresent(endpoints: EndpointExecutor): Promise<boolean> {
 
 test.describe('KPost Contacts · feature flow', () => {
   test.describe.configure({ mode: 'default' });
-  test.skip(
-    process.env.CONTACTS_LIFECYCLE !== 'true',
-    'writes to the address book; set CONTACTS_LIFECYCLE=true',
-  );
+  test.skip(!env.CONTACTS_LIFECYCLE, 'writes to the address book; set CONTACTS_LIFECYCLE=true');
 
   test('add → verify → reference → delete, restoring the address book @api @contacts', async ({
     endpoints,

@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated settings lifecycle (read → change → restore), not simple assertions.
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
@@ -29,10 +30,7 @@ async function write(
 
 test.describe('KPost Settings · feature flow', () => {
   test.describe.configure({ mode: 'default' });
-  test.skip(
-    process.env.SETTINGS_LIFECYCLE !== 'true',
-    'changes account preferences; set SETTINGS_LIFECYCLE=true',
-  );
+  test.skip(!env.SETTINGS_LIFECYCLE, 'changes account preferences; set SETTINGS_LIFECYCLE=true');
 
   test('font and theme change, then restore @api @settings', async ({ endpoints }) => {
     try {

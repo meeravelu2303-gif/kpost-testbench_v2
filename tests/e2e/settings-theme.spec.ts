@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
@@ -17,7 +18,7 @@ import { expect, test } from '@fixtures';
  */
 test.describe('KPost Settings · Personalize theme (write)', { tag: '@ui' }, () => {
   test.skip(
-    process.env.SETTINGS_UI_LIFECYCLE !== 'true',
+    !env.SETTINGS_UI_LIFECYCLE,
     'changes a real (cosmetic) preference; set SETTINGS_UI_LIFECYCLE=true',
   );
   test.skip(

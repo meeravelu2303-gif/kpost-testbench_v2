@@ -1,9 +1,9 @@
 import type { SideEffect } from '@engine/production-guard';
 import type { ValidationToggles } from '@engine/validation-policy';
 import type { HttpMethod, RequestSpec } from '../../client/request-builder';
-import { workbookContract } from '../../contract/workbook-contract';
 import type { ContractSchema } from '../../schema/contract-schema';
 import type { EndpointDefinition, RequestFactory } from '../../registry/endpoint-definition';
+import { buildDefinition } from '../endpoint-factory';
 
 /**
  * Declares one real KPost endpoint.
@@ -102,41 +102,13 @@ export interface KpostEndpointConfig {
  * than becoming a test that quietly validates nothing.
  */
 export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefinition {
-  const contract = workbookContract(
-    'kpost-api',
-    config.contractMethod ?? config.method,
-    config.contractPath ?? config.path,
-  );
-
-  return {
-    id: config.id,
-    method: config.method,
-    path: config.path,
-    contractPath: config.contractPath,
-    contractMethod: config.contractMethod,
+  return buildDefinition(config, {
     suite: 'kpost-api',
     responseContract: 'kpost',
-    summary: config.summary,
-    tags: ['kpost-api', ...(config.tags ?? [])],
-    requirements: config.requirements,
+    suiteTags: ['kpost-api'],
     // The common module is public: these endpoints are called before anyone has a token.
-    authentication: config.authentication ?? { required: false },
-    expectedStatus: config.expectedStatus,
-    envelope: config.envelope,
-    contentType: config.contentType,
-    request: config.request,
-    requestSchema: config.requestSchema ?? contract.requestSchema,
-    responseSchema: contract.responseSchema,
-    destructive: config.destructive,
-    sideEffect: config.sideEffect,
-    productionSafe: config.productionSafe,
-    otpDependent: config.otpDependent,
-    validations: config.validations,
-    skipValidators: config.skipValidators,
-    businessRules: config.businessRules,
-    security: config.security,
-    performance: config.performance,
-  };
+    defaultAuthentication: { required: false },
+  });
 }
 
 /** A request factory for an endpoint that takes a JSON body. */

@@ -49,6 +49,12 @@ const runs = new Map<string, Promise<ValidationReport | ProductionSafetyError>>(
 interface PlannedCase {
   name: string;
   description: string;
+  /**
+   * Set when the case is reported but deliberately not executed — today, a validator outside the
+   * active validation profile. It still appears (SKIPPED, with this reason) so a run can never
+   * silently lose a whole class of checks: "injection not run" must be visible in the report.
+   */
+  skipReason?: string;
 }
 
 /**
@@ -56,8 +62,10 @@ interface PlannedCase {
  *
  * Validators the policy excludes are deliberately **kept**: they become skipped cases carrying the
  * reason ("endpoint is public", "no request schema"), which documents the endpoint's shape far
- * better than silently omitting them. Business rules and database validations are named the way
- * the engine names them, so their results line up.
+ * better than silently omitting them. The same holds for validators outside the active validation
+ * profile: they are planned with a `skipReason` instead of being dropped, so a REGRESSION run shows
+ * injection/XSS as "not in profile" rather than not at all. Business rules and database validations
+ * are named the way the engine names them, so their results line up.
  */
 export function plannedCases(
   endpoint: ResolvedEndpoint,
@@ -66,9 +74,16 @@ export function plannedCases(
   const active = profile ?? env.VALIDATION_PROFILE;
   const central = validationRegistry
     .all()
-    .filter((validator) => validator.profiles.includes(active))
     .sort((a, b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage])
-    .map((validator) => ({ name: validator.name, description: validator.description }));
+    .map((validator): PlannedCase => {
+      const planned: PlannedCase = { name: validator.name, description: validator.description };
+      if (!validator.profiles.includes(active)) {
+        planned.skipReason =
+          `not in validation profile ${active} (runs in ${validator.profiles.join('/')}) — ` +
+          'set VALIDATION_PROFILE to include it';
+      }
+      return planned;
+    });
 
   return [
     ...central,
@@ -119,6 +134,10 @@ export function describeEndpointCases(
           `${planned.name} — ${planned.description}`,
           { tag: tagsFor(endpoint) },
           async ({ validationEngine }) => {
+            if (planned.skipReason) {
+              test.skip(true, planned.skipReason);
+              return;
+            }
             const note = describeTestData();
             if (note) test.info().annotations.push({ type: 'test-data', description: note });
 

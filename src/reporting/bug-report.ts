@@ -87,6 +87,10 @@ function runTotals(reports: readonly ValidationReport[]): RunTotals {
  * pattern that matches wins, so specific reasons (OTP, needs-id) are tested before generic ones.
  */
 const SKIP_BUCKETS: readonly (readonly [string, RegExp])[] = [
+  [
+    'Not in the active validation profile — set VALIDATION_PROFILE to run it',
+    /not in validation profile/i,
+  ],
   ['OTP-gated — no OTP bypass on the live app', /\botp\b/i],
   [
     'Needs a runtime id (message / call / group) only a write flow creates',

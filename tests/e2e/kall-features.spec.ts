@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
@@ -34,10 +35,7 @@ test.describe('KPost Kall — read-only', { tag: '@ui' }, () => {
 });
 
 test.describe('KPost Kall · schedule a Kool Kall (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KALL_UI_LIFECYCLE !== 'true',
-    'creates a real scheduled call; set KALL_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.KALL_UI_LIFECYCLE, 'creates a real scheduled call; set KALL_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account',

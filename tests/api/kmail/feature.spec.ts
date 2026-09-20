@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated KMail lifecycle (compose → read back → act → delete), not simple assertions; the
 // conditionals guard optional steps and cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
@@ -83,7 +84,7 @@ async function del(
 
 test.describe('KPost KMail · feature flow', () => {
   test.describe.configure({ mode: 'default' });
-  test.skip(process.env.KMAIL_LIFECYCLE !== 'true', 'sends real mail; set KMAIL_LIFECYCLE=true');
+  test.skip(!env.KMAIL_LIFECYCLE, 'sends real mail; set KMAIL_LIFECYCLE=true');
 
   test('compose a New mail → read back → mark important → delete (FR-M01/M07) @api @kmail', async ({
     endpoints,

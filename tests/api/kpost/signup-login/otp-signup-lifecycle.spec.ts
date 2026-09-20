@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // The OTP + signup flows, driven end to end on the disposable test DB whose OTP subsystem is a TEST
 // GATEWAY (no real SMS/e-mail; 123456 validates). Not simple assertions: orchestrated flows with
 // best-effort steps, so the conditionals are intentional.
@@ -20,7 +21,7 @@ const OTP = testData.bypassOtp;
 
 test.describe('Signup & OTP lifecycle (test gateway)', { tag: '@api' }, () => {
   test.skip(
-    process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',
+    !env.OTP_TEST_GATEWAY || !env.TEST_DB_MODE,
     'OTP/signup flows run only on a confirmed test gateway: OTP_TEST_GATEWAY=true + TEST_DB_MODE=true',
   );
 

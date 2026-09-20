@@ -35,7 +35,14 @@ import { ProductionSafetyError } from './production-guard';
  * and the burden falls on whoever exempts it — the reverse arrangement silently admits every field
  * nobody thought about.
  *
- * Off production this is inert: fuzzing ids is exactly what the bench is for.
+ * It applies to EVERY real host — the live app and the test deployments alike (see
+ * `targetsRealHost` in endpoint-executor.ts). A disposable test DB is still shared with the
+ * developers and other QA accounts, and the owner's standing rule is that the bench never touches a
+ * record it does not own. Only the bundled mock (and the bench's own mock fixtures) is exempt: there,
+ * fuzzing ids is exactly what the bench is for, and the ids name nothing real.
+ *
+ * Multipart form fields (including JSON carried inside a `text` field) and JSON raw bodies are
+ * inspected too; a non-JSON raw body carries no key to judge by and is not.
  */
 
 /**
@@ -296,6 +303,42 @@ export interface GuardedRequest {
   body?: unknown;
   query?: Record<string, unknown>;
   pathParams?: Record<string, unknown>;
+  /** Form fields of a multipart request; a file part (an object with a buffer) is not inspected. */
+  multipart?: Record<string, unknown>;
+  /** A body sent verbatim; inspected when it is a JSON object or array. */
+  rawBody?: string;
+}
+
+/** A JSON object/array carried inside a string (a multipart `text` field, a raw body), or undefined. */
+function embeddedJson(value: string): unknown {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return undefined;
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Multipart form fields. The company-logo upload carries its ids as JSON inside a `text` field
+ * (`text={"companyID":4}`), so a field whose value is embedded JSON is walked like a body; a plain
+ * string field is checked under its own key; a file part is skipped (bytes, not identifiers).
+ */
+function walkMultipart(
+  multipart: Record<string, unknown>,
+  owned: Set<string>,
+  found: Offence[],
+): void {
+  for (const [key, value] of Object.entries(multipart)) {
+    if (typeof value === 'string') {
+      const json = embeddedJson(value);
+      if (json !== undefined) walk(json, `multipart.${key}`, owned, found);
+      else walk({ [key]: value }, 'multipart', owned, found);
+    } else if (typeof value === 'number') {
+      walk({ [key]: value }, 'multipart', owned, found);
+    }
+  }
 }
 
 /**
@@ -309,6 +352,9 @@ export function foreignIdentifiers(request: GuardedRequest): Offence[] {
   walk(request.body, 'body', owned, found);
   walk(request.query, 'query', owned, found);
   walk(request.pathParams, 'path', owned, found);
+  if (request.multipart) walkMultipart(request.multipart, owned, found);
+  // A raw body that is not JSON (plain text, malformed-JSON probes) carries no key to judge by.
+  if (request.rawBody !== undefined) walk(embeddedJson(request.rawBody), 'rawBody', owned, found);
   return found;
 }
 
@@ -322,9 +368,9 @@ export function foreignIdentifiers(request: GuardedRequest): Offence[] {
 export function assertQaOwnedIdentifiers(
   request: GuardedRequest,
   label: string,
-  isProduction: boolean,
+  targetsRealHost: boolean,
 ): void {
-  if (!isProduction) return;
+  if (!targetsRealHost) return;
 
   const foreign = foreignIdentifiers(request);
   if (!foreign.length) return;
@@ -336,7 +382,7 @@ export function assertQaOwnedIdentifiers(
   const more = foreign.length > 8 ? `\n  …and ${foreign.length - 8} more` : '';
 
   throw new ProductionSafetyError(
-    `${label}: refusing to send a request to the LIVE application that names ` +
+    `${label}: refusing to send a request to a real KPost host that names ` +
       `${foreign.length} identifier(s) we do not own:\n${detail}${more}\n` +
       `Every identifier must be a QA_* value from .env. If one of these is legitimately not a ` +
       `resource identifier, add it to NOT_A_RESOURCE in qa-identifier-guard.ts with a reason.`,

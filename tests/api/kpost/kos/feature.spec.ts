@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated KWord document lifecycle driving every KWord write, not simple assertions; the
 // conditionals guard optional steps and cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
@@ -46,7 +47,7 @@ function extractDocId(data: Record<string, unknown>): string | undefined {
 
 test.describe('KPost KOS · feature flow', () => {
   test.describe.configure({ mode: 'default' });
-  test.skip(process.env.KOS_LIFECYCLE !== 'true', 'writes real KWord docs; set KOS_LIFECYCLE=true');
+  test.skip(!env.KOS_LIFECYCLE, 'writes real KWord docs; set KOS_LIFECYCLE=true');
 
   test('KWord document lifecycle: create → save → update → share → join → reads → delete @api @kos', async ({
     endpoints,

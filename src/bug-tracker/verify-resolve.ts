@@ -156,12 +156,15 @@ export function classifyResolve(
   if (systemic) {
     const own = (affectedEndpoints ?? []).map(normalizeEndpoint);
     if (own.length) {
-      // Verify against the ticket's OWN endpoints — the accurate scope.
-      const tested = own.filter((ep) => index.ranEndpoint.has(ep));
+      // Verify against the ticket's OWN endpoints — the accurate scope. "Tested" means THIS
+      // validator ran on the endpoint (`ranPair`), not merely that the endpoint ran some other
+      // check: an endpoint whose validator was skipped (another profile, a production exclusion)
+      // proved nothing about this fault, and must not count as "passed".
+      const tested = own.filter((ep) => index.ranPair.has(`${ep}||${validator}`));
       if (!tested.length) {
         return {
           action: 'keep',
-          reason: `none of the ticket's ${own.length} endpoint(s) were exercised this run`,
+          reason: `"${validator}" did not run on any of the ticket's ${own.length} endpoint(s) this run`,
           validator,
           systemic,
         };

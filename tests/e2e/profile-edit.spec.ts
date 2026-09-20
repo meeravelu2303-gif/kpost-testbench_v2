@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
@@ -18,10 +19,7 @@ import { expect, test } from '@fixtures';
  * Update → verify → restore), gating and self-restore here are correct once the selector lands.
  */
 test.describe('KPost Profile · edit About (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.PROFILE_UI_LIFECYCLE !== 'true',
-    'edits a profile field; set PROFILE_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.PROFILE_UI_LIFECYCLE, 'edits a profile field; set PROFILE_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

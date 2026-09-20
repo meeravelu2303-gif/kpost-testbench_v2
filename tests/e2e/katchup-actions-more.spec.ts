@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 /* eslint-disable playwright/no-conditional-in-test */
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
@@ -37,10 +38,7 @@ const SUBFLOW_ACTIONS: ReadonlyArray<{ id: string; menu: RegExp }> = [
 ];
 
 test.describe('KPost Katchup · sender sub-flow actions (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-    'writes real messages; set KATCHUP_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.KATCHUP_UI_LIFECYCLE, 'writes real messages; set KATCHUP_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
     'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',

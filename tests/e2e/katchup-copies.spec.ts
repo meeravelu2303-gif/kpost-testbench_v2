@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { STORAGE_STATE_2, STORAGE_STATE_3 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
@@ -34,10 +35,7 @@ test.describe(
   'KPost Katchup · Copy / Confidential / Bulk (multi-account write)',
   { tag: '@ui' },
   () => {
-    test.skip(
-      process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-      'writes real messages; set KATCHUP_UI_LIFECYCLE=true',
-    );
+    test.skip(!env.KATCHUP_UI_LIFECYCLE, 'writes real messages; set KATCHUP_UI_LIFECYCLE=true');
     test.skip(
       !CONFIG_OK,
       'needs 3 QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID, QA_PERSONAL_3_KPOST_ID)',

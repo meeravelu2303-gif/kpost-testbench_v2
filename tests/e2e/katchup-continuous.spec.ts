@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 /* eslint-disable playwright/no-conditional-in-test */
 /* eslint-disable playwright/no-wait-for-timeout -- the pause BETWEEN sends is the whole point: the
    reported bug is that a second message will not send until you refresh, and it appears only after a
@@ -27,7 +28,7 @@ test.describe(
   { tag: '@ui' },
   () => {
     test.skip(
-      process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+      !env.KATCHUP_UI_LIFECYCLE,
       'writes real messages; set KATCHUP_UI_LIFECYCLE=true (npm run ui does)',
     );
     test.skip(

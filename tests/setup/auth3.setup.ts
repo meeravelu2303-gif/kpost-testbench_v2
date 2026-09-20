@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { STORAGE_STATE_3 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test as setup } from '@fixtures';
@@ -12,7 +13,7 @@ import { expect, test as setup } from '@fixtures';
  * third fresh login.
  */
 setup('authenticate third account', async ({ page, loginPage, log }) => {
-  const wanted = process.env.KATCHUP_UI_LIFECYCLE === 'true';
+  const wanted = env.KATCHUP_UI_LIFECYCLE;
   const configured = testData.personal3KpostId && !testData.personal3KpostId.includes('qa.p3');
 
   if (wanted && configured) {

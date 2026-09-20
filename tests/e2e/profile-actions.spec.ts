@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
@@ -53,10 +54,7 @@ test.describe('KPost Profile — actions (read-only)', { tag: '@ui' }, () => {
 });
 
 test.describe('KPost Profile · add an Experience record (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.PROFILE_UI_LIFECYCLE !== 'true',
-    'writes a profile record; set PROFILE_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.PROFILE_UI_LIFECYCLE, 'writes a profile record; set PROFILE_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account',

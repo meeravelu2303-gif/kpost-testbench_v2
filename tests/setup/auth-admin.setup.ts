@@ -19,7 +19,7 @@ import { test as setup } from '@fixtures';
  * self-skip — so a normal run never touches the admin host.
  */
 setup('authenticate admin UI (BUSINESS_M SSO)', async ({ page, endpoints, log }) => {
-  const wanted = process.env.ADMIN_UI_LIFECYCLE === 'true';
+  const wanted = env.ADMIN_UI_LIFECYCLE;
   const adminUrl = env.ADMIN_UI_BASE_URL;
   const businessM = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'business-m');
   const configured = Boolean(

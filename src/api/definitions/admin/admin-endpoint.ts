@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { workbookContract } from '../../contract/workbook-contract';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
+import { buildDefinition } from '../endpoint-factory';
 import type { KpostEndpointConfig } from '../kpost/kpost-endpoint';
 
 /**
@@ -31,45 +31,13 @@ export const COMPANY_SCOPED_READ = z.object({ companyId: z.string() });
  * string. See `response-contract.ts` and `docs/admin-flow.md`.
  */
 export function defineAdminEndpoint(config: KpostEndpointConfig): EndpointDefinition {
-  const contract = workbookContract(
-    'admin-api',
-    config.contractMethod ?? config.method,
-    config.contractPath ?? config.path,
-  );
-
-  return {
-    id: config.id,
-    method: config.method,
-    path: config.path,
-    contractPath: config.contractPath,
-    contractMethod: config.contractMethod,
+  return buildDefinition(config, {
     suite: 'admin-api',
     responseContract: 'admin',
-    summary: config.summary,
-    tags: ['admin-api', ...(config.tags ?? [])],
-    requirements: config.requirements,
+    suiteTags: ['admin-api'],
     // The Admin module is entirely post-login and driven by the BUSINESS_M admin: every route needs
     // that Bearer token. `business-m` is named explicitly because several principals share
-    // COMPANY_ADMIN, and it authenticates via `adminUserLogin` (its per-principal login override).
-    authentication: config.authentication ?? {
-      required: true,
-      role: 'COMPANY_ADMIN',
-      principalKey: 'business-m',
-    },
-    expectedStatus: config.expectedStatus,
-    envelope: config.envelope,
-    contentType: config.contentType,
-    request: config.request,
-    requestSchema: config.requestSchema ?? contract.requestSchema,
-    responseSchema: contract.responseSchema,
-    destructive: config.destructive,
-    sideEffect: config.sideEffect,
-    productionSafe: config.productionSafe,
-    otpDependent: config.otpDependent,
-    validations: config.validations,
-    skipValidators: config.skipValidators,
-    businessRules: config.businessRules,
-    security: config.security,
-    performance: config.performance,
-  };
+    // COMPANY_ADMIN.
+    defaultAuthentication: { required: true, role: 'COMPANY_ADMIN', principalKey: 'business-m' },
+  });
 }

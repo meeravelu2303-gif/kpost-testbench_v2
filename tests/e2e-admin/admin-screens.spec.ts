@@ -32,7 +32,7 @@ function control(page: Page, c: AdminControl): Locator {
 
 test.describe('Admin/HR-Setup deep UI sweep — every screen', { tag: '@admin-ui' }, () => {
   test.skip(
-    process.env.ADMIN_UI_LIFECYCLE !== 'true' ||
+    !env.ADMIN_UI_LIFECYCLE ||
       !env.ADMIN_UI_BASE_URL ||
       testData.businessMKpostId.includes('qa.business'),
     'needs ADMIN_UI_LIFECYCLE=true, a configured admin host and BUSINESS_M account',

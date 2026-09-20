@@ -49,6 +49,18 @@ export interface SendOptions {
 
 const MAX_ERROR_BODY_CHARS = 300;
 
+/**
+ * Whether a request to `endpoint` reaches a real KPost host (live OR a test deployment), rather than
+ * the bundled mock. The QA-identifier guard applies to every real host, not only to
+ * `TEST_ENV=production`: a disposable test DB is still shared with the developers and the other QA
+ * accounts, so naming a record we do not own is wrong there too. A mock fixture, or a suite that
+ * falls back to the mock's base URL while the mock is running, reaches nothing real.
+ */
+export function targetsRealHost(endpoint: ResolvedEndpoint): boolean {
+  if (endpoint.definition.mockFixture) return false;
+  return !(env.MOCK_API && endpoint.suite.baseUrl === env.API_BASE_URL);
+}
+
 /** Executes registered endpoints: builds requests, attaches credentials, enforces prod safety. */
 export class EndpointExecutor {
   readonly tokens: TokenProvider;
@@ -139,15 +151,20 @@ export class EndpointExecutor {
 
     /*
      * Every request passes through here - primary calls, probe mutations and setup chains alike -
-     * which is the only place that can see the payload as it will actually be sent. On the live
-     * application an identifier we do not own is refused here, because several endpoints act on
-     * the id in the payload rather than on the caller (see qa-identifier-guard.ts).
+     * which is the only place that can see the payload as it will actually be sent. On any real
+     * host an identifier we do not own is refused here, because several endpoints act on the id in
+     * the payload rather than on the caller (see qa-identifier-guard.ts).
      */
     assertQaOwnedIdentifiers(
-      { body: spec.body, query: spec.query, pathParams: spec.pathParams },
+      {
+        body: spec.body,
+        query: spec.query,
+        pathParams: spec.pathParams,
+        multipart: spec.multipart,
+        rawBody: spec.rawBody,
+      },
       options.label ?? endpoint.label,
-      // A mock fixture goes to the bundled mock server, so its ids name nothing real.
-      env.IS_PRODUCTION && !endpoint.definition.mockFixture,
+      targetsRealHost(endpoint),
     );
 
     const request = RequestBuilder.for(options.method ?? endpoint.method, endpoint.path)

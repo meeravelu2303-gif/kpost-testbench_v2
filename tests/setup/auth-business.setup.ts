@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test as setup } from '@fixtures';
@@ -12,7 +13,7 @@ import { expect, test as setup } from '@fixtures';
  * (which re-hits the throttling country-list endpoint).
  */
 setup('authenticate BUSINESS_S admin', async ({ page, loginPage, log }) => {
-  const wanted = process.env.BUSINESS_UI_LIFECYCLE === 'true';
+  const wanted = env.BUSINESS_UI_LIFECYCLE;
   const configured =
     testData.businessSKpostId && !testData.businessSKpostId.includes('qa.business');
 

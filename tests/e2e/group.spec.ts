@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
@@ -16,10 +17,7 @@ import { expect, test } from '@fixtures';
  * best-effort. Never runs on a default run.
  */
 test.describe('KPost Group — create / rename / delete (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.GROUP_UI_LIFECYCLE !== 'true',
-    'creates a real group; set GROUP_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.GROUP_UI_LIFECYCLE, 'creates a real group; set GROUP_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
     'needs both QA accounts (a group needs at least one other member)',

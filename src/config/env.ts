@@ -6,6 +6,14 @@ import { ROOT_DIR, VALIDATION_PROFILES } from './constants';
 
 const testEnv = process.env.TEST_ENV || 'local';
 
+/*
+ * Bug filing may only be ARMED by the command that starts the run (a `:file` npm script, CI) —
+ * never by a value sitting in a `.env` file, where it silently turns every ad-hoc
+ * `npx playwright test` or IDE run into a live filing run. So the value is captured from the real
+ * process environment BEFORE dotenv loads the files; a `false` that only a file supplied is ignored.
+ */
+const dryRunFromCommand = process.env.BUGZILLA_DRY_RUN;
+
 // Earlier files win, and dotenv never overrides variables already set (e.g. CI secrets),
 // so precedence is: process env > .env.<TEST_ENV> > .env
 dotenv.config({
@@ -110,6 +118,44 @@ const EnvSchema = z.object({
    */
   OTP_TEST_GATEWAY: z.stringbool().default(false),
 
+  // ---- Gated write flows. Each gate opens one module's self-cleaning lifecycle spec, which writes
+  // real data on the target (messages, calls, mails, org records …). All default OFF; the per-suite
+  // npm commands (docs/COMMANDS.md) switch on the ones they run. Declared here — not read ad hoc as
+  // `process.env.X === 'true'` — so every run switch is typed, documented and in `.env.example`.
+  /** API lifecycle: Admin/HR org build on BUSINESS_M (tests/api/admin/feature.spec.ts). */
+  ADMIN_LIFECYCLE: z.stringbool().default(false),
+  /**
+   * Admin role posting — mints a real KPost + KSMACC account that cannot be deleted. Above
+   * ADMIN_LIFECYCLE, owner-authorized only.
+   */
+  ADMIN_ROLE_POSTING_LIVE: z.stringbool().default(false),
+  AWS_LIFECYCLE: z.stringbool().default(false),
+  CONTACTS_LIFECYCLE: z.stringbool().default(false),
+  GROUP_LIFECYCLE: z.stringbool().default(false),
+  KALL_LIFECYCLE: z.stringbool().default(false),
+  KATCHUP_LIFECYCLE: z.stringbool().default(false),
+  KDIARY_LIFECYCLE: z.stringbool().default(false),
+  KMAIL_LIFECYCLE: z.stringbool().default(false),
+  KOS_LIFECYCLE: z.stringbool().default(false),
+  /** K-AI generation calls a real, BILLED AI service. Above KOS_LIFECYCLE, owner-authorized only. */
+  KOS_AI_LIVE: z.stringbool().default(false),
+  PROFILE_LIFECYCLE: z.stringbool().default(false),
+  SETTINGS_LIFECYCLE: z.stringbool().default(false),
+  /** UI write flows (tests/e2e) — each drives its module's screens against the real app. */
+  ADMIN_UI_LIFECYCLE: z.stringbool().default(false),
+  BUSINESS_UI_LIFECYCLE: z.stringbool().default(false),
+  CONTACTS_UI_LIFECYCLE: z.stringbool().default(false),
+  GROUP_UI_LIFECYCLE: z.stringbool().default(false),
+  KALL_UI_LIFECYCLE: z.stringbool().default(false),
+  KATCHUP_UI_LIFECYCLE: z.stringbool().default(false),
+  KDIARY_UI_LIFECYCLE: z.stringbool().default(false),
+  KMAIL_UI_LIFECYCLE: z.stringbool().default(false),
+  LOGIN_UI_LIFECYCLE: z.stringbool().default(false),
+  PROFILE_UI_LIFECYCLE: z.stringbool().default(false),
+  SETTINGS_UI_LIFECYCLE: z.stringbool().default(false),
+  /** Pixel-baseline comparison (tests/e2e/visual.spec.ts); needs committed baselines. */
+  VISUAL_REGRESSION: z.stringbool().default(false),
+
   HEADLESS: z.stringbool().default(true),
   WORKERS: z.coerce.number().int().positive().optional(),
   RETRIES: z.coerce.number().int().min(0).optional(),
@@ -120,6 +166,11 @@ const EnvSchema = z.object({
   GITHUB_RUN_NUMBER: z.string().optional(),
   TEST_RUN_ID: z.string(),
 });
+
+/** Every variable the schema reads (TEST_RUN_ID is generated) — `.env.example` must document each. */
+export const ENV_SCHEMA_KEYS: readonly string[] = Object.keys(EnvSchema.shape).filter(
+  (key) => key !== 'TEST_RUN_ID',
+);
 
 // Treat empty values (`KEY=` in .env files) as unset so defaults apply; accept `prod` as an alias.
 const rawEnv: Record<string, string | undefined> = Object.fromEntries(
@@ -137,8 +188,28 @@ if (!parsed.success) {
 const data = parsed.data;
 const mockApi = data.MOCK_API ?? (data.TEST_ENV === 'local' && !data.API_BASE_URL);
 
+/**
+ * The effective dry-run setting. Filing is armed only when the COMMAND's own environment says
+ * `BUGZILLA_DRY_RUN=false`; a `false` that only a `.env` file supplied is overruled (`forced`).
+ */
+export function resolveDryRun(
+  configured: boolean,
+  fromCommand: string | undefined,
+): { dryRun: boolean; forced: boolean } {
+  const forced = !configured && fromCommand === undefined;
+  return { dryRun: configured || forced, forced };
+}
+
+const dryRun = resolveDryRun(data.BUGZILLA_DRY_RUN, dryRunFromCommand);
+// Written back so Playwright workers, which inherit process.env, agree with the main process.
+if (dryRun.forced) process.env.BUGZILLA_DRY_RUN = 'true';
+const filingArmedByFile = dryRun.forced;
+
 export const env = Object.freeze({
   ...data,
+  BUGZILLA_DRY_RUN: dryRun.dryRun,
+  /** True when a `.env` file set BUGZILLA_DRY_RUN=false and it was ignored (reported once per run). */
+  BUGZILLA_DRY_RUN_FORCED: filingArmedByFile,
   MOCK_API: mockApi,
   API_BASE_URL:
     data.API_BASE_URL ?? (mockApi ? `http://127.0.0.1:${data.MOCK_API_PORT}` : data.BASE_URL),

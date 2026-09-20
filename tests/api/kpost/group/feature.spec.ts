@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated group lifecycle driving every group write, not simple assertions; the conditionals
 // guard optional steps and cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
@@ -58,10 +59,7 @@ async function as(
 
 test.describe('KPost Group · feature flow', () => {
   test.describe.configure({ mode: 'default' });
-  test.skip(
-    process.env.GROUP_LIFECYCLE !== 'true',
-    'creates real groups; set GROUP_LIFECYCLE=true',
-  );
+  test.skip(!env.GROUP_LIFECYCLE, 'creates real groups; set GROUP_LIFECYCLE=true');
 
   test('create → add member → admin → rename → image → leave → remove → delete @api @group', async ({
     endpoints,

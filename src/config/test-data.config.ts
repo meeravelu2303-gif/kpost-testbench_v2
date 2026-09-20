@@ -186,6 +186,9 @@ const SOURCES = {
   moduleId: 'QA_MODULE_ID',
 } as const satisfies Record<keyof z.infer<typeof schema>, string>;
 
+/** Every QA_* variable the test data reads — `.env.example` must document each (framework guard). */
+export const TEST_DATA_ENV_VARS: readonly string[] = Object.values(SOURCES);
+
 const provided = Object.fromEntries(
   Object.entries(SOURCES)
     .map(([field, variable]) => [field, process.env[variable]] as const)

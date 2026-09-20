@@ -23,21 +23,21 @@ All/Selected Members targeting, sent-message display). Bench: group send is COVE
 
 ## Signup & Login — `FR-SL-001..032` (32)
 
-| FR             | Title                                                     | Status       | Where / reason                                                                      |
-| -------------- | --------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------- |
-| FR-SL-001..005 | Sign-up entry, account type, country, language, domain    | OUT-OF-SCOPE | signup; accounts created by hand                                                    |
-| FR-SL-006..008 | Mobile entry, OTP, confirm                                | OUT-OF-SCOPE | OTP-gated on live (no bypass)                                                       |
-| FR-SL-009..015 | Name, gender, DOB, email, PIN address auto-fill, policies | OUT-OF-SCOPE | signup; PIN auto-fill = `getAddressUsingPincode` (common, COVERED as a read)        |
-| FR-SL-016..018 | KPOST ID create, suggestions, reject taken                | PARTIAL      | `kpostIdExist`/`kpostIDsuggestionList` COVERED as reads; signup submit out-of-scope |
-| FR-SL-019..022 | Password strength/confirm, submit, success                | OUT-OF-SCOPE | signup submit (OTP)                                                                 |
-| FR-SL-023      | Select country on login                                   | COVERED      | `login.spec.ts` / `tests/e2e/login.spec.ts`                                         |
-| FR-SL-024      | Enter KPOST ID / mobile for login                         | COVERED      | `login.api.ts` `fetchUserDetails` + login UI                                        |
-| FR-SL-025      | Identified user on password screen                        | COVERED      | `tests/e2e/login.spec.ts` (step-2)                                                  |
-| FR-SL-026      | Authenticate password and sign in                         | COVERED      | `login-flow.spec.ts` (+ enumeration rule)                                           |
-| FR-SL-027..029 | Notification / contacts / battery permissions             | OUT-OF-SCOPE | native mobile-app permissions                                                       |
-| FR-SL-030      | Set primary device                                        | OUT-OF-SCOPE | device designation, OTP-gated (`device.api.ts`, blocked)                            |
-| FR-SL-031      | Optional profession entry                                 | PARTIAL      | profile designation write (API lifecycle)                                           |
-| FR-SL-032      | Home with Recents + navigation                            | COVERED      | `home.spec.ts` / `shell.spec.ts` / `navigation.spec.ts`                             |
+| FR             | Title                                                     | Status       | Where / reason                                                                                                   |
+| -------------- | --------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| FR-SL-001..005 | Sign-up entry, account type, country, language, domain    | PARTIAL      | API registration on the OTP test gateway (`otp-signup-lifecycle.spec.ts`, `signup.api.ts`); signup UI not driven |
+| FR-SL-006..008 | Mobile entry, OTP, confirm                                | PARTIAL      | sendOTP → validateOTP (mobile + mail) on the OTP test gateway only; UI not driven                                |
+| FR-SL-009..015 | Name, gender, DOB, email, PIN address auto-fill, policies | PARTIAL      | fields sent in the API signup payload; per-field UI validation not asserted                                      |
+| FR-SL-016..018 | KPOST ID create, suggestions, reject taken                | PARTIAL      | availability + suggestions as reads; create via API signup (OTP gateway)                                         |
+| FR-SL-019..022 | Password strength/confirm, submit, success                | PARTIAL      | API submit + success on the OTP gateway; strength rules via request fuzzers only                                 |
+| FR-SL-023      | Select country on login                                   | COVERED      | `login.spec.ts` / `tests/e2e/login.spec.ts`                                                                      |
+| FR-SL-024      | Enter KPOST ID / mobile for login                         | COVERED      | `login.api.ts` `fetchUserDetails` + login UI                                                                     |
+| FR-SL-025      | Identified user on password screen                        | COVERED      | `tests/e2e/login.spec.ts` (step-2)                                                                               |
+| FR-SL-026      | Authenticate password and sign in                         | COVERED      | `login-flow.spec.ts` (+ enumeration rule)                                                                        |
+| FR-SL-027..029 | Notification / contacts / battery permissions             | OUT-OF-SCOPE | native mobile-app permissions                                                                                    |
+| FR-SL-030      | Set primary device                                        | OUT-OF-SCOPE | device designation, OTP-gated (`device.api.ts`, blocked)                                                         |
+| FR-SL-031      | Optional profession entry                                 | PARTIAL      | profile designation write (API lifecycle)                                                                        |
+| FR-SL-032      | Home with Recents + navigation                            | COVERED      | `home.spec.ts` / `shell.spec.ts` / `navigation.spec.ts`                                                          |
 
 ## Katchup — `FR-KU-001..057` (57)
 

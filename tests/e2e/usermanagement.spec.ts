@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
@@ -17,7 +18,7 @@ test.describe('KPost company-admin · User Management (BUSINESS_S)', { tag: '@ui
   test.use({ storageState: STORAGE_STATE_BUSINESS });
 
   test.skip(
-    process.env.BUSINESS_UI_LIFECYCLE !== 'true',
+    !env.BUSINESS_UI_LIFECYCLE,
     'needs the BUSINESS_S admin session; set BUSINESS_UI_LIFECYCLE=true',
   );
   test.skip(

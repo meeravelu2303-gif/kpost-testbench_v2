@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated multi-step call lifecycle (initiate → status → members → end → clean up), not
 // simple assertions; the conditionals guard optional steps and best-effort cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
@@ -77,7 +78,7 @@ async function clearHistory(endpoints: EndpointExecutor, who: Principal[]): Prom
 test.describe('KPost Kall · feature flow', () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
-    process.env.KALL_LIFECYCLE !== 'true',
+    !env.KALL_LIFECYCLE,
     'places/schedules real calls; set KALL_LIFECYCLE=true (owner sign-off, docs/kall-flow.md §5)',
   );
 

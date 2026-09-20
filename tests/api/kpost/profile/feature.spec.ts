@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated profile write lifecycle (read → update → read back → restore), not simple
 // assertions; the conditionals guard optional steps and restore of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
@@ -52,10 +53,7 @@ async function write(
 
 test.describe('KPost Profile · write lifecycle', () => {
   test.describe.configure({ mode: 'default' });
-  test.skip(
-    process.env.PROFILE_LIFECYCLE !== 'true',
-    'writes real profile data; set PROFILE_LIFECYCLE=true to run',
-  );
+  test.skip(!env.PROFILE_LIFECYCLE, 'writes real profile data; set PROFILE_LIFECYCLE=true to run');
 
   test('update "about" is saved and reads back, then is restored @api @profile', async ({
     endpoints,

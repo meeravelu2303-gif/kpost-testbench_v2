@@ -1,6 +1,6 @@
 import { env } from '@config/env';
-import { workbookContract } from '../../contract/workbook-contract';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
+import { buildDefinition } from '../endpoint-factory';
 import type { KpostEndpointConfig } from '../kpost/kpost-endpoint';
 
 /**
@@ -20,40 +20,12 @@ import type { KpostEndpointConfig } from '../kpost/kpost-endpoint';
 const KMAIL_PREFIX = env.KMAIL_PATH_PREFIX;
 
 export function defineKmailEndpoint(config: KpostEndpointConfig): EndpointDefinition {
-  const documentedPath = config.contractPath ?? config.path;
-  const contract = workbookContract(
-    'kmail-api',
-    config.contractMethod ?? config.method,
-    documentedPath,
-  );
-
-  return {
-    id: config.id,
-    method: config.method,
-    path: `${KMAIL_PREFIX}${config.path}`,
-    // The unprefixed documented path — used for the schema lookup and coverage reconciliation.
-    contractPath: documentedPath,
-    contractMethod: config.contractMethod,
+  return buildDefinition(config, {
     suite: 'kmail-api',
     responseContract: 'kmail',
-    summary: config.summary,
-    tags: ['kmail-api', 'kmail', ...(config.tags ?? [])],
-    requirements: config.requirements,
-    authentication: config.authentication ?? { required: true },
-    expectedStatus: config.expectedStatus,
-    envelope: config.envelope,
-    contentType: config.contentType,
-    request: config.request,
-    requestSchema: contract.requestSchema,
-    responseSchema: contract.responseSchema,
-    destructive: config.destructive,
-    sideEffect: config.sideEffect,
-    productionSafe: config.productionSafe,
-    otpDependent: config.otpDependent,
-    validations: config.validations,
-    skipValidators: config.skipValidators,
-    businessRules: config.businessRules,
-    security: config.security,
-    performance: config.performance,
-  };
+    suiteTags: ['kmail-api', 'kmail'],
+    defaultAuthentication: { required: true },
+    // The request goes to the prefixed path; schema lookup/coverage keep the unprefixed contract path.
+    pathPrefix: KMAIL_PREFIX,
+  });
 }

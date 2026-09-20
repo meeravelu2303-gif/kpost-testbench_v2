@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { openConversation } from './support/katchup';
@@ -60,10 +61,7 @@ test.describe('KPost Contacts — read-only', { tag: '@ui' }, () => {
 });
 
 test.describe('KPost Contacts — block / unblock (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.CONTACTS_UI_LIFECYCLE !== 'true',
-    'blocks a real contact; set CONTACTS_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.CONTACTS_UI_LIFECYCLE, 'blocks a real contact; set CONTACTS_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
     'needs both QA accounts',

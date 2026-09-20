@@ -9,6 +9,10 @@ Every surface has **one command to run it**, and the same name with **`:file`** 
 
 Always run the plain command first, read `reports/REPORT.md`, then run `:file`. Filing cannot be undone.
 
+**Filing is armed only by the command.** `BUGZILLA_DRY_RUN=false` works when the command sets it (the
+`:file` scripts, CI); a `false` in a `.env` file is **ignored** and the run says so — so an ad-hoc
+`npx playwright test` or an IDE run can never file tickets by accident.
+
 ---
 
 ## 1. Run one surface
@@ -41,9 +45,11 @@ What each one does:
   **browser name** (`[browser:…]` + a "Browsers affected" line), so a WebKit- or Firefox-only defect is
   unmistakable.
 
-- **`all`** — `kpost`, then `kmail`, then `ui`, in order (separate runs, so the API login never displaces the UI session).
+- **`all`** — `kpost`, then `kmail`, then `ui`, in order (separate runs, so the API login never displaces the UI session). Run by `scripts/run-suites.cjs`: **every suite runs even when an earlier one finds defects** (a finding exits non-zero, which used to stop the chain after `kpost`), each suite's report is kept in `reports/<suite>/`, and `reports/SUITES.md` indexes them. It exits non-zero if any suite did.
 
-Each run writes the single report (see §4). All are serial (`--workers=1`).
+The API commands set **`VALIDATION_PROFILE=FULL`** explicitly (REGRESSION + injection/XSS/rate-limit).
+A validator outside the active profile is reported as **SKIPPED — "not in validation profile …"**, never
+silently dropped. Each run writes the single report (see §4). All are serial (`--workers=1`).
 
 ---
 
@@ -74,7 +80,8 @@ with a comment), without filing any new tickets. Use it to update statuses after
 
 ## 4. After any run — where the results are
 
-Every run writes **exactly two files**, nothing else:
+Every run writes **exactly two files** (`npm run all` also keeps each suite's copy in `reports/<suite>/`
+and an index in `reports/SUITES.md`):
 
 | File                      | What it is                                                                                                                                                                                         |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -107,6 +114,7 @@ Every run writes **exactly two files**, nothing else:
 
 - The target is the **disposable automation test DB** `testingapi.kpostindia.com` (`.env`).
 - **No OTP/SMS/email** is ever sent to a real host — hard kill-switch, every mode.
-- **No request names a record outside our QA accounts** — the QA-identifier guard refuses it before sending.
+- **No request names a record outside our QA accounts** — the QA-identifier guard refuses it before
+  sending, on **every real host** (live and test), including multipart form fields and JSON raw bodies.
 - **`external` / `global` writes** (account provisioning, another user's password, app version) stay
   **blocked on the live host** — only the disposable-DB deep tier fuzzes `data` writes.

@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
@@ -41,10 +42,7 @@ test.describe('KPost KDiary — read-only', { tag: '@ui' }, () => {
 });
 
 test.describe('KPost KDiary · create event (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KDIARY_UI_LIFECYCLE !== 'true',
-    'creates a real diary event; set KDIARY_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.KDIARY_UI_LIFECYCLE, 'creates a real diary event; set KDIARY_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account',

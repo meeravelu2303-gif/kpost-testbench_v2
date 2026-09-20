@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
@@ -84,10 +85,7 @@ test.describe('KPost login screen · deeper flows', { tag: '@ui' }, () => {
  * ends the session (self-contained — the saved storageState file is untouched, so other tests re-login).
  */
 test.describe('KPost header · logout', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.LOGIN_UI_LIFECYCLE !== 'true',
-    'ends the session; set LOGIN_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.LOGIN_UI_LIFECYCLE, 'ends the session; set LOGIN_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

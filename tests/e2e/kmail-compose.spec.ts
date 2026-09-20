@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
@@ -48,10 +49,7 @@ test.describe('KPost KMail compose', { tag: '@ui' }, () => {
 });
 
 test.describe('KPost KMail compose · send (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KMAIL_UI_LIFECYCLE !== 'true',
-    'sends a real mail; set KMAIL_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.KMAIL_UI_LIFECYCLE, 'sends a real mail; set KMAIL_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
     'needs both QA accounts',

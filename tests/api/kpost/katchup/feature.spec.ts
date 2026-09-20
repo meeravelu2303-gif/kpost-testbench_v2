@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated multi-step feature flow (send → read → recall → clean up), not simple assertions;
 // the conditionals guard optional steps and best-effort cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
@@ -95,7 +96,7 @@ async function cleanup(endpoints: EndpointExecutor, as: Principal, msgID?: numbe
 test.describe('KPost Katchup · feature flow', () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
-    process.env.KATCHUP_LIFECYCLE !== 'true',
+    !env.KATCHUP_LIFECYCLE,
     'writes real messages; set KATCHUP_LIFECYCLE=true (owner sign-off, docs/katchup-flow.md §6)',
   );
 

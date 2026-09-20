@@ -129,20 +129,25 @@ the response-time budget, which is a functional check, not load testing).
 
 ## 5. What the bench is today
 
-Playwright + TypeScript (strict). ~124 source files, 14 spec files, 3 contract scripts.
+Playwright + TypeScript (strict). ~330 `.ts` files (207 in `src/`), 111 spec files, ~32 500 LOC.
+Collected: ~6 300 API cases (≈130 endpoints × 47 validators), 148 UI tests × 3 browsers, 8 admin-UI,
+120 framework guards. A full production-readiness audit with scores, gaps and the 10-phase roadmap is
+in `docs/PRODUCTION-READINESS-AUDIT.md` (2026-09-19).
 
 ```
-src/config/             env, api, auth, database, thresholds, ownership   ← all configuration
-src/api/                client (pool, request builder, token provider) · registry · schemas · definitions
-src/validation-engine/  engine · registry · context · policy · probe · production guard
-src/validators/         44 centralized validators (auth, authz, request, response, security, perf, common)
-src/business-rules/     endpoint-specific rules (licence limit, duplicates, blocked company)
-src/database/           DB client · repositories · assertions · named DB validations
-src/bug-tracker/        Bugzilla client · fingerprint · candidate · validity gate · filer
-src/reporting/          validation reporter · bugzilla reporter · formatters
+src/config/             env (zod — every run switch incl. the *_LIFECYCLE gates), auth, ownership, test data
+src/api/                client (pool, request builder, token provider) · registry · contracts · definitions
+  definitions/          ~345 endpoints; per-suite factories share one mapping (endpoint-factory.ts)
+src/validation-engine/  engine · policy · executor (the single send chokepoint + safety guards) · flow findings
+src/validators/         47 centralized validators (auth, authz, request, response, security, perf, common)
+src/business-rules/     registered rules — today only on the bench's own mock fixtures
+src/database/           DB client · repositories · validations — mock only; no real MySQL/Mongo adapter yet
+src/ui/                 screen registry · 9-check UI catalogue · health monitor · crawler
+src/bug-tracker/        Bugzilla client · fingerprint · candidate · validity gate · filer · auto-resolve
+src/reporting/          one reporter → reports/REPORT.{md,json}
+scripts/                contract converters/audits · run-suites.cjs (multi-suite runner for `npm run all`)
 mock-server/            local stand-in for the KPost API (the framework runs with no environment)
-contracts/              GENERATED from the Excel workbook
-openapi/                GENERATED per product
+contracts/  openapi/    GENERATED
 ```
 
 **The central idea:** common validations exist **once**. An endpoint definition states only what is
@@ -150,17 +155,18 @@ specific to it; the engine applies every applicable validator automatically. Add
 one definition; adding a validator is one line in `src/validators/index.ts` and it applies to every
 endpoint. Details: `docs/validation-framework.md`.
 
-**Profiles:** `SMOKE` → `REGRESSION` (default) → `SECURITY` → `FULL`.
+**Profiles:** `SMOKE` → `REGRESSION` (default) → `SECURITY` → `FULL`. The API npm commands set
+`FULL` explicitly; a validator outside the active profile is reported SKIPPED, never dropped.
 
-**Target: the LIVE application.** `TEST_ENV=production` activates three independent safety controls
-— an endpoint allowlist (`productionSafe`), a validator allowlist (no request-mutating probe runs)
-and the QA-identifier guard (no request may name a record we do not own). All three are default-deny
-and none can be switched off by configuration, including by `ALLOW_DESTRUCTIVE_TESTS`. See §8 and
-`tests/framework/live-safety.spec.ts`. **16 endpoints are OTP-gated and cannot run on live at all**
-(`npm run contract:otp`).
+**Target: the disposable TEST deployment** (testingapi / testkmail / on-prem admin), run with
+`TEST_ENV=production` so the endpoint + validator allowlists stay armed. The QA-identifier guard (no
+request may name a record we do not own) applies to **every real host**, live or test. None of the
+controls can be switched off by configuration. See §8 and `tests/framework/live-safety.spec.ts`.
+**Filing is armed only by the command** (`:file` scripts, CI), never by a `.env` value.
 
-**Verified state:** `npm run check` clean; **52 tests pass, 2 skip** (the module suites skip until
-their hosts are configured).
+**Verified state (2026-09-19):** `npm run check` clean (0 errors, 32 pre-existing lint warnings);
+**116 framework guards pass, 4 skip**. Known structural gaps (see the audit): no real DB validation,
+authorization validators not wired to real endpoints, serial-only execution, CI runs the mock only.
 
 ## 6. Bug filing — routed to the developer who owns the module
 
@@ -227,6 +233,74 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 ## 8. Decision log — what was done and why
 
 Newest first. Each entry records the decision, not just the change.
+
+### 2026-09-19 — Production-readiness audit; Phase 1 (bench correctness & safety) done
+
+The owner asked for a complete, evidence-based audit before any further code work. It is in
+**`docs/PRODUCTION-READINESS-AUDIT.md`**: application understanding, current architecture, a scored
+assessment (overall **5.5/10** — a strong validation core and defect pipeline on an operational layer
+that is not yet production-grade), a gap table, the target architecture, and a 10-phase roadmap. The
+owner approved it and asked for Phase 1. **Intent (recorded before the change, per the working
+agreement):** fix the defects found in the bench itself and make the docs tell the truth — no new
+test coverage, no change to what a live run sends except where noted.
+
+**What Phase 1 changed, and why:**
+
+- **Auto-resolve could close bugs it never re-verified.** The systemic branch of `classifyResolve`
+  (`verify-resolve.ts`) counted a ticket's endpoint as "tested" when the endpoint ran ANY check, so a
+  platform-wide ticket whose validator was SKIPPED on its endpoints closed as "ran and passed" — on the
+  developers' real Bugzilla. It now requires the exact (endpoint, validator) pair to have run
+  (`ranPair`). Guard added in `verify-resolve.spec.ts`.
+- **Injection / XSS / rate-limit never ran on `npm run kpost|kmail|admin`.** They are SECURITY/FULL
+  validators and no command set `VALIDATION_PROFILE`, so the default REGRESSION applied — and the cases
+  were filtered out silently, not reported. The earlier claim here that `TEST_DB_MODE` ran "the full
+  matrix incl. injection/XSS" was therefore not true. Now: every API command sets
+  `VALIDATION_PROFILE=FULL` explicitly, and a validator outside the active profile is **reported as
+  SKIPPED** ("not in validation profile …") both as a Playwright case and in the engine's report (a new
+  bucket in REPORT.md's skip breakdown). Rate-limit is opt-in per endpoint and no KPost endpoint opts
+  in, so FULL adds exactly injection + XSS on the test-DB reads. **Expect more findings** on the next
+  `npm run kpost` — preview (dry) and review per class before `:file`, as always.
+- **A `.env` value could arm live filing.** `.env` had `BUGZILLA_DRY_RUN=false`, so any ad-hoc
+  `npx playwright test` or IDE run filed tickets. Filing is now armed **only by the command**:
+  `env.ts` captures `BUGZILLA_DRY_RUN` from the process environment before dotenv loads the files, and
+  a `false` that only a file supplied is overruled (the run prints a one-line notice). The `:file`
+  scripts and the CI merge job set it on the command, so they are unaffected. (`resolveDryRun`, guarded.)
+- **`npm run all` stopped after the first suite with a finding** (`kpost && kmail && ui`; a finding
+  exits non-zero) and each run overwrote `reports/REPORT.*`. New `scripts/run-suites.cjs` runs every
+  suite regardless, keeps each suite's report in `reports/<suite>/`, writes `reports/SUITES.md`, and
+  exits non-zero if any suite did. Verified in a scratch sandbox (failure mid-chain, no-report suite,
+  exit codes).
+- **KMail ignored the `requestSchema` override** (its factory used the contract schema
+  unconditionally). The three per-suite factories now delegate to one `buildDefinition()`
+  (`src/api/definitions/endpoint-factory.ts`), so a config field cannot be honoured by one suite and
+  dropped by another. No KMail definition used the override yet, so no current behaviour changed.
+- **The QA-identifier guard had two holes.** It ran only when `TEST_ENV=production`, and it walked
+  only body/query/path. It now applies to **every real host** (`targetsRealHost` — anything but the
+  bundled mock and mock fixtures), matching the owner's rule that the bench never touches a record it
+  does not own, and it inspects **multipart form fields** (including JSON inside a `text` field) and
+  **JSON raw bodies**. A probe of every registered multipart request confirmed all lifecycle uploads
+  still pass — and that the guard now sees `updateCompanyLogo`'s `companyID: 1` (a real company on
+  live) that it was blind to before (that endpoint is `global`/blocked regardless).
+- **25 run switches were read raw** (`process.env.X === 'true'` in ~30 specs). The 22 `*_LIFECYCLE`
+  gates plus `KOS_AI_LIVE`, `ADMIN_ROLE_POSTING_LIVE`, `VISUAL_REGRESSION` are now in the zod env
+  schema and read as `env.X`.
+- **Docs made true.** `.env.example` rewritten to list every variable the bench reads (it had none of
+  the ~45 `QA_*` keys) — a guard now fails if the code reads a variable the example does not document;
+  CLAUDE.md §5 (which still said "~124 files, 52 tests") rewritten; `docs/COMMANDS.md` updated;
+  `docs/requirements-frd.md` signup rows moved from OUT-OF-SCOPE to PARTIAL (API-covered on the OTP
+  test gateway since earlier today; the signup UI is still not driven).
+
+**Verified:** `npm run check` clean (32 lint warnings, identical to before the change); **116
+framework guards pass, 4 skip** (8 new in `bench-hardening.spec.ts` + 1 in `verify-resolve.spec.ts`);
+the API project now collects 6 292 cases (was 5 902 — the +390 are the profile-excluded validators,
+now visible). Nothing was run against a live or test host.
+
+**Found, deliberately NOT changed (later phases):** `endpoints.sendTo(id, {})` sends the literal spec
+and never runs the request factory, so the Katchup/Profile lifecycle "multipart uploads" send an empty
+request despite their comments (Phase 4 — changes what a live run sends). `.env` carries 8 variables
+the bench never reads (`QA_BUSINESS_M_USER_3/4_KPOST_ID`, the four `QA_BUSINESS_M_USER_*_MOBILE`).
+The owner's own `.env` still says `BUGZILLA_DRY_RUN=false`; it is now harmless, but setting it to
+`true` avoids the notice.
 
 ### 2026-09-19 — First full KPost run reviewed: false-positive classes fixed (incl. the validateOTP lesson)
 
@@ -4383,6 +4457,15 @@ contract rejects them. The production guard blocks mutating calls when `TEST_ENV
 explicitly allowed.
 
 ## 9. Plan
+
+### Production-readiness roadmap (2026-09-19)
+
+The authoritative plan is the 10-phase roadmap in `docs/PRODUCTION-READINESS-AUDIT.md` §12.
+**Phase 1 (bench correctness & safety) is DONE** (§8). **Next: Phase 2** — one runner CLI with typed
+run profiles, auto-derived tags + stable test-case ids, a fixture-owned test-data ledger with
+guaranteed teardown, and the account-pool abstraction. Owner decisions that gate later phases are in
+the audit's §13 (read-only DB access, more QA accounts, a self-hosted CI runner, the CI gate policy,
+the RBAC matrix, `data-testid`).
 
 ### Blocked on the repo owner
 

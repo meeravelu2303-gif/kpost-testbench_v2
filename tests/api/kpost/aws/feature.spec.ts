@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated attachment lifecycle (generate → check → delete), not simple assertions.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 import { AUTH_PROFILES } from '@config/auth-profile';
@@ -38,10 +39,7 @@ function extractUuid(text: string): string | undefined {
 
 test.describe('KPost AWS · feature flow', () => {
   test.describe.configure({ mode: 'default' });
-  test.skip(
-    process.env.AWS_LIFECYCLE !== 'true',
-    'S3 attachment lifecycle; set AWS_LIFECYCLE=true',
-  );
+  test.skip(!env.AWS_LIFECYCLE, 'S3 attachment lifecycle; set AWS_LIFECYCLE=true');
 
   test('generate presigned URL → delete, on our own attachment @api @aws', async ({
     endpoints,

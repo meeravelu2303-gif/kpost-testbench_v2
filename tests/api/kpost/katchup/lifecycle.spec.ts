@@ -22,7 +22,7 @@ import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 test.describe('KPost Katchup · 1:1 lifecycle', () => {
   test.describe.configure({ mode: 'serial' });
   test.skip(
-    process.env.KATCHUP_LIFECYCLE !== 'true',
+    !env.KATCHUP_LIFECYCLE,
     'writes a real message; set KATCHUP_LIFECYCLE=true to run (owner sign-off, flow doc Q4)',
   );
 

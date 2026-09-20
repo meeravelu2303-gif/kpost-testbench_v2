@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
@@ -69,10 +70,7 @@ test.describe('KPost Katchup compose', { tag: '@ui' }, () => {
  * `#ChatTop`; recall = the message action menu → "Recall").
  */
 test.describe('KPost Katchup compose · send (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-    'sends a real message; set KATCHUP_UI_LIFECYCLE=true',
-  );
+  test.skip(!env.KATCHUP_UI_LIFECYCLE, 'sends a real message; set KATCHUP_UI_LIFECYCLE=true');
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
     'needs both QA accounts',

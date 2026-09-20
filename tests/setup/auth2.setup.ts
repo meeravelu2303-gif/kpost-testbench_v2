@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test as setup } from '@fixtures';
@@ -11,7 +12,7 @@ import { expect, test as setup } from '@fixtures';
  * not do a second fresh login (which would hit the throttling country-list endpoint again).
  */
 setup('authenticate second account', async ({ page, loginPage, log }) => {
-  const wanted = process.env.KATCHUP_UI_LIFECYCLE === 'true';
+  const wanted = env.KATCHUP_UI_LIFECYCLE;
   const configured = testData.victimKpostId && !testData.victimKpostId.includes('qa.bench');
 
   if (wanted && configured) {

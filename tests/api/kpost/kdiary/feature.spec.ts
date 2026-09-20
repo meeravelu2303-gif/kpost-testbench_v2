@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated diary lifecycle driving every write, not simple assertions; the conditionals
 // guard optional steps and the per-endpoint soft threshold.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
@@ -71,10 +72,7 @@ async function deleteAllQaEvents(endpoints: EndpointExecutor): Promise<void> {
 
 test.describe('KPost KDiary · feature flow', () => {
   test.describe.configure({ mode: 'default' });
-  test.skip(
-    process.env.KDIARY_LIFECYCLE !== 'true',
-    'writes real diary events; set KDIARY_LIFECYCLE=true',
-  );
+  test.skip(!env.KDIARY_LIFECYCLE, 'writes real diary events; set KDIARY_LIFECYCLE=true');
 
   test('every diary write, end to end (create → update → participants → remarks → reports → delete) @api @kdiary', async ({
     endpoints,

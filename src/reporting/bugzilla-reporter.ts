@@ -138,6 +138,12 @@ export default class BugzillaReporter implements Reporter {
     // Candidates and the validity gate need no Bugzilla connection, so they are computed on every
     // run — the in-bench bug report is written even when filing is off (dry run, no host).
     const tests = this.suite?.allTests() ?? [];
+    if (env.BUGZILLA_DRY_RUN_FORCED) {
+      console.log(
+        `${LOG} BUGZILLA_DRY_RUN=false came from a .env file and was IGNORED — this is a dry run. ` +
+          'Filing is armed only by the command (npm run <suite>:file) or CI.',
+      );
+    }
     const candidates = consolidateCascades(
       mergeCandidates([...this.apiCandidates(), ...this.uiCandidates(tests)]),
     );

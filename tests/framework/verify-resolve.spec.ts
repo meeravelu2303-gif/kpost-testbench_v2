@@ -143,6 +143,22 @@ test.describe('auto-resolve verification', () => {
     expect(classifyResolve(bug(summary), index, NONE, imgAffected).action).toBe('keep');
   });
 
+  test('keeps a systemic bug when its validator was skipped on every one of its own endpoints @framework', () => {
+    // The ticket's endpoints ran, but only OTHER checks — the missing-token validator was skipped
+    // (e.g. filtered by profile). That verified nothing about this fault, so it must stay open.
+    const index = buildRunIndex([
+      report([
+        result('GET /v2/signupLogin/getActiveSession', 'response.status-code', 'PASSED'),
+        result('GET /v2/signupLogin/getActiveSession', 'authentication.missing-token', 'SKIPPED'),
+      ]),
+    ]);
+    const summary =
+      '[KP-SES001] Platform-wide — missing-token cases failed: no Authorization header';
+    const d = classifyResolve(bug(summary), index, NONE, ['GET /v2/signupLogin/getActiveSession']);
+    expect(d.action).toBe('keep');
+    expect(d.reason).toContain('did not run');
+  });
+
   test('parseAffectedEndpoints reads the description list and representative endpoint @framework', () => {
     const desc =
       'Representative endpoint: GET /v2/signupLogin/getActiveSession\n\n' +

@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 /* eslint-disable playwright/no-conditional-in-test */
 import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
@@ -50,7 +51,7 @@ async function clickSend(page: Page): Promise<void> {
 
 test.describe('KPost Katchup · two-session (sender + receiver)', { tag: '@ui' }, () => {
   test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+    !env.KATCHUP_UI_LIFECYCLE,
     'writes real messages between two accounts; set KATCHUP_UI_LIFECYCLE=true',
   );
   test.skip(

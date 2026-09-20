@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 // An orchestrated Admin/HR org-setup lifecycle (tier → variable → location → HR → employee → clean up),
 // not simple assertions; the conditionals guard optional steps and best-effort teardown of real records.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
@@ -75,10 +76,7 @@ function call(
 }
 
 test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }, () => {
-  test.skip(
-    process.env.ADMIN_LIFECYCLE !== 'true',
-    'writes real org structure; set ADMIN_LIFECYCLE=true',
-  );
+  test.skip(!env.ADMIN_LIFECYCLE, 'writes real org structure; set ADMIN_LIFECYCLE=true');
   test.skip(
     !businessM || testData.businessMKpostId.includes('qa.business.m'),
     'needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID)',
