@@ -288,6 +288,43 @@ stateDiagram-v2
   Released --> [*]
 ```
 
+> **Implementation note (Phase 2.5, delivered).** The cleanup framework now runs the ledger.
+>
+> 1. **The boundary is a Playwright FIXTURE teardown** (`resources` in `src/fixtures/index.ts`), not
+>    `afterEach`. Playwright runs fixture teardown after the body whatever its outcome — pass, failed
+>    assertion, thrown error, timeout — and before the account fixtures are released, so the
+>    principals a delete needs are still valid. A fixture is declared once and a test that uses it
+>    cannot skip it; an `afterEach` is per-spec and easy to omit or mis-order.
+> 2. **`CleanupCoordinator`** (`src/test-data/cleanup.ts`) holds the cleanup OPERATIONS; the ledger
+>    holds the STATE. There is no second copy of resource state. Operations come either inline with
+>    the resource (`track({ …, cleanup })`) or from a kind-level `CleanupHandler` in a
+>    `CleanupRegistry` — surface-neutral, so API/UI/Admin/KMail all use the same mechanism.
+> 3. **LIFO**, because later resources depend on earlier ones. One failure never stops the rest.
+> 4. **Ownership is enforced, not assumed:** a resource whose run, test case or slot differs from the
+>    ledger's owner is REFUSED with `not-owned` rather than deleted. Deletes still travel through
+>    `EndpointExecutor.send`, so the production guard, OTP kill-switch and QA-identifier guard all
+>    apply as before.
+> 5. **No retries.** The state machine permits `CLEANUP_FAILED → CLEANUP_PENDING` for a future
+>    recovery pass, and `cleanupOne()` is exposed so such a pass can act per resource, but nothing
+>    loops automatically: an unbounded retry against a failing target is its own hazard.
+> 6. **Reporting stays separate:** each test attaches a `cleanup-summary` (JSON) and a
+>    `cleanup-status` annotation. No validation result, report file or Bugzilla path changed —
+>    a cleanup failure is an infrastructure dimension and never becomes a defect.
+>
+> **Migrated:** `katchup/feature.spec.ts` (messages via `send()`, the variant messages via `drive()`,
+> and the group — it had 13 tests, 2 `finally` blocks and ~15 `.catch(() => undefined)`) and
+> `profile/feature.spec.ts` (the two restore-after-assertion tests). Both now register at creation and
+> clean from teardown; neither contains a swallowed cleanup.
+>
+> **Not migrated (documented, later):** `kall` and `admin` already tear down in `finally` correctly;
+> `kmail`, `group`, `contacts`, `kdiary`, `kos`, `aws` and the UI write specs still manage their own
+> cleanup. `aws` deletes its presigned key as part of the test's own assertions, so it owns no
+> untracked resource.
+>
+> **Known limitation:** a crash BETWEEN creation and `track()` cannot be detected by anything — the
+> resource exists and nothing knows it. Registration happens on the very next statement to keep that
+> window as small as possible.
+
 ### 6.2 Ledger API
 
 ```ts

@@ -58,17 +58,38 @@ function statusOf(test: TestCase, result: TestResult): CaseRecord['status'] {
  * already applies to UI defect fingerprints.
  */
 export function testCaseIdOf(test: TestCase): { id: string; identityKey: string } {
-  const pinned = test.annotations.find((a) => a.type === TEST_CASE_ID_ANNOTATION)?.description;
-  const specFile = path.relative(process.cwd(), test.location.file).replace(/\\/g, '/');
-  const projectName = test.parent.project()?.name;
-  // titlePath() = ['', project, file, …describes, title]; drop everything that is not the test's own
+  return deriveTestCaseId({
+    file: test.location.file,
+    titlePath: test.titlePath(),
+    projectName: test.parent.project()?.name,
+    pinned: test.annotations.find((a) => a.type === TEST_CASE_ID_ANNOTATION)?.description,
+  });
+}
+
+export interface TestCaseIdInput {
+  /** Absolute path of the spec file. */
+  file: string;
+  /** Playwright's title path, which includes the project and file entries this strips. */
+  titlePath: readonly string[];
+  projectName: string | undefined;
+  /** An id the test pinned itself (the generated-case annotation). */
+  pinned?: string;
+}
+
+/**
+ * The single derivation, shared by the reporter (which sees `TestCase`) and the fixtures (which see
+ * `TestInfo`). Keeping it in one place is what stops a test's id differing between the run and the
+ * report — the two would then disagree about which check owns a resource.
+ */
+export function deriveTestCaseId(input: TestCaseIdInput): { id: string; identityKey: string } {
+  const specFile = path.relative(process.cwd(), input.file).replace(/\\/g, '/');
+  // titlePath = ['', project, file, …describes, title]; drop everything that is not the test's own
   // naming, so a browser project can never leak into the identity.
-  const titlePath = test
-    .titlePath()
+  const titlePath = input.titlePath
     .filter(Boolean)
-    .filter((part) => part !== projectName && !part.endsWith('.ts'));
+    .filter((part) => part !== input.projectName && !part.endsWith('.ts'));
   const identityKey = specIdentityKey({ specFile, titlePath });
-  return { id: pinned ?? specTestCaseId({ specFile, titlePath }), identityKey };
+  return { id: input.pinned ?? specTestCaseId({ specFile, titlePath }), identityKey };
 }
 
 /** Collects one row per finished test, and the identities needed for collision detection. */

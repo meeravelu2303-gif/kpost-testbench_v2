@@ -3,7 +3,7 @@ import { env } from '@config/env';
 // the conditionals guard optional steps and best-effort cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 import type { Principal } from '@config/auth.config';
-import { currentSlot } from '../../../../src/test-data/index';
+import { currentSlot, type CleanupCoordinator } from '../../../../src/test-data/index';
 import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/schemas/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
@@ -44,6 +44,7 @@ function firstRow(body: Record<string, unknown>): Record<string, unknown> | unde
 /** Send a message as `as`, returning the created row's msgID. */
 async function send(
   endpoints: EndpointExecutor,
+  resources: CleanupCoordinator,
   as: Principal,
   overrides: Record<string, unknown>,
 ): Promise<Sent> {
@@ -55,11 +56,20 @@ async function send(
   const parsed = exchange.json();
   const body = (parsed.ok ? parsed.value : {}) as Record<string, unknown>;
   const row = firstRow(body);
-  return {
-    status: exchange.status,
-    msgID: typeof row?.msgID === 'number' ? row.msgID : undefined,
-    body,
-  };
+  const msgID = typeof row?.msgID === 'number' ? row.msgID : undefined;
+  /*
+   * Tracked the instant it exists, not at the end of the test: the ledger journals it before the
+   * flow continues, and the fixture teardown deletes it whatever the assertions below do.
+   */
+  if (msgID !== undefined) {
+    resources.track({
+      kind: 'katchup-message',
+      id: msgID,
+      describe: `message from `,
+      cleanup: () => deleteMessage(endpoints, as, msgID),
+    });
+  }
+  return { status: exchange.status, msgID, body };
 }
 
 /** Read `as`'s conversation with `withKpostId`, returning the raw body text for content checks. */
@@ -76,16 +86,21 @@ async function conversation(
   return { status: exchange.status, text: exchange.bodyText };
 }
 
-/** Best-effort cleanup — delete a message we created. Never throws. */
-async function cleanup(endpoints: EndpointExecutor, as: Principal, msgID?: number): Promise<void> {
-  if (!msgID) return;
-  await endpoints
-    .sendTo(
-      'katchup-delete-message',
-      { body: { messageIds: [msgID], groupFlag: false } },
-      { label: 'feature:cleanup', auth: { principal: as }, allowLiveWrite: true },
-    )
-    .catch(() => undefined);
+/**
+ * Deletes a message we created. This is the cleanup OPERATION the ledger runs; it deliberately does
+ * NOT swallow errors — a failed delete must reach the cleanup summary instead of vanishing.
+ */
+async function deleteMessage(
+  endpoints: EndpointExecutor,
+  as: Principal,
+  msgID: number,
+): Promise<number> {
+  const exchange = await endpoints.sendTo(
+    'katchup-delete-message',
+    { body: { messageIds: [msgID], groupFlag: false } },
+    { label: 'feature:cleanup', auth: { principal: as }, allowLiveWrite: true },
+  );
+  return exchange.status;
 }
 
 test.describe('KPost Katchup · feature flow', () => {
@@ -97,20 +112,24 @@ test.describe('KPost Katchup · feature flow', () => {
 
   test('a message carries its Subject and issues a msgID (BR-K01) @api @katchup', async ({
     endpoints,
+    resources,
   }) => {
     const subject = `QA Feature ${Date.now()}`;
-    const sent = await send(endpoints, A, { receiver: B.username, subject });
+    const sent = await send(endpoints, resources, A, { receiver: B.username, subject });
     expect(sent.status, 'send succeeds').toBeLessThan(300);
     expect(firstRow(sent.body)?.subject, 'subject is carried (BR-K01)').toBe(subject);
     expect(sent.msgID, 'a msgID is issued').toBeTruthy();
-    await cleanup(endpoints, A, sent.msgID);
   });
 
   test('reply, note, comment and clarify are each accepted with their type @api @katchup', async ({
     endpoints,
+    resources,
   }) => {
     // Seed a message to reply to.
-    const seed = await send(endpoints, A, { receiver: B.username, subject: 'QA thread' });
+    const seed = await send(endpoints, resources, A, {
+      receiver: B.username,
+      subject: 'QA thread',
+    });
     expect(seed.msgID, 'seed message created').toBeTruthy();
 
     const T = KATCHUP_MESSAGE_TYPE as Record<string, number>;
@@ -123,7 +142,7 @@ test.describe('KPost Katchup · feature flow', () => {
     const made: number[] = [];
     for (const [label, type, as] of variants) {
       const to = as.key === B.key ? A.username : B.username;
-      const r = await send(endpoints, as, {
+      const r = await send(endpoints, resources, as, {
         receiver: to,
         messageType: type,
         sharedType: type,
@@ -136,18 +155,16 @@ test.describe('KPost Katchup · feature flow', () => {
     }
 
     // Clean up seed + variants (as their senders — the reply/comment/clarify are B's, note is A's).
-    await cleanup(endpoints, A, seed.msgID);
-    for (const id of made) await cleanup(endpoints, A, id);
-    for (const id of made) await cleanup(endpoints, B, id);
   });
 
   test('an edited message is marked edited (FR-K08 / FR-K09) @api @katchup', async ({
     endpoints,
+    resources,
   }) => {
-    const seed = await send(endpoints, A, { receiver: B.username, subject: 'QA edit' });
+    const seed = await send(endpoints, resources, A, { receiver: B.username, subject: 'QA edit' });
     expect(seed.msgID, 'seed created').toBeTruthy();
 
-    const edited = await send(endpoints, A, {
+    const edited = await send(endpoints, resources, A, {
       receiver: B.username,
       messageType: KATCHUP_MESSAGE_TYPE.editMessage,
       sharedType: KATCHUP_MESSAGE_TYPE.editMessage,
@@ -160,16 +177,17 @@ test.describe('KPost Katchup · feature flow', () => {
     // B's view should show the edited content (the "Edited:" marker is a UI label over messageType 6).
     const view = await conversation(endpoints, B, A.username);
     expect.soft(view.text, 'the recipient sees the edited body').toContain('QA edited body');
-
-    await cleanup(endpoints, A, seed.msgID);
-    await cleanup(endpoints, A, edited.msgID);
   });
 
   test('a recalled message is removed from the recipient view (FR-K10 / BR-K03) @api @katchup @security', async ({
     endpoints,
+    resources,
   }) => {
     const marker = `QA recall ${Date.now()}`;
-    const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
+    const sent = await send(endpoints, resources, A, {
+      receiver: B.username,
+      actualMessage: marker,
+    });
     expect(sent.msgID, 'message created').toBeTruthy();
 
     // Recall it.
@@ -185,12 +203,11 @@ test.describe('KPost Katchup · feature flow', () => {
     expect
       .soft(view.text, 'a recalled message must not remain in the recipient view (BR-K03)')
       .not.toContain(marker);
-
-    await cleanup(endpoints, A, sent.msgID);
   });
 
   test('group message: send reaches members and read receipts are tracked (FR-K06 / FR-K07) @api @katchup', async ({
     endpoints,
+    resources,
   }) => {
     // Create a group A(admin) + B, C, D.
     const members = [B, C, D].map((p) => ({
@@ -234,10 +251,42 @@ test.describe('KPost Katchup · feature flow', () => {
     expect(created.status, 'group is created').toBeLessThan(300);
     expect(groupKpostID, 'a groupKpostID is returned').toBeTruthy();
 
+    /*
+     * Tracked as soon as it exists. Its cleanup is the same pair of calls the old  made, in
+     * the same verified order (members first — the API refuses to delete a group that still has
+     * them), but it now runs from the fixture teardown and its failures are reported.
+     */
+    if (groupID !== undefined && groupKpostID !== undefined) {
+      resources.track({
+        kind: 'katchup-group',
+        id: groupID,
+        describe: 'feature group',
+        cleanup: async () => {
+          await endpoints.sendTo(
+            'group-remove-member',
+            {
+              body: {
+                memberKpostIdList: [B.username, C.username, D.username],
+                groupID,
+                groupKpostID,
+              },
+            },
+            { label: 'feature:group-remove', auth: { principal: A }, allowLiveWrite: true },
+          );
+          const deleted = await endpoints.sendTo(
+            'group-delete',
+            { body: { groupID } },
+            { label: 'feature:group-delete', auth: { principal: A }, allowLiveWrite: true },
+          );
+          return deleted.status;
+        },
+      });
+    }
+
     let msgID: number | undefined;
-    try {
+    {
       // Group send from A.
-      const sent = await send(endpoints, A, {
+      const sent = await send(endpoints, resources, A, {
         receiver: groupKpostID,
         status: KATCHUP_STATUS.group,
         groupFlag: true,
@@ -256,35 +305,12 @@ test.describe('KPost Katchup · feature flow', () => {
         );
         expect.soft(receipts.status, 'read-receipt status reads back').toBe(200);
       }
-    } finally {
-      // Cleanup: remove members, then delete the group (verified order on live).
-      if (groupID && groupKpostID) {
-        await endpoints
-          .sendTo(
-            'group-remove-member',
-            {
-              body: {
-                memberKpostIdList: [B.username, C.username, D.username],
-                groupID,
-                groupKpostID,
-              },
-            },
-            { label: 'feature:group-remove', auth: { principal: A }, allowLiveWrite: true },
-          )
-          .catch(() => undefined);
-        await endpoints
-          .sendTo(
-            'group-delete',
-            { body: { groupID } },
-            { label: 'feature:group-delete', auth: { principal: A }, allowLiveWrite: true },
-          )
-          .catch(() => undefined);
-      }
     }
   });
 
   test('a Confidential Copy is hidden from the other recipients (FR-K05 / NFR-SEC02) @api @katchup @security', async ({
     endpoints,
+    resources,
   }) => {
     /*
      * The crown-jewel security test. A sends to B (TO), Copies C (visible), Confidential-Copies D.
@@ -297,7 +323,7 @@ test.describe('KPost Katchup · feature flow', () => {
      * `sharedMessageDetails` carries revealContactList (visible Copy = C) and hiddenContactList
      * (Confidential Copy = D), and `forwardReceiverList` is copies + confidential + the TO recipient.
      */
-    const sent = await send(endpoints, A, {
+    const sent = await send(endpoints, resources, A, {
       receiver: B.username,
       messageType: KATCHUP_MESSAGE_TYPE.copiesMessage,
       sharedType: KATCHUP_MESSAGE_TYPE.normalMessage,
@@ -322,25 +348,29 @@ test.describe('KPost Katchup · feature flow', () => {
     expect
       .soft(cView.text, 'the Copy recipient must not see the confidential copy (NFR-SEC02)')
       .not.toContain(D.username);
-
-    await cleanup(endpoints, A, sent.msgID);
   });
 
-  test('a reminder message is accepted (FR-K13) @api @katchup', async ({ endpoints }) => {
-    const sent = await send(endpoints, A, {
+  test('a reminder message is accepted (FR-K13) @api @katchup', async ({
+    endpoints,
+    resources,
+  }) => {
+    const sent = await send(endpoints, resources, A, {
       receiver: B.username,
       messageType: KATCHUP_MESSAGE_TYPE.reminderMessage,
       sharedType: KATCHUP_MESSAGE_TYPE.reminderMessage,
       actualMessage: 'QA reminder',
     });
     expect.soft(sent.status, 'reminder accepted').toBeLessThan(300);
-    await cleanup(endpoints, A, sent.msgID);
   });
 
   test('forward carries a message to another recipient (FR-K15) @api @katchup', async ({
     endpoints,
+    resources,
   }) => {
-    const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to forward' });
+    const seed = await send(endpoints, resources, A, {
+      receiver: B.username,
+      actualMessage: 'QA to forward',
+    });
     expect(seed.msgID, 'seed created').toBeTruthy();
 
     // Forward shape from the client (ForwardFooter.js): forwardReceiverList + referenceMessageIDList
@@ -368,11 +398,11 @@ test.describe('KPost Katchup · feature flow', () => {
      * complete forward needs the source object, out of scope for this smoke of the action.
      */
     expect.soft(fwd.status, 'forward validates without crashing (no 5xx)').toBeLessThan(500);
-    await cleanup(endpoints, A, seed.msgID);
   });
 
   test('forward variants — hidden/revealed × with/without thread each validate (FR-KU-035..038) @api @katchup', async ({
     endpoints,
+    resources,
   }) => {
     /*
      * The four Forward variants the FRD splits out (source Hidden vs Revealed × single vs
@@ -381,7 +411,7 @@ test.describe('KPost Katchup · feature flow', () => {
      * validates a full referenceMessage object), so each is asserted as "handled, no 5xx".
      */
     const T = KATCHUP_MESSAGE_TYPE as Record<string, number>;
-    const seed = await send(endpoints, A, {
+    const seed = await send(endpoints, resources, A, {
       receiver: B.username,
       actualMessage: 'QA fwd variants',
     });
@@ -412,11 +442,16 @@ test.describe('KPost Katchup · feature flow', () => {
       );
       expect.soft(fwd.status, `${label} validates without crashing (no 5xx)`).toBeLessThan(500);
     }
-    await cleanup(endpoints, A, seed.msgID);
   });
 
-  test('save and mark-important act on a message (FR-K18) @api @katchup', async ({ endpoints }) => {
-    const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to save' });
+  test('save and mark-important act on a message (FR-K18) @api @katchup', async ({
+    endpoints,
+    resources,
+  }) => {
+    const seed = await send(endpoints, resources, A, {
+      receiver: B.username,
+      actualMessage: 'QA to save',
+    });
     expect(seed.msgID, 'seed created').toBeTruthy();
 
     const saved = await endpoints.sendTo(
@@ -432,14 +467,16 @@ test.describe('KPost Katchup · feature flow', () => {
       { label: 'feature:mark', auth: { principal: A }, allowLiveWrite: true },
     );
     expect.soft(marked.status, 'mark-important accepted').toBeLessThan(300);
-
-    await cleanup(endpoints, A, seed.msgID);
   });
 
   test('a recipient can report a received message (FR-K24) @api @katchup', async ({
     endpoints,
+    resources,
   }) => {
-    const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to report' });
+    const seed = await send(endpoints, resources, A, {
+      receiver: B.username,
+      actualMessage: 'QA to report',
+    });
     expect(seed.msgID, 'seed created').toBeTruthy();
 
     // B (the recipient) reports A's message.
@@ -456,12 +493,11 @@ test.describe('KPost Katchup · feature flow', () => {
       { label: 'feature:report', auth: { principal: B }, allowLiveWrite: true },
     );
     expect.soft(report.status, 'report accepted').toBeLessThan(300);
-
-    await cleanup(endpoints, A, seed.msgID);
   });
 
   test('a disappearing / secret message is accepted in both modes (FR-KU-017..024) @api @katchup @security', async ({
     endpoints,
+    resources,
   }) => {
     /*
      * Disappearing / Secret Messages — the compose lock-icon feature (Katchup FRD FR-KU-017..024).
@@ -472,7 +508,7 @@ test.describe('KPost Katchup · feature flow', () => {
      */
 
     // Mode 1 — Disappear After Reading.
-    const afterRead = await send(endpoints, A, {
+    const afterRead = await send(endpoints, resources, A, {
       receiver: B.username,
       actualMessage: `QA vanish-after-read ${Date.now()}`,
       isVanished: true,
@@ -487,7 +523,7 @@ test.describe('KPost Katchup · feature flow', () => {
 
     // Mode 2 — Disappear As Per Schedule (auto-delete at a future time, one hour out).
     const expireAt = Date.now() + 60 * 60 * 1000;
-    const scheduled = await send(endpoints, A, {
+    const scheduled = await send(endpoints, resources, A, {
       receiver: B.username,
       actualMessage: `QA vanish-scheduled ${Date.now()}`,
       isVanished: false,
@@ -500,15 +536,12 @@ test.describe('KPost Katchup · feature flow', () => {
         .soft(Number(row2.secretMessageExpireTime), 'the scheduled expiry is carried back')
         .toBeGreaterThan(Date.now());
     }
-
-    await cleanup(endpoints, A, afterRead.msgID);
-    await cleanup(endpoints, A, scheduled.msgID);
   });
 
   test('send variants (multipart, bulk) and forward variants, all self-cleaning @api @katchup', async ({
     endpoints,
+    resources,
   }) => {
-    const created: number[] = [];
     const drive = async (id: string, bodyOrEmpty: Record<string, unknown>, label: string) => {
       const ex = await endpoints.sendTo(
         id,
@@ -517,48 +550,50 @@ test.describe('KPost Katchup · feature flow', () => {
       );
       const parsed = ex.json();
       const row = firstRow((parsed.ok ? parsed.value : {}) as Record<string, unknown>);
-      if (typeof row?.msgID === 'number') created.push(row.msgID);
+      if (typeof row?.msgID === 'number') {
+        const msgID = row.msgID;
+        resources.track({
+          kind: 'katchup-message',
+          id: msgID,
+          describe: label + ' message',
+          cleanup: () => deleteMessage(endpoints, A, msgID),
+        });
+      }
       return ex.status;
     };
 
-    try {
-      // A source message the forwards reference.
-      const seed = await send(endpoints, A, { receiver: B.username, subject: 'QA variants' });
-      if (seed.msgID) created.push(seed.msgID);
+    // A source message the forwards reference.
+    const seed = await send(endpoints, resources, A, {
+      receiver: B.username,
+      subject: 'QA variants',
+    });
 
-      // Send variants — each uses the endpoint's own request factory (multipart / bulk shapes).
-      for (const [id, label] of [
-        ['katchup-send-multipart', 'send-multipart'],
-        ['katchup-send-bulk', 'send-bulk'],
-        ['katchup-send-bulk-multipart', 'send-bulk-multipart'],
-      ] as Array<[string, string]>) {
-        const status = await drive(id, {}, label);
-        expect.soft(status, `${label} returns a status`).toBeLessThan(600);
-      }
+    // Send variants — each uses the endpoint's own request factory (multipart / bulk shapes).
+    for (const [id, label] of [
+      ['katchup-send-multipart', 'send-multipart'],
+      ['katchup-send-bulk', 'send-bulk'],
+      ['katchup-send-bulk-multipart', 'send-bulk-multipart'],
+    ] as Array<[string, string]>) {
+      const status = await drive(id, {}, label);
+      expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+    }
 
-      // Forward variants — reference the seed message / our own second account.
-      for (const [id, bodyObj, label] of [
-        [
-          'katchup-forward-message-new',
-          { msgID: seed.msgID ?? 0, groupFlag: false },
-          'forward-new',
-        ],
-        [
-          'katchup-forward-multiple',
-          { forwardReceiverList: [B.username], groupForwardList: [] },
-          'forward-multiple',
-        ],
-        [
-          'katchup-send-forward-selected-attachment',
-          { forwardReceiverList: [B.username], msgID: seed.msgID ?? 0 },
-          'forward-selected-attachment',
-        ],
-      ] as Array<[string, Record<string, unknown>, string]>) {
-        const status = await drive(id, bodyObj, label);
-        expect.soft(status, `${label} returns a status`).toBeLessThan(600);
-      }
-    } finally {
-      for (const msgID of created) await cleanup(endpoints, A, msgID);
+    // Forward variants — reference the seed message / our own second account.
+    for (const [id, bodyObj, label] of [
+      ['katchup-forward-message-new', { msgID: seed.msgID ?? 0, groupFlag: false }, 'forward-new'],
+      [
+        'katchup-forward-multiple',
+        { forwardReceiverList: [B.username], groupForwardList: [] },
+        'forward-multiple',
+      ],
+      [
+        'katchup-send-forward-selected-attachment',
+        { forwardReceiverList: [B.username], msgID: seed.msgID ?? 0 },
+        'forward-selected-attachment',
+      ],
+    ] as Array<[string, Record<string, unknown>, string]>) {
+      const status = await drive(id, bodyObj, label);
+      expect.soft(status, `${label} returns a status`).toBeLessThan(600);
     }
   });
 });

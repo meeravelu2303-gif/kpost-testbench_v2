@@ -11,7 +11,14 @@ import { ValidationEngine, type ValidationEngineDeps } from '@engine/validation-
 import { LoginPage } from '@pages/LoginPage';
 import { attachValidationReport } from '@reporting/report-attachment';
 import { businessRuleRegistry } from '@rules/index';
-import { accountPool, type SlotAccounts } from '../test-data/index';
+import {
+  accountPool,
+  createTestCleanup,
+  type CleanupCoordinator,
+  type SlotAccounts,
+} from '../test-data/index';
+import { deriveTestCaseId } from '@reporting/case-registry';
+import { TEST_CASE_ID_ANNOTATION } from '@reporting/test-case-id';
 import { newCorrelationId } from '@utils/correlation';
 import { createLogger, type Logger } from '@utils/logger';
 import { validationRegistry } from '@validators/index';
@@ -29,6 +36,11 @@ interface TestFixtures {
    * naming a principal, so two workers can never log in as the same account.
    */
   accounts: SlotAccounts;
+  /**
+   * Tracks what this test creates and removes it afterwards (Phase 2.5). Cleanup runs in this
+   * fixture's TEARDOWN, so it happens whether the test passed, failed or threw.
+   */
+  resources: CleanupCoordinator;
   /** Builds an engine; overrides let framework tests swap registries or reporting. */
   createValidationEngine: (overrides?: Partial<ValidationEngineDeps>) => ValidationEngine;
   validationEngine: ValidationEngine;
@@ -79,6 +91,46 @@ export const test = base.extend<TestFixtures>({
   // eslint-disable-next-line no-empty-pattern
   accounts: async ({}, use, testInfo) => {
     await use(accountPool.slot(testInfo.parallelIndex));
+  },
+
+  /*
+   * THE guaranteed cleanup boundary.
+   *
+   * Playwright runs a fixture's teardown after the test body regardless of its outcome — pass, failed
+   * assertion, thrown error or timeout — and it runs BEFORE the account fixtures are released, so the
+   * principals a delete needs are still valid while cleanup executes. `afterEach` would also run, but
+   * it is per-spec and easy to forget or to order wrongly against other hooks; a fixture is declared
+   * once and cannot be skipped by the test that uses it.
+   *
+   * Cleanup never changes the test's own verdict: a passing feature whose delete fails is still a
+   * passing feature (the failure is reported on its own dimension), and a cleanup problem is never
+   * an application defect. Nothing here reaches Bugzilla.
+   */
+  // eslint-disable-next-line no-empty-pattern
+  resources: async ({}, use, testInfo) => {
+    const { id: testCaseId } = deriveTestCaseId({
+      file: testInfo.file,
+      titlePath: testInfo.titlePath,
+      projectName: testInfo.project.name,
+      pinned: testInfo.annotations.find((a) => a.type === TEST_CASE_ID_ANNOTATION)?.description,
+    });
+    const coordinator = createTestCleanup({ testCaseId, slot: testInfo.parallelIndex });
+
+    await use(coordinator);
+
+    const summary = await coordinator.cleanupAll();
+    if (summary.status === 'NOT_REQUIRED') return;
+    // Reported on its own dimension — never merged into the test's status, never sent to Bugzilla.
+    testInfo.annotations.push({
+      type: 'cleanup-status',
+      description:
+        `${summary.status}: ${summary.cleaned}/${summary.registered} cleaned` +
+        (summary.failed ? `, ${summary.failed} failed` : ''),
+    });
+    await testInfo.attach('cleanup-summary', {
+      body: JSON.stringify(summary, null, 2),
+      contentType: 'application/json',
+    });
   },
 
   createValidationEngine: async ({ apiClients, log, playwright }, use, testInfo) => {

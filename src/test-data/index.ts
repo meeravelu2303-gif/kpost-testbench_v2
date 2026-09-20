@@ -1,6 +1,11 @@
+import path from 'node:path';
 import { AUTH_PROFILES } from '@config/auth-profile';
+import { ROOT_DIR } from '@config/constants';
 import { env } from '@config/env';
 import { AccountPool, currentSlotIndex, type SlotAccounts } from './account-pool';
+import { CleanupCoordinator } from './cleanup';
+import { ResourceLedger } from './resource-ledger';
+import { DEFAULT_JOURNAL_FILE, FileResourceJournal } from './resource-journal';
 
 /**
  * The configured account pool for this process.
@@ -76,4 +81,38 @@ export {
  */
 export function ledgerOwner(testCaseId: string, slot: number | null = currentSlotIndex()) {
   return { runId: env.TEST_RUN_ID, testCaseId, slot };
+}
+
+export {
+  CleanupCoordinator,
+  CleanupOwnershipError,
+  CleanupRegistry,
+  type CleanupErrorCategory,
+  type CleanupFailure,
+  type CleanupHandler,
+  type CleanupOperation,
+  type CleanupStatus,
+  type CleanupSummary,
+  type TrackedResource,
+} from './cleanup';
+
+/**
+ * A cleanup coordinator for one test, wired to a ledger that journals to `reports/resources.jsonl`.
+ *
+ * Ownership comes from the pieces the earlier phases already established: the canonical run id
+ * (`TEST_RUN_ID`), the stable test-case id (Phase 2.2) and the logical account slot (Phase 2.3,
+ * `parallelIndex`). Nothing new identifies anything.
+ */
+export function createTestCleanup(options: {
+  testCaseId: string;
+  slot: number | null;
+  journalFile?: string;
+}): CleanupCoordinator {
+  const ledger = new ResourceLedger({
+    owner: { runId: env.TEST_RUN_ID, testCaseId: options.testCaseId, slot: options.slot },
+    journal: new FileResourceJournal(
+      path.join(ROOT_DIR, options.journalFile ?? DEFAULT_JOURNAL_FILE),
+    ),
+  });
+  return new CleanupCoordinator({ ledger });
 }

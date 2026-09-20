@@ -234,6 +234,55 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-20 — Phase 2.5: the cleanup framework — cleanup that cannot be skipped
+
+Fifth step of the approved Phase 2 design (§17.5), and the step that makes the Phase 2.4 ledger
+operational. **Intent:** stop relying on a test remembering to delete its own data, and stop losing
+the evidence when a delete fails.
+
+**The two structural problems it fixes.** A lifecycle spec deleted its data on the last line of the
+test body, so an assertion failing three lines earlier skipped the delete; and every delete was
+wrapped in `.catch(() => undefined)`, so a failure was invisible. Neither is fixed by being careful.
+
+- **`src/test-data/cleanup.ts`** — `CleanupCoordinator` holds the cleanup OPERATIONS while the ledger
+  holds the STATE (no second copy of resource state). Operations come inline with the resource
+  (`track({ …, cleanup })`) or from a kind-level `CleanupHandler` in a `CleanupRegistry` —
+  surface-neutral, so API/UI/Admin/KMail share one mechanism.
+- **The boundary is a Playwright FIXTURE teardown** (`resources`), not `afterEach`: Playwright runs it
+  after the body whatever the outcome, and **before** the account fixtures are released, so the
+  principals a delete needs are still valid. A fixture cannot be forgotten by the test that uses it.
+- **LIFO** (a member before its group), one failure never stops the rest, and `cleanupAll()` never
+  throws — a tidy-up problem must not replace the test's verdict.
+- **Ownership enforced:** a resource whose run, test case or slot differs from the ledger's owner is
+  **refused** (`not-owned`), never deleted. Deletes still go through `EndpointExecutor.send`, so the
+  production guard, OTP kill-switch and QA-identifier guard apply unchanged.
+- **Failures are structured and visible:** kind, id, testCaseId, runId, slot, operation, category
+  (`no-handler` / `operation-threw` / `not-owned` / `ledger-rejected`) and a redacted message — in
+  the summary, the journal and a per-test `cleanup-summary` attachment. **Never** in Bugzilla: a
+  cleanup failure is an infrastructure dimension, and the defect-confidence work that decides
+  otherwise is a later phase.
+- **No retries.** The state machine allows `CLEANUP_FAILED → CLEANUP_PENDING` and `cleanupOne()` is
+  exposed for a future recovery pass, but nothing loops automatically.
+
+**Migrated:** `katchup/feature.spec.ts` — the worst offender (13 tests, 2 `finally`, ~15 swallowed
+deletes): messages register inside `send()` and `drive()`, the group registers at creation with the
+same remove-members-then-delete order it always used. `profile/feature.spec.ts` — the two
+restore-after-assertion tests now register the restore as their cleanup, so a failed read-back can no
+longer leave a QA profile carrying a test marker. Both specs keep their exact test counts (13 and 6)
+and their existing cleanup operations — no endpoint, payload or id was invented.
+
+**Not migrated (documented):** `kall` and `admin` already tear down correctly in `finally`; `kmail`,
+`group`, `contacts`, `kdiary`, `kos`, `aws` and the UI write specs still own their cleanup. `aws`
+deletes its presigned key as part of its own assertions.
+
+**Known limitation, stated rather than hidden:** a crash BETWEEN creation and `track()` is invisible
+to everything; registration is the very next statement to keep that window minimal.
+
+**Verified (no KPost host contacted — cleanup operations in the tests are plain functions):**
+`npm run check` clean (32 pre-existing warnings, unchanged); **251 framework guards, 247 pass / 4
+skip** (23 new); reporting/bug-tracker/account-pool regression 90 green; both migrated specs still
+collect 13 and 6 tests.
+
 ### 2026-09-20 — Phase 2.4: the resource ledger + durable journal (TRACK only — no cleanup)
 
 Fourth step of the approved Phase 2 design (§17.4). **Intent:** make what a run created knowable, and
@@ -4660,7 +4709,8 @@ The authoritative plan is the 10-phase roadmap in `docs/PRODUCTION-READINESS-AUD
 for Phase 2 by `docs/PHASE-2-DESIGN.md` (§17 implementation order). **Phase 1 is DONE**;
 **Phase 2.1 (profiles + runner)**, **2.2 (stable test-case ids)** and **2.3 (account pool + session
 isolation)** and **2.4 (resource ledger + durable journal, TRACK only)** are DONE (§8).
-**Next: the cleanup phase** — performing cleanup, fixture wiring and the journal sweeper.
+**Phase 2.5 (cleanup framework + first lifecycle migrations)** is DONE (§8). **Next:** migrating the
+remaining lifecycle specs, then the journal-driven recovery sweep — both owner-approved, live-verified.
 Owner decisions that gate later phases are in
 the audit's §13 (read-only DB access, more QA accounts, a self-hosted CI runner, the CI gate policy,
 the RBAC matrix, `data-testid`).

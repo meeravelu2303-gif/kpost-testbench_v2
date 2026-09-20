@@ -57,6 +57,7 @@ test.describe('KPost Profile · write lifecycle', () => {
 
   test('update "about" is saved and reads back, then is restored @api @profile', async ({
     endpoints,
+    resources,
   }) => {
     const before = (await fetchProfile(endpoints)).aboutYourself;
     const marker = `QA about ${Date.now()}`;
@@ -69,24 +70,36 @@ test.describe('KPost Profile · write lifecycle', () => {
     );
     expect(status, 'update about accepted').toBeLessThan(300);
 
+    /*
+     * The field is now MUTATED, so restoring it is this test's cleanup — registered here, not after
+     * the assertions below. Previously a failed read-back skipped the restore and left the QA
+     * account's profile carrying a test marker.
+     */
+    resources.track({
+      kind: 'profile-field',
+      id: 'aboutYourself',
+      describe: 'about (restored to its original value)',
+      cleanup: () =>
+        write(
+          endpoints,
+          'profile-update-about',
+          { aboutYourself: typeof before === 'string' ? before : '' },
+          'about-restore',
+        ),
+    });
+
     // Read-back is best-effort: the profile read can lag the write (eventual consistency), so it is
     // verified only when the field has surfaced — the 200 above is the write's own confirmation.
     const after = (await fetchProfile(endpoints)).aboutYourself;
     if (after !== undefined && after !== null && after !== '') {
       expect.soft(after, 'the new about reads back').toBe(marker);
     }
-
-    // Restore.
-    await write(
-      endpoints,
-      'profile-update-about',
-      { aboutYourself: typeof before === 'string' ? before : '' },
-      'about-restore',
-    );
+    // The restore runs from the fixture teardown — see the tracked resource above.
   });
 
   test('update designation is saved and reads back, then is restored @api @profile', async ({
     endpoints,
+    resources,
   }) => {
     const before = (await fetchProfile(endpoints)).designation;
     const marker = `QA Designation ${Date.now() % 100000}`;
@@ -99,18 +112,26 @@ test.describe('KPost Profile · write lifecycle', () => {
     );
     expect(status, 'update designation accepted').toBeLessThan(300);
 
+    // Mutated: the restore is this test's cleanup, registered before anything can fail.
+    resources.track({
+      kind: 'profile-field',
+      id: 'designation',
+      describe: 'designation (restored to its original value)',
+      cleanup: () =>
+        write(
+          endpoints,
+          'profile-update-designation',
+          { designation: typeof before === 'string' ? before : '' },
+          'designation-restore',
+        ),
+    });
+
     // Best-effort read-back (see the about test for why).
     const after = (await fetchProfile(endpoints)).designation;
     if (after !== undefined && after !== null && after !== '') {
       expect.soft(after, 'the new designation reads back').toBe(marker);
     }
-
-    await write(
-      endpoints,
-      'profile-update-designation',
-      { designation: typeof before === 'string' ? before : '' },
-      'designation-restore',
-    );
+    // The restore runs from the fixture teardown — see the tracked resource above.
   });
 
   test('basic, contact and privacy updates are accepted @api @profile', async ({ endpoints }) => {
