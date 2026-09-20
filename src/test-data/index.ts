@@ -27,3 +27,53 @@ export {
   type PooledAccount,
   type SlotAccounts,
 } from './account-pool';
+
+/**
+ * Resource tracking (Phase 2.4). The ledger records what a run created and the journal makes that
+ * record survive a crashed worker. **Nothing here performs cleanup** — that, and wiring it into the
+ * lifecycle fixtures, is a later phase.
+ */
+export {
+  DuplicateResourceError,
+  InvalidResourceTransitionError,
+  ResourceLedger,
+  ResourceLedgerError,
+  UnknownResourceError,
+  type ResourceLedgerOptions,
+  type ResourceRegistration,
+} from './resource-ledger';
+export {
+  DEFAULT_JOURNAL_FILE,
+  FileResourceJournal,
+  findOrphans,
+  NULL_JOURNAL_SINK,
+  readJournalFile,
+  readJournalText,
+  ResourceJournalError,
+  type JournalIssue,
+  type JournalReadResult,
+  type OrphanReport,
+  type ResourceEvent,
+  type ResourceJournalSink,
+} from './resource-journal';
+export {
+  allowedTransitionsFrom,
+  canTransition,
+  isResourceState,
+  redactForJournal,
+  resourceKey,
+  RESOURCE_STATES,
+  type ResourceIdentity,
+  type ResourceOwner,
+  type ResourceRecord,
+  type ResourceState,
+} from './resource-record';
+
+/**
+ * Ownership for a ledger created in this process: the canonical run id (`TEST_RUN_ID`, the bench's
+ * one run identity) and this worker's logical slot (`parallelIndex`, Phase 2.3). The test case id
+ * is supplied by the caller, because only the test knows which case it is.
+ */
+export function ledgerOwner(testCaseId: string, slot: number | null = currentSlotIndex()) {
+  return { runId: env.TEST_RUN_ID, testCaseId, slot };
+}

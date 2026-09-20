@@ -234,6 +234,55 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-20 — Phase 2.4: the resource ledger + durable journal (TRACK only — no cleanup)
+
+Fourth step of the approved Phase 2 design (§17.4). **Intent:** make what a run created knowable, and
+keep it knowable after a crash. **Cleanup is deliberately NOT implemented** — performing deletion, and
+the sweeper that would act on the journal, need their own safety review and are later phases.
+
+**Why a durable record at all.** In-memory tracking dies with the process. A worker killed mid-flow
+would otherwise leave a resource that exists on the test environment, that nothing knows it made, and
+that nobody can tell from real data. The journal turns that into a named, attributable record.
+
+- **`src/test-data/resource-record.ts`** — the record and its **state machine**:
+  `REGISTERED → CLEANUP_PENDING → CLEANED | CLEANUP_FAILED`, with `CLEANUP_FAILED → CLEANUP_PENDING`
+  for a retry and `CLEANED` terminal. `CLEANUP_PENDING` is recorded _before_ an attempt, so "cleanup
+  was interrupted" is distinguishable from "cleanup never started". No free-form state strings.
+- **Identity is ownership + kind + id** (`runId | slot | testCaseId | kind | id`) — which is what
+  stops two runs, two test cases or two account slots from overwriting each other when the product
+  reuses small ids. `slot` is the Phase 2.3 logical slot (`parallelIndex`) or **explicitly `null`**
+  when a resource belongs to no account; the correlation key is the Phase 2.2 **`testCaseId`**, never
+  `validationId`, and the run id is the existing `TEST_RUN_ID`. No second identity scheme was added.
+- **`resource-ledger.ts`** — `register`/`track`, `update`, `markCleanupPending|Succeeded|Failed`,
+  `get`/`has`/`list`/`count`/`getByRun`/`getByTestCase`/`getBySlot`/`outstanding`. Registering one
+  identity twice throws `DuplicateResourceError` **naming the existing record** — never overwriting.
+  Typed errors (`ResourceLedgerError`, `DuplicateResourceError`,
+  `InvalidResourceTransitionError`, `UnknownResourceError`, `ResourceJournalError`) keep an
+  infrastructure failure distinguishable from an application assertion failure.
+- **`resource-journal.ts`** — append-only `reports/resources.jsonl`, **one JSON object per line
+  carrying the whole record**, so a line is readable alone and a crash damages at most the last one.
+  The reader is pure (takes text): it reconstructs current state, reports a truncated tail as the
+  crash signature rather than corruption, and surfaces malformed JSON / missing fields / unknown
+  states / duplicate registrations / illegal transitions **with line numbers** instead of hiding them.
+  `findOrphans` classifies candidates as never-cleaned, pending or failed.
+- **Redaction** reuses `maskString` and adds a journal-scoped `key=value` rule, because the shared
+  masker covers JWT/Bearer/connection-string/e-mail but not `password=…` in free text — found by the
+  test, fixed in the code. Proven against password, JWT, Bearer, cookie, refresh-token and API-key
+  shapes in descriptions, cleanup reasons, the file on disk, and the reader's own error output.
+- **Concurrency stated honestly:** appends are single-process. When parallel slots arrive each slot
+  should write `resources.<slot>.jsonl`; the reader already merges events from several sources in any
+  order, so no redesign is needed.
+
+**Deliberately not done:** no fixture wiring, no lifecycle spec touched, no method that deletes,
+sweeps or calls anything (a guard asserts the API has no such verb), no Bugzilla change, no worker
+change. Future consumers: every lifecycle spec that creates data (katchup, kall, kmail, group,
+contacts, profile, settings, kdiary, kos, aws, admin) — they migrate with the cleanup phase.
+
+**Verified (no KPost host contacted; journals written to a temp dir per test, never a developer's
+`reports/`):** `npm run check` clean (32 pre-existing warnings, unchanged); **228 framework guards,
+224 pass / 4 skip** (33 new); reporting + bug-tracker regression 67 green; account pool + profiles 54
+green.
+
 ### 2026-09-20 — Phase 2.3: the account pool — session ownership by logical slot
 
 Third step of the approved Phase 2 design (§17.3). **Intent:** make the session collision that
@@ -4610,7 +4659,8 @@ explicitly allowed.
 The authoritative plan is the 10-phase roadmap in `docs/PRODUCTION-READINESS-AUDIT.md` §12, refined
 for Phase 2 by `docs/PHASE-2-DESIGN.md` (§17 implementation order). **Phase 1 is DONE**;
 **Phase 2.1 (profiles + runner)**, **2.2 (stable test-case ids)** and **2.3 (account pool + session
-isolation)** are DONE (§8). **Next: Phase 2.4** — the resource ledger + durable journal (§17.4).
+isolation)** and **2.4 (resource ledger + durable journal, TRACK only)** are DONE (§8).
+**Next: the cleanup phase** — performing cleanup, fixture wiring and the journal sweeper.
 Owner decisions that gate later phases are in
 the audit's §13 (read-only DB access, more QA accounts, a self-hosted CI runner, the CI gate policy,
 the RBAC matrix, `data-testid`).

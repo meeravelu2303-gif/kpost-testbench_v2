@@ -399,6 +399,37 @@ journal is _evidence_, not an actor — Phase 2 writes and reports it. The contr
 consumes it to delete leftovers stays Phase 4/10, deliberately: automated deletion driven by a file
 needs its own safety review, and this design does not smuggle it in early.
 
+> **Implementation note (Phase 2.4, delivered — TRACK only).** The ledger and the journal are built;
+> **cleanup is not**, by design. What the implementation settled:
+>
+> 1. **Four explicit states**, not the two the sketch above used:
+>    `REGISTERED → CLEANUP_PENDING → CLEANED | CLEANUP_FAILED`, with `CLEANUP_FAILED → CLEANUP_PENDING`
+>    for a retry and `CLEANED` terminal. `CLEANUP_PENDING` is written _before_ an attempt, so an
+>    interrupted cleanup is distinguishable from one that never started. The transition table is the
+>    single authority; illegal moves throw `InvalidResourceTransitionError`.
+> 2. **Identity is ownership + kind + id** (`runId | slot | testCaseId | kind | id`). That is what
+>    stops two runs, two test cases or two slots from overwriting each other when a target reuses
+>    small ids. Registering one identity twice throws `DuplicateResourceError` naming the existing
+>    record; it never overwrites.
+> 3. **The journal is one JSON object per line, whole-record per event** — not a delta — so a line is
+>    readable on its own and a crash damages at most the final line. A truncated tail is reported as
+>    `truncatedFinalLine`, not as corruption; malformed lines, unknown states, duplicate
+>    registrations and illegal transitions are each reported with their line number.
+> 4. **Redaction reuses `maskString`** plus a journal-scoped `key=value` rule (the shared masker does
+>    not cover `password=…` in free text). Tested against password, JWT, Bearer, cookie, refresh
+>    token and API-key shapes, in descriptions, cleanup reasons, the file on disk, and in the reader's
+>    own error output.
+> 5. **Concurrency is stated, not claimed:** appends are single-process; when parallel slots arrive,
+>    each slot should write `resources.<slot>.jsonl` and the reader merges them — it already accepts
+>    events from several sources in any order.
+> 6. **Nothing is wired into a lifecycle spec or a fixture yet**, and the ledger has no method that
+>    deletes, sweeps or calls anything (a guard asserts that). Bugzilla is untouched: a leftover
+>    resource is an infrastructure observation, never a defect.
+>
+> Files: `src/test-data/resource-record.ts` (record + state machine + redaction),
+> `resource-journal.ts` (append-only sink, pure reader, orphan report), `resource-ledger.ts` (the API
+> and typed errors), `tests/framework/resource-ledger.spec.ts` (33 guards).
+
 ### 6.5 Run-scoped naming
 
 `QA-<runId8>-<slot>-<seq>` (e.g. `QA-7f3a9c21-0-4`), applied by `run-scope.ts` to subjects, group
