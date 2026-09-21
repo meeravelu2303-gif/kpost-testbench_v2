@@ -57,7 +57,7 @@ async function as(
   return { status: ex.status, data: (value.data as Record<string, unknown>) ?? {} };
 }
 
-test.describe('KPost Group · feature flow', () => {
+test.describe('KPost Group · feature flow', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(!env.GROUP_LIFECYCLE, 'creates real groups; set GROUP_LIFECYCLE=true');
 

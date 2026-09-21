@@ -71,7 +71,7 @@ async function login(
   };
 }
 
-test.describe('KPost Login · behaviour', () => {
+test.describe('KPost Login · behaviour', { tag: '@kpost-api' }, () => {
   /*
    * `default`, not `serial`. Serial skips every later test after the first failure — and several of
    * these assertions are *meant* to stay red (they report live defects), which would hide every

@@ -28,7 +28,7 @@ async function write(
   return ex.status;
 }
 
-test.describe('KPost Settings · feature flow', () => {
+test.describe('KPost Settings · feature flow', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(!env.SETTINGS_LIFECYCLE, 'changes account preferences; set SETTINGS_LIFECYCLE=true');
 

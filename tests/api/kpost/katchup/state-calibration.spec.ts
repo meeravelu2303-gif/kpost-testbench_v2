@@ -21,7 +21,7 @@ import {
   observeExchange,
   requireObservationDefinition,
 } from '../../../../src/state-observation/index';
-import { currentSlot, type CleanupCoordinator } from '../../../../src/test-data/index';
+import { slotPrincipals, type CleanupCoordinator } from '../../../../src/test-data/index';
 
 /**
  * Phase 4D — controlled LIVE state calibration.
@@ -52,7 +52,7 @@ import { currentSlot, type CleanupCoordinator } from '../../../../src/test-data/
  * calibrations are READ-ONLY: they observe whatever the account already has and create nothing.
  */
 
-const [A, B] = currentSlot().principals(2) as [Principal, Principal];
+const [A, B] = slotPrincipals(2) as [Principal, Principal];
 
 const LIFECYCLE_OBSERVATION = 'katchup.message.lifecycle-via-conversation';
 const READ_TIME_OBSERVATION = 'katchup.message.read-time-via-conversation';
@@ -151,7 +151,7 @@ async function deleteMessage(
   return exchange.status;
 }
 
-test.describe('KPost state calibration · Katchup read', () => {
+test.describe('KPost state calibration · Katchup read', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     !env.KATCHUP_LIFECYCLE,
@@ -270,122 +270,130 @@ test.describe('KPost state calibration · Katchup read', () => {
   });
 });
 
-test.describe('KPost state calibration · Kall representation (read-only)', () => {
-  test.describe.configure({ mode: 'default' });
-  test.skip(!env.KALL_LIFECYCLE, 'live calibration read; set KALL_LIFECYCLE=true');
+test.describe(
+  'KPost state calibration · Kall representation (read-only)',
+  { tag: '@kpost-api' },
+  () => {
+    test.describe.configure({ mode: 'default' });
+    test.skip(!env.KALL_LIFECYCLE, 'live calibration read; set KALL_LIFECYCLE=true');
 
-  test('calibrate the Kall status representation @api @kall @calibration', async ({
-    endpoints,
-  }: {
-    endpoints: EndpointExecutor;
-  }, testInfo) => {
-    // Creates NOTHING. It observes whatever calls the account already has, so there is no resource
-    // to clean up and no risk of ringing a device.
-    const session = new CalibrationSession(
-      'kall.status-representation',
-      new Date().toISOString(),
-      env.TEST_RUN_ID,
-    );
-
-    const exchange = await endpoints.sendTo(
-      'kall-today-kool',
-      {},
-      { label: 'calibration:kall-today-kool', auth: { principal: A } },
-    );
-
-    for (const observationId of [
-      'kall.status-via-today-kool',
-      'kall.participant-state-via-today-kool',
-    ]) {
-      capture(session, exchange, observationId, 'kall:observe', 'call-caller', testInfo.testId);
-    }
-
-    session.addFinding(
-      observedRepresentation(
+    test('calibrate the Kall status representation @api @kall @calibration', async ({
+      endpoints,
+    }: {
+      endpoints: EndpointExecutor;
+    }, testInfo) => {
+      // Creates NOTHING. It observes whatever calls the account already has, so there is no resource
+      // to clean up and no risk of ringing a device.
+      const session = new CalibrationSession(
         'kall.status-representation',
-        session.select({ stateKey: 'senderKallStatus' }),
-        'How this build represents the call status on kall-today-kool. CONF-KALL-STATUS-REPRESENTATION ' +
-          'records that the workbook documents both a numeric senderKallStatus and a string kallStatus ' +
-          'for this endpoint; this records only what came back.',
-      ),
-    );
-    session.addFinding(
-      observedRepresentation(
-        'kall.participant-representation',
-        session.select({ stateKey: 'receiverKallStatus' }),
-        'How this build represents per-participant call status.',
-      ),
-    );
+        new Date().toISOString(),
+        env.TEST_RUN_ID,
+      );
 
-    /*
-     * Only that a response was received. The STATUS is data, recorded in the attempt — an error
-     * status means the calibration could not observe, which is an UNKNOWN finding, not a failed
-     * test. Judging whether that status is correct belongs to the validators and the future
-     * Business Invariant Model, never here.
-     */
-    expect(exchange.status, 'the Kall read received a response').toBeGreaterThan(0);
-    persist('kall', session.result());
-    await testInfo.attach('state-calibration-kall.json', {
-      body: JSON.stringify(session.result(), null, 2),
-      contentType: 'application/json',
+      const exchange = await endpoints.sendTo(
+        'kall-today-kool',
+        {},
+        { label: 'calibration:kall-today-kool', auth: { principal: A } },
+      );
+
+      for (const observationId of [
+        'kall.status-via-today-kool',
+        'kall.participant-state-via-today-kool',
+      ]) {
+        capture(session, exchange, observationId, 'kall:observe', 'call-caller', testInfo.testId);
+      }
+
+      session.addFinding(
+        observedRepresentation(
+          'kall.status-representation',
+          session.select({ stateKey: 'senderKallStatus' }),
+          'How this build represents the call status on kall-today-kool. CONF-KALL-STATUS-REPRESENTATION ' +
+            'records that the workbook documents both a numeric senderKallStatus and a string kallStatus ' +
+            'for this endpoint; this records only what came back.',
+        ),
+      );
+      session.addFinding(
+        observedRepresentation(
+          'kall.participant-representation',
+          session.select({ stateKey: 'receiverKallStatus' }),
+          'How this build represents per-participant call status.',
+        ),
+      );
+
+      /*
+       * Only that a response was received. The STATUS is data, recorded in the attempt — an error
+       * status means the calibration could not observe, which is an UNKNOWN finding, not a failed
+       * test. Judging whether that status is correct belongs to the validators and the future
+       * Business Invariant Model, never here.
+       */
+      expect(exchange.status, 'the Kall read received a response').toBeGreaterThan(0);
+      persist('kall', session.result());
+      await testInfo.attach('state-calibration-kall.json', {
+        body: JSON.stringify(session.result(), null, 2),
+        contentType: 'application/json',
+      });
     });
-  });
-});
+  },
+);
 
-test.describe('KPost state calibration · KMail transaction (read-only)', () => {
-  test.describe.configure({ mode: 'default' });
-  test.skip(!env.KMAIL_LIFECYCLE, 'live calibration read; set KMAIL_LIFECYCLE=true');
+test.describe(
+  'KPost state calibration · KMail transaction (read-only)',
+  { tag: '@kmail-api' },
+  () => {
+    test.describe.configure({ mode: 'default' });
+    test.skip(!env.KMAIL_LIFECYCLE, 'live calibration read; set KMAIL_LIFECYCLE=true');
 
-  test('calibrate the KMail delivery/read representation @api @kmail @calibration', async ({
-    endpoints,
-  }: {
-    endpoints: EndpointExecutor;
-  }, testInfo) => {
-    // Read-only: sentMailNotOpened reports mails ALREADY sent. It composes nothing and mails nobody.
-    const session = new CalibrationSession(
-      'kmail.transaction-representation',
-      new Date().toISOString(),
-      env.TEST_RUN_ID,
-    );
-
-    /*
-     * The body is passed explicitly. `sendTo(id, {})` sends the LITERAL spec and never runs the
-     * definition's request factory, so an empty object would post an empty body — which this
-     * endpoint answers 400 to. Reporting that 400 as an observation about KMail would have been a
-     * bench-payload artefact dressed up as application behaviour, the exact false-bug shape
-     * CLAUDE.md §8 records as the validateOTP lesson.
-     */
-    const exchange = await endpoints.sendTo(
-      'kmail-sent-not-opened',
-      { body: { selectedContact: B.username } },
-      { label: 'calibration:kmail-sent-not-opened', auth: { principal: A } },
-    );
-
-    capture(
-      session,
-      exchange,
-      'kmail.transaction.unread-via-sent-not-opened',
-      'kmail:observe',
-      'sender',
-      testInfo.testId,
-    );
-
-    session.addFinding(
-      observedRepresentation(
+    test('calibrate the KMail delivery/read representation @api @kmail @calibration', async ({
+      endpoints,
+    }: {
+      endpoints: EndpointExecutor;
+    }, testInfo) => {
+      // Read-only: sentMailNotOpened reports mails ALREADY sent. It composes nothing and mails nobody.
+      const session = new CalibrationSession(
         'kmail.transaction-representation',
-        session.select({ stateKey: 'readStatus' }),
-        'How this build represents per-recipient mail read state. CONF-KMAIL-RECEIPT-COVERAGE is ' +
-          'unaffected by this observation: it concerns whether the receipt is COVERED, not how it is ' +
-          'represented.',
-      ),
-    );
+        new Date().toISOString(),
+        env.TEST_RUN_ID,
+      );
 
-    // See the Kall note above: an error status is recorded, not asserted against.
-    expect(exchange.status, 'the KMail read received a response').toBeGreaterThan(0);
-    persist('kmail', session.result());
-    await testInfo.attach('state-calibration-kmail.json', {
-      body: JSON.stringify(session.result(), null, 2),
-      contentType: 'application/json',
+      /*
+       * The body is passed explicitly. `sendTo(id, {})` sends the LITERAL spec and never runs the
+       * definition's request factory, so an empty object would post an empty body — which this
+       * endpoint answers 400 to. Reporting that 400 as an observation about KMail would have been a
+       * bench-payload artefact dressed up as application behaviour, the exact false-bug shape
+       * CLAUDE.md §8 records as the validateOTP lesson.
+       */
+      const exchange = await endpoints.sendTo(
+        'kmail-sent-not-opened',
+        { body: { selectedContact: B.username } },
+        { label: 'calibration:kmail-sent-not-opened', auth: { principal: A } },
+      );
+
+      capture(
+        session,
+        exchange,
+        'kmail.transaction.unread-via-sent-not-opened',
+        'kmail:observe',
+        'sender',
+        testInfo.testId,
+      );
+
+      session.addFinding(
+        observedRepresentation(
+          'kmail.transaction-representation',
+          session.select({ stateKey: 'readStatus' }),
+          'How this build represents per-recipient mail read state. CONF-KMAIL-RECEIPT-COVERAGE is ' +
+            'unaffected by this observation: it concerns whether the receipt is COVERED, not how it is ' +
+            'represented.',
+        ),
+      );
+
+      // See the Kall note above: an error status is recorded, not asserted against.
+      expect(exchange.status, 'the KMail read received a response').toBeGreaterThan(0);
+      persist('kmail', session.result());
+      await testInfo.attach('state-calibration-kmail.json', {
+        body: JSON.stringify(session.result(), null, 2),
+        contentType: 'application/json',
+      });
     });
-  });
-});
+  },
+);

@@ -45,7 +45,7 @@ function extractDocId(data: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-test.describe('KPost KOS · feature flow', () => {
+test.describe('KPost KOS · feature flow', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(!env.KOS_LIFECYCLE, 'writes real KWord docs; set KOS_LIFECYCLE=true');
 

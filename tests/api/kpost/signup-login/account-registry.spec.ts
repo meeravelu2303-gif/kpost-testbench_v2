@@ -58,7 +58,7 @@ async function availability(
   return { status: exchange.status, availability: availabilityFromExistCheck(exchange.status) };
 }
 
-test.describe('KPost signup · account registry integration', () => {
+test.describe('KPost signup · account registry integration', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'serial' });
   test.skip(
     !env.OTP_TEST_GATEWAY,

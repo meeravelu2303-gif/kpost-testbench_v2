@@ -14,11 +14,28 @@ import { expect, test } from '@fixtures';
  * and self-cleaning (delete the task).
  */
 test.describe('KPost KDiary — read-only', { tag: '@ui' }, () => {
-  // FINDING (2026-09-15): the KDiary UI is NOT reachable in the deployed build. `/kdiary` is commented
-  // out in MenuRoutes.js, and although `Diary` is imported by the right-rail filler, the default rail on
-  // /home and /katchup renders KNews / E-Commerce, not the Diary — confirmed from the live DOM. So the
-  // Diary panel has no user-facing entry point today. The KDiary API is fully covered on live (9/9).
-  // This stays skipped-with-reason until the app exposes a Diary trigger (or its route is re-enabled).
+  /*
+   * FINDING (2026-09-15, re-verified against the frontend SOURCE on 2026-09-21): the KDiary UI is not
+   * reachable in this build. It is intentionally unavailable, not a stale selector and not a second
+   * navigation path we failed to find — every route TO it is commented out in
+   * `D:/KPOST_PROJECTS/KPOST_REACTJS_2023_V1`, in four independent places:
+   *
+   *   MenuRoutes.js:490                     {/* <Route path="/kdiary" element={<KDiary />} /> *}
+   *   .../Overall/Knews.js:14-18            the right-rail <Diary /> block, in ALL THREE Katchup
+   *                                         variants (bubble, classic, components) — only <News />
+   *                                         renders, which is what the 2026-09-15 live DOM showed
+   *   containers/Header.js ~4705-4718       the rail icon + its "KDiary" tooltip
+   *   containers/Header.js ~5130-5147       the expanded-menu "KDiary" entry, whose onClick would
+   *                                         navigate("/kdiary") — to the route commented out above
+   *
+   * `components/KDiary/KDiary.js` is imported by nothing except that commented-out route, so the
+   * screen cannot be mounted by any user action. The KDiary API is covered on live (9/9 writes,
+   * driven by the gated `kdiary/feature.spec.ts`), so the module is not untested — only its UI.
+   *
+   * RECOVERY CONDITION (checkable, not a guess): un-comment EITHER the `/kdiary` route or the
+   * right-rail `<Diary />` block. This test then needs no change — its selectors come from
+   * `docs/ui-build-plan.md` and target the Diary component that already exists in the source.
+   */
   test.skip(
     true,
     'KDiary UI has no route/rail entry point in the deployed build — API-covered instead',

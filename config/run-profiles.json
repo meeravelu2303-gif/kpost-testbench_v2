@@ -35,7 +35,7 @@
     "mock": {
       "description": "Every project against the bundled mock API.",
       "targetKind": "mock",
-      "projects": ["setup", "api", "framework", "chromium"],
+      "projects": ["setup", "api", "framework", "integration", "chromium"],
       "flags": { "MOCK_API": "true" },
       "lifecycles": [],
       "execution": { "mode": "parallel-safe", "maxWorkers": 4 },
@@ -164,7 +164,7 @@
     "ui": {
       "description": "The whole UI e2e on Chromium, Firefox and WebKit, with the UI write flows.",
       "targetKind": "test",
-      "projects": ["setup", "chromium", "firefox", "webkit"],
+      "projects": ["setup", "chromium", "firefox", "webkit", "admin-ui"],
       "flags": { "MOCK_API": "false" },
       "lifecycles": [
         "KATCHUP_LIFECYCLE",

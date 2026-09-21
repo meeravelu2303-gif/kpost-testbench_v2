@@ -29,7 +29,11 @@ export const signupApi = defineKpostEndpoint({
   method: 'POST',
   path: '/v2/signupLogin/signup/',
   summary: 'Register a personal account',
-  tags: [...SIGNUP_TAGS, 'critical'],
+  // `mints-account`: the generated contract spec EXCLUDES this tag. An account cannot be deleted
+  // through this API, so a fuzzed registration leaves a permanent row behind — the availability
+  // READS beside it are safe to fuzz, this is not. It is driven deliberately by
+  // `otp-signup-lifecycle.spec.ts` on the OTP test gateway instead.
+  tags: [...SIGNUP_TAGS, 'critical', 'mints-account'],
   /*
    * `global`: an account cannot be deleted through this API, so a run leaves a `qabench.signup@`
    * row behind — fine on a disposable test DB, reset between full runs.
@@ -79,7 +83,9 @@ export const adminRegistrationApi = defineKpostEndpoint({
   method: 'POST',
   path: '/v2/signupLogin/adminRegistration/',
   summary: 'Register a business account and its company',
-  tags: [...SIGNUP_TAGS, 'business-tier'],
+  // `mints-account` — and this one mints a whole TENANT (see the note below), so it is excluded
+  // from the generated contract spec for the same reason, and more strongly.
+  tags: [...SIGNUP_TAGS, 'business-tier', 'mints-account'],
   /*
    * Creates a company as well as an account — a whole tenant per run. `global`: companies accumulate,
    * appear in other tenants' lookups, and consume a unique name/domain that cannot be released.

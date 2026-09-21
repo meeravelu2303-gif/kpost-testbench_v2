@@ -11,7 +11,7 @@ import { expect, test } from '@fixtures';
  * gated, that the metered AI endpoints are `external` (blocked even under allowLiveWrite), and that
  * every cleared read's payload passes the QA-identifier guard.
  */
-test.describe('KPost KOS · module coverage', () => {
+test.describe('KPost KOS · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented kword/ai endpoint has a definition @framework', () => {
     expect(uncoveredKosPaths(), 'documented but untested').toEqual([]);
   });

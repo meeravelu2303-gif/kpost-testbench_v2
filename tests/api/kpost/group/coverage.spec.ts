@@ -5,7 +5,7 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /** Self-tests for the Group module wiring. No HTTP. */
-test.describe('KPost Group · module coverage', () => {
+test.describe('KPost Group · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented group endpoint has a definition @framework', () => {
     expect(uncoveredGroupPaths(), 'documented but untested').toEqual([]);
   });

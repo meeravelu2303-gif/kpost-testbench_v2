@@ -8,7 +8,7 @@ import { expect, test } from '@fixtures';
  * Self-tests for the Settings module. No HTTP — full coverage, contract agreement, and that every
  * write is gated (a settings write changes the account, even if only cosmetically).
  */
-test.describe('KPost Settings · module coverage', () => {
+test.describe('KPost Settings · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented generalSetting endpoint has a definition @framework', () => {
     expect(uncoveredSettingsPaths(), 'documented but untested').toEqual([]);
   });

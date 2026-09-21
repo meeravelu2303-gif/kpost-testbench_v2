@@ -6,6 +6,9 @@ import { defineAdminEndpoint } from '@api/definitions/admin/admin-endpoint';
 import { defineKmailEndpoint } from '@api/definitions/kmail/kmail-endpoint';
 import { defineKpostEndpoint } from '@api/definitions/kpost/kpost-endpoint';
 import { ROOT_DIR } from '@config/constants';
+import { runProbes } from '@engine/probe';
+import { ProductionSafetyError } from '@engine/production-guard';
+import type { ValidationContext } from '@engine/validation-context';
 import { ENV_SCHEMA_KEYS, env, resolveDryRun } from '@config/env';
 import { TEST_DATA_ENV_VARS, testData } from '@config/test-data.config';
 import { plannedCases } from '@engine/endpoint-cases';
@@ -141,5 +144,56 @@ test.describe('bench hardening @framework', () => {
       (key) => !documented.has(key),
     );
     expect(missing, 'variables read by the bench but absent from .env.example').toEqual([]);
+  });
+});
+
+test.describe('a refused probe is inconclusive, never a finding @framework', () => {
+  /*
+   * The mutating validators rewrite every field, id fields included: `request.data-type` turns
+   * `companyId: "242"` into a number, `security.injection` into a SQL tautology. Those name a
+   * company we do not own, so the QA-identifier guard refuses to send them — correctly.
+   *
+   * That refusal used to propagate out of `runProbes` as `validator error: …`, and the validator was
+   * reported FAILED. On the Admin suite that was three CRITICAL/HIGH "findings" per endpoint,
+   * manufactured entirely from the bench's own safety control. The guard is unchanged; what changed
+   * is that its refusal is now recorded as SKIPPED with the reason, exactly as a throttled probe is.
+   */
+  const probeContext = (send: () => Promise<never>): ValidationContext =>
+    ({ send }) as unknown as ValidationContext;
+
+  test('a safety refusal is SKIPPED with the reason, and nothing is reported as failed', async () => {
+    const outcome = await runProbes(
+      probeContext(() => {
+        throw new ProductionSafetyError('refusing to send a request … names 1 identifier(s)');
+      }),
+      'request.data-type',
+      [{ name: 'body.companyId: number instead of string', spec: { body: { companyId: 1 } } }],
+      'negative request cases',
+    );
+
+    expect(outcome.status, 'a refusal is not evidence of an application defect').toBe('SKIPPED');
+    expect(outcome.details?.[0]?.status).toBe('SKIPPED');
+    expect(outcome.details?.[0]?.message, 'the reason travels with the skip').toContain(
+      'refused by a bench safety control',
+    );
+    expect(
+      outcome.details?.[0]?.request,
+      'nothing was sent, so there is no request to reproduce',
+    ).toBeUndefined();
+  });
+
+  test('a transport error is still judged — only the safety refusal is caught', async () => {
+    // Catching every error here would hide a real observation about the host behind a skip.
+    const boom = new Error('socket hang up');
+    await expect(
+      runProbes(
+        probeContext(() => {
+          throw boom;
+        }),
+        'request.data-type',
+        [{ name: 'case', spec: { body: { companyId: 1 } } }],
+        'negative request cases',
+      ),
+    ).rejects.toThrow('socket hang up');
   });
 });

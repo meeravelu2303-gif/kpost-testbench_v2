@@ -3,7 +3,7 @@ import { env } from '@config/env';
 // the conditionals guard optional steps and best-effort cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 import type { Principal } from '@config/auth.config';
-import { currentSlot, type CleanupCoordinator } from '../../../../src/test-data/index';
+import { slotPrincipals, type CleanupCoordinator } from '../../../../src/test-data/index';
 import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/schemas/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
@@ -28,7 +28,7 @@ import { sendShape } from '@api/definitions/kpost/katchup/send.api';
  * accounts nobody else may log in as, which is what keeps a parallel run from signing this test out
  * mid-flow. Slot 0 resolves to the same four accounts this spec has always used.
  */
-const [A, B, C, D] = currentSlot().principals(4) as [Principal, Principal, Principal, Principal];
+const [A, B, C, D] = slotPrincipals(4) as [Principal, Principal, Principal, Principal];
 
 interface Sent {
   status: number;
@@ -103,7 +103,7 @@ async function deleteMessage(
   return exchange.status;
 }
 
-test.describe('KPost Katchup · feature flow', () => {
+test.describe('KPost Katchup · feature flow', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     !env.KATCHUP_LIFECYCLE,

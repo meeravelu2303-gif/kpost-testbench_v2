@@ -19,7 +19,7 @@ import { expect, test } from '@fixtures';
  */
 const OTP = testData.bypassOtp;
 
-test.describe('Signup & OTP lifecycle (test gateway)', { tag: '@api' }, () => {
+test.describe('Signup & OTP lifecycle (test gateway)', { tag: ['@api', '@kpost-api'] }, () => {
   test.skip(
     !env.OTP_TEST_GATEWAY || !env.TEST_DB_MODE,
     'OTP/signup flows run only on a confirmed test gateway: OTP_TEST_GATEWAY=true + TEST_DB_MODE=true',

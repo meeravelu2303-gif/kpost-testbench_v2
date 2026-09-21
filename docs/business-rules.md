@@ -13,7 +13,7 @@ files a false bug.
 
 **Status legend:** ✅ verified against the response · 🟡 partial (only "accepted", or UI-only) · ⬜ to
 do · ⛔ out of scope (OTP-gated signup / mobile-only device features). Guard:
-`tests/framework/business-rules-coverage.spec.ts` fails if a rule here is unmapped.
+`tests/framework/business-invariants.spec.ts` fails if a rule here is unmapped.
 
 ---
 
@@ -56,7 +56,7 @@ do · ⛔ out of scope (OTP-gated signup / mobile-only device features). Guard:
 | **FR-GM-012** — Add Admin promotes a member; both admins then listed            | `addOrRemoveAdminAccess` | promoted member appears as admin                    | 🟡     | `group/feature`   |
 | **FR-GM-013** — Remove Admin allowed only when >1 admin exists                  | `addOrRemoveAdminAccess` | demotion blocked when sole admin                    | ⬜     | to-do             |
 | **FR-GM-014** — a sole admin cannot exit until another admin exists             | `leaveFromGroup`  | sole admin's exit blocked; non-sole admin exits          | 🟡     | `group/feature` (2xx recorded as finding) |
-| **FR-GC-delete** — a group cannot be deleted until all members are removed      | `deleteGroup`     | delete with members present → 400 "remove all members"   | ✅     | `katchup/feature` |
+| **BR-GC-DELETE-EMPTY** — a group cannot be deleted until all members are removed      | `deleteGroup`     | delete with members present → 400 "remove all members"   | ✅     | `katchup/feature` |
 
 ## Kall (`kpost-api`)
 
@@ -83,8 +83,8 @@ do · ⛔ out of scope (OTP-gated signup / mobile-only device features). Guard:
 
 | Rule                                                                        | Applies to                    | Verify                                            | Status | Spec        |
 | --------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------ | ------ | ----------- |
-| **FR-KD-002 org-scope** — directory shows only the viewer's own org users   | `globalSearch`/directory      | users outside the viewer's org are absent         | ⬜     | to-do       |
-| **FR-KD-002 search** — search by name; no match → empty state               | `globalSearch`                | query returns only name-matching entries          | 🟡     | contacts    |
+| **FR-KD-002-ORG-SCOPE** — directory shows only the viewer's own org users   | `globalSearch`/directory      | users outside the viewer's org are absent         | ⬜     | to-do       |
+| **FR-KD-002-SEARCH** — search by name; no match → empty state               | `globalSearch`                | query returns only name-matching entries          | 🟡     | contacts    |
 | **FR-KD-003** — each entry shows name, role/designation, team               | directory entry               | all three fields present                          | ⬜     | to-do       |
 | **FR-KD-005** — opening an entry returns that user's full profile           | `getUserProfileUsingKpostID`  | profile view returns the selected user's details  | ✅     | profile read|
 

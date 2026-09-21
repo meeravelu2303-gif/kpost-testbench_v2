@@ -6,6 +6,8 @@ import {
   accountPool,
   currentSlot,
   currentSlotIndex,
+  lazyPrincipals,
+  slotPrincipals,
 } from '../../src/test-data/index';
 import { expect, test } from '@fixtures';
 
@@ -244,5 +246,96 @@ test.describe('account pool: backward compatibility @framework', () => {
     expect(slot.index).toBe(currentSlotIndex());
     expect(slot.keys().length).toBeGreaterThan(0);
     expect(slot.keys()).toEqual(accountPool.slot(slot.index, slot.size).keys());
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Lazy resolution (Phase 4I-B) — allocation unchanged, the REQUEST deferred to first use
+// ---------------------------------------------------------------------------------------------
+
+test.describe('account pool: lazy principals @framework', () => {
+  /*
+   * Playwright imports every spec in a project's testDir before `--grep` selects any of them, so
+   * failable work at module scope breaks the run for the specs that WERE selected. Resolving four
+   * session accounts at the top of the Katchup spec collapsed the whole `kmail` profile — which
+   * allocates two, correctly, because two is what KMail needs — with
+   * `AccountPoolError: Slot 0 owns 2 session account(s); 4 requested`.
+   *
+   * These pin the repair's two halves: nothing is requested until a test touches a principal, and
+   * when it does, it gets exactly what an eager `currentSlot().principals(n)` would have given it.
+   */
+
+  test('nothing is requested until a principal is actually used', () => {
+    let calls = 0;
+    const principals = lazyPrincipals((count) => {
+      calls += 1;
+      return fakePrincipals(count);
+    }, 3);
+
+    expect(calls, 'creating the views resolves nothing').toBe(0);
+    expect(principals).toHaveLength(3);
+    expect(principals[0]?.key, 'the first read resolves').toBe('personal-1');
+    expect(calls).toBe(1);
+  });
+
+  test('one resolution is shared by every view, however many are read', () => {
+    let calls = 0;
+    const principals = lazyPrincipals((count) => {
+      calls += 1;
+      return fakePrincipals(count);
+    }, 4);
+
+    expect(principals.map((principal) => principal.key)).toEqual([
+      'personal-1',
+      'personal-2',
+      'personal-3',
+      'personal-4',
+    ]);
+    expect(calls, 'four principals, one slot request').toBe(1);
+  });
+
+  test('a view is indistinguishable from the principal it stands for', () => {
+    // The executor reads fields, spreads and stringifies principals; all three must be unchanged.
+    const [real] = fakePrincipals(1);
+    const [view] = lazyPrincipals(() => fakePrincipals(1), 1);
+
+    expect(view?.username).toBe(real?.username);
+    expect(Object.keys(view as object).sort()).toEqual(Object.keys(real as object).sort());
+    expect({ ...(view as object) }).toEqual({ ...(real as object) });
+    expect(JSON.stringify(view)).toBe(JSON.stringify(real));
+    expect('password' in (view as object)).toBe(true);
+  });
+
+  test('a shared principal cannot be mutated through a view', () => {
+    const [view] = lazyPrincipals(() => fakePrincipals(1), 1);
+    // Non-strict assignment through a `set` trap returning false throws in ESM/strict code.
+    expect(() => {
+      (view as unknown as Record<string, unknown>).password = 'tampered';
+    }).toThrow();
+    expect(view?.password).toBe('super-secret-value');
+  });
+
+  test('an under-capacity slot still fails — at use, with the pool’s own message', () => {
+    const principals = lazyPrincipals(
+      (count) => AccountPool.fromPrincipals(fakePrincipals(2)).slot(0, 2).principals(count),
+      4,
+    );
+    // Deferred, not softened: creating the views is silent, reading one raises the real error.
+    expect(() => principals[0]?.key).toThrow(AccountPoolError);
+    expect(() => principals[0]?.key).toThrow(/Slot 0 owns 2 session account\(s\); 4 requested/);
+  });
+
+  test('slotPrincipals allocates exactly what currentSlot().principals would', () => {
+    const eager = currentSlot().principals(2);
+    const lazy = slotPrincipals(2);
+    expect(lazy.map((principal) => principal.key)).toEqual(eager.map((principal) => principal.key));
+    expect(lazy.map((principal) => principal.username)).toEqual(
+      eager.map((principal) => principal.username),
+    );
+  });
+
+  test('a nonsensical count fails immediately, not at first use', () => {
+    expect(() => lazyPrincipals(() => [], 0)).toThrow(/positive integer/);
+    expect(() => lazyPrincipals(() => [], 1.5)).toThrow(/positive integer/);
   });
 });

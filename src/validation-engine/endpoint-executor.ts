@@ -226,9 +226,21 @@ export class EndpointExecutor {
       isProduction: env.IS_PRODUCTION,
       allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
       allowLiveWrite: options.allowLiveWrite,
-      // Threads the mock/real-host signal so the SMS/OTP kill-switch blocks OTP senders against a
-      // real host in EVERY mode, while still letting them run against the bundled mock.
-      mockApi: env.MOCK_API,
+      /*
+       * Threads the mock/real-host signal so the SMS/OTP kill-switch blocks OTP senders against a
+       * real host in EVERY mode, while still letting them run against the bundled mock.
+       *
+       * This is `targetsRealHost(endpoint)`, NOT `env.MOCK_API`. The two disagree in a case this
+       * repository can actually produce: `MOCK_API=true` only redirects a suite whose base URL
+       * FELL BACK to the mock's, and every KPost suite takes its own module host from `.env`. So
+       * with `MOCK_API=true` and `KPOST_API_BASE_URL` set — what `bench --profile mock` produces —
+       * the flag says "mock" while the request still goes to testingapi. Passing the flag there
+       * told the kill-switch a real host was unreachable when it was one URL away.
+       *
+       * `targetsRealHost` is the signal `assertQaOwnedIdentifiers` below already uses, so both
+       * controls now answer the same question the same way.
+       */
+      mockApi: !targetsRealHost(endpoint),
       // Deep write-fuzz on a disposable test DB (both required); opens only `data` writes.
       writeFuzz: env.WRITE_FUZZ,
       testDbMode: env.TEST_DB_MODE,

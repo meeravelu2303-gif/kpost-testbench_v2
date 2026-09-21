@@ -80,6 +80,14 @@ const NOT_A_RESOURCE = new Set(
      * since `loginRO.userType: "PERSONAL"` is not a QA-owned value. Found before the first run.
      */
     'usertype',
+    /*
+     * The LIST form of the same account tier, sent by the KDirectory search
+     * (`contacts/globalSearch` → `userTypeList: ['personal']`). Identical values to `usertype`
+     * above, matching the pattern for the identical reason — the key contains "user". Its siblings
+     * in that payload (`languageList`, `countryList`) carry no identifier token and were never
+     * checked, so the singular being exempt while the plural was not simply refused a cleared read.
+     */
+    'usertypelist',
     // Values this bench generates for itself.
     'sessionid',
     'deviceid',
@@ -155,6 +163,12 @@ const NOT_A_RESOURCE = new Set(
     'kmailsenddate',
     'kmailtype',
     'kmailsendtype',
+    /*
+     * Which VIEW of the thread to fetch (`'A'`), from `Kmail.js getKmailChat`. A one-letter type
+     * code, not a mail and not an account — it matches only because the key contains "mail", the
+     * same over-match as `kmailType` beside it.
+     */
+    'fetchmailtype',
     'attachmentflag',
     'attachmentcaption',
     'groupid',

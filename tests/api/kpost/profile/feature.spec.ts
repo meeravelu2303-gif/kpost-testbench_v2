@@ -51,7 +51,7 @@ async function write(
   return exchange.status;
 }
 
-test.describe('KPost Profile · write lifecycle', () => {
+test.describe('KPost Profile · write lifecycle', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(!env.PROFILE_LIFECYCLE, 'writes real profile data; set PROFILE_LIFECYCLE=true to run');
 

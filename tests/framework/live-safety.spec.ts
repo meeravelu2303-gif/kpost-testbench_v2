@@ -11,7 +11,9 @@ import {
   PRODUCTION_SAFE_VALIDATORS,
   productionExclusion,
 } from '@engine/production-validators';
+import { targetsRealHost } from '@engine/endpoint-executor';
 import { foreignIdentifiers } from '@engine/qa-identifier-guard';
+import type { ResolvedEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 import { validationRegistry } from '@validators/index';
 
@@ -383,6 +385,44 @@ test.describe('live-application safety @framework', () => {
     expect(foreign.map((offence) => offence.path)).toEqual(['body.memberKpostIdList[0]']);
   });
 
+  test('an account-TIER list and a mail-VIEW type code are not resources; the contact beside them is', () => {
+    /*
+     * Two type/enum fields that matched only on a substring, and were refusing two CLEARED LIVE
+     * READS until the module coverage guards were finally able to run (Phase 4I-B):
+     *
+     *   userTypeList: ['personal']  — KDirectory search. The SINGULAR `userType` has been exempt
+     *                                 since before the first live run ("an account TIER, not an
+     *                                 account"); the list form carries the identical values and was
+     *                                 refused purely because nobody wrote the plural down. Its
+     *                                 siblings `languageList`/`countryList` carry no identifier
+     *                                 token and were never checked, which is how the asymmetry hid.
+     *   fetchMailType: 'A'          — which VIEW of a mail thread to fetch. A one-letter code, the
+     *                                 same over-match as the already-exempt `kmailType` beside it.
+     *
+     * Neither can address another account, and the exemption is by EXACT key, so it widens nothing
+     * else. The tenant identifier travelling in the very same payload — `selectedContact` — is
+     * still refused, which is the property that makes these two safe to exempt at all.
+     */
+    const foreign = foreignIdentifiers({
+      body: {
+        search: 'qa',
+        userTypeList: ['personal'],
+        fetchMailType: 'A',
+        kmailType: 1,
+        selectedContact: 'stranger@kpostindia.com',
+      },
+    });
+    expect(foreign.map((offence) => offence.path)).toEqual(['body.selectedContact']);
+  });
+
+  test('the tier exemption does not leak to a neighbouring id list', () => {
+    // `usertypelist` is exempt by exact key; a list of ACCOUNTS under a similar-looking key is not.
+    const foreign = foreignIdentifiers({
+      body: { userTypeList: ['business_m'], userIdList: ['stranger@kpostindia.com'] },
+    });
+    expect(foreign.map((offence) => offence.path)).toEqual(['body.userIdList[0]']);
+  });
+
   test('a bare `id` is exempt (an echoed row id), but a qualified id is still checked', () => {
     /*
      * `updateKallStatus`/`endKoolKall` echo the kall's row id as `{id: <our kall>}`. A bare `id` is
@@ -595,5 +635,86 @@ test.describe('live-application safety @framework', () => {
       destructiveBlockReason(dataWrite, { ...fuzz, writeFuzz: false }),
       'no writeFuzz → a data write stays blocked on live',
     ).toBeTruthy();
+  });
+});
+
+test.describe('live-application safety: the real-host signal @framework', () => {
+  /*
+   * The SMS/OTP kill-switch asks "can this request reach a real host?". For a long time the answer
+   * it was given was `env.MOCK_API`, which is a different question.
+   *
+   * `MOCK_API=true` redirects only a suite whose base URL FELL BACK to the mock's
+   * (`targetsRealHost`: `!(env.MOCK_API && suite.baseUrl === env.API_BASE_URL)`). Every KPost suite
+   * takes its own module host from `.env`, so with `MOCK_API=true` and `KPOST_API_BASE_URL` set —
+   * exactly what `bench --profile mock` produces — the flag said "mock" while the request still
+   * went to testingapi. The `productionSafe` gate happened to stop it while `TEST_ENV=production`,
+   * but that is a second control covering for a wrong answer in the first.
+   */
+
+  const suiteAt = (baseUrl: string): ResolvedEndpoint =>
+    ({
+      definition: { mockFixture: false },
+      suite: { baseUrl },
+    }) as unknown as ResolvedEndpoint;
+
+  test('a suite with its own module host is a real host even when MOCK_API is set', () => {
+    // `env.API_BASE_URL` is the mock's; a module host is anything else.
+    expect(
+      targetsRealHost(suiteAt('https://testingapi.kpostindia.com')),
+      'a configured module host is reachable whatever the flag says',
+    ).toBe(true);
+    expect(
+      targetsRealHost({
+        definition: { mockFixture: true },
+        suite: { baseUrl: 'https://testingapi.kpostindia.com' },
+      } as unknown as ResolvedEndpoint),
+      'a mock fixture is routed to the mock and reaches nothing real',
+    ).toBe(false);
+  });
+
+  test('the executor gives the kill-switch the real-host signal, not the MOCK_API flag', () => {
+    /*
+     * A source guard, because the defect was a CALL SITE passing the wrong value into a correct
+     * function. Nothing about `destructiveBlockReason` was wrong; it was told the wrong thing.
+     */
+    const source = fs.readFileSync(
+      path.join(ROOT_DIR, 'src', 'validation-engine', 'endpoint-executor.ts'),
+      'utf8',
+    );
+    const call = /destructiveBlockReason\(endpoint, \{[\s\S]*?\n {4}\}\);/.exec(source)?.[0] ?? '';
+    expect(call, 'the guard call was found').toContain('isProduction');
+    // Strip comments: the explanation beside it names `env.MOCK_API` on purpose.
+    const code = call.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+    expect(code, 'the accurate signal is passed').toContain('mockApi: !targetsRealHost(endpoint)');
+    expect(code, 'the raw flag is not what decides whether a real host is reachable').not.toContain(
+      'mockApi: env.MOCK_API',
+    );
+  });
+
+  test('an OTP sender stays blocked on a module host, and only clears against the mock', () => {
+    const otpSender: GuardedEndpoint = {
+      label: 'POST /v2/common/sendOTP/',
+      destructive: true,
+      sideEffect: 'external',
+      otpDependent: 'sends',
+    };
+    // `mockApi` here is the caller's answer to "unreachable?" — the executor now computes it.
+    expect(
+      destructiveBlockReason(otpSender, {
+        isProduction: false,
+        allowDestructive: true,
+        allowLiveWrite: true,
+        mockApi: false,
+      }),
+      'no flag unlocks an SMS sender against a reachable host, in any mode',
+    ).toBeTruthy();
+    expect(
+      destructiveBlockReason(otpSender, {
+        isProduction: false,
+        allowDestructive: true,
+        mockApi: true,
+      }),
+      'against the bundled mock it may run: nothing real is sent',
+    ).toBeUndefined();
   });
 });

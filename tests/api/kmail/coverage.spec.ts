@@ -11,7 +11,7 @@ import { expect, test } from '@fixtures';
  * "every documented path is covered" assertion is enabled once the write stages land; for now this
  * pins contract agreement, auth, the guard on cleared reads, and the case count.
  */
-test.describe('KPost KMail · module coverage', () => {
+test.describe('KPost KMail · module coverage', { tag: '@kmail-api' }, () => {
   test('every documented KMail endpoint has a definition @framework', () => {
     expect(uncoveredKmailPaths(), 'documented but untested').toEqual([]);
   });

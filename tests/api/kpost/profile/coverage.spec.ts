@@ -5,7 +5,7 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /** Self-tests for the Profile module wiring. No HTTP. */
-test.describe('KPost Profile · module coverage', () => {
+test.describe('KPost Profile · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented profile endpoint has a definition @framework', () => {
     expect(uncoveredProfilePaths(), 'documented but untested').toEqual([]);
   });

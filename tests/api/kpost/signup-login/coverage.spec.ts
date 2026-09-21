@@ -10,7 +10,7 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /** Self-tests for the module's wiring. No HTTP: these assert what a reviewer would have to trust. */
-test.describe('KPost Signup & Login · module coverage', () => {
+test.describe('KPost Signup & Login · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented signupLogin endpoint has a definition @framework', () => {
     expect(uncoveredSignupLoginPaths(), 'documented but untested').toEqual([]);
   });
@@ -67,19 +67,50 @@ test.describe('KPost Signup & Login · module coverage', () => {
     expect(logout?.sideEffect, 'it ends only the session it is sent with').toBe('data');
   });
 
-  test('signup is out of scope, and only the named registration paths are excluded @framework', () => {
+  test('registration is in scope, and every account-minting write stays OTP-gated @framework', () => {
+    /*
+     * This guard used to assert the OPPOSITE — that the five registration endpoints were absent and
+     * `SIGNUP_OUT_OF_SCOPE` named all five. That was true when it was written and was reversed on
+     * 2026-09-19, when the owner confirmed testingapi's OTP subsystem is a TEST GATEWAY and signup
+     * was re-added (CLAUDE.md §8; the list's own comment in `signup-login/index.ts` says so). The
+     * guard never ran — every hand-written api spec was dropped by the suite tag filter — so it kept
+     * asserting a retired decision.
+     *
+     * What matters is NOT whether registration is registered; it is that the two endpoints which
+     * MINT A PERMANENT ACCOUNT can never run casually. An account cannot be deleted on this product,
+     * so a stray registration is permanent. That property is what is pinned here, and it is stricter
+     * than "these ids must be absent" ever was: the ids may exist, but only behind the OTP gateway,
+     * as a destructive global write the production guard blocks by default.
+     */
     const ids = signupLoginApis.map((api) => api.id);
-    for (const removed of [
-      'signup-login-signup',
+    const byId = (id: string) => signupLoginApis.find((api) => api.id === id);
+
+    for (const id of ['signup-login-signup', 'signup-login-admin-registration']) {
+      const api = byId(id);
+      expect(api, `${id} is registered (signup came back into scope on 2026-09-19)`).toBeTruthy();
+      expect(api?.otpDependent, `${id} needs an OTP it cannot obtain outside the gateway`).toBe(
+        'requires',
+      );
+      expect(api?.destructive, `${id} mints a permanent account`).toBe(true);
+      expect(api?.sideEffect, `${id} touches shared, unremovable state`).toBe('global');
+      expect(api?.productionSafe ?? false, `${id} is never cleared for a standalone live run`).toBe(
+        false,
+      );
+    }
+
+    // The availability lookups are reads: they answer "is this id free?" and create nothing.
+    for (const id of [
       'signup-login-signup-get',
-      'signup-login-admin-registration',
       'signup-login-kpost-id-exist',
       'signup-login-kpost-id-suggestions',
     ]) {
-      expect(ids, `${removed} is registration, out of scope`).not.toContain(removed);
+      expect(byId(id)?.destructive ?? false, `${id} is an availability read`).toBe(false);
     }
+
     // The login screen's step 1 is NOT signup, whatever its path looks like.
     expect(ids).toContain('signup-login-fetch-user-details');
-    expect(SIGNUP_OUT_OF_SCOPE).toHaveLength(5);
+    // Nothing under /signupLogin is deliberately excluded any more; the list stays as the hook that
+    // makes a NEW uncovered path fail rather than be swallowed (see uncoveredSignupLoginPaths).
+    expect(SIGNUP_OUT_OF_SCOPE, 'no signupLogin path is deliberately out of scope').toEqual([]);
   });
 });

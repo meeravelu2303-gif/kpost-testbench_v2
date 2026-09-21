@@ -19,7 +19,7 @@ import { sendShape } from '@api/definitions/kpost/katchup/send.api';
  * flag, because the mock has no Katchup handlers; it exists to run against a real KPost host once a
  * human has said yes.
  */
-test.describe('KPost Katchup · 1:1 lifecycle', () => {
+test.describe('KPost Katchup · 1:1 lifecycle', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'serial' });
   test.skip(
     !env.KATCHUP_LIFECYCLE,

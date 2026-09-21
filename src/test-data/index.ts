@@ -2,7 +2,9 @@ import path from 'node:path';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { ROOT_DIR } from '@config/constants';
 import { env } from '@config/env';
+import type { Principal } from '@config/auth.config';
 import { AccountPool, currentSlotIndex, type SlotAccounts } from './account-pool';
+import { lazyPrincipals } from './lazy-principals';
 import { CleanupCoordinator } from './cleanup';
 import { ResourceLedger } from './resource-ledger';
 import { DEFAULT_JOURNAL_FILE, FileResourceJournal } from './resource-journal';
@@ -27,6 +29,18 @@ export function currentSlot(size?: number): SlotAccounts {
   return accountPool.slot(currentSlotIndex(), size);
 }
 
+/**
+ * This slot's first `count` principals, resolved on first USE rather than at module load.
+ *
+ * Identical allocation to `currentSlot().principals(count)` — same slot, same accounts, same order
+ * — but a spec that a `--grep` discards never asks, so it cannot fail the run of the specs that
+ * were selected. See `lazy-principals.ts` for the failure this removes.
+ */
+export function slotPrincipals(count: number): Principal[] {
+  return lazyPrincipals((wanted) => currentSlot().principals(wanted), count);
+}
+
+export { lazyPrincipals } from './lazy-principals';
 export {
   AccountPool,
   AccountPoolError,

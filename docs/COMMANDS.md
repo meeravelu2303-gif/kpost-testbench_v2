@@ -45,7 +45,7 @@ What each one does:
   **browser name** (`[browser:…]` + a "Browsers affected" line), so a WebKit- or Firefox-only defect is
   unmistakable.
 
-- **`all`** — `kpost`, then `kmail`, then `ui`, in order (separate runs, so the API login never displaces the UI session). Run by `scripts/run-suites.cjs`: **every suite runs even when an earlier one finds defects** (a finding exits non-zero, which used to stop the chain after `kpost`), each suite's report is kept in `reports/<suite>/`, and `reports/SUITES.md` indexes them. It exits non-zero if any suite did.
+- **`all`** — `kpost`, then `kmail`, then **`admin`**, then `ui`, in order (separate runs, so the API login never displaces the UI session). Admin was missing until 2026-09-21, so `all` covered two of the three API surfaces while being labelled "Everything"; it runs the existing `admin` command unchanged (`ADMIN_LIFECYCLE` only — the account-provisioning writes stay behind `ADMIN_ROLE_POSTING_LIVE`), and stays ahead of `ui` so the UI session is still the last thing established. Run by `scripts/run-suites.cjs`: **every suite runs even when an earlier one finds defects** (a finding exits non-zero, which used to stop the chain after `kpost`), each suite's report is kept in `reports/<suite>/`, and `reports/SUITES.md` indexes them. It exits non-zero if any suite did.
 
 The API commands set **`VALIDATION_PROFILE=FULL`** explicitly (REGRESSION + injection/XSS/rate-limit).
 A validator outside the active profile is reported as **SKIPPED — "not in validation profile …"**, never

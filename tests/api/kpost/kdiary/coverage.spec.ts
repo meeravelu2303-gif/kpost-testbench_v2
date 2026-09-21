@@ -10,7 +10,7 @@ import { expect, test } from '@fixtures';
  * Self-tests for the KDiary module. No HTTP — full coverage, contract agreement, that every write is
  * gated, and that every cleared read's payload passes the QA-identifier guard on live.
  */
-test.describe('KPost KDiary · module coverage', () => {
+test.describe('KPost KDiary · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented dairySchedule endpoint has a definition @framework', () => {
     expect(uncoveredKdiaryPaths(), 'documented but untested').toEqual([]);
   });

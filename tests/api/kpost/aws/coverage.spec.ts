@@ -9,7 +9,7 @@ import { expect, test } from '@fixtures';
  * Self-tests for the AWS module. No HTTP — full coverage, contract agreement, that the delete is
  * gated, and that the cleared presigned generators pass the QA-identifier guard.
  */
-test.describe('KPost AWS · module coverage', () => {
+test.describe('KPost AWS · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented aws endpoint has a definition @framework', () => {
     expect(uncoveredAwsPaths(), 'documented but untested').toEqual([]);
   });

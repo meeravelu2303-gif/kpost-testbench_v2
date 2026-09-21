@@ -8,7 +8,7 @@ import { expect, test } from '@fixtures';
  * Self-tests for the common module's coverage. These send no HTTP requests — they assert that the
  * module is fully and honestly wired, which a reviewer would otherwise have to take on trust.
  */
-test.describe('KPost common · module coverage', () => {
+test.describe('KPost common · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented common endpoint has a definition @framework', () => {
     // Fails the moment a new workbook dump adds a common endpoint nobody has covered.
     expect(uncoveredCommonPaths(), 'documented but untested').toEqual([]);

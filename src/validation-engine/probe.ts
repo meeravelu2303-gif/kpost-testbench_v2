@@ -2,6 +2,7 @@ import { apiConfig } from '@config/api.config';
 import type { HttpMethod, RequestSpec } from '@api/client/request-builder';
 import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import type { AuthMode } from './endpoint-executor';
+import { ProductionSafetyError } from './production-guard';
 import type { ValidationContext } from './validation-context';
 import { fromChecks, type CheckDetail, type ValidationOutcome } from './validation-result';
 
@@ -36,12 +37,38 @@ export async function runProbes(
 ): Promise<ValidationOutcome> {
   const checks: CheckDetail[] = [];
   for (const probe of cases) {
-    const exchange = await context.send(probe.spec, {
-      label: `${labelPrefix}:${probe.name}`,
-      auth: probe.auth,
-      method: probe.method,
-      contentType: probe.contentType,
-    });
+    /*
+     * A probe our OWN safety controls refused taught us nothing either.
+     *
+     * The mutating validators rewrite every field, id fields included, so `request.data-type` turns
+     * `companyId: "242"` into a number and `security.injection` into a SQL tautology — values that
+     * name a company we do not own. The QA-identifier guard correctly refuses to send them, and
+     * throws. Left to propagate, that throw surfaced as `validator error: …` and the whole check was
+     * reported FAILED: the bench declaring an application defect on the strength of its own refusal.
+     *
+     * So it is SKIPPED with the reason, exactly as a throttled probe is. The guard is unchanged and
+     * still refuses; what changes is that a refusal is no longer mistaken for a finding. A transport
+     * error is NOT caught here — that is a real observation about the host and must still be judged.
+     */
+    let exchange: ApiResponseWrapper;
+    try {
+      exchange = await context.send(probe.spec, {
+        label: `${labelPrefix}:${probe.name}`,
+        auth: probe.auth,
+        method: probe.method,
+        contentType: probe.contentType,
+      });
+    } catch (error) {
+      if (!(error instanceof ProductionSafetyError)) throw error;
+      checks.push({
+        name: probe.name,
+        status: 'SKIPPED',
+        expected: probe.expectedStatus ?? 'any status < 500',
+        actual: 'not sent',
+        message: `refused by a bench safety control - inconclusive, nothing was sent (${error.message})`,
+      });
+      continue;
+    }
     const statusOk = statusMatches(exchange.status, probe.expectedStatus);
     const problem = statusOk ? probe.assert?.(exchange) : exchange.transportError?.message;
     /*

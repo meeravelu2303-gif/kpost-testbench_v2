@@ -11,7 +11,7 @@ import { expect, test } from '@fixtures';
  * is gated, and — the one that matters on live — that every cleared read's payload passes the
  * QA-identifier guard.
  */
-test.describe('KPost Contacts · module coverage', () => {
+test.describe('KPost Contacts · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented contacts endpoint has a definition @framework', () => {
     expect(uncoveredContactsPaths(), 'documented but untested').toEqual([]);
   });

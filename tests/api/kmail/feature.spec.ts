@@ -82,7 +82,7 @@ async function del(
     .catch(() => undefined);
 }
 
-test.describe('KPost KMail · feature flow', () => {
+test.describe('KPost KMail · feature flow', { tag: '@kmail-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(!env.KMAIL_LIFECYCLE, 'sends real mail; set KMAIL_LIFECYCLE=true');
 

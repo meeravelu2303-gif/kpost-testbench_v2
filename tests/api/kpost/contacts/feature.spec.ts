@@ -83,7 +83,7 @@ async function waitForContact(
   return { found: false, answered };
 }
 
-test.describe('KPost Contacts · feature flow', () => {
+test.describe('KPost Contacts · feature flow', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(!env.CONTACTS_LIFECYCLE, 'writes to the address book; set CONTACTS_LIFECYCLE=true');
 

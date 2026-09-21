@@ -37,7 +37,7 @@ function extractUuid(text: string): string | undefined {
   return uuid?.[1];
 }
 
-test.describe('KPost AWS · feature flow', () => {
+test.describe('KPost AWS · feature flow', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(!env.AWS_LIFECYCLE, 'S3 attachment lifecycle; set AWS_LIFECYCLE=true');
 

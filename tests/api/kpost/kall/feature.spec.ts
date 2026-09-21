@@ -3,7 +3,7 @@ import { env } from '@config/env';
 // simple assertions; the conditionals guard optional steps and best-effort cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 import type { Principal } from '@config/auth.config';
-import { currentSlot } from '../../../../src/test-data/index';
+import { slotPrincipals } from '../../../../src/test-data/index';
 import { KALL_STATUS } from '@api/schemas/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
@@ -38,7 +38,7 @@ import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
  * can log in as them and displace this flow's sessions. Slot 0 resolves to the same three accounts
  * this spec has always used.
  */
-const [A, B, C] = currentSlot().principals(3) as [Principal, Principal, Principal];
+const [A, B, C] = slotPrincipals(3) as [Principal, Principal, Principal];
 
 /** The kallID from a create response, across the shapes the API might use. */
 function extractKallId(body: Record<string, unknown>): number | undefined {
@@ -71,7 +71,7 @@ async function clearHistory(endpoints: EndpointExecutor, who: Principal[]): Prom
   }
 }
 
-test.describe('KPost Kall · feature flow', () => {
+test.describe('KPost Kall · feature flow', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     !env.KALL_LIFECYCLE,

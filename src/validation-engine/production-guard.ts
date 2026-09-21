@@ -16,8 +16,15 @@ export interface SafetyFlags {
    */
   allowLiveWrite?: boolean;
   /**
-   * True when requests go to the bundled mock server (`MOCK_API=true`), which cannot send a real
-   * SMS/email. False means a real host — where the SMS/OTP kill-switch below applies in EVERY mode.
+   * True when this request CANNOT reach a real host, so it cannot send a real SMS or e-mail. False
+   * means a real host — where the SMS/OTP kill-switch below applies in EVERY mode.
+   *
+   * **Not simply `env.MOCK_API`.** That flag only redirects a suite whose base URL fell back to the
+   * mock's; a suite with its own module host configured still reaches that host while the flag says
+   * "mock". A caller that knows the endpoint's suite must therefore pass
+   * `!targetsRealHost(endpoint)` — which `EndpointExecutor.send` does, and a framework guard pins.
+   * The default below is the flag alone, because a bare `GuardedEndpoint` carries no base URL to
+   * judge by; it is the weaker answer, and it is why the executor overrides it.
    */
   mockApi?: boolean;
   /**

@@ -13,7 +13,7 @@ import { kallReadApis } from '@api/definitions/kpost/kall/read.api';
  * what `docs/kall-flow.md` says, that every write is gated, and — the one that matters most on live
  * — that every cleared read's payload passes the QA-identifier guard.
  */
-test.describe('KPost Kall · module coverage', () => {
+test.describe('KPost Kall · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented kall endpoint has a definition @framework', () => {
     expect(uncoveredKallPaths(), 'documented but untested').toEqual([]);
   });

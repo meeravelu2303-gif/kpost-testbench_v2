@@ -10,7 +10,7 @@ import { expect, test } from '@fixtures';
  * take on trust: full coverage, contract agreement, that the enum codes still mean what
  * `docs/katchup-flow.md` says, and that every send is authenticated and gated.
  */
-test.describe('KPost Katchup · module coverage', () => {
+test.describe('KPost Katchup · module coverage', { tag: '@kpost-api' }, () => {
   test('every documented katchup endpoint has a definition @framework', () => {
     expect(uncoveredKatchupPaths(), 'documented but untested').toEqual([]);
   });
