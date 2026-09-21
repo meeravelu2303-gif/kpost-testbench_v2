@@ -6,6 +6,9 @@ import { AccountPool, currentSlotIndex, type SlotAccounts } from './account-pool
 import { CleanupCoordinator } from './cleanup';
 import { ResourceLedger } from './resource-ledger';
 import { DEFAULT_JOURNAL_FILE, FileResourceJournal } from './resource-journal';
+import { AccountRegistry } from './accounts/account-registry';
+import { JsonlAccountStore } from './accounts/account-store';
+import { environmentOf } from './accounts/environment';
 
 /**
  * The configured account pool for this process.
@@ -127,4 +130,68 @@ export function createTestCleanup(options: {
     ),
   });
   return new CleanupCoordinator({ ledger });
+}
+
+// ---- the account registry (Phase 4D) ------------------------------------------------------------
+
+/*
+ * Re-exported by NAME, not with `export *`.
+ *
+ * `./resource-record` and `./accounts/account-record` both export `canTransition` and
+ * `allowedTransitionsFrom` — one over `ResourceState`, one over `TestAccountStatus`. This file
+ * already exports the resource pair explicitly above, and ES semantics make an explicit export win
+ * over a conflicting star-export: the ACCOUNT pair was therefore silently dropped from this barrel,
+ * with nothing to say so.
+ *
+ * Nothing broke, because every account consumer imports `src/test-data/accounts/index` directly. But
+ * a silent omission is a trap for the next caller, who would reach for `canTransition` here, receive
+ * the resource-lifecycle one, and get a type error naming states they never mentioned. Listing the
+ * names makes the boundary explicit: the two colliding helpers are deliberately NOT surfaced here,
+ * and are imported from `src/test-data/accounts/index` — which is also where the account lifecycle
+ * belongs, since it is a different vocabulary from the resource ledger's (see `account-record.ts`).
+ */
+export {
+  ACCOUNT_SOURCES,
+  AccountRegistry,
+  AccountStoreError,
+  FORBIDDEN_ACCOUNT_KEYS,
+  InMemoryAccountStore,
+  JsonlAccountStore,
+  TEST_ACCOUNT_STATUSES,
+  TestAccountError,
+  accountKey,
+  assertNoSecrets,
+  assertSameEnvironment,
+  environmentOf,
+  isTestAccountStatus,
+  matchesEnvironment,
+  parseAccountLines,
+  type AccountRegistration,
+  type AccountSource,
+  type AccountStore,
+  type AccountStoreProblem,
+  type TestAccountRecord,
+  type TestAccountStatus,
+} from './accounts/index';
+
+/** Where the durable account registry lives. Test-bench DATA, not a report — see the note below. */
+export const DEFAULT_ACCOUNT_REGISTRY_FILE = path.join('test-data', 'accounts', 'accounts.jsonl');
+
+/**
+ * The account registry for this process, backed by the durable JSONL file.
+ *
+ * Kept in `test-data/` rather than `reports/` on purpose: `reports/` holds the OUTPUT of a run and is
+ * regenerated per suite, whereas the registry must outlive every run — an account cannot be deleted
+ * on this product, so forgetting one is permanent. It is git-ignored, because it names real accounts
+ * on a live deployment and those identities do not belong in the repository's history.
+ */
+export function accountRegistry(file = DEFAULT_ACCOUNT_REGISTRY_FILE): AccountRegistry {
+  return new AccountRegistry(new JsonlAccountStore(path.join(ROOT_DIR, file)));
+}
+
+/** The environment label of the KPost deployment this process targets. */
+export function currentEnvironment(): string {
+  // An unset host throws with the reason rather than defaulting: an account recorded against a
+  // guessed environment could be reused against a deployment it does not exist on.
+  return environmentOf(env.KPOST_API_BASE_URL ?? '');
 }

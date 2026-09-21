@@ -185,6 +185,11 @@ export class ValidationEngine {
       contract: {
         expectedStatus: resolved.expectedStatus,
         maxResponseTimeMs: resolved.performance.maxResponseTimeMs,
+        // Phase 3.4 — already-resolved structured fields, copied verbatim so the confidence gate can
+        // verify a schema/header/content-type claim against the dimension it actually concerns.
+        contentType: resolved.contentType,
+        responseSchemaDeclared: resolved.responseSchema !== undefined,
+        requiredHeaders: resolved.requiredHeaders,
       },
     };
     await this.deps.onReport?.(report);

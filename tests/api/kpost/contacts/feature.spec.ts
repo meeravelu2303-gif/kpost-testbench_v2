@@ -1,12 +1,12 @@
 import { env } from '@config/env';
-// An orchestrated address-book lifecycle (add → verify → block → unblock → delete), not simple
-// assertions; the conditionals guard optional steps and restore of real live data.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+// An orchestrated address-book lifecycle (add → verify → block → unblock → delete): each test
+// writes real data and restores it in a `finally`.
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
+import { hasContact } from '../../support/contacts-response';
 
 /**
  * Contacts **feature flow** — the address book, end to end, on a real host, self-restoring.
@@ -19,6 +19,8 @@ import { expect, test } from '@fixtures';
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 const contactId = testData.victimKpostId;
+/** A deliberately absent id, used as the negative control for the address-book matcher. */
+const NON_EXISTENT_CONTACT = 'qa.bench.absent.negative-control@kpostindia.com';
 
 async function write(
   endpoints: EndpointExecutor,
@@ -34,16 +36,51 @@ async function write(
   return ex.status;
 }
 
-/** Read myContacts and report whether our second account appears (best-effort). */
-async function contactPresent(endpoints: EndpointExecutor): Promise<boolean> {
-  const ex = await endpoints
+/** Read the address book once, returning the parsed body (or `undefined` when it did not answer). */
+async function readAddressBook(endpoints: EndpointExecutor): Promise<unknown> {
+  const exchange = await endpoints
     .sendTo(
       'contacts-my-contacts',
       { body: { lastfetchDate: null } },
       { label: 'contacts:verify', auth: { principal: A } },
     )
-    .catch(() => ({ bodyText: '' }) as never);
-  return (ex.bodyText ?? '').toLowerCase().includes(contactId.toLowerCase());
+    .catch(() => undefined);
+  if (!exchange) return undefined;
+  const parsed = exchange.json();
+  return parsed.ok ? parsed.value : undefined;
+}
+
+/**
+ * Polls the address book until the contact appears, or the attempts run out.
+ *
+ * The bounded retry is what the original `if (present) assert(true)` was reaching for: the write is
+ * eventually consistent, so a single immediate read can legitimately miss it. Retrying preserves
+ * that tolerance while keeping the outcome a real assertion — if the contact never arrives, the
+ * caller gets `undefined` and the test fails, which is exactly what the tautology prevented.
+ */
+async function waitForContact(
+  endpoints: EndpointExecutor,
+  attempts = 3,
+  delayMs = 1_000,
+): Promise<{ found: boolean; answered: boolean }> {
+  let answered = false;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const body = await readAddressBook(endpoints);
+    if (body !== undefined) {
+      answered = true;
+      if (hasContact(body, contactId)) return { found: true, answered };
+      /*
+       * Negative control, on the SAME live body: the matcher must not find an id that cannot exist.
+       * Without it, a matcher that returned true for everything would look identical to a working
+       * one — which is how the assertion this replaces came to be meaningless.
+       */
+      expect
+        .soft(hasContact(body, NON_EXISTENT_CONTACT), 'the matcher rejects an absent contact id')
+        .toBe(false);
+    }
+    if (attempt < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return { found: false, answered };
 }
 
 test.describe('KPost Contacts · feature flow', () => {
@@ -60,12 +97,20 @@ test.describe('KPost Contacts · feature flow', () => {
         { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
         'add',
       );
+      // Layer 1 — the HTTP contract. Kept: it still says something the read-back does not.
       expect.soft(added, 'adding a contact is accepted').toBeLessThan(300);
 
-      // Eventual consistency: assert presence only when it has surfaced.
-      if (await contactPresent(endpoints)) {
-        expect.soft(true, 'the contact appears in myContacts').toBe(true);
-      }
+      /*
+       * Layer 2 — the application state. This is the assertion that used to be
+       * `expect.soft(true, 'the contact appears in myContacts').toBe(true)` inside an
+       * `if (present)` guard: a tautology that could not fail and that reported nothing when the
+       * contact was absent. It now reads `contacts_added[].contactID` from the real response.
+       */
+      const seen = await waitForContact(endpoints);
+      expect
+        .soft(seen.answered, 'myContacts answered, so its contents are evidence either way')
+        .toBe(true);
+      expect.soft(seen.found, `the added contact ${contactId} appears in myContacts`).toBe(true);
 
       const ref = await write(
         endpoints,

@@ -11,6 +11,8 @@ export default defineConfig({
     // Evidence is persisted by its own reporter, independently of defect filing (Phase 3.2).
     ['./src/reporting/evidence-reporter.ts'],
     ['./src/reporting/observation-reporter.ts'],
+    // Phase 3.4 — the shadow confidence gate and its divergence report. Changes no filing decision.
+    ['./src/reporting/confidence-reporter.ts'],
     ['./src/reporting/bugzilla-reporter.ts'],
   ],
 });

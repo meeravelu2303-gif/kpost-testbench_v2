@@ -12,6 +12,13 @@ const BUGZILLA_REPORTER = './src/reporting/bugzilla-reporter.ts';
 const EVIDENCE_REPORTER = './src/reporting/evidence-reporter.ts';
 /** Phase 3.3 — classifies failures into observations, in SHADOW. It changes no filing decision. */
 const OBSERVATION_REPORTER = './src/reporting/observation-reporter.ts';
+/**
+ * Phase 3.4 — assesses whether a classified failure has evidence strong enough to be a defect
+ * CANDIDATE, in SHADOW, and measures that answer against the existing candidate pipeline. It reads
+ * the same attachments again and writes its own artifacts; it changes no filing decision, and the
+ * Bugzilla reporter neither reads its output nor knows it ran.
+ */
+const CONFIDENCE_REPORTER = './src/reporting/confidence-reporter.ts';
 const MOCK_API_STARTUP_TIMEOUT_MS = 30_000;
 
 /**
@@ -88,6 +95,7 @@ export default defineConfig({
         ['html', { open: 'never' }],
         [EVIDENCE_REPORTER],
         [OBSERVATION_REPORTER],
+        [CONFIDENCE_REPORTER],
         [BUGZILLA_REPORTER],
       ],
 

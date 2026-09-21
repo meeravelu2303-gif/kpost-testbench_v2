@@ -152,6 +152,31 @@ export interface ValidationReport {
     maxResponseTimeMs?: number;
     /** Reserved: the configuration declaring a capability intentionally unsupported. */
     declaredUnsupported?: boolean;
+    /*
+     * Phase 3.4 additions — strictly additive, and all three are values that ALREADY exist on
+     * `ResolvedEndpoint`; nothing new is derived, inferred or invented here.
+     *
+     * They are carried so the confidence gate can verify a claim against the dimension it concerns
+     * rather than borrowing the status contract's credibility: a response-schema claim must rest on
+     * the endpoint declaring a schema, a header claim on it declaring required headers, and a
+     * content-type claim on it declaring a content type. Without them the gate could only ever
+     * answer INDETERMINATE for those dimensions.
+     *
+     * Optional, so a report written before Phase 3.4 still parses. Nothing in the Bugzilla pipeline
+     * reads `contract`, so adding fields to it cannot change a fingerprint, a candidate or a filing
+     * decision.
+     */
+    /** The content type the endpoint is configured to return. */
+    contentType?: string;
+    /**
+     * Whether the endpoint's registered contract declares a response schema AT ALL.
+     *
+     * A boolean rather than the schema itself: the gate only needs to know a structured shape was
+     * declared, and copying the schema onto every report would bloat the artifact for nothing.
+     */
+    responseSchemaDeclared?: boolean;
+    /** Response header NAMES the endpoint's contract requires. Names only — never values. */
+    requiredHeaders?: readonly string[];
   };
 }
 

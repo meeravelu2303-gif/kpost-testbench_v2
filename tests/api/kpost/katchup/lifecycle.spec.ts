@@ -41,6 +41,40 @@ test.describe('KPost Katchup · 1:1 lifecycle', () => {
     return Array.isArray(data) ? (data[0] as Record<string, unknown>) : undefined;
   }
 
+  /**
+   * Whether a message id is still in the sender's conversation with our second account.
+   *
+   * Keyed on `data[].msgID` rather than the message TEXT: the body of a recalled message is not
+   * reliably present in every view, whereas the id is the row's documented identity. A read that
+   * does not answer returns `false` only for the pre-delete check to fail loudly — it is never used
+   * to claim a deletion succeeded.
+   */
+  async function messageInConversation(
+    endpoints: EndpointExecutor,
+    id: number | undefined,
+  ): Promise<boolean> {
+    if (id === undefined) return false;
+    const exchange = await endpoints.sendTo(
+      'katchup-conversation',
+      {
+        body: {
+          groupFlag: false,
+          firstMsgID: null,
+          lastMsgID: null,
+          receiver: testData.victimKpostId,
+        },
+      },
+      { label: 'katchup-lifecycle:observe-delete' },
+    );
+    const parsed = exchange.json();
+    if (!parsed.ok) return false;
+    const rows = (parsed.value as Record<string, unknown>).data;
+    return (
+      Array.isArray(rows) &&
+      rows.some((row) => (row as Record<string, unknown> | null)?.msgID === id)
+    );
+  }
+
   async function send(
     endpoints: EndpointExecutor,
     overrides: Record<string, unknown>,
@@ -95,7 +129,8 @@ test.describe('KPost Katchup · 1:1 lifecycle', () => {
     await endpoints
       .sendTo(
         'katchup-delete-message',
-        { body: { msgID: created?.msgID ?? 0, groupFlag: false } },
+        // Same correction as the delete test below: the field is `messageIds`, an array.
+        { body: { messageIds: [created?.msgID ?? 0], groupFlag: false } },
         { label: 'katchup-lifecycle:cleanup-empty-subject' },
       )
       .catch(() => undefined);
@@ -132,11 +167,33 @@ test.describe('KPost Katchup · 1:1 lifecycle', () => {
 
   test('delete removes it entirely (FR-K20)', async ({ endpoints }) => {
     expect(msgID, 'the send test must have produced a msgID').toBeTruthy();
+
+    // Precondition: the message is there to delete. Without this the absence check below could
+    // pass against a message that was never in the conversation in the first place.
+    expect(await messageInConversation(endpoints, msgID), 'the message exists before delete').toBe(
+      true,
+    );
+
     const exchange = await endpoints.sendTo(
       'katchup-delete-message',
-      { body: { msgID, groupFlag: false } },
+      /*
+       * `messageIds` — a plural ARRAY — is the shape the live client sends (Katchup.js
+       * DeleteMessage) and the shape `katchup-delete-message` declares. This test previously sent
+       * `{ msgID }`, which the endpoint definition itself records as "the wrong shape [that] can
+       * leave the message undeleted (orphan)" — the defect that left 18 orphan messages on the QA
+       * account until the cleanup framework surfaced it. The workbook documents no payload for this
+       * endpoint at all, so the frontend client is the only contract there is.
+       */
+      { body: { messageIds: [msgID], groupFlag: false } },
       { label: 'katchup-lifecycle:delete' },
     );
-    expect(exchange.status, 'delete succeeds — the message is cleaned up').toBeLessThan(300);
+    // Layer 1 — the HTTP contract.
+    expect(exchange.status, 'delete is accepted').toBeLessThan(300);
+
+    // Layer 2 — the application state. A 2xx alone never established that anything was deleted.
+    expect(
+      await messageInConversation(endpoints, msgID),
+      'the deleted message no longer appears in the conversation (FR-K20)',
+    ).toBe(false);
   });
 });

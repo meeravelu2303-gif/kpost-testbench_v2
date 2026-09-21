@@ -77,3 +77,33 @@ export {
 } from './classifier';
 
 export { decidingCorrelationIds, observationsFromReport, type Observation } from './observation';
+
+/**
+ * Phase 3.4 — the defect-confidence gate. Still observational: it answers whether an observation's
+ * evidence is strong enough to be treated as a defect CANDIDATE, and nothing reads that answer back
+ * into Bugzilla filing, fingerprints or auto-resolution.
+ */
+export {
+  CONFIDENCE_DECISIONS,
+  DECISION_BY_REASON,
+  GATE_REASON_CODES,
+  GATE_VERSION,
+  observationKeyOf,
+  type ConfidenceAssessment,
+  type ConfidenceDecision,
+  type ConfidenceDecisionRecord,
+  type ConfidenceFactors,
+  type ConfidenceInput,
+  type GateContract,
+  type GateObservation,
+  type GateReasonCode,
+} from './confidence';
+
+export { assessConfidence, confidenceFactors } from './confidence-gate';
+
+export {
+  confidenceInputFor,
+  decisionRecord,
+  decisionsFromReport,
+  type DecisionOptions,
+} from './confidence-decision';

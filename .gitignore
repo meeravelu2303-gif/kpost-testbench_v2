@@ -9,6 +9,11 @@ node_modules/
 /reports/
 /junit-report/
 
+# Test-bench account registry — names real accounts on a live deployment.
+# Identity data, not source: it is environment-specific and must not enter git history.
+# (It holds NO credentials; those stay in .env / the account pool.)
+/test-data/accounts/
+
 # Saved auth sessions (contain live cookies/tokens)
 /.auth/
 

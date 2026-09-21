@@ -122,6 +122,32 @@ export function flowFindingReports(findings: readonly FlowFinding[]): Validation
       ],
       summary: { total: 1, passed: 0, failed: 1, warnings: 0, skipped: 0 },
       gate: { passed: false, blocking: [FLOW_VALIDATOR] },
+      /*
+       * The endpoint's OWN registered contract, carried so the structured evidence chain survives
+       * into Phase 3.3/3.4:
+       *
+       *     flow finding → registered endpoint contract → structured expected behaviour → gate
+       *
+       * `f.endpoint` is the `ResolvedEndpoint` the flow already resolved in order to send the call,
+       * so this copies values that are literally in hand at this point. Nothing is derived, nothing
+       * is invented, and the contract registry is not duplicated or re-resolved — these are the same
+       * fields, read the same way, as `ValidationEngine.validate` puts on an engine report.
+       *
+       * The PROSE expectation on the result below (`'a client error (4xx) or success — never a 5xx'`)
+       * is deliberately left exactly as it is. It is a human-readable statement of the flow rule and
+       * it is NOT contract evidence: the gate reads numbers only, from this block, and can never
+       * derive a status expectation from that sentence.
+       *
+       * Nothing in the Bugzilla pipeline reads `contract`, so adding it cannot change a fingerprint,
+       * a candidate, the validity gate or a filing decision.
+       */
+      contract: {
+        expectedStatus: f.endpoint.expectedStatus,
+        maxResponseTimeMs: f.endpoint.performance.maxResponseTimeMs,
+        contentType: f.endpoint.contentType,
+        responseSchemaDeclared: f.endpoint.responseSchema !== undefined,
+        requiredHeaders: f.endpoint.requiredHeaders,
+      },
     };
   });
 }
