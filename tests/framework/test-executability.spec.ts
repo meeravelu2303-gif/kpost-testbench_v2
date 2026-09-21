@@ -99,7 +99,16 @@ test.describe('executability: run modes reach every project @framework', () => {
     const reachable = new Set(
       RUN_PROFILE_NAMES.flatMap((name) => (RUN_PROFILES[name] as RunProfile).projects),
     );
-    const orphaned = [...declared].filter((project) => !reachable.has(project)).sort();
+    /*
+     * `filing` is the one deliberate exception, and its unreachability IS its safety property: the
+     * only command that may create a Bugzilla ticket is `npm run bugs:file:kpost`, and a suite run
+     * or a `bench` profile must never be able to sweep it up. Named here so the exception is a
+     * recorded decision rather than an orphan nobody noticed.
+     */
+    const DELIBERATELY_UNREACHABLE = new Set(['filing']);
+    const orphaned = [...declared]
+      .filter((project) => !reachable.has(project) && !DELIBERATELY_UNREACHABLE.has(project))
+      .sort();
     expect(orphaned, 'a project no profile names can never be run through `npm run bench`').toEqual(
       [],
     );

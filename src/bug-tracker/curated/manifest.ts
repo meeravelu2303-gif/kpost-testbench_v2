@@ -81,7 +81,16 @@ export const manifestDefectSchema = z
     secretsScan: z.string().optional(),
     /** Set once the defect has been filed. Read from the filing result, never guessed. */
     bugzillaId: z.number().int().positive().optional(),
-    /** Developer-facing evidence added to an already-filed bug as a comment. */
+    /**
+     * The developer-facing evidence: what the defect means, why it matters, the reproduction
+     * command and the scope the evidence actually covers.
+     *
+     * Optional in the SCHEMA because the enrich path reads records written before it existed, but
+     * REQUIRED to file: `adapterProblems` refuses a record without one, because its
+     * `classification` and `category` are what a ticket's Classification line and `[cat:…]` axis
+     * are built from, and a record that cannot state them is not reviewed enough to reach a
+     * developer.
+     */
     enrichment: z
       .object({
         classification: z.string().min(1),
@@ -104,7 +113,19 @@ export const manifestDefectSchema = z
 export type ManifestDefect = z.infer<typeof manifestDefectSchema>;
 
 export const filingManifestSchema = z.object({
-  meta: z.looseObject({ product: z.string().min(1) }),
+  /*
+   * Loose on purpose — the manifest also carries reviewer notes (blockers, warnings, counts) that
+   * no code reads. The fields named here are the ones the filing path DOES read, typed so the
+   * adapter never has to widen an `unknown`.
+   */
+  meta: z.looseObject({
+    product: z.string().min(1),
+    /** When the curated record was produced. Becomes the ticket's `Run date:`. */
+    generatedAt: z.string().optional(),
+    sourceRun: z.string().optional(),
+    /** The bench build behind the source run, when it was recorded. */
+    build: z.string().optional(),
+  }),
   defects: z.array(manifestDefectSchema).min(1),
 });
 

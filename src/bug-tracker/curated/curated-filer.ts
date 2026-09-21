@@ -1,9 +1,16 @@
+import { buildBugFields, buildEvidenceAttachment, buildSummary } from '../bug-builder';
 import {
   findSecrets,
   isApprovedForFiling,
   type FilingManifest,
   type ManifestDefect,
 } from './manifest';
+import {
+  adapterProblems,
+  contextOf,
+  manifestToCandidate,
+  type CuratedContext,
+} from './manifest-to-candidate';
 
 /**
  * The curated filer — files ONLY what the manifest approves, and cannot do anything else.
@@ -16,8 +23,17 @@ import {
  * here because there is nothing for it to enable.
  *
  * The client it takes is the narrowest interface that does the job — search, user check, create,
- * comment. The full `BugzillaClient` satisfies it, and so does a stub, which is how the tests run
- * without touching a live instance.
+ * comment, attach. The full `BugzillaClient` satisfies it, and so does a stub, which is how the
+ * tests run without touching a live instance.
+ *
+ * ## It renders nothing itself
+ *
+ * The ticket — summary, description, severity, priority, whiteboard, evidence attachment — is built
+ * by `src/bug-tracker/bug-builder.ts`, the same module the broad `kpost:file` path uses. This file
+ * once had its own `renderSummary`/`renderDescription`, and that duplicate is exactly what filed
+ * bugs 493–500 with a thin body, `severity: enhancement`, `priority: ---`, an empty whiteboard and
+ * no attachment: a hand-written `createBug` payload omits by silence. A guard now asserts this
+ * module contains no second description generator.
  *
  * ## Eligibility and deduplication are separate concerns, deliberately
  *
@@ -35,6 +51,15 @@ export interface CuratedBugzillaClient {
   userExists(email: string): Promise<boolean>;
   createBug(fields: Record<string, unknown>): Promise<{ id: number } | { error: string }>;
   addComment(bugId: number, body: string): Promise<{ ok: true } | { error: string }>;
+  /**
+   * The unabridged evidence file. Returns void and never throws — the real client logs a warning
+   * and carries on, because a filed ticket whose attachment failed is still a filed ticket and
+   * failing the run would be worse than the missing file.
+   */
+  attach(
+    bugId: number,
+    attachment: { fileName: string; summary: string; body: string },
+  ): Promise<void>;
 }
 
 /**
@@ -105,6 +130,7 @@ const isOpen = (bug: BugRef): boolean => bug.is_open === true;
  */
 export function checkFilingGates(manifest: FilingManifest): string[] {
   const failures: string[] = [];
+  const context = contextOf(manifest);
   for (const defect of manifest.defects) {
     const id = defect.canonicalDefectId || '(missing canonicalDefectId)';
     if (!defect.canonicalDefectId.trim()) failures.push(`${id}: no canonical defect id`);
@@ -113,9 +139,15 @@ export function checkFilingGates(manifest: FilingManifest): string[] {
     if (!defect.independentConfirmation.trim()) failures.push(`${id}: no independent confirmation`);
     if (!defect.component.trim()) failures.push(`${id}: component unresolved`);
     if (!defect.assignee.trim()) failures.push(`${id}: assignee unresolved`);
-    const secrets = findSecrets(renderDescription(defect));
-    if (secrets.length)
-      failures.push(`${id}: the generated description contains ${secrets.join(', ')}`);
+    /*
+     * Anything the adapter cannot READ from the record — its severity band, its defect category,
+     * its owning suite — is a gate failure naming the field. Never a default: `enhancement` and
+     * `---` reached eight real tickets because an absent value was allowed to become Bugzilla's.
+     */
+    for (const problem of adapterProblems(defect, context)) {
+      failures.push(`${id}: ${problem.field} — ${problem.reason}`);
+    }
+    failures.push(...secretsIn(defect, context).map((s) => `${id}: the ticket would contain ${s}`));
   }
   const ids = manifest.defects.map((d) => d.canonicalDefectId);
   const duplicated = ids.filter((id, i) => ids.indexOf(id) !== i);
@@ -124,54 +156,24 @@ export function checkFilingGates(manifest: FilingManifest): string[] {
   return failures;
 }
 
-/** The ticket summary, carrying the dedupe tag a rerun matches on. */
-export function renderSummary(defect: ManifestDefect): string {
-  return `[${defect.benchTags[0] ?? defect.canonicalDefectId}] ${defect.summary}`;
-}
-
 /**
- * The ticket body.
+ * Secrets in what would actually be SENT — summary, description and the evidence attachment.
  *
- * Built only from manifest fields, so a defect's CONFIRMED SCOPE travels with it. That matters for
- * the mixed findings: the AWS crash is confirmed for `extension: null` and explicitly not for
- * `fileName: null`, and a description that blurred the two would send a developer after behaviour
- * the bench measured as working.
- *
- * Severity is stated as the BENCH's validator class and never as a product severity, because nothing
- * in this repository establishes one.
+ * Scanned on the rendered payload rather than on the manifest fields, because the rendering is what
+ * leaves the process. A record the adapter cannot map yields nothing here; that record already has
+ * its own gate failure, and throwing from a scan would mask it.
  */
-export function renderDescription(defect: ManifestDefect): string {
-  const lines: string[] = [
-    `Canonical defect: ${defect.canonicalDefectId}`,
-    `Module: ${defect.module} · Component: ${defect.component}`,
-    `Endpoint: ${defect.method} ${defect.endpoint}`,
-    `Environment: ${defect.environment}`,
-    `Source run: ${defect.sourceRun}`,
-    '',
+function secretsIn(defect: ManifestDefect, context: CuratedContext): string[] {
+  if (adapterProblems(defect, context).length > 0) return [];
+  const candidate = manifestToCandidate(defect, context);
+  const fields = buildBugFields(candidate, { version: candidate.version });
+  return [
+    ...new Set([
+      ...findSecrets(fields.summary),
+      ...findSecrets(fields.description),
+      ...findSecrets(buildEvidenceAttachment(candidate)),
+    ]),
   ];
-  if (defect.confirmedScope) {
-    lines.push('CONFIRMED SCOPE', defect.confirmedScope, '');
-  }
-  lines.push('STEPS TO REPRODUCE');
-  defect.reproduction.forEach((step, i) => lines.push(`  ${String(i + 1)}. ${step}`));
-  lines.push('');
-  if (defect.control) lines.push('KNOWN-GOOD CONTROL', `  ${defect.control}`, '');
-  lines.push('EXPECTED', `  ${defect.expected}`, '');
-  lines.push('ACTUAL', `  ${defect.actual}`, '');
-  lines.push('INDEPENDENT CONFIRMATION', `  ${defect.independentConfirmation}`, '');
-  lines.push('EVIDENCE', ...defect.evidenceRefs.map((ref) => `  ${ref}`), '');
-  if (defect.relatedTo) lines.push('RELATED', `  ${defect.relatedTo}`, '');
-  if (defect.bugzillaAdjacency) lines.push('NOTE', `  ${defect.bugzillaAdjacency}`, '');
-  if (defect.benchSeverity) {
-    lines.push(
-      'SEVERITY',
-      `  ${defect.benchSeverity}`,
-      `  Product severity: ${defect.productSeverity ?? 'to be determined by the product/backend team'}`,
-      '',
-    );
-  }
-  lines.push(`Ownership: ${defect.ownerName} <${defect.assignee}> — ${defect.assignmentSource}`);
-  return lines.join('\n');
 }
 
 const counts = (): Record<FilingOperation, number> => ({
@@ -206,14 +208,21 @@ export async function fileCuratedDefects(
   const entries: CuratedFilingEntry[] = [];
   const tally = counts();
   const checkedUsers = new Map<string, boolean>();
+  const context = contextOf(manifest);
 
   for (const defect of manifest.defects) {
     const at = new Date().toISOString();
+    /*
+     * The candidate is built ONCE per record, here, and everything downstream — the summary in the
+     * result table, the dedupe tag, the create payload, the attachment — reads from it. One
+     * derivation means the preview and the thing that gets filed cannot disagree.
+     */
+    const candidate = manifestToCandidate(defect, context);
     const row = {
       canonicalDefectId: defect.canonicalDefectId,
-      component: defect.component,
-      assignee: defect.assignee,
-      summary: renderSummary(defect),
+      component: candidate.component,
+      assignee: candidate.assignee,
+      summary: buildSummary(candidate),
       timestamp: at,
     };
     const record = (operation: FilingOperation, extra: Partial<CuratedFilingEntry> = {}): void => {
@@ -228,8 +237,7 @@ export async function fileCuratedDefects(
     }
 
     // ---- deduplication. Can only turn a CREATE into an EXISTING, never the reverse. -----------
-    const tag = defect.benchTags[0] ?? defect.canonicalDefectId;
-    const found = await client.findByTag(tag);
+    const found = await client.findByTag(candidate.id);
     if ('error' in found) {
       record('FAILED', {
         reason: `dedup search failed, so filing would risk a duplicate: ${found.error}`,
@@ -242,7 +250,7 @@ export async function fileCuratedDefects(
      * would file a duplicate, which is the worse of the two mistakes.
      */
     const sameProduct = found.bugs.filter(
-      (bug) => bug.product === undefined || bug.product === defect.product,
+      (bug) => bug.product === undefined || bug.product === candidate.product,
     );
     const judged = sameProduct.find((bug) =>
       HUMAN_JUDGED.has((bug.resolution ?? '').toUpperCase()),
@@ -261,12 +269,40 @@ export async function fileCuratedDefects(
       record('EXISTING', { bugzillaId: open.id, reason: 'already represented by an open bug' });
       continue;
     }
+    /*
+     * Resolved for any OTHER reason — FIXED, MOVED, anything a human or the broad resolve pass set.
+     *
+     * The broad filer REOPENS here. This path deliberately cannot: reopening is a mutation, and the
+     * whole safety argument for the curated filer is that the capability is absent. That leaves
+     * CREATE or SKIP, and CREATE would file a second ticket for a fault Bugzilla already tracks —
+     * which is exactly the duplication this path exists to prevent.
+     *
+     * Found by the dry run: bugs 493/494/495 were resolved FIXED between two previews, and the
+     * records for them flipped from EXISTING to CREATED. On an armed run that would have been three
+     * duplicates. Whether the fix holds is a question for a verification run, not for the filer.
+     */
+    const resolved = sameProduct.find((bug) => (bug.resolution ?? '').trim().length > 0);
+    if (resolved) {
+      record('SKIPPED', {
+        bugzillaId: resolved.id,
+        reason:
+          `bug ${String(resolved.id)} is resolved ${resolved.resolution} — this path cannot reopen, and ` +
+          'a second ticket would duplicate it; re-verify the fix or reopen it by hand',
+      });
+      continue;
+    }
 
     // ---- assignee must exist, or the ticket lands nowhere -------------------------------------
-    const known = checkedUsers.get(defect.assignee) ?? (await client.userExists(defect.assignee));
-    checkedUsers.set(defect.assignee, known);
+    /*
+     * Mirrors the broad filer's `verifiedAssignee`: a verified owner is set explicitly, and an
+     * unverifiable one is OMITTED so the component's default assignee takes the ticket rather than
+     * the create failing. The curated path used to set it unconditionally.
+     */
+    const known =
+      checkedUsers.get(candidate.assignee) ?? (await client.userExists(candidate.assignee));
+    checkedUsers.set(candidate.assignee, known);
     if (!known) {
-      record('FAILED', { reason: `assignee ${defect.assignee} is not a Bugzilla account` });
+      record('FAILED', { reason: `assignee ${candidate.assignee} is not a Bugzilla account` });
       continue;
     }
 
@@ -275,20 +311,28 @@ export async function fileCuratedDefects(
       continue;
     }
 
-    const created = await client.createBug({
-      product: defect.product,
-      component: defect.component,
-      summary: renderSummary(defect),
-      description: renderDescription(defect),
-      assigned_to: defect.assignee,
-      version: 'unspecified',
-      op_sys: 'All',
-      platform: 'All',
+    /*
+     * The whole ticket, from the one canonical builder: summary, line-anchored description,
+     * severity, priority, `[cat:…]` whiteboard, op_sys, platform and the assignee rule. Nothing is
+     * added or overridden here — a field this path chose for itself is a field that can silently
+     * disagree with the broad path, which is how `severity: enhancement` happened.
+     */
+    const fields = buildBugFields(candidate, {
+      version: candidate.version,
+      assignee: candidate.assignee,
     });
+    const created = await client.createBug(fields as unknown as Record<string, unknown>);
     if ('error' in created) {
       record('FAILED', { reason: created.error });
       continue;
     }
+    // Immediately after create, exactly as the broad filer does. It warns rather than throws, so a
+    // rejected attachment never turns a filed ticket into a reported failure.
+    await client.attach(created.id, {
+      fileName: `${candidate.id}-evidence.txt`,
+      summary: `Evidence for ${candidate.id}`,
+      body: buildEvidenceAttachment(candidate),
+    });
     record('CREATED', { bugzillaId: created.id });
   }
 

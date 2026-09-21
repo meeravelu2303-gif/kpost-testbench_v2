@@ -43,8 +43,15 @@ test.describe('confidence · the gate cannot reach filing @framework', () => {
      * The structural version of "shadow-only". While the filing code cannot import it, no edit can
      * accidentally make a confidence decision block or permit a ticket — the wire does not exist.
      */
+    /*
+     * Comments stripped first. `curated/manifest.ts` DOCUMENTS this very boundary — "deduplication,
+     * confidence and filing stay separable" — and a guard that trips on its own explanation teaches
+     * everyone to stop explaining things. The property under test is an import, which is code.
+     */
     const offenders = sourcesUnder('src', 'bug-tracker')
-      .filter(({ source }) => /confidence|assessConfidence|ConfidenceDecision/.test(source))
+      .filter(({ source }) =>
+        /confidence|assessConfidence|ConfidenceDecision/.test(stripComments(source)),
+      )
       .map(({ file }) => file);
     expect(
       offenders,
@@ -55,7 +62,7 @@ test.describe('confidence · the gate cannot reach filing @framework', () => {
   test('nothing in src/bug-tracker imports the canonical-defect grouping either', () => {
     // Same reasoning for Phase 12: deduplication, confidence and filing stay separate stages.
     const offenders = sourcesUnder('src', 'bug-tracker')
-      .filter(({ source }) => /canonical-defect/.test(source))
+      .filter(({ source }) => /canonical-defect/.test(stripComments(source)))
       .map(({ file }) => file);
     expect(offenders).toEqual([]);
   });

@@ -2,11 +2,13 @@ import { ROOT_DIR } from '@config/constants';
 import { expect, test } from '@fixtures';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { buildBugFields } from '../../src/bug-tracker/bug-builder';
 import {
   checkFilingGates,
+  contextOf,
   fileCuratedDefects,
+  manifestToCandidate,
   parseFilingManifest,
-  renderDescription,
   type BugRef,
   type CuratedBugzillaClient,
   type FilingManifest,
@@ -45,9 +47,34 @@ const defect = (over: Partial<ManifestDefect> = {}): ManifestDefect => ({
   evidenceRefs: ['tb-1234'],
   benchTags: ['KP-TEST01'],
   sourceRun: 'run-test',
+  /*
+   * Required to FILE (not merely to parse): the classification and category below are what the
+   * ticket's `Classification:` line and `[cat:…]` whiteboard are built from, and the severity band
+   * is what stops Bugzilla defaulting the record to `enhancement`.
+   */
+  benchSeverity: 'HIGH (bench validator class)',
+  enrichment: {
+    classification: 'request.null-value',
+    category: 'Functional',
+    whatThisMeans: 'A null in one field crashes the endpoint instead of being rejected.',
+    whyItMatters:
+      'An unhandled crash on a client input is a robustness defect, not a validation one.',
+    developerGuidance:
+      'The evidence shows a crash rather than a rejection; the cause is not visible.',
+    occurrences: 'Observed once in the targeted confirmation.',
+    curl: "curl -i -X POST 'https://example.test/v2/test/endpoint' -d '{\"field\": null}'",
+    affectedScope: 'One endpoint.',
+  },
   filingStatus: 'READY_FOR_BUGZILLA',
   ...over,
 });
+
+/** The Bugzilla payload a record would actually produce. */
+const payloadFor = (over: Partial<ManifestDefect> = {}): ReturnType<typeof buildBugFields> => {
+  const manifest = manifestOf(defect(over));
+  const candidate = manifestToCandidate(manifest.defects[0] as ManifestDefect, contextOf(manifest));
+  return buildBugFields(candidate, { version: candidate.version, assignee: candidate.assignee });
+};
 
 const manifestOf = (...defects: ManifestDefect[]): FilingManifest => ({
   meta: { product: 'KPost API' },
@@ -57,13 +84,14 @@ const manifestOf = (...defects: ManifestDefect[]): FilingManifest => ({
 interface StubCalls {
   created: Record<string, unknown>[];
   comments: number[];
+  attached: string[];
 }
 
 function stub(over: Partial<CuratedBugzillaClient> = {}): {
   client: CuratedBugzillaClient;
   calls: StubCalls;
 } {
-  const calls: StubCalls = { created: [], comments: [] };
+  const calls: StubCalls = { created: [], comments: [], attached: [] };
   const client: CuratedBugzillaClient = {
     findByTag: () => Promise.resolve({ bugs: [] }),
     userExists: () => Promise.resolve(true),
@@ -74,6 +102,10 @@ function stub(over: Partial<CuratedBugzillaClient> = {}): {
     addComment: (id) => {
       calls.comments.push(id);
       return Promise.resolve({ ok: true });
+    },
+    attach: (_id, attachment) => {
+      calls.attached.push(attachment.fileName);
+      return Promise.resolve();
     },
     ...over,
   };
@@ -255,11 +287,23 @@ test.describe('curated filer: deduplication and human judgements @framework', ()
 test.describe('curated filer: gates, dry-run and partial failure @framework', () => {
   test.describe.configure({ mode: 'default' });
 
-  test('an unresolved component or assignee stops that record, and the whole run', () => {
+  test('an unresolved component stops that record, and the whole run', () => {
     expect(checkFilingGates(manifestOf(defect({ component: '   ' }))).join(' ')).toContain(
       'component unresolved',
     );
-    expect(checkFilingGates(manifestOf(defect({ assignee: 'x@y.z' })))).toHaveLength(0);
+  });
+
+  test('an assignee that disagrees with the ownership configuration is refused', () => {
+    /*
+     * The manifest cites `ownership.config.ts` as its assignment source, so the two disagreeing
+     * means one of them is stale — and a ticket routed off a stale record reaches the wrong
+     * developer. CLAUDE.md §6 already applies this rule to the live Bugzilla component defaults;
+     * this is the same principle one layer earlier.
+     */
+    expect(checkFilingGates(manifestOf(defect({ assignee: 'x@y.z' }))).join(' ')).toContain(
+      'manifest says x@y.z, ownership.config.ts says jagan@kpost.in',
+    );
+    expect(checkFilingGates(manifestOf(defect())), 'the shipped owner agrees').toHaveLength(0);
   });
 
   test('a missing assignee account fails that record instead of filing it nowhere', async () => {
@@ -329,21 +373,53 @@ test.describe('curated filer: gates, dry-run and partial failure @framework', ()
   });
 
   test('bench severity is never presented as a product severity', () => {
-    const rendered = renderDescription(
-      defect({ benchSeverity: 'CRITICAL (bench validator class)', productSeverity: undefined }),
-    );
-    expect(rendered).toContain('bench validator class');
-    expect(rendered).toContain('Product severity: to be determined');
+    /*
+     * The band still reaches Bugzilla's severity field — that is what stopped these being filed as
+     * `enhancement` — but the body says plainly that it is the bench's validator class and that
+     * product triage belongs to the team.
+     */
+    const fields = payloadFor({ benchSeverity: 'CRITICAL (bench validator class)' });
+    expect(fields.severity, 'the band must reach Bugzilla, not be defaulted').toBe('critical');
+    expect(fields.description).toContain('bench validator class');
+    expect(fields.description).toContain('is the team’s call, not the bench’s');
   });
 
   test('a confirmed scope travels into the ticket body', () => {
     // The AWS and kpostIdExist defects are confirmed for ONE field; a ticket that blurred that would
     // send a developer after behaviour the bench measured as working.
-    const rendered = renderDescription(
-      defect({ confirmedScope: 'extension = null only; fileName = null is NOT confirmed' }),
+    const fields = payloadFor({
+      confirmedScope: 'extension = null only; fileName = null is NOT confirmed',
+    });
+    expect(fields.description).toContain('Confirmed scope:');
+    expect(fields.description).toContain('fileName = null is NOT confirmed');
+    expect(fields.description).toContain('Nothing outside that scope is claimed here');
+  });
+
+  test('a record the adapter cannot map is refused, never defaulted', () => {
+    /*
+     * The exact failure that produced bugs 493–500: a value the payload did not carry became
+     * Bugzilla's default. Now an unreadable severity band or category stops the record — and,
+     * because the gate is all-or-nothing, the whole run.
+     */
+    expect(
+      checkFilingGates(manifestOf(defect({ benchSeverity: 'severe-ish' }))).join(' '),
+    ).toContain('names no severity band');
+    const noCategory = defect();
+    noCategory.enrichment = { ...noCategory.enrichment!, category: 'Vibes' };
+    expect(checkFilingGates(manifestOf(noCategory)).join(' ')).toContain(
+      'not a known defect category',
     );
-    expect(rendered).toContain('CONFIRMED SCOPE');
-    expect(rendered).toContain('fileName = null is NOT confirmed');
+    const noEnrichment = defect();
+    delete noEnrichment.enrichment;
+    expect(checkFilingGates(manifestOf(noEnrichment)).join(' ')).toContain('no enrichment block');
+  });
+
+  test('an evidence attachment is uploaded with every created ticket', async () => {
+    const { client, calls } = stub();
+    await fileCuratedDefects(manifestOf(defect()), client, { dryRun: false });
+    expect(calls.attached, 'the unabridged evidence is what the description had to clamp').toEqual([
+      'KP-TEST01-evidence.txt',
+    ]);
   });
 });
 

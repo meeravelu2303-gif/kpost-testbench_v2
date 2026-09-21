@@ -62,6 +62,7 @@ function clientFor(config: ReturnType<typeof readBugzillaConfig>): CuratedBugzil
     userExists: () => Promise.resolve(true),
     createBug: () => Promise.resolve({ error: 'Bugzilla not configured' }),
     addComment: () => Promise.resolve({ error: 'Bugzilla not configured' }),
+    attach: () => Promise.resolve(),
   };
 }
 
