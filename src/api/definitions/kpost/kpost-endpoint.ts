@@ -88,6 +88,17 @@ export interface KpostEndpointConfig {
   validations?: Partial<ValidationToggles>;
   skipValidators?: readonly string[];
   businessRules?: readonly string[];
+  /**
+   * Persistence checks against the real KPOST_QA database, by id from
+   * `src/database/validations/index.ts`.
+   *
+   * Only for what the response genuinely cannot prove — a row exists, a soft-delete flag flipped,
+   * a logical foreign key resolves. Anything the body already shows belongs to a response
+   * validator, or the same defect gets filed twice.
+   */
+  database?: EndpointDefinition['database'];
+  /** Tuning for the simultaneous-request probes (`identityPaths`, `singleWriteWins`, ...). */
+  concurrency?: EndpointDefinition['concurrency'];
   security?: EndpointDefinition['security'];
   performance?: EndpointDefinition['performance'];
   /** Reason this endpoint's schema is absent or partial, for the report. */
@@ -134,6 +145,8 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     validations: config.validations,
     skipValidators: config.skipValidators,
     businessRules: config.businessRules,
+    database: config.database,
+    concurrency: config.concurrency,
     security: config.security,
     performance: config.performance,
   };

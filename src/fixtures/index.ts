@@ -3,7 +3,7 @@ import { ApiClient } from '@api/client/api-client';
 import { ApiClientPool } from '@api/client/api-client-pool';
 import { apiRegistry } from '@api/definitions/index';
 import { env } from '@config/env';
-import { createDatabaseClient } from '@database/database-client';
+import { DatabasePool } from '@database/database-pool';
 import { databaseValidationRegistry } from '@database/validations/index';
 import { EndpointExecutor } from '@engine/endpoint-executor';
 import { businessRuleFindingReports, flowFindingReports } from '@engine/flow-finding';
@@ -23,6 +23,15 @@ interface TestFixtures {
   apiClients: ApiClientPool;
   /** Calls registered endpoints directly (integration tests, setup). */
   endpoints: EndpointExecutor;
+  /**
+   * One database client per suite, for workflow specs that assert persistence directly.
+   *
+   * A multi-step flow has to check the database *between* steps — send, then confirm the row, then
+   * recall, then confirm the flag — which is not something an endpoint's `database: { validations }`
+   * can express, since those run once per endpoint call. The write policy still comes from the
+   * target: `databases.for('admin-api')` is read-only whatever the environment says.
+   */
+  databases: DatabasePool;
   /** Builds an engine; overrides let framework tests swap registries or reporting. */
   createValidationEngine: (overrides?: Partial<ValidationEngineDeps>) => ValidationEngine;
   validationEngine: ValidationEngine;
@@ -65,8 +74,25 @@ export const test = base.extend<TestFixtures>({
     }
   },
 
+  databases: async ({ playwright }, use) => {
+    // Its own request context: the mock adapter reads the mock's store over HTTP, and a workflow
+    // spec must be able to query between steps without borrowing the engine's lifecycle.
+    const request = await playwright.request.newContext({ baseURL: env.API_BASE_URL });
+    const pool = new DatabasePool(request);
+    await use(pool);
+    await pool.dispose();
+    await request.dispose();
+  },
+
   createValidationEngine: async ({ apiClients, log, playwright }, use, testInfo) => {
     const dbRequest = await playwright.request.newContext({ baseURL: env.API_BASE_URL });
+    /*
+     * One pool per test, built here rather than inside the factory: the MySQL adapter owns
+     * connection pools, and building one per `createValidationEngine()` call would leave a pool
+     * open for every engine a framework test constructs. The pool itself creates a client per
+     * suite lazily, so a run that never touches Admin never opens its (live) database.
+     */
+    const databases = new DatabasePool(dbRequest);
     await use(
       (overrides = {}) =>
         new ValidationEngine({
@@ -75,12 +101,14 @@ export const test = base.extend<TestFixtures>({
           validators: validationRegistry,
           businessRules: businessRuleRegistry,
           databaseValidations: databaseValidationRegistry,
-          database: createDatabaseClient(dbRequest),
+          databases,
           log,
           onReport: (report) => attachValidationReport(testInfo, report),
           ...overrides,
         }),
     );
+    // Closes pooled connections; a no-op on the mock and disabled adapters, which hold none.
+    await databases.dispose();
     await dbRequest.dispose();
   },
 

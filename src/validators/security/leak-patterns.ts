@@ -6,9 +6,16 @@ export const LEAK_PATTERNS: readonly { name: string; pattern: RegExp }[] = [
       /\bat\s+[\w$.<>]+\s+\([^()]+:\d+:\d+\)|Traceback \(most recent call last\)|Exception in thread|\.java:\d+\)/,
   },
   {
+    /*
+     * MySQL signatures lead, since that is what KPost runs on: `ER_*` codes, the `errno`/`sqlState`
+     * fields mysql2 and JDBC surface, and the "You have an error in your SQL syntax" text that a
+     * leaked MySQL error reliably carries. The other engines' patterns are kept — a response
+     * disclosing an Oracle or PostgreSQL error would be just as much of a leak, and a stack from a
+     * third-party service can carry one.
+     */
     name: 'SQL error',
     pattern:
-      /SQL syntax|SQLSTATE|ORA-\d{5}|syntax error at or near|unterminated quoted string|SqlException|PG::\w+Error/i,
+      /SQL syntax|SQLSTATE|sqlState|\bER_[A-Z_]{3,}\b|errno:\s*\d+|MySQLSyntaxErrorException|MySQLIntegrityConstraintViolationException|com\.mysql\.|Duplicate entry '[^']*' for key|Unknown column '[^']*' in|Table '[^']*' doesn't exist|ORA-\d{5}|syntax error at or near|unterminated quoted string|SqlException|PG::\w+Error/i,
   },
   {
     name: 'SQL query',

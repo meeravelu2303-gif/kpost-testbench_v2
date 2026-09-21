@@ -44,7 +44,8 @@
     "admin:deep": "cross-env BUGZILLA_DRY_RUN=true TEST_DB_MODE=true WRITE_FUZZ=true ALLOW_DESTRUCTIVE_TESTS=true MOCK_API=false ADMIN_LIFECYCLE=true ADMIN_ROLE_POSTING_LIVE=false playwright test --project=api --grep @admin-api --workers=1",
     "admin:deep:file": "cross-env BUGZILLA_DRY_RUN=false BUGZILLA_AUTO_RESOLVE=true TEST_DB_MODE=true WRITE_FUZZ=true ALLOW_DESTRUCTIVE_TESTS=true MOCK_API=false ADMIN_LIFECYCLE=true ADMIN_ROLE_POSTING_LIVE=false playwright test --project=api --grep @admin-api --workers=1",
     "ui:visual:update": "cross-env VISUAL_REGRESSION=true MOCK_API=false playwright test visual.spec.ts --project=chromium --project=firefox --project=webkit --workers=1 --update-snapshots",
-    "ui:visual": "cross-env VISUAL_REGRESSION=true MOCK_API=false playwright test visual.spec.ts --project=chromium --project=firefox --project=webkit --workers=1"
+    "ui:visual": "cross-env VISUAL_REGRESSION=true MOCK_API=false playwright test visual.spec.ts --project=chromium --project=firefox --project=webkit --workers=1",
+    "accounts:verify": "node scripts/verify-test-accounts.cjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -58,6 +59,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^10.10.0",
     "eslint-plugin-playwright": "^2.11.0",
+    "mysql2": "^3.24.4",
     "prettier": "^3.9.6",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.0",

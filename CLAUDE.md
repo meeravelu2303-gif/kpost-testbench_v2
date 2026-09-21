@@ -129,17 +129,20 @@ the response-time budget, which is a functional check, not load testing).
 
 ## 5. What the bench is today
 
-Playwright + TypeScript (strict). ~124 source files, 14 spec files, 3 contract scripts.
+Playwright + TypeScript (strict). 214 source files, 112 spec files, 6 contract scripts.
 
 ```
 src/config/             env, api, auth, database, thresholds, ownership   ← all configuration
 src/api/                client (pool, request builder, token provider) · registry · schemas · definitions
 src/validation-engine/  engine · registry · context · policy · probe · production guard
-src/validators/         44 centralized validators (auth, authz, request, response, security, perf, common)
+src/validators/         49 centralized validators (auth, authz, request, response, security,
+                        performance, concurrency, common)
 src/business-rules/     endpoint-specific rules (licence limit, duplicates, blocked company)
-src/database/           DB client · repositories · assertions · named DB validations
+src/database/           DB client (MySQL · mock · disabled) · per-suite pool · repositories ·
+                        assertions · transaction assertions · named DB validations
 src/bug-tracker/        Bugzilla client · fingerprint · candidate · validity gate · filer
 src/reporting/          validation reporter · bugzilla reporter · formatters
+src/utils/              logging · JSON · masking · correlation · simultaneous dispatch
 mock-server/            local stand-in for the KPost API (the framework runs with no environment)
 contracts/              GENERATED from the Excel workbook
 openapi/                GENERATED per product
@@ -159,8 +162,33 @@ and none can be switched off by configuration, including by `ALLOW_DESTRUCTIVE_T
 `tests/framework/live-safety.spec.ts`. **16 endpoints are OTP-gated and cannot run on live at all**
 (`npm run contract:otp`).
 
-**Verified state:** `npm run check` clean; **52 tests pass, 2 skip** (the module suites skip until
-their hosts are configured).
+**Concurrency layer.** Four probes cover the faults that need two requests inside the handler at
+once — `concurrency.read-consistency`, `burst-resilience`, `duplicate-write`, `session-isolation`
+(`src/validators/concurrency/`). They dispatch from a shared barrier (`src/utils/concurrency.ts`)
+rather than from `Promise.all(map(...))`, and a burst whose requests left more than
+`thresholds.concurrency.maxDispatchSkewMs` apart reports **INCONCLUSIVE, never PASSED** — a race
+probe that quietly degrades into a sequential one is worse than none, because it looks green. All
+four are blocked on live (§8, 2026-09-21).
+
+**Database layer — MySQL, and one target per suite.** Three adapters behind one interface: MySQL
+(`DB_HOST`/`DB_NAME`, via `mysql2/promise`), the mock store (`MOCK_API=true`), and disabled.
+`DatabasePool.for(suite)` decides which a suite gets, because **they do not share a database**:
+
+| Suite                    | Database              | Writes                                           |
+| ------------------------ | --------------------- | ------------------------------------------------ |
+| `kpost-api`, `kmail-api` | `KPOST_QA` (**test**) | permitted when `DB_ALLOW_WRITES=true`            |
+| `admin-api`              | **LIVE production**   | **refused in code** — no env var can unlock them |
+
+Disabled is still the honest default, and DB validations then report **SKIPPED rather than
+passing** — a green persistence check that never queried anything is the most misleading result the
+bench could produce. Identifiers are validated and backtick-quoted, values are bound as `?`
+placeholders, `null` becomes `IS NULL`, and `WITH` is **not** a read (MySQL 8 allows a CTE to head a
+`DELETE`). See §8 (2026-09-21, later) and `tests/framework/admin-db-safety.spec.ts`.
+
+**Verified state:** `npm run check` clean; the framework project runs **134 pass, 6 skip** (the
+skips need a configured API host or the mock). The module suites skip until their hosts are
+configured. The MySQL connection itself is **not yet usable**: the server requires TLS and presents
+a self-signed certificate, so it needs `DB_SSL_CA` — see §8.
 
 ## 6. Bug filing — routed to the developer who owns the module
 
@@ -227,6 +255,323 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 ## 8. Decision log — what was done and why
 
 Newest first. Each entry records the decision, not just the change.
+
+### 2026-09-21 (night) — Domain separation by account type, verified against the product
+
+**The rule holds, and it is enforced in the UI.** Checked on the live signup screen rather than
+taken on trust: `/signup` → **Personal** reveals a "KPOST Domain" control whose option list, for
+country India, contains **exactly one entry — `@kpostindia.com`**. The API does not re-check it;
+`kpostID` is accepted as given. So the UI is the enforcement point, and
+`tests/e2e/signup-domain.spec.ts` asserts both halves — the right domain is offered, and _no other
+one is_. A list that merely included the right domain would still let a personal account be created
+on the business domain, which is the defect the rule exists to prevent.
+
+**The data agrees, with a known legacy tail.** Active accounts on KPOST_QA:
+
+| Type         | Domain            | Count |
+| ------------ | ----------------- | ----: |
+| `PERSONAL`   | `kpostindia.com`  |   324 |
+| `PERSONAL`   | `kpost.in`        |   205 | ← legacy, predates the split          |
+| `BUSINESS_*` | `kpost.in`        |   648 |
+| `BUSINESS_*` | `<slug>.kpost.in` |   603 | ← companies with their own sub-domain |
+
+The 205 legacy personal accounts are **not** rewritten and should not be: `kpost_id` is the primary
+key across ~90 tables. `QA_KPOST_ID` is one of them, and `domain-policy.spec.ts` pins that
+explicitly so the exception lives in a test rather than only in prose. Business accounts use the
+**bare** domain, not a per-company sub-domain — a sub-domain is issued by a separate company
+registration flow this registry does not drive.
+
+**The registry is now keyed by policy, not by a single pattern.** `domainFor(userType)` and
+`qatestId(identifier, userType)` build every bench-owned id, so a spec _cannot_ hand-write a
+personal id on the business domain — the helper has no parameter for it. `policyViolation()` reports
+_which_ rule an id breaks rather than returning a boolean, because every caller needs to say so.
+
+**The QA-identifier guard now reads the registry**, and finding that out was the useful part: the
+first run of the domain spec was refused with `ProductionSafetyError: … names 1 identifier(s) we do
+not own`. The guard built its allowlist from `testData` only, so every `qatest_*` account would have
+been blocked the moment it was provisioned — the registry would have named accounts the bench then
+refused to send requests for. Two further lessons from the same spec, both the bench's own fault
+rather than the product's: an **ad-hoc id is correctly refused** (only registry accounts are owned),
+and `kpostIdExist` answers **500 to a partial payload** — it needs `firstName`, `lastName` and
+`mobileNumber` beside the id. Sending a partial body and reporting the 500 would have been the
+validateOTP mistake again (§8, 2026-09-19).
+
+**The signup page object carries the react-select mechanics.** `SignupPage` deliberately exposes
+**no submit** — registration is OTP-gated with a global side effect on an environment whose mail
+server is live, so the only way to misuse it would be to add one. It also holds the one `settle()`
+wait in the suite: state-based alternatives were tried and were worse (waiting for options to appear
+fails when the click was swallowed by a closing menu; waiting for them to vanish fails while one is
+still animating), so the pause is confined to the page object where no spec has to know about it.
+
+### 2026-09-21 (late) — Account registry, KMail schema mapped, and three assumptions that were wrong
+
+**The account registry** (`src/fixtures/test-accounts.json` + `test-accounts.ts`) names six roles —
+primary, counterparty, observer, company admin/member/expendable — so a spec asks for a _role_
+rather than an id. That matters beyond tidiness: a two-party flow whose ends turn out to be the same
+account proves nothing, and a permission check proves nothing if the "member" is the admin.
+
+Two deliberate deviations from a literal reading of the request:
+
+- **No passwords are in the file.** It is committed, so a password in it would be in the git
+  history permanently and could not be rotated by redeploying. The registry stores `passwordEnv` —
+  the _name_ of an environment variable — and the secret stays in the git-ignored `.env`, the same
+  rule the Bugzilla key and the database credentials already follow.
+- **An unprovisioned account resolves to a REASON, never to a substitute.** Falling back to another
+  account would let a two-party flow run with one party and still report PASS. `requireAccount()`
+  returns the reason and the spec skips. `npm run accounts:verify` reconciles the registry against
+  the database in both directions (claimed-live-but-absent, and exists-but-unrecorded).
+
+**No `qatest_*` account exists on KPOST_QA — all six are `provisioned: false`, and the bench did
+not create them.** Creating them means signup (`otpDependent: 'requires'`, `sideEffect: 'global'`)
+plus a company registration, on an environment whose **mail server is live**; accounts cannot be
+removed through the API afterwards (`terminateUser` on the company admin destroys the company and
+it cannot be recreated). That is outward-facing and irreversible, so it waits for an explicit
+go-ahead rather than being done on inference. Everything downstream is built and skips with that
+reason attached.
+
+**KMail schema is now mapped** (`docs/KMAIL-SCHEMA.md`, `kmail.repository.ts`,
+`kmail-assertions.ts`). Three facts contradict what the task assumed, and each would have produced
+a test that fails against a healthy API:
+
+1. **The subject is ENCRYPTED at rest.** Sampled `kmail_subject` values are base64 ciphertext
+   (`pL0yhPnbTLQEjzSdenFdTJRdO07+C5tlU+CX0SAAI8Y=`), while Katchup's `subject` on the same database
+   is plaintext (`"General"`). It also lives on `TBL_KPOST_KMAIL_MASTER`, not on the transaction
+   row, and is `longtext` rather than a BLOB — so "decode the subject BLOB and compare" is wrong
+   three times over. The bench has no key, so the meaningful assertion is the inverse: the subject
+   is stored **and is not the plaintext**, which is a genuine encryption-at-rest check.
+2. **The state flags are `'Y'`/`'N'` chars, not tinyints.** Katchup uses `0`/`1`; KMail does not.
+   `Number('N')` is `NaN`, and — the trap — **`Boolean('N')` is `true`**, so the obvious truthiness
+   check reports every mail as read, starred and deleted at once and every assertion built on it
+   passes for the wrong reason. `kmailFlag()` reads them as a tri-state, with the NUL byte found on
+   107 live rows mapped to `unknown` rather than guessed into `clear`.
+3. **There is no archive column.** Every `%KMAIL%` table was searched for `archiv`, `star`, `favou`
+   and `flag`; only `group_flag`, `attachment_flag` and `blocked_contact_flag` exist. An archive
+   assertion would mean inventing a column and producing a test that passes because it checks
+   nothing. The spec asserts the **marked/starred** pair instead, and the archive question is
+   recorded for the owner.
+
+Also worth knowing before anyone writes a recall assertion: `recall` is `'Y'` on **zero** of ~90,000
+rows. Either the path is unused here or it does not write the column.
+
+**The Katchup lifecycle was NOT executed.** The instruction was to run it _"strictly between
+designated `qatest_*` accounts"_, and those do not exist; running it would have used the existing
+non-`qatest` accounts and broken the naming mandate in the same step that introduced it. It is one
+command (`KATCHUP_LIFECYCLE=true`) once the accounts are provisioned.
+
+### 2026-09-21 (evening) — The `getUserProfileUsingKpostID` 404 is a product defect, and cross-layer workflows
+
+**The 404 was NOT a missing or misconfigured QA account.** That was the obvious diagnosis and it is
+wrong, so the evidence is recorded here rather than the conclusion alone. `QA_KPOST_ID`
+(`abhinumukund@kpost.in`) is: active in `TBL_KPOST_USER_MASTER`, holder of exactly one
+`TBL_KPOST_USER_PROFILE` row, present in **both** `VW_KPOST_USER_DETAIL` and `VW_KPOST_USER_MASTER`,
+absent from `TBL_KPOST_DEACTIVATED_DETAILS`, and served 200 by both `userLogin` and
+`fetchUserDetails` on the same credentials. The API nevertheless answers
+`404 "No user found for the given kpostID"`. **Seeding the account would have fixed nothing,
+because the account is already there.**
+
+Two plausible rules were tested and **refuted**, which is what turns this from "undocumented
+behaviour" into a defect:
+
+| Hypothesis                                | Test                         | Result                                        |
+| ----------------------------------------- | ---------------------------- | --------------------------------------------- |
+| Self-lookup is not allowed                | account B looks itself up    | **200** — refuted                             |
+| The subject account is hidden from others | account B asks for account A | **404** — follows the subject, not the caller |
+| `privacy_status = 1` hides a profile      | 4 sampled private accounts   | **3 of 4 answer 200** — refuted               |
+
+So: the 404 follows one specific, well-formed account, for every caller. The server-side cause is
+not determinable without the application source or its logs, and that is the ticket.
+
+**What was changed, and why it is not a workaround.** The endpoint's contract probes now address
+`personal3KpostId` instead of our own account. Before, a single 404 made every downstream validator
+skip and the endpoint contributed one finding, repeated; now the same endpoint exercises its real
+success path — 200, valid envelope, 1725-byte payload, id/email/date/boolean conventions and
+`database.kpost-user-active` (6 checks). The defect is **not** hidden by that change: it has its own
+spec, `tests/api/kpost/profile/directory-lookup.spec.ts`, which fails on purpose with the database
+evidence in the failure message, plus a control (the endpoint works for another account, so the
+path, token and payload are all exonerated) and an enumeration-parity check (an absent id is refused
+identically, so the fix must not split the two apart).
+
+**Cross-layer workflows.** `tests/api/kpost/katchup/workflow-db.spec.ts` asserts send → read →
+recall → delete at both layers _after every step_, because a lifecycle checked only at the end
+cannot say which transition broke. The assertions it makes are exactly the ones a response cannot:
+the Subject is stored as sent (a decoded BLOB — BR-K01), recall actually moves a deletion flag
+rather than merely reporting success, and delete is a **soft** delete that leaves the row for the
+counterparty. A hard delete there would take the recipient's copy with it and look identical on the
+wire.
+
+`tests/e2e/cross-layer-login.spec.ts` spans UI → API → MySQL on a login, which is the journey where
+the three layers can disagree invisibly: the UI can land on `/home`, the API can have issued a
+token, and `TBL_KPOST_LOGIN_SESSION` can still hold no row — a session the server cannot revoke, so
+"log out from all devices" silently does nothing. It polls rather than reads once (the SPA fires the
+login as it navigates, so a single read races the commit) and never asserts an exact session count,
+since other suites share these accounts.
+
+A `databases` fixture now exposes the per-suite pool to specs, because a multi-step flow has to
+query _between_ steps — something an endpoint's `database: { validations }` cannot express, as those
+run once per call. The write policy still comes from the target, so `databases.for('admin-api')`
+stays read-only whatever the environment says.
+
+### 2026-09-21 (afternoon) — KPOST_QA connected, real schema mapped, and failures must reproduce
+
+**The database is live.** TLS verification is off at the owner's explicit instruction (no CA
+available); the connection is encrypted but the server is **not authenticated**, which on a public
+host means these QA credentials could be read by anything positioned in between. `DB_SSL_CA` closes
+it properly and turns verification back on by itself. Confirmed: MySQL 8.0.46, `KPOST_QA`, 90
+tables, and `database.kpost-user-active` now reports **PASSED, 6 checks in 183ms** on
+`profile-fetch-user-details` — DB validations have moved from SKIPPED to real assertions.
+
+**The existing DB validations were NOT repointed at the real schema, deliberately.** Every one of
+them (`user-created`, `user-updated`, `user-deleted`, `company-created`) is attached to a
+`mockFixture: true` endpoint — they are the framework's own self-tests against the mock server's
+idealised `users`/`companies` tables. Rewriting their columns would have broken the self-tests while
+asserting nothing about KPost, because no real endpoint references them. The real schema instead got
+its own vocabulary (`kpost-assertions.ts`, `repositories/kpost.repository.ts`,
+`validations/kpost.db.ts`) attached to real endpoints. Both families are registered side by side and
+the split is documented in `validations/index.ts`.
+
+**What the real schema actually looks like**, read off `information_schema` rather than assumed —
+each of these would have produced a false failure if guessed:
+
+- Keys are **natural**: a user is `TBL_KPOST_USER_MASTER.kpost_id`, a varchar e-mail, not an `id`.
+- Audit columns are **`created_date` / `modified_date`**, with `created_by` / `modified_by`. There
+  is no `createdAt`, no `updatedAt`, and **no `deletedAt` anywhere in the schema**.
+- **Deletion is a flag, and a different flag each time.** `USER_MASTER` and `USERGROUP_MASTER` use
+  `active_status` with the _strings_ `'yes'`/`'no'`; `USER_CONTACTS` uses a tinyint `delete_status`;
+  Katchup marks each side separately via `deleted_by_sender` / `deleted_by_receiver`. A single
+  assumption would have silently passed on the other two.
+- **Text is frequently BLOB.** `subject`, `actual_message`, `group_name` and `receiver_name` come
+  back as `Buffer`, so `record.subject === 'QA Bench 123'` is false even when the stored bytes spell
+  exactly that. Verified on a real row: `subject` is a Buffer decoding to `"General"`. Every
+  comparison goes through `text()` — this is the single most likely way a correct API would
+  otherwise have been reported as broken.
+- `company_id → TBL_KPOST_ADMIN_REGISTRATION.id` is a **logical** FK; KPOST_QA declares almost no
+  constraints, so the orphan check is worth running rather than redundant. A PERSONAL account has a
+  null `company_id`, which is correct and not an orphan.
+- `TBL_KPOST_AUDIT_MASTER` holds **95M rows**. Nothing queries it without a narrow key.
+
+**A failure is only a defect once it has failed again** (`src/validation-engine/reproduction-gate.ts`).
+A FAILED check is re-run up to 3 passes with exponential backoff, and one clean pass downgrades it
+to a WARNING that is reported but never filed. This had to live in the engine rather than the
+reporter: by the time the reporter runs, the request, the token and the server state are gone, so
+"try it again" is no longer possible. Two exclusions, both to avoid paying for nothing or corrupting
+the answer — **deterministic checks** (`primary`/`aggregate` re-read an exchange already in hand and
+cannot disagree with themselves, so they stay fileable on one pass) and **non-idempotent probes**
+(`concurrency.duplicate-write` creates a row on pass 1, so pass 2 would race that row and
+manufacture the very failure it looks for). Observed live: `request.data-type on POST
+/v2/profile/getUserProfileUsingKpostID/: 3/3 passes failed (reproduced — fileable)`.
+
+**On "eliminate unnecessary skipping":** the 81 `test.skip` calls were audited and are almost
+entirely **deliberate write gates** (`*_LIFECYCLE`, `OTP_TEST_GATEWAY`, `VISUAL_REGRESSION`), and
+the `npm run kpost` / `kmail` / `ui` scripts already set every one of them — so they do not skip in
+a real run. The large SKIPPED counts inside a run are per-validator non-applicability ("endpoint is
+not paginated", "no email fields in response"), which is the engine reporting honestly, not
+coverage that is missing. Removing either kind would not add coverage; it would either fire real
+writes unattended or replace an accurate SKIP with a meaningless PASS.
+
+### 2026-09-21 (later) — The database is MySQL, and Admin's is LIVE
+
+The adapter written earlier the same day targeted PostgreSQL. KPost runs on **MySQL 8**, so it was
+refactored to `mysql2/promise`, and a second fact arrived with the correction that mattered more
+than the driver: **KPost and KMail run against a test database (`KPOST_QA`), but the Admin module
+runs against a live production one.**
+
+**Database access is now per-suite, not per-run.** `DatabasePool.for(suite)` hands each suite its
+own client. The alternative — one connection with one `DB_ALLOW_WRITES` flag — would have meant the
+switch that usefully unlocks writes on KPOST_QA also unlocking them on live Admin data. Write
+permission is therefore a property of the **target**, not of the run.
+
+**The Admin write-ban lives in code, not in configuration.** `admin-api` is in
+`WRITE_BANNED_SUITES` (`src/config/database.config.ts`) and resolves to `allowWrites: false`
+whatever the environment says. `DB_ALLOW_WRITES=true` is the project's current setting, so this is
+not hypothetical: `tests/framework/admin-db-safety.spec.ts` asserts that the flag which is on right
+now still leaves Admin read-only. The reasoning matches the production endpoint allowlist — an
+environment variable is inherited from a shell, a CI job or a stale `.env`, and an unaudited write
+into live Admin data, through a path with none of the application's validation or permissions,
+cannot be undone. Admin also gets **separate** `ADMIN_DB_*` variables, so pointing it at the test
+database (or the KPost suites at the live one) takes a deliberate edit rather than a shared default.
+
+**`WITH` is no longer treated as a read — this was a real hole, not a cosmetic port.** The
+PostgreSQL gate allowed a `WITH` prefix because a CTE there heads a `SELECT`. MySQL 8 permits
+`WITH x AS (...) DELETE FROM ...`, so carrying that rule over would have let a **delete through on
+the live Admin database** — exactly the statement the gate exists to stop. `WITH` was removed from
+the read-only set and the two CTE-headed writes are pinned as tests. A legitimate read needing a CTE
+can be a subquery: refusing a valid read is recoverable, and the other mistake is not.
+
+**MySQL syntax throughout:** identifiers backtick-quoted (and the pattern rejects a backtick, which
+is what would close the quoting), `?` placeholders instead of `$1`, `IS NULL` for a null term with a
+test pinning that placeholders stay aligned with values when nulls sit between them. `qualify()` no
+longer prefixes a schema — in MySQL the database _is_ the schema and the connection already selected
+it. `multipleStatements: false` on every pool, so an injected `;` can never become a second
+statement independently of the identifier check. BIGINT/DECIMAL come back as strings, because an id
+silently rounded by IEEE-754 is a bug nobody finds twice.
+
+**TLS is mandatory and currently unresolved.** The KPOST_QA server runs with
+`--require_secure_transport=ON`, so a plaintext connection is refused before authentication — and it
+presents a **self-signed certificate**, so verification against public CAs fails with
+`HANDSHAKE_SSL_ERROR`. Connectivity and credentials were both confirmed by direct probe (MySQL
+8.0.46), but the bench is deliberately left with `DB_SSL_REJECT_UNAUTHORIZED` at its secure default
+rather than silently disabled: the host is a public address, so an unverified connection could be
+intercepted and these credentials read from the handshake. **The fix is `DB_SSL_CA` pointing at the
+server's CA** (supplying one turns verification back on automatically); disabling verification is an
+explicit decision for the repo owner, not a default. Until one or the other is chosen, DB
+validations report SKIPPED.
+
+### 2026-09-21 — Concurrency probes and a real PostgreSQL adapter (superseded by the entry above)
+
+Two gaps were genuinely open: nothing in the bench sent two requests at once, and the database
+interface had no implementation behind it. Both are now closed. What was decided, and why:
+
+**The dispatcher is a barrier, not `Promise.all`.** Mapping over an array starts each task as the
+iteration reaches it, so on a loaded machine the first response can arrive before the last request
+is built and the endpoint never holds two at once. The race then does not reproduce, the probe
+reports PASSED, and the bug ships. So tasks are constructed first, parked on a shared barrier and
+released together; `dispatchSkewMs` records how far apart they actually left. **A burst wider than
+`thresholds.concurrency.maxDispatchSkewMs` reports INCONCLUSIVE, not PASSED.** This is the entry's
+main point: a concurrency check that silently degrades into a sequential one is worse than having
+none, because it certifies an endpoint nobody tested.
+
+**Four probes, at three severities, because they are not equally certain.**
+`read-consistency` (HIGH) fires one caller's read N times: a status divergence or a divergent
+`identityPaths` value is FAILED, a body divergence only WARNING — a record can legitimately change
+between two reads a millisecond apart, and filing that as a defect would flood the tracker.
+`burst-resilience` (HIGH) asks what happens to requests that arrive together — served, or cleanly
+throttled, but never 5xx. It sits beside `security.rate-limit` rather than replacing it: that one
+sends requests **sequentially** and asks whether a policy exists; this one sends them **at the same
+instant** and asks whether the handler survives. An endpoint with a correct limit can still 500 on
+the third simultaneous caller because its pool holds two. `duplicate-write` (CRITICAL) is opt-in via
+`concurrency.singleWriteWins`, because the bench cannot infer that a second identical write is
+wrong — two messages with the same text are two messages; two companies with the same name are a
+defect. `session-isolation` (CRITICAL) needs two configured principals and **reports SKIPPED with
+one**, never PASSED: "no second caller was available" and "two callers did not interfere" are
+different facts, and reporting the first as the second is how a bench claims coverage it lacks.
+
+**All four are blocked on the live application** (`PRODUCTION_BLOCKED_VALIDATORS`). The obvious
+reason is traffic — each multiplies one reviewed request into N. The better reason is that their
+findings would be _unfalsifiable_ there: on live, other people's requests are in the handler too, so
+a divergence between two of our responses cannot be attributed to our own burst. They need a quiet,
+disposable target, which is what `TEST_DB_MODE` already describes.
+
+**The database adapter is PostgreSQL, lazily loaded, read-only by default.** `pg` is imported
+dynamically so a run that never touches a database does not load it. Values are always bound as
+parameters; table and column names — which PostgreSQL cannot parameterize — are matched against a
+strict identifier pattern and then double-quoted, and `tests/framework/concurrency.spec.ts` pins
+that with eight hostile names. `null` in a `where` becomes `IS NULL`, not `= NULL`, which would
+silently match nothing and turn "the field was cleared, as expected" into "the record is missing".
+Non-`SELECT` SQL is refused unless `DB_ALLOW_WRITES=true`, kept deliberately separate from
+`ALLOW_DESTRUCTIVE_TESTS`: that flag governs requests the application handles, where its validation,
+permissions and audit trail still apply, while a direct SQL write bypasses all three.
+
+**Disabled stays the default, and disabled means SKIPPED.** With no `DB_CONNECTION_STRING` the DB
+validations report SKIPPED with the reason attached rather than passing. Whether a write actually
+landed is precisely what the API response cannot prove, so a green persistence check that never
+issued a query is the most misleading result available.
+
+**Not verified against a real database.** No credentials exist for the KPost schema, so the adapter
+is complete and typechecked but unexercised: the identifier/parameter/`IS NULL` logic is covered by
+framework tests, the connection path is not. Setting `DB_CONNECTION_STRING` is what turns the
+existing DB validations from SKIPPED into real assertions, and the transaction probes in
+`src/database/transaction-assertions.ts` (repeatable-read snapshot, concurrent read agreement) are
+read-only so they need no write grant.
 
 ### 2026-09-19 — First full KPost run reviewed: false-positive classes fixed (incl. the validateOTP lesson)
 
@@ -4480,6 +4825,43 @@ do not exist on live; its PERSONAL cases move into the login flow tests). `fetch
    it cannot be recreated through the API. So Admin waits on a business company with **three
    members**, one of them expendable (see the account plan).
 
+8. **Finish turning the DB layer on.** The MySQL adapter is written, typechecked and covered by
+   framework tests, and the KPOST_QA credentials are configured. Two things still block real
+   assertions:
+
+   - **The TLS certificate.** The server requires TLS (`--require_secure_transport=ON`) and presents
+     a **self-signed** certificate, so every connection currently fails with
+     `HANDSHAKE_SSL_ERROR: self-signed certificate in certificate chain`. Obtain the server's CA and
+     point `DB_SSL_CA` at the PEM — supplying a CA switches verification on by itself. The fallback,
+     `DB_SSL_REJECT_UNAUTHORIZED=false`, keeps the traffic encrypted but stops authenticating the
+     server; on a public host that means the credentials could be read by anything positioned in
+     between, so it is a decision for the owner rather than a default the bench should take.
+   - **The table and column names** behind the endpoints under test. The validations in
+     `src/database/validations/` were written against the mock's shape (`users`, `companies`,
+     `createdAt`, `deletedAt`) and need remapping to the real KPOST_QA schema before they assert
+     anything true — a validation pointed at a table that does not exist fails as a query error,
+     which is loud, but a column that exists under a _different meaning_ fails silently.
+
+   Once connected, the endpoints worth wiring first are the ones whose response cannot prove
+   persistence: the Katchup send lifecycle (did the message row land, with the Subject BR-K01
+   requires?), profile writes, and anything with a soft delete — where "200 OK" and "the row is
+   still active" are entirely compatible.
+
+   **Admin is a separate question.** Its database is live, so it stays read-only whatever else is
+   configured, and no `ADMIN_DB_*` connection has been supplied. Admin DB validations will report
+   SKIPPED until one is — which is the correct state, not a gap to close in a hurry.
+
+9. **Declare `concurrency.identityPaths` on the read endpoints.** The concurrency probes are
+   registered and run, but two of their four checks are inert without it: `read-consistency`'s
+   identity comparison reports SKIPPED, and `session-isolation` does not apply at all. The path is
+   whatever field names the caller in each response (`data.kpostID`, `data.companyID`). This is a
+   one-line addition per endpoint and it is what turns the probes from "did the responses differ?"
+   into "was one caller served another's record?" — the finding that actually matters.
+
+   `concurrency.singleWriteWins` likewise needs setting on the writes that must not duplicate; a
+   company or a group name are the obvious first candidates, and the owner should confirm which
+   writes are genuinely unique-constrained rather than the bench guessing.
+
 ### UI bench (prerequisites gathered, not started)
 
 Needs: a reachable environment on a **secure context** (a bare-IP HTTP origin renders a blank page),
@@ -4505,5 +4887,14 @@ centralized UI validators, mirroring the API engine.
   `tests/framework/payload-audit.spec.ts` enforces this: every payload gap must be sent or recorded
   with a reason (runtime/lifecycle-supplied, or a deliberate frontend-authoritative omission).
 - **Secrets** come from the environment only, and are masked in logs, reports and tickets.
+- **A check that could not run says so.** SKIPPED with a reason, never PASSED. This applies to a DB
+  validation with no database, a session-isolation probe with one principal, and a concurrency burst
+  whose requests did not overlap. Each of those could be made to "pass" trivially, and each would
+  then certify coverage that does not exist — which is worse than a visible gap, because a visible
+  gap gets fixed.
+- **SQL binds values and validates identifiers.** Table and column names cannot be parameterized, so
+  they are matched against a strict pattern and quoted; everything else is a bound parameter. Direct
+  SQL writes are refused unless `DB_ALLOW_WRITES=true`, separately from `ALLOW_DESTRUCTIVE_TESTS`,
+  because a SQL write bypasses the application's validation, permissions and audit trail.
 - `npm run check` (typecheck + lint + format) must pass before anything is considered done.
 - Tests describe **which** endpoint is tested; the engine owns **how**.

@@ -1,4 +1,5 @@
 import { providedIdentityValues, testData } from '@config/test-data.config';
+import { TEST_ACCOUNTS } from '@fixtures/test-accounts';
 import { ProductionSafetyError } from './production-guard';
 
 /**
@@ -252,6 +253,19 @@ function qaOwnedValues(): Set<string> {
     // `0` = the "no specific company" sentinel some public lookups require (e.g. mobileNoExist's
     // companyID for a personal check). It names no real company, so it is safe to allowlist.
     '0',
+    /*
+     * Every account in the central registry (`src/fixtures/test-accounts.json`).
+     *
+     * These are bench-owned by construction: the `qatest_` prefix exists precisely so an account of
+     * ours is identifiable, and `policyViolation()` refuses to record an id without it. Without
+     * this line the guard would block the suites that use them — the registry would name accounts
+     * the bench then refused to send requests for, which is the opposite of the point.
+     *
+     * Included whether or not they are provisioned: an unprovisioned id names no existing record,
+     * so it is safe for the same reason the "absent" fixtures above are, and the availability check
+     * the signup screen drives has to be able to ask about an id before it exists.
+     */
+    ...TEST_ACCOUNTS.map((account) => account.kpostId),
   ];
   return new Set(owned.map((value) => String(value).trim().toLowerCase()).filter(Boolean));
 }

@@ -29,6 +29,38 @@ export const thresholds = {
     /** Safety cap for rate-limit probes regardless of endpoint configuration. */
     maxRateLimitBurst: 50,
   },
+  /**
+   * Simultaneous-request probes. Deliberately small: these exist to expose a race, not to load-test.
+   * Eight parallel callers is enough to catch a missing lock, a shared mutable handler field or a
+   * connection-pool bleed, while staying well under any sane rate limit — a burst that trips
+   * throttling teaches nothing about locking, because the second write never reaches the handler.
+   */
+  concurrency: {
+    /** Requests dispatched together when the endpoint does not say otherwise. */
+    defaultRequests: 8,
+    /** Hard cap, whatever an endpoint configures. */
+    maxRequests: 25,
+    /**
+     * Largest spread between first and last dispatch that still counts as simultaneous. Above it
+     * the burst degraded into a sequence and its result is reported INCONCLUSIVE rather than
+     * PASSED — a race that never had the chance to happen is not evidence that it cannot.
+     */
+    maxDispatchSkewMs: 150,
+  },
+  /**
+   * How many times a FAILED check is re-run before it is believed (`src/validation-engine/
+   * reproduction-gate.ts`). Only probes that issue fresh work are retried; a deterministic check
+   * cannot disagree with itself, and retrying it would be pure traffic.
+   *
+   * Three passes is the point of diminishing returns: one flake is common, two in a row is rare
+   * enough that a third pass changes the verdict on almost nothing while tripling the cost.
+   */
+  reproduction: {
+    attempts: 3,
+    baseDelayMs: 500,
+    /** Ceiling on one backoff, so a slow endpoint cannot stall the whole run on one check. */
+    maxDelayMs: 4_000,
+  },
   clockSkewMs: 5 * 60_000,
   qualityGate: {
     /** FAILED results of these severities fail the test. Lower severities are reported only. */

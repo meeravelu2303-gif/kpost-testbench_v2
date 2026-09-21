@@ -138,6 +138,9 @@ export const generateJwTokensApi = defineKpostEndpoint({
 
 export const activeSessionApi = defineKpostEndpoint({
   id: 'signup-login-active-session',
+  // A token with no TBL_KPOST_LOGIN_SESSION row cannot be revoked server-side, and no response
+  // assertion can see that.
+  database: { validations: ['kpost-login-session-created'] },
   // Live: Reads the CALLER'S sessions; the account comes from the token, not a payload.
   productionSafe: true,
   requirements: ['FR-S11'],

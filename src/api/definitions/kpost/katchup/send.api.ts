@@ -58,6 +58,12 @@ const sendBody =
 export const sendMessageApi = defineKatchupEndpoint({
   id: 'katchup-send-message',
   requirements: ['FR-KU-003', 'FR-KU-003', 'FR-KU-003', 'FR-K07'],
+  /*
+   * BR-K01 (every message carries a Subject) is only genuinely verifiable in the database: the
+   * send response echoes back the subject it was handed, whatever it actually stored. The column
+   * is a BLOB, so the validation decodes it before comparing — see kpost-assertions.text().
+   */
+  database: { validations: ['katchup-message-persisted'] },
   method: 'POST',
   path: '/v2/katchup/sendMessage/',
   summary: 'Send a Katchup message — the primary send path',

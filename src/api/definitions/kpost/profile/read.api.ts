@@ -22,10 +22,20 @@ export const fetchUserDetailsApi = defineProfileEndpoint({
   summary: "Fetch the caller's profile details",
   tags: [...READ_TAGS, 'pii'],
   productionSafe: true,
+  /*
+   * The caller's OWN account, so the row is guaranteed to exist whenever the call succeeds — which
+   * is what makes this the right endpoint to anchor the account check on. It confirms in
+   * TBL_KPOST_USER_MASTER that the account behind a 200 is genuinely active: a deactivated account
+   * and a healthy one return the same shape on the wire, and only `active_status` separates them.
+   */
+  database: { validations: ['kpost-user-active'] },
 });
 
 export const userProfileByKpostIdApi = defineProfileEndpoint({
   id: 'profile-user-profile-by-kpostid',
+  // Confirms the account behind this profile is real and active in TBL_KPOST_USER_MASTER: an
+  // empty 200 from a deactivated account is indistinguishable from 'no such user' on the wire.
+  database: { validations: ['kpost-user-active'] },
   // KDirectory "view full profile" (FR-KD-005) — opening a directory entry's full profile.
   requirements: ['FR-KD-005'],
   // A POST read: destructive defaults true for POST, which would grep-drop it on live.
@@ -35,7 +45,27 @@ export const userProfileByKpostIdApi = defineProfileEndpoint({
   summary: 'Fetch a profile by KPost ID',
   tags: [...READ_TAGS, 'pii', 'enumeration-surface'],
   productionSafe: true,
-  request: body(() => ({ kpostID: testData.kpostId })),
+  /*
+   * Looks up the SECOND personal account, not our own (`testData.kpostId`), and the reason is a
+   * product defect rather than a preference.
+   *
+   * `testData.kpostId` (the primary QA account) is answered `404 "No user found for the given
+   * kpostID"` by this endpoint — while the row demonstrably exists: active in
+   * TBL_KPOST_USER_MASTER, one row in TBL_KPOST_USER_PROFILE, present in both VW_KPOST_USER_DETAIL
+   * and VW_KPOST_USER_MASTER, absent from TBL_KPOST_DEACTIVATED_DETAILS, and reachable through
+   * `fetchUserDetails` (200) and `userLogin` (200) with the same credentials.
+   *
+   * It is NOT a self-lookup rule and NOT the privacy flag — both were tested and refuted:
+   * a second account looking itself up succeeds, a third caller asking for THIS account still gets
+   * 404, and three of four `privacy_status = 1` accounts answer 200. See
+   * `tests/api/kpost/profile/directory-lookup.spec.ts`, which pins the behaviour so it stays
+   * visible and gets filed instead of being hidden by this change.
+   *
+   * Pointing the contract probes at a resolvable account is what lets them exercise the endpoint's
+   * real success path (schema, envelope, auth, headers) instead of reporting one 404 forty times
+   * over and burying every other finding on it.
+   */
+  request: body(() => ({ kpostID: testData.personal3KpostId })),
 });
 
 export const userBasicByKpostIdApi = defineProfileEndpoint({

@@ -127,6 +127,40 @@ export interface EndpointDefinition {
     rateLimit?: { maxRequests: number; request: RequestFactory };
   };
 
+  /**
+   * Tuning for the simultaneous-request validators (`src/validators/concurrency`).
+   *
+   * Every field is optional: the probes work from central defaults, and an endpoint states only
+   * what is specific to it. The two `*Paths` lists exist because a concurrency finding is only
+   * trustworthy when the bench knows which differences between two identical responses are normal —
+   * without them a server-generated timestamp reads as one caller receiving another's record.
+   */
+  concurrency?: {
+    /** Requests dispatched together. Default: `thresholds.concurrency.defaultRequests`. */
+    requests?: number;
+    /**
+     * Response paths that may legitimately differ between two identical reads — a server clock, a
+     * view counter, a freshly minted token. Excluded before bodies are compared, so ordinary
+     * volatility is never reported as a race.
+     */
+    volatilePaths?: readonly string[];
+    /**
+     * Response paths carrying the CALLER'S OWN identity (`data.kpostID`, `data.companyID`). Every
+     * response in a burst must repeat the same value: a different one means one caller was handed
+     * another caller's record, which is the most serious fault this category can find.
+     */
+    identityPaths?: readonly string[];
+    /**
+     * This endpoint creates something that must exist at most once — a unique constraint, an
+     * idempotency key, a single seat. Enables the duplicate-write race probe: the same payload
+     * dispatched twice simultaneously must yield exactly one success and one rejection.
+     *
+     * Opt-in, because only the endpoint knows whether a second identical write is a duplicate or a
+     * legitimate second record — two messages with the same text are two messages.
+     */
+    singleWriteWins?: boolean;
+  };
+
   /** Per-endpoint on/off switches merged over the default policy. */
   validations?: Partial<ValidationToggles>;
   /** Disable individual validators by name, e.g. `['security.rate-limit']`. */

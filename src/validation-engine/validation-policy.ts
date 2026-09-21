@@ -27,6 +27,8 @@ export interface ValidationToggles {
   pagination: boolean;
   performance: boolean;
   security: boolean;
+  /** Simultaneous-request checks: read consistency, burst behaviour, duplicate writes, isolation. */
+  concurrency: boolean;
   commonData: boolean;
   businessRules: boolean;
   database: boolean;
@@ -47,6 +49,7 @@ export const DEFAULT_POLICY: Readonly<ValidationToggles> = Object.freeze({
   pagination: true,
   performance: true,
   security: true,
+  concurrency: true,
   commonData: true,
   businessRules: true,
   database: true,
@@ -109,6 +112,7 @@ export interface ResolvedEndpoint {
   mockFixture: boolean;
   performance: { maxResponseTimeMs: number; maxPayloadBytes: number; timeoutMs: number };
   security: NonNullable<EndpointDefinition['security']>;
+  concurrency: NonNullable<EndpointDefinition['concurrency']>;
   validations: ValidationToggles;
   skipValidators: readonly string[];
   businessRules: readonly string[];
@@ -182,6 +186,7 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
       timeoutMs: definition.performance?.timeoutMs ?? thresholds.requestTimeoutMs,
     },
     security: definition.security ?? {},
+    concurrency: definition.concurrency ?? {},
     validations: { ...DEFAULT_POLICY, ...definition.validations },
     skipValidators: definition.skipValidators ?? [],
     businessRules: definition.businessRules ?? [],

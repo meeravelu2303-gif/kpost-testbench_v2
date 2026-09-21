@@ -23,6 +23,7 @@
       "@database/*": ["./src/database/*"],
       "@engine/*": ["./src/validation-engine/*"],
       "@fixtures": ["./src/fixtures/index.ts"],
+      "@fixtures/*": ["./src/fixtures/*"],
       "@pages/*": ["./src/pages/*"],
       "@reporting/*": ["./src/reporting/*"],
       "@rules/*": ["./src/business-rules/*"],

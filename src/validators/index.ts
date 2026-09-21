@@ -10,6 +10,10 @@ import { permissionValidator } from './authorization/permission.validator';
 import { privilegeEscalationValidator } from './authorization/privilege-escalation.validator';
 import { roleValidator } from './authorization/role.validator';
 import { booleanValidator } from './common/boolean.validator';
+import { burstResilienceValidator } from './concurrency/burst-resilience.validator';
+import { duplicateWriteValidator } from './concurrency/duplicate-write.validator';
+import { readConsistencyValidator } from './concurrency/read-consistency.validator';
+import { sessionIsolationValidator } from './concurrency/session-isolation.validator';
 import { commonErrorValidator } from './common/common-error.validator';
 import { dateValidator } from './common/date.validator';
 import { emailValidator } from './common/email.validator';
@@ -102,6 +106,15 @@ export const validationRegistry = new ValidationRegistry().register(
   rateLimitValidator,
   informationDisclosureValidator,
   sensitiveDataValidator,
+  /*
+   * Concurrency — the faults that need two requests inside the handler at once. Placed after
+   * security because they are the most expensive probes in the suite (each one is a burst), and a
+   * cheap check that will fail anyway should fail first.
+   */
+  readConsistencyValidator,
+  burstResilienceValidator,
+  duplicateWriteValidator,
+  sessionIsolationValidator,
   // Common data conventions
   idValidator,
   emailValidator,

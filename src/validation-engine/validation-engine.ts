@@ -6,11 +6,12 @@ import type { ValidationProfile } from '@config/constants';
 import { databaseConfig } from '@config/database.config';
 import { env } from '@config/env';
 import { thresholds } from '@config/thresholds.config';
-import type { DatabaseClient } from '@database/database-client';
 import type { DatabaseValidationRegistry } from '@database/database-validation';
+import type { DatabasePool } from '@database/database-pool';
 import type { Logger } from '@utils/logger';
 import { maskSensitive, maskString } from '@utils/masking';
 import { EndpointExecutor } from './endpoint-executor';
+import { confirmFailure } from './reproduction-gate';
 import {
   EngineValidationContext,
   type RunInfo,
@@ -37,7 +38,12 @@ export interface ValidationEngineDeps {
   validators: ValidationRegistry;
   businessRules: BusinessRuleRegistry;
   databaseValidations: DatabaseValidationRegistry;
-  database: DatabaseClient;
+  /**
+   * One client per suite, not one for the run: KPost/KMail point at the KPOST_QA test database and
+   * Admin at a live production one, with different write policies. The endpoint under validation
+   * decides which it gets.
+   */
+  databases: DatabasePool;
   log: Logger;
   /** Called with every finished report (the test fixture attaches it to the Playwright report). */
   onReport?: (report: ValidationReport) => void | Promise<void>;
@@ -171,7 +177,22 @@ export class ValidationEngine {
     const notApplicable = validator.notApplicable(context);
     if (notApplicable) return skip(notApplicable);
 
-    return validator.validate(context);
+    /*
+     * A failure is re-run before it is believed. This is the only place it can be: once the run
+     * ends, the request, the token and the server state are gone, so the reporter cannot retry
+     * anything. Eligibility and backoff are decided in reproduction-gate.ts; a check that recovers
+     * comes back as a WARNING and is never filed.
+     */
+    const confirmation = await confirmFailure(validator, context, () =>
+      validator.validate(context),
+    );
+    if (confirmation.attempts > 1) {
+      context.log.info(
+        `${validator.name} on ${context.endpoint.label}: ${confirmation.failures}/${confirmation.attempts} passes failed ` +
+          `(${confirmation.reproduced ? 'reproduced — fileable' : 'intermittent — not filed'})`,
+      );
+    }
+    return confirmation.result;
   }
 
   private businessRuleValidators(endpoint: ResolvedEndpoint): Validator[] {
@@ -197,6 +218,12 @@ export class ValidationEngine {
   }
 
   private databaseValidators(endpoint: ResolvedEndpoint): Validator[] {
+    /*
+     * Resolved from the endpoint's own suite, so a KMail validation queries KPOST_QA and an Admin
+     * one queries the Admin database under its own (write-banned) policy. Reading this from the
+     * endpoint rather than from the run is what keeps the two targets from ever being confused.
+     */
+    const database = this.deps.databases.for(endpoint.suite.id);
     return endpoint.databaseValidations.map((id) => {
       const validation = this.deps.databaseValidations.get(id);
       return defineValidator({
@@ -209,12 +236,13 @@ export class ValidationEngine {
         stage: 'database',
         dependsOn: ['response.status-code'],
         appliesTo: () =>
-          databaseConfig.enabled && this.deps.database.enabled
+          databaseConfig.enabled && database.enabled
             ? true
-            : 'database validation disabled (DB_ENABLED=false or no database client configured)',
+            : `database validation disabled for the ${endpoint.suite.id} suite ` +
+              '(DB_ENABLED=false, or no connection configured for it)',
         check: (context) =>
           validation
-            ? validation.check(context, this.deps.database)
+            ? validation.check(context, database)
             : outcome.failed(
                 `database validation "${id}" is not registered in src/database/validations/index.ts`,
               ),

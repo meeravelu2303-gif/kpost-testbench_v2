@@ -56,8 +56,77 @@ const EnvSchema = z.object({
   /** Tenant/company used for data created by tests (mock mode uses the seeded company). */
   TEST_COMPANY_ID: z.string().optional(),
 
+  /**
+   * Force database access on or off. Unset, it follows what is reachable: the mock's store under
+   * `MOCK_API=true`, a real MySQL when `DB_HOST`/`DB_NAME` are set, otherwise nothing.
+   */
   DB_ENABLED: z.stringbool().optional(),
-  DB_CONNECTION_STRING: z.string().optional(),
+  /** `mysql` is the only real engine KPost runs on; `mock` is the bundled in-memory store. */
+  DB_TYPE: z.enum(['mysql', 'mock']).default('mysql'),
+  /**
+   * MySQL host. A JDBC URL (`jdbc:mysql://host:3306`) is accepted and reduced to its host, because
+   * that is the form the connection details are normally handed over in — see `mysqlHost()` below.
+   */
+  DB_HOST: z.string().optional(),
+  DB_PORT: z.coerce.number().int().positive().default(3306),
+  DB_USER: z.string().optional(),
+  DB_PASSWORD: z.string().optional(),
+  /** Database (schema) name — in MySQL these are the same thing. */
+  DB_NAME: z.string().optional(),
+  /** Pooled connections. Must exceed the concurrency burst size, or the bench throttles itself. */
+  DB_POOL_SIZE: z.coerce.number().int().positive().default(10),
+  /** Per-statement timeout; a query outliving it is abandoned and reported as a failed check. */
+  DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
+  /**
+   * TLS for the MySQL connection. On by default, and the KPOST_QA server enforces it
+   * (`--require_secure_transport=ON`), so a plaintext attempt is refused before it authenticates.
+   */
+  DB_SSL: z.stringbool().default(true),
+  /**
+   * Path to the server's CA certificate (PEM). Supply this when the server presents a private or
+   * self-signed certificate, which is what makes verification possible rather than skipped.
+   */
+  DB_SSL_CA: z.string().optional(),
+  /**
+   * Verify the server's certificate chain. **Leave this on.**
+   *
+   * Turning it off keeps the connection encrypted but stops authenticating the server, so anything
+   * positioned between the bench and the database can present its own certificate and read the
+   * credentials in the handshake. That matters here because the host is a public address, not a
+   * machine on a private network. It exists as an escape hatch for a self-signed server whose CA
+   * has not been handed over yet — the fix is `DB_SSL_CA`, not living with this off.
+   */
+  DB_SSL_REJECT_UNAUTHORIZED: z.stringbool().default(true),
+  /**
+   * Permit non-SELECT SQL on the KPost/KMail **test** database.
+   *
+   * Default deny: a direct write bypasses the application's own validation, permissions and audit
+   * trail, so it is a separate decision from `ALLOW_DESTRUCTIVE_TESTS`. It has **no effect on the
+   * Admin database**, which is a live production system and is write-banned in code — see
+   * `src/config/database.config.ts`.
+   */
+  DB_ALLOW_WRITES: z.stringbool().default(false),
+
+  /*
+   * ---- Admin module database (SEPARATE, and LIVE) ----------------------------------------------
+   *
+   * The Admin module runs against a production database while KPost/KMail run against KPOST_QA, so
+   * it gets its own connection rather than sharing one. These are deliberately distinct variables:
+   * pointing Admin at the test DB, or the KPost suites at the live one, must take an explicit edit
+   * rather than an inherited default.
+   *
+   * Writes are refused on this connection regardless of `DB_ALLOW_WRITES`, so there is no
+   * combination of environment variables that lets the bench write to live Admin data.
+   */
+  ADMIN_DB_HOST: z.string().optional(),
+  ADMIN_DB_PORT: z.coerce.number().int().positive().default(3306),
+  ADMIN_DB_USER: z.string().optional(),
+  ADMIN_DB_PASSWORD: z.string().optional(),
+  ADMIN_DB_NAME: z.string().optional(),
+  ADMIN_DB_SSL: z.stringbool().default(true),
+  ADMIN_DB_SSL_CA: z.string().optional(),
+  /** Certificate verification for the LIVE Admin database. Turning this off is a worse idea here. */
+  ADMIN_DB_SSL_REJECT_UNAUTHORIZED: z.stringbool().default(true),
 
   // ---- Bugzilla bug filing (see src/config/bugzilla.config.ts)
   /** REST root, e.g. http://192.168.0.50/rest. Unset disables filing entirely. */
@@ -137,6 +206,50 @@ if (!parsed.success) {
 const data = parsed.data;
 const mockApi = data.MOCK_API ?? (data.TEST_ENV === 'local' && !data.API_BASE_URL);
 
+/**
+ * Reduces a MySQL host setting to a bare host and, when the value carries one, a port.
+ *
+ * Connection details are usually handed over as a JDBC URL — `jdbc:mysql://db.example:3306` —
+ * because that is what the application's own configuration holds. Passing that string to a driver
+ * as a hostname produces a DNS failure whose message says nothing about the real cause, so it is
+ * normalized here, once, at the edge.
+ *
+ * A port inside the URL that **disagrees** with the separate `*_DB_PORT` variable throws rather
+ * than picking a winner. Either choice would be a guess about which the author meant, and a bench
+ * silently connecting to a different port than its configuration states is the kind of fault that
+ * gets diagnosed as "the database is down".
+ */
+export function parseMysqlHost(
+  value: string | undefined,
+  port: number,
+  variable: string,
+): { host?: string; port: number } {
+  if (!value) return { port };
+
+  // Strip a scheme (`jdbc:mysql://`, `mysql://`) and anything from the first path/query separator.
+  const withoutScheme = value.replace(/^[a-z+]+:(?:\/\/)?/i, '').replace(/^mysql:\/\//i, '');
+  const authority = withoutScheme.split(/[/?]/)[0] ?? '';
+
+  // IPv6 literals are bracketed, so only split on a colon that is not inside brackets.
+  const match = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(authority);
+  if (!match) return { host: authority || undefined, port };
+
+  const host = match[1];
+  const embedded = match[2] ? Number(match[2]) : undefined;
+
+  if (embedded !== undefined && embedded !== port) {
+    throw new Error(
+      `${variable} specifies port ${embedded} but ${variable.replace(/HOST$/, 'PORT')} is ${port}. ` +
+        'Remove the port from the host, or make the two agree — the bench will not guess which you meant.',
+    );
+  }
+
+  return { host: host || undefined, port: embedded ?? port };
+}
+
+const kpostDb = parseMysqlHost(data.DB_HOST, data.DB_PORT, 'DB_HOST');
+const adminDb = parseMysqlHost(data.ADMIN_DB_HOST, data.ADMIN_DB_PORT, 'ADMIN_DB_HOST');
+
 export const env = Object.freeze({
   ...data,
   MOCK_API: mockApi,
@@ -144,6 +257,11 @@ export const env = Object.freeze({
     data.API_BASE_URL ?? (mockApi ? `http://127.0.0.1:${data.MOCK_API_PORT}` : data.BASE_URL),
   IS_PRODUCTION: data.TEST_ENV === 'production',
   BUILD_ID: data.BUILD_ID ?? data.GITHUB_RUN_NUMBER ?? 'local',
+  // Normalized above, so everything downstream sees a host a driver can actually resolve.
+  DB_HOST: kpostDb.host,
+  DB_PORT: kpostDb.port,
+  ADMIN_DB_HOST: adminDb.host,
+  ADMIN_DB_PORT: adminDb.port,
 });
 
 export type Env = typeof env;

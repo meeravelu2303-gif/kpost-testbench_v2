@@ -116,6 +116,25 @@ export const PRODUCTION_BLOCKED_VALIDATORS: Readonly<Record<string, string>> = {
   'authorization.role': 'requires a principal that must not be exercised on live',
   'performance.payload-size': 'sends oversized bodies at a live service',
   'performance.timeout': 'provokes timeouts, holding real connections',
+  /*
+   * ## Concurrency probes — blocked on live, and not only for the obvious reason
+   *
+   * Each one multiplies a single request into a simultaneous burst, so a live run would generate N
+   * times the traffic anyone reviewing the endpoint allowlist agreed to. That alone is enough.
+   *
+   * The deeper reason is that their findings would be worthless there. On the live application
+   * other people's requests are inside the handler at the same time, so a divergence between two of
+   * our responses cannot be attributed to our own burst, and "one caller was served another's
+   * record" could not be told apart from a real user's legitimate concurrent write. The probe would
+   * produce unfalsifiable findings — the worst kind to put in front of a developer.
+   *
+   * They need a quiet, disposable environment, which is what TEST_DB_MODE describes and where
+   * `productionExclusion` lets them through on reads.
+   */
+  'concurrency.read-consistency': 'multiplies the request into a simultaneous burst',
+  'concurrency.burst-resilience': 'deliberately floods the endpoint in parallel',
+  'concurrency.duplicate-write': 'writes the same record twice at once, by design',
+  'concurrency.session-isolation': 'drives two real accounts at one endpoint simultaneously',
 };
 
 const ALLOWED = new Set(PRODUCTION_SAFE_VALIDATORS);

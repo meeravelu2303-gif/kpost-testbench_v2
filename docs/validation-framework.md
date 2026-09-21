@@ -438,7 +438,9 @@ export const userCreatedValidation: DatabaseValidation = {
 
 `dbAssert` provides record exists / not exists, field values, audit fields, created and updated timestamps, update detection, soft delete and foreign keys. Also included: `user-updated`, `user-deleted` (soft delete) and `company-created`. When `DB_ENABLED=false`, DB validations are `SKIPPED` with that reason.
 
-**Real database:** the mock adapter reads the mock API's store. For KPost, implement `DatabaseClient` with your driver (e.g. `pg`), building parameterised SQL from `DbQuery`, and select it in `createDatabaseClient()`. The connection string comes only from `DB_CONNECTION_STRING`.
+**Real database:** KPost runs on **MySQL**, and `MysqlDatabaseClient` (`mysql2/promise`) is the real adapter; the mock adapter reads the mock API's store instead. Identifiers are validated against a strict pattern and backtick-quoted, values are bound as `?` placeholders, and a `null` in a `where` becomes `IS NULL`. Credentials come from `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` only.
+
+**One database per suite.** `DatabasePool.for(suite)` gives each suite its own client, because they do not share a target: **KPost and KMail** point at the KPOST_QA **test** database, where `DB_ALLOW_WRITES=true` is the intended setting, while **Admin** points at a **live production** database. `admin-api` is on `WRITE_BANNED_SUITES`, so non-`SELECT` statements are refused there regardless of `DB_ALLOW_WRITES` — the ban lives in code precisely so an environment variable cannot lift it. Note that `WITH` is **not** treated as a read: MySQL 8 allows a CTE to head an `UPDATE`/`DELETE`. See `tests/framework/admin-db-safety.spec.ts`.
 
 ## 15. OpenAPI and schema integration
 
