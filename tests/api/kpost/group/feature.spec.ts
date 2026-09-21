@@ -57,6 +57,33 @@ async function as(
   return { status: ex.status, data: (value.data as Record<string, unknown>) ?? {} };
 }
 
+/**
+ * A READ against a resource this flow just created.
+ *
+ * It uses `allowLiveRead`, not `allowLiveWrite`. The two are separate capabilities on purpose:
+ * `allowLiveWrite` requires `destructive === true`, so it cannot authorise a GET at all, and
+ * declaring these downloads destructive to borrow the write path would misstate them and leave a
+ * read one flag away from write authorisation. `allowLiveRead` requires the opposite —
+ * `destructive !== true` — so it can never unlock a write by construction.
+ *
+ * This is the recovery path `docs/ENDPOINT-EXECUTION-MATRIX.md` recorded for these two endpoints
+ * when they were blocked, now that Phase 8 built the capability.
+ */
+async function readAs(
+  endpoints: EndpointExecutor,
+  who: Principal,
+  id: string,
+  pathParams: Record<string, string>,
+  label: string,
+): Promise<{ status: number; contentType: string | undefined }> {
+  const ex = await endpoints.sendTo(
+    id,
+    { pathParams },
+    { label: `group:${label}`, auth: { principal: who }, allowLiveRead: true },
+  );
+  return { status: ex.status, contentType: ex.headers['content-type'] };
+}
+
 test.describe('KPost Group · feature flow', { tag: '@kpost-api' }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(!env.GROUP_LIFECYCLE, 'creates real groups; set GROUP_LIFECYCLE=true');
@@ -88,7 +115,7 @@ test.describe('KPost Group · feature flow', { tag: '@kpost-api' }, () => {
           ],
           [A, 'group-edit-name', { groupKpostID, groupKpostName: 'QA Bench Renamed' }, 'edit-name'],
           [A, 'group-update-image', { groupKpostID }, 'update-image'],
-          [A, 'group-remove-image', { groupKpostID }, 'remove-image'],
+          // remove-image runs AFTER the downloads below — see the note there.
           [C, 'group-leave', { id: '0', groupID, groupKpostID }, 'leave'],
           [
             A,
@@ -101,6 +128,51 @@ test.describe('KPost Group · feature flow', { tag: '@kpost-api' }, () => {
           const r = await as(endpoints, who, id, bodyObj, label);
           expect.soft(r.status, `${label} returns a status`).toBeLessThan(600);
         }
+
+        /*
+         * The two group-image DOWNLOADS, driven here and nowhere else.
+         *
+         * They are GETs keyed by a RUNTIME groupKpostID, so no static value can reach them: a
+         * fabricated group id 404s, which is why they are not `productionSafe`. Until Phase 8 they
+         * were recorded as BLOCKED coverage debt, because `allowLiveWrite` requires
+         * `destructive === true` and so cannot authorise a read. `allowLiveRead` is the recovery
+         * path that entry named, and this is it being used.
+         *
+         * They run BEFORE remove-image on purpose — after it the group has no image, so a download
+         * would be answering a different question.
+         *
+         * MEASURED on live: both answer **204**, because `group-update-image` sends only the
+         * groupKpostID — uploading a real file is the documented attachment-upload gap this bench
+         * still has. So what is covered here is honest but bounded: the endpoints are REACHED with a
+         * real runtime group id and answer correctly for a group with no image. Fetching actual
+         * image BYTES needs the upload gap closed, and the assertion says `< 500` rather than
+         * pretending otherwise.
+         */
+        for (const [id, label] of [
+          ['group-download-image', 'download-image'],
+          ['group-download-full-image', 'download-full-image'],
+        ] as const) {
+          const image = await readAs(
+            endpoints,
+            A,
+            id,
+            { groupKpostID, kpostID: A.username },
+            label,
+          );
+          expect
+            .soft(image.status, `${label} answers for a group image this flow just set`)
+            .toBeLessThan(500);
+        }
+
+        // Deferred so the downloads above had an image to fetch.
+        const removed = await as(
+          endpoints,
+          A,
+          'group-remove-image',
+          { groupKpostID },
+          'remove-image',
+        );
+        expect.soft(removed.status, 'remove-image returns a status').toBeLessThan(600);
       }
     } finally {
       if (groupID) {

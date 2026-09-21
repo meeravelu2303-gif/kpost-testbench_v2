@@ -1,7 +1,10 @@
 import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
+import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import type { Locator, Page } from '@playwright/test';
+import { sendShape } from '@api/definitions/kpost/katchup/send.api';
+import { actAsBrowser, observeAsBrowser } from './support/api-evidence';
 
 /**
  * Katchup **sender message actions** — the post-send control set that is KPost's reason to exist
@@ -29,15 +32,61 @@ import type { Locator, Page } from '@playwright/test';
 /** The composer's editable Quill area (not a read-only sent-message display). */
 const EDITOR = '.ql-editor[contenteditable="true"]';
 
-/** Open Katchup, wait out the loader overlay, open the 2nd QA account's conversation + composer. */
-async function openComposer(page: Page): Promise<void> {
+/** Katchup, with the loader overlay waited out. */
+async function gotoKatchup(page: Page): Promise<void> {
   await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await page
     .locator('.loader-overlay')
     .waitFor({ state: 'hidden', timeout: 30_000 })
     .catch(() => undefined);
+}
+
+/**
+ * Open the 2nd QA account's conversation and its composer.
+ *
+ * ## The precondition, declared rather than assumed
+ *
+ * The composer is reached through a conversation row keyed `[id=<kpostId>]`, and that row exists
+ * only once there is traffic between the two accounts. These QA accounts are not saved contacts of
+ * each other, so on a clean account the row is simply absent — **measured on live, where all four
+ * tests in this file failed at this exact step**, not at anything they were testing.
+ *
+ * So if the row is missing, one message is seeded to bring the conversation into existence. Two
+ * things make that honest rather than a workaround that hides a product problem:
+ *
+ *   - it is a PRECONDITION, not the assertion. Every test still performs its own UI send and asserts
+ *     its own outcome; the seed only makes the composer reachable.
+ *   - it goes through the browser's OWN token (`actAsBrowser`), so no second session is created.
+ *     A fresh API login would displace the very session the test is about to drive — the Phase 8
+ *     defect, which presents as a conversation list that never fills and reads like a product bug.
+ *
+ * The seed is skipped entirely when the row is already there, so a populated account pays nothing.
+ */
+async function openComposer(page: Page, endpoints: EndpointExecutor): Promise<void> {
+  await gotoKatchup(page);
 
   const conversation = page.locator(`[id="${testData.victimKpostId}"]`).first();
+  if ((await conversation.count()) === 0) {
+    const seeded = await actAsBrowser(
+      endpoints,
+      page,
+      'katchup-send-message',
+      {
+        body: sendShape({
+          receiver: testData.victimKpostId,
+          subject: `QA UI precondition ${Date.now()}`,
+          actualMessage: 'QA bench precondition — brings the conversation into the list.',
+        }),
+      },
+      'ui-actions:seed-conversation',
+    );
+    expect(
+      seeded?.status,
+      'the conversation could not be seeded, so the composer is unreachable',
+    ).toBeLessThan(400);
+    await gotoKatchup(page);
+  }
+
   await expect(conversation, 'the 2nd QA account is in the conversation list').toBeVisible({
     timeout: 20_000,
   });
@@ -93,9 +142,13 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
 
   test('Delete removes a sent message from the conversation (send → Delete → Confirm → gone) @ui', async ({
     page,
+    endpoints,
+  }: {
+    page: Page;
+    endpoints: EndpointExecutor;
   }) => {
     const subject = `QA UI del ${Date.now()}`;
-    await openComposer(page);
+    await openComposer(page, endpoints);
     const message = await sendMessage(page, subject, 'QA UI delete — self-cleaning');
 
     // Bell menu → Delete → the "Delete Message" confirm dialog → Confirm.
@@ -111,21 +164,55 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
     });
     await confirm.click();
 
-    // Clicking Confirm triggers the delete (handleDeleteButtonClickBell) and the dialog closes — that
-    // is the reliable "delete was accepted" signal. The message shows in several DOM places (thread,
-    // recents, the list preview), so asserting the text vanishes everywhere is unreliable; the actual
-    // server-side removal is the API Katchup lifecycle's assertion (deleteKatchUpMessage, green).
+    // The dialog closing says the click was ACCEPTED. It is not evidence that anything was deleted:
+    // it happens on click, whether or not the server ever answered.
     await expect(confirm, 'the delete was accepted (the confirm dialog closed)').toHaveCount(0, {
       timeout: 15_000,
     });
+
+    /*
+     * The actual assertion — the master plan's own example, "delete → read-back proves absence".
+     *
+     * Asserting the text vanishes from the page is unreliable (the subject renders in the thread, in
+     * recents and in the list preview, and sender-side delete does not clear all three), and it would
+     * still only be the client's opinion. This asks the SERVER, using the browser's own token so no
+     * second session is created and the page's session is not displaced — see the api-evidence helper.
+     */
+    const conversation = await observeAsBrowser(
+      endpoints,
+      page,
+      'katchup-conversation',
+      {
+        body: {
+          groupFlag: false,
+          firstMsgID: null,
+          lastMsgID: null,
+          receiver: testData.victimKpostId,
+        },
+      },
+      'ui-delete:read-back',
+    );
+    test.skip(
+      conversation === undefined,
+      'the page holds no token, so the deletion could not be observed — inconclusive, not a pass',
+    );
+    expect(
+      conversation?.rows.some((row) => row.subject === subject),
+      `the deleted message must be gone from the sender's conversation on the SERVER, not merely ` +
+        `from the page. Subject "${subject}", read status ${String(conversation?.status)}.`,
+    ).toBe(false);
   });
 
   test('Edit re-sends an edited body and marks it Edited (send → Edit → resend → Edited), then deletes @ui', async ({
     page,
+    endpoints,
+  }: {
+    page: Page;
+    endpoints: EndpointExecutor;
   }) => {
     const subject = `QA UI edit ${Date.now()}`;
     const editedBody = 'QA UI edited body — self-cleaning';
-    await openComposer(page);
+    await openComposer(page, endpoints);
     const message = await sendMessage(page, subject, 'QA UI original body');
 
     // Bell menu → Edit → the composer reopens pre-filled (EditMsg mode).
@@ -168,9 +255,13 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
 
   test('Save bookmarks a sent message (send → Save → accepted), then deletes @ui', async ({
     page,
+    endpoints,
+  }: {
+    page: Page;
+    endpoints: EndpointExecutor;
   }) => {
     const subject = `QA UI save ${Date.now()}`;
-    await openComposer(page);
+    await openComposer(page, endpoints);
     const message = await sendMessage(page, subject, 'QA UI save — self-cleaning');
 
     // Bell menu → Save. This is a single-click action (`handleSaveButtonClickBell([msgID])`) that
@@ -188,9 +279,13 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
 
   test('Copy copies a sent message to the clipboard (send → Copy → accepted), then deletes @ui', async ({
     page,
+    endpoints,
+  }: {
+    page: Page;
+    endpoints: EndpointExecutor;
   }) => {
     const subject = `QA UI copy ${Date.now()}`;
-    await openComposer(page);
+    await openComposer(page, endpoints);
     const message = await sendMessage(page, subject, 'QA UI copy — self-cleaning');
 
     // Bell menu → Copy (`handleCopyToClipboard`). Reading the clipboard is permission-gated and flaky

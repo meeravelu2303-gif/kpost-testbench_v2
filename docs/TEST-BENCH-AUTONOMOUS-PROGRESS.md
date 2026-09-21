@@ -9,29 +9,30 @@ Newest phase last. Every phase ends with the §24 completion record.
 
 ## Phase index
 
-| Phase | Name                                                    | Status      |
-| ----- | ------------------------------------------------------- | ----------- |
-| 3     | Actor model foundation                                  | COMPLETE    |
-| 4A–4D | State discovery / model / observation / calibration     | COMPLETE    |
-| 4D-B  | Test account registry                                   | COMPLETE    |
-| 4F    | Architecture / duplication / hygiene audit              | COMPLETE    |
-| 4G    | Tier 0 test-correctness repair                          | COMPLETE    |
-| 4H    | Architecture boundary & hygiene review                  | COMPLETE    |
-| 4I    | Test executability & skip elimination                   | COMPLETE    |
-| 4I-B  | Execution infrastructure repair & API coverage recovery | COMPLETE    |
-| 5     | Business invariant model                                | COMPLETE    |
-| 5B    | Safety-control correctness: the real-host signal        | COMPLETE    |
-| 5C    | A refused probe is inconclusive, never a finding        | COMPLETE    |
-| 6     | Application flow execution engine                       | COMPLETE    |
-| 7     | State transition validation                             | COMPLETE    |
-| 8     | Cross-actor and multi-channel coverage                  | COMPLETE    |
-| 9     | Side-effect verification                                | COMPLETE    |
-| 10    | Failure analysis upgrade                                | COMPLETE    |
-| 11    | Independent confirmation engine                         | COMPLETE    |
-| 12    | Duplicate detection and canonical defects               | COMPLETE    |
-| 13    | Confidence gate (shadow-only, deliberately)             | COMPLETE    |
-| 14    | Bugzilla integration                                    | GATED       |
-| 15–20 | Coverage, cleanup, orchestration, regression, discovery | NOT STARTED |
+| Phase | Name                                                       | Status      |
+| ----- | ---------------------------------------------------------- | ----------- |
+| 3     | Actor model foundation                                     | COMPLETE    |
+| 4A–4D | State discovery / model / observation / calibration        | COMPLETE    |
+| 4D-B  | Test account registry                                      | COMPLETE    |
+| 4F    | Architecture / duplication / hygiene audit                 | COMPLETE    |
+| 4G    | Tier 0 test-correctness repair                             | COMPLETE    |
+| 4H    | Architecture boundary & hygiene review                     | COMPLETE    |
+| 4I    | Test executability & skip elimination                      | COMPLETE    |
+| 4I-B  | Execution infrastructure repair & API coverage recovery    | COMPLETE    |
+| 5     | Business invariant model                                   | COMPLETE    |
+| 5B    | Safety-control correctness: the real-host signal           | COMPLETE    |
+| 5C    | A refused probe is inconclusive, never a finding           | COMPLETE    |
+| 6     | Application flow execution engine                          | COMPLETE    |
+| 7     | State transition validation                                | COMPLETE    |
+| 8     | Cross-actor and multi-channel coverage                     | COMPLETE    |
+| 9     | Side-effect verification                                   | COMPLETE    |
+| 10    | Failure analysis upgrade                                   | COMPLETE    |
+| 11    | Independent confirmation engine                            | COMPLETE    |
+| 12    | Duplicate detection and canonical defects                  | COMPLETE    |
+| 13    | Confidence gate (shadow-only, deliberately)                | COMPLETE    |
+| 14    | Bugzilla integration                                       | GATED       |
+| 15    | Complete API coverage                                      | COMPLETE    |
+| 16–20 | UI coverage, cleanup, orchestration, regression, discovery | NOT STARTED |
 
 Phases 3–4H are recorded in `CLAUDE.md` §8 (the repository's decision log) and are verified from the
 code, the guards and the git history rather than re-derived here.
@@ -1448,3 +1449,123 @@ NEXT
 Phases 15–17 (complete API coverage, complete UI coverage, resource/cleanup hardening) are
 **independent of this gate** and can proceed without it. Phase 15 is the natural next step: 64
 registered endpoints have no generated tests, measured in Phase 4I-B.
+
+---
+
+## PHASE: 15 — Complete API coverage
+
+STATUS: COMPLETE
+
+OBJECTIVE
+Master plan §17: an authoritative coverage matrix over every registered endpoint, with no
+unexplained gaps — and explicitly NOT thousands of uncontrolled live-write tests.
+
+THE NUMBER, RECOMPUTED RATHER THAN REUSED
+
+The brief cites ~64 endpoints without generated tests. **Measured from the current repository, that
+number is now 0.** It was real when Phase 4I found it and has since been closed:
+
+|                                |         Count |
+| ------------------------------ | ------------: |
+| Registered endpoints           |       **350** |
+| Generated validator cases      |           289 |
+| Driven by a hand-written flow  |           175 |
+| Flow only (no generated cases) |            59 |
+| Documented exclusions          |             5 |
+| **Blocked**                    | **0** (was 2) |
+| **NOT_YET_COVERED**            |         **0** |
+
+289 + 59 + 2 accounted for the 350 before this phase; the 2 are now closed, so every endpoint reaches
+an execution layer. The brief's instruction not to assume "no generated test" means "untested" was
+the right caution: 59 endpoints are covered behaviourally by a flow and would look uncovered to a
+generator-only count.
+
+WHAT WAS ACTUALLY MISSING — the other dimensions
+
+The old matrix measured three things (contract, flow, live). The plan asks for ten, and the gaps are
+there, not in execution:
+
+| Dimension                                      | Covered | of 350 |
+| ---------------------------------------------- | ------: | -----: |
+| A schema is held (contract declared)           |     279 |        |
+| Generated validator cases                      |     289 |        |
+| Negative / input-validation probes             |     289 |        |
+| Auth + security probes                         |     251 |        |
+| Named by a business invariant                  |      39 |        |
+| …and that invariant declares observed states   |      13 |        |
+| Cross-checked by a UI spec                     |       6 |        |
+| Observed by a cross-actor or confirmation spec |      10 |        |
+
+They are deliberately NOT summed into a score: a percentage lets a strong dimension hide a missing
+one, which is the exact failure the matrix exists to prevent.
+
+IMPLEMENTED
+
+**The matrix generator extended from 3 dimensions to 10**, with the full column set the brief asks
+for plus a REASON column, so no status is unexplained. Business-rule and state coverage are read from
+the **invariant registry** (`appliesTo`, `observedStates`), never from a test title or a filename —
+otherwise the matrix would reward naming a file well rather than declaring a rule. `appliesTo` is
+already registry-validated, so a typo cannot masquerade as coverage.
+
+**Live coverage is three-valued** (`default` / `gated` / `—`) rather than a tick, because "never
+runs live" and "runs live only behind its lifecycle flag" are very different claims and a boolean
+flatters the second into the first.
+
+**The 2 blocked endpoints are CLOSED — the debt was paid, not reclassified.**
+`group-download-image` and `group-download-full-image` are GETs keyed by a runtime group id. Their
+recorded recovery path was "an authorised-read concept (the read equivalent of `allowLiveWrite`)".
+Phase 8 built exactly that, so the group lifecycle now drives both with `allowLiveRead`, against the
+image it sets and before it removes it. The entries were **deleted** from
+`BLOCKED_BY_ARCHITECTURE` rather than moved to `DOCUMENTED_EXCLUSIONS`, because "not applicable"
+ends a conversation that here was genuinely finished.
+
+FILES CHANGED
+`tests/framework/endpoint-execution-matrix.spec.ts` (10 dimensions, reason column, blockers cleared,
++4 guards), `tests/api/kpost/group/feature.spec.ts` (the two downloads, `readAs` helper),
+`docs/ENDPOINT-EXECUTION-MATRIX.md` (regenerated).
+
+TESTS
++4 framework guards: every endpoint carries an actionable reason; a documented exclusion is genuinely
+outside the generated matrix (a stale exclusion is worse than none — each names a real hazard, so one
+that starts being generated means the hazard is live); an endpoint cleared for live is actually
+executed by something (`productionSafe` is permission, not coverage); the blocked list and the
+reported statuses agree.
+
+VERIFICATION
+typecheck 0 · lint 0 errors / 32 warnings (baseline) · framework **853 pass / 4 skip**.
+
+LIVE EXECUTION
+Group lifecycle re-run on live with the two downloads. Both **answer 204**. Resources cleaned.
+
+FINDINGS
+
+- **NEW: `group-admin-access` answers HTTP 500** —
+  `"Make user as Admin or remove Admin in an Existing Group failed"` — on a client-reachable path
+  where a 4xx belongs. This is also why the existing FR-GM-012/013 promote/demote test fails; that
+  failure was **pre-existing and had not been recorded**, and running the lifecycle live surfaced the
+  cause. Same class as the Kall scheduled-call 500s already in the decision log. Recorded, not filed.
+- **The image downloads are covered, but BOUNDED, and the record says which.** Both answer 204
+  because `group-update-image` sends only the groupKpostID — uploading a real file is the documented
+  attachment-upload gap. So what is proven is that the endpoints are REACHED with a real runtime id
+  and answer correctly for a group with no image. Fetching actual image bytes still needs that gap
+  closed, and the assertion is `< 500` rather than pretending otherwise.
+
+CONFLICTS
+None. The four earlier findings (Katchup count, group membership, the bench session-displacement
+defect, and the disproven confidentiality classification) are untouched and still recorded.
+
+BLOCKERS
+None new, and one removed. The scoped ones stand: Admin UI deployment, Kall `connected`,
+the visible-vs-confidential Copy account, KDiary UI, the non-contact UI composer.
+
+SAFETY
+No gate weakened and no fuzz added. `allowLiveRead` requires `destructive !== true`, so it cannot
+unlock a write by construction — a Phase 8 guard asserts that. Phase 14 remains GATED: nothing here
+touched filing.
+
+COVERAGE IMPACT
+Blocked endpoints 2 → **0**; NOT_YET_COVERED 0 → 0 (held); matrix dimensions 3 → **10**.
+Framework guards 849 → **853**.
+
+NEXT
+Phase 16 — complete UI coverage (master plan §18).

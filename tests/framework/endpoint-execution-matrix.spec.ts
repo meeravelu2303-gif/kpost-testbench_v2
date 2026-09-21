@@ -1,9 +1,10 @@
 import { apiRegistry } from '@api/definitions/index';
+import { BUSINESS_INVARIANTS } from '../../src/business-rules/invariants/index';
 import type { EndpointFilter } from '@api/registry/api-registry';
 import { ROOT_DIR } from '@config/constants';
 import { RUN_PROFILES, RUN_PROFILE_NAMES, type RunProfile } from '@config/run-profiles';
 import { expect, test } from '@fixtures';
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -58,26 +59,47 @@ const DOCUMENTED_EXCLUSIONS: Readonly<Record<string, string>> = {
  * not "not applicable". Each states the blocker, the code that enforces it, and what would lift it.
  */
 const BLOCKED_BY_ARCHITECTURE: Readonly<Record<string, string>> = {
-  'group-download-image':
-    'A non-destructive GET keyed by a RUNTIME group id. The group lifecycle creates a group and ' +
-    'holds its groupKpostID, so the id exists — but `liveWriteAuthorized` in production-guard.ts ' +
-    'requires `endpoint.destructive === true`, so `allowLiveWrite` cannot authorise a READ, and the ' +
-    'endpoint is not `productionSafe` because a fabricated group id would 404. Kall solves this for ' +
-    'its id-keyed reads only because they are POST, which defaults to destructive. RECOVERY: an ' +
-    'authorised-read concept (the read equivalent of `allowLiveWrite`) so a flow can drive a read ' +
-    'against a resource it just created. Declaring a GET destructive to borrow the write path would ' +
-    'misstate the endpoint and is deliberately not done.',
-  'group-download-full-image':
-    'Same blocker and same recovery path as `group-download-image`, for the full-size variant.',
+  /*
+   * EMPTY, and that is the point.
+   *
+   * It held `group-download-image` and `group-download-full-image` — non-destructive GETs keyed by
+   * a RUNTIME group id, which no static value can reach. The recorded recovery path was "an
+   * authorised-read concept (the read equivalent of `allowLiveWrite`) so a flow can drive a read
+   * against a resource it just created". Phase 8 built exactly that (`allowLiveRead`), and the group
+   * lifecycle now drives both downloads against the image it sets, before it removes it.
+   *
+   * The entries were DELETED rather than moved to DOCUMENTED_EXCLUSIONS: the debt was paid, not
+   * reclassified. Keeping this record empty rather than removing it altogether is deliberate — it is
+   * where the next genuine architecture blocker goes, and an empty list is a claim a reviewer can
+   * check.
+   */
 };
 
 interface Row {
   id: string;
   suite: string;
+  module: string;
+  method: string;
+  path: string;
   label: string;
+  /** A request or response SCHEMA is held for this endpoint — the contract itself, not a test. */
+  contractDeclared: boolean;
+  /** `describeEndpointCases`/`Contracts` generates validator cases for it. */
   contract: boolean;
+  /** The request fuzzers apply: generated, and not excluded by `skipValidators`. */
+  negative: boolean;
+  /** The auth/security probes apply: generated, authenticated, and not excluded. */
+  security: boolean;
   flow: boolean;
   live: boolean;
+  /** An invariant that names this endpoint also declares the states it observes. */
+  state: boolean;
+  /** Some business invariant names this endpoint in `appliesTo`. */
+  businessRule: boolean;
+  /** A UI spec drives or asserts against this endpoint. */
+  uiCrossCheck: boolean;
+  /** A cross-actor or confirmation spec observes this endpoint independently. */
+  confirmation: boolean;
   destructive: boolean;
   sideEffect: string;
   otpDependent: string | null;
@@ -171,10 +193,60 @@ function flowCovered(registered: readonly string[]): Set<string> {
   return new Set(registered.filter((id) => quoted.has(id)));
 }
 
+/**
+ * Endpoint ids quoted in the spec files under `dirs` — the same distinctive-kebab rule
+ * `flowCovered` uses, applied to a narrower set of directories so a dimension can be measured
+ * separately from "is it driven at all".
+ */
+function idsQuotedIn(
+  registered: readonly string[],
+  dirs: readonly string[],
+  onlyFiles?: RegExp,
+): Set<string> {
+  const quoted = new Set<string>();
+  for (const dir of dirs) {
+    const root = path.join(ROOT_DIR, dir);
+    if (!existsSync(root)) continue;
+    for (const file of walk(root, (name) => name.endsWith('.ts'))) {
+      if (onlyFiles && !onlyFiles.test(file)) continue;
+      for (const match of code(file).matchAll(/'([a-z][a-z0-9-]{4,})'/g))
+        quoted.add(match[1] as string);
+    }
+  }
+  return new Set(registered.filter((id) => quoted.has(id)));
+}
+
+/**
+ * Business-rule and state coverage, read from the INVARIANT REGISTRY rather than from test titles.
+ *
+ * `appliesTo` names endpoint ids and `observedStates` names the states a rule is about, so both
+ * dimensions come from the same authoritative declaration the invariant catalogue already maintains.
+ * Deriving either from a spec filename would reward naming a file well rather than declaring a rule.
+ */
+function invariantCoverage(): { rule: Set<string>; state: Set<string> } {
+  const rule = new Set<string>();
+  const state = new Set<string>();
+  for (const entry of BUSINESS_INVARIANTS) {
+    for (const endpointId of entry.appliesTo) {
+      rule.add(endpointId);
+      if ((entry.observedStates?.length ?? 0) > 0) state.add(endpointId);
+    }
+  }
+  return { rule, state };
+}
+
+/** Whether a validator family is excluded for this endpoint by its own `skipValidators`. */
+const skips = (skipped: readonly string[], prefixes: readonly string[]): boolean =>
+  skipped.some((name) => prefixes.some((prefix) => name.startsWith(prefix)));
+
 function buildRows(): Row[] {
   const registered = apiRegistry.all();
+  const ids = registered.map((definition) => definition.id);
   const contract = contractCovered().ids;
-  const flow = flowCovered(registered.map((definition) => definition.id));
+  const flow = flowCovered(ids);
+  const { rule, state } = invariantCoverage();
+  const ui = idsQuotedIn(ids, ['tests/e2e', 'tests/e2e-admin']);
+  const confirmed = idsQuotedIn(ids, ['tests/api'], /(cross-actor|confirmation)\.spec\.ts$/);
   return registered
     .map((definition): Row => {
       const extra = definition as typeof definition & {
@@ -183,13 +255,29 @@ function buildRows(): Row[] {
         mockFixture?: boolean;
         otpDependent?: string;
       };
+      const skipped = definition.skipValidators ?? [];
+      const generated = contract.has(definition.id);
       return {
         id: definition.id,
         suite: definition.suite ?? 'kpost-api',
+        module: definition.tags?.[1] ?? definition.tags?.[0] ?? '—',
+        method: definition.method,
+        path: definition.path,
         label: `${definition.method} ${definition.path}`,
-        contract: contract.has(definition.id),
+        contractDeclared:
+          definition.requestSchema !== undefined || definition.responseSchema !== undefined,
+        contract: generated,
+        negative: generated && !skips(skipped, ['request.']),
+        security:
+          generated &&
+          definition.authentication?.required !== false &&
+          !skips(skipped, ['authentication.', 'authorization.', 'security.']),
         flow: flow.has(definition.id),
         live: extra.productionSafe === true,
+        state: state.has(definition.id),
+        businessRule: rule.has(definition.id),
+        uiCrossCheck: ui.has(definition.id),
+        confirmation: confirmed.has(definition.id),
         destructive: definition.destructive === true,
         sideEffect: extra.sideEffect ?? 'data',
         otpDependent: extra.otpDependent ?? null,
@@ -201,6 +289,37 @@ function buildRows(): Row[] {
 
 /** Report rendering, kept out of the test body: a ternary there reads as test logic. */
 const tick = (value: boolean): string => (value ? 'yes' : '—');
+
+/**
+ * How this endpoint reaches a live host.
+ *
+ * Three-valued rather than a tick, because "never runs live" and "runs live only behind its
+ * lifecycle flag" are very different claims and a boolean would flatter the second into the first.
+ */
+function liveness(row: Row): string {
+  if (row.live) return 'default';
+  return row.flow ? 'gated' : '—';
+}
+
+/**
+ * Why a row sits where it does — the column that stops any gap being unexplained.
+ *
+ * It names the FIRST missing dimension that matters for this endpoint kind, rather than listing
+ * every absent tick: a read has no business-rule obligation simply for existing, and a matrix that
+ * demanded one would manufacture invariants to satisfy itself.
+ */
+function reason(row: Row): string {
+  if (DOCUMENTED_EXCLUSIONS[row.id]) return 'documented exclusion — see above';
+  if (BLOCKED_BY_ARCHITECTURE[row.id]) return 'blocked — recovery path above';
+  if (!row.contract && !row.flow) return 'no generated case and no flow drives it';
+  if (!row.contract) return 'driven by a flow; no generated validator cases';
+  if (!row.security)
+    return row.negative
+      ? 'security probes excluded (skipValidators, or the endpoint is unauthenticated)'
+      : 'validator families excluded by the endpoint own skipValidators';
+  if (!row.live && !row.flow) return 'contract-validated off live only';
+  return 'covered at every layer that applies to it';
+}
 
 /** How a row is covered today, in the master plan's vocabulary. */
 function status(row: Row): string {
@@ -251,6 +370,56 @@ test.describe('endpoint execution matrix @framework', () => {
     ).toEqual([]);
   });
 
+  test('every endpoint carries a reason, so no gap is unexplained @framework', () => {
+    /*
+     * The master plan asks that every endpoint end as COVERED, NOT_APPLICABLE with evidence,
+     * BLOCKED with a recovery path, or NOT_YET_COVERED. A status without a reason satisfies the
+     * letter of that and none of the point: "NOT_YET_COVERED" alone tells a reader nothing about
+     * what to do next.
+     */
+    const unexplained = buildRows()
+      .filter((row) => reason(row).trim().length < 20)
+      .map((row) => row.id);
+    expect(unexplained, 'a status needs a reason a reviewer can act on').toEqual([]);
+  });
+
+  test('a documented exclusion is genuinely outside the generated matrix @framework', () => {
+    /*
+     * An exclusion that the generator actually covers is stale, and stale exclusions are worse
+     * than none: they claim a deliberate decision where the truth is that nobody re-checked. Each
+     * of these names a real hazard — a session-ending call, an OTP the bench cannot obtain, an
+     * account KPOST cannot delete — so if one starts being generated, that hazard is live.
+     */
+    const rows = buildRows();
+    const wronglyGenerated = Object.keys(DOCUMENTED_EXCLUSIONS).filter(
+      (id) => rows.find((row) => row.id === id)?.contract === true,
+    );
+    expect(
+      wronglyGenerated,
+      'this endpoint is excluded for a safety reason and is now being generated anyway',
+    ).toEqual([]);
+  });
+
+  test('an endpoint cleared for live is actually executed by something @framework', () => {
+    /*
+     * `productionSafe` is permission, not coverage. One that nothing generates and no flow drives
+     * is a claim that an endpoint is safe to run live, with nothing running it — which reads on
+     * every report as coverage and is not.
+     */
+    const permissionOnly = buildRows()
+      .filter((row) => row.live && !row.contract && !row.flow)
+      .map((row) => row.id);
+    expect(permissionOnly, 'cleared for live, but nothing executes it').toEqual([]);
+  });
+
+  test('the blocked list and the reported statuses agree @framework', () => {
+    // The list is empty today. If a row still reported BLOCKED, one of the two would be lying.
+    const blockedRows = buildRows()
+      .filter((row) => status(row).startsWith('BLOCKED'))
+      .map((row) => row.id);
+    expect(blockedRows.sort()).toEqual(Object.keys(BLOCKED_BY_ARCHITECTURE).sort());
+  });
+
   test('writes docs/ENDPOINT-EXECUTION-MATRIX.md', () => {
     const rows = buildRows();
     const count = (predicate: (row: Row) => boolean): string =>
@@ -275,8 +444,38 @@ test.describe('endpoint execution matrix @framework', () => {
       `| — both layers | ${count((row) => row.contract && row.flow)} |`,
       `| — flow only (no generated cases) | ${count((row) => row.flow && !row.contract)} |`,
       `| — cleared for live (\`productionSafe\`) | ${count((row) => row.live)} |`,
+      `| — a schema is held for the endpoint (contract declared) | ${count((row) => row.contractDeclared)} |`,
+      `| — negative / input-validation probes apply | ${count((row) => row.negative)} |`,
+      `| — auth + security probes apply | ${count((row) => row.security)} |`,
+      `| — named by a business invariant | ${count((row) => row.businessRule)} |`,
+      `| — that invariant also declares observed states | ${count((row) => row.state)} |`,
+      `| — cross-checked by a UI spec | ${count((row) => row.uiCrossCheck)} |`,
+      `| — observed by a cross-actor or confirmation spec | ${count((row) => row.confirmation)} |`,
       `| — documented exclusions (not applicable) | ${String(Object.keys(DOCUMENTED_EXCLUSIONS).length)} |`,
       `| — blocked (coverage debt, recovery path below) | ${String(Object.keys(BLOCKED_BY_ARCHITECTURE).length)} |`,
+      '',
+      '## Reading the coverage dimensions',
+      '',
+      'They answer different questions and are deliberately NOT summed into a single score — a',
+      'percentage would let a strong dimension hide a missing one, which is the exact failure this',
+      'matrix exists to prevent.',
+      '',
+      '| Dimension | What a yes claims |',
+      '| --------- | ----------------- |',
+      '| Contract | a request or response SCHEMA is held for this endpoint — the contract itself, not a test |',
+      '| Generated | describeEndpointCases / describeEndpointContracts builds validator cases for it |',
+      '| Negative | the request fuzzers apply. For a GET that is query and path only: the body fuzzers are gated on carriesRequestBody, because a body sent with a GET is ignored and a 200 would be a false finding |',
+      '| Security | the auth-token and security probes apply — generated, authenticated, and not excluded by the endpoint own skipValidators |',
+      '| Flow | a hand-written application flow drives it |',
+      '| Live | default = runs on a normal live run; gated = driven live only behind its *_LIFECYCLE flag |',
+      '| State | an invariant naming this endpoint also declares the states it observes |',
+      '| Rule | some business invariant names it in appliesTo |',
+      '| UI | a UI spec drives or asserts against it |',
+      '| Confirm | a cross-actor or confirmation spec observes it independently |',
+      '',
+      '**Business-rule and state coverage are read from the INVARIANT REGISTRY**, never from a test',
+      'title or a filename — otherwise the matrix would reward naming a file well rather than',
+      'declaring a rule.',
       '',
       '## Documented exclusions',
       '',
@@ -317,8 +516,8 @@ test.describe('endpoint execution matrix @framework', () => {
       '',
       '## Per-endpoint',
       '',
-      '| Suite | Endpoint | Contract | Flow | Live | Write class | Status |',
-      '| ----- | -------- | -------- | ---- | ---- | ----------- | ------ |',
+      '| Endpoint | Module | Method | Path | Contract | Generated | Negative | Security | Flow | Live | State | Rule | UI | Confirm | Write class | Status | Reason |',
+      '| -------- | ------ | ------ | ---- | -------- | --------- | -------- | -------- | ---- | ---- | ----- | ---- | -- | ------- | ----------- | ------ | ------ |',
       ...rows.map((row) => {
         const otp = row.otpDependent ? ` / otp:${row.otpDependent}` : '';
         const writeClass = row.mockFixture
@@ -327,8 +526,11 @@ test.describe('endpoint execution matrix @framework', () => {
             ? `${row.sideEffect}${otp}`
             : 'read';
         return (
-          `| ${row.suite} | \`${row.id}\`<br>\`${row.label}\` | ${tick(row.contract)} | ` +
-          `${tick(row.flow)} | ${tick(row.live)} | ${writeClass} | ${status(row)} |`
+          `| \`${row.id}\` | ${row.module} | ${row.method} | \`${row.path}\` | ` +
+          `${tick(row.contractDeclared)} | ${tick(row.contract)} | ${tick(row.negative)} | ` +
+          `${tick(row.security)} | ${tick(row.flow)} | ${liveness(row)} | ${tick(row.state)} | ` +
+          `${tick(row.businessRule)} | ${tick(row.uiCrossCheck)} | ${tick(row.confirmation)} | ` +
+          `${writeClass} | ${status(row)} | ${reason(row)} |`
         );
       }),
       '',
