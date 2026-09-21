@@ -12,8 +12,8 @@ gap Phase 4I found, where the ledger read 0 uncovered while 64 endpoints had no 
 | - | ----: |
 | Registered endpoints | **350** |
 | — contract matrix (generated validator cases) | 289 |
-| — driven by a hand-written application flow | 177 |
-| — both layers | 116 |
+| — driven by a hand-written application flow | 183 |
+| — both layers | 122 |
 | — flow only (no generated cases) | 61 |
 | — cleared for live (`productionSafe`) | 116 |
 | — a schema is held for the endpoint (contract declared) | 279 |
@@ -22,7 +22,7 @@ gap Phase 4I found, where the ledger read 0 uncovered while 64 endpoints had no 
 | — named by a business invariant | 39 |
 | — that invariant also declares observed states | 13 |
 | — cross-checked by a UI spec | 6 |
-| — observed by a cross-actor or confirmation spec | 10 |
+| — observed by a cross-actor or confirmation spec | 18 |
 | — documented exclusions (not applicable) | 5 |
 | — blocked (coverage debt, recovery path below) | 0 |
 
@@ -247,7 +247,7 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `common-send-otp` | common | POST | `/v2/common/sendOTP/` | yes | yes | yes | — | yes | gated | — | — | — | — | external / otp:sends | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `common-send-otp-to-mail` | common | POST | `/v2/common/sendOTPtoMail/` | yes | yes | yes | — | yes | gated | — | — | — | — | external / otp:sends | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `common-states` | common | GET | `/v2/common/getStates/` | — | yes | yes | — | — | default | — | — | — | — | read | COVERED (contract) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
-| `common-total-count-by-date` | common | POST | `/v2/common/getTotalCountByDate` | yes | yes | yes | — | — | default | — | — | — | — | read | COVERED (contract) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
+| `common-total-count-by-date` | common | POST | `/v2/common/getTotalCountByDate` | yes | yes | yes | — | yes | default | — | — | — | yes | read | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `common-unique-name-exist` | common | POST | `/v2/common/uniqueNameExist` | yes | yes | yes | — | — | default | — | — | — | — | read | COVERED (contract) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `common-update-company-logo` | common | POST | `/v2/common/updateCompanyLogo` | yes | yes | yes | yes | yes | gated | — | — | — | — | global | COVERED (contract + flow) | covered at every layer that applies to it |
 | `common-update-flutter-app-version` | common | POST | `/v2/common/updateFlutterAppVersion` | yes | yes | yes | — | yes | gated | — | — | — | — | global | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
@@ -261,14 +261,14 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `contacts-block-multiple` | contacts | POST | `/v2/contacts/blockOrUnBlockMultipleContact` | yes | — | — | — | yes | gated | — | — | — | — | data | COVERED (flow only) | driven by a flow; no generated validator cases |
 | `contacts-blocked` | contacts | GET | `/v2/contacts/getblockContactDetails` | — | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
 | `contacts-delete` | contacts | POST | `/v2/contacts/deleteContact/` | yes | — | — | — | yes | gated | — | — | — | — | data | COVERED (flow only) | driven by a flow; no generated validator cases |
-| `contacts-global-search` | contacts | POST | `/v2/contacts/globalSearch/` | yes | yes | yes | yes | — | default | — | yes | — | — | read | COVERED (contract) | covered at every layer that applies to it |
+| `contacts-global-search` | contacts | POST | `/v2/contacts/globalSearch/` | yes | yes | yes | yes | yes | default | — | yes | — | yes | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `contacts-import-phone` | contacts | POST | `/v2/contacts/importPhoneContacts/` | yes | — | — | — | yes | gated | — | — | — | — | data | COVERED (flow only) | driven by a flow; no generated validator cases |
 | `contacts-imported-phone` | contacts | GET | `/v2/contacts/getImportedPhoneContacts/` | yes | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
 | `contacts-my-contacts` | contacts | POST | `/v2/contacts/myContacts/` | yes | yes | yes | yes | yes | default | — | yes | — | — | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `contacts-my-groups` | contacts | POST | `/v2/contacts/myGroups/` | yes | yes | yes | yes | yes | default | — | yes | yes | yes | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `contacts-my-unknown-contacts` | contacts | POST | `/v2/contacts/myUnknownKatchupContacts/` | yes | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
 | `contacts-my-unknown-groups` | contacts | POST | `/v2/contacts/myUnknownGroups/` | yes | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
-| `contacts-search-details` | contacts | POST | `/v2/contacts/getSearchDetails/` | yes | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
+| `contacts-search-details` | contacts | POST | `/v2/contacts/getSearchDetails/` | yes | yes | yes | yes | yes | default | — | — | — | yes | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `contacts-update-invite` | contacts | POST | `/v2/contacts/updateInviteStatus/` | yes | — | — | — | yes | gated | — | — | — | — | data | COVERED (flow only) | driven by a flow; no generated validator cases |
 | `create-company` | critical | POST | `/companies` | yes | yes | yes | yes | yes | gated | — | — | — | — | mock fixture | COVERED (contract + flow) | covered at every layer that applies to it |
 | `create-user` | critical | POST | `/users` | yes | yes | yes | yes | yes | gated | — | — | — | — | mock fixture | COVERED (contract + flow) | covered at every layer that applies to it |
@@ -278,7 +278,7 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `delete-user` | users | DELETE | `/users/{id}` | — | yes | yes | yes | yes | gated | — | — | — | — | mock fixture | COVERED (contract + flow) | covered at every layer that applies to it |
 | `get-user` | critical | GET | `/users/{id}` | yes | yes | yes | yes | yes | gated | — | — | — | — | mock fixture | COVERED (contract + flow) | covered at every layer that applies to it |
 | `group-add-user` | group | POST | `/v2/group/addUserToGroup/` | yes | — | — | — | yes | gated | — | yes | — | — | data | COVERED (flow only) | driven by a flow; no generated validator cases |
-| `group-admin-access` | group | POST | `/v2/group/addOrRemoveAdminAccess/` | yes | — | — | — | yes | gated | — | yes | — | — | data | COVERED (flow only) | driven by a flow; no generated validator cases |
+| `group-admin-access` | group | POST | `/v2/group/addOrRemoveAdminAccess/` | yes | — | — | — | yes | gated | — | yes | — | yes | data | COVERED (flow only) | driven by a flow; no generated validator cases |
 | `group-create` | group | POST | `/v2/group/createUserGroup/` | yes | — | — | — | yes | gated | — | yes | — | yes | data | COVERED (flow only) | driven by a flow; no generated validator cases |
 | `group-delete` | group | POST | `/v2/group/deleteGroup` | yes | — | — | — | yes | gated | — | yes | yes | yes | data | COVERED (flow only) | driven by a flow; no generated validator cases |
 | `group-download-full-image` | group | GET | `/v2/group/downloadGroupFullProfileImage/{groupKpostID}/{kpostID}` | — | — | — | — | yes | gated | — | — | — | — | read | COVERED (flow only) | driven by a flow; no generated validator cases |
@@ -295,7 +295,7 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `kall-dashboard` | kall | POST | `/v2/kall/kallDashboard` | yes | yes | yes | yes | — | default | yes | yes | — | — | read | COVERED (contract) | covered at every layer that applies to it |
 | `kall-end-individual` | kall | POST | `/v2/kall/endIndividualKall/` | yes | — | — | — | yes | gated | — | — | — | — | data | COVERED (flow only) | driven by a flow; no generated validator cases |
 | `kall-end-kool` | kall | POST | `/v2/kall/endKoolKall` | yes | — | — | — | yes | gated | — | — | — | — | data | COVERED (flow only) | driven by a flow; no generated validator cases |
-| `kall-fetch-scheduled-repeat` | kall | POST | `/v2/kall/fetchScheduledRepeatKall` | yes | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
+| `kall-fetch-scheduled-repeat` | kall | POST | `/v2/kall/fetchScheduledRepeatKall` | yes | yes | yes | yes | yes | default | — | — | — | yes | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `kall-frequent-contacts` | kall | GET | `/v2/kall/frequentKallContacts` | yes | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
 | `kall-get-status` | kall | POST | `/v2/kall/getKallStatus` | yes | yes | yes | yes | yes | gated | — | — | — | — | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `kall-get-status-by-id` | kall | POST | `/v2/kall/getKallStatusUsingKallID` | yes | yes | yes | yes | yes | gated | — | — | — | — | read | COVERED (contract + flow) | covered at every layer that applies to it |
@@ -392,7 +392,7 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `profile-download-cover` | profile | GET | `/v2/profile/downloadCoverImage/{kpostID}` | — | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
 | `profile-download-full-image` | profile | GET | `/v2/profile/downloadFullProfileImage/{kpostID}` | — | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
 | `profile-download-image` | profile | GET | `/v2/profile/downloadProfileImage/{kpostID}` | — | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
-| `profile-fetch-user-details` | profile | GET | `/v2/profile/fetchUserDetails/` | yes | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
+| `profile-fetch-user-details` | profile | GET | `/v2/profile/fetchUserDetails/` | yes | yes | yes | yes | yes | default | — | — | — | yes | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `profile-forgot-password-or-kpostid` | profile | POST | `/v2/profile/forgotPasswordOrKpostID/` | yes | yes | yes | — | yes | gated | — | — | — | — | external / otp:sends | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `profile-get-languages` | profile | GET | `/v2/profile/getlanguages/` | — | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
 | `profile-get-signature` | profile | GET | `/v2/profile/getSignatureImage` | — | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
@@ -409,7 +409,7 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `profile-send-primary-device-otp` | profile | GET | `/v2/profile/sendPrimaryDeviceOtp/` | yes | yes | yes | yes | — | — | — | — | — | — | external / otp:sends | COVERED (contract) | contract-validated off live only |
 | `profile-set-device-primary` | profile | POST | `/v2/profile/setDeviceAsPrimary/` | yes | yes | yes | yes | yes | gated | — | — | — | — | global / otp:requires | COVERED (contract + flow) | covered at every layer that applies to it |
 | `profile-set-device-secondary` | profile | POST | `/v2/profile/setDeviceAsSecondary` | yes | yes | yes | yes | — | — | — | — | — | — | global / otp:requires | COVERED (contract) | contract-validated off live only |
-| `profile-share-user-details` | profile | POST | `/v2/profile/shareUserDetails` | yes | yes | yes | yes | yes | gated | — | — | — | — | data | COVERED (contract + flow) | covered at every layer that applies to it |
+| `profile-share-user-details` | profile | POST | `/v2/profile/shareUserDetails` | yes | yes | yes | yes | yes | gated | — | — | — | yes | data | COVERED (contract + flow) | covered at every layer that applies to it |
 | `profile-update-about` | profile | POST | `/v2/profile/updateAboutYourself/` | yes | yes | yes | yes | yes | gated | — | — | — | — | data | COVERED (contract + flow) | covered at every layer that applies to it |
 | `profile-update-basic` | profile | POST | `/v2/profile/updateBasicInformation/` | yes | yes | yes | yes | yes | gated | — | — | — | — | data | COVERED (contract + flow) | covered at every layer that applies to it |
 | `profile-update-contact` | profile | POST | `/v2/profile/updateContactInformation/` | yes | yes | yes | yes | yes | gated | — | — | — | — | data | COVERED (contract + flow) | covered at every layer that applies to it |
@@ -438,7 +438,7 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `signup-login-generate-jwt` | signup-login | POST | `/v2/signupLogin/generateJWTokens/` | yes | yes | yes | — | — | — | — | — | — | — | read | COVERED (contract) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `signup-login-kpost-id-exist` | signup-login | POST | `/v2/signupLogin/kpostIdExist/` | yes | yes | yes | — | yes | default | — | yes | — | — | read | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `signup-login-kpost-id-suggestions` | signup-login | POST | `/v2/signupLogin/kpostIDsuggestionList/` | yes | yes | yes | — | yes | default | — | — | — | — | read | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
-| `signup-login-login-history` | signup-login | POST | `/v2/signupLogin/getLoginHistory` | — | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
+| `signup-login-login-history` | signup-login | POST | `/v2/signupLogin/getLoginHistory` | — | yes | yes | yes | yes | default | — | — | — | yes | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `signup-login-logout-all-devices` | signup-login | GET | `/v2/signupLogin/userLogoutFromAllDevices/` | — | yes | yes | yes | yes | gated | — | — | — | — | global | COVERED (contract + flow) | covered at every layer that applies to it |
 | `signup-login-set-access-code` | signup-login | POST | `/v2/signupLogin/setAccessCode` | yes | yes | yes | yes | yes | gated | — | — | — | — | global | COVERED (contract + flow) | covered at every layer that applies to it |
 | `signup-login-signup` | signup-login | POST | `/v2/signupLogin/signup/` | yes | — | — | — | yes | gated | — | yes | — | — | global / otp:requires | COVERED (flow only) | documented exclusion — see above |

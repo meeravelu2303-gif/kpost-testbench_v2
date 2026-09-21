@@ -100,6 +100,14 @@ test.describe('KPost Group · feature flow', { tag: '@kpost-api' }, () => {
       expect.soft(groupKpostID, 'a groupKpostID is returned').toBeTruthy();
 
       if (groupKpostID && groupID) {
+        // The row ids the create response issued for the non-admin members — what promotion needs.
+        const createdMembers = Array.isArray(created.data.memberDetails)
+          ? (created.data.memberDetails as Record<string, unknown>[])
+          : [];
+        const memberRowIds = createdMembers
+          .filter((row) => row.kpostID === testData.victimKpostId)
+          .map((row) => row.id);
+
         const steps: Array<[Principal, string, Record<string, unknown>, string]> = [
           [
             A,
@@ -107,10 +115,19 @@ test.describe('KPost Group · feature flow', { tag: '@kpost-api' }, () => {
             { groupID, groupKpostID, memberDetails: [member(C.username)] },
             'add-user',
           ],
+          /*
+           * `ids` carries the member ROW ids `createUserGroup` issued, not a placeholder.
+           *
+           * This sent `ids: [0]` and had been producing a reproducible HTTP 500 that reached the
+           * backend bug candidates as `group-admin-access`. Confirmed on live
+           * (`backend-confirmation.spec.ts`): with the real row id the same call answers
+           * **200 "Admin added successfully"**, and only the placeholder faults. So the 500 was our
+           * payload, and filing it would have sent a developer after a defect that does not exist.
+           */
           [
             A,
             'group-admin-access',
-            { kpostIDs: [testData.victimKpostId], ids: [0], groupID, hasAdminAccess: 'Y' },
+            { kpostIDs: [testData.victimKpostId], ids: memberRowIds, groupID, hasAdminAccess: 'Y' },
             'admin-access',
           ],
           [A, 'group-edit-name', { groupKpostID, groupKpostName: 'QA Bench Renamed' }, 'edit-name'],
@@ -195,6 +212,18 @@ test.describe('KPost Group · feature flow', { tag: '@kpost-api' }, () => {
     try {
       const created = await as(endpoints, A, 'group-create', createBody(), 'create');
       groupKpostID = created.data.groupKpostID as string | undefined;
+      /*
+       * The member ROW ids createUserGroup issued. Promotion needs the id the product minted, not a
+       * placeholder: `ids: [0]` answers a reproducible 500, and the real id answers
+       * 200 "Admin added successfully" (confirmed live in backend-confirmation.spec.ts).
+       */
+      const adminRowIds = (
+        Array.isArray(created.data.memberDetails)
+          ? (created.data.memberDetails as Record<string, unknown>[])
+          : []
+      )
+        .filter((row) => row.kpostID === testData.victimKpostId)
+        .map((row) => row.id);
       groupID = created.data.groupID as number | undefined;
       expect.soft(groupKpostID, 'a groupKpostID is returned').toBeTruthy();
       if (!(groupID && groupKpostID)) return;
@@ -204,7 +233,7 @@ test.describe('KPost Group · feature flow', { tag: '@kpost-api' }, () => {
         endpoints,
         A,
         'group-admin-access',
-        { kpostIDs: [testData.victimKpostId], ids: [0], groupID, hasAdminAccess: 'Y' },
+        { kpostIDs: [testData.victimKpostId], ids: adminRowIds, groupID, hasAdminAccess: 'Y' },
         'promote-admin',
       );
       expect.soft(promote.status, 'promote to admin is accepted (FR-GM-012)').toBeLessThan(300);
@@ -214,7 +243,7 @@ test.describe('KPost Group · feature flow', { tag: '@kpost-api' }, () => {
         endpoints,
         A,
         'group-admin-access',
-        { kpostIDs: [testData.victimKpostId], ids: [0], groupID, hasAdminAccess: 'N' },
+        { kpostIDs: [testData.victimKpostId], ids: adminRowIds, groupID, hasAdminAccess: 'N' },
         'demote-admin',
       );
       expect.soft(demote.status, 'demote from admin is accepted (FR-GM-013)').toBeLessThan(300);

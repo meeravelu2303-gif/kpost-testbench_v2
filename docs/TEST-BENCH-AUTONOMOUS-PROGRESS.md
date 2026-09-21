@@ -9,30 +9,32 @@ Newest phase last. Every phase ends with the §24 completion record.
 
 ## Phase index
 
-| Phase | Name                                                       | Status      |
-| ----- | ---------------------------------------------------------- | ----------- |
-| 3     | Actor model foundation                                     | COMPLETE    |
-| 4A–4D | State discovery / model / observation / calibration        | COMPLETE    |
-| 4D-B  | Test account registry                                      | COMPLETE    |
-| 4F    | Architecture / duplication / hygiene audit                 | COMPLETE    |
-| 4G    | Tier 0 test-correctness repair                             | COMPLETE    |
-| 4H    | Architecture boundary & hygiene review                     | COMPLETE    |
-| 4I    | Test executability & skip elimination                      | COMPLETE    |
-| 4I-B  | Execution infrastructure repair & API coverage recovery    | COMPLETE    |
-| 5     | Business invariant model                                   | COMPLETE    |
-| 5B    | Safety-control correctness: the real-host signal           | COMPLETE    |
-| 5C    | A refused probe is inconclusive, never a finding           | COMPLETE    |
-| 6     | Application flow execution engine                          | COMPLETE    |
-| 7     | State transition validation                                | COMPLETE    |
-| 8     | Cross-actor and multi-channel coverage                     | COMPLETE    |
-| 9     | Side-effect verification                                   | COMPLETE    |
-| 10    | Failure analysis upgrade                                   | COMPLETE    |
-| 11    | Independent confirmation engine                            | COMPLETE    |
-| 12    | Duplicate detection and canonical defects                  | COMPLETE    |
-| 13    | Confidence gate (shadow-only, deliberately)                | COMPLETE    |
-| 14    | Bugzilla integration                                       | GATED       |
-| 15    | Complete API coverage                                      | COMPLETE    |
-| 16–20 | UI coverage, cleanup, orchestration, regression, discovery | NOT STARTED |
+| Phase | Name                                                    | Status                            |
+| ----- | ------------------------------------------------------- | --------------------------------- |
+| 3     | Actor model foundation                                  | COMPLETE                          |
+| 4A–4D | State discovery / model / observation / calibration     | COMPLETE                          |
+| 4D-B  | Test account registry                                   | COMPLETE                          |
+| 4F    | Architecture / duplication / hygiene audit              | COMPLETE                          |
+| 4G    | Tier 0 test-correctness repair                          | COMPLETE                          |
+| 4H    | Architecture boundary & hygiene review                  | COMPLETE                          |
+| 4I    | Test executability & skip elimination                   | COMPLETE                          |
+| 4I-B  | Execution infrastructure repair & API coverage recovery | COMPLETE                          |
+| 5     | Business invariant model                                | COMPLETE                          |
+| 5B    | Safety-control correctness: the real-host signal        | COMPLETE                          |
+| 5C    | A refused probe is inconclusive, never a finding        | COMPLETE                          |
+| 6     | Application flow execution engine                       | COMPLETE                          |
+| 7     | State transition validation                             | COMPLETE                          |
+| 8     | Cross-actor and multi-channel coverage                  | COMPLETE                          |
+| 9     | Side-effect verification                                | COMPLETE                          |
+| 10    | Failure analysis upgrade                                | COMPLETE                          |
+| 11    | Independent confirmation engine                         | COMPLETE                          |
+| 12    | Duplicate detection and canonical defects               | COMPLETE                          |
+| 13    | Confidence gate (shadow-only, deliberately)             | COMPLETE                          |
+| 14    | Bugzilla integration                                    | GATED                             |
+| 15    | Complete API coverage                                   | COMPLETE                          |
+| 16    | Complete UI coverage                                    | IN PROGRESS                       |
+| BE    | Backend/API bug preparation (owner-requested)           | COMPLETE — awaiting manual filing |
+| 17–20 | Cleanup, orchestration, regression, discovery           | NOT STARTED                       |
 
 Phases 3–4H are recorded in `CLAUDE.md` §8 (the repository's decision log) and are verified from the
 code, the guards and the git history rather than re-derived here.
@@ -1569,3 +1571,117 @@ Framework guards 849 → **853**.
 
 NEXT
 Phase 16 — complete UI coverage (master plan §18).
+
+---
+
+## PHASE: 16 (partial) — UI evidence, and what it exposed
+
+STATUS: IN PROGRESS — paused at the owner's direction to finish the backend bug package first.
+
+**The rule (master plan §18):** do not equate a button click, a closed dialog, a URL change or an
+input value with successful business behaviour. The reason is circularity — every one of those is
+produced by the same client that would be wrong if the feature were broken.
+
+**`tests/framework/ui-evidence.spec.ts`** audits every gated UI WRITE spec for the strongest
+evidence it carries and writes `docs/UI-EVIDENCE-AUDIT.md`. Measured: **18 UI write specs, 4
+carrying outcome evidence.** The rest are recorded as evidence DEBT, each with the path to closing
+it. `katchup-actions.spec.ts` was the clearest case — Delete, Save and Copy each asserted only that
+a menu or dialog closed.
+
+**The enabler — `tests/e2e/support/api-evidence.ts`.** The reason most UI flows proved themselves
+through the UI was not laziness: KPOST allows ONE session per account, so an API read-back logs in
+again and displaces the very browser session under test (the Phase 8 defect, which presents as a
+list that never fills). `observeAsBrowser` borrows the browser's OWN token via
+`auth: { header }`, so no second session is created and the strongest evidence becomes available to
+any UI spec. Every safety control still applies — it goes through `EndpointExecutor.send` unchanged.
+
+**FINDING — an entire UI write spec had been failing on live and nobody knew.** All four tests in
+`katchup-actions.spec.ts` failed at their first step: the composer is reached through a conversation
+row keyed by kpostID, which exists only once there is traffic between the two accounts. Not a product
+defect. Fixed with a declared, seeded precondition (using the browser's own token, so no
+displacement) that is skipped when the row already exists. **Live: 4 failed / 5 passed → 1 failed /
+8 passed**, and Delete now proves absence on the SERVER rather than by a closing dialog. The
+remaining failure is a login flake (the country list failing to load leaves the id field disabled),
+not a product defect.
+
+---
+
+## PHASE: BE — Backend / API bug preparation (owner-requested)
+
+STATUS: COMPLETE. **Nothing was filed, assigned, commented on or closed.** Bugzilla was not written
+to. The package is `reports/bugs/BACKEND-BUG-MANIFEST.md`.
+
+OBJECTIVE
+Produce the smallest defensible set of independently supported, canonical, backend-owned defects
+genuinely ready for MANUAL filing — and stop at that boundary.
+
+THE NARROWING, WHICH IS WHERE THE WORK IS
+
+| Stage                                      | Count |
+| ------------------------------------------ | ----: |
+| Classified observations                    |   482 |
+| Classified APP_DEFECT                      |   392 |
+| Shadow confidence gate ELIGIBLE            |    38 |
+| Survived live re-verification (2026-09-21) |    14 |
+| After removing bench-payload artefacts     |     8 |
+| **Canonical backend defects ready**        | **4** |
+
+TWO REDUCTIONS THAT WOULD OTHERWISE HAVE REACHED A DEVELOPER
+
+- **24 findings no longer reproduce.** All 16 `response.error-format` findings on
+  `common-designation`, `common-languages` and `common-postal-pincode` now PASS against the
+  current build. They were real on 2026-09-20 and are not real today. This is why the brief's
+  instruction not to trust historical findings was right.
+- **6 were the bench's own empty request.** The profile image/attachment 500s come from
+  `sendTo(id, {})`, which never runs the request factory — a bench defect already in `CLAUDE.md`.
+  Those endpoints are multipart uploads that received no body at all.
+
+READY FOR MANUAL FILING — all `KPost API` → Jaganathan Murthy, from the authoritative mapping
+
+| ID        | Defect                                                  | Component                            | Ownership           |
+| --------- | ------------------------------------------------------- | ------------------------------------ | ------------------- |
+| CD-BE-001 | `getTotalCountByDate` 500s on every well-formed request | Common Reference Data & Utilities V2 | BACKEND_API         |
+| CD-BE-002 | `msStatus` returns a bare string, not JSON              | Common Reference Data & Utilities V2 | BACKEND_CONTRACT    |
+| CD-BE-003 | recall clears the recipient's list but not their count  | Katchup Messaging V2                 | BACKEND_PERSISTENCE |
+| CD-BE-004 | a removed group member keeps the group in their list    | Contacts Directory V2                | BACKEND_PERSISTENCE |
+
+CD-BE-001 is the strongest: the SAME endpoint answers a correct 400 to a malformed body and 500 to a
+well-formed one, so routing and parsing work and the handler itself faults. The 500 body is a generic
+`"Unexpected error occurred"` — the documented signature of a real crash, as opposed to a
+`"X is required"` field error, which signals a bench payload gap.
+
+**CD-BE-004 carries a scope correction:** it was first recorded as a confidentiality failure. That was
+measured independently and disproved — post-removal group traffic does not reach the removed member.
+It is a data-consistency defect and must not be filed as an access-control one.
+
+NOT MERGED, DELIBERATELY: CD-BE-003 and CD-BE-004 share a shape (a derived view grows on an add and
+never shrinks on a withdrawal) in two modules. Merging would put a Group fault inside a Katchup
+ticket; if that ticket were closed the second would never surface again.
+
+ASSIGNMENT
+Authoritative. `src/config/ownership.config.ts` gives product + component + owner, and a framework
+test reconciles it against the live Bugzilla component defaults. Components resolved per endpoint
+from `docs/COMPONENT-ROUTING.md`. **No assignee was guessed, and none had to be.**
+
+GATES VERIFIED, NONE WEAKENED
+Dry-run default, the `.env`-cannot-arm-filing rule, the validity gate, cascade consolidation,
+component routing, ownership reconciliation, secret redaction, and the Phase 13 guard that
+`src/bug-tracker` cannot read a confidence verdict — **35 filing-gate guards pass**. Confidence
+remains shadow-only; it was not promoted to production filing.
+
+VERIFICATION
+typecheck 0 · lint 0 errors / 32 warnings (baseline) · framework **857 pass / 4 skip** ·
+live re-verification of the common module (read-only, dry-run).
+
+NEW FINDING RECORDED, NOT FILED
+`group-admin-access` returns **500** — `"Make user as Admin or remove Admin in an Existing Group
+failed"`. It is also why the FR-GM-012/013 promote/demote test fails, a failure that had not been
+recorded. Seen once; it needs a second independent run before it is fileable, so it sits in section C.
+
+REMAINING BLOCKERS
+The input-validation class (107 findings) is the most likely to become fileable, and the fix is a
+Test Bench one: record the mutation kind and field NAME — never the value — on the request evidence.
+
+NEXT
+Owner review of `reports/bugs/BACKEND-BUG-MANIFEST.md`, then `npm run kpost` (preview) and
+`npm run kpost:file` (files). Phases 16–20 resume after that.
