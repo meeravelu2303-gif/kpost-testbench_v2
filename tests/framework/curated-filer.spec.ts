@@ -265,6 +265,40 @@ test.describe('curated filer: deduplication and human judgements @framework', ()
     }
   });
 
+  test('a bug resolved FIXED is never duplicated by a second ticket', async () => {
+    /*
+     * The case the dry run caught live: bugs 493/494/495 were resolved FIXED between two previews,
+     * and the records flipped from EXISTING to CREATED. The broad filer would REOPEN; this path has
+     * no reopen capability by design, so the only safe answer is to stand down and say why.
+     */
+    const { client, calls } = stub({
+      findByTag: () =>
+        Promise.resolve({ bugs: [bug({ id: 493, is_open: false, resolution: 'FIXED' })] }),
+    });
+    const result = await fileCuratedDefects(manifestOf(defect()), client, { dryRun: false });
+    expect(calls.created, 'a tracked fault must not get a second ticket').toEqual([]);
+    expect(result.counts.SKIPPED).toBe(1);
+    expect(result.entries[0]?.reason).toContain('resolved FIXED');
+    expect(result.entries[0]?.reason).toContain('cannot reopen');
+  });
+
+  test('an OPEN bug still wins over a resolved one under the same tag', async () => {
+    // A tag can carry both an old resolved ticket and the current open one; the open one is the
+    // ticket to comment on, and the resolved branch must not shadow it.
+    const { client } = stub({
+      findByTag: () =>
+        Promise.resolve({
+          bugs: [
+            bug({ id: 475, is_open: false, resolution: 'FIXED' }),
+            bug({ id: 495, is_open: true }),
+          ],
+        }),
+    });
+    const result = await fileCuratedDefects(manifestOf(defect()), client, { dryRun: false });
+    expect(result.counts.EXISTING).toBe(1);
+    expect(result.entries[0]?.bugzillaId).toBe(495);
+  });
+
   test('a bug in a DIFFERENT product does not deduplicate this one', async () => {
     // The same tag can exist under KMail; filing would then silently go missing.
     const { client } = stub({
