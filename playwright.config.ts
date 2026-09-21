@@ -153,5 +153,10 @@ export default defineConfig({
     { name: 'api', testDir: './tests/api' },
     { name: 'integration', testDir: './tests/integration' },
     { name: 'framework', testDir: './tests/framework' },
+    /*
+     * Curated Bugzilla filing. Its own project so the entry point cannot be swept up by a suite run:
+     * nothing selects it except `npm run bugs:file:kpost`, which is the only command that may file.
+     */
+    { name: 'filing', testDir: './tests/filing' },
   ]),
 });

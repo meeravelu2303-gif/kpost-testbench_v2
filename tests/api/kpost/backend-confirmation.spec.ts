@@ -236,6 +236,183 @@ test.describe('KPost · backend bug confirmation', { tag: '@kpost-api' }, () => 
     ).toBeLessThan(500);
   });
 
+  test('gap A · unhandled NullPointerException on a null field, control vs mutant @api @confirmation', async ({
+    endpoints,
+  }: {
+    endpoints: EndpointExecutor;
+  }, testInfo) => {
+    /*
+     * The independent confirmation for the two strongest gap-A candidates: a known-good request
+     * against the SAME endpoint, immediately before the mutated one.
+     *
+     * The control is what makes this evidence rather than an observation. "A null produced a 500" on
+     * its own could mean the endpoint is simply broken; the pair shows the endpoint works, and that
+     * ONE null field is what breaks it. Both endpoints are READS — nothing is created, changed or
+     * deleted here.
+     *
+     * The product's own response is the second, independent signal: it carries a Java
+     * NullPointerException naming the field, which the validator never asserted and only the
+     * application could have produced.
+     */
+    const probe = async (id: string, body: Record<string, unknown>, label: string) => {
+      const ex = await endpoints.sendTo(id, { body }, { label: `confirm-a:${label}` });
+      return probeOf(ex);
+    };
+
+    const countGood = await probe(
+      'katchup-message-count',
+      { receiver: testData.victimKpostId, groupFlag: 'false' },
+      'count-control',
+    );
+    const countNull = await probe(
+      'katchup-message-count',
+      { receiver: testData.victimKpostId, groupFlag: null },
+      'count-null-groupFlag',
+    );
+    const suggestGood = await probe(
+      'signup-login-kpost-id-suggestions',
+      { firstName: 'QA', lastName: 'Bench', mobileNumber: testData.mobileAbsent },
+      'suggest-control',
+    );
+    const suggestNull = await probe(
+      'signup-login-kpost-id-suggestions',
+      { firstName: null, lastName: 'Bench', mobileNumber: testData.mobileAbsent },
+      'suggest-null-firstName',
+    );
+
+    await testInfo.attach('gap-A-npe', {
+      body: [
+        line('messageCount — CONTROL, groupFlag "false"', countGood),
+        line('messageCount — MUTANT, groupFlag null', countNull),
+        line('kpostIDsuggestionList — CONTROL, firstName "QA"', suggestGood),
+        line('kpostIDsuggestionList — MUTANT, firstName null', suggestNull),
+      ].join(String.fromCharCode(10, 10)),
+      contentType: 'text/plain',
+    });
+
+    expect(countGood.status, 'the control must succeed, or the pair proves nothing').toBeLessThan(
+      400,
+    );
+    expect(suggestGood.status, 'the control must succeed').toBeLessThan(400);
+    expect(
+      countNull.status,
+      `a null field must not crash the server. The control succeeded, so the endpoint works and the ` +
+        `null is what breaks it. Response: ${countNull.body}`,
+    ).toBeLessThan(500);
+    expect(
+      suggestNull.status,
+      `a null field must not crash the server. Response: ${suggestNull.body}`,
+    ).toBeLessThan(500);
+  });
+
+  test('gap A completion · the five contract-proven candidates, control vs mutant @api @confirmation', async ({
+    endpoints,
+  }: {
+    endpoints: EndpointExecutor;
+  }, testInfo) => {
+    /*
+     * The same standard that confirmed the first two: a known-good control on the SAME endpoint,
+     * immediately before each mutant, so a 500 can be attributed to the mutated field rather than to
+     * a broken endpoint.
+     *
+     * All three endpoints are `destructive: false, productionSafe: true` — presigned-URL generation
+     * derives a signed URL from file metadata and writes nothing; the other two are existence and
+     * suggestion lookups. Nothing here creates, changes or deletes state.
+     *
+     * Control values are the ones the endpoint definitions already use, so every identifier is
+     * QA-owned and the identifier guard stays satisfied.
+     */
+    const probe = async (id: string, body: Record<string, unknown>, label: string) => {
+      const ex = await endpoints.sendTo(id, { body }, { label: `confirm-a5:${label}` });
+      return probeOf(ex);
+    };
+    const fileMeta = { extension: 'pdf', fileName: 'qa-bench.pdf', fileSize: '940' };
+    const idExist = {
+      kpostID: testData.kpostIdAbsent,
+      firstName: 'QA',
+      lastName: 'Bench',
+      mobileNumber: testData.mobileAbsent,
+    };
+    const suggest = {
+      kpostID: testData.signupKpostId,
+      firstName: 'QA',
+      lastName: 'Bench',
+      mobileNumber: testData.signupMobile,
+    };
+
+    // ---- KP-25BD89 / KP-596D5D · aws/katchup/generate-presigned-url --------------------------
+    const awsControl = await probe('aws-katchup-presigned', fileMeta, 'aws-control');
+    const awsNullExt = await probe(
+      'aws-katchup-presigned',
+      { ...fileMeta, extension: null },
+      'aws-null-extension',
+    );
+    const awsNullName = await probe(
+      'aws-katchup-presigned',
+      { ...fileMeta, fileName: null },
+      'aws-null-fileName',
+    );
+    const awsEmpty = await probe('aws-katchup-presigned', {}, 'aws-empty-body');
+
+    // ---- KP-8CA830 / KP-FE86A2 · signupLogin/kpostIdExist -------------------------------------
+    const idControl = await probe('signup-login-kpost-id-exist', idExist, 'idexist-control');
+    const idNullMobile = await probe(
+      'signup-login-kpost-id-exist',
+      { ...idExist, mobileNumber: null },
+      'idexist-null-mobile',
+    );
+    const idNullKpost = await probe(
+      'signup-login-kpost-id-exist',
+      { ...idExist, kpostID: null },
+      'idexist-null-kpostID',
+    );
+    const idEmpty = await probe('signup-login-kpost-id-exist', {}, 'idexist-empty-body');
+
+    // ---- KP-8B109B · signupLogin/kpostIDsuggestionList ----------------------------------------
+    const sugControl = await probe('signup-login-kpost-id-suggestions', suggest, 'suggest-control');
+    const sugEmpty = await probe('signup-login-kpost-id-suggestions', {}, 'suggest-empty-body');
+
+    await testInfo.attach('gap-A-completion', {
+      body: [
+        line('AWS presigned — CONTROL {extension,fileName,fileSize}', awsControl),
+        line('AWS presigned — MUTANT extension: null  [KP-25BD89]', awsNullExt),
+        line('AWS presigned — MUTANT fileName: null   [KP-25BD89]', awsNullName),
+        line('AWS presigned — MUTANT empty body {}    [KP-596D5D]', awsEmpty),
+        line('kpostIdExist — CONTROL', idControl),
+        line('kpostIdExist — MUTANT mobileNumber: null [KP-8CA830]', idNullMobile),
+        line('kpostIdExist — MUTANT kpostID: null      [KP-8CA830]', idNullKpost),
+        line('kpostIdExist — MUTANT empty body {}      [KP-FE86A2]', idEmpty),
+        line('kpostIDsuggestionList — CONTROL', sugControl),
+        line('kpostIDsuggestionList — MUTANT empty body {} [KP-8B109B]', sugEmpty),
+      ].join(String.fromCharCode(10, 10)),
+      contentType: 'text/plain',
+    });
+
+    // The controls must succeed, or none of the pairs below mean anything.
+    expect(awsControl.status, 'AWS presigned control must succeed').toBeLessThan(400);
+    expect(idControl.status, 'kpostIdExist control must succeed').toBeLessThan(400);
+    expect(sugControl.status, 'kpostIDsuggestionList control must succeed').toBeLessThan(400);
+
+    // Each mutant: a bad input must not crash the server.
+    const mutants: [string, Probe][] = [
+      ['aws extension: null', awsNullExt],
+      ['aws fileName: null', awsNullName],
+      ['aws empty body', awsEmpty],
+      ['kpostIdExist mobileNumber: null', idNullMobile],
+      ['kpostIdExist kpostID: null', idNullKpost],
+      ['kpostIdExist empty body', idEmpty],
+      ['kpostIDsuggestionList empty body', sugEmpty],
+    ];
+    for (const [name, p] of mutants) {
+      expect
+        .soft(
+          p.status,
+          `${name}: the control succeeded, so the endpoint works — a bad input must not produce a server error. Response: ${p.body}`,
+        )
+        .toBeLessThan(500);
+    }
+  });
+
   test('read candidates · valid requests, recorded verbatim @api @confirmation', async ({
     endpoints,
   }: {

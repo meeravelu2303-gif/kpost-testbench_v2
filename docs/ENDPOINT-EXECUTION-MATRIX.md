@@ -12,8 +12,8 @@ gap Phase 4I found, where the ledger read 0 uncovered while 64 endpoints had no 
 | - | ----: |
 | Registered endpoints | **350** |
 | — contract matrix (generated validator cases) | 289 |
-| — driven by a hand-written application flow | 183 |
-| — both layers | 122 |
+| — driven by a hand-written application flow | 184 |
+| — both layers | 123 |
 | — flow only (no generated cases) | 61 |
 | — cleared for live (`productionSafe`) | 116 |
 | — a schema is held for the endpoint (contract declared) | 279 |
@@ -22,7 +22,7 @@ gap Phase 4I found, where the ledger read 0 uncovered while 64 endpoints had no 
 | — named by a business invariant | 39 |
 | — that invariant also declares observed states | 13 |
 | — cross-checked by a UI spec | 6 |
-| — observed by a cross-actor or confirmation spec | 18 |
+| — observed by a cross-actor or confirmation spec | 22 |
 | — documented exclusions (not applicable) | 5 |
 | — blocked (coverage debt, recovery path below) | 0 |
 
@@ -220,7 +220,7 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `aws-check-attachment` | aws | POST | `/v2/aws/checkAttachmentS3/` | yes | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
 | `aws-delete-attachment` | aws | GET | `/v2/aws/deleteAttachmentFromS3/{uuid}` | — | yes | yes | yes | yes | gated | — | — | — | — | data | COVERED (contract + flow) | covered at every layer that applies to it |
 | `aws-generate-presigned` | aws | POST | `/v2/aws/generate-presigned-url` | yes | yes | yes | yes | yes | default | — | — | — | — | read | COVERED (contract + flow) | covered at every layer that applies to it |
-| `aws-katchup-presigned` | aws | POST | `/v2/aws/katchup/generate-presigned-url` | yes | yes | yes | yes | — | default | — | — | — | — | read | COVERED (contract) | covered at every layer that applies to it |
+| `aws-katchup-presigned` | aws | POST | `/v2/aws/katchup/generate-presigned-url` | yes | yes | yes | yes | yes | default | — | — | — | yes | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `common-cities-by-region` | common | POST | `/v2/common/getCitiesByRegionId/` | yes | yes | yes | — | — | default | — | — | — | — | read | COVERED (contract) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `common-company-details` | common | POST | `/v2/common/getCompanyDetails` | yes | yes | yes | — | — | default | — | — | — | — | read | COVERED (contract) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `common-company-details-by-admin` | common | POST | `/v2/common/getCompanyDetailsByAdmin` | yes | yes | yes | — | — | default | — | — | — | — | read | COVERED (contract) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
@@ -326,7 +326,7 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `katchup-generate-thumbnail` | katchup | POST | `/v2/katchup/generateThumbnailUsingUUID` | yes | yes | yes | yes | — | — | — | — | — | — | data | COVERED (contract) | contract-validated off live only |
 | `katchup-mark-important` | katchup | POST | `/v2/katchup/markOrUnmarkImportantMessage/` | yes | yes | yes | yes | yes | gated | — | — | — | — | data | COVERED (contract + flow) | covered at every layer that applies to it |
 | `katchup-media-streaming` | katchup | GET | `/v2/katchup/mediaStreaming/{uuid}` | — | yes | yes | yes | — | — | — | — | — | — | read | COVERED (contract) | contract-validated off live only |
-| `katchup-message-count` | katchup | POST | `/v2/katchup/messageCountBetweenSenderAndReceiver/` | yes | yes | yes | yes | yes | default | — | — | — | — | read | COVERED (contract + flow) | covered at every layer that applies to it |
+| `katchup-message-count` | katchup | POST | `/v2/katchup/messageCountBetweenSenderAndReceiver/` | yes | yes | yes | yes | yes | default | — | — | — | yes | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `katchup-messages-by-reference` | katchup | POST | `/v2/katchup/getMessagesByReferenceMessageList` | yes | yes | yes | yes | — | — | — | — | — | — | read | COVERED (contract) | contract-validated off live only |
 | `katchup-messages-subject` | katchup | GET | `/v2/katchup/getKatchupMessagesSubject` | — | yes | yes | yes | — | — | — | — | — | — | read | COVERED (contract) | contract-validated off live only |
 | `katchup-read-status-group` | katchup | POST | `/v2/katchup/getReadStatusGroupMessage/` | yes | yes | yes | yes | yes | gated | yes | yes | — | — | read | COVERED (contract + flow) | covered at every layer that applies to it |
@@ -436,8 +436,8 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | `signup-login-admin-user-login` | signup-login | POST | `/signupLoginForMediumAndLarge/adminUserLogin` | yes | yes | yes | — | — | — | — | — | — | — | read | COVERED (contract) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `signup-login-fetch-user-details` | signup-login | POST | `/v2/signupLogin/fetchUserDetails/` | yes | yes | yes | — | yes | default | — | yes | — | — | read | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `signup-login-generate-jwt` | signup-login | POST | `/v2/signupLogin/generateJWTokens/` | yes | yes | yes | — | — | — | — | — | — | — | read | COVERED (contract) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
-| `signup-login-kpost-id-exist` | signup-login | POST | `/v2/signupLogin/kpostIdExist/` | yes | yes | yes | — | yes | default | — | yes | — | — | read | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
-| `signup-login-kpost-id-suggestions` | signup-login | POST | `/v2/signupLogin/kpostIDsuggestionList/` | yes | yes | yes | — | yes | default | — | — | — | — | read | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
+| `signup-login-kpost-id-exist` | signup-login | POST | `/v2/signupLogin/kpostIdExist/` | yes | yes | yes | — | yes | default | — | yes | — | yes | read | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
+| `signup-login-kpost-id-suggestions` | signup-login | POST | `/v2/signupLogin/kpostIDsuggestionList/` | yes | yes | yes | — | yes | default | — | — | — | yes | read | COVERED (contract + flow) | security probes excluded (skipValidators, or the endpoint is unauthenticated) |
 | `signup-login-login-history` | signup-login | POST | `/v2/signupLogin/getLoginHistory` | — | yes | yes | yes | yes | default | — | — | — | yes | read | COVERED (contract + flow) | covered at every layer that applies to it |
 | `signup-login-logout-all-devices` | signup-login | GET | `/v2/signupLogin/userLogoutFromAllDevices/` | — | yes | yes | yes | yes | gated | — | — | — | — | global | COVERED (contract + flow) | covered at every layer that applies to it |
 | `signup-login-set-access-code` | signup-login | POST | `/v2/signupLogin/setAccessCode` | yes | yes | yes | yes | yes | gated | — | — | — | — | global | COVERED (contract + flow) | covered at every layer that applies to it |
