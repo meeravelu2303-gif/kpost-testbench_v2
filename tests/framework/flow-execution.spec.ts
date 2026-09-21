@@ -37,7 +37,8 @@ const SYNTHETIC_FLOW: FlowDefinition = {
   flowId: 'test.synthetic-lifecycle',
   name: 'synthetic lifecycle',
   module: 'katchup',
-  requirementIds: [],
+  // A registered id: the validator refuses a flow nobody requires, and it is right to.
+  requirementIds: ['FR-KU-003'],
   actorRoles: ['sender', 'recipient'],
   cleanupStrategy: 'ledger-managed',
   status: 'ACTIVE',
@@ -102,6 +103,17 @@ const action = (
   describe: `synthetic ${name}`,
   run,
 });
+
+/** Files under `dir` whose source mentions `needle`. Module scope: a recursive scan is not test logic. */
+function filesMentioning(dir: string, needle: string): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true, recursive: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
+    const full = path.join(entry.parentPath ?? dir, entry.name);
+    if (readFileSync(full, 'utf8').includes(needle)) found.push(entry.name);
+  }
+  return found;
+}
 
 const pass = (result: Partial<StepActionResult> = {}): StepActionResult => ({
   outcome: 'PASSED',
@@ -168,12 +180,7 @@ test.describe('flow execution: a successful flow @framework', () => {
       'PASSED',
     ]);
     // The engine sends nothing itself: every call went through the executor the caller injected.
-    expect(endpoints.calls).toEqual([
-      'auth:sender#0',
-      'create:katchup-send-message',
-      'observe:1',
-      'auth:sender#0'.replace('auth:sender#0', 'observe:1').replace('observe:1', 'observe:1'),
-    ]);
+    expect(endpoints.calls).toEqual(['auth:sender#0', 'create:katchup-send-message', 'observe:1']);
   });
 
   test('an artifact a step publishes is readable by the step that consumes it', async () => {
@@ -203,7 +210,7 @@ test.describe('flow execution: a successful flow @framework', () => {
     expect(seen, 'the binding names the endpoint; the flow carries no payload').toBe(
       'katchup-send-message',
     );
-    expect(actions.describe().length, 'the registry describes itself for a report').toBe(4);
+    expect(actions.describe(), 'the registry describes itself for a report').toHaveLength(4);
   });
 });
 
@@ -399,7 +406,12 @@ test.describe('flow execution: channels and bindings @framework', () => {
     expect(result.run.read(MESSAGE_ID)).toBe(811_500);
   });
 
-  test('a UI execution uses the UI binding, and skips steps that have only an API one', async () => {
+  test('a step with only an API binding is SKIPPED on a UI run, and that skip blocks its dependants', async () => {
+    /*
+     * The UI run of a flow whose authentication step is API-only. The point is the SECOND half: a
+     * SKIPPED prerequisite blocks what depends on it exactly as a FAILED one does. A skip means the
+     * value was never produced, so a downstream step that consumed it would be asserting on nothing.
+     */
     const actions = new StepActionRegistry<FakeExecutor, FakeResources>().register(
       action('test.create', () => pass({ produces: [produced(RECORD_ID, 7)] }), 'UI'),
     );
@@ -407,13 +419,48 @@ test.describe('flow execution: channels and bindings @framework', () => {
     const result = await engine.execute(SYNTHETIC_FLOW);
 
     const byId = Object.fromEntries(result.steps.map((step) => [step.stepId, step]));
-    // `authenticate` has an API binding only — skipped on a UI run, and the reason says so.
     expect(byId.authenticate?.status).toBe('SKIPPED');
     expect(byId.authenticate?.reason).toContain('no UI binding');
-    // `create` has both, so the UI adapter drives it and the artifact still crosses.
-    expect(byId.create?.status).toBe('PASSED');
-    expect(result.run.read(RECORD_ID)).toBe(7);
+    expect(byId.create?.status, 'its token was never produced').toBe('BLOCKED');
+    expect(byId.create?.blocked?.missingArtifactId).toBe('token');
+    expect(result.run.has(RECORD_ID), 'a blocked step publishes nothing').toBe(false);
     expect(result.channel).toBe('UI');
+  });
+
+  test('a UI binding drives the step when its dependencies are met', async () => {
+    // Same business flow, same step ids — only the channel differs. That is the master plan's rule
+    // that API and UI are channels of ONE flow, never two flows describing the same behaviour.
+    const uiFlow: FlowDefinition = {
+      ...SYNTHETIC_FLOW,
+      flowId: 'test.ui-lifecycle',
+      steps: SYNTHETIC_FLOW.steps.map((step) =>
+        step.stepId === 'authenticate'
+          ? {
+              ...step,
+              bindings: [{ channel: 'UI', helper: 'tests/setup/auth.setup.ts#login' }],
+            }
+          : step,
+      ),
+    };
+    const actions = new StepActionRegistry<FakeExecutor, FakeResources>().register(
+      action('test.authenticate', () => pass({ produces: [produced(TOKEN, 't')] }), 'UI'),
+      action(
+        'test.create',
+        (context) => {
+          context.endpoints.calls.push(`ui-create:${context.channel}`);
+          return pass({ produces: [produced(RECORD_ID, 7)] });
+        },
+        'UI',
+      ),
+    );
+    const { engine, endpoints } = engineWith(actions, { channel: 'UI' });
+    const result = await engine.execute(uiFlow);
+
+    const byId = Object.fromEntries(result.steps.map((step) => [step.stepId, step]));
+    expect(byId.authenticate?.status).toBe('PASSED');
+    expect(byId.create?.status).toBe('PASSED');
+    expect(endpoints.calls, 'the UI adapter ran, with the UI channel').toEqual(['ui-create:UI']);
+    expect(result.run.read(RECORD_ID)).toBe(7);
   });
 
   test('an action registered for one channel is not used for another', async () => {
@@ -571,20 +618,9 @@ test.describe('flow execution: architectural boundary @framework', () => {
   test('the declarative flow layer still knows nothing of execution', () => {
     // The dependency must run one way. `src/flows/` importing the engine would make a business
     // description depend on the machinery meant to carry it out.
-    const dir = path.join(ROOT_DIR, 'src', 'flows');
-    const offenders: string[] = [];
-    const walk = (current: string): void => {
-      for (const entry of readdirSync(current, { withFileTypes: true })) {
-        const full = path.join(current, entry.name);
-        if (entry.isDirectory()) walk(full);
-        else if (
-          entry.name.endsWith('.ts') &&
-          readFileSync(full, 'utf8').includes('flow-execution')
-        )
-          offenders.push(entry.name);
-      }
-    };
-    walk(dir);
-    expect(offenders, 'flows must not depend on flow-execution').toEqual([]);
+    expect(
+      filesMentioning(path.join(ROOT_DIR, 'src', 'flows'), 'flow-execution'),
+      'flows must not depend on flow-execution',
+    ).toEqual([]);
   });
 });

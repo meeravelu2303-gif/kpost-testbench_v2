@@ -39,7 +39,7 @@ export interface ProducedArtifact {
 
 /** Type-safe pairing: `produced(MESSAGE_ID, msgID)` will not compile with the wrong value type. */
 export function produced<T>(artifact: FlowArtifact<T>, value: T): ProducedArtifact {
-  return { artifact: artifact as FlowArtifact<unknown>, value };
+  return { artifact, value };
 }
 
 /**

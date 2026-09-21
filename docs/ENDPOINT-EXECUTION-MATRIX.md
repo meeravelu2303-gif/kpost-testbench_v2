@@ -12,8 +12,8 @@ gap Phase 4I found, where the ledger read 0 uncovered while 64 endpoints had no 
 | - | ----: |
 | Registered endpoints | **350** |
 | — contract matrix (generated validator cases) | 289 |
-| — driven by a hand-written application flow | 174 |
-| — both layers | 115 |
+| — driven by a hand-written application flow | 175 |
+| — both layers | 116 |
 | — flow only (no generated cases) | 59 |
 | — cleared for live (`productionSafe`) | 116 |
 | — documented exclusions (not applicable) | 5 |
@@ -298,7 +298,7 @@ the SMS/OTP kill-switch is the first check in `destructiveBlockReason` and no fl
 | kpost-api | `katchup-generate-thumbnail`<br>`POST /v2/katchup/generateThumbnailUsingUUID` | yes | — | — | data | COVERED (contract) |
 | kpost-api | `katchup-mark-important`<br>`POST /v2/katchup/markOrUnmarkImportantMessage/` | yes | yes | — | data | COVERED (contract + flow) |
 | kpost-api | `katchup-media-streaming`<br>`GET /v2/katchup/mediaStreaming/{uuid}` | yes | — | — | read | COVERED (contract) |
-| kpost-api | `katchup-message-count`<br>`POST /v2/katchup/messageCountBetweenSenderAndReceiver/` | yes | — | yes | read | COVERED (contract) |
+| kpost-api | `katchup-message-count`<br>`POST /v2/katchup/messageCountBetweenSenderAndReceiver/` | yes | yes | yes | read | COVERED (contract + flow) |
 | kpost-api | `katchup-messages-by-reference`<br>`POST /v2/katchup/getMessagesByReferenceMessageList` | yes | — | — | read | COVERED (contract) |
 | kpost-api | `katchup-messages-subject`<br>`GET /v2/katchup/getKatchupMessagesSubject` | yes | — | — | read | COVERED (contract) |
 | kpost-api | `katchup-read-status-group`<br>`POST /v2/katchup/getReadStatusGroupMessage/` | yes | yes | — | read | COVERED (contract + flow) |

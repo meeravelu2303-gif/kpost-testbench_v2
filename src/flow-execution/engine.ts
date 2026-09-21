@@ -87,6 +87,16 @@ export interface FlowExecutionOptions<TExecutor, TResources> {
    * to learn the distinction, and the same conclusion.
    */
   readonly isSafetyRefusal?: (error: unknown) => boolean;
+  /**
+   * Called once with the fresh `FlowRun`, before any step runs.
+   *
+   * The one thing a caller must do that the engine cannot: bind this run's actors to accounts.
+   * Which account plays which role is an allocation decision owned by `AccountPool` and
+   * `ActorContext`, and the engine deliberately has no opinion on it — it would need to know about
+   * slots, tiers and session exclusivity to choose, and that is a second account pool by another
+   * name. So the caller binds, and the engine reads the binding through the actor.
+   */
+  readonly prepare?: (run: FlowRun) => void | Promise<void>;
 }
 
 export class FlowExecutionEngine<TExecutor, TResources> {
@@ -105,6 +115,8 @@ export class FlowExecutionEngine<TExecutor, TResources> {
     const steps: StepExecution[] = [];
     const startedAt = new Date().toISOString();
     const began = Date.now();
+
+    await this.options.prepare?.(run);
 
     for (const step of flow.steps) {
       steps.push(await this.executeStep(flow, step, run, channel));

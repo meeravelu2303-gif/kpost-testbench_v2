@@ -718,3 +718,89 @@ test.describe('live-application safety: the real-host signal @framework', () => 
     ).toBeUndefined();
   });
 });
+
+test.describe('live-application safety: authorised READ is not authorised write @framework', () => {
+  /*
+   * Phase 8 §13. Two group image downloads were stranded: non-destructive GETs keyed by a runtime
+   * `groupKpostID`, so they cannot be `productionSafe` (a fabricated id names nothing we own) and
+   * `allowLiveWrite` could not cover them because it requires `destructive === true`. Kall's id-keyed
+   * reads escape only by accident — they are POST, so `destructive` defaults to true.
+   *
+   * The fix is a SEPARATE, narrower capability, never a widening of the write one. These guards pin
+   * that it can only ever do less.
+   */
+  const liveFlags = { isProduction: true, allowDestructive: false, mockApi: false };
+
+  const groupImageRead: GuardedEndpoint = {
+    label: 'GET /v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID}',
+    destructive: false,
+    sideEffect: 'data',
+  };
+
+  test('it clears the productionSafe gate for a read of a resource the run owns', () => {
+    expect(
+      destructiveBlockReason(groupImageRead, liveFlags),
+      'without it, a runtime-id read is blocked on live',
+    ).toMatch(/not cleared for the live application/);
+    expect(
+      destructiveBlockReason(groupImageRead, { ...liveFlags, allowLiveRead: true }),
+      'with it, the same read is authorised',
+    ).toBeUndefined();
+  });
+
+  test('it can NEVER unlock a write, by construction', () => {
+    // The property that makes it safe to add at all: it requires `destructive !== true`.
+    const write: GuardedEndpoint = {
+      label: 'POST /v2/group/deleteGroup',
+      destructive: true,
+      sideEffect: 'data',
+    };
+    expect(
+      destructiveBlockReason(write, { ...liveFlags, allowLiveRead: true }),
+      'a destructive endpoint is untouched by the read authorization',
+    ).toMatch(/not cleared for the live application/);
+  });
+
+  test('it never reaches external, global or OTP endpoints', () => {
+    const external: GuardedEndpoint = {
+      label: 'POST /v2/common/sendOTP/',
+      destructive: false,
+      sideEffect: 'external',
+      otpDependent: 'sends',
+    };
+    const global: GuardedEndpoint = {
+      label: 'GET /v2/common/getMailCredentials',
+      destructive: false,
+      sideEffect: 'global',
+    };
+    expect(
+      destructiveBlockReason(external, { ...liveFlags, allowLiveRead: true }),
+      'the SMS/OTP kill-switch sits above every authorization',
+    ).toBeTruthy();
+    expect(
+      destructiveBlockReason(global, { ...liveFlags, allowLiveRead: true }),
+      'shared state is not opened by a read authorization',
+    ).toBeTruthy();
+  });
+
+  test('the engine never sets it — only a flow does', () => {
+    /*
+     * The same rule `allowLiveWrite` lives by. If the engine set it, every fuzzer's mutated read
+     * would be authorised against live, which is the opposite of what this is for.
+     */
+    const engineSources = [
+      'validation-engine.ts',
+      'endpoint-cases.ts',
+      'contract-suite.ts',
+      'probe.ts',
+    ]
+      .map((name) => path.join(ROOT_DIR, 'src', 'validation-engine', name))
+      .filter((file) => fs.existsSync(file))
+      .filter((file) =>
+        /allowLiveRead\s*:\s*true/.test(
+          fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''),
+        ),
+      );
+    expect(engineSources, 'no engine module may authorise a live read').toEqual([]);
+  });
+});

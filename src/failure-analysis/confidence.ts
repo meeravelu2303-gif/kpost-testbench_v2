@@ -111,6 +111,14 @@ export const GATE_REASON_CODES = [
   'BUSINESS_RULE_EVIDENCE_INCOMPLETE',
   /** No structured before/after state record; one response cannot prove a transition. */
   'STATE_EVIDENCE_INCOMPLETE',
+  /** Phase 7 produces a transition record, but it is not yet carried on the observation. */
+  'TRANSITION_RECORD_NOT_CARRIED',
+  /** Phase 9 produces a before/after delta, but it is not yet carried on the observation. */
+  'SIDE_EFFECT_RECORD_NOT_CARRIED',
+  /** Two reads disagreed, but only one of them is recorded, so the disagreement is unwitnessed. */
+  'CONSISTENCY_EVIDENCE_INCOMPLETE',
+  /** A UI finding's evidence is a screenshot and a page state, neither of them structured here. */
+  'UI_EVIDENCE_INCOMPLETE',
   /** A single latency sample cannot separate a transient slowdown from a regression. */
   'PERFORMANCE_REQUIRES_REPEATABILITY',
   /** The contract dimension under test could not be identified, so nothing can be verified. */
@@ -145,6 +153,10 @@ export const DECISION_BY_REASON: Readonly<Record<GateReasonCode, ConfidenceDecis
   INPUT_VALIDATION_EVIDENCE_INCOMPLETE: 'INDETERMINATE',
   BUSINESS_RULE_EVIDENCE_INCOMPLETE: 'INDETERMINATE',
   STATE_EVIDENCE_INCOMPLETE: 'INDETERMINATE',
+  TRANSITION_RECORD_NOT_CARRIED: 'INDETERMINATE',
+  SIDE_EFFECT_RECORD_NOT_CARRIED: 'INDETERMINATE',
+  CONSISTENCY_EVIDENCE_INCOMPLETE: 'INDETERMINATE',
+  UI_EVIDENCE_INCOMPLETE: 'INDETERMINATE',
   PERFORMANCE_REQUIRES_REPEATABILITY: 'INDETERMINATE',
   VIOLATION_TYPE_UNSUPPORTED: 'INDETERMINATE',
 };
@@ -180,6 +192,36 @@ export interface ConfidenceFactors {
   stateEvidenceAvailable: boolean;
   /** Structured evidence witnesses the security property that was asserted. */
   securityEvidenceAvailable: boolean;
+
+  /*
+   * ---- Phase 13 factors -----------------------------------------------------------------------
+   *
+   * Both are RECORDED, and neither is enforced. The master plan is explicit twice over — "keep the
+   * existing confidence gate shadow-only until evidence is mature" and "do not enforce confidence
+   * prematurely" — so these change no decision today. They exist so that when the gate is armed,
+   * the evidence it would need has been measured all along rather than retrofitted, and so a shadow
+   * run can show how often each is actually available.
+   */
+
+  /**
+   * An INDEPENDENT observation confirmed the behaviour (Phase 11).
+   *
+   * False covers three different situations on purpose — no confirmation was attempted, one was
+   * attempted down a path that was not independent, or one was attempted and did not reproduce. The
+   * gate must not treat any of them as evidence FOR a defect, and the confirmation record itself
+   * keeps the distinction for a reader.
+   */
+  independentlyConfirmed: boolean;
+
+  /**
+   * This finding is a fresh canonical defect rather than another sighting of one already known
+   * (Phase 12).
+   *
+   * False is not a mark against the finding: a second sighting is often the strongest evidence a
+   * defect is real. It is recorded because filing needs it and confidence must not silently double
+   * count one fault seen twice.
+   */
+  distinctCanonicalDefect: boolean;
 }
 
 /**
@@ -235,6 +277,20 @@ export interface ConfidenceInput {
    * was contracted to answer. This field is recorded alongside it so the two can be compared.
    */
   checkExpectedStatuses?: readonly number[];
+
+  /*
+   * ---- Phase 13 evidence, carried and RECORDED but never enforced -----------------------------
+   *
+   * The master plan says it twice: keep the gate shadow-only, do not enforce confidence
+   * prematurely. These are here so the shadow run can measure how often each is actually available
+   * before anything is armed on them.
+   */
+
+  /** The Phase 11 confirmation of this finding, when one was attempted. */
+  confirmation?: { readonly outcome: 'CONFIRMED' | 'NOT_REPRODUCED' | 'INDETERMINATE' };
+
+  /** The canonical defect this finding is another sighting of, when it is one (Phase 12). */
+  duplicateOf?: string;
 }
 
 /**

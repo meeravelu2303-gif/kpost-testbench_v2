@@ -125,6 +125,45 @@ export interface FailureInput {
   reachability: ReachabilityWitness;
   /** The endpoint's registered contract, when the caller could resolve it. */
   contract?: ContractExpectation;
+
+  /*
+   * ---- Phase 10 evidence ------------------------------------------------------------------
+   *
+   * Every field below is OPTIONAL, so a caller that predates this phase classifies exactly as it
+   * did before. They exist because the master plan asks the analysis to consume flow, actor, state,
+   * invariant and requirement evidence — and because without them the classifier has to answer from
+   * an HTTP status, which is the one thing it is forbidden to do.
+   */
+
+  /**
+   * Where this check sat in an executed flow.
+   *
+   * `prerequisiteFailed` is the load-bearing field: a step whose DECLARED prerequisite failed never
+   * exercised its own subject, so classifying it at all would attribute someone else's failure to
+   * it. The master plan forbids it in as many words, and rule 2 below enforces it.
+   */
+  flowStep?: {
+    readonly flowId: string;
+    readonly stepId: string;
+    readonly prerequisiteFailed: boolean;
+    /** The step that failed first, when one did. Named so the record points at the real cause. */
+    readonly blockedByStepId?: string;
+  };
+
+  /** Which participant made the observation. The pool KEY, never a username or a credential. */
+  actor?: { readonly role: string; readonly accountKey: string };
+
+  /** The Phase 7 verdict, when this check was a state transition. */
+  stateTransition?: 'OCCURRED' | 'NOT_OCCURRED' | 'INDETERMINATE';
+
+  /** The Phase 9 verdict, when this check was a side effect. */
+  sideEffect?: 'OBSERVED' | 'NOT_OBSERVED' | 'INDETERMINATE';
+
+  /** The business invariant this check was asserting, when it was asserting one. */
+  invariantId?: string;
+
+  /** The requirement ids this check traces to, for provenance on the record. */
+  requirementIds?: readonly string[];
 }
 
 /** HTTP 429. Compared as a number, never matched as text. */
@@ -267,6 +306,15 @@ function decide(input: FailureInput): Decision {
     ...reference('originRule', deciding?.originRule),
     ...reference('status', deciding?.response.status),
     ...reference('reachability', input.reachability.state),
+    // Phase 10 provenance. Present only when the caller supplied it, so nothing is invented.
+    ...reference('flowId', input.flowStep?.flowId),
+    ...reference('stepId', input.flowStep?.stepId),
+    ...reference('actorRole', input.actor?.role),
+    ...reference('actorAccount', input.actor?.accountKey),
+    ...reference('stateTransition', input.stateTransition),
+    ...reference('sideEffect', input.sideEffect),
+    ...reference('invariantId', input.invariantId),
+    ...reference('requirements', input.requirementIds?.join(',')),
   ];
 
   // ---- 1. Cleanup isolation. A safety rule, so nothing below can override it. ----------------
@@ -355,6 +403,33 @@ function decide(input: FailureInput): Decision {
         ...base,
         ...reference('preconditionCorrelationId', failedPrecondition.correlationId),
         ...reference('preconditionStatus', failedPrecondition.response.status),
+      ],
+    );
+  }
+
+  /*
+   * ---- 3b. A DECLARED prerequisite step of the flow failed. -------------------------------------
+   *
+   * The master plan states it directly: do not classify a downstream step when its prerequisite
+   * failed. A step that never ran its own action cannot have produced a defect, and attributing one
+   * to it is how a single real failure becomes a page of derived ones that all name the wrong thing.
+   *
+   * This sits with the other BLOCKED rules rather than among the evidence rules because it is not a
+   * judgement about evidence at all — whatever the exchange shows, the subject was never exercised.
+   * It is deliberately narrower than "something earlier failed": it fires only on a DECLARED
+   * dependency, the same artifact dependency the flow engine blocks on, so an unrelated failure
+   * elsewhere in the flow does not silence a real finding here.
+   */
+  if (input.flowStep?.prerequisiteFailed === true) {
+    return result(
+      'BLOCKED',
+      'FLOW_PREREQUISITE_FAILED',
+      'A declared prerequisite step of this flow failed, so this step never exercised its subject. ' +
+        'The failure belongs to the prerequisite, not here.',
+      [
+        ...base,
+        ...reference('blockedByStepId', input.flowStep.blockedByStepId),
+        { field: 'prerequisiteFailed', value: true },
       ],
     );
   }
@@ -491,6 +566,43 @@ function decide(input: FailureInput): Decision {
       'CAPABILITY_DECLARED_UNSUPPORTED',
       'The endpoint’s registered configuration declares this capability intentionally unsupported.',
       [...base, ...reference('declaredUnsupported', true)],
+    );
+  }
+
+  /*
+   * ---- 10b. A transition or a side effect that could not be MEASURED. ---------------------------
+   *
+   * Reached only after every infrastructure, environment and reachability rule above has declined,
+   * so the host did answer and the application produced it. What is left is the Phase 7 / Phase 9
+   * distinction that matters most:
+   *
+   *     NOT_OCCURRED / NOT_OBSERVED   the application was measured, and it did not do the thing
+   *     INDETERMINATE                 one side was never measured, so there is nothing to judge
+   *
+   * The second is the one worth a rule of its own. An INDETERMINATE outcome reaching the contract
+   * violation below would be reported as a defect on the strength of a measurement nobody took —
+   * the exact "unmeasured is not unchanged" failure the side-effect layer refuses to make, undone
+   * one layer later. A NOT_OCCURRED / NOT_OBSERVED outcome deliberately falls through to rule 11,
+   * because it IS an application-attributed contract violation and needs no special pleading.
+   */
+  if (input.stateTransition === 'INDETERMINATE') {
+    return result(
+      'INSUFFICIENT_EVIDENCE',
+      'STATE_TRANSITION_INDETERMINATE',
+      'The state before or after the action was never observed, so whether the transition happened ' +
+        'cannot be judged from this evidence.',
+      base,
+      { missing: ['an observation of the state on both sides of the action'] },
+    );
+  }
+  if (input.sideEffect === 'INDETERMINATE') {
+    return result(
+      'INSUFFICIENT_EVIDENCE',
+      'SIDE_EFFECT_INDETERMINATE',
+      'One side of the before/after comparison was never measured, so no change can be judged. ' +
+        'Unmeasured is not unchanged.',
+      base,
+      { missing: ['a measurement of the derived value on both sides of the action'] },
     );
   }
 

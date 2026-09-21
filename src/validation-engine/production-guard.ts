@@ -16,6 +16,16 @@ export interface SafetyFlags {
    */
   allowLiveWrite?: boolean;
   /**
+   * A caller explicitly authorizes THIS read on the live application, for a resource the run owns.
+   *
+   * Separate from `allowLiveWrite` and strictly narrower: it requires the endpoint to be
+   * NON-destructive, so it can never unlock a write. It exists for a read keyed by a runtime id —
+   * a group image download needs the `groupKpostID` a create just minted — which cannot be
+   * `productionSafe` because a fabricated id names nothing we own. Set per call by a flow, never by
+   * the engine.
+   */
+  allowLiveRead?: boolean;
+  /**
    * True when this request CANNOT reach a real host, so it cannot send a real SMS or e-mail. False
    * means a real host — where the SMS/OTP kill-switch below applies in EVERY mode.
    *
@@ -178,6 +188,34 @@ export function destructiveBlockReason(
     (endpoint.sideEffect ?? 'data') === 'data';
 
   /*
+   * A READ the caller has explicitly authorized, on a resource this run created.
+   *
+   * Deliberately a SEPARATE capability from `allowLiveWrite`, not a widening of it. Some reads are
+   * keyed by an id that only exists at runtime — a group's `groupKpostID`, a message's `msgID` — so
+   * they cannot be `productionSafe` (a fabricated id would 404, or worse, name a stranger's
+   * resource). Kall's id-keyed reads escape this only by accident: they are POST, so `destructive`
+   * defaults to true and `allowLiveWrite` happens to cover them. A GET has no such accident, and the
+   * repository's two group image downloads were stranded by it.
+   *
+   * The fix is not to call a GET destructive to borrow the write path — that would misstate the
+   * endpoint and put a read one flag away from the write authorization. This is strictly NARROWER
+   * than `liveWriteAuthorized`:
+   *
+   *   - it requires `destructive !== true`, so it can never unlock a write, by construction;
+   *   - it requires `sideEffect: data`, so `external`/`global` stay blocked;
+   *   - the SMS/OTP kill-switch sits ABOVE it and no flag reaches past that;
+   *   - the QA-identifier guard still runs, so the id must be one this run owns;
+   *   - the engine never sets it, so probes and fuzzers remain blocked.
+   *
+   * It clears the `productionSafe` gate and nothing else.
+   */
+  const liveReadAuthorized =
+    isLive &&
+    flags.allowLiveRead === true &&
+    endpoint.destructive !== true &&
+    (endpoint.sideEffect ?? 'data') === 'data';
+
+  /*
    * Deep write-fuzzing on a disposable TEST DB. Lets the ENGINE run a `data`-side-effect destructive
    * write (so its fuzzers/attack probes exercise the write's input validation) — which persists junk,
    * so it requires BOTH `writeFuzz` and `testDbMode`. It opens ONLY `data` writes: `external` (SMS/
@@ -196,6 +234,7 @@ export function destructiveBlockReason(
     isLive &&
     !endpoint.productionSafe &&
     !liveWriteAuthorized &&
+    !liveReadAuthorized &&
     !writeFuzzAuthorized &&
     !otpTestAuthorized
   ) {

@@ -58,7 +58,7 @@ Preserved, never resolved by this layer.
 | `BR-KU-DISAPPEAR-SCHED` | "Disappear As Per Schedule" deletes the message at its scheduled time whether or not it was read. | sender, recipient | ABSENCE, STATE_TRANSITION | TO_DO | needs a flow that can wait out a real timer, which no current spec supports. |
 | `BR-KU-DISAPPEAR-IMMUTABLE` | The disappearing-message setting cannot be changed after the message is sent. | sender | READ_BACK, REJECTION | TO_DO | — |
 | `BR-KU-FORWARD-HIDE` | A hide-source forward does not expose the original sender to the new recipient. | sender, recipient | CROSS_ACTOR, ABSENCE | TO_DO | the forward endpoints answer 500 on the test host today (CLAUDE.md 2026-09-13), so the rule cannot yet be exercised. |
-| `BR-KU-RECEIPTS` | A per-recipient read date and time is recorded, and only once that recipient has actually read the message. | sender, recipient, group-member | STATE_TRANSITION, CROSS_ACTOR | PARTIAL | tests/api/kpost/katchup/feature.spec.ts |
+| `BR-KU-RECEIPTS` | A per-recipient read date and time is recorded, and only once that recipient has actually read the message. | sender, recipient, group-member | STATE_TRANSITION, CROSS_ACTOR | PARTIAL | tests/api/kpost/katchup/state-transition.spec.ts |
 | `BR-KU-DELETE-OWN` | Deleting a received message removes it from the deleter's view only; other participants still see it. | sender, recipient | CROSS_ACTOR, ABSENCE, READ_BACK | PARTIAL | tests/api/kpost/katchup/lifecycle.spec.ts |
 
 ## group

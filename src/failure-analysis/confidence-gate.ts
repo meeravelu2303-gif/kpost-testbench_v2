@@ -158,9 +158,15 @@ function contractPresentFor(
     case 'PERFORMANCE':
       return contract.maxResponseTimeMs !== undefined;
     case 'SECURITY':
+    case 'AUTHENTICATION':
+    case 'AUTHORIZATION':
     case 'INPUT_VALIDATION':
     case 'BUSINESS_RULE':
     case 'STATE':
+    case 'STATE_TRANSITION':
+    case 'SIDE_EFFECT':
+    case 'DATA_CONSISTENCY':
+    case 'UI_BEHAVIOUR':
     case 'OTHER':
       /*
        * No per-endpoint structured declaration exists for these dimensions. Reporting `false` is the
@@ -172,6 +178,29 @@ function contractPresentFor(
 }
 
 /** Every factor, derived from structured evidence only. Computed once, recorded on every decision. */
+/**
+ * Whether an independent confirmation supports this finding.
+ *
+ * Deliberately conservative: anything other than an explicit CONFIRMED reads as false, because a
+ * confirmation that was never attempted and one that failed to reproduce are both "not evidence for
+ * a defect", whatever else distinguishes them.
+ */
+function independentlyConfirmed(input: ConfidenceInput): boolean {
+  return input.confirmation?.outcome === 'CONFIRMED';
+}
+
+/**
+ * Whether this is a defect not already known.
+ *
+ * Absent evidence reads as TRUE here, which is the opposite of the rule elsewhere in this file and
+ * is the right way round: with no duplicate analysis available, treating a finding as already-known
+ * would suppress it, and suppressing an unexamined finding is the one mistake this architecture is
+ * built to avoid. Defaulting to "distinct" can only over-report, which is visible and cheap.
+ */
+function distinctCanonicalDefect(input: ConfidenceInput): boolean {
+  return input.duplicateOf === undefined;
+}
+
 export function confidenceFactors(input: ConfidenceInput): ConfidenceFactors {
   const { observation, deciding, contract } = input;
   const samples = sampleCount(input);
@@ -193,6 +222,8 @@ export function confidenceFactors(input: ConfidenceInput): ConfidenceFactors {
       samples >= MIN_PERFORMANCE_SAMPLES && contract?.maxResponseTimeMs !== undefined,
     stateEvidenceAvailable: STATE_EVIDENCE_SUPPORTED,
     securityEvidenceAvailable: SECURITY_ACTOR_EVIDENCE_SUPPORTED,
+    independentlyConfirmed: independentlyConfirmed(input),
+    distinctCanonicalDefect: distinctCanonicalDefect(input),
   };
 }
 
@@ -610,7 +641,19 @@ function assessDimension(
      * never recorded (so an injection condition is not in the record), and no exchange carries an
      * actor identity (so no cross-account or authorization claim can be supported).
      */
+    /*
+     * `AUTHENTICATION` and `AUTHORIZATION` are judged here alongside `SECURITY` ON PURPOSE.
+     *
+     * Phase 10 split them apart in the CLASSIFICATION, because "the caller was not who they claimed"
+     * and "the caller was not allowed to do that" are different defects with different owners. What
+     * the GATE asks is a different question — is the property witnessed by structured evidence? —
+     * and the answer is identical for all three: request values are never recorded, so the condition
+     * under test is absent from the record. Sharing the branch keeps every existing verdict
+     * byte-identical while the report gains the distinction.
+     */
     case 'SECURITY':
+    case 'AUTHENTICATION':
+    case 'AUTHORIZATION':
       return {
         reasonCode: 'SECURITY_EVIDENCE_INCOMPLETE',
         summary:
@@ -674,6 +717,77 @@ function assessDimension(
         missing: [
           'structured state records captured before and after the action (the database layer is ' +
             'mock-only, so no read of committed state exists to compare)',
+        ],
+      };
+
+    /*
+     * Phase 7 and Phase 9 DO produce exactly the structured evidence these dimensions need — a
+     * before state, an after state and a declared expectation. What is missing is not the evidence
+     * but the CARRIAGE: the observation record does not yet hold it, so the gate cannot read it.
+     *
+     * That is deliberately stated as a missing INPUT rather than answered as a defect. Saying
+     * ELIGIBLE here would mean the gate had verified something it never saw, and the specs already
+     * assert these outcomes directly and fail on them — the finding is not lost, it is simply not
+     * yet independently re-witnessed at this layer.
+     */
+    case 'STATE_TRANSITION':
+      return {
+        reasonCode: 'TRANSITION_RECORD_NOT_CARRIED',
+        summary:
+          'A state-transition check failed, and a structured transition record exists in the test ' +
+          'but is not carried on the observation, so the gate cannot re-witness it.',
+        supporting: [{ field: 'stateEvidenceAvailable', value: factors.stateEvidenceAvailable }],
+        missing: [
+          'the transition record on the observation: the FROM state, the TO state, the field they ' +
+            'were read from, and the correlation ids of the before and after observations',
+        ],
+      };
+
+    case 'SIDE_EFFECT':
+      return {
+        reasonCode: 'SIDE_EFFECT_RECORD_NOT_CARRIED',
+        summary:
+          'A side-effect check failed, and a before/after delta exists in the test but is not ' +
+          'carried on the observation, so the gate cannot re-witness the change.',
+        missing: [
+          'the side-effect record on the observation: the value before, the value after, the ' +
+            'expected change, and the correlation ids of both reads',
+        ],
+      };
+
+    /*
+     * Data consistency is the strongest shape of evidence this bench produces — two reads by the
+     * SAME actor that contradict each other — because neither read can be dismissed as the wrong
+     * question. It still needs BOTH reads on the record; one of them plus a conclusion is an
+     * assertion, not evidence.
+     */
+    case 'DATA_CONSISTENCY':
+      return {
+        reasonCode: 'CONSISTENCY_EVIDENCE_INCOMPLETE',
+        summary:
+          'Two reads were reported to disagree, but the record holds only one of them, so the ' +
+          'disagreement itself is not witnessed.',
+        missing: [
+          'both sides of the contradiction on the record: each read endpoint, its actor and its ' +
+            'correlation id, and the specific field whose values conflict',
+        ],
+      };
+
+    /*
+     * A UI finding evidence is a screenshot, a video and a page state. Those are attached to the
+     * ticket and are genuinely strong for a human, but none of them is structured evidence this
+     * gate can verify a claim against.
+     */
+    case 'UI_BEHAVIOUR':
+      return {
+        reasonCode: 'UI_EVIDENCE_INCOMPLETE',
+        summary:
+          'A UI check failed. Its proof is visual and is attached for a human, but no structured ' +
+          'evidence witnesses the behaviour, so the gate leaves it visible and undecided.',
+        missing: [
+          'a structured record of the UI condition: the screen, the control acted on, and the ' +
+            'observed page state — the crash and broken-asset signals are selector-independent and ' +
+            'would be the first to carry',
         ],
       };
 

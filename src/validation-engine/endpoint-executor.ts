@@ -75,6 +75,11 @@ export interface SendOptions {
    */
   allowLiveWrite?: boolean;
   /**
+   * Authorizes a NON-destructive read of a resource this run owns (a group image keyed by the
+   * groupKpostID a create just minted). Never unlocks a write — see `production-guard.ts`.
+   */
+  allowLiveRead?: boolean;
+  /**
    * Which part of the lifecycle this call belongs to. Defaults to `action`, so every existing call
    * site keeps its exact behaviour. An ambient scope opened with `withPhase()` takes precedence,
    * because the framework sets that at a boundary it owns (the cleanup fixture) and a closure running
@@ -226,6 +231,7 @@ export class EndpointExecutor {
       isProduction: env.IS_PRODUCTION,
       allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
       allowLiveWrite: options.allowLiveWrite,
+      allowLiveRead: options.allowLiveRead,
       /*
        * Threads the mock/real-host signal so the SMS/OTP kill-switch blocks OTP senders against a
        * real host in EVERY mode, while still letting them run against the bundled mock.

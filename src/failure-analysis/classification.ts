@@ -57,6 +57,16 @@ export const REASON_CODES = [
   /** The endpoint's own configuration declares the capability unsupported. */
   'CAPABILITY_DECLARED_UNSUPPORTED',
   'APPLICATION_CONTRACT_VIOLATION',
+  /** A DECLARED prerequisite step of the flow failed, so this step never exercised its subject. */
+  'FLOW_PREREQUISITE_FAILED',
+  /** The resource did not reach the declared state, and the application produced the evidence. */
+  'STATE_TRANSITION_NOT_OBSERVED',
+  /** Before or after could not be observed, so no transition judgement is possible. */
+  'STATE_TRANSITION_INDETERMINATE',
+  /** A derived value did not change as the action required. */
+  'SIDE_EFFECT_NOT_OBSERVED',
+  /** One side of the comparison was never measured. Unmeasured is not unchanged. */
+  'SIDE_EFFECT_INDETERMINATE',
   'UNCLASSIFIED',
 ] as const;
 export type ReasonCode = (typeof REASON_CODES)[number];
@@ -72,6 +82,21 @@ export type ReasonCode = (typeof REASON_CODES)[number];
  * `INPUT_VALIDATION` and `PERFORMANCE` extend the suggested set because `request.*` (11 validators)
  * and `performance.*` (3) are real, sizeable families in this repository that would otherwise
  * collapse into `OTHER` and lose exactly the detail this field exists to provide.
+ *
+ * ## Phase 10 widening, and why it is safe
+ *
+ * The master plan asks for authentication/session, authorization, data consistency and UI behaviour
+ * to be DISTINGUISHABLE rather than merged. Three of those were collapsing here:
+ * `authentication.*` and `authorization.*` both resolved to `SECURITY`, so "the caller was not
+ * who they claimed" and "the caller was not allowed to do that" — different defects, different
+ * owners, different fixes — were indistinguishable in every report. They are now their own
+ * dimensions, and `STATE_TRANSITION`, `SIDE_EFFECT` and `DATA_CONSISTENCY` are added for the
+ * Phase 7 and Phase 9 evidence that previously had nowhere to go.
+ *
+ * Safe for Bugzilla because `violationType` is NOT part of a bug fingerprint — identity is
+ * `endpointId | validatorName | message` (`bug-fingerprint.ts`). Refining a dimension therefore
+ * cannot orphan an existing ticket or duplicate one, which is exactly the trap the 2026-09-17
+ * product-scoped-dedup entry in the decision log records.
  */
 export const VIOLATION_TYPES = [
   'STATUS_CODE',
@@ -79,9 +104,15 @@ export const VIOLATION_TYPES = [
   'HEADER',
   'CONTENT_TYPE',
   'SECURITY',
+  'AUTHENTICATION',
+  'AUTHORIZATION',
   'INPUT_VALIDATION',
   'BUSINESS_RULE',
   'STATE',
+  'STATE_TRANSITION',
+  'SIDE_EFFECT',
+  'DATA_CONSISTENCY',
+  'UI_BEHAVIOUR',
   'PERFORMANCE',
   'OTHER',
 ] as const;
@@ -124,7 +155,7 @@ export interface ClassificationResult {
  * Bumped whenever a rule changes meaning, so a stored observation can always be read against the
  * rules that produced it. A distribution is only comparable across runs of the same version.
  */
-export const CLASSIFIER_VERSION = '3.3.1';
+export const CLASSIFIER_VERSION = '3.4.0';
 
 /**
  * Validator name → the contract dimension it tests. Longest prefix wins, so `security.rate-limit`
@@ -147,9 +178,13 @@ const VIOLATION_BY_PREFIX: readonly (readonly [string, ViolationType])[] = [
   ['request.', 'INPUT_VALIDATION'],
   ['common.', 'RESPONSE_SCHEMA'],
   ['security.', 'SECURITY'],
-  ['authentication.', 'SECURITY'],
-  ['authorization.', 'SECURITY'],
+  ['authentication.', 'AUTHENTICATION'],
+  ['authorization.', 'AUTHORIZATION'],
   ['database.', 'STATE'],
+  ['state-transition.', 'STATE_TRANSITION'],
+  ['side-effect.', 'SIDE_EFFECT'],
+  ['consistency.', 'DATA_CONSISTENCY'],
+  ['ui.', 'UI_BEHAVIOUR'],
 ];
 
 /** The dimension a validator tests. Deterministic, and `OTHER` when the name is unrecognised. */

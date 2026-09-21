@@ -184,8 +184,13 @@ export const KATCHUP_INVARIANTS: readonly BusinessInvariant[] = [
       'a member who has not read shows no read time; after that member reads, a read time appears for them and not for the others',
     evidence: ['STATE_TRANSITION', 'CROSS_ACTOR'],
     status: 'PARTIAL',
-    verifiedBy: 'tests/api/kpost/katchup/feature.spec.ts',
-    gap: 'receipts are read back; the before/after transition per member is not asserted.',
+    verifiedBy: 'tests/api/kpost/katchup/state-transition.spec.ts',
+    gap:
+      'The 1:1 case is now verified as a real transition: the sender’s view is observed BEFORE, ' +
+      'the recipient opens the conversation, and the view is observed AFTER — status 0 → 2, ' +
+      'checked by the Phase 7 transition checker rather than by reading a receipt endpoint back. ' +
+      'What remains is the PER-MEMBER group case: that a read time appears for the member who read ' +
+      'and for no one else.',
     conflict:
       'CONF-KATCHUP-READ-PERSPECTIVE: the Phase 4D calibration found the API conversation read itself performs the read transition, which contradicts the Phase 4B model recording the mechanism as UI. Preserved, not resolved.',
   },
