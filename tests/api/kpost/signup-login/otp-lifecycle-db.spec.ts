@@ -47,6 +47,19 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
     'OTP flows run only on a confirmed test gateway: OTP_TEST_GATEWAY=true + TEST_DB_MODE=true',
   );
 
+  /*
+   * Every test here mints codes against `otpMobile`, NEVER `signupMobile`.
+   *
+   * Those are two reserved numbers and the distinction is load-bearing: `otp-signup-lifecycle.spec.ts`
+   * drives the registration chain on `signupMobile`, and a code is consumed by whoever validates it
+   * first. Sharing one number made both specs pass alone and fail together — seven tests failed in a
+   * full run while passing 7/7 in isolation, because each spec was validating a code the other had
+   * just replaced. Splitting the numbers is what makes them independent.
+   *
+   * Within this file the describe is `mode: 'serial'`, so its own tests cannot race each other for
+   * the number either — which the expiry test depends on, since it asserts that nothing minted a
+   * newer code while it waited.
+   */
   /** The documented validity window, stated by the API's own message ("Valid for 10 minutes only."). */
   const WINDOW_SECONDS = 600;
 
@@ -88,7 +101,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
       {
         body: {
           countryID: testData.countryId,
-          mobileNumber: testData.signupMobile,
+          mobileNumber: testData.otpMobile,
           requestType: 'signup',
         },
       },
@@ -97,7 +110,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
     expect(sent.status, 'sendOTP is accepted').toBe(200);
 
     const row = await latest(database, 'TBL_KPOST_OTP_VALIDATION', {
-      mobile_number: testData.signupMobile,
+      mobile_number: testData.otpMobile,
     });
 
     expect(
@@ -136,7 +149,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
       {
         body: {
           countryID: testData.countryId,
-          mobileNumber: testData.signupMobile,
+          mobileNumber: testData.otpMobile,
           requestType: 'signup',
         },
       },
@@ -144,7 +157,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
     );
 
     const minted = await latest(database, 'TBL_KPOST_OTP_VALIDATION', {
-      mobile_number: testData.signupMobile,
+      mobile_number: testData.otpMobile,
     });
     expect(minted?.otp, 'a code was minted to validate').toBeTruthy();
 
@@ -154,7 +167,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
         body: {
           otp: minted?.otp,
           countryID: testData.countryId,
-          mobileNumber: testData.signupMobile,
+          mobileNumber: testData.otpMobile,
         },
       },
       { label: 'otp-db:validate-mobile', allowLiveWrite: true },
@@ -180,7 +193,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
         body: {
           otp: minted?.otp,
           countryID: testData.countryId,
-          mobileNumber: testData.signupMobile,
+          mobileNumber: testData.otpMobile,
         },
       },
       { label: 'otp-db:replay-mobile', allowLiveWrite: true },
@@ -200,14 +213,14 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
       {
         body: {
           countryID: testData.countryId,
-          mobileNumber: testData.signupMobile,
+          mobileNumber: testData.otpMobile,
           requestType: 'signup',
         },
       },
       { label: 'otp-db:send-for-wrong', allowLiveWrite: true },
     );
     const minted = await latest(database, 'TBL_KPOST_OTP_VALIDATION', {
-      mobile_number: testData.signupMobile,
+      mobile_number: testData.otpMobile,
     });
 
     const wrong = await endpoints.sendTo(
@@ -216,7 +229,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
         body: {
           otp: testData.invalidOtp,
           countryID: testData.countryId,
-          mobileNumber: testData.signupMobile,
+          mobileNumber: testData.otpMobile,
         },
       },
       { label: 'otp-db:wrong-code', allowLiveWrite: true },
@@ -261,7 +274,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
         {
           body: {
             countryID: testData.countryId,
-            mobileNumber: testData.signupMobile,
+            mobileNumber: testData.otpMobile,
             requestType: 'signup',
           },
         },
@@ -269,7 +282,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
       );
       statuses.push(sent.status);
       const row = await latest(database, 'TBL_KPOST_OTP_VALIDATION', {
-        mobile_number: testData.signupMobile,
+        mobile_number: testData.otpMobile,
       });
       if (row) ids.push(row.id);
     }
@@ -403,7 +416,7 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
           kpostID: testData.signupKpostId,
           firstName: 'QA',
           lastName: 'Bench',
-          mobileNumber: testData.signupMobile,
+          mobileNumber: testData.otpMobile,
         },
       },
       { label: 'otp-db:signup-identity' },

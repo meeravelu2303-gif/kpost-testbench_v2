@@ -22,6 +22,7 @@ import { type BusinessRuleFinding, type FlowFinding, isServerError } from './flo
 import { destructiveBlockReason, ProductionSafetyError } from './production-guard';
 import { assertQaOwnedIdentifiers } from './qa-identifier-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
+import { oldestExpiredToken, recordToken } from './token-history';
 
 /** How a request authenticates: as a role, as a specific principal, or with a raw header. */
 export type AuthMode = { role: Role } | { principal: Principal } | { header: string | undefined };
@@ -243,9 +244,18 @@ export class EndpointExecutor {
     return (endpoint.envelope ? getPath(parsed.value, 'data') : parsed.value) as T;
   }
 
-  /** A genuinely expired token: from EXPIRED_TOKEN, or minted by the mock API. */
+  /**
+   * A genuinely expired token, in order of preference:
+   *   1. EXPIRED_TOKEN, when someone set it explicitly (a manual override always wins);
+   *   2. the newest token from an EARLIER run that has since aged past its exp (the automatic path —
+   *      see token-history.ts, this is what stops the check skipping without any manual step);
+   *   3. one minted on demand by the mock API, when running against the mock.
+   * Undefined only on a brand-new checkout that has not yet run long enough for a token to mature.
+   */
   async expiredToken(): Promise<string | undefined> {
     if (env.EXPIRED_TOKEN) return env.EXPIRED_TOKEN;
+    const aged = oldestExpiredToken();
+    if (aged) return aged;
     if (!env.MOCK_API) return undefined;
     const client = await this.clients.get(suiteFor());
     const exchange = await client.execute(
@@ -266,7 +276,14 @@ export class EndpointExecutor {
     const profile = authProfileFor(endpoint.definition);
     const principal =
       auth && 'principal' in auth ? auth.principal : this.principalFor(endpoint, auth?.role);
-    return `${profile.scheme} ${await this.tokens.tokenFor(principal, profile)}`;
+    const token = await this.tokens.tokenFor(principal, profile);
+    /*
+     * Record every real KPost token as it is minted, so a later run's expired-token check has an
+     * aged one to use and never has to skip. Gated on the live KPost auth: the mock's tokens are not
+     * worth aging, and only KPost issues the ones the check is about.
+     */
+    if (!env.MOCK_API && profile.id === 'kpost') recordToken(token);
+    return `${profile.scheme} ${token}`;
   }
 
   /*

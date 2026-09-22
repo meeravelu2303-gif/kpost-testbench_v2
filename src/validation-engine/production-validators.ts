@@ -43,6 +43,8 @@ export const PRODUCTION_SAFE_VALIDATORS: readonly string[] = [
   'response.structure',
   'response.schema',
   'response.content-type',
+  // Reads the primary response body's magic number only — no extra request, no mutation.
+  'response.binary-content',
   'response.headers',
   'response.metadata',
   'response.pagination',

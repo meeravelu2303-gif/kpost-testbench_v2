@@ -98,6 +98,25 @@ export interface RunSummary {
     byCategory: CategoryRow[];
     topFailingValidators: ValidatorRow[];
     endpointsWithFailures: EndpointRow[];
+    /**
+     * The honest breakdown of WHY checks skipped, so the raw skip count is not read as a coverage
+     * hole. Most skips are a validator correctly declining an endpoint it cannot apply to (a body
+     * fuzzer on a GET, an authz check on a public route) — that is full coverage of what applies,
+     * not a gap. See `classifySkip`.
+     */
+    skips: {
+      notApplicable: number;
+      recoverable: number;
+      blockedByDefect: number;
+      environmental: number;
+      deliberate: number;
+    };
+    /**
+     * Coverage measured over the checks that actually APPLIED and ran (passed + failed), ignoring the
+     * inapplicable matrix cells. This is the number that means something — a GET fully checked by the
+     * validators that apply to a GET is 100% here, even though the body-fuzzers "skipped" it.
+     */
+    applicable: { ran: number; passed: number; passRate: number };
   };
   ui: {
     ran: boolean;
@@ -124,12 +143,91 @@ const MAX_ENDPOINT_ROWS = 40;
 /** How many validators to show in the "top failing validators" table. */
 const MAX_VALIDATOR_ROWS = 20;
 
+/**
+ * Why a check skipped, in the terms that matter for coverage.
+ *
+ *  - **not-applicable** the validator cannot apply to this endpoint/response by design — a body
+ *    fuzzer on a GET with no body, an authz check on a public route, an email-format check on a
+ *    response with no email field. This is NOT a gap: it is full coverage of what applies.
+ *  - **recoverable** a contract or config gap the team can close — a missing response schema, an
+ *    undocumented error envelope, an unconfigured cross-tenant scenario. Filling it makes the check
+ *    run.
+ *  - **blocked-by-defect** a dependent check that could not run because the primary request already
+ *    failed (a 401/500/400, or a failed prerequisite). It recovers automatically when the root
+ *    defect is fixed — it is not a separate gap.
+ *  - **environmental** a timeout or no-response — transient, not a coverage decision.
+ *  - **deliberate** switched off for this endpoint on purpose (`skipValidators`).
+ *
+ * The point of splitting these is that a single "skipped" total is misleading: the overwhelming
+ * majority is not-applicable-by-design, and only `recoverable` is a coverage hole anyone can act on.
+ */
+export type SkipClass =
+  'not-applicable' | 'recoverable' | 'blocked-by-defect' | 'environmental' | 'deliberate';
+
+export function classifySkip(reason: string): SkipClass {
+  const r = reason.toLowerCase();
+  if (/skipvalidators|disabled for this endpoint/.test(r)) return 'deliberate';
+  if (
+    /prerequisite .* did not pass|the primary request answered \d|answered 404: the route is unknown/.test(
+      r,
+    )
+  ) {
+    return 'blocked-by-defect';
+  }
+  if (/no http response|no response within|timeout|response has no content \(http 0\)/.test(r)) {
+    return 'environmental';
+  }
+  if (
+    /defines no (response|request) schema|documents no error envelope|no expired token available|no privilege-escalation scenario configured|not tenant-scoped|no principals of a second tenant|does not declare concurrency\.singlewritewins/.test(
+      r,
+    )
+  ) {
+    return 'recoverable';
+  }
+  // Everything else that skipped is a validator declining an endpoint it cannot apply to.
+  return 'not-applicable';
+}
+
 export function buildRunSummary(input: RunSummaryInput): RunSummary {
   const reports = input.validationReports;
   const results = reports.flatMap((r) => r.results);
 
   const checks = { ...zero(), total: results.length };
   for (const r of results) add(checks, r.status);
+
+  // Classify every SKIPPED check by its reason, so the skip total is legible instead of alarming.
+  const skips = {
+    notApplicable: 0,
+    recoverable: 0,
+    blockedByDefect: 0,
+    environmental: 0,
+    deliberate: 0,
+  };
+  for (const r of results) {
+    if (r.status !== 'SKIPPED') continue;
+    switch (classifySkip(r.message ?? '')) {
+      case 'recoverable':
+        skips.recoverable += 1;
+        break;
+      case 'blocked-by-defect':
+        skips.blockedByDefect += 1;
+        break;
+      case 'environmental':
+        skips.environmental += 1;
+        break;
+      case 'deliberate':
+        skips.deliberate += 1;
+        break;
+      default:
+        skips.notApplicable += 1;
+    }
+  }
+  const ran = checks.passed + checks.failed;
+  const applicable = {
+    ran,
+    passed: checks.passed,
+    passRate: ran > 0 ? Math.round((checks.passed / ran) * 1000) / 10 : 0,
+  };
 
   // Aggregate by DISTINCT endpoint — an endpoint can produce several reports in one run (multiple
   // test blocks, or a retry), and counting each report as an endpoint would inflate the totals and
@@ -249,6 +347,8 @@ export function buildRunSummary(input: RunSummaryInput): RunSummary {
         .sort((a, b) => b.failed - a.failed)
         .slice(0, MAX_VALIDATOR_ROWS),
       endpointsWithFailures,
+      skips,
+      applicable,
     },
     ui: {
       ran: input.uiTests.length > 0,
@@ -469,6 +569,32 @@ export function renderRunSummaryConsole(s: RunSummary): string {
     out.push(`    failed             ${pad(c.failed, 6, true)}   ${share(c.failed, c.total)}`);
     out.push(`    warnings           ${pad(c.warnings, 6, true)}   ${share(c.warnings, c.total)}`);
     out.push(`    skipped            ${pad(c.skipped, 6, true)}   ${share(c.skipped, c.total)}`);
+
+    /*
+     * Applicable coverage — the number that means something. Of the checks that actually applied and
+     * ran, how many passed. The skipped total above is dominated by validators correctly declining
+     * endpoints they cannot apply to, so a raw "X% skipped" understates coverage badly.
+     */
+    out.push('');
+    out.push(
+      `  Applicable coverage  ${api.applicable.passed}/${api.applicable.ran} checks passed  (${api.applicable.passRate}%)`,
+    );
+    out.push('  Skips, by why (only "recoverable" is a coverage hole anyone can act on):');
+    out.push(
+      `    not applicable (by design)  ${pad(api.skips.notApplicable, 6, true)}   correct — nothing to check`,
+    );
+    out.push(
+      `    recoverable (config/contract)${pad(api.skips.recoverable, 5, true)}   fillable — schema/scenario gaps`,
+    );
+    out.push(
+      `    blocked by a defect         ${pad(api.skips.blockedByDefect, 6, true)}   recovers when the root bug is fixed`,
+    );
+    out.push(
+      `    environmental (timeouts)    ${pad(api.skips.environmental, 6, true)}   transient`,
+    );
+    out.push(
+      `    deliberately disabled       ${pad(api.skips.deliberate, 6, true)}   switched off on purpose`,
+    );
 
     if (api.bySuite.length) {
       out.push('');

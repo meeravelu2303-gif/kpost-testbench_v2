@@ -25,7 +25,30 @@ export class ApiResponseWrapper {
     readonly transportError?: TransportError,
     /** Which probe produced the exchange, e.g. `primary` or `authentication.missing-token`. */
     readonly label = 'primary',
+    /**
+     * The first 16 bytes of the raw body as hex, captured before any lossy text decode. Used to
+     * identify a binary body's real format from its magic number — the bytes `bodyText` cannot keep.
+     */
+    readonly bodyPrefixHex?: string,
   ) {}
+
+  /**
+   * The image/document format the body ACTUALLY is, read from its magic number — independent of the
+   * Content-Type header the server claimed. `undefined` when the prefix matches no known signature
+   * (a JSON or text body, or an unknown format). This is what makes "header says jpeg, bytes are
+   * png" visible.
+   */
+  get magicType(): string | undefined {
+    const hex = (this.bodyPrefixHex ?? '').toLowerCase();
+    if (hex.startsWith('89504e47')) return 'image/png';
+    if (hex.startsWith('ffd8ff')) return 'image/jpeg';
+    if (hex.startsWith('474946')) return 'image/gif';
+    if (hex.startsWith('25504446')) return 'application/pdf';
+    if (hex.startsWith('424d')) return 'image/bmp';
+    // RIFF....WEBP — bytes 0-3 "RIFF" (52494646), bytes 8-11 "WEBP" (57454250).
+    if (hex.startsWith('52494646') && hex.slice(16, 24) === '57454250') return 'image/webp';
+    return undefined;
+  }
 
   get correlationId(): string {
     return this.request.correlationId;

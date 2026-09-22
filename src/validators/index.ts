@@ -37,6 +37,7 @@ import { malformedJsonValidator } from './request/malformed-json.validator';
 import { nullValueValidator } from './request/null-value.validator';
 import { requiredFieldsValidator } from './request/required-fields.validator';
 import { unknownFieldsValidator } from './request/unknown-fields.validator';
+import { binaryContentValidator } from './response/binary-content.validator';
 import { contentTypeValidator } from './response/content-type.validator';
 import { errorFormatValidator } from './response/error-format.validator';
 import { headersValidator } from './response/headers.validator';
@@ -62,6 +63,7 @@ export const validationRegistry = new ValidationRegistry().register(
   // Response
   statusCodeValidator,
   contentTypeValidator,
+  binaryContentValidator,
   headersValidator,
   responseStructureValidator,
   responseSchemaValidator,

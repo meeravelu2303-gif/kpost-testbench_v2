@@ -34,7 +34,15 @@ export class ApiClient {
         failOnStatusCode: false,
         maxRedirects: 0,
       });
-      const bodyText = await response.text();
+      /*
+       * Read the body ONCE as a Buffer, then derive the text from it. Playwright lets a body be
+       * consumed only once, and the raw leading bytes are what a binary check needs: a lossy UTF-8
+       * decode drops the very magic-number bytes (0x89 for PNG, 0xFF for JPEG) that identify the
+       * real format, so `bodyText` alone cannot tell a mislabelled image from a correct one.
+       */
+      const buffer = await response.body();
+      const bodyText = buffer.toString('utf8');
+      const bodyPrefixHex = buffer.subarray(0, 16).toString('hex');
       const durationMs = Math.round(performance.now() - started);
       this.log.debug(`${apiRequest.method} ${apiRequest.url} -> ${response.status()}`, {
         label,
@@ -49,6 +57,7 @@ export class ApiClient {
         durationMs,
         undefined,
         label,
+        bodyPrefixHex,
       );
     } catch (error) {
       const message = (error as Error).message;
