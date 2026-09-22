@@ -37,7 +37,11 @@ const OUT = path.join(__dirname, '..', '.auth', 'aging-token.json');
       module: 0,
       sessionID: require('crypto').randomUUID(),
       kpostID: process.env.QA_KPOST_ID,
-      loginRO: { countryID: String(process.env.QA_COUNTRY_ID || 1), password: process.env.QA_PASSWORD, userType: 'PERSONAL' },
+      loginRO: {
+        countryID: String(process.env.QA_COUNTRY_ID || 1),
+        password: process.env.QA_PASSWORD,
+        userType: 'PERSONAL',
+      },
       logintime: Date.now(),
     }),
   });
@@ -46,10 +50,17 @@ const OUT = path.join(__dirname, '..', '.auth', 'aging-token.json');
     console.error('login did not return an accessToken — check QA_KPOST_ID / QA_PASSWORD');
     process.exit(1);
   }
-  const claims = JSON.parse(Buffer.from(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
+  const claims = JSON.parse(
+    Buffer.from(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString(),
+  );
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
-  fs.writeFileSync(OUT, JSON.stringify({ token, exp: claims.exp, capturedAt: Math.floor(Date.now() / 1000) }, null, 2));
+  fs.writeFileSync(
+    OUT,
+    JSON.stringify({ token, exp: claims.exp, capturedAt: Math.floor(Date.now() / 1000) }, null, 2),
+  );
   const hrs = ((claims.exp - Date.now() / 1000) / 3600).toFixed(1);
   console.error(`captured. expires in ${hrs}h (at ${new Date(claims.exp * 1000).toISOString()}).`);
-  console.error(`it becomes usable as EXPIRED_TOKEN after that time. saved to .auth/aging-token.json`);
+  console.error(
+    `it becomes usable as EXPIRED_TOKEN after that time. saved to .auth/aging-token.json`,
+  );
 })();

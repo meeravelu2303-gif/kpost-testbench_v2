@@ -61,7 +61,8 @@ test.describe('KPost KOS · feature flow', () => {
      * issue, so there is no downstream assertion for the inversion to mask. The moment create
      * works, this turns RED and the rest of the flow starts being exercised for real.
      */
-    test.fail(true, 'known product defect (Bugzilla #499): /kword/create 500s for every payload');
+    // Bugzilla #499 reported fixed — now asserted normally (create must issue a docId and the full
+    // lifecycle run). Was pinned with test.fail() while create 500'd for every payload.
     let docId: string | undefined;
     try {
       const created = await run(

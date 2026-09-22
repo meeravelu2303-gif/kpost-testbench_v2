@@ -72,6 +72,17 @@ const UI_FILING_SPECS = new Set([
   // real defect, never a tuning miss. (axe-a11y and visual regression are review-only, not here.)
   'keyboard-nav.spec.ts',
   'network-resilience.spec.ts',
+  // The Profile/Settings breakage sweep files too: it reports only crashes / broken assets / frozen
+  // renders across those screens' sections and panels — selector-INDEPENDENT defects, never a
+  // tuning miss.
+  'profile-settings-breakage.spec.ts',
+  // The Contacts breakage sweep files for the same reason — crashes / broken assets on the Contacts
+  // tab and its Add / KDirectory / Group surfaces.
+  'contacts-breakage.spec.ts',
+  // The chat session-safety check files: "clicking a contact avatar logs the user out" is a
+  // selector-INDEPENDENT, unambiguous functional defect (the session ends), captured with clear
+  // visible proof — never a tuning miss.
+  'chat-avatar-session.spec.ts',
 ]);
 
 /**
@@ -419,6 +430,22 @@ function proofFrom(
       proof.push({ path: a.path, contentType: a.contentType, label: `Screenshot (${browser})` });
     } else if (a.name === 'video') {
       proof.push({ path: a.path, contentType: a.contentType, label: `Video (${browser})` });
+    } else if (a.name === 'crash-evidence') {
+      // An annotated screenshot: the JS crash painted onto the page as readable text, so the IMAGE
+      // itself shows the bug (the raw screenshot only shows a normal-looking screen).
+      proof.push({
+        path: a.path,
+        contentType: a.contentType,
+        label: `Annotated crash screenshot (${browser})`,
+      });
+    } else if (a.name === 'crash-diagnosis') {
+      // A plain-English explanation of a JS crash (error + stack + the API call behind it) — the
+      // evidence a screenshot/video cannot give for an exception that fires silently in the console.
+      proof.push({
+        path: a.path,
+        contentType: a.contentType,
+        label: `Crash diagnosis (${browser})`,
+      });
     }
   }
   return proof;

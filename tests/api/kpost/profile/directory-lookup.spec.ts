@@ -58,10 +58,8 @@ test.describe('KPost Profile · directory lookup @api @kpost-api @profile @datab
      * spec can be flipped back and the ticket closed. A `skip` would go quiet forever; a plain
      * failure would leave the bench permanently red and train people to ignore it.
      */
-    test.fail(
-      true,
-      'known product defect (Bugzilla #498): getUserProfileUsingKpostID 404s for this active account',
-    );
+    // Bugzilla #498 reported fixed — now asserted normally (an active account must resolve, not
+    // 404). Was pinned with test.fail() while the lookup 404'd.
     /*
      * The database half runs first and is asserted separately, so a failure names the right layer:
      * if the row were genuinely missing this would be a data problem, not an API defect, and the

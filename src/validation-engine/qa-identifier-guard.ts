@@ -103,6 +103,9 @@ const NOT_A_RESOURCE = new Set(
     'referencemessageidlist',
     'sharedmessagedetails',
     'groupkpostname',
+    // The group's DISPLAY name in editGroupName — free text a user types, not a resource id. Same
+    // class as groupkpostname; without it the identifier guard blocks a rename with a non-QA name.
+    'groupname',
     'memberdesignation',
     'reportid',
     // Group metadata flags/paths — contain "group" but are booleans/paths, not a group id.

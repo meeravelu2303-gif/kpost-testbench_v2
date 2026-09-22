@@ -172,7 +172,8 @@ test.describe('KPost signup · domain policy @api @kpost-api @signup-login @data
      * Kept as `test.fail()` rather than deleted: the run stays green while the defect is live and
      * turns RED the moment the status is corrected, which is when this can be flipped back.
      */
-    test.fail(true, 'known product defect (Bugzilla #497): a taken KPost ID answers HTTP 500');
+    // Bugzilla #497 reported fixed — now asserted normally (a taken KPost ID must be a clean 4xx,
+    // not a 500). Was pinned with test.fail() while it answered HTTP 500.
 
     const account = findAccount('primary');
     const exchange = await endpoints.sendTo(

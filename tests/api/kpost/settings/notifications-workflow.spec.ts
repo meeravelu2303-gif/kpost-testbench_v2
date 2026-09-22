@@ -72,7 +72,8 @@ test.describe('KPost Settings · notification preferences @api @kpost-api @setti
      * the row never changes. `test.fail()` keeps the run green while the defect is live and turns
      * RED the moment the write starts persisting — which is when the ticket can be closed.
      */
-    test.fail(true, 'known product defect (Bugzilla #495): the preference write persists nothing');
+    // Bugzilla #495 reported fixed — now asserted normally (a toggled preference must persist to
+    // the row). Was pinned with test.fail() while the write persisted nothing.
     const database = databases.for('kpost-api');
     test.skip(!database.enabled, 'needs the KPOST_QA connection');
 

@@ -320,10 +320,8 @@ test.describe('KPost Kall · feature flow @database', () => {
      * `test.fail()` is safe — it keeps the run green while the defect is live and turns RED the
      * moment a repeating call can be created.
      */
-    test.fail(
-      true,
-      'known product defect (Bugzilla #500): scheduledRepeatKall 500s for every repeat interval',
-    );
+    // Bugzilla #500 reported fixed — now asserted normally (fixed → green; a regression → red, and
+    // :file mode reopens the ticket). Was pinned with test.fail() while the 500 was live.
     try {
       const repeat = await endpoints.sendTo(
         'kall-scheduled-repeat',
@@ -358,10 +356,8 @@ test.describe('KPost Kall · feature flow @database', () => {
      * so pinning it on a six-step flow would also swallow a regression in join, end or the database
      * assertions. A pinned test should assert one rule.
      */
-    test.fail(
-      true,
-      'known product defect (Bugzilla #501): reScheduleKall creates a new call instead of updating',
-    );
+    // Bugzilla #501 reported fixed — now asserted normally (reschedule must update in place, not
+    // create a new call). Was pinned with test.fail() while the defect was live.
     const database = databases.for('kpost-api');
 
     const scheduled = await endpoints.sendTo(

@@ -290,23 +290,77 @@ export class EndpointExecutor {
    * The profile follows the endpoint being tested, not a global: a token minted by the mock and
    * sent to the live API would be rejected as invalid and read like an API defect.
    */
+  /**
+   * Log in and return a token the resource endpoints will actually ACCEPT.
+   *
+   * KPost's auth is non-deterministic (as of the 2026-09 deploy): roughly half of all logins return
+   * HTTP 200 with a well-formed, unexpired token that every authenticated endpoint then rejects with
+   * 401 "UNAUTHORIZED USER" — the login session is not shared across backend instances (filed as its
+   * own defect). A single such token 401s every call in the run and floods the report with hundreds
+   * of false defects. So this canaries the minted token against a lightweight authed endpoint and
+   * re-logs-in until it holds one the API accepts, or gives up after MAX_LOGIN_ATTEMPTS.
+   */
   private async login(principal: Principal, profile: AuthProfile): Promise<string> {
     // A principal may name its own login endpoint (BUSINESS_M/L → adminUserLogin); else the profile's.
     const endpoint = resolveEndpoint(
       this.apiRegistry.get(principal.loginEndpointId ?? profile.loginEndpointId),
     );
-    const exchange = await this.send(endpoint, profile.loginRequest(principal), {
-      label: 'setup:login',
-      auth: { header: undefined },
-    });
-    const parsed = exchange.json();
-    const token = parsed.ok ? getPath(parsed.value, profile.tokenPath) : undefined;
-    if (!endpoint.expectedStatus.includes(exchange.status) || typeof token !== 'string') {
-      throw new Error(
-        `Login failed for principal "${principal.key}" (HTTP ${exchange.status}, correlationId ${exchange.correlationId})`,
+    const MAX_LOGIN_ATTEMPTS = 8;
+    let lastReason = 'unknown';
+    for (let attempt = 1; attempt <= MAX_LOGIN_ATTEMPTS; attempt++) {
+      const exchange = await this.send(endpoint, profile.loginRequest(principal), {
+        label: 'setup:login',
+        auth: { header: undefined },
+      });
+      const parsed = exchange.json();
+      const token = parsed.ok ? getPath(parsed.value, profile.tokenPath) : undefined;
+      if (!endpoint.expectedStatus.includes(exchange.status) || typeof token !== 'string') {
+        lastReason = `login endpoint answered HTTP ${exchange.status} (correlationId ${exchange.correlationId})`;
+        continue;
+      }
+      if (await this.tokenIsAccepted(profile, principal, token)) {
+        if (attempt > 1) {
+          this.log.warn(
+            `principal "${principal.key}": discarded ${attempt - 1} unusable token(s) before a working one — KPost intermittent-auth defect (login mints a token the API 401s)`,
+          );
+        }
+        this.log.debug(`Authenticated principal "${principal.key}"`);
+        return token;
+      }
+      lastReason = 'the minted token was rejected (401) by the verification endpoint';
+      this.log.debug(
+        `principal "${principal.key}": token rejected on attempt ${attempt}/${MAX_LOGIN_ATTEMPTS}, re-logging in`,
       );
     }
-    this.log.debug(`Authenticated principal "${principal.key}"`);
-    return token;
+    throw new Error(
+      `Login failed for principal "${principal.key}" after ${MAX_LOGIN_ATTEMPTS} attempts: ${lastReason}. ` +
+        `This is the KPost intermittent-auth defect if the reason is a rejected token.`,
+    );
+  }
+
+  /**
+   * Does a resource endpoint actually accept this token? Canaries it against a lightweight, read-only
+   * authed endpoint (fetchUserDetails on the caller's own account). 401/403 means the token was NOT
+   * accepted (the intermittent-auth defect); anything else (200, 404, even 500) means auth passed and
+   * only the resource result differs. Only the real KPost auth is affected, so the mock is exempt. A
+   * transport error is not a verdict — treat as accepted rather than loop on a network blip.
+   */
+  private async tokenIsAccepted(
+    profile: AuthProfile,
+    principal: Principal,
+    token: string,
+  ): Promise<boolean> {
+    if (env.MOCK_API || profile.id !== 'kpost') return true;
+    try {
+      const canary = resolveEndpoint(this.apiRegistry.get('signup-login-fetch-user-details'));
+      const res = await this.send(
+        canary,
+        { body: { kpostID: principal.username } },
+        { label: 'setup:verify-token', auth: { header: `${profile.scheme} ${token}` } },
+      );
+      return res.status !== 401 && res.status !== 403;
+    } catch {
+      return true;
+    }
   }
 }

@@ -90,7 +90,7 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
     );
     expect.soft(validateMail.status, 'validateMailOTP accepted the real code').toBeLessThan(500);
 
-    // 4. Register the personal account (both OTPs validated). Fresh DB → success; re-run → already-exists.
+    // 4. Register the personal account (both OTPs validated). Fresh DB → created; re-run → already-exists.
     const signup = await endpoints.sendTo(
       'signup-login-signup',
       {},
@@ -99,6 +99,46 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
     expect
       .soft(signup.status, 'signup answered (created or already-exists, not a 5xx)')
       .toBeLessThan(500);
+
+    /*
+     * 5. VERIFY the account really exists now — signup must do more than "not 5xx". Whether this run
+     * created it (fresh/reset DB) or it was already there (re-run), the identity must be REGISTERED:
+     * kpostIdExist reports a registered id as "already exists". To sign up a genuinely NEW user each
+     * run, set QA_SIGNUP_KPOST_ID / QA_SIGNUP_MOBILE / the signup email to fresh allowlisted values
+     * (or reset the disposable test DB); the guard permits those because they come from config.
+     */
+    const exists = await endpoints.sendTo(
+      'signup-login-kpost-id-exist',
+      {
+        body: {
+          kpostID: testData.signupKpostId,
+          firstName: 'QA',
+          lastName: 'Bench',
+          mobileNumber: testData.signupMobile,
+        },
+      },
+      { label: 'feature:signup:verify-registered' },
+    );
+    expect
+      .soft(
+        exists.bodyText.toLowerCase(),
+        'after signup the identity is registered (kpostIdExist reports it as taken)',
+      )
+      .toMatch(/already exi/);
+
+    /*
+     * 6. Cross-layer proof: the account row is really in the user master (when the DB is reachable).
+     * This is the difference between "the endpoint answered" and "a user was actually created".
+     */
+    if (database.enabled) {
+      const userRows = await database.findMany<{ kpost_id: string }>({
+        table: 'TBL_KPOST_USER_MASTER',
+        where: { kpost_id: testData.signupKpostId },
+      });
+      expect
+        .soft(userRows.length, 'the signup wrote a user row to TBL_KPOST_USER_MASTER (API → DB)')
+        .toBeGreaterThan(0);
+    }
   });
 
   test('forgot-password OTP → set a new password on the spare account @api', async ({
