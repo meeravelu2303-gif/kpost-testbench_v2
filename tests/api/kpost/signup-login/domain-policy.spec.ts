@@ -1,7 +1,14 @@
 import { testData } from '@config/test-data.config';
 import { KpostRepository } from '@database/repositories/kpost.repository';
 import { text } from '@database/kpost-assertions';
-import { domainFor, domainOf, findAccount, qatestId } from '@fixtures/test-accounts';
+import {
+  TEST_ACCOUNTS,
+  domainFor,
+  domainOf,
+  findAccount,
+  kpostIdOf,
+  policyViolation,
+} from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
 
 /**
@@ -27,78 +34,157 @@ import { expect, test } from '@fixtures';
  * non-destructively.
  */
 test.describe('KPost signup · domain policy @api @kpost-api @signup-login', () => {
-  test('the id-availability check answers for both policy domains', async ({ endpoints }) => {
+  test('every registry account satisfies the domain policy or is a declared legacy account', () => {
     /*
-     * `kpostIDExist` is the endpoint the signup screen calls as the user types, and it is the only
+     * Asserted through `policyViolation()` rather than by comparing domains directly, and across
+     * EVERY registry account rather than a chosen two.
+     *
+     * The direct comparison this replaces was wrong in a way worth recording: `primary` is
+     * abhinumukund@kpost.in — a PERSONAL account on the business domain, and the exact legacy
+     * exception the next test documents. A raw `domainOf(id) === domainFor('PERSONAL')` therefore
+     * failed on data the bench has already established is pre-existing and correct. The registry
+     * carries `legacyDomain` for precisely this, and `policyViolation()` is where the exemption
+     * is applied — so going around it re-decided the policy in a second place, wrongly.
+     *
+     * Sweeping all accounts also catches the case that matters: a role repointed in `.env` at an
+     * account on the wrong domain, which would otherwise surface only in whichever spec used it.
+     */
+    for (const account of TEST_ACCOUNTS) {
+      const id = kpostIdOf(account);
+      if (!id) continue;
+      expect(
+        policyViolation(id, account.userType, account.legacyDomain),
+        `${account.id} must satisfy the domain policy or be a declared legacy account`,
+      ).toBeUndefined();
+    }
+  });
+
+  /*
+   * The COMPLETE documented payload, not just the id. `kpostIdExist` requires `firstName`,
+   * `lastName` and `mobileNumber` alongside it and answers 500 when they are missing — sending a
+   * partial body would report the bench's own omission as an API crash. That mistake has been made
+   * here before (see the validateOTP entry in CLAUDE.md §8); a payload is safety-critical, never
+   * cosmetic.
+   *
+   * `mobileNumber` is the configured known-absent fixture: it matches no account, so it names
+   * nobody's record and the identifier guard allows it.
+   */
+  const availability = (kpostID: string): Record<string, unknown> => ({
+    kpostID,
+    firstName: 'QA',
+    lastName: 'Bench',
+    mobileNumber: testData.mobileAbsent,
+  });
+
+  test('an unprovisioned id is reported available', async ({ endpoints }) => {
+    /*
+     * `kpostIDExist` is what the signup screen calls as the user types, and the only
      * non-destructive way to ask the API about an account that does not exist yet.
      *
-     * The ids come from the REGISTRY rather than being built ad hoc. That is not a style choice:
-     * the QA-identifier guard refuses any live request naming an identifier the bench does not own,
-     * and it builds that list from the registry — so an invented id is correctly rejected before it
-     * is sent. Using registry accounts is what makes this request legitimate.
+     * The id comes from the configured absent fixture. That is not a style choice: the
+     * QA-identifier guard refuses any live request naming an identifier the bench does not own, so
+     * an invented id is rejected before it is sent — and an id belonging to a real third party must
+     * never be probed at all.
+     */
+    const exchange = await endpoints.sendTo(
+      'signup-login-kpost-id-exist',
+      { body: availability(testData.kpostIdAbsent) },
+      { label: 'domain-policy:available' },
+    );
+
+    expect(exchange.status, 'the availability check answers').toBe(200);
+    /*
+     * The ENVELOPE, not the transport — KPost reports failure inside a 200 elsewhere, so a
+     * status-only check can read a refusal as a success.
+     */
+    const parsed = exchange.json();
+    const envelope = parsed.ok ? (parsed.value as { statusCode?: number; message?: string }) : {};
+    expect(envelope.statusCode, 'and reports success in the envelope').toBe(200);
+    expect(envelope.message ?? '', 'for an id nobody holds').toMatch(/available/i);
+  });
+
+  test('a provisioned id on either policy domain is reported as taken', async ({ endpoints }) => {
+    /*
+     * The BR-S02 path, asserted on both domains because the collision this separation prevents is
+     * an id matched on its local part with the domain ignored — which would show up as one of these
+     * two answering "available" for a name that is plainly taken.
+     *
+     * These ids are provisioned by construction: they are the bench's own registry accounts. An
+     * earlier version of this test asserted the opposite ("an unprovisioned id must not be reported
+     * as taken") — a premise left behind by the abandoned `qatest_*` provisioning plan, which the
+     * switch to pre-existing `.env` accounts silently invalidated.
      */
     const personalAccount = findAccount('primary');
     const businessAccount = findAccount('company-admin');
     expect(personalAccount, 'the registry defines a personal account').toBeDefined();
     expect(businessAccount, 'and a business account').toBeDefined();
 
-    const personal = personalAccount?.kpostId ?? '';
-    const business = businessAccount?.kpostId ?? '';
-
-    expect(domainOf(personal), 'the personal account is on the personal domain').toBe(
-      domainFor('PERSONAL'),
-    );
+    const personal = personalAccount ? (kpostIdOf(personalAccount) ?? '') : '';
+    const business = businessAccount ? (kpostIdOf(businessAccount) ?? '') : '';
     expect(domainOf(business), 'the business account is on the business domain').toBe(
       domainFor('BUSINESS_M'),
     );
 
-    /*
-     * The COMPLETE documented payload, not just the id. `kpostIdExist` requires `firstName`,
-     * `lastName` and `mobileNumber` alongside it, and answers 500 when they are missing — sending a
-     * partial body would report the bench's own omission as an API crash. That mistake has been
-     * made here before (see the validateOTP entry in CLAUDE.md §8), and the rule it produced is
-     * that a payload is safety-critical, never cosmetic.
-     *
-     * `mobileNumber` is the configured known-absent fixture: it matches no account, so it names
-     * nobody's record and the identifier guard allows it.
-     */
-    const availability = (kpostID: string): Record<string, unknown> => ({
-      kpostID,
-      firstName: 'QA',
-      lastName: 'Bench',
-      mobileNumber: testData.mobileAbsent,
-    });
-
-    const first = await endpoints.sendTo(
-      'signup-login-kpost-id-exist',
-      { body: availability(personal) },
-      { label: 'domain-policy:personal' },
-    );
-    const second = await endpoints.sendTo(
-      'signup-login-kpost-id-exist',
-      { body: availability(business) },
-      { label: 'domain-policy:business' },
-    );
-
-    expect(first.status, 'the availability check answers for the personal domain').toBeLessThan(
-      500,
-    );
-    expect(second.status, 'and for the business domain').toBeLessThan(500);
-
-    /*
-     * Neither may report an existing account: these ids are unprovisioned by construction. A "taken"
-     * answer here would mean the API is matching on the local part and ignoring the domain, which is
-     * exactly the collision the separation is meant to prevent.
-     */
-    for (const [label, exchange] of [
-      ['personal', first],
-      ['business', second],
+    for (const [label, kpostId] of [
+      ['personal', personal],
+      ['business', business],
     ] as const) {
+      const exchange = await endpoints.sendTo(
+        'signup-login-kpost-id-exist',
+        { body: availability(kpostId) },
+        { label: `domain-policy:taken-${label}` },
+      );
+
+      /*
+       * Asserted on the MESSAGE rather than the status, because the status is itself the defect
+       * pinned below: what the product must get right here is that an existing id is recognised as
+       * existing, on both domains.
+       */
       expect(
         exchange.bodyText.toLowerCase(),
-        `${label}: an unprovisioned id must not be reported as taken`,
-      ).not.toMatch(/already (exists|registered|taken)/);
+        `${label}: a provisioned id must be recognised as taken`,
+      ).toMatch(/already exi/);
+
+      /*
+       * The suggestions are the proof the lookup actually ran rather than erroring out: a genuine
+       * server fault would have no alternatives to offer.
+       */
+      const parsed = exchange.json();
+      const envelope = parsed.ok ? (parsed.value as { data?: unknown }) : {};
+      expect(
+        Array.isArray(envelope.data) && envelope.data.length > 0,
+        `${label}: the endpoint returns alternative ids, so the check completed`,
+      ).toBe(true);
     }
+  });
+
+  test('a taken id is refused with a client error, not a 500', async ({ endpoints }) => {
+    /*
+     * Expected failure while Bugzilla #497 is open.
+     *
+     * MEASURED: an existing id is answered `HTTP 500` with `{"status":"FAILURE","statusCode":500,
+     * "message":"KpostID is already exits!","data":[...]}`, while an absent id is answered 200.
+     * "This name is taken, here are alternatives" is the most common outcome on a signup form and a
+     * completed, successful lookup — reporting it as a server error means every client's error
+     * handling sees an outage on the normal path, retries and circuit breakers trip on healthy
+     * traffic, and a real fault here is indistinguishable from a user picking a popular name.
+     *
+     * Kept as `test.fail()` rather than deleted: the run stays green while the defect is live and
+     * turns RED the moment the status is corrected, which is when this can be flipped back.
+     */
+    test.fail(true, 'known product defect (Bugzilla #497): a taken KPost ID answers HTTP 500');
+
+    const account = findAccount('primary');
+    const exchange = await endpoints.sendTo(
+      'signup-login-kpost-id-exist',
+      { body: availability(account ? (kpostIdOf(account) ?? '') : '') },
+      { label: 'domain-policy:taken-status' },
+    );
+
+    expect(
+      exchange.status,
+      `a taken id is a business outcome, not a server fault (body: ${exchange.bodyText.slice(0, 200)})`,
+    ).toBeLessThan(500);
   });
 
   test('live accounts follow the domain policy, and the legacy exceptions are known', async ({
@@ -135,14 +221,24 @@ test.describe('KPost signup · domain policy @api @kpost-api @signup-login', () 
     ).not.toBe(domainFor('PERSONAL'));
   });
 
-  test('the bench will not build an id that breaks the policy', () => {
+  test('KPost IDs cannot contain an underscore — the constraint that blocks qatest_* naming', () => {
     /*
-     * The guard that keeps the rule from being bypassed by accident. Every bench-owned id comes from
-     * `qatestId`, so a spec cannot hand-write a personal id on the business domain — the helper has
-     * no parameter for it.
+     * MEASURED, not assumed. Two otherwise identical signup payloads with distinct mobile numbers:
+     * `qatest_sender@kpostindia.com` was refused with {statusCode: 500, "Enter valid Credentials"},
+     * `qatestsender@kpostindia.com` was not refused for that reason. Corroborated by the data —
+     * 0 of the 2,167 accounts on KPOST_QA contain an underscore in `kpost_id`.
+     *
+     * Pinned here because it is the reason the bench uses the pre-existing `.env` accounts rather
+     * than creating `qatest_*` ones: the mandated shape cannot be registered through the product.
+     * If signup ever accepts an underscore, this fails and the provisioning route reopens.
      */
-    expect(qatestId('primary', 'PERSONAL')).toBe('qatest_primary@kpostindia.com');
-    expect(qatestId('primary', 'BUSINESS_M')).toBe('qatest_primary@kpost.in');
-    expect(() => qatestId('bad id', 'PERSONAL'), 'a malformed identifier is refused').toThrow();
+    for (const account of TEST_ACCOUNTS) {
+      const id = kpostIdOf(account);
+      if (!id) continue;
+      expect(
+        id,
+        `${account.id} must not contain an underscore — signup rejects those`,
+      ).not.toContain('_');
+    }
   });
 });

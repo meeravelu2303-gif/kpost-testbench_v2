@@ -1,4 +1,5 @@
 import { mailShape } from '@api/definitions/kmail/send.api';
+import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { kmailDb, kmailFlag } from '@database/kmail-assertions';
 import { KmailRepository } from '@database/repositories/kmail.repository';
 import type { KmailTransactionRecord } from '@database/repositories/kmail.repository';
@@ -33,8 +34,16 @@ import { expect, test } from '@fixtures';
  * opt-in for real mail) *and* provisioned `qatest_*` accounts, so that the only mailboxes it can
  * ever reach are ones the bench owns. With either missing it skips with the reason attached rather
  * than falling back to another account.
+ *
+ * Each write also passes `allowLiveWrite: true` — the per-call authorization the executor requires
+ * for a `data` write on the live application. It unlocks nothing else: `external`/`global` side
+ * effects stay blocked, and the QA-identifier guard still refuses any payload naming a record we do
+ * not own. It is set here, per call, because the repo owner signed this flow off explicitly (2026-09-21).
  */
 test.describe('KMail · lifecycle with MySQL assertions @api @kmail-api @kmail', () => {
+  // Gated while KMail refuses every valid token — see src/fixtures/kmail-auth-gate.ts.
+  test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
+
   test.describe.configure({ mode: 'serial' });
   test.skip(
     process.env.KMAIL_LIFECYCLE !== 'true',
@@ -64,7 +73,7 @@ test.describe('KMail · lifecycle with MySQL assertions @api @kmail-api @kmail',
     const exchange = await endpoints.sendTo(
       'kmail-post-mail',
       { body: mailShape({ toAddress: receiver.kpostId, kmailSubject: subject }) },
-      { label: 'kmail-workflow:send' },
+      { label: 'kmail-workflow:send', allowLiveWrite: true },
     );
     expect(exchange.status, 'the send succeeds').toBeLessThan(300);
 
@@ -120,7 +129,7 @@ test.describe('KMail · lifecycle with MySQL assertions @api @kmail-api @kmail',
     const exchange = await endpoints.sendTo(
       'kmail-set-important',
       { body: { kmailID: kmailId } },
-      { label: 'kmail-workflow:star' },
+      { label: 'kmail-workflow:star', allowLiveWrite: true },
     );
     expect(exchange.status, 'the mail is accepted as important').toBeLessThan(300);
 
@@ -155,7 +164,7 @@ test.describe('KMail · lifecycle with MySQL assertions @api @kmail-api @kmail',
     const exchange = await endpoints.sendTo(
       'kmail-delete',
       { body: { groupFlag: false, transactionIDs: [transactionId] } },
-      { label: 'kmail-workflow:delete' },
+      { label: 'kmail-workflow:delete', allowLiveWrite: true },
     );
     expect(exchange.status, 'the delete is accepted').toBeLessThan(300);
 

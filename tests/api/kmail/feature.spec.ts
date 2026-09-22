@@ -2,6 +2,7 @@
 // conditionals guard optional steps and cleanup of real live data.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 import { AUTH_PROFILES } from '@config/auth-profile';
+import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import type { Principal } from '@config/auth.config';
 import { KMAIL_PRIORITY, KMAIL_TYPE } from '@api/schemas/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
@@ -82,6 +83,9 @@ async function del(
 }
 
 test.describe('KPost KMail · feature flow', () => {
+  // Gated while KMail refuses every valid token — see src/fixtures/kmail-auth-gate.ts.
+  test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
+
   test.describe.configure({ mode: 'default' });
   test.skip(process.env.KMAIL_LIFECYCLE !== 'true', 'sends real mail; set KMAIL_LIFECYCLE=true');
 

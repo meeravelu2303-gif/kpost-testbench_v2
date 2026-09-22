@@ -306,3 +306,77 @@ export const companyLicenceIntegrityValidation: DatabaseValidation = {
     );
   },
 };
+
+/**
+ * A notification-preference write actually persisted something.
+ *
+ * ## The defect this exists to catch
+ *
+ * `generalSetting/katchupNotification` answers `200 "katchupNotification Updated Successfully"` and
+ * leaves `TBL_KPOST_GENERAL_SETTINGS.katchup_notification` untouched. Measured 2026-09-22 against
+ * KPOST_QA: the column held `{"Sound":null,"Vibrate":null,"Do Not Disturb":null,"Message Preview":null}`
+ * before and after, for `{enable:0}`, for `{enable:1}`, and for a payload shaped exactly like the
+ * stored column. So the user's preference silently never saves, and the response says otherwise.
+ *
+ * ## Why the assertion is "not entirely null" rather than a before/after diff
+ *
+ * A DB validation sees one moment — it runs after the endpoint's single call, so it cannot hold a
+ * "before" snapshot. What it can say is that a settings row whose every preference is null has
+ * never been written by a successful update, which is exactly the observed state. That is weaker
+ * than a diff and still catches this defect; the before/after comparison lives in the workflow
+ * spec, where both moments are available.
+ */
+export const settingsPersistedValidation: DatabaseValidation = {
+  id: 'kpost-settings-persisted',
+  description:
+    'A successful notification-preference update leaves a non-empty preference in TBL_KPOST_GENERAL_SETTINGS',
+  severity: 'HIGH',
+  async check(context, db) {
+    const kpostId = callerKpostId(context);
+    if (!kpostId) return outcome.skipped('no KPost ID available to look the settings row up by');
+
+    const row = await db
+      .findOne<JsonObject>(
+        { table: 'TBL_KPOST_GENERAL_SETTINGS', where: { kpost_id: kpostId } },
+        context.correlationId,
+      )
+      .catch(() => undefined);
+
+    if (!row) {
+      return fromChecks(
+        [kpostDb.exists(`settings for ${kpostId}`, row)],
+        'settings persistence checks',
+      );
+    }
+
+    /*
+     * The column is JSON. `mysql2` gives it back parsed, so "every preference is null" is a shape
+     * question rather than a string comparison — a stored `{}` and a stored all-null object are the
+     * same fact: nothing was ever saved.
+     */
+    const preference = row.katchup_notification;
+    const values =
+      preference && typeof preference === 'object' && !Array.isArray(preference)
+        ? Object.values(preference as Record<string, unknown>)
+        : [];
+    const anySet = values.some((value) => value !== null && value !== undefined && value !== '');
+
+    return fromChecks(
+      [
+        kpostDb.exists(`settings for ${kpostId}`, row),
+        {
+          name: 'the stored Katchup preference holds a value',
+          status: anySet ? 'PASSED' : 'FAILED',
+          expected: 'at least one preference key set',
+          actual: JSON.stringify(preference ?? null),
+          message: anySet
+            ? undefined
+            : 'katchupNotification reports "Updated Successfully" but every key in the stored ' +
+              'preference is null — the write is accepted and persisted nowhere, so the user’s ' +
+              'setting silently reverts on next login',
+        },
+      ],
+      'settings persistence checks',
+    );
+  },
+};

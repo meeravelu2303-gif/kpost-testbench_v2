@@ -54,6 +54,16 @@ export interface EndpointDefinition {
    */
   suite?: SuiteId;
   summary?: string;
+  /**
+   * Why this endpoint cannot be exercised the obvious way, in one line.
+   *
+   * Already carried by 107 definitions before it was declared here — typically to record that a
+   * call needs a runtime id from a prior request (a `draftMailID`, a `parentAttributeId`), or
+   * that a documented payload is refused by the running service. Declared so the convention is
+   * typed rather than tolerated, and so coverage invariants can require one where an endpoint is
+   * excluded from something — an exclusion with a written reason is auditable, a bare flag is not.
+   */
+  note?: string;
   tags?: readonly string[];
   /**
    * Requirement ids from the Full Suite FRD v2.0 that this endpoint exercises (FR-S01, BR-K02,

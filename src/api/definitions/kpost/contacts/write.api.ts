@@ -15,11 +15,16 @@ import { defineContactsEndpoint } from './contacts-endpoint';
  */
 const WRITE_TAGS = ['contacts-write'] as const;
 
-const contactShape = (): Record<string, unknown> => ({
+/**
+ * The add-contact payload. Exported so a workflow spec can target a specific counterparty without
+ * hand-copying the field list — which is how a payload drifts out of sync with the endpoint.
+ */
+export const contactShape = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   contactID: testData.victimKpostId,
   firstName: 'Qa',
   lastName: 'Tester',
   userType: 'PERSONAL',
+  ...overrides,
 });
 
 export const addContactApi = defineContactsEndpoint({

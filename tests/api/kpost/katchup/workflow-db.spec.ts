@@ -65,7 +65,7 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
     const exchange = await endpoints.sendTo(
       'katchup-send-message',
       { body: sendShape({ subject, actualMessage: message }) },
-      { label: 'workflow-db:send' },
+      { label: 'workflow-db:send', allowLiveWrite: true },
     );
 
     expect(exchange.status, 'the send succeeds').toBeLessThan(300);
@@ -149,7 +149,7 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
     const exchange = await endpoints.sendTo(
       'katchup-recall-message',
       { body: { msgID: msgId, groupFlag: false } },
-      { label: 'workflow-db:recall' },
+      { label: 'workflow-db:recall', allowLiveWrite: true },
     );
     expect(exchange.status, 'the recall is accepted').toBeLessThan(300);
 
@@ -183,7 +183,7 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
     const exchange = await endpoints.sendTo(
       'katchup-delete-message',
       { body: { msgID: msgId, groupFlag: false } },
-      { label: 'workflow-db:delete' },
+      { label: 'workflow-db:delete', allowLiveWrite: true },
     );
     expect(exchange.status, 'delete succeeds — the message is cleaned up').toBeLessThan(300);
 

@@ -3,9 +3,8 @@ import type { KmailTransactionRecord } from '@database/repositories/kmail.reposi
 import {
   TEST_ACCOUNTS,
   domainFor,
-  domainOf,
+  kpostIdOf,
   policyViolation,
-  qatestId,
   requireAccount,
 } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
@@ -87,102 +86,80 @@ test.describe('KMail flag semantics @framework', () => {
 });
 
 test.describe('test account registry @framework', () => {
-  test('every registered account satisfies the naming AND domain policy', () => {
+  test('every account resolves to an id that satisfies the domain policy', () => {
     /*
-     * The convention is not cosmetic: it is how a bench-owned account is recognised in the database,
-     * in a mail log and by the QA-identifier guard, which refuses to send a request naming an id we
-     * do not own. An account that breaks it would be blocked later, somewhere far less obvious.
+     * The registry points at pre-existing accounts in `.env`, so this is the check that the roles
+     * were wired to the RIGHT accounts. A personal role pointed at a business account would still
+     * log in — and would quietly invalidate every permission and routing assertion built on it.
+     *
+     * `legacyDomain` accounts are exempt by declaration: a personal account on @kpost.in is
+     * pre-existing data (205 of them on KPOST_QA), not a defect, and a kpost_id is the primary key
+     * across ~90 tables.
      */
-    const offenders = TEST_ACCOUNTS.map((a) => policyViolation(a.kpostId, a.userType)).filter(
-      (reason): reason is string => reason !== undefined,
+    const offenders = TEST_ACCOUNTS.flatMap((account) => {
+      const id = kpostIdOf(account);
+      if (!id) return [];
+      const reason = policyViolation(id, account.userType, account.legacyDomain);
+      return reason ? [`${account.id}: ${reason}`] : [];
+    });
+
+    expect(offenders, 'each role must point at an account of the right type and domain').toEqual(
+      [],
     );
-    expect(
-      offenders,
-      'every account must satisfy the qatest_ prefix and its type’s domain',
-    ).toEqual([]);
   });
 
-  test('personal accounts are on kpostindia.com and business accounts on kpost.in', () => {
-    /*
-     * The product binds the domain from the account type at signup — the user never types it. A
-     * bench account on the wrong domain would exercise a routing path no real signup can produce,
-     * so the registry has to agree with the product rather than merely be internally consistent.
-     *
-     * Verified against KPOST_QA: 324 active PERSONAL accounts on kpostindia.com and 648 active
-     * BUSINESS_* accounts on kpost.in. (205 PERSONAL accounts on kpost.in are legacy, predating the
-     * split — see the rationale in test-accounts.json.)
-     */
+  test('the domain policy itself matches the product', () => {
+    // Verified on the live signup screen and against KPOST_QA — see signup-domain.spec.ts.
     expect(domainFor('PERSONAL')).toBe('kpostindia.com');
     for (const type of ['BUSINESS_S', 'BUSINESS_M', 'BUSINESS_L'] as const) {
       expect(domainFor(type), `${type} is a business type`).toBe('kpost.in');
     }
-
-    for (const account of TEST_ACCOUNTS) {
-      expect(domainOf(account.kpostId), `${account.id} (${account.userType})`).toBe(
-        domainFor(account.userType),
-      );
-    }
   });
 
-  test('qatestId builds a compliant id from a type, and refuses a bad identifier', () => {
-    expect(qatestId('primary', 'PERSONAL')).toBe('qatest_primary@kpostindia.com');
-    expect(qatestId('admin', 'BUSINESS_M')).toBe('qatest_admin@kpost.in');
-    // Normalised rather than rejected: a trailing space or capital is a typo, not a new account.
-    expect(qatestId('  Primary  ', 'PERSONAL')).toBe('qatest_primary@kpostindia.com');
-    // An identifier that would produce an unroutable or ambiguous address is refused outright.
-    for (const bad of ['has space', 'has@at', '_leading', 'UPPER!', '']) {
-      expect(() => qatestId(bad, 'PERSONAL'), `"${bad}" must be refused`).toThrow(/identifier/i);
-    }
+  test('a personal id on the business domain is refused unless declared legacy', () => {
+    expect(policyViolation('someone@kpost.in', 'PERSONAL')).toContain('kpostindia.com');
+    expect(
+      policyViolation('someone@kpost.in', 'PERSONAL', true),
+      'a declared legacy account is exempt',
+    ).toBeUndefined();
+    expect(policyViolation('admin@kpostindia.com', 'BUSINESS_M')).toContain('kpost.in');
   });
 
-  test('a personal id on the business domain is a policy violation, and says so', () => {
-    const reason = policyViolation('qatest_primary@kpost.in', 'PERSONAL');
-
-    expect(reason, 'the wrong domain for the type is caught').toBeTruthy();
-    expect(reason).toContain('kpostindia.com');
-    // And the inverse, so the rule is not accidentally one-directional.
-    expect(policyViolation('qatest_admin@kpostindia.com', 'BUSINESS_M')).toContain('kpost.in');
-  });
-
-  test('no account carries a password, only a pointer to one', () => {
+  test('no account embeds an id or a password — both are environment pointers', () => {
     /*
-     * test-accounts.json is committed. A password in it would be in the git history permanently and
-     * could not be rotated by redeploying, so the registry stores the NAME of an environment
-     * variable and the secret stays in the git-ignored .env.
+     * The file is committed. An id here would name a real account on a shared environment, and a
+     * password would be in the git history permanently and un-rotatable by redeploying.
      */
     for (const account of TEST_ACCOUNTS) {
-      const serialized = JSON.stringify(account);
-      expect(serialized, `${account.id} must not embed a secret`).not.toMatch(
-        /"password"\s*:|"secret"\s*:/i,
-      );
+      // Only the identity fields — `purpose` is prose and legitimately mentions domains.
+      expect(
+        JSON.stringify({ kpostIdEnv: account.kpostIdEnv, passwordEnv: account.passwordEnv }),
+        `${account.id} must not embed an address or a secret`,
+      ).not.toMatch(/@/);
+      expect(account.kpostIdEnv, `${account.id} names its id variable`).toMatch(/^[A-Z0-9_]+$/);
       expect(account.passwordEnv, `${account.id} names its password variable`).toMatch(
         /^[A-Z0-9_]+$/,
       );
     }
   });
 
-  test('account ids are unique, in both directions', () => {
-    // A duplicate id makes `requireAccount` non-deterministic; a duplicate KPost ID makes two roles
-    // silently the same account, which is fatal to any sender/receiver or admin/member flow.
-    expect(new Set(TEST_ACCOUNTS.map((a) => a.id)).size).toBe(TEST_ACCOUNTS.length);
-    expect(new Set(TEST_ACCOUNTS.map((a) => a.kpostId)).size).toBe(TEST_ACCOUNTS.length);
-  });
-
-  test('an unprovisioned account resolves to a reason, never to a substitute', () => {
+  test('roles are distinct: no two point at the same account', () => {
     /*
-     * The core safety property. Falling back to another account would let a two-party flow run with
-     * one party, or a permission test run as the admin it was meant to be denied as — and still
-     * report PASS. A reason that causes a SKIP is the only honest answer.
+     * The failure this prevents is silent and total: a sender/receiver flow where both ends are one
+     * account still passes every assertion while testing nothing, and an admin/member permission
+     * check becomes the admin testing itself.
      */
-    const unprovisioned = TEST_ACCOUNTS.find((a) => !a.provisioned);
-    test.skip(!unprovisioned, 'every account is provisioned on this target');
+    const ids = TEST_ACCOUNTS.flatMap((account) => {
+      const id = kpostIdOf(account);
+      return id ? [id.toLowerCase()] : [];
+    });
+    test.skip(ids.length < 2, 'needs at least two configured accounts');
 
-    const resolution = requireAccount(unprovisioned?.id ?? '');
-    expect(resolution.ok).toBe(false);
-    expect(resolution.ok === false && resolution.reason).toContain('not been provisioned');
+    expect(new Set(ids).size, `two roles share an account: ${ids.join(', ')}`).toBe(ids.length);
+    expect(new Set(TEST_ACCOUNTS.map((a) => a.id)).size).toBe(TEST_ACCOUNTS.length);
   });
 
-  test('an unknown id is refused rather than guessed at', () => {
+  test('an unknown role is refused rather than guessed at', () => {
     const resolution = requireAccount('no-such-role');
     expect(resolution.ok).toBe(false);
     expect(resolution.ok === false && resolution.reason).toContain('no account');

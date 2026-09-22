@@ -6,6 +6,7 @@ import {
   kpostProfileUpdatedValidation,
   kpostUserActiveValidation,
   loginSessionCreatedValidation,
+  settingsPersistedValidation,
 } from './kpost.db';
 import { userCreatedValidation, userDeletedValidation, userUpdatedValidation } from './users.db';
 
@@ -34,4 +35,5 @@ export const databaseValidationRegistry = new DatabaseValidationRegistry().regis
   katchupMessagePersistedValidation,
   loginSessionCreatedValidation,
   companyLicenceIntegrityValidation,
+  settingsPersistedValidation,
 );

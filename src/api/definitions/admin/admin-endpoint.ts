@@ -46,6 +46,9 @@ export function defineAdminEndpoint(config: KpostEndpointConfig): EndpointDefini
     suite: 'admin-api',
     responseContract: 'admin',
     summary: config.summary,
+    // Carried through to the registry: coverage invariants require a written reason where an
+    // endpoint is excluded from live clearance, and a note that never left the config cannot be read.
+    note: config.note,
     tags: ['admin-api', ...(config.tags ?? [])],
     requirements: config.requirements,
     // The Admin module is entirely post-login and driven by the BUSINESS_M admin: every route needs

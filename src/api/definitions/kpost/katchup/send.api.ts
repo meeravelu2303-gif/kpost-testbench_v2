@@ -33,7 +33,17 @@ export function sendShape(overrides: Record<string, unknown> = {}): Record<strin
     serverTime: now(),
     status: KATCHUP_STATUS.sent,
     sessionID: 'Web-Reactjs',
-    groupFlag: false,
+    /*
+     * A STRING, not a boolean — measured 2026-09-21, and the fix for a 400 that blocked every send.
+     *
+     * The DTO binds `groupFlag` as a char/String ('N' / 'Y'), matching KPost's 'Y'/'N' convention
+     * elsewhere (KMail's read/star/delete flags are all chars). Sending `false` or `0` makes Jackson
+     * reject the WHOLE body with 400 "Malformed or missing request body" — which names no field, so
+     * it reads as a malformed request rather than as one wrong type. Every other boolean in this
+     * payload (`isVanished`, `isHtml`, `isVoiceMessage`) binds correctly AS a boolean; this one
+     * field is the exception, verified by adding each field individually to a known-good body.
+     */
+    groupFlag: 'N',
     forwardReceiverList: null,
     groupForwardList: null,
     groupmemberList: [],

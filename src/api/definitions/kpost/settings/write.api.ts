@@ -44,6 +44,8 @@ export const changeThemeApi = defineSettingsEndpoint({
 
 export const katchupNotificationApi = defineSettingsEndpoint({
   id: 'settings-katchup-notification',
+  // The response says 'Updated Successfully' whatever it stored; only the row can contradict it.
+  database: { validations: ['kpost-settings-persisted'] },
   method: 'POST',
   path: '/generalSetting/katchupNotification',
   summary: 'Toggle Katchup notifications',

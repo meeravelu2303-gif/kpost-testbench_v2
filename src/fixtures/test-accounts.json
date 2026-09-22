@@ -1,102 +1,89 @@
 {
   "$comment": [
-    "THE central registry of accounts the bench uses. Specs resolve accounts through",
+    "THE central registry of accounts the bench uses. Specs resolve accounts by ROLE through",
     "src/fixtures/test-accounts.ts and never hard-code a KPost ID.",
     "",
-    "NO PASSWORDS LIVE IN THIS FILE. It is committed to the repository, so every credential is a",
-    "POINTER to an environment variable (`passwordEnv`) rather than the secret itself. A password",
-    "written here would be in the git history permanently, readable by anyone with repo access, and",
-    "could not be rotated by changing a deployment.",
+    "These are the PRE-EXISTING accounts declared in .env, not accounts the bench created. The",
+    "qatest_* provisioning attempt was abandoned for a product reason, recorded in blockedByProduct",
+    "below: KPost rejects any kpostID containing an underscore, so the mandated qatest_<name> shape",
+    "cannot be registered through the product at all.",
     "",
-    "`provisioned: false` means the account DOES NOT EXIST on the target yet. Specs that need it",
-    "report SKIPPED with that reason; they never fall back to another account, because a test that",
-    "silently runs as somebody else is worse than one that does not run.",
-    "",
-    "To add an account: create it on the target, then set `provisioned: true` and record",
-    "`provisionedAt`. `npm run accounts:verify` reconciles this file against the database."
+    "NO IDs OR PASSWORDS LIVE IN THIS FILE. Both are POINTERS to environment variables",
+    "(kpostIdEnv / passwordEnv). The file is committed; .env is not."
   ],
   "domainPolicy": {
     "PERSONAL": "kpostindia.com",
     "BUSINESS_S": "kpost.in",
     "BUSINESS_M": "kpost.in",
     "BUSINESS_L": "kpost.in",
-    "prefix": "qatest_",
-    "identifierPattern": "^[a-z0-9][a-z0-9_]*$",
     "rationale": [
-      "KPost separates account types by e-mail domain, and the signup UI binds the domain from the",
-      "user type rather than letting the user type it. Verified against KPOST_QA (active accounts):",
+      "Verified against KPOST_QA (active accounts): PERSONAL @kpostindia.com 324, PERSONAL",
+      "@kpost.in 205 (LEGACY, predates the split), BUSINESS_* @kpost.in 648.",
       "",
-      "  PERSONAL   @kpostindia.com  324   ← current policy",
-      "  PERSONAL   @kpost.in        205   ← LEGACY, predates the split (e.g. QA_KPOST_ID)",
-      "  BUSINESS_* @kpost.in        648   ← current policy",
-      "  BUSINESS_* <slug>.kpost.in  603   ← companies that registered their own sub-domain",
-      "",
-      "So a personal account on @kpost.in is not invalid data — it is old data. Bench-owned accounts",
-      "follow the current policy so they exercise the path the product actually routes new users",
-      "down; the legacy accounts stay usable and are flagged, not rewritten, because rewriting a",
-      "kpost_id is a primary-key change across ~90 tables.",
-      "",
-      "Business accounts use the BARE domain rather than a per-company sub-domain: a sub-domain is",
-      "issued when a company registers one, which is a separate flow this registry does not drive."
+      "An account marked legacyDomain: true is a personal account on the business domain. It is",
+      "pre-existing data, NOT a defect and NOT something to rewrite — kpost_id is the primary key",
+      "across ~90 tables. The flag exists so the mismatch is declared rather than silently tolerated."
+    ],
+    "blockedByProduct": [
+      "MEASURED 2026-09-21 against testingapi + KPOST_QA:",
+      "Signup REJECTS any kpostID whose local part contains an UNDERSCORE, answering HTTP 200 with",
+      "{statusCode: 500, message: \"Enter valid Credentials\"}. Decisive test: two otherwise identical",
+      "payloads with distinct mobiles — qatest_sender@kpostindia.com refused, qatestsender@kpostindia.com",
+      "not refused for that reason. Corroborated: 0 of 2,167 accounts on KPOST_QA contain an underscore."
     ]
   },
   "accounts": [
     {
       "id": "primary",
-      "kpostId": "qatest_primary@kpostindia.com",
-      "passwordEnv": "QATEST_PRIMARY_PASSWORD",
+      "kpostIdEnv": "QA_KPOST_ID",
+      "passwordEnv": "QA_PASSWORD",
       "userType": "PERSONAL",
-      "purpose": "The bench's own account: the sender in 1:1 flows and the caller for profile reads.",
-      "provisioned": false,
-      "provisionedAt": null
+      "legacyDomain": true,
+      "purpose": "The bench's own account: sender in 1:1 flows and caller for profile reads. On the legacy @kpost.in domain.",
+      "provisioned": true
     },
     {
       "id": "counterparty",
-      "kpostId": "qatest_counterparty@kpostindia.com",
-      "passwordEnv": "QATEST_COUNTERPARTY_PASSWORD",
+      "kpostIdEnv": "QA_VICTIM_KPOST_ID",
+      "passwordEnv": "QA_PASSWORD",
       "userType": "PERSONAL",
       "purpose": "The receiver in 1:1 Katchup and KMail flows, and the second session for isolation probes.",
-      "provisioned": false,
-      "provisionedAt": null
+      "provisioned": true
     },
     {
       "id": "observer",
-      "kpostId": "qatest_observer@kpostindia.com",
-      "passwordEnv": "QATEST_OBSERVER_PASSWORD",
+      "kpostIdEnv": "QA_PERSONAL_3_KPOST_ID",
+      "passwordEnv": "QA_PASSWORD",
       "userType": "PERSONAL",
-      "purpose": "A third party: Cc, confidential-copy invisibility (NFR-SEC02) and group membership of three.",
-      "provisioned": false,
-      "provisionedAt": null
+      "purpose": "A third party: Cc, confidential-copy invisibility (NFR-SEC02) and a group of three.",
+      "provisioned": true
     },
     {
       "id": "company-admin",
-      "kpostId": "qatest_admin@kpost.in",
-      "passwordEnv": "QATEST_ADMIN_PASSWORD",
+      "kpostIdEnv": "QA_BUSINESS_M_KPOST_ID",
+      "passwordEnv": "QA_PASSWORD",
       "userType": "BUSINESS_M",
-      "companyIdEnv": "QATEST_COMPANY_ID",
-      "purpose": "Administrator of the test business company; drives the Admin permission workflows.",
-      "provisioned": false,
-      "provisionedAt": null
+      "companyIdEnv": "QA_BUSINESS_M_COMPANY_ID",
+      "purpose": "Administrator of the BUSINESS_M company (Nebius, 242); drives the Admin permission workflows.",
+      "provisioned": true
     },
     {
       "id": "company-member",
-      "kpostId": "qatest_member@kpost.in",
-      "passwordEnv": "QATEST_MEMBER_PASSWORD",
+      "kpostIdEnv": "QA_BUSINESS_M_USER_1_KPOST_ID",
+      "passwordEnv": "QA_PASSWORD",
       "userType": "BUSINESS_M",
-      "companyIdEnv": "QATEST_COMPANY_ID",
-      "purpose": "An ordinary member of the test company: the subject of permission and role checks.",
-      "provisioned": false,
-      "provisionedAt": null
+      "companyIdEnv": "QA_BUSINESS_M_COMPANY_ID",
+      "purpose": "An ordinary member of that company: the subject of permission and role checks.",
+      "provisioned": true
     },
     {
-      "id": "company-expendable",
-      "kpostId": "qatest_expendable@kpost.in",
-      "passwordEnv": "QATEST_EXPENDABLE_PASSWORD",
+      "id": "company-second-member",
+      "kpostIdEnv": "QA_BUSINESS_M_USER_2_KPOST_ID",
+      "passwordEnv": "QA_PASSWORD",
       "userType": "BUSINESS_M",
-      "companyIdEnv": "QATEST_COMPANY_ID",
-      "purpose": "The member Admin flows may terminate or hold. Expendable by design — never reuse it elsewhere.",
-      "provisioned": false,
-      "provisionedAt": null
+      "companyIdEnv": "QA_BUSINESS_M_COMPANY_ID",
+      "purpose": "The third member, so a company of three can be exercised. NEVER terminated — the Admin DB is live-adjacent and members cannot be recreated via API.",
+      "provisioned": true
     }
   ]
 }

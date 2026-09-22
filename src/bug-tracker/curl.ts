@@ -1,6 +1,6 @@
 import type { RequestSpec } from '@api/client/request-builder';
 import { resolvePath } from '@api/client/request-builder';
-import { maskSensitive } from '@utils/masking';
+import { maskSecretsOnly } from '@utils/masking';
 
 /**
  * Builds the `curl` a developer can paste into a terminal to see the defect themselves.
@@ -19,9 +19,11 @@ import { maskSensitive } from '@utils/masking';
  * - `Authorization: Bearer $KPOST_TOKEN` as a placeholder, never a live token. Tokens are
  *   credentials; a ticket is readable by anyone with a Bugzilla account, and a JWT pasted into one
  *   is a credential leak that outlives the bug.
- * - Values already masked by `maskSensitive`, so a password in a login payload appears as `***`.
- *   The command then needs one edit before it runs — which is the right trade: a reproducible
- *   password in a ticket is worse than a one-word edit.
+ * - **Real identifiers.** `kpostID` values are printed as-is, because in KPost a kpostID IS an
+ *   e-mail and the general e-mail mask turned the one value a developer needs into `***` — which
+ *   left an unrunnable command. Credentials are still masked: a password in a login payload appears
+ *   as `***`, so that command needs one edit before it runs. That is the right trade — a
+ *   reproducible password in a ticket is worse than a one-word edit.
  */
 export interface CurlOptions {
   method: string;
@@ -71,7 +73,7 @@ export function buildCurl(options: CurlOptions): string {
   const body = request?.rawBody ?? (request?.body === undefined ? undefined : request.body);
   if (body !== undefined) {
     const serialized =
-      typeof body === 'string' ? body : JSON.stringify(maskSensitive(body), null, 2);
+      typeof body === 'string' ? body : JSON.stringify(maskSecretsOnly(body), null, 2);
     lines.push(`  -d ${shellQuote(serialized)}`);
   }
 

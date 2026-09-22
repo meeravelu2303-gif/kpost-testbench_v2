@@ -37,6 +37,9 @@ export function defineKmailEndpoint(config: KpostEndpointConfig): EndpointDefini
     suite: 'kmail-api',
     responseContract: 'kmail',
     summary: config.summary,
+    // Carried through to the registry: coverage invariants require a written reason where an
+    // endpoint is excluded from live clearance, and a note that never left the config cannot be read.
+    note: config.note,
     tags: ['kmail-api', 'kmail', ...(config.tags ?? [])],
     requirements: config.requirements,
     authentication: config.authentication ?? { required: true },

@@ -1,5 +1,5 @@
 import { providedIdentityValues, testData } from '@config/test-data.config';
-import { TEST_ACCOUNTS } from '@fixtures/test-accounts';
+import { allRegisteredKpostIds } from '@fixtures/test-accounts';
 import { ProductionSafetyError } from './production-guard';
 
 /**
@@ -66,6 +66,14 @@ const NOT_A_RESOURCE = new Set(
      * since `loginRO.userType: "PERSONAL"` is not a QA-owned value. Found before the first run.
      */
     'usertype',
+    /*
+     * The same tier enum in its plural FILTER form, as the directory search sends it
+     * (`userTypeList: ['personal']`). A separate entry because the guard matches whole keys, so
+     * exempting `usertype` does not cover `usertypelist` — and the value is still a closed set of
+     * tiers, never an account. Found by the contacts coverage invariant, which is there precisely
+     * to catch an exemption that stops one key short of the payloads actually sent.
+     */
+    'usertypelist',
     // Values this bench generates for itself.
     'sessionid',
     'deviceid',
@@ -265,7 +273,7 @@ function qaOwnedValues(): Set<string> {
      * so it is safe for the same reason the "absent" fixtures above are, and the availability check
      * the signup screen drives has to be able to ask about an id before it exists.
      */
-    ...TEST_ACCOUNTS.map((account) => account.kpostId),
+    ...allRegisteredKpostIds(),
   ];
   return new Set(owned.map((value) => String(value).trim().toLowerCase()).filter(Boolean));
 }

@@ -256,6 +256,87 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 
 Newest first. Each entry records the decision, not just the change.
 
+### 2026-09-21 (verified) — KMail refuses every valid token: a server-side regression, not a bench fault
+
+**Every KMail endpoint answers `401 "Unauthorized: UNAUTHORIZED USER"` to a valid KPost token —
+including the ones this repository's own generated `docs/LIVE-ENDPOINTS.md` records as running on
+live.** The bench's KMail auth is unchanged and correct; the host stopped accepting it.
+
+The controls that make this a product finding rather than a setup mistake:
+
+| Control                                                      | Result                                                                                    |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Same freshly minted token → KPost `fetchUserDetails`         | **200**                                                                                   |
+| Same token → KMail `getSaluations`                           | **401**                                                                                   |
+| 4 accounts (3 PERSONAL + 1 BUSINESS_M), separate tokens each | **401 every time**                                                                        |
+| Login tokens minted with `module` 0 / 1 / 2                  | **401 every time**                                                                        |
+| No `Authorization` header                                    | Spring's _generic_ 401 — so the route exists and auth is required                         |
+| `Bearer <token>`                                             | KMail's **own** `UNAUTHORIZED USER` — so the scheme is right and the app refuses the USER |
+
+That last pair is the decisive one: the two 401s come from different layers. The transport and the
+scheme are fine; the application is rejecting the authenticated principal.
+
+Endpoints confirmed 401 that `LIVE-ENDPOINTS.md` lists as live: `common/getSaluations/`,
+`common/getAllMailCount`, `common/getKmailDashboardMsg/`. Also `sentMail/postMail/` and
+`sentMail/getMailCredentials/`. Shared-password auth was tested and is not the gate — the 401 is
+raised before the body's password is read.
+
+**Consequence for the suite:** the whole `kmail-api` module now fails at `authentication.valid-token`,
+and because every check under it also fails, the 3-pass reproduction gate triples the module's
+runtime. That is the gate behaving correctly on a genuinely broken target, but it makes a full KMail
+run impractically slow until the host is fixed.
+
+**Needs the owner:** does `testkmail.kpostindia.com` share KPOST_QA's user store, or does it keep its
+own? If its own, these accounts need provisioning there — no credential change on the bench side can
+help.
+
+### 2026-09-21 (final) — Existing .env accounts adopted; KMail and Katchup blockers localised
+
+**The registry now points at the pre-existing `.env` accounts, by ROLE.** `kpostIdEnv` /
+`passwordEnv` are pointers, so neither an id nor a secret sits in the committed file, and a role
+can be repointed by editing `.env` alone. All six reconcile against MySQL (`npm run accounts:verify`).
+Two facts had to be modelled rather than smoothed over:
+
+- **`legacyDomain`** — `QA_KPOST_ID` is a PERSONAL account on `@kpost.in`, one of the 205 that
+  predate the domain split. Declared per account, so the policy check states the exception instead
+  of tolerating it silently.
+- **`sessionCapable: false`** — `QA_BUSINESS_M_USER_2/3/4` all reject `QA_PASSWORD` (verified).
+  Only the admin and USER_1 can hold sessions. That still supports the Admin flows, because a
+  permission check acts _on_ a member by `kpostID` rather than _as_ one — and saying so stops a spec
+  assuming it can log in and then failing with a credential error that reads like a product defect.
+
+**KMail is blocked on AUTHORIZATION, not on the token.** `getMailCredentials` answers
+`401 "Unauthorized: UNAUTHORIZED USER"` to a freshly minted, valid KPost token. The evidence that
+this is the application and not the transport: with `Bearer` the response is KMail's **own** message,
+while a raw token or `x-access-token` returns Spring's generic 401 — so the scheme is right and the
+app is explicitly refusing the _user_. Every QA account has a `kmail_password` set (2,188 accounts
+do), so provisioning exists in the data; what is missing is whatever grants the account KMail access
+on this host. **Needs the owner:** does a KMail session require a separate login with
+`kmail_password`, or must the account be activated for KMail first?
+
+**Katchup's send body is wrapped, and the wrapper key is unknown.** Measured against
+`/v2/katchup/sendMessage/`:
+
+| Body                                             | Result                                              |
+| ------------------------------------------------ | --------------------------------------------------- |
+| flat object (the bench's `sendShape`, 24 fields) | 400 `Malformed or missing request body`             |
+| array of one                                     | 400 `Malformed or missing request body`             |
+| multipart with a `text` field                    | 415 `Content type not supported`                    |
+| `{ <anyKey>: object }`                           | **500** — binding succeeded, then failed downstream |
+
+So the endpoint is JSON-only (415 rules out multipart) and expects an **object wrapper**: a wrapper
+gets past `@RequestBody` binding where a flat object does not. The workbook documents **no payload**
+for this row, and the bench's `sendShape` was inferred from the web client — that inference is what
+is wrong. **Needs the real request from the frontend source or a browser trace**; guessing the key
+produces 500s against a live handler and is not worth continuing.
+
+**Nothing was filed to Bugzilla.** Filing is irreversible, and the run that would carry these
+findings currently fails for _environment_ reasons (KMail authorization, Katchup wrapper). Filing
+from it is precisely what the validity gate exists to prevent, and the run gate would block it in any
+case. Both genuine defects remain captured as failing specs — `directory-lookup.spec.ts` with its
+database evidence, and the HTTP-200-with-`statusCode: 500` envelope pinned in `domain-policy.spec.ts`
+— so a clean run files them through the 3-pass gate without further work.
+
 ### 2026-09-21 (night) — Domain separation by account type, verified against the product
 
 **The rule holds, and it is enforced in the UI.** Checked on the live signup screen rather than

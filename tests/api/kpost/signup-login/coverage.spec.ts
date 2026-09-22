@@ -67,19 +67,44 @@ test.describe('KPost Signup & Login · module coverage', () => {
     expect(logout?.sideEffect, 'it ends only the session it is sent with').toBe('data');
   });
 
-  test('signup is out of scope, and only the named registration paths are excluded @framework', () => {
+  test('signup is in scope, and nothing under /signupLogin is silently excluded @framework', () => {
+    /*
+     * This inverts an invariant that had gone stale.
+     *
+     * It previously asserted that the five registration ids were ABSENT and that
+     * `SIGNUP_OUT_OF_SCOPE` held five entries. Signup came back into scope on 2026-09-19 — the
+     * testingapi test database runs an OTP TEST GATEWAY, so registration and the OTP flows can run
+     * end to end without sending real SMS — and `SIGNUP_OUT_OF_SCOPE` was emptied accordingly. The
+     * test was not updated with it, so it had been asserting the opposite of the bench's actual
+     * configuration.
+     *
+     * Two of those ids matter beyond bookkeeping: `kpostIdExist` and `kpostIdSuggestions` register
+     * nothing at all. They are the availability and suggestion calls the signup screen makes as the
+     * user types — reads, `destructive: false`, cleared for live. Excluding them as "registration"
+     * left the signup front door untested; including them is what surfaced Bugzilla #497.
+     */
     const ids = signupLoginApis.map((api) => api.id);
-    for (const removed of [
+    for (const covered of [
       'signup-login-signup',
       'signup-login-signup-get',
       'signup-login-admin-registration',
       'signup-login-kpost-id-exist',
       'signup-login-kpost-id-suggestions',
     ]) {
-      expect(ids, `${removed} is registration, out of scope`).not.toContain(removed);
+      expect(ids, `${covered} is in scope on the OTP test gateway`).toContain(covered);
     }
+
     // The login screen's step 1 is NOT signup, whatever its path looks like.
     expect(ids).toContain('signup-login-fetch-user-details');
-    expect(SIGNUP_OUT_OF_SCOPE).toHaveLength(5);
+
+    /*
+     * The list is empty, and the assertion is that it STAYS empty rather than that it has some
+     * length: an entry added here removes a path from coverage, and that should be a deliberate act
+     * that fails this test until someone confirms it.
+     */
+    expect(
+      SIGNUP_OUT_OF_SCOPE,
+      'no /signupLogin path is deliberately out of scope; an addition here must be justified',
+    ).toEqual([]);
   });
 });

@@ -9,7 +9,7 @@ import { thresholds } from '@config/thresholds.config';
 import type { DatabaseValidationRegistry } from '@database/database-validation';
 import type { DatabasePool } from '@database/database-pool';
 import type { Logger } from '@utils/logger';
-import { maskSensitive, maskString } from '@utils/masking';
+import { maskSecretsInString, maskSecretsOnly } from '@utils/masking';
 import { EndpointExecutor } from './endpoint-executor';
 import { confirmFailure } from './reproduction-gate';
 import {
@@ -128,12 +128,13 @@ export class ValidationEngine {
       endpointId: resolved.id,
       endpoint: resolved.label,
       method: resolved.method,
-      request: maskSensitive(request),
+      // Secrets-only: a bug report needs the real kpostID it was sent as, or its cURL is unrunnable.
+      request: maskSecretsOnly(request),
       requiresAuth: resolved.authentication.required,
       primary: {
         status: primary.status,
         // 2 KB is plenty to recognise an error and small enough not to bloat a ticket.
-        body: maskString(primary.bodyText.slice(0, 2_048)),
+        body: maskSecretsInString(primary.bodyText.slice(0, 2_048)),
       },
       tags: resolved.tags,
       suite: resolved.suite.id,
@@ -142,7 +143,7 @@ export class ValidationEngine {
       correlationId: primary.correlationId,
       startedAt: startedAt.toISOString(),
       durationMs: Math.round(performance.now() - started),
-      results: maskSensitive(results),
+      results: maskSecretsOnly(results),
       summary: summarize(results),
       gate: { passed: blocking.length === 0, blocking: blocking.map((r) => r.validatorName) },
     };

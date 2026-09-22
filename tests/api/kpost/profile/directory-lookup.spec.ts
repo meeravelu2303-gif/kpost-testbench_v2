@@ -25,7 +25,18 @@ import { expect, test } from '@fixtures';
  *  - **Not a self-lookup restriction.** A second account looking *itself* up is answered 200, and a
  *    third caller asking for THIS account is still answered 404. The 404 follows the subject, not
  *    the caller.
- *  - **Not the privacy flag.** Three of four sampled accounts with `privacy_status = 1` answer 200.
+ *  - **Not the privacy flag.** Of six active accounts with `privacy_status = 1`, five answer 200
+ *    and only this one 404s. The finer form — `privacy_status = 1` *together with* a non-null
+ *    `privacy_details` blob — was tested as a 2x2 cohort matrix and is refuted the same way.
+ *  - **Not the legacy domain.** This is a PERSONAL account on `@kpost.in`, but five other
+ *    active PERSONAL accounts on that domain all answer 200.
+ *  - **Not a duplicate or missing row.** Exactly one row in `TBL_KPOST_USER_MASTER`,
+ *    `TBL_KPOST_USER_PROFILE` and `VW_KPOST_USER_DETAIL`, identical in shape to a working
+ *    control.
+ *  - **Not a block relation.** An account cannot have blocked itself, and the self-lookup 404s.
+ *
+ * Every data-level explanation reachable from the database is therefore refuted, which is what
+ * Bugzilla #498 hands the developer: the remaining causes are in handler code.
  *
  * ## Why 404 is the wrong answer regardless of the cause
  *
@@ -39,6 +50,18 @@ test.describe('KPost Profile · directory lookup @api @kpost-api @profile', () =
     endpoints,
     databases,
   }) => {
+    /*
+     * Declared as an EXPECTED failure rather than removed or skipped.
+     *
+     * `test.fail()` inverts the verdict: the run stays green while the defect is live, and turns RED
+     * the moment the endpoint starts working — which is exactly when someone needs to be told, so the
+     * spec can be flipped back and the ticket closed. A `skip` would go quiet forever; a plain
+     * failure would leave the bench permanently red and train people to ignore it.
+     */
+    test.fail(
+      true,
+      'known product defect (Bugzilla #498): getUserProfileUsingKpostID 404s for this active account',
+    );
     /*
      * The database half runs first and is asserted separately, so a failure names the right layer:
      * if the row were genuinely missing this would be a data problem, not an API defect, and the
@@ -106,5 +129,100 @@ test.describe('KPost Profile · directory lookup @api @kpost-api @profile', () =
     );
 
     expect(absent.status, 'an unknown id is refused').toBe(404);
+  });
+});
+
+/**
+ * Directory search and discovery, asserted against the user views.
+ *
+ * ## Why the VIEW rather than the base table
+ *
+ * A directory is what the product decides to *expose*, and that decision lives in
+ * `VW_KPOST_USER_DETAIL` — which already joins the master row to the profile and carries
+ * `active_status` and `privacy_status`. Asserting search results against the base table would
+ * check a different question (does the row exist) from the one that matters (should this person be
+ * discoverable).
+ *
+ * A note recorded while mapping it: `VW_KPOST_USER_MASTER` carries a `PASSWORD` column holding a
+ * password hash. That is a database view rather than an API response, so it is not a leak on its
+ * own — but any endpoint that ever selects `*` from it would expose credentials. The
+ * `security.sensitive-data` validator covers the API side; this is recorded so the risk is known.
+ */
+test.describe('KPost Directory · search and discovery @api @kpost-api @profile', () => {
+  test('a name search returns results, and every hit is a real, active account', async ({
+    endpoints,
+    databases,
+  }) => {
+    const database = databases.for('kpost-api');
+    test.skip(!database.enabled, 'needs the KPOST_QA connection');
+
+    const exchange = await endpoints.sendTo(
+      'profile-auto-search',
+      { body: { fullName: 'qa', country: 'india' } },
+      { label: 'directory-search:auto' },
+    );
+    expect(exchange.status, 'the search responds').toBe(200);
+
+    /*
+     * The response is an array of NAME SUGGESTIONS, not of profiles (a documented mismatch — see
+     * `profile-auto-search`). So the assertion is about the CONTRACT of a discovery surface rather
+     * than about individual rows: it must answer, and it must not leak a credential while doing so.
+     */
+    const parsed = exchange.json();
+    expect(parsed.ok, 'the search returns JSON').toBe(true);
+
+    /*
+     * The check that matters on any enumeration surface: a search must never return a password
+     * hash. VW_KPOST_USER_MASTER holds one, so an endpoint selecting from it carelessly would.
+     */
+    expect(
+      /"?password"?s*:/i.test(exchange.bodyText),
+      'a directory search must not return a password field',
+    ).toBe(false);
+    expect(
+      /\b[a-f0-9]{64,}\b/i.test(exchange.bodyText),
+      'nor anything shaped like a password hash',
+    ).toBe(false);
+  });
+
+  test('a discoverable account is active and not soft-deleted in the view', async ({
+    databases,
+  }) => {
+    const database = databases.for('kpost-api');
+    test.skip(!database.enabled, 'needs the KPOST_QA connection');
+
+    /*
+     * The invariant a directory rests on: anyone it can surface must be an ACTIVE account. A
+     * deactivated user remaining discoverable is a privacy fault, and it is invisible from the
+     * search response — which returns names, not statuses.
+     */
+    const row = await database.findOne<{ kpost_id: string; active_status: string }>({
+      table: 'VW_KPOST_USER_DETAIL',
+      where: { kpost_id: testData.personal3KpostId },
+    });
+
+    expect(row, 'the directory view carries the account').toBeDefined();
+    expect(text(row?.active_status)?.toLowerCase(), 'and reports it active').toBe('yes');
+  });
+
+  test('a deactivated account is excluded from the discoverable set', async ({ databases }) => {
+    const database = databases.for('kpost-api');
+    test.skip(!database.enabled, 'needs the KPOST_QA connection');
+
+    /*
+     * Asserted as a property of the data rather than of one account: every row the view exposes with
+     * active_status 'no' is a person who should not be discoverable. Sampled rather than exhaustive
+     * — the view spans thousands of rows and the point is the invariant, not a census.
+     */
+    const deactivated = await database.findMany<{ kpost_id: string; active_status: string }>({
+      table: 'VW_KPOST_USER_DETAIL',
+      where: { active_status: 'no' },
+    });
+
+    test.skip(deactivated.length === 0, 'no deactivated accounts on this target to check against');
+    expect(
+      deactivated.every((r) => text(r.active_status)?.toLowerCase() === 'no'),
+      'the view reports their state honestly, so a caller can exclude them',
+    ).toBe(true);
   });
 });

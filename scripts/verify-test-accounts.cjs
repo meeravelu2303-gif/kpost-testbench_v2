@@ -32,19 +32,20 @@ function resolveHost(value) {
 (async () => {
   const registry = JSON.parse(fs.readFileSync(REGISTRY, 'utf8'));
   const policy = registry.domainPolicy;
-  const identifier = new RegExp(policy.identifierPattern);
   const accounts = registry.accounts;
 
   /** Mirrors `policyViolation()` in test-accounts.ts — the prefix, then the type's domain. */
+  const idOf = (account) => (process.env[account.kpostIdEnv] || '').trim();
+
+  /** Mirrors policyViolation() in test-accounts.ts: the type's domain, with the legacy exemption. */
   const violation = (account) => {
-    const at = account.kpostId.lastIndexOf('@');
-    const local = account.kpostId.slice(0, at);
-    const domain = account.kpostId.slice(at + 1).toLowerCase();
-    if (!local.startsWith(policy.prefix)) return `missing "${policy.prefix}" prefix`;
-    if (!identifier.test(local.slice(policy.prefix.length))) return 'bad identifier';
+    const id = idOf(account);
+    if (!id) return `${account.kpostIdEnv} is not set`;
+    const domain = id.slice(id.lastIndexOf('@') + 1).toLowerCase();
     const expected = policy[account.userType];
-    if (domain !== expected) return `${account.userType} must be on @${expected}, is on @${domain}`;
-    return undefined;
+    if (domain === expected) return undefined;
+    if (account.legacyDomain) return undefined;
+    return `${account.userType} belongs on @${expected}, is on @${domain}`;
   };
 
   console.log(
@@ -55,7 +56,7 @@ function resolveHost(value) {
   const offenders = accounts.map((a) => [a, violation(a)]).filter(([, reason]) => reason);
   if (offenders.length) {
     console.log('POLICY VIOLATIONS (these would be refused by the QA-identifier guard):');
-    offenders.forEach(([a, reason]) => console.log(`  ${a.id}: ${a.kpostId} — ${reason}`));
+    offenders.forEach(([a, reason]) => console.log(`  ${a.id}: ${idOf(a)} — ${reason}`));
     console.log('');
   }
 
@@ -64,7 +65,7 @@ function resolveHost(value) {
     console.log('No database configured (DB_HOST / DB_NAME), so existence was NOT verified.');
     console.log('Registry state is reported as-is:\n');
     accounts.forEach((a) =>
-      console.log(`  ${a.provisioned ? 'claimed live' : 'not provisioned'}  ${a.kpostId}`),
+      console.log(`  ${a.provisioned ? 'claimed live' : 'not provisioned'}  ${idOf(a)}`),
     );
     process.exitCode = 0;
     return;
@@ -91,7 +92,7 @@ function resolveHost(value) {
     for (const account of accounts) {
       const [rows] = await pool.query(
         'SELECT kpost_id, user_type, active_status, company_id FROM `TBL_KPOST_USER_MASTER` WHERE `kpost_id` = ? LIMIT 1',
-        [account.kpostId],
+        [idOf(account)],
       );
       const row = rows[0];
       const exists = Boolean(row);
@@ -114,7 +115,7 @@ function resolveHost(value) {
       }
       if (verdict.startsWith('DRIFT') || verdict.startsWith('UNUSABLE')) drift += 1;
 
-      console.log(`  ${account.kpostId.padEnd(34)} ${verdict}`);
+      console.log(`  ${idOf(account).padEnd(34)} ${verdict}`);
     }
   } finally {
     await pool.end();

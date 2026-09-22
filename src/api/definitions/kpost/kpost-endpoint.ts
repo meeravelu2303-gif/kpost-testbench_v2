@@ -128,6 +128,9 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     suite: 'kpost-api',
     responseContract: 'kpost',
     summary: config.summary,
+    // Carried through to the registry: coverage invariants require a written reason where an
+    // endpoint is excluded from live clearance, and a note that never left the config cannot be read.
+    note: config.note,
     tags: ['kpost-api', ...(config.tags ?? [])],
     requirements: config.requirements,
     // The common module is public: these endpoints are called before anyone has a token.
