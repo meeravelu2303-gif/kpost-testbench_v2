@@ -40,7 +40,7 @@ import { expect, test } from '@fixtures';
  * earlier runs of this bench — records these same endpoints as working, so this is a regression on
  * the host rather than a change here.
  */
-test.describe('KMail · authentication regression @api @kmail-api @kmail', () => {
+test.describe('KMail · authentication regression @api @kmail-api @kmail @database', () => {
   test('a valid KPost token is accepted by KPost and refused by KMail', async ({
     validationEngine,
     endpoints,

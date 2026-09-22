@@ -32,7 +32,7 @@ import { expect, test } from '@fixtures';
  * Writes only to the caller's own settings row, captures the original value and restores it.
  * `allowLiveWrite` is the executor's per-call authorization for a `data` write on live.
  */
-test.describe('KPost Settings · notification preferences @api @kpost-api @settings', () => {
+test.describe('KPost Settings · notification preferences @api @kpost-api @settings @database', () => {
   test.describe.configure({ mode: 'serial' });
 
   const accounts = requireAll('primary');
@@ -156,7 +156,7 @@ test.describe('KPost Settings · notification preferences @api @kpost-api @setti
  * something other than `kpost_id` would apply one user's preference to everybody, and every
  * single-account test would still pass.
  */
-test.describe('KPost Settings · isolation @api @kpost-api @settings', () => {
+test.describe('KPost Settings · isolation @api @kpost-api @settings @database', () => {
   const accounts = requireAll('primary', 'counterparty');
   test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
 

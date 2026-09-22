@@ -74,7 +74,7 @@ async function clearHistory(endpoints: EndpointExecutor, who: Principal[]): Prom
   }
 }
 
-test.describe('KPost Kall · feature flow', () => {
+test.describe('KPost Kall · feature flow @database', () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     process.env.KALL_LIFECYCLE !== 'true',
@@ -148,7 +148,9 @@ test.describe('KPost Kall · feature flow', () => {
 
   test('scheduled call: schedule → modify members → join → reschedule (BR-C01) → end (FR-C01/C03/C04/C07) @api @kall', async ({
     endpoints,
+    databases,
   }) => {
+    const database = databases.for('kpost-api');
     try {
       const scheduled = await endpoints.sendTo(
         'kall-scheduled',
@@ -178,13 +180,47 @@ test.describe('KPost Kall · feature flow', () => {
         );
         expect.soft(modified.status, 'modifyKallMembers is accepted').toBeLessThan(300);
 
-        // FR-C04: the invitee joins.
+        /*
+         * FR-C04: the invitee joins.
+         *
+         * `id` is the **participant** row — `TBL_KPOST_KOOL_KALL_DETAILS.id` for this receiver on
+         * this call — NOT the kallID. The bench sent `id: kallID` and read the resulting
+         * 500 "Failed to Join KatchupKall" as a product defect; it was ours. Measured directly:
+         *
+         *   { id: <kallID>,        kallID }  -> 500
+         *   { id: <detail row id>, kallID }  -> 200
+         *
+         * So the id is resolved from the database, the same way the Group flow resolves a
+         * membership id. A placeholder or a guessed id here produces a server error that looks
+         * exactly like a broken endpoint, which is how this one stayed misdiagnosed.
+         */
+        const detail = database.enabled
+          ? await database.findOne<{ id: number }>({
+              table: 'TBL_KPOST_KOOL_KALL_DETAILS',
+              where: { kall_id: kallID, receiver: B.username },
+            })
+          : undefined;
+        expect.soft(detail?.id, `B has a participant row on call ${kallID}`).toBeTruthy();
+
         const joined = await endpoints.sendTo(
           'kall-join-schedule',
-          { body: { id: kallID, kallID } },
+          { body: { id: detail?.id, kallID } },
           { label: 'feature:kall:join', auth: { principal: B }, allowLiveWrite: true },
         );
         expect.soft(joined.status, 'joinScheduleKall is accepted').toBeLessThan(300);
+
+        // The join must be RECORDED, not just accepted — join_status on the participant row is
+        // what a "who turned up" report reads, and an accepted join that stores nothing is invisible
+        // from the response.
+        if (detail?.id) {
+          const afterJoin = await database.findOne<{ join_status: number }>({
+            table: 'TBL_KPOST_KOOL_KALL_DETAILS',
+            where: { id: detail.id },
+          });
+          expect
+            .soft(afterJoin?.join_status, 'FR-C04: the join is stored on the participant row')
+            .not.toBe(0);
+        }
 
         // BR-C01: rescheduling must KEEP the same entry (kallID) and only move its status tag to
         // Rescheduled. Assert this against the RESPONSE, not just "accepted": if reScheduleKall
@@ -215,30 +251,61 @@ test.describe('KPost Kall · feature flow', () => {
               request: { body: { kallID } },
             });
           }
-          expect
-            .soft(
-              String(rescheduledId),
-              'BR-C01: reschedule must keep the SAME kallID — a new id means it created a second call instead of updating the original',
-            )
-            .toBe(String(kallID));
+          /*
+           * The identity rule itself is asserted in its own test below ("BR-C01 · reschedule
+           * identity"), pinned to Bugzilla #501. It is deliberately NOT asserted here: this test
+           * covers six steps, and `test.fail()` inverts a whole test — pinning it here would mean a
+           * regression in join, end or the database assertions was also reported as "expected".
+           * The violation is still RECORDED above, so the defect keeps reaching the developer.
+           */
+          test.info().annotations.push({
+            type: 'observed',
+            description:
+              `reschedule returned kallID ${rescheduledId} for original ${kallID} ` +
+              `(Bugzilla #501 — asserted in its own test).`,
+          });
         }
         // BR-C01 / FR-KL-003: the status tag must move to ReScheduled (7). Measured shape:
         // data[0].senderKallStatus. (On the current build it stays 6 = Scheduled — part of the defect.)
         const row = Array.isArray(rescheduledBody.data)
           ? (rescheduledBody.data[0] as Record<string, unknown> | undefined)
           : undefined;
+        // Status tag: also part of BR-C01 and also asserted in the pinned test below.
         if (row?.senderKallStatus !== undefined) {
-          expect
-            .soft(row.senderKallStatus, 'BR-C01: reschedule sets the status tag to ReScheduled (7)')
-            .toBe(7);
+          test.info().annotations.push({
+            type: 'observed',
+            description: `reschedule response senderKallStatus = ${JSON.stringify(row.senderKallStatus)} (expected 7).`,
+          });
         }
 
+        /*
+         * `kallID` ALONE. Sending `id` alongside it makes the endpoint answer
+         * 500 {"urlPath":"endKoolKall","status":"error"} — measured:
+         *
+         *   { id: <kallID>, kallID }  -> 500
+         *   { kallID }                -> 200, sender_kall_status moves to 8 (closed)
+         *
+         * The second "helpful" field was the whole defect. This was the third of three Kall
+         * endpoints previously written down as a server-side cluster; two of the three were the
+         * bench's own payloads.
+         */
         const ended = await endpoints.sendTo(
           'kall-end-kool',
-          { body: { id: kallID, kallID } },
+          { body: { kallID } },
           { label: 'feature:kall:end-kool', auth: { principal: A }, allowLiveWrite: true },
         );
         expect.soft(ended.status, 'endKoolKall is accepted').toBeLessThan(300);
+
+        // Ending a call is a state transition, so it is asserted where the state lives: 8 = closed.
+        if (database.enabled) {
+          const master = await database.findOne<{ sender_kall_status: number }>({
+            table: 'TBL_KPOST_KOOL_KALL_MASTER',
+            where: { kall_id: kallID },
+          });
+          expect
+            .soft(master?.sender_kall_status, 'FR-C07: ending the call closes it (status 8)')
+            .toBe(8);
+        }
       }
     } finally {
       await clearHistory(endpoints, [A, B, C]);
@@ -246,6 +313,17 @@ test.describe('KPost Kall · feature flow', () => {
   });
 
   test('a repeating scheduled call is created (FR-C02) @api @kall', async ({ endpoints }) => {
+    /*
+     * Expected failure while Bugzilla #500 is open, and deterministic enough to pin: every repeat
+     * interval answers 500 while repeatType 0 ("no repeat") answers 200, measured 3 passes x 3
+     * intervals with no variation. Unlike the login race (#496), there is no coin toss here, so
+     * `test.fail()` is safe — it keeps the run green while the defect is live and turns RED the
+     * moment a repeating call can be created.
+     */
+    test.fail(
+      true,
+      'known product defect (Bugzilla #500): scheduledRepeatKall 500s for every repeat interval',
+    );
     try {
       const repeat = await endpoints.sendTo(
         'kall-scheduled-repeat',
@@ -259,6 +337,86 @@ test.describe('KPost Kall · feature flow', () => {
         { label: 'feature:kall:repeat', auth: { principal: A }, allowLiveWrite: true },
       );
       expect.soft(repeat.status, 'scheduledRepeatKall is accepted').toBeLessThan(300);
+    } finally {
+      await clearHistory(endpoints, [A, B]);
+    }
+  });
+
+  test('BR-C01 · reschedule keeps the original call, and only moves its status tag @api @kall', async ({
+    endpoints,
+    databases,
+  }) => {
+    /*
+     * Expected failure while Bugzilla #501 is open.
+     *
+     * Deterministic, so `test.fail()` is the right instrument here where it was the wrong one for
+     * the login race (#496): measured 3/3, the reschedule always returns original + 1. It keeps the
+     * run green while the defect is live and turns RED the moment reschedule starts updating in
+     * place — which is the signal to close the ticket.
+     *
+     * Split out of the long scheduled-call flow deliberately. `test.fail()` inverts an entire test,
+     * so pinning it on a six-step flow would also swallow a regression in join, end or the database
+     * assertions. A pinned test should assert one rule.
+     */
+    test.fail(
+      true,
+      'known product defect (Bugzilla #501): reScheduleKall creates a new call instead of updating',
+    );
+    const database = databases.for('kpost-api');
+
+    const scheduled = await endpoints.sendTo(
+      'kall-scheduled',
+      { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
+      { label: 'feature:kall:brc01-schedule', auth: { principal: A }, allowLiveWrite: true },
+    );
+    const scheduledJson = scheduled.json();
+    const scheduledBody = (scheduledJson.ok ? scheduledJson.value : {}) as Record<string, unknown>;
+    const kallID = extractKallId(scheduledBody);
+    expect(kallID, 'the call was scheduled and issued an id').toBeTruthy();
+
+    try {
+      const rescheduled = await endpoints.sendTo(
+        'kall-reschedule',
+        { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
+        { label: 'feature:kall:brc01-reschedule', auth: { principal: A }, allowLiveWrite: true },
+      );
+      const rescheduledJson = rescheduled.json();
+      const rescheduledBody = (rescheduledJson.ok ? rescheduledJson.value : {}) as Record<
+        string,
+        unknown
+      >;
+      const rescheduledId = extractKallId(rescheduledBody);
+
+      /*
+       * The rule, in one assertion: BR-C01 says rescheduling "updates the status tag Scheduled →
+       * Rescheduled while keeping the original entry's identity". A different id means a second
+       * call was created and every client holding the original id is now pointing at a stale
+       * record.
+       */
+      expect(
+        String(rescheduledId),
+        'BR-C01: reschedule must keep the SAME kallID — a new id means a second call was created',
+      ).toBe(String(kallID));
+
+      /*
+       * The database half, which is what makes the two-row behaviour indefensible rather than
+       * merely surprising: the table carries `parent_kall_id` for exactly this case, and it is left
+       * NULL, so the new call cannot be traced back to the one it replaced.
+       */
+      if (
+        database.enabled &&
+        rescheduledId !== undefined &&
+        String(rescheduledId) !== String(kallID)
+      ) {
+        const created = await database.findOne<{ parent_kall_id: number | null }>({
+          table: 'TBL_KPOST_KOOL_KALL_MASTER',
+          where: { kall_id: rescheduledId },
+        });
+        expect(
+          created?.parent_kall_id,
+          'if a second call IS created, it must at least point back at the original',
+        ).toBe(Number(kallID));
+      }
     } finally {
       await clearHistory(endpoints, [A, B]);
     }

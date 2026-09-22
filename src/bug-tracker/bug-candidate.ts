@@ -87,6 +87,22 @@ export interface BugCandidate {
   responseStatus?: number;
   /** A copy-pasteable command that reproduces the failure. */
   curl?: string;
+  /**
+   * The SQL a developer can run to see the same discrepancy in the database.
+   *
+   * Present when the finding was reached by asserting MySQL state rather than a response — a write
+   * that reported success and stored nothing, a transition the row never recorded. Without it the
+   * ticket asserts something about the data and gives the reader no way to check it.
+   */
+  verificationSql?: string;
+  /**
+   * How the reproduction gate scored this finding: `failures` of `attempts` passes failed.
+   *
+   * The gate already computes this before deciding to file, and it used to be discarded — so a
+   * filed ticket never said whether the defect failed once or every time. That distinction is the
+   * whole difference between a defect and a flake, and it is the first thing a developer asks.
+   */
+  reproduction?: { attempts: number; failures: number };
   correlationId?: string;
   /** Browser projects that observed a UI failure. */
   browsers?: string[];
@@ -265,6 +281,7 @@ function fromValidationResult(
       authenticated: report.requiresAuth ?? Boolean(report.request?.headers?.Authorization),
     }),
     correlationId: result.correlationId,
+    reproduction: result.reproduction,
     occurrences: 1,
     environment: report.environment,
     baseURL: context.baseURL,
@@ -285,6 +302,7 @@ function fromValidationResult(
       actual: result.actual,
       details: result.details,
       correlationId: result.correlationId,
+      reproduction: result.reproduction,
       error: result.error,
     }),
   };

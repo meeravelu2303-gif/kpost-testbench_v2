@@ -40,7 +40,7 @@ import { expect, test } from '@fixtures';
  * effects stay blocked, and the QA-identifier guard still refuses any payload naming a record we do
  * not own. It is set here, per call, because the repo owner signed this flow off explicitly (2026-09-21).
  */
-test.describe('KMail · lifecycle with MySQL assertions @api @kmail-api @kmail', () => {
+test.describe('KMail · lifecycle with MySQL assertions @api @kmail-api @kmail @database', () => {
   // Gated while KMail refuses every valid token — see src/fixtures/kmail-auth-gate.ts.
   test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
 

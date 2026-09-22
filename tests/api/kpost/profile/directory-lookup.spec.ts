@@ -45,7 +45,7 @@ import { expect, test } from '@fixtures';
  * "you may not see this one", and neither can the bench — which is why the enumeration validators
  * treat this endpoint as an enumeration surface in the first place.
  */
-test.describe('KPost Profile · directory lookup @api @kpost-api @profile', () => {
+test.describe('KPost Profile · directory lookup @api @kpost-api @profile @database', () => {
   test('an account that exists in MySQL is resolvable through getUserProfileUsingKpostID', async ({
     endpoints,
     databases,
@@ -148,7 +148,7 @@ test.describe('KPost Profile · directory lookup @api @kpost-api @profile', () =
  * own — but any endpoint that ever selects `*` from it would expose credentials. The
  * `security.sensitive-data` validator covers the API side; this is recorded so the risk is known.
  */
-test.describe('KPost Directory · search and discovery @api @kpost-api @profile', () => {
+test.describe('KPost Directory · search and discovery @api @kpost-api @profile @database', () => {
   test('a name search returns results, and every hit is a real, active account', async ({
     endpoints,
     databases,

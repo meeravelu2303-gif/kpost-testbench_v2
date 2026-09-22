@@ -36,7 +36,7 @@ import { expect, test } from '@fixtures';
  * the same `KATCHUP_LIFECYCLE` opt-in as the existing flow, for the same reason: until the owner
  * has signed off on sending on the live application, this must not run there by accident.
  */
-test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api @katchup', () => {
+test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api @katchup @database', () => {
   test.describe.configure({ mode: 'serial' });
   test.skip(
     process.env.KATCHUP_LIFECYCLE !== 'true',

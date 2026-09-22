@@ -75,6 +75,14 @@ export interface ValidationResult {
   error?: { name: string; message: string };
   correlationId: string;
   details?: CheckDetail[];
+  /**
+   * How the reproduction gate scored this check: `failures` of `attempts` passes failed.
+   *
+   * Set only where the gate actually ran (retryable stages). It travels on the result so the ticket
+   * can state it — the gate used to compute this, log it and drop it, which left every filed defect
+   * silent on the one question a developer asks first: did it fail once, or every time?
+   */
+  reproduction?: { attempts: number; failures: number };
 }
 
 export interface ValidationSummary {

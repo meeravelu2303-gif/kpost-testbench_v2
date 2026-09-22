@@ -34,7 +34,7 @@ import { expect, test } from '@fixtures';
  * **lockout**, so the wrong-password probe sends exactly ONE bad attempt and is followed by a good
  * login — the precaution the bench already documents for live accounts.
  */
-test.describe('KPost Security · sessions and concurrency @api @kpost-api @signup-login', () => {
+test.describe('KPost Security · sessions and concurrency @api @kpost-api @signup-login @database', () => {
   const accounts = requireAll('primary');
   test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
 

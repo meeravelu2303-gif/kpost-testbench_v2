@@ -69,79 +69,179 @@ export function buildWhiteboard(candidate: BugCandidate): string {
   return tags.join('');
 }
 
+/** Section rule, sized to the 80-column budget below. */
+const SECTION_RULE = '-'.repeat(78);
+
+/**
+ * Wrap prose to 78 columns, preserving deliberate line breaks.
+ *
+ * Bugzilla renders a comment inside a <pre> element, which does NOT wrap. A 300-character narrative
+ * on one line therefore becomes a horizontal scrollbar, and everything past the fold is invisible
+ * until the reader drags. Pre-formatted blocks (curl, SQL, JSON) are NOT passed through this — they
+ * are wrapped at the point they are built, where the syntax is known and a break can be put
+ * somewhere legal.
+ */
+function wrap(text: string, width = 78, indent = '  '): string[] {
+  const out: string[] = [];
+  for (const paragraph of text.split('\n')) {
+    if (!paragraph.trim()) {
+      out.push('');
+      continue;
+    }
+    let line = '';
+    for (const word of paragraph.trim().split(/\s+/)) {
+      if (line && (line + ' ' + word).length + indent.length > width) {
+        out.push(indent + line);
+        line = word;
+      } else {
+        line = line ? line + ' ' + word : word;
+      }
+    }
+    if (line) out.push(indent + line);
+  }
+  return out;
+}
+
+/** A pre-formatted block (curl, SQL, a response body): indented, never re-wrapped. */
+function block(text: string, indent = '  '): string[] {
+  return text.split('\n').map((line) => (line.trim() ? indent + line : ''));
+}
+
+/** "LABEL  value" with the labels aligned into a column. */
+function field(label: string, value: string | number, width = 16): string {
+  return `  ${label.padEnd(width)}${value}`;
+}
+
+function section(title: string): string[] {
+  return ['', title, SECTION_RULE];
+}
+
+/**
+ * The ticket body a developer reads in Bugzilla.
+ *
+ * ## Why plain text, and why no Markdown
+ *
+ * This Bugzilla is 5.2, which has no Markdown support for comments — no `is_markdown` field on the
+ * REST comment object and no markdown parameter on the instance. Asterisks written for bold would
+ * be shown literally, and a triple-backtick fence would appear as three backticks. Comments are
+ * rendered inside a <pre>, so the monospace panel a reader sees is the SKIN doing that to every
+ * comment on the instance, not something a payload can opt into or out of.
+ *
+ * What a payload CAN control, and what this layout uses, is structure that survives a fixed-width
+ * pre: uppercase section headers with a rule under them, labels aligned into a column, and every
+ * line kept inside 78 characters so nothing needs horizontal scrolling.
+ *
+ * ## Section order
+ *
+ * Endpoint, then expected, then actual, then the two things that let the reader check it
+ * themselves — the curl and the SQL — and finally the environment and how reliably it reproduced.
+ * A reader who stops after twenty lines still has the defect; a reader who wants to verify it has
+ * everything without leaving the ticket.
+ *
+ * Sections with no data are omitted entirely rather than printed empty, so a UI defect does not
+ * carry a blank DATABASE VERIFICATION heading implying a check nobody ran.
+ */
 export function buildDescription(candidate: BugCandidate): string {
-  const endpointLabel = candidate.source === 'api' ? 'Representative endpoint:' : 'Endpoint:';
-  const lines = [
-    `Classification: ${candidate.classification}`,
-    `Category: ${candidate.category}`,
-    `${endpointLabel} ${candidate.endpoint ?? '(not applicable)'}`,
-    `Module: ${candidate.component}`,
-    '',
-    candidate.narrative,
-  ];
-  // Self-explanatory ticket: what the defect is, why it matters, and how to fix it — so a developer
-  // opening it in Bugzilla understands it without asking. Anchored so the UI renders it as a section.
+  const lines: string[] = [];
+
+  /* ---- SUMMARY & ENDPOINT ------------------------------------------------------------------ */
+  lines.push('SUMMARY & ENDPOINT', SECTION_RULE);
+  if (candidate.endpoint) lines.push(`  ${candidate.endpoint}`);
+  lines.push(field('Module', `${candidate.product} / ${candidate.component}`));
+  lines.push(field('Severity', candidate.severity));
+  lines.push(field('Found by', `${candidate.classification}  (${candidate.category})`));
+  if (candidate.affectedEndpoints && candidate.affectedEndpoints.length > 1) {
+    // Only true when the fault really does span endpoints. On a single-endpoint defect this note
+    // would send the reader looking for a list that is not there.
+    lines.push(field('Note', 'representative endpoint — full list under SCOPE below'));
+  }
+  lines.push('');
+  lines.push(...wrap(candidate.narrative));
+
   const guidance = developerGuidance(candidate.classification);
   if (guidance) {
+    lines.push(...section('WHAT THIS MEANS'));
+    lines.push(...wrap(guidance.meaning));
+    lines.push('');
+    lines.push('  Why it matters:');
+    lines.push(...wrap(guidance.why, 78, '    '));
+    lines.push('');
+    lines.push('  How to fix:');
+    lines.push(...wrap(guidance.fix, 78, '    '));
+  }
+
+  /* ---- EXPECTED / ACTUAL -------------------------------------------------------------------- */
+  lines.push(...section('EXPECTED RESULT'));
+  lines.push(...block(clamp(candidate.expected, 'expected')));
+
+  lines.push(...section('ACTUAL RESULT'));
+  lines.push(...block(clamp(candidate.actual, 'response')));
+  if (candidate.responseBody) {
+    lines.push('');
+    lines.push(`  Response body (HTTP ${candidate.responseStatus ?? '?'}):`);
+    lines.push(...block(clamp(candidate.responseBody, 'response body'), '    '));
+  }
+
+  /* ---- REPRODUCTION ------------------------------------------------------------------------- */
+  if (candidate.repro) {
+    lines.push(...section('STEPS TO REPRODUCE'));
+    lines.push(...block(clamp(candidate.repro, 'repro')));
+  }
+
+  /*
+   * The curl carries real identifiers and a $KPOST_TOKEN placeholder for the bearer token: the
+   * identifiers are what make it runnable, the token is the one value that must never be pasted
+   * into a tracker. See src/bug-tracker/curl.ts.
+   */
+  if (candidate.curl) {
+    lines.push(...section('REPRODUCIBLE cURL'));
+    lines.push(...block(clamp(candidate.curl, 'curl')));
+  }
+
+  if (candidate.verificationSql) {
+    lines.push(...section('DATABASE VERIFICATION SQL'));
+    lines.push(...block(clamp(candidate.verificationSql, 'sql')));
+  }
+
+  /* ---- SCOPE -------------------------------------------------------------------------------- */
+  if (candidate.affectedEndpoints && candidate.affectedEndpoints.length > 1) {
+    lines.push(...section('SCOPE — ONE FAULT, MANY ENDPOINTS'));
     lines.push(
-      '',
-      `What this means: ${guidance.meaning}`,
-      '',
-      `Why it matters: ${guidance.why}`,
-      '',
-      `How to fix: ${guidance.fix}`,
+      ...wrap(
+        `${candidate.affectedEndpoints.length} endpoints show this same fault. One shared fix ` +
+          `resolves all of them — they are listed so triage can confirm the scope rather than ` +
+          `hunt for it.`,
+      ),
     );
+    lines.push('');
+    for (const endpoint of candidate.affectedEndpoints) lines.push(`    ${endpoint}`);
+  }
+
+  /* ---- ENVIRONMENT & REPRODUCIBILITY -------------------------------------------------------- */
+  lines.push(...section('ENVIRONMENT & REPRODUCIBILITY'));
+  lines.push(field('Environment', `${candidate.environment} (${candidate.baseURL})`));
+  if (candidate.reproduction) {
+    const { attempts, failures } = candidate.reproduction;
+    const verdict =
+      failures === attempts
+        ? 'confirmed, not flake'
+        : 'INTERMITTENT — treat timing as part of the defect';
+    lines.push(field('Reproduction', `${failures}/${attempts} passes failed — ${verdict}`));
   }
   if (candidate.occurrences > 1) {
-    lines.push('', `Observed ${candidate.occurrences} times in this run.`);
-  }
-  if (candidate.affectedEndpoints && candidate.affectedEndpoints.length > 1) {
-    // A single platform-wide fault: name every endpoint it was seen on, so triage can confirm the
-    // one shared fix covers them all rather than hunting for the scope.
-    lines.push(
-      '',
-      `Affects ${candidate.affectedEndpoints.length} endpoints — one shared fix resolves all of them:`,
-      ...candidate.affectedEndpoints.map((endpoint) => `  - ${endpoint}`),
-    );
+    lines.push(field('Occurrences', `${candidate.occurrences} times in this run`));
   }
   if (candidate.browsers?.length) {
-    lines.push('', `Browsers affected: ${candidate.browsers.join(', ')}.`);
+    lines.push(field('Browsers', candidate.browsers.join(', ')));
   }
   if (candidate.correlationId) {
-    lines.push(
-      '',
-      `Correlation ID (search the application logs for it): ${candidate.correlationId}`,
-    );
+    lines.push(field('Correlation ID', candidate.correlationId));
+    lines.push(field('', '(search the application logs for it)'));
   }
-  lines.push(
-    '',
-    'Expected:',
-    clamp(candidate.expected, 'expected'),
-    '',
-    'Actual:',
-    clamp(candidate.actual, 'response'),
-  );
-  if (candidate.responseBody) {
-    lines.push(
-      '',
-      `Response body (HTTP ${candidate.responseStatus ?? '?'}):`,
-      clamp(candidate.responseBody, 'response body'),
-    );
-  }
-  if (candidate.repro) lines.push('', 'Repro:', clamp(candidate.repro, 'repro'));
-  /*
-   * The curl goes last of the reproduction material, matching the tickets already in this Bugzilla
-   * (see bug 98). Any token is a $KPOST_TOKEN placeholder and masked values stay masked - see
-   * src/bug-tracker/curl.ts for why that is deliberate.
-   */
-  if (candidate.curl) lines.push('', 'curl:', clamp(candidate.curl, 'curl'));
-  lines.push(
-    '',
-    `Owner: ${candidate.ownerName} <${candidate.assignee}> — maintainer of the ${candidate.product} module`,
-    `Environment: ${candidate.environment} (${candidate.baseURL})`,
-    `Run date: ${candidate.observedAt}`,
-    `Filed by: kpost-testbench_v2, build ${candidate.build}, run ${candidate.testRunId}`,
-  );
+  lines.push(field('Observed', candidate.observedAt));
+  lines.push(field('Owner', `${candidate.ownerName} <${candidate.assignee}>`));
+  lines.push(field('Filed by', `kpost-testbench_v2 build ${candidate.build}`));
+  lines.push(field('Test run', candidate.testRunId));
 
   const description = lines.join('\n');
   if (description.length <= BUGZILLA_LIMITS.comment) return description;

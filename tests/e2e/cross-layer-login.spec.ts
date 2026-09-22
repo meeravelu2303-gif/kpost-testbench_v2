@@ -31,7 +31,7 @@ import { expect, test } from '@fixtures';
  * (`screenshot: 'only-on-failure'`, `video: 'retain-on-failure'`, `trace: 'retain-on-failure'`),
  * so a failure here arrives at Bugzilla with the reproduction attached.
  */
-test.describe('Cross-layer · UI login reaches the database', { tag: '@ui' }, () => {
+test.describe('Cross-layer · UI login reaches the database @database', { tag: '@ui' }, () => {
   // A real login, so the saved session must not short-circuit it.
   test.use({ storageState: { cookies: [], origins: [] } });
 

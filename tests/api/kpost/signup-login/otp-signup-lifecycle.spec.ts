@@ -18,13 +18,13 @@ import { expect, test } from '@fixtures';
  */
 const OTP = testData.bypassOtp;
 
-test.describe('Signup & OTP lifecycle (test gateway)', { tag: '@api' }, () => {
+test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }, () => {
   test.skip(
     process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',
     'OTP/signup flows run only on a confirmed test gateway: OTP_TEST_GATEWAY=true + TEST_DB_MODE=true',
   );
 
-  test('mobile + mail OTP → personal registration @api', async ({ endpoints }) => {
+  test('mobile + mail OTP → personal registration @api', async ({ endpoints, databases }) => {
     // 1. Send the mobile OTP (test gateway — creates the record, no real SMS).
     const sendMobile = await endpoints.sendTo(
       'common-send-otp',
@@ -53,19 +53,42 @@ test.describe('Signup & OTP lifecycle (test gateway)', { tag: '@api' }, () => {
     );
     expect.soft(validateMobile.status, 'validateOTP accepted the bypass code').toBeLessThan(500);
 
-    // 3. Send + validate the mail OTP.
+    /*
+     * 3. Send + validate the mail OTP.
+     *
+     * The gateway bypass is SMS-ONLY. Measured on this database: the mobile channel stores the
+     * literal `123456`, while the mail channel stores a real random code and sends it. This step
+     * used to post `123456` to validateMailOTP and treat the resulting 500 as a product defect —
+     * the code was simply wrong and the endpoint refused it correctly.
+     *
+     * So the real code is read from the row the send just created. Legitimate only because this is
+     * the disposable TEST database the bench is authorised to read, and it is the one way to drive
+     * the mail path without a mailbox. The mechanics are covered in full by
+     * `otp-lifecycle-db.spec.ts`; here it is a step in the signup chain.
+     */
     const sendMail = await endpoints.sendTo(
       'common-send-otp-to-mail',
       { body: { otherEmail: testData.otpEmail } },
       { label: 'feature:otp:send-mail' },
     );
     expect.soft(sendMail.status, 'sendOTPtoMail accepted').toBeLessThan(500);
+
+    const database = databases.for('kpost-api');
+    const mailRows = database.enabled
+      ? await database.findMany<{ id: number; otp: string }>({
+          table: 'TBL_KPOST_EMAIL_OTP_VALIDATION',
+          where: { email: testData.otpEmail },
+        })
+      : [];
+    const mailCode = [...mailRows].sort((a, b) => b.id - a.id)[0]?.otp;
+    expect.soft(mailCode, 'the send minted a mail code to validate').toBeTruthy();
+
     const validateMail = await endpoints.sendTo(
       'common-validate-mail-otp',
-      { body: { email: testData.otpEmail, otp: Number(OTP) } },
+      { body: { email: testData.otpEmail, otp: Number(mailCode ?? OTP) } },
       { label: 'feature:otp:validate-mail' },
     );
-    expect.soft(validateMail.status, 'validateMailOTP accepted the bypass code').toBeLessThan(500);
+    expect.soft(validateMail.status, 'validateMailOTP accepted the real code').toBeLessThan(500);
 
     // 4. Register the personal account (both OTPs validated). Fresh DB → success; re-run → already-exists.
     const signup = await endpoints.sendTo(
@@ -81,6 +104,25 @@ test.describe('Signup & OTP lifecycle (test gateway)', { tag: '@api' }, () => {
   test('forgot-password OTP → set a new password on the spare account @api', async ({
     endpoints,
   }) => {
+    /*
+     * Skipped unless a spare account is explicitly configured, because this flow REWRITES a
+     * password.
+     *
+     * `testData.forgotPasswordKpostId` defaults to an address that deliberately does not exist, so
+     * that "an unconfigured run cannot change anything real" — and `.env` ships with
+     * QA_FORGOT_PASSWORD_KPOST_ID commented out. The test ignored that and fired anyway, which put
+     * a nonexistent id on the wire and was correctly refused by the QA-identifier guard — reported
+     * as a red failure rather than as the "not configured" it actually was.
+     *
+     * A skip is right here where the bench normally avoids them: there is no safe default target.
+     * Inventing one would mean rewriting the password of an account chosen by the test, and using
+     * the login account would lock every other suite out mid-run.
+     */
+    test.skip(
+      testData.forgotPasswordKpostId === 'no.such.user.9f2a@kpost.in',
+      'set QA_FORGOT_PASSWORD_KPOST_ID to a spare account whose password may be rewritten; ' +
+        'unset, this flow has no safe target',
+    );
     const sendReset = await endpoints.sendTo(
       'common-forgot-password-otp',
       { body: { kpostID: testData.forgotPasswordKpostId, requestType: 'password' } },

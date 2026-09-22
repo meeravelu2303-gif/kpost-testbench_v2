@@ -25,7 +25,12 @@ import { createLogger } from '../utils/logger';
 import type { ValidationReport } from '../validation-engine/validation-result';
 import { buildBugReportConsole, buildBugReportMarkdown } from './bug-report';
 import { VALIDATION_REPORT_ATTACHMENT } from './report-attachment';
-import { buildRunSummary, renderRunSummaryMarkdown, type UiTestRecord } from './run-summary';
+import {
+  buildRunSummary,
+  renderRunSummaryConsole,
+  renderRunSummaryMarkdown,
+  type UiTestRecord,
+} from './run-summary';
 
 /**
  * Files this run's defects into Bugzilla.
@@ -235,6 +240,12 @@ export default class BugzillaReporter implements Reporter {
     const markdown = `${renderRunSummaryMarkdown(runSummary)}\n${buildBugReportMarkdown(reportInput)}`;
     this.writeReport('REPORT.json', JSON.stringify(combined, null, 2));
     this.writeReport('REPORT.md', markdown);
+    /*
+     * Execution health first, then the defects: "what ran" before "what is broken". A bug count
+     * read without the coverage that produced it is unanchored — 4 defects out of 5 checks and
+     * 4 out of 4,000 describe very different runs.
+     */
+    console.log(`\n${renderRunSummaryConsole(runSummary)}`);
     console.log(`\n${buildBugReportConsole(reportInput)}`);
   }
 

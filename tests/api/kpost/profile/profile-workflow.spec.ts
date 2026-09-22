@@ -31,7 +31,7 @@ import { expect, test } from '@fixtures';
  * nothing else — `external`/`global` stay blocked, and the QA-identifier guard still refuses any
  * payload naming a record we do not own. Every write here targets the CALLER'S OWN profile.
  */
-test.describe('KPost Profile · update workflow @api @kpost-api @profile', () => {
+test.describe('KPost Profile · update workflow @api @kpost-api @profile @database', () => {
   test.describe.configure({ mode: 'serial' });
 
   const accounts = requireAll('primary');

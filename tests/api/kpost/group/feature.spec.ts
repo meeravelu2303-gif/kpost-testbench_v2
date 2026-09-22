@@ -56,7 +56,7 @@ async function as(
   return { status: ex.status, data: (value.data as Record<string, unknown>) ?? {} };
 }
 
-test.describe('KPost Group · feature flow', () => {
+test.describe('KPost Group · feature flow @database', () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     process.env.GROUP_LIFECYCLE !== 'true',
@@ -113,13 +113,30 @@ test.describe('KPost Group · feature flow', () => {
 
   test('promote then demote a co-admin, and the sole admin cannot exit (FR-GM-012/013/014) @api @group @security', async ({
     endpoints,
+    databases,
   }) => {
     /*
      * FR-GM-012 Add Admin / FR-GM-013 Remove Admin, and the crown BR FR-GM-014: a group must always
      * retain at least one active admin, so the sole admin is blocked from exiting. We create A(admin)
      * + B(member), promote B, demote B (leaving A sole admin), then A tries to exit — which the rule
      * must block. If the backend allows it (200), that is a real finding: the BR is UI-only.
+     *
+     * ## Why the membership id is read from MySQL
+     *
+     * `addOrRemoveAdminAccess` takes `ids` — the row ids of the MEMBERSHIPS being changed, not the
+     * accounts. This test used to send `ids: [0]` as a placeholder and the endpoint answered 500 on
+     * both promote and demote; the endpoint definition's own note already said it "needs a real group
+     * id and membership id". A placeholder id is the bench's bug, not the product's, and reporting it
+     * as a server defect would have sent a developer after nothing. The real id lives in
+     * `TBL_KPOST_USERGROUP_MEMBERDETAILS.id` and the bench can read it, so it does.
+     *
+     * ## Why the assertions are on the row, not the response
+     *
+     * `addOrRemoveAdminAccess` answers SUCCESS whatever it wrote. Admin rights that report granted
+     * and are not stored is a privilege bug that no response-level check can see — and the inverse,
+     * rights that persist after a demote, is a security hole. `admin_access` is the fact.
      */
+    const database = databases.for('kpost-api');
     let groupID: number | undefined;
     let groupKpostID: string | undefined;
     try {
@@ -129,25 +146,74 @@ test.describe('KPost Group · feature flow', () => {
       expect.soft(groupKpostID, 'a groupKpostID is returned').toBeTruthy();
       if (!(groupID && groupKpostID)) return;
 
-      // FR-GM-012 — promote B to co-admin.
+      /*
+       * The membership row for B in THIS group. Scoped by both group_id and kpost_id: the same
+       * account is a member of many groups on a shared test database, and promoting the wrong
+       * membership would grant admin somewhere else entirely.
+       */
+      const membership = database.enabled
+        ? await database.findOne<{ id: number; admin_access: string }>({
+            table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+            where: { group_id: groupID, kpost_id: testData.victimKpostId, removed_flag: 'N' },
+          })
+        : undefined;
+
+      test.skip(
+        !database.enabled,
+        'needs the KPOST_QA connection to resolve the real membership id',
+      );
+      expect(membership?.id, `B has a membership row in group ${groupID}`).toBeTruthy();
+      const memberRowId = membership?.id ?? 0;
+
+      // FR-GM-012 — promote B to co-admin, naming the real membership row.
       const promote = await as(
         endpoints,
         A,
         'group-admin-access',
-        { kpostIDs: [testData.victimKpostId], ids: [0], groupID, hasAdminAccess: 'Y' },
+        {
+          kpostIDs: [testData.victimKpostId],
+          ids: [memberRowId],
+          groupID,
+          hasAdminAccess: 'Y',
+        },
         'promote-admin',
       );
       expect.soft(promote.status, 'promote to admin is accepted (FR-GM-012)').toBeLessThan(300);
+
+      const afterPromote = await database.findOne<{ admin_access: string }>({
+        table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+        where: { id: memberRowId },
+      });
+      expect
+        .soft(afterPromote?.admin_access, 'FR-GM-012: the grant is stored on the membership row')
+        .toBe('Y');
 
       // FR-GM-013 — demote B back to a regular member.
       const demote = await as(
         endpoints,
         A,
         'group-admin-access',
-        { kpostIDs: [testData.victimKpostId], ids: [0], groupID, hasAdminAccess: 'N' },
+        {
+          kpostIDs: [testData.victimKpostId],
+          ids: [memberRowId],
+          groupID,
+          hasAdminAccess: 'N',
+        },
         'demote-admin',
       );
       expect.soft(demote.status, 'demote from admin is accepted (FR-GM-013)').toBeLessThan(300);
+
+      /*
+       * The security half: rights must actually be REVOKED. A demote that reports success and leaves
+       * `admin_access = 'Y'` leaves a user with group-admin powers nobody believes they have.
+       */
+      const afterDemote = await database.findOne<{ admin_access: string }>({
+        table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+        where: { id: memberRowId },
+      });
+      expect
+        .soft(afterDemote?.admin_access, 'FR-GM-013: the revoke is stored, not just reported')
+        .toBe('N');
 
       // FR-GM-014 — A is now the SOLE admin; exiting must be blocked (min-one-admin rule).
       const exit = await as(
@@ -157,15 +223,28 @@ test.describe('KPost Group · feature flow', () => {
         { id: '0', groupID, groupKpostID },
         'sole-admin-exit',
       );
+
+      /*
+       * Asserted against the DATABASE rather than the response code, because either answer is
+       * defensible at the API layer and only one is defensible in the data: whatever the endpoint
+       * replies, the group must still have an admin afterwards. A group with zero admins cannot be
+       * administered by anyone again — members cannot be added, removed or promoted, and the group
+       * is effectively orphaned.
+       */
+      const admins = await database.findMany<{ id: number; kpost_id: string }>({
+        table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+        where: { group_id: groupID, admin_access: 'Y', removed_flag: 'N' },
+      });
       expect
         .soft(
-          exit.status,
-          'the sole admin must NOT be able to exit the group (FR-GM-014); a 2xx here is a finding — the rule is UI-only',
+          admins.length,
+          `FR-GM-014: the group must retain at least one admin after the sole admin's exit ` +
+            `attempt (exit answered ${exit.status})`,
         )
-        .toBeGreaterThanOrEqual(400);
+        .toBeGreaterThan(0);
     } finally {
       if (groupID) {
-        await as(endpoints, A, 'group-delete', { groupID }, 'cleanup-delete').catch(
+        await as(endpoints, A, 'group-delete', { groupID, groupKpostID }, 'cleanup-delete').catch(
           () => undefined,
         );
       }

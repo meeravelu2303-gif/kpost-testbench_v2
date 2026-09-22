@@ -258,6 +258,21 @@ function qaOwnedValues(): Set<string> {
      */
     testData.signupKpostId,
     testData.signupMobile,
+    /*
+     * The reserved OTP DESTINATIONS — the mail and mobile half of the same registration identity.
+     *
+     * Allowlisted for the reason above rather than by exempting the `otherEmail` / `email` keys:
+     * an email address IS a resource identifier, it addresses a mailbox, and this environment's
+     * mail server is LIVE. Exempting the key would let the negative probes mutate it and mail a
+     * one-time code to whatever address a fuzzer invented. Allowlisting the specific configured
+     * values keeps the guard's teeth and lets only the bench's own throwaway destinations through.
+     *
+     * Their defaults are deliberate throwaways (see the note on `otpEmail` in test-data.config.ts)
+     * and name no user record. Point QA_OTP_EMAIL / QA_OTP_MOBILE at a mailbox and number the team
+     * actually controls before running the OTP suites anywhere that delivers.
+     */
+    testData.otpEmail,
+    testData.otpMobile,
     // `0` = the "no specific company" sentinel some public lookups require (e.g. mobileNoExist's
     // companyID for a personal check). It names no real company, so it is safe to allowlist.
     '0',

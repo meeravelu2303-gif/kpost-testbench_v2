@@ -32,7 +32,7 @@ import { expect, test } from '@fixtures';
  * `allowLiveWrite` per call — the executor's authorization for a `data` write on live. The
  * QA-identifier guard still refuses any payload naming a record we do not own.
  */
-test.describe('KPost Contacts · relationship workflow @api @kpost-api @contacts', () => {
+test.describe('KPost Contacts · relationship workflow @api @kpost-api @contacts @database', () => {
   test.describe.configure({ mode: 'serial' });
 
   const accounts = requireAll('primary', 'counterparty');

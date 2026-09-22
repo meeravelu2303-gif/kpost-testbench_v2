@@ -193,7 +193,15 @@ export class ValidationEngine {
           `(${confirmation.reproduced ? 'reproduced — fileable' : 'intermittent — not filed'})`,
       );
     }
-    return confirmation.result;
+    /*
+     * Carry the gate's verdict on the result. Recorded even for a single-attempt check, because
+     * "1/1" is itself information: it says the check was not eligible for retry rather than that
+     * nobody measured. A reader can then tell a confirmed 3/3 from an unretryable primary check.
+     */
+    return {
+      ...confirmation.result,
+      reproduction: { attempts: confirmation.attempts, failures: confirmation.failures },
+    };
   }
 
   private businessRuleValidators(endpoint: ResolvedEndpoint): Validator[] {

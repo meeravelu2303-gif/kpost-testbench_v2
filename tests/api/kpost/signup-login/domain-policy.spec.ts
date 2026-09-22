@@ -33,7 +33,7 @@ import { expect, test } from '@fixtures';
  * which is the worst case to run repeatedly. The existence check below is the same question asked
  * non-destructively.
  */
-test.describe('KPost signup · domain policy @api @kpost-api @signup-login', () => {
+test.describe('KPost signup · domain policy @api @kpost-api @signup-login @database', () => {
   test('every registry account satisfies the domain policy or is a declared legacy account', () => {
     /*
      * Asserted through `policyViolation()` rather than by comparing domains directly, and across

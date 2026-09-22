@@ -409,3 +409,138 @@ export function renderRunSummaryMarkdown(s: RunSummary): string {
   );
   return `${L.join('\n')}\n`;
 }
+
+/* ------------------------------------------------------------------------------------------------
+ * Console rendering
+ * ---------------------------------------------------------------------------------------------- */
+
+const RULE = '═'.repeat(78);
+const THIN = '─'.repeat(78);
+
+/** Right-pad, and left-pad numbers, so the columns line up in a terminal. */
+const pad = (value: string | number, width: number, right = false): string => {
+  const text = String(value);
+  return right ? text.padStart(width) : text.padEnd(width);
+};
+
+const share = (part: number, whole: number): string =>
+  whole === 0 ? '  — ' : `${((part / whole) * 100).toFixed(1).padStart(5)}%`;
+
+/**
+ * The end-of-run summary printed to the terminal.
+ *
+ * The same numbers already go to `reports/REPORT.md`, but a file nobody opens is not a report. This
+ * is the version a person reads the moment a run finishes: how much ran, what passed, how much of
+ * the API surface was actually covered, and — separately — the browser results.
+ *
+ * API numbers are CHECK-level and UI numbers are TEST-level. They are never added together, because
+ * one endpoint contributes dozens of checks and one browser test contributes one result; a combined
+ * "total" would be a number with no meaning. Each block says which it is.
+ */
+export function renderRunSummaryConsole(s: RunSummary): string {
+  const out: string[] = [];
+  const api = s.api;
+  const ui = s.ui;
+
+  out.push(RULE);
+  out.push('  TEST RUN SUMMARY — kpost-testbench_v2');
+  out.push(RULE);
+  out.push(
+    `  Environment  ${s.meta.environment}` + `    Build ${s.meta.build}    Run ${s.meta.testRunId}`,
+  );
+  out.push(`  Finished     ${s.meta.generatedAt}    Status ${s.meta.runStatus}`);
+  if (s.meta.profiles.length) out.push(`  Profiles     ${s.meta.profiles.join(', ')}`);
+
+  /* ---- API ------------------------------------------------------------------------------- */
+  if (api.checks.total > 0) {
+    const c = api.checks;
+    out.push('');
+    out.push(THIN);
+    out.push('  API LAYER — validation checks (one endpoint runs many checks)');
+    out.push(THIN);
+    out.push(`  Endpoints tested     ${pad(api.endpoints, 6, true)}`);
+    out.push(
+      `  Endpoints with a failing check  ${pad(api.gateFailedEndpoints, 6, true)}` +
+        `   (${share(api.gateFailedEndpoints, api.endpoints)} of the surface)`,
+    );
+    out.push('');
+    out.push(`  Checks run           ${pad(c.total, 6, true)}`);
+    out.push(`    passed             ${pad(c.passed, 6, true)}   ${share(c.passed, c.total)}`);
+    out.push(`    failed             ${pad(c.failed, 6, true)}   ${share(c.failed, c.total)}`);
+    out.push(`    warnings           ${pad(c.warnings, 6, true)}   ${share(c.warnings, c.total)}`);
+    out.push(`    skipped            ${pad(c.skipped, 6, true)}   ${share(c.skipped, c.total)}`);
+
+    if (api.bySuite.length) {
+      out.push('');
+      out.push(
+        `  ${pad('MODULE', 22)}${pad('ENDPOINTS', 11, true)}${pad('PASS', 9, true)}` +
+          `${pad('FAIL', 8, true)}${pad('WARN', 8, true)}${pad('SKIP', 8, true)}`,
+      );
+      for (const row of api.bySuite) {
+        out.push(
+          `  ${pad(row.suite, 22)}${pad(row.endpoints, 11, true)}${pad(row.passed, 9, true)}` +
+            `${pad(row.failed, 8, true)}${pad(row.warnings, 8, true)}${pad(row.skipped, 8, true)}`,
+        );
+      }
+    }
+
+    if (api.topFailingValidators.length) {
+      /*
+       * The top failing validators, because a platform-wide fault inflates the raw failure count
+       * enormously — 71 "information-disclosure" failures are one missing header, not 71 defects.
+       * Showing this next to the totals stops the headline number being read as 71 problems.
+       */
+      out.push('');
+      out.push('  Most frequent failures (one root cause can span many endpoints):');
+      for (const row of api.topFailingValidators.slice(0, 5)) {
+        out.push(`    ${pad(row.validator, 34)}${pad(row.failed, 5, true)} failed`);
+      }
+    }
+  }
+
+  /* ---- UI -------------------------------------------------------------------------------- */
+  if (ui.ran) {
+    const t = ui.tests;
+    out.push('');
+    out.push(THIN);
+    out.push('  UI LAYER — browser tests (one result per test)');
+    out.push(THIN);
+    out.push(`  Tests run            ${pad(t.total, 6, true)}`);
+    out.push(`    passed             ${pad(t.passed, 6, true)}   ${share(t.passed, t.total)}`);
+    out.push(`    failed             ${pad(t.failed, 6, true)}   ${share(t.failed, t.total)}`);
+    out.push(`    flaky              ${pad(t.flaky, 6, true)}   ${share(t.flaky, t.total)}`);
+    out.push(`    skipped            ${pad(t.skipped, 6, true)}   ${share(t.skipped, t.total)}`);
+
+    if (ui.byProject.length) {
+      out.push('');
+      out.push(
+        `  ${pad('BROWSER', 22)}${pad('TESTS', 11, true)}${pad('PASS', 9, true)}` +
+          `${pad('FAIL', 8, true)}${pad('FLAKY', 8, true)}${pad('SKIP', 8, true)}`,
+      );
+      for (const row of ui.byProject) {
+        out.push(
+          `  ${pad(row.project, 22)}${pad(row.total, 11, true)}${pad(row.passed, 9, true)}` +
+            `${pad(row.failed, 8, true)}${pad(row.flaky, 8, true)}${pad(row.skipped, 8, true)}`,
+        );
+      }
+    }
+
+    if (ui.failures.length) {
+      out.push('');
+      out.push(`  Failing UI tests (${ui.failures.length}):`);
+      for (const failure of ui.failures.slice(0, 10)) {
+        out.push(`    ✗ [${failure.project}] ${failure.spec} › ${failure.title}`);
+        const first = (failure.message || '').split('\n')[0]?.trim();
+        if (first) out.push(`        ${first.slice(0, 96)}`);
+      }
+      if (ui.failures.length > 10) {
+        out.push(`    …and ${ui.failures.length - 10} more — see reports/REPORT.md`);
+      }
+    }
+  }
+
+  out.push('');
+  out.push(`  Full report: reports/REPORT.md   ·   machine-readable: reports/REPORT.json`);
+  out.push(RULE);
+  return out.join('\n');
+}
