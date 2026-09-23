@@ -52,6 +52,58 @@ function isSystemicFinding(validatorName: string, message: string): boolean {
 }
 
 /**
+ * A STABLE, endpoint- and probe-order-independent signature for a systemic (platform-wide) fault, so
+ * every endpoint that shows the SAME shared root cause collapses to ONE ticket. The raw validator
+ * message is a volatile concatenation of every probe that observed the fault — and those probes run
+ * asynchronously, so their ORDER changes between runs. Fingerprinting that raw message split a single
+ * fault (e.g. a versioned `Server` header present on every response) into dozens of near-duplicate
+ * tickets. Hashing this signature instead means one root cause = one ticket, with the affected
+ * endpoints listed on it.
+ */
+export function systemicSignature(validatorName: string, message: string): string {
+  const m = message.toLowerCase();
+  if (validatorName === 'security.information-disclosure') {
+    const headers: string[] = [];
+    if (/server header/.test(m)) headers.push('server');
+    if (/x-powered|powered-by/.test(m)) headers.push('x-powered-by');
+    if (/via header/.test(m)) headers.push('via');
+    if (/x-aspnet|asp.net|x-runtime/.test(m)) headers.push('x-aspnet-version');
+    return headers.length ? `header:${[...new Set(headers)].sort().join(',')}` : 'header';
+  }
+  if (validatorName === 'response.error-format') return 'auth-error-envelope';
+  if (validatorName === 'security.security-headers') {
+    const names = [
+      ...m.matchAll(
+        /(content-security-policy|x-frame-options|x-content-type-options|strict-transport-security|referrer-policy|permissions-policy|cache-control)/g,
+      ),
+    ].map((x) => x[1]);
+    return names.length ? `missing:${[...new Set(names)].sort().join(',')}` : 'missing';
+  }
+  // Auth-filter validators and JWT: one platform-wide ticket per validator.
+  return validatorName;
+}
+
+/** A concise, human-readable one-liner for a systemic ticket's title and Actual — never the volatile
+ * probe concatenation, so the ticket reads cleanly and stays identical run to run. */
+function systemicHeadline(validatorName: string, message: string): string {
+  const sig = systemicSignature(validatorName, message);
+  switch (validatorName) {
+    case 'security.information-disclosure': {
+      const hdrs = sig.replace(/^header:?/, '').replace(/,/g, ', ') || 'technology';
+      return `the ${hdrs} response header discloses server/technology version information`;
+    }
+    case 'response.error-format':
+      return 'authentication-rejection responses do not use the standard error envelope';
+    case 'security.security-headers': {
+      const names = sig.replace(/^missing:?/, '').replace(/,/g, ', ') || 'required';
+      return `responses are missing expected security headers (${names})`;
+    }
+    default:
+      return `the shared auth filter does not satisfy "${validatorName}" across endpoints`;
+  }
+}
+
+/**
  * A defect ready to be filed — derived from evidence the run already produced, never invented.
  * One candidate is one Bugzilla ticket; repeated observations raise `occurrences`.
  *
@@ -207,11 +259,13 @@ function fromValidationResult(
 ): BugCandidate {
   const suite = suiteFor(report.suite);
   const systemic = isSystemicFinding(result.validatorName, result.message);
+  const systemicHead = systemic ? systemicHeadline(result.validatorName, result.message) : '';
   const id = systemic
     ? systemicFingerprint({
         prefix: config.tagPrefix,
         validatorName: result.validatorName,
-        message: result.message,
+        // Stable signature, NOT the volatile probe concatenation — so one root cause is one ticket.
+        message: systemicSignature(result.validatorName, result.message),
       })
     : apiFingerprint({
         prefix: config.tagPrefix,
@@ -224,7 +278,7 @@ function fromValidationResult(
     source: 'api',
     suiteId: suite.id,
     title: systemic
-      ? `Platform-wide — ${maskString(result.message)}`
+      ? `Platform-wide — ${systemicHead}`
       : `${result.endpoint}: ${maskString(result.message)}`,
     narrative: systemic
       ? `The centralized validation engine ran "${result.validatorName}" and found the same failure ` +
@@ -250,7 +304,12 @@ function fromValidationResult(
     assignee: suite.owner.email,
     ownerName: suite.owner.name,
     endpoint: result.endpoint,
-    ...renderExpectedActual(result),
+    ...(systemic
+      ? {
+          expected: 'The shared gateway/auth layer satisfies this check on every endpoint.',
+          actual: `${systemicHead} — observed on this and other endpoints (see the affected list below).`,
+        }
+      : renderExpectedActual(result)),
     /** What the endpoint actually replied, quoted the way the existing tickets here do. */
     responseBody: report.primary?.body?.trim() ? report.primary.body : undefined,
     responseStatus: report.primary?.status,
