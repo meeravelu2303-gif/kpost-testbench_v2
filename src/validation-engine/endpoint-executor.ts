@@ -46,6 +46,13 @@ export interface SendOptions {
    * blocked. The QA-identifier guard still confines the payload to accounts we own.
    */
   allowLiveWrite?: boolean;
+  /**
+   * Explicitly authorize a non-destructive "needs-id" read to run on the live application (see
+   * SafetyFlags). The read-side counterpart to `allowLiveWrite`, for a dependency-driven flow that
+   * reads back an id a prior step in the same flow just minted. Same rules: an owner-approved
+   * feature spec sets this per call, never the engine; the QA-identifier guard still applies.
+   */
+  allowLiveRead?: boolean;
 }
 
 const MAX_ERROR_BODY_CHARS = 300;
@@ -55,9 +62,10 @@ export class EndpointExecutor {
   readonly tokens: TokenProvider;
 
   /**
-   * Server errors (5xx) seen while a gated lifecycle flow drove a real write (`allowLiveWrite`).
-   * Drained by the `endpoints` fixture at test end and filed to Bugzilla — a lifecycle crash the
-   * developer would otherwise never see. Only 5xx: a 4xx might be our payload, so it is never filed.
+   * Server errors (5xx) seen while a gated lifecycle flow drove a real write or read
+   * (`allowLiveWrite`/`allowLiveRead`). Drained by the `endpoints` fixture at test end and filed to
+   * Bugzilla — a lifecycle crash the developer would otherwise never see. Only 5xx: a 4xx might be
+   * our payload, so it is never filed.
    */
   readonly flowFindings: FlowFinding[] = [];
 
@@ -127,6 +135,7 @@ export class EndpointExecutor {
       isProduction: env.IS_PRODUCTION,
       allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
       allowLiveWrite: options.allowLiveWrite,
+      allowLiveRead: options.allowLiveRead,
       // Threads the mock/real-host signal so the SMS/OTP kill-switch blocks OTP senders against a
       // real host in EVERY mode, while still letting them run against the bundled mock.
       mockApi: env.MOCK_API,
@@ -169,12 +178,12 @@ export class EndpointExecutor {
     );
     const exchange = await client.execute(request, options.label);
 
-    // A server error while an owner-authorized lifecycle flow drove a real write is a fileable
-    // product defect (a server must never 5xx — even bad input warrants a 4xx). Collected here, at
-    // the one chokepoint every flow call passes through, and filed by the fixture. A 4xx is NOT
-    // collected: it might be our payload, and the feature spec's own assertions surface it.
+    // A server error while an owner-authorized lifecycle flow drove a real write OR read is a
+    // fileable product defect (a server must never 5xx — even bad input warrants a 4xx). Collected
+    // here, at the one chokepoint every flow call passes through, and filed by the fixture. A 4xx is
+    // NOT collected: it might be our payload, and the feature spec's own assertions surface it.
     if (
-      options.allowLiveWrite &&
+      (options.allowLiveWrite || options.allowLiveRead) &&
       isServerError(exchange.status) &&
       !endpoint.definition.mockFixture
     ) {

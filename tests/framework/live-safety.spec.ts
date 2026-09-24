@@ -76,6 +76,76 @@ test.describe('live-application safety @framework', () => {
     ).toMatch(/kill-switch/i);
   });
 
+  test('allowLiveRead unlocks a non-destructive "needs-id" read on live, and nothing else', () => {
+    /*
+     * The read-side counterpart to allowLiveWrite, added so a dependency-driven flow (create a doc,
+     * then read it back) can exercise a "needs-id" read that has no productionSafe flag — previously
+     * impossible under any flag combination (see docs/API-COVERAGE-DEPTH.md's "systemic ceiling").
+     */
+    const needsIdRead: GuardedEndpoint = {
+      label: 'GET /v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID}',
+      destructive: false,
+      sideEffect: 'data',
+    };
+    expect(
+      destructiveBlockReason(needsIdRead, { isProduction: true, allowDestructive: false }),
+      'blocked with no flag, exactly like today',
+    ).toBeTruthy();
+    expect(
+      destructiveBlockReason(needsIdRead, {
+        isProduction: true,
+        allowDestructive: false,
+        allowLiveRead: true,
+      }),
+      'unlocked once a caller explicitly authorizes this read',
+    ).toBeUndefined();
+
+    // It must NOT unlock a destructive endpoint — that stays allowLiveWrite's job exclusively.
+    const destructiveWrite: GuardedEndpoint = {
+      label: 'POST /v2/group/deleteGroup',
+      destructive: true,
+      sideEffect: 'data',
+    };
+    expect(
+      destructiveBlockReason(destructiveWrite, {
+        isProduction: true,
+        allowDestructive: false,
+        allowLiveRead: true,
+      }),
+      'allowLiveRead does not unlock a write',
+    ).toBeTruthy();
+
+    // It must NOT unlock an external/global read — same side-effect fence as allowLiveWrite.
+    const globalRead: GuardedEndpoint = {
+      label: 'GET /v2/admin/someoneElsesPassword',
+      destructive: false,
+      sideEffect: 'global',
+    };
+    expect(
+      destructiveBlockReason(globalRead, {
+        isProduction: true,
+        allowDestructive: false,
+        allowLiveRead: true,
+      }),
+      'allowLiveRead does not unlock a global-side-effect read',
+    ).toBeTruthy();
+
+    // The OTP/SMS kill-switch still supersedes — allowLiveRead cannot reach an OTP-dependent read.
+    const otpRead: GuardedEndpoint = {
+      label: 'GET /v2/common/checkOtpStatus',
+      destructive: false,
+      otpDependent: 'consumes',
+    };
+    expect(
+      destructiveBlockReason(otpRead, {
+        isProduction: true,
+        allowDestructive: false,
+        allowLiveRead: true,
+      }),
+      'allowLiveRead cannot unlock an OTP-dependent endpoint',
+    ).toMatch(/OTP/);
+  });
+
   test('OTP-dependent endpoints are skipped on live with the reason attached', () => {
     for (const kind of ['sends', 'consumes', 'requires'] as const) {
       const endpoint: GuardedEndpoint = {

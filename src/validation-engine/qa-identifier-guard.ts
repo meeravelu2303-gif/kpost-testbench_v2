@@ -93,6 +93,9 @@ const NOT_A_RESOURCE = new Set(
      */
     'messagetype',
     'actualmessage',
+    // The full-text search query a caller types (searchKatchUpMessage/searchKatchUpMessageSubject)
+    // — content typed for a query, exactly like actualMessage above, never a record identifier.
+    'searchmessage',
     'messagetime',
     'servertime',
     'sharedtype',

@@ -513,7 +513,11 @@ test.describe('KPost Katchup · feature flow', () => {
     endpoints,
   }) => {
     const created: number[] = [];
-    const drive = async (id: string, bodyOrEmpty: Record<string, unknown>, label: string) => {
+    const drive = async (
+      id: string,
+      bodyOrEmpty: Record<string, unknown>,
+      label: string,
+    ): Promise<{ status: number; msgID?: number }> => {
       const ex = await endpoints.sendTo(
         id,
         Object.keys(bodyOrEmpty).length ? { body: bodyOrEmpty } : {},
@@ -521,8 +525,9 @@ test.describe('KPost Katchup · feature flow', () => {
       );
       const parsed = ex.json();
       const row = firstRow((parsed.ok ? parsed.value : {}) as Record<string, unknown>);
-      if (typeof row?.msgID === 'number') created.push(row.msgID);
-      return ex.status;
+      const msgID = typeof row?.msgID === 'number' ? row.msgID : undefined;
+      if (msgID) created.push(msgID);
+      return { status: ex.status, msgID };
     };
 
     try {
@@ -536,11 +541,12 @@ test.describe('KPost Katchup · feature flow', () => {
         ['katchup-send-bulk', 'send-bulk'],
         ['katchup-send-bulk-multipart', 'send-bulk-multipart'],
       ] as Array<[string, string]>) {
-        const status = await drive(id, {}, label);
+        const { status } = await drive(id, {}, label);
         expect.soft(status, `${label} returns a status`).toBeLessThan(600);
       }
 
       // Forward variants — reference the seed message / our own second account.
+      let forwardedMsgID: number | undefined;
       for (const [id, bodyObj, label] of [
         [
           'katchup-forward-message-new',
@@ -558,8 +564,28 @@ test.describe('KPost Katchup · feature flow', () => {
           'forward-selected-attachment',
         ],
       ] as Array<[string, Record<string, unknown>, string]>) {
-        const status = await drive(id, bodyObj, label);
-        expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+        const result = await drive(id, bodyObj, label);
+        expect.soft(result.status, `${label} returns a status`).toBeLessThan(600);
+        if (id === 'katchup-forward-message-new' && result.msgID) forwardedMsgID = result.msgID;
+      }
+
+      // katchup-forward-backtrack: destructive:false, no productionSafe — needs allowLiveRead, fed
+      // the REAL forwarded message's own msgID (not the seed) to trace it back to its origin.
+      if (forwardedMsgID) {
+        const backtrack = await endpoints.sendTo(
+          'katchup-forward-backtrack',
+          { body: { msgID: forwardedMsgID } },
+          { label: 'feature:forward-backtrack', auth: { principal: A }, allowLiveRead: true },
+        );
+        expect
+          .soft(backtrack.status, 'forwardMessageBacktrackByMsgID traces a real forwarded message')
+          .toBeLessThan(500);
+      } else {
+        // Recorded rather than silently skipped: forward-message-new did not return a usable
+        // msgID (per its own response), so forward-backtrack still has no live-verified test.
+        expect
+          .soft(forwardedMsgID, 'forward-message-new returned a real msgID to backtrack from')
+          .toBeTruthy();
       }
     } finally {
       for (const msgID of created) await cleanup(endpoints, A, msgID);

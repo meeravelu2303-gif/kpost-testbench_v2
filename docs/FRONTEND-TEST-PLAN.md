@@ -41,13 +41,9 @@ coverage because the hard API-layer work is largely done.
 
 - [ ] Per untested panel (AccountRecovery, BusinessSettings, ChangeMobNumber\*, ChangePassword\*,
       DataStorage, DeleteAccount\*, DigitalCardSettings, KnewsSettings, LetterHead, OtherMail,
-      SecurityPrivacy, Settingdetails, SettingProfile, VacationResponse):
-      1. Codegen the panel open + its one or two real actions.
-      2. Identify its backing endpoint(s) from `Services/*.js`.
-      3. Write functional (does the action reach the API/DB) + validation (bad input rejected)
-         + a breakage-sweep entry.
-  (\* ChangePassword/ChangeMobNumber/DeleteAccount are destructive — gate behind their own lifecycle
-  flag and a dedicated safety design, same rigor as the account-mutation work already done.)
+      SecurityPrivacy, Settingdetails, SettingProfile, VacationResponse): 1. Codegen the panel open + its one or two real actions. 2. Identify its backing endpoint(s) from `Services/*.js`. 3. Write functional (does the action reach the API/DB) + validation (bad input rejected) + a breakage-sweep entry.
+      (\* ChangePassword/ChangeMobNumber/DeleteAccount are destructive — gate behind their own lifecycle
+      flag and a dedicated safety design, same rigor as the account-mutation work already done.)
 - [ ] Extend `accessibility-axe.spec.ts`'s `AUTHENTICATED_SCREENS` list if Settings sub-panels aren't
       already walked individually (currently it walks top-level routes; deep panels may need their
       own entries, mirroring the Profile/Settings breakage-sweep's sub-section walk).

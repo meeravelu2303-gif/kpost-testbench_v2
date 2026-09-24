@@ -148,15 +148,48 @@ test.describe('KPost KMail · feature flow', () => {
           ['kmail-reply-not-req-sender', { selectedContact: B.username, kmailID: id }],
           ['kmail-reply-not-req-receiver', { selectedContact: B.username, kmailID: id }],
           ['kmail-group-read-status', { kmailID: id }],
+          // Contact-scoped reads: not kmailID-keyed, but real now that A→B has an actual mail
+          // between them (previously only reachable off-live with a placeholder contact).
+          ['kmail-subjects', { selectedContact: B.username }],
+          ['kmail-sent-not-opened', { selectedContact: B.username }],
+          ['kmail-reply-not-received', { kpostUser: A.username, selectedContact: B.username }],
+          ['kmail-reply-not-sent', { selectedContact: B.username }],
+          ['kmail-important-mails', { selectedContact: B.username }],
+          ['kmail-all-mail-count', { selectedContact: B.username, groupFlag: false }],
+          ['kmail-drafts-for-contact', { toAddress: B.username }],
+          ['kmail-status-with-count', { kmailStatusFlag: 2 }],
+          // destructive:false explicitly, no productionSafe — needs allowLiveRead (added below on
+          // every call here), not allowLiveWrite, to run at all.
+          ['kmail-bulk-dashboard', { kmailID: id }],
         ];
         for (const [epId, reqBody] of reads) {
           const ex = await endpoints.sendTo(
             epId,
             { body: reqBody },
-            { label: `kmail:readback:${epId}`, auth: { principal: A }, allowLiveWrite: true },
+            {
+              label: `kmail:readback:${epId}`,
+              auth: { principal: A },
+              allowLiveWrite: true,
+              allowLiveRead: true,
+            },
           );
           expect.soft(ex.status, `${epId} reads the mail without a server error`).toBeLessThan(500);
         }
+
+        // GET, path-param-keyed (not a body read like the others above) — real now that this flow
+        // has a real kmailID. destructive:false (GET) with no productionSafe: needs allowLiveRead.
+        const copies = await endpoints.sendTo(
+          'kmail-copies-info',
+          { pathParams: { kmailID: id } },
+          {
+            label: 'kmail:readback:kmail-copies-info',
+            auth: { principal: A },
+            allowLiveRead: true,
+          },
+        );
+        expect
+          .soft(copies.status, 'getCopiesInfo reads the mail without a server error')
+          .toBeLessThan(500);
       }
     } finally {
       await del(endpoints, A, sent.transactionIDs);
@@ -274,14 +307,17 @@ test.describe('KPost KMail · feature flow', () => {
     }
   });
 
-  test('a draft is saved and deleted @api @kmail', async ({ endpoints }) => {
+  test('a draft is saved, appears in the draft lists, is readable, and delete removes it @api @kmail', async ({
+    endpoints,
+  }) => {
+    const marker = `QA Draft ${Date.now()}`;
     const saved = await endpoints.sendTo(
       'kmail-draft-save',
       {
         body: mailShape({
           toAddress: B.username,
           kmailType: KMAIL_TYPE.draft,
-          kmailSubject: 'QA draft',
+          kmailSubject: marker,
         }),
       },
       { label: 'kmail:draft-save', auth: { principal: A }, allowLiveWrite: true },
@@ -295,12 +331,49 @@ test.describe('KPost KMail · feature flow', () => {
       typeof r.kmailID === 'number' || typeof r.kmailID === 'string' ? String(r.kmailID) : '0';
 
     if (draftMailID) {
+      const allDrafts = await endpoints.sendTo(
+        'kmail-all-drafts',
+        {},
+        { label: 'kmail:draft-list', auth: { principal: A } },
+      );
+      expect(allDrafts.status, 'getAllDraftMails succeeds').toBe(200);
+      expect(allDrafts.bodyText, 'the saved draft appears in getAllDraftMails').toContain(marker);
+
+      const contacts = await endpoints.sendTo(
+        'kmail-draft-contacts',
+        {},
+        { label: 'kmail:draft-contacts', auth: { principal: A } },
+      );
+      expect(contacts.status, 'getDraftMailsContacts succeeds').toBe(200);
+      expect(contacts.bodyText, 'the draft recipient appears in getDraftMailsContacts').toContain(
+        B.username,
+      );
+
+      // kmail-draft-content is a "needs-id" read (destructive:false, no productionSafe) — real now
+      // that this flow minted a real draftMailID, via allowLiveRead.
+      const content = await endpoints.sendTo(
+        'kmail-draft-content',
+        { body: { draftKmailID: draftMailID, kmailSendDate: Date.now(), kmailSubject: marker } },
+        { label: 'kmail:draft-content', auth: { principal: A }, allowLiveRead: true },
+      );
+      expect.soft(content.status, 'draftMailContent reads the real draft').toBeLessThan(300);
+
       const deleted = await endpoints.sendTo(
         'kmail-draft-delete',
         { body: { kmailID, draftMailID } },
         { label: 'kmail:draft-delete', auth: { principal: A }, allowLiveWrite: true },
       );
       expect.soft(deleted.status, 'deleting the draft is accepted').toBeLessThan(300);
+
+      const afterDelete = await endpoints.sendTo(
+        'kmail-all-drafts',
+        {},
+        { label: 'kmail:draft-list-after', auth: { principal: A } },
+      );
+      expect(
+        afterDelete.bodyText,
+        'the deleted draft no longer appears in getAllDraftMails',
+      ).not.toContain(marker);
     }
   });
 
@@ -316,23 +389,6 @@ test.describe('KPost KMail · feature flow', () => {
       return ex.status;
     };
 
-    // Saluation: save (returns an id) → the save is enough to exercise; delete is best-effort.
-    expect
-      .soft(
-        await write('kmail-save-saluation', { saluationID: '', saluation: 'QA Dr' }, 'saluation'),
-        'save saluation',
-      )
-      .toBeLessThan(600);
-    expect
-      .soft(
-        await write(
-          'kmail-set-instant-reply',
-          { id: '', instantReply: 'QA auto-reply' },
-          'instant-reply',
-        ),
-        'save instant reply',
-      )
-      .toBeLessThan(600);
     expect
       .soft(
         await write(
@@ -349,5 +405,113 @@ test.describe('KPost KMail · feature flow', () => {
         'count-days-limit',
       )
       .toBeLessThan(600);
+  });
+
+  test('saluation: save → appears in the list → is reflected on the digital signature → delete removes it', async ({
+    endpoints,
+  }) => {
+    // A unique marker per run: this account already accumulates real saved saluations, so a fixed
+    // literal like "QA Dr" cannot be told apart from a leftover of a PRIOR run.
+    const marker = `QA Saluation ${Date.now()}`;
+    const saved = await endpoints.sendTo(
+      'kmail-save-saluation',
+      { body: { saluationID: '', saluation: marker } },
+      { label: 'kmail:sal-save', auth: { principal: A }, allowLiveWrite: true },
+    );
+    expect.soft(saved.status, 'save is accepted').toBeLessThan(300);
+
+    const list = await endpoints.sendTo(
+      'kmail-saluations',
+      {},
+      { label: 'kmail:sal-list', auth: { principal: A } },
+    );
+    expect(list.status, 'the saluation list reads back').toBe(200);
+    const listBody = JSON.parse(list.bodyText || '{}') as {
+      data?: Array<{ saluationID: string; saluation: string }>;
+    };
+    const entry = (listBody.data ?? []).find((s) => s.saluation === marker);
+    expect(entry, 'the saved saluation appears in kmail-saluations, with a real id').toBeTruthy();
+
+    if (entry) {
+      const digSig = await endpoints.sendTo(
+        'kmail-digital-signature',
+        {},
+        { label: 'kmail:sal-digsig', auth: { principal: A } },
+      );
+      expect(
+        digSig.bodyText,
+        'the same saluation is embedded in getDigitalSignature (not a divergent copy)',
+      ).toContain(marker);
+
+      const deleted = await endpoints.sendTo(
+        'kmail-delete-saluation',
+        { body: { saluationID: entry.saluationID } },
+        { label: 'kmail:sal-delete', auth: { principal: A }, allowLiveWrite: true },
+      );
+      expect.soft(deleted.status, 'delete is accepted').toBeLessThan(300);
+
+      const after = await endpoints.sendTo(
+        'kmail-saluations',
+        {},
+        { label: 'kmail:sal-list-after', auth: { principal: A } },
+      );
+      const afterBody = JSON.parse(after.bodyText || '{}') as {
+        data?: Array<{ saluationID: string }>;
+      };
+      expect(
+        (afterBody.data ?? []).some((s) => s.saluationID === entry.saluationID),
+        'the deleted saluation no longer appears in the list',
+      ).toBe(false);
+    }
+  });
+
+  test('instant reply: save → reflected on the digital signature → delete removes it', async ({
+    endpoints,
+  }) => {
+    const marker = `QA Auto-Reply ${Date.now()}`;
+    const saved = await endpoints.sendTo(
+      'kmail-set-instant-reply',
+      { body: { id: '', instantReply: marker } },
+      { label: 'kmail:reply-save', auth: { principal: A }, allowLiveWrite: true },
+    );
+    expect.soft(saved.status, 'save is accepted').toBeLessThan(300);
+
+    const digSig = await endpoints.sendTo(
+      'kmail-digital-signature',
+      {},
+      { label: 'kmail:reply-digsig', auth: { principal: A } },
+    );
+    expect(digSig.status, 'getDigitalSignature reads back').toBe(200);
+    const digBody = JSON.parse(digSig.bodyText || '{}') as {
+      data?: { customizedInstantReply?: string };
+    };
+    const customized = JSON.parse(digBody.data?.customizedInstantReply || '[]') as Array<{
+      id: string;
+      instantReply: string;
+    }>;
+    const entry = customized.find((r) => r.instantReply === marker);
+    expect(
+      entry,
+      'the saved instant reply is embedded in getDigitalSignature, with a real id',
+    ).toBeTruthy();
+
+    if (entry) {
+      const deleted = await endpoints.sendTo(
+        'kmail-delete-instant-reply',
+        { body: { id: entry.id } },
+        { label: 'kmail:reply-delete', auth: { principal: A }, allowLiveWrite: true },
+      );
+      expect.soft(deleted.status, 'delete is accepted').toBeLessThan(300);
+
+      const after = await endpoints.sendTo(
+        'kmail-digital-signature',
+        {},
+        { label: 'kmail:reply-digsig-after', auth: { principal: A } },
+      );
+      expect(
+        after.bodyText,
+        'the deleted instant reply no longer appears on the digital signature',
+      ).not.toContain(marker);
+    }
   });
 });

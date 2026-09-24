@@ -12,6 +12,12 @@ import { expect, test } from '@fixtures';
  * to end on a real host, self-cleaning (delete in `finally`). Gated `KOS_LIFECYCLE=true`, each write
  * `allowLiveWrite`, all on our own account / second account. The two K-AI generation endpoints
  * (`chatResponse`, `messageAssist`) are `external` (metered) and are NOT driven here.
+ *
+ * `kos-ai-sessions`, `kos-ai-messages` and `kos-list-documents` are covered at the bottom of this
+ * file: the sessions list is a free (non-metered) read exercised directly; the messages read needs a
+ * real sessionId that only a metered chat call can create, so it is chained into the KOS_AI_LIVE test
+ * below rather than exercised standalone; `kos-list-documents` 404s on this test build (route not
+ * deployed) and is recorded as a gap.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -160,6 +166,15 @@ test.describe('KPost KOS · feature flow', () => {
     // the KOS_LIFECYCLE gate. One prompt each, on our own account.
     test.skip(process.env.KOS_AI_LIVE !== 'true', 'metered AI calls; set KOS_AI_LIVE=true to run');
 
+    /*
+     * aiType is sent as 'general' here and in the endpoint definitions (kos/write.api.ts,
+     * kos/read.api.ts), but the workbook contract documents only chatgpt/perplexity/gemini/mistral/
+     * deepseek as valid values (messageAssist: aiType is optional and defaults to deepseek).
+     * 'general' is off-contract. What the backend actually does with an unrecognized value — silently
+     * defaults, errors, or something else — is Unknown/Requires Clarification: verifying it means a
+     * real metered call, which is exactly what this gate exists to prevent doing casually. Left as-is
+     * pending an owner decision on whether to correct it to a real model name.
+     */
     const chat = await run(
       endpoints,
       'kos-ai-chat',
@@ -169,13 +184,120 @@ test.describe('KPost KOS · feature flow', () => {
     expect.soft(chat.status, 'chatResponse status (>0 means sent)').toBeGreaterThan(0);
     expect.soft(chat.status, 'chatResponse returns a valid status').toBeLessThan(600);
 
+    // The live client (AI_Common.js) sends {message, prompt, requestType} for messageAssist, NOT
+    // {prompt, aiType} (that is chatResponse's shape) — see the endpoint definition's own note.
     const assist = await run(
       endpoints,
       'kos-ai-assist',
-      { body: { prompt: 'Summarise: QA bench test.', aiType: 'general' } },
+      {
+        body: {
+          message: 'QA bench conversation context.',
+          prompt: 'Summarise: QA bench test.',
+          requestType: 'REPLY',
+        },
+      },
       'ai-assist',
     );
     expect.soft(assist.status, 'messageAssist status (>0 means sent)').toBeGreaterThan(0);
     expect.soft(assist.status, 'messageAssist returns a valid status').toBeLessThan(600);
+
+    // Cross-endpoint dependency (Phase 4): a session chatResponse just created should be
+    // discoverable via ai-sessions, and its content readable via ai-messages — neither of which can
+    // be verified without a real sessionId, which only this metered call can produce.
+    const sessions = await run(
+      endpoints,
+      'kos-ai-sessions',
+      { query: { aiType: 'general' } },
+      'sessions-after-chat',
+    );
+    expect.soft(sessions.status, 'ai-sessions is reachable after a chat').toBe(200);
+
+    const sessionId = extractSessionId(chat.data);
+    if (sessionId) {
+      const messages = await run(
+        endpoints,
+        'kos-ai-messages',
+        { pathParams: { sessionId } },
+        'messages-for-new-session',
+      );
+      expect
+        .soft(messages.status, 'ai-messages succeeds for the session chatResponse just created')
+        .toBeLessThan(300);
+    } else {
+      // Recorded rather than silently skipped: chatResponse's response shape hasn't been observed
+      // (no session id in its data under any of the field names guessed below), so ai-messages
+      // still has no live-verified business-rule test.
+      expect
+        .soft(sessionId, "chatResponse's response carries a discoverable session id")
+        .toBeTruthy();
+    }
   });
 });
+
+/*
+ * A separate, UNGATED describe: these do not need KOS_LIFECYCLE. `ai-sessions` is a free
+ * (non-metered) read, safe to run on every default run; the list-documents test is a recorded gap
+ * placeholder, not a write. Keeping them out of the KOS_LIFECYCLE-gated describe above matters
+ * because `test.skip(condition, reason)` at a describe's top level applies to every test registered
+ * in that describe, not just the ones after it — nesting them there would have silently skipped both
+ * on a default run.
+ */
+test.describe('KPost KOS · read-only business rules @api @kos', () => {
+  test('ai-sessions: the model-bucket envelope is stable regardless of the aiType query value', async ({
+    endpoints,
+  }) => {
+    // Live-verified 2026-09-24: a nonsense aiType returns the SAME four-model envelope as a real
+    // one — the backend does not filter by aiType at all, it always returns every model's bucket.
+    const [withRealType, withNonsenseType] = await Promise.all([
+      run(endpoints, 'kos-ai-sessions', { query: { aiType: 'general' } }, 'sessions-real-type'),
+      run(
+        endpoints,
+        'kos-ai-sessions',
+        { query: { aiType: 'not-a-real-model-xyz' } },
+        'sessions-bad-type',
+      ),
+    ]);
+    expect.soft(withRealType.status, 'ai-sessions succeeds').toBe(200);
+    expect
+      .soft(withNonsenseType.status, 'ai-sessions succeeds even for an unrecognized aiType')
+      .toBe(200);
+
+    const expectedBuckets = ['gemini', 'perplexity', 'chatgpt', 'mistral'].sort();
+    for (const [label, data] of [
+      ['real aiType', withRealType.data],
+      ['nonsense aiType', withNonsenseType.data],
+    ] as const) {
+      expect(
+        Object.keys(data).sort(),
+        `${label}: the four known model buckets are present`,
+      ).toEqual(expectedBuckets);
+      for (const bucket of expectedBuckets) {
+        expect(Array.isArray(data[bucket]), `${label}: ${bucket} bucket is an array`).toBe(true);
+      }
+    }
+    expect(
+      withNonsenseType.data,
+      'aiType has no filtering effect — the envelope is identical for a real vs. a nonsense value',
+    ).toEqual(withRealType.data);
+  });
+
+  test('kos-list-documents: no live business-rule test (recorded gap, not a workaround)', () => {
+    test.skip(
+      true,
+      'testingapi answers 404 "No matching endpoint for this request" for GET /kword/documents/ — ' +
+        "the KWord list route is not deployed on this test build (see the endpoint definition's own " +
+        'note). Not run standalone (a 404 there reads as a false CRITICAL); needs the dev to confirm ' +
+        'whether the route ships on this build before a business-rule test can be written.',
+    );
+    expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
+  });
+});
+
+/** A K-AI chat/session response's session id, across the field names a Spring service might use. */
+function extractSessionId(data: Record<string, unknown>): string | undefined {
+  for (const c of [data.sessionId, data.session_id, data.id]) {
+    if (typeof c === 'string' && c.length > 0) return c;
+    if (typeof c === 'number') return String(c);
+  }
+  return undefined;
+}

@@ -27141,14 +27141,14 @@
       }
     },
     "/v2/profile/fetchUserDetails/": {
-      "post": {
+      "get": {
         "operationId": "fetchUserDetails",
         "summary": "fetchUserDetails",
         "tags": [
           "Signup"
         ],
         "x-excel-source": "KatchupAPI:R2",
-        "x-method-source": "payload-rule",
+        "x-method-source": "request-note",
         "responses": {
           "200": {
             "description": "Documented sample response",
@@ -27223,27 +27223,6 @@
                   "statusCode": 200,
                   "status": "SUCCESS"
                 }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "kpostID": {
-                    "type": "string"
-                  },
-                  "countryID": {
-                    "type": "integer"
-                  }
-                }
-              },
-              "example": {
-                "kpostID": "karans@kpost.in",
-                "countryID": 1
               }
             }
           }
@@ -29383,8 +29362,8 @@
     },
     "/v2/signupLogin/fetchUserDetails/": {
       "post": {
-        "operationId": "post-signupLogin-fetchUserDetails",
-        "summary": "POST /v2/signupLogin/fetchUserDetails/",
+        "operationId": "fetchUserDetails-3",
+        "summary": "fetchUserDetails",
         "tags": [
           "Signup"
         ],

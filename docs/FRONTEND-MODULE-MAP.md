@@ -29,39 +29,42 @@ disagreeing with it.
 ## Route map (from `MenuRoutes.js` — ground truth, not assumed)
 
 ### Public (no auth token required)
-| Route | Component | Notes |
-|---|---|---|
-| `/` | `Home` (auth/Home.js) | Landing |
-| `/login` | `Login` | |
-| `/signup` | `MainSignup` | `Register.js` exists but is **not routed** — dead code unless reachable another way |
-| `/profile-webview/:id` | `ProfileWebView` | Shareable public profile card |
-| `/koolkall/:id` | `GlobalKoolKall` | Public call-join link |
-| `/kall-window` | `KallWindow` | |
-| `/digital-card/:id` | `GloabalDigitalCard` | Shareable digital business card |
-| `/child-safety-standards-policy` | `ChildSafetyPolicy` | Static compliance page — **zero test coverage today** |
-| `*` | `NotFound` | |
+
+| Route                            | Component             | Notes                                                                               |
+| -------------------------------- | --------------------- | ----------------------------------------------------------------------------------- |
+| `/`                              | `Home` (auth/Home.js) | Landing                                                                             |
+| `/login`                         | `Login`               |                                                                                     |
+| `/signup`                        | `MainSignup`          | `Register.js` exists but is **not routed** — dead code unless reachable another way |
+| `/profile-webview/:id`           | `ProfileWebView`      | Shareable public profile card                                                       |
+| `/koolkall/:id`                  | `GlobalKoolKall`      | Public call-join link                                                               |
+| `/kall-window`                   | `KallWindow`          |                                                                                     |
+| `/digital-card/:id`              | `GloabalDigitalCard`  | Shareable digital business card                                                     |
+| `/child-safety-standards-policy` | `ChildSafetyPolicy`   | Static compliance page — **zero test coverage today**                               |
+| `*`                              | `NotFound`            |                                                                                     |
 
 ### Authenticated (wrapped in `<Header>` layout, requires `user.user` truthy)
-| Route | Component | Bench coverage today |
-|---|---|---|
-| `/home` | `MainHomePage` | breakage-sweep only |
-| `/katchup` | `Katchup` | **Deep** — API + UI functional + breakage |
-| `/kmail` | `Kmail` | API deep; UI functional not built |
-| `/writemail` | `Kmail` ⚠️ | **Anomaly:** routes to `Kmail`, not `WriteMail` — `WriteMail.js` (1 file) looks unrouted/dead |
-| `/kall` | `Kall` | API deep; UI functional not built |
-| `/kdirectory` | `Kdirectory` | API (contacts) deep; UI functional partial |
-| `/kcloud` | `KCloud` | **Zero coverage** |
-| `/kbooking` | `KBook` | **Zero coverage** |
-| `/settings` | `Setting` | API (generalSetting) partial; UI covers ~4 of 25 real panels |
-| `/knews` | `Knews` | **Zero coverage** |
-| `/e-commerce` | `ECommerce` | **Zero coverage** |
-| `/kdoc` | `KOS` | API deep (KWord); UI not built |
-| `/userprofile` | `UserProfile` | API deep; UI functional partial |
-| `/usermanagement` | `UserManagement` | **Zero coverage** |
+
+| Route             | Component        | Bench coverage today                                                                          |
+| ----------------- | ---------------- | --------------------------------------------------------------------------------------------- |
+| `/home`           | `MainHomePage`   | breakage-sweep only                                                                           |
+| `/katchup`        | `Katchup`        | **Deep** — API + UI functional + breakage                                                     |
+| `/kmail`          | `Kmail`          | API deep; UI functional not built                                                             |
+| `/writemail`      | `Kmail` ⚠️       | **Anomaly:** routes to `Kmail`, not `WriteMail` — `WriteMail.js` (1 file) looks unrouted/dead |
+| `/kall`           | `Kall`           | API deep; UI functional not built                                                             |
+| `/kdirectory`     | `Kdirectory`     | API (contacts) deep; UI functional partial                                                    |
+| `/kcloud`         | `KCloud`         | **Zero coverage**                                                                             |
+| `/kbooking`       | `KBook`          | **Zero coverage**                                                                             |
+| `/settings`       | `Setting`        | API (generalSetting) partial; UI covers ~4 of 25 real panels                                  |
+| `/knews`          | `Knews`          | **Zero coverage**                                                                             |
+| `/e-commerce`     | `ECommerce`      | **Zero coverage**                                                                             |
+| `/kdoc`           | `KOS`            | API deep (KWord); UI not built                                                                |
+| `/userprofile`    | `UserProfile`    | API deep; UI functional partial                                                               |
+| `/usermanagement` | `UserManagement` | **Zero coverage**                                                                             |
 
 ### Other
-| Route | Component | Notes |
-|---|---|---|
+
+| Route      | Component              | Notes                                                                   |
+| ---------- | ---------------------- | ----------------------------------------------------------------------- |
 | `/profile` | `Profile` (dashboard/) | Distinct from `/userprofile` — different component, purpose unclear yet |
 
 ⚠️ **`/kdiary` has NO route at all** — commented out in `MenuRoutes.js`. `KDiary.js` exists (1 file) and
@@ -73,39 +76,59 @@ whether to file it as a bug.
 
 ## Module inventory (component file count = rough complexity signal)
 
-| Module | Files | Bench status | Backend API (docs/COVERAGE.md) |
-|---|---:|---|---|
-| Katchup | 120 | Deep (API+UI+breakage) | `katchup` 36/36 tested |
-| Settings | 27 | Partial UI (4/25 panels) | `generalsetting` 7/7 + pieces of `kmail`/`profile`/`contacts` |
-| Kmail | 25 | API only | `kmail` 79/80 tested |
-| Kall | 21 | API only | `kall` 20/20 tested |
-| KOS | 8 | API only | `kword` 14/14 tested |
-| Kdirectory (Contacts) | 4 | API + UI functional | `contacts` 16/16 tested |
-| K-Booking | 3 | **Zero** | not in COVERAGE.md — verify a backend exists |
-| KNews | 3 | **Zero** | not in COVERAGE.md — verify a backend exists |
-| KCloud | 2 | **Zero** | not in COVERAGE.md — verify a backend exists |
-| K-ECommerce | 2 | **Zero** | not in COVERAGE.md — verify a backend exists |
-| UserProfile | 1 (+nested) | API deep + UI functional partial | `profile` 45/45 tested |
-| UserManagement | 1 | **Zero** | check `admin`-module scope |
-| KDiary | 1 | API only, **unrouted** | `dairyschedule` 14/14 tested |
-| WriteMail | 1 | Dead/unrouted | n/a |
-| ChildSafetyPolicy | 1 | **Zero** | static content — likely UI-only |
+| Module                |       Files | Bench status                     | Backend API (docs/COVERAGE.md)                                |
+| --------------------- | ----------: | -------------------------------- | ------------------------------------------------------------- |
+| Katchup               |         120 | Deep (API+UI+breakage)           | `katchup` 36/36 tested                                        |
+| Settings              |          27 | Partial UI (4/25 panels)         | `generalsetting` 7/7 + pieces of `kmail`/`profile`/`contacts` |
+| Kmail                 |          25 | API only                         | `kmail` 79/80 tested                                          |
+| Kall                  |          21 | API only                         | `kall` 20/20 tested                                           |
+| KOS                   |           8 | API only                         | `kword` 14/14 tested                                          |
+| Kdirectory (Contacts) |           4 | API + UI functional              | `contacts` 16/16 tested                                       |
+| K-Booking             |           3 | **Zero**                         | not in COVERAGE.md — verify a backend exists                  |
+| KNews                 |           3 | **Zero**                         | not in COVERAGE.md — verify a backend exists                  |
+| KCloud                |           2 | **Zero**                         | not in COVERAGE.md — verify a backend exists                  |
+| K-ECommerce           |           2 | **Zero**                         | not in COVERAGE.md — verify a backend exists                  |
+| UserProfile           | 1 (+nested) | API deep + UI functional partial | `profile` 45/45 tested                                        |
+| UserManagement        |           1 | **Zero**                         | check `admin`-module scope                                    |
+| KDiary                |           1 | API only, **unrouted**           | `dairyschedule` 14/14 tested                                  |
+| WriteMail             |           1 | Dead/unrouted                    | n/a                                                           |
+| ChildSafetyPolicy     |           1 | **Zero**                         | static content — likely UI-only                               |
 
 **Settings' 25 real sub-panels** (folders under `src/components/Settings/`), cross-referenced against
 current coverage:
 
-| Panel | UI coverage | Likely backing API |
-|---|---|---|
-| About, BasicInformation, ContactInformation, Education, Experience, OtherActivities | ✅ partial (`profile-functional.spec.ts`) | `profile` |
-| Notification, Personalize, InstantReply, MailSignature | ✅ (`settings-functional.spec.ts`) | `generalsetting` / `kmail`'s `kmailSetting` |
-| BlockedContact | ✅ partial (`contacts-breakage`/API) | `contacts` block/unblock |
-| AccountRecovery, BusinessSettings, ChangeMobNumber, ChangePassword, DataStorage, DeleteAccount, DigitalCardSettings, KnewsSettings, LetterHead, OtherMail, SecurityPrivacy, Settingdetails, SettingProfile, VacationResponse | ❌ **no UI test** | mostly unmapped — needs per-panel confirmation |
+| Panel                                                                                                                                                                                                                        | UI coverage                               | Likely backing API                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------- |
+| About, BasicInformation, ContactInformation, Education, Experience, OtherActivities                                                                                                                                          | ✅ partial (`profile-functional.spec.ts`) | `profile`                                      |
+| Notification, Personalize, InstantReply, MailSignature                                                                                                                                                                       | ✅ (`settings-functional.spec.ts`)        | `generalsetting` / `kmail`'s `kmailSetting`    |
+| BlockedContact                                                                                                                                                                                                               | ✅ partial (`contacts-breakage`/API)      | `contacts` block/unblock                       |
+| AccountRecovery, BusinessSettings, ChangeMobNumber, ChangePassword, DataStorage, DeleteAccount, DigitalCardSettings, KnewsSettings, LetterHead, OtherMail, SecurityPrivacy, Settingdetails, SettingProfile, VacationResponse | ❌ **no UI test**                         | mostly unmapped — needs per-panel confirmation |
 
 ## Icons
 
 Font-icon system via **icomoon** (`src/Assets/icons/icomoon/fonts/*`), consumed as `.icon-KP_###...`
 CSS classes — exactly the selectors already used throughout the bench's UI specs (e.g.
 `.icon-KP_107-User-Add`, `.icon-KP_112-Group-Add`). No separate SVG-icon-per-file convention to learn.
+
+## ⚠️ K-Booking is a REAL payment flow — hard safety boundary
+
+`Services/KBooking.js` is a genuine **redbus.in bus-ticket booking integration**: city search,
+trip listing, `BlockTickets`, `GenerateOrderID`, `verifySignature` (a payment-gateway signature
+check — Razorpay/PayU-style), `BookTicket`, `CancelTicket`. Base URL is hardcoded to
+`https://devapi2.kpostindia.com`. This is money-moving, exactly the class of feature the bench
+already refuses to touch for OTP/SMS. **No automated test may call `BookTicket`, `GenerateOrderID`,
+`verifySignature`, or the payment-gateway UI endpoints** without explicit written authorization and
+a sandboxed payment gateway confirmed by the product owner. Safe to test: city suggestion, trip
+search/listing, ticket lookup (read-only). This overrides Phase 2's K-Booking scope in the test plan.
+
+## Correction: `Services/ECommerce.js` is dead/misnamed, not the real E-Commerce API
+
+Despite its name, `Services/ECommerce.js` contains **KDiary schedule** endpoints
+(`CreateDiarySchedule`, `GetAllDiarySchedule`, `DeleteDiaryScheduleEvent`, …) — leftover from a
+copy/refactor, not wired to the E-Commerce screen. The real `/e-commerce` route
+(`K-ECommerce/ECommerce.js`) renders `ECommerceList` instead, which has not yet been traced to its
+actual data source — do that before writing E-Commerce tests; do not assume `Services/ECommerce.js`
+is it.
 
 ## What "complete UI documentation" would still need (not done here — scoping honestly)
 

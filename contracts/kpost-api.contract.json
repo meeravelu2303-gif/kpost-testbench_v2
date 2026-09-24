@@ -1,13 +1,13 @@
 {
   "source": "KPOST API (6).xlsx",
   "product": "KPost API",
-  "generatedAt": "2026-09-15T16:48:55.313Z",
+  "generatedAt": "2026-09-24T12:47:42.472Z",
   "counts": {
-    "rows": 306,
+    "rows": 305,
     "usable": 266,
-    "excluded": 40,
-    "withRequestExample": 193,
-    "withResponseExample": 157
+    "excluded": 39,
+    "withRequestExample": 191,
+    "withResponseExample": 156
   },
   "endpoints": [
     {
@@ -16,17 +16,13 @@
       "row": 2,
       "module": "Signup",
       "name": "fetchUserDetails",
-      "method": "POST",
-      "methodSource": "payload-rule",
-      "requestKind": "json",
+      "method": "GET",
+      "methodSource": "request-note",
+      "requestKind": "none",
       "path": "/v2/profile/fetchUserDetails/",
       "sourceUrl": "https://devapi2.kpostindia.com/v2/profile/fetchUserDetails/",
       "legacy": false,
-      "requestExample": {
-        "kpostID": "karans@kpost.in",
-        "countryID": 1
-      },
-      "requestRaw": "{\n    \"kpostID\": \"karans@kpost.in\",\n    \"countryID\":1\n}",
+      "requestRaw": "GET METHOD",
       "responseExample": {
         "data": {
           "firstName": "karkuvel",
@@ -50,45 +46,6 @@
       "name": "fetchUserDetails",
       "method": "POST",
       "methodSource": "payload-rule",
-      "dataNotes": [
-        "one payload is documented for the two endpoints in this row"
-      ],
-      "requestKind": "json",
-      "path": "/v2/profile/fetchUserDetails/",
-      "sourceUrl": "https://devapi2.kpostindia.com/v2/profile/fetchUserDetails/",
-      "legacy": false,
-      "requestExample": {
-        "kpostID": "karans@kpost.in",
-        "countryID": 1
-      },
-      "requestRaw": "{\n    \"kpostID\": \"karans@kpost.in\",\n    \"countryID\":1\n}",
-      "responseExample": {
-        "data": {
-          "firstName": "karks",
-          "lastName": "rajan",
-          "kpostID": "karksrajan@kpostindia.com",
-          "countryID": "1"
-        },
-        "urlPath": "fetchUserDetails",
-        "statusCode": 200,
-        "status": "SUCCESS"
-      },
-      "responseRaw": "{\r\n    \"data\": {\r\n        \"firstName\": \"karks\",\r\n        \"lastName\": \"rajan\",\r\n        \"kpostID\": \"karksrajan@kpostindia.com\",\r\n        \"countryID\": \"1\"\r\n    },\r\n    \"urlPath\": \"fetchUserDetails\",\r\n    \"statusCode\": 200,\r\n    \"status\": \"SUCCESS\"\r\n}",
-      "reasons": [
-        "duplicate-of KatchupAPI:R2"
-      ],
-      "usable": false
-    },
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 3,
-      "module": "Signup",
-      "method": "POST",
-      "methodSource": "payload-rule",
-      "dataNotes": [
-        "one payload is documented for the two endpoints in this row"
-      ],
       "requestKind": "json",
       "path": "/v2/signupLogin/fetchUserDetails/",
       "sourceUrl": "https://devapi2.kpostindia.com/v2/signupLogin/fetchUserDetails/",

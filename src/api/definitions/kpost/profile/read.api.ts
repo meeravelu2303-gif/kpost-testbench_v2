@@ -14,10 +14,12 @@ const READ_TAGS = ['profile-read'] as const;
 
 export const fetchUserDetailsApi = defineProfileEndpoint({
   id: 'profile-fetch-user-details',
-  // FINDING: the workbook documents POST; the live API answers only GET (POST -> 405). Verified on
-  // devapi2. `contractMethod` keeps the schema from the documented POST row.
+  // The workbook previously documented POST with a {kpostID, countryID} body (row 2, KatchupAPI) —
+  // wrong on both counts: the live API is GET, and takes no payload at all, identifying the caller
+  // from the token alone (confirmed 2026-09-24). The workbook has been corrected at the source; the
+  // stray payload in row 3's combined URL cell belonged only to the unrelated
+  // /v2/signupLogin/fetchUserDetails/ POST endpoint and has been split out.
   method: 'GET',
-  contractMethod: 'POST',
   path: '/v2/profile/fetchUserDetails/',
   summary: "Fetch the caller's profile details",
   tags: [...READ_TAGS, 'pii'],
@@ -119,11 +121,16 @@ export const advancedSearchApi = defineProfileEndpoint({
   productionSafe: true,
   // Every documented filter is sent so the payload matches the contract in full (an empty filter is
   // a no-op, exactly like omitting it, but a strict presence check on the API cannot then 400 us —
-  // the missing-field class that filed a false bug on the KMail signature). Values are empty, so no
-  // real person or place is named.
+  // the missing-field class that filed a false bug on the KMail signature).
+  //
+  // mobileNumber CANNOT be sent empty: it matches the qa-identifier-guard's resource-identifier
+  // pattern, and an empty string is not in the QA-owned allowlist any more than a stranger's real
+  // number would be (confirmed 2026-09-24 — this previously blocked any live run of this endpoint
+  // outright with a ProductionSafetyError, not just a "no real person named" no-op). testData.mobileExists
+  // is our own QA-owned number, so a real, harmless value satisfies the guard.
   request: body(() => ({
     fullName: 'qa',
-    mobileNumber: '',
+    mobileNumber: testData.mobileExists,
     gender: null,
     ageFrom: null,
     ageTo: null,
@@ -142,11 +149,14 @@ export const getLanguagesApi = defineProfileEndpoint({
   summary: 'Languages the caller can pick for their profile',
   tags: [...READ_TAGS, 'reference'],
   /*
-   * FINDING: neither verb works on live — GET answers 405, POST answers 500. The documented GET is
-   * kept (the workbook's method), so the endpoint reports the 405 rather than being silently dropped.
+   * The "neither verb works" finding this note used to record no longer reproduces: both GET and
+   * POST now answer 200 consistently (re-verified twice, 2026-09-24). What's still true and worth
+   * recording: the response is `{"data": []}` — an empty language list — on every call, so the
+   * profile-language picker this backs currently has nothing to offer. Left as an observation, not
+   * escalated to a defect: Unknown/Requires Clarification whether an empty reference table is
+   * expected on this test build or a real data gap.
    */
   productionSafe: true,
-  note: 'GET -> 405 and POST -> 500 on live; no working verb found',
 });
 
 export const isDevicePrimaryApi = defineProfileEndpoint({

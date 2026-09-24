@@ -1,13 +1,13 @@
 {
   "source": "KPOST API (6).xlsx",
   "sourcePath": "D:\\TEST-BENCH-AUTOMATIONS\\kpost-testbench_v2\\KPOST API (6).xlsx",
-  "generatedAt": "2026-09-15T16:48:55.313Z",
+  "generatedAt": "2026-09-24T12:47:42.472Z",
   "summary": {
     "kpost-api": {
-      "rows": 306,
+      "rows": 305,
       "usable": 266,
       "operations": 266,
-      "withRequest": 165,
+      "withRequest": 164,
       "withResponse": 119
     },
     "kmail-api": {
@@ -56,15 +56,6 @@
     }
   ],
   "excluded": [
-    {
-      "product": "kpost-api",
-      "tab": "KatchupAPI",
-      "row": 3,
-      "path": "/v2/profile/fetchUserDetails/",
-      "reasons": [
-        "duplicate-of KatchupAPI:R2"
-      ]
-    },
     {
       "product": "kpost-api",
       "tab": "KatchupAPI",

@@ -9,6 +9,13 @@ import { expect, test } from '@fixtures';
  * safest writes in the bench (cosmetic, own-account, no other user), but they persist, so the flow
  * is gated `SETTINGS_LIFECYCLE=true`, each write `allowLiveWrite`, and restores to a sensible default
  * in a `finally`.
+ *
+ * The font/theme change test that used to live here moved to `personalize-workflow.spec.ts`: it
+ * restored only the font on cleanup, never the theme, and the live QA account was found still
+ * holding a prior run's theme values (kpostLayoutTheme: "purple") as a result. The replacement
+ * captures the account's real original font AND theme from the database and restores both exactly,
+ * and additionally verifies the write persists to `TBL_KPOST_GENERAL_SETTINGS` and that
+ * `settings-get-personalize` reflects the stored row rather than a cached/default value.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -33,44 +40,6 @@ test.describe('KPost Settings · feature flow', () => {
     process.env.SETTINGS_LIFECYCLE !== 'true',
     'changes account preferences; set SETTINGS_LIFECYCLE=true',
   );
-
-  test('font and theme change, then restore @api @settings', async ({ endpoints }) => {
-    try {
-      const font = await write(
-        endpoints,
-        'settings-font',
-        { fontSize: 'small', fontStyle: 'Helvetica' },
-        'font',
-      );
-      expect.soft(font, 'fontSetting is accepted').toBeLessThan(300);
-
-      const theme = await write(
-        endpoints,
-        'settings-change-theme',
-        {
-          colourPalette: '#0001',
-          nightModeEnable: 0,
-          'useLocalSunset&Sunrise': 0,
-          syncwithDeviceSetting: 0,
-          scheduleTiming: 'HH ::RR :: MM',
-          kpostLayoutTheme: 'purple',
-          katchupChatStyle: 'bubble',
-          katchupChatTheme: 'sunset',
-          katchupChatBackgroundThemeWallpaper: { default: true, color: null, image: null },
-        },
-        'theme',
-      );
-      expect.soft(theme, 'changeTheme is accepted').toBeLessThan(300);
-    } finally {
-      // Restore a neutral default (medium font, default wallpaper, night mode off).
-      await write(
-        endpoints,
-        'settings-font',
-        { fontSize: 'medium', fontStyle: 'Helvetica' },
-        'font-restore',
-      ).catch(() => undefined);
-    }
-  });
 
   test('the three notification toggles are each accepted, then restored on @api @settings', async ({
     endpoints,

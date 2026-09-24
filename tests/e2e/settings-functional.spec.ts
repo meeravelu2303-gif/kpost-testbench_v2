@@ -204,6 +204,69 @@ test.describe('KPost Settings · UI functional behaviour @ui @database', { tag: 
     expect(dispatched, 'the Mail Signature must not save with a malformed email').toBe(false);
   });
 
+  test('the Vacation Response form does not save with an empty message @ui', async ({ page }) => {
+    /*
+     * Vacation Response (auto-reply/out-of-office) lives under the "KMail Settings" top-level
+     * category, unlike Notification/Personalize/Mail Signature/Instant Reply which this suite's
+     * other tests reach directly — its panel only renders after that category is opened first, so
+     * this is the two-step open every other panel here needs too (captured against the live build,
+     * 2026-09; earlier tests in this file may rely on a leftover "last viewed category" UI state
+     * rather than a guaranteed default, so this explicit two-step is the more robust pattern).
+     *
+     * Fields (from a live pass): a master ON/OFF toggle beside the "Vacation Response" title gates
+     * the whole form — From / To (date range), "Enter the Vacation Response" (subject), "Enter the
+     * Vacation Message" (body) and Save all render `disabled` until that toggle is switched on. This
+     * test only reaches the OFF state today: turning the toggle on needs its exact selector
+     * confirmed (a codegen pass over "enable vacation response") before this can drive the form —
+     * skips honestly rather than guess a selector and risk a false pass/fail. Validation-only once
+     * enabled: a From/To date with no message must not save — leaves nothing to clean up.
+     */
+    await page.goto('/settings', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+    await page
+      .locator('.loader-overlay')
+      .waitFor({ state: 'hidden', timeout: 30_000 })
+      .catch(() => undefined);
+    await page
+      .getByText('KMail Settings', { exact: true })
+      .first()
+      .click({ timeout: 15_000 })
+      .catch(() => undefined);
+    await page
+      .getByText('Vacation Response', { exact: false })
+      .first()
+      .click({ timeout: 15_000 })
+      .catch(() => undefined);
+
+    const subjectField = page.getByRole('textbox', { name: 'Enter the Vacation Response' });
+    const opened = await subjectField.isVisible({ timeout: 10_000 }).catch(() => false);
+    test.skip(
+      !opened,
+      'the Vacation Response form did not open on this build — needs a codegen re-tune',
+    );
+    const enabled = await subjectField.isEnabled().catch(() => false);
+    test.skip(
+      !enabled,
+      'the form is gated behind an ON/OFF toggle that is currently off — needs its exact ' +
+        'selector confirmed (codegen "enable vacation response") before this can drive the form',
+    );
+
+    // Leave the message empty; the subject alone must not be enough to save.
+    await subjectField.click();
+    await subjectField.fill('QA vacation response (validation probe)');
+    await page
+      .getByRole('button', { name: 'Save' })
+      .first()
+      .click({ timeout: 8_000 })
+      .catch(() => undefined);
+
+    const dispatched = await page
+      .waitForRequest('**/kmailSetting/**', { timeout: 4_000 })
+      .then(() => true)
+      .catch(() => false);
+
+    expect(dispatched, 'a Vacation Response with no message must not be saved').toBe(false);
+  });
+
   test('Personalize country/language selection persists across a reload @ui', async ({ page }) => {
     /*
      * Personalize (country + language) is a preference that must survive a reload — if it reverts,

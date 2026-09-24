@@ -9,11 +9,13 @@ import { expect, test } from '@fixtures';
 
 /**
  * Group **feature flow** — create a group and drive every group WRITE end to end on a real host,
- * self-cleaning: add a member, grant admin, rename, group-image update/remove, a member leaves,
- * remove a member, delete. Gated `GROUP_LIFECYCLE=true`, each write `allowLiveWrite`, all on our own
- * accounts. The two group-image DOWNLOADS are reads keyed by the runtime groupKpostID (off-live,
- * like other needs-id reads). `updateGroupProfileImage` needs a real image part, so a JSON-only call
- * may 4xx — a finding, `expect.soft`.
+ * self-cleaning: add a member, grant admin, rename, group-image update/download/remove, a member
+ * leaves, remove a member, delete. Gated `GROUP_LIFECYCLE=true`, each write `allowLiveWrite`, all on
+ * our own accounts. The two group-image DOWNLOADS are reads keyed by the runtime groupKpostID this
+ * flow just created — `destructive: false` with no `productionSafe`, so they need `allowLiveRead`
+ * (added to the engine for exactly this class of dependency-driven read) to run at all.
+ * `updateGroupProfileImage` needs a real image part, so a JSON-only call may 4xx — a finding,
+ * `expect.soft`.
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -56,6 +58,22 @@ async function as(
   return { status: ex.status, data: (value.data as Record<string, unknown>) ?? {} };
 }
 
+/** Reads a "needs-id" endpoint fed a real id this flow just minted (`allowLiveRead`, not a write). */
+async function readAs(
+  endpoints: EndpointExecutor,
+  who: Principal,
+  id: string,
+  pathParams: Record<string, unknown>,
+  label: string,
+): Promise<number> {
+  const ex = await endpoints.sendTo(
+    id,
+    { pathParams: pathParams as Record<string, string | number> },
+    { label: `group:${label}`, auth: { principal: who }, allowLiveRead: true },
+  );
+  return ex.status;
+}
+
 test.describe('KPost Group · feature flow @database', () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
@@ -90,6 +108,17 @@ test.describe('KPost Group · feature flow @database', () => {
           ],
           [A, 'group-edit-name', { groupKpostID, groupKpostName: 'QA Bench Renamed' }, 'edit-name'],
           [A, 'group-update-image', { groupKpostID }, 'update-image'],
+          // Downloads keyed by the REAL groupKpostID this flow just created — previously untestable
+          // on live (destructive:false, no productionSafe: allowLiveWrite alone cannot unlock a
+          // read). Run right after update-image, before remove-image takes the image away again.
+          // Handled via readAs() below (branched on the "group-download-" id prefix), not as().
+          [A, 'group-download-image', { groupKpostID, kpostID: A.username }, 'download-image'],
+          [
+            A,
+            'group-download-full-image',
+            { groupKpostID, kpostID: A.username },
+            'download-full-image',
+          ],
           [A, 'group-remove-image', { groupKpostID }, 'remove-image'],
           [C, 'group-leave', { id: '0', groupID, groupKpostID }, 'leave'],
           [
@@ -100,8 +129,14 @@ test.describe('KPost Group · feature flow @database', () => {
           ],
         ];
         for (const [who, id, bodyObj, label] of steps) {
-          const r = await as(endpoints, who, id, bodyObj, label);
-          expect.soft(r.status, `${label} returns a status`).toBeLessThan(600);
+          // The two group-image downloads are GET reads keyed by PATH params, not a body write —
+          // and need allowLiveRead (destructive:false), not allowLiveWrite. Branched here rather
+          // than given their own loop: they still need to run interleaved, right after update-image
+          // and before remove-image takes the image away.
+          const status = id.startsWith('group-download-')
+            ? await readAs(endpoints, who, id, bodyObj, label)
+            : (await as(endpoints, who, id, bodyObj, label)).status;
+          expect.soft(status, `${label} returns a status`).toBeLessThan(600);
         }
       }
     } finally {

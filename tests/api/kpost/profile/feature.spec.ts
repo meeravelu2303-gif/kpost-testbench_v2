@@ -154,19 +154,23 @@ test.describe('KPost Profile · write lifecycle', () => {
   });
 
   test('an education record can be saved and then deleted @api @profile', async ({ endpoints }) => {
-    // Save a college record.
+    /*
+     * A unique marker per run: this account has accumulated several "QA Bench College" leftovers
+     * from before this fix (see below), so a fixed literal can no longer be told apart from those.
+     *
+     * `collegeDetails` on getUserProfileUsingKpostID's response is a JSON-encoded STRING, not an
+     * array — `collegeDetailsAsJson` is the already-parsed array. Reading `collegeDetails` here
+     * (as the test previously did) made `Array.isArray(...)` false, so `mine` was always undefined
+     * and `profile-delete-college` was never actually reached: dead code masquerading as a passing
+     * cleanup step, real 2026-09-24.
+     */
+    const marker = `QA Bench College ${Date.now()}`;
     const saved = await write(
       endpoints,
       'profile-save-college',
       {
         collegeDetails: [
-          {
-            collegeID: '',
-            collegeName: 'QA Bench College',
-            degree: 'QA',
-            fromYear: '2010',
-            toYear: '2014',
-          },
+          { collegeID: '', collegeName: marker, degree: 'QA', fromYear: '2010', toYear: '2014' },
         ],
       },
       'save-college',
@@ -175,12 +179,11 @@ test.describe('KPost Profile · write lifecycle', () => {
 
     // Read it back to find its id, then delete it (cleanup).
     const profile = await fetchProfile(endpoints);
-    const colleges = (profile.collegeDetails ?? profile.college ?? []) as Array<
-      Record<string, unknown>
-    >;
+    const colleges = (profile.collegeDetailsAsJson ?? []) as Array<Record<string, unknown>>;
     const mine = Array.isArray(colleges)
-      ? colleges.find((c) => c.collegeName === 'QA Bench College')
+      ? colleges.find((c) => c.collegeName === marker)
       : undefined;
+    expect.soft(mine, 'the saved college record appears in the profile read-back').toBeTruthy();
     const collegeID = mine?.collegeID;
 
     if (typeof collegeID === 'string' && collegeID) {
@@ -192,6 +195,124 @@ test.describe('KPost Profile · write lifecycle', () => {
       );
       expect.soft(deleted, 'delete college accepted').toBeLessThan(300);
     }
+  });
+
+  test('school/university records can each be saved and then deleted @api @profile', async ({
+    endpoints,
+  }) => {
+    // Mirrors the college test above for two of the four remaining education-record types, each
+    // with its own field/array names. A unique marker per run distinguishes this run's record from
+    // any leftover of a prior one when searching the read-back for it. experience and other-activity
+    // are deliberately NOT included here — see the two recorded-gap tests below for why.
+    const marker = Date.now();
+    const records: Array<{
+      saveId: string;
+      saveLabel: string;
+      saveBody: Record<string, unknown>;
+      listKeys: string[];
+      nameField: string;
+      nameValue: string;
+      idField: string;
+      deleteId?: string;
+      deleteLabel?: string;
+    }> = [
+      {
+        saveId: 'profile-save-school',
+        saveLabel: 'save-school',
+        saveBody: {
+          schoolDetails: [
+            { schoolID: '', schoolName: `QA Bench School ${marker}`, standard: '10' },
+          ],
+        },
+        // *DetailsAsJson is the already-parsed array; the plain *Details key is a JSON-encoded
+        // STRING (see the college test's comment above) — kept as a documented, deliberately-unused
+        // fallback so a future reader isn't tempted to "simplify" this back to the broken key.
+        listKeys: ['schoolDetailsAsJson', 'schoolDetails'],
+        nameField: 'schoolName',
+        nameValue: `QA Bench School ${marker}`,
+        idField: 'schoolID',
+        deleteId: 'profile-delete-school',
+        deleteLabel: 'delete-school',
+      },
+      {
+        saveId: 'profile-save-university',
+        saveLabel: 'save-university',
+        saveBody: {
+          universityDetails: [
+            {
+              universityID: '',
+              universityName: `QA Bench University ${marker}`,
+              degree: 'Masters',
+            },
+          ],
+        },
+        listKeys: ['universityDetailsAsJson', 'universityDetails'],
+        nameField: 'universityName',
+        nameValue: `QA Bench University ${marker}`,
+        idField: 'universityID',
+        deleteId: 'profile-delete-university',
+        deleteLabel: 'delete-university',
+      },
+    ];
+
+    for (const rec of records) {
+      const saved = await write(endpoints, rec.saveId, rec.saveBody, rec.saveLabel);
+      expect.soft(saved, `${rec.saveLabel} accepted`).toBeLessThan(300);
+
+      const profile = await fetchProfile(endpoints);
+      let list: Array<Record<string, unknown>> = [];
+      for (const key of rec.listKeys) {
+        const candidate = profile[key];
+        if (Array.isArray(candidate)) {
+          list = candidate as Array<Record<string, unknown>>;
+          break;
+        }
+      }
+      const mine = list.find((entry) => entry[rec.nameField] === rec.nameValue);
+      expect.soft(mine, `${rec.saveLabel} appears in the profile read-back`).toBeTruthy();
+
+      const recordId = mine?.[rec.idField];
+      if (typeof recordId === 'string' && recordId && rec.deleteId && rec.deleteLabel) {
+        const deleted = await write(
+          endpoints,
+          rec.deleteId,
+          { [rec.idField]: recordId },
+          rec.deleteLabel,
+        );
+        expect.soft(deleted, `${rec.deleteLabel} accepted`).toBeLessThan(300);
+      }
+    }
+  });
+
+  test('profile-save-experience / profile-delete-experience: no live test (QA_COMPANY_NAME is not configured)', () => {
+    /*
+     * experienceDetails[].companyName matches the qa-identifier-guard's resource-identifier
+     * pattern (same as kmail-sig-company/kmail-add-od-contact this session) and is a hard-required
+     * IDENTITY_FIELD (src/config/test-data.config.ts) — the schema default is deliberately NOT
+     * allowed to stand in for it on live. Only QA_COMPANY_NAME_ABSENT is set in .env today (for
+     * negative testing); QA_COMPANY_NAME itself needs a real, owner-confirmed company name before
+     * this can be exercised live. Not worked around by inventing a value.
+     */
+    test.skip(
+      !process.env.QA_COMPANY_NAME,
+      'set QA_COMPANY_NAME in .env to a real, owner-confirmed company name to unblock this',
+    );
+    expect(true, 'placeholder — once configured, write the real save/read-back/delete flow').toBe(
+      true,
+    );
+  });
+
+  test('profile-save-other-activity: no live test (no delete endpoint exists — would permanently pollute the account)', () => {
+    test.skip(
+      true,
+      'saveOrUpdateOtherActivity is registered but there is no matching delete endpoint anywhere ' +
+        'in the module (unlike college/school/university/experience, which all have one). Saving a ' +
+        'real record live would leave it on the shared QA account forever, with no way to clean it ' +
+        "up — the same class of bug already found and fixed once this session (KMail's saluation/" +
+        'instant-reply leak). Not worked around by testing it anyway; recorded pending either a ' +
+        'delete endpoint being added or the dev confirming a safe way to remove a test record.',
+    );
+    expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
   });
 
   test('convertBase64ToImage accepts a data URI @api @profile', async ({ endpoints }) => {

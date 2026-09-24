@@ -16,6 +16,15 @@ export interface SafetyFlags {
    */
   allowLiveWrite?: boolean;
   /**
+   * A caller explicitly authorizes THIS non-destructive "needs-id" read on the live application —
+   * the read-side counterpart to `allowLiveWrite`, for a dependency-driven flow that mints a real id
+   * (a doc, an attachment, a group image) and then needs to read it back. Scoped identically: `data`-
+   * side-effect only (`external`/`global` and OTP stay blocked regardless), the QA-identifier guard
+   * still confines it to accounts we own, and it is set per call by an owner-approved feature spec —
+   * never by the engine, so its probes and fuzzers stay blocked.
+   */
+  allowLiveRead?: boolean;
+  /**
    * True when requests go to the bundled mock server (`MOCK_API=true`), which cannot send a real
    * SMS/email. False means a real host — where the SMS/OTP kill-switch below applies in EVERY mode.
    */
@@ -171,6 +180,19 @@ export function destructiveBlockReason(
     (endpoint.sideEffect ?? 'data') === 'data';
 
   /*
+   * The read-side counterpart, for a "needs-id" read fed a real id a lifecycle flow just minted
+   * (e.g. reading back a group image right after uploading it). `destructive !== true` rather than
+   * requiring it false: a read is never destructive, so this simply excludes writes, which have
+   * their own authorization above. `external`/`global` reads still fall through to the side-effect
+   * check below unauthorized, exactly like an unauthorized write would.
+   */
+  const liveReadAuthorized =
+    isLive &&
+    flags.allowLiveRead === true &&
+    endpoint.destructive !== true &&
+    (endpoint.sideEffect ?? 'data') === 'data';
+
+  /*
    * Deep write-fuzzing on a disposable TEST DB. Lets the ENGINE run a `data`-side-effect destructive
    * write (so its fuzzers/attack probes exercise the write's input validation) — which persists junk,
    * so it requires BOTH `writeFuzz` and `testDbMode`. It opens ONLY `data` writes: `external` (SMS/
@@ -189,6 +211,7 @@ export function destructiveBlockReason(
     isLive &&
     !endpoint.productionSafe &&
     !liveWriteAuthorized &&
+    !liveReadAuthorized &&
     !writeFuzzAuthorized &&
     !otpTestAuthorized
   ) {
