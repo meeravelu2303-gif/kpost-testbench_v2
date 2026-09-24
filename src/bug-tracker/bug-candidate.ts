@@ -229,7 +229,7 @@ function renderExpectedActual(result: ValidationResult): { expected: string; act
 }
 
 /** Words from a spec path and test title, used to find the UI screen's component. */
-function screenTokens(file: string, title: string): string[] {
+export function screenTokens(file: string, title: string): string[] {
   return `${file} ${title}`
     .toLowerCase()
     .split(/[^a-z0-9-]+/)
@@ -241,6 +241,42 @@ function screenTokens(file: string, title: string): string[] {
  * WARNING and SKIPPED never become tickets: a warning is not a defect, and a skip is the
  * framework saying it did not check.
  */
+/**
+ * Negative-input probes that assert bad/optional input is REJECTED (4xx). On KPost these fields are
+ * frequently optional filters, so the endpoint legitimately ACCEPTS a null / empty / differently-typed
+ * value and returns 2xx with data — that is lenient-by-design, not a defect (e.g. #534: a null
+ * serverTime/lastMsgID on homeDashboardMsgs still fetches and returns 200). So a negative-input
+ * finding is filed ONLY when the endpoint CRASHED (5xx) on the input — a real fault — and suppressed
+ * when it simply accepted the input (2xx/3xx). Genuine 5xx on the primary request is independently
+ * caught by response.status-code / flow.server-error, so nothing real is lost.
+ */
+const LENIENT_INPUT_VALIDATORS = new Set<string>([
+  'request.null-value',
+  'request.empty-body',
+  'request.empty-value',
+  'request.data-type',
+  'request.boundary-value',
+  'request.enum',
+  'request.format',
+  'request.required-fields',
+  'request.unknown-fields',
+  'request.invalid-payload',
+  'request.method-not-allowed',
+]);
+
+export function isLenientAcceptanceFalsePositive(result: ValidationResult): boolean {
+  if (!LENIENT_INPUT_VALIDATORS.has(result.validatorName)) return false;
+  const failed = (result.details ?? []).filter((d) => d.status === 'FAILED');
+  if (!failed.length) return false;
+  // A 5xx on bad input is a real crash — keep it. Suppress only when every failing case was ACCEPTED
+  // (the observed status is not a server error), which is lenient-by-design, not a bug.
+  const crashed = failed.some((d) => {
+    const code = Number(d.actual);
+    return Number.isFinite(code) && code >= 500 && code < 600;
+  });
+  return !crashed;
+}
+
 export function candidatesFromReport(
   report: ValidationReport,
   context: { baseURL: string },
@@ -248,6 +284,7 @@ export function candidatesFromReport(
 ): BugCandidate[] {
   return report.results
     .filter((result) => result.status === 'FAILED')
+    .filter((result) => !isLenientAcceptanceFalsePositive(result))
     .map((result) => fromValidationResult(result, report, context, config));
 }
 
@@ -570,4 +607,156 @@ export function consolidateCascades(candidates: readonly BugCandidate[]): BugCan
     kept.push(...independents);
   }
   return kept;
+}
+
+/**
+ * WCAG (accessibility) findings, grouped into ONE ticket per RULE rather than one per screen.
+ *
+ * axe-core reports the same rule violation on many screens (a shared header component with low
+ * contrast fails `color-contrast` on every page that uses it). Filing per screen would flood the
+ * queue with dozens of near-duplicates of the same underlying defect — the same problem the
+ * platform-wide API collapse (`systemicSignature`) solves, applied here to the UI side: the rule id
+ * IS the root cause, so it is the fingerprint, and the ticket lists every screen affected.
+ *
+ * Only CRITICAL and SERIOUS violations are candidates — the same bar `accessibility-axe.spec.ts`
+ * soft-asserts on, so a finding here is never news to that spec's own report; moderate/minor findings
+ * stay visible in the per-screen attachment but are not fileable at this bar.
+ */
+export interface AccessibilityScreenInput {
+  screen: string;
+  route: string;
+  violations: {
+    id: string;
+    impact: 'critical' | 'serious' | 'moderate' | 'minor';
+    help: string;
+    helpUrl: string;
+    tags: string[];
+    nodeCount: number;
+    targets: string[];
+  }[];
+  /** This screen's screenshot/video from the failing test run, so the ticket shows the actual page —
+   * not just the JSON evidence — the way every other UI ticket does. */
+  proof?: ProofFile[];
+}
+
+const A11Y_SEVERITY: Record<'critical' | 'serious', Severity> = {
+  critical: 'CRITICAL',
+  serious: 'HIGH',
+};
+
+/** The single Bugzilla component for a rule's affected screens: that screen's component when every
+ * affected screen shares one, otherwise the UI suite's fallback — a rule hitting screens across
+ * several components is a shared/cross-cutting defect, not any one team's alone. */
+function componentForScreens(
+  suite: ReturnType<typeof suiteFor>,
+  screens: readonly string[],
+): string {
+  const components = new Set(screens.map((name) => componentFor(suite, [name.toLowerCase()])));
+  return components.size === 1 ? [...components][0]! : suite.bugzilla.fallbackComponent;
+}
+
+export function accessibilityCandidatesFromScreens(
+  screens: readonly AccessibilityScreenInput[],
+  config: BugzillaConfig,
+): BugCandidate[] {
+  const suite = suiteFor('kpost-ui');
+
+  // Group every (screen, violation) pair by rule id, keeping one entry per screen per rule (a rule
+  // hit twice on the same screen across browser projects counts as one affected screen, not two).
+  const byRule = new Map<
+    string,
+    { impact: 'critical' | 'serious'; help: string; helpUrl: string; tags: string[] } & {
+      screens: Map<string, { nodeCount: number; targets: string[]; proof?: ProofFile[] }>;
+    }
+  >();
+  for (const screen of screens) {
+    for (const v of screen.violations) {
+      if (v.impact !== 'critical' && v.impact !== 'serious') continue;
+      const entry = byRule.get(v.id) ?? {
+        impact: v.impact,
+        help: v.help,
+        helpUrl: v.helpUrl,
+        tags: v.tags,
+        screens: new Map<string, { nodeCount: number; targets: string[]; proof?: ProofFile[] }>(),
+      };
+      // The worse tier observed for this rule wins, so a rule that is critical on one screen and
+      // serious on another files at CRITICAL — the severity a developer should actually triage at.
+      if (v.impact === 'critical') entry.impact = 'critical';
+      const existing = entry.screens.get(screen.screen);
+      if (!existing || v.nodeCount > existing.nodeCount) {
+        entry.screens.set(screen.screen, {
+          nodeCount: v.nodeCount,
+          targets: v.targets,
+          proof: screen.proof,
+        });
+      }
+      byRule.set(v.id, entry);
+    }
+  }
+
+  const now = new Date().toISOString();
+  return [...byRule.entries()].map(([ruleId, rule]) => {
+    const screenNames = [...rule.screens.keys()].sort();
+    const component = componentForScreens(suite, screenNames);
+    const totalNodes = [...rule.screens.values()].reduce((sum, s) => sum + s.nodeCount, 0);
+    const exampleTargets = [...rule.screens.values()][0]?.targets ?? [];
+    // Every affected screen's screenshot/video, so the ticket shows the actual page(s) — not just
+    // the JSON evidence — the way every other UI ticket already does. Deduped by label: a flaky retry
+    // can recapture the same screen's proof more than once, and "Screenshot (Home)" is meant to be
+    // unique per candidate — a repeat is always a duplicate, never a second distinct piece of proof.
+    const seenLabels = new Set<string>();
+    const proof = [...rule.screens.values()]
+      .flatMap((s) => s.proof ?? [])
+      .filter((p) => (seenLabels.has(p.label) ? false : (seenLabels.add(p.label), true)));
+
+    return {
+      // Stable per RULE, independent of which screens observed it or in what order — one root
+      // cause, one ticket, reused verbatim across runs so a re-run comments/reopens, never dupes.
+      id: systemicFingerprint({
+        prefix: config.tagPrefix,
+        validatorName: `accessibility.${ruleId}`,
+        message: ruleId,
+      }),
+      source: 'ui',
+      suiteId: suite.id,
+      title: `WCAG violation — ${ruleId}: ${maskString(rule.help)} (${screenNames.length} screen${screenNames.length > 1 ? 's' : ''})`,
+      narrative:
+        `axe-core (WCAG 2.1 A/AA) found the same accessibility rule failing on ` +
+        `${screenNames.length} screen${screenNames.length > 1 ? 's' : ''} of the ${suite.label}: ` +
+        `"${rule.help}". This is ONE shared root cause — most likely one component or pattern reused ` +
+        `across those screens — so one fix should resolve it everywhere it appears, filed as a single ` +
+        `ticket rather than one per screen. See ${rule.helpUrl} for the rule's full explanation and how ` +
+        `to fix it.`,
+      severity: A11Y_SEVERITY[rule.impact],
+      category: 'Functional',
+      classification: `accessibility.${ruleId}`,
+      product: suite.bugzilla.product,
+      component,
+      version: suite.bugzilla.version,
+      assignee: suite.owner.email,
+      ownerName: suite.owner.name,
+      expected: `No ${rule.impact} "${ruleId}" violations on any screen.`,
+      actual:
+        `${rule.help} — found on ${screenNames.length} screen(s), ${totalNodes} element(s) total: ` +
+        `${screenNames.join(', ')}.`,
+      occurrences: totalNodes,
+      environment: config.dryRun ? 'test' : 'production',
+      baseURL: suite.baseUrl,
+      build: process.env.BUILD_ID ?? 'local',
+      testRunId: process.env.TEST_RUN_ID ?? 'run',
+      observedAt: now,
+      evidence: maskSensitive({
+        module: suite.label,
+        rule: ruleId,
+        impact: rule.impact,
+        wcagTags: rule.tags,
+        helpUrl: rule.helpUrl,
+        exampleSelectors: exampleTargets,
+        screens: Object.fromEntries(
+          [...rule.screens.entries()].map(([name, s]) => [name, { nodeCount: s.nodeCount }]),
+        ),
+      }),
+      proof,
+    };
+  });
 }

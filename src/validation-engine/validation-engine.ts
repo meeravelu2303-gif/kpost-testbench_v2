@@ -68,13 +68,17 @@ export class ValidationEngine {
     profile: ValidationProfile = env.VALIDATION_PROFILE,
   ): Validator[] {
     const resolved = this.resolve(endpoint);
-    return [
-      ...this.deps.validators.all(),
-      ...this.businessRuleValidators(resolved),
-      ...this.databaseValidators(resolved),
-    ]
-      .filter((validator) => validator.profiles.includes(profile))
-      .sort((a, b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage]);
+    return (
+      [
+        ...this.deps.validators.all(),
+        ...this.businessRuleValidators(resolved),
+        ...this.databaseValidators(resolved),
+      ]
+        .filter((validator) => validator.profiles.includes(profile))
+        // Concurrency probes fire simultaneous bursts; skip them on a server shared with live (env flag).
+        .filter((validator) => env.CONCURRENCY_PROBES || validator.category !== 'CONCURRENCY')
+        .sort((a, b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage])
+    );
   }
 
   async validate(

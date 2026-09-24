@@ -67,6 +67,8 @@ export function plannedCases(
   const central = validationRegistry
     .all()
     .filter((validator) => validator.profiles.includes(active))
+    // Concurrency probes fire simultaneous bursts; skip them on a server shared with live (see env).
+    .filter((validator) => env.CONCURRENCY_PROBES || validator.category !== 'CONCURRENCY')
     .sort((a, b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage])
     .map((validator) => ({ name: validator.name, description: validator.description }));
 

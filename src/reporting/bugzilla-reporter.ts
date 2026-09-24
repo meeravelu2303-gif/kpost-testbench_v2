@@ -1,14 +1,17 @@
-﻿import { mkdirSync, writeFileSync } from 'node:fs';
+﻿import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { FullResult, Reporter, Suite, TestCase, TestResult } from '@playwright/test/reporter';
 import {
+  accessibilityCandidatesFromScreens,
   candidateFromUiFailure,
   candidatesFromReport,
   consolidateCascades,
   mergeCandidates,
+  type AccessibilityScreenInput,
   type BugCandidate,
   type ProofFile,
 } from '../bug-tracker/bug-candidate';
+import { AXE_JSON_ATTACHMENT } from '../ui/accessibility-evidence';
 import { BugzillaClient } from '../bug-tracker/bugzilla-client';
 import { BugzillaFiler, type FilingOutcome } from '../bug-tracker/bugzilla-filer';
 import { applyValidityGate, assessRunValidity } from '../bug-tracker/validity-gate';
@@ -155,7 +158,11 @@ export default class BugzillaReporter implements Reporter {
     // run — the in-bench bug report is written even when filing is off (dry run, no host).
     const tests = this.suite?.allTests() ?? [];
     const candidates = consolidateCascades(
-      mergeCandidates([...this.apiCandidates(), ...this.uiCandidates(tests)]),
+      mergeCandidates([
+        ...this.apiCandidates(),
+        ...this.uiCandidates(tests),
+        ...this.accessibilityCandidates(tests),
+      ]),
     );
     const gate = applyValidityGate(candidates);
 
@@ -391,6 +398,44 @@ export default class BugzillaReporter implements Reporter {
     });
   }
 
+  /**
+   * WCAG (accessibility) findings from `accessibility-axe.spec.ts`, collapsed to one ticket per RULE
+   * across every screen it hit. Reads back the structured JSON each screen attached (see
+   * `@ui/accessibility-evidence`) regardless of that screen's pass/fail outcome — a screen with only
+   * moderate/minor findings still "passes" its soft assertions, but any critical/serious violation the
+   * JSON carries is still a candidate; the severity bar is enforced in `accessibilityCandidatesFromScreens`,
+   * not by filtering on outcome here.
+   */
+  private accessibilityCandidates(tests: readonly TestCase[]): BugCandidate[] {
+    if (!this.config.fileAccessibilityFailures) return [];
+    const screens: AccessibilityScreenInput[] = [];
+    for (const test of tests) {
+      if (path.basename(test.location.file) !== 'accessibility-axe.spec.ts') continue;
+      for (const result of test.results) {
+        const attachment = result.attachments.find((a) => a.name === AXE_JSON_ATTACHMENT);
+        if (!attachment?.path) continue;
+        try {
+          const parsed = JSON.parse(
+            readFileSync(attachment.path, 'utf8'),
+          ) as AccessibilityScreenInput;
+          if (parsed.violations?.length) {
+            // The screenshot/video Playwright captured for this failing test. A WCAG violation
+            // is a static property (nothing visibly changes), so the test paints the violations onto
+            // the page and holds them before finishing — the video now ends on that readable report
+            // instead of an unremarkable blank page, and the annotated screenshot ('a11y-evidence')
+            // shows the same thing as a still image. Both are meaningful now, so both are kept.
+            parsed.proof = proofFrom(result.attachments, parsed.screen);
+            screens.push(parsed);
+          }
+        } catch {
+          // A missing/malformed evidence file is a bench problem, not a product defect — skip it
+          // rather than let a parse error crash the whole reporting pass.
+        }
+      }
+    }
+    return accessibilityCandidatesFromScreens(screens, this.config);
+  }
+
   private writeReport(file: string, content: string): void {
     try {
       const dir = path.join(process.cwd(), 'reports');
@@ -419,17 +464,68 @@ function firstLine(message: string): string {
  * ticket. Playwright records these on failure (`screenshot: 'only-on-failure'`, `video:
  * 'retain-on-failure'`); each attachment carries the file `path` and `contentType`.
  */
-function proofFrom(
+/** Bytes on disk, or -1 if the file cannot be statted (never wins a largest-file comparison). */
+function fileSize(path: string): number {
+  try {
+    return statSync(path).size;
+  } catch {
+    return -1;
+  }
+}
+
+/** Among several attachments sharing a name, the one whose file is actually the largest — Playwright
+ * can emit more than one under the same name (e.g. a brief secondary browser context produces a
+ * near-empty stub video alongside the real recording), and "first in the array" is not reliable. */
+function largestByName(
+  attachments: readonly { name: string; path?: string; contentType: string }[],
+  name: string,
+): { name: string; path?: string; contentType: string } | undefined {
+  const matches = attachments.filter((a) => a.name === name && a.path);
+  if (!matches.length) return undefined;
+  return matches.reduce((best, a) => (fileSize(a.path!) > fileSize(best.path!) ? a : best));
+}
+
+export function proofFrom(
   attachments: readonly { name: string; path?: string; contentType: string }[] | undefined,
   browser: string,
+  // A video only earns its storage cost when it shows something a still image cannot — motion, a
+  // sequence, an overlay appearing. A static defect (a WCAG rule, a form's resting state) looks
+  // IDENTICAL at the first frame and the last: the whole recording is just a blank/unchanging page,
+  // which bloats Bugzilla's attachment storage for zero extra evidence. Callers for that kind of
+  // finding pass includeVideo: false so only the screenshot — which shows exactly the same thing —
+  // gets attached.
+  { includeVideo = true }: { includeVideo?: boolean } = {},
 ): ProofFile[] {
   const proof: ProofFile[] = [];
-  for (const a of attachments ?? []) {
+  const list = attachments ?? [];
+
+  const screenshot = largestByName(list, 'screenshot');
+  if (screenshot?.path) {
+    proof.push({
+      path: screenshot.path,
+      contentType: screenshot.contentType,
+      label: `Screenshot (${browser})`,
+    });
+  }
+  if (includeVideo) {
+    const video = largestByName(list, 'video');
+    if (video?.path) {
+      proof.push({ path: video.path, contentType: video.contentType, label: `Video (${browser})` });
+    }
+  }
+
+  for (const a of list) {
     if (!a.path) continue;
-    if (a.name === 'screenshot') {
-      proof.push({ path: a.path, contentType: a.contentType, label: `Screenshot (${browser})` });
-    } else if (a.name === 'video') {
-      proof.push({ path: a.path, contentType: a.contentType, label: `Video (${browser})` });
+    if (a.name === 'screenshot' || a.name === 'video') {
+      continue;
+    } else if (a.name === 'a11y-evidence') {
+      // The WCAG violations painted onto the actual page — the only way a static accessibility
+      // defect (missing alt text, low contrast, …) becomes visible in a screenshot at all.
+      proof.push({
+        path: a.path,
+        contentType: a.contentType,
+        label: `Annotated WCAG screenshot (${browser})`,
+      });
     } else if (a.name === 'crash-evidence') {
       // An annotated screenshot: the JS crash painted onto the page as readable text, so the IMAGE
       // itself shows the bug (the raw screenshot only shows a normal-looking screen).

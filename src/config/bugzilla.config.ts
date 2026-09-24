@@ -69,6 +69,8 @@ export interface BugzillaConfig {
   dryRun: boolean;
   maxFile: number;
   fileUiFailures: boolean;
+  /** File WCAG (accessibility) findings, one ticket per rule (see env BUGZILLA_FILE_ACCESSIBILITY). */
+  fileAccessibilityFailures: boolean;
   /** Auto-close a bench-filed bug this run verified as fixed (see env `BUGZILLA_AUTO_RESOLVE`). */
   autoResolve: boolean;
   /** Close verified-fixed bugs but file/comment no new ones (see env `BUGZILLA_RESOLVE_ONLY`). */
@@ -90,6 +92,7 @@ export function readBugzillaConfig(): BugzillaConfig {
     dryRun: env.BUGZILLA_DRY_RUN,
     maxFile: env.BUGZILLA_MAX_FILE,
     fileUiFailures: env.BUGZILLA_FILE_UI_FAILURES,
+    fileAccessibilityFailures: env.BUGZILLA_FILE_ACCESSIBILITY,
     autoResolve: env.BUGZILLA_AUTO_RESOLVE,
     resolveOnly: env.BUGZILLA_RESOLVE_ONLY,
     tagPrefix: 'KP',

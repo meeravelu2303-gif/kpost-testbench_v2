@@ -352,10 +352,14 @@ export class EndpointExecutor {
   ): Promise<boolean> {
     if (env.MOCK_API || profile.id !== 'kpost') return true;
     try {
-      const canary = resolveEndpoint(this.apiRegistry.get('signup-login-fetch-user-details'));
+      // Canary MUST be a token-REQUIRED endpoint. fetchUserDetails is public (returns 200 with no
+      // token at all), so it cannot tell a good token from a bad one and would pass every token —
+      // defeating the retry. myContacts requires auth (401 without a valid token), so a 200 here
+      // means the token is genuinely accepted by the resource layer.
+      const canary = resolveEndpoint(this.apiRegistry.get('contacts-my-contacts'));
       const res = await this.send(
         canary,
-        { body: { kpostID: principal.username } },
+        { body: { lastfetchDate: null } },
         { label: 'setup:verify-token', auth: { header: `${profile.scheme} ${token}` } },
       );
       return res.status !== 401 && res.status !== 403;

@@ -141,6 +141,12 @@ const EnvSchema = z.object({
   /** File failures from the browser (UI) suites as well. */
   BUGZILLA_FILE_UI_FAILURES: z.stringbool().default(true),
   /**
+   * File WCAG (accessibility) findings from `accessibility-axe.spec.ts`, one ticket per RULE across
+   * every screen it hit — not one per screen. Independent of BUGZILLA_FILE_UI_FAILURES so a11y
+   * filing can be turned off on its own without touching crash/breakage filing.
+   */
+  BUGZILLA_FILE_ACCESSIBILITY: z.stringbool().default(true),
+  /**
    * Auto-close a bench-filed bug that this run VERIFIED as fixed — its exact endpoint+validator ran
    * and passed, and the fault did not reproduce. Marked RESOLVED/FIXED with a comment. Default on;
    * it only acts on a real filing run (never a dry run) and never touches a human-judged resolution.
@@ -151,6 +157,15 @@ const EnvSchema = z.object({
    * only reconciles "what the developers already fixed" without adding tickets yet.
    */
   BUGZILLA_RESOLVE_ONLY: z.stringbool().default(false),
+
+  /**
+   * Concurrency probes (read-consistency, burst-resilience, session-isolation, duplicate-write) fire
+   * a request as a SIMULTANEOUS BURST to catch races. On a host SHARED with the live application that
+   * load can degrade or take down production, so this switch turns them ALL off regardless of the
+   * validation profile. Default on; set CONCURRENCY_PROBES=false while the test app shares a server
+   * with live, and turn it back on once the test app has its own isolated server.
+   */
+  CONCURRENCY_PROBES: z.stringbool().default(true),
 
   VALIDATION_PROFILE: z.enum(VALIDATION_PROFILES).default('REGRESSION'),
   ALLOW_DESTRUCTIVE_TESTS: z.stringbool().default(false),
