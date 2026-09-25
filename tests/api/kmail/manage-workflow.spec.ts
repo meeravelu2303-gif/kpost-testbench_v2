@@ -211,18 +211,53 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
     expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
   });
 
-  test('kmail-reference-content: no live test (identifier-guard gap, not a workaround)', () => {
-    test.skip(
-      true,
-      'referenceKmailID (the natural way to obtain a real referenceMails id — reply to a mail we ' +
-        'just sent) matches the qa-identifier-guard\'s "mail" identifier pattern, and a real, runtime' +
-        '-scoped id we created ourselves is not in the static allowlist — the same class of gap as ' +
-        'kallIds/groupID, which ARE already exempted as runtime-scoped. referenceKmailID is not, so ' +
-        'the guard refuses the reply that would produce a real id to test with. Not worked around by ' +
-        'sending a fabricated id (a false 400/500) or editing the shared guard for one endpoint; ' +
-        'recorded pending a decision on extending the runtime-scoped exemption list.',
+  test('referenceMailContent: exact request shape is Unknown/Requires Clarification (identifier-guard gap fixed)', async ({
+    endpoints,
+  }) => {
+    /*
+     * The identifier-guard half of this gap is FIXED 2026-09-25: `referencekmailid`/`referencemails`
+     * are now exempted as runtime-scoped KMail ids (same class as `kmailid`/`kallid` already were),
+     * so a real mail's id can be used here instead of the guard refusing it outright.
+     *
+     * The request SHAPE is still Unknown/Requires Clarification, live-verified 2026-09-25: sending a
+     * real kmailID from a mail just sent 400s "Bad Request" (a plain Spring deserialization failure,
+     * no custom envelope) under every shape tried — `{referenceMails:[id]}` (number and string form),
+     * `{referenceKmailID:id}`, `{kmailIDs:[id]}`, `{kmailIds:[id]}`, a raw `[id]` array body, and
+     * `referenceMails`/`kmailID` as query params. Not worked around by guessing further; recorded
+     * with a real id now available whenever the correct shape is confirmed.
+     */
+    const composed = await endpoints.sendTo(
+      'kmail-post-mail',
+      {
+        body: mailShape({
+          toAddress: B.username,
+          kmailSubject: `QA reference-content ${Date.now()}`,
+        }),
+      },
+      { label: 'kmail:reference-content-send', auth: { principal: A }, allowLiveWrite: true },
     );
-    expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
+    expect.soft(composed.status, 'sending the mail to reference succeeds').toBeLessThan(300);
+    const parsed = composed.json();
+    const value = (parsed.ok ? parsed.value : {}) as { data?: unknown };
+    const row = Array.isArray(value.data)
+      ? (value.data[0] as Record<string, unknown>)
+      : (value.data as Record<string, unknown> | undefined);
+    const kmailID = typeof row?.kmailID === 'number' ? row.kmailID : undefined;
+    expect.soft(kmailID, 'the composed mail issues a real kmailID to reference').toBeTruthy();
+
+    if (kmailID) {
+      const ref = await endpoints.sendTo(
+        'kmail-reference-content',
+        { body: { referenceMails: [kmailID] } },
+        { label: 'kmail:reference-content', auth: { principal: A }, allowLiveRead: true },
+      );
+      expect
+        .soft(
+          ref.status,
+          'referenceMailContent returns a status (exact required shape: Unknown/Requires Clarification)',
+        )
+        .toBeLessThan(500);
+    }
   });
 
   test('kmail-download-thumbnail / kmail-media-streaming / kmail-download-attachment: no live test (needs an attachment upload lifecycle not yet built)', () => {
@@ -252,8 +287,13 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
       true,
       'getAllLetterHead lists exactly ONE letterhead (id "1") on this account, and whether it is a ' +
         'personal letterhead (safe to delete and re-create) or a shared system template (deleting it ' +
-        'would remove it for every account) has not been confirmed. Deleting it to test the endpoint ' +
-        'risks destroying shared state on a guess — recorded pending the dev confirming the ' +
+        'would remove it for every account) has not been confirmed. Re-checked 2026-09-25: ' +
+        'getLetterHead marks it `"default":"Y"` and its assets sit at a generic S3 path ' +
+        '(letterHead/LHH2.png, LHF2.png) — evidence pointing toward a shared system default, not ' +
+        'something this account personally uploaded, which only strengthens the original concern. ' +
+        'No registered endpoint creates a NEW letterhead to safely delete instead (only ' +
+        'get-all/get-current/get-template/set-active-by-id/delete-by-id are registered). Deleting the ' +
+        'only one on a guess risks destroying shared state — recorded pending the dev confirming the ' +
         'letterhead ownership model, not worked around by deleting it anyway.',
     );
     expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);

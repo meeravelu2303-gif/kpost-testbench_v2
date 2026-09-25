@@ -113,10 +113,18 @@ export const searchDetailsApi = defineContactsEndpoint({
   // Reference data (area names), not a person. Harmless read.
   destructive: false,
   productionSafe: true,
-  // The documented cascade fields (province/state/city) are sent empty so the payload matches the
-  // contract — an `areaName` lookup ignores them, but a strict presence check cannot then 400 us.
+  /*
+   * A REAL cascade, not independent lookups — live-verified 2026-09-24, correcting the prior
+   * assumption here (that `areaName` "ignores" the other fields). The server requires each level
+   * populated from the one above it: `country` -> `provienceName` (a ZONE, e.g. "Southern Zone", not
+   * a state) -> `state` (needs `provienceName`) -> `city` (needs `provienceName` + `state`) ->
+   * `areaName` (needs all three). Requesting `areaName` with the lower levels empty 400s
+   * ("Missing required fields for requestType 'areaName'") — that was this default, so the
+   * endpoint's own baseline call always failed. `provienceName` is the only level valid with just
+   * `country`, so it is the new default; `contacts-search-cascade.spec.ts` drives the full chain.
+   */
   request: body(() => ({
-    requestType: 'areaName',
+    requestType: 'provienceName',
     country: 'INDIA',
     provienceName: '',
     state: '',

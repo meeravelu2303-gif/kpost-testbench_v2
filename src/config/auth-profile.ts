@@ -125,8 +125,10 @@ const ALL_KPOST_PRINCIPALS: readonly (Principal & { account: keyof TestData })[]
     password: testData.password,
     userType: 'BUSINESS_M',
     // Verified on live (2026-09-15): these accounts log in via plain `userLogin` (the default) and the
-    // token carries companyID + role:admin, which also authenticates the Admin module. `adminUserLogin`
-    // answers 403 for them — so no `loginEndpointId` override.
+    // token carries companyID + role:admin, which also authenticates the Admin module — so no
+    // `loginEndpointId` override. `adminUserLogin` itself now 500s for every tier, business-m
+    // included (regression, live-verified 2026-09-24, filed as #598 — see
+    // signup-login/admin-login-regression.spec.ts); this account never needs it as a login path.
   },
   {
     key: 'business-l',

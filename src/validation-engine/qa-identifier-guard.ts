@@ -110,6 +110,9 @@ const NOT_A_RESOURCE = new Set(
     // class as groupkpostname; without it the identifier guard blocks a rename with a non-QA name.
     'groupname',
     'memberdesignation',
+    // A capacity/quantity number (e.g. an enquiry's requested seat count), not a member id — matches
+    // the pattern only because the key contains "member".
+    'maximummemberscount',
     'reportid',
     // Group metadata flags/paths — contain "group" but are booleans/paths, not a group id.
     'isprivategroup',
@@ -146,6 +149,14 @@ const NOT_A_RESOURCE = new Set(
     'draftkmailid',
     'saluationid',
     'templateid',
+    /*
+     * `referenceKmailID` (a reply/forward pointing at a mail we sent) and `referenceMails` (the array
+     * form `kmail-reference-content` reads by) — the same runtime-scoped KMail id as `kmailID` above,
+     * just under the reply-specific key names. Without this, replying to our own mail to mint a real
+     * id to test with is refused, the one gap `kmail-reference-content` was blocked on.
+     */
+    'referencekmailid',
+    'referencemails',
     // KMail content/enum/meta fields that match only via the "mail"/"msg"/"attachment" token — a
     // subject, a body, a send timestamp, a type/priority/flag — not tenant resources.
     'kmailstatusflag',

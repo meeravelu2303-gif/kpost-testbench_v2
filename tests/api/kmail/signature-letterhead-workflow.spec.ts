@@ -82,22 +82,44 @@ test.describe('KMail · signature components, letterhead, count-days-limit @api 
     expect(read.status, 'getMailSignature reads back').toBe(200);
   });
 
-  test('sig-company: no live test yet (QA_COMPANY_NAME is not configured)', () => {
+  test('sig-company: saveOrUpdateMailSignatureCompanyData is accepted and reflected on getMailSignature', async ({
+    endpoints,
+  }) => {
     /*
-     * companyName is a hard-required IDENTITY_FIELD (src/config/test-data.config.ts) — the schema
-     * default is deliberately NOT allowed to stand in for it on live, because an unconfigured
-     * default would tell the QA-identifier guard that some arbitrary/real company is ours to name
-     * in a request. Only `QA_COMPANY_NAME_ABSENT` is set in .env today (for negative testing);
-     * `QA_COMPANY_NAME` itself needs a real, owner-confirmed company name this QA account genuinely
-     * belongs to before `kmail-sig-company` (and the companyData half of `kmail-sig-full`) can be
-     * exercised live. Not worked around by inventing a value — that is exactly the danger the
-     * guard's own docstring warns about.
+     * companyName is a hard-required IDENTITY_FIELD — a fabricated value would tell the
+     * QA-identifier guard that some arbitrary/real company is ours to name. Unblocked 2026-09-25:
+     * `QA_COMPANY_NAME=Nebius Solutions` is now set in `.env`, confirmed live via
+     * `common-company-details` authenticated AS the `business-m` principal itself (co 242) —
+     * genuinely owner-confirmed, not invented. A company signature only makes sense for a business
+     * account, so this runs as `business-m`, not the personal principal every other test here uses.
      */
-    test.skip(
-      !process.env.QA_COMPANY_NAME,
-      'set QA_COMPANY_NAME in .env to a real, owner-confirmed company name to unblock this',
+    const BM = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'business-m')!;
+    const company = {
+      companyName: testData.companyName,
+      website: 'https://kpostindia.com',
+      addressLine1: 'QA Bench Address Line 1',
+      addressLine2: 'QA Bench Address Line 2',
+    };
+    const saved = await endpoints.sendTo(
+      'kmail-sig-company',
+      { body: company },
+      { label: 'kmail:sig-company', auth: { principal: BM }, allowLiveWrite: true },
     );
-    expect(testData.companyName, 'once configured, this test can assert against it').toBeTruthy();
+    expect(saved.status, 'saveOrUpdateMailSignatureCompanyData is accepted').toBeLessThan(300);
+
+    const read = await endpoints.sendTo(
+      'kmail-mail-signature',
+      {},
+      { label: 'kmail:sig-company-read', auth: { principal: BM } },
+    );
+    expect(read.status, 'getMailSignature reads back').toBe(200);
+    const body = JSON.parse(read.bodyText || '{}') as {
+      data?: { companyData?: { companyName?: string } };
+    };
+    expect(
+      body.data?.companyData?.companyName,
+      'the saved company name is reflected back exactly',
+    ).toBe(testData.companyName);
   });
 
   test('signature "full" write sets every section in one call, reflected on getMailSignature', async ({

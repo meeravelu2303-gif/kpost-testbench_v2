@@ -115,8 +115,13 @@ test.describe('KPost KDiary · feature flow', () => {
             { eventIds: [eventID], remarks: 1, remarksDescription: 'Completed by QA' },
             'remarks',
           ],
-          ['kdiary-save-report', { eventID, report: 'QA bench report' }, 'save-report'],
-          ['kdiary-edit-report', { eventID, report: 'QA bench report edited' }, 'edit-report'],
+          /*
+           * Live-verified 2026-09-24: the report FIELD is `taskReport`, not `report` — `report` is
+           * silently accepted (200) but never persisted (see `saveReportApi`'s comment). `saveReport`
+           * is also date-scoped ("Report already exists for today" on a re-run the same day), which
+           * is fine here since it stays out of `clientUsed` below.
+           */
+          ['kdiary-save-report', { eventID, taskReport: 'QA bench report' }, 'save-report'],
         ];
         // The client-used endpoints must succeed; the frontend-unused ones may 4xx/5xx (findings).
         // `addparticipants` now carries the client field shape (`{eventID, participants}`) but the
@@ -126,6 +131,32 @@ test.describe('KPost KDiary · feature flow', () => {
         for (const [id, bodyObj, label] of steps) {
           const r = await write(endpoints, id, bodyObj, label);
           expect.soft(r.status, `${label} status`).toBeLessThan(clientUsed.has(label) ? 300 : 600);
+        }
+
+        /*
+         * `editReport` needs the REPORT's own id (not eventID) — read it back from `getTodayReport`
+         * so this works whether the `save-report` step above just created it or "already exists for
+         * today" fired instead (a report for today exists either way).
+         */
+        const todayReport = await endpoints
+          .sendTo(
+            'kdiary-today-report',
+            {},
+            { label: 'kdiary:report-lookup', auth: { principal: A } },
+          )
+          .catch(() => undefined);
+        const parsedReport = todayReport?.json();
+        const reportId = parsedReport?.ok
+          ? (parsedReport.value as { data?: { id?: number } }).data?.id
+          : undefined;
+        if (reportId) {
+          const edited = await write(
+            endpoints,
+            'kdiary-edit-report',
+            { id: reportId, taskReport: 'QA bench report edited' },
+            'edit-report',
+          );
+          expect.soft(edited.status, 'edit-report status').toBeLessThan(300);
         }
       }
     } finally {

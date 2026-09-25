@@ -108,18 +108,22 @@ export const adminUserLoginApi = defineKpostEndpoint({
 export const generateJwTokensApi = defineKpostEndpoint({
   id: 'signup-login-generate-jwt',
   /*
-   * Exchanges a refresh token for a new access token. On testingapi the login response does not
-   * expose a `refreshToken` where the chain can read it, so the endpoint answers 400 "refreshToken
-   * is required" — a precondition, not a defect. Not run standalone (that 400 would read as a false
-   * CRITICAL); confirm with the dev where the login returns the refresh token, then drive it from a
-   * lifecycle. Left `needs-id` until then.
+   * Exchanges a refresh token for a new access token. Live-verified 2026-09-24 (corrects the prior
+   * note here): the login response DOES expose a `refreshToken` — but only on a login that runs on
+   * its OWN fresh device id, not the shared cached session every other test in a run reuses (whose
+   * accessToken belongs to a different device). And redeeming it is device-scoped: the caller must
+   * be authorized with THAT SAME login's own accessToken — authorizing with the shared cached
+   * principal token instead (a different device) is correctly refused with 401 "UNAUTHORIZED USER".
+   * See `tests/api/kpost/signup-login/session-lifecycle.spec.ts` for both branches, driven from a
+   * dedicated device-scoped login rather than this `helpers.call` chain (which reuses the shared
+   * session and so cannot observe the same-device case).
    */
   requirements: ['FR-SL-026', 'NFR-SEC01'],
   method: 'POST',
   path: '/v2/signupLogin/generateJWTokens/',
   summary: 'Exchange a refresh token for a new access token',
   tags: [...LOGIN_TAGS, 'token-refresh', 'needs-id'],
-  note: 'needs a runtime refreshToken the login must expose (empty → 400 "refreshToken is required")',
+  note: 'device-scoped: needs a runtime refreshToken AND its own login\'s accessToken as authorization (see session-lifecycle.spec.ts)',
   destructive: false,
   /*
    * Needs a real refresh token, which only a login produces. `helpers.call` runs the login

@@ -122,19 +122,33 @@ export const saveReportApi = defineKdiaryEndpoint({
   summary: 'Save a diary report',
   tags: [...WRITE_TAGS, 'report'],
   destructive: true,
-  request: body(() => ({ eventID: 0, report: 'QA bench report' })),
-  note: 'workbook documents no body; report shape inferred',
+  /*
+   * The workbook documents no body, and the field was originally guessed as `report` — live-verified
+   * 2026-09-24: the server accepts that silently (200) but the saved row's `taskReport` column stays
+   * null, confirmed against `getTodayReport` immediately after. The real field is `taskReport`,
+   * matching the exact key every read response already returns it under.
+   */
+  request: body(() => ({ eventID: 0, taskReport: 'QA bench report' })),
+  note: 'field is `taskReport`, not `report` (live-verified 2026-09-24 — see saveReportApi comment)',
 });
 
 export const editReportApi = defineKdiaryEndpoint({
   id: 'kdiary-edit-report',
   method: 'POST',
   path: '/dairySchedule/editReport',
-  summary: 'Edit a diary report',
-  tags: [...WRITE_TAGS, 'report'],
+  summary: "Edit today's diary report",
+  tags: [...WRITE_TAGS, 'report', 'needs-id'],
   destructive: true,
-  request: body(() => ({ eventID: 0, report: 'QA bench report edited' })),
-  note: 'workbook documents no body; report shape inferred',
+  /*
+   * Live-verified 2026-09-24: `eventID` is the wrong key entirely — the server answers 400 "Report id
+   * is required". It needs the REPORT's own `id` (the one `saveReport`/`getTodayReport` return, e.g.
+   * `{"data":{"id":10,"taskReport":…}}`), not the event's id, plus `taskReport` (not `report`) for
+   * the text — confirmed both by a 200 that echoed the new text back and by `getTodayReport`
+   * reflecting it afterward. `0` is never a real report id, so this needs a real one from a prior
+   * `saveReport` in the same lifecycle.
+   */
+  request: body(() => ({ id: 0, taskReport: 'QA bench report edited' })),
+  note: 'needs the REPORT id (not eventID) from saveReport/getTodayReport; field is `taskReport`',
 });
 
 export const kdiaryWriteApis = [
