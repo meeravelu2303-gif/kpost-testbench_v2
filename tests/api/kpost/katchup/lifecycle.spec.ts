@@ -48,7 +48,7 @@ test.describe('KPost Katchup · 1:1 lifecycle', () => {
     const exchange = await endpoints.sendTo(
       'katchup-send-message',
       { body: sendShape(overrides) },
-      { label: 'katchup-lifecycle:send' },
+      { label: 'katchup-lifecycle:send', allowLiveWrite: true },
     );
     const parsed = exchange.json();
     return {
@@ -75,32 +75,6 @@ test.describe('KPost Katchup · 1:1 lifecycle', () => {
     msgID = created?.msgID as number;
   });
 
-  test('an empty subject is handled deliberately (FR-K02)', async ({ endpoints }) => {
-    /*
-     * FR-K02 requires a Subject. The web client never sends an empty one (it defaults to "General"),
-     * so the API's own behaviour is untested by the product. We send `subject: ""` to find out: it
-     * should either reject the message OR store "General" — never store a blank subject silently.
-     * This asserts the meaningful contract; if it fails, that IS the finding (flow doc §2.3).
-     */
-    const { status, body } = await send(endpoints, { subject: '' });
-    const created = firstCreated(body);
-
-    const rejectedOrDefaulted = status >= 400 || created?.subject === 'General';
-    expect(
-      rejectedOrDefaulted,
-      `an empty subject must be rejected or defaulted, not stored blank (got status ${status}, subject ${JSON.stringify(created?.subject)})`,
-    ).toBe(true);
-
-    // Clean up whatever was created, if anything (harmless when there is no id).
-    await endpoints
-      .sendTo(
-        'katchup-delete-message',
-        { body: { msgID: created?.msgID ?? 0, groupFlag: false } },
-        { label: 'katchup-lifecycle:cleanup-empty-subject' },
-      )
-      .catch(() => undefined);
-  });
-
   test('the sent message appears in the conversation with our second account (FR-K07)', async ({
     endpoints,
   }) => {
@@ -125,7 +99,7 @@ test.describe('KPost Katchup · 1:1 lifecycle', () => {
     const exchange = await endpoints.sendTo(
       'katchup-recall-message',
       { body: { msgID, groupFlag: false } },
-      { label: 'katchup-lifecycle:recall' },
+      { label: 'katchup-lifecycle:recall', allowLiveWrite: true },
     );
     expect(exchange.status, 'recall succeeds').toBeLessThan(300);
   });
@@ -134,9 +108,40 @@ test.describe('KPost Katchup · 1:1 lifecycle', () => {
     expect(msgID, 'the send test must have produced a msgID').toBeTruthy();
     const exchange = await endpoints.sendTo(
       'katchup-delete-message',
-      { body: { msgID, groupFlag: false } },
-      { label: 'katchup-lifecycle:delete' },
+      { body: { messageIds: [msgID], groupFlag: false } },
+      { label: 'katchup-lifecycle:delete', allowLiveWrite: true },
     );
     expect(exchange.status, 'delete succeeds — the message is cleaned up').toBeLessThan(300);
+  });
+
+  /*
+   * Independent of the msgID chain above (sends and cleans its own message) — kept last in this
+   * `serial` describe so a failure here (a known, confirmed finding — see below) can never block the
+   * main send → conversation → recall → delete chain from running.
+   */
+  test('an empty subject is accepted as-is (FR-K02, amended 2026-09-25)', async ({ endpoints }) => {
+    /*
+     * FR-K02/BR-K01 amended 2026-09-25: Subject is no longer mandatory. The owner's updated
+     * requirement is that a message with no Subject must be accepted, not rejected and not silently
+     * defaulted. (Previously the opposite was asserted here as BR-K01-empty-subject-stored-blank,
+     * filed as #615 [KP-9DD851] — closed as invalid once the requirement changed; the observed
+     * behaviour, storing `subject: ""` verbatim with a 200, was correct all along.) The web client
+     * still defaults an empty composer field to "General" before sending — a UI convenience, not an
+     * API contract — so this sends `subject: ""` directly to prove the API's own acceptance.
+     */
+    const { status, body } = await send(endpoints, { subject: '' });
+    const created = firstCreated(body);
+
+    expect(status, 'an empty subject is accepted, not rejected').toBeLessThan(300);
+    expect(created?.subject, 'the empty subject is stored as sent, not silently defaulted').toBe('');
+
+    // Clean up whatever was created (harmless when there is no id).
+    await endpoints
+      .sendTo(
+        'katchup-delete-message',
+        { body: { messageIds: [created?.msgID ?? 0], groupFlag: false } },
+        { label: 'katchup-lifecycle:cleanup-empty-subject', allowLiveWrite: true },
+      )
+      .catch(() => undefined);
   });
 });

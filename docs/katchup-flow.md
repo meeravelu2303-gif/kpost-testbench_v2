@@ -73,12 +73,14 @@ what the original was, so the UI can label it "Copies · Reply", "Forwarded By",
    display quirk, not a contract change — the send codes are authoritative — but worth knowing when
    reading the screen. _No action needed unless the display is wrong._
 
-3. **Subject is auto-defaulted, so FR-K02 cannot be tested through the UI.** FR-K02/BR-K01 require a
-   Subject on every message. The client **never sends an empty subject**: `subject == null || "" ?
-"General"` (WriteMessage.js, KatchupMessage.js). So the screen enforces the rule by _defaulting_,
-   not by blocking. Whether the **API** rejects an empty subject is therefore untested by the client
-   and is a real question — the bench sends `subject: ""` directly to find out. _Is an empty subject
-   meant to be rejected, or is defaulting to "General" the intended behaviour?_
+3. **FR-K02/BR-K01 amended, 2026-09-25: Subject is no longer mandatory.** Previously read as "every
+   message must carry a Subject" (rejected or defaulted if empty). Per the owner's updated
+   requirement, a message with no Subject must now be **accepted as-is** — an empty `subject: ""` is
+   valid input, not an error condition. `sendMessage` already does this (200, stores `subject: ""`
+   verbatim), so no backend fix is needed; this was previously mis-flagged as a defect (#615, now
+   closed as invalid — not a bug, the requirement changed). The client still defaults an empty
+   composer Subject to "General" before sending (WriteMessage.js, KatchupMessage.js) — that remains a
+   UI convenience, not something the API enforces or ever needs to.
 
 ## 3. The send contract, from the live client
 
@@ -161,7 +163,12 @@ counts it and it runs the moment the accounts arrive.
 
 ## 6. Open questions for the owner
 
-1. **Empty subject** — reject, or default to "General"? (governs the FR-K02 assertion; §2.3)
+1. ~~**Empty subject** — reject, or default to "General"?~~ **Answered by the owner, 2026-09-25: FR-K02
+   requirement changed — Subject is no longer required.** A message with an empty Subject must be
+   accepted as-is (not rejected, not silently defaulted). `sendMessage` already does exactly that
+   (200, `subject: ""` stored verbatim), so this is now the documented, correct behaviour — not a
+   defect. #615 [KP-9DD851] closed as invalid (requirement changed after filing).
+   `lifecycle.spec.ts`'s "an empty subject is accepted" test confirms this.
 2. **`recallMessage` payload** — `{msgID, groupFlag}` (live client) vs `{msgID, status:5}` (workbook)?
    (§2.1)
 3. **How many extra PERSONAL accounts** will you create, and their ids — needed for group (≥3), Cc and

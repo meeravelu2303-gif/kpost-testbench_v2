@@ -98,6 +98,13 @@ const NOT_A_RESOURCE = new Set(
     'searchmessage',
     'messagetime',
     'servertime',
+    /*
+     * The Disappearing/Secret-Message auto-delete deadline (an epoch ms, one hour out) — a timestamp,
+     * same class as messagetime/servertime above. Matches the pattern only because it contains
+     * "message". Found live 2026-09-25: refused every scheduled-secret-message send in
+     * feature.spec.ts, since a future Date.now()-derived ms is never a QA-owned value.
+     */
+    'secretmessageexpiretime',
     'sharedtype',
     'selectedmembers',
     'isvoicemessage',
@@ -129,6 +136,16 @@ const NOT_A_RESOURCE = new Set(
      */
     'msgid',
     'msgids',
+    /*
+     * `deleteKatchUpMessage`'s own field spelling (Katchup.js `DeleteMessage`) — the live client uses
+     * `messageIds` (an ARRAY), not `msgIds`, for this one endpoint. Same runtime-scoped msgID as
+     * above, just a different plural. Missing this exemption meant every `katchup-delete-message`
+     * cleanup call across this suite silently threw (caught by a `.catch(() => undefined)` at each
+     * call site, so the failure was never visible) instead of actually deleting the message —
+     * confirmed live 2026-09-25 while investigating a `katchup-recall-message` finding.
+     */
+    'messageid',
+    'messageids',
     'temporarymsgid',
     'oldmsgid',
     'sourcemsgid',

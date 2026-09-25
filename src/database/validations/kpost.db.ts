@@ -163,8 +163,9 @@ export const kpostProfileUpdatedValidation: DatabaseValidation = {
  *
  * This is the validation the send lifecycle most needs, for a KPost-specific reason: `subject` is a
  * **BLOB**, so a naive comparison against the string the test sent fails even when the stored bytes
- * are identical. `text()` decodes it. BR-K01 (every message carries a subject) is only genuinely
- * verifiable here — the send response echoes back what it was handed, whatever it stored.
+ * are identical. `text()` decodes it. BR-K01 (a message's Subject, when given, is carried as sent —
+ * Subject itself is optional per the FR-K02 amendment 2026-09-25) is only genuinely verifiable here —
+ * the send response echoes back what it was handed, whatever it stored.
  */
 export const katchupMessagePersistedValidation: DatabaseValidation = {
   id: 'katchup-message-persisted',

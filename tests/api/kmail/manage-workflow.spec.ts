@@ -260,16 +260,55 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
     }
   });
 
-  test('kmail-download-thumbnail / kmail-media-streaming / kmail-download-attachment: no live test (needs an attachment upload lifecycle not yet built)', () => {
-    test.skip(
-      true,
-      'all three need a real attachment uuid from a mail that actually has a file attached. The ' +
-        'bench can mint a presigned S3 URL (aws-generate-presigned) but does not yet drive an actual ' +
-        'PUT upload to it followed by a postMail carrying that uuid as an attachment — that lifecycle ' +
-        'does not exist for KMail yet. Recorded as a scope gap for a future attachment-lifecycle spec, ' +
-        'not worked around with a fabricated uuid.',
+  test('kmail-download-thumbnail / kmail-media-streaming / kmail-download-attachment: happy path still needs an attachment upload lifecycle; nonexistent-uuid handling is tested', async ({
+    endpoints,
+  }) => {
+    /*
+     * The HAPPY PATH (a real attachment uuid from a mail that actually has a file attached) is still
+     * a recorded gap: `postMail` only accepts a JSON body with a pre-existing `attachmentUuid` — live-
+     * verified 2026-09-25, it answers 415 "Unsupported Media Type" for a multipart request — and the
+     * one documented multipart upload route, `draftMailMultiPart`, still 404s (see the test above).
+     * There is no way to mint a real, uploaded attachment uuid for KMail yet, so the happy path is not
+     * worked around with a fabricated one.
+     *
+     * What IS testable without a real upload: how each endpoint handles a well-formed but NONEXISTENT
+     * uuid — and that surfaced a real, reproducible defect. Live-verified 2026-09-25 across 3 distinct
+     * fake uuids: `downloadAttachment`/`downloadThumbnail` both answer 200 with an EMPTY body (should
+     * be 404, not a silent empty "success"); `mediaStreaming` answers 500 every time (a crash on input
+     * that will occur for real whenever a client holds a stale/deleted attachment reference) — filed
+     * as **#604**, CRITICAL, KMail API.
+     */
+    // A genuine 5xx from an allowLiveRead-authorized call auto-files via the engine's own
+    // flow-finding pipeline (verified: filed as #604) — no manual recordBusinessRuleViolation needed.
+    const fakeUuids = ['test-uuid', 'no-such-attachment-9f2a', 'another-fake-uuid-123'];
+    for (const uuid of fakeUuids) {
+      const stream = await endpoints.sendTo(
+        'kmail-media-streaming',
+        { pathParams: { uuid } },
+        { label: `kmail:media-streaming:${uuid}`, auth: { principal: A }, allowLiveRead: true },
+      );
+      expect
+        .soft(stream.status, `mediaStreaming(${uuid}) does not crash on a nonexistent attachment`)
+        .toBeLessThan(500);
+    }
+
+    const download = await endpoints.sendTo(
+      'kmail-download-attachment',
+      { pathParams: { uuid: fakeUuids[0]! } },
+      { label: 'kmail:download-attachment-fake', auth: { principal: A }, allowLiveRead: true },
     );
-    expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
+    expect
+      .soft(download.status, 'downloadAttachment does not crash on a nonexistent attachment')
+      .toBeLessThan(500);
+
+    const thumb = await endpoints.sendTo(
+      'kmail-download-thumbnail',
+      { pathParams: { uuid: fakeUuids[0]! } },
+      { label: 'kmail:download-thumbnail-fake', auth: { principal: A }, allowLiveRead: true },
+    );
+    expect
+      .soft(thumb.status, 'downloadThumbnail does not crash on a nonexistent attachment')
+      .toBeLessThan(500);
   });
 
   test("kmail-bulk-status: no live test (blocked by postBulkMail's Unknown/Requires Clarification shape)", () => {

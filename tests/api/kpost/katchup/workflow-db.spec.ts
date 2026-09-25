@@ -136,6 +136,57 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
     );
   });
 
+  /*
+   * "delete" runs BEFORE "recall" deliberately (against its own, independent seed message, not the
+   * shared `msgId` above). This describe block is `serial` (required: the project runs
+   * `fullyParallel`, see `endpoint-cases.ts`), and `serial` skips every later test once ANY earlier
+   * one fails — regardless of soft vs. hard assertions. `recall` (below) is a known, permanently-open
+   * regression (#610); ordering "delete" after it would mean this soft-delete check could never run
+   * at all. See `lifecycle.spec.ts`'s empty-subject test for the same independence pattern.
+   */
+  test('delete: the message is soft-deleted, not removed from the table', async ({
+    endpoints,
+    databases,
+  }) => {
+    const database = databases.for('kpost-api');
+    test.skip(!database.enabled, 'needs the KPOST_QA connection to assert persistence');
+
+    const seed = await endpoints.sendTo(
+      'katchup-send-message',
+      { body: sendShape({ subject: `${subject} delete-test`, actualMessage: message }) },
+      { label: 'workflow-db:delete-seed', allowLiveWrite: true },
+    );
+    expect(seed.status, 'the seed send succeeds').toBeLessThan(300);
+    const seedParsed = seed.json();
+    const seedData = seedParsed.ok ? (seedParsed.value as { data?: unknown }).data : undefined;
+    const seedRow = Array.isArray(seedData) ? (seedData[0] as Record<string, unknown>) : undefined;
+    const deleteMsgId = seedRow?.msgID as number | undefined;
+    expect(deleteMsgId, 'a numeric msgID was issued for the seed').toEqual(expect.any(Number));
+
+    const exchange = await endpoints.sendTo(
+      'katchup-delete-message',
+      { body: { messageIds: [deleteMsgId], groupFlag: false } },
+      { label: 'workflow-db:delete', allowLiveWrite: true },
+    );
+    expect(exchange.status, 'delete succeeds — the message is cleaned up').toBeLessThan(300);
+
+    const stored = await row(new KpostRepository(database), deleteMsgId);
+
+    /*
+     * The distinction that matters, and the one the response cannot express: KPost deletes a
+     * Katchup message per participant, so the ROW must survive with a flag set. A hard delete would
+     * also take the counterparty's copy — the recipient's message vanishing because the sender
+     * tidied up is a data-loss defect, and on the wire it looks identical to a correct soft delete.
+     */
+    expect(
+      stored,
+      'a per-participant delete must leave the row in place for the other party',
+    ).toBeDefined();
+    expect(Number(stored?.deleted_by_sender ?? 0), 'deleted_by_sender records who removed it').toBe(
+      1,
+    );
+  });
+
   test('recall: the API reports success AND MySQL marks it deleted for the sender', async ({
     endpoints,
     databases,
@@ -163,45 +214,34 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
     expect(stored, 'a recall is a soft delete: the row must still exist').toBeDefined();
     const senderDeleted = Number(stored?.deleted_by_sender ?? 0);
     const receiverDeleted = Number(stored?.deleted_by_receiver ?? 0);
-    expect(
-      senderDeleted === 1 || receiverDeleted === 1,
-      `recall reported success but neither deletion flag moved ` +
-        `(deleted_by_sender=${senderDeleted}, deleted_by_receiver=${receiverDeleted})`,
-    ).toBe(true);
-  });
-
-  test('delete: the message is soft-deleted, not removed from the table', async ({
-    endpoints,
-    databases,
-  }) => {
-    const database = databases.for('kpost-api');
-    test.skip(
-      !database.enabled || msgId === undefined,
-      'needs the sent message from the first step',
-    );
-
-    const exchange = await endpoints.sendTo(
-      'katchup-delete-message',
-      { body: { msgID: msgId, groupFlag: false } },
-      { label: 'workflow-db:delete', allowLiveWrite: true },
-    );
-    expect(exchange.status, 'delete succeeds — the message is cleaned up').toBeLessThan(300);
-
-    const stored = await row(new KpostRepository(database), msgId);
-
+    const flagMoved = senderDeleted === 1 || receiverDeleted === 1;
     /*
-     * The distinction that matters, and the one the response cannot express: KPost deletes a
-     * Katchup message per participant, so the ROW must survive with a flag set. A hard delete would
-     * also take the counterparty's copy — the recipient's message vanishing because the sender
-     * tidied up is a data-loss defect, and on the wire it looks identical to a correct soft delete.
+     * Live-verified 2026-09-25 (the first time this test could run at all — it was blocked behind
+     * the now-fixed `katchup-send-message` outage): recallMessage answers 200 "Message recalled
+     * successfully" for `groupFlag: false` (also reproduced with the string `"false"`) while leaving
+     * BOTH deletion flags at 0 — the message stays visible in both threads. `groupFlag: true`/`"true"`
+     * instead crashes with a 500. This is a 2xx-but-wrong-DATA defect the engine's own validators
+     * cannot see (the response body genuinely says success), so it's filed explicitly. Filed as
+     * **#610** [KP-80AC38], HIGH, KPost API. Soft, not hard: kept last in this `serial` chain so a
+     * known, already-filed regression here never blocks a test that could otherwise run.
      */
-    expect(
-      stored,
-      'a per-participant delete must leave the row in place for the other party',
-    ).toBeDefined();
-    expect(Number(stored?.deleted_by_sender ?? 0), 'deleted_by_sender records who removed it').toBe(
-      1,
-    );
+    if (!flagMoved) {
+      endpoints.recordBusinessRuleViolation({
+        endpointId: 'katchup-recall-message',
+        ruleId: 'REGRESSION-katchup-recall-no-db-effect',
+        rule: 'recallMessage must actually mark the message deleted for the sender or receiver when it reports success — a 200 with neither flag moved is a false success.',
+        expected: 'deleted_by_sender=1 or deleted_by_receiver=1 after a 2xx recall',
+        actual: `${exchange.status}, deleted_by_sender=${senderDeleted}, deleted_by_receiver=${receiverDeleted}`,
+        request: { body: { msgID: msgId, groupFlag: false } },
+      });
+    }
+    expect
+      .soft(
+        flagMoved,
+        `recall reported success but neither deletion flag moved ` +
+          `(deleted_by_sender=${senderDeleted}, deleted_by_receiver=${receiverDeleted})`,
+      )
+      .toBe(true);
   });
 
   test.afterAll(() => {

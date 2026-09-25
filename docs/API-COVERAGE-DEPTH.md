@@ -72,10 +72,10 @@ one still needs its own dependency-flow test written as that module is reached.
 
 | Module | Registered | API-rich | Generic-only | Depth |
 | --- | ---: | ---: | ---: | ---: |
-| `kmail` | 70 | 62 | 8 | 89% ✅ done 2026-09-25 (8 recorded gaps, see below) |
+| `kmail` | 70 | 65 | 5 | 93% ✅ done 2026-09-25 (5 recorded gaps, see below) |
 | `kpost/profile` | 45 | 32 | 13 | 71% ✅ done 2026-09-24 (10 permanently by design, 3 real gaps) |
 | `admin` | 38 | 29 | 9 | 76% |
-| `kpost/katchup` | 36 | 24 | 12 | 67% ⚠️ blocked 2026-09-24, see note |
+| `kpost/katchup` | 36 | 29 | 7 | 81% ✅ done 2026-09-25 (7 genuinely blocked, see note) |
 | `kpost/common` | 33 | 28 | 5 | 85% ✅ done 2026-09-24 |
 | `kpost/kall` | 20 | 20 | 0 | 100% ✅ done 2026-09-24 |
 | `kpost/kos` | 18 | 17 | 1 | 94% ✅ done 2026-09-24 |
@@ -87,7 +87,7 @@ one still needs its own dependency-flow test written as that module is reached.
 | `kpost/settings` | 7 | 7 | 0 | 100% ✅ done 2026-09-24 |
 | `kpost/aws` | 4 | 4 | 0 | 100% ✅ done 2026-09-24 |
 | `kpost/dashboard` | 3 | 3 | 0 | 100% ✅ done 2026-09-24 |
-| **Total (real KPost/KMail/Admin surface)** | **341** | **281** | **60** | **82%** |
+| **Total (real KPost/KMail/Admin surface)** | **341** | **284** | **57** | **83%** |
 
 **Excluded from the table above — bench-internal scaffolding, not KPost product endpoints**
 (`users`, `auth`, `companies`, `dictionary`, `health` — 9 endpoints): every one of these carries
@@ -129,22 +129,12 @@ flag, and the engine's safety gate (`destructiveBlockReason`) only grants a live
 non-destructive "needs-id" read. Recorded as a skipped, explicitly-reasoned placeholder test rather
 than worked around or left silently absent.
 
-### 3. `kmail` — ✅ done (2026-09-25): 60→62/70, 8 recorded gaps
+### 3. `kmail` — ✅ done (2026-09-25): 60→65/70, 5 recorded gaps
 
 Originally went 15→60 rich (21%→86%) on 2026-09-24 across `feature.spec.ts`, `reads-workflow.spec.ts`,
-`signature-letterhead-workflow.spec.ts`, `manage-workflow.spec.ts`. Revisited 2026-09-25 specifically
-to close as many of the 10 recorded gaps as could honestly be closed. Highlights from the original pass:
-
-**New defect found and filed while re-verifying the module 2026-09-25**: `kmail-reply-not-req-receiver`
-(`POST /common/replyNotRequiredByReceiver/`) 500s reproducibly reading back a mail the caller just
-sent, inside the *existing* `feature.spec.ts` kmailID-keyed-read loop. That loop's own comment assumed
-any 5xx there "files via the flow-finding pipeline" — false for this one: the read is authorized via
-`allowLiveRead` (`destructive: false`), and the engine's auto-filing only tracks `allowLiveWrite`-
-authorized 5xxs, so this genuine crash was going completely unfiled despite being caught by the
-assertion every run. Fixed by adding explicit `recordBusinessRuleViolation` filing inside the loop, so
-every endpoint it reads is actually covered by the safety net, not just the destructive ones. Filed as
-**#603** [KP-843C72], HIGH, KMail API — confirmed reproducible (not caused by this session's other
-changes; re-verified with them stashed out) and cleanly deduping on a second run.
+`signature-letterhead-workflow.spec.ts`, `manage-workflow.spec.ts`. Revisited twice more on 2026-09-25
+— once to close as many of the 10 recorded gaps as could honestly be closed, then again after the dev
+pushed changes, to re-verify every open ticket and check for anything the update fixed.
 
 - **Prerequisite finding**: `testkmail.kpostindia.com`'s long-standing 401-on-every-token regression
   (`auth-regression.spec.ts`, `KMAIL_AUTH_FIXED` gate) is fixed — verified live across 3 accounts
@@ -158,7 +148,7 @@ changes; re-verified with them stashed out) and cleanly deduping on a second run
   when `companyData` is omitted; `kmail-unopened-count` 500s deterministically for every account
   (`SQLGrammarException: could not extract ResultSet`) — not a flake, reproduced across 2 accounts.
 
-**2 of the original 10 gaps closed 2026-09-25**:
+**3 of the original 10 gaps closed**:
 - `kmail-sig-company` — `QA_COMPANY_NAME` is now set in `.env` to `Nebius Solutions`, confirmed live
   via `common-company-details` authenticated AS the `business-m` principal itself (co 242) — genuinely
   owner-confirmed via the account's own data, not invented. `saveOrUpdateMailSignatureCompanyData` now
@@ -171,27 +161,62 @@ changes; re-verified with them stashed out) and cleanly deduping on a second run
   id}`, `{kmailIDs:[id]}`, `{kmailIds:[id]}`, a raw `[id]` array body, and both as query params) 400s
   with a generic Spring deserialization failure. Recorded with a real id now available whenever the
   correct shape is confirmed — not worked around by guessing further.
+- `kmail-download-thumbnail` / `kmail-media-streaming` / `kmail-download-attachment` — the HAPPY PATH
+  is still blocked (see below), but nonexistent-uuid handling is now genuinely tested, live-verified
+  across 3 fake uuids: `downloadAttachment`/`downloadThumbnail` answer 200 with an EMPTY body (should
+  be 404); `mediaStreaming` crashes with 500 every time. Filed as **#604**, CRITICAL, KMail API.
 
-**Re-investigated, found to still be blocked (no change)**:
-- `kmail-postbox-contacts` / `kmail-draft-multipart` — re-confirmed 404 "Not Found" live 2026-09-25;
-  routes still not deployed on this test build.
-- `kmail-delete-letterhead` — re-checked with NEW evidence: `getLetterHead` marks the only letterhead
+**A dev update landed 2026-09-25 mid-session — re-verified every open ticket against it.** 5 were
+genuinely fixed and closed: `#591` (`deleteKmailWithDeletedBy` now correctly 400s instead of 500 on
+its original repro), `#582` (`replyNotReceived` now answers 200 with real data instead of 500 on a
+null `kpostUser`), plus 3 auto-resolved by the engine's own verified-fix check during a routine full
+run (`#374`, `#380`, `#600`). `postMail` still 415s a multipart request (attachments still cannot be
+uploaded — the one documented upload route, `draftMailMultiPart`, still 404s) and `postBulkMail`/
+`clearStatusOf*` still fail identically to before — the dev's update did not touch those paths.
+
+**Two duplicate tickets found and merged during this re-verification — both this bench's own mistake,
+worth recording so it isn't repeated**: while closing the `kmail-reply-not-req-receiver` and
+`kmail-media-streaming` gaps, a docstring in `feature.spec.ts` (and one I wrote for the attachment
+test) both assumed the engine's flow-finding pipeline only auto-files `allowLiveWrite`-authorized
+5xxs, not `allowLiveRead`-authorized ones — **false**, confirmed by `admin-login-regression.spec.ts`
+already working correctly the other way. Manually adding `recordBusinessRuleViolation` for a plain
+5xx status check in both cases created a genuine duplicate ticket for a fault the pipeline was
+already tracking on its own (`#603` duplicated `#583`; `#605` duplicated `#604`). Both duplicates
+resolved with an explanatory comment and `dupe_of` set; the manual filing code was reverted in both
+places. **Lesson applied going forward**: `recordBusinessRuleViolation` is only for a genuine
+2xx-but-wrong-DATA finding the engine cannot see by status code alone (like the `countryID`
+inconsistency or `kall-contactInfo`'s all-null envelope) — never for a plain "must not 5xx" check,
+which the pipeline already covers regardless of which live-authorization flag unlocked the call.
+Audited every other `recordBusinessRuleViolation` call added this session against this rule; none of
+the others (company-workflow's countryID check, kall-reads-workflow's contactInfo check) share this
+mistake.
+
+**A second, older duplicate pair found while auditing tickets predating this session**: `#584`/`#585`
+each exactly duplicated `#383`/`#384` (same endpoint, same classification, same error) — filed 5 days
+apart under different dedupe tags because the bench's own report-message template changed between
+those dates, shifting the fingerprint hash for the same underlying fault. Not an ongoing dedupe bug
+(today's re-runs matched correctly); both newer duplicates resolved, pointing at the older tickets.
+
+**Re-investigated, confirmed still blocked (dev update did not change these)**:
+- `kmail-postbox-contacts` / `kmail-draft-multipart` — still 404 "Not Found"; routes not deployed on
+  this test build.
+- `kmail-delete-letterhead` — re-checked with evidence: `getLetterHead` marks the only letterhead
   `"default":"Y"` and its assets sit at a generic S3 path (`letterHead/LHH2.png`), pointing toward a
-  shared system default rather than something this account uploaded — strengthening, not resolving,
-  the original ownership concern. No registered endpoint creates a new letterhead to safely delete
-  instead.
+  shared system default rather than something this account uploaded. No registered endpoint creates a
+  new letterhead to safely delete instead.
 - `kmail-clear-status` / `kmail-clear-all-status` / `kmail-post-bulk` — tried several additional field
   names and value shapes (`kmailStatusFlag` as a string/enum-name, `statusType`, `status`, `valueFor`,
   and alternate recipient-list keys for `post-bulk`); all either 400 identically to the existing
-  Unknown/Requires Clarification finding or fail JSON deserialization entirely. Still genuinely
-  unresolvable without the real contract from the dev.
+  Unknown/Requires Clarification finding or fail JSON deserialization entirely.
 - `kmail-bulk-status` — stays blocked transitively by `kmail-post-bulk`.
 - `kmail-credentials` — sensitive (returns account credentials), deliberately not driven on live; a
   policy decision, not something further investigation changes.
-- `kmail-download-thumbnail` / `kmail-media-streaming` / `kmail-download-attachment` — still need a
-  real attachment uuid from an actual file upload; that lifecycle doesn't exist for KMail (the same
-  class of gap `katchup`'s own attachment trio hit this session, independently confirmed unresolvable
-  there too).
+
+**What it would take to close the remaining 5 (11%→7%)**: a route deployment for 2 (`postbox-contacts`,
+`draft-multipart`), the real `postBulkMail`/`clearStatusOf*` request contract from the dev for 2 more
+(`post-bulk` transitively covers `bulk-status`), and an ownership decision on the shared-looking
+letterhead for the last one. None of these are testing-effort gaps; each needs one specific input from
+the KMail team.
 
 ### 4. `kpost/common` — ✅ done (2026-09-24): 6→28/33
 **Methodology correction first**: the original 6/33 estimate was itself measured wrong. This
@@ -271,7 +296,67 @@ Went from 18→32 rich (40%→71%) across `feature.spec.ts`, `reads-workflow.spe
   `QA_COMPANY_NAME` configured in `.env` (only `QA_COMPANY_NAME_ABSENT` exists today) — same
   unconfigured-identity-field gap as `kmail-sig-company`.
 
-### 6. `kpost/katchup` — ⚠️ 15→24/36 (2026-09-24), then blocked mid-module by a live outage
+### 6. `kpost/katchup` — ✅ done (2026-09-25): 15→29/36 (81%)
+
+**Root cause of the 2026-09-24 blocker, found and fixed**: the developer flagged that `groupFlag`
+must be a boolean, not the `'N'`/`'Y'` char convention `sendShape()` used. Live investigation found
+neither is right: `groupFlag` is a **String-typed field spelled as the word `"false"`/`"true"`** — a
+real JSON boolean 400s identically to the old char convention. Fixed in `send.api.ts`; this single
+change fixed `katchup-send-message` (**Bug #594 resolved**) AND cascaded to `katchup-send-multipart`
+(embeds `sendShape()` in its `text` field) AND `katchup-save-messages`/the group-send path in
+`feature.spec.ts` (same String convention, found live once sends worked again and those calls still
+400s). `katchup-mark-important`/`-recall-message`/`-delete-message` all accept a real boolean fine —
+the String requirement is per-endpoint, not module-wide; each is commented where fixed.
+
+That fix unblocked everything the module needed a real sent message for:
+
+- **Shared/reference reads** (`katchup-bulk-message-info`, `-reference-details`,
+  `-messages-by-reference`, `-shared-message-info`, `-shared-message-details`): the "no id-minting
+  endpoint" theory from 2026-09-24 was wrong — every ordinary `sendMessage` response already carries
+  a `sharedMessageId`, no separate "share" action needed. `getBulkMessageInfo`/`getReferenceMSGDetails`
+  confirmed working (200, real data); `getSharedMessageInfo`/`getSharedMessageDetails` both crash
+  (500) on a real id — filed as **#612**/**#613**, both CRITICAL, KPost API.
+  See `shared-reference-workflow.spec.ts`.
+- `katchup-send-multipart` now succeeds but never actually attaches the uploaded file
+  (`attachmentUuid: null`, both immediately and on readback) — a genuine 2xx-but-wrong-data finding,
+  filed as **#614** [KP-90586F], HIGH. See `attachment-workflow.spec.ts`. This still blocks the six
+  download/streaming reads (no real attachment uuid exists to test them with).
+- `recallMessage` answers 200 "success" for a real message but leaves both `deleted_by_sender` and
+  `deleted_by_receiver` DB flags at 0 — a false success, confirmed by a direct MySQL check. Filed as
+  **#610** [KP-80AC38], HIGH. See `workflow-db.spec.ts`.
+- An empty `subject` is stored as sent (200), answering the open question in `docs/katchup-flow.md`
+  §6 Q1. Initially filed as **#615** [KP-9DD851] on the assumption Subject was mandatory; the owner
+  then amended FR-K02/BR-K01 (2026-09-25) — Subject is no longer required, so this is the correct,
+  intended behaviour. **#615 closed as INVALID**; `lifecycle.spec.ts` now asserts acceptance instead
+  of flagging a violation.
+- `katchup-forward-message-new` consistently 500s on a real msgID — already tracked as pre-existing
+  **#611** [KP-A082D1]; not a new finding, confirmed still open.
+
+**Two structural test-authoring bugs, unrelated to `groupFlag`, found and fixed while re-verifying
+the whole module**:
+- `lifecycle.spec.ts`'s entire suite could never run at all, at any point in this bench's history —
+  its own `send()` helper never set `allowLiveWrite: true`, so every call threw
+  `ProductionSafetyError` before the `groupFlag` bug was even reachable. Its delete calls also used
+  the wrong field (`msgID` singular; the live client's own field is `messageIds`, an array — same
+  bug independently found in `workflow-db.spec.ts`'s delete test, also fixed).
+- Both `lifecycle.spec.ts` and `workflow-db.spec.ts` run their tests `mode: 'serial'` (required: the
+  project is `fullyParallel`, so shared state across tests in one file needs the same worker) — and
+  Playwright's serial mode skips every later test once **any** earlier one fails, soft assertions
+  included. A test asserting a known, permanently-open regression (#610; originally also #615, before
+  that one was closed as invalid — see above) was sitting mid-chain
+  in both files, silently preventing later, otherwise-passing tests from ever running (`workflow-db`'s
+  "delete: soft-deleted, not removed" test had never once executed). Fixed by reordering each
+  known-failing assertion to the end of its serial chain (or, for `workflow-db`'s delete test, making
+  it independent of the shared `msgId` entirely, since order still mattered for `recall`'s own setup).
+
+**Final state**: 29/36 (81%). The 7 remaining generic endpoints are genuinely blocked, not
+under-tested — `katchup-messages-subject` (404, route not deployed on this build) and the six
+attachment download/streaming reads (blocked on the #614 attachment-storage fix) — both recorded with
+their specific reason in `needs-id-workflow.spec.ts`, not worked around with a fabricated id.
+
+<details>
+<summary>History (2026-09-24 investigation, before the fix)</summary>
+
 Highlights before the blocker hit:
 
 - Added `searchmessage` to `qa-identifier-guard.ts`'s `NOT_A_RESOURCE` — the exact same class of
@@ -316,6 +401,8 @@ still 400, from a different receiver and from a self-send alike, with both QA ac
 normally on testingapi via other reads. So the 400 is confirmed on testingapi specifically, not on
 devapi2/production. #594 was amended with this finding so it isn't chased as a production issue; see
 `send-regression.spec.ts`'s updated docstring for the full trail.
+
+</details>
 
 ### 7. `kpost/signup-login` — ✅ done (2026-09-24): 4→11/14
 

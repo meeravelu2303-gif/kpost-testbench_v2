@@ -166,8 +166,16 @@ export const sharedMessageInfoApi = defineKatchupEndpoint({
   path: '/v2/katchup/getSharedMessageInfo/',
   summary: 'Details of a shared message',
   tags: [...READ_TAGS, 'share', 'needs-message-id'],
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live.
+  destructive: false,
   request: body(() => ({ sharedMessageId: 0 })),
-  note: 'needs a real sharedMessageId',
+  /*
+   * `sharedMessageId` is NOT minted by a separate "share" action — live-verified 2026-09-25, every
+   * ordinary sendMessage response already carries one (`sharedMessageId`, equal to
+   * `messageTimeAsLong`). Fed a real one from a plain send: 500 "An error occurred while processing
+   * the request" — a genuine crash, not a needs-id gap. See `shared-reference-workflow.spec.ts`.
+   */
+  note: 'needs a real sharedMessageId (every sent message has one — see the endpoint comment); 500s when given a real one',
 });
 
 export const bulkMessageInfoApi = defineKatchupEndpoint({
@@ -176,8 +184,11 @@ export const bulkMessageInfoApi = defineKatchupEndpoint({
   path: '/v2/katchup/getBulkMessageInfo/',
   summary: 'Details of a bulk/broadcast message',
   tags: [...READ_TAGS, 'share', 'needs-message-id'],
+  destructive: false,
   request: body(() => ({ sharedMessageId: 0 })),
-  note: 'needs a real bulk message id',
+  // Same sharedMessageId as above — live-verified 2026-09-25: fed a real one, this one works (200,
+  // real recipient/read-time data). See `shared-reference-workflow.spec.ts`.
+  note: 'needs a real sharedMessageId (every sent message has one); confirmed working live 2026-09-25',
 });
 
 export const sharedMessageDetailsApi = defineKatchupEndpoint({
@@ -186,8 +197,11 @@ export const sharedMessageDetailsApi = defineKatchupEndpoint({
   path: '/v2/katchup/getSharedMessageDetails/{msgID}',
   summary: 'A shared message by id',
   tags: [...READ_TAGS, 'share', 'needs-message-id'],
+  destructive: false,
   request: pathParams(() => ({ msgID: 0 })),
-  note: 'needs a real msgID',
+  // Live-verified 2026-09-25: fed a real msgID from a plain send, this 500s ("FAILURE", no message).
+  // See `shared-reference-workflow.spec.ts`.
+  note: 'needs a real msgID; 500s when given a real one',
 });
 
 export const referenceDetailsApi = defineKatchupEndpoint({
@@ -196,8 +210,11 @@ export const referenceDetailsApi = defineKatchupEndpoint({
   path: '/v2/katchup/getReferenceMSGDetails/',
   summary: 'Details of the messages a thread references',
   tags: [...READ_TAGS, 'thread', 'needs-message-id'],
+  destructive: false,
   request: body(() => ({ referenceMessageIDList: [], sourceMsgID: 0 })),
-  note: 'needs real reference message ids',
+  // Live-verified 2026-09-25: fed {referenceMessageIDList: [msgID], sourceMsgID: msgID} from a plain
+  // send (no reply/forward needed) — 200, real data. See `shared-reference-workflow.spec.ts`.
+  note: 'needs real reference message ids; confirmed working live 2026-09-25 fed a plain sent msgID',
 });
 
 export const messagesByReferenceApi = defineKatchupEndpoint({
@@ -206,8 +223,15 @@ export const messagesByReferenceApi = defineKatchupEndpoint({
   path: '/v2/katchup/getMessagesByReferenceMessageList',
   summary: 'Messages named by a reference list',
   tags: [...READ_TAGS, 'thread', 'needs-message-id'],
+  destructive: false,
   request: body(() => ({ referenceMessageList: '[]' })),
-  note: 'needs a real reference message list',
+  /*
+   * Live-verified 2026-09-25: fed a real msgID (as `referenceMessageIDList: [msgID]`, since a plain
+   * sent message has no `referenceMessageList` of its own to test with), this answers a clean 404
+   * "No messages found for the given Data" — reachable and well-formed, not a crash, but not yet
+   * confirmed to return a positive result for a message that was genuinely referenced by another.
+   */
+  note: 'needs a real reference message list; a plain sent msgID gets a clean 404, not yet confirmed positive',
 });
 
 export const katchupReadApis = [

@@ -67,7 +67,9 @@ export const saveMessagesApi = defineKatchupEndpoint({
   tags: [...MANAGE_TAGS, 'sender-action', 'needs-message-id'],
   destructive: true,
   sideEffect: 'data',
-  request: body(() => ({ groupKpostID: testData.victimKpostId, msgIDs: [], groupFlag: false })),
+  // groupFlag is a STRING here (see send.api.ts's groupFlag comment) — a real boolean 400s
+  // "Malformed or missing request body", live-verified 2026-09-25 (feature.spec.ts).
+  request: body(() => ({ groupKpostID: testData.victimKpostId, msgIDs: [], groupFlag: 'false' })),
   note: 'needs real owned msgIDs',
 });
 

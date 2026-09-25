@@ -173,25 +173,6 @@ test.describe('KPost KMail · feature flow', () => {
               allowLiveRead: true,
             },
           );
-          /*
-           * Live-verified 2026-09-25: a read-only endpoint here (`destructive: false`) is actually
-           * authorized by `allowLiveRead`, not `allowLiveWrite` — the flow-finding pipeline's
-           * auto-filing only tracks `allowLiveWrite`-authorized 5xxs, so a genuine crash on one of
-           * these reads (confirmed: `kmail-reply-not-req-receiver` 500s reproducibly reading a real
-           * kmailID) would otherwise go completely unfiled despite this test's own comment above
-           * assuming it files automatically. Filed explicitly here so the safety net actually covers
-           * every endpoint in this loop, not just the destructive ones.
-           */
-          if (ex.status >= 500) {
-            endpoints.recordBusinessRuleViolation({
-              endpointId: epId,
-              ruleId: 'REGRESSION-kmail-readback-server-error',
-              rule: `${epId} must read back a mail the caller just sent without a server error.`,
-              expected: 'a client error or success — never a 5xx',
-              actual: `${ex.status} ${ex.bodyText.slice(0, 300)}`,
-              request: { body: reqBody },
-            });
-          }
           expect.soft(ex.status, `${epId} reads the mail without a server error`).toBeLessThan(500);
         }
 

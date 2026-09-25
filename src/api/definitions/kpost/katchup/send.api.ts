@@ -34,16 +34,17 @@ export function sendShape(overrides: Record<string, unknown> = {}): Record<strin
     status: KATCHUP_STATUS.sent,
     sessionID: 'Web-Reactjs',
     /*
-     * A STRING, not a boolean — measured 2026-09-21, and the fix for a 400 that blocked every send.
-     *
-     * The DTO binds `groupFlag` as a char/String ('N' / 'Y'), matching KPost's 'Y'/'N' convention
-     * elsewhere (KMail's read/star/delete flags are all chars). Sending `false` or `0` makes Jackson
-     * reject the WHOLE body with 400 "Malformed or missing request body" — which names no field, so
-     * it reads as a malformed request rather than as one wrong type. Every other boolean in this
-     * payload (`isVanished`, `isHtml`, `isVoiceMessage`) binds correctly AS a boolean; this one
-     * field is the exception, verified by adding each field individually to a known-good body.
+     * The STRING "false"/"true" (a JSON string spelling of a boolean) — corrected 2026-09-25,
+     * developer-flagged that the previous 'N'/'Y' char convention was wrong. Live-verified: neither a
+     * real JSON boolean (`true`/`false`) NOR the old `'N'`/`'Y'` chars work — both still 400
+     * "Malformed or missing request body" — but the literal string `"false"` sends successfully
+     * (confirmed live: real msgID issued, cleaned up). This is not a one-off: `katchup-message-count`
+     * (`read.api.ts`) already sends `groupFlag: 'false'` the same way and works, while a real boolean
+     * `false` 400s IT too — the backend binds `groupFlag` to a String field on both routes, just
+     * spelled as the word "false", not a char code. Bug #594 is resolved by this correction; see
+     * `send-regression.spec.ts`.
      */
-    groupFlag: 'N',
+    groupFlag: 'false',
     forwardReceiverList: null,
     groupForwardList: null,
     groupmemberList: [],
@@ -69,9 +70,10 @@ export const sendMessageApi = defineKatchupEndpoint({
   id: 'katchup-send-message',
   requirements: ['FR-KU-003', 'FR-KU-003', 'FR-KU-003', 'FR-K07'],
   /*
-   * BR-K01 (every message carries a Subject) is only genuinely verifiable in the database: the
-   * send response echoes back the subject it was handed, whatever it actually stored. The column
-   * is a BLOB, so the validation decodes it before comparing — see kpost-assertions.text().
+   * BR-K01 (a message's Subject, when given, is carried as sent — Subject itself is optional per the
+   * FR-K02 amendment 2026-09-25, see docs/katchup-flow.md §2.3) is only genuinely verifiable in the
+   * database: the send response echoes back the subject it was handed, whatever it actually stored.
+   * The column is a BLOB, so the validation decodes it before comparing — see kpost-assertions.text().
    */
   database: { validations: ['katchup-message-persisted'] },
   method: 'POST',

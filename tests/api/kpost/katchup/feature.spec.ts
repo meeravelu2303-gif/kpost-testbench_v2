@@ -244,7 +244,8 @@ test.describe('KPost Katchup · feature flow', () => {
       const sent = await send(endpoints, A, {
         receiver: groupKpostID,
         status: KATCHUP_STATUS.group,
-        groupFlag: true,
+        // A STRING, per the groupFlag convention (see send.api.ts) — a real boolean 400s here too.
+        groupFlag: 'true',
         groupmemberList: [B.username, C.username, D.username],
         actualMessage: 'QA group hello',
       });
@@ -425,7 +426,9 @@ test.describe('KPost Katchup · feature flow', () => {
 
     const saved = await endpoints.sendTo(
       'katchup-save-messages',
-      { body: { groupKpostID: B.username, msgIDs: [seed.msgID], groupFlag: false } },
+      // groupFlag is a STRING here too (see send.api.ts) — a real boolean 400s "Malformed or missing
+      // request body", live-verified 2026-09-25.
+      { body: { groupKpostID: B.username, msgIDs: [seed.msgID], groupFlag: 'false' } },
       { label: 'feature:save', auth: { principal: A }, allowLiveWrite: true },
     );
     expect.soft(saved.status, 'save accepted').toBeLessThan(300);
@@ -499,9 +502,12 @@ test.describe('KPost Katchup · feature flow', () => {
     });
     expect.soft(scheduled.status, 'disappear-as-per-schedule send is accepted').toBeLessThan(300);
     const row2 = firstRow(scheduled.body);
-    if (row2 && row2.secretMessageExpireTime != null) {
+    // Live-verified 2026-09-25: `secretMessageExpireTime` comes back as an ISO string; the numeric
+    // epoch is `secretMessageExpireTimeAsLong`, same `...AsLong` convention as messageTime/serverTime
+    // in this same response.
+    if (row2 && row2.secretMessageExpireTimeAsLong != null) {
       expect
-        .soft(Number(row2.secretMessageExpireTime), 'the scheduled expiry is carried back')
+        .soft(Number(row2.secretMessageExpireTimeAsLong), 'the scheduled expiry is carried back')
         .toBeGreaterThan(Date.now());
     }
 
@@ -583,6 +589,8 @@ test.describe('KPost Katchup · feature flow', () => {
       } else {
         // Recorded rather than silently skipped: forward-message-new did not return a usable
         // msgID (per its own response), so forward-backtrack still has no live-verified test.
+        // Matches the pre-existing #611 [KP-A082D1] forwardKatchupMessageNew crash — not a new
+        // regression; the endpoint itself 500s on a real msgID (confirmed 2026-09-25).
         expect
           .soft(forwardedMsgID, 'forward-message-new returned a real msgID to backtrack from')
           .toBeTruthy();
