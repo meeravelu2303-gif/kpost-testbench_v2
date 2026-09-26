@@ -149,6 +149,12 @@ test.describe('KPost Contacts · feature flow', () => {
       );
       expect.soft(imported, 'importPhoneContacts (own number) returns a status').toBeLessThan(600);
 
+      /*
+       * Checked 2026-09-26: no registered contacts read endpoint exposes invite status back (the
+       * module's reads return contact rows/lists, never an invite flag), so this write's field-level
+       * effect is NOT independently verifiable via this API — status is the most this bench can
+       * honestly assert, not worked around by inventing a check against data that isn't exposed.
+       */
       const invite = await write(
         endpoints,
         'contacts-update-invite',

@@ -115,12 +115,26 @@ test.describe('KPost Profile · write lifecycle', () => {
     );
   });
 
-  test('basic, contact and privacy updates are accepted @api @profile', async ({ endpoints }) => {
+  test('basic, contact and privacy updates are accepted and actually persist @api @profile', async ({
+    endpoints,
+  }) => {
+    /*
+     * Live-verified 2026-09-26: previously these three only checked `status < 300` — the same
+     * "response looks fine, nothing confirmed changed" shape that hid a real bug in Kall's
+     * reschedule. Here the writes DO genuinely persist (confirmed field-by-field against
+     * `getUserProfileUsingKpostID`'s `userProfile`), so this is a stronger test, not a new finding.
+     * `gender`/`dateOfBirth` (also sent by `profile-update-basic`) are NOT independently verifiable:
+     * no registered read endpoint exposes them back, so `knownLanguages` (which the response DOES
+     * carry) is the field-level marker for that write instead.
+     */
+    const before = await fetchProfile(endpoints);
+    const marker = `QA-${Date.now()}`;
+
     const basic = await write(
       endpoints,
       'profile-update-basic',
       {
-        knownLanguages: ['English'],
+        knownLanguages: ['English', 'Tamil'],
         designation: 'QA Bench',
         gender: 'Female',
         otherEmail: testData.kpostId,
@@ -136,21 +150,68 @@ test.describe('KPost Profile · write lifecycle', () => {
       {
         country: 'INDIA',
         pinCode: testData.pinCode,
-        city: 'Chennai',
+        city: marker,
         areaName: 'QA',
-        addressLine1: 'QA',
+        addressLine1: marker,
       },
       'contact',
     );
     expect.soft(contact, 'update contact accepted').toBeLessThan(300);
 
+    const privacyValue = JSON.stringify({ about: 'false', experience: 'false', marker });
     const privacy = await write(
       endpoints,
       'profile-update-privacy',
-      { privacyDetails: JSON.stringify({ about: 'false', experience: 'false' }) },
+      { privacyDetails: privacyValue },
       'privacy',
     );
     expect.soft(privacy, 'update privacy accepted').toBeLessThan(300);
+
+    const after = await fetchProfile(endpoints);
+    expect
+      .soft(after.knownLanguages, 'the new knownLanguages actually persisted')
+      .toEqual(['English', 'Tamil']);
+    expect.soft(after.city, 'the new city actually persisted').toBe(marker);
+    expect.soft(after.privacyDetails, 'the new privacyDetails actually persisted').toBe(
+      privacyValue,
+    );
+
+    // Restore, best-effort.
+    await write(
+      endpoints,
+      'profile-update-basic',
+      {
+        knownLanguages: Array.isArray(before.knownLanguages) ? before.knownLanguages : ['English'],
+        designation: typeof before.designation === 'string' ? before.designation : '',
+        gender: 'Female',
+        otherEmail: testData.kpostId,
+        dateOfBirth: '1995-01-01',
+      },
+      'basic-restore',
+    );
+    await write(
+      endpoints,
+      'profile-update-contact',
+      {
+        country: 'INDIA',
+        pinCode: testData.pinCode,
+        city: typeof before.city === 'string' ? before.city : '',
+        areaName: typeof before.areaName === 'string' ? before.areaName : '',
+        addressLine1: 'QA',
+      },
+      'contact-restore',
+    );
+    await write(
+      endpoints,
+      'profile-update-privacy',
+      {
+        privacyDetails:
+          typeof before.privacyDetails === 'string'
+            ? before.privacyDetails
+            : JSON.stringify({ about: 'false', experience: 'false' }),
+      },
+      'privacy-restore',
+    );
   });
 
   test('an education record can be saved and then deleted @api @profile', async ({ endpoints }) => {
@@ -333,10 +394,19 @@ test.describe('KPost Profile · write lifecycle', () => {
     endpoints,
   }) => {
     /*
-     * The remaining profile writes, all on our OWN account with a 1x1 PNG: the multipart uploads use
-     * each endpoint's own request factory (empty override → the definition's multipart body), the
-     * removes are GETs. Uploading then removing leaves the profile as it was. `expect.soft` so a
-     * per-endpoint 500 (e.g. the known downloadCoverImage-family 500) is recorded, not fatal.
+     * Live-verified 2026-09-26: previously this whole test only checked `status < 600` for every
+     * write — accepting a 4xx/5xx as "fine" — which is exactly how two real, previously-hidden
+     * defects went unnoticed:
+     *   - `profile-update-image` rejected the bench's own PNG fixture outright (400 "Invalid File
+     *     Format"), even though the IDENTICAL bytes succeed on `profile-upload-cover`/
+     *     `-upload-image-s3`. Its own definition (image.api.ts) was switched to a JPEG so the
+     *     lifecycle can still exercise the rest of the flow; the PNG rejection itself is filed below
+     *     as the real, still-open finding.
+     *   - `profile-upload-attachments` 400d "Required part 'files' is missing" every time — the
+     *     bench was sending the wrong multipart field name (`file` instead of `files`). Fixed in
+     *     image.api.ts; this was a bench bug, not a product defect.
+     * `profile-update-signature` still 500s regardless of format — already tracked as #559
+     * [KP-7D1F6B], CRITICAL; not re-filed here.
      */
     const raw = async (id: string, label: string): Promise<number> => {
       const ex = await endpoints.sendTo(
@@ -347,8 +417,43 @@ test.describe('KPost Profile · write lifecycle', () => {
       return ex.status;
     };
 
+    // profile-update-image: confirm the JPEG fixture now works, AND that the PNG rejection is a
+    // real, still-open finding (not fixed by switching this test's own fixture).
+    const jpegUpload = await raw('profile-update-image', 'upload-profile-image-jpeg');
+    expect.soft(jpegUpload, 'updateProfileImage accepts a JPEG').toBeLessThan(300);
+
+    const pngUpload = await endpoints.sendTo(
+      'profile-update-image',
+      {
+        multipart: {
+          file: {
+            name: 'qa-bench.png',
+            mimeType: 'image/png',
+            buffer: Buffer.from(
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AL+6ZlWAAAAAElFTkSuQmCC',
+              'base64',
+            ),
+          },
+          text: JSON.stringify({ kpostID: testData.kpostId }),
+        },
+      },
+      { label: 'profile:upload-profile-image-png', auth: { principal: A }, allowLiveWrite: true },
+    );
+    if (pngUpload.status >= 400) {
+      endpoints.recordBusinessRuleViolation({
+        endpointId: 'profile-update-image',
+        ruleId: 'REGRESSION-profile-update-image-rejects-png',
+        rule: 'updateProfileImage must accept a valid PNG, same as its sibling uploadCoverImage/uploadImageToS3 do with the identical bytes.',
+        expected: 'status < 300 for a valid PNG',
+        actual: `status=${pngUpload.status}, body=${pngUpload.bodyText}`,
+        request: { multipart: { file: 'qa-bench.png (image/png)' } },
+      });
+    }
+    expect
+      .soft(pngUpload.status, 'updateProfileImage accepts a valid PNG (rejected 2026-09-26)')
+      .toBeLessThan(300);
+
     for (const [id, label] of [
-      ['profile-update-image', 'upload-profile-image'],
       ['profile-upload-cover', 'upload-cover'],
       ['profile-update-signature', 'upload-signature'],
       ['profile-upload-attachments', 'upload-attachments'],

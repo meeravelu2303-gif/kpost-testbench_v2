@@ -69,11 +69,21 @@ export const postBulkMailApi = defineKmailEndpoint({
   tags: [...SEND_TAGS, 'bulk'],
   // Bulk to our own second account only, so no stranger is mailed.
   destructive: true,
+  /*
+   * Dev-confirmed 2026-09-26 (a working curl against a dev host): `postBulkMail` is NOT `postMail`'s
+   * shape plus `toAddressList` — it has its own small, distinct contract. Spreading the full
+   * `mailShape()` in (saluation, groupFlag, senderLatitde/Longitude, forwardList, …) is what caused
+   * the previous bare 400 "Bad Request" with no detail; none of those fields belong here.
+   */
   request: body(() => ({
-    ...mailShape({ kmailType: KMAIL_TYPE.bulkmail }),
     toAddressList: [testData.victimKpostId],
+    kmailSubject: 'QA Bench Bulk Mail',
+    kmailContent: 'QA bench bulk mail body — safe to ignore.',
+    priority: KMAIL_PRIORITY.low,
+    kmailType: KMAIL_TYPE.bulkmail,
+    attachmentUuid: [] as string[],
   })),
-  note: 'bulk send; recipients confined to our own accounts',
+  note: 'bulk send; recipients confined to our own accounts; own contract, not postMail + toAddressList',
 });
 
 export const kmailSendApis = [postMailApi, postBulkMailApi];

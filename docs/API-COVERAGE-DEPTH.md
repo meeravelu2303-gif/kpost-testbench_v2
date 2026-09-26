@@ -12,6 +12,115 @@ An endpoint can be "tested" per COVERAGE.md and still have zero assertions about
 **Do not assume a test existing means the endpoint is covered.** This document exists because that
 assumption was checked and found false for just over half the registry.
 
+## Cross-cutting audit: "reported fixed" is a claim, not a fact (2026-09-26)
+
+Triggered by a user report that Kall's reschedule endpoint "doesn't handle its type/details
+correctly." Live-checking it surfaced that a Bugzilla ticket the bench believed FIXED was not, and a
+second believed INVALID was actually a real, still-reproducing defect — both because a test had been
+switched from a pinned `test.fail()`/skip to a hard or trusted assertion on the strength of the
+ticket's resolution, without a fresh live re-check first. That risk pattern was then searched for
+across the whole suite (any test whose comment claims a bug "reported fixed" without describing a
+dated, specific, freshly-observed behaviour) and every match was re-verified live. Findings:
+
+| Ticket | Module / file | Believed | Actually found (2026-09-26) |
+| --- | --- | --- | --- |
+| #501 | Kall `reScheduleKall` | RESOLVED/INVALID | Reopened same-day on the belief it was "still broken" (creates a new `kallID`) — **then corrected back**: the owner confirmed a new `kallID` on reschedule IS the requirement. The original INVALID resolution was right all along; see the follow-up note below. |
+| #500 | Kall `scheduledRepeatKall` | RESOLVED/FIXED | **Partially fixed** — the 500 crash is gone, but every repeat interval now 400s "Invalid Request" instead; a repeating call still cannot be created at all. Filed separately as #622 (4xx findings aren't auto-tracked). |
+| #507 | Security `object-authorization.spec.ts` (BOLA) | RESOLVED/FIXED | **Still exploitable** — `removeGroupMember` lets an outsider remove a member from a group they don't belong to, confirmed at the database level. The other two attack paths in the same test (grant-self-admin, rename) ARE correctly denied. Reopened. |
+| #499 | KOS `feature.spec.ts` (KWord lifecycle) | RESOLVED/FIXED | **Still broken** — `/kword/create` still fails to return a `docId`, so the entire downstream lifecycle still cannot run. A second file (`security/kword-object-authorization.spec.ts`) had already correctly assumed this was still open. Reopened. |
+| #495 | Settings `notifications-workflow.spec.ts` | RESOLVED/FIXED | **Still broken** — the Katchup notification toggle reports success but never persists to the row. Reopened. |
+| #497 | Signup-login `domain-policy.spec.ts` | RESOLVED/FIXED | **Genuinely fixed** — verified clean. |
+| #498 | Profile `directory-lookup.spec.ts` | RESOLVED/FIXED | **Genuinely fixed** — verified clean (all 6 tests in the file pass). |
+| — | Profile `profile-download-cover`'s 500→204 claim | (undated comment) | **Genuinely correct** — verified live, 204 with no body as claimed. |
+
+**Two new self-inflicted duplicates found and resolved the same way as earlier this session**: adding
+explicit filing (`recordBusinessRuleViolation`) to a finding that previously relied on an
+unmonitored soft/hard assertion always mints a *new* Bugzilla fingerprint on its first run, even when
+reopening the *original* ticket for the same fault in the same edit — #623 (dup of #507) and #624
+(dup of #499) were both filed this way, then closed as duplicates pointing at the reopened original.
+
+**A second, independent structural bug found while fixing these**: in three separate files this
+session (Katchup, Admin, and now Settings), a test asserting a known, permanently-open regression was
+sitting *mid-chain* in a `mode: 'serial'` describe block. Playwright's serial mode skips every later
+test once *any* earlier one fails — soft assertions included — so each of these was silently
+preventing a later, unrelated, otherwise-passing test from ever running. Fixed the same way each
+time: move the known-failing assertion to the end of its serial chain (or make it independent of
+shared state, when order itself mattered for something else).
+
+**The lesson, applied going forward**: a Bugzilla resolution (`FIXED`/`INVALID`/`WONTFIX`) is a claim
+someone made at a point in time, not a durable fact. Every place in this suite that encodes "X is
+fixed" as a hard assertion or a skip condition should describe *what was actually observed, and
+when* — a bare "#NNN reported fixed" comment is exactly the pattern that produced five wrong beliefs
+in one afternoon, three of them about defects that were still live and, in one case, exploitable.
+
+**Follow-up, same day — #501 correction reversed by the owner**: the owner confirmed that
+`reScheduleKall` creating a NEW `kallID` on every reschedule is the actual, intended requirement —
+"rescheduling" supersedes the original call with a fresh one, it does not update in place. Live-
+verified against the database to see the full, correct picture: the original call's row moves
+`senderKallStatus` 6 (Scheduled) → 7 (ReScheduled), correctly marking it superseded, while the new
+call starts fresh at 6. The bench's test had been reading the WRONG row for the status check (the
+API response's row, which is the new call and correctly stays at 6) — once that was fixed, both the
+identity assertion and the status assertion pass cleanly. **#501, #620 and #621 all closed INVALID**
+(their original 2026-09-22 resolutions were correct; this session's reopening of #501 was itself the
+mistake, now reversed). `kall-reschedule`'s tests in `feature.spec.ts` now assert the corrected rule:
+a new kallID is required and expected, and the ORIGINAL row is checked for the 6→7 transition rather
+than the response's row. This doesn't overturn the "verify claims live" lesson above — if anything it
+reinforces it in the other direction: a live re-check surfaced that the bench's own fix was itself
+built on a misread of the requirement, and a second live re-check (this time checking the right row)
+caught that too.
+
+**Bench-tooling bug found while cleaning up #622's evidence**: `recordBusinessRuleViolation`'s
+`request` field is what `buildCurl` (`src/bug-tracker/curl.ts`) turns into the ticket's reproduction
+`curl` — and the `scheduledRepeatKall` finding had only been given `{ repeatType: 1 }` there, not the
+full body actually sent. The ticket's auto-generated curl was therefore genuinely misleading: pasting
+it reproduces a *different, correct* 400 ("scheduledStartTime is required") rather than the "Invalid
+Request" the ticket is actually about — exactly the kind of wrong repro that gets a real defect closed
+as "cannot reproduce". Fixed in `feature.spec.ts` (the full `scheduleShape()`-built body is now what
+gets attached); a clarifying comment was added to #622 pointing at the corrected reproduction and
+explicitly disclaiming the earlier truncated curls in the same thread.
+
+**A second, smaller masking quirk found in the same evidence**: `buildCurl`'s masking
+(`maskSecretsOnly`) is documented to keep identifiers (kpostIDs/emails) readable in a ticket's curl —
+but `kallSession` still comes out fully masked (`"***"`) because its key name matches the generic
+`/session/i` sensitive-key pattern in `src/utils/masking.ts`, even though a Kall session label is a
+benign client-generated string, not a credential. `receiver` also appeared partially masked
+(`h***@kpostindia.com`) in one ticket despite `maskSecretsOnly` not masking emails by design — the
+exact mechanism wasn't fully traced (it likely originates in an earlier, stricter `maskSensitive` pass
+over the captured exchange, e.g. `response-wrapper.ts`, before the value ever reaches `buildCurl`).
+Neither breaks a ticket outright (a developer can still infer both values), but both work against this
+tool's own stated goal of a copy-and-run reproduction. Worth a follow-up pass on the masking pipeline;
+not fixed this session, flagged here so it isn't lost.
+
+## Cross-cutting audit: "status < 300" is not "the field actually changed" (2026-09-26)
+
+Direct follow-on to the audit above, at the user's request to go module by module. Scoped via four
+parallel research passes across every module (kmail, profile, common, contacts, kdiary,
+signup-login, group, kos, admin) for the same shape of gap Kall's reschedule had: an update/edit
+endpoint whose test checks only the write's own status code (or, worse, only that it didn't 5xx),
+never reading the record back to confirm the specific field actually changed. Every candidate found
+was live-verified. Results:
+
+| Endpoint | Module | Found | Fix |
+| --- | --- | --- | --- |
+| `kmail-sig-graphics/-style/-social/-template` | kmail | Readback existed but never compared field values | Genuinely works — strengthened the assertion to compare real markers |
+| `kmail-edit-od-contact` | kmail | `contactName` wrongly guard-blocked as a resource id — the edit could only ever be a no-op back to the same owned address | Exempted in `qa-identifier-guard.ts`; no read endpoint exists to verify the name itself (structural limit, documented) |
+| `profile-update-basic/-contact/-privacy` | profile | Status-only | Genuinely works (`knownLanguages`, `city`, `privacyDetails` all confirmed persisting) — strengthened |
+| `profile-update-image` | profile | **Real defect**: rejects the bench's own PNG fixture ("Invalid File Format") while the identical bytes succeed on `uploadCoverImage`/`uploadImageToS3` | Filed **#626** [KP-6E793F], HIGH. Definition switched to JPEG so the lifecycle still runs |
+| `profile-upload-attachments` | profile | **Bench bug**: wrong multipart field name (`file` instead of `files`) — had 400d every run | Fixed in `image.api.ts` |
+| `profile-update-signature` | profile | 500s regardless of format | Already tracked, **#559** [KP-7D1F6B], CRITICAL — not new |
+| `kdiary-update-remarks` | kdiary | Status-only | Genuinely works (`remarks`, `remarksDescription` both confirmed persisting) — strengthened |
+| `contacts-update-invite` | contacts | Status-only | Structurally unverifiable — no read endpoint exposes invite status; documented, not worked around |
+| `group-edit-name` | group | Status-only | Structurally unverifiable — no "get group details" read exists; documented |
+| `group-update-image` | group | **Real bug, bench-side**: sent a plain JSON body to a multipart-only route — had 400d "Request must be multipart/form-data" on every single run in this bench's history | Fixed in `group.api.ts` (multipart, `file` part, JPEG — PNG also rejected here); the test now uploads for real and confirms non-empty content on download |
+| `kos-update-doc` | kos | Status-only | Assertion added and ready, but **cannot be live-verified yet** — blocked transitively by #499 (`kword/create` still failing, see above) |
+| `admin-workplace-tier-attribute-update`, `admin-hr-tier-attribute-update`, `admin-workplace-location-update`, `admin-employee-update` | admin | Status-only (unlike their sibling SAVE calls, which already cross-check) | Genuinely work — all 4 strengthened with a real before/after read comparison |
+
+**Two more real, previously-hidden bugs found only because a genuine multipart upload was finally
+attempted** (both endpoints had never once succeeded before, in either case): `profile-update-image`
+and `group-update-image` share the same format restriction (PNG rejected, JPEG accepted) — worth a
+developer question on whether PNG support is intentionally absent or itself a defect, since nothing
+in either endpoint's naming or docs suggests "JPEG only."
+
 ## Resolved: the systemic ceiling on ~49 "needs-id" reads (`allowLiveRead`, added 2026-09-24)
 
 While closing individual module gaps (dashboard, kos, group), the same architectural wall came up
@@ -72,7 +181,7 @@ one still needs its own dependency-flow test written as that module is reached.
 
 | Module | Registered | API-rich | Generic-only | Depth |
 | --- | ---: | ---: | ---: | ---: |
-| `kmail` | 70 | 65 | 5 | 93% ✅ done 2026-09-25 (5 recorded gaps, see below) |
+| `kmail` | 70 | 67 | 3 | 96% ✅ done 2026-09-26 (3 recorded gaps, see below) |
 | `kpost/profile` | 45 | 32 | 13 | 71% ✅ done 2026-09-24 (10 permanently by design, 3 real gaps) |
 | `admin` | 38 | 33 | 5 | 87% ✅ done 2026-09-26 (5 genuinely blocked, see note) |
 | `kpost/katchup` | 36 | 34 | 2 | 94% ✅ done 2026-09-26 (2 genuinely blocked, see note) |
@@ -87,7 +196,7 @@ one still needs its own dependency-flow test written as that module is reached.
 | `kpost/settings` | 7 | 7 | 0 | 100% ✅ done 2026-09-24 |
 | `kpost/aws` | 4 | 4 | 0 | 100% ✅ done 2026-09-24 |
 | `kpost/dashboard` | 3 | 3 | 0 | 100% ✅ done 2026-09-24 |
-| **Total (real KPost/KMail/Admin surface)** | **341** | **293** | **48** | **86%** |
+| **Total (real KPost/KMail/Admin surface)** | **341** | **295** | **46** | **87%** |
 
 **Excluded from the table above — bench-internal scaffolding, not KPost product endpoints**
 (`users`, `auth`, `companies`, `dictionary`, `health` — 9 endpoints): every one of these carries
@@ -129,7 +238,7 @@ flag, and the engine's safety gate (`destructiveBlockReason`) only grants a live
 non-destructive "needs-id" read. Recorded as a skipped, explicitly-reasoned placeholder test rather
 than worked around or left silently absent.
 
-### 3. `kmail` — ✅ done (2026-09-25): 60→65/70, 5 recorded gaps
+### 3. `kmail` — ✅ done (2026-09-26): 60→67/70, 3 recorded gaps
 
 Originally went 15→60 rich (21%→86%) on 2026-09-24 across `feature.spec.ts`, `reads-workflow.spec.ts`,
 `signature-letterhead-workflow.spec.ts`, `manage-workflow.spec.ts`. Revisited twice more on 2026-09-25
@@ -197,26 +306,61 @@ apart under different dedupe tags because the bench's own report-message templat
 those dates, shifting the fingerprint hash for the same underlying fault. Not an ongoing dedupe bug
 (today's re-runs matched correctly); both newer duplicates resolved, pointing at the older tickets.
 
-**Re-investigated, confirmed still blocked (dev update did not change these)**:
-- `kmail-postbox-contacts` / `kmail-draft-multipart` — still 404 "Not Found"; routes not deployed on
-  this test build.
-- `kmail-delete-letterhead` — re-checked with evidence: `getLetterHead` marks the only letterhead
-  `"default":"Y"` and its assets sit at a generic S3 path (`letterHead/LHH2.png`), pointing toward a
-  shared system default rather than something this account uploaded. No registered endpoint creates a
-  new letterhead to safely delete instead.
-- `kmail-clear-status` / `kmail-clear-all-status` / `kmail-post-bulk` — tried several additional field
-  names and value shapes (`kmailStatusFlag` as a string/enum-name, `statusType`, `status`, `valueFor`,
-  and alternate recipient-list keys for `post-bulk`); all either 400 identically to the existing
-  Unknown/Requires Clarification finding or fail JSON deserialization entirely.
-- `kmail-bulk-status` — stays blocked transitively by `kmail-post-bulk`.
+**Dev answered 4 of the original open questions on 2026-09-26 — 2 gaps closed for real, 2 reclassified**:
+- **`kmail-post-bulk` (`postBulkMail`) — closed, genuinely fixed.** The dev supplied a working curl
+  showing `postBulkMail` is NOT `postMail`'s shape plus `toAddressList` — it has its own small, distinct
+  contract: `{toAddressList, kmailSubject, kmailContent, priority, kmailType: 13 (bulkmail),
+  attachmentUuid: []}`. Spreading the full `mailShape()` in (saluation, groupFlag,
+  senderLatitde/Longitude, forwardList, …) is what caused the previous bare 400 with no detail — none of
+  those fields belong here. Fixed in the endpoint definition (`send.api.ts`) and live-verified against
+  `testkmail.kpostindia.com`: 202 `"Bulk PostMail Send SuccessFully"` to both an internal `.kpost.in`
+  address and an external address; sending to the caller's own address correctly 400s "Receiver Cannot
+  be same as sender" (sensible validation, not a defect). `manage-workflow.spec.ts`'s `postBulkMail`
+  test rewritten around the correct shape and passes live.
+- **`kmail-bulk-status` — closed as a direct consequence, was never actually blocked.** It had been
+  recorded as blocked transitively on `postBulkMail`'s "Unknown/Requires Clarification" shape, but
+  `GET /sentMail/bulkMail/status/{fromAddress}` only needs the CALLER's own address
+  (`testData.kpostId`), not any id `postBulkMail`'s response would need to mint (it returns none).
+  Live-verified 2026-09-26 right after a real bulk send: `{"total":1,"status":"PROCESSING",...}`. Folded
+  into the `postBulkMail` test rather than kept as a separate skip.
+- **`kmail-postbox-contacts` / `kmail-draft-multipart` — reclassified, not closed.** Dev-confirmed:
+  "Api's are not in use." These are intentionally unavailable on this build, not a deployment gap
+  waiting to be filled — consistent with the plain Spring 404 both routes return. Still generic-only
+  (there is no business rule to test on a route that will never be called), but no longer an open
+  question blocking further work; recorded as permanent by-design exclusions.
+
+**Dev answered questions 3 and 4 on 2026-09-26 too — both narrowed the problem instead of closing it**:
+- **Question 3, `clearStatusOfKmailsContacts` / `clearStatusOfAllKmailsContacts`** — dev said the
+  original 500 "was fixed by using some custom annotations." Re-tested live the same day: only PARTLY
+  true. `selectedContact` alone (the old default body) still 500s
+  `{"errorCode":"clear mails exception occured",...}`; adding a `kmailStatusFlag` field (tried as int
+  0-4, `"0"` as a string, and enum-name strings `"REPLY_SENT"`/`"REPLY_NOT_SENT"`) avoids the crash and
+  gets a clean 400 `{"valueFor":"REPLY_NOT_SENT","message":"Parameter Invalid"}` instead — so the
+  annotation fix only covers the field-present case, not its absence. More importantly: no value of
+  `kmailStatusFlag` ever satisfies `REPLY_NOT_SENT`, live-verified even across a real send-then-reply
+  exchange between the two test accounts (A sends to B, B genuinely replies to A, then A calls
+  clear-status for B) — identical error, unchanged by the reply actually existing. That result makes
+  `kmailStatusFlag` look like the wrong field name (its presence avoiding the crash may just be dodging
+  a null-check elsewhere, not actually being read). Endpoint definitions and the manage-workflow test
+  updated to reflect this sharper diagnosis; still tracked as one open ticket (auto-commented, not
+  re-filed) rather than closed. **What's still needed from the dev**: the exact field name/type the
+  validation checks, and what account/mail state `REPLY_NOT_SENT` is actually testing for.
+- **Question 4, `kmail-delete-letterhead`** — dev confirmed: letterhead id "1" is the shared system
+  default; "other[s] are should be added by user for their own customization." This matches the
+  evidence already on file and resolves the ownership question — id 1 is confirmed unsafe to delete,
+  not merely suspected. But it surfaces a narrower, still-open gap: the KMail OpenAPI contract and
+  workbook register only get-all/get-current/get-template/set-active-by-id/delete-by-id for
+  letterheads — no create/save/upload route is documented anywhere for the "add your own" flow the dev
+  described. **What's still needed from the dev**: which endpoint that flow actually calls, so this
+  bench can create a personal letterhead and safely test delete against that instead of the shared
+  default.
 - `kmail-credentials` — sensitive (returns account credentials), deliberately not driven on live; a
   policy decision, not something further investigation changes.
 
-**What it would take to close the remaining 5 (11%→7%)**: a route deployment for 2 (`postbox-contacts`,
-`draft-multipart`), the real `postBulkMail`/`clearStatusOf*` request contract from the dev for 2 more
-(`post-bulk` transitively covers `bulk-status`), and an ownership decision on the shared-looking
-letterhead for the last one. None of these are testing-effort gaps; each needs one specific input from
-the KMail team.
+**What it would take to close the remaining 3**: one more specific answer each for questions 3 and 4
+(above), and nothing further for `kmail-credentials` (a permanent policy exclusion, not an open
+question). `postbox-contacts` and `draft-multipart` are also permanent by-design exclusions now, not
+open questions.
 
 ### 4. `kpost/common` — ✅ done (2026-09-24): 6→28/33
 **Methodology correction first**: the original 6/33 estimate was itself measured wrong. This
@@ -504,6 +648,37 @@ other's in-flight call), producing inconsistent results — the `contactInfo` fi
 pre-existing `BR-C01` reschedule issue each looked different across the two runs. Neither concurrent
 run's output was trusted; a clean, isolated re-run confirmed the `contactInfo` finding reproduces
 reliably and everything else in the module is unaffected.
+
+**2026-09-26: re-audited `reScheduleKall`/`scheduledRepeatKall` at the user's request, on the theory
+that "reschedule doesn't handle its type/details correctly" — confirmed, and worse than the bench's
+own records showed.** Two tickets the bench believed were resolved were not:
+
+- **#501** was closed **RESOLVED/INVALID** on 2026-09-22 — but reschedule still creates a brand-new
+  `kallID` instead of updating the original, reproduced twice, deterministically, in the same session.
+  The bench's own test had been switched from a pinned `test.fail()` to a hard `expect()` on the
+  belief the fix had landed, without re-verifying live first — a bench-side mistake. **#501 reopened**
+  with the fresh evidence, and the test is soft + explicitly filed again, permanently, rather than
+  ever assuming "fixed" without a live check.
+- **Two more sub-findings under the same reschedule call, previously only logged as inert
+  "observed" annotations, never asserted or filed**: `senderKallStatus` never moves from Scheduled
+  (6) to ReScheduled (7) on either row (filed **#621** [KP-087A98], HIGH); the new row reschedule
+  creates has `parent_kall_id: null` instead of pointing back at the original, making the duplicate
+  untraceable (filed **#620** [KP-8315CB], HIGH).
+- **A new permanent test for a fourth, previously-unrecorded reschedule finding**: an incomplete
+  payload (`{ kallID }` alone, or `{ kallID, subject }`) 500s "Unable to reschedule kool kall"
+  instead of a clean 400 — auto-filed by the engine's own pipeline as **#619** [KP-FFF743],
+  CRITICAL, now covered by a dedicated regression test instead of only being found by chance.
+- **#500** was closed **RESOLVED/FIXED** on 2026-09-22 for fixing a 500 crash on
+  `scheduledRepeatKall` — but the underlying capability is still completely broken: every repeat
+  interval now answers 400 "Invalid Request" instead (tried with both past and future date ranges,
+  ruling out a stale test date), so a repeating call still cannot be created at all. Since this is a
+  4xx, the engine's automatic write-flow filing does not pick it up by design — filed explicitly as
+  **#622** [KP-1F469E], HIGH, so the regression doesn't hide behind an improved status code.
+
+**Lesson applied**: a ticket's resolution (`FIXED`/`INVALID`) is a claim, not a fact — this bench had
+trusted two without a fresh live check and both turned out wrong (one still fully broken, one only
+superficially improved). Every "reported fixed" comment elsewhere in the suite should be treated as
+provisional until re-verified live, not as a standing fact.
 
 ### 10. `kpost/kdiary` — ✅ done (2026-09-24): 10→13/14
 

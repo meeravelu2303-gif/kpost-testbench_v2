@@ -37,17 +37,22 @@ test.describe('KMail · signature components, letterhead, count-days-limit @api 
     'writes real KMail settings; set KMAIL_LIFECYCLE=true',
   );
 
-  test('signature graphics/style/social/template writes are accepted', async ({ endpoints }) => {
+  test('signature graphics/style/social/template writes are accepted and actually persist', async ({
+    endpoints,
+  }) => {
     // None of these fields match the qa-identifier-guard's resource-identifier pattern, so they
     // need no QA-owned allowlisted value — unlike companyName (see the sig-company test below).
-    const style = { color: '#1A73E8', fontStyle: 'Arial, sans-serif' };
+    // A unique marker per field, so the readback below proves THESE writes landed, not a stale value
+    // left over from an earlier run.
+    const marker = `QA-${Date.now()}`;
+    const style = { color: '#1A73E8', fontStyle: marker };
 
     expect
       .soft(
         await write(
           endpoints,
           'kmail-sig-graphics',
-          { photoUrl: '', bannerUrl: '', bannerLinkingTo: '' },
+          { photoUrl: `${marker}.png`, bannerUrl: '', bannerLinkingTo: '' },
           'sig-graphics',
         ),
         'sig-graphics',
@@ -61,7 +66,7 @@ test.describe('KMail · signature components, letterhead, count-days-limit @api 
         await write(
           endpoints,
           'kmail-sig-social',
-          { twitter: '', facebook: '', instagram: '', linkedIn: '', youTube: '' },
+          { twitter: marker, facebook: '', instagram: '', linkedIn: '', youTube: '' },
           'sig-social',
         ),
         'sig-social',
@@ -74,12 +79,32 @@ test.describe('KMail · signature components, letterhead, count-days-limit @api 
       )
       .toBeLessThan(300);
 
+    /*
+     * Live-verified 2026-09-26: previously this readback only checked `status === 200`, the exact
+     * "readback call present but nothing compared" shape that hid a real bug in Kall's reschedule.
+     * Here the writes DO genuinely persist — confirmed by comparing each field against the unique
+     * marker just sent, not merely that a 200 came back.
+     */
     const read = await endpoints.sendTo(
       'kmail-mail-signature',
       {},
       { label: 'kmail:sig-readback', auth: { principal: A } },
     );
     expect(read.status, 'getMailSignature reads back').toBe(200);
+    const body = JSON.parse(read.bodyText || '{}') as {
+      data?: {
+        graphics?: { photoUrl?: string };
+        style?: { fontStyle?: string };
+        socialMedialink?: { twitter?: string };
+      };
+    };
+    expect(body.data?.graphics?.photoUrl, 'the new photoUrl is actually stored').toBe(
+      `${marker}.png`,
+    );
+    expect(body.data?.style?.fontStyle, 'the new fontStyle is actually stored').toBe(marker);
+    expect(body.data?.socialMedialink?.twitter, 'the new twitter link is actually stored').toBe(
+      marker,
+    );
   });
 
   test('sig-company: saveOrUpdateMailSignatureCompanyData is accepted and reflected on getMailSignature', async ({

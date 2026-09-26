@@ -1,6 +1,6 @@
 // A cross-account authorization (IDOR / BOLA) flow: an outsider acting on another account's group.
 // Conditionals guard the setup/teardown of real live data, so they are intentional here.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+/* eslint-disable playwright/no-conditional-in-test */
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
@@ -91,16 +91,19 @@ test.describe('KPost Security · object-level authorization (IDOR/BOLA) @api @kp
     databases,
   }) => {
     /*
-     * Expected failure while Bugzilla #507 is open. The removeGroupMember assertion below fails
-     * because an outsider CAN remove members (the confirmed BOLA hole). `test.fail()` keeps the run
-     * green while the vulnerability is live and turns it RED the moment removeGroupMember starts
-     * enforcing authorization — which is exactly when someone must know, so this can be flipped back
-     * and the ticket closed. The other two assertions (grant-admin, rename) already pass — the
-     * server protects those — so this test also fails if either of THEM regresses into a hole.
+     * Bugzilla #507 was closed RESOLVED/FIXED on 2026-09-22 — but live-verified again 2026-09-26,
+     * with a real outsider account (`personal-3`) and a fresh throwaway group, the BOLA hole is
+     * still there: `removeGroupMember` lets an outsider remove a legitimate member from a group they
+     * neither own nor belong to (`removed_flag` moves to 1 in the database — a 200 that actually
+     * mutated another tenant's data). The other two attacks (grant-self-admin, rename) are correctly
+     * denied — only the remove-member path is vulnerable. #507 reopened with this evidence. Filed
+     * explicitly below (a soft assertion alone was never enough to get this tracked — it takes a
+     * DB-level check to see a BOLA hole at all, and nothing upstream auto-files a 200 that shouldn't
+     * have worked). The first run after this fix filed a new ticket (#623) instead of commenting on
+     * the reopened #507 — a new `recordBusinessRuleViolation` call always mints its own fingerprint,
+     * it doesn't know about a differently-fingerprinted ticket for the same fault. #623 closed as a
+     * duplicate of #507; #507 is the ticket of record going forward.
      */
-    // Bugzilla #507 reported fixed — now asserted normally (an outsider must NOT be able to remove
-    // members / administer a group they don't belong to). Was pinned with test.fail() while the
-    // BOLA hole was live.
     const database = databases.for('kpost-api');
     test.skip(
       !database.enabled,
@@ -182,9 +185,20 @@ test.describe('KPost Security · object-level authorization (IDOR/BOLA) @api @kp
         table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
         where: { group_id: groupID, kpost_id: attacker!.username },
       });
+      const attackerAdminAccess = attackerRow?.admin_access ?? 'absent';
+      if (attackerAdminAccess === 'Y') {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'group-admin-access',
+          ruleId: 'BOLA-outsider-grants-self-admin',
+          rule: 'addOrRemoveAdminAccess must refuse a caller who neither owns nor belongs to the group — an outsider must not be able to grant themselves admin.',
+          expected: "admin_access stays not 'Y' (the outsider's call is refused)",
+          actual: `admin_access=Y (addOrRemoveAdminAccess replied ${grabAdmin.status}) — the outsider became admin`,
+          request: { body: { kpostIDs: [attacker!.username], groupID } },
+        });
+      }
       expect
         .soft(
-          attackerRow?.admin_access ?? 'absent',
+          attackerAdminAccess,
           'BOLA: an outsider must not become admin of a group they do not belong to ' +
             `(addOrRemoveAdminAccess replied ${grabAdmin.status})`,
         )
@@ -194,9 +208,20 @@ test.describe('KPost Security · object-level authorization (IDOR/BOLA) @api @kp
         table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
         where: { group_id: groupID, kpost_id: testData.victimKpostId },
       });
+      const removedFlag = String(memberStillThere?.removed_flag ?? 'Y');
+      if (removedFlag !== 'N') {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'group-remove-member',
+          ruleId: 'BOLA-outsider-removes-member',
+          rule: 'removeGroupMember must refuse a caller who neither owns nor belongs to the group — an outsider must not be able to remove another group’s member.',
+          expected: "removed_flag stays 'N' (the outsider's call is refused)",
+          actual: `removed_flag=${removedFlag} (removeGroupMember replied ${kickMember.status}) — the outsider's removal took effect`,
+          request: { body: { memberKpostIdList: [testData.victimKpostId], groupID } },
+        });
+      }
       expect
         .soft(
-          memberStillThere?.removed_flag ?? 'Y',
+          removedFlag,
           `BOLA: an outsider must not remove a member (removeGroupMember replied ${kickMember.status})`,
         )
         .toBe('N');
@@ -205,9 +230,20 @@ test.describe('KPost Security · object-level authorization (IDOR/BOLA) @api @kp
         table: 'TBL_KPOST_USERGROUP_MASTER',
         where: { group_id: groupID },
       });
+      const groupName = String(groupRow?.group_name ?? '');
+      if (groupName === 'HACKED BY QA BENCH') {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'group-edit-name',
+          ruleId: 'BOLA-outsider-renames-group',
+          rule: 'editGroupName must refuse a caller who neither owns nor belongs to the group — an outsider must not be able to rename it.',
+          expected: "group_name unchanged (the outsider's call is refused)",
+          actual: `group_name="HACKED BY QA BENCH" (editGroupName replied ${rename.status}) — the outsider's rename took effect`,
+          request: { body: { groupID, groupName: 'HACKED BY QA BENCH' } },
+        });
+      }
       expect
         .soft(
-          String(groupRow?.group_name ?? ''),
+          groupName,
           `BOLA: an outsider must not rename the group (editGroupName replied ${rename.status})`,
         )
         .not.toBe('HACKED BY QA BENCH');

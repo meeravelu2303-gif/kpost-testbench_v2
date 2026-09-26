@@ -146,8 +146,28 @@ export const updateGroupImageApi = defineGroupEndpoint({
   tags: ['group-manage', 'needs-message-id'],
   destructive: true,
   sideEffect: 'data',
-  request: body(() => ({ groupKpostID: testData.kpostIdAbsent })),
-  note: 'needs a real groupKpostID and an image part',
+  /*
+   * Live-verified 2026-09-26: this route is `multipart/form-data`, not JSON — the previous plain-JSON
+   * body always 400d "Request must be multipart/form-data with the required file parts", so this
+   * write had never once succeeded in this bench's history (hidden by a `status < 600` check in
+   * feature.spec.ts). The file part is `file` (confirmed against `image`/`groupImage`/`profileImage`/
+   * `files`, all rejected as "Required part 'file' is missing"). It also rejects PNG — same class of
+   * format restriction as `profile-update-image` — with "Invalid File Format"; JPEG is accepted.
+   */
+  request: () => ({
+    multipart: {
+      file: {
+        name: 'qa-bench.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from(
+          '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
+          'base64',
+        ),
+      },
+      text: JSON.stringify({ groupKpostID: testData.kpostIdAbsent }),
+    },
+  }),
+  note: 'needs a real groupKpostID; multipart JPEG (PNG is rejected)',
 });
 
 export const removeGroupImageApi = defineGroupEndpoint({

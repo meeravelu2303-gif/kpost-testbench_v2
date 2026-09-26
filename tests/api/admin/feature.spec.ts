@@ -186,13 +186,34 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
 
       // Exercise the workplace tier attribute + variable UPDATE writes.
       if (wpAttrId) {
+        const wpAttrEdited = name('WP Tier edited');
         const wpAttrUpd = await call(
           endpoints,
           'admin-workplace-tier-attribute-update',
-          { id: wpAttrId, companyId: cid(), attributeName: name('WP Tier edited') },
+          { id: wpAttrId, companyId: cid(), attributeName: wpAttrEdited },
           'wp-attr-update',
         );
         expect.soft(statusOf(wpAttrUpd), 'workplace tier attribute updated').toMatch(/success/i);
+
+        // Live-verified 2026-09-26: previously only the envelope status was checked here (the sibling
+        // SAVE calls in this file already cross-check a fresh read; the UPDATE calls never did) — the
+        // exact "response looks fine, nothing confirmed changed" shape found in Kall's reschedule.
+        const wpAttrRecheck = await call(
+          endpoints,
+          'admin-workplace-tier-attribute-by-company',
+          { companyId: cid() },
+          'wp-attr-recheck',
+        );
+        const wpAttrRecheckRows = envelope(wpAttrRecheck).value;
+        expect
+          .soft(
+            Array.isArray(wpAttrRecheckRows) &&
+              wpAttrRecheckRows.some(
+                (r) => isPlainObject(r) && r.id === wpAttrId && r.attributeName === wpAttrEdited,
+              ),
+            'the updated workplace tier attribute name actually persisted',
+          )
+          .toBe(true);
       }
       if (wpVarId) {
         const wpVarUpd = await call(
@@ -258,13 +279,30 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           expect.soft(statusOf(locById), 'location by id read').toMatch(/success/i);
 
           // Exercise the location UPDATE write.
+          const locEdited = name('Location edited');
           const locUpd = await call(
             endpoints,
             'admin-workplace-location-update',
-            { id: locId, companyId: cid(), locationName: name('Location edited') },
+            { id: locId, companyId: cid(), locationName: locEdited },
             'loc-update',
           );
           expect.soft(statusOf(locUpd), 'workplace location updated').toMatch(/success/i);
+
+          // Live-verified 2026-09-26: re-read the SAME location by id (the exact endpoint already
+          // used above) and confirm the new name actually landed, not just that the write said so.
+          const locRecheck = await call(
+            endpoints,
+            'admin-workplace-location-by-id',
+            { id: locId },
+            'loc-recheck',
+          );
+          const locRecheckValue = envelope(locRecheck).value;
+          expect
+            .soft(
+              isPlainObject(locRecheckValue) && locRecheckValue.locationName === locEdited,
+              'the updated location name actually persisted',
+            )
+            .toBe(true);
         }
       }
 
@@ -364,13 +402,32 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
 
       // Exercise the HR tier attribute + variable UPDATE writes.
       if (hrAttrId) {
+        const hrAttrEdited = name('HR Tier edited');
         const hrAttrUpd = await call(
           endpoints,
           'admin-hr-tier-attribute-update',
-          { id: hrAttrId, companyId: cid(), attributeName: name('HR Tier edited') },
+          { id: hrAttrId, companyId: cid(), attributeName: hrAttrEdited },
           'hr-attr-update',
         );
         expect.soft(statusOf(hrAttrUpd), 'HR tier attribute updated').toMatch(/success/i);
+
+        // Same field-level check as the workplace tier attribute update above.
+        const hrAttrRecheck = await call(
+          endpoints,
+          'admin-hr-tier-attribute-by-company',
+          { companyId: cid() },
+          'hr-attr-recheck',
+        );
+        const hrAttrRecheckRows = envelope(hrAttrRecheck).value;
+        expect
+          .soft(
+            Array.isArray(hrAttrRecheckRows) &&
+              hrAttrRecheckRows.some(
+                (r) => isPlainObject(r) && r.id === hrAttrId && r.attributeName === hrAttrEdited,
+              ),
+            'the updated HR tier attribute name actually persisted',
+          )
+          .toBe(true);
       }
       if (hrVarId) {
         const hrVarUpd = await call(
@@ -443,18 +500,43 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         .toBe(true);
 
       if (empId) {
+        const empLastNameEdited = `Employee ${stamp} edited`;
         const empUpdate = await call(
           endpoints,
           'admin-employee-update',
           {
             id: empId,
             companyId: cid(),
-            personalInformationObj: { firstName: 'QA', lastName: `Employee ${stamp} edited` },
+            personalInformationObj: { firstName: 'QA', lastName: empLastNameEdited },
             employmentObj: {},
           },
           'employee-update',
         );
         expect.soft(statusOf(empUpdate), 'employee updated').toMatch(/success/i);
+
+        // Live-verified 2026-09-26: re-read the company's employee list (the exact endpoint already
+        // used above) and confirm the new name actually landed for THIS employee, not just that the
+        // write said so.
+        const empRecheck = await call(
+          endpoints,
+          'admin-employee-details',
+          { companyId: cid() },
+          'employee-recheck',
+        );
+        const empRecheckRows = envelope(empRecheck).value;
+        expect
+          .soft(
+            Array.isArray(empRecheckRows) &&
+              empRecheckRows.some(
+                (r) =>
+                  isPlainObject(r) &&
+                  r.id === empId &&
+                  isPlainObject(r.personalInformationObj) &&
+                  r.personalInformationObj.lastName === empLastNameEdited,
+              ),
+            'the updated employee last name actually persisted',
+          )
+          .toBe(true);
 
         const roleByEmp = await call(
           endpoints,

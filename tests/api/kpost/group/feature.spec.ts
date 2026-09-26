@@ -58,6 +58,11 @@ async function as(
   return { status: ex.status, data: (value.data as Record<string, unknown>) ?? {} };
 }
 
+const GROUP_IMAGE_JPEG = Buffer.from(
+  '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
+  'base64',
+);
+
 /** Reads a "needs-id" endpoint fed a real id this flow just minted (`allowLiveRead`, not a write). */
 async function readAs(
   endpoints: EndpointExecutor,
@@ -65,13 +70,13 @@ async function readAs(
   id: string,
   pathParams: Record<string, unknown>,
   label: string,
-): Promise<number> {
+): Promise<{ status: number; bodyText: string }> {
   const ex = await endpoints.sendTo(
     id,
     { pathParams: pathParams as Record<string, string | number> },
     { label: `group:${label}`, auth: { principal: who }, allowLiveRead: true },
   );
-  return ex.status;
+  return { status: ex.status, bodyText: ex.bodyText ?? '' };
 }
 
 test.describe('KPost Group · feature flow @database', () => {
@@ -106,12 +111,15 @@ test.describe('KPost Group · feature flow @database', () => {
             { kpostIDs: [testData.victimKpostId], ids: [0], groupID, hasAdminAccess: 'Y' },
             'admin-access',
           ],
+          // Checked 2026-09-26: no registered group read endpoint exposes the group's name back (no
+          // "get group details" route exists in this module), so this write's field-level effect is
+          // NOT independently verifiable via this API — status is the most this bench can honestly
+          // assert here, not worked around by inventing a check against data that isn't exposed.
           [A, 'group-edit-name', { groupKpostID, groupKpostName: 'QA Bench Renamed' }, 'edit-name'],
-          [A, 'group-update-image', { groupKpostID }, 'update-image'],
           // Downloads keyed by the REAL groupKpostID this flow just created — previously untestable
           // on live (destructive:false, no productionSafe: allowLiveWrite alone cannot unlock a
-          // read). Run right after update-image, before remove-image takes the image away again.
-          // Handled via readAs() below (branched on the "group-download-" id prefix), not as().
+          // read). Run right after update-image (below), before remove-image takes the image away
+          // again. Handled via readAs() below (branched on the "group-download-" id prefix), not as().
           [A, 'group-download-image', { groupKpostID, kpostID: A.username }, 'download-image'],
           [
             A,
@@ -128,15 +136,51 @@ test.describe('KPost Group · feature flow @database', () => {
             'remove-member',
           ],
         ];
+
+        /*
+         * `group-update-image` run separately, BEFORE the loop: live-verified 2026-09-26, this route
+         * is multipart/form-data with a `file` part — the loop's generic JSON-body `as()` helper
+         * always sent a plain JSON body, which 400d "Request must be multipart/form-data..." every
+         * time (hidden by a `status < 600` check). Fixed in group.api.ts; here it's driven directly
+         * with the real groupKpostID and its own JPEG fixture (PNG is rejected — same class of
+         * restriction as `profile-update-image`), then the download steps below confirm a real image
+         * now comes back, not an empty/stale one.
+         */
+        const imageUpdate = await endpoints.sendTo(
+          'group-update-image',
+          {
+            multipart: {
+              file: { name: 'qa-bench.jpg', mimeType: 'image/jpeg', buffer: GROUP_IMAGE_JPEG },
+              text: JSON.stringify({ groupKpostID }),
+            },
+          },
+          { label: 'group:update-image', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(imageUpdate.status, 'updateGroupProfileImage is accepted').toBeLessThan(300);
+
         for (const [who, id, bodyObj, label] of steps) {
           // The two group-image downloads are GET reads keyed by PATH params, not a body write —
           // and need allowLiveRead (destructive:false), not allowLiveWrite. Branched here rather
           // than given their own loop: they still need to run interleaved, right after update-image
           // and before remove-image takes the image away.
-          const status = id.startsWith('group-download-')
-            ? await readAs(endpoints, who, id, bodyObj, label)
-            : (await as(endpoints, who, id, bodyObj, label)).status;
-          expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+          if (id.startsWith('group-download-')) {
+            const read = await readAs(endpoints, who, id, bodyObj, label);
+            expect.soft(read.status, `${label} returns a status`).toBeLessThan(600);
+            if (imageUpdate.status < 300 && read.status === 200) {
+              // A real, freshly-uploaded image must come back non-trivially sized, not an empty or
+              // placeholder response — a coarse but honest check given the transport encodes binary
+              // image bytes as text here (no raw-buffer access), so an exact byte match isn't made.
+              expect
+                .soft(
+                  read.bodyText.length,
+                  `${label} returns real image content, not empty, after a fresh upload`,
+                )
+                .toBeGreaterThan(0);
+            }
+          } else {
+            const status = (await as(endpoints, who, id, bodyObj, label)).status;
+            expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+          }
         }
       }
     } finally {

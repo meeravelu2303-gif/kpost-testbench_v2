@@ -63,17 +63,47 @@ test.describe('KPost Settings · notification preferences @api @kpost-api @setti
     original = { katchup: row?.katchup_notification, kmail: row?.kmail_notification };
   });
 
+  test('the settings read-back reflects the stored row', async ({ endpoints, databases }) => {
+    const database = databases.for('kpost-api');
+    test.skip(!database.enabled, 'needs the KPOST_QA connection');
+
+    const stored = await database.findOne<{ katchup_notification: unknown }>({
+      table: 'TBL_KPOST_GENERAL_SETTINGS',
+      where: { kpost_id: me() },
+    });
+
+    const exchange = await endpoints.sendTo(
+      'settings-get-notifications',
+      {},
+      { label: 'notifications-workflow:read-back' },
+    );
+
+    expect(exchange.status, 'the settings read succeeds').toBe(200);
+    /*
+     * Asserted against the DATABASE's copy rather than against what the test sent: if the API ever
+     * served a cached or default preference, comparing to our own variable would hide it — our
+     * variable is what we hoped for, the row is what is true.
+     */
+    expect(stored, 'the row the API should be reflecting exists').toBeDefined();
+    expect(exchange.bodyText.length, 'and the read returns a body').toBeGreaterThan(0);
+  });
+
+  /*
+   * Kept LAST in this `mode: 'serial'` describe deliberately: this test asserts a known,
+   * permanently-open regression (#495) — closed FIXED on 2026-09-22 but live-verified again
+   * 2026-09-26 (in the correct full-file execution order, since `original` is captured above by the
+   * FIRST test — a `-g`-filtered run that skips that first test leaves `original` undefined and
+   * produces a false pass) to still reproduce deterministically: the endpoint answers success and
+   * the stored JSON never changes. #495 reopened with this evidence. Playwright's serial mode skips
+   * every later test once any earlier one fails, soft assertions included, so a test asserting a
+   * known-failing regression must run last or it silently prevents "the settings read-back..." above
+   * from ever running (the exact trap found earlier this session in Katchup and Admin) — soft +
+   * explicitly filed as defense in depth on top of the reordering.
+   */
   test('toggling the Katchup notification preference persists to the settings row', async ({
     endpoints,
     databases,
   }) => {
-    /*
-     * Expected failure while Bugzilla #495 is open: the endpoint answers "Updated Successfully" and
-     * the row never changes. `test.fail()` keeps the run green while the defect is live and turns
-     * RED the moment the write starts persisting — which is when the ticket can be closed.
-     */
-    // Bugzilla #495 reported fixed — now asserted normally (a toggled preference must persist to
-    // the row). Was pinned with test.fail() while the write persisted nothing.
     const database = databases.for('kpost-api');
     test.skip(!database.enabled, 'needs the KPOST_QA connection');
 
@@ -105,35 +135,21 @@ test.describe('KPost Settings · notification preferences @api @kpost-api @setti
      * the write CHANGED it — a toggle that reports success and leaves the value identical has not
      * been applied, and the user's preference will silently revert.
      */
-    expect(
-      JSON.stringify(after?.katchup_notification ?? null),
-      'the stored Katchup preference changed when the toggle was applied',
-    ).not.toBe(JSON.stringify(original?.katchup ?? null));
-  });
-
-  test('the settings read-back reflects the stored row', async ({ endpoints, databases }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection');
-
-    const stored = await database.findOne<{ katchup_notification: unknown }>({
-      table: 'TBL_KPOST_GENERAL_SETTINGS',
-      where: { kpost_id: me() },
-    });
-
-    const exchange = await endpoints.sendTo(
-      'settings-get-notifications',
-      {},
-      { label: 'notifications-workflow:read-back' },
-    );
-
-    expect(exchange.status, 'the settings read succeeds').toBe(200);
-    /*
-     * Asserted against the DATABASE's copy rather than against what the test sent: if the API ever
-     * served a cached or default preference, comparing to our own variable would hide it — our
-     * variable is what we hoped for, the row is what is true.
-     */
-    expect(stored, 'the row the API should be reflecting exists').toBeDefined();
-    expect(exchange.bodyText.length, 'and the read returns a body').toBeGreaterThan(0);
+    const afterJson = JSON.stringify(after?.katchup_notification ?? null);
+    const beforeJson = JSON.stringify(original?.katchup ?? null);
+    if (afterJson === beforeJson) {
+      endpoints.recordBusinessRuleViolation({
+        endpointId: 'settings-katchup-notification',
+        ruleId: 'REGRESSION-katchup-notification-not-persisted',
+        rule: 'katchupNotification must persist the toggled preference to TBL_KPOST_GENERAL_SETTINGS, not just report success.',
+        expected: `a changed value (was ${beforeJson})`,
+        actual: `unchanged: ${afterJson}`,
+        request: { body: { enable: 0 } },
+      });
+    }
+    expect
+      .soft(afterJson, 'the stored Katchup preference changed when the toggle was applied')
+      .not.toBe(beforeJson);
   });
 
   test.afterAll(async ({ endpoints }) => {

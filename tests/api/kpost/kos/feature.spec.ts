@@ -58,17 +58,24 @@ test.describe('KPost KOS · feature flow', () => {
     endpoints,
   }) => {
     /*
-     * Expected failure while Bugzilla #499 is open: /kword/create answers 500 'Error while creating
-     * document' for every payload tried, including an empty body, and writes no row. Deterministic
-     * across 3 passes, so test.fail() is safe here.
+     * Bugzilla #499 was closed RESOLVED/FIXED on 2026-09-22 — but live-verified again 2026-09-26
+     * with KOS_LIFECYCLE=true and it still reproduces exactly as originally reported: /kword/create
+     * still fails to return a docId, so the whole downstream lifecycle (save/update/share/join/
+     * reads/delete) still cannot run. #499 reopened with this evidence. This test previously trusted
+     * the ticket's FIXED status and switched from a pinned `test.fail()` to a plain soft assertion
+     * with no explicit filing — that assertion alone did not get this reliably tracked on every run
+     * (the auto-pipeline did not pick it up on the re-verification run), so it is filed explicitly
+     * below now, matching the pattern used for the other "reported fixed but wasn't" tickets found
+     * this session (#501, #507). The first run after this fix filed a new ticket (#624) instead of
+     * commenting on the reopened #499 — closed as a duplicate of #499, which is the ticket of record
+     * going forward.
      *
      * Pinning the WHOLE lifecycle is right in this one case, where it would be wrong elsewhere:
      * every later step (save, update, share, join, delete) takes a docId that only create can
      * issue, so there is no downstream assertion for the inversion to mask. The moment create
-     * works, this turns RED and the rest of the flow starts being exercised for real.
+     * works, this turns RED (in the sense of "0 findings, nothing filed") and the rest of the flow
+     * starts being exercised for real.
      */
-    // Bugzilla #499 reported fixed — now asserted normally (create must issue a docId and the full
-    // lifecycle run). Was pinned with test.fail() while create 500'd for every payload.
     let docId: string | undefined;
     try {
       const created = await run(
@@ -85,6 +92,16 @@ test.describe('KPost KOS · feature flow', () => {
         },
         'create',
       );
+      if (created.status >= 500) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'kos-create-doc',
+          ruleId: 'REGRESSION-kword-create-still-500',
+          rule: '/kword/create must actually create a document and return a docId — #499 fixed some cases but this reproduces the same 500 on the documented default payload.',
+          expected: 'status < 300 and a real docId',
+          actual: `status=${created.status}`,
+          request: { body: { titleOfDocument: 'QA Bench Doc', documentType: 'word' } },
+        });
+      }
       expect.soft(created.status, 'createDoc is accepted').toBeLessThan(300);
       docId = extractDocId(created.data);
       expect.soft(docId, 'create returns a docId').toBeTruthy();
@@ -138,9 +155,28 @@ test.describe('KPost KOS · feature flow', () => {
           expect.soft(r.status, `${label} returns a valid status`).toBeLessThan(600);
         }
 
+        /*
+         * Field-level check for `kos-update-doc`, added 2026-09-26: previously nothing here (or the
+         * doc-keyed reads below) ever confirmed the "Introduction" heading sent above was actually
+         * stored — every check in this file was status-only. Cannot be live-verified yet: this whole
+         * test never reaches this point while #499 (kword/create) is still broken (docId is always
+         * undefined), so this is the correct assertion to have ready, not a live-confirmed one.
+         */
+        const getDoc = await run(endpoints, 'kos-get-document', { pathParams: { docId } }, 'get-document');
+        expect.soft(getDoc.status, 'get-document returns a status').toBeLessThan(600);
+        if (getDoc.status < 300) {
+          const headings = (getDoc.data as { heading?: Array<{ topic?: string }> } | undefined)
+            ?.heading;
+          expect
+            .soft(
+              Array.isArray(headings) && headings.some((h) => h?.topic === 'Introduction'),
+              'the heading set by kos-update-doc actually appears in a fresh read',
+            )
+            .toBe(true);
+        }
+
         // Doc-keyed reads, fed the real docId.
         for (const [id, label] of [
-          ['kos-get-document', 'get-document'],
           ['kos-presence', 'presence'],
           ['kos-access-activity', 'access-activity'],
           ['kos-revisions', 'revisions'],

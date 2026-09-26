@@ -116,6 +116,11 @@ const NOT_A_RESOURCE = new Set(
     // The group's DISPLAY name in editGroupName — free text a user types, not a resource id. Same
     // class as groupkpostname; without it the identifier guard blocks a rename with a non-QA name.
     'groupname',
+    // A KMail other-domain contact's DISPLAY name (addOtherDomainContact/editOtherDomainContacts
+    // Details) — free text a user types, not a resource id. Same class as groupname; without it the
+    // guard refused any edit that actually changed the name, so the bench could only ever "edit" a
+    // contact back to its own address as a no-op. Found live 2026-09-26.
+    'contactname',
     'memberdesignation',
     // A capacity/quantity number (e.g. an enquiry's requested seat count), not a member id — matches
     // the pattern only because the key contains "member".

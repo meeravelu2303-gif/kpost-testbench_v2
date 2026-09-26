@@ -35,6 +35,14 @@ export const setImportantApi = defineKmailEndpoint({
   note: 'needs a real kmailID; exercised by the lifecycle',
 });
 
+/*
+ * Dev-confirmed 2026-09-26: the previous 500 crash "was fixed by using some custom annotations" —
+ * partly true. `kmailStatusFlag`'s mere PRESENCE (any int 0-4) avoids the crash, turning it into a
+ * clean 400 `{"valueFor":"REPLY_NOT_SENT","message":"Parameter Invalid"}`; its ABSENCE still crashes
+ * with a 500 `{"errorCode":"clear mails exception occured",...}` (see manage-workflow.spec.ts). No
+ * value tried (0-4) ever clears "REPLY_NOT_SENT", even live-verified across a real reply exchange
+ * between the two accounts — the exact contract remains Unknown/Requires Clarification.
+ */
 export const clearStatusApi = defineKmailEndpoint({
   id: 'kmail-clear-status',
   method: 'POST',
@@ -42,8 +50,8 @@ export const clearStatusApi = defineKmailEndpoint({
   summary: 'Clear the status of a contact’s mails',
   tags: [...M, 'status'],
   destructive: true,
-  request: body(() => ({ selectedContact: testData.victimKpostId })),
-  note: 'clears our own view of a contact’s mail status',
+  request: body(() => ({ selectedContact: testData.victimKpostId, kmailStatusFlag: 0 })),
+  note: 'kmailStatusFlag required to avoid a 500 crash, but no value satisfies REPLY_NOT_SENT — contract still Unknown/Requires Clarification',
 });
 
 export const clearAllStatusApi = defineKmailEndpoint({
@@ -53,7 +61,8 @@ export const clearAllStatusApi = defineKmailEndpoint({
   summary: 'Clear the status of all contacts’ mails',
   tags: [...M, 'status'],
   destructive: true,
-  note: 'workbook documents no body; clears our own status view',
+  request: body(() => ({ kmailStatusFlag: 0 })),
+  note: 'same Unknown/Requires Clarification contract as kmail-clear-status',
 });
 
 export const convertPdfApi = defineKmailEndpoint({

@@ -134,6 +134,29 @@ test.describe('KPost KDiary · feature flow', () => {
         }
 
         /*
+         * Live-verified 2026-09-26: `kdiary-update-remarks` genuinely persists both fields — this
+         * was previously status-only (accepted, but never confirmed the actual event row changed).
+         */
+        const eventsAfterRemarks = await endpoints.sendTo(
+          'kdiary-get-events',
+          {},
+          { label: 'kdiary:remarks-recheck', auth: { principal: A } },
+        );
+        const eventsParsed = JSON.parse(eventsAfterRemarks.bodyText || '{}') as {
+          data?: Array<Record<string, unknown>>;
+        };
+        const eventRow = (eventsParsed.data ?? []).find((r) => r.eventID === eventID);
+        expect
+          .soft(eventRow?.remarks, 'the new remarks code actually persisted')
+          .toBe(1);
+        expect
+          .soft(
+            eventRow?.remarksDescription,
+            'the new remarksDescription actually persisted',
+          )
+          .toBe('Completed by QA');
+
+        /*
          * `editReport` needs the REPORT's own id (not eventID) — read it back from `getTodayReport`
          * so this works whether the `save-report` step above just created it or "already exists for
          * today" fired instead (a report for today exists either way).

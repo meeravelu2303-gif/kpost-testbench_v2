@@ -16,7 +16,8 @@ import { mailShape } from '@api/definitions/kmail/send.api';
  * OD-contact writes take a non-KPost email; the QA-identifier guard refuses a stranger's, so — per
  * the endpoint definition's own note — an address we own (`testData.kpostId`) stands in for the
  * external contact. `kmail-credentials` (sensitive: returns credentials) and `kmail-postbox-contacts`
- * (404 on this test build) are deliberately NOT exercised here; see the recorded-gap tests at the end.
+ * (dev-confirmed 2026-09-26: not in use) are deliberately NOT exercised here; see the recorded-gap
+ * tests at the end.
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -45,29 +46,53 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
     'writes real KMail data; set KMAIL_LIFECYCLE=true',
   );
 
-  test('clearStatusOfKmailsContacts and clearStatusOfAllKmailsContacts: exact request shape is Unknown/Requires Clarification', async ({
+  test('clearStatusOfKmailsContacts and clearStatusOfAllKmailsContacts: `kmailStatusFlag` is required, but no value satisfies it', async ({
     endpoints,
   }) => {
     /*
-     * Live-verified 2026-09-24: both consistently answer 400 `{"valueFor":"REPLY_NOT_SENT",
-     * "message":"Parameter Invalid"}` regardless of whether a `kmailStatusFlag` (0-3) is added to
-     * the body — the endpoint definition's own default body (`{selectedContact}` / no body at all)
-     * is not what the backend expects, and "REPLY_NOT_SENT" suggests a required parameter this
-     * bench has not identified. Not worked around by guessing further; asserted as "no server
-     * error" only, which is genuinely all that's confirmed right now.
+     * Dev-confirmed 2026-09-26: this 500 crash "was fixed by using some custom annotations." Re-tested
+     * live the same day — it is only PARTLY fixed. `selectedContact` alone (this endpoint's previous
+     * default body) still 500s `{"errorCode":"clear mails exception occured",...}`; adding a
+     * `kmailStatusFlag` field (any int 0-4) avoids the crash and gets a clean 400
+     * `{"valueFor":"REPLY_NOT_SENT","message":"Parameter Invalid"}` instead. So the annotation fix
+     * only covers the "field present" case — a genuinely missing `kmailStatusFlag` still reaches an
+     * uncaught exception rather than a validation error. Filed automatically by the engine's own
+     * flow-finding pipeline (a live 5xx auto-files/comments; no manual recordBusinessRuleViolation
+     * needed) — this assertion is what keeps that finding open until the dev also validates the
+     * field's ABSENCE, not just a bad value.
+     *
+     * Separately, and still open: no value of `kmailStatusFlag` (0-4, as an int) ever satisfies
+     * "REPLY_NOT_SENT" — live-verified across a real send AND a real reply exchange between the two
+     * test accounts (A sends to B, B replies to A, then A calls clear-status for B): identical error,
+     * unchanged by the reply actually existing. This means either `kmailStatusFlag` is the wrong field
+     * name entirely (its mere presence avoids the crash by luck, e.g. a null-check elsewhere), or the
+     * real precondition for clearing status is unrelated to a reply happening at all. Not worked
+     * around by guessing further — needs the dev to give the exact field name/type AND the account
+     * state "REPLY_NOT_SENT" actually checks for.
      */
     expect
       .soft(
         await act(endpoints, 'kmail-clear-status', { selectedContact: B.username }, 'clear-status'),
-        'clearStatusOfKmailsContacts returns a status (exact required shape: Unknown/Requires Clarification)',
+        'clearStatusOfKmailsContacts does not crash when kmailStatusFlag is omitted (dev-confirmed partial fix)',
       )
       .toBeLessThan(500);
     expect
       .soft(
-        await act(endpoints, 'kmail-clear-all-status', undefined, 'clear-all-status'),
-        'clearStatusOfAllKmailsContacts returns a status (exact required shape: Unknown/Requires Clarification)',
+        await act(
+          endpoints,
+          'kmail-clear-status',
+          { selectedContact: B.username, kmailStatusFlag: 0 },
+          'clear-status-with-flag',
+        ),
+        'clearStatusOfKmailsContacts: exact contract still Unknown/Requires Clarification — kmailStatusFlag present but no value passes REPLY_NOT_SENT',
       )
-      .toBeLessThan(500);
+      .toBeLessThan(400);
+    expect
+      .soft(
+        await act(endpoints, 'kmail-clear-all-status', { kmailStatusFlag: 0 }, 'clear-all-status'),
+        'clearStatusOfAllKmailsContacts: same Unknown/Requires Clarification contract as clear-status',
+      )
+      .toBeLessThan(400);
   });
 
   test('convertMailAsPDF and downloadODAttachment, fed a real kmailID from a compose @api', async ({
@@ -122,17 +147,26 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
   test('other-domain contact: add → edit → delete @api', async ({ endpoints }) => {
     /*
      * The guard refuses a non-owned email, so testData.kpostId stands in for "an external contact"
-     * — matching addOtherDomainContactApi's own definition note. contactName/referenceName ALSO
-     * match the guard's identifier pattern (both contain "contact"/"name"-adjacent substrings it
-     * treats broadly) and need a QA-owned allowlisted STRING value, not an arbitrary label — no
-     * free-text QA name is configured, so the same owned address is reused there too.
+     * — matching addOtherDomainContactApi's own definition note. `referenceName` ALSO matches the
+     * guard's identifier pattern and needs a QA-owned allowlisted value, so the same owned address
+     * is reused there too. `contactName` is a free-text display name (exempted in
+     * qa-identifier-guard.ts 2026-09-26 — it was wrongly treated as a resource id, so the edit below
+     * could previously only ever "change" the name back to the same owned address, a no-op that hid
+     * the fact nothing was really being tested).
+     *
+     * There is no registered read endpoint that exposes an other-domain contact's stored name back
+     * (`kmail-misc-contacts` returns bare email strings; `kmail-other-domain-mails` returns mail
+     * records, not contact records) — live-verified 2026-09-26. So the edit's field-level effect is
+     * NOT independently verifiable via this API; asserted as "accepted", which is the most this
+     * bench can honestly claim, not worked around by inventing a check against data that isn't
+     * exposed.
      */
     const contactEmailID = testData.kpostId;
 
     const added = await act(
       endpoints,
       'kmail-add-od-contact',
-      { contactEmailID, contactName: testData.kpostId, referenceName: testData.kpostId },
+      { contactEmailID, contactName: 'QA Original Name', referenceName: testData.kpostId },
       'od-add',
     );
     expect.soft(added, 'addOtherDomainContacts is accepted').toBeLessThan(300);
@@ -140,7 +174,7 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
     const edited = await act(
       endpoints,
       'kmail-edit-od-contact',
-      { contactEmailID, contactName: testData.kpostId },
+      { contactEmailID, contactName: `QA Edited Name ${Date.now()}` },
       'od-edit',
     );
     expect.soft(edited, 'editOtherDomainContactsDetails is accepted').toBeLessThan(300);
@@ -154,59 +188,65 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
     expect.soft(deleted, 'deleteOtherDomainContact is accepted').toBeLessThan(300);
   });
 
-  test('postBulkMail: exact required shape is Unknown/Requires Clarification', async ({
+  test('postBulkMail: sends to multiple recipients with its own, distinct contract @api', async ({
     endpoints,
   }) => {
     /*
-     * Live-verified 2026-09-24: a plain Spring 400 with no detail message, using the endpoint
-     * definition's own default body shape (mailShape + toAddressList). Not enough information to
-     * determine what the backend actually wants beyond that — not worked around by guessing further.
+     * Dev-confirmed 2026-09-26 (a working curl on a dev host): `postBulkMail` is NOT `postMail`'s
+     * shape plus `toAddressList` — spreading `mailShape()` in (as this test previously did) is what
+     * produced the bare 400 "Bad Request" with no detail. The real, minimal contract is just:
+     * `{ toAddressList, kmailSubject, kmailContent, priority, kmailType: 13, attachmentUuid }`.
+     * Live-verified against testkmail.kpostindia.com with this exact shape: 202 "Bulk PostMail Send
+     * SuccessFully". (Also confirmed live: sending to the CALLER's own address 400s "Receiver Cannot
+     * be same as sender" — sensible validation, not a defect — so the recipient list below is our
+     * second QA account only, never the caller's own.)
      */
     const bulk = await endpoints.sendTo(
       'kmail-post-bulk',
       {
         body: {
-          ...mailShape({ kmailType: KMAIL_TYPE.bulkmail, kmailSubject: `QA Bulk ${Date.now()}` }),
           toAddressList: [B.username],
+          kmailSubject: `QA Bulk ${Date.now()}`,
+          kmailContent: 'QA bench bulk mail body — safe to ignore.',
+          priority: 0,
+          kmailType: KMAIL_TYPE.bulkmail,
+          attachmentUuid: [] as string[],
         },
       },
       { label: 'kmail:post-bulk', auth: { principal: A }, allowLiveWrite: true },
     );
+    expect.soft(bulk.status, 'postBulkMail is accepted').toBeLessThan(300);
+    /*
+     * No cleanup step: the response carries no transaction/kmailID (just a plain success message),
+     * so there is nothing here to delete by id — a real, permanent limitation of this endpoint's own
+     * response shape, not something this bench can work around without inventing an id.
+     */
+
+    /*
+     * kmail-bulk-status, unblocked by the same fix: it was recorded as blocked on "a real bulk-mail
+     * fromAddress, which only a successful postBulkMail produces" — but `fromAddress` is just the
+     * CALLER's own address (testData.kpostId), which needs no send to exist at all. Live-verified
+     * 2026-09-26 right after a real bulk send: it correctly reports the just-sent mail's processing
+     * state (`{"total":1,"status":"PROCESSING",...}`), not a stale/empty read.
+     */
+    const status = await endpoints.sendTo(
+      'kmail-bulk-status',
+      { pathParams: { fromAddress: testData.kpostId } },
+      { label: 'kmail:bulk-status', auth: { principal: A }, allowLiveRead: true },
+    );
+    expect.soft(status.status, 'bulkMail/status reads back after a real bulk send').toBeLessThan(300);
+    const statusBody = JSON.parse(status.bodyText || '{}') as { total?: number };
     expect
-      .soft(
-        bulk.status,
-        'postBulkMail returns a status (exact required shape: Unknown/Requires Clarification)',
-      )
-      .toBeLessThan(500);
-    if (bulk.status < 300) {
-      const parsed = bulk.json();
-      const value = (parsed.ok ? parsed.value : {}) as { data?: unknown };
-      const data = Array.isArray(value.data)
-        ? (value.data[0] as Record<string, unknown>)
-        : (value.data as Record<string, unknown> | undefined);
-      const txns = data?.kmailTransactionList;
-      const transactionIDs = Array.isArray(txns)
-        ? (txns as Array<Record<string, unknown>>)
-            .map((t) => t.transactionID ?? t.id)
-            .filter((v): v is number => typeof v === 'number')
-        : [];
-      await endpoints
-        .sendTo(
-          'kmail-delete',
-          { body: { groupFlag: false, transactionIDs } },
-          { label: 'kmail:post-bulk-cleanup', auth: { principal: A }, allowLiveWrite: true },
-        )
-        .catch(() => undefined);
-    }
+      .soft(statusBody.total, 'the status reflects at least the mail just sent')
+      .toBeGreaterThan(0);
   });
 
   test('draftMailMultiPart: no live business-rule test (recorded gap, not a workaround)', () => {
     test.skip(
       true,
-      'testkmail answers a plain Spring 404 "Not Found" for POST /draft/draftMailMultiPart ' +
-        "(live-verified 2026-09-24, using the endpoint definition's own multipart shape) — the " +
-        'route is not deployed on this test build, the same pattern as kmail-postbox-contacts and ' +
-        'kos-list-documents. Needs the dev to confirm whether the route ships on this build.',
+      'Dev-confirmed 2026-09-26: this route is not in use — intentionally unavailable on this ' +
+        'build, not a deployment gap. testkmail answers a plain Spring 404 "Not Found" for POST ' +
+        '/draft/draftMailMultiPart, consistent with that. Not exercised, by design.',
     );
     expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
   });
@@ -311,29 +351,19 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
       .toBeLessThan(500);
   });
 
-  test("kmail-bulk-status: no live test (blocked by postBulkMail's Unknown/Requires Clarification shape)", () => {
+  test('kmail-delete-letterhead: no live test (dev-confirmed shared default; no create endpoint to safely test against)', () => {
     test.skip(
       true,
-      'needs a real bulk-mail fromAddress, which only a successful postBulkMail produces — and ' +
-        'postBulkMail itself currently 400s with no diagnosable detail (see the postBulkMail test ' +
-        'above). Blocked on that being resolved first, not an independent gap.',
-    );
-    expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
-  });
-
-  test('kmail-delete-letterhead: no live test (ownership of the only available letterhead is Unknown/Requires Clarification)', () => {
-    test.skip(
-      true,
-      'getAllLetterHead lists exactly ONE letterhead (id "1") on this account, and whether it is a ' +
-        'personal letterhead (safe to delete and re-create) or a shared system template (deleting it ' +
-        'would remove it for every account) has not been confirmed. Re-checked 2026-09-25: ' +
-        'getLetterHead marks it `"default":"Y"` and its assets sit at a generic S3 path ' +
-        '(letterHead/LHH2.png, LHF2.png) — evidence pointing toward a shared system default, not ' +
-        'something this account personally uploaded, which only strengthens the original concern. ' +
-        'No registered endpoint creates a NEW letterhead to safely delete instead (only ' +
-        'get-all/get-current/get-template/set-active-by-id/delete-by-id are registered). Deleting the ' +
-        'only one on a guess risks destroying shared state — recorded pending the dev confirming the ' +
-        'letterhead ownership model, not worked around by deleting it anyway.',
+      'Dev-confirmed 2026-09-26: letterhead id "1" IS the shared system default — "other[s] are ' +
+        'should be added by user for their own customization." This matches the evidence already on ' +
+        'file (getLetterHead marks id 1 `"default":"Y"` at a generic S3 path). So deleting id 1 is ' +
+        'confirmed unsafe, exactly as suspected — not a remaining open question. What blocks a live ' +
+        'test now is narrower: the KMail OpenAPI contract and workbook register only ' +
+        'get-all/get-current/get-template/set-active-by-id/delete-by-id for letterheads — no ' +
+        'create/save/upload route a user would call to add their own, so this bench has no way to ' +
+        'create a personal letterhead to safely delete instead. Needs the dev to name which endpoint ' +
+        'the "add your own" flow actually calls (not documented in the KMAILAPI workbook) before this ' +
+        'can be tested end to end; not worked around by deleting the shared default.',
     );
     expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
   });
@@ -348,12 +378,12 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
     expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
   });
 
-  test('kmail-postbox-contacts: no live test (recorded gap, not a workaround)', () => {
+  test('kmail-postbox-contacts: no live test (dev-confirmed not in use, not a gap)', () => {
     test.skip(
       true,
-      'returns Spring 404 "route not mapped" on this test build (see the endpoint definition\'s own ' +
-        'note). Not run standalone (a 404 there reads as a false CRITICAL); needs the dev to confirm ' +
-        'whether the route ships on this build before a business-rule test can be written.',
+      'Dev-confirmed 2026-09-26: this route is not in use — intentionally unavailable on this build, ' +
+        'not a deployment gap. Consistent with the plain Spring 404 "route not mapped" it returns. ' +
+        'Not exercised, by design.',
     );
     expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
   });

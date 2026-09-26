@@ -222,10 +222,17 @@ test.describe('KPost Kall · feature flow @database', () => {
             .not.toBe(0);
         }
 
-        // BR-C01: rescheduling must KEEP the same entry (kallID) and only move its status tag to
-        // Rescheduled. Assert this against the RESPONSE, not just "accepted": if reScheduleKall
-        // returns a NEW kallID, it created a second call instead of updating the original — the
-        // BR-C01 violation. (The old test only checked status < 300, so it missed exactly this.)
+        /*
+         * BR-C01, CORRECTED 2026-09-26 by the owner: rescheduling a call is REQUIRED to create a new
+         * call (a new kallID) — this is the intended design, not a defect. The original entry is
+         * superseded, not overwritten. Live-verified against the database (not just the response):
+         * the ORIGINAL row's senderKallStatus moves 6 (Scheduled) -> 7 (ReScheduled), correctly
+         * marking it superseded, while the NEW row starts fresh at 6 (Scheduled) — exactly what a
+         * "new call" should do. The bench had this backwards for a while: #501 (new kallID),
+         * #620 (new row not linked back) and #621 (status not moved) were all filed against a wrong
+         * reading of the requirement — the status transition IS correct, just on the original row,
+         * not the response's row (the earlier check read the wrong one). All three closed INVALID.
+         */
         const rescheduled = await endpoints.sendTo(
           'kall-reschedule',
           { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
@@ -239,43 +246,34 @@ test.describe('KPost Kall · feature flow @database', () => {
           unknown
         >;
         const rescheduledId = extractKallId(rescheduledBody);
-        if (rescheduledId !== undefined) {
-          if (rescheduledId !== kallID) {
-            // CONFIRMED BR-C01 violation — file it to the developer, not just a soft assert.
-            endpoints.recordBusinessRuleViolation({
-              endpointId: 'kall-reschedule',
-              ruleId: 'BR-C01',
-              rule: 'Rescheduling a call must keep the same call (kallID) and only move its status to Rescheduled — it must not create a new call.',
-              expected: `the same kallID (${kallID})`,
-              actual: `a new kallID (${rescheduledId}) — a second call was created`,
-              request: { body: { kallID } },
-            });
-          }
-          /*
-           * The identity rule itself is asserted in its own test below ("BR-C01 · reschedule
-           * identity"), pinned to Bugzilla #501. It is deliberately NOT asserted here: this test
-           * covers six steps, and `test.fail()` inverts a whole test — pinning it here would mean a
-           * regression in join, end or the database assertions was also reported as "expected".
-           * The violation is still RECORDED above, so the defect keeps reaching the developer.
-           */
-          test.info().annotations.push({
-            type: 'observed',
-            description:
-              `reschedule returned kallID ${rescheduledId} for original ${kallID} ` +
-              `(Bugzilla #501 — asserted in its own test).`,
-          });
-        }
-        // BR-C01 / FR-KL-003: the status tag must move to ReScheduled (7). Measured shape:
-        // data[0].senderKallStatus. (On the current build it stays 6 = Scheduled — part of the defect.)
-        const row = Array.isArray(rescheduledBody.data)
+        expect
+          .soft(rescheduledId, 'reschedule issues a real, NEW kallID for the rescheduled call')
+          .toBeTruthy();
+        expect
+          .soft(
+            rescheduledId,
+            'BR-C01: rescheduling creates a new call — a different kallID from the original, by design',
+          )
+          .not.toBe(kallID);
+
+        const newRow = Array.isArray(rescheduledBody.data)
           ? (rescheduledBody.data[0] as Record<string, unknown> | undefined)
           : undefined;
-        // Status tag: also part of BR-C01 and also asserted in the pinned test below.
-        if (row?.senderKallStatus !== undefined) {
-          test.info().annotations.push({
-            type: 'observed',
-            description: `reschedule response senderKallStatus = ${JSON.stringify(row.senderKallStatus)} (expected 7).`,
+        expect
+          .soft(newRow?.senderKallStatus, 'the new call starts fresh as Scheduled (6)')
+          .toBe(6);
+
+        if (database.enabled && rescheduledId !== undefined) {
+          const originalRow = await database.findOne<{ sender_kall_status: number }>({
+            table: 'TBL_KPOST_KOOL_KALL_MASTER',
+            where: { kall_id: kallID },
           });
+          expect
+            .soft(
+              originalRow?.sender_kall_status,
+              'BR-C01: the ORIGINAL call moves to ReScheduled (7), marking it superseded',
+            )
+            .toBe(7);
         }
 
         /*
@@ -314,50 +312,63 @@ test.describe('KPost Kall · feature flow @database', () => {
 
   test('a repeating scheduled call is created (FR-C02) @api @kall', async ({ endpoints }) => {
     /*
-     * Expected failure while Bugzilla #500 is open, and deterministic enough to pin: every repeat
-     * interval answers 500 while repeatType 0 ("no repeat") answers 200, measured 3 passes x 3
-     * intervals with no variation. Unlike the login race (#496), there is no coin toss here, so
-     * `test.fail()` is safe — it keeps the run green while the defect is live and turns RED the
-     * moment a repeating call can be created.
+     * Bugzilla #500 was closed RESOLVED/FIXED (2026-09-22) — but that only fixed the SEVERITY, not
+     * the feature. Live-verified again 2026-09-26: every repeat interval still fails identically
+     * ("Invalid Request", tried with both past and future date ranges — the date isn't the cause),
+     * just with a 400 now instead of the original 500. A repeating call still cannot be created at
+     * all. Since this is a 4xx, the engine's automatic write-flow filing does not pick it up by
+     * design (it only auto-files 5xx) — filed explicitly here so this regression doesn't go
+     * silently untracked just because its status code improved.
+     *
+     * CORRECTED 2026-09-26: originally filed as #622 [KP-1F469E] via ruleId
+     * `REGRESSION-kall-repeat-still-broken` — but that finding's `request` evidence was only
+     * `{"repeatType": 1}` (what this test happened to override), not the full body actually sent.
+     * The ticket's "Reproduce" curl box is generated once, from the bug's original description, and
+     * Bugzilla has no API to edit a description/comment after posting — so the wrong curl could not
+     * be corrected in place. #622 closed WONTFIX; re-filed under a new ruleId
+     * (`REGRESSION-kall-repeat-still-broken-v2`) so the fresh ticket's own "Reproduce" box carries
+     * the complete, correct request from the moment it's created.
      */
-    // Bugzilla #500 reported fixed — now asserted normally (fixed → green; a regression → red, and
-    // :file mode reopens the ticket). Was pinned with test.fail() while the 500 was live.
     try {
+      const repeatBody = scheduleShape({
+        repeatType: 1,
+        repeatedDate: JSON.stringify({ start_date: '2026-09-14', end_date: '2026-09-20' }),
+        kallDetails: [{ receiver: B.username }],
+      });
       const repeat = await endpoints.sendTo(
         'kall-scheduled-repeat',
-        {
-          body: scheduleShape({
-            repeatType: 1,
-            repeatedDate: JSON.stringify({ start_date: '2026-09-14', end_date: '2026-09-20' }),
-            kallDetails: [{ receiver: B.username }],
-          }),
-        },
+        { body: repeatBody },
         { label: 'feature:kall:repeat', auth: { principal: A }, allowLiveWrite: true },
       );
+      if (repeat.status >= 400) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'kall-scheduled-repeat',
+          ruleId: 'REGRESSION-kall-repeat-still-broken-v2',
+          rule: 'scheduledRepeatKall must actually create a repeating call for a real repeat interval, not reject every one — #500 fixed the status code (500→400) but not the underlying capability.',
+          expected: 'status < 300 for a well-formed repeat interval',
+          actual: `status=${repeat.status}, body=${repeat.bodyText}`,
+          request: { body: repeatBody },
+        });
+      }
       expect.soft(repeat.status, 'scheduledRepeatKall is accepted').toBeLessThan(300);
     } finally {
       await clearHistory(endpoints, [A, B]);
     }
   });
 
-  test('BR-C01 · reschedule keeps the original call, and only moves its status tag @api @kall', async ({
+  test('BR-C01 · reschedule creates a new call, and moves the ORIGINAL to ReScheduled @api @kall', async ({
     endpoints,
     databases,
   }) => {
     /*
-     * Expected failure while Bugzilla #501 is open.
-     *
-     * Deterministic, so `test.fail()` is the right instrument here where it was the wrong one for
-     * the login race (#496): measured 3/3, the reschedule always returns original + 1. It keeps the
-     * run green while the defect is live and turns RED the moment reschedule starts updating in
-     * place — which is the signal to close the ticket.
-     *
-     * Split out of the long scheduled-call flow deliberately. `test.fail()` inverts an entire test,
-     * so pinning it on a six-step flow would also swallow a regression in join, end or the database
-     * assertions. A pinned test should assert one rule.
+     * BR-C01, CORRECTED 2026-09-26 by the owner: creating a new call on reschedule is the intended
+     * requirement, not a defect. #501, #620 and #621 were all filed against a wrong reading of the
+     * rule and are closed INVALID. The real rule, live-verified against the database: rescheduling
+     * issues a genuinely NEW kallID, that new call starts fresh at senderKallStatus 6 (Scheduled),
+     * and the ORIGINAL call's row moves to senderKallStatus 7 (ReScheduled) — marking it superseded.
+     * This test was previously checking the RESPONSE's row (the new call) for the 6->7 transition,
+     * which is why it looked broken: the transition is real, it just happens on the ORIGINAL row.
      */
-    // Bugzilla #501 reported fixed — now asserted normally (reschedule must update in place, not
-    // create a new call). Was pinned with test.fail() while the defect was live.
     const database = databases.for('kpost-api');
 
     const scheduled = await endpoints.sendTo(
@@ -383,36 +394,66 @@ test.describe('KPost Kall · feature flow @database', () => {
       >;
       const rescheduledId = extractKallId(rescheduledBody);
 
-      /*
-       * The rule, in one assertion: BR-C01 says rescheduling "updates the status tag Scheduled →
-       * Rescheduled while keeping the original entry's identity". A different id means a second
-       * call was created and every client holding the original id is now pointing at a stale
-       * record.
-       */
+      expect(rescheduledId, 'reschedule issues a real, NEW kallID').toBeTruthy();
       expect(
         String(rescheduledId),
-        'BR-C01: reschedule must keep the SAME kallID — a new id means a second call was created',
-      ).toBe(String(kallID));
+        'BR-C01: reschedule creates a NEW call — a different kallID from the original, by design',
+      ).not.toBe(String(kallID));
 
-      /*
-       * The database half, which is what makes the two-row behaviour indefensible rather than
-       * merely surprising: the table carries `parent_kall_id` for exactly this case, and it is left
-       * NULL, so the new call cannot be traced back to the one it replaced.
-       */
-      if (
-        database.enabled &&
-        rescheduledId !== undefined &&
-        String(rescheduledId) !== String(kallID)
-      ) {
-        const created = await database.findOne<{ parent_kall_id: number | null }>({
+      const newRow = Array.isArray(rescheduledBody.data)
+        ? (rescheduledBody.data[0] as Record<string, unknown> | undefined)
+        : undefined;
+      expect(newRow?.senderKallStatus, 'the new call starts fresh as Scheduled (6)').toBe(6);
+
+      if (database.enabled && kallID !== undefined) {
+        const originalRow = await database.findOne<{ sender_kall_status: number }>({
           table: 'TBL_KPOST_KOOL_KALL_MASTER',
-          where: { kall_id: rescheduledId },
+          where: { kall_id: kallID },
         });
         expect(
-          created?.parent_kall_id,
-          'if a second call IS created, it must at least point back at the original',
-        ).toBe(Number(kallID));
+          originalRow?.sender_kall_status,
+          'BR-C01: the ORIGINAL call moves to ReScheduled (7), marking it superseded',
+        ).toBe(7);
       }
+    } finally {
+      await clearHistory(endpoints, [A, B]);
+    }
+  });
+
+  test('reScheduleKall: an incomplete payload crashes (500) instead of a clean validation error @api @kall', async ({
+    endpoints,
+  }) => {
+    /*
+     * Live-verified 2026-09-26, while investigating BR-C01 above: `reScheduleKall` fed only
+     * `{ kallID }`, or `{ kallID, subject }`, answers `500 "Unable to reschedule kool kall"` both
+     * times — a missing required field should be a 400, not a server error. Auto-filed by the
+     * engine's own write-flow pipeline (it auto-files any 5xx on an authorized live write) as
+     * **#619** [KP-FFF743], CRITICAL, KPost API — recorded here too, as a permanent regression test,
+     * rather than left to only ever be caught by chance during an unrelated investigation.
+     */
+    const scheduled = await endpoints.sendTo(
+      'kall-scheduled',
+      { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
+      { label: 'feature:kall:incomplete-resched-setup', auth: { principal: A }, allowLiveWrite: true },
+    );
+    const scheduledJson = scheduled.json();
+    const kallID = extractKallId(
+      (scheduledJson.ok ? scheduledJson.value : {}) as Record<string, unknown>,
+    );
+    expect(kallID, 'the call was scheduled and issued an id').toBeTruthy();
+
+    try {
+      const incomplete = await endpoints.sendTo(
+        'kall-reschedule',
+        { body: { kallID } },
+        { label: 'feature:kall:incomplete-resched', auth: { principal: A }, allowLiveWrite: true },
+      );
+      expect
+        .soft(
+          incomplete.status,
+          'an incomplete reschedule payload is rejected with a 4xx, not a 500 crash',
+        )
+        .toBeLessThan(500);
     } finally {
       await clearHistory(endpoints, [A, B]);
     }
