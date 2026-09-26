@@ -1,79 +1,31 @@
-/* eslint-disable playwright/no-conditional-in-test */
-import { AUTH_PROFILES } from '@config/auth-profile';
-import type { Principal } from '@config/auth.config';
-import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { expect, test } from '@fixtures';
 
 /**
- * Katchup **attachment upload** — `sendKatchupMsgMultiPart`, unblocked 2026-09-25 by the same
- * `groupFlag` fix as `katchup-send-message` (its `text` field embeds `sendShape()`). It no longer
- * 400s — but confirmed live: it doesn't do what it says either.
+ * Katchup **attachment upload** — recorded gap, not a workaround.
+ *
+ * `katchup-send-multipart` (`sendKatchupMsgMultiPart`) previously had a live business-rule test here:
+ * it accepted a file part (200, real msgID — unblocked by the 2026-09-25 `groupFlag` fix) but the
+ * created message's `attachmentUuid` came back `null`, both immediately and on readback. Filed as
+ * **#614** [KP-90586F], HIGH, KPost API.
+ *
+ * **Owner-confirmed 2026-09-26: that route is legacy and not used by the current client.** The
+ * product's real attachment flow generates a presigned S3 URL (`aws-katchup-presigned`), uploads the
+ * file directly to S3 with it, then sends an ordinary `katchup-send-message` whose `uuid` array names
+ * the uploaded attachment — see `presigned-attachment-workflow.spec.ts`. #614 is closed WONTFIX: the
+ * behaviour is real, but the route it was found on is dead code from the product's own perspective,
+ * so it is not chased further and no longer asserted here.
  */
-const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
-
-test.describe('KPost Katchup · attachment upload @api @kpost-api @katchup', () => {
-  test.skip(
-    process.env.KATCHUP_LIFECYCLE !== 'true',
-    'sends a real multipart message; set KATCHUP_LIFECYCLE=true',
-  );
-
-  test('sendKatchupMsgMultiPart accepts a file part but never actually attaches it', async ({
-    endpoints,
-  }) => {
-    const composed = await endpoints.sendTo(
-      'katchup-send-multipart',
-      {
-        multipart: {
-          text: JSON.stringify(sendShape()),
-          file: {
-            name: 'qa-bench.txt',
-            mimeType: 'text/plain',
-            buffer: Buffer.from('QA bench attachment', 'utf8'),
-          },
-        },
-      },
-      { label: 'attachment:send-multipart', auth: { principal: A }, allowLiveWrite: true },
+test.describe('KPost Katchup · attachment upload (legacy multipart route)', () => {
+  test('sendKatchupMsgMultiPart: no live business-rule test (legacy route, superseded by presigned S3 upload)', () => {
+    test.skip(
+      true,
+      'katchup-send-multipart is the OLD direct-upload path — owner-confirmed 2026-09-26 that the ' +
+        'current client uses the presigned-URL flow instead (aws-katchup-presigned + a direct S3 PUT ' +
+        '+ katchup-send-message\'s own uuid field). The route stays registered (generic validator ' +
+        'sweep still runs against it) but its attachment-storage behaviour is no longer product-' +
+        'relevant, so it is not asserted on live. The prior finding is closed as #614 WONTFIX, not ' +
+        'chased further. See presigned-attachment-workflow.spec.ts for the current, real upload path.',
     );
-    expect(composed.status, 'sendKatchupMsgMultiPart is accepted').toBeLessThan(300);
-    const body = JSON.parse(composed.bodyText || '{}') as {
-      data?: Array<{ msgID?: number; attachmentUuid?: unknown }>;
-    };
-    const row = Array.isArray(body.data) ? body.data[0] : undefined;
-    const msgID = row?.msgID;
-    expect(msgID, 'the multipart send issues a real msgID').toBeTruthy();
-
-    try {
-      /*
-       * Live-verified 2026-09-25: the immediate response's `attachmentUuid` is already null, and a
-       * fresh readback confirms it stays null — the file part was accepted (no 400, no rejection of
-       * any kind) but never actually stored as an attachment. This is the finding the engine's own
-       * validators cannot see: a 2xx response for a write that silently drops half of what it claims
-       * to do. Filed as #614 [KP-90586F], HIGH, KPost API.
-       */
-      if (row?.attachmentUuid == null) {
-        endpoints.recordBusinessRuleViolation({
-          endpointId: 'katchup-send-multipart',
-          ruleId: 'REGRESSION-katchup-multipart-no-attachment',
-          rule: 'sendKatchupMsgMultiPart must actually attach the uploaded file — a real attachmentUuid must be set on the created message, not null.',
-          expected: 'a non-null attachmentUuid on the created message',
-          actual: `attachmentUuid=${JSON.stringify(row?.attachmentUuid)}`,
-          request: { multipart: { text: '(sendShape JSON)', file: 'qa-bench.txt' } },
-        });
-      }
-      expect
-        .soft(
-          row?.attachmentUuid,
-          'the created message carries a real attachmentUuid, not null — the file was actually attached',
-        )
-        .not.toBeNull();
-    } finally {
-      await endpoints
-        .sendTo(
-          'katchup-delete-message',
-          { body: { messageIds: [msgID], groupFlag: false } },
-          { label: 'attachment:cleanup', auth: { principal: A }, allowLiveWrite: true },
-        )
-        .catch(() => undefined);
-    }
+    expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
   });
 });

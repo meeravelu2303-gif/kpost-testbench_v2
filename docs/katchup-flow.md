@@ -111,6 +111,20 @@ fields the client sends (KatchupMessage.js `temp`):
 `Cc` (Copy) rides in `copies` on the composer object and becomes a **messageType 14** message; the
 `Confidential Copy` recipient is the confidential variant, hidden from the others (NFR-SEC02).
 
+**`uuid[]` — "uploaded first" means a presigned S3 URL, confirmed live 2026-09-26.** The real,
+current attachment flow: generate a presigned upload URL (`aws-katchup-presigned`,
+`POST /v2/aws/katchup/generate-presigned-url`, the uuid is embedded in the returned URL's path), PUT
+the file directly to S3 with it, then send the message with that uuid in `uuid[]`. The response
+correctly sets `attachmentUuid` and full `attachmentCaptionDetails`. `katchup-send-multipart`
+(`sendKatchupMsgMultiPart`) is confirmed legacy — not used by the current client, and even though it
+accepts a file part with a 200, it never actually attaches it (#614, closed WONTFIX 2026-09-26 since
+the route is dead code from the product's own perspective). See
+`presigned-attachment-workflow.spec.ts` for the live-verified flow, which also surfaced two real
+defects in the download side: `katchup-download` serves the correct bytes but a hardcoded
+`Content-Type: image/jpeg` regardless of the real file type (**#617**), and
+`katchup-download-attachment`'s presigned GET URL hardcodes its ASCII `Content-Disposition` filename
+fallback to `"file.xlsx"` regardless of the real file name (**#618**).
+
 ## 4. The message lifecycle, mapped to endpoints
 
 ```

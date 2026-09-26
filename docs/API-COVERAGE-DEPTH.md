@@ -74,8 +74,8 @@ one still needs its own dependency-flow test written as that module is reached.
 | --- | ---: | ---: | ---: | ---: |
 | `kmail` | 70 | 65 | 5 | 93% ✅ done 2026-09-25 (5 recorded gaps, see below) |
 | `kpost/profile` | 45 | 32 | 13 | 71% ✅ done 2026-09-24 (10 permanently by design, 3 real gaps) |
-| `admin` | 38 | 29 | 9 | 76% |
-| `kpost/katchup` | 36 | 29 | 7 | 81% ✅ done 2026-09-25 (7 genuinely blocked, see note) |
+| `admin` | 38 | 33 | 5 | 87% ✅ done 2026-09-26 (5 genuinely blocked, see note) |
+| `kpost/katchup` | 36 | 34 | 2 | 94% ✅ done 2026-09-26 (2 genuinely blocked, see note) |
 | `kpost/common` | 33 | 28 | 5 | 85% ✅ done 2026-09-24 |
 | `kpost/kall` | 20 | 20 | 0 | 100% ✅ done 2026-09-24 |
 | `kpost/kos` | 18 | 17 | 1 | 94% ✅ done 2026-09-24 |
@@ -87,7 +87,7 @@ one still needs its own dependency-flow test written as that module is reached.
 | `kpost/settings` | 7 | 7 | 0 | 100% ✅ done 2026-09-24 |
 | `kpost/aws` | 4 | 4 | 0 | 100% ✅ done 2026-09-24 |
 | `kpost/dashboard` | 3 | 3 | 0 | 100% ✅ done 2026-09-24 |
-| **Total (real KPost/KMail/Admin surface)** | **341** | **284** | **57** | **83%** |
+| **Total (real KPost/KMail/Admin surface)** | **341** | **293** | **48** | **86%** |
 
 **Excluded from the table above — bench-internal scaffolding, not KPost product endpoints**
 (`users`, `auth`, `companies`, `dictionary`, `health` — 9 endpoints): every one of these carries
@@ -296,7 +296,7 @@ Went from 18→32 rich (40%→71%) across `feature.spec.ts`, `reads-workflow.spe
   `QA_COMPANY_NAME` configured in `.env` (only `QA_COMPANY_NAME_ABSENT` exists today) — same
   unconfigured-identity-field gap as `kmail-sig-company`.
 
-### 6. `kpost/katchup` — ✅ done (2026-09-25): 15→29/36 (81%)
+### 6. `kpost/katchup` — ✅ done (2026-09-26): 15→34/36 (94%)
 
 **Root cause of the 2026-09-24 blocker, found and fixed**: the developer flagged that `groupFlag`
 must be a boolean, not the `'N'`/`'Y'` char convention `sendShape()` used. Live investigation found
@@ -318,9 +318,22 @@ That fix unblocked everything the module needed a real sent message for:
   (500) on a real id — filed as **#612**/**#613**, both CRITICAL, KPost API.
   See `shared-reference-workflow.spec.ts`.
 - `katchup-send-multipart` now succeeds but never actually attaches the uploaded file
-  (`attachmentUuid: null`, both immediately and on readback) — a genuine 2xx-but-wrong-data finding,
-  filed as **#614** [KP-90586F], HIGH. See `attachment-workflow.spec.ts`. This still blocks the six
-  download/streaming reads (no real attachment uuid exists to test them with).
+  (`attachmentUuid: null`, both immediately and on readback) — filed as **#614** [KP-90586F], HIGH.
+  **Owner-confirmed 2026-09-26: this route is legacy, not used by the current client** — the real
+  production flow uploads via a presigned S3 URL instead (see below). #614 closed **WONTFIX**; the
+  route stays registered but is no longer asserted on live. See `attachment-workflow.spec.ts`.
+- **The real attachment flow, found and driven live for the first time 2026-09-26**: generate a
+  presigned S3 URL (`aws-katchup-presigned`), PUT the file directly to S3 with it, then send an
+  ordinary `katchup-send-message` whose `uuid[]` names the upload. Confirmed working correctly —
+  `attachmentUuid` comes back set, `attachmentCaptionDetails` is populated. This minted the real
+  attachment uuid the six download/streaming reads needed, unblocking all of them:
+  `katchup-download-from-s3`, `-download-thumbnail`, `-media-streaming` and `-generate-thumbnail` all
+  confirmed working; two real defects found on the other two — `katchup-download` serves the exact
+  right bytes but a **hardcoded `Content-Type: image/jpeg`** regardless of the real file type (filed
+  **#617** [KP-CBBC90], HIGH), and `katchup-download-attachment`'s presigned GET URL hardcodes its
+  ASCII `Content-Disposition` filename fallback to **`"file.xlsx"`** for every attachment, reproduced
+  with two different real file names (filed **#618** [KP-2CAEB3], HIGH). See
+  `presigned-attachment-workflow.spec.ts`.
 - `recallMessage` answers 200 "success" for a real message but leaves both `deleted_by_sender` and
   `deleted_by_receiver` DB flags at 0 — a false success, confirmed by a direct MySQL check. Filed as
   **#610** [KP-80AC38], HIGH. See `workflow-db.spec.ts`.
@@ -349,10 +362,11 @@ the whole module**:
   known-failing assertion to the end of its serial chain (or, for `workflow-db`'s delete test, making
   it independent of the shared `msgId` entirely, since order still mattered for `recall`'s own setup).
 
-**Final state**: 29/36 (81%). The 7 remaining generic endpoints are genuinely blocked, not
-under-tested — `katchup-messages-subject` (404, route not deployed on this build) and the six
-attachment download/streaming reads (blocked on the #614 attachment-storage fix) — both recorded with
-their specific reason in `needs-id-workflow.spec.ts`, not worked around with a fabricated id.
+**Final state**: 34/36 (94%). The 2 remaining generic endpoints are genuinely blocked, not
+under-tested — `katchup-messages-subject` (404, route not deployed on this build) and
+`katchup-send-multipart` (legacy route, superseded by the presigned-URL flow, #614 closed WONTFIX) —
+both recorded with their specific reason in `needs-id-workflow.spec.ts`/`attachment-workflow.spec.ts`,
+not worked around with a fabricated id.
 
 <details>
 <summary>History (2026-09-24 investigation, before the fix)</summary>
@@ -512,6 +526,47 @@ found no frontend caller for this route (the app uses `getEvents` + `getEventSel
 and that it 500s "Value must not be null" for every payload shape tried, curl-verified 2026-09-19.
 That stands; the real payload needs confirming with the dev before this can be driven live without
 risking a false CRITICAL on a route nobody calls.
+
+### 11. `admin` — ✅ done (2026-09-26): 29→33/38 (87%)
+
+This module (the general Admin/HR-Setup org-build API, distinct from `kpost/admin`'s business-tier
+account actions above) has **no FRD** — every finding below came from live behaviour, not a spec.
+
+**A crash bug found and fixed, unrelated to the gap investigation itself**: `admin-workplace-hierarchy`
+had never once run to completion in this suite's history. Its call in `feature.spec.ts` used
+`allowLiveWrite` (fine for the file's other, `productionSafe` reads) on an endpoint that is
+`destructive: false` and NOT `productionSafe` — it needs `allowLiveRead` instead — and sent only
+`{ companyId }` despite the endpoint's own definition documenting that a real `parentAttributeId` is
+required. Both are fixed; the HR/employee/role-posting sections of the lifecycle test had silently
+never executed before this, exactly the same class of bug found earlier this session in Katchup's
+`lifecycle.spec.ts`.
+
+**4 of the module's 9 undocumented gaps closed** with real cross-checks, not just "status success":
+- `admin-workplace-tier-attribute-by-company` / `admin-hr-tier-attribute-by-company` — each now
+  asserts the just-created tier attribute genuinely appears on a fresh company-scoped read.
+- `admin-role-posting-by-company` — asserts every returned row genuinely belongs to the caller's
+  company (a data-quality invariant, not just "didn't crash").
+- `admin-country-address-by-pincode` — a dependency-free reference lookup, moved to a new, ungated
+  `reads-workflow.spec.ts` and asserted to resolve a real state/district/area for a known pincode.
+
+**5 remain genuinely blocked**, recorded in a new `needs-id-workflow.spec.ts`:
+- `admin-role-posting-suspended-list` — `requestType` enum Unknown/Requires Clarification. Tried live:
+  `SUSPEND`, `TERMINATE`, `SUSPEND_TERMINATE`, `ACTIVE`, `INACTIVE`, `ALL`, `Suspended`, `suspended`,
+  `SUSPENDED_TERMINATED`, `BOTH`, numeric/boolean/null variants, and alternate field names
+  (`status`/`type`/`requestStatus`/`employeeStatus`) — all 400. Even the originally documented
+  `"SUSPENDED"` (owner's PDF) is rejected. No frontend source was available to confirm the real value.
+- `admin-role-posting-save` / `-update` / `-delete` / `-suspend-terminate` — provision/mutate a real,
+  non-reversible external KSMACC account. Meant to run behind a second flag (`ADMIN_ROLE_POSTING_LIVE`)
+  on top of `ADMIN_LIFECYCLE`, but **that flag is documented only in a comment — no code anywhere
+  reads it**, so this flow has never run even with it set. Wiring it up needs explicit owner
+  sign-off first (irreversible external side effect), not done unilaterally.
+
+**A new, still-open Unknown/Requires Clarification finding surfaced by the crash fix**:
+`admin-workplace-hierarchy` now reaches the server (previously it never did), but no confirmed
+payload returns success — `{ companyId }` alone 400s "parentAttributeId is required"; a REAL
+Mongo ObjectId in `parentAttributeId`/`parentVariableId` instead 400s "Request parameter is invalid".
+Some value is clearly expected, but neither absence nor a real id satisfies it. Left as a soft,
+clearly-commented assertion in `feature.spec.ts` pending the real contract from the dev.
 
 ## What this document does NOT yet claim
 

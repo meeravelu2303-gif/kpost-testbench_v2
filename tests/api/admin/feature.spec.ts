@@ -36,6 +36,28 @@ import { expect, test } from '@fixtures';
  *
  * Every write carries `allowLiveWrite: true` (the authorized-write control), runs as the BUSINESS_M
  * admin, and uses `expect.soft` so one run reports every finding.
+ *
+ * **2026-09-26: closed 4 of this module's undocumented coverage gaps** (no FRD exists for this
+ * module, so each was verified directly against live behaviour rather than a spec):
+ * `admin-workplace-tier-attribute-by-company` and `admin-hr-tier-attribute-by-company` now assert
+ * the just-created attribute genuinely appears on a fresh company-scoped read (not just that the
+ * save answered success); `admin-role-posting-by-company` asserts every returned row genuinely
+ * belongs to this company. `admin-country-address-by-pincode` is a dependency-free reference lookup,
+ * moved to `reads-workflow.spec.ts` instead, ungated.
+ *
+ * **`admin-role-posting-suspended-list`** (`getSuspendOrTerminateEmployee`) remains genuinely
+ * blocked: its `requestType` filter value is Unknown/Requires Clarification. Every value tried live
+ * 2026-09-26 — `SUSPEND`, `TERMINATE`, `SUSPEND_TERMINATE`, `ACTIVE`, `INACTIVE`, `ALL`, `Suspended`,
+ * `suspended`, `SUSPENDED_TERMINATED`, `BOTH`, plus numeric/boolean/null variants and alternate field
+ * names (`status`, `type`, `requestStatus`, `employeeStatus`) — 400s identically to the originally
+ * documented `"SUSPENDED"`. No frontend source for this build was available to confirm the real
+ * enum. See `needs-id-workflow.spec.ts`.
+ *
+ * **`ADMIN_ROLE_POSTING_LIVE` is a documented but UNWIRED gate**: no code anywhere in this repo
+ * actually checks `process.env.ADMIN_ROLE_POSTING_LIVE`, so `admin-role-posting-save`/`-update`/
+ * `-delete`/`-suspend-terminate` have never been run, even with the flag set. Wiring it up would make
+ * this flow able to run for the first time — not done without explicit owner sign-off first, since
+ * it provisions a real, non-reversible external KSMACC account per run. See `needs-id-workflow.spec.ts`.
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -105,6 +127,23 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       wpAttrId = createdId(wpAttr);
       expect.soft(statusOf(wpAttr), 'workplace tier attribute saved').toMatch(/success/i);
       expect.soft(wpAttrId, 'workplace tier attribute returns an id').toBeTruthy();
+
+      // Read back the company's tier attributes and confirm the one just created is really in there
+      // — not just "the save answered success", but that it is actually visible on a fresh read.
+      const wpAttrList = await call(
+        endpoints,
+        'admin-workplace-tier-attribute-by-company',
+        { companyId: cid() },
+        'wp-attr-by-company',
+      );
+      expect.soft(statusOf(wpAttrList), 'workplace tier attributes read back').toMatch(/success/i);
+      const wpAttrRows = envelope(wpAttrList).value;
+      expect
+        .soft(
+          Array.isArray(wpAttrRows) && wpAttrRows.some((r) => isPlainObject(r) && r.id === wpAttrId),
+          'the newly created workplace tier attribute appears in the company list',
+        )
+        .toBe(true);
 
       if (wpAttrId) {
         const wpVar = await call(
@@ -229,13 +268,33 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         }
       }
 
-      const hierarchy = await call(
-        endpoints,
+      /*
+       * Fixed 2026-09-26, found while adding new coverage to this file (unrelated to it): this call
+       * always threw before reaching the HR/employee/role-posting sections below, so none of those
+       * had ever actually run to completion in this suite's history. Two bugs, both now fixed:
+       *   1. `admin-workplace-hierarchy` is `destructive: false`, not `productionSafe` — it needs
+       *      `allowLiveRead`, not `allowLiveWrite` (the `call()` helper's blanket flag, fine for the
+       *      other `productionSafe` reads in this file, doesn't unlock this one).
+       *   2. Its own definition documents "400 without a real parentAttributeId" — the call sent only
+       *      `{ companyId }`, never the real one this test already minted (`wpAttrId`/`wpVarId`).
+       * Fixing those two unblocked everything below (HR/employee/role-posting never used to run at
+       * all), but the endpoint's own contract is still Unknown/Requires Clarification: a real Mongo
+       * ObjectId in `parentAttributeId`/`parentVariableId` gets 400 "Request parameter is invalid" —
+       * a DIFFERENT error than the "…is required" it gives with none at all, so some value is
+       * expected but a real id isn't accepted either. No confirmed payload produces 200 yet. Left
+       * soft (not hard) so this genuine, still-open finding doesn't block the sections after it.
+       */
+      const hierarchy = await endpoints.sendTo(
         'admin-workplace-hierarchy',
-        { companyId: cid() },
-        'hierarchy',
+        { body: { companyId: cid(), parentAttributeId: wpAttrId ?? '0', parentVariableId: wpVarId ?? '0' } },
+        { label: 'feature:admin:hierarchy', auth: { principal: businessM! }, allowLiveRead: true },
       );
-      expect.soft(statusOf(hierarchy), 'workplace hierarchy read').toMatch(/success/i);
+      expect
+        .soft(
+          statusOf(hierarchy),
+          'workplace hierarchy read (Unknown/Requires Clarification — see comment above)',
+        )
+        .toMatch(/success/i);
 
       // ---- HR Breakdown Setup: tier attribute → variable -------------------------------------
       const hrAttr = await call(
@@ -247,6 +306,23 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       hrAttrId = createdId(hrAttr);
       expect.soft(statusOf(hrAttr), 'HR tier attribute saved').toMatch(/success/i);
       expect.soft(hrAttrId, 'HR tier attribute returns an id').toBeTruthy();
+
+      // Same real cross-check as the workplace side: the created attribute must actually show up on
+      // a fresh company-scoped read, not just be claimed by the save response.
+      const hrAttrList = await call(
+        endpoints,
+        'admin-hr-tier-attribute-by-company',
+        { companyId: cid() },
+        'hr-attr-by-company',
+      );
+      expect.soft(statusOf(hrAttrList), 'HR tier attributes read back').toMatch(/success/i);
+      const hrAttrRows = envelope(hrAttrList).value;
+      expect
+        .soft(
+          Array.isArray(hrAttrRows) && hrAttrRows.some((r) => isPlainObject(r) && r.id === hrAttrId),
+          'the newly created HR tier attribute appears in the company list',
+        )
+        .toBe(true);
 
       if (hrAttrId) {
         const hrVar = await call(
@@ -347,6 +423,24 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         'role-employees',
       );
       expect.soft(statusOf(empByCompany), 'role-posting employees read').toMatch(/success/i);
+
+      // The plain company-wide role-posting list: a data-quality check (every row genuinely belongs
+      // to this company), cross-checked against the single-employee read below once empId exists.
+      const rolePostingsByCompany = await call(
+        endpoints,
+        'admin-role-posting-by-company',
+        { companyId: cid() },
+        'role-posting-by-company',
+      );
+      expect.soft(statusOf(rolePostingsByCompany), 'role postings by company read').toMatch(/success/i);
+      const rolePostingRows = envelope(rolePostingsByCompany).value;
+      expect
+        .soft(
+          Array.isArray(rolePostingRows) &&
+            rolePostingRows.every((r) => isPlainObject(r) && r.companyId === cid()),
+          'every role posting returned genuinely belongs to this company',
+        )
+        .toBe(true);
 
       if (empId) {
         const empUpdate = await call(

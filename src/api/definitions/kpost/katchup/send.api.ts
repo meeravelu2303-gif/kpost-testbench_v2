@@ -96,11 +96,19 @@ export const sendMultipartApi = defineKatchupEndpoint({
   requirements: ['FR-KU-016'],
   method: 'POST',
   path: '/v2/katchup/sendKatchupMsgMultiPart/',
-  summary: 'Send a message with attachments (multipart)',
-  tags: [...SEND_TAGS, 'attachment'],
+  summary: 'Send a message with attachments (multipart) — LEGACY, superseded by presigned S3 upload',
+  tags: [...SEND_TAGS, 'attachment', 'legacy'],
   /*
-   * Commented out in the current web build (`SendMessage` runs instead), but the route exists and is
-   * the documented way to attach files: a `text` field carrying the JSON message plus the file part.
+   * Confirmed by the owner 2026-09-26: this direct-multipart-upload path is the OLD attachment flow
+   * and is not what the current client uses. The live client now generates a presigned S3 URL
+   * (`aws-katchup-presigned`, `POST /v2/aws/katchup/generate-presigned-url`), uploads the file
+   * directly to S3 with it, then sends an ordinary `katchup-send-message` whose `uuid` array names
+   * the uploaded attachment. `attachmentUuid: null` on a message sent through THIS route (previously
+   * filed as #614) is not chased further — the route itself is legacy, not currently reachable from
+   * the product, so its own storage behaviour is no longer product-relevant. Still registered (the
+   * generic validator sweep still runs against it) but no live business-rule test asserts on its
+   * attachment-storage behaviour; see `attachment-workflow.spec.ts` and
+   * `presigned-attachment-workflow.spec.ts` for the current, real upload path.
    */
   destructive: true,
   sideEffect: 'data',
@@ -148,8 +156,10 @@ export const bulkMultipartApi = defineKatchupEndpoint({
   requirements: ['FR-KU-016', 'FR-GMSG-005'],
   method: 'POST',
   path: '/v2/katchup/sendBulkKatchupMsgMultiPart/',
-  summary: 'Bulk send with attachments (multipart)',
-  tags: [...SEND_TAGS, 'bulk', 'attachment', 'needs-recipients'],
+  summary: 'Bulk send with attachments (multipart) — LEGACY, superseded by presigned S3 upload',
+  tags: [...SEND_TAGS, 'bulk', 'attachment', 'needs-recipients', 'legacy'],
+  // Same legacy direct-upload path as `katchup-send-multipart` (see its comment) — the bulk variant
+  // of the same superseded flow.
   destructive: true,
   sideEffect: 'data',
   request: () => ({
