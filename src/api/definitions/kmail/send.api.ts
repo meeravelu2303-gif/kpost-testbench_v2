@@ -69,6 +69,9 @@ export const postBulkMailApi = defineKmailEndpoint({
   tags: [...SEND_TAGS, 'bulk'],
   // Bulk to our own second account only, so no stranger is mailed.
   destructive: true,
+  // Live-verified 2026-09-26: a successful send answers 202 Accepted, not 200 — the generic engine's
+  // default expectation flagged this as a false "expected 200, got 202" defect before this was set.
+  expectedStatus: [202],
   /*
    * Dev-confirmed 2026-09-26 (a working curl against a dev host): `postBulkMail` is NOT `postMail`'s
    * shape plus `toAddressList` — it has its own small, distinct contract. Spreading the full

@@ -1,0 +1,12 @@
+{
+  "$comment": [
+    "Every KPost account this bench itself CREATED during a test run — the opposite of",
+    "test-accounts.json, which is exclusively the PRE-EXISTING, .env-declared accounts.",
+    "",
+    "Appended to, never overwritten, by src/fixtures/created-accounts.ts's recordCreatedAccount().",
+    "Each entry is the kpostID and mobile number a signup/registration flow actually minted, so a",
+    "newly-created identity is never lost track of across runs. Committed to the repo (no secrets:",
+    "a kpostID and mobile are identifiers, not credentials)."
+  ],
+  "accounts": []
+}

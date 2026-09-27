@@ -3,6 +3,7 @@
 // best-effort steps, so the conditionals are intentional.
 /* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 import { testData } from '@config/test-data.config';
+import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
 
 /**
@@ -131,13 +132,22 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
      * This is the difference between "the endpoint answered" and "a user was actually created".
      */
     if (database.enabled) {
-      const userRows = await database.findMany<{ kpost_id: string }>({
+      const userRows = await database.findMany<{ kpost_id: string; mobile_number: string | number }>({
         table: 'TBL_KPOST_USER_MASTER',
         where: { kpost_id: testData.signupKpostId },
       });
       expect
         .soft(userRows.length, 'the signup wrote a user row to TBL_KPOST_USER_MASTER (API → DB)')
         .toBeGreaterThan(0);
+      // Every account this bench creates gets logged — see src/fixtures/created-accounts.ts.
+      if (userRows[0]) {
+        recordCreatedAccount({
+          kpostId: userRows[0].kpost_id,
+          mobileNumber: String(userRows[0].mobile_number),
+          source: 'signup-login-signup',
+          note: 'otp-signup-lifecycle.spec.ts: personal registration',
+        });
+      }
     }
   });
 

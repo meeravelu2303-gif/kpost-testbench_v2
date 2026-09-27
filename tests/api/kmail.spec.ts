@@ -16,7 +16,7 @@ test.describe('KMail API', () => {
    * come back into the run automatically once Signup & Login can issue one.
    */
   describeEndpointContracts(
-    { suites: ['kmail-api'], excludeTags: ['needs-login'] },
+    { suites: ['kmail-api'], excludeTags: ['needs-login', 'not-in-use'] },
     { allowEmpty: true },
   );
 });

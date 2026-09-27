@@ -26,7 +26,10 @@ export const draftMailMultipartApi = defineKmailEndpoint({
   method: 'POST',
   path: '/draft/draftMailMultiPart',
   summary: 'Save a draft with attachments (multipart)',
-  tags: [...DRAFT_TAGS, 'attachment'],
+  // Dev-confirmed 2026-09-26: this route is not in use — intentionally unavailable on this build,
+  // not a deployment gap. Its 404 is expected, not a defect; excluded from the generic contract-suite
+  // sweep via this tag so a deep-fuzz run doesn't keep re-filing an already-answered question.
+  tags: [...DRAFT_TAGS, 'attachment', 'not-in-use'],
   destructive: true,
   request: () => ({
     multipart: {

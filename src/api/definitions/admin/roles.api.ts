@@ -74,7 +74,10 @@ export const adminRolesApis: EndpointDefinition[] = [
     method: 'POST',
     path: '/rolePosting/save',
     summary: 'Assign a role posting to an employee (workplace + HR role)',
-    tags: ['role-posting'],
+    // Backend-confirmed (Admin_Module/RolePostingSetUpServiceImpl.save -> createRolePostingCommunication):
+    // calls real, hardcoded external services (login.ksmacc.in, devapi2.kpostindia.com) to create a
+    // KSMACC/KPost user. Excluded from the generic fuzz sweep even with ALLOW_DESTRUCTIVE_TESTS.
+    tags: ['role-posting', 'role-posting-mutation'],
     request: body(() => ({
       companyId: companyId(),
       employeeId: 1,
@@ -89,7 +92,9 @@ export const adminRolesApis: EndpointDefinition[] = [
     method: 'POST',
     path: '/rolePosting/update',
     summary: "Change an employee's role posting",
-    tags: ['role-posting'],
+    // Backend-confirmed (Admin_Module/RolePostingSetUpServiceImpl.update -> createCommunication /
+    // createCommunicationForRellocate): same external-call class as save. Excluded from the fuzz sweep.
+    tags: ['role-posting', 'role-posting-mutation'],
     request: body(() => ({ id: 1, employeeId: 1, rolePostingId: 1 })),
     destructive: true,
     sideEffect: 'data',
@@ -99,7 +104,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     method: 'POST',
     path: '/rolePosting/delete',
     summary: 'Remove a role posting',
-    tags: ['role-posting'],
+    tags: ['role-posting', 'role-posting-mutation'],
     request: body(() => ({ id: 1 })),
     destructive: true,
     sideEffect: 'data',
@@ -109,7 +114,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     method: 'POST',
     path: '/rolePosting/suspendOrTerminateEmployee',
     summary: 'Suspend or terminate an employee (expendable QA member only)',
-    tags: ['role-posting'],
+    tags: ['role-posting', 'role-posting-mutation'],
     // DANGEROUS: only ever an expendable member the lifecycle created — never a seeded member.
     // Authoritative payload (owner's PDF, 2026-09-19): { employeeId, companyId, requestType, reason }.
     // The field is `requestType` (not `status`), value UPPERCASE "SUSPENDED".

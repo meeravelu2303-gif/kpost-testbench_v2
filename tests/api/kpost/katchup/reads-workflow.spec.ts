@@ -119,7 +119,7 @@ test.describe('KPost Katchup · plain-read business rules @api @kpost-api @katch
   }) => {
     const ex = await endpoints.sendTo(
       'katchup-filter-message',
-      { body: { selectedContact: testData.victimKpostId, groupFlag: false } },
+      { body: { selectedContact: testData.victimKpostId, groupFlag: false, messageBy: 'All' } },
       { label: 'katchup:filter-message', auth: { principal: A }, timeoutMs: 20_000 },
     );
     expect.soft(ex.status, 'filterKatchUpMessage succeeds').toBe(200);

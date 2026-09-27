@@ -93,6 +93,9 @@ const NOT_A_RESOURCE = new Set(
      */
     'messagetype',
     'actualmessage',
+    // The filter enum (`All`/`sent`/`received`) filterKatchUpMessage takes — a closed set of filter
+    // modes, not a record identifier. Matches the pattern only because the key contains "message".
+    'messageby',
     // The full-text search query a caller types (searchKatchUpMessage/searchKatchUpMessageSubject)
     // — content typed for a query, exactly like actualMessage above, never a record identifier.
     'searchmessage',

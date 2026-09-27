@@ -128,10 +128,20 @@ export const filterMessageApi = defineKatchupEndpoint({
    * The API rejects an empty body with 400 "Malformed or missing request body" — it needs a filter
    * context. Sends the same {selectedContact, groupFlag} shape the conversation reads use (our own
    * second account), so it filters our own messages and owns nothing.
+   *
+   * Live-verified 2026-09-26: `messageBy` is ALSO required (400 "messageBy must be one of: All,
+   * sent, received" without it) — missing from this default the whole time this endpoint has been
+   * marked `productionSafe`, so its own baseline call has always 400'd. `messageBy` matches the QA-
+   * identifier guard's pattern purely because the key contains "message" — exempted in
+   * `qa-identifier-guard.ts`'s `NOT_A_RESOURCE` (it is a closed filter enum, not a record id).
    */
   productionSafe: true,
-  request: body(() => ({ selectedContact: testData.victimKpostId, groupFlag: false })),
-  note: 'needs a filter body (empty body 400s "Malformed or missing request body")',
+  request: body(() => ({
+    selectedContact: testData.victimKpostId,
+    groupFlag: false,
+    messageBy: 'All',
+  })),
+  note: 'needs a filter body: selectedContact, groupFlag AND messageBy (All/sent/received)',
 });
 
 export const allReportMsgApi = defineKatchupEndpoint({

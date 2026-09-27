@@ -187,7 +187,7 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
     );
   });
 
-  test('recall: the API reports success AND MySQL marks it deleted for the sender', async ({
+  test('recall: the API reports success AND MySQL marks message_type as recalled', async ({
     endpoints,
     databases,
   }) => {
@@ -196,6 +196,9 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
       !database.enabled || msgId === undefined,
       'needs the sent message from the first step',
     );
+
+    const before = await row(new KpostRepository(database), msgId);
+    const originalMessageType = Number(before?.message_type ?? 0);
 
     const exchange = await endpoints.sendTo(
       'katchup-recall-message',
@@ -207,41 +210,23 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
     const stored = await row(new KpostRepository(database), msgId);
 
     /*
-     * The assertion the response cannot make. A recall that answers SUCCESS and leaves both flags
-     * clear has changed nothing — the message is still in both threads — and every API-only test
-     * would pass.
+     * BR-C01-style correction, 2026-09-26: this test used to check `deleted_by_sender`/
+     * `deleted_by_receiver` and filed #610 [KP-80AC38] when neither moved. The dev closed it
+     * INVALID: "Recall message is handled using messageType [...], it is a different from delete by
+     * sender or receiver." Live-verified directly against MySQL the same day: a fresh message starts
+     * at `message_type=0`; after a successful recall it reads `message_type=7` — a real, distinct DB
+     * effect, just not the one this test used to look for. #610 was correctly closed; this now checks
+     * the field the product actually uses.
      */
     expect(stored, 'a recall is a soft delete: the row must still exist').toBeDefined();
-    const senderDeleted = Number(stored?.deleted_by_sender ?? 0);
-    const receiverDeleted = Number(stored?.deleted_by_receiver ?? 0);
-    const flagMoved = senderDeleted === 1 || receiverDeleted === 1;
-    /*
-     * Live-verified 2026-09-25 (the first time this test could run at all — it was blocked behind
-     * the now-fixed `katchup-send-message` outage): recallMessage answers 200 "Message recalled
-     * successfully" for `groupFlag: false` (also reproduced with the string `"false"`) while leaving
-     * BOTH deletion flags at 0 — the message stays visible in both threads. `groupFlag: true`/`"true"`
-     * instead crashes with a 500. This is a 2xx-but-wrong-DATA defect the engine's own validators
-     * cannot see (the response body genuinely says success), so it's filed explicitly. Filed as
-     * **#610** [KP-80AC38], HIGH, KPost API. Soft, not hard: kept last in this `serial` chain so a
-     * known, already-filed regression here never blocks a test that could otherwise run.
-     */
-    if (!flagMoved) {
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'katchup-recall-message',
-        ruleId: 'REGRESSION-katchup-recall-no-db-effect',
-        rule: 'recallMessage must actually mark the message deleted for the sender or receiver when it reports success — a 200 with neither flag moved is a false success.',
-        expected: 'deleted_by_sender=1 or deleted_by_receiver=1 after a 2xx recall',
-        actual: `${exchange.status}, deleted_by_sender=${senderDeleted}, deleted_by_receiver=${receiverDeleted}`,
-        request: { body: { msgID: msgId, groupFlag: false } },
-      });
-    }
+    const recalledMessageType = Number(stored?.message_type ?? 0);
     expect
       .soft(
-        flagMoved,
-        `recall reported success but neither deletion flag moved ` +
-          `(deleted_by_sender=${senderDeleted}, deleted_by_receiver=${receiverDeleted})`,
+        recalledMessageType,
+        `recall must change message_type from its original value (${originalMessageType}) — ` +
+          `stayed at ${recalledMessageType}, so recall changed nothing`,
       )
-      .toBe(true);
+      .not.toBe(originalMessageType);
   });
 
   test.afterAll(() => {
