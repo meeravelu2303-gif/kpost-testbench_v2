@@ -9,6 +9,7 @@ import { EndpointExecutor } from '@engine/endpoint-executor';
 import { businessRuleFindingReports, flowFindingReports } from '@engine/flow-finding';
 import { ValidationEngine, type ValidationEngineDeps } from '@engine/validation-engine';
 import { LoginPage } from '@pages/LoginPage';
+import { SignupPage } from '@pages/SignupPage';
 import { attachValidationReport } from '@reporting/report-attachment';
 import { businessRuleRegistry } from '@rules/index';
 import { newCorrelationId } from '@utils/correlation';
@@ -36,6 +37,7 @@ interface TestFixtures {
   createValidationEngine: (overrides?: Partial<ValidationEngineDeps>) => ValidationEngine;
   validationEngine: ValidationEngine;
   loginPage: LoginPage;
+  signupPage: SignupPage;
 }
 
 /** Import `test` and `expect` from `@fixtures` in every spec — never from `@playwright/test`. */
@@ -118,6 +120,10 @@ export const test = base.extend<TestFixtures>({
 
   loginPage: async ({ page }, use) => {
     await use(new LoginPage(page));
+  },
+
+  signupPage: async ({ page }, use) => {
+    await use(new SignupPage(page));
   },
 });
 

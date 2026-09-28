@@ -79,6 +79,20 @@ const schema = z.object({
   signupKpostId: z.string().min(3).default('qabench.signup@kpost.in'),
   signupMobile: z.string().min(6).default('9000000777'),
 
+  /**
+   * A SEPARATE reserved identity for the UI-driven signup (`tests/e2e/signup-login-lifecycle.spec.ts`).
+   *
+   * `signupKpostId`'s default domain (`@kpost.in`) is the legacy domain the API layer already
+   * reserved; the live signup SCREEN only ever offers the current PERSONAL domain policy
+   * (`@kpostindia.com` — see `domainPolicy.PERSONAL` in `test-accounts.json`, and
+   * `tests/e2e/signup-domain.spec.ts`, which asserts exactly that). A UI signup can never produce
+   * `signupKpostId`'s exact string, so it needs its own slot — a LOCAL PART ONLY, because the test
+   * selects whatever domain the dropdown actually offers rather than assuming one. Kept apart from
+   * `signupMobile` too, so a UI run and an API run never race for the same "is it taken?" answer.
+   */
+  signupUiKpostIdLocal: z.string().min(3).default('qabenchweb'),
+  signupUiMobile: z.string().min(6).default('9000000778'),
+
   /** A mobile number that IS registered. */
   mobileExists: z.string().min(6).default('9000000949'),
   /** A mobile number that is NOT registered. */
@@ -161,6 +175,8 @@ const SOURCES = {
   kpostIdAbsent: 'QA_KPOST_ID_ABSENT',
   signupKpostId: 'QA_SIGNUP_KPOST_ID',
   signupMobile: 'QA_SIGNUP_MOBILE',
+  signupUiKpostIdLocal: 'QA_SIGNUP_UI_KPOST_ID_LOCAL',
+  signupUiMobile: 'QA_SIGNUP_UI_MOBILE',
   mobileExists: 'QA_MOBILE_EXISTS',
   mobileAbsent: 'QA_MOBILE_ABSENT',
   companyId: 'QA_COMPANY_ID',

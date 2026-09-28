@@ -125,6 +125,25 @@ Gate: `KDIARY_UI_LIFECYCLE=true`. Reached from inside Katchup (no standalone `/k
 (`createEvent` → `deleteEvent`, id field is `eventID`). Flow: open diary → create event → verify →
 delete.
 
+## 9. Signup — Personal registration → login · `signup-login-lifecycle.spec.ts` (BUILT, gated, BLOCKED by #720)
+
+Gate: `SIGNUP_UI_LIFECYCLE=true` + `OTP_TEST_GATEWAY=true` + `TEST_DB_MODE=true`. Drives the real
+`PersonalSignup.js` flow end to end: Personal → country/language/domain → mobile OTP (the test
+gateway's bypass code) → name/gender/DOB/pincode confirm → preferred KPOST ID → password → submit →
+the success modal's "Ok" (which itself lands on `/login`) → logs in with the new account, all the
+way to `/home`. Uses its own reserved identity (`QA_SIGNUP_UI_KPOST_ID_LOCAL` / `QA_SIGNUP_UI_MOBILE`
+— separate from the API layer's `QA_SIGNUP_KPOST_ID`/`MOBILE`, whose legacy `@kpost.in` domain the
+signup screen can never produce; see `signup-domain.spec.ts`).
+
+**Currently blocked at the very first step.** Live-verified 2026-09-28: the screen's own mobile
+"Verify" call never sends `companyID`, which the API now requires — every non-200 response falls
+into the same generic "Mobile number already exists!" toast, so EVERY personal signup attempt is
+misreported as a duplicate, regardless of whether the number is actually free. Filed as **#720**
+(KPost UI / Auth, critical). The spec detects this itself (cross-checks the same lookup with the
+correctly-shaped body — `companyID: 0`, as `common-mobile-no-exist` already sends) and skips with a
+clear reason rather than failing inscrutably. Once #720 is fixed, this flow should go green with no
+test changes needed.
+
 ---
 
 ## Status summary
@@ -136,6 +155,7 @@ delete.
 | Katchup Delete + Edit                                        | built, gated, needs one tuning pass (`katchup-actions.spec.ts`) |
 | Katchup group/copy/attach                                    | planned — selectors mined, needs 3 QA accts + recording         |
 | KMail / Settings / Profile / Contacts / Kall / KDiary writes | planned — API-proven, UI selectors mined, need recording        |
+| Signup — Personal registration → login                      | built, gated — **blocked by #720** (mobile Verify always fails) |
 
 Every planned write flow already has a **green API lifecycle** proving the operation works on live; the
 UI track proves the _screen_ drives that same operation. Nothing here runs on a default run, and nothing

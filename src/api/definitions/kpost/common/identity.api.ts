@@ -29,12 +29,18 @@ export const mobileNoExistApi = defineKpostEndpoint({
   summary: 'Check whether a mobile number is already registered',
   tags: IDENTITY_TAGS,
   destructive: false,
-  // The API rejects an empty companyID with 400 "companyID is required". `0` = no specific company
-  // (a personal mobile-exists check), which names no real company (guard-safe sentinel).
+  /*
+   * Matches the documented contract exactly (Excel/openapi/kpost-api.openapi.json: countryID +
+   * mobileNumber only — no companyID). This endpoint briefly regressed live and rejected exactly
+   * this shape with 400 "companyID is required" for a PERSONAL check (filed as #720, KPost UI/Auth,
+   * traced from the signup screen never sending companyID either); confirmed fixed live 2026-09-28
+   * — this shape now succeeds again. Kept undoing the earlier `companyID: 0` workaround on purpose:
+   * a workaround that silently absorbs a contract violation is the reason #720 went unnoticed on
+   * the signup screen for as long as it did.
+   */
   request: body(() => ({
     countryID: testData.countryId,
     mobileNumber: testData.mobileAbsent,
-    companyID: 0,
   })),
 });
 

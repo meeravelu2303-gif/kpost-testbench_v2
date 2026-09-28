@@ -8,5 +8,13 @@
     "newly-created identity is never lost track of across runs. Committed to the repo (no secrets:",
     "a kpostID and mobile are identifiers, not credentials)."
   ],
-  "accounts": []
+  "accounts": [
+    {
+      "kpostId": "qabenchsignup@kpostindia.com",
+      "mobileNumber": "9000000777",
+      "source": "manual curl probe (2026-09-28)",
+      "note": "Created while diagnosing whether the API-only signup path still works with current domain/password/kpostID policy, independent of bug #720 and the Cloudflare Turnstile block on the UI. Confirmed in TBL_KPOST_USER_MASTER.",
+      "createdAt": "2026-09-28T09:48:54.579Z"
+    }
+  ]
 }
