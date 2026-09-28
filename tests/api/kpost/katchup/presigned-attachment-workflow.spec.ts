@@ -49,9 +49,17 @@ test.describe('KPost Katchup · presigned attachment upload @api @kpost-api @kat
     const putRes = await fetch(url, { method: 'PUT', headers: { 'Content-Type': contentType }, body: content });
     expect(putRes.status, 'the direct S3 upload succeeds').toBeLessThan(300);
 
+    /*
+     * Live-verified 2026-09-27: passing ANY value for `attachmentCaption` — even the plain filename
+     * string this used to send — now 400s "attachmentCaption must be a valid JSON array" (also tried
+     * a JSON-encoded array string and a raw array; both still rejected). Leaving it at `sendShape`'s
+     * own default (`null`) works: the server derives `attachmentCaptionDetails` (fileName, caption,
+     * fileSize, uuid) from the uploaded file itself. This was a stale override in this bench's own
+     * test, not a product regression — `fileName` is still threaded through for the assertions below.
+     */
     const sent = await endpoints.sendTo(
       'katchup-send-message',
-      { body: sendShape({ uuid: uuid ? [uuid] : [], attachmentCaption: fileName }) },
+      { body: sendShape({ uuid: uuid ? [uuid] : [] }) },
       { label: 'presigned:send', auth: { principal: A }, allowLiveWrite: true },
     );
     expect(sent.status, 'the send succeeds').toBeLessThan(300);
