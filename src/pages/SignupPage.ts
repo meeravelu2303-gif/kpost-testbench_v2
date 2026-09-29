@@ -34,10 +34,16 @@ export class SignupPage extends BasePage {
     super(page);
   }
 
-  /** The account-type chooser is the screen's first step, so its presence means "loaded". */
+  /**
+   * The account-type chooser is the screen's first step, so its presence means "loaded". Below the
+   * 992px desktop/mobile breakpoint the heading text is shorter ("Select Account Option", no "for
+   * Signup" suffix) and the desktop copy is a hidden `display:none` duplicate — `.filter({ visible:
+   * true })` on the shared substring handles both viewports.
+   */
   async expectLoaded(): Promise<void> {
     await this.page
-      .getByText(/Select Account Option for Signup/i)
+      .getByText(/Select Account Option/i)
+      .filter({ visible: true })
       .first()
       .waitFor({ state: 'visible', timeout: 30_000 });
   }
@@ -138,17 +144,90 @@ export class SignupPage extends BasePage {
   }
 
   /**
+   * Types a mobile number that is NOT 10 digits and clicks "Verify". `Mobile()`'s own input mask
+   * (`/^\d{0,10}$/`) already blocks non-digit characters and anything past 10 digits as they are
+   * typed, so this only usefully exercises a SHORT digit string — `sendOTP()` checks the length
+   * itself before ever calling the network (`if (enteredNumber.length !== 10) { toast.error(...) }`),
+   * so neither the OTP modal nor an "already exists" toast can appear here; this is the third, purely
+   * client-side outcome those two don't cover.
+   */
+  async attemptVerifyWithInvalidMobile(mobileNumber: string): Promise<void> {
+    await test.step(`Signup: verify an invalid mobile number ${mobileNumber}`, async () => {
+      await this.page.getByPlaceholder('Enter Mobile Number').fill(mobileNumber);
+      await this.page.getByText(/^Verify$/i).first().click();
+      await this.page
+        .getByText(/^Invalid Mobile Number$/i)
+        .waitFor({ state: 'visible', timeout: 10_000 });
+    });
+  }
+
+  /** Opens the Date of Birth calendar, if it is not open already. */
+  async openDateOfBirthPicker(): Promise<void> {
+    await this.page.getByPlaceholder('Select Date of Birth').click();
+  }
+
+  /**
+   * True when the given day/month/year cell carries react-datepicker's own disabled class —
+   * `DateSelect.js`'s `maxDate` (18 years before today) should make any day within that window
+   * unselectable.
+   *
+   * Re-opens the picker itself on every call rather than assuming a prior call left it open and in
+   * the right month/year: live-verified 2026-09-28, calling this twice in a row without an explicit
+   * reopen between checks was flaky (the year `<select>` intermittently had no options yet).
+   */
+  async isDateOfBirthDayDisabled(day: number, month: string, year: number): Promise<boolean> {
+    await this.openDateOfBirthPicker();
+    await this.page.locator('.react-datepicker__year-select').selectOption(String(year));
+    await this.page.locator('.react-datepicker__month-select').selectOption({ label: month });
+    const cell = this.page
+      .locator('.react-datepicker__day:not(.react-datepicker__day--outside-month)')
+      .getByText(new RegExp(`^${day}$`), { exact: true })
+      .first();
+    const classAttr = (await cell.getAttribute('class')) ?? '';
+    return classAttr.includes('react-datepicker__day--disabled');
+  }
+
+  /**
    * Types the 6-digit OTP into the modal's per-digit boxes (`id="input_0"`..`"input_5"`, set by
    * `PersonalSignup.js` from the `Input` component's `id` prop). The form auto-validates on the
    * 6th digit and closes the modal on success — no separate submit button to click.
+   *
+   * Returns `invalid` rather than throwing when the app itself rejects the code (its own
+   * `validateOTP` call, not one this bench controls — the OTP box's auto-submit is a black box
+   * from here), so a caller can tell "the code was rejected" apart from a genuine hang.
+   *
+   * Live-verified 2026-09-28: a WRONGLY suspected bug was filed and retracted here (#721, closed
+   * INVALID) — `validateOTP` seemed to reject even the correct bypass code. Two wrong theories were
+   * ruled out first (server load from a concurrent API sweep; the `sendDate` field itself — a
+   * byte-identical request succeeded when sent standalone). The real cause: this method filled the
+   * OTP digits too soon after the modal's title became visible, before the digit boxes were actually
+   * ready to receive input. See the settle below.
    */
-  async enterMobileOtp(otp: string): Promise<void> {
-    await test.step('Signup: enter mobile OTP', async () => {
+  async enterMobileOtp(otp: string): Promise<'verified' | 'invalid'> {
+    return test.step('Signup: enter mobile OTP', async () => {
+      /*
+       * Live-verified 2026-09-28: the modal's TITLE becomes visible slightly before its digit boxes
+       * are ready to receive input reliably — filling them immediately after the title appears was
+       * the actual cause of #721 (retracted), not `sendDate` or server load. Waiting for the first
+       * box to actually be visible+enabled (not just a fixed delay) is the real readiness signal; a
+       * short settle after it closes the remaining gap — a fixed 3s alone still occasionally raced.
+       */
+      const firstBox = this.page.locator('#input_0');
+      await firstBox.waitFor({ state: 'visible', timeout: 15_000 });
+      await this.settle();
+      await this.page.waitForTimeout(2000);
       const digits = otp.trim().split('').slice(0, 6);
       for (const [index, digit] of digits.entries()) {
         await this.page.locator(`#input_${index}`).fill(digit);
       }
-      await this.page.getByText(/^Enter your OTP$/i).waitFor({ state: 'hidden', timeout: 15_000 });
+      const modalClosed = this.page.getByText(/^Enter your OTP$/i);
+      const rejected = this.page.getByText(/Invalid OTP\. Please enter the correct code/i);
+      return Promise.race([
+        modalClosed
+          .waitFor({ state: 'hidden', timeout: 20_000 })
+          .then((): 'verified' => 'verified'),
+        rejected.waitFor({ state: 'visible', timeout: 20_000 }).then((): 'invalid' => 'invalid'),
+      ]);
     });
   }
 
@@ -158,6 +237,11 @@ export class SignupPage extends BasePage {
    *
    * Gender is the only react-select mounted on this screen (Country/Language/Domain from the
    * previous screen have unmounted), so it is `chooseFromSelect(0, ...)` here, not index 2.
+   *
+   * Live-verified 2026-09-28: the Pincode modal's "Confirm" stays disabled until an Area is picked —
+   * it only auto-selects when the pincode has exactly one area, which most real pincodes (including
+   * the default 600001, with 6) do not. Gender's select is still mounted behind the modal, so Area
+   * is `chooseFromSelect(1, ...)`, not `0`.
    */
   async fillPersonalDetails(details: {
     firstName: string;
@@ -167,6 +251,7 @@ export class SignupPage extends BasePage {
     dobMonth: string;
     dobYear: number;
     pincode: string;
+    area: string;
   }): Promise<void> {
     await test.step('Signup: personal details', async () => {
       await this.page.getByPlaceholder('Enter the first name').fill(details.firstName);
@@ -175,10 +260,17 @@ export class SignupPage extends BasePage {
       await this.chooseDateOfBirth(details.dobDay, details.dobMonth, details.dobYear);
       await this.page.getByPlaceholder('Enter postal pincode').fill(details.pincode);
 
-      await this.page
-        .getByText(/^Pincode Details$/i)
-        .waitFor({ state: 'visible', timeout: 15_000 });
+      const pincodeModalTitle = this.page.getByText(/^Pincode Details$/i);
+      await pincodeModalTitle.waitFor({ state: 'visible', timeout: 15_000 });
+      await this.chooseFromSelect(1, details.area);
       await this.page.getByRole('button', { name: /^Confirm$/i }).click();
+      /*
+       * Live-verified 2026-09-28: clicking "Continue" (the next step) immediately after this modal's
+       * own "Confirm" is flaky — the modal's closing animation (a Bootstrap `.fade`) briefly
+       * intercepts pointer events even after "Confirm" resolves. Waiting for the title to actually
+       * leave the DOM avoids the race instead of relying on Playwright's click-retry to paper over it.
+       */
+      await pincodeModalTitle.waitFor({ state: 'hidden', timeout: 15_000 });
     });
   }
 
@@ -186,21 +278,38 @@ export class SignupPage extends BasePage {
    * Drives the `react-datepicker` popup (`DateSelect.js`): `showMonthDropdown` + `showYearDropdown`
    * + `dropdownMode="select"` render real `<select>` elements for month/year rather than arrow
    * pagers — the stable part of this widget's DOM across versions.
+   *
+   * Live-verified 2026-09-28: the month `<option>`s carry the FULL name as their label ("June", not
+   * "Jun") and a 0-indexed numeric string as their value ("0".."11") — `selectOption` matches by
+   * value first, so passing a month name only works via `{ label }`, and only the full name matches.
    */
   private async chooseDateOfBirth(day: number, month: string, year: number): Promise<void> {
     await this.page.getByPlaceholder('Select Date of Birth').click();
+    const popup = this.page.locator('.react-datepicker-popper');
     await this.page.locator('.react-datepicker__year-select').selectOption(String(year));
-    await this.page.locator('.react-datepicker__month-select').selectOption(month);
+    await this.page.locator('.react-datepicker__month-select').selectOption({ label: month });
     await this.page
       .locator('.react-datepicker__day:not(.react-datepicker__day--outside-month)')
       .getByText(new RegExp(`^${day}$`), { exact: true })
       .first()
       .click();
+    /*
+     * Live-verified 2026-09-28: picking a day closes the calendar, but not instantly — the still-
+     * closing popup can sit over the "Continue" button and swallow that click. Same race as the
+     * Pincode modal above; waited out the same way instead of leaning on click-retry.
+     */
+    await popup.waitFor({ state: 'hidden', timeout: 15_000 });
   }
 
-  /** The "Continue" button gated on `ValidData && otpValidationStatus` (mobile OTP + pincode confirm). */
+  /**
+   * The "Continue" button gated on `ValidData && otpValidationStatus` (mobile OTP + pincode confirm).
+   *
+   * `force: true`: live-verified 2026-09-28, a leftover datepicker day cell intermittently still
+   * intercepts pointer events here even after `chooseDateOfBirth` confirms its popup hidden — the
+   * same category of overlay race `openSelect` above already forces through for react-select.
+   */
   async continueToKpostId(): Promise<void> {
-    await this.page.getByRole('button', { name: /^Continue$/i }).click();
+    await this.page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
   }
 
   /**
@@ -237,6 +346,146 @@ export class SignupPage extends BasePage {
         .getByText(/Successfully completed the Signup/i)
         .waitFor({ state: 'visible', timeout: 20_000 });
       await this.page.getByRole('button', { name: /^Ok$/i }).click();
+    });
+  }
+
+  // ============================================================================================
+  // BUSINESS (Small) registration — a separate multi-screen flow from Personal, driven from
+  // `SmallBusiness.js` in KPOST_REACTJS_2023_V1. After `chooseAccountType('Business')` the screen
+  // shows a CATEGORY picker (Small/Medium/Large/Multi-National) before any registration form mounts;
+  // only "Small" is wired to a real flow today (Medium/Large use a much larger, separately-built
+  // component; Multi-National is unimplemented and just toasts "in progress"). Country/Language/
+  // Domain, the mobile-OTP mechanism, the date-of-birth picker, the password policy, and the success
+  // modal are ALL identical to Personal's (same components/selectors) — only reused, not redefined
+  // here. NEEDS-LIVE-TUNING to the same degree as the Personal write flow: built from source, not a
+  // codegen recording, since a full run mints a real, permanent company (see adminRegistration's own
+  // `global` side-effect note in the API definitions).
+  // ============================================================================================
+
+  /**
+   * The category picker shown after choosing "Business" (`MainSignup.js`'s `signupBoolean.category`
+   * screen). Each card is `.category-contentBox-layout` with a `.category-title` naming it; the click
+   * target is that SAME card's own "Continue" span, scoped by card so the right one is hit among the
+   * (currently 4) identically-labelled "Continue" controls on this screen.
+   */
+  async chooseBusinessCategory(category: 'Small' | 'Medium' | 'Large' | 'Multi-National'): Promise<void> {
+    await test.step(`Signup: business category ${category}`, async () => {
+      // The screen renders each category card TWICE (a hidden, `display:none` responsive/mobile
+      // duplicate alongside the visible one) — `.filter({ visible: true })` narrows to the one shown.
+      await this.page
+        .locator('.category-contentBox-layout', { hasText: category })
+        .filter({ visible: true })
+        .getByText(/^Continue$/i)
+        .click();
+    });
+  }
+
+  /**
+   * Business's own second screen (post country/language/domain): the same name/gender/DOB fields as
+   * Personal, but NO Postal Pincode/Area here — Business collects pincode later, on the Company
+   * Details screen, instead (`updateValidity()` forces `isPinCodeValid = true` for Business on this
+   * screen). Gender is still the only react-select mounted here, so `chooseFromSelect(0, …)`.
+   */
+  async fillBusinessPersonalDetails(details: {
+    firstName: string;
+    lastName: string;
+    gender: 'Male' | 'Female' | 'Others';
+    dobDay: number;
+    dobMonth: string;
+    dobYear: number;
+  }): Promise<void> {
+    await test.step('Signup: business admin personal details', async () => {
+      await this.page.getByPlaceholder('Enter the first name').fill(details.firstName);
+      await this.page.getByPlaceholder('Enter the last name').fill(details.lastName);
+      await this.chooseFromSelect(0, details.gender);
+      await this.chooseDateOfBirth(details.dobDay, details.dobMonth, details.dobYear);
+    });
+  }
+
+  /**
+   * The Company Details screen (`SmallBusiness.js`'s `smallBusiness` step) — Business-only, no
+   * Personal equivalent. Company Name and Business Short Unique Name are each existence-checked
+   * live on BLUR; this fills every field in tab order (so each blur fires naturally) and returns
+   * both availability outcomes plus the pincode-modal's area-confirm handling (identical widget to
+   * Personal's — live-verified 2026-09-29: Gender's select from the PREVIOUS screen is still mounted
+   * behind this modal too, same as Personal's, so Area is `chooseFromSelect(1, …)` here, not `0`).
+   */
+  async fillCompanyDetails(details: {
+    companyName: string;
+    typeOfBusiness: string;
+    pincode: string;
+    area: string;
+    address1?: string;
+    address2?: string;
+    adminDesignation: string;
+    preAdminDesignationId: string;
+    businessUniqueName: string;
+  }): Promise<{ companyNameOutcome: 'available' | 'taken'; uniqueNameOutcome: 'available' | 'taken' }> {
+    return test.step('Signup: company details', async () => {
+      const companyNameField = this.page.getByPlaceholder('Enter Company Name');
+      await companyNameField.fill(details.companyName);
+      const companyTaken = this.page.getByText(/Company name already exists/i);
+      await companyNameField.blur();
+      const companyNameOutcome = await companyTaken
+        .waitFor({ state: 'visible', timeout: 8_000 })
+        .then((): 'taken' => 'taken')
+        .catch((): 'available' => 'available');
+
+      await this.page.getByPlaceholder('Type of Business').fill(details.typeOfBusiness);
+      await this.page.getByPlaceholder('Enter postal pincode').fill(details.pincode);
+
+      const pincodeModalTitle = this.page.getByText(/^Pincode Details$/i);
+      await pincodeModalTitle.waitFor({ state: 'visible', timeout: 15_000 });
+      await this.chooseFromSelect(1, details.area);
+      await this.page.getByRole('button', { name: /^Confirm$/i }).click();
+      await pincodeModalTitle.waitFor({ state: 'hidden', timeout: 15_000 });
+
+      if (details.address1) await this.page.getByPlaceholder('Enter the Business Address').first().fill(details.address1);
+      if (details.address2) await this.page.getByPlaceholder('Enter the Business Address').nth(1).fill(details.address2);
+
+      await this.chooseFromSelect(0, details.adminDesignation);
+      await this.page
+        .getByPlaceholder('Length 2-10 Characters')
+        .first()
+        .fill(details.preAdminDesignationId);
+
+      const uniqueNameField = this.page.getByPlaceholder('Length 2-10 Characters').nth(1);
+      await uniqueNameField.fill(details.businessUniqueName);
+      const uniqueNameTaken = this.page.getByText(/Business Short Unique Name already exists/i);
+      await uniqueNameField.blur();
+      const uniqueNameOutcome = await uniqueNameTaken
+        .waitFor({ state: 'visible', timeout: 8_000 })
+        .then((): 'taken' => 'taken')
+        .catch((): 'available' => 'available');
+
+      return { companyNameOutcome, uniqueNameOutcome };
+    });
+  }
+
+  /**
+   * Advances from Company Details to the final screen. Unlike Personal, the KPOST ID isn't typed
+   * here — clicking Continue itself derives `preAdminDesignationId.businessUniqueName` and checks its
+   * availability, which the NEXT screen then displays read-only.
+   */
+  async continueToBusinessFinalStep(): Promise<void> {
+    await test.step('Signup: continue from company details', async () => {
+      await this.page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
+    });
+  }
+
+  /**
+   * Reads the passively-displayed KPOST ID availability message on the final screen (the field
+   * itself is `readOnly` here — availability was already checked when Continue was clicked on the
+   * previous screen). Same message text as Personal's `choosePreferredKpostId`.
+   */
+  async businessKpostIdAvailability(): Promise<'available' | 'taken'> {
+    return test.step('Signup: read business KPOST ID availability', async () => {
+      const available = this.page.getByText(/KpostID is Available/i);
+      const taken = this.page.getByText(/This KpostID is already exists/i);
+      return Promise.race([
+        available.waitFor({ state: 'visible', timeout: 15_000 }).then((): 'available' => 'available'),
+        taken.waitFor({ state: 'visible', timeout: 15_000 }).then((): 'taken' => 'taken'),
+      ]);
     });
   }
 }

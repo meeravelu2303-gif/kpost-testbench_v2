@@ -27,14 +27,19 @@ test.describe('KPost Contacts — read-only', { tag: '@ui' }, () => {
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    // The contact/search box is present and the 2nd QA account is a known contact (a conversation row
-    // whose element id is that account's KPOST ID).
+    // The contact/search box is present and the 2nd QA account is a known contact. Both the Recents and
+    // Contacts tab panels stay mounted (Recents slides off-screen rather than unmounting), each with its
+    // own copy of this contact's avatar — `.last()` is the on-screen Contacts-panel copy (confirmed via
+    // live DOM inspection: the Recents copy always renders first). The name is matched exactly and in
+    // lowercase because the Personal list renders it lowercase ("hamza ali"), distinct from the
+    // Frequently-Accessed strip's title-case, broken-image copy of the same avatar (alt="Hamza Ali"),
+    // which is a separate widget that does not respond to this search box.
     await expect(
       page.locator('[placeholder*="Search" i]').first(),
       'the contact search box is present',
     ).toBeVisible({ timeout: 20_000 });
     await expect(
-      page.locator(`[id="${testData.victimKpostId}"]`).first(),
+      page.getByRole('img', { name: 'hamza ali', exact: true }).last(),
       'a known contact is listed',
     ).toBeVisible({ timeout: 20_000 });
   });

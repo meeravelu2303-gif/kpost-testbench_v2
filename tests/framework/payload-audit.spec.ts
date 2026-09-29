@@ -64,8 +64,8 @@ const GATED_WRITE_OMISSIONS: Record<string, string> = {
   'common-validate-mail-otp': 'workbook `sendDate` omitted — matches the working validateOTP shape',
   // Katchup forwards/bulk — the reference-message object + source msgIDs are minted by the running
   // conversation and supplied by the KATCHUP_LIFECYCLE spec; a static value would be a fabricated id.
-  'katchup-forward-message':
-    'referenceMessage + source msgIDs supplied at runtime by the katchup lifecycle',
+  // (`katchup-forward-message`, the older path, was retired 2026-09-28 — confirmed unused by the
+  // current client.)
   'katchup-forward-message-new':
     'referenceMessage + source msgIDs supplied at runtime by the katchup lifecycle',
   'katchup-send-forward-selected-attachment':

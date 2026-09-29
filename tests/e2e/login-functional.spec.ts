@@ -116,19 +116,27 @@ test.describe('KPost login · UI functional behaviour @ui', { tag: '@ui' }, () =
       'the id was accepted and the password step is shown',
     ).toBeVisible();
 
-    /*
-     * Watch for the request itself instead of sleeping: if a login is dispatched this resolves, and
-     * if none is dispatched it times out — which is the passing case. Asserting on the absence of
-     * something is exactly where a fixed sleep is least trustworthy.
-     */
-    await loginPage.loginButton.click();
-    const dispatched = await page
-      .waitForRequest('**/userLogin**', { timeout: 5000 })
-      .then(() => true)
-      .catch(() => false);
+    // The button is now disabled outright with an empty password (confirmed live) — a plain `.click()`
+    // times out on a permanently-disabled element rather than proving anything, so check for that first.
+    // Fall back to the network-race check for a build where the button stays enabled but the app must
+    // still refuse to dispatch — either mechanism is a valid way to satisfy "must not be sent".
+    if (await loginPage.loginButton.isDisabled()) {
+      expect(true, 'the login button is disabled with an empty password').toBe(true);
+    } else {
+      /*
+       * Watch for the request itself instead of sleeping: if a login is dispatched this resolves, and
+       * if none is dispatched it times out — which is the passing case. Asserting on the absence of
+       * something is exactly where a fixed sleep is least trustworthy.
+       */
+      await loginPage.loginButton.click();
+      const dispatched = await page
+        .waitForRequest('**/userLogin**', { timeout: 5000 })
+        .then(() => true)
+        .catch(() => false);
 
-    expect(dispatched, 'a login with an empty password must not be sent').toBe(false);
-    expect(submitted, 'and nothing reached the network').toHaveLength(0);
+      expect(dispatched, 'a login with an empty password must not be sent').toBe(false);
+    }
+    expect(submitted, 'nothing reached the network either way').toHaveLength(0);
   });
 
   test('the error the user sees matches the error the server sent', async ({ loginPage, page }) => {
@@ -236,6 +244,48 @@ test.describe('KPost login · UI functional behaviour @ui', { tag: '@ui' }, () =
     ).toBeEnabled({ timeout: 10_000 });
 
     expect(/\/login/.test(page.url()), 'a 500 must not navigate the user into the app').toBe(true);
+  });
+
+  test('a disabled-account rejection shows the server\'s own message @ui', async ({
+    loginPage,
+    page,
+  }) => {
+    /*
+     * A different rejection shape from the wrong-password case above (403, not 401/200-with-failure),
+     * and a realistic one — an account disabled by an admin is a normal support scenario, not an edge
+     * case. Stubbed for the same reason as the other error-shape tests in this file: the subject is
+     * the client's rendering, and provoking a real account lock is not something this bench should do
+     * to a shared QA account.
+     */
+    const serverMessage = 'Your account has been disabled. Please contact support.';
+    await page.route('**/userLogin**', async (route) => {
+      await route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          statusCode: 403,
+          status: 'FAILURE',
+          message: serverMessage,
+          accessToken: null,
+          data: null,
+        }),
+      });
+    });
+
+    await loginPage.goto();
+    await loginPage.expectLoaded();
+    await loginPage.enterLoginId(testData.kpostId);
+    await loginPage.passwordInput.fill('anypassword123');
+    await loginPage.loginButton.click();
+
+    await expect(
+      page.getByText(serverMessage),
+      'a disabled account must be told WHY, not given a generic or missing error',
+    ).toBeVisible({ timeout: 10_000 });
+    expect(
+      /\/login/.test(page.url()),
+      'a disabled-account rejection must not navigate the user into the app',
+    ).toBe(true);
   });
 
   test('a failed login leaves no session row behind @database', async ({

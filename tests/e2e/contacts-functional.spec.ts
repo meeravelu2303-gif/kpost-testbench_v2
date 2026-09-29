@@ -58,15 +58,21 @@ test.describe('KPost Contacts · UI functional behaviour @ui', { tag: '@ui' }, (
     const opened = await gotoContacts(page);
     test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
 
-    const search = page.getByRole('searchbox', { name: 'Search' }).first();
+    // Both tab panels stay mounted and slide horizontally; the Recents panel's identical "Search" box
+    // sits off-screen (negative x) rather than being unmounted, so `.first()` grabs the wrong one —
+    // the Contacts panel's box is the one that renders second.
+    const search = page.getByRole('searchbox', { name: 'Search' }).last();
     await search.click();
     await search.fill('zzzzzznomatch');
-    // A no-match query must not still show a full list of contacts — the list responds to the filter.
-    // (We assert the specific 2nd-account row is NOT shown for a nonsense query.)
+    // A no-match query must not still show a full list of contacts. The 2nd QA account has no attribute
+    // anywhere in the DOM carrying its KPOST ID — only its display name — so it's matched by name
+    // (exact lowercase, as the Personal list renders it) rather than `testData.victimKpostId`. `.last()`
+    // picks the on-screen Contacts-panel copy of the avatar, not the off-screen Recents-panel one or the
+    // separate, search-independent Frequently-Accessed strip (which renders the same name title-cased).
     await expect(
-      page.locator(`[id="${testData.victimKpostId}"]`),
+      page.getByRole('img', { name: 'hamza ali', exact: true }).last(),
       'a nonsense search does not still show every contact',
-    ).toHaveCount(0, { timeout: 10_000 });
+    ).toBeHidden({ timeout: 10_000 });
   });
 
   test('the Add-contact wizard opens and reaches its people-search step @ui', async ({ page }) => {

@@ -15,6 +15,48 @@
       "source": "manual curl probe (2026-09-28)",
       "note": "Created while diagnosing whether the API-only signup path still works with current domain/password/kpostID policy, independent of bug #720 and the Cloudflare Turnstile block on the UI. Confirmed in TBL_KPOST_USER_MASTER.",
       "createdAt": "2026-09-28T09:48:54.579Z"
+    },
+    {
+      "kpostId": "qabenchweb@kpostindia.com",
+      "mobileNumber": "9000000778",
+      "source": "signup-login-lifecycle.spec.ts (UI)",
+      "note": "Personal registration driven end-to-end through the signup screen",
+      "createdAt": "2026-09-28T14:31:47.305Z"
+    },
+    {
+      "kpostId": "qabenchweb2@kpostindia.com",
+      "mobileNumber": "9000000779",
+      "source": "signup-login-lifecycle.spec.ts (UI)",
+      "note": "Personal registration driven end-to-end through the signup screen",
+      "createdAt": "2026-09-28T14:42:13.787Z"
+    },
+    {
+      "kpostId": "qabenchweb3@kpostindia.com",
+      "mobileNumber": "9000000780",
+      "source": "signup-login-lifecycle.spec.ts (UI)",
+      "note": "Personal registration driven end-to-end through the signup screen",
+      "createdAt": "2026-09-29T05:44:31.960Z"
+    },
+    {
+      "kpostId": "qabbzad.qabenchbz@kpost.in",
+      "mobileNumber": "9000000790",
+      "source": "signup-business.spec.ts (UI)",
+      "note": "Business (Small) registration driven end-to-end; company \"QA Bench Business Co\"",
+      "createdAt": "2026-09-29T06:20:07.756Z"
+    },
+    {
+      "kpostId": "qd009750.qd009750@kpost.in",
+      "mobileNumber": "9988557848",
+      "source": "ad-hoc diagnostic probe (2026-09-29)",
+      "note": "Created while testing whether Business signup rejects a mobile number already registered to a DIFFERENT company. It did not reject it (adminRegistration returned 200 SUCCESS, companyID 1064) — confirmed CORRECT per the real business requirement (one mobile MAY have multiple Business accounts across different companies; only same-company duplicates must be rejected). Originally mis-filed as bug #818 (CRITICAL); retracted as INVALID once the requirement was clarified. Kept here per this bench's safety-net policy; not cleaned up (the API has no delete-company endpoint).",
+      "createdAt": "2026-09-29T06:40:25.000Z"
+    },
+    {
+      "kpostId": "nostacof.nst@kpost.in",
+      "mobileNumber": "9196969363",
+      "source": "ad-hoc diagnostic probe (2026-09-29) via /usermanagement Add Manually",
+      "note": "UNINTENDED side effect while testing same-company duplicate-mobile rejection for a real member of BUSINESS_S's company (1034, North Star Technology). Intended to reuse an existing member's exact mobile (Mark Fisher, 9696936363), but the Mobile No field's own input mask truncated/mangled the typed value (\"919696936363\") into \"9196969363\" — a DIFFERENT, new number, not a real duplicate. So this run did NOT actually test the intended scenario; it just created an extra real member by mistake. addingUserByAdmin returned 200 SUCCESS, companyID 1034. Not cleaned up (terminateUser is a permanent, non-reversible state change, not a deletion, and is itself on this bench's permanent do-not-automate list).",
+      "createdAt": "2026-09-29T07:55:58.295Z"
     }
   ]
 }

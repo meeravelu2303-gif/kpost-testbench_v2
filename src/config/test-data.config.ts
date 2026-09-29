@@ -93,6 +93,20 @@ const schema = z.object({
   signupUiKpostIdLocal: z.string().min(3).default('qabenchweb'),
   signupUiMobile: z.string().min(6).default('9000000778'),
 
+  /**
+   * The Business (Small) UI signup lifecycle's own reserved identity — separate from
+   * `signupUiKpostIdLocal`/`signupUiMobile` (Personal) for the same reason those are separate from
+   * `signupKpostId`/`signupMobile` (API): a UI run and any other run must never race for the same
+   * "is it taken?" answer. `signupBusinessUniqueName`/`signupBusinessDesignationId` are the two
+   * pieces the product dot-joins into the actual KPOST ID local part
+   * (`${designationId}.${uniqueName}`) — kept apart so either can be regenerated independently
+   * after a run consumes them, without needing a fresh mobile too.
+   */
+  signupBusinessUiMobile: z.string().min(6).default('9000000790'),
+  signupBusinessCompanyName: z.string().min(3).default('QA Bench Business Co'),
+  signupBusinessUniqueName: z.string().min(2).max(10).default('qabenchbz'),
+  signupBusinessDesignationId: z.string().min(2).max(10).default('qabbzad'),
+
   /** A mobile number that IS registered. */
   mobileExists: z.string().min(6).default('9000000949'),
   /** A mobile number that is NOT registered. */
@@ -177,6 +191,10 @@ const SOURCES = {
   signupMobile: 'QA_SIGNUP_MOBILE',
   signupUiKpostIdLocal: 'QA_SIGNUP_UI_KPOST_ID_LOCAL',
   signupUiMobile: 'QA_SIGNUP_UI_MOBILE',
+  signupBusinessUiMobile: 'QA_SIGNUP_BUSINESS_UI_MOBILE',
+  signupBusinessCompanyName: 'QA_SIGNUP_BUSINESS_COMPANY_NAME',
+  signupBusinessUniqueName: 'QA_SIGNUP_BUSINESS_UNIQUE_NAME',
+  signupBusinessDesignationId: 'QA_SIGNUP_BUSINESS_DESIGNATION_ID',
   mobileExists: 'QA_MOBILE_EXISTS',
   mobileAbsent: 'QA_MOBILE_ABSENT',
   companyId: 'QA_COMPANY_ID',

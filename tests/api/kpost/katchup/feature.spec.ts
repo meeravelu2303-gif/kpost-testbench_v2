@@ -349,9 +349,11 @@ test.describe('KPost Katchup · feature flow', () => {
     expect(seed.msgID, 'seed created').toBeTruthy();
 
     // Forward shape from the client (ForwardFooter.js): forwardReceiverList + referenceMessageIDList
-    // (the source msgIDs), not a single `receiver`.
+    // (the source msgIDs), not a single `receiver`. `forwardKatchupMessage` (the older path) is
+    // confirmed unused by the current client — this now targets `forwardKatchupMessageNew`, the one
+    // actually live (retired 2026-09-28, see manage.api.ts).
     const fwd = await endpoints.sendTo(
-      'katchup-forward-message',
+      'katchup-forward-message-new',
       {
         body: {
           messageType: KATCHUP_MESSAGE_TYPE.forwardMessageReveal,
@@ -400,7 +402,7 @@ test.describe('KPost Katchup · feature flow', () => {
     ];
     for (const [label, type] of variants) {
       const fwd = await endpoints.sendTo(
-        'katchup-forward-message',
+        'katchup-forward-message-new',
         {
           body: {
             messageType: type,

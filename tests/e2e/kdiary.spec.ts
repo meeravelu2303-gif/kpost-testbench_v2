@@ -18,9 +18,11 @@ test.describe('KPost KDiary — read-only', { tag: '@ui' }, () => {
   // /home and /katchup renders KNews / E-Commerce, not the Diary — confirmed from the live DOM. So the
   // Diary panel has no user-facing entry point today. The KDiary API is fully covered on live (9/9).
   // This stays skipped-with-reason until the app exposes a Diary trigger (or its route is re-enabled).
+  // Filed as #812 (2026-09-29) — this had not actually been reported to Bugzilla until confirmed still
+  // current on that date.
   test.skip(
     true,
-    'KDiary UI has no route/rail entry point in the deployed build — API-covered instead',
+    'KDiary UI has no route/rail entry point in the deployed build — see #812',
   );
 
   test('the Diary panel renders in the Katchup right rail @ui', async ({ page }) => {
@@ -49,6 +51,11 @@ test.describe('KPost KDiary · create event (write)', { tag: '@ui' }, () => {
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account',
   );
+  // See #812: KDiary has no reachable UI entry point in the deployed build (confirmed live — no
+  // ".Dairy-Container", no "Diary" text, and no "+ Add" trigger exist anywhere in the Katchup rail), so
+  // this can never get past its own first assertion. Matches the read-only describe block's own
+  // already-documented finding above. Skipping with reason rather than failing on a known product gap.
+  test.skip(true, 'KDiary has no UI entry point to drive — see #812');
 
   /**
    * FIRST-RUN NOTE: the Add-Schedule modal's date/priority pickers and the delete-task confirm

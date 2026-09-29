@@ -108,8 +108,10 @@ test.describe('KPost Kall · schedule a Kool Kall (write)', { tag: '@ui' }, () =
       .getByText(/Invite Participants/i)
       .first()
       .click({ force: true });
+    // "Qa Tester2" was a stale name that no longer exists in this account's contacts; the 2nd QA account
+    // (testData.victimKpostId) renders here as "Hamza Ali" (confirmed live in the picker's contact list).
     await expect(
-      page.getByText(/^Qa Tester2$/i).first(),
+      page.getByText(/^Hamza Ali$/i).first(),
       'the participant picker lists selectable contacts',
     ).toBeVisible({ timeout: 15_000 });
   });

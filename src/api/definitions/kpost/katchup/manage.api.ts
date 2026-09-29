@@ -97,25 +97,11 @@ export const reportAbuseApi = defineKatchupEndpoint({
 
 /*
  * ## Forwards — all need a source message id
+ *
+ * `/v2/katchup/forwardKatchupMessage/` (the older path) is confirmed unused by the current client —
+ * only `forwardKatchupMessageNew` is live. Its endpoint definition, the tests that exercised it, and
+ * its filed bugs were retired 2026-09-28 rather than kept testing a dead route.
  */
-export const forwardMessageApi = defineKatchupEndpoint({
-  id: 'katchup-forward-message',
-  requirements: ['FR-KU-035'],
-  method: 'POST',
-  path: '/v2/katchup/forwardKatchupMessage/',
-  summary: 'Forward a message (reveal sender)',
-  tags: [...MANAGE_TAGS, 'forward', 'needs-message-id'],
-  destructive: true,
-  sideEffect: 'data',
-  request: body(() => ({
-    receiver: testData.victimKpostId,
-    messageType: KATCHUP_MESSAGE_TYPE.forwardMessageReveal,
-    subject: 'QA Bench',
-    actualMessage: 'QA bench forward.',
-  })),
-  note: 'needs a source message to forward',
-});
-
 export const forwardMessageNewApi = defineKatchupEndpoint({
   id: 'katchup-forward-message-new',
   requirements: ['FR-KU-035', 'FR-KU-037'],
@@ -165,7 +151,6 @@ export const katchupManageApis = [
   markImportantApi,
   saveMessagesApi,
   reportAbuseApi,
-  forwardMessageApi,
   forwardMessageNewApi,
   forwardMultipleApi,
   forwardBacktrackApi,
