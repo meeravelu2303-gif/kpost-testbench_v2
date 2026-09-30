@@ -10,6 +10,7 @@ import { businessRuleFindingReports, flowFindingReports } from '@engine/flow-fin
 import { ValidationEngine, type ValidationEngineDeps } from '@engine/validation-engine';
 import { HomePage } from '@pages/HomePage';
 import { LoginPage } from '@pages/LoginPage';
+import { SettingsPage } from '@pages/SettingsPage';
 import { SignupPage } from '@pages/SignupPage';
 import { attachValidationReport } from '@reporting/report-attachment';
 import { businessRuleRegistry } from '@rules/index';
@@ -40,6 +41,7 @@ interface TestFixtures {
   loginPage: LoginPage;
   signupPage: SignupPage;
   homePage: HomePage;
+  settingsPage: SettingsPage;
 }
 
 /** Import `test` and `expect` from `@fixtures` in every spec — never from `@playwright/test`. */
@@ -130,6 +132,10 @@ export const test = base.extend<TestFixtures>({
 
   homePage: async ({ page }, use) => {
     await use(new HomePage(page));
+  },
+
+  settingsPage: async ({ page }, use) => {
+    await use(new SettingsPage(page));
   },
 });
 
