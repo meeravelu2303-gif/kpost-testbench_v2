@@ -94,6 +94,14 @@ const schema = z.object({
   signupUiMobile: z.string().min(6).default('9000000778'),
 
   /**
+   * A THIRD Personal UI identity, reserved for the mobile-viewport (<992px) full-completion test —
+   * separate from `signupUiKpostIdLocal`/`signupUiMobile` (the desktop lifecycle) for the same
+   * "never race for the same is-it-taken answer" reason those are separate from the API layer's own.
+   */
+  signupMobileViewportUiKpostIdLocal: z.string().min(3).default('qabenchmob'),
+  signupMobileViewportUiMobile: z.string().min(6).default('9000000779'),
+
+  /**
    * The Business (Small) UI signup lifecycle's own reserved identity — separate from
    * `signupUiKpostIdLocal`/`signupUiMobile` (Personal) for the same reason those are separate from
    * `signupKpostId`/`signupMobile` (API): a UI run and any other run must never race for the same
@@ -106,6 +114,23 @@ const schema = z.object({
   signupBusinessCompanyName: z.string().min(3).default('QA Bench Business Co'),
   signupBusinessUniqueName: z.string().min(2).max(10).default('qabenchbz'),
   signupBusinessDesignationId: z.string().min(2).max(10).default('qabbzad'),
+
+  /**
+   * The Medium and Large Business UI signup lifecycles' own reserved identities — `MLRegister.js`
+   * is a THIRD, separate component from both Personal and Small Business, so each tier gets its own
+   * slot for the same "never race for the same is-it-taken answer" reason as Small's own identity
+   * above. Kept as two full sets (not shared) since Medium and Large are independently gated tests
+   * and may run on different days.
+   */
+  signupMediumBusinessUiMobile: z.string().min(6).default('9000000791'),
+  signupMediumBusinessCompanyName: z.string().min(3).default('QA Bench Medium Co'),
+  signupMediumBusinessUniqueName: z.string().min(2).max(10).default('qabenchmd'),
+  signupMediumBusinessDesignationId: z.string().min(2).max(10).default('qabmdad'),
+
+  signupLargeBusinessUiMobile: z.string().min(6).default('9000000792'),
+  signupLargeBusinessCompanyName: z.string().min(3).default('QA Bench Large Co'),
+  signupLargeBusinessUniqueName: z.string().min(2).max(10).default('qabenchlg'),
+  signupLargeBusinessDesignationId: z.string().min(2).max(10).default('qablgad'),
 
   /** A mobile number that IS registered. */
   mobileExists: z.string().min(6).default('9000000949'),
@@ -191,10 +216,20 @@ const SOURCES = {
   signupMobile: 'QA_SIGNUP_MOBILE',
   signupUiKpostIdLocal: 'QA_SIGNUP_UI_KPOST_ID_LOCAL',
   signupUiMobile: 'QA_SIGNUP_UI_MOBILE',
+  signupMobileViewportUiKpostIdLocal: 'QA_SIGNUP_MOBILE_VIEWPORT_UI_KPOST_ID_LOCAL',
+  signupMobileViewportUiMobile: 'QA_SIGNUP_MOBILE_VIEWPORT_UI_MOBILE',
   signupBusinessUiMobile: 'QA_SIGNUP_BUSINESS_UI_MOBILE',
   signupBusinessCompanyName: 'QA_SIGNUP_BUSINESS_COMPANY_NAME',
   signupBusinessUniqueName: 'QA_SIGNUP_BUSINESS_UNIQUE_NAME',
   signupBusinessDesignationId: 'QA_SIGNUP_BUSINESS_DESIGNATION_ID',
+  signupMediumBusinessUiMobile: 'QA_SIGNUP_MEDIUM_BUSINESS_UI_MOBILE',
+  signupMediumBusinessCompanyName: 'QA_SIGNUP_MEDIUM_BUSINESS_COMPANY_NAME',
+  signupMediumBusinessUniqueName: 'QA_SIGNUP_MEDIUM_BUSINESS_UNIQUE_NAME',
+  signupMediumBusinessDesignationId: 'QA_SIGNUP_MEDIUM_BUSINESS_DESIGNATION_ID',
+  signupLargeBusinessUiMobile: 'QA_SIGNUP_LARGE_BUSINESS_UI_MOBILE',
+  signupLargeBusinessCompanyName: 'QA_SIGNUP_LARGE_BUSINESS_COMPANY_NAME',
+  signupLargeBusinessUniqueName: 'QA_SIGNUP_LARGE_BUSINESS_UNIQUE_NAME',
+  signupLargeBusinessDesignationId: 'QA_SIGNUP_LARGE_BUSINESS_DESIGNATION_ID',
   mobileExists: 'QA_MOBILE_EXISTS',
   mobileAbsent: 'QA_MOBILE_ABSENT',
   companyId: 'QA_COMPANY_ID',

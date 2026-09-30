@@ -28,6 +28,31 @@ const PNG_1X1 =
 const JPEG_1X1 =
   '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
 
+/**
+ * A JPEG padded to `targetBytes` using a standard JPEG COM (comment, marker `0xFFFE`) segment right
+ * after the SOI — every decoder skips COM segments, so the image itself is still the same valid 1x1
+ * pixel, but the FILE size genuinely grows by the padding, unlike appending bytes after the JPEG's
+ * own EOI marker (which some servers strip or reject as trailing garbage).
+ *
+ * Exists because `updateSignatureImage` answers 400 "Signature must be between 10KB and 50KB in
+ * size" for the plain `JPEG_1X1` above — confirmed live 2026-09-30 this was a bench fixture problem
+ * (a tiny fixture failing a real size floor), not a product defect: it produced a false CRITICAL
+ * "expected 200, got 400" candidate before this fix.
+ */
+function paddedJpeg(targetBytes: number): string {
+  const tiny = Buffer.from(JPEG_1X1, 'base64');
+  const padLength = targetBytes - tiny.length - 4; // -4 for the COM marker + its 2-byte length field
+  const comPayload = Buffer.alloc(padLength, 0x20);
+  const comLengthField = comPayload.length + 2; // includes itself, excludes the 2-byte marker
+  const comHeader = Buffer.from([0xff, 0xfe, (comLengthField >> 8) & 0xff, comLengthField & 0xff]);
+  return Buffer.concat([tiny.subarray(0, 2), comHeader, comPayload, tiny.subarray(2)]).toString(
+    'base64',
+  );
+}
+
+/** ~25KB — comfortably inside the confirmed 10KB-50KB floor for `updateSignatureImage`. */
+const JPEG_25KB = paddedJpeg(25 * 1024);
+
 const imageUpload = (
   path: string,
   id: string,
@@ -93,9 +118,14 @@ export const updateSignatureImageApi = imageUpload(
   '/v2/profile/updateSignatureImage',
   'profile-update-signature',
   "Update the caller's signature image",
-  // Live-verified 2026-09-26: this route 500s "API error" regardless of format (PNG or JPEG) —
-  // already tracked as #559 [KP-7D1F6B], CRITICAL. Left on the standard PNG fixture since switching
-  // format doesn't change the outcome.
+  'file',
+  // Live-verified 2026-09-26: this route 500'd "API error" regardless of format (PNG or JPEG) —
+  // tracked as #559 [KP-7D1F6B], CRITICAL. Re-verified 2026-09-30 (post-deployment): the 500 is
+  // GONE — the tiny 1x1 fixture now gets a proper 400 "Signature must be between 10KB and 50KB in
+  // size" instead, i.e. real, correct size validation. That suggests #559 may already be fixed;
+  // switched to a properly-sized (~25KB) fixture here to find out whether a genuinely valid upload
+  // now succeeds, rather than leaving this on a fixture that can never pass the real size floor.
+  { name: 'qa-bench-signature.jpg', mimeType: 'image/jpeg', base64: JPEG_25KB },
 );
 
 export const removeProfileImageApi = defineProfileEndpoint({

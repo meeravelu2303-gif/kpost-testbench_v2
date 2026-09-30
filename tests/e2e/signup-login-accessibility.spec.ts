@@ -1,5 +1,6 @@
 /* eslint-disable playwright/no-wait-for-timeout */
 import AxeBuilder from '@axe-core/playwright';
+import { domainFor } from '@fixtures/test-accounts';
 import { testData } from '@config/test-data.config';
 import { AXE_JSON_ATTACHMENT, renderAccessibilityOverlay } from '@ui/accessibility-evidence';
 import type { AxeScreenResult } from '@ui/accessibility-evidence';
@@ -148,5 +149,78 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
       .waitFor({ state: 'visible', timeout: 15_000 });
     await page.waitForTimeout(1200);
     await scanCurrentPage(page, testInfo, 'Login — Forgot Password modal', '/login');
+  });
+
+  /*
+   * The two deeper signup screens below were unreachable before the Cloudflare Turnstile fix
+   * (2026-09-30) — mobile verification never completed, so nothing past it could be scanned. Each
+   * uses its own fresh, throwaway mobile number: unlike the lifecycle specs, this never completes a
+   * signup (no account is created), so no reserved identity is needed — a collision just means
+   * re-running with a different generated number.
+   */
+  function freshMobile(): string {
+    return `77${Date.now().toString().slice(-8)}`;
+  }
+
+  test('Signup — Personal details step (post-OTP) — WCAG violations (axe) @ui', async ({
+    page,
+    signupPage,
+  }, testInfo) => {
+    test.skip(
+      process.env.SIGNUP_UI_LIFECYCLE !== 'true',
+      'drives a real mobile OTP to reach this step; set SIGNUP_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',
+      'the mobile OTP bypass code only validates on the confirmed OTP test gateway',
+    );
+
+    await signupPage.goto();
+    await signupPage.chooseAccountType('Personal');
+    await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
+
+    const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
+    test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+    const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
+    test.skip(otpEntryOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
+
+    await page.waitForTimeout(1200);
+    await scanCurrentPage(page, testInfo, 'Signup — Personal details (post-OTP)', '/signup');
+  });
+
+  test('Signup — Business Company Details step (post-OTP) — WCAG violations (axe) @ui', async ({
+    page,
+    signupPage,
+  }, testInfo) => {
+    test.skip(
+      process.env.SIGNUP_UI_LIFECYCLE !== 'true',
+      'drives a real mobile OTP to reach this step; set SIGNUP_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',
+      'the mobile OTP bypass code only validates on the confirmed OTP test gateway',
+    );
+
+    await signupPage.goto();
+    await signupPage.chooseAccountType('Business');
+    await signupPage.chooseBusinessCategory('Small');
+    await signupPage.selectCountryLanguageDomain('India', 'English', 'kpost.in');
+
+    const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
+    test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+    const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
+    test.skip(otpEntryOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
+
+    await signupPage.fillBusinessPersonalDetails({
+      firstName: 'QA',
+      lastName: 'A11y',
+      gender: 'Female',
+      dobDay: 15,
+      dobMonth: 'June',
+      dobYear: 1995,
+    });
+    await page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
+    await page.waitForTimeout(1200);
+    await scanCurrentPage(page, testInfo, 'Signup — Business Company Details (post-OTP)', '/signup');
   });
 });

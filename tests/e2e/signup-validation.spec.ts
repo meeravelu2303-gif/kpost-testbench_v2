@@ -244,4 +244,69 @@ test.describe('KPost signup · Personal field validation', { tag: '@ui' }, () =>
       'Submit stays disabled while password and confirmation disagree',
     ).toBeDisabled();
   });
+
+  /**
+   * The one genuinely untested angle of "editing a field before submit": the Preferred KPOST ID
+   * field's availability check is live and DEBOUNCED (per `choosePreferredKpostId`'s own doc
+   * comment). The password-policy test above already proves a plain re-`fill()` correctly re-runs
+   * pure client-side validation — this instead targets the NETWORK-backed check specifically, where
+   * a stale response for an earlier value arriving late could incorrectly overwrite what should be
+   * shown for the value the user has since changed to. Uses a real registered id (`testData.kpostId`,
+   * expected "taken") followed by a fresh generated one (expected "available") to prove the SECOND
+   * check's result is what actually displays, not a stale first one.
+   */
+  test('editing the Preferred KPOST ID after a check re-validates the NEW value, not a stale result @ui', async ({
+    signupPage,
+    page,
+  }) => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real, already-registered live account (QA_KPOST_ID) as the known-taken value',
+    );
+
+    await signupPage.goto();
+    await signupPage.chooseAccountType('Personal');
+    await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
+
+    const mobile = freshMobile();
+    const otpOutcome = await signupPage.requestMobileOtp(mobile);
+    test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+    const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
+    test.skip(otpEntryOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
+
+    await signupPage.fillPersonalDetails({
+      firstName: 'QA',
+      lastName: 'EditRecheck',
+      gender: 'Female',
+      dobDay: 15,
+      dobMonth: 'June',
+      dobYear: 1995,
+      pincode: testData.pinCode,
+      area: 'Chennai',
+    });
+    await signupPage.continueToKpostId();
+
+    // First value: a real registered id's local part — expected "taken".
+    const takenLocal = testData.kpostId.slice(0, testData.kpostId.indexOf('@'));
+    const firstOutcome = await signupPage.choosePreferredKpostId(takenLocal);
+    test.info().annotations.push({
+      type: 'observed',
+      description: `first check ("${takenLocal}"): ${firstOutcome}`,
+    });
+
+    // Edit to a fresh, never-used local part BEFORE any further action — expected "available".
+    const freshLocal = `qaedit${mobile.slice(-6)}`;
+    const secondOutcome = await signupPage.choosePreferredKpostId(freshLocal);
+    test.info().annotations.push({
+      type: 'observed',
+      description: `after editing to ("${freshLocal}"): ${secondOutcome}`,
+    });
+
+    expect(
+      secondOutcome,
+      `after editing the field to a fresh, unused id ("${freshLocal}"), the check must reflect ` +
+        `THAT value ("available") — showing "taken" here would mean a stale response for the ` +
+        `earlier value ("${takenLocal}") incorrectly overwrote the current one`,
+    ).toBe('available');
+  });
 });

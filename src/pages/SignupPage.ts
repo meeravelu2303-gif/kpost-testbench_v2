@@ -489,4 +489,96 @@ export class SignupPage extends BasePage {
       ]);
     });
   }
+
+  // ============================================================================================
+  // BUSINESS (Medium/Large) registration — a THIRD, separate flow from both Personal and Small
+  // Business, driven from `MLRegister.js` in KPOST_REACTJS_2023_V1 (~2,100 lines — a materially
+  // bigger component, not a variant of `SmallBusiness.js`). Reached the same way as Small
+  // (`chooseAccountType('Business')` then `chooseBusinessCategory('Medium' | 'Large')`) and its
+  // Country/Language/Domain step, Gender/DOB step, mobile-OTP mechanism, and final KPOST-ID/password
+  // screen are ALL byte-identical in markup to Small's (confirmed live 2026-09-30: same
+  // `.react-select__input` selects, same `#input_0`..`#input_5` OTP boxes, same "Enter Password"/
+  // "Enter Confirm Password " placeholders) — so `selectCountryLanguageDomain`, `requestMobileOtp`,
+  // `enterMobileOtp`, `fillBusinessPersonalDetails`, `continueToBusinessFinalStep`,
+  // `businessKpostIdAvailability`, `setPasswordAndSubmit` and `confirmSuccessAndGoToLogin` are all
+  // reused as-is. Only the Company Details step differs — it has 5 extra fields Small does not
+  // collect (Website, Registration No, GST No, No of Employee, No of Licenses) — so that is the one
+  // new method this section adds.
+  //
+  // For India (the only country this bench ever signs up as), mobile OTP is the verification
+  // channel exactly like Small/Personal — `MLRegister.js` only switches to an email-OTP channel for
+  // non-India signups, which is out of scope here.
+  // ============================================================================================
+
+  /**
+   * The Medium/Large Company Details screen (`MLRegister.js`'s `smallBusiness` step — the flag name
+   * is a leftover from a copy/paste of `SmallBusiness.js`, not a sign the two components share code).
+   * Fields are progressively `isDisabled` until the previous one is filled, so this fills them in the
+   * screen's own order. Company Name and Business Short Unique Name are each existence-checked live
+   * on BLUR, same mechanism as Small's `fillCompanyDetails` — GST No and No of Employee have no such
+   * check (confirmed from source: no blur handler, just `setGstNo`/`setEmployeeCount`).
+   */
+  async fillMediumLargeCompanyDetails(details: {
+    typeOfBusiness: string;
+    companyName: string;
+    website: string;
+    registrationNo: string;
+    gstNo: string;
+    employeeCount: string;
+    pincode: string;
+    area: string;
+    address1?: string;
+    address2?: string;
+    adminDesignation: string;
+    preAdminDesignationId: string;
+    businessUniqueName: string;
+    licenses: string;
+  }): Promise<{ companyNameOutcome: 'available' | 'taken'; uniqueNameOutcome: 'available' | 'taken' }> {
+    return test.step('Signup: Medium/Large company details', async () => {
+      await this.page.getByPlaceholder('Type of Business').fill(details.typeOfBusiness);
+
+      const companyNameField = this.page.getByPlaceholder('Enter Company Name');
+      await companyNameField.fill(details.companyName);
+      const companyTaken = this.page.getByText(/Company name already exists/i);
+      await companyNameField.blur();
+      const companyNameOutcome = await companyTaken
+        .waitFor({ state: 'visible', timeout: 8_000 })
+        .then((): 'taken' => 'taken')
+        .catch((): 'available' => 'available');
+
+      await this.page.getByPlaceholder('Enter Website').fill(details.website);
+      await this.page.getByPlaceholder('Registration No').fill(details.registrationNo);
+      await this.page.getByPlaceholder('Enter GST No').fill(details.gstNo);
+      await this.page.getByPlaceholder('Enter No of Employee').fill(details.employeeCount);
+      await this.page.getByPlaceholder('Enter postal pincode').fill(details.pincode);
+
+      const pincodeModalTitle = this.page.getByText(/^Pincode Details$/i);
+      await pincodeModalTitle.waitFor({ state: 'visible', timeout: 15_000 });
+      await this.chooseFromSelect(1, details.area);
+      await this.page.getByRole('button', { name: /^Confirm$/i }).click();
+      await pincodeModalTitle.waitFor({ state: 'hidden', timeout: 15_000 });
+
+      if (details.address1) await this.page.getByPlaceholder('Enter the Business Address').first().fill(details.address1);
+      if (details.address2) await this.page.getByPlaceholder('Enter the Business Address').nth(1).fill(details.address2);
+
+      await this.chooseFromSelect(0, details.adminDesignation);
+      await this.page
+        .getByPlaceholder('Length 2-10 Characters')
+        .first()
+        .fill(details.preAdminDesignationId);
+
+      const uniqueNameField = this.page.getByPlaceholder('Length 2-10 Characters').nth(1);
+      await uniqueNameField.fill(details.businessUniqueName);
+      const uniqueNameTaken = this.page.getByText(/Business Short Unique Name already exists/i);
+      await uniqueNameField.blur();
+      const uniqueNameOutcome = await uniqueNameTaken
+        .waitFor({ state: 'visible', timeout: 8_000 })
+        .then((): 'taken' => 'taken')
+        .catch((): 'available' => 'available');
+
+      await this.page.getByPlaceholder('Enter No of User / Licenses').fill(details.licenses);
+
+      return { companyNameOutcome, uniqueNameOutcome };
+    });
+  }
 }

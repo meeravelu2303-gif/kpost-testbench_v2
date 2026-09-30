@@ -59,6 +59,11 @@ export const saveEnquiryDetailsApi = defineKpostEndpoint({
   summary: 'Capture a sales enquiry',
   tags: ['common', 'common-platform', 'public-write'],
   destructive: true,
+  // Confirmed live 2026-09-30: the server's own 400 spells out the full required set —
+  // "companyName, entity, maximumMembersCount, firstName, lastName, designation, mobileNumber,
+  // email and timeToContact are required". This definition was missing `timeToContact`, so the
+  // "primary" request was never actually well-formed — a bench fixture bug, not a product defect
+  // (it produced a false CRITICAL "expected 200, got 400" candidate before this fix).
   request: body(() => ({
     companyName: testData.companyNameAbsent,
     entity: 'Cake Shop',
@@ -68,6 +73,7 @@ export const saveEnquiryDetailsApi = defineKpostEndpoint({
     designation: 'CEO',
     mobileNumber: testData.otpMobile,
     email: testData.otpEmail,
+    timeToContact: '10:00 AM',
   })),
 });
 

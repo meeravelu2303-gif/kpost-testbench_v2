@@ -94,4 +94,86 @@ export class LoginPage extends BasePage {
       { box: true },
     );
   }
+
+  // ============================================================================================
+  // Forgot-password — the full reset flow (`Login.js`'s `handleForgetPassword` /
+  // `handleVerifyOTP` / `passwordChange`). NEEDS-LIVE-TUNING to the same degree as the Signup
+  // write flow: built from source, not a codegen recording.
+  //
+  // IMPORTANT, confirmed from source (2026-09-30): clicking "Forgot Password ?" itself fires a REAL
+  // OTP send (`ForgetPasswordSentOTP`) immediately — it is NOT deferred to some later "submit" step.
+  // Only run this under the same OTP_TEST_GATEWAY + TEST_DB_MODE gate as every other OTP-driven flow
+  // in this bench, and only ever against the dedicated `QA_FORGOT_PASSWORD_KPOST_ID` spare account —
+  // never the shared `QA_KPOST_ID` every other suite logs in with (see `test-data.config.ts`'s own
+  // doc comment on this exact hazard).
+  // ============================================================================================
+
+  /** The Forgot-Password modal's OTP-entry section: `#input_0`..`#input_5`, same as every other. */
+  readonly forgotPasswordOtpFirstBox = this.page.locator('#input_0');
+  /** The New-Password section — no `placeholder` attribute on either field (labeled by adjacent
+   * text instead), so these are addressed by type + order within the modal, scoped via `.modal`. */
+  private readonly forgotPasswordModal = this.page.locator('.modal, [role="dialog"]').filter({
+    has: this.page.getByText(/^Forgot Password$/i),
+  });
+
+  /**
+   * Step 1 -> id -> password step -> click "Forgot Password ?" -> the OTP modal opens. This ALONE
+   * already dispatches a real OTP send (see the class doc comment above).
+   */
+  async requestPasswordResetOtp(loginId: string): Promise<void> {
+    await test.step(`Forgot password: request OTP for ${loginId}`, async () => {
+      await this.enterLoginId(loginId);
+      await this.passwordInput.waitFor({ state: 'visible', timeout: 20_000 });
+      await this.page.getByText(/Forgot Password/i).first().click();
+      await this.forgotPasswordOtpFirstBox.waitFor({ state: 'visible', timeout: 15_000 });
+    });
+  }
+
+  /**
+   * Types the 6-digit OTP; the form auto-submits on the 6th digit (`handleVerifyOTP`) and, on
+   * success, transitions straight to the New Password section — no separate confirm click.
+   */
+  async enterPasswordResetOtp(otp: string): Promise<'verified' | 'invalid'> {
+    return test.step('Forgot password: enter OTP', async () => {
+      await this.forgotPasswordOtpFirstBox.waitFor({ state: 'visible', timeout: 15_000 });
+      const digits = otp.trim().split('').slice(0, 6);
+      for (const [index, digit] of digits.entries()) {
+        await this.page.locator(`#input_${index}`).fill(digit);
+      }
+      const newPasswordSection = this.page.getByText(/^Enter Your New Password$/i);
+      const stillOtp = this.forgotPasswordOtpFirstBox;
+      return Promise.race([
+        newPasswordSection
+          .waitFor({ state: 'visible', timeout: 20_000 })
+          .then((): 'verified' => 'verified'),
+        // No dedicated "Invalid OTP" text is rendered here (unlike Signup's) — the OTP boxes simply
+        // stay put with nothing to enter next. Treat "still on the OTP screen after a real wait" as
+        // the invalid case.
+        this.page
+          .waitForTimeout(8_000)
+          .then(() => stillOtp.isVisible())
+          .then((stillThere): 'invalid' | never => {
+            if (stillThere) return 'invalid';
+            throw new Error('left the OTP screen without reaching New Password — unexpected state');
+          }),
+      ]);
+    });
+  }
+
+  /**
+   * The New Password / Confirm New Password screen. Both fields lack a `placeholder` attribute
+   * (labeled by adjacent text instead — live-verified 2026-09-30), so they are addressed by
+   * `input[type="password"]` order, scoped to this modal specifically so a stray password field
+   * elsewhere on the page can never be matched instead.
+   */
+  async submitNewPassword(newPassword: string): Promise<void> {
+    await test.step('Forgot password: submit new password', async () => {
+      const modal = this.forgotPasswordModal;
+      const fields = modal.locator('input[type="password"]');
+      await fields.nth(0).waitFor({ state: 'visible', timeout: 15_000 });
+      await fields.nth(0).fill(newPassword);
+      await fields.nth(1).fill(newPassword);
+      await modal.getByRole('button', { name: /^Submit$/i }).click();
+    });
+  }
 }

@@ -57,6 +57,20 @@
       "source": "ad-hoc diagnostic probe (2026-09-29) via /usermanagement Add Manually",
       "note": "UNINTENDED side effect while testing same-company duplicate-mobile rejection for a real member of BUSINESS_S's company (1034, North Star Technology). Intended to reuse an existing member's exact mobile (Mark Fisher, 9696936363), but the Mobile No field's own input mask truncated/mangled the typed value (\"919696936363\") into \"9196969363\" — a DIFFERENT, new number, not a real duplicate. So this run did NOT actually test the intended scenario; it just created an extra real member by mistake. addingUserByAdmin returned 200 SUCCESS, companyID 1034. Not cleaned up (terminateUser is a permanent, non-reversible state change, not a deletion, and is itself on this bench's permanent do-not-automate list).",
       "createdAt": "2026-09-29T07:55:58.295Z"
+    },
+    {
+      "kpostId": "qablgad.qabenchlg@kpost.in",
+      "mobileNumber": "9000000792",
+      "source": "signup-business-medium-large.spec.ts (UI)",
+      "note": "Business (Large) registration driven end-to-end; company \"QA Bench Large Co\"",
+      "createdAt": "2026-09-30T10:24:10.603Z"
+    },
+    {
+      "kpostId": "qabmdad.qabenchmd@kpost.in",
+      "mobileNumber": "9000000791",
+      "source": "signup-business-medium-large.spec.ts (UI)",
+      "note": "Business (Medium) registration driven end-to-end; company \"QA Bench Medium Co\"",
+      "createdAt": "2026-09-30T10:35:47.575Z"
     }
   ]
 }
