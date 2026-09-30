@@ -75,7 +75,7 @@ test.describe('KPost signup · Business category picker (read-only)', { tag: '@u
 
     // Same first screen as Personal: Country/Language/Domain selects + Continue.
     await expect(
-      page.locator('input[id^="react-select"]').first(),
+      page.locator('.react-select__input').first(),
       'the Business registration form opens with its Country/Language/Domain selects',
     ).toBeVisible({ timeout: 15_000 });
   });
@@ -97,7 +97,7 @@ test.describe('KPost signup · mobile viewport (below 992px)', { tag: '@ui' }, (
     await page.getByText(/^Personal$/i).filter({ visible: true }).first().click();
 
     await expect(
-      page.locator('input[id^="react-select"]').first(),
+      page.locator('.react-select__input').first(),
       'Personal signup reaches its Country/Language/Domain form on mobile',
     ).toBeVisible({ timeout: 15_000 });
   });
@@ -115,7 +115,7 @@ test.describe('KPost signup · mobile viewport (below 992px)', { tag: '@ui' }, (
     // This SHOULD find a registration form (documenting #825 until it's fixed) — today it instead
     // finds itself back on the very first "Select Account Option" screen.
     await expect(
-      page.locator('input[id^="react-select"]').first(),
+      page.locator('.react-select__input').first(),
       'Business signup should reach a registration form on mobile, matching Personal — see #825',
     ).toBeVisible({ timeout: 10_000 });
   });

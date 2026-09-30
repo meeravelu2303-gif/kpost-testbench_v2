@@ -16,19 +16,20 @@ import { BasePage } from './BasePage';
  * exactly the kind of mechanical detail a page object exists to absorb — a spec asserting "Personal
  * offers one domain" should not also be responsible for knowing how the widget mounts.
  *
- * Selectors are taken from the live screen: the controls are `input[id^="react-select"]` in form
- * order (Country, Language, KPOST Domain) and options carry a `-option` class suffix. Addressing
- * them by ORDER rather than by the generated `react-select-N-input` ids is deliberate — those
- * numbers are per mounted instance and shift whenever another select appears anywhere on the page,
- * which would silently point this at the wrong control.
+ * Selectors are taken from the live screen: the controls are `.react-select__input` in form order
+ * (Country, Language, KPOST Domain) and options carry a `-option` class suffix. Addressing them by
+ * ORDER rather than by id is deliberate — a deploy on 2026-09-30 changed the id scheme from
+ * react-select's own generated `react-select-N-input` to a custom `kpost-select-rN` (confirmed live:
+ * `id="kpost-select-r0"`, `aria-label="Country"` — an accessibility improvement, not a regression),
+ * which broke every id-based locator here overnight. The CLASS name (`react-select__input`, from the
+ * library itself) is what's actually stable across a markup change like this; matching by that plus
+ * position is now the resilient choice, not just the original one.
  */
 export class SignupPage extends BasePage {
   readonly path = '/signup';
 
-  /** Any open react-select menu's options. */
-  private readonly options = this.page.locator(
-    '[id^="react-select"][id$="-option"], [class*="-option"]',
-  );
+  /** Any open react-select menu's options — class-based (see the class comment above for why). */
+  private readonly options = this.page.locator('[class*="-option"]');
 
   constructor(page: Page) {
     super(page);
@@ -86,7 +87,7 @@ export class SignupPage extends BasePage {
   }
 
   private async openSelect(index: number): Promise<void> {
-    const input = this.page.locator('input[id^="react-select"]').nth(index);
+    const input = this.page.locator('.react-select__input').nth(index);
     await input.waitFor({ state: 'attached', timeout: 20_000 });
     await input.click({ force: true });
     await this.settle();

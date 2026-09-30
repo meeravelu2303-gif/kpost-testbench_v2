@@ -97,7 +97,7 @@ test.describe('KPost company-admin · User Management (BUSINESS_S)', { tag: '@ui
 
     const modal = page.locator('.modal.show, [role="dialog"]').last();
     // Designation must be set first (async-search react-select) before Mobile No is enabled.
-    await modal.locator('input[id^="react-select"]').first().click({ force: true });
+    await modal.locator('.react-select__input').first().click({ force: true });
     await page.waitForTimeout(700);
     await page.keyboard.type('Accounts Officer');
     await page.waitForTimeout(1200);

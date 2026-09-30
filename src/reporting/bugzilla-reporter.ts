@@ -86,6 +86,11 @@ const UI_FILING_SPECS = new Set([
   // selector-INDEPENDENT, unambiguous functional defect (the session ends), captured with clear
   // visible proof — never a tuning miss.
   'chat-avatar-session.spec.ts',
+  // The signed-out (Signup/Login) screen sweep files too, for the same reason as `screens.spec.ts`
+  // itself — same catalogue (health/performance/layout), just applied to the two screens that sweep
+  // cannot reach (it requires a live session). Confirmed clean across two consecutive live runs
+  // (2026-09-29) before being added here.
+  'signup-login-screens.spec.ts',
 ]);
 
 /**
@@ -410,7 +415,15 @@ export default class BugzillaReporter implements Reporter {
     if (!this.config.fileAccessibilityFailures) return [];
     const screens: AccessibilityScreenInput[] = [];
     for (const test of tests) {
-      if (path.basename(test.location.file) !== 'accessibility-axe.spec.ts') continue;
+      // `signup-login-accessibility.spec.ts` runs the identical axe-core scan + evidence shape,
+      // just on the signed-out Signup/Login screens `accessibility-axe.spec.ts` cannot reach
+      // (it requires a live session). Same rule-level consolidation applies across both files.
+      if (
+        !['accessibility-axe.spec.ts', 'signup-login-accessibility.spec.ts'].includes(
+          path.basename(test.location.file),
+        )
+      )
+        continue;
       for (const result of test.results) {
         const attachment = result.attachments.find((a) => a.name === AXE_JSON_ATTACHMENT);
         if (!attachment?.path) continue;
