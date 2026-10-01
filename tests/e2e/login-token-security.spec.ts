@@ -6,13 +6,16 @@ import { expect, test } from '@fixtures';
  * coverage `login-security.spec.ts` (signed-out field fuzzing) never touches, since it needs a real
  * authenticated session to exist first.
  *
- * Confirmed from source (`Login.js`): the access token is NOT an HttpOnly cookie — it is stored in
- * plain `localStorage` under the key `Authuser` (`{ accessToken, ... }`, `JSON.stringify`'d). That is
- * itself worth stating plainly rather than assuming: any XSS anywhere on an authenticated page can
- * read it directly (`localStorage.getItem('Authuser')`), no cookie-jar bypass needed. This is the
- * same underlying exposure #808 already covers via the `/profile` debug-page route — this file checks
- * a different angle: whether the token itself is well-formed and time-bounded, not just where it's
- * stored.
+ * Confirmed from a direct live inspection of a saved session (not assumed from source alone): the
+ * access token is NOT an HttpOnly cookie — it is stored in plain `localStorage` under its OWN
+ * top-level key, `accessToken` (a SEPARATE key from `Authuser`, which holds profile fields like
+ * kpostID/firstName/userType but carries no token itself). That is itself worth stating plainly
+ * rather than assuming: any XSS anywhere on an authenticated page can read it directly
+ * (`localStorage.getItem('accessToken')`), no cookie-jar bypass needed. This is the same underlying
+ * exposure #808 already covers via the `/profile` debug-page route — this file checks a different
+ * angle: whether the token itself is well-formed and time-bounded, not just where it's stored.
+ * Live-confirmed token lifetime: 24 hours (iat/exp 86400s apart) — well inside this test's own
+ * 30-day sanity bound.
  */
 test.describe('KPost login · issued-token inspection', { tag: '@ui' }, () => {
   test.skip(
@@ -27,12 +30,8 @@ test.describe('KPost login · issued-token inspection', { tag: '@ui' }, () => {
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    const authUserRaw = await page.evaluate(() => localStorage.getItem('Authuser'));
-    expect(authUserRaw, 'an authenticated session must have an Authuser entry in localStorage').not.toBeNull();
-
-    const authUser = JSON.parse(authUserRaw ?? '{}') as { accessToken?: string };
-    const token = authUser.accessToken;
-    expect(token, 'the stored Authuser object must carry an accessToken').toBeTruthy();
+    const token = await page.evaluate(() => localStorage.getItem('accessToken'));
+    expect(token, 'an authenticated session must store a top-level accessToken in localStorage').toBeTruthy();
 
     const parts = (token ?? '').split('.');
     expect(parts, 'a JWT has exactly three dot-separated parts (header.payload.signature)').toHaveLength(3);

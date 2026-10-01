@@ -13,7 +13,7 @@ test.describe('KPost KOS · K-AI panel', { tag: '@ui' }, () => {
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  test('the K-AI panel renders its prompt input and History / New Chat controls @ui', async ({
+  test('the K-AI panel renders its prompt input and History / Reset controls @ui', async ({
     page,
   }) => {
     await page.goto('/kdoc', { waitUntil: 'domcontentloaded', timeout: 45_000 });
@@ -22,8 +22,12 @@ test.describe('KPost KOS · K-AI panel', { tag: '@ui' }, () => {
       page.getByPlaceholder(/Type your prompt or pick a suggestion|Ask .* /i).first(),
       'the prompt input renders',
     ).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/^History$/i).first(), 'the History control is present').toBeVisible();
-    await expect(page.getByText(/^New Chat$/i).first(), 'the New Chat control is present').toBeVisible();
+    // Corrected from source (KAI.js): both are icon-only buttons carrying a `title` tooltip, not
+    // visible text — "History" opens the session history panel, "Reset" clears the current chat
+    // (there is no separate "New Chat" control on the default view; that text only exists inside
+    // the history panel's own session sub-view).
+    await expect(page.locator('[title="History"]').first(), 'the History control is present').toBeVisible();
+    await expect(page.locator('[title="Reset"]').first(), 'the Reset control is present').toBeVisible();
   });
 
   test('submitting an empty prompt is guarded client-side, before any API call @ui', async ({

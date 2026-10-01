@@ -49,7 +49,10 @@ export class HomePage extends BasePage {
    */
   async searchRecents(query: string): Promise<void> {
     await test.step(`Home: filter recents by "${query}"`, async () => {
-      await this.page.getByPlaceholder('Search').fill(query);
+      // Both the Recents and Contacts tab panels stay mounted (same pattern documented in
+      // contacts.spec.ts) - each with its own "Search" placeholder. Recents renders first in the
+      // DOM, so `.first()` is the on-screen Recents copy when that tab is active (Home's default).
+      await this.page.getByPlaceholder('Search').first().fill(query);
     });
   }
 
@@ -60,7 +63,7 @@ export class HomePage extends BasePage {
    */
   async openAdvancedSearch(): Promise<void> {
     await test.step('Home: open Advanced Search', async () => {
-      await this.page.getByPlaceholder('Search').click();
+      await this.page.getByPlaceholder('Search').first().click();
       await this.page.getByText(/^Advanced Search$/i).waitFor({ state: 'visible', timeout: 10_000 });
     });
   }

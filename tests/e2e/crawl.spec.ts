@@ -33,6 +33,14 @@ test.describe('KPost UI systematic crawl — every control, every screen', { tag
     test(`${screen.name} — crawl every control without crashing or freezing @ui`, async ({
       page,
     }) => {
+      // Up to 24 real clicks, several of which navigate and trigger a full reload
+      // (`waitUntil: 'domcontentloaded'` against the live production app) rather than a local mock —
+      // the default 60s test timeout is too tight for that real network cost once a screen has enough
+      // candidates to hit the click cap. Confirmed live 2026-09-30: a "timeout" failure here was
+      // mid-crawl (still working through the candidate list, not frozen) — a budget problem, not a
+      // product defect. 150s comfortably covers the worst case while still catching a genuinely
+      // frozen screen (which stalls far longer than any real reload ever would).
+      test.setTimeout(150_000);
       const stop = watchUiHealth(page);
 
       await page.goto(screen.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
