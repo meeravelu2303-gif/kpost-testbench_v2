@@ -43,7 +43,9 @@ test.describe('KPost Kall · contact search box security fuzzing', { tag: '@ui' 
         .waitFor({ state: 'hidden', timeout: 30_000 })
         .catch(() => undefined);
 
-      const search = page.getByPlaceholder(/search contacts/i).first();
+      // Found live 2026-10-01: the real placeholder is just "Search", not "Search Contacts" as
+      // previously assumed (confirmed via screenshot) — a bench selector gap, not a product defect.
+      const search = page.getByPlaceholder(/^search$/i).first();
       await expect(search, 'the contact search box is present').toBeVisible({ timeout: 20_000 });
       await search.click();
       await search.fill(payload.value);

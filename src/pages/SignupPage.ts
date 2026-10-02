@@ -49,10 +49,21 @@ export class SignupPage extends BasePage {
       .waitFor({ state: 'visible', timeout: 30_000 });
   }
 
-  /** Chooses an account type from "Select Account Option for Signup". */
+  /**
+   * Chooses an account type from "Select Account Option for Signup". Each card renders TWICE (a
+   * hidden, `display:none` responsive/mobile duplicate alongside the visible one — same pattern as
+   * `chooseBusinessCategory`'s own cards) — `.filter({ visible: true })` narrows to the one shown.
+   *
+   * Found live 2026-10-01: at a mobile viewport (480×900) the hidden duplicate resolves FIRST in DOM
+   * order — the opposite of desktop, where `.first()` alone happened to hit the visible one. Without
+   * the filter, `signup-mobile-lifecycle.spec.ts` timed out clicking an invisible element — a bench
+   * selector bug, not a product defect (the mobile-viewport describe block in `signup-business.spec.ts`
+   * already used the filtered form; this method just hadn't caught up).
+   */
   async chooseAccountType(type: 'Personal' | 'Business'): Promise<void> {
     await this.page
       .getByText(new RegExp(`^${type}$`, 'i'))
+      .filter({ visible: true })
       .first()
       .click();
   }
@@ -128,10 +139,14 @@ export class SignupPage extends BasePage {
    *
    * The product checks existence BEFORE sending an OTP: `already-exists` means the number is
    * already registered (a toast, no OTP modal) — a valid outcome on a re-run, not a failure.
+   *
+   * Found live 2026-10-01: below the 992px breakpoint this screen is a DIFFERENT, mobile-specific
+   * component whose placeholder reads "Enter the Number", not desktop's "Enter Mobile Number" — a
+   * bench selector gap (the field itself works fine), not a product defect. The regex matches both.
    */
   async requestMobileOtp(mobileNumber: string): Promise<'sent' | 'already-exists'> {
     return test.step(`Signup: verify mobile ${mobileNumber}`, async () => {
-      await this.page.getByPlaceholder('Enter Mobile Number').fill(mobileNumber);
+      await this.page.getByPlaceholder(/Enter (Mobile Number|the Number)/i).fill(mobileNumber);
       await this.page.getByText(/^Verify$/i).first().click();
       const otpModal = this.page.getByText(/^Enter your OTP$/i);
       const alreadyExists = this.page.getByText(/Mobile number already exists/i);

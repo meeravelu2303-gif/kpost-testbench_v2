@@ -166,3 +166,8 @@ export const body =
 export const pathParams =
   (params: () => Record<string, string | number>): RequestFactory =>
   (): RequestSpec => ({ pathParams: params() });
+
+/** A request factory for an endpoint whose parameter is a query string, not a path segment or body. */
+export const queryParams =
+  (params: () => Record<string, string | number | boolean>): RequestFactory =>
+  (): RequestSpec => ({ query: params() });

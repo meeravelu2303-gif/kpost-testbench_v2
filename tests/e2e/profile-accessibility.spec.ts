@@ -107,8 +107,10 @@ test.describe('KPost Profile · dynamic-state accessibility (axe-core WCAG)', { 
 
     await page.locator('.icon-KP_144---More-Vertical').first().click();
     await page.getByText(/^Share$/i).first().click();
+    // `.first()` on each side independently still lets `.or()` match 2 elements (both the dialog
+    // role AND the modal-content div exist at once) - wrap `.first()` around the combined OR instead.
     await expect(
-      page.getByRole('dialog').first().or(page.locator('.modal-content').first()),
+      page.getByRole('dialog').or(page.locator('.modal-content')).first(),
       'the Share modal opens',
     ).toBeVisible({ timeout: 15_000 });
     await page.waitForTimeout(1000);

@@ -19,6 +19,29 @@ import type { ValidationReport } from '../validation-engine/validation-result';
 /** Normalizes a validator NAME (from the run) or a bug SUMMARY (free text) to one shared class. */
 export function normalizeValidator(text: string): string {
   const t = text.toLowerCase();
+  /*
+   * The hand-written admin write-fuzz checks (write-fuzz-workflow.spec.ts) record violations under
+   * a ruleId that is ALREADY a precise, per-check identifier — e.g. "ADMIN-WRITE-FUZZ-admin-hr-tier-
+   * attribute-save" or "ADMIN-WRITE-FUZZ-XSS-INJECTION-admin-employee-save". That exact string also
+   * appears verbatim in the filed bug's own summary. Used as the class directly (not collapsed into
+   * one generic bucket), so a "missing field" violation and an "XSS" violation on the SAME endpoint
+   * stay distinguishable — confusing them would let one's pass wrongly auto-resolve the other.
+   * Found 2026-10-01: before this, every one of these fell through to 'other' (NON_VERIFIABLE),
+   * so these bugs could only ever be re-verified by an exact tag match, never by this (endpoint,
+   * validator) check — 17 open tickets sat unverified every run regardless of whether their own
+   * check had actually re-run, purely because of this classification gap.
+   */
+  const writeFuzzRule = t.match(/admin-write-fuzz-[a-z0-9-]+/);
+  if (writeFuzzRule) return `business-rule.${writeFuzzRule[0]}`;
+  /*
+   * `flowFindingReports` (flow-finding.ts) records a lifecycle write-flow crash under the FIXED
+   * validator name `flow.server-error`, with message text "write flow received HTTP {status} — a
+   * server error where a 4xx (or success) belongs ... never crash the server." Must map to that
+   * EXACT class, not the generic `response.status-code` catch-all below — they are different live
+   * validators, and conflating them would make this check pass on an unrelated status-code success
+   * rather than on this ticket's own flow-crash check actually re-running clean.
+   */
+  if (/write flow received http|never crash the server/.test(t)) return 'flow.server-error';
   if (/security[- ]?headers/.test(t)) return 'security.security-headers';
   if (/missing[- ]?token|no authorization header/.test(t)) return 'auth.missing-token';
   if (/malformed[- ]?token/.test(t)) return 'auth.malformed-token';

@@ -9,7 +9,16 @@ import { expect, test } from '@fixtures';
  *
  * Two content bugs confirmed from source and asserted directly rather than silently worked around:
  * the provider dropdown's own label reads "Vacation Response" and its placeholder "Enter the
- * Vacation Reason" — both copy-pasted verbatim from the unrelated VacationResponse panel.
+ * Vacation Reason" — both copy-pasted verbatim from the unrelated VacationResponse panel (filed as
+ * KP-OTHERMAILMISLABELED, #923).
+ *
+ * NEEDS-CODEGEN, confirmed live 2026-10-01: `.locator('.d-flex.flex-column', { hasText: 'Vacation
+ * Response' })` matches 8 elements on this page (most of the Settings nav shares this generic class +
+ * text filter), and the one actually holding the live, visible react-select control is neither
+ * `.first()` nor `.last()` — it's one of the middle matches. Both tests below need a fresh interactive
+ * codegen pass to find a selector that reliably targets the real control before their steps (including
+ * whether "Next" truly starts hidden with nothing selected, or codegen finds it some other way) can be
+ * trusted.
  */
 test.describe('KPost Settings · Add Other Mail Accounts panel', { tag: '@ui' }, () => {
   test.skip(

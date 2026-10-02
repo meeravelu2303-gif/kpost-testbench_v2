@@ -36,7 +36,17 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
     let requestFired = false;
     page.on('request', (req) => {
       const url = req.url();
-      if (url.includes('/health') || url.includes('.js') || url.includes('.css')) return;
+      // katchupDashboardMsg is an unrelated background poll (confirmed live 2026-10-01: it fires
+      // continuously on this page regardless of what's clicked) - excluding it so it can't produce a
+      // false "a request fired" result for these confirmed-dead buttons.
+      if (
+        url.includes('/health') ||
+        url.includes('.js') ||
+        url.includes('.css') ||
+        url.includes('katchupDashboardMsg')
+      ) {
+        return;
+      }
       requestFired = true;
     });
 
@@ -69,7 +79,17 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
     let requestFired = false;
     page.on('request', (req) => {
       const url = req.url();
-      if (url.includes('/health') || url.includes('.js') || url.includes('.css')) return;
+      // katchupDashboardMsg is an unrelated background poll (confirmed live 2026-10-01) - excluding it
+      // so it can't produce a false "a request fired" result for this confirmed-dead button, or for
+      // the local-only "buy" flow's own no-network-call assertion below.
+      if (
+        url.includes('/health') ||
+        url.includes('.js') ||
+        url.includes('.css') ||
+        url.includes('katchupDashboardMsg')
+      ) {
+        return;
+      }
       requestFired = true;
     });
 

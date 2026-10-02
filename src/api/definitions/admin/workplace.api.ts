@@ -35,6 +35,16 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     productionSafe: true,
   }),
   defineAdminEndpoint({
+    id: 'admin-workplace-tier-attribute-get',
+    method: 'POST',
+    path: '/adminTierAttribute/getAttribute',
+    summary: 'Get one workplace tier attribute by id',
+    tags: ['workplace-tier-attribute', 'needs-id'],
+    request: body(() => ({ id: 1 })),
+    destructive: false,
+    note: '"get one by id" is inferred from the shared DTO shape (no ByCompanyId suffix) — confirm live',
+  }),
+  defineAdminEndpoint({
     id: 'admin-workplace-tier-attribute-save',
     method: 'POST',
     path: '/adminTierAttribute/save',
@@ -123,6 +133,15 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     sideEffect: 'data',
   }),
   defineAdminEndpoint({
+    id: 'admin-workplace-tier-variable-get-all',
+    method: 'GET',
+    path: '/adminTierVariable/getAllVariable',
+    summary: 'List all workplace tier variables (no parameters)',
+    tags: ['workplace-tier-variable'],
+    destructive: false,
+    productionSafe: true,
+  }),
+  defineAdminEndpoint({
     id: 'admin-workplace-tier-variable-reporting-hierarchy',
     method: 'POST',
     path: '/adminTierVariable/getAllReportingVariableHierarchy',
@@ -160,6 +179,16 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     summary: 'Get one workplace location by id',
     tags: ['workplace-location'],
     request: body(() => ({ id: 1 })),
+  }),
+  defineAdminEndpoint({
+    id: 'admin-workplace-location-reporting-name',
+    method: 'POST',
+    path: '/location/getReportingLocationName',
+    summary: 'Read the reporting location name for a location',
+    tags: ['workplace-location', 'needs-id'],
+    request: body(() => ({ id: 1 })),
+    destructive: false,
+    note: '"get one by id" is inferred from the shared DTO shape — confirm live',
   }),
   defineAdminEndpoint({
     id: 'admin-workplace-location-save',
@@ -217,5 +246,52 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     })),
     destructive: false,
     note: 'needs a runtime parentAttributeId from a created workplace tier (confirmed 400 without it)',
+  }),
+  defineAdminEndpoint({
+    id: 'admin-workplace-organization',
+    method: 'GET',
+    path: '/workplaceHierarchy/getOrganization',
+    summary: 'Read the assembled organization tree (no parameters)',
+    tags: ['workplace-hierarchy'],
+    destructive: false,
+    productionSafe: true,
+  }),
+  /*
+   * save/update/delete on WorkPlaceHierarchyEntity have NO companyId field at all — the entity is a
+   * pure mapping between an already-created attributeId/variableId (and optional reporting-side
+   * counterparts), confirmed from the live contract's schema. A placeholder id cannot create or
+   * touch a real record, so these run the generic request/security/auth battery only (same
+   * convention as every other update/delete placeholder below) — they are not a real create/clean
+   * lifecycle the way the already-covered tier endpoints are.
+   */
+  defineAdminEndpoint({
+    id: 'admin-workplace-hierarchy-save',
+    method: 'POST',
+    path: '/workplaceHierarchy/save',
+    summary: 'Create a workplace hierarchy mapping',
+    tags: ['workplace-hierarchy', 'needs-id'],
+    request: body(() => ({ attributeId: '1', variableId: '1' })),
+    destructive: true,
+    sideEffect: 'data',
+  }),
+  defineAdminEndpoint({
+    id: 'admin-workplace-hierarchy-update',
+    method: 'POST',
+    path: '/workplaceHierarchy/update',
+    summary: 'Update a workplace hierarchy mapping',
+    tags: ['workplace-hierarchy', 'needs-id'],
+    request: body(() => ({ id: '1', attributeId: '1', variableId: '1' })),
+    destructive: true,
+    sideEffect: 'data',
+  }),
+  defineAdminEndpoint({
+    id: 'admin-workplace-hierarchy-delete',
+    method: 'POST',
+    path: '/workplaceHierarchy/delete',
+    summary: 'Delete a workplace hierarchy mapping',
+    tags: ['workplace-hierarchy', 'needs-id'],
+    request: body(() => ({ id: '1' })),
+    destructive: true,
+    sideEffect: 'data',
   }),
 ];

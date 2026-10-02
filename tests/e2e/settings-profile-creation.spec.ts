@@ -79,7 +79,10 @@ test.describe('KPost Settings · Profile header (Cover Photo)', { tag: '@ui' }, 
     });
     await uploadPromise;
 
-    const removeButton = page.getByRole('button', { name: /^Remove$/i }).first();
+    // Confirmed live 2026-10-01: this is a real <button>, but its icon-font span's generated content
+    // defeats getByRole's accessible-name match - getByText (matching the button's own text content
+    // directly) is the reliable way to find it.
+    const removeButton = page.getByText(/^Remove$/i).first();
     await expect(removeButton, 'a Remove control appears once a cover is set').toBeVisible({
       timeout: 15_000,
     });

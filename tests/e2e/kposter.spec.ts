@@ -1,3 +1,4 @@
+import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
@@ -91,6 +92,13 @@ test.describe('KPost KPoster — Create post visibility gating', { tag: '@ui' },
 });
 
 test.describe('KPost KPoster — Composer (BUSINESS_S)', { tag: '@ui' }, () => {
+  // Confirmed live 2026-10-01: this block was missing its own storage state and was silently running
+  // as the default (personal) QA account, so "Create post" never appeared - not because of a product
+  // bug, but because a personal account genuinely never sees it (confirmed by the sibling "visibility
+  // gating" describe block above). Added the real BUSINESS_S session, matching
+  // settings-business-bank-details.spec.ts's own convention.
+  test.use({ storageState: STORAGE_STATE_BUSINESS });
+
   test.skip(
     !testData.businessSKpostId || testData.businessSKpostId.includes('qa.business'),
     'needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID)',

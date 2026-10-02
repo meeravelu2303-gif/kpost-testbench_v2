@@ -11,6 +11,16 @@ import { expect, test } from '@fixtures';
  * `BlockTickets`/`GenerateOrderID`/`verifySignature`/`BookTicket`/`CancelTicket` or the payment-gateway
  * UI. The boundary in the UI is the per-trip "Show seats" link — this suite NEVER clicks it. Safe
  * surface only: city search, trip LISTING (read-only), and "My Trips" (a read-only fetch).
+ *
+ * NEEDS-CODEGEN, confirmed live 2026-10-01: the From/To fields are react-select controls, not real
+ * `<input placeholder=...>` elements — "Enter your Departure/Arrival place" is rendered as a plain
+ * `<div class="react-select__placeholder">`, so `getByPlaceholder()` can never match it (confirmed via
+ * a standalone script: the real `<input>` has an empty placeholder attribute, and the field itself
+ * renders within seconds — this is NOT the platform-wide slow-render issue #905, a wrong locator
+ * strategy). Typing into the control also needs a `{ force: true }` click on `.react-select__control`
+ * (the input-container intercepts plain clicks), and picking a suggestion from the dropdown needs the
+ * same treatment. Needs one interactive codegen pass to nail down the full click/type/select sequence
+ * before these two tests can be trusted again.
  */
 test.describe('KPost K-Booking — search and read-only trip listing', { tag: '@ui' }, () => {
   test.skip(

@@ -88,8 +88,10 @@ test.describe('KPost Profile · add an Experience record (write)', { tag: '@ui' 
     await section.locator('.icon-KP_45-Add').first().click({ force: true });
 
     // The add modal opens (a ModalComponent) — the reliable entry assertion.
+    // `.first()` on each side independently still lets `.or()` match 2 elements - wrap `.first()`
+    // around the combined OR instead.
     await expect(
-      page.getByRole('dialog').first().or(page.locator('.modal-content').first()),
+      page.getByRole('dialog').or(page.locator('.modal-content')).first(),
       'the Experience add modal opens',
     ).toBeVisible({ timeout: 15_000 });
   });

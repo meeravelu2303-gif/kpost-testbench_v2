@@ -30,11 +30,12 @@ test.describe('KPost Kall screen', { tag: '@ui' }, () => {
   test('the kall screen offers contact search and the call tabs @ui', async ({ page }) => {
     await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
-    // The contact search (placeholder "Search Contacts") is the entry point to placing a call, and
-    // the tab strip (`.tabs-wrapper`) carries Recent / Frequent. Either proves the panel mounted.
+    // The contact search (placeholder just "Search", confirmed live 2026-10-01 - not "Search
+    // Contacts" as previously assumed) is the entry point to placing a call, and the tab strip
+    // (`.tabs-wrapper`) carries Recent / Frequent. Either proves the panel mounted.
     await expect(
       page
-        .getByPlaceholder(/search contacts/i)
+        .getByPlaceholder(/^search$/i)
         .or(page.locator('.tabs-wrapper'))
         .first(),
       'the contact search or the call tabs are present',

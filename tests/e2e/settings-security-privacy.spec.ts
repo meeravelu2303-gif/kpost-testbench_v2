@@ -40,7 +40,9 @@ test.describe('KPost Settings · Security & Privacy panel', { tag: '@ui' }, () =
         'confirmed from source, not asserted as a hard failure here.',
     });
 
-    const profileSelect = page.getByText('Profile', { exact: true }).last();
+    // Confirmed live 2026-10-01: this page renders a hidden duplicate of this label (a second,
+    // off-screen copy) — .last() picks the hidden one; .first() is the real, visible label.
+    const profileSelect = page.getByText('Profile', { exact: true }).first();
     await expect(profileSelect, 'Profile dropdown starts present').toBeVisible({ timeout: 15_000 });
 
     // Chain: Profile Picture -> Profile -> Mobile No -> Digital Card -> Address.

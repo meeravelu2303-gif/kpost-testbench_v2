@@ -42,6 +42,7 @@
     "contract:coverage": "node scripts/contract-coverage.cjs",
     "contract:gaps": "node scripts/excel-gap-report.cjs",
     "contract:otp": "node scripts/otp-dependency-report.cjs",
+    "bugzilla:dupe-check": "node scripts/bugzilla-duplicate-check.cjs",
     "kmail:deep": "cross-env BUGZILLA_DRY_RUN=true TEST_DB_MODE=true MOCK_API=false WRITE_FUZZ=true ALLOW_DESTRUCTIVE_TESTS=true KMAIL_LIFECYCLE=true playwright test --project=api tests/api/kmail --workers=1",
     "kmail:deep:file": "cross-env BUGZILLA_DRY_RUN=false BUGZILLA_AUTO_RESOLVE=true TEST_DB_MODE=true MOCK_API=false WRITE_FUZZ=true ALLOW_DESTRUCTIVE_TESTS=true KMAIL_LIFECYCLE=true playwright test --project=api tests/api/kmail --workers=1",
     "admin:deep": "cross-env BUGZILLA_DRY_RUN=true MOCK_API=false WRITE_FUZZ=true ALLOW_DESTRUCTIVE_TESTS=true ADMIN_LIFECYCLE=true ADMIN_ROLE_POSTING_LIVE=false playwright test --project=api tests/api/admin --workers=1",

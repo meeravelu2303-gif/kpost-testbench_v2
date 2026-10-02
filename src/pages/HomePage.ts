@@ -57,13 +57,17 @@ export class HomePage extends BasePage {
   }
 
   /**
-   * `Recent.js`'s `SearchBar` opens the Advanced Search modal on its own click handler
-   * (`onclick={() => setAdvanceSearch(true)}`) — separate from typing into it. Clicking the
-   * placeholder text itself is the most reliable way to trigger that handler without also typing.
+   * Opens the Advanced Search modal via its own dedicated icon button
+   * (`.icon-KP_225_Advanced-Search`), next to the mic icon in the Recents search bar.
+   *
+   * Found live 2026-10-01 (after a deploy): clicking the search placeholder itself no longer opens
+   * Advanced Search — confirmed via DOM inspection that the search box, mic, and Advanced Search are
+   * now three separate controls. Previously the placeholder click doubled as the trigger; that is no
+   * longer true, so this targets the dedicated icon directly instead.
    */
   async openAdvancedSearch(): Promise<void> {
     await test.step('Home: open Advanced Search', async () => {
-      await this.page.getByPlaceholder('Search').first().click();
+      await this.page.locator('.icon-KP_225_Advanced-Search').first().click();
       await this.page.getByText(/^Advanced Search$/i).waitFor({ state: 'visible', timeout: 10_000 });
     });
   }
@@ -81,6 +85,12 @@ export class HomePage extends BasePage {
    * `isDisabled`:
    *   dataType  ->  enables messageBy  ->  enables messageType  ->  enables contentType
    * This method always fills them in that order regardless of the order given in `filters`.
+   *
+   * Found live 2026-10-01 (after a deploy): "Enter Word" itself is now disabled until ALL FOUR
+   * dropdowns are filled — previously it was reachable independently of the chain (see the filed
+   * ticket on this). So whenever `word` is requested without the caller also naming all four
+   * dropdowns, this defaults every unset one to "All" purely to reach the field — a test-plumbing
+   * concession, not a statement that "All" is what a real user would pick.
    */
   async fillAdvancedSearch(filters: {
     dataType?: string;
@@ -92,14 +102,19 @@ export class HomePage extends BasePage {
     toDate?: string;
   }): Promise<void> {
     await test.step('Home: fill Advanced Search filters', async () => {
-      if (filters.dataType) await this.chooseAdvancedSearchDropdown('Select by Data Type', filters.dataType);
-      if (filters.messageBy) await this.chooseAdvancedSearchDropdown('Select Message by', filters.messageBy);
-      if (filters.messageType) {
-        await this.chooseAdvancedSearchDropdown('Select Type of Message', filters.messageType);
-      }
-      if (filters.contentType) {
-        await this.chooseAdvancedSearchDropdown('Select Content Type', filters.contentType);
-      }
+      // "All" only stands in for a dropdown the caller never named, and only when `word` needs the
+      // full chain completed to unlock — a caller testing the chain itself (no `word`) still gets
+      // the exact, untouched subset it asked for.
+      const fallback = filters.word ? 'All' : undefined;
+      const dataType = filters.dataType ?? fallback;
+      const messageBy = filters.messageBy ?? fallback;
+      const messageType = filters.messageType ?? fallback;
+      const contentType = filters.contentType ?? fallback;
+
+      if (dataType) await this.chooseAdvancedSearchDropdown('Select by Data Type', dataType);
+      if (messageBy) await this.chooseAdvancedSearchDropdown('Select Message by', messageBy);
+      if (messageType) await this.chooseAdvancedSearchDropdown('Select Type of Message', messageType);
+      if (contentType) await this.chooseAdvancedSearchDropdown('Select Content Type', contentType);
       if (filters.word) await this.page.getByPlaceholder('Enter Word').fill(filters.word);
       if (filters.fromDate) await this.page.getByPlaceholder('From').fill(filters.fromDate);
       if (filters.toDate) await this.page.getByPlaceholder('To').fill(filters.toDate);
