@@ -12,6 +12,10 @@ node_modules/
 # Saved auth sessions (contain live cookies/tokens)
 /.auth/
 
+# Mutable diagnostic-tool state (snapshot/diff accounts for the write-fuzz workflows) — generated
+# working data, not source; see tests/framework/_snapshot-accounts.local.spec.ts.
+*.local.json
+
 # Environment files (secrets) — only the example is committed
 .env
 .env.*
