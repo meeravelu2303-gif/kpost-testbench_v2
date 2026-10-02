@@ -4,18 +4,19 @@
 (`npm run test:framework`). It resolves `componentFor` for every registered endpoint and checks
 each target exists in the live product, so tickets can never route to a non-existent component.
 
-## KPost Admin (38 endpoints)
+## KPost Admin (84 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
+| admin-module-application | 37 |
 | Role Postings | 8 |
-| Workplace Locations | 6 |
-| Workplace Tier — Variables (Nodes) | 5 |
+| Workplace Locations | 7 |
+| Workplace Tier — Variables (Nodes) | 6 |
+| Workplace Tier — Attributes (Levels) | 5 |
+| Workplace Hierarchy Links | 5 |
+| HR Set-Up Tier — Levels | 5 |
 | HR Set-Up Tier — Variables (Nodes) | 5 |
-| Workplace Tier — Attributes (Levels) | 4 |
-| HR Set-Up Tier — Levels | 4 |
-| Employee Master Data | 4 |
-| Workplace Hierarchy Links | 1 |
+| Employee Master Data | 5 |
 | Country & Address Reference Data | 1 |
 
 ### KPost Admin — endpoint → component
@@ -29,12 +30,14 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `admin-employee-delete`
 - `admin-employee-details`
 - `admin-employee-save`
+- `admin-employee-transfer-promotion-details`
 - `admin-employee-update`
 
 **HR Set-Up Tier — Levels**
 
 - `admin-hr-tier-attribute-by-company`
 - `admin-hr-tier-attribute-delete`
+- `admin-hr-tier-attribute-get`
 - `admin-hr-tier-attribute-save`
 - `admin-hr-tier-attribute-update`
 
@@ -60,6 +63,10 @@ each target exists in the live product, so tickets can never route to a non-exis
 **Workplace Hierarchy Links**
 
 - `admin-workplace-hierarchy`
+- `admin-workplace-hierarchy-delete`
+- `admin-workplace-hierarchy-save`
+- `admin-workplace-hierarchy-update`
+- `admin-workplace-organization`
 
 **Workplace Locations**
 
@@ -67,6 +74,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `admin-workplace-location-by-id`
 - `admin-workplace-location-delete`
 - `admin-workplace-location-get`
+- `admin-workplace-location-reporting-name`
 - `admin-workplace-location-save`
 - `admin-workplace-location-update`
 
@@ -74,16 +82,58 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `admin-workplace-tier-attribute-by-company`
 - `admin-workplace-tier-attribute-delete`
+- `admin-workplace-tier-attribute-get`
 - `admin-workplace-tier-attribute-save`
 - `admin-workplace-tier-attribute-update`
 
 **Workplace Tier — Variables (Nodes)**
 
 - `admin-workplace-tier-variable-delete`
+- `admin-workplace-tier-variable-get-all`
 - `admin-workplace-tier-variable-list`
 - `admin-workplace-tier-variable-reporting-hierarchy`
 - `admin-workplace-tier-variable-save`
 - `admin-workplace-tier-variable-update`
+
+**admin-module-application**
+
+- `admin-attribute-by-company`
+- `admin-attribute-delete`
+- `admin-attribute-get`
+- `admin-attribute-save`
+- `admin-attribute-update`
+- `admin-country-address-by-pincode-only`
+- `admin-country-list`
+- `admin-demo-request-list`
+- `admin-department-abbreviation-code`
+- `admin-department-by-company`
+- `admin-department-delete`
+- `admin-department-save`
+- `admin-department-update`
+- `admin-designation-abbreviation-code`
+- `admin-designation-by-company-department`
+- `admin-designation-delete`
+- `admin-designation-save`
+- `admin-designation-update`
+- `admin-holiday-list`
+- `admin-hr-tier-extra-by-company`
+- `admin-hr-tier-extra-delete`
+- `admin-hr-tier-extra-get`
+- `admin-hr-tier-extra-save`
+- `admin-hr-tier-extra-update`
+- `admin-hr-variable-extra-delete`
+- `admin-hr-variable-extra-list`
+- `admin-hr-variable-extra-save`
+- `admin-hr-variable-extra-update`
+- `admin-product-employee-mapping-get`
+- `admin-product-employee-mapping-kpost-ids`
+- `admin-product-master-list`
+- `admin-product-purchase-by-company`
+- `admin-project-list`
+- `admin-variable-delete`
+- `admin-variable-list`
+- `admin-variable-save`
+- `admin-variable-update`
 
 ## KMail API (70 endpoints)
 
@@ -190,12 +240,12 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `kmail-translation`
 
-## KPost API (233 endpoints)
+## KPost API (237 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
 | User Profile V2 | 45 |
-| Katchup Messaging V2 | 36 |
+| Katchup Messaging V2 | 35 |
 | Common Reference Data & Utilities V2 | 20 |
 | Kall (Voice/Video) V2 - current | 20 |
 | Company Administration | 19 |
@@ -205,6 +255,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 | Kdiary - Schedules, Events & Reports | 14 |
 | Groups V2 | 11 |
 | General Settings | 7 |
+| kpost-webservice-application | 5 |
 | Integration - AWS S3 Pre-signed URLs | 4 |
 | Dashboard V2 | 3 |
 | Authentication - Medium & Large Enterprise | 2 |
@@ -394,7 +445,6 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `katchup-download-thumbnail`
 - `katchup-filter-message`
 - `katchup-forward-backtrack`
-- `katchup-forward-message`
 - `katchup-forward-message-new`
 - `katchup-forward-multiple`
 - `katchup-frequent-contacts`
@@ -485,4 +535,20 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `profile-upload-image-s3`
 - `profile-user-basic-by-kpostid`
 - `profile-user-profile-by-kpostid`
+
+**kpost-webservice-application**
+
+- `kbooking-available-trips`
+- `kbooking-block-ticket`
+- `kbooking-city-suggestion`
+- `kbooking-destinations`
+- `kbooking-trip-details`
+
+## On the catch-all component (review — a built module here is a routing gap)
+
+- kpost-api · kbooking-city-suggestion (kpost-api,kbooking,redbus)
+- kpost-api · kbooking-destinations (kpost-api,kbooking,redbus)
+- kpost-api · kbooking-available-trips (kpost-api,kbooking,redbus)
+- kpost-api · kbooking-trip-details (kpost-api,kbooking,redbus,needs-id)
+- kpost-api · kbooking-block-ticket (kpost-api,kbooking,redbus,needs-id,critical)
 

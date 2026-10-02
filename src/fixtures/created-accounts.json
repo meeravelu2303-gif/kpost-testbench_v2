@@ -12,65 +12,121 @@
     {
       "kpostId": "qabenchsignup@kpostindia.com",
       "mobileNumber": "9000000777",
-      "source": "manual curl probe (2026-09-28)",
-      "note": "Created while diagnosing whether the API-only signup path still works with current domain/password/kpostID policy, independent of bug #720 and the Cloudflare Turnstile block on the UI. Confirmed in TBL_KPOST_USER_MASTER.",
-      "createdAt": "2026-09-28T09:48:54.579Z"
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.245Z"
     },
     {
       "kpostId": "qabenchweb@kpostindia.com",
       "mobileNumber": "9000000778",
-      "source": "signup-login-lifecycle.spec.ts (UI)",
-      "note": "Personal registration driven end-to-end through the signup screen",
-      "createdAt": "2026-09-28T14:31:47.305Z"
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.246Z"
     },
     {
       "kpostId": "qabenchweb2@kpostindia.com",
       "mobileNumber": "9000000779",
-      "source": "signup-login-lifecycle.spec.ts (UI)",
-      "note": "Personal registration driven end-to-end through the signup screen",
-      "createdAt": "2026-09-28T14:42:13.787Z"
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.245Z"
     },
     {
       "kpostId": "qabenchweb3@kpostindia.com",
       "mobileNumber": "9000000780",
-      "source": "signup-login-lifecycle.spec.ts (UI)",
-      "note": "Personal registration driven end-to-end through the signup screen",
-      "createdAt": "2026-09-29T05:44:31.960Z"
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.246Z"
     },
     {
       "kpostId": "qabbzad.qabenchbz@kpost.in",
       "mobileNumber": "9000000790",
-      "source": "signup-business.spec.ts (UI)",
-      "note": "Business (Small) registration driven end-to-end; company \"QA Bench Business Co\"",
-      "createdAt": "2026-09-29T06:20:07.756Z"
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.244Z"
     },
     {
       "kpostId": "qd009750.qd009750@kpost.in",
       "mobileNumber": "9988557848",
-      "source": "ad-hoc diagnostic probe (2026-09-29)",
-      "note": "Created while testing whether Business signup rejects a mobile number already registered to a DIFFERENT company. It did not reject it (adminRegistration returned 200 SUCCESS, companyID 1064) — confirmed CORRECT per the real business requirement (one mobile MAY have multiple Business accounts across different companies; only same-company duplicates must be rejected). Originally mis-filed as bug #818 (CRITICAL); retracted as INVALID once the requirement was clarified. Kept here per this bench's safety-net policy; not cleaned up (the API has no delete-company endpoint).",
-      "createdAt": "2026-09-29T06:40:25.000Z"
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.252Z"
     },
     {
       "kpostId": "nostacof.nst@kpost.in",
       "mobileNumber": "9196969363",
-      "source": "ad-hoc diagnostic probe (2026-09-29) via /usermanagement Add Manually",
-      "note": "UNINTENDED side effect while testing same-company duplicate-mobile rejection for a real member of BUSINESS_S's company (1034, North Star Technology). Intended to reuse an existing member's exact mobile (Mark Fisher, 9696936363), but the Mobile No field's own input mask truncated/mangled the typed value (\"919696936363\") into \"9196969363\" — a DIFFERENT, new number, not a real duplicate. So this run did NOT actually test the intended scenario; it just created an extra real member by mistake. addingUserByAdmin returned 200 SUCCESS, companyID 1034. Not cleaned up (terminateUser is a permanent, non-reversible state change, not a deletion, and is itself on this bench's permanent do-not-automate list).",
-      "createdAt": "2026-09-29T07:55:58.295Z"
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.243Z"
     },
     {
       "kpostId": "qablgad.qabenchlg@kpost.in",
       "mobileNumber": "9000000792",
-      "source": "signup-business-medium-large.spec.ts (UI)",
-      "note": "Business (Large) registration driven end-to-end; company \"QA Bench Large Co\"",
-      "createdAt": "2026-09-30T10:24:10.603Z"
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.247Z"
     },
     {
       "kpostId": "qabmdad.qabenchmd@kpost.in",
       "mobileNumber": "9000000791",
-      "source": "signup-business-medium-large.spec.ts (UI)",
-      "note": "Business (Medium) registration driven end-to-end; company \"QA Bench Medium Co\"",
-      "createdAt": "2026-09-30T10:35:47.575Z"
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.248Z"
+    },
+    {
+      "kpostId": "qasf179299@kpostindia.com",
+      "mobileNumber": "7742179299",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.248Z"
+    },
+    {
+      "kpostId": "qasf206847@kpostindia.com",
+      "mobileNumber": "7742206847",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.249Z"
+    },
+    {
+      "kpostId": "qasf234495@kpostindia.com",
+      "mobileNumber": "7742234495",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.249Z"
+    },
+    {
+      "kpostId": "qasf237146@kpostindia.com",
+      "mobileNumber": "7738237146",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.250Z"
+    },
+    {
+      "kpostId": "qasf276344@kpostindia.com",
+      "mobileNumber": "7738276344",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.251Z"
+    },
+    {
+      "kpostId": "qasf315060@kpostindia.com",
+      "mobileNumber": "7738315060",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.251Z"
+    },
+    {
+      "kpostId": "sasemana.kpost.in",
+      "mobileNumber": "9089675432",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.252Z"
+    },
+    {
+      "kpostId": "saseviprma.kpost.in",
+      "mobileNumber": "9094100000",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-02T12:11:26.253Z"
     }
   ]
 }

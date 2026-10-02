@@ -458,4 +458,104 @@ test.describe('KPost Kall · feature flow @database', () => {
       await clearHistory(endpoints, [A, B]);
     }
   });
+
+  test('scheduledKall requires title/date/start/end — missing a required field is blocked (FR-KL-001) @api @kall', async ({
+    endpoints,
+  }) => {
+    /*
+     * FR-KL-001 (business-rules.md, ⬜ to-do as of 2026-10-02): a scheduled Kall requires subject
+     * (title), a date and start/end time; a request missing one of these must be rejected, not
+     * accepted as if the field were optional. Each case omits exactly one required field from an
+     * otherwise-valid scheduleShape() body. `expect.soft` so one run reports every field, not just
+     * the first failure — and any field that unexpectedly succeeds still gets cleaned up below.
+     */
+    const requiredFieldCases: Array<[string, Record<string, unknown>]> = [
+      ['subject', { subject: undefined }],
+      ['scheduledStartTime', { scheduledStartTime: undefined }],
+      ['scheduledEndTime', { scheduledEndTime: undefined }],
+    ];
+
+    for (const [fieldName, override] of requiredFieldCases) {
+      const attempt = await endpoints.sendTo(
+        'kall-scheduled',
+        { body: scheduleShape({ ...override, kallDetails: [{ receiver: B.username }] }) },
+        { label: `feature:kall:missing-${fieldName}`, auth: { principal: A }, allowLiveWrite: true },
+      );
+      // If the product unexpectedly accepts the incomplete payload, clean up the real call it created
+      // rather than leaving it on the account — the assertion below still reports it as a finding.
+      if (attempt.status < 300) {
+        await clearHistory(endpoints, [A, B]).catch(() => undefined);
+      }
+      expect
+        .soft(
+          attempt.status,
+          `FR-KL-001: scheduledKall must reject a payload missing "${fieldName}" ` +
+            `(replied ${attempt.status})`,
+        )
+        .toBeGreaterThanOrEqual(400);
+    }
+  });
+
+  test('a placed call appears in the dashboard log with its participants (FR-KL-008) @api @kall', async ({
+    endpoints,
+  }) => {
+    /*
+     * FR-KL-008 (business-rules.md, ⬜ to-do as of 2026-10-02): "the call log records participants,
+     * role/team, duration". Response shape measured live 2026-10-02 (kall-dashboard, `kall[]` array,
+     * each entry carrying `kallID`/`sender`/`senderName` and a `kallDetails[]` array of
+     * `receiver`/`receiverName`) before writing this assertion — not guessed.
+     *
+     * The PARTICIPANT half is fully testable here and is what this test asserts. The DURATION half
+     * (and FR-KL-009's exact start/end timestamps) is NOT independently testable by this bench: a
+     * plain initiate→end flow with no real WebRTC peer measured `kallStartTime`/`kallEndTime`/
+     * `kallDuration` as `null` even after `endIndividualKall`, consistent with this file's own
+     * documented constraint ("a call cannot connect headlessly — no WebRTC peer"). Asserting those
+     * fields would either be vacuously true (null is 'fine' because nothing ever connects) or require
+     * infrastructure this bench does not have. Recorded as a genuine, named limitation rather than a
+     * test that looks green for the wrong reason.
+     */
+    let kallID: number | undefined;
+    try {
+      const placed = await endpoints.sendTo(
+        'kall-initiate',
+        { body: initiateShape({ receiver: B.username }) },
+        { label: 'feature:kall:log-setup', auth: { principal: A }, allowLiveWrite: true },
+      );
+      const placedJson = placed.json();
+      const placedValue = (placedJson.ok ? placedJson.value : {}) as Record<string, unknown>;
+      kallID = extractKallId(placedValue);
+      expect(kallID, 'a call was placed').toBeTruthy();
+      if (!kallID) return;
+
+      await endpoints.sendTo(
+        'kall-end-individual',
+        { body: { kallID } },
+        { label: 'feature:kall:log-end', auth: { principal: A }, allowLiveWrite: true },
+      );
+
+      const dashboard = await endpoints.sendTo(
+        'kall-dashboard',
+        { body: { kallID: '' } },
+        { label: 'feature:kall:log-read', auth: { principal: A } },
+      );
+      const dashboardJson = dashboard.json();
+      const dashboardValue = (dashboardJson.ok ? dashboardJson.value : {}) as Record<string, unknown>;
+      const entries = (dashboardValue.kall as Array<Record<string, unknown>> | undefined) ?? [];
+      const entry = entries.find((row) => row.kallID === kallID);
+      expect.soft(entry, `FR-KL-008: the placed call (kallID ${kallID}) appears in the dashboard log`).toBeTruthy();
+
+      if (entry) {
+        const details = (entry.kallDetails as Array<Record<string, unknown>> | undefined) ?? [];
+        const participant = details.find((d) => d.receiver === B.username);
+        expect
+          .soft(participant, `FR-KL-008: the log entry records ${B.username} as a participant`)
+          .toBeTruthy();
+        expect
+          .soft((entry.sender as string | undefined), 'FR-KL-008: the log entry records the caller (sender)')
+          .toBe(A.username);
+      }
+    } finally {
+      if (kallID) await clearHistory(endpoints, [A, B]);
+    }
+  });
 });

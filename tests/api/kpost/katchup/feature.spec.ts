@@ -71,10 +71,11 @@ async function conversation(
   endpoints: EndpointExecutor,
   as: Principal,
   withKpostId: string,
+  groupFlag = false,
 ): Promise<{ status: number; text: string }> {
   const exchange = await endpoints.sendTo(
     'katchup-conversation',
-    { body: { groupFlag: false, firstMsgID: null, lastMsgID: null, receiver: withKpostId } },
+    { body: { groupFlag, firstMsgID: null, lastMsgID: null, receiver: withKpostId } },
     { label: `feature:conversation:${as.key}`, auth: { principal: as } },
   );
   return { status: exchange.status, text: exchange.bodyText };
@@ -599,6 +600,191 @@ test.describe('KPost Katchup · feature flow', () => {
       }
     } finally {
       for (const msgID of created) await cleanup(endpoints, A, msgID);
+    }
+  });
+
+  test('deleting a received message removes it only from the deleter\'s view (BR-KU-DELETE-OWN) @api @katchup', async ({
+    endpoints,
+  }) => {
+    const marker = `QA delete-own ${Date.now()}`;
+    const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
+    expect(sent.msgID, 'message created').toBeTruthy();
+    if (!sent.msgID) return;
+
+    try {
+      // B (the receiver) deletes their own copy of the message.
+      const del = await endpoints.sendTo(
+        'katchup-delete-message',
+        { body: { messageIds: [sent.msgID], groupFlag: false } },
+        { label: 'feature:delete-own:receiver', auth: { principal: B }, allowLiveWrite: true },
+      );
+      expect.soft(del.status, 'deleteKatchUpMessage is accepted').toBeLessThan(300);
+
+      // BR-KU-DELETE-OWN: gone from B's own view...
+      const viewB = await conversation(endpoints, B, A.username);
+      expect
+        .soft(viewB.text, 'the deleter\'s own view must no longer show the message')
+        .not.toContain(marker);
+
+      // ...but UNCHANGED in A's (the sender's) view — a delete is per-viewer, not a recall.
+      const viewA = await conversation(endpoints, A, B.username);
+      expect
+        .soft(
+          viewA.text,
+          'BR-KU-DELETE-OWN: deleting a received message must not remove it from the ' +
+            'sender\'s own view — only recall does that',
+        )
+        .toContain(marker);
+    } finally {
+      // The sender's own copy still needs cleaning up.
+      await cleanup(endpoints, A, sent.msgID);
+    }
+  });
+
+  test('recall is blocked once the recipient has already read the message (BR-KU-RECALL-UNREAD) @api @katchup @security', async ({
+    endpoints,
+  }) => {
+    // BR-KU-RECALL-UNREAD (⬜ to-do): recall is allowed ONLY before the recipient has read it.
+    const marker = `QA recall-unread ${Date.now()}`;
+    const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
+    expect(sent.msgID, 'message created').toBeTruthy();
+    if (!sent.msgID) return;
+
+    try {
+      // B opens the conversation — the live client's own read action.
+      await conversation(endpoints, B, A.username);
+
+      const recall = await endpoints.sendTo(
+        'katchup-recall-message',
+        { body: { msgID: sent.msgID, groupFlag: false } },
+        { label: 'feature:recall-after-read', auth: { principal: A }, allowLiveWrite: true },
+      );
+
+      // Asserted against B's view, not the status code: whatever recall replies, an already-read
+      // message must still be visible to B afterward — recalling history B has already seen is
+      // exactly what this rule exists to prevent.
+      const viewAfter = await conversation(endpoints, B, A.username);
+      if (!viewAfter.text.includes(marker)) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'katchup-recall-message',
+          ruleId: 'BR-KU-RECALL-UNREAD',
+          rule: 'recallMessage must refuse to recall a message the recipient has already read.',
+          expected: 'the message remains visible to B after an already-read recall attempt',
+          actual: `the message was removed from B's view (recall replied ${recall.status}) despite B having already opened the conversation`,
+          request: { body: { msgID: sent.msgID, groupFlag: false } },
+        });
+      }
+      expect
+        .soft(
+          viewAfter.text,
+          `BR-KU-RECALL-UNREAD: an already-read message must survive a recall attempt (recall replied ${recall.status})`,
+        )
+        .toContain(marker);
+    } finally {
+      await cleanup(endpoints, A, sent.msgID);
+    }
+  });
+
+  test('recall is unavailable for a group message (BR-KU-RECALL-SCOPE) @api @katchup @security', async ({
+    endpoints,
+  }) => {
+    // BR-KU-RECALL-SCOPE (⬜ to-do): recall is unavailable for copies and group messages.
+    const members = [B, C].map((p) => ({
+      createdBy: A.username,
+      hasAdminAccess: 'N',
+      kpostID: p.username,
+      name: 'QA Bench',
+      memberDesignation: '',
+      privacyStatus: 'Y',
+      remarks: 'created',
+    }));
+    members.push({
+      createdBy: A.username,
+      hasAdminAccess: 'Y',
+      kpostID: A.username,
+      name: 'QA Bench',
+      memberDesignation: '',
+      privacyStatus: 'Y',
+      remarks: 'created',
+    });
+    const created = await endpoints.sendTo(
+      'group-create',
+      {
+        body: {
+          activeStatus: 'Y',
+          createdBy: A.username,
+          groupPicturePath: null,
+          groupCreateAccess: true,
+          groupKpostName: `QA Recall-Scope Group ${Date.now()}`,
+          isPrivateGroup: 'N',
+          memberDetails: members,
+        },
+      },
+      { label: 'feature:recall-scope-group-create', auth: { principal: A }, allowLiveWrite: true },
+    );
+    const gBody = created.json();
+    const gData = (gBody.ok ? (gBody.value as Record<string, unknown>).data : undefined) as
+      Record<string, unknown> | undefined;
+    const groupKpostID = gData?.groupKpostID as string | undefined;
+    const groupID = gData?.groupID as number | undefined;
+    expect(created.status, 'group is created').toBeLessThan(300);
+    if (!groupKpostID) return;
+
+    let msgID: number | undefined;
+    try {
+      const marker = `QA recall-scope ${Date.now()}`;
+      const sent = await send(endpoints, A, {
+        receiver: groupKpostID,
+        status: KATCHUP_STATUS.group,
+        groupFlag: 'true',
+        groupmemberList: [B.username, C.username],
+        actualMessage: marker,
+      });
+      expect.soft(sent.status, 'group send is accepted').toBeLessThan(300);
+      msgID = sent.msgID;
+      if (!msgID) return;
+
+      const recall = await endpoints.sendTo(
+        'katchup-recall-message',
+        { body: { msgID, groupFlag: true } },
+        { label: 'feature:recall-group', auth: { principal: A }, allowLiveWrite: true },
+      );
+
+      // Asserted against a member's view: a group message must survive a recall attempt.
+      const viewAfter = await conversation(endpoints, B, groupKpostID, true);
+      if (!viewAfter.text.includes(marker)) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'katchup-recall-message',
+          ruleId: 'BR-KU-RECALL-SCOPE',
+          rule: 'recallMessage must refuse to recall a group message (recall is 1-to-1 only).',
+          expected: 'the group message remains visible to members after a recall attempt',
+          actual: `the message was removed from a member's view (recall replied ${recall.status})`,
+          request: { body: { msgID, groupFlag: true } },
+        });
+      }
+      expect
+        .soft(
+          viewAfter.text,
+          `BR-KU-RECALL-SCOPE: a group message must survive a recall attempt (recall replied ${recall.status})`,
+        )
+        .toContain(marker);
+    } finally {
+      if (groupID && groupKpostID) {
+        await endpoints
+          .sendTo(
+            'group-remove-member',
+            { body: { memberKpostIdList: [B.username, C.username], groupID, groupKpostID } },
+            { label: 'feature:recall-scope-group-remove', auth: { principal: A }, allowLiveWrite: true },
+          )
+          .catch(() => undefined);
+        await endpoints
+          .sendTo(
+            'group-delete',
+            { body: { groupID } },
+            { label: 'feature:recall-scope-group-delete', auth: { principal: A }, allowLiveWrite: true },
+          )
+          .catch(() => undefined);
+      }
     }
   });
 });

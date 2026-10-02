@@ -150,12 +150,26 @@ export const dashboardApi = contactRead(
   { kmailID: '' },
   ['dashboard'],
 );
+/*
+ * `selectedContact`/`kpostUser` are genuine tenant identifiers (a real contact's kpostID) — the
+ * qa-identifier-guard correctly refuses to let the generic fuzzers (security.xss, security.injection,
+ * request.data-type) mutate them into arbitrary garbage and send it to the LIVE application, exactly
+ * as designed (`qa-identifier-guard.ts`: "a resource id never belongs [in NOT_A_RESOURCE]"). That
+ * refusal surfaces as a loud validator FAILURE rather than a skip, which is correct for a human to
+ * read once — found live 2026-10-02 triaging the first post-auth-fix KMail run, confirmed NOT a
+ * product defect (the guard is doing its job), and skipped here the same way `kmail-translation`
+ * already skips probes that don't apply to it. Fuzzing these fields is simply out of scope on a
+ * target the bench does not control.
+ */
+const SELECTED_CONTACT_SKIP = ['security.xss', 'security.injection', 'request.data-type'] as const;
+
 export const subjectsApi = contactRead(
   'kmail-subjects',
   '/common/mailSubjectSelectedContact/',
   'Mail subjects with a contact',
   { selectedContact: testData.victimKpostId },
   ['subject'],
+  { skipValidators: SELECTED_CONTACT_SKIP },
 );
 export const sentNotOpenedApi = contactRead(
   'kmail-sent-not-opened',
@@ -163,6 +177,7 @@ export const sentNotOpenedApi = contactRead(
   'Sent mails not yet opened',
   { selectedContact: testData.victimKpostId },
   ['status'],
+  { skipValidators: SELECTED_CONTACT_SKIP },
 );
 export const replyNotReceivedApi = contactRead(
   'kmail-reply-not-received',
@@ -170,6 +185,7 @@ export const replyNotReceivedApi = contactRead(
   'Replies not received',
   { kpostUser: testData.kpostId, selectedContact: testData.victimKpostId },
   ['status'],
+  { skipValidators: SELECTED_CONTACT_SKIP },
 );
 export const replyNotSentApi = contactRead(
   'kmail-reply-not-sent',
@@ -177,6 +193,7 @@ export const replyNotSentApi = contactRead(
   'Replies not sent',
   { selectedContact: testData.victimKpostId },
   ['status'],
+  { skipValidators: SELECTED_CONTACT_SKIP },
 );
 export const importantMailsApi = contactRead(
   'kmail-important-mails',
@@ -184,6 +201,7 @@ export const importantMailsApi = contactRead(
   'Important mails with a contact',
   { selectedContact: testData.victimKpostId },
   ['important'],
+  { skipValidators: SELECTED_CONTACT_SKIP },
 );
 export const draftsForContactApi = contactRead(
   'kmail-drafts-for-contact',
@@ -209,7 +227,13 @@ export const postBoxContactsApi = contactRead(
   ['contacts', 'needs-id'],
   {
     productionSafe: false,
-    note: 'returns Spring 404 (route not mapped) on the test build — confirm it exists there',
+    // CONFIRMED from KMail backend source (2026-10-02, full-repo audit): this route was renamed/
+    // deprecated. `CommonMailController.java:223` maps the method as `@PostMapping("unusedpostBoxContacts")`
+    // — there is no `postBoxContacts` mapping at all on the live backend; this path is permanently
+    // stale, not a transient 404. Retarget to `/common/unusedpostBoxContacts` (the real live route,
+    // despite its name) or drop this definition — kept as `productionSafe: false` either way so it
+    // never files a false "endpoint missing" bug.
+    note: 'dead route — backend maps this method as "unusedpostBoxContacts", not "postBoxContacts" (confirmed from source, not a transient 404)',
   },
 );
 export const knownPostBoxContactsApi = contactRead(
@@ -225,6 +249,7 @@ export const allMailCountApi = contactRead(
   'All mail count with a contact',
   { selectedContact: testData.victimKpostId, groupFlag: false },
   ['status'],
+  { skipValidators: SELECTED_CONTACT_SKIP },
 );
 export const bulkDashboardApi = contactRead(
   'kmail-bulk-dashboard',
@@ -298,6 +323,7 @@ const idRead = (
   request: ReturnType<typeof body>,
   note: string,
   tags: string[] = [],
+  opts: { authentication?: { required: boolean } } = {},
 ) =>
   defineKmailEndpoint({
     id,
@@ -307,6 +333,7 @@ const idRead = (
     tags: [...R, 'needs-id', ...tags],
     request,
     note,
+    authentication: opts.authentication,
   });
 
 export const copiesInfoApi = idRead(
@@ -324,8 +351,16 @@ export const downloadThumbApi = idRead(
   '/readMail/downloadThumbnail/{uuid}',
   'Attachment thumbnail',
   pathParams(() => ({ uuid: '' })),
-  'needs a real attachment uuid',
+  // CONFIRMED from KMail backend source (2026-10-02): `SecurityConfiguration.java` explicitly
+  // `permitAll()`s this exact path — no token is required at all, unlike every other KMail endpoint.
+  // Combined with `AWSs3ClientServiceImpl.fileDownloadFromS3` looking attachments up by UUID alone
+  // with no sender/receiver ownership check, this means anyone who obtains or guesses a thumbnail
+  // UUID can fetch it, authenticated or not, regardless of whether they ever sent/received that mail.
+  // Tracked as a security finding in TEST_BENCH_100_PERCENT_PLAN.md (§16 P0, item 0a) — not filed yet,
+  // pending a controlled live proof using only bench-owned accounts.
+  'needs a real attachment uuid; genuinely unauthenticated on live (see note above), not a bench gap',
   ['attachment'],
+  { authentication: { required: false } },
 );
 export const mediaStreamApi = idRead(
   'kmail-media-streaming',

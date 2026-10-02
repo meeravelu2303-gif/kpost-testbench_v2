@@ -186,4 +186,72 @@ test.describe('KPost KDiary · feature flow', () => {
       await deleteAllQaEvents(endpoints);
     }
   });
+
+  test('an unrelated account cannot delete another account\'s private diary event (IDOR) @api @kdiary @security', async ({
+    endpoints,
+  }) => {
+    /*
+     * KDiary events are keyed by a freestanding `eventID` (same shape as Group's membership ids and
+     * KWord's docId before those were checked) — a plausible IDOR surface this plan's matrix had
+     * marked MISSING. A creates a PRIVATE event (no participants, so B has no relationship to it at
+     * all); B then tries to delete it by naming A's real eventID directly.
+     *
+     * `deleteEvent` is confirmed exercised by the real frontend (unlike updateEvent/editScheduleEvent,
+     * which this file's own header notes are unused routes) — so this targets the live, real mutation
+     * path, not a best-effort one.
+     */
+    const B: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim')!;
+    const created = await write(
+      endpoints,
+      'kdiary-create-event',
+      scheduleShape({ title: `QA Bench private event ${Date.now()}`, participants: [] }),
+      'idor-setup',
+    );
+    expect(created.status, 'the private event was created').toBeLessThan(300);
+    const eventID = extractId(created.body);
+    expect(eventID, 'createEvent issues an eventID').toBeTruthy();
+    if (!eventID) return;
+
+    try {
+      const attackerDelete = await endpoints.sendTo(
+        'kdiary-delete-event',
+        { body: { eventID } },
+        { label: 'kdiary:idor-attacker-delete', auth: { principal: B }, allowLiveWrite: true },
+      );
+
+      // Verdict read back as the OWNER, not the attacker's response — the same discipline as the
+      // Group BOLA test: a 200 that didn't actually delete anything is still a finding worth knowing
+      // about, and a clean denial must be confirmed by the event still existing, not assumed from status.
+      const stillThere = await endpoints
+        .sendTo('kdiary-get-events', {}, { label: 'kdiary:idor-owner-recheck', auth: { principal: A } })
+        .catch(() => undefined);
+      const rows = stillThere
+        ? ((JSON.parse(stillThere.bodyText || '{"data":[]}') as { data?: Array<Record<string, unknown>> })
+            .data ?? [])
+        : [];
+      const survived = rows.some((r) => r.eventID === eventID);
+
+      if (!survived) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'kdiary-delete-event',
+          ruleId: 'IDOR-kdiary-event-delete',
+          rule:
+            'deleteEvent must refuse a caller who has no relationship to the event (not its owner, ' +
+            'not a participant) — an unrelated account must not be able to delete another account\'s ' +
+            'private diary event by naming its eventID.',
+          expected: 'the event still exists after the unrelated account\'s delete attempt',
+          actual: `the event no longer appears in the owner's list (attacker delete replied ${attackerDelete.status})`,
+          request: { body: { eventID } },
+        });
+      }
+      expect
+        .soft(
+          survived,
+          `IDOR: an unrelated account's delete must not remove another account's private event (replied ${attackerDelete.status})`,
+        )
+        .toBe(true);
+    } finally {
+      await deleteAllQaEvents(endpoints);
+    }
+  });
 });

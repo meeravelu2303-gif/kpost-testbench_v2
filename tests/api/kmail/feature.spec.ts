@@ -8,6 +8,7 @@ import { KMAIL_PRIORITY, KMAIL_TYPE } from '@api/schemas/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';
+import { testData } from '@config/test-data.config';
 
 /**
  * KMail **feature flow** — the FRD's mail behaviours (FR-M01..M09, BR-M01), end to end on kmail5,
@@ -512,6 +513,88 @@ test.describe('KPost KMail · feature flow', () => {
         after.bodyText,
         'the deleted instant reply no longer appears on the digital signature',
       ).not.toContain(marker);
+    }
+  });
+
+  test('postMail rejects a salutation outside the allowed set (BR-KM-SALUTE) @api @kmail', async ({
+    endpoints,
+  }) => {
+    /*
+     * BR-KM-SALUTE (business-rules.md, ⬜ to-do): salutation must be one of
+     * {Hi,Hello,Dear,Sir,Madam,Respect}, default Hi. `mailShape()`'s own default is 'Hello' (a valid
+     * member), so this test overrides it with a value outside the set and expects rejection or
+     * normalization — never silent storage of an out-of-set value.
+     */
+    const sent = await send(
+      endpoints,
+      A,
+      { toAddress: B.username, kmailSubject: `QA salute ${Date.now()}`, saluation: 'NotARealSalutation' },
+      'bad-salute',
+    );
+    try {
+      if (sent.status < 300 && sent.kmailID) {
+        // Accepted — the rule must still hold at the data layer: read it back and check it was
+        // either rejected at write time (caught above) or normalized, never stored verbatim.
+        const readBack = await endpoints.sendTo(
+          'kmail-details-by-id',
+          { body: { kmailIDs: [sent.kmailID] } },
+          { label: 'kmail:salute-readback', auth: { principal: A }, allowLiveWrite: true, allowLiveRead: true },
+        );
+        const readJson = readBack.json();
+        const readValue = row((readJson.ok ? readJson.value : {}) as Record<string, unknown>);
+        expect
+          .soft(
+            readValue.saluation,
+            'BR-KM-SALUTE: an out-of-set salutation must not be stored verbatim ' +
+              `(postMail replied ${sent.status})`,
+          )
+          .not.toBe('NotARealSalutation');
+      } else {
+        expect.soft(sent.status, 'BR-KM-SALUTE: an out-of-set salutation is rejected at write time').toBeGreaterThanOrEqual(400);
+      }
+    } finally {
+      await del(endpoints, A, sent.transactionIDs);
+    }
+  });
+
+  test('postMail rejects an empty body (BR-KM-BODY) @api @kmail', async ({ endpoints }) => {
+    // BR-KM-BODY (⬜ to-do): send requires body text — an empty kmailContent must not be accepted.
+    const sent = await send(
+      endpoints,
+      A,
+      { toAddress: B.username, kmailSubject: `QA empty-body ${Date.now()}`, kmailContent: '' },
+      'empty-body',
+    );
+    try {
+      expect
+        .soft(sent.status, `BR-KM-BODY: an empty mail body must be rejected (postMail replied ${sent.status})`)
+        .toBeGreaterThanOrEqual(400);
+    } finally {
+      await del(endpoints, A, sent.transactionIDs);
+    }
+  });
+
+  test('postMail accepts a non-KPost external address as recipient (BR-KM-EXTERNAL) @api @kmail', async ({
+    endpoints,
+  }) => {
+    // BR-KM-EXTERNAL (⬜ to-do): a non-KPost email is accepted as a recipient. Uses the bench's own
+    // reserved OTP-destination mailbox (testData.otpEmail) — a real, bench-owned external address —
+    // never an invented third-party inbox, consistent with the qa-identifier-guard's email policy.
+    const sent = await send(
+      endpoints,
+      A,
+      { toAddress: testData.otpEmail, kmailSubject: `QA external ${Date.now()}` },
+      'external-recipient',
+    );
+    try {
+      expect
+        .soft(
+          sent.status,
+          `BR-KM-EXTERNAL: a non-KPost external address must be accepted as a recipient (replied ${sent.status})`,
+        )
+        .toBeLessThan(300);
+    } finally {
+      await del(endpoints, A, sent.transactionIDs);
     }
   });
 });

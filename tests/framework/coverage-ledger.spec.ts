@@ -87,7 +87,10 @@ const MODULE_SCOPE: Record<string, Scope> = {
     status: 'built',
     note: 'Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here',
   },
-  redbus: { status: 'out-of-scope', note: 'third-party travel booking; confirm scope with owner' },
+  redbus: {
+    status: 'built',
+    note: 'KBooking bus search (city/destinations/trips/tripdetails) + blockTicket (gated, KBOOKING_LIFECYCLE); reclassified Category-A 2026-10-02 — frontend-active, confirmed no rzp_test_ payment sandbox exists. bookticket/cancelticket/getTicket/checkBookedTicket are real+active but undocumented in the workbook contract — blocked on the workbook owner, see kbooking.api.ts header',
+  },
   ecommerce: { status: 'out-of-scope', note: 'third-party commerce; confirm scope with owner' },
   metadee: { status: 'out-of-scope', note: 'third-party; confirm scope with owner' },
   knews: { status: 'external', note: 'external RSS feeds, not the KPost API' },

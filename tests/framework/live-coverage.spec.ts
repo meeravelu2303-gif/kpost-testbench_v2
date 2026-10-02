@@ -54,12 +54,29 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
     return 'COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning';
   }
   const tags = definition.tags ?? [];
+  /*
+   * Confirmed dead routes — checked BEFORE the needs-id branch below on purpose: both of these also
+   * carry a `needs-id` tag, and an earlier version of this function let that branch claim them first,
+   * which wrongly reported them as "COVERED via lifecycle" when no lifecycle actually exercises them
+   * at all. They curl-verified 404 "No matching endpoint for this request" on the current test build
+   * (not a business-account issue) — `katchup/needs-id-workflow.spec.ts` and `kos/feature.spec.ts`
+   * both record this explicitly with their own recorded-gap test.
+   */
+  if (/getKatchupMessagesSubject|\/kword\/documents\/$/.test(definition.path)) {
+    return 'OFF-LIVE: route not deployed on this test build (confirmed 404 — needs the dev to confirm deployment, not a business-account gap)';
+  }
   // Reads keyed by a RUNTIME id — a message/call/group/attachment/mail/document id that only a
   // completed write produces. Detected by tag OR by a runtime-id path param. NOT a business-account
   // block: these are covered by the gated lifecycle flows that create the id first.
   const RUNTIME_ID_PATH = /\{(uuid|docId|sessionId|kmailID|msgID|eventID)\}/i;
   if (
-    tags.some((tag) => /^needs-(message-id|kall-id|group|attachment)$/.test(tag)) ||
+    // Confirmed 2026-10-02: the bare `needs-id` tag (25 endpoint definitions use it, e.g.
+    // kmail-bulk-dashboard) never matched this regex — only the more specific `needs-message-id`
+    // etc. did — so every one of those 25 silently fell through to the generic "needs business
+    // setup" catch-all below, which is wrong for all of them (they need a runtime id from a prior
+    // write, not a business-tier account). Found while investigating why `kmail-bulk-dashboard`
+    // appeared in that bucket despite its own definition note clearly saying "needs a real kmailID".
+    tags.some((tag) => /^needs-(id|message-id|kall-id|group|attachment)$/.test(tag)) ||
     RUNTIME_ID_PATH.test(definition.path)
   ) {
     return 'COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints';
@@ -77,6 +94,9 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
   // KMail lifecycle, not a business-account block.
   if (/readMail|kmailGroupReadStatus|replyNotRequired|bulkMail\/status/.test(definition.path)) {
     return 'COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints';
+  }
+  if (/getKatchupMessagesSubject|\/kword\/documents\/$/.test(definition.path)) {
+    return 'OFF-LIVE: route not deployed on this test build (confirmed 404 — needs the dev to confirm deployment, not a business-account gap)';
   }
   return 'OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s)';
 }
@@ -205,6 +225,7 @@ test.describe('live endpoint coverage @framework', () => {
       if (r.includes('SMS or email')) return 'Real SMS / email to a real recipient';
       if (r.includes('shared record')) return 'Public record write (enquiry / unsubscribe)';
       if (r.includes('shared by the whole environment')) return 'Shared / global write (by choice)';
+      if (r.includes('not deployed on this test build')) return 'Route not deployed on this test build (confirmed 404)';
       return 'Needs setup we lack (business login 403, company logo 500)';
     };
     const catCounts = new Map<string, number>();

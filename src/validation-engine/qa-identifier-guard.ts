@@ -231,10 +231,13 @@ const NOT_A_RESOURCE = new Set(
     /*
      * An S3 attachment uuid we generated (`generate-presigned-url` mints it) — runtime-scoped like a
      * msgID/docId, cannot be pre-allowlisted, and no productionSafe endpoint accepts one (every
-     * attachment op is gated / needs-attachment). `attachmentsuuid` is the array form.
+     * attachment op is gated / needs-attachment). `attachmentsuuid` is Katchup's array form;
+     * `attachmentuuid` is KMail's `postMail` field name for the same runtime-generated uuid (found
+     * 2026-10-02 writing the attachment-IDOR proof — same class, different key spelling).
      */
     'uuid',
     'attachmentsuuid',
+    'attachmentuuid',
     // KWord document CONTENT/TYPE fields — a title, a subject line, a document-type name — not
     // resources. They match only because the key contains "doc"/"document".
     'doctitle',
@@ -331,6 +334,22 @@ function qaOwnedValues(): Set<string> {
      * the signup screen drives has to be able to ask about an id before it exists.
      */
     ...allRegisteredKpostIds(),
+    /*
+     * The BARE (no-domain) form of every `.env`-provided identity value. Splitting an already-owned
+     * `name@domain` on `@` cannot produce a foreign identifier — it is the same account, written the
+     * way the product's own `userLogin` accepts it (BR-SL-3IDS: a bare KPost ID must authenticate the
+     * same account as its full, domain-qualified form). Without this, testing that exact rule trips
+     * the guard on the bare form alone, even though it names nothing the full form didn't already.
+     */
+    ...providedIdentityValues()
+      .filter((value) => value.includes('@'))
+      .map((value) => value.split('@')[0] ?? value),
+    /*
+     * The PRIMARY account's real mobile number — confirmed live against `TBL_KPOST_USER_MASTER`
+     * (2026-10-02), NOT `QA_MOBILE_EXISTS` (checked and found to belong to a different account
+     * entirely). Needed for the same BR-SL-3IDS rule: login by mobile must resolve to this account.
+     */
+    '8122016145',
   ];
   return new Set(owned.map((value) => String(value).trim().toLowerCase()).filter(Boolean));
 }

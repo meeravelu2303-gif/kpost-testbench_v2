@@ -57,6 +57,9 @@ export const postMailApi = defineKmailEndpoint({
   summary: 'Compose and send a mail — the primary send path',
   tags: [...SEND_TAGS, 'critical'],
   destructive: true,
+  // Not yet exercised: every DB validation reports SKIPPED until DB_SSL_CA is supplied (see plan
+  // §16 P0 item 2). Wired now so it runs the instant that's resolved — see src/database/validations/kmail.db.ts.
+  database: { validations: ['kmail-mail-persisted'] },
   request: body(() => mailShape()),
 });
 

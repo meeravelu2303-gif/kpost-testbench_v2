@@ -58,5 +58,8 @@ export function defineKmailEndpoint(config: KpostEndpointConfig): EndpointDefini
     businessRules: config.businessRules,
     security: config.security,
     performance: config.performance,
+    // Was never wired through here (no KMail DB validation existed to reference it) — added
+    // 2026-10-02 alongside the first one, `kmail-mail-persisted`. Mirrors `defineKpostEndpoint`.
+    database: config.database,
   };
 }

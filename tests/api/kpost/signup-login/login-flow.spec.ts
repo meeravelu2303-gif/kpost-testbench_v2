@@ -200,4 +200,38 @@ test.describe('KPost Login · behaviour', () => {
     const shared = await login(endpoints, testData.kpostId, testData.password);
     expect(shared.status, 'the shared session still logs in').toBe(200);
   });
+
+  test('mobile, bare KPost ID, and the full domain-qualified ID all authenticate the same account (BR-SL-3IDS) @api @signup-login', async ({
+    endpoints,
+  }) => {
+    /*
+     * BR-SL-3IDS (business-rules.md, ⬜ to-do as of 2026-10-02): "mobile, KPost ID, and full
+     * KPost-ID-with-domain all log in [as the same account]". The primary test account's real mobile
+     * number was confirmed directly against TBL_KPOST_USER_MASTER (2026-10-02) — `8122016145` — not
+     * taken from `QA_MOBILE_EXISTS`, which was checked and found to belong to a DIFFERENT account
+     * entirely; using it here would have produced a meaningless mismatch, not a rule violation.
+     */
+    const bareId = testData.kpostId.split('@')[0] ?? testData.kpostId;
+    const primaryMobile = '8122016145';
+
+    const forms: Array<[string, string]> = [
+      ['full domain-qualified ID', testData.kpostId],
+      ['bare KPost ID (no domain)', bareId],
+      ['mobile number', primaryMobile],
+    ];
+
+    for (const [label, identifier] of forms) {
+      const { status, body } = await login(endpoints, identifier, testData.password);
+      expect.soft(status, `BR-SL-3IDS: login via ${label} ("${identifier}") must succeed`).toBe(200);
+      // Evaluated unconditionally (a non-200 body has no accessToken, so sameAccount() with an empty
+      // subject just reports false) — a failed login is still a failed BR-SL-3IDS case, not a skip.
+      const token = typeof body.accessToken === 'string' ? body.accessToken : '';
+      expect
+        .soft(
+          sameAccount(jwtSubject(token), testData.kpostId),
+          `BR-SL-3IDS: login via ${label} must resolve to the SAME account as the full ID (status ${status})`,
+        )
+        .toBe(true);
+    }
+  });
 });

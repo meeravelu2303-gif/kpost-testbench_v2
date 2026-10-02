@@ -141,7 +141,10 @@ test.describe('KPost Security · object-level authorization (IDOR/BOLA) @api @kp
        */
       const victimMembership = await database.findOne<{ id: number; admin_access: string }>({
         table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
-        where: { group_id: groupID, kpost_id: testData.victimKpostId, removed_flag: 'N' },
+        // removed_flag is numeric (0 = present, 1 = removed) on live, not 'Y'/'N' — confirmed by
+        // direct query 2026-10-02; admin_access on the same table genuinely IS 'Y'/'N', which is
+        // presumably how the two got conflated here originally.
+        where: { group_id: groupID, kpost_id: testData.victimKpostId, removed_flag: 0 },
       });
       const membershipId = victimMembership?.id ?? 0;
 
@@ -204,17 +207,19 @@ test.describe('KPost Security · object-level authorization (IDOR/BOLA) @api @kp
         )
         .not.toBe('Y');
 
-      const memberStillThere = await database.findOne<{ removed_flag: string }>({
+      const memberStillThere = await database.findOne<{ removed_flag: number }>({
         table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
         where: { group_id: groupID, kpost_id: testData.victimKpostId },
       });
-      const removedFlag = String(memberStillThere?.removed_flag ?? 'Y');
-      if (removedFlag !== 'N') {
+      // Numeric encoding confirmed live 2026-10-02: 0 = still a member, 1 = removed. A vanished row
+      // (undefined) is treated as the worst case (removed) rather than silently passing.
+      const removedFlag = Number(memberStillThere?.removed_flag ?? 1);
+      if (removedFlag !== 0) {
         endpoints.recordBusinessRuleViolation({
           endpointId: 'group-remove-member',
           ruleId: 'BOLA-outsider-removes-member',
           rule: 'removeGroupMember must refuse a caller who neither owns nor belongs to the group — an outsider must not be able to remove another group’s member.',
-          expected: "removed_flag stays 'N' (the outsider's call is refused)",
+          expected: 'removed_flag stays 0 (the outsider’s call is refused)',
           actual: `removed_flag=${removedFlag} (removeGroupMember replied ${kickMember.status}) — the outsider's removal took effect`,
           request: { body: { memberKpostIdList: [testData.victimKpostId], groupID } },
         });
@@ -224,7 +229,7 @@ test.describe('KPost Security · object-level authorization (IDOR/BOLA) @api @kp
           removedFlag,
           `BOLA: an outsider must not remove a member (removeGroupMember replied ${kickMember.status})`,
         )
-        .toBe('N');
+        .toBe(0);
 
       const groupRow = await database.findOne<{ group_name: string }>({
         table: 'TBL_KPOST_USERGROUP_MASTER',

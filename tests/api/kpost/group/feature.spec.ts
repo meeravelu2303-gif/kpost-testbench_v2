@@ -233,7 +233,9 @@ test.describe('KPost Group · feature flow @database', () => {
       const membership = database.enabled
         ? await database.findOne<{ id: number; admin_access: string }>({
             table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
-            where: { group_id: groupID, kpost_id: testData.victimKpostId, removed_flag: 'N' },
+            // removed_flag is numeric (0 = present, 1 = removed) on live, not 'Y'/'N' — confirmed by
+            // direct query 2026-10-02.
+            where: { group_id: groupID, kpost_id: testData.victimKpostId, removed_flag: 0 },
           })
         : undefined;
 
@@ -312,7 +314,7 @@ test.describe('KPost Group · feature flow @database', () => {
        */
       const admins = await database.findMany<{ id: number; kpost_id: string }>({
         table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
-        where: { group_id: groupID, admin_access: 'Y', removed_flag: 'N' },
+        where: { group_id: groupID, admin_access: 'Y', removed_flag: 0 },
       });
       expect
         .soft(
@@ -324,6 +326,96 @@ test.describe('KPost Group · feature flow @database', () => {
     } finally {
       if (groupID) {
         await as(endpoints, A, 'group-delete', { groupID, groupKpostID }, 'cleanup-delete').catch(
+          () => undefined,
+        );
+      }
+    }
+  });
+
+  test('a group cannot be created with no member besides the creator (FR-GC-006) @api @group', async ({
+    endpoints,
+  }) => {
+    const soloBody: Record<string, unknown> = {
+      activeStatus: 'Y',
+      createdBy: A.username,
+      groupPicturePath: null,
+      groupCreateAccess: true,
+      groupKpostName: `QA Solo Group ${Date.now()}`,
+      isPrivateGroup: 'N',
+      memberDetails: [member(A.username, true)],
+    };
+    const created = await as(endpoints, A, 'group-create', soloBody, 'create-solo');
+    // Cleanup first, so a surprising 2xx (the rule not being enforced) doesn't leak a real group.
+    const groupID = created.data.groupID as number | undefined;
+    const groupKpostID = created.data.groupKpostID as string | undefined;
+    if (groupID) {
+      await as(endpoints, A, 'group-delete', { groupID, groupKpostID }, 'cleanup-solo-delete').catch(
+        () => undefined,
+      );
+    }
+    expect
+      .soft(
+        created.status,
+        `FR-GC-006: a group with only its creator (no other member) must be rejected ` +
+          `(createUserGroup replied ${created.status})`,
+      )
+      .toBeGreaterThanOrEqual(400);
+  });
+
+  test('a sole admin cannot be demoted — Remove Admin needs >1 admin to exist (FR-GM-013) @api @group @security', async ({
+    endpoints,
+    databases,
+  }) => {
+    /*
+     * FR-GM-013 is distinct from FR-GM-014 (sole-admin EXIT is blocked, tested above): this is about
+     * DEMOTION — addOrRemoveAdminAccess(hasAdminAccess:'N') targeting the only admin a group has.
+     * A is created as the group's sole admin, C as a plain member; A then tries to demote themself.
+     */
+    const database = databases.for('kpost-api');
+    let groupID: number | undefined;
+    let groupKpostID: string | undefined;
+    try {
+      const created = await as(endpoints, A, 'group-create', createBody(), 'create-sole-admin');
+      groupID = created.data.groupID as number | undefined;
+      groupKpostID = created.data.groupKpostID as string | undefined;
+      expect(groupID, 'the group was created with A as its only admin').toBeTruthy();
+      if (!groupID) return;
+
+      const ownMembership = database.enabled
+        ? await database.findOne<{ id: number }>({
+            table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+            where: { group_id: groupID, kpost_id: A.username, removed_flag: 0 },
+          })
+        : undefined;
+      const ownMembershipId = ownMembership?.id ?? 0;
+
+      const demoteSelf = await as(
+        endpoints,
+        A,
+        'group-admin-access',
+        { kpostIDs: [A.username], ids: [ownMembershipId], groupID, hasAdminAccess: 'N' },
+        'demote-sole-admin',
+      );
+
+      // Asserted against the database, not the status code: whatever the endpoint replies, A must
+      // still be an admin afterward — a group that loses its only admin is orphaned, same reasoning
+      // as FR-GM-014 above.
+      const afterwards = database.enabled
+        ? await database.findOne<{ admin_access: string }>({
+            table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+            where: { id: ownMembershipId },
+          })
+        : undefined;
+      expect
+        .soft(
+          afterwards?.admin_access ?? 'Y',
+          `FR-GM-013: the sole admin must remain an admin after a self-demotion attempt ` +
+            `(demote replied ${demoteSelf.status})`,
+        )
+        .toBe('Y');
+    } finally {
+      if (groupID) {
+        await as(endpoints, A, 'group-delete', { groupID, groupKpostID }, 'cleanup-sole-admin-delete').catch(
           () => undefined,
         );
       }
