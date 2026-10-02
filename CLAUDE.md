@@ -2994,9 +2994,11 @@ minimal `{enable}` is sent and the empty-body/null probes carry the rest.
   (systemic classes).
 - **Write lifecycle 2/2 on live**, self-restoring: font + theme change → restore; the three
   notification toggles off → restore on. Gated `SETTINGS_LIFECYCLE=true`, each write `allowLiveWrite`.
-- **`tests/e2e/settings.spec.ts`** — the `/settings` screen promoted out of `profile.spec.ts` into
-  its own spec: the two-panel workspace (`.settings-theme-shell`) and the section nav
-  (`General Settings`/`Profile Creation`), cross-browser.
+- **`tests/e2e/settings-sections.spec.ts`** — the `/settings` screen's two-panel workspace
+  (`.settings-theme-shell`) and section nav (`General Settings`/`Profile Creation`), including the
+  group-expand interaction, cross-browser. (`settings.spec.ts`, its predecessor, was retired
+  2026-10-02 — fully superseded, it tested the same two things without the expand interaction this
+  file adds.)
 
 **A guard exemption the theme write forced:** `changeTheme` sends `katchupChatStyle`,
 `katchupChatTheme`, `katchupChatBackgroundThemeWallpaper` and `kpostLayoutTheme` — appearance values

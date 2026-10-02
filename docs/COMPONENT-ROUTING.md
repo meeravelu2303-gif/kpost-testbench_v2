@@ -546,9 +546,9 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 ## On the catch-all component (review — a built module here is a routing gap)
 
-- kpost-api · kbooking-city-suggestion (kpost-api,kbooking,redbus)
-- kpost-api · kbooking-destinations (kpost-api,kbooking,redbus)
-- kpost-api · kbooking-available-trips (kpost-api,kbooking,redbus)
+- kpost-api · kbooking-city-suggestion (kpost-api,kbooking,redbus,kbooking-read)
+- kpost-api · kbooking-destinations (kpost-api,kbooking,redbus,kbooking-read)
+- kpost-api · kbooking-available-trips (kpost-api,kbooking,redbus,kbooking-read)
 - kpost-api · kbooking-trip-details (kpost-api,kbooking,redbus,needs-id)
 - kpost-api · kbooking-block-ticket (kpost-api,kbooking,redbus,needs-id,critical)
 

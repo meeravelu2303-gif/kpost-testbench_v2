@@ -33,13 +33,15 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
   }
   if (definition.productionSafe) return undefined;
   const p = definition.path;
-  // Attachment/media reads keyed by a real S3 uuid — need a real file upload, which no lifecycle
-  // does yet (the one genuine file-upload coverage gap). Not downloadCompanyLogo ({companyID}).
-  if (
-    /\/(download|downloadThumbnail|mediaStreaming)\/\{uuid\}|generateThumbnailUsingUUID/i.test(p)
-  ) {
-    return 'OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap';
-  }
+  /*
+   * Attachment/media endpoints keyed by a real S3 uuid used to be an unconditional "needs a real
+   * uploaded attachment, nobody has built that yet" block. That stopped being true on 2026-09-26
+   * (Katchup, `presigned-attachment-workflow.spec.ts`, KATCHUP_LIFECYCLE+AWS_LIFECYCLE) and
+   * 2026-10-02 (KMail, `attachment-idor.spec.ts`, KMAIL_LIFECYCLE+AWS_LIFECYCLE) — both built a real
+   * presigned-upload flow and drive all nine of these endpoints live with a real attachment uuid. The
+   * tag-based check below (`attachment`/`needs-attachment`/`katchup-attachment`) now catches every one
+   * of them as covered; this function no longer special-cases their paths before reaching that check.
+   */
   if (definition.sideEffect === 'global') {
     return 'OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle)';
   }
@@ -50,6 +52,18 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
     // Public writes that persist a real shared record (enquiry / unsubscribe) have no lifecycle.
     if (/\/common\/save(Enquiry|Unsubscriber)/i.test(p)) {
       return 'OFF-LIVE by choice: persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle';
+    }
+    /*
+     * Found 2026-10-02: this generic "destructive => some *_LIFECYCLE flow covers it" claim was
+     * FALSE for `blockTicket` — no `KBOOKING_LIFECYCLE` env var is ever actually read anywhere in
+     * this repo (confirmed by grep), and `feature.spec.ts` unconditionally `test.skip`s it pending
+     * explicit owner authorization (a real third-party seat hold, unconfirmed sandbox — same standing
+     * as the Razorpay payment path). Calling this "COVERED" was a false positive this bench's own
+     * report was making about itself. Named explicitly rather than silently trusting the generic
+     * branch for every future destructive write without a real, grep-confirmed env gate.
+     */
+    if (definition.id === 'kbooking-block-ticket') {
+      return 'OFF-LIVE (WRITTEN, execution blocked): no env flag actually gates this (KBOOKING_LIFECYCLE is referenced only in comments) — unconditionally test.skip\'d pending explicit owner authorization, not driven by any lifecycle flow';
     }
     return 'COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning';
   }
@@ -226,6 +240,7 @@ test.describe('live endpoint coverage @framework', () => {
       if (r.includes('shared record')) return 'Public record write (enquiry / unsubscribe)';
       if (r.includes('shared by the whole environment')) return 'Shared / global write (by choice)';
       if (r.includes('not deployed on this test build')) return 'Route not deployed on this test build (confirmed 404)';
+      if (r.includes('WRITTEN, execution blocked')) return 'Written, execution blocked pending explicit owner authorization';
       return 'Needs setup we lack (business login 403, company logo 500)';
     };
     const catCounts = new Map<string, number>();

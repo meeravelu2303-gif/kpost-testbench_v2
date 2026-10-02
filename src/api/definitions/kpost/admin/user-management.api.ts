@@ -21,7 +21,7 @@ import { body, defineKpostEndpoint, pathParams } from '../kpost-endpoint';
  *    live by default — there is no expendable member to safely act on.
  */
 
-/** Every business-admin op authenticates as the BUSINESS_M company admin (company 1067). */
+/** Every business-admin op authenticates as the BUSINESS_M company admin (company 242, "Nebius Solutions", confirmed live 2026-10-02). */
 const asBusinessAdmin = {
   required: true,
   role: 'COMPANY_ADMIN',

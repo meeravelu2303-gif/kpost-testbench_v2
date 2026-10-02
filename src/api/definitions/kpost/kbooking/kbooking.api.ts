@@ -108,7 +108,12 @@ export const blockTicketApi = defineKBookingEndpoint({
   // explicit lifecycle flag, same pattern as every other real-world-effecting write in this suite.
   // KBook.js:845-867 — full passenger/fare payload, kpostID as a path param.
   productionSafe: false,
-  note: 'gated: KBOOKING_LIFECYCLE=true — places a real third-party seat hold (SeatSeller "Test Credentials", not confirmed as a true sandbox)',
+  // Unconditionally skipped in feature.spec.ts (not gated behind an env flag) — places a real
+  // third-party seat hold and the SeatSeller "Test Credentials" label is not confirmed to be a true
+  // sandbox, so this needs explicit owner authorization before ANY live execution, the same standing
+  // as the Razorpay payment path and the OTP-bypass flag. No env var controls this; do not add one
+  // without that authorization first.
+  note: 'WRITTEN, EXECUTION BLOCKED pending explicit owner authorization — real third-party seat hold, unconfirmed sandbox (see feature.spec.ts)',
   // Needs both a body AND a path param (kpostId) — neither `body()` nor `pathParams()` alone covers
   // that, so this is an inline RequestFactory combining both, matching the real call shape exactly.
   // kpostId is the CALLER'S OWN kpost account id — KBook.js:867 passes `User.kpostID` (the logged-in

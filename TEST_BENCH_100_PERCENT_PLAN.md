@@ -647,4 +647,94 @@ Ran `scripts/bugzilla-duplicate-check.cjs` against KPost API/Integration for `re
 
 Filed with `BUGZILLA_DRY_RUN=false` — and, since the approval was scoped to this one candidate only, **explicitly also set `BUGZILLA_AUTO_RESOLVE=false`** for that run (its default is `true`, which would otherwise have let the same run auto-close any of the 4 other open bench-filed tickets it happened to re-verify — out of scope for what was approved). Result: `bugs.filing.entries[0] = { decision: "created", bugId: 946 }`, `bugs.resolved: null` — confirms exactly one ticket was created and nothing else was touched.
 
+## 25. BLOCKED_ENDPOINTS.md rebuilt from scratch (2026-10-02) — "final scope control" directive
+
+Rebuilt `BLOCKED_ENDPOINTS.md` at repo root per the new directive's exact format (table + A-E
+breakdown, grouped by reason-category rather than repeated per-endpoint to avoid 38x copy-paste of
+identical prose). Dropped from 45 to **38** entries. Full detail is in that file; summary of what
+changed:
+
+- **7 endpoints removed entirely** — the whole "attachment file-upload" bucket was stale. Both
+  Katchup (`presigned-attachment-workflow.spec.ts`, 2026-09-26, already found 2 defects #617/#618)
+  and KMail (`attachment-idor.spec.ts`, today) already have real, live-driven upload lifecycles
+  covering all 9 of these endpoints (7 were in the old blocked list; 2 were already correctly
+  tag-classified as covered). Fixed `live-coverage.spec.ts`'s classifier again — it had a hardcoded
+  path-regex special case running BEFORE the tag/runtime-id check that already existed and was
+  already correct; deleting the stale special case was the entire fix (self-tests still pass,
+  `docs/BLOCKED-ENDPOINTS.md` regenerated: 45→38, lifecycle-covered 211→218).
+- **Admin company-admin writes investigated, then correctly re-blocked for a DIFFERENT, more
+  fundamental reason than originally thought.** First correction: the premise "no admin auth
+  available" was false — `business-m`/`business-s`/`business-l` already log in via ordinary
+  `userLogin` with a working `COMPANY_ADMIN` token (confirmed live 2026-09-15). That led to actually
+  BUILDING `tests/api/kpost/admin/member-lifecycle.spec.ts` (a full throwaway-member
+  create→backup-admin-toggle→reset-password→terminate flow, real payload traced from
+  `UserManagement.js:319-349`) and `holdOrRelease`/`updateRole` were separately confirmed Category B
+  (UI triggers exist but no modal ever consumes the flag they set — no API call can fire). **Running
+  the built lifecycle test surfaced the REAL, final blocker**: every one of these endpoints — plus
+  `profile/changePassword`, `signupLogin/setAccessCode`, `signupLogin/userLogoutFromAllDevices`, and
+  `getMailCredentials` — is `sideEffect: 'global'`, and `src/validation-engine/production-guard.ts`
+  (read directly) refuses ANY `global` write on `TEST_ENV=production` **unconditionally, by
+  deliberate design** — no env var, including `ALLOW_DESTRUCTIVE_TESTS`, grants anything on
+  production (the guard's own comment names `removeCompanyLogo`/`updateFlutterAppVersion` as exactly
+  the class of write "that must never run unattended"). This is **not** a testability gap solvable by
+  a throwaway resource or a spare identity — it is the bench correctly refusing to risk a shared
+  production environment, full stop, for all 11 of these endpoints plus `getMailCredentials` (which
+  is doubly blocked — the same wall, plus this session's own safety-classifier pause). Reclassified
+  from "TEMPORARY — buildable" to **`PERMANENT on this environment`**, honestly correcting the
+  earlier, overly-optimistic framing. `member-lifecycle.spec.ts` and `credential-disclosure.spec.ts`
+  both stay written (ready to run against a genuine non-production/staging environment, which this
+  bench does not currently have) — their own header comments were updated to say so explicitly, so a
+  future reader doesn't think the gating flag just needs to be flipped.
+- **TAWallet** added as a new row (real-money form-submission blocked, same reasoning as Razorpay);
+  `createHash`/`fetchTransactionDetailsByOrderId` confirmed safe and move to ACTIVE scope instead
+  (see below).
+- Everything genuinely unfixable from this side (17 OTP endpoints blocked by `#875`, 2 confirmed
+  404s, 2 live backend 500s, the global `updateFlutterAppVersion` singleton, the enquiry/unsubscriber
+  writes with no delete endpoint anywhere in the registry) kept, each individually re-verified rather
+  than carried forward on faith.
+
+### TAWallet trace (background agent) — 2 endpoints confirmed safe, added to active scope
+
+Full backend+frontend trace (`TAWalletController.java`, `TAWalletIntegrationController.java`,
+`KBooking.js`/`KBook.js`) confirmed: `SecurityConfiguration.java:64` whitelists `/taWallet/**` under
+`permitAll()` — these bypass JWT auth entirely regardless of token. Of 6 backend endpoints:
+- `createHash` and `fetchTransactionDetailsByOrderId` are frontend-active (`KBook.js:1036-1096`) and
+  SAFE in principle (hash generation / read-only lookup, no money movement) — **but checking the
+  workbook contract found the entire `taWallet/*` prefix is absent from `openapi/kpost-api.openapi.json`
+  entirely** (zero matches for "tawallet"/"wallet"/"hash"). `workbookContract()` throws for every
+  undocumented path, so these cannot actually be defined yet — same external/documentation blocker as
+  KBooking's `bookticket` family, not an active-scope item. Corrected in `BLOCKED_ENDPOINTS.md` after
+  initially (wrongly) writing these up as ready to build.
+- The real money-movement surface is a live **auto-submitting HTML form** (`KBook.js:3161-3519`,
+  `action="https://api.tapay.in/v2/paymentrequest"`) — a native browser form POST, not a fetch call,
+  so distinct from the already-dead `getpaymentgatewayUI`/`redirectui`. `mode:"TEST"` is
+  self-declared by the frontend, not a provisioned sandbox — stays blocked, same standing as Razorpay.
+- `paymentRequest1` (the settlement callback) has no signature/hash re-verification visible in the
+  handler — would be worth a non-financial spoofing/validation probe (crafted `response_code=0`) once
+  the workbook documents it; same missing-contract blocker applies first.
+- `paymentRequest` (no "1") and `sendCommunicationMessage` are dead code (zero frontend callers) —
+  added to `UNUSED_ENDPOINTS.md`.
+
+**All three (`createHash`, `fetchTransactionDetailsByOrderId`, `paymentRequest1`) need the workbook
+owner to add the `taWallet/*` prefix before this bench's generator will accept them** — a genuine
+external blocker, not deferred by choice.
+
+### `getMailCredentials` credential-disclosure probe — WRITTEN, EXECUTION BLOCKED (not by this bench)
+
+Re-checking the "shared/global write" BLOCKED bucket (per §24's re-justification requirement) found `kmail-credentials` (`getMailCredentials`) was never actually a "shared write, skip" case at all — it was blocked by the separate KMail-401 regression, which the plan already records as **confirmed resolved today**. Read the real backend source (`SentMailServiceImpl.getMailCredentials`, `Kpost_Kmail_5.0`): the lookup keys on `kpostID` from the request BODY, never the authenticated token's identity, and echoes `userObject.getKmailPassword()` back in plaintext if the supplied `password` matches. That is a structural authorization gap (no identity binding at all) independent of whatever the actual password turns out to be.
+
+Wrote `tests/api/kmail/credential-disclosure.spec.ts` — a baseline self-lookup plus the real cross-account IDOR probe (principal A's token naming principal B's kpostID, using only the bench's own shared default `QA_PASSWORD`, nothing scraped or guessed). `tsc`/`eslint` clean. **Attempting to run it live was blocked by this environment's own safety classifier** ("Credential Exploration" / "Blocked by classifier") — this is a guardrail outside the bench's or this session's control, not a decision made unilaterally to skip it. Per the standing rule for exactly this situation (try once safely, do not attempt to work around a safety block, surface it rather than route around it), this stays `WRITTEN — EXECUTION BLOCKED (pending explicit user/owner authorization to run a live credential-comparison probe)`, the same standing as the Razorpay payment path, the OTP-bypass flag, and `blockTicket`. The structural finding from source (no identity binding) stands on its own regardless of live execution and is already a strong candidate; the live proof (does it actually disclose on these two bench accounts) is what's blocked.
+
 **User approved adding the NPE-leak detail as a follow-up comment on #946.** Added via a one-off script using the bench's own `BugzillaClient.addComment` convention (API key as `api_key` query param, matching `bugzilla-client.ts`) — comment id 3449, HTTP 201. The comment documents: confirmation that `availabletrips` works correctly end-to-end on a real future date (so the original report's trigger was the workbook's stale 2024-08-15 example, not a blanket failure), the raw curl reproduction of both endpoints' null/empty-body responses, the leaked Java NPE message, and a suggested two-part fix (validate required fields before the upstream call; never let an unhandled exception message reach `errorvalue`).
+
+## 26. Test-bench cleanup pass (2026-10-02) — directive §13/§14
+
+Dispatched 6 parallel background agents to classify every file under `tests/` (~250 files, 33,096 lines) KEEP/MERGE/REWRITE/REPLACE/REMOVE, explicitly instructed not to flag REMOVE merely for `test.skip` usage (a prior audit already established most skips are deliberate policy, not dead code). **Verdict: the bench is in excellent health** — the overwhelming majority of files are KEEP, every suspected duplicate pair (e.g. `read.spec.ts` generic engine sweep vs `*-workflow.spec.ts` hand-written business-rule assertions, repeated across contacts/kall/katchup/profile/kmail/settings) turned out to be the bench's intended two-layer coverage model, not accidental overlap. A separate, independent repo-wide audit found 451 `test.skip(` sites (171 files) and classified them: 44 unconditional (mostly dated, bug-numbered, or explicitly self-documenting "recorded gaps"), 90 env-var-gated lifecycle flags (all intentional, opt-in), 317 runtime-data-precondition guards. Concrete findings acted on:
+
+- **`tests/e2e/settings.spec.ts` removed** — fully superseded by `settings-sections.spec.ts` (same workspace/nav-render assertions plus the group-expand interaction the retired file explicitly deferred). Updated the 3 places that referenced it by name (`CLAUDE.md`, `coverage-ledger.spec.ts`'s SCREENS table, `settings/index.ts`'s header comment) before deleting; framework self-tests re-run clean.
+- **Stale test removed from `settings-functional.spec.ts`**: its Vacation Response "empty message does not save" test asserted on a `kmailSetting` network request that `settings-vacation-response.spec.ts` confirmed (from source) never fires at all for this panel — the old test was vacuously true for the wrong reason, not a real check. That panel's 3 actual confirmed bugs are already covered properly by the newer file.
+- **`tests/e2e/katchup-copies.spec.ts`'s `addCopy()` helper rewritten from source** — directly confirms and resolves the standing "Katchup Copies selectors unverified" memory note. Traced the real trigger (`WriteMessage.js:3366-3388`: icon `.icon-KP_229_Copies1`, not text) and the per-contact Copy/Confidential-Copy mechanism (`MultipleContact.js:1444-1473`: two bare unlabeled radios per row, first=Copy/second=Confidential) and the real `Done` button. Row-scoping honestly flagged as still best-effort pending one live recording pass; not run live this session (needs `KATCHUP_UI_LIFECYCLE=true` + multi-account UI sessions).
+- **Admin throwaway-member lifecycle built, run, and found to be permanently blocked** — see the correction above; documented precisely rather than left as an open "buildable" item.
+- Minor, lower-priority items noted but not actioned this session: `tests/api/kpost/security/object-authorization.spec.ts` is 100% Group-specific despite its generic name (rename to `group-object-authorization.spec.ts` recommended, not done); `isReadOnlyStatement` is tested with overlapping cases in both `admin-db-safety.spec.ts` and `tests/framework/concurrency.spec.ts` (minor consolidation opportunity); several `contacts-*.spec.ts` UI files each locally redefine an identical `gotoContacts()` helper (DRY opportunity for a future `support/contacts.ts`, not a correctness risk).
+
+Full typecheck + lint clean, framework self-test suite re-run after every change (same 3 pre-existing unrelated failures throughout — concurrency-validator-registration gap already logged in §22).

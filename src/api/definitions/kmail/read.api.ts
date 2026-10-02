@@ -230,10 +230,14 @@ export const postBoxContactsApi = contactRead(
     // CONFIRMED from KMail backend source (2026-10-02, full-repo audit): this route was renamed/
     // deprecated. `CommonMailController.java:223` maps the method as `@PostMapping("unusedpostBoxContacts")`
     // — there is no `postBoxContacts` mapping at all on the live backend; this path is permanently
-    // stale, not a transient 404. Retarget to `/common/unusedpostBoxContacts` (the real live route,
-    // despite its name) or drop this definition — kept as `productionSafe: false` either way so it
-    // never files a false "endpoint missing" bug.
-    note: 'dead route — backend maps this method as "unusedpostBoxContacts", not "postBoxContacts" (confirmed from source, not a transient 404)',
+    // stale, not a transient 404. The real route IS reachable, but attempting to retarget this
+    // definition to it (2026-10-02) found `workbookContract()` throws — `/common/unusedpostBoxContacts/`
+    // is not documented in the Excel-workbook-generated contract either, only the dead
+    // `/common/postBoxContacts/` is. Same external/documentation blocker as KBooking's
+    // bookticket/cancelticket (see kbooking.api.ts) — cannot be defined here until the workbook owner
+    // adds the real path. Kept as `productionSafe: false` so it never files a false "endpoint missing"
+    // bug against a path that can never respond.
+    note: 'dead route (confirmed from source) AND the real route is undocumented in the workbook contract — two separate blockers, not one',
   },
 );
 export const knownPostBoxContactsApi = contactRead(

@@ -26,7 +26,7 @@ cannot drift from what is actually tested.
 | `kword` | 14 | 14 | 0 | built | KOS/KWord — document CRUD; reads live, writes gated (API-only) |
 | `signuplogin` | 12 | 12 | 8 | built | login & session; signup out of scope (OTP-gated) |
 | `group` | 11 | 11 | 0 | built | group membership (FR-K06) |
-| `redbus` | 8 | 5 | 3 | built | KBooking bus search (city/destinations/trips/tripdetails) + blockTicket (gated, KBOOKING_LIFECYCLE); reclassified Category-A 2026-10-02 — frontend-active, confirmed no rzp_test_ payment sandbox exists. bookticket/cancelticket/getTicket/checkBookedTicket are real+active but undocumented in the workbook contract — blocked on the workbook owner, see kbooking.api.ts header |
+| `redbus` | 8 | 5 | 3 | built | KBooking bus search (city/destinations/trips/tripdetails) live-tested; blockTicket WRITTEN but unconditionally skipped pending owner authorization (unconfirmed sandbox, no env flag gates it). Reclassified Category-A 2026-10-02 — frontend-active, confirmed no rzp_test_ payment sandbox exists. bookticket/cancelticket/getTicket/checkBookedTicket are real+active but undocumented in the workbook contract — blocked on the workbook owner, see kbooking.api.ts header |
 | `generalsetting` | 7 | 7 | 2 | built | Settings — theme/font/notifications; reads live, writes gated |
 | `ai` | 4 | 4 | 1 | built | KOS K-AI — sessions read live; generation metered/external |
 | `aws` | 4 | 4 | 3 | built | S3 presigned URLs + attachment check/delete; generators run live |
@@ -116,7 +116,7 @@ cannot drift from what is actually tested.
 
 ## Screens
 
-Covered: **12 / 15** routes.
+Covered: **13 / 15** routes.
 
 | Route | e2e spec | Note |
 | ----- | -------- | ---- |
@@ -127,14 +127,14 @@ Covered: **12 / 15** routes.
 | `/kall` | `kall.spec.ts` | calling |
 | `/kmail` | `kmail.spec.ts` | email |
 | `/userprofile` | `profile.spec.ts` | profile + settings |
-| `/settings` | `settings.spec.ts` | settings workspace |
+| `/settings` | `settings-sections.spec.ts` | settings workspace + section nav |
 | `/kdirectory` | — | out of scope per BRD §4.2 |
 | `/kcloud` | `auxiliary.spec.ts` | smoke (no API) |
 | `/kbooking` | `auxiliary.spec.ts` | smoke (no API) |
 | `/knews` | `auxiliary.spec.ts` | smoke (external RSS) |
 | `/e-commerce` | `auxiliary.spec.ts` | smoke (third-party) |
 | `/kdoc` | — | KOS "Coming Soon" today |
-| `/usermanagement` | — | admin — needs a business account |
+| `/usermanagement` | `usermanagement.spec.ts` | admin — BUSINESS_S account; also usermanagement-accessibility.spec.ts, usermanagement-security.spec.ts |
 
 ## What "complete" is blocked on
 

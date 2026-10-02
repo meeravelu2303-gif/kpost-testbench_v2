@@ -282,14 +282,14 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/kall/updateKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/kall/updateSenderAndReceiverKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/deleteKatchUpMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `GET` | `/v2/katchup/download/{uuid}` | Katchup | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `GET` | `/v2/katchup/download/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/katchup/downloadAttachment/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/katchup/downloadFromS3/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `GET` | `/v2/katchup/downloadThumbnail/{uuid}` | Katchup | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `GET` | `/v2/katchup/downloadThumbnail/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/forwardKatchupMessageNew` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/forwardKatchupMultipleMsgs` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/forwardMessageBacktrackByMsgID` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/v2/katchup/generateThumbnailUsingUUID` | Katchup | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `POST` | `/v2/katchup/generateThumbnailUsingUUID` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/getBulkMessageInfo/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/katchup/getKatchupMessagesSubject` | Katchup | OFF-LIVE: route not deployed on this test build (confirmed 404 — needs the dev to confirm deployment, not a business-account gap) |
 | `POST` | `/v2/katchup/getMessagesByReferenceMessageList` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -298,7 +298,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `GET` | `/v2/katchup/getSharedMessageDetails/{msgID}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/getSharedMessageInfo/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/markOrUnmarkImportantMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `GET` | `/v2/katchup/mediaStreaming/{uuid}` | Katchup | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `GET` | `/v2/katchup/mediaStreaming/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/recallMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/reportAbuse` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/saveKatchupMessages/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -332,13 +332,13 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/testkmail/v2/draft/deleteDraftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/testkmail/v2/draft/draftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/testkmail/v2/draft/draftMailMultiPart` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `GET` | `/testkmail/v2/readMail/download/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `GET` | `/testkmail/v2/readMail/download/{uuid}` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/testkmail/v2/readMail/downloadODAttachment` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `GET` | `/testkmail/v2/readMail/downloadThumbnail/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `GET` | `/testkmail/v2/readMail/downloadThumbnail/{uuid}` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/testkmail/v2/readMail/draftMailContent` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/testkmail/v2/readMail/getCopiesInfo/{kmailID}` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/testkmail/v2/readMail/getKmailDetailsUsingKmailID` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `GET` | `/testkmail/v2/readMail/mediaStreaming/{uuid}` | KMail | OFF-LIVE: needs a real uploaded attachment (S3 file upload) — the one file-upload gap |
+| `GET` | `/testkmail/v2/readMail/mediaStreaming/{uuid}` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/testkmail/v2/readMail/referenceMailContent/` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/testkmail/v2/readMail/sentAndInboxMailContent/` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/testkmail/v2/sentMail/bulkMail/status/{fromAddress}` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -368,7 +368,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/signupLogin/setAccessCode` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/signupLogin/signup/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/redbus/blockTicket/{kpostId}` | other | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/redbus/blockTicket/{kpostId}` | other | OFF-LIVE (WRITTEN, execution blocked): no env flag actually gates this (KBOOKING_LIFECYCLE is referenced only in comments) — unconditionally test.skip'd pending explicit owner authorization, not driven by any lifecycle flow |
 | `POST` | `/redbus/tripdetails/` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/dashboard/homeDashboardNewMsgs` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/profile/changePassword` | Profile | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |

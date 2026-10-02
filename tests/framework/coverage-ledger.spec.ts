@@ -89,7 +89,7 @@ const MODULE_SCOPE: Record<string, Scope> = {
   },
   redbus: {
     status: 'built',
-    note: 'KBooking bus search (city/destinations/trips/tripdetails) + blockTicket (gated, KBOOKING_LIFECYCLE); reclassified Category-A 2026-10-02 — frontend-active, confirmed no rzp_test_ payment sandbox exists. bookticket/cancelticket/getTicket/checkBookedTicket are real+active but undocumented in the workbook contract — blocked on the workbook owner, see kbooking.api.ts header',
+    note: 'KBooking bus search (city/destinations/trips/tripdetails) live-tested; blockTicket WRITTEN but unconditionally skipped pending owner authorization (unconfirmed sandbox, no env flag gates it). Reclassified Category-A 2026-10-02 — frontend-active, confirmed no rzp_test_ payment sandbox exists. bookticket/cancelticket/getTicket/checkBookedTicket are real+active but undocumented in the workbook contract — blocked on the workbook owner, see kbooking.api.ts header',
   },
   ecommerce: { status: 'out-of-scope', note: 'third-party commerce; confirm scope with owner' },
   metadee: { status: 'out-of-scope', note: 'third-party; confirm scope with owner' },
@@ -107,14 +107,18 @@ const SCREENS: Array<{ route: string; spec: string | null; note: string }> = [
   { route: '/kall', spec: 'kall.spec.ts', note: 'calling' },
   { route: '/kmail', spec: 'kmail.spec.ts', note: 'email' },
   { route: '/userprofile', spec: 'profile.spec.ts', note: 'profile + settings' },
-  { route: '/settings', spec: 'settings.spec.ts', note: 'settings workspace' },
+  { route: '/settings', spec: 'settings-sections.spec.ts', note: 'settings workspace + section nav' },
   { route: '/kdirectory', spec: null, note: 'out of scope per BRD §4.2' },
   { route: '/kcloud', spec: 'auxiliary.spec.ts', note: 'smoke (no API)' },
   { route: '/kbooking', spec: 'auxiliary.spec.ts', note: 'smoke (no API)' },
   { route: '/knews', spec: 'auxiliary.spec.ts', note: 'smoke (external RSS)' },
   { route: '/e-commerce', spec: 'auxiliary.spec.ts', note: 'smoke (third-party)' },
   { route: '/kdoc', spec: null, note: 'KOS "Coming Soon" today' },
-  { route: '/usermanagement', spec: null, note: 'admin — needs a business account' },
+  {
+    route: '/usermanagement',
+    spec: 'usermanagement.spec.ts',
+    note: 'admin — BUSINESS_S account; also usermanagement-accessibility.spec.ts, usermanagement-security.spec.ts',
+  },
 ];
 
 test.describe('coverage ledger @framework', () => {

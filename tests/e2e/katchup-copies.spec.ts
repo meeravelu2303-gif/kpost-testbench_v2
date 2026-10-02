@@ -18,9 +18,20 @@ import { deleteSentMessage, gotoKatchup, openComposer } from './support/katchup'
  *
  * Gated behind `KATCHUP_UI_LIFECYCLE=true`, self-cleaning (account 1 deletes its message).
  *
- * FIRST-RUN NOTE: the composer's add-a-Copy / add-a-Confidential-Copy recipient picker is a nested
- * control (`copiesMemberMessage` {reveal, hidden}) that needs one live recording pass — `addCopy()`
- * below is best-effort. The multi-account VERIFY (who can see whom) is the validated security logic.
+ * FIRST-RUN NOTE: `addCopy()`'s trigger is now source-confirmed, not guessed — the test-file
+ * classification audit (2026-10-02) flagged the original `getByText(/^Copy$/i)` as targeting the
+ * wrong UI paradigm (this screen uses icon controls, not text buttons), matching the already-tracked
+ * "Katchup Copies selectors unverified" gap. Traced `WriteMessage.js:3366-3388`: the single trigger
+ * is the icon `.icon-KP_229_Copies1`, which opens ONE shared `MultipleContact`/Copies modal for both
+ * visible and confidential copies — there is no separate "Confidential Copy" trigger icon. Inside
+ * that modal (`MultipleContact.js:1444-1473`), each contact row renders two bare, unlabeled
+ * `<input type="radio" name="copiesRadio {index}">` elements sharing one radio group per row — the
+ * FIRST is "Copy" (`handleCopiesRadioButtonClick`), the SECOND is "Confidential Copy"
+ * (`handleCCRadioButtonClick`); confirmed submitted via a real `Done` button
+ * (`className="Done-button"`, `label={t("Done")}`) at `MultipleContact.js:1957-1982`. The row-scoping
+ * below (finding the two radios nearest the contact's own text) is still best-effort pending one live
+ * recording pass to confirm the exact DOM nesting; the trigger and Done-button fixes are source-exact.
+ * The multi-account VERIFY (who can see whom) is the validated security logic and was already correct.
  */
 
 const CONFIG_OK =
@@ -53,19 +64,15 @@ test.describe(
      * (`confidential: true`). Best-effort — the exact picker selectors need one recording pass.
      */
     async function addCopy(page: Page, kpostId: string, confidential: boolean): Promise<void> {
-      const trigger = confidential ? /Confidential Copy/i : /^Copy$/i;
+      // Single shared trigger for both Copy and Confidential Copy — WriteMessage.js:3366-3388.
+      await page.locator('.icon-KP_229_Copies1').first().click().catch(() => undefined);
+      // Each contact row has 2 bare radios sharing one group: [0] = Copy, [1] = Confidential Copy
+      // (MultipleContact.js:1444-1473). Row-scoping is best-effort pending a live recording pass.
+      const row = page.locator('div').filter({ hasText: kpostId }).last();
+      const radios = row.locator('input[type="radio"]');
+      await radios.nth(confidential ? 1 : 0).click().catch(() => undefined);
       await page
-        .getByText(trigger)
-        .first()
-        .click()
-        .catch(() => undefined);
-      await page
-        .getByText(kpostId)
-        .first()
-        .click()
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: /Add|Done|OK|Select/i })
+        .getByRole('button', { name: /Done/i })
         .first()
         .click()
         .catch(() => undefined);

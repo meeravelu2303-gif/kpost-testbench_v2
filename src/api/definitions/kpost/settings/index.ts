@@ -9,7 +9,7 @@ import { settingsWriteApis } from './write.api';
  *   read.api.ts   getPersonalize, getAllNotification            (run on live)
  *   write.api.ts  font, theme, katchup/kmail/kall notifications (gated lifecycle, self-restoring)
  *
- * Undocumented (no FR ids). The `/settings` screen is exercised by `tests/e2e/settings.spec.ts`.
+ * Undocumented (no FR ids). The `/settings` screen is exercised by `tests/e2e/settings-sections.spec.ts`.
  */
 export const settingsApis: EndpointDefinition[] = [...settingsReadApis, ...settingsWriteApis];
 
