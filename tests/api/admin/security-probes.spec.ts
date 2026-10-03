@@ -121,4 +121,78 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
       )
       .toBe(false);
   });
+
+  /*
+   * 0d, extended to every other company-scoped `productionSafe` read in the module. The single
+   * `admin-department-by-company` probe above already found and filed a real CRITICAL finding
+   * (0d/0c combined); this is that exact proven pattern, parameterized — not new design — across
+   * every endpoint whose request shape takes `companyId` the same way, per the 2026-10-03
+   * ground-truth re-audit's top recommendation. `ids` cover every shape companyId appears in:
+   * JSON body (most), a path param, and a query param.
+   */
+  const CROSS_TENANT_CANDIDATES: Array<{
+    id: string;
+    extra?: Record<string, unknown>;
+    shape: 'body' | 'pathParams' | 'queryParams';
+  }> = [
+    { id: 'admin-employee-details', shape: 'body' },
+    { id: 'admin-hr-tier-attribute-by-company', shape: 'body' },
+    { id: 'admin-hr-tier-variable-list', shape: 'body', extra: { parentVariableId: 0 } },
+    { id: 'admin-role-posting-by-company', shape: 'body' },
+    { id: 'admin-role-posting-employees', shape: 'body' },
+    { id: 'admin-attribute-by-company', shape: 'body' },
+    { id: 'admin-variable-list', shape: 'body', extra: { parentVariableId: 0 } },
+    { id: 'admin-hr-tier-extra-by-company', shape: 'body' },
+    { id: 'admin-hr-variable-extra-list', shape: 'body', extra: { parentVariableId: 0 } },
+    { id: 'admin-workplace-tier-attribute-by-company', shape: 'body' },
+    { id: 'admin-workplace-tier-variable-list', shape: 'body', extra: { parentVariableId: 0 } },
+    { id: 'admin-workplace-location-all', shape: 'body' },
+    { id: 'admin-product-master-list', shape: 'pathParams' },
+    { id: 'admin-product-purchase-by-company', shape: 'queryParams' },
+  ];
+
+  for (const candidate of CROSS_TENANT_CANDIDATES) {
+    test(`0d (extended): BUSINESS_M's token cannot read BUSINESS_S's company data via ${candidate.id}`, async ({
+      endpoints,
+    }) => {
+      const otherCompanyId = '1034'; // QA_BUSINESS_S_COMPANY_ID — a DIFFERENT bench-owned tenant
+      const params = { companyId: otherCompanyId, ...candidate.extra };
+      const ex = await endpoints.sendTo(
+        candidate.id,
+        { [candidate.shape]: params },
+        { label: `admin:0d-extended:${candidate.id}`, auth: { principal: businessM! }, allowLiveRead: true },
+      );
+
+      let returnedOtherCompanyData = false;
+      if (ex.status < 300) {
+        try {
+          const parsed = JSON.parse(ex.bodyText || '{}') as { value?: unknown[]; data?: unknown[] };
+          const rows = parsed.value ?? parsed.data ?? [];
+          returnedOtherCompanyData = Array.isArray(rows) ? rows.length > 0 : Boolean(rows);
+        } catch {
+          returnedOtherCompanyData = false;
+        }
+      }
+
+      if (returnedOtherCompanyData) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: candidate.id,
+          ruleId: `IDOR-admin-cross-company-tenant-${candidate.id}`,
+          rule:
+            'An Admin endpoint must scope company-scoped data by the CALLER\'S OWN companyId (from ' +
+            `their token), not by whatever companyId the request names — a BUSINESS_M-authenticated ` +
+            'caller must not be able to read BUSINESS_S\'s company data by naming company 1034.',
+          expected: 'company 1034\'s data is refused or empty to a company-242-authenticated caller',
+          actual: `${candidate.id}(companyId=1034) answered ${ex.status} with non-empty data to a BUSINESS_M (company 242) token`,
+          request: { [candidate.shape]: params },
+        });
+      }
+      expect
+        .soft(
+          returnedOtherCompanyData,
+          `0d (${candidate.id}): BUSINESS_M's token must not read BUSINESS_S's (company 1034) data`,
+        )
+        .toBe(false);
+    });
+  }
 });

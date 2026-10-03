@@ -20,14 +20,24 @@ import { expect, test } from '@fixtures';
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 
 /**
- * The caller's editable profile fields, from `getUserProfileUsingKpostID`. The about/designation/
- * education records live under `data.userProfile` (not the flat `fetchUserDetails` response), so the
- * read-backs use this endpoint.
+ * The caller's editable profile fields. The about/designation/education records live under
+ * `data.userProfile` (not the flat `fetchUserDetails` response).
+ *
+ * Uses `profile-get-user-profile` (the caller's own profile, no id needed) rather than
+ * `profile-user-profile-by-kpostid` with `testData.kpostId` — that endpoint's own definition
+ * documents the primary QA account as broken on it (previously 404 "No user found", now a 500
+ * "Unable to fetch user details" — confirmed live 2026-10-02). Every write-lifecycle test in this
+ * file authenticates as the primary account, so a read-back against it 500ed every time, silently:
+ * `mine` was always `undefined`, `expect.soft` reported it (easy to miss in a long soft-assertion
+ * list), and — critically — the cleanup delete never ran, since it's gated on `mine` existing. That
+ * left real orphaned records on the shared QA account across every past run of this file (confirmed:
+ * ~18 stray "other activity" rows alone). `profile-get-user-profile` returns the identical
+ * `userProfile` shape for the caller's own account and has no such defect.
  */
 async function fetchProfile(endpoints: EndpointExecutor): Promise<Record<string, unknown>> {
   const exchange = await endpoints.sendTo(
-    'profile-user-profile-by-kpostid',
-    { body: { kpostID: testData.kpostId } },
+    'profile-get-user-profile',
+    {},
     { label: 'profile:fetch', auth: { principal: A } },
   );
   const parsed = exchange.json();
@@ -345,35 +355,96 @@ test.describe('KPost Profile · write lifecycle', () => {
     }
   });
 
-  test('profile-save-experience / profile-delete-experience: no live test (QA_COMPANY_NAME is not configured)', () => {
+  test('experience and other-activity records can each be saved and then deleted @api @profile', async ({
+    endpoints,
+  }) => {
     /*
-     * experienceDetails[].companyName matches the qa-identifier-guard's resource-identifier
-     * pattern (same as kmail-sig-company/kmail-add-od-contact this session) and is a hard-required
-     * IDENTITY_FIELD (src/config/test-data.config.ts) — the schema default is deliberately NOT
-     * allowed to stand in for it on live. Only QA_COMPANY_NAME_ABSENT is set in .env today (for
-     * negative testing); QA_COMPANY_NAME itself needs a real, owner-confirmed company name before
-     * this can be exercised live. Not worked around by inventing a value.
+     * Both were previously recorded gaps:
+     *  - experience: `companyName` matches the qa-identifier-guard's resource-identifier pattern and
+     *    is a hard-required IDENTITY_FIELD, so a schema default could not stand in for it on live.
+     *    `QA_COMPANY_NAME` is now configured (`.env`, "Nebius Solutions"), which resolves that.
+     *  - other-activity: there was no delete endpoint to clean up with — `profile-delete-other-activity`
+     *    was added this session (`defineUndocumentedProfileEndpoint`, confirmed live), closing it.
+     * Mirrors the school/university test above: a unique marker per run, saved → read back → deleted.
      */
-    test.skip(
-      !process.env.QA_COMPANY_NAME,
-      'set QA_COMPANY_NAME in .env to a real, owner-confirmed company name to unblock this',
-    );
-    expect(true, 'placeholder — once configured, write the real save/read-back/delete flow').toBe(
-      true,
-    );
-  });
+    test.skip(!process.env.QA_COMPANY_NAME, 'set QA_COMPANY_NAME to a real company name to unblock this');
 
-  test('profile-save-other-activity: no live test (no delete endpoint exists — would permanently pollute the account)', () => {
-    test.skip(
-      true,
-      'saveOrUpdateOtherActivity is registered but there is no matching delete endpoint anywhere ' +
-        'in the module (unlike college/school/university/experience, which all have one). Saving a ' +
-        'real record live would leave it on the shared QA account forever, with no way to clean it ' +
-        "up — the same class of bug already found and fixed once this session (KMail's saluation/" +
-        'instant-reply leak). Not worked around by testing it anyway; recorded pending either a ' +
-        'delete endpoint being added or the dev confirming a safe way to remove a test record.',
-    );
-    expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
+    const marker = Date.now();
+    const records: Array<{
+      saveId: string;
+      saveLabel: string;
+      saveBody: Record<string, unknown>;
+      listKeys: string[];
+      nameField: string;
+      nameValue: string;
+      idField: string;
+      deleteId: string;
+      deleteLabel: string;
+    }> = [
+      {
+        saveId: 'profile-save-experience',
+        saveLabel: 'save-experience',
+        saveBody: {
+          experienceDetails: [
+            {
+              experienceID: '',
+              companyName: testData.companyName,
+              designation: `QA Bench ${marker}`,
+              fromYear: '2020',
+            },
+          ],
+        },
+        listKeys: ['experienceDetailsAsJson', 'experienceDetails'],
+        nameField: 'designation',
+        nameValue: `QA Bench ${marker}`,
+        idField: 'experienceID',
+        deleteId: 'profile-delete-experience',
+        deleteLabel: 'delete-experience',
+      },
+      {
+        saveId: 'profile-save-other-activity',
+        saveLabel: 'save-other-activity',
+        saveBody: {
+          otherActivities: [
+            { activityID: '', title: `QA Bench ${marker}`, achievements: 'QA bench activity' },
+          ],
+        },
+        listKeys: ['otherActivitiesAsJson', 'otherActivities'],
+        nameField: 'title',
+        nameValue: `QA Bench ${marker}`,
+        idField: 'activityID',
+        deleteId: 'profile-delete-other-activity',
+        deleteLabel: 'delete-other-activity',
+      },
+    ];
+
+    for (const rec of records) {
+      const saved = await write(endpoints, rec.saveId, rec.saveBody, rec.saveLabel);
+      expect.soft(saved, `${rec.saveLabel} accepted`).toBeLessThan(300);
+
+      const profile = await fetchProfile(endpoints);
+      let list: Array<Record<string, unknown>> = [];
+      for (const key of rec.listKeys) {
+        const candidate = profile[key];
+        if (Array.isArray(candidate)) {
+          list = candidate as Array<Record<string, unknown>>;
+          break;
+        }
+      }
+      const mine = list.find((entry) => entry[rec.nameField] === rec.nameValue);
+      expect.soft(mine, `${rec.saveLabel} appears in the profile read-back`).toBeTruthy();
+
+      const recordId = mine?.[rec.idField];
+      if (typeof recordId === 'string' && recordId) {
+        const deleted = await write(
+          endpoints,
+          rec.deleteId,
+          { [rec.idField]: recordId },
+          rec.deleteLabel,
+        );
+        expect.soft(deleted, `${rec.deleteLabel} accepted`).toBeLessThan(300);
+      }
+    }
   });
 
   test('convertBase64ToImage accepts a data URI @api @profile', async ({ endpoints }) => {

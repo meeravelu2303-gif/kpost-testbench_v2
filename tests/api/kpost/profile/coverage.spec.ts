@@ -12,6 +12,9 @@ test.describe('KPost Profile · module coverage', () => {
 
   test('every definition matches the generated contract @framework', () => {
     for (const api of profileApis) {
+      // Deliberate exception: confirmed real from the live frontend, not the workbook — see
+      // `defineUndocumentedKpostEndpoint`'s own doc comment. Nothing to cross-check against.
+      if ((api.tags ?? []).includes('undocumented-contract')) continue;
       const documented = api.contractPath ?? api.path;
       // `contractMethod` where the live verb differs from the documented one (fetchUserDetails,
       // isDevicePrimaryOrNot): the schema still comes from the documented method+path row.

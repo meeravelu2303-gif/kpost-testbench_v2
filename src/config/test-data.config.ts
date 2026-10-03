@@ -80,6 +80,20 @@ const schema = z.object({
   signupMobile: z.string().min(6).default('9000000777'),
 
   /**
+   * A SEPARATE reserved identity for BUSINESS registration (`signup-login-admin-registration`) on the
+   * disposable test DB — kept apart from `signupKpostId`/`signupMobile` (PERSONAL) for the same
+   * "never race for the same is-it-taken answer" reason as every other reserved signup identity above.
+   * `adminRegistration` creates a whole company/tenant, not just an account, so it also needs its own
+   * company name and unique name — reusing `signupBusinessCompanyName`/`signupBusinessUniqueName`
+   * (the UI lifecycle's own reserved values) would let an API run and the UI run race for the same
+   * company. On a fresh/reset test DB this registers; on a re-run it is "already exists" — both valid.
+   */
+  businessSignupKpostId: z.string().min(3).default('qabenchapibiz@kpostindia.com'),
+  businessSignupMobile: z.string().min(6).default('9000000793'),
+  businessSignupCompanyName: z.string().min(3).default('QA Bench API Business Co'),
+  businessSignupUniqueName: z.string().min(2).default('qabenchapibiz'),
+
+  /**
    * A SEPARATE reserved identity for the UI-driven signup (`tests/e2e/signup-login-lifecycle.spec.ts`).
    *
    * `signupKpostId`'s default domain (`@kpost.in`) is the legacy domain the API layer already
@@ -214,6 +228,10 @@ const SOURCES = {
   kpostIdAbsent: 'QA_KPOST_ID_ABSENT',
   signupKpostId: 'QA_SIGNUP_KPOST_ID',
   signupMobile: 'QA_SIGNUP_MOBILE',
+  businessSignupKpostId: 'QA_BUSINESS_SIGNUP_KPOST_ID',
+  businessSignupMobile: 'QA_BUSINESS_SIGNUP_MOBILE',
+  businessSignupCompanyName: 'QA_BUSINESS_SIGNUP_COMPANY_NAME',
+  businessSignupUniqueName: 'QA_BUSINESS_SIGNUP_UNIQUE_NAME',
   signupUiKpostIdLocal: 'QA_SIGNUP_UI_KPOST_ID_LOCAL',
   signupUiMobile: 'QA_SIGNUP_UI_MOBILE',
   signupMobileViewportUiKpostIdLocal: 'QA_SIGNUP_MOBILE_VIEWPORT_UI_KPOST_ID_LOCAL',

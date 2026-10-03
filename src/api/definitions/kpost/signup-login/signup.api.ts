@@ -62,7 +62,10 @@ export const signupApi = defineKpostEndpoint({
 
 export const signupGetApi = defineKpostEndpoint({
   id: 'signup-login-signup-get',
-  // A GET on the signup path — answers 405; harmless, and pins a stale Sheet3 row.
+  // A GET on the signup path — answers 405; harmless, and pins a stale Sheet3 row. Never reached the
+  // central engine until this module's signup tag was swept (2026-10-03), which is why this wasn't
+  // declared before: expectedStatus defaults to [200], so an undeclared 405 read as a false failure.
+  expectedStatus: [405],
   productionSafe: true,
   requirements: ['FR-SL-001'],
   method: 'GET',
@@ -87,13 +90,13 @@ export const adminRegistrationApi = defineKpostEndpoint({
   destructive: true,
   sideEffect: 'global',
   request: body(() => ({
-    kpostID: testData.signupKpostId,
-    companyName: testData.companyNameAbsent,
+    kpostID: testData.businessSignupKpostId,
+    companyName: testData.businessSignupCompanyName,
     entity: 'Vegetable Shop',
-    uniqueName: 'qabenchsignup',
+    uniqueName: testData.businessSignupUniqueName,
     firstName: 'QA',
     lastName: 'Bench',
-    mobileNumber: testData.signupMobile,
+    mobileNumber: testData.businessSignupMobile,
     otherEmail: testData.otpEmail,
     password: testData.password,
     gender: 'female',

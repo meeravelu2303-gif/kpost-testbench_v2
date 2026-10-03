@@ -37,15 +37,23 @@ export const messagesSubjectApi = defineKatchupEndpoint({
   id: 'katchup-messages-subject',
   requirements: ['FR-KU-003'],
   method: 'GET',
-  path: '/v2/katchup/getKatchupMessagesSubject',
-  summary: "Subjects of the caller's Katchup conversations",
+  path: '/v2/katchup/getKatchupMessagesSubject/{id}',
+  // The workbook documents the bare path with no id; the real live client always appends one (see
+  // below). contractPath keeps the workbook-contract check honest about what's actually documented.
+  contractPath: '/v2/katchup/getKatchupMessagesSubject',
+  summary: 'Subject suggestions for a conversation with a given contact or group',
   tags: [...READ_TAGS, 'subject', 'needs-id'],
-  // On testingapi this route answers 404 "No matching endpoint for this request" — the gateway does
-  // not route it on this build. Not run standalone (a 404 would read as a false CRITICAL); confirm
-  // with the dev whether it is deployed on the test env. The Subject differentiator (BR-K01) is
-  // otherwise proven by the Katchup feature flow.
   destructive: false,
-  note: 'testingapi answers 404 "No matching endpoint" — confirm the route is deployed on the test build',
+  /*
+   * Found 2026-10-03: the previously-recorded 404 was this bench calling the wrong shape, not an
+   * undeployed route. The live client (`Katchup.js:1703` `GetSubjectSuggestion(id)`, called from all
+   * three `WriteMessage.js` variants) ALWAYS appends a path-param id —
+   * `selectedContact.group ? selectedContact.groupKpostID : selectedContact.contactID` — this
+   * definition previously sent no id at all. `testData.victimKpostId` is the individual-contact
+   * shape; a group id would need a real groupKpostID this account belongs to.
+   */
+  request: pathParams(() => ({ id: testData.victimKpostId })),
+  note: 'needs a real contact or group id — see the live-client evidence above',
 });
 
 export const frequentContactsApi = defineKatchupEndpoint({
@@ -162,6 +170,10 @@ export const allReportMsgApi = defineKatchupEndpoint({
 export const readStatusGroupApi = defineKatchupEndpoint({
   id: 'katchup-read-status-group',
   requirements: ['FR-K07'],
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live — the one
+  // sibling in this file missing this line (found 2026-10-03), silently invisible to the generic
+  // sweep on a flag-less production run alongside the genuine writes.
+  destructive: false,
   method: 'POST',
   path: '/v2/katchup/getReadStatusGroupMessage/',
   summary: 'Per-recipient read receipts for a group message',

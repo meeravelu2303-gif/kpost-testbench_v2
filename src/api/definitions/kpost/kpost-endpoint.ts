@@ -155,6 +155,81 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
   };
 }
 
+/**
+ * Declares a real KPost endpoint the Excel workbook does NOT document — confirmed instead by
+ * reading the live frontend's own call site.
+ *
+ * ## Why this exists (2026-10-02 scope rebuild, "cover all frontend-integrated endpoints")
+ *
+ * `defineKpostEndpoint` always calls `workbookContract()`, which throws for any path the generated
+ * `openapi/kpost-api.openapi.json` doesn't list — the right default, since a hand-typed path with no
+ * contract behind it would validate against nothing and silently report success. But that default
+ * also means a GENUINELY REAL, frontend-active endpoint stays permanently untestable until the
+ * workbook owner documents it, even when this bench already knows the exact method, path, and
+ * payload shape from the live React source. The owner's decision takes time this effort can't wait
+ * on — and in the meantime the endpoint sits completely uncovered.
+ *
+ * So this is the deliberate exception: SAME safety contract, different source of truth. Instead of
+ * the workbook, the schema comes from `requestSchema` (required here, never optional) and the
+ * evidence trail comes from `evidence` (required) — a `file:line` citation of the real frontend call
+ * site this was measured from, so a reviewer can verify the shape independently rather than trust an
+ * assertion. No contract, no guess: every field in `requestSchema` must trace to a real `fetch()`/
+ * `axios` call this bench's own trace confirmed, the same standard `defineKpostEndpoint` payloads
+ * already hold themselves to (test data from `testData`, never the frontend's literal example).
+ *
+ * `responseSchema` is deliberately left undefined (no workbook sample exists to validate against) —
+ * response-shape checks skip with that reason, same as any endpoint with an undocumented response.
+ * Use `workbookContract` once it's updated; this function is a bridge, not a replacement for it.
+ */
+export interface UndocumentedKpostEndpointConfig
+  extends Omit<KpostEndpointConfig, 'requestSchema' | 'contractPath' | 'contractMethod'> {
+  /**
+   * The payload's real shape, in full — there is no workbook schema to fall back on. Omit ONLY when
+   * the real frontend call genuinely sends no body/params at all (confirmed from the same call site
+   * named in `evidence`, not assumed) — never omit it just because deriving the schema is more work.
+   */
+  requestSchema?: ContractSchema;
+  /**
+   * Where this was confirmed in the live frontend source — e.g. `"Setting.js:345-371, caller
+   * Login.js:1282"`. Required so every undocumented endpoint carries an audit trail, not a guess.
+   */
+  evidence: string;
+}
+
+export function defineUndocumentedKpostEndpoint(
+  config: UndocumentedKpostEndpointConfig,
+): EndpointDefinition {
+  return {
+    id: config.id,
+    method: config.method,
+    path: config.path,
+    suite: 'kpost-api',
+    responseContract: 'kpost',
+    summary: config.summary,
+    note: `UNDOCUMENTED IN WORKBOOK — confirmed from frontend source (${config.evidence}). ${config.note ?? ''}`.trim(),
+    tags: ['kpost-api', 'undocumented-contract', ...(config.tags ?? [])],
+    requirements: config.requirements,
+    authentication: config.authentication ?? { required: false },
+    expectedStatus: config.expectedStatus,
+    envelope: config.envelope,
+    contentType: config.contentType,
+    request: config.request,
+    requestSchema: config.requestSchema,
+    responseSchema: undefined,
+    destructive: config.destructive,
+    sideEffect: config.sideEffect,
+    productionSafe: config.productionSafe,
+    otpDependent: config.otpDependent,
+    validations: config.validations,
+    skipValidators: config.skipValidators,
+    businessRules: config.businessRules,
+    database: config.database,
+    concurrency: config.concurrency,
+    security: config.security,
+    performance: config.performance,
+  };
+}
+
 /** A request factory for an endpoint that takes a JSON body. */
 export const body =
   (payload: () => Record<string, unknown>): RequestFactory =>

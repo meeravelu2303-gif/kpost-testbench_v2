@@ -738,3 +738,43 @@ Dispatched 6 parallel background agents to classify every file under `tests/` (~
 - Minor, lower-priority items noted but not actioned this session: `tests/api/kpost/security/object-authorization.spec.ts` is 100% Group-specific despite its generic name (rename to `group-object-authorization.spec.ts` recommended, not done); `isReadOnlyStatement` is tested with overlapping cases in both `admin-db-safety.spec.ts` and `tests/framework/concurrency.spec.ts` (minor consolidation opportunity); several `contacts-*.spec.ts` UI files each locally redefine an identical `gotoContacts()` helper (DRY opportunity for a future `support/contacts.ts`, not a correctness risk).
 
 Full typecheck + lint clean, framework self-test suite re-run after every change (same 3 pre-existing unrelated failures throughout — concurrency-validator-registration gap already logged in §22).
+
+## 27. Full frontend-integration re-trace (2026-10-02) — "how many endpoints does the frontend actually call?"
+
+Prompted by a direct question: had this session actually verified the frontend-call count, or just trusted the existing 391-endpoint registry? Answer: not yet, for most of the app — only KBooking/TAWallet/Admin had been freshly re-traced this session. Dispatched 3 parallel agents to exhaustively trace every exported function across all 20 real `Services/*.js` files (KNews already solid from an earlier session, excluded), each cross-referenced against the actual registry — not just re-deriving what was already known.
+
+**Result: 6 more genuine, confirmed-real, frontend-active endpoints found missing from the registry**, all independently verified by direct source reads before trusting the agent reports (one agent's claimed HTTP method for `GetAllKWordDocs` was wrong — GET, not POST — caught by checking the raw `fetch()` call directly):
+
+- `/v2/profile/getUserProfile/` (GET) — **the single most load-bearing one found**: called immediately after every login (`Login.js:1282`), 17 total call sites.
+- `/v2/group/getGroupDetailsUsingGroupKpostID/{groupKpostID}` (GET) — 7 call sites across `App.js`, Home, 3 Katchup UI variants, Kmail.
+- `/v2/profile/deleteOtherActivity` (POST) — the one missing sibling among an otherwise-complete delete-record family.
+- `/kword/documentsType` (GET), `/kword/changeDocumentAccess` (POST), `/kword/updateJobId` (POST) — all real, called KOS endpoints.
+
+All 6 hit the exact same wall as KBooking/TAWallet before them: **confirmed absent from the Excel workbook contract**, so `workbookContract()` refuses to let them be defined until the workbook owner documents them. Added to `BLOCKED_ENDPOINTS.md` (46→53) with full evidence rather than left unrecorded.
+
+**One structurally different finding**: `getKloudUsedData` IS in the workbook, but documented under the `kpost-api` contract while the real call goes to a different host (`kmail5.kpostindia.com`) and is absent from the separate `kmail-api` contract — neither endpoint-definition helper can cleanly model it as currently architected. Needs either a workbook correction or a cross-suite endpoint mechanism this bench doesn't have.
+
+**One possible existing-defect finding, not yet live-verified**: the already-registered `kos-delete-doc` tests `GET /kword/delete?docId=` (the only form the workbook documents), but the real frontend always sends `POST /kword/delete` with a JSON body. Either the GET form is a still-working legacy path (meaning the REAL delete flow is completely untested) or it no longer works at all (meaning the existing test may be passing against dead code). Blocked on investigating live, which itself is blocked on reopened `#499` (`kos-create-doc` doesn't return a usable `docId`).
+
+**Two newly-noticed third-party integrations** (not KPost endpoints, informational only): a pdf2html conversion microservice (`DocumentConversion.js`, same category as the known Docling integration) and a KAD annotation-counts service (`api.annotations.katbook.com`, its own host and auth scheme).
+
+**Updated true scope**: 391 registered + 7 previously-found-undocumented (KBooking bookticket family + TAWallet) + 6 newly-found-undocumented + 1 cross-suite-mismatched = **405 confirmed real KPost backend endpoints the frontend actually calls**, of which 391 are registered in the bench and 14 are blocked purely on the workbook/contract side (zero of which are the bench's own fault).
+
+## 28. Built 6 of the 14 workbook-undocumented endpoints anyway (2026-10-02) — "take it from the frontend, don't wait on the workbook"
+
+Explicit direction: don't leave genuinely frontend-integrated endpoints blocked just because the workbook hasn't caught up — if the real payload is known from the frontend source, build and test it anyway, and file any root-cause issue found as a Bugzilla bug.
+
+**Built a new definition path**: `defineUndocumentedKpostEndpoint()` (`kpost-endpoint.ts`), parallel to `defineKpostEndpoint` but sourcing the schema from a required `requestSchema` field instead of `workbookContract()`, plus a mandatory `evidence` field (a `file:line` citation of the real frontend call site) so every one of these carries an audit trail instead of an assertion. Tagged `undocumented-contract` so it's visible in every report. Added matching per-module wrappers (`defineUndocumentedProfileEndpoint`, `defineUndocumentedGroupEndpoint`, `defineUndocumentedKosEndpoint`) and fixed the 4 places that would have wrongly flagged these as "phantom coverage" (`coverage-ledger.spec.ts`'s global self-test, plus the profile/group/kos module-level `coverage.spec.ts` contract-checks) — all now explicitly skip anything tagged `undocumented-contract` rather than silently breaking.
+
+**Built 6 of the 14**, matching real, measured frontend payloads exactly (every field traced to a real call site, same discipline `defineKpostEndpoint` payloads already hold themselves to — no literal frontend example values, `testData` only):
+- `profile-get-user-profile` (`GET /v2/profile/getUserProfile/`) — **confirmed live, 200, 17/17 applicable checks passed.** The single most load-bearing untested endpoint in the app is now tested.
+- `profile-delete-other-activity` (`POST /v2/profile/deleteOtherActivity`) — registered, gated behind the existing profile write lifecycle (matches its 4 siblings).
+- `group-details-by-id` (`GET /v2/group/getGroupDetailsUsingGroupKpostID/{groupKpostID}`) — registered, needs a real `groupKpostID` (needs-id, exercised by lifecycle).
+- `kos-documents-type` (`GET /kword/documentsType`) — **confirmed live, and found a real defect** (below).
+- `kos-change-document-access` / `kos-update-job-id` (`POST /kword/changeDocumentAccess`, `POST /kword/updateJobId`) — registered, gated behind `KOS_LIFECYCLE` like their siblings.
+
+**Immediate result — a genuine, previously-invisible CRITICAL defect found on the first live run**: `kos-documents-type` (the endpoint the real app actually uses to list KWord documents) answers **HTTP 500** on a normal, correctly-authenticated call — `{"data":"Error while fetching documents","urlPath":"/kword/documents","status":"FAILURE","statusCode":500}`. The bench had been testing the WRONG, workbook-documented path (`/kword/documents/`, `kos-list-documents`) this whole time, which merely 404s — a relatively benign "not deployed" signal that masked the fact that the endpoint real users actually hit is **completely broken**. Reproduced 4/4 times in the same run. Duplicate-checked clean (`scripts/bugzilla-duplicate-check.cjs`, no matches). **Not yet filed** — the automated filing pipeline was refused by this session's own safety classifier ("External System Writes") when attempted via Playwright; same standing block already reported for the earlier 4-candidate batch, awaiting the user's direction on how to proceed with actual Bugzilla writes.
+
+**Remaining 8 of the 14** not yet built this session (lower-priority given the one concrete win above, or needing more design — `getKloudUsedData`'s cross-suite-host issue needs its own mechanism, not just a schema): KBooking's `bookticket`/`cancelticket`/`getTicket`/`checkBookedTicket` (4, payment-adjacent, same authorization caution as `blockTicket`), TAWallet's `createHash`/`fetchTransactionDetailsByOrderId`/`paymentRequest1` (3, confirmed safe, straightforward to build the same way), `getKloudUsedData` (1, cross-suite).
+
+Framework self-test suite re-run after every change — same 3 pre-existing unrelated failures throughout, no regressions introduced.

@@ -178,3 +178,89 @@ test.describe('KPost Contacts · relationship workflow @api @kpost-api @contacts
       .catch(() => undefined);
   });
 });
+
+/**
+ * Blocking — its own describe (not chained to the add/delete lifecycle above) so it's unaffected by
+ * that suite's ordering and always starts from "the contact exists, unblocked."
+ *
+ * Same silent-failure shape as delete: `blockOrUnBlockContact` answers SUCCESS whatever it did to the
+ * row, so the flag — not the response — is the only honest judge (the sibling describe's own
+ * docstring already flags this exact gap: "Block reports success and leaves is_blocked = 0").
+ */
+test.describe('KPost Contacts · block @api @kpost-api @contacts @database', () => {
+  const accounts = requireAll('primary', 'counterparty');
+  test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
+
+  const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
+  const them = (): string => (accounts.ok ? (accounts.accounts[1]?.kpostId ?? '') : '');
+
+  test('blocking sets is_blocked, unblocking clears it, their row survives', async ({
+    endpoints,
+    databases,
+  }) => {
+    const database = databases.for('kpost-api');
+    test.skip(!database.enabled, 'needs the KPOST_QA connection');
+
+    // Ensure the contact exists first — this describe doesn't depend on the add/delete suite's state.
+    await endpoints
+      .sendTo(
+        'contacts-add',
+        { body: contactShape({ contactID: them() }) },
+        { label: 'contacts-workflow:block-setup-add', allowLiveWrite: true },
+      )
+      .catch(() => undefined);
+
+    const repo = new KpostRepository(database);
+    const theirRowBefore = await repo.contact(them(), me());
+
+    const block = await endpoints.sendTo(
+      'contacts-block',
+      { body: { contactID: them(), isBlocked: true } },
+      { label: 'contacts-workflow:block', allowLiveWrite: true },
+    );
+    const blockEnvelope = block.json();
+    const blockStatus = blockEnvelope.ok
+      ? ((blockEnvelope.value as { statusCode?: number }).statusCode ?? block.status)
+      : block.status;
+    expect.soft(
+      blockStatus,
+      `block reported failure (body: ${block.bodyText.slice(0, 160)})`,
+    ).toBeLessThan(300);
+
+    const blocked = await repo.contact(me(), them());
+    const blockedCheck = kpostDb.isBlocked(blocked, true);
+    expect
+      .soft(blockedCheck.status, `${blockedCheck.name}: got ${String(blockedCheck.actual)}`)
+      .toBe('PASSED');
+
+    const theirsAfterBlock = await repo.contact(them(), me());
+    if (theirRowBefore && theirsAfterBlock) {
+      expect
+        .soft(
+          Number(theirsAfterBlock.is_blocked ?? 0),
+          'blocking them in MY book must not block me in THEIRS',
+        )
+        .toBe(Number(theirRowBefore.is_blocked ?? 0));
+    }
+
+    const unblock = await endpoints.sendTo(
+      'contacts-block',
+      { body: { contactID: them(), isBlocked: false } },
+      { label: 'contacts-workflow:unblock', allowLiveWrite: true },
+    );
+    const unblockEnvelope = unblock.json();
+    const unblockStatus = unblockEnvelope.ok
+      ? ((unblockEnvelope.value as { statusCode?: number }).statusCode ?? unblock.status)
+      : unblock.status;
+    expect.soft(
+      unblockStatus,
+      `unblock reported failure (body: ${unblock.bodyText.slice(0, 160)})`,
+    ).toBeLessThan(300);
+
+    const unblocked = await repo.contact(me(), them());
+    const unblockedCheck = kpostDb.isBlocked(unblocked, false);
+    expect
+      .soft(unblockedCheck.status, `${unblockedCheck.name}: got ${String(unblockedCheck.actual)}`)
+      .toBe('PASSED');
+  });
+});

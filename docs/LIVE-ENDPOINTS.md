@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **135** |
-| Blocked | 256 |
-| Total registered | 391 |
+| **Runs on live** | **137** |
+| Blocked | 260 |
+| Total registered | 397 |
 
 ---
 
-## Runs on live — 135
+## Runs on live — 137
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -124,6 +124,7 @@ reviewer can check against the comment beside it.
 | `GET` | `/testkmail/v2/sentMail/loadOtherDomainMails/` | KMail |
 | `POST` | `/testkmail/v2/translator/translation/` | KMail |
 | `GET` | `/ai/sessions` | KOS |
+| `GET` | `/kword/documentsType` | KOS |
 | `POST` | `/v2/signupLogin/fetchUserDetails/` | Login & session |
 | `GET` | `/v2/signupLogin/getActiveSession` | Login & session |
 | `POST` | `/v2/signupLogin/getLoginHistory` | Login & session |
@@ -147,6 +148,7 @@ reviewer can check against the comment beside it.
 | `GET` | `/v2/profile/getlanguages/` | Profile |
 | `GET` | `/v2/profile/getSignatureImage` | Profile |
 | `POST` | `/v2/profile/getUserBasicDetailsUsingKpostID` | Profile |
+| `GET` | `/v2/profile/getUserProfile/` | Profile |
 | `POST` | `/v2/profile/getUserProfileUsingKpostID/` | Profile |
 | `GET` | `/v2/profile/isDevicePrimaryOrNot/` | Profile |
 | `GET` | `/generalSetting/getAllNotification` | Settings |
@@ -161,7 +163,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 256
+## Blocked on live — 260
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -263,6 +265,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `GET` | `/v2/group/downloadGroupFullProfileImage/{groupKpostID}/{kpostID}` | Group | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID}` | Group | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/group/editGroupName` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/v2/group/getGroupDetailsUsingGroupKpostID/{groupKpostID}` | Group | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/group/leaveFromGroup/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/group/removeGroupMember/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/group/removeGroupProfileImage` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -348,6 +351,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/ai/chatResponse` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/ai/messageAssist` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/ai/messages/{sessionId}` | KOS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/kword/changeDocumentAccess` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kword/create` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/kword/delete` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kword/deleteHeading` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -362,6 +366,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/kword/saveContent` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kword/share` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kword/update` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kword/updateJobId` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | Login & session | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/signupLogin/adminRegistration/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `POST` | `/v2/signupLogin/generateJWTokens/` | Login & session | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -376,6 +381,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/profile/deactivateAccount/` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `POST` | `/v2/profile/deleteCollegeDetail` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/profile/deleteExperienceDetail` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/profile/deleteOtherActivity` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/profile/deleteSchoolDetail` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/profile/deleteUniversityDetail` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/profile/forgotPasswordOrKpostID/` | Profile | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |

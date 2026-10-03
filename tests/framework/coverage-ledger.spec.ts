@@ -259,10 +259,18 @@ test.describe('coverage ledger @framework', () => {
     expect([...unclassified], 'add these module prefixes to MODULE_SCOPE with a scope').toEqual([]);
     // No phantom coverage: every registered non-fixture endpoint's documented path (its
     // `contractPath` when the live path was corrected, else its path) is in a contract.
+    //
+    // Deliberate exception: `undocumented-contract`-tagged endpoints (2026-10-02 scope rebuild —
+    // "cover all frontend-integrated endpoints") are confirmed real from the live frontend source
+    // but genuinely absent from the workbook — see `defineUndocumentedKpostEndpoint`'s own doc
+    // comment. These are an intentional, evidence-backed exception to "the workbook is the only
+    // source of truth", not an accidental phantom; excluding them here is the point of that helper
+    // existing, not a loophole.
     const documentedPaths = new Set(documented.map((d) => d.path));
     const phantom = apiRegistry
       .all()
       .filter((d: EndpointDefinition) => !d.mockFixture)
+      .filter((d: EndpointDefinition) => !(d.tags ?? []).includes('undocumented-contract'))
       .map((d: EndpointDefinition) => d.contractPath ?? d.path)
       .filter((p: string) => !documentedPaths.has(p) && !p.includes('{'));
     expect(phantom, 'registered endpoints whose documented path is in no contract').toEqual([]);

@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
+import { z } from 'zod';
 import { body } from '../kpost-endpoint';
-import { defineProfileEndpoint } from './profile-endpoint';
+import { defineProfileEndpoint, defineUndocumentedProfileEndpoint } from './profile-endpoint';
 
 /**
  * Profile **writes** — updates to the caller's own profile: about, designation, basic and contact
@@ -199,6 +200,26 @@ export const deleteExperienceApi = deleteRecord(
   'experienceID',
 );
 
+/**
+ * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. Every
+ * sibling delete (college/school/university/experience, above) is documented and registered; this
+ * one was simply never added to the workbook at all. Real caller: `OtherActivities.js:74-79`
+ * (`DeleteOtherActivity(activityID)` → `{activityID}`), via `Setting.js#OtherActivityList`.
+ */
+export const deleteOtherActivityApi = defineUndocumentedProfileEndpoint({
+  id: 'profile-delete-other-activity',
+  method: 'POST',
+  path: '/v2/profile/deleteOtherActivity',
+  summary: 'Delete an other-activity record',
+  tags: [...WRITE_TAGS, 'education', 'needs-record-id'],
+  evidence: 'Setting.js:490-516 (OtherActivityList), caller OtherActivities.js:74-79',
+  destructive: true,
+  sideEffect: 'data',
+  requestSchema: z.object({ activityID: z.string() }),
+  request: body(() => ({ activityID: '00000000-0000-4000-8000-000000000000' })),
+  note: 'needs a real activityID',
+});
+
 export const profileWriteApis = [
   updateAboutApi,
   updateDesignationApi,
@@ -215,4 +236,5 @@ export const profileWriteApis = [
   deleteSchoolApi,
   deleteUniversityApi,
   deleteExperienceApi,
+  deleteOtherActivityApi,
 ];

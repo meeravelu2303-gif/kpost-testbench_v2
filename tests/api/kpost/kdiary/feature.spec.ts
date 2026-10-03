@@ -78,17 +78,35 @@ test.describe('KPost KDiary · feature flow', () => {
 
   test('every diary write, end to end (create → update → participants → remarks → reports → delete) @api @kdiary', async ({
     endpoints,
+    databases,
   }) => {
+    const database = databases.for('kpost-api');
     try {
+      const createTitle = `QA Bench ${Date.now()}`;
       const created = await write(
         endpoints,
         'kdiary-create-event',
-        scheduleShape(),
+        scheduleShape({ title: createTitle }),
         'create-event',
       );
       expect.soft(created.status, 'createEvent is accepted').toBeLessThan(300);
       const eventID = extractId(created.body);
       expect.soft(eventID, 'createEvent issues an eventID').toBeTruthy();
+
+      // Database coverage was previously 0/14 for this module — the endpoint answering 200 is not
+      // proof a row exists, same reasoning as every other module's "answers success regardless" gap.
+      if (eventID && database.enabled) {
+        const row = await database.findOne<{ event_id: number; title: string }>({
+          table: 'TBL_KPOST_KDIARY_SCHEDULE',
+          where: { event_id: eventID },
+        });
+        expect
+          .soft(row, 'createEvent actually wrote a row to TBL_KPOST_KDIARY_SCHEDULE')
+          .toBeDefined();
+        // title is a blob/mediumtext holding plain text here; no decoding needed, unlike
+        // Katchup's BLOB subject column.
+        expect.soft(row?.title, 'the stored title matches what was sent').toBe(createTitle);
+      }
 
       // createSchedule — the sibling create (frontend-unused).
       const sched = await write(
@@ -156,6 +174,18 @@ test.describe('KPost KDiary · feature flow', () => {
           )
           .toBe('Completed by QA');
 
+        // Same fact, confirmed at the database row directly rather than through the API's own
+        // read-back — a cross-check that the API's answer and the table it reads from agree.
+        if (database.enabled) {
+          const remarksRow = await database.findOne<{ remarks: number; remarks_description: string }>(
+            { table: 'TBL_KPOST_KDIARY_SCHEDULE', where: { event_id: eventID } },
+          );
+          expect.soft(remarksRow?.remarks, 'DB: remarks code matches the API read-back').toBe(1);
+          expect
+            .soft(remarksRow?.remarks_description, 'DB: remarks description matches the API read-back')
+            .toBe('Completed by QA');
+        }
+
         /*
          * `editReport` needs the REPORT's own id (not eventID) — read it back from `getTodayReport`
          * so this works whether the `save-report` step above just created it or "already exists for
@@ -180,6 +210,31 @@ test.describe('KPost KDiary · feature flow', () => {
             'edit-report',
           );
           expect.soft(edited.status, 'edit-report status').toBeLessThan(300);
+        }
+
+        /*
+         * deleteEvent — the other half of this module's 0/14 database coverage. Deleted explicitly
+         * here (not left to the sweep below) so the row's actual post-delete state can be checked:
+         * `delete_by_sender` has a tinyint column on this table, so this treats it the same way as
+         * every other soft-delete flag in this bench — a response answering success is not proof.
+         */
+        const deleted = await write(endpoints, 'kdiary-delete-event', { eventID }, 'delete-event');
+        expect.soft(deleted.status, 'deleteEvent is accepted').toBeLessThan(300);
+        if (database.enabled) {
+          const afterDelete = await database.findOne<{ delete_by_sender: number | null }>({
+            table: 'TBL_KPOST_KDIARY_SCHEDULE',
+            where: { event_id: eventID },
+          });
+          // Either shape counts as deleted: a hard delete (row gone) or a soft delete (flag set) —
+          // what must NOT happen is the row surviving with the flag still clear, which is the
+          // "reports success, changed nothing" failure mode this bench keeps finding elsewhere.
+          const reallyDeleted = !afterDelete || Number(afterDelete.delete_by_sender ?? 0) === 1;
+          expect
+            .soft(
+              reallyDeleted,
+              `deleteEvent actually removed or flagged the row (delete_by_sender: ${afterDelete?.delete_by_sender ?? '(row gone)'})`,
+            )
+            .toBe(true);
         }
       }
     } finally {

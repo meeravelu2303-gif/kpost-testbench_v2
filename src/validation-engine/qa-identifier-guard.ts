@@ -304,6 +304,14 @@ function qaOwnedValues(): Set<string> {
     testData.signupKpostId,
     testData.signupMobile,
     /*
+     * The reserved BUSINESS registration identity (`signup-login-admin-registration`) — same reason
+     * as the PERSONAL one above, plus the company/unique name the registration mints alongside it.
+     */
+    testData.businessSignupKpostId,
+    testData.businessSignupMobile,
+    testData.businessSignupCompanyName,
+    testData.businessSignupUniqueName,
+    /*
      * The reserved OTP DESTINATIONS — the mail and mobile half of the same registration identity.
      *
      * Allowlisted for the reason above rather than by exempting the `otherEmail` / `email` keys:

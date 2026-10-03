@@ -79,8 +79,20 @@ neighbor; every endpoint in a category was individually checked against that cat
 | `taWallet/fetchTransactionDetailsByOrderId` | POST | TAWallet | same — confirmed-active, SAFE (read-only lookup) — same missing-contract blocker | same | TEMPORARY — needs the workbook owner to add this path |
 | `taWallet/paymentRequest1` | POST | TAWallet | settlement callback; safe to probe for spoofing/validation (no signature re-check visible), not safe for real settlement — same missing-contract blocker applies first | same | TEMPORARY — needs the workbook owner to add this path |
 | `/common/postBoxContacts/` (documented path) | POST | KMail | the documented path is a dead/renamed route (`unusedpostBoxContacts` is the real one) **and** the real route is itself undocumented in the workbook | `CommonMailController.java:223`, contract search | TEMPORARY — two stacked blockers, both external (dead doc + undocumented real route) |
+| `/kmail5/v2/kmailData/getKloudUsedData` | GET | KMail (cross-suite) | real, confirmed-active (`GetKlouDUsedDataList`, caller `DataStorage.js:64`) — IS present in the workbook, but documented under the `kpost-api` contract while the real call goes to a **different host** (`kmail5.kpostindia.com`), and is absent from the separate `kmail-api` contract entirely. Neither `defineKpostEndpoint` (wrong host) nor `defineKmailEndpoint` (path not in that suite's contract) can cleanly model this as currently architected | `Setting.js:1010-1038`, frontend trace 2026-10-02; both `openapi/kpost-api.openapi.json` and `openapi/kmail-api.openapi.json` checked directly | TEMPORARY — needs either the workbook corrected to the right suite, or a cross-suite endpoint mechanism this bench doesn't have yet |
 
-**Total: 46.**
+**6 rows removed 2026-10-02** (`getUserProfile`, `deleteOtherActivity`, `getGroupDetailsUsingGroupKpostID`, `documentsType`, `changeDocumentAccess`, `updateJobId`) — no longer blocked at all. Per explicit direction ("take the payload from the frontend, cover it anyway, don't wait on the workbook"), built a new `defineUndocumentedKpostEndpoint()` definition path that uses the frontend-measured payload shape directly instead of the workbook contract, with a mandatory `evidence` citation on every use. See `TEST_BENCH_100_PERCENT_PLAN.md` §28 for the full build and what it immediately found.
+
+**Total: 47.**
+
+### A genuine existing-definition defect found by this trace (not a new blocked endpoint — a possible false-confidence risk in an ALREADY-registered one)
+
+`kos-delete-doc` (`write.api.ts`) is modeled as `GET /kword/delete?docId={docId}`, matching the workbook's only documented form. But the real, live frontend client (`KOS.js:115-141`, `DeleteDocument(body)`, callers `KWord.js:4339`, `KPresenter.js:4419`) **always sends `POST /kword/delete` with a JSON body `{docId}`** — never the GET+query form the bench tests. This means either (a) the GET form is a legacy/parallel path that still works server-side, in which case the bench's existing test is validating a path real users never take while the actual delete flow is completely untested, or (b) the GET form no longer works at all server-side, in which case the existing test may be silently failing or passing against dead code. **Not yet live-verified** — KOS's own write lifecycle is separately blocked on reopened `#499` (`kos-create-doc` doesn't return a `docId`), so testing the real POST form requires that to be fixed first (or a throwaway docId obtained another way). Flagged as a priority investigation item, not fixed this session.
+
+### Third-party integrations newly noticed (not KPost endpoints — informational, not added to the 53 above)
+
+- **pdf2html conversion service** (`DocumentConversion.js`, default `http://192.168.0.38:8989/v2/pdf2html/convert`, overridable via `REACT_APP_PDF_TO_HTML_URL`) — real, live caller (`DocumentPreviewModal.jsx:306`, the "Convert to KAD" button). A separate third-party/internal microservice, same category as the already-known Docling integration, but never previously noticed by this bench at all.
+- **KAD annotation counts** (`KAD.js#GetKADCounts`, `https://api.annotations.katbook.com/api/v1/counts/book/{docID}`, header `x-app-key: d9e74b06`) — real, live caller (`KADDocument.js:380`). A wholly separate third-party host with its own auth scheme, not a KPost API endpoint.
 
 ---
 

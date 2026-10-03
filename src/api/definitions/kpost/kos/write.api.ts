@@ -1,6 +1,7 @@
+import { z } from 'zod';
 import { testData } from '@config/test-data.config';
 import { body, pathParams } from '../kpost-endpoint';
-import { defineKosEndpoint } from './kos-endpoint';
+import { defineKosEndpoint, defineUndocumentedKosEndpoint } from './kos-endpoint';
 
 /**
  * KOS **writes** — KWord document CRUD (create / save / update / delete, headings, share, join,
@@ -128,7 +129,48 @@ export const deleteDocApi = defineKosEndpoint({
   tags: [...WRITE_TAGS, 'critical', 'kword'],
   destructive: true,
   request: () => ({ query: { docId: '' } }),
-  note: 'a GET with a docId query param; needs a real docId',
+  // CAUTION (2026-10-02 frontend trace): the real client (KWord.js:4339, KPresenter.js:4419) always
+  // sends POST /kword/delete with a JSON body {docId} — NEVER this GET+query form, which is only what
+  // the workbook documents. Not yet live-verified which form (if either) the backend still honors;
+  // flagged in BLOCKED_ENDPOINTS.md as a priority investigation, blocked on #499 providing a real
+  // docId to test against. Left unchanged pending that live check — do not assume this form is wrong.
+  note: 'a GET with a docId query param; needs a real docId — see BLOCKED_ENDPOINTS.md for a GET-vs-POST discrepancy found 2026-10-02, not yet resolved',
+});
+
+/**
+ * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. Real
+ * caller: `KADDocument.js:710` (`ChangeDocumentAccess({docId, kpostId, role})`), changing a
+ * collaborator's role on a shared document.
+ */
+export const changeDocumentAccessApi = defineUndocumentedKosEndpoint({
+  id: 'kos-change-document-access',
+  method: 'POST',
+  path: '/kword/changeDocumentAccess',
+  summary: "Change a collaborator's access role on a KWord document",
+  tags: [...WRITE_TAGS, 'kword', 'share'],
+  evidence: 'KOS.js:325-356 (ChangeDocumentAccess); caller KADDocument.js:710',
+  destructive: true,
+  requestSchema: z.object({ docId: z.number(), kpostId: z.string(), role: z.string() }),
+  request: body(() => ({ docId: 0, kpostId: testData.victimKpostId, role: 'editor' })),
+  note: 'needs a real docId; exercised by the lifecycle, shared with our own second account',
+});
+
+/**
+ * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. Links a
+ * Docling-converted PDF's job id to a KWord document. Real callers: `KWord.js:3404` (sets a real
+ * jobId) and `:3444` (clears it with `jobId: null` once the converted HTML is saved).
+ */
+export const updateJobIdApi = defineUndocumentedKosEndpoint({
+  id: 'kos-update-job-id',
+  method: 'POST',
+  path: '/kword/updateJobId',
+  summary: "Link (or clear) a Docling conversion job id on a KWord document",
+  tags: [...WRITE_TAGS, 'kword'],
+  evidence: 'KOS.js:207-233 (UpdateKWordJobId); callers KWord.js:3404 (set), :3444 (clear, jobId:null)',
+  destructive: true,
+  requestSchema: z.object({ docId: z.number(), jobId: z.string().nullable() }),
+  request: body(() => ({ docId: 0, jobId: null })),
+  note: 'needs a real docId; exercised by the lifecycle',
 });
 
 export const aiChatApi = defineKosEndpoint({
@@ -177,6 +219,8 @@ export const kosWriteApis = [
   convertToKadApi,
   exitDocApi,
   deleteDocApi,
+  changeDocumentAccessApi,
+  updateJobIdApi,
   aiChatApi,
   aiMessageAssistApi,
 ];

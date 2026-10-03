@@ -240,7 +240,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `kmail-translation`
 
-## KPost API (237 endpoints)
+## KPost API (243 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
@@ -254,8 +254,8 @@ each target exists in the live product, so tickets can never route to a non-exis
 | Contacts Directory V2 | 16 |
 | Kdiary - Schedules, Events & Reports | 14 |
 | Groups V2 | 11 |
+| kpost-webservice-application | 11 |
 | General Settings | 7 |
-| kpost-webservice-application | 5 |
 | Integration - AWS S3 Pre-signed URLs | 4 |
 | Dashboard V2 | 3 |
 | Authentication - Medium & Large Enterprise | 2 |
@@ -538,14 +538,26 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 **kpost-webservice-application**
 
+- `group-details-by-id`
 - `kbooking-available-trips`
 - `kbooking-block-ticket`
 - `kbooking-city-suggestion`
 - `kbooking-destinations`
 - `kbooking-trip-details`
+- `kos-change-document-access`
+- `kos-documents-type`
+- `kos-update-job-id`
+- `profile-delete-other-activity`
+- `profile-get-user-profile`
 
 ## On the catch-all component (review — a built module here is a routing gap)
 
+- kpost-api · group-details-by-id (kpost-api,undocumented-contract,group,group-read,needs-group)
+- kpost-api · kos-documents-type (kpost-api,undocumented-contract,kos,kos-read,kword)
+- kpost-api · kos-change-document-access (kpost-api,undocumented-contract,kos,kos-write,kword,share)
+- kpost-api · kos-update-job-id (kpost-api,undocumented-contract,kos,kos-write,kword)
+- kpost-api · profile-get-user-profile (kpost-api,undocumented-contract,profile,profile-read,pii)
+- kpost-api · profile-delete-other-activity (kpost-api,undocumented-contract,profile,profile-write,education,needs-record-id)
 - kpost-api · kbooking-city-suggestion (kpost-api,kbooking,redbus,kbooking-read)
 - kpost-api · kbooking-destinations (kpost-api,kbooking,redbus,kbooking-read)
 - kpost-api · kbooking-available-trips (kpost-api,kbooking,redbus,kbooking-read)

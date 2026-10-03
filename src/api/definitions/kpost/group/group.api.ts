@@ -1,6 +1,13 @@
 import { testData } from '@config/test-data.config';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
-import { body, defineKpostEndpoint, pathParams, type KpostEndpointConfig } from '../kpost-endpoint';
+import {
+  body,
+  defineKpostEndpoint,
+  defineUndocumentedKpostEndpoint,
+  pathParams,
+  type KpostEndpointConfig,
+  type UndocumentedKpostEndpointConfig,
+} from '../kpost-endpoint';
 
 /**
  * The KPost **Group** module — `/v2/group/*`. Groups are what Katchup group messaging (FR-K06)
@@ -13,6 +20,17 @@ import { body, defineKpostEndpoint, pathParams, type KpostEndpointConfig } from 
  */
 function defineGroupEndpoint(config: KpostEndpointConfig): EndpointDefinition {
   return defineKpostEndpoint({
+    ...config,
+    authentication: config.authentication ?? { required: true },
+    tags: ['group', ...(config.tags ?? [])],
+  });
+}
+
+/** Same as `defineGroupEndpoint`, for a real endpoint the workbook does not document. */
+function defineUndocumentedGroupEndpoint(
+  config: UndocumentedKpostEndpointConfig,
+): EndpointDefinition {
+  return defineUndocumentedKpostEndpoint({
     ...config,
     authentication: config.authentication ?? { required: true },
     tags: ['group', ...(config.tags ?? [])],
@@ -210,6 +228,29 @@ export const downloadGroupFullImageApi = defineGroupEndpoint({
   note: 'needs a real groupKpostID with an image',
 });
 
+/**
+ * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. Heavily
+ * used: 7 real call sites across `App.js`, Home's `RecentMessage.js`/`MainHomePage.js`, all 3
+ * Katchup UI variants, and Kmail's `MessageContainer.js`. Real shape: `Contacts.js:93-98`
+ * (`FetchGroupDetailsByGroupID(groupKpostID)`), a GET with the id in the path, no body.
+ */
+export const groupDetailsByIdApi = defineUndocumentedGroupEndpoint({
+  id: 'group-details-by-id',
+  method: 'GET',
+  path: '/v2/group/getGroupDetailsUsingGroupKpostID/{groupKpostID}',
+  summary: "Fetch a group's details by its groupKpostID",
+  tags: ['group-read', 'needs-group'],
+  evidence:
+    'Contacts.js:93-98 (FetchGroupDetailsByGroupID); callers App.js, RecentMessage.js, ' +
+    'MainHomePage.js, 3 Katchup UI variants, Kmail MessageContainer.js',
+  productionSafe: false,
+  request: pathParams(() => ({ groupKpostID: testData.kpostIdAbsent })),
+  note:
+    'needs a real groupKpostID from a group this account belongs to. Confirmed live 2026-10-02: ' +
+    'the group record comes back under a `known_group` key, not the usual `data` envelope key — ' +
+    'unknown until now since no workbook sample existed to check against (undocumented endpoint).',
+});
+
 export const groupApis = [
   createGroupApi,
   addUserToGroupApi,
@@ -222,4 +263,5 @@ export const groupApis = [
   removeGroupImageApi,
   downloadGroupImageApi,
   downloadGroupFullImageApi,
+  groupDetailsByIdApi,
 ];

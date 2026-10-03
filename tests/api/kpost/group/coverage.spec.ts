@@ -12,6 +12,7 @@ test.describe('KPost Group · module coverage', () => {
 
   test('every definition matches the generated contract @framework', () => {
     for (const api of groupApis) {
+      if ((api.tags ?? []).includes('undocumented-contract')) continue;
       const documented = api.contractPath ?? api.path;
       expect(workbookContract('kpost-api', api.method, documented).path, `${api.id} path`).toBe(
         documented,

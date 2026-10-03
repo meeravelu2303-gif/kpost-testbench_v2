@@ -12,9 +12,9 @@
     {
       "kpostId": "qabenchsignup@kpostindia.com",
       "mobileNumber": "9000000777",
-      "source": "kpost:deep (write-fuzz run)",
-      "note": "caught by before/after DB diff, not a known hand-written signup path",
-      "createdAt": "2026-10-02T12:11:26.245Z"
+      "source": "signup-login-signup",
+      "note": "otp-signup-lifecycle.spec.ts: personal registration",
+      "createdAt": "2026-10-02T18:51:38.580Z"
     },
     {
       "kpostId": "qabenchweb@kpostindia.com",
@@ -127,6 +127,13 @@
       "source": "kpost:deep (write-fuzz run)",
       "note": "caught by before/after DB diff, not a known hand-written signup path",
       "createdAt": "2026-10-02T12:11:26.253Z"
+    },
+    {
+      "kpostId": "qabenchapibiz@kpostindia.com",
+      "mobileNumber": "9000000793",
+      "source": "signup-login-admin-registration",
+      "note": "otp-signup-lifecycle.spec.ts: business (admin) registration",
+      "createdAt": "2026-10-02T18:55:04.320Z"
     }
   ]
 }

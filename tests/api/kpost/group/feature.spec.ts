@@ -79,6 +79,27 @@ async function readAs(
   return { status: ex.status, bodyText: ex.bodyText ?? '' };
 }
 
+/**
+ * `group-details-by-id` (added this session) returns the group record (name, members, image) — the
+ * route that previously didn't exist, which is why `group-edit-name`/`group-add-user` could only be
+ * checked for "answered a status," not for the field they actually changed.
+ */
+async function groupDetails(
+  endpoints: EndpointExecutor,
+  who: Principal,
+  groupKpostID: string,
+): Promise<Record<string, unknown>> {
+  const ex = await endpoints.sendTo(
+    'group-details-by-id',
+    { pathParams: { groupKpostID } },
+    { label: 'group:details-recheck', auth: { principal: who }, allowLiveRead: true },
+  );
+  const parsed = ex.json();
+  const value = (parsed.ok ? parsed.value : {}) as Record<string, unknown>;
+  // The real response wraps the group under `known_group`, not the usual `data` envelope key.
+  return (value.known_group as Record<string, unknown> | undefined) ?? {};
+}
+
 test.describe('KPost Group · feature flow @database', () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
@@ -111,10 +132,6 @@ test.describe('KPost Group · feature flow @database', () => {
             { kpostIDs: [testData.victimKpostId], ids: [0], groupID, hasAdminAccess: 'Y' },
             'admin-access',
           ],
-          // Checked 2026-09-26: no registered group read endpoint exposes the group's name back (no
-          // "get group details" route exists in this module), so this write's field-level effect is
-          // NOT independently verifiable via this API — status is the most this bench can honestly
-          // assert here, not worked around by inventing a check against data that isn't exposed.
           [A, 'group-edit-name', { groupKpostID, groupKpostName: 'QA Bench Renamed' }, 'edit-name'],
           // Downloads keyed by the REAL groupKpostID this flow just created — previously untestable
           // on live (destructive:false, no productionSafe: allowLiveWrite alone cannot unlock a
@@ -180,6 +197,29 @@ test.describe('KPost Group · feature flow @database', () => {
           } else {
             const status = (await as(endpoints, who, id, bodyObj, label)).status;
             expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+
+            /*
+             * Field-level recheck via `group-details-by-id` (added this session — previously no
+             * registered group read exposed the name/members, so `group-add-user`/`group-edit-name`
+             * could only be checked for "answered a status," not for the field each one actually
+             * changed. Soft so a recheck failure doesn't hide a later step's finding.
+             */
+            if (status < 300 && id === 'group-edit-name') {
+              const details = await groupDetails(endpoints, A, groupKpostID);
+              expect
+                .soft(details.groupKpostName, 'group-edit-name actually renamed the group')
+                .toBe('QA Bench Renamed');
+            }
+            if (status < 300 && id === 'group-add-user') {
+              const details = await groupDetails(endpoints, A, groupKpostID);
+              const members = (details.memberDetails ?? []) as Array<Record<string, unknown>>;
+              expect
+                .soft(
+                  Array.isArray(members) && members.some((m) => m.kpostID === C.username),
+                  'group-add-user actually added the member to the group',
+                )
+                .toBe(true);
+            }
           }
         }
       }

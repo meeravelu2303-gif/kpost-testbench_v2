@@ -142,6 +142,18 @@ export const kpostDb = {
     );
   },
 
+  /** The tinyint block flag used by TBL_KPOST_USER_CONTACTS — same shape as `deleteStatus`. */
+  isBlocked(record: JsonObject | undefined, expectedBlocked: boolean): CheckDetail {
+    const raw = record?.is_blocked;
+    const blocked = raw === 1 || raw === true || text(raw) === '1';
+    return detail(
+      expectedBlocked ? 'is_blocked marks the contact blocked' : 'is_blocked is clear',
+      blocked === expectedBlocked,
+      expectedBlocked ? 1 : 0,
+      raw ?? '(missing)',
+    );
+  },
+
   /**
    * Katchup's per-side deletion flags.
    *

@@ -91,10 +91,36 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
     );
     expect.soft(validateMail.status, 'validateMailOTP accepted the real code').toBeLessThan(500);
 
-    // 4. Register the personal account (both OTPs validated). Fresh DB → created; re-run → already-exists.
+    /*
+     * 4. Register the personal account (both OTPs validated). Fresh DB → created; re-run →
+     * already-exists. `sendTo` sends a LITERAL request — it does not run the endpoint's own request
+     * factory — so the body here mirrors `signupApi`'s `request` in signup.api.ts exactly.
+     */
     const signup = await endpoints.sendTo(
       'signup-login-signup',
-      {},
+      {
+        body: {
+          kpostID: testData.signupKpostId,
+          firstName: 'QA',
+          lastName: 'Bench',
+          mobileNumber: testData.signupMobile,
+          createdDate: Date.now(),
+          password: testData.password,
+          gender: 'female',
+          dateOfBirth: '1995-01-01',
+          module: 0,
+          countryCode: '91',
+          email: testData.otpEmail,
+          userProfile: {
+            landLineNumber: '04400000000',
+            referalId: '',
+            pinCode: testData.pinCode,
+            areaName: 'Pazhavanthangal',
+            state: 'Tamil Nadu',
+            city: 'Chennai',
+          },
+        },
+      },
       { label: 'feature:signup:personal' },
     );
     expect
@@ -146,6 +172,153 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
           mobileNumber: String(userRows[0].mobile_number),
           source: 'signup-login-signup',
           note: 'otp-signup-lifecycle.spec.ts: personal registration',
+        });
+      }
+    }
+  });
+
+  test('mobile + mail OTP → business (admin) registration @api', async ({
+    endpoints,
+    databases,
+  }) => {
+    /*
+     * `adminRegistrationApi` creates a whole company/tenant, not just an account (see the `global`
+     * note on `adminRegistrationApi` in signup.api.ts) — a bigger, permanent footprint than the
+     * personal-signup test above, so this stays behind its own explicit opt-in on top of the OTP
+     * gateway gate, same spirit as the forgot-password test's spare-account gate below.
+     */
+    test.skip(
+      process.env.BUSINESS_SIGNUP_LIVE !== 'true',
+      'mints a permanent company/tenant on the test DB; set BUSINESS_SIGNUP_LIVE=true to run it. ' +
+        'Confirmed live 2026-10-02: registers QA Bench API Business Co end to end.',
+    );
+
+    const sendMobile = await endpoints.sendTo(
+      'common-send-otp',
+      {
+        body: {
+          countryID: testData.countryId,
+          mobileNumber: testData.businessSignupMobile,
+          requestType: 'signup',
+        },
+      },
+      { label: 'feature:otp:send-mobile-business' },
+    );
+    expect.soft(sendMobile.status, 'sendOTP accepted').toBeLessThan(500);
+
+    const validateMobile = await endpoints.sendTo(
+      'common-validate-otp',
+      {
+        body: {
+          otp: OTP,
+          countryID: testData.countryId,
+          mobileNumber: testData.businessSignupMobile,
+        },
+      },
+      { label: 'feature:otp:validate-mobile-business' },
+    );
+    expect.soft(validateMobile.status, 'validateOTP accepted the bypass code').toBeLessThan(500);
+
+    // Same mail-OTP mechanics as the personal flow above: the mobile bypass is SMS-only, the mail
+    // channel stores a real code that has to be read back from the disposable test DB.
+    const sendMail = await endpoints.sendTo(
+      'common-send-otp-to-mail',
+      { body: { otherEmail: testData.otpEmail } },
+      { label: 'feature:otp:send-mail-business' },
+    );
+    expect.soft(sendMail.status, 'sendOTPtoMail accepted').toBeLessThan(500);
+
+    const database = databases.for('kpost-api');
+    const mailRows = database.enabled
+      ? await database.findMany<{ id: number; otp: string }>({
+          table: 'TBL_KPOST_EMAIL_OTP_VALIDATION',
+          where: { email: testData.otpEmail },
+        })
+      : [];
+    const mailCode = [...mailRows].sort((a, b) => b.id - a.id)[0]?.otp;
+    expect.soft(mailCode, 'the send minted a mail code to validate').toBeTruthy();
+
+    const validateMail = await endpoints.sendTo(
+      'common-validate-mail-otp',
+      { body: { email: testData.otpEmail, otp: Number(mailCode ?? OTP) } },
+      { label: 'feature:otp:validate-mail-business' },
+    );
+    expect.soft(validateMail.status, 'validateMailOTP accepted the real code').toBeLessThan(500);
+
+    /*
+     * Register the business account + company (both OTPs validated). `sendTo` sends a LITERAL
+     * request, so the body mirrors `adminRegistrationApi`'s own `request` in signup.api.ts exactly.
+     */
+    const signup = await endpoints.sendTo(
+      'signup-login-admin-registration',
+      {
+        body: {
+          kpostID: testData.businessSignupKpostId,
+          companyName: testData.businessSignupCompanyName,
+          entity: 'Vegetable Shop',
+          uniqueName: testData.businessSignupUniqueName,
+          firstName: 'QA',
+          lastName: 'Bench',
+          mobileNumber: testData.businessSignupMobile,
+          otherEmail: testData.otpEmail,
+          password: testData.password,
+          gender: 'female',
+          dateOfBirth: '1995-01-01',
+          countryID: String(testData.countryId),
+          countryCode: '91',
+          language: 'english',
+          userType: 'BUSINESS_M',
+          address1: '39 Chettinad Chamber',
+          address2: 'Dr. Radhakrishnan Salai',
+          country: 'india',
+          state: 'TamilNadu',
+          city: 'Chennai',
+          areaName: 'Mylapore',
+          designation: 'Managing Director',
+          role: '',
+          pinCode: testData.pinCode,
+          referenceName: 'QABENCH',
+        },
+      },
+      { label: 'feature:signup:business' },
+    );
+    expect
+      .soft(signup.status, 'adminRegistration answered (created or already-exists, not a 5xx)')
+      .toBeLessThan(500);
+
+    const exists = await endpoints.sendTo(
+      'signup-login-kpost-id-exist',
+      {
+        body: {
+          kpostID: testData.businessSignupKpostId,
+          firstName: 'QA',
+          lastName: 'Bench',
+          mobileNumber: testData.businessSignupMobile,
+        },
+      },
+      { label: 'feature:signup:verify-registered-business' },
+    );
+    expect
+      .soft(
+        exists.bodyText.toLowerCase(),
+        'after registration the identity is registered (kpostIdExist reports it as taken)',
+      )
+      .toMatch(/already exi/);
+
+    if (database.enabled) {
+      const userRows = await database.findMany<{ kpost_id: string; mobile_number: string | number }>({
+        table: 'TBL_KPOST_USER_MASTER',
+        where: { kpost_id: testData.businessSignupKpostId },
+      });
+      expect
+        .soft(userRows.length, 'the registration wrote a user row to TBL_KPOST_USER_MASTER (API → DB)')
+        .toBeGreaterThan(0);
+      if (userRows[0]) {
+        recordCreatedAccount({
+          kpostId: userRows[0].kpost_id,
+          mobileNumber: String(userRows[0].mobile_number),
+          source: 'signup-login-admin-registration',
+          note: 'otp-signup-lifecycle.spec.ts: business (admin) registration',
         });
       }
     }

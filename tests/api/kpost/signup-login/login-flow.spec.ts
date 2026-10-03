@@ -161,8 +161,9 @@ test.describe('KPost Login · behaviour', () => {
       .toBe(bodyMessage(doesNotExist.body));
   });
 
-  test('a session can be ended without harming the shared session @api @signup-login', async ({
+  test('a session can be ended without harming the shared session @api @signup-login @database', async ({
     endpoints,
+    databases,
   }) => {
     /*
      * Open a NEW session on a device id of our own, then log exactly that one out. The token the
@@ -178,6 +179,15 @@ test.describe('KPost Login · behaviour', () => {
       ownDevice,
     );
     expect(opened.status, 'the throwaway session opens').toBe(200);
+
+    const database = databases.for('kpost-api');
+    if (database.enabled) {
+      const row = await database.findOne<{ device_identity_primary: string }>({
+        table: 'TBL_KPOST_LOGIN_SESSION',
+        where: { kpost_id: testData.kpostId, device_identity_primary: ownDevice },
+      });
+      expect(row, 'the fresh login wrote a row to TBL_KPOST_LOGIN_SESSION').toBeDefined();
+    }
 
     const logout = await endpoints.sendTo(
       'signup-login-user-logout',
@@ -195,6 +205,19 @@ test.describe('KPost Login · behaviour', () => {
       },
     );
     expect(logout.status, 'logout of our own session succeeds').toBeLessThan(400);
+
+    // The endpoint answers success whatever it did to the row — same discipline as every other
+    // "reports success regardless" check in this bench — so the row itself is the judge.
+    if (database.enabled) {
+      const afterLogout = await database.findOne<{ device_identity_primary: string }>({
+        table: 'TBL_KPOST_LOGIN_SESSION',
+        where: { kpost_id: testData.kpostId, device_identity_primary: ownDevice },
+      });
+      expect(
+        afterLogout,
+        'logout actually removed the session row, not just answered success',
+      ).toBeUndefined();
+    }
 
     // The shared session (a different device) is unaffected.
     const shared = await login(endpoints, testData.kpostId, testData.password);

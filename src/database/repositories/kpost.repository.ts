@@ -68,8 +68,28 @@ export interface KatchupMessageRecord extends JsonObject {
   group_flag: number | null;
   deleted_by_sender: number | null;
   deleted_by_receiver: number | null;
+  marked_by_sender: number | boolean | null;
+  marked_by_receiver: number | boolean | null;
+  reference_message_list: string | null;
+  reference_message_id_list: unknown;
+  shared_message_id: number | null;
+  shared_message_details: unknown;
   message_time: Date | string | null;
   server_time: Date | string | null;
+}
+
+/** `TBL_KPOST_KATCHUP_ATTACHMENT` — one row per uploaded attachment, keyed by its S3 uuid. */
+export interface KatchupAttachmentRecord extends JsonObject {
+  uuid: string;
+  kpost_id: string;
+  original_file_name: string | null;
+  s3_file_name: string | null;
+  s3_file_path: string | null;
+  file_size: string | null;
+  s3_thumbnail_file_name: string | null;
+  s3_thumbnail_file_path: string | null;
+  delete_status: number | null;
+  create_date: Date | string | null;
 }
 
 /** `TBL_KPOST_LOGIN_SESSION` — one row per live session; the logout path removes it. */
@@ -136,6 +156,16 @@ export class KpostRepository {
   ): Promise<KatchupMessageRecord | undefined> {
     return this.db.findOne<KatchupMessageRecord>(
       { table: 'TBL_KPOST_KATCHUP_MESSAGES', where: { msg_id: msgId } },
+      correlationId,
+    );
+  }
+
+  katchupAttachment(
+    uuid: string,
+    correlationId?: string,
+  ): Promise<KatchupAttachmentRecord | undefined> {
+    return this.db.findOne<KatchupAttachmentRecord>(
+      { table: 'TBL_KPOST_KATCHUP_ATTACHMENT', where: { uuid } },
       correlationId,
     );
   }

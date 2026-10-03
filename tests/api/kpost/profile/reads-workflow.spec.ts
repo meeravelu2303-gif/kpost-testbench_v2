@@ -25,6 +25,24 @@ test.describe('KPost Profile · plain-read business rules @api @kpost-api @profi
     expect(body.data?.kpostID, 'a real account is resolved from the mobile number').toBeTruthy();
   });
 
+  test('getUserProfile returns the caller\'s own profile @api', async ({ endpoints }) => {
+    /*
+     * `profile-get-user-profile` — undocumented in the workbook, added this session via
+     * `defineUndocumentedProfileEndpoint` (confirmed live). It is the real call the signup/login flow
+     * makes immediately after login (17 call sites per its own evidence comment in read.api.ts), yet
+     * had no test referencing it at all until now — the highest-traffic profile read with the least
+     * attention. A bodyless GET: the only question is whether it resolves to the caller's own account.
+     */
+    const ex = await endpoints.sendTo(
+      'profile-get-user-profile',
+      {},
+      { label: 'profile:get-user-profile', auth: { principal: A } },
+    );
+    expect(ex.status, 'getUserProfile succeeds').toBe(200);
+    const body = JSON.parse(ex.bodyText || '{}') as { data?: { kpostID?: string } };
+    expect(body.data?.kpostID, "the profile returned is the caller's own").toBe(testData.kpostId);
+  });
+
   test("getDigitalCard returns the requested contact's own card", async ({ endpoints }) => {
     const ex = await endpoints.sendTo(
       'profile-digital-card',

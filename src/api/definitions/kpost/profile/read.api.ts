@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { body, pathParams } from '../kpost-endpoint';
-import { defineProfileEndpoint } from './profile-endpoint';
+import { defineProfileEndpoint, defineUndocumentedProfileEndpoint } from './profile-endpoint';
 
 /**
  * Profile **reads** — fetch a profile, search, digital card, languages, device state.
@@ -231,8 +231,35 @@ export const getSignatureImageApi = defineProfileEndpoint({
   expectedStatus: [200, 204, 404],
 });
 
+/**
+ * **UNDOCUMENTED IN THE WORKBOOK** — found via a 2026-10-02 full frontend-integration trace, not the
+ * contract. This is the single most load-bearing profile read in the entire app: called immediately
+ * after every login (`Login.js:1282`, `getUserProfileList(token)`), plus 16 more call sites across
+ * `ProfileWebView.js`, `Settings/{BasicInformation,ContactInformation,Education,Experience,
+ * OtherActivities}.js`, and three Katchup `ProfilePage.js` variants (bubble/classic/components). A
+ * GET with no body at all —
+ * the caller's identity comes from the Bearer token alone (`Setting.js:345-371`).
+ *
+ * Distinct from `fetchUserDetailsApi` (`/v2/profile/fetchUserDetails/`, also workbook-undocumented
+ * historically but now corrected at the source) and `userProfileByKpostIdApi`
+ * (`/v2/profile/getUserProfileUsingKpostID/`, looks up someone ELSE's profile by id) — this is a
+ * third, separate, real endpoint the workbook has simply never listed.
+ */
+export const getUserProfileApi = defineUndocumentedProfileEndpoint({
+  id: 'profile-get-user-profile',
+  method: 'GET',
+  path: '/v2/profile/getUserProfile/',
+  summary: "Fetch the caller's full profile (used immediately after login)",
+  tags: [...READ_TAGS, 'pii'],
+  evidence: 'Setting.js:345-371 (getUserProfileList), caller Login.js:1282 + 16 others',
+  productionSafe: true,
+  // A bodyless GET — nothing to validate beyond what the central engine already checks generically
+  // (auth, headers, response shape). No requestSchema: confirmed no params/body at the real call site.
+});
+
 export const profileReadApis = [
   fetchUserDetailsApi,
+  getUserProfileApi,
   userProfileByKpostIdApi,
   userBasicByKpostIdApi,
   digitalCardApi,

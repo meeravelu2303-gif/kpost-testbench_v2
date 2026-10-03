@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { pathParams } from '../kpost-endpoint';
-import { defineKosEndpoint } from './kos-endpoint';
+import { defineKosEndpoint, defineUndocumentedKosEndpoint } from './kos-endpoint';
 
 /**
  * KOS **reads** — the caller's KWord document list and K-AI sessions run on live; the reads keyed by
@@ -14,11 +14,32 @@ export const listDocumentsApi = defineKosEndpoint({
   id: 'kos-list-documents',
   method: 'GET',
   path: '/kword/documents/',
-  summary: "The caller's KWord documents",
+  summary: "The caller's KWord documents (workbook-documented path — confirmed not the real one, see kos-documents-type)",
   tags: [...READ_TAGS, 'kword', 'needs-id'],
   // testingapi answers 404 "No matching endpoint for this request" — the KWord route is not deployed
-  // on the test build. Not run standalone (a 404 reads as a false CRITICAL); confirm with the dev.
-  note: 'testingapi 404 "No matching endpoint" — KWord route not deployed on the test build',
+  // on the test build. CONFIRMED 2026-10-02 via frontend trace: this path has no caller anywhere in
+  // the real client at all — GetAllKWordDocs (KOS.js:235-263) calls /kword/documentsType instead
+  // (see kos-documents-type below). The 404 may simply be this exact path never having been real.
+  note: 'testingapi 404 "No matching endpoint" — AND confirmed zero frontend callers of this exact path; the real list call is kos-documents-type',
+});
+
+/**
+ * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. This is
+ * the function the real client actually uses to list KWord documents (`listDocumentsApi` above,
+ * `/kword/documents/`, is the workbook's documented-but-dead path). Real callers:
+ * `KOS.js:235-263` (`GetAllKWordDocs(type)`, an OPTIONAL query param — `?type=` only appends when
+ * truthy), used at `KWord.js:2375,2747` and in KPresenter, **always called with no argument at all**
+ * in both real call sites — so the confirmed-real shape is no query string whatsoever, not a guessed
+ * `type` value.
+ */
+export const documentsTypeApi = defineUndocumentedKosEndpoint({
+  id: 'kos-documents-type',
+  method: 'GET',
+  path: '/kword/documentsType',
+  summary: "The caller's KWord documents (the real list call, confirmed no query param)",
+  tags: [...READ_TAGS, 'kword'],
+  evidence: 'KOS.js:235-263 (GetAllKWordDocs); callers KWord.js:2375,2747 — always called with no args',
+  productionSafe: true,
 });
 
 export const aiSessionsApi = defineKosEndpoint({
@@ -86,6 +107,7 @@ export const aiMessagesApi = defineKosEndpoint({
 
 export const kosReadApis = [
   listDocumentsApi,
+  documentsTypeApi,
   aiSessionsApi,
   getDocumentApi,
   presenceApi,

@@ -27,6 +27,19 @@ import { expect, test } from '@fixtures';
  * the JSON unchanged means the user's preference silently reverts on next login — invisible from
  * the response, one column away in the database.
  *
+ * ## Open question found 2026-10-02, not yet resolved
+ *
+ * All three toggles (including Katchup — a pre-existing, previously-passing test, not something this
+ * change introduced) now answer `400 "Invalid request"` for the documented `{enable: 0|1}` body —
+ * confirmed by reverting to the untouched original test before this change and re-running it in
+ * isolation. This CONTRADICTS the bench's own #495 evidence (2026-09-26), which shows the Katchup
+ * toggle answering 2xx and silently failing to persist, not rejecting the request outright. Tried
+ * `enable` as a number, a numeric string, and a real boolean — none changed the result — and no
+ * caller of `generalSetting/*Notification` could be found in the live frontend source to confirm the
+ * real shape. This looks like either a genuine backend regression since 2026-09-26 or a body shape
+ * that was never actually correct, caught by #495 for the wrong reason. Needs live dev input before
+ * concluding either way — left failing honestly rather than guessed into a false pass.
+ *
  * ## Safety
  *
  * Writes only to the caller's own settings row, captures the original value and restores it.
@@ -40,27 +53,19 @@ test.describe('KPost Settings · notification preferences @api @kpost-api @setti
 
   const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
 
-  /** The row as we found it, so the account is left exactly as it started. */
-  let original: { katchup?: unknown; kmail?: unknown } | undefined;
-
   test('the caller has a settings row, keyed by their natural key', async ({ databases }) => {
     const database = databases.for('kpost-api');
     test.skip(!database.enabled, 'needs the KPOST_QA connection');
 
-    const rows = await database.findMany<{
-      kpost_id: string;
-      katchup_notification: unknown;
-      kmail_notification: unknown;
-      modified_date: Date | string | null;
-    }>({ table: 'TBL_KPOST_GENERAL_SETTINGS', where: { kpost_id: me() } });
+    const rows = await database.findMany<{ kpost_id: string }>({
+      table: 'TBL_KPOST_GENERAL_SETTINGS',
+      where: { kpost_id: me() },
+    });
 
     expect(rows, 'TBL_KPOST_GENERAL_SETTINGS holds exactly one row for this account').toHaveLength(
       1,
     );
-    const row = rows[0];
-    expect(row?.kpost_id, 'and it is keyed by the caller').toBe(me());
-
-    original = { katchup: row?.katchup_notification, kmail: row?.kmail_notification };
+    expect(rows[0]?.kpost_id, 'and it is keyed by the caller').toBe(me());
   });
 
   test('the settings read-back reflects the stored row', async ({ endpoints, databases }) => {
@@ -87,84 +92,98 @@ test.describe('KPost Settings · notification preferences @api @kpost-api @setti
     expect(stored, 'the row the API should be reflecting exists').toBeDefined();
     expect(exchange.bodyText.length, 'and the read returns a body').toBeGreaterThan(0);
   });
-
-  /*
-   * Kept LAST in this `mode: 'serial'` describe deliberately: this test asserts a known,
-   * permanently-open regression (#495) — closed FIXED on 2026-09-22 but live-verified again
-   * 2026-09-26 (in the correct full-file execution order, since `original` is captured above by the
-   * FIRST test — a `-g`-filtered run that skips that first test leaves `original` undefined and
-   * produces a false pass) to still reproduce deterministically: the endpoint answers success and
-   * the stored JSON never changes. #495 reopened with this evidence. Playwright's serial mode skips
-   * every later test once any earlier one fails, soft assertions included, so a test asserting a
-   * known-failing regression must run last or it silently prevents "the settings read-back..." above
-   * from ever running (the exact trap found earlier this session in Katchup and Admin) — soft +
-   * explicitly filed as defense in depth on top of the reordering.
-   */
-  test('toggling the Katchup notification preference persists to the settings row', async ({
-    endpoints,
-    databases,
-  }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection');
-
-    const exchange = await endpoints.sendTo(
-      'settings-katchup-notification',
-      { body: { enable: 0 } },
-      { label: 'notifications-workflow:disable', allowLiveWrite: true },
-    );
-
-    /*
-     * The ENVELOPE, not the transport. KPost answers HTTP 200 carrying `statusCode: 500` on
-     * failure, so a transport-only check reads a rejected write as a success — the same mistake
-     * that once reported six accounts created when none were.
-     */
-    const parsed = exchange.json();
-    const envelope = parsed.ok ? (parsed.value as { statusCode?: number }) : {};
-    expect(
-      envelope.statusCode ?? exchange.status,
-      `the toggle reported failure (body: ${exchange.bodyText.slice(0, 160)})`,
-    ).toBeLessThan(300);
-
-    const after = await database.findOne<{ katchup_notification: unknown; modified_date: unknown }>(
-      { table: 'TBL_KPOST_GENERAL_SETTINGS', where: { kpost_id: me() } },
-    );
-
-    expect(after, 'the settings row still exists after the write').toBeDefined();
-    /*
-     * The column is JSON, so its exact shape is the product's business. What is asserted is that
-     * the write CHANGED it — a toggle that reports success and leaves the value identical has not
-     * been applied, and the user's preference will silently revert.
-     */
-    const afterJson = JSON.stringify(after?.katchup_notification ?? null);
-    const beforeJson = JSON.stringify(original?.katchup ?? null);
-    if (afterJson === beforeJson) {
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'settings-katchup-notification',
-        ruleId: 'REGRESSION-katchup-notification-not-persisted',
-        rule: 'katchupNotification must persist the toggled preference to TBL_KPOST_GENERAL_SETTINGS, not just report success.',
-        expected: `a changed value (was ${beforeJson})`,
-        actual: `unchanged: ${afterJson}`,
-        request: { body: { enable: 0 } },
-      });
-    }
-    expect
-      .soft(afterJson, 'the stored Katchup preference changed when the toggle was applied')
-      .not.toBe(beforeJson);
-  });
-
-  test.afterAll(async ({ endpoints }) => {
-    // Restore the preference. Leaving notifications disabled on a shared QA account would quietly
-    // change behaviour for every later run and for anyone using the account by hand.
-    if (!accounts.ok) return;
-    await endpoints
-      .sendTo(
-        'settings-katchup-notification',
-        { body: { enable: 1 } },
-        { label: 'notifications-workflow:restore', allowLiveWrite: true },
-      )
-      .catch(() => undefined);
-  });
 });
+
+/*
+ * One self-contained test per preference field — each captures its OWN "before" value inline and
+ * restores it in its own `afterAll`, rather than sharing mutable state or a `mode:'serial'` ordering
+ * with the others. That used to be a trap: a `mode:'serial'` group stops every later test once one
+ * fails, soft assertions included (the exact mistake found earlier this session in Katchup and
+ * Admin) — so the Katchup regression check (#495, confirmed still broken) silently prevented a new,
+ * untried KMail/Kall check from ever running when it was added in the same serial block. Independent
+ * describes mean a failure in one (expected, known, or newly discovered) never hides the others.
+ */
+for (const field of ['katchup', 'kmail', 'kall'] as const) {
+  const endpointId = `settings-${field}-notification` as const;
+  const column = `${field}_notification` as const;
+
+  test.describe(`KPost Settings · ${field} notification persistence @api @kpost-api @settings @database`, () => {
+    const accounts = requireAll('primary');
+    test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
+    const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
+
+    test(`toggling the ${field} notification preference persists to the settings row`, async ({
+      endpoints,
+      databases,
+    }) => {
+      const database = databases.for('kpost-api');
+      test.skip(!database.enabled, 'needs the KPOST_QA connection');
+
+      const before = await database.findOne<Record<string, unknown>>({
+        table: 'TBL_KPOST_GENERAL_SETTINGS',
+        where: { kpost_id: me() },
+      });
+      expect(before, 'the caller has a settings row before toggling').toBeDefined();
+
+      const exchange = await endpoints.sendTo(
+        endpointId,
+        { body: { enable: 0 } },
+        { label: `notifications-workflow:disable-${field}`, allowLiveWrite: true },
+      );
+      /*
+       * The ENVELOPE, not the transport. KPost answers HTTP 200 carrying `statusCode: 500` on
+       * failure, so a transport-only check reads a rejected write as a success — the same mistake
+       * that once reported six accounts created when none were.
+       */
+      const parsed = exchange.json();
+      const envelope = parsed.ok ? (parsed.value as { statusCode?: number }) : {};
+      expect(
+        envelope.statusCode ?? exchange.status,
+        `the toggle reported failure (body: ${exchange.bodyText.slice(0, 160)})`,
+      ).toBeLessThan(300);
+
+      const after = await database.findOne<Record<string, unknown>>({
+        table: 'TBL_KPOST_GENERAL_SETTINGS',
+        where: { kpost_id: me() },
+      });
+      expect(after, 'the settings row still exists after the write').toBeDefined();
+
+      /*
+       * The column is JSON, so its exact shape is the product's business. What is asserted is that
+       * the write CHANGED it — a toggle that reports success and leaves the value identical has not
+       * been applied, and the user's preference will silently revert.
+       */
+      const afterJson = JSON.stringify(after?.[column] ?? null);
+      const beforeJson = JSON.stringify(before?.[column] ?? null);
+      if (afterJson === beforeJson) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId,
+          ruleId: `REGRESSION-${field}-notification-not-persisted`,
+          rule: `${field}Notification must persist the toggled preference to TBL_KPOST_GENERAL_SETTINGS, not just report success.`,
+          expected: `a changed value (was ${beforeJson})`,
+          actual: `unchanged: ${afterJson}`,
+          request: { body: { enable: 0 } },
+        });
+      }
+      expect
+        .soft(afterJson, `the stored ${field} preference changed when the toggle was applied`)
+        .not.toBe(beforeJson);
+    });
+
+    test.afterAll(async ({ endpoints }) => {
+      // Restore the preference. Leaving notifications disabled on a shared QA account would quietly
+      // change behaviour for every later run and for anyone using the account by hand.
+      if (!accounts.ok) return;
+      await endpoints
+        .sendTo(
+          endpointId,
+          { body: { enable: 1 } },
+          { label: `notifications-workflow:restore-${field}`, allowLiveWrite: true },
+        )
+        .catch(() => undefined);
+    });
+  });
+}
 
 /**
  * A second, unrelated fact the same table proves: settings are per-account, not global.

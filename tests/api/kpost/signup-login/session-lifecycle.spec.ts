@@ -100,10 +100,14 @@ test.describe(
       );
     });
 
-    test('getLoginHistory returns well-shaped rows for the caller only', async ({ endpoints }) => {
+    test('getLoginHistory returns well-shaped rows for the caller only, matching TBL_KPOST_LOGIN_HISTORY', async ({
+      endpoints,
+      databases,
+    }) => {
+      const today = new Date().toISOString().slice(0, 10);
       const ex = await endpoints.sendTo(
         'signup-login-login-history',
-        { body: { selectedDate: new Date().toISOString().slice(0, 10) } },
+        { body: { selectedDate: today } },
         { label: 'session-lifecycle:login-history', auth: { principal: A } },
       );
       expect(ex.status, 'getLoginHistory succeeds').toBe(200);
@@ -115,6 +119,19 @@ test.describe(
           row.kpostID?.toLowerCase(),
           "every history row belongs to the caller's own account, never someone else's",
         ).toBe(testData.kpostId.toLowerCase());
+      }
+
+      // Cross-check against the real table the API reads from, not just the API's own shape.
+      const database = databases.for('kpost-api');
+      if (database.enabled) {
+        const rows = await database.findMany<{ kpost_id: string }>({
+          table: 'TBL_KPOST_LOGIN_HISTORY',
+          where: { kpost_id: testData.kpostId },
+        });
+        expect(
+          rows.length,
+          "the account has at least one real row in TBL_KPOST_LOGIN_HISTORY (today's shared-session logins)",
+        ).toBeGreaterThan(0);
       }
     });
 

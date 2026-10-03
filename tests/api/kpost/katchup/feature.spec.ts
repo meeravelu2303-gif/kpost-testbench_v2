@@ -5,6 +5,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/schemas/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { KpostRepository } from '@database/repositories/kpost.repository';
 import { expect, test } from '@fixtures';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 
@@ -423,7 +424,10 @@ test.describe('KPost Katchup · feature flow', () => {
     await cleanup(endpoints, A, seed.msgID);
   });
 
-  test('save and mark-important act on a message (FR-K18) @api @katchup', async ({ endpoints }) => {
+  test('save and mark-important act on a message (FR-K18) @api @katchup @database', async ({
+    endpoints,
+    databases,
+  }) => {
     const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to save' });
     expect(seed.msgID, 'seed created').toBeTruthy();
 
@@ -434,7 +438,7 @@ test.describe('KPost Katchup · feature flow', () => {
       { body: { groupKpostID: B.username, msgIDs: [seed.msgID], groupFlag: 'false' } },
       { label: 'feature:save', auth: { principal: A }, allowLiveWrite: true },
     );
-    expect.soft(saved.status, 'save accepted').toBeLessThan(300);
+    expect.soft(saved.status, `save accepted (body: ${saved.bodyText?.slice(0, 200)})`).toBeLessThan(300);
 
     const marked = await endpoints.sendTo(
       'katchup-mark-important',
@@ -442,6 +446,23 @@ test.describe('KPost Katchup · feature flow', () => {
       { label: 'feature:mark', auth: { principal: A }, allowLiveWrite: true },
     );
     expect.soft(marked.status, 'mark-important accepted').toBeLessThan(300);
+
+    // Same discipline as recall/delete: the response answers success regardless, so the row is the
+    // judge. TBL_KPOST_KATCHUP_MESSAGES had no registered check for this write before.
+    const database = databases.for('kpost-api');
+    if (database.enabled && seed.msgID) {
+      const row = await new KpostRepository(database).katchupMessage(seed.msgID);
+      const marked_ =
+        row?.marked_by_sender === 1 || row?.marked_by_receiver === 1 ||
+        row?.marked_by_sender === true || row?.marked_by_receiver === true;
+      expect
+        .soft(
+          marked_,
+          `mark-important reported success but neither marked_by_sender nor marked_by_receiver ` +
+            `moved (sender=${String(row?.marked_by_sender)}, receiver=${String(row?.marked_by_receiver)})`,
+        )
+        .toBe(true);
+    }
 
     await cleanup(endpoints, A, seed.msgID);
   });
