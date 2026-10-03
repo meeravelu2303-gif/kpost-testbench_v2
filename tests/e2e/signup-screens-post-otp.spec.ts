@@ -61,7 +61,6 @@ test.describe('KPost signup post-OTP screens — deep UI sweep', { tag: '@ui' },
     signupPage,
   }) => {
     const stop = watchUiHealth(page);
-    const started = Date.now();
 
     await signupPage.goto();
     await signupPage.chooseAccountType('Personal');
@@ -69,6 +68,15 @@ test.describe('KPost signup post-OTP screens — deep UI sweep', { tag: '@ui' },
 
     const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
     test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+    /*
+     * #896 (closed INVALID 2026-10-03): the timer used to start at `goto()`, which folded the entire
+     * page-load + account-type + country/language/domain flow (~10s, confirmed by direct
+     * instrumentation) into what the bug then called "time for the screen to appear after OTP". The
+     * real post-OTP render is under a second. Starting the clock HERE — right before OTP entry, same
+     * boundary the bug's own wording describes ("the screen right after entering the mobile OTP") —
+     * is what the performance budget below should actually be judging.
+     */
+    const started = Date.now();
     const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
     test.skip(otpEntryOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
     const loadMs = Date.now() - started;
@@ -88,7 +96,6 @@ test.describe('KPost signup post-OTP screens — deep UI sweep', { tag: '@ui' },
     signupPage,
   }) => {
     const stop = watchUiHealth(page);
-    const started = Date.now();
 
     await signupPage.goto();
     await signupPage.chooseAccountType('Business');
@@ -108,6 +115,9 @@ test.describe('KPost signup post-OTP screens — deep UI sweep', { tag: '@ui' },
       dobMonth: 'June',
       dobYear: 1995,
     });
+    // Same #896 fix as the Personal test above: time THIS screen's own transition (Continue ->
+    // Company Details rendering), not the whole flow since page load.
+    const started = Date.now();
     await page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
     const loadMs = Date.now() - started;
 

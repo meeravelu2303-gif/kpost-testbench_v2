@@ -344,10 +344,11 @@ function qaOwnedValues(): Set<string> {
     ...allRegisteredKpostIds(),
     /*
      * The BARE (no-domain) form of every `.env`-provided identity value. Splitting an already-owned
-     * `name@domain` on `@` cannot produce a foreign identifier — it is the same account, written the
-     * way the product's own `userLogin` accepts it (BR-SL-3IDS: a bare KPost ID must authenticate the
-     * same account as its full, domain-qualified form). Without this, testing that exact rule trips
-     * the guard on the bare form alone, even though it names nothing the full form didn't already.
+     * `name@domain` on `@` cannot produce a foreign identifier — it is the same account, just written
+     * without its domain. Still allowlisted even though BR-SL-3IDS turned out to be a misreading of
+     * the FRD (bug #949, closed INVALID 2026-10-03): login via the bare form is CORRECTLY rejected,
+     * since the local part is not unique across domains — but the bench still needs to send that exact
+     * bare value to assert the rejection, and it names nothing the full form didn't already.
      */
     ...providedIdentityValues()
       .filter((value) => value.includes('@'))

@@ -246,26 +246,31 @@ test.describe('KPost Login · behaviour', () => {
     expect(shared.status, 'the shared session still logs in').toBe(200);
   });
 
-  test('mobile, bare KPost ID, and the full domain-qualified ID all authenticate the same account (BR-SL-3IDS) @api @signup-login', async ({
+  test('mobile and the full domain-qualified ID log in; the bare KPost ID is correctly rejected (BR-SL-3IDS) @api @signup-login', async ({
     endpoints,
   }) => {
     /*
-     * BR-SL-3IDS (business-rules.md, ⬜ to-do as of 2026-10-02): "mobile, KPost ID, and full
-     * KPost-ID-with-domain all log in [as the same account]". The primary test account's real mobile
-     * number was confirmed directly against TBL_KPOST_USER_MASTER (2026-10-02) — `8122016145` — not
-     * taken from `QA_MOBILE_EXISTS`, which was checked and found to belong to a DIFFERENT account
-     * entirely; using it here would have produced a meaningless mismatch, not a rule violation.
+     * BR-SL-3IDS (business-rules.md): the FRD text this rule was originally transcribed from reads as
+     * if mobile, bare KPost ID, and full domain-qualified ID were three equally valid login
+     * identifiers for the same account. That reading is wrong — confirmed by the developer 2026-10-03
+     * (Bugzilla #949, closed INVALID): a KPost ID's local part (before the `@`) is not unique across
+     * domains, so a bare ID is genuinely ambiguous and login correctly requires either the mobile
+     * number or the full, domain-qualified ID. The bare form must be REJECTED, not accepted.
+     *
+     * The primary test account's real mobile number was confirmed directly against
+     * TBL_KPOST_USER_MASTER (2026-10-02) — `8122016145` — not taken from `QA_MOBILE_EXISTS`, which was
+     * checked and found to belong to a DIFFERENT account entirely; using it here would have produced a
+     * meaningless mismatch, not a rule violation.
      */
     const bareId = testData.kpostId.split('@')[0] ?? testData.kpostId;
     const primaryMobile = '8122016145';
 
-    const forms: Array<[string, string]> = [
+    const validForms: Array<[string, string]> = [
       ['full domain-qualified ID', testData.kpostId],
-      ['bare KPost ID (no domain)', bareId],
       ['mobile number', primaryMobile],
     ];
 
-    for (const [label, identifier] of forms) {
+    for (const [label, identifier] of validForms) {
       const { status, body } = await login(endpoints, identifier, testData.password);
       expect.soft(status, `BR-SL-3IDS: login via ${label} ("${identifier}") must succeed`).toBe(200);
       // Evaluated unconditionally (a non-200 body has no accessToken, so sameAccount() with an empty
@@ -278,5 +283,16 @@ test.describe('KPost Login · behaviour', () => {
         )
         .toBe(true);
     }
+
+    // The bare (no-domain) form is correctly ambiguous across domains and must be refused, not
+    // silently accepted — this is the behavior #949 incorrectly flagged as a defect.
+    const bare = await login(endpoints, bareId, testData.password);
+    expect
+      .soft(
+        bare.status,
+        `BR-SL-3IDS: login via the bare KPost ID ("${bareId}", no domain) must be rejected — ` +
+          `the local part is not unique across domains, so this is correct, not a bug (status ${bare.status})`,
+      )
+      .toBe(401);
   });
 });

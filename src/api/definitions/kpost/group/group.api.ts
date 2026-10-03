@@ -100,6 +100,36 @@ export const removeGroupMemberApi = defineGroupEndpoint({
   note: 'needs a real group id',
 });
 
+/**
+ * **V1 legacy** route — `GroupController.java` (base `group`, no `v2` prefix), still live alongside
+ * the hardened V2 route above. Source-confirmed (`GroupServiceDaoImpl.deleteUserFromGroup`, a raw
+ * `DELETE ... WHERE group_id = :groupId AND kpost_id IN (:kpostID)`) to perform **zero ownership or
+ * membership check**: the controller only requires *some* valid authenticated caller, then deletes
+ * whatever `groupID` + `memberKpostIdList` the request names — it never checks that the caller is an
+ * admin, or even a member, of that group. Tracked as its own endpoint (not reusing `group-remove-
+ * member`, the V2 id) because the two routes have materially different authorization behaviour.
+ */
+export const removeGroupMemberV1LegacyApi = defineUndocumentedGroupEndpoint({
+  id: 'group-remove-member-v1-legacy',
+  method: 'POST',
+  path: '/group/removeGroupMember/',
+  summary: 'V1 legacy remove-member route — source-confirmed zero ownership/membership check',
+  tags: ['group-manage', 'legacy', 'security'],
+  destructive: true,
+  sideEffect: 'data',
+  request: body(() => ({
+    memberKpostIdList: [testData.victimKpostId],
+    groupID: 0,
+    groupKpostID: testData.kpostIdAbsent,
+  })),
+  evidence:
+    'GroupController.java:72-86 (@RequestMapping("group"), @PostMapping("removeGroupMember")) -> ' +
+    'GroupServiceImpl.deleteUserFromGroup -> GroupServiceDaoImpl.deleteUserFromGroup:102-109, a raw ' +
+    '"DELETE FROM TBL_KPOST_USERGROUP_MEMBERDETAILS WHERE group_id=:groupId AND kpost_id IN (:kpostID)" ' +
+    'with no ownership/membership check on the caller.',
+  note: 'needs a real group id; source-confirmed BOLA, see katchup-ground-truth-coverage-2026-10-03.md priority finding #4',
+});
+
 export const leaveGroupApi = defineGroupEndpoint({
   id: 'group-leave',
   method: 'POST',
@@ -255,6 +285,7 @@ export const groupApis = [
   createGroupApi,
   addUserToGroupApi,
   removeGroupMemberApi,
+  removeGroupMemberV1LegacyApi,
   leaveGroupApi,
   adminAccessApi,
   editGroupNameApi,

@@ -1,5 +1,5 @@
 import { testData } from '@config/test-data.config';
-import { body, pathParams } from '../kpost-endpoint';
+import { body, pathParams, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
@@ -239,6 +239,23 @@ export const referenceDetailsApi = defineKatchupEndpoint({
   note: 'needs real reference message ids; confirmed working live 2026-09-25 fed a plain sent msgID',
 });
 
+export const referenceMessagesDetailsApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-reference-messages-details',
+  authentication: { required: true },
+  method: 'POST',
+  path: '/v2/katchup/getReferenceMessagesDetails',
+  summary: 'Details of referenced messages (forward-hidden/reveal family sibling of getReferenceMSGDetails)',
+  tags: ['katchup', ...READ_TAGS, 'thread', 'needs-message-id', 'security'],
+  destructive: false,
+  request: body(() => ({ referenceMessageIDList: [] })),
+  evidence:
+    'KatchupControllerV2.java:1486-1526 (@PostMapping("getReferenceMessagesDetails")) -> ' +
+    'KatchupServiceImpl.getReferenceMessagesDetails:2093-2099, which calls ' +
+    'katchupRepo.findAllById(referenceMessageIDList) with no participant filter — unlike its sibling ' +
+    'getReferenceMSGDetails, which has one (tagged KPV2-REFDETAILSIDOR).',
+  note: 'security-relevant: no participant filter in source — see priority finding #6',
+});
+
 export const messagesByReferenceApi = defineKatchupEndpoint({
   id: 'katchup-messages-by-reference',
   method: 'POST',
@@ -272,5 +289,6 @@ export const katchupReadApis = [
   bulkMessageInfoApi,
   sharedMessageDetailsApi,
   referenceDetailsApi,
+  referenceMessagesDetailsApi,
   messagesByReferenceApi,
 ];
