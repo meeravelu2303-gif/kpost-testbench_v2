@@ -219,6 +219,28 @@ test.describe('KPost Login · behaviour', () => {
       ).toBeUndefined();
     }
 
+    /*
+     * BR-SL-LOGOUT (SRS-S05): "logout invalidates the session token" — the row being gone is not the
+     * same claim as the TOKEN no longer authenticating. A JWT is self-contained; unless the server
+     * actively checks the session store on every authenticated call, a logged-out token could still
+     * verify cryptographically and keep working. This is the actual business rule, not a proxy for
+     * it — tries the now-logged-out token against a real authenticated endpoint.
+     */
+    const reuseAttempt = await endpoints.sendTo(
+      'signup-login-active-session',
+      {},
+      {
+        label: 'login-flow:logout-token-reuse',
+        auth: { header: `Bearer ${String(opened.body.accessToken)}` },
+      },
+    );
+    expect
+      .soft(
+        reuseAttempt.status,
+        `BR-SL-LOGOUT: a logged-out token must not still authenticate (getActiveSession replied ${reuseAttempt.status})`,
+      )
+      .toBe(401);
+
     // The shared session (a different device) is unaffected.
     const shared = await login(endpoints, testData.kpostId, testData.password);
     expect(shared.status, 'the shared session still logs in').toBe(200);

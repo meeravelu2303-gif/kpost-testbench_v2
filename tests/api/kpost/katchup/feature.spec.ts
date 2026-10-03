@@ -259,7 +259,7 @@ test.describe('KPost Katchup · feature flow', () => {
         const receipts = await endpoints.sendTo(
           'katchup-read-status-group',
           { body: { msgID } },
-          { label: 'feature:read-receipts', auth: { principal: A }, allowLiveWrite: true },
+          { label: 'feature:read-receipts', auth: { principal: A }, allowLiveRead: true },
         );
         expect.soft(receipts.status, 'read-receipt status reads back').toBe(200);
       }

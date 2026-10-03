@@ -146,7 +146,7 @@ test.describe('KPost Security · sessions and concurrency @api @kpost-api @signu
     });
   });
 
-  test('the login burst still reproduces Bugzilla #496, and nothing worse', async ({
+  test('a login burst produces no 5xx (Bugzilla #496, fixed and verified 2026-10-03)', async ({
     endpoints,
   }) => {
     test.skip(!testData.password, 'needs QA_PASSWORD');
@@ -191,18 +191,16 @@ test.describe('KPost Security · sessions and concurrency @api @kpost-api @signu
     expect(statuses.length, 'all 15 logins were answered').toBe(15);
 
     /*
-     * The direction of this assertion is the point. While #496 is open the burst is EXPECTED to
-     * produce 5xx, so demanding zero would leave the bench permanently red on a known, filed defect.
-     * What is asserted instead is that the defect still behaves as filed — and the moment it stops
-     * reproducing across all three passes, this fails and says so, which is the signal to re-verify
-     * and close #496 rather than let a fixed ticket sit open indefinitely.
+     * Re-verified live 2026-10-03: 15/15 simultaneous logins succeeded across 3 passes, zero 5xx,
+     * reproduced on a second full run of this module the same day. Bugzilla #496 (RESOLVED/FIXED)
+     * confirmed. The assertion now holds the fix: any 5xx here is a regression, not an open defect.
      */
     expect(
       serverErrors.length,
-      `Bugzilla #496 did not reproduce: 15/15 simultaneous logins succeeded across 3 passes ` +
-        `(statuses: ${statuses.join(', ')}). If this holds, the defect is fixed — re-verify and ` +
-        `close the ticket, then change this assertion to require zero 5xx.`,
-    ).toBeGreaterThan(0);
+      `Bugzilla #496 regressed: ${serverErrors.length}/15 simultaneous logins answered 5xx across ` +
+        `3 passes (statuses: ${statuses.join(', ')}). This was fixed and verified 2026-10-03 — a ` +
+        `failure here means it came back.`,
+    ).toBe(0);
 
     test.info().annotations.push({
       type: 'observed',

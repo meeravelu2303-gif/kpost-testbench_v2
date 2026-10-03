@@ -177,6 +177,82 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
     }
   });
 
+  /*
+   * BR-SL-PWD (NFR-SEC03): password must be ≥8 chars with upper/lower/digit/special, or rejected.
+   * Previously marked ⛔ "OTP-gated" in docs/business-rules.md — signup is back in scope (the OTP
+   * gateway fix earlier this session), so this is now testable. Confirmed live 2026-10-03: password
+   * validation runs BEFORE the "already exists" check, so this works even against the already-
+   * registered `signupKpostId` from the test above — every weak variant below gets a clean,
+   * password-specific rejection, never "already exists".
+   */
+  test('a weak password is rejected at every missing requirement (BR-SL-PWD) @api', async ({
+    endpoints,
+  }) => {
+    const sendMobile = await endpoints.sendTo(
+      'common-send-otp',
+      { body: { countryID: testData.countryId, mobileNumber: testData.signupMobile, requestType: 'signup' } },
+      { label: 'br-sl-pwd:send-mobile' },
+    );
+    expect.soft(sendMobile.status, 'sendOTP accepted').toBeLessThan(500);
+    const validateMobile = await endpoints.sendTo(
+      'common-validate-otp',
+      { body: { otp: OTP, countryID: testData.countryId, mobileNumber: testData.signupMobile } },
+      { label: 'br-sl-pwd:validate-mobile' },
+    );
+    expect.soft(validateMobile.status, 'validateOTP accepted the bypass code').toBeLessThan(500);
+
+    const signupBody = (password: string): Record<string, unknown> => ({
+      kpostID: testData.signupKpostId,
+      firstName: 'QA',
+      lastName: 'Bench',
+      mobileNumber: testData.signupMobile,
+      createdDate: Date.now(),
+      password,
+      gender: 'female',
+      dateOfBirth: '1995-01-01',
+      module: 0,
+      countryCode: '91',
+      email: testData.otpEmail,
+      userProfile: {
+        landLineNumber: '04400000000',
+        referalId: '',
+        pinCode: testData.pinCode,
+        areaName: 'Pazhavanthangal',
+        state: 'Tamil Nadu',
+        city: 'Chennai',
+      },
+    });
+
+    const weakVariants: Array<[string, string]> = [
+      ['too short (7 chars, all classes)', 'Qa1!abc'],
+      ['no uppercase', 'qa1!abcdef'],
+      ['no lowercase', 'QA1!ABCDEF'],
+      ['no digit', 'Qa!abcdefg'],
+      ['no special character', 'Qa1abcdefg'],
+      ['all lowercase, too short', 'abc'],
+    ];
+
+    for (const [label, password] of weakVariants) {
+      const attempt = await endpoints.sendTo(
+        'signup-login-signup',
+        { body: signupBody(password) },
+        { label: `br-sl-pwd:${label}` },
+      );
+      expect
+        .soft(
+          attempt.status,
+          `BR-SL-PWD: a password that is ${label} must be rejected (replied ${attempt.status}: ${attempt.bodyText.slice(0, 120)})`,
+        )
+        .toBe(400);
+      expect
+        .soft(
+          attempt.bodyText.toLowerCase(),
+          `BR-SL-PWD: the rejection for "${label}" must be about the password, not an unrelated error`,
+        )
+        .toMatch(/password/);
+    }
+  });
+
   test('mobile + mail OTP → business (admin) registration @api', async ({
     endpoints,
     databases,

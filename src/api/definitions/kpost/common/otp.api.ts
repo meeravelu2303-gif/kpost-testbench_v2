@@ -53,14 +53,16 @@ export const validateOtpApi = defineKpostEndpoint({
   tags: [...OTP_TAGS, 'otp-consume'],
   destructive: false,
   note: 'lifecycle-only: needs a prior sendOTP session in the same run (standalone → 500 "OTP validation failed", a bench-precondition, not a product defect); covered by otp-signup-lifecycle',
-  // Payload matches the WORKING live call (owner-verified curl 2026-09-19): { otp, countryID,
-  // mobileNumber }. The earlier `sendDate: Date.now()` (a 13-digit epoch) pushed it into a failure
-  // path that answered 500 — a bench-payload artifact, not a product defect. `mobileNumber` is the
-  // configured QA number (set QA_MOBILE_EXISTS to a number the bypass validates on the test env).
+  // Payload now matches the REAL Signup UI exactly, `sendDate` included. This field was blamed twice
+  // for a failure (500 on 2026-09-19, then 400 "Invalid OTP" as Bugzilla #875 on 2026-10-01) and
+  // omitted from this definition both times as a workaround. Re-verified live 2026-10-03, replaying
+  // the exact #875 repro (bypass code + sendDate): 200 "OTP has been validated successfully." — #875
+  // is genuinely fixed, not just avoided, so the bench payload now carries the field it was hiding.
   request: body(() => ({
     otp: testData.bypassOtp,
     countryID: testData.countryId,
     mobileNumber: testData.mobileExists,
+    sendDate: Date.now(),
   })),
 });
 
