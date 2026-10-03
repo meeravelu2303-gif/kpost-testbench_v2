@@ -4,14 +4,14 @@
 Reconciles `src/ui/katchup-features.ts` (enumerated from the FRD, the `katchupMessageType` enum,
 and the frontend action menus) so a Katchup feature cannot be silently missed.
 
-**35** features · **22 built** · 1 needs-upload · 7 needs-received · 3 api-only · 2 ui-only
+**35** features · **23 built** · 7 needs-received · 3 api-only · 2 ui-only
 
 | Feature | FR | msgType | Category | Status | Spec / reason |
 | ------- | -- | ------: | -------- | ------ | ------------- |
 | Subject on every message (the differentiator) | BR-K01, FR-K02 |  | compose | built | `katchup-compose.spec.ts` |
 | Message body (Quill editor) | FR-K01 | 0 | compose | built | `katchup-compose.spec.ts` |
 | Send a 1:1 message, verify it appears | FR-K01 | 0 | compose | built | `katchup-compose.spec.ts` |
-| Attach a file → send → thumbnail → delete | FR-K03 |  | compose | needs-upload | needs a real file upload; the attachment uuid only a completed S3 upload produces |
+| Attach a file → send → thumbnail → delete | FR-K03 |  | compose | built | `katchup-attach-send-e2e.spec.ts` |
 | Copy / Cc — a visible additional recipient (revealContactList) | FR-K04 | 14 | compose | built | `katchup-copies.spec.ts` |
 | Confidential Copy — hidden from other recipients (NFR-SEC02) | FR-K05, NFR-SEC02 | 14 | compose | built | `katchup-copies.spec.ts` |
 | Group send + per-recipient read receipts | FR-K06, FR-K07 | 0 | compose | needs-received | the 3-account harness exists (create is `group.spec.ts`); group SEND + per-recipient receipts is the remaining multi-account flow to record |
@@ -24,10 +24,10 @@ and the frontend action menus) so a Katchup feature cannot be silently missed.
 | Edit a sent message (visible Edited marker) | FR-K08, FR-K09, BR-K03 | 6 | sender-action | built | `katchup-actions.spec.ts` |
 | Recall — the message disappears from the recipient view | FR-K10, BR-K03 | 7 | sender-action | built | `katchup-compose.spec.ts` |
 | Recall & Repost — recall then re-send | FR-K10 |  | sender-action | api-only | not a distinct bell-menu entry; it is Recall (green in katchup-compose) + a re-send (green), so it is covered by the composition of two tested flows, not a dedicated UI test |
-| Note — attach a private note to a message | FR-K13 | 5 | sender-action | built | `katchup-actions-more.spec.ts` |
+| Note — attach a private note to a message | FR-K13 | 5 | sender-action | built | `katchup-note-subflow-e2e.spec.ts` |
 | Reminder — set a reminder on a message | FR-K13 | 3 | sender-action | built | `katchup-actions-more.spec.ts` |
-| Transfer a message to another contact | FR-K14 |  | sender-action | built | `katchup-actions-more.spec.ts` |
-| Forward a message (with / without thread) | FR-K15, FR-K16 | 15 | sender-action | built | `katchup-actions-more.spec.ts` |
+| Transfer a message to another contact | FR-K14 |  | sender-action | built | `katchup-transfer-subflow-e2e.spec.ts` |
+| Forward a message (with / without thread) | FR-K15, FR-K16 | 15 | sender-action | built | `katchup-forward-subflow-e2e.spec.ts` |
 | Copy message text to the clipboard | FR-K17 |  | sender-action | built | `katchup-actions.spec.ts` |
 | Save / bookmark a message | FR-K18 |  | sender-action | built | `katchup-actions.spec.ts` |
 | Mark / unmark important | FR-K18 |  | sender-action | api-only | no bell-menu entry; the star toggle is covered by the API markOrUnmarkImportantMessage |

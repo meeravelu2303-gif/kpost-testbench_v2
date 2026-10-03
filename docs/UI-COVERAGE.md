@@ -49,6 +49,11 @@ Every screen inherits the **full check catalogue** below. Covered: **13** screen
 | Katchup compose | `katchup-compose.spec.ts` | open a chat → open composer → enter Subject (BR-K01) + message; gated send + recall (green) |
 | Katchup message actions | `katchup-actions.spec.ts` | sender bell menu → Delete · Edit (Edited marker, BR-K03) · Save · Copy, each self-cleaning (gated) |
 | Katchup sub-flow actions | `katchup-actions-more.spec.ts` | bell menu → Note · Reminder · Transfer · Forward · Forward-with-thread · Recall&Repost (entry wired, self-clean, gated) |
+| Katchup attach-and-send | `katchup-attach-send-e2e.spec.ts` | compose → attach a real file → upload → send → thread renders the thumbnail (gated, self-clean) |
+| Katchup Note sub-flow (completion) | `katchup-note-subflow-e2e.spec.ts` | bell menu Note → composer opens pre-filled with reply context → type a note body → send (gated, self-clean) |
+| Katchup Transfer sub-flow (completion) | `katchup-transfer-subflow-e2e.spec.ts` | bell menu Transfer → Katchup recipient picker → select a contact → Done sends (gated, self-clean) |
+| Katchup Forward sub-flow (completion) | `katchup-forward-subflow-e2e.spec.ts` | bell menu Forward → recipient picker narrows to one contact → Done → final send button → forward actually sends (gated, self-clean) |
+| Katchup secret/confidential message | `katchup-secret-message-e2e.spec.ts` | composer → Secret message → Delete-as-per-Schedule → Done → the confidential message sends (gated, self-clean) |
 | Katchup search | `katchup-search.spec.ts` | type in the search box → the conversation list filters to the match (read-only, safe) |
 | Katchup two-session | `katchup-two-session.spec.ts` | account 1 sends → account 2 (own context) receives + Reply/Comment/Clarify + read receipt (gated, self-clean) |
 | Katchup Copy / Confidential / Bulk | `katchup-copies.spec.ts` | 3-account: visible Copy seen by TO · Confidential Copy hidden from TO (NFR-SEC02) · bulk to many (gated) |
@@ -64,7 +69,7 @@ Every screen inherits the **full check catalogue** below. Covered: **13** screen
 
 ## Deep write flows (planned — gated, need live tuning)
 
-- Katchup group / confidential-copy / attachments (needs 3 QA accounts + recording)
+- Katchup group send + per-recipient read receipts (needs 3 QA accounts + recording — confidential-copy and attachments are now built, see Interaction flows above)
 - KMail composer: open → recipient/subject → send (gated) → verify in Sent → delete; reply, drafts
 - Settings font + notifications: change through the UI → verify applied → restore (theme is built)
 - Profile: Edit Profile → change About → Update → verify → restore

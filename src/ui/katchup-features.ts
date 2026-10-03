@@ -76,8 +76,8 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     name: 'Attach a file → send → thumbnail → delete',
     fr: ['FR-K03'],
     category: 'compose',
-    status: 'needs-upload',
-    reason: 'needs a real file upload; the attachment uuid only a completed S3 upload produces',
+    status: 'built',
+    spec: 'katchup-attach-send-e2e.spec.ts',
   },
   {
     id: 'copy-cc',
@@ -196,7 +196,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 5,
     category: 'sender-action',
     status: 'built',
-    spec: 'katchup-actions-more.spec.ts',
+    spec: 'katchup-note-subflow-e2e.spec.ts',
   },
   {
     id: 'reminder',
@@ -213,7 +213,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['FR-K14'],
     category: 'sender-action',
     status: 'built',
-    spec: 'katchup-actions-more.spec.ts',
+    spec: 'katchup-transfer-subflow-e2e.spec.ts',
   },
   {
     id: 'forward',
@@ -222,7 +222,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 15,
     category: 'sender-action',
     status: 'built',
-    spec: 'katchup-actions-more.spec.ts',
+    spec: 'katchup-forward-subflow-e2e.spec.ts',
   },
   {
     id: 'copy-clipboard',

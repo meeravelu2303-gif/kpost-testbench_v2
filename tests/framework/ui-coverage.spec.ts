@@ -49,6 +49,31 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
     note: 'bell menu → Note · Reminder · Transfer · Forward · Forward-with-thread · Recall&Repost (entry wired, self-clean, gated)',
   },
   {
+    flow: 'Katchup attach-and-send',
+    spec: 'katchup-attach-send-e2e.spec.ts',
+    note: 'compose → attach a real file → upload → send → thread renders the thumbnail (gated, self-clean)',
+  },
+  {
+    flow: 'Katchup Note sub-flow (completion)',
+    spec: 'katchup-note-subflow-e2e.spec.ts',
+    note: 'bell menu Note → composer opens pre-filled with reply context → type a note body → send (gated, self-clean)',
+  },
+  {
+    flow: 'Katchup Transfer sub-flow (completion)',
+    spec: 'katchup-transfer-subflow-e2e.spec.ts',
+    note: 'bell menu Transfer → Katchup recipient picker → select a contact → Done sends (gated, self-clean)',
+  },
+  {
+    flow: 'Katchup Forward sub-flow (completion)',
+    spec: 'katchup-forward-subflow-e2e.spec.ts',
+    note: 'bell menu Forward → recipient picker narrows to one contact → Done → final send button → forward actually sends (gated, self-clean)',
+  },
+  {
+    flow: 'Katchup secret/confidential message',
+    spec: 'katchup-secret-message-e2e.spec.ts',
+    note: 'composer → Secret message → Delete-as-per-Schedule → Done → the confidential message sends (gated, self-clean)',
+  },
+  {
     flow: 'Katchup search',
     spec: 'katchup-search.spec.ts',
     note: 'type in the search box → the conversation list filters to the match (read-only, safe)',
@@ -115,7 +140,7 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
  * mined and the flows are specified in `docs/ui-write-flows.md`; each has a green API lifecycle.
  */
 const PLANNED_FLOWS = [
-  'Katchup group / confidential-copy / attachments (needs 3 QA accounts + recording)',
+  'Katchup group send + per-recipient read receipts (needs 3 QA accounts + recording — confidential-copy and attachments are now built, see Interaction flows above)',
   'KMail composer: open → recipient/subject → send (gated) → verify in Sent → delete; reply, drafts',
   'Settings font + notifications: change through the UI → verify applied → restore (theme is built)',
   'Profile: Edit Profile → change About → Update → verify → restore',
