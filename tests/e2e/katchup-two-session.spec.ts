@@ -9,6 +9,7 @@ import {
   gotoKatchup,
   messageBySubject,
   openComposer,
+  openConversation,
   openReceivedConversation,
   receivedMessageBySubject,
   sendMessage,
@@ -97,6 +98,29 @@ test.describe('KPost Katchup · two-session (sender + receiver)', { tag: '@ui' }
       await receiver.context().close();
     }
   });
+
+  /**
+   * Unread badge / message count (FR-K07) — RESOLVED as a confirmed product gap, filed as #978, not
+   * an automatable test.
+   *
+   * Three rounds of live DOM diagnostics (across two sessions) traced this conclusively: the one
+   * working unread-badge mechanism (`.Msg-Count` / `.Msg-Count-Font`, real and functional — confirmed
+   * showing correct non-zero counts for established contacts) exists ONLY on the "Frequently
+   * Accessed" strip (`components/FrequentlyAccessed/FrequentlyAccessed.js`), which is populated from
+   * a separate, server-ranked `FetchFrequentContact` call — not recency, not unread status. A
+   * freshly-sent, still-unopened message's own Recents row (confirmed found correctly, `id=<sender
+   * kpostID>`, class `recent-hover-card`) has ZERO unread-related markup anywhere in its DOM subtree
+   * — no `.Msg-Count`, no `.contact_msgCount`, no conditional bold/weight class (`ContactBar.js`, the
+   * real row renderer, has no `isRead`/unread-conditional styling at all). `Recent.js` (which DOES
+   * contain `msgCount` markup) is confirmed dead code — hardcoded mock data, never imported from the
+   * live `bubble/Katchup.js` entry point.
+   *
+   * This means the Recents list — the primary, default way any user checks for new messages — has no
+   * unread indicator at all, independent of whether the sender happens to also be a long-standing
+   * frequent contact. Filed as **#978** from this source+live-DOM evidence directly (the same
+   * standard used for #976): there is no reliable automated repro to build here because the gap is an
+   * absence of a code path, not a flaky live behavior.
+   */
 
   for (const action of RECIPIENT_ACTIONS) {
     test(`${action.id}: the 2nd account ${action.id.toLowerCase()}s a received message (recipient menu) @ui`, async ({

@@ -36,6 +36,7 @@ test.describe('KPost Settings · Instant Reply security fuzzing', { tag: '@ui' }
   for (const payload of PAYLOADS) {
     test(`an Instant Reply carrying a ${payload.name} payload is stored and shown inert @ui`, async ({
       page,
+      settingsPage,
     }) => {
       const stop = watchUiHealth(page);
       let dialogFired = false;
@@ -44,16 +45,10 @@ test.describe('KPost Settings · Instant Reply security fuzzing', { tag: '@ui' }
         void dialog.dismiss();
       });
 
-      await page.goto('/settings', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
-      await page
-        .getByText('Instant Reply', { exact: false })
-        .first()
-        .click({ timeout: 15_000 })
-        .catch(() => undefined);
+      // Nested under "KMail Settings" — must be expanded first, or the item is not in the DOM
+      // (see SettingsPage.ts / Settingdetails.js's single-group-open accordion).
+      await settingsPage.goto();
+      await settingsPage.openPanel('KMail Settings', 'Instant Reply');
       await page
         .getByRole('button', { name: 'Add' })
         .first()

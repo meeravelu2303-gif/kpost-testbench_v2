@@ -12,6 +12,20 @@ import { expect, test } from '@fixtures';
  *
  * Also confirmed from source: `handleInputChange` forces both fields to `.toUpperCase()` as the user
  * types — asserted directly, not assumed.
+ *
+ * NEEDS-CODEGEN fix applied 2026-10-04: the component uses MUI's `<Edit />` icon
+ * (`@mui/icons-material`), not a `.icon-KP_236_Edit` KPost font-icon — the old `.icon-KP_236_Edit,
+ * [class*="edit"]` selector matches neither (MUI renders `MuiSvgIcon-root`, no literal "edit"
+ * substring), so the edit form never actually opened. There are also TWO `<Edit />` icons on this page
+ * when the summary view is showing — one beside "Company Address" with no `onClick` at all (a second,
+ * separate dead-icon defect, not exercised here), and the functional one beside "Company Registration
+ * Details" — scoped to by that heading specifically.
+ *
+ * Also confirmed from source, a real defect worth asserting directly: on a successful save,
+ * `handleSaveCompanyDetails` calls `setCompanyDetails({ panNumber: '', gstNumber: '' })` — wiping the
+ * local state to blank — instead of the values just saved, before flipping back to the read-only
+ * summary view. The backend update itself succeeds; only the immediately-following UI display is
+ * wrong, falsely showing both fields as blank right after a successful save.
  */
 test.describe('KPost Settings · Company Details (BUSINESS_S, self-restoring)', { tag: '@ui' }, () => {
   test.use({ storageState: STORAGE_STATE_BUSINESS });
@@ -40,7 +54,12 @@ test.describe('KPost Settings · Company Details (BUSINESS_S, self-restoring)', 
     // Read the current values before touching anything, so they can be restored.
     const panField = page.getByPlaceholder('Enter PAN details');
     const gstField = page.getByPlaceholder('Enter GST details');
-    const editIcon = page.locator('.icon-KP_236_Edit, [class*="edit"]').first();
+    // Scoped to the "Company Registration Details" heading specifically — a second, non-functional
+    // <Edit /> icon also sits beside "Company Address" elsewhere on this page.
+    const editIcon = page
+      .locator('h3', { hasText: 'Company Registration Details' })
+      .locator('svg')
+      .first();
 
     const editOpened = await editIcon
       .click()
@@ -70,8 +89,26 @@ test.describe('KPost Settings · Company Details (BUSINESS_S, self-restoring)', 
       'a success toast confirms the update',
     ).toBeVisible({ timeout: 10_000 });
 
+    // Confirmed from source: handleSaveCompanyDetails wipes local state to blank on success instead
+    // of showing the just-saved values — the summary view falsely displays blank PAN/GST right after
+    // a successful update, even though the backend write itself succeeded.
+    const panSummaryValue = page
+      .locator('p', { hasText: 'Company Pan Card Number' })
+      .locator('b')
+      .first();
+    await expect(
+      panSummaryValue,
+      'confirmed bug: right after a successful save, the summary view shows an EMPTY PAN value ' +
+        '(local state is reset to blank on success instead of the value just saved — a real display ' +
+        'defect even though the backend write itself succeeded)',
+    ).toHaveText('');
+
     // Restore the original values.
-    await editIcon.click();
+    const editIconAfterSave = page
+      .locator('h3', { hasText: 'Company Registration Details' })
+      .locator('svg')
+      .first();
+    await editIconAfterSave.click();
     await expect(panField, 'the edit form reopens for restore').toBeVisible({ timeout: 10_000 });
     await panField.fill('');
     if (originalPan) await panField.type(originalPan);

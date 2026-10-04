@@ -171,6 +171,47 @@ test.describe('KPost Katchup · feature flow', () => {
     await cleanup(endpoints, A, edited.msgID);
   });
 
+  test('an edit cannot change the Subject, only the body (BR-KU-EDIT-SUBJ) @api @katchup', async ({
+    endpoints,
+  }) => {
+    const originalSubject = `QA subj-lock ${Date.now()}`;
+    const seed = await send(endpoints, A, { receiver: B.username, subject: originalSubject });
+    expect(seed.msgID, 'seed created').toBeTruthy();
+
+    const attemptedSubject = `${originalSubject} CHANGED`;
+    const edited = await send(endpoints, A, {
+      receiver: B.username,
+      messageType: KATCHUP_MESSAGE_TYPE.editMessage,
+      sharedType: KATCHUP_MESSAGE_TYPE.editMessage,
+      subject: attemptedSubject,
+      actualMessage: 'QA subj-lock edited body',
+      temporaryMsgID: seed.msgID,
+    });
+    expect.soft(edited.status, 'edit is accepted').toBeLessThan(300);
+
+    const view = await conversation(endpoints, B, A.username);
+    expect.soft(view.text, 'the body itself still changes').toContain('QA subj-lock edited body');
+
+    // The real UI client locks the Subject field during edit (WriteMessage.js: `isDisabled={isEdited
+    // || isEditedandRepost}` on both Subject inputs) — a normal user can never trigger this. But the
+    // server itself has no equivalent guard: calling editMessage with a different `subject` silently
+    // accepts and persists it. Recorded as a confirmed (defense-in-depth) rule violation, not a hard
+    // failure — the real product is not reachable through this path today.
+    if (view.text.includes(attemptedSubject)) {
+      endpoints.recordBusinessRuleViolation({
+        endpointId: 'katchup-send-message',
+        ruleId: 'BR-KU-EDIT-SUBJ',
+        rule: 'editMessage must not change the Subject — the body is the only editable field.',
+        expected: `the Subject stays "${originalSubject}"`,
+        actual: `the Subject changed to "${attemptedSubject}" (server accepted it; the real UI client ` +
+          'disables the Subject field during edit, so this is unreachable from the product today)',
+      });
+    }
+
+    await cleanup(endpoints, A, seed.msgID);
+    await cleanup(endpoints, A, edited.msgID);
+  });
+
   test('a recalled message is removed from the recipient view (FR-K10 / BR-K03) @api @katchup @security', async ({
     endpoints,
   }) => {
@@ -256,12 +297,47 @@ test.describe('KPost Katchup · feature flow', () => {
 
       // FR-K07: per-recipient read receipts.
       if (msgID) {
-        const receipts = await endpoints.sendTo(
+        const receiptsBefore = await endpoints.sendTo(
           'katchup-read-status-group',
           { body: { msgID } },
-          { label: 'feature:read-receipts', auth: { principal: A }, allowLiveRead: true },
+          { label: 'feature:read-receipts-before', auth: { principal: A }, allowLiveRead: true },
         );
-        expect.soft(receipts.status, 'read-receipt status reads back').toBe(200);
+        expect.soft(receiptsBefore.status, 'read-receipt status reads back').toBe(200);
+        const beforeParsed = receiptsBefore.json();
+        const beforeList = (beforeParsed.ok
+          ? ((beforeParsed.value as Record<string, unknown>).data as unknown[])
+          : []) as Array<{ receiver?: string; readStatus?: string }>;
+        const bBefore = beforeList.find((r) => r.receiver?.toLowerCase() === B.username.toLowerCase());
+        expect
+          .soft(bBefore?.readStatus, 'BR-KU-RECEIPTS: B has not read it yet, before opening the thread')
+          .not.toBe('Y');
+
+        // B opens the group conversation — this is what marks a group message read FOR B specifically
+        // (confirmed from source: `katchupMessagesForSelectedContactID`'s groupFlag branch calls
+        // `groupReadStatusRepository.updateReadStatus` scoped to the calling receiver).
+        await conversation(endpoints, B, groupKpostID!, true);
+
+        const receiptsAfter = await endpoints.sendTo(
+          'katchup-read-status-group',
+          { body: { msgID } },
+          { label: 'feature:read-receipts-after', auth: { principal: A }, allowLiveRead: true },
+        );
+        const afterParsed = receiptsAfter.json();
+        const afterList = (afterParsed.ok
+          ? ((afterParsed.value as Record<string, unknown>).data as unknown[])
+          : []) as Array<{ receiver?: string; readStatus?: string }>;
+        const bAfter = afterList.find((r) => r.receiver?.toLowerCase() === B.username.toLowerCase());
+        const cAfter = afterList.find((r) => r.receiver?.toLowerCase() === C.username.toLowerCase());
+        const dAfter = afterList.find((r) => r.receiver?.toLowerCase() === D.username.toLowerCase());
+        expect
+          .soft(bAfter?.readStatus, 'BR-KU-RECEIPTS: B shows read AFTER opening the thread, independently')
+          .toBe('Y');
+        expect
+          .soft(cAfter?.readStatus, 'BR-KU-RECEIPTS: C (never opened it) must NOT show read')
+          .not.toBe('Y');
+        expect
+          .soft(dAfter?.readStatus, 'BR-KU-RECEIPTS: D (never opened it) must NOT show read')
+          .not.toBe('Y');
       }
     } finally {
       // Cleanup: remove members, then delete the group (verified order on live).

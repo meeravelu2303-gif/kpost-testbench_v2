@@ -157,8 +157,9 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['FR-K17'],
     messageType: 23,
     category: 'compose',
-    status: 'needs-received',
-    reason: 'the shared location is verified in the recipient conversation; needs 2 sessions',
+    status: 'ui-only',
+    reason:
+      'Corrected 2026-10-03: confirmed non-functional stub, not a 2-session gap. bubble/WriteMessage/WriteMessage.js:1966-2006 — handleSendLocation(lat, lng) is a bare console.log; sendLocationMessage() builds a local object, logs it, and resets state behind a literally commented-out `// socket.emit("sendMessage", message);` line. navigator.geolocation.getCurrentPosition is called (so a permission prompt and UI state exist), but no request of any kind ever reaches the backend. No UI test is possible until a developer wires it up.',
   },
 
   // ── Sender actions — the bell menu (FR-K08..K20) ────────────────────────────────────────────────
@@ -307,9 +308,9 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     name: 'Report a received message (abuse)',
     fr: ['FR-K24'],
     category: 'recipient-action',
-    status: 'needs-received',
+    status: 'ui-only',
     reason:
-      'the two-session harness now exists; Report (reportAbuse) opens a reason dialog off the recipient More menu — its sub-flow needs one recording pass',
+      'Corrected 2026-10-03: there is no message-level Report entry on the recipient ReplyIcon menu at all — the only "Report" in the whole Katchup UI is ReportContact.js, reached from the Digital Card, which is a confirmed non-functional stub (zero fetch/axios/service calls in the component, across all 3 bubble/classic/components copies). The `reportAbuse` backend endpoint is registered and API-tested but has no frontend caller anywhere in the app. No UI test is possible until a developer wires it up.',
   },
   {
     id: 'more-options',

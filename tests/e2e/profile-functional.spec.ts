@@ -7,10 +7,19 @@ import type { Page } from '@playwright/test';
  * Profile **functional** UI testing — does the profile editor validate input and reflect state, and
  * does what the screen accepts match what the database stores?
  *
- * Selectors captured from a live `codegen` pass over the Profile → Basic Information / About editors:
- *   - the edit drawer opens from the `.profilecreation` control on `/userprofile`;
- *   - Basic Information holds "Enter Email ID"; About holds "Write about yourself...";
- *   - each editor saves with an "Update" button.
+ * ## Where the editors actually live (corrected 2026-10-04)
+ *
+ * None of these editors are a drawer on `/userprofile` itself — that was a stale assumption from an
+ * earlier `codegen` pass, confirmed live to be wrong (the `.profilecreation` trigger it referenced no
+ * longer exists anywhere on the page, so every `open*` helper was silently no-op'ing and every test in
+ * this file was hitting its own `test.skip(!opened, ...)` guard). The real path, confirmed live: go to
+ * `/settings`, click the "Profile Creation" accordion header to expand it, then click the specific
+ * section name (`About` / `Basic Information` / `Contact Information` / `Education` / `Experience` /
+ * `Other Activities`) — each one then renders its own full-page form, not a modal. Basic Information
+ * holds "Enter Email ID"; About holds "Write about yourself...". Each editor saves with an "Update"
+ * button. Note: some field placeholders (e.g. "Enter Email ID") currently render TWICE on the page —
+ * use `.first()` on the final field locator, not a bare unscoped match, or Playwright's strict mode
+ * will flag it as ambiguous.
  *
  * ## What this covers that profile-edit / profile-actions do not
  *
@@ -34,26 +43,26 @@ import type { Page } from '@playwright/test';
  */
 const UPDATE = { role: 'button' as const, name: 'Update' };
 
-async function openBasicInformation(page: Page): Promise<boolean> {
-  await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+/** Opens a Profile Creation sub-section from Settings — the one real path, see the file doc above. */
+async function openProfileCreationSection(
+  page: Page,
+  section: 'About' | 'Basic Information' | 'Contact Information' | 'Education' | 'Experience' | 'Other Activities',
+): Promise<void> {
+  await page.goto('/settings', { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await page
     .locator('.loader-overlay')
     .waitFor({ state: 'hidden', timeout: 30_000 })
     .catch(() => undefined);
-  // Open the profile edit drawer, then the Basic Information section.
-  await page
-    .locator('.profilecreation')
-    .first()
-    .click({ timeout: 15_000 })
-    .catch(() => undefined);
-  await page
-    .getByText('Basic Information', { exact: false })
-    .first()
-    .click({ timeout: 15_000 })
-    .catch(() => undefined);
+  await page.getByText('Profile Creation', { exact: true }).first().click({ timeout: 15_000 });
+  await page.getByText(section, { exact: true }).first().click({ timeout: 15_000 });
+}
+
+async function openBasicInformation(page: Page): Promise<boolean> {
+  await openProfileCreationSection(page, 'Basic Information');
   return page
-    .getByRole('textbox', { name: 'Enter Email ID' })
-    .isVisible({ timeout: 10_000 })
+    .getByPlaceholder('Enter Email ID')
+    .first()
+    .isVisible({ timeout: 15_000 })
     .catch(() => false);
 }
 
@@ -84,7 +93,7 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
       'the Basic Information editor did not open on this build — needs a codegen re-tune',
     );
 
-    const emailField = page.getByRole('textbox', { name: 'Enter Email ID' });
+    const emailField = page.getByPlaceholder('Enter Email ID').first();
 
     // Watch what the editor sends: an update dispatched with a malformed email means no client
     // validation. Combined with the DB check below, this pins the layer at fault.
@@ -155,24 +164,10 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
     };
     const before = repo ? await repo.profile(testData.kpostId) : undefined;
 
-    await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-    await page
-      .locator('.profilecreation')
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
-    await page
-      .getByText('Contact Information', { exact: false })
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
+    await openProfileCreationSection(page, 'Contact Information');
 
-    const pincode = page.getByRole('spinbutton', { name: 'Enter Pincode' });
-    const opened = await pincode.isVisible({ timeout: 10_000 }).catch(() => false);
+    const pincode = page.getByPlaceholder('Enter Pincode').first();
+    const opened = await pincode.isVisible({ timeout: 15_000 }).catch(() => false);
     test.skip(
       !opened,
       'the Contact Information editor did not open on this build — needs a codegen re-tune',
@@ -221,9 +216,15 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
       'the Basic Information editor did not open on this build — needs a codegen re-tune',
     );
 
-    const mobile = page.getByRole('textbox', { name: 'Enter Mobile Number' });
+    const mobile = page.getByPlaceholder('Enter Mobile Number').first();
     const present = await mobile.isVisible({ timeout: 8_000 }).catch(() => false);
     test.skip(!present, 'the mobile field was not present in this editor build');
+
+    // Confirmed live 2026-10-04: this field is `readonly` in the Basic Information form (changing a
+    // verified mobile number goes through its own OTP flow elsewhere, not this editor) — correctly so,
+    // and not something this test can exercise by filling it directly.
+    const readOnly = await mobile.evaluate((el) => (el as HTMLInputElement).readOnly);
+    test.skip(readOnly, 'the mobile field is read-only in this editor — changing it needs its own OTP flow, not testable here');
 
     await mobile.click();
     await mobile.fill('abc123xyz'); // letters — not a phone number
@@ -259,28 +260,14 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
       await route.continue();
     });
 
-    await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-    await page
-      .locator('.profilecreation')
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
-    await page
-      .getByText('Education', { exact: false })
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
+    await openProfileCreationSection(page, 'Education');
     await page
       .getByRole('button', { name: 'School', exact: true })
       .click({ timeout: 10_000 })
       .catch(() => undefined);
 
-    const schoolName = page.getByRole('textbox', { name: 'Enter School Name' });
-    const opened = await schoolName.isVisible({ timeout: 10_000 }).catch(() => false);
+    const schoolName = page.getByPlaceholder('Enter School Name').first();
+    const opened = await schoolName.isVisible({ timeout: 15_000 }).catch(() => false);
     test.skip(
       !opened,
       'the Education/School form did not open on this build — needs a codegen re-tune',
@@ -303,24 +290,10 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
   });
 
   test('the Experience form requires a company name before it saves @ui', async ({ page }) => {
-    await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-    await page
-      .locator('.profilecreation')
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
-    await page
-      .getByText('Experience', { exact: false })
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
+    await openProfileCreationSection(page, 'Experience');
 
-    const company = page.getByRole('textbox', { name: 'Enter Company Name' });
-    const opened = await company.isVisible({ timeout: 10_000 }).catch(() => false);
+    const company = page.getByPlaceholder('Enter Company Name').first();
+    const opened = await company.isVisible({ timeout: 15_000 }).catch(() => false);
     test.skip(!opened, 'the Experience form did not open on this build — needs a codegen re-tune');
 
     await page
@@ -339,24 +312,10 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
   });
 
   test('editing the About text is reflected and then restored @ui', async ({ page }) => {
-    await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-    await page
-      .locator('.profilecreation')
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
-    await page
-      .getByText('About', { exact: true })
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
+    await openProfileCreationSection(page, 'About');
 
-    const aboutField = page.getByRole('textbox', { name: 'Write about yourself...' });
-    const opened = await aboutField.isVisible({ timeout: 10_000 }).catch(() => false);
+    const aboutField = page.getByPlaceholder('Write about yourself...').first();
+    const opened = await aboutField.isVisible({ timeout: 15_000 }).catch(() => false);
     test.skip(!opened, 'the About editor did not open on this build — needs a codegen re-tune');
 
     const original = (await aboutField.inputValue().catch(() => '')) || '';
@@ -374,12 +333,7 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
     ).toBeVisible({ timeout: 12_000 });
 
     // Restore.
-    await openBasicInformation(page).catch(() => undefined);
-    await page
-      .getByText('About', { exact: true })
-      .first()
-      .click({ timeout: 10_000 })
-      .catch(() => undefined);
+    await openProfileCreationSection(page, 'About').catch(() => undefined);
     await aboutField.click().catch(() => undefined);
     await aboutField.fill(original).catch(() => undefined);
     await page

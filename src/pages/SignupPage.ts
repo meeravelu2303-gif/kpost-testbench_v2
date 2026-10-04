@@ -97,6 +97,26 @@ export class SignupPage extends BasePage {
     await this.settle();
   }
 
+  /**
+   * The Gender select, specifically — confirmed live 2026-10-04 to occasionally not commit on
+   * Firefox (the Date of Birth field it gates stays `disabled`, unlike on Chromium/WebKit where this
+   * never reproduced). `chooseFromSelect` itself is left untouched (its own doc comment already notes
+   * every state-based alternative was tried and was worse for the general case) — this wraps it with
+   * a call-site-local verify-and-retry instead, checked against the one real signal that matters here
+   * (the DOB field actually becoming enabled), so Chromium/WebKit's already-stable behavior (first
+   * attempt always succeeds) is unaffected and Firefox gets one automatic retry before failing.
+   */
+  private async chooseGenderAndVerify(index: number, gender: string): Promise<void> {
+    const dobField = this.page.getByPlaceholder('Select Date of Birth');
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      await this.chooseFromSelect(index, gender);
+      const enabled = await dobField
+        .isEnabled({ timeout: attempt === 1 ? 3_000 : 10_000 })
+        .catch(() => false);
+      if (enabled) return;
+    }
+  }
+
   private async openSelect(index: number): Promise<void> {
     const input = this.page.locator('.react-select__input').nth(index);
     await input.waitFor({ state: 'attached', timeout: 20_000 });
@@ -272,7 +292,7 @@ export class SignupPage extends BasePage {
     await test.step('Signup: personal details', async () => {
       await this.page.getByPlaceholder('Enter the first name').fill(details.firstName);
       await this.page.getByPlaceholder('Enter the last name').fill(details.lastName);
-      await this.chooseFromSelect(0, details.gender);
+      await this.chooseGenderAndVerify(0, details.gender);
       await this.chooseDateOfBirth(details.dobDay, details.dobMonth, details.dobYear);
       await this.page.getByPlaceholder('Enter postal pincode').fill(details.pincode);
 
@@ -413,7 +433,7 @@ export class SignupPage extends BasePage {
     await test.step('Signup: business admin personal details', async () => {
       await this.page.getByPlaceholder('Enter the first name').fill(details.firstName);
       await this.page.getByPlaceholder('Enter the last name').fill(details.lastName);
-      await this.chooseFromSelect(0, details.gender);
+      await this.chooseGenderAndVerify(0, details.gender);
       await this.chooseDateOfBirth(details.dobDay, details.dobMonth, details.dobYear);
     });
   }

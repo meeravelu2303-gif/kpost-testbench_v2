@@ -10,24 +10,36 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import { runSimultaneously } from '@utils/concurrency';
+import { mailShape } from '@api/definitions/kmail/send.api';
+import { contactShape } from '@api/definitions/kpost/contacts/write.api';
 import { expect, test } from '@fixtures';
 
 /**
- * CONCURRENCY — WRITTEN, EXECUTION DEFERRED.
+ * CONCURRENCY — real setup, gated behind `CONCURRENCY_LIFECYCLE=true`, off by default.
  *
  * Every test in this file is fully implemented (built on the same `runSimultaneously` barrier
  * dispatcher the engine's own concurrency validators use — tasks are constructed first and released
  * together from one tick, so the race genuinely reproduces instead of degrading into two sequential
- * calls) but is UNCONDITIONALLY skipped, independent of any env flag. This is a deliberate, temporary
- * restriction: the shared test environment currently has no one available to restart/recover it if a
- * burst of simultaneous writes knocks it over, so firing any of these for real is deferred until that
- * changes. See `TEST_BENCH_100_PERCENT_PLAN.md` §"Concurrency — written, execution deferred" for the
- * full catalog, including scenarios not yet encoded here. To re-enable a specific test once recovery
- * capability exists, delete its `test.skip(true, ...)` line — nothing else needs to change.
+ * calls). They used to be unconditionally skipped with no way to enable them short of deleting code;
+ * 2026-10-04 this was switched to the same one-env-var lifecycle-flag pattern every other
+ * real-write-against-shared-environment suite in this bench already uses (`KALL_LIFECYCLE`,
+ * `KATCHUP_LIFECYCLE`, `CONTACTS_LIFECYCLE`, etc.) — set `CONCURRENCY_LIFECYCLE=true` to run them.
+ *
+ * The underlying caution has NOT changed and is NOT waived by this flag existing: the 2026-10-02
+ * task-owner note is still in force — the shared test environment has no one available to
+ * restart/recover it if a burst of simultaneous writes knocks it over. This flag makes execution
+ * POSSIBLE on a one-line command rather than impossible outright; it does not itself authorize firing
+ * a burst against the shared environment. Get explicit confirmation that recovery capability exists
+ * (or that this run targets an environment where an outage is acceptable) before setting it `true`
+ * against anything other than a throwaway/local target.
+ *
+ * See `TEST_BENCH_100_PERCENT_PLAN.md` §"Concurrency" for the full catalog, including scenarios not
+ * yet encoded here.
  */
 const DEFERRED_REASON =
-  'CONCURRENCY — WRITTEN, EXECUTION DEFERRED: shared test environment has no restart/recovery ' +
-  'coverage right now; do not fire simultaneous-write bursts until that changes.';
+  'CONCURRENCY: set CONCURRENCY_LIFECYCLE=true to run — off by default because the shared test ' +
+  'environment has no confirmed restart/recovery coverage; get that confirmed before enabling against ' +
+  'anything but a throwaway/local target.';
 
 const K = AUTH_PROFILES.kpost;
 const principal = (key: string): Principal => {
@@ -56,7 +68,7 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
        * (e.g. a non-atomic read-modify-write on a per-conversation counter) crashing or corrupting
        * state instead of just creating two ordinary messages.
        */
-      test.skip(true, DEFERRED_REASON);
+      test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const sender = principal('personal');
       const body = {
         selectedContact: testData.victimKpostId,
@@ -94,7 +106,7 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
        * Race condition this detects: a non-atomic "check membership exists, then update" pattern
        * racing with itself — the classic double-delete TOCTOU bug.
        */
-      test.skip(true, DEFERRED_REASON);
+      test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const owner = principal('personal');
       const victim = testData.victimKpostId;
       let groupID: number | undefined;
@@ -177,7 +189,7 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
        * Race condition this detects: a non-atomic read-modify-write on the document body letting two
        * writers silently clobber each other into an inconsistent response-vs-stored-state pair.
        */
-      test.skip(true, DEFERRED_REASON);
+      test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       test.skip(true, 'also blocked on #499 (kos-create-doc does not return a docId) independent of deferral');
       const owner = principal('personal');
       const created = await endpoints.sendTo(
@@ -225,7 +237,7 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
        * Race condition this detects: two reschedules racing to read-then-write the original's status,
        * both seeing "still Scheduled" and both minting a new call from the same original.
        */
-      test.skip(true, DEFERRED_REASON);
+      test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const owner = principal('personal');
       const receiver = principal('victim');
       const start = Date.now() + 3_600_000;
@@ -286,7 +298,7 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
        * Race condition this detects: a non-atomic field-level update letting two simultaneous writers
        * interleave and leave the row in a state neither caller actually requested.
        */
-      test.skip(true, DEFERRED_REASON);
+      test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const owner = principal('personal');
       const original = await endpoints.sendTo(
         'profile-fetch-user-details',
@@ -351,6 +363,145 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
       }
     },
   );
+
+  test(
+    'KMail postMail: two identical sends fired together (duplicate-tap) @api @kmail @concurrency',
+    async ({ endpoints }) => {
+      /*
+       * Scenario: a user double-taps "send" on the compose screen (or a flaky client retries) before
+       * the first response returns, firing the exact same mail twice, simultaneously. Structurally
+       * identical to the Katchup scenario above. Previously catalogued but deliberately NOT encoded
+       * (see this file's history) because KMail's write-lifecycle flows were still being reconciled
+       * after the 2026-10-02 auth-regression fix — that has since settled (the 2026-10-04 KMail
+       * ground-truth audit built and ran multiple new live write-lifecycle tests successfully:
+       * `content-idor.spec.ts`, the existing `mutation-idor.spec.ts`), so this is now safe to encode.
+       * Endpoint: kmail-post-mail (POST /v2/sentMail/postMail/).
+       * Test data: 2 identical bodies (same subject/content/receiver), sent to the victim test
+       * account — fully disposable, cleaned up via kmail-delete in `finally`.
+       * Requests: 2, dispatched from the same tick via runSimultaneously(2, ...).
+       * Expected behavior: no idempotency key exists on this endpoint (confirmed via source this
+       * session — Services/Kmail.js's sendMultiPartMailService has no dedup logic), so the most
+       * defensible expectation is that BOTH sends succeed and create TWO distinct mails (different
+       * kmailID), not that the server silently dedupes one — and CRITICALLY not that either response
+       * is a 5xx, which would itself be the finding.
+       * Race condition this detects: a non-atomic write path (e.g. a shared mail-count/sequence
+       * column) crashing or corrupting state under two simultaneous callers instead of just creating
+       * two ordinary mails.
+       */
+      test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
+      const sender = principal('personal');
+      const receiver = principal('victim');
+      const subject = `QA concurrency probe ${Date.now()}`;
+      let kmailIds: number[] = [];
+
+      try {
+        const result = await runSimultaneously(2, () =>
+          endpoints.sendTo(
+            'kmail-post-mail',
+            {
+              body: mailShape({
+                toAddress: receiver.username,
+                kmailSubject: subject,
+                kmailContent: 'Sent twice, at once, on purpose — safe to ignore.',
+              }),
+            },
+            { label: 'concurrency:kmail-double-send', auth: { principal: sender }, allowLiveWrite: true },
+          ),
+        );
+        const statuses = result.outcomes.map((o) => (o.status === 'fulfilled' ? o.value?.status : -1));
+        expect
+          .soft(
+            statuses.every((s) => typeof s === 'number' && s < 500),
+            `no 5xx under a 2-way burst (got ${JSON.stringify(statuses)})`,
+          )
+          .toBe(true);
+
+        kmailIds = result.outcomes
+          .map((o) => {
+            if (o.status !== 'fulfilled') return undefined;
+            const json = o.value?.json();
+            const body = (json?.ok ? json.value : {}) as Record<string, unknown>;
+            const data = body.data;
+            const row = Array.isArray(data) ? (data[0] as Record<string, unknown> | undefined) : undefined;
+            return typeof row?.kmailID === 'number' ? row.kmailID : undefined;
+          })
+          .filter((id): id is number => typeof id === 'number');
+      } finally {
+        for (const kmailId of kmailIds) {
+          await endpoints
+            .sendTo(
+              'kmail-delete',
+              { body: { groupFlag: false, transactionIDs: [kmailId] } },
+              { label: 'concurrency:kmail-cleanup', auth: { principal: sender }, allowLiveWrite: true },
+            )
+            .catch(() => undefined);
+        }
+      }
+    },
+  );
+
+  test(
+    'Contacts addContact: the same contact added twice, simultaneously @api @contacts @concurrency',
+    async ({ endpoints, databases }) => {
+      /*
+       * Scenario: a double-tap on "Add Contact" (or a flaky client retry) fires two simultaneous
+       * addContact calls for the SAME counterparty from the SAME account.
+       * Endpoint: contacts-add (POST /v2/contacts/addContact). Confirmed from the 2026-10-04 Contacts
+       * ground-truth audit that this endpoint's ownership check (`checkContact`/`contactExists`,
+       * scoped by kpostID+contactID) is correct for single calls — the open question here is
+       * specifically what happens when two identical adds race each other.
+       * Test data: our own second account (victim) as the target contact — fully disposable, removed
+       * in `finally` regardless of outcome.
+       * Requests: 2, identical body, dispatched together.
+       * Expected behavior: exactly one contact row for this pair after both calls settle (not two
+       * duplicate rows, not a UNIQUE-constraint 5xx on the second writer — a clean 2xx no-op or a
+       * sane 4xx "already a contact" is acceptable for whichever call loses the race), and no 5xx on
+       * either response.
+       * Race condition this detects: a non-atomic "check contact doesn't exist yet, then insert"
+       * pattern racing with itself — the classic double-insert TOCTOU, same shape as the Group
+       * double-remove scenario above but on the insert side instead of the delete side.
+       */
+      test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
+      const owner = principal('personal');
+      const target = testData.victimKpostId;
+
+      try {
+        const result = await runSimultaneously(2, () =>
+          endpoints.sendTo(
+            'contacts-add',
+            { body: contactShape({ contactID: target }) },
+            { label: 'concurrency:contacts-double-add', auth: { principal: owner }, allowLiveWrite: true },
+          ),
+        );
+        const statuses = result.outcomes.map((o) => (o.status === 'fulfilled' ? o.value?.status : -1));
+        expect
+          .soft(
+            statuses.every((s) => typeof s === 'number' && s < 500),
+            `no 5xx on either simultaneous add (got ${JSON.stringify(statuses)})`,
+          )
+          .toBe(true);
+
+        const database = databases.for('kpost-api');
+        if (database.enabled) {
+          const rows = await database.findMany<{ contact_id: string }>({
+            table: 'TBL_KPOST_USER_CONTACTS',
+            where: { kpost_id: owner.username, contact_id: target },
+          });
+          expect
+            .soft(rows.length, 'exactly one contact row exists for this pair, not a duplicate insert')
+            .toBeLessThanOrEqual(1);
+        }
+      } finally {
+        await endpoints
+          .sendTo(
+            'contacts-delete',
+            { body: { contactID: target } },
+            { label: 'concurrency:contacts-cleanup', auth: { principal: owner }, allowLiveWrite: true },
+          )
+          .catch(() => undefined);
+      }
+    },
+  );
 });
 
 /**
@@ -369,7 +520,7 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
  *   principle (classic double-booking race), but no KBooking endpoint definitions exist in the bench
  *   yet (search/seat-selection API coverage is itself still TODO, independent of concurrency). Revisit
  *   once the non-payment KBooking API surface is built.
- * - KMail send duplicate-tap: structurally identical to the Katchup scenario above, deferred to avoid
- *   writing it against a module whose write-lifecycle flows (KMAIL_LIFECYCLE) are still being
- *   reconciled after the 2026-10-02 auth-regression fix — revisit once that settles.
+ *
+ * (KMail send duplicate-tap was in this catalog as deferred; it is now implemented above as a real
+ * test, 2026-10-04, since the write-lifecycle reconciliation it was waiting on has settled.)
  */

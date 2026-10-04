@@ -10,7 +10,9 @@ import { expect, test } from '@fixtures';
  * true`; the two chain tests create a real event, so they run only with `KDIARY_LIFECYCLE=true`,
  * self-cleaning.
  *
- * `getEventDate` is NOT covered — see `kdiary-gaps.spec.ts`.
+ * `getEventDate` is covered separately — see `tests/api/kpost/security/kdiary-object-authorization.spec.ts`
+ * (its real payload and a confirmed cross-tenant IDOR, filed as #1017; `kdiary-gaps.spec.ts` has the
+ * resolution history).
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 

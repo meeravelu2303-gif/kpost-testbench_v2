@@ -42,19 +42,20 @@ export const getEventDateApi = defineKdiaryEndpoint({
   id: 'kdiary-get-event-date',
   method: 'POST',
   path: '/dairySchedule/getEventDate',
-  summary: 'Dates that have diary events (for a month view)',
+  summary: 'Event details for a list of eventIDs',
   tags: [...READ_TAGS, 'event', 'needs-id'],
   destructive: false,
-  // NOT run standalone: no frontend calls `getEventDate` (the app uses `getEvents` +
-  // `getEventSelectedDate`), so its body is inferred. It answers 500 "Value must not be null" for
-  // BOTH date-only and full datetime payloads (curl-verified 2026-09-19) — an unknown required field
-  // is missing, not the date format — so an "expected 200, got 500" here is our incomplete payload,
-  // not a confirmed product defect. Confirm the real payload with the dev before treating it as a bug.
-  request: body(() => ({
-    scheduleStartDateAndTime: '2026-09-01T00:00:00',
-    scheduleEndDateAndTime: '2026-09-30T00:00:00',
-  })),
-  note: 'frontend-unused; inferred body 500s "Value must not be null" for any date format — payload unconfirmed, not a standalone read',
+  // CORRECTED 2026-10-04: the previous body (scheduleStartDateAndTime/scheduleEndDateAndTime) was
+  // wrong — confirmed via direct source read of KdiaryRO.java and
+  // KdiaryScheduleServiceImpl.getEventDate (line 279): the real required field is `eventIds: List
+  // <Long>`, passed straight into `kdiaryScheduleRepository.findByEventIDIn(eventIds)` with NO
+  // ownership/participant scoping at all — a confirmed cross-tenant read-IDOR (filed, see Bugzilla).
+  // The old date-shaped payload left `eventIds` null, which is exactly what produced the "Value must
+  // not be null" 500 — a wrong payload, not a server bug. No frontend caller exists for this route
+  // (the app uses getEvents + getEventSelectedDate instead), but it is live, authenticated, and
+  // directly callable.
+  request: body(() => ({ eventIds: [0] })),
+  note: 'needs a real eventID; CONFIRMED cross-tenant read-IDOR (no ownership check) — see tests/api/kpost/security/kdiary-object-authorization.spec.ts',
 });
 
 export const getEventSelectedDateApi = defineKdiaryEndpoint({

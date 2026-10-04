@@ -4,7 +4,7 @@
 Reconciles `src/ui/katchup-features.ts` (enumerated from the FRD, the `katchupMessageType` enum,
 and the frontend action menus) so a Katchup feature cannot be silently missed.
 
-**35** features · **23 built** · 7 needs-received · 3 api-only · 2 ui-only
+**35** features · **23 built** · 6 needs-received · 3 api-only · 3 ui-only
 
 | Feature | FR | msgType | Category | Status | Spec / reason |
 | ------- | -- | ------: | -------- | ------ | ------------- |
@@ -37,7 +37,7 @@ and the frontend action menus) so a Katchup feature cannot be silently missed.
 | Reply to a received message | FR-K21 | 1 | recipient-action | built | `katchup-two-session.spec.ts` |
 | Comment on a received message | FR-K22 | 8 | recipient-action | built | `katchup-two-session.spec.ts` |
 | Clarify a received message | FR-K23 | 9 | recipient-action | built | `katchup-two-session.spec.ts` |
-| Report a received message (abuse) | FR-K24 |  | recipient-action | needs-received | the two-session harness now exists; Report (reportAbuse) opens a reason dialog off the recipient More menu — its sub-flow needs one recording pass |
+| Report a received message (abuse) | FR-K24 |  | recipient-action | ui-only | Corrected 2026-10-03: there is no message-level Report entry on the recipient ReplyIcon menu at all — the only "Report" in the whole Katchup UI is ReportContact.js, reached from the Digital Card, which is a confirmed non-functional stub (zero fetch/axios/service calls in the component, across all 3 bubble/classic/components copies). The `reportAbuse` backend endpoint is registered and API-tested but has no frontend caller anywhere in the app. No UI test is possible until a developer wires it up. |
 | More options on a received message | FR-K25 |  | recipient-action | needs-received | the recipient More menu (`katchup-two-session.spec.ts` harness) — sub-flow needs recording |
 | Search / filter the conversation list | FR-K01 |  | read-search | built | `katchup-search.spec.ts` |
 | Open a conversation and the composer | FR-K01 |  | read-search | built | `katchup-compose.spec.ts` |

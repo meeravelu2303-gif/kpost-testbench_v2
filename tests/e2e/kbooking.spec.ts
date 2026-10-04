@@ -12,15 +12,14 @@ import { expect, test } from '@fixtures';
  * UI. The boundary in the UI is the per-trip "Show seats" link — this suite NEVER clicks it. Safe
  * surface only: city search, trip LISTING (read-only), and "My Trips" (a read-only fetch).
  *
- * NEEDS-CODEGEN, confirmed live 2026-10-01: the From/To fields are react-select controls, not real
+ * FIXED 2026-10-04 (was NEEDS-CODEGEN): the From/To fields are react-select controls, not real
  * `<input placeholder=...>` elements — "Enter your Departure/Arrival place" is rendered as a plain
- * `<div class="react-select__placeholder">`, so `getByPlaceholder()` can never match it (confirmed via
- * a standalone script: the real `<input>` has an empty placeholder attribute, and the field itself
- * renders within seconds — this is NOT the platform-wide slow-render issue #905, a wrong locator
- * strategy). Typing into the control also needs a `{ force: true }` click on `.react-select__control`
- * (the input-container intercepts plain clicks), and picking a suggestion from the dropdown needs the
- * same treatment. Needs one interactive codegen pass to nail down the full click/type/select sequence
- * before these two tests can be trusted again.
+ * `<div class="react-select__placeholder">`, so `getByPlaceholder()` can never match it. Fixed by
+ * locating on the placeholder TEXT (`getByText(..., { exact: true })`) and force-clicking it (the
+ * input-container intercepts plain clicks), then scoping the suggestion pick to `.react-select__menu`
+ * — a bare page-wide `getByText('Bangalore')`/`getByText('Delhi')` can also match an unrelated hidden
+ * element elsewhere on the page, the same collision already seen and fixed for Contacts/KMail this
+ * session.
  */
 test.describe('KPost K-Booking — search and read-only trip listing', { tag: '@ui' }, () => {
   test.skip(
@@ -35,24 +34,32 @@ test.describe('KPost K-Booking — search and read-only trip listing', { tag: '@
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    const toCityInput = page.getByPlaceholder(/Enter your Arrival place/i).first();
-    await expect(toCityInput, 'the To-city field renders').toBeVisible({ timeout: 15_000 });
-    await expect(toCityInput, 'To-city starts disabled until From is chosen').toBeDisabled();
+    // The From control is the 1st `.react-select__control` on the page, To is the 2nd — stable by
+    // position since the form only ever renders these two Select fields, in this order.
+    const toCityControl = page.locator('.react-select__control').nth(1);
+    await expect(toCityControl, 'the To-city field renders').toBeVisible({ timeout: 15_000 });
+    await expect(
+      toCityControl,
+      'To-city starts disabled until From is chosen (react-select\'s own isDisabled class)',
+    ).toHaveClass(/--is-disabled/);
 
-    const fromCityInput = page.getByPlaceholder(/Enter your Departure place/i).first();
-    await fromCityInput.click();
-    await fromCityInput.fill('Bangalore');
+    const fromCityControl = page.getByText('Enter your Departure place', { exact: true }).first();
+    await fromCityControl.click({ force: true });
+    await page.keyboard.type('Bangalore');
     await page.waitForTimeout(1_000);
-    // Pick the first suggestion if one surfaces.
+    // Pick the first suggestion if one surfaces, scoped to the open menu (a bare page-wide text
+    // match can also hit an unrelated hidden element elsewhere on the page).
     await page
+      .locator('.react-select__menu')
       .getByText(/Bangalore/i)
       .first()
       .click({ timeout: 5_000 })
       .catch(() => undefined);
 
-    await expect(toCityInput, 'To-city becomes enabled once From is chosen').toBeEnabled({
-      timeout: 10_000,
-    });
+    await expect(
+      toCityControl,
+      'To-city becomes enabled once From is chosen (the --is-disabled class is removed)',
+    ).not.toHaveClass(/--is-disabled/, { timeout: 10_000 });
   });
 
   test('searching buses lists trips (or renders no rows) without crashing, and never reaches Show seats @ui', async ({
@@ -64,21 +71,23 @@ test.describe('KPost K-Booking — search and read-only trip listing', { tag: '@
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    const fromCityInput = page.getByPlaceholder(/Enter your Departure place/i).first();
-    await fromCityInput.click();
-    await fromCityInput.fill('Delhi');
+    const fromCityControl = page.getByText('Enter your Departure place', { exact: true }).first();
+    await fromCityControl.click({ force: true });
+    await page.keyboard.type('Delhi');
     await page.waitForTimeout(1_000);
     await page
+      .locator('.react-select__menu')
       .getByText(/Delhi/i)
       .first()
       .click({ timeout: 5_000 })
       .catch(() => undefined);
 
-    const toCityInput = page.getByPlaceholder(/Enter your Arrival place/i).first();
-    await toCityInput.click();
-    await toCityInput.fill('Jaipur');
+    const toCityControl = page.locator('.react-select__control').nth(1);
+    await toCityControl.click({ force: true });
+    await page.keyboard.type('Jaipur');
     await page.waitForTimeout(1_000);
     await page
+      .locator('.react-select__menu')
       .getByText(/Jaipur/i)
       .first()
       .click({ timeout: 5_000 })
