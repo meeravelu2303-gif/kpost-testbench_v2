@@ -99,11 +99,18 @@ test.describe('KPost signup · Personal field validation', { tag: '@ui' }, () =>
   });
 
   /*
-   * See #817: the First Name field accepts a raw <script> tag and an HTML-attribute-breakout payload
-   * verbatim, with no character-class filtering, and Continue is not blocked by it — confirmed live.
-   * Kept as a standing regression check rather than a one-off finding.
+   * CORRECTED 2026-10-05 (was filed/reopened as #817, now RESOLVED INVALID): the original version of
+   * this test asserted that the First Name INPUT's raw value must not equal the typed payload — the
+   * wrong signal. The app's real defense (confirmed in src/utils/validation.js, and in the frontend's
+   * own dedicated unit test literally titled "signup name validation (KPA-817)") is
+   * isValidSignupName(), which correctly rejects raw markup and drives `ValidData`, which disables
+   * Continue — it does not strip the character out of the live input box, which is a legitimate,
+   * common UX choice (show the user exactly what they typed, tell them why it's invalid, block
+   * progression) rather than a defect. The user confirmed this by hand: typing the payload leaves it
+   * visible but Continue will not proceed. The real, meaningful assertion is that Continue stays
+   * disabled and the error message appears — not that the box silently rewrites what was typed.
    */
-  test('the First Name field does not filter script/HTML-breakout characters — #817 @ui', async ({
+  test('the First Name field rejects a script tag — Continue stays disabled and an error shows @ui', async ({
     signupPage,
     page,
   }) => {
@@ -119,16 +126,17 @@ test.describe('KPost signup · Personal field validation', { tag: '@ui' }, () =>
     const field = page.getByPlaceholder('Enter the first name');
     const payload = '<script>alert(1)</script>';
     await field.fill(payload);
+    await page.getByPlaceholder('Enter the last name').fill('Bench');
 
-    test.info().annotations.push({
-      type: 'observed',
-      description: `First Name accepted verbatim: ${JSON.stringify(await field.inputValue())}`,
-    });
-
-    // This SHOULD fail today (documenting #817) — a name field must not accept raw markup unfiltered.
-    await expect(field, 'a name field must not accept an unfiltered <script> tag — see #817').not.toHaveValue(
-      payload,
-    );
+    const continueButton = page.getByRole('button', { name: /^Continue$/i });
+    await expect(
+      continueButton,
+      'Continue must stay disabled while First Name holds an unfiltered <script> tag',
+    ).toBeDisabled();
+    await expect(
+      page.getByText(/can contain only letters, numbers, spaces, periods, apostrophes, and hyphens/i),
+      'a validation error explains why the name is rejected',
+    ).toBeVisible();
   });
 
   test('the date picker blocks a birthday younger than 18 years old @ui', async ({

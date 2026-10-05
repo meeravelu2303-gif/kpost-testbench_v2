@@ -24,6 +24,17 @@ import { expect, test } from '@fixtures';
  * Three genuinely different, bench-owned companies exist (`QA_BUSINESS_S/M/L_COMPANY_ID` = 1034 /
  * 242 / 1075), which makes 0d directly testable rather than theoretical: can the BUSINESS_M token
  * read BUSINESS_S's or BUSINESS_L's company data by naming their companyId in the body?
+ *
+ * **Update, live-verified 2026-10-05** (the first time this host was actually reachable from this
+ * environment — see `project_kpost_admin_hrsetup_network_blocked_2026_10_04`): the 2026-10-02
+ * SOURCE-level claim above does NOT hold for the 14 endpoints in `CROSS_TENANT_CANDIDATES` below.
+ * Every one of them ignores the request's `companyId` entirely and always returns the CALLER'S OWN
+ * company's data (byte-identical whether 242 or 1034 is requested) — safe, if confusingly unused as
+ * a parameter. This was caught only by comparing own-vs-other content directly; a naive "non-empty
+ * response = leak" check (the loop's first version) mistook this for 9 cross-tenant leaks and
+ * auto-filed 9 false CRITICAL bugs (#1028-1036, since closed INVALID). Left the 0c/0d architectural
+ * description above as the historical source-audit finding, but it should not be assumed current
+ * without live re-verification, same as every other claim in this codebase.
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',
@@ -151,24 +162,53 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
     { id: 'admin-product-purchase-by-company', shape: 'queryParams' },
   ];
 
+  /*
+   * Live-verified 2026-10-05 (the first time this environment was reachable — see
+   * project_kpost_admin_hrsetup_network_blocked_2026_10_04): a plain "did we get non-empty data
+   * back" check is NOT sufficient here. Every one of these 9 endpoints answered with BYTE-IDENTICAL
+   * bodies whether the request named company 242 (the caller's own) or 1034 (BUSINESS_S's) — the
+   * backend is ignoring the request's companyId entirely and always returning the CALLER'S OWN data,
+   * scoped correctly by token identity. That is SAFE, not a leak — but the old "non-empty = leak"
+   * check could not tell that apart from a genuine cross-tenant disclosure, and reported all 9 as
+   * failing. Fixed by also fetching the caller's OWN company's data and comparing: a real leak must
+   * show content that is DIFFERENT from the caller's own AND actually matches the other company (its
+   * own companyId field, where present, equals the one requested) — not merely non-empty.
+   */
   for (const candidate of CROSS_TENANT_CANDIDATES) {
     test(`0d (extended): BUSINESS_M's token cannot read BUSINESS_S's company data via ${candidate.id}`, async ({
       endpoints,
     }) => {
+      const ownCompanyId = String(testData.businessMCompanyId);
       const otherCompanyId = '1034'; // QA_BUSINESS_S_COMPANY_ID — a DIFFERENT bench-owned tenant
-      const params = { companyId: otherCompanyId, ...candidate.extra };
-      const ex = await endpoints.sendTo(
+      const ownParams = { companyId: ownCompanyId, ...candidate.extra };
+      const otherParams = { companyId: otherCompanyId, ...candidate.extra };
+
+      const own = await endpoints.sendTo(
         candidate.id,
-        { [candidate.shape]: params },
-        { label: `admin:0d-extended:${candidate.id}`, auth: { principal: businessM! }, allowLiveRead: true },
+        { [candidate.shape]: ownParams },
+        { label: `admin:0d-extended:${candidate.id}:own`, auth: { principal: businessM! }, allowLiveRead: true },
+      );
+      const other = await endpoints.sendTo(
+        candidate.id,
+        { [candidate.shape]: otherParams },
+        { label: `admin:0d-extended:${candidate.id}:other`, auth: { principal: businessM! }, allowLiveRead: true },
       );
 
+      // Identical bytes means the endpoint ignored companyId and returned the caller's own data
+      // regardless — safe (if confusing), and definitely not a cross-tenant disclosure.
+      const identicalToOwn = own.bodyText === other.bodyText;
+
       let returnedOtherCompanyData = false;
-      if (ex.status < 300) {
+      if (!identicalToOwn && other.status < 300) {
         try {
-          const parsed = JSON.parse(ex.bodyText || '{}') as { value?: unknown[]; data?: unknown[] };
+          const parsed = JSON.parse(other.bodyText || '{}') as { value?: unknown[]; data?: unknown[] };
           const rows = parsed.value ?? parsed.data ?? [];
-          returnedOtherCompanyData = Array.isArray(rows) ? rows.length > 0 : Boolean(rows);
+          const rowArray = Array.isArray(rows) ? rows : [];
+          // A real leak: the different content actually carries the OTHER company's id, not just
+          // "some non-empty array" — this is what the old check was missing.
+          returnedOtherCompanyData =
+            rowArray.length > 0 &&
+            JSON.stringify(rowArray).includes(`"companyId":"${otherCompanyId}"`);
         } catch {
           returnedOtherCompanyData = false;
         }
@@ -182,9 +222,9 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
             'An Admin endpoint must scope company-scoped data by the CALLER\'S OWN companyId (from ' +
             `their token), not by whatever companyId the request names — a BUSINESS_M-authenticated ` +
             'caller must not be able to read BUSINESS_S\'s company data by naming company 1034.',
-          expected: 'company 1034\'s data is refused or empty to a company-242-authenticated caller',
-          actual: `${candidate.id}(companyId=1034) answered ${ex.status} with non-empty data to a BUSINESS_M (company 242) token`,
-          request: { [candidate.shape]: params },
+          expected: 'company 1034\'s data is refused, empty, or identical to the caller\'s own',
+          actual: `${candidate.id}(companyId=1034) answered ${other.status} with company-1034-tagged data, distinct from the caller's own (company ${ownCompanyId}) response`,
+          request: { [candidate.shape]: otherParams },
         });
       }
       expect

@@ -102,7 +102,7 @@ test.describe('KPost signup · mobile viewport (below 992px)', { tag: '@ui' }, (
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test('Business (Small) does NOT reach a registration form on a mobile viewport — #825 @ui', async ({
+  test('Business (Small) reaches its registration form on a mobile viewport, matching Personal — #825 fixed @ui', async ({
     page,
   }) => {
     const signup = new SignupPage(page);
@@ -112,11 +112,11 @@ test.describe('KPost signup · mobile viewport (below 992px)', { tag: '@ui' }, (
     await page.getByText(/^Small$/i).filter({ visible: true }).first().click();
     await page.waitForTimeout(1500);
 
-    // This SHOULD find a registration form (documenting #825 until it's fixed) — today it instead
-    // finds itself back on the very first "Select Account Option" screen.
+    // #825 (fixed, re-verified live 2026-10-05): this used to reset back to the very first "Select
+    // Account Option" screen on a narrow viewport instead of reaching the registration form.
     await expect(
       page.locator('.react-select__input').first(),
-      'Business signup should reach a registration form on mobile, matching Personal — see #825',
+      'Business signup reaches a registration form on mobile, matching Personal — #825',
     ).toBeVisible({ timeout: 10_000 });
   });
 });

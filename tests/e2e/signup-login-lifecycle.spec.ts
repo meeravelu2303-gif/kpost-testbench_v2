@@ -90,9 +90,21 @@ test.describe('KPost signup · personal registration → login', { tag: '@ui' },
      * arbitrary mobile number it does not recognise as an owned identity, and this diagnostic probe
      * — re-asking the exact same public, unauthenticated lookup the browser itself just made — has
      * no more access than the UI already does.
+     *
+     * CORRECTED 2026-10-05: this was asking `env.API_BASE_URL`, which is the FRONTEND origin
+     * (`BASE_URL` is its fallback when `API_BASE_URL` is unset — see src/config/env.ts) rather than
+     * the real API host (`KPOST_API_BASE_URL`). That made the self-correction unreliable — it could
+     * come back without a `"data":true` match for reasons having nothing to do with whether the
+     * number is really registered (wrong host, a proxy 404, …), which is exactly the false "a repeat
+     * of #720" signal this probe exists to prevent. Confirmed live 2026-10-05: calling the real API
+     * host directly shows QA_SIGNUP_UI_MOBILE (9000000780) IS genuinely registered — it was
+     * consumed by an orphaned account from an earlier write-fuzz run (`qabenchweb3@kpostindia.com`,
+     * 2026-10-02 — see src/fixtures/created-accounts.json) — so #720 is not reopened by this; the
+     * underlying number has simply gone stale and needs replacing with a fresh, OTP-gateway
+     * provisioned one.
      */
     if (otpOutcome === 'already-exists') {
-      const recheck = await page.request.post(`${env.API_BASE_URL}/v2/common/mobileNoExist/`, {
+      const recheck = await page.request.post(`${env.KPOST_API_BASE_URL}/v2/common/mobileNoExist/`, {
         data: { countryID: testData.countryId, mobileNumber },
       });
       const reallyExists = recheck.status() === 200 && /"data":true/.test(await recheck.text());

@@ -5,6 +5,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { JPEG_1X1 } from '@api/definitions/kpost/profile/image.api';
 import { expect, test } from '@fixtures';
 
 /**
@@ -479,6 +480,14 @@ test.describe('KPost Profile · write lifecycle', () => {
      * `profile-update-signature` still 500s regardless of format — already tracked as #559
      * [KP-7D1F6B], CRITICAL; not re-filed here.
      */
+    // CORRECTED 2026-10-05: `endpoints.sendTo(id, {}, …)` sends `{}` as the LITERAL request body —
+    // it does not fall back to the endpoint definition's own default `request()` factory the way
+    // `endpoints.call()` does (see feedback_sendto_literal_body_bug_class in this engagement's own
+    // notes; this is the same bug class found twice before, in signup and Katchup). `raw()` below
+    // relied on that fallback for the JPEG check, so it was silently sending an EMPTY multipart body
+    // and getting a 400 "Request must be multipart/form-data with the required file parts" — a bench
+    // fixture bug, not a real regression on JPEG uploads. Fixed by building the JPEG body explicitly,
+    // the same way the PNG check just below it already does.
     const raw = async (id: string, label: string): Promise<number> => {
       const ex = await endpoints.sendTo(
         id,
@@ -490,8 +499,17 @@ test.describe('KPost Profile · write lifecycle', () => {
 
     // profile-update-image: confirm the JPEG fixture now works, AND that the PNG rejection is a
     // real, still-open finding (not fixed by switching this test's own fixture).
-    const jpegUpload = await raw('profile-update-image', 'upload-profile-image-jpeg');
-    expect.soft(jpegUpload, 'updateProfileImage accepts a JPEG').toBeLessThan(300);
+    const jpegUploadEx = await endpoints.sendTo(
+      'profile-update-image',
+      {
+        multipart: {
+          file: { name: 'qa-bench.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(JPEG_1X1, 'base64') },
+          text: JSON.stringify({ kpostID: testData.kpostId }),
+        },
+      },
+      { label: 'profile:upload-profile-image-jpeg', auth: { principal: A }, allowLiveWrite: true },
+    );
+    expect.soft(jpegUploadEx.status, 'updateProfileImage accepts a JPEG').toBeLessThan(300);
 
     const pngUpload = await endpoints.sendTo(
       'profile-update-image',
