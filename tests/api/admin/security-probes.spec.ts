@@ -27,7 +27,7 @@ import { expect, test } from '@fixtures';
  *
  * **Update, live-verified 2026-10-05** (the first time this host was actually reachable from this
  * environment — see `project_kpost_admin_hrsetup_network_blocked_2026_10_04`): the 2026-10-02
- * SOURCE-level claim above does NOT hold for the 14 endpoints in `CROSS_TENANT_CANDIDATES` below.
+ * SOURCE-level claim above does NOT hold for the endpoints in `CROSS_TENANT_CANDIDATES` below.
  * Every one of them ignores the request's `companyId` entirely and always returns the CALLER'S OWN
  * company's data (byte-identical whether 242 or 1034 is requested) — safe, if confusingly unused as
  * a parameter. This was caught only by comparing own-vs-other content directly; a naive "non-empty
@@ -35,6 +35,14 @@ import { expect, test } from '@fixtures';
  * auto-filed 9 false CRITICAL bugs (#1028-1036, since closed INVALID). Left the 0c/0d architectural
  * description above as the historical source-audit finding, but it should not be assumed current
  * without live re-verification, same as every other claim in this codebase.
+ *
+ * **2026-10-06**: the standalone `admin-department-by-company` probes for 0c (missing-header bypass)
+ * and the 0d baseline (both below) were removed along with the `department/*` endpoint definitions —
+ * the Admin module's test scope is now restricted to `Admin_module - API Services.pdf`'s 36
+ * endpoints, which do not include any `department/*` path. These two tests were the clearest,
+ * already-filed CRITICAL reproduction of 0c/0d combined; that finding loses bench regression coverage
+ * as a result. Six `CROSS_TENANT_CANDIDATES` entries were removed for the same reason (their
+ * endpoints no longer have definitions); the rest of the extended 0d sweep below is unaffected.
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',
@@ -45,93 +53,6 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
     !businessM || testData.businessMKpostId.includes('qa.business.m'),
     'needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID)',
   );
-
-  test('0c: a request with NO Authorization header at all is not rejected outright', async ({
-    endpoints,
-  }) => {
-    /*
-     * Calls a plain, read-only, company-scoped endpoint with no auth header whatsoever, naming a
-     * real company (BUSINESS_M's own, 242 — our own data either way, so even a worst-case "it works"
-     * result exposes nothing we do not already own). If the backend's filter genuinely rejects a
-     * missing header the way it rejects an invalid one, this must be a 401/403. If it instead
-     * defaults kpostID/companyID and still serves the request, that is 0c confirmed.
-     */
-    const ex = await endpoints.sendTo(
-      'admin-department-by-company',
-      { body: { companyId: String(testData.businessMCompanyId) } },
-      { label: 'admin:0c-no-auth-header', auth: { header: undefined }, allowLiveRead: true },
-    );
-
-    if (ex.status < 300) {
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'admin-department-by-company',
-        ruleId: 'AUTH-BYPASS-admin-missing-header',
-        rule:
-          'An Admin endpoint must reject a request with no Authorization header at all, the same ' +
-          'way it rejects a present-but-invalid one — not silently default kpostID/companyID and ' +
-          'serve the request.',
-        expected: 'a request with no Authorization header is refused (401/403)',
-        actual: `getDepartmentByCompanyId answered ${ex.status} with no Authorization header sent at all`,
-        request: { body: { companyId: String(testData.businessMCompanyId) } },
-      });
-    }
-    expect
-      .soft(
-        ex.status,
-        `0c: an Admin endpoint must reject a request with no Authorization header (replied ${ex.status})`,
-      )
-      .toBeGreaterThanOrEqual(400);
-  });
-
-  test('0d: BUSINESS_M\'s token can read BUSINESS_S\'s company data by naming its companyId', async ({
-    endpoints,
-  }) => {
-    /*
-     * Authenticated as BUSINESS_M (company 242, a real token, a real valid session) but asking for
-     * company 1034's (BUSINESS_S's) departments. If the backend scopes by the token's own companyID
-     * claim, this must be refused or return nothing. If it scopes by whatever companyId the caller
-     * typed in the body, BUSINESS_S's real department data comes back to an account that has no
-     * business seeing it — 0d confirmed. Both 1034 and 242 are bench-owned (QA_BUSINESS_S/M_COMPANY_ID),
-     * so this never touches a real third party's data regardless of the outcome.
-     */
-    const otherCompanyId = '1034'; // QA_BUSINESS_S_COMPANY_ID — a DIFFERENT bench-owned tenant
-    const ex = await endpoints.sendTo(
-      'admin-department-by-company',
-      { body: { companyId: otherCompanyId } },
-      { label: 'admin:0d-cross-company', auth: { principal: businessM! }, allowLiveRead: true },
-    );
-
-    let returnedOtherCompanyData = false;
-    if (ex.status < 300) {
-      try {
-        const parsed = JSON.parse(ex.bodyText || '{}') as { value?: unknown[]; data?: unknown[] };
-        const rows = parsed.value ?? parsed.data ?? [];
-        returnedOtherCompanyData = Array.isArray(rows) && rows.length > 0;
-      } catch {
-        returnedOtherCompanyData = false;
-      }
-    }
-
-    if (returnedOtherCompanyData) {
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'admin-department-by-company',
-        ruleId: 'IDOR-admin-cross-company-tenant',
-        rule:
-          'An Admin endpoint must scope company-scoped data by the CALLER\'S OWN companyId (from ' +
-          'their token), not by whatever companyId the request body names — a BUSINESS_M-authenticated ' +
-          'caller must not be able to read BUSINESS_S\'s company data by naming company 1034 in the body.',
-        expected: 'company 1034\'s data is refused or empty to a company-242-authenticated caller',
-        actual: `getDepartmentByCompanyId(companyId=1034) answered ${ex.status} with non-empty data to a BUSINESS_M (company 242) token`,
-        request: { body: { companyId: otherCompanyId } },
-      });
-    }
-    expect
-      .soft(
-        returnedOtherCompanyData,
-        '0d: BUSINESS_M\'s token must not read BUSINESS_S\'s (company 1034) department data',
-      )
-      .toBe(false);
-  });
 
   /*
    * 0d, extended to every other company-scoped `productionSafe` read in the module. The single
@@ -151,15 +72,9 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
     { id: 'admin-hr-tier-variable-list', shape: 'body', extra: { parentVariableId: 0 } },
     { id: 'admin-role-posting-by-company', shape: 'body' },
     { id: 'admin-role-posting-employees', shape: 'body' },
-    { id: 'admin-attribute-by-company', shape: 'body' },
-    { id: 'admin-variable-list', shape: 'body', extra: { parentVariableId: 0 } },
-    { id: 'admin-hr-tier-extra-by-company', shape: 'body' },
-    { id: 'admin-hr-variable-extra-list', shape: 'body', extra: { parentVariableId: 0 } },
     { id: 'admin-workplace-tier-attribute-by-company', shape: 'body' },
     { id: 'admin-workplace-tier-variable-list', shape: 'body', extra: { parentVariableId: 0 } },
     { id: 'admin-workplace-location-all', shape: 'body' },
-    { id: 'admin-product-master-list', shape: 'pathParams' },
-    { id: 'admin-product-purchase-by-company', shape: 'queryParams' },
   ];
 
   /*

@@ -31,16 +31,6 @@ export const adminHrApis: EndpointDefinition[] = [
     productionSafe: true,
   }),
   defineAdminEndpoint({
-    id: 'admin-hr-tier-attribute-get',
-    method: 'POST',
-    path: '/hrSetUpTierAttribute/getAttribute',
-    summary: 'Get one HR tier attribute by id',
-    tags: ['hr-tier-attribute', 'needs-id'],
-    request: body(() => ({ id: 1 })),
-    destructive: false,
-    note: '"get one by id" is inferred from the shared DTO shape (no ByCompanyId suffix) — confirm live',
-  }),
-  defineAdminEndpoint({
     id: 'admin-hr-tier-attribute-save',
     method: 'POST',
     path: '/hrSetUpTierAttribute/save',

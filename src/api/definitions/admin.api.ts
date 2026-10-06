@@ -6,4 +6,4 @@
  * the module is reached by BUSINESS_M/L admins from "Admin / HR Setup". Definitions live under
  * `./admin/`; this file re-exports them, mirroring how `kmail.api.ts` re-exports `./kmail`.
  */
-export { adminApis, uncoveredAdminPaths } from './admin';
+export { adminApis } from './admin';

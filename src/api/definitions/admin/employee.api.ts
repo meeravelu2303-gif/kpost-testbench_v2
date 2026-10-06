@@ -63,19 +63,6 @@ export const adminEmployeeApis: EndpointDefinition[] = [
     sideEffect: 'data',
   }),
 
-  // Keyed by a runtime employee id a write creates — contract shows an open string-keyed map, no
-  // fixed schema, so the field names here are inferred from the sibling employee endpoints' shape.
-  defineAdminEndpoint({
-    id: 'admin-employee-transfer-promotion-details',
-    method: 'POST',
-    path: '/employeeDetails/getTransferOrPromotionDetails',
-    summary: "Read an employee's transfer/promotion history",
-    tags: ['employee', 'needs-id'],
-    request: body(() => ({ companyId: companyId(), employeeId: '1' })),
-    destructive: false,
-    note: 'request shape inferred (open map in the contract, no fixed schema) — confirm live',
-  }),
-
   // Reference data: pincode + country → address. Read-only, no tenant data named.
   defineAdminEndpoint({
     id: 'admin-country-address-by-pincode',
