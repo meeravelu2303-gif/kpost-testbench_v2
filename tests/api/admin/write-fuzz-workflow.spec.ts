@@ -293,11 +293,18 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         .toBe(true);
 
       // ---- The adversarial battery, per family: save (no id needed) + update/delete (real id) ----
+      //
+      // `companyId` is deliberately excluded from every `assertRejectsMalformed` validBody below
+      // (it stays in `assertPayloadNotStoredVerbatim` calls, which test a different thing). Confirmed
+      // from source: every one of these controllers calls `companyIdFromToken(request)` and never
+      // reads the body's own companyId at all — so "missing/null body.companyId" was never a real
+      // required-field case, and including it here produced 10 false bugs (#632-650) this
+      // engagement. See feedback_companyid_token_vs_payload_nuance.
 
       await assertRejectsMalformed(
         endpoints,
         'admin-workplace-tier-attribute-save',
-        { attributeName: name('WP Tier Fuzz'), companyId: cid() },
+        { attributeName: name('WP Tier Fuzz') },
         (b) => [b],
         'wp-attr-save',
       );
@@ -315,7 +322,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-workplace-tier-attribute-update',
-          { id: wpAttrId, companyId: cid(), attributeName: name('WP Tier Fuzz edited') },
+          { id: wpAttrId, attributeName: name('WP Tier Fuzz edited') },
           (b) => b,
           'wp-attr-update',
         );
@@ -326,7 +333,6 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         'admin-workplace-tier-variable-save',
         {
           variableName: name('WP Var Fuzz'),
-          companyId: cid(),
           attributeId: wpAttrId ?? '0',
           parentVariableId: 0,
         },
@@ -349,7 +355,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-workplace-tier-variable-update',
-          { id: wpVarId, companyId: cid(), attributeId: wpAttrId, variableName: name('WP Var Fuzz edited') },
+          { id: wpVarId, attributeId: wpAttrId, variableName: name('WP Var Fuzz edited') },
           (b) => b,
           'wp-var-update',
         );
@@ -360,7 +366,6 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
           endpoints,
           'admin-workplace-location-save',
           {
-            companyId: cid(),
             attributeId: wpAttrId,
             variableId: wpVarId,
             locationName: name('Location Fuzz'),
@@ -394,7 +399,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-workplace-location-update',
-          { id: locId, companyId: cid(), locationName: name('Location Fuzz edited') },
+          { id: locId, locationName: name('Location Fuzz edited') },
           (b) => b,
           'loc-update',
         );
@@ -403,7 +408,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
       await assertRejectsMalformed(
         endpoints,
         'admin-hr-tier-attribute-save',
-        { attributeName: name('HR Tier Fuzz'), companyId: cid() },
+        { attributeName: name('HR Tier Fuzz') },
         (b) => [b],
         'hr-attr-save',
       );
@@ -421,7 +426,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-hr-tier-attribute-update',
-          { id: hrAttrId, companyId: cid(), attributeName: name('HR Tier Fuzz edited') },
+          { id: hrAttrId, attributeName: name('HR Tier Fuzz edited') },
           (b) => b,
           'hr-attr-update',
         );
@@ -432,7 +437,6 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         'admin-hr-tier-variable-save',
         {
           variableName: name('HR Var Fuzz'),
-          companyId: cid(),
           attributeId: hrAttrId ?? '0',
           parentVariableId: 0,
         },
@@ -455,7 +459,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-hr-tier-variable-update',
-          { id: hrVarId, companyId: cid(), attributeId: hrAttrId, variableName: name('HR Var Fuzz edited') },
+          { id: hrVarId, attributeId: hrAttrId, variableName: name('HR Var Fuzz edited') },
           (b) => b,
           'hr-var-update',
         );
@@ -468,7 +472,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
       await assertRejectsMalformed(
         endpoints,
         'admin-employee-save',
-        { companyId: cid(), personalInformationObj: { firstName: 'QA', lastName: `Fuzz ${stamp}` } },
+        { personalInformationObj: { firstName: 'QA', lastName: `Fuzz ${stamp}` } },
         (b) => b,
         'employee-save',
       );
@@ -493,7 +497,6 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
           'admin-employee-update',
           {
             id: empId,
-            companyId: cid(),
             personalInformationObj: { firstName: 'QA', lastName: `Fuzz ${stamp} edited` },
           },
           (b) => b,

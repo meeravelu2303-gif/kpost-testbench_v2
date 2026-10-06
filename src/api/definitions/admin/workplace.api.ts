@@ -50,11 +50,15 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/adminTierAttribute/save',
     summary: 'Create a workplace tier attribute (level)',
     tags: ['workplace-tier-attribute'],
-    request: body(() => ({
-      companyId: companyId(),
-      attributeName: `QA WP Tier ${Date.now()}`,
-      createdBy: companyId(),
-    })),
+    // AdminTierAttributeController.save takes List<AdminTierAttributeEntity>, not a single object
+    // (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
+    request: body(() => [
+      {
+        companyId: companyId(),
+        attributeName: `QA WP Tier ${Date.now()}`,
+        createdBy: companyId(),
+      },
+    ]),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -98,12 +102,16 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/adminTierVariable/save',
     summary: 'Create a workplace tier variable (node)',
     tags: ['workplace-tier-variable'],
-    request: body(() => ({
-      companyId: companyId(),
-      attributeId: 1,
-      variableName: `QA WP Var ${Date.now()}`,
-      parentVariableId: 0,
-    })),
+    // AdminTierVariableController.save takes List<AdminTierVariableEntity>, not a single object
+    // (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
+    request: body(() => [
+      {
+        companyId: companyId(),
+        attributeId: 1,
+        variableName: `QA WP Var ${Date.now()}`,
+        parentVariableId: 0,
+      },
+    ]),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -196,13 +204,17 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/location/save',
     summary: 'Create a workplace location',
     tags: ['workplace-location'],
-    request: body(() => ({
-      companyId: companyId(),
-      locationName: `QA Location ${Date.now()}`,
-      addressLine1: 'QA address',
-      pincode: testData.pinCode,
-      country: 'India',
-    })),
+    // LocationController.save takes List<LocationEntity>, not a single object (confirmed from
+    // source 2026-10-05) — a bare object 400s "Request body is invalid".
+    request: body(() => [
+      {
+        companyId: companyId(),
+        locationName: `QA Location ${Date.now()}`,
+        addressLine1: 'QA address',
+        pincode: testData.pinCode,
+        country: 'India',
+      },
+    ]),
     destructive: true,
     sideEffect: 'data',
   }),

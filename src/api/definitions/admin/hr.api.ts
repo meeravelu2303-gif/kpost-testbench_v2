@@ -46,11 +46,15 @@ export const adminHrApis: EndpointDefinition[] = [
     path: '/hrSetUpTierAttribute/save',
     summary: 'Create an HR tier attribute (level)',
     tags: ['hr-tier-attribute'],
-    request: body(() => ({
-      companyId: companyId(),
-      attributeName: `QA HR Tier ${Date.now()}`,
-      createdBy: companyId(),
-    })),
+    // HrTierSetUpAttributeController.save takes List<HrSetUpTierAttributeEntity>, not a single
+    // object (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
+    request: body(() => [
+      {
+        companyId: companyId(),
+        attributeName: `QA HR Tier ${Date.now()}`,
+        createdBy: companyId(),
+      },
+    ]),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -103,12 +107,16 @@ export const adminHrApis: EndpointDefinition[] = [
     path: '/hrSetUpTierVariable/save',
     summary: 'Create an HR tier variable (node)',
     tags: ['hr-tier-variable'],
-    request: body(() => ({
-      companyId: companyId(),
-      attributeId: 1,
-      variableName: `QA HR Var ${Date.now()}`,
-      parentVariableId: 0,
-    })),
+    // HrSetUpTierVariableController.save takes List<HrSetUpTierVariableEntity>, not a single
+    // object (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
+    request: body(() => [
+      {
+        companyId: companyId(),
+        attributeId: 1,
+        variableName: `QA HR Var ${Date.now()}`,
+        parentVariableId: 0,
+      },
+    ]),
     destructive: true,
     sideEffect: 'data',
   }),

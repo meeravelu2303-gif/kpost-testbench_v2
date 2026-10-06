@@ -1,6 +1,6 @@
 import { KATCHUP_MESSAGE_TYPE } from '@api/schemas/kpost-types';
 import { testData } from '@config/test-data.config';
-import { body } from '../kpost-endpoint';
+import { body, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
@@ -28,6 +28,38 @@ export const recallMessageApi = defineKatchupEndpoint({
   // Live client payload, not the workbook's {msgID, status:5}.
   request: body(() => ({ msgID: 0, groupFlag: false })),
   note: 'live-client payload {msgID, groupFlag}; needs a real owned msgID',
+});
+
+/*
+ * Legacy "V1" twin of recallMessageApi — confirmed dead from the real frontend (EndPointURL already
+ * bakes in /v2, so every live call resolves to KatchupControllerV2, never this bare "katchup" path)
+ * but still deployed. KatchupController.recallMessage (KatchupController.java, no HttpServletRequest
+ * parameter AT ALL) passes the client-supplied FetchKatchupRO straight to
+ * KatchupServiceImpl.recallMessage, which matches purely on the body's own `sender` field
+ * (katchupRepo.recallKatchupMessage(msgID, sender, status)) — unlike its V2 sibling, which
+ * correctly overrides sender from the JWT (`fetchKatchupRO.setSender((String)
+ * request.getAttribute("kpostID"))`, KatchupControllerV2.java:741) before calling the identical
+ * service method. Registered here only to prove/track the live cross-account message-tampering
+ * gap — never driven as a normal client flow.
+ */
+// Not in the generated OpenAPI contract at all (it's a dead V1 path, never documented in the
+// workbook) — defineKatchupEndpoint's workbookContract() lookup throws at module-load time for any
+// path the contract doesn't know, which previously crashed every spec that imports this module.
+// defineUndocumentedKpostEndpoint skips that lookup; it's normally used for real-but-undocumented
+// frontend calls, but its only actual requirement is a path the generated contract doesn't have, so
+// it's the correct escape valve here too.
+export const legacyRecallMessageApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-legacy-recall-message',
+  method: 'POST',
+  path: '/katchup/recallMessage',
+  summary: '[LEGACY/dead-from-frontend] Recall a message by msgID+sender taken straight from the body',
+  tags: ['katchup', ...MANAGE_TAGS, 'legacy', 'needs-message-id'],
+  authentication: { required: true },
+  destructive: true,
+  sideEffect: 'data',
+  request: body(() => ({ msgID: 0, sender: '', groupFlag: false })),
+  evidence:
+    'KatchupController.recallMessage (KatchupController.java) — confirmed zero frontend callers 2026-10-05; no HttpServletRequest param at all in the controller, sender is trusted from the body',
 });
 
 export const deleteMessageApi = defineKatchupEndpoint({
@@ -147,6 +179,7 @@ export const forwardBacktrackApi = defineKatchupEndpoint({
 
 export const katchupManageApis = [
   recallMessageApi,
+  legacyRecallMessageApi,
   deleteMessageApi,
   markImportantApi,
   saveMessagesApi,

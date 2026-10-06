@@ -17,6 +17,9 @@ test.describe('KPost Katchup · module coverage', () => {
 
   test('every definition matches the generated contract @framework', () => {
     for (const api of katchupApis) {
+      // Deliberate exception: confirmed real from the live frontend, not the workbook — see
+      // `defineUndocumentedKpostEndpoint`'s own doc comment. Nothing to cross-check against.
+      if ((api.tags ?? []).includes('undocumented-contract')) continue;
       const documented = api.contractPath ?? api.path;
       expect(workbookContract('kpost-api', api.method, documented).path, `${api.id} path`).toBe(
         documented,

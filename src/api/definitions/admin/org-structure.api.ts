@@ -38,7 +38,11 @@ export const adminOrgStructureApis: EndpointDefinition[] = [
     path: '/department/save',
     summary: 'Create a department',
     tags: ['department'],
-    request: body(() => ({ companyId: companyId(), departmentName: `QA Dept ${Date.now()}` })),
+    // Confirmed from backend source 2026-10-05 (DepartmentController.saveDepartment takes
+    // `List<Department>`, not a single object) — a bare object 400s "Request body is invalid".
+    request: body(() => [
+      { companyId: companyId(), departmentName: `QA Dept ${Date.now()}`, abbreviation: 'QAD', code: 'QAD' },
+    ]),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -68,7 +72,12 @@ export const adminOrgStructureApis: EndpointDefinition[] = [
     path: '/department/abbreviationAndCodeCreation',
     summary: 'Derive an abbreviation/code suggestion for a department name',
     tags: ['department'],
-    request: body(() => ({ companyId: companyId(), departmentName: `QA Dept ${Date.now()}` })),
+    // companyId removed 2026-10-05: confirmed from source (DepartmentController.
+    // abbreviationAndCodeCreation) that this method never reads companyId at all — it only calls
+    // departmentService.abbreviationAndCodeCreation(departmentName). Including it caused a false
+    // "missing companyId should 4xx" finding (#879's companyId case). See
+    // feedback_companyid_token_vs_payload_nuance.
+    request: body(() => ({ departmentName: `QA Dept ${Date.now()}` })),
     destructive: false,
     productionSafe: true,
     note: 'modeled as a non-persisting preview call by analogy with admin-kpostid-designation-suggestion — confirm live',
@@ -92,11 +101,15 @@ export const adminOrgStructureApis: EndpointDefinition[] = [
     path: '/designation/save',
     summary: 'Create a designation',
     tags: ['designation'],
-    request: body(() => ({
-      companyId: companyId(),
-      departmentId: 1,
-      designationName: `QA Designation ${Date.now()}`,
-    })),
+    // DesignationController.save takes List<Designation>, not a single object (confirmed from
+    // source 2026-10-05) — a bare object 400s "Request body is invalid".
+    request: body(() => [
+      {
+        companyId: companyId(),
+        departmentId: 1,
+        designationName: `QA Designation ${Date.now()}`,
+      },
+    ]),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -131,7 +144,11 @@ export const adminOrgStructureApis: EndpointDefinition[] = [
     path: '/designation/abbreviationAndCodeCreation',
     summary: 'Derive an abbreviation/code suggestion for a designation name',
     tags: ['designation'],
-    request: body(() => ({ companyId: companyId(), designationName: `QA Designation ${Date.now()}` })),
+    // companyId removed, departmentId added 2026-10-05: confirmed from source
+    // (DesignationController.abbreviationAndCodeCreation) — this method requires designationName
+    // and departmentId only; it never reads companyId at all. See
+    // feedback_companyid_token_vs_payload_nuance.
+    request: body(() => ({ departmentId: 1, designationName: `QA Designation ${Date.now()}` })),
     destructive: false,
     productionSafe: true,
     note: 'modeled as a non-persisting preview call by analogy with admin-kpostid-designation-suggestion — confirm live',

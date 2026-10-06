@@ -82,12 +82,18 @@ export const adminRolesApis: EndpointDefinition[] = [
      * the guard's own "external (SMS/account provisioning)" category (see its write-fuzz comment).
      */
     tags: ['role-posting', 'role-posting-mutation'],
-    request: body(() => ({
-      companyId: companyId(),
-      employeeId: 1,
-      hrVariableId: 1,
-      locationId: 1,
-    })),
+    // RolePostingSetUpController.save takes List<RolePostingRequestObject>, not a single object
+    // (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid". Never
+    // actually sent live anyway (sideEffect:'external' above), but kept correct for shape/negative
+    // probes run off-production.
+    request: body(() => [
+      {
+        companyId: companyId(),
+        employeeId: 1,
+        hrVariableId: 1,
+        locationId: 1,
+      },
+    ]),
     destructive: true,
     sideEffect: 'external',
   }),

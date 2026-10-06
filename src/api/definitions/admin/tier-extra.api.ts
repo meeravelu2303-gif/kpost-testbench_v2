@@ -45,7 +45,7 @@ export const adminTierExtraApis: EndpointDefinition[] = [
     tags: ['attribute', 'needs-id'],
     request: body(() => ({ id: 1 })),
     destructive: false,
-    note: '"get one by id" is inferred from the shared DTO shape, not documented — confirm live',
+    note: '"get one by id" is inferred from the shared DTO shape, not documented — confirm live. Confirmed 2026-10-05: zero callers in ADMIN_HR_MODULES_25 (dead from the real frontend) but still deployed, with NO companyIdFromToken check at all (AttributeController.java:67-89) — see security-admin-legacy-v1.spec.ts.',
   }),
   defineAdminEndpoint({
     id: 'admin-attribute-save',
@@ -53,7 +53,9 @@ export const adminTierExtraApis: EndpointDefinition[] = [
     path: '/attribute/save',
     summary: 'Create an attribute',
     tags: ['attribute'],
-    request: body(() => ({ companyId: companyId(), attributeName: `QA Attr ${Date.now()}` })),
+    // AttributeController.save takes List<AttributeEntity>, not a single object (confirmed from
+    // source 2026-10-05) — a bare object 400s "Request body is invalid".
+    request: body(() => [{ companyId: companyId(), attributeName: `QA Attr ${Date.now()}` }]),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -97,12 +99,16 @@ export const adminTierExtraApis: EndpointDefinition[] = [
     path: '/variable/save',
     summary: 'Create a variable',
     tags: ['variable'],
-    request: body(() => ({
-      companyId: companyId(),
-      attributeId: 1,
-      variableName: `QA Var ${Date.now()}`,
-      parentVariableId: 0,
-    })),
+    // VariableController.save takes List<VariableEntity>, not a single object (confirmed from
+    // source 2026-10-05) — a bare object 400s "Request body is invalid".
+    request: body(() => [
+      {
+        companyId: companyId(),
+        attributeId: 1,
+        variableName: `QA Var ${Date.now()}`,
+        parentVariableId: 0,
+      },
+    ]),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -161,7 +167,9 @@ export const adminTierExtraApis: EndpointDefinition[] = [
     path: '/hrTier/save',
     summary: 'Create an HR tier',
     tags: ['hr-tier-extra'],
-    request: body(() => ({ companyId: companyId(), attributeName: `QA HR Tier2 ${Date.now()}` })),
+    // HrTierController.save takes List<HrTierEntity>, not a single object (confirmed from source
+    // 2026-10-05) — a bare object 400s "Request body is invalid".
+    request: body(() => [{ companyId: companyId(), attributeName: `QA HR Tier2 ${Date.now()}` }]),
     destructive: true,
     sideEffect: 'data',
   }),

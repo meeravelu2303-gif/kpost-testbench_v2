@@ -1,3 +1,4 @@
+import { STORAGE_STATE } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { text } from '@database/kpost-assertions';
 import { KpostRepository } from '@database/repositories/kpost.repository';
@@ -73,6 +74,17 @@ test.describe('Cross-layer · UI login reaches the database @database', { tag: '
     // --- Layer 2: the client now holds a token --------------------------------------------------
     const token = await page.evaluate(() => window.localStorage.getItem('accessToken'));
     expect(token, 'the app stored an access token for the signed-in user').toBeTruthy();
+
+    /*
+     * This is a real login for the SAME account every other spec's shared `storageState: STORAGE_STATE`
+     * depends on. If the backend revokes the previous session on a fresh login (plausible — this very
+     * test exists to prove a session row is created and therefore revocable), the OLD token baked into
+     * the shared file at suite start goes dead the instant this test runs, and every later spec in a
+     * long sequential run (workers=1) starts 401-ing simultaneously across unrelated screens — looking
+     * like a mass regression when it is really this test's own side effect. Re-saving the fresh,
+     * just-issued session back to the same shared path heals it for everything that runs afterward.
+     */
+    await page.context().storageState({ path: STORAGE_STATE });
 
     // --- Layer 3, after: the server can actually revoke that session -----------------------------
     /*

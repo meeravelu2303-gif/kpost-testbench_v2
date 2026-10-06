@@ -8,6 +8,7 @@ import { databaseValidationRegistry } from '@database/validations/index';
 import { EndpointExecutor } from '@engine/endpoint-executor';
 import { businessRuleFindingReports, flowFindingReports } from '@engine/flow-finding';
 import { ValidationEngine, type ValidationEngineDeps } from '@engine/validation-engine';
+import { AdminPage } from '@pages/AdminPage';
 import { HomePage } from '@pages/HomePage';
 import { LoginPage } from '@pages/LoginPage';
 import { SettingsPage } from '@pages/SettingsPage';
@@ -42,6 +43,7 @@ interface TestFixtures {
   signupPage: SignupPage;
   homePage: HomePage;
   settingsPage: SettingsPage;
+  adminPage: AdminPage;
 }
 
 /** Import `test` and `expect` from `@fixtures` in every spec — never from `@playwright/test`. */
@@ -136,6 +138,10 @@ export const test = base.extend<TestFixtures>({
 
   settingsPage: async ({ page }, use) => {
     await use(new SettingsPage(page));
+  },
+
+  adminPage: async ({ page }, use) => {
+    await use(new AdminPage(page));
   },
 });
 
