@@ -4,7 +4,7 @@ import { componentFor, suiteFor, type SuiteId } from '@config/ownership.config';
 import type { Severity, ValidationReport, ValidationResult } from '@engine/validation-result';
 import { maskSensitive, maskString } from '@utils/masking';
 import { buildCurl } from './curl';
-import { apiFingerprint, systemicFingerprint, uiFingerprint } from './bug-fingerprint';
+import { apiFingerprint, systemicFingerprint, uiFingerprint, uiSystemicFingerprint } from './bug-fingerprint';
 
 /**
  * Validators whose failure is ONE platform-wide root cause, not an endpoint's own bug: a defect in
@@ -431,41 +431,150 @@ export interface UiFailureInput {
   proof?: ProofFile[];
 }
 
+/**
+ * Known shared background components that fail the SAME way on every screen they happen to be
+ * mounted on — the screen under test is incidental, not the cause. Keyed by a snippet found in the
+ * failing request's own hostname; add to this list whenever a new one turns up (recognisable by
+ * the same symptom being filed against many unrelated screens for what is really one component).
+ */
+const KNOWN_BACKGROUND_WIDGETS: ReadonlyArray<{ hostMatch: string; causeKey: string; label: string }> = [
+  {
+    hostMatch: 'rss2json.com',
+    causeKey: 'rss-widget-cors',
+    label: 'the news/RSS widget that appears on every screen',
+  },
+];
+
+/** The hostname out of a URL embedded in an error message, tolerant of the bench's own spacing quirks. */
+function hostnameIn(message: string): string | undefined {
+  const m = /https?:\s*\/*([a-zA-Z0-9.-]+)/i.exec(message);
+  return m?.[1];
+}
+
+/**
+ * Rewrites a raw Playwright/browser failure message into something a non-technical reader can
+ * follow, and — for a small set of known shared background components — recognises that the
+ * failure has nothing to do with the screen under test, so every screen's occurrence should
+ * collapse into ONE ticket instead of one per screen. Never invents a cause outside this list;
+ * anything not recognised still gets a readable sentence, just without the systemic collapse.
+ */
+function humanizeUiFailure(message: string): {
+  classification: string;
+  actual: string;
+  systemic?: { causeKey: string; narrative: string };
+} {
+  const host = hostnameIn(message);
+  if (host) {
+    const widget = KNOWN_BACKGROUND_WIDGETS.find((w) => host.includes(w.hostMatch));
+    if (widget) {
+      return {
+        classification: 'A shared background component fails on every screen, not just this one',
+        actual:
+          `${widget.label} tried to load something from an outside website (${host}) and that ` +
+          `call failed, which crashed the page. This is not specific to this screen — the same ` +
+          `widget is mounted everywhere, so every screen hits the same failure. Technical detail: ` +
+          message,
+        systemic: {
+          causeKey: widget.causeKey,
+          narrative:
+            `${widget.label.charAt(0).toUpperCase()}${widget.label.slice(1)} fails to load an ` +
+            `outside feed through ${host}, and the resulting error crashes whichever screen ` +
+            `happens to be open at the time — Home, Katchup, Kall, KMail, Profile, Settings, and ` +
+            `every other screen that renders this widget are all affected the same way. Fix the ` +
+            `one shared component and every screen is fixed at once.`,
+        },
+      };
+    }
+    return {
+      classification: 'A background request to an outside website failed and crashed the page',
+      actual: `While using the screen, a background request to ${host} failed, and the page crashed as a result. Technical detail: ${message}`,
+    };
+  }
+
+  if (/Test timeout of \d+ms exceeded/i.test(message)) {
+    return {
+      classification: 'The screen became unresponsive and the check timed out waiting for it',
+      actual: `The check gave up waiting for the screen to respond. Technical detail: ${message}`,
+    };
+  }
+  if (/TimeoutError:\s*locator\.click/i.test(message)) {
+    return {
+      classification: 'A control on the screen never became clickable',
+      actual: `A button or control the check tried to click never became available to click, so the check gave up. Technical detail: ${message}`,
+    };
+  }
+  if (/ChunkLoadError/i.test(message)) {
+    return {
+      classification: 'Part of the app failed to load (a missing or broken code chunk)',
+      actual: `A piece of the app's own code failed to download and load in the browser. Technical detail: ${message}`,
+    };
+  }
+  if (/Minified React error/i.test(message)) {
+    return {
+      classification: 'The page crashed due to an internal React error',
+      actual: `The page's own code crashed with an internal React error. Technical detail: ${message}`,
+    };
+  }
+  if (/keyboard use crashed the screen/i.test(message)) {
+    return {
+      classification: 'Using the keyboard to navigate the screen crashes it',
+      actual: `Tabbing through the screen's controls with the keyboard crashed it. Technical detail: ${message}`,
+    };
+  }
+  if (/the screen crashed when the network dropped/i.test(message)) {
+    return {
+      classification: 'The screen crashes if the network connection drops',
+      actual: `When the network connection was interrupted, the screen crashed instead of showing an error. Technical detail: ${message}`,
+    };
+  }
+
+  // No recognised pattern — still return something readable rather than the raw string verbatim.
+  return { classification: 'UI Test Failure', actual: message };
+}
+
 /** Turns a browser test failure into a candidate for the UI module and its developer. */
 export function candidateFromUiFailure(
   input: UiFailureInput,
   config: BugzillaConfig,
 ): BugCandidate {
   const suite = suiteFor('kpost-ui');
-  const id = uiFingerprint({
-    prefix: config.tagPrefix,
-    file: input.file,
-    title: input.title,
-    message: input.message,
-  });
   // The component doubles as the screen name for the reproduction steps.
   const component = componentFor(suite, screenTokens(input.file, input.title));
+  const humanized = humanizeUiFailure(input.message);
+
+  const id = humanized.systemic
+    ? uiSystemicFingerprint({ prefix: config.tagPrefix, causeKey: humanized.systemic.causeKey })
+    : uiFingerprint({
+        prefix: config.tagPrefix,
+        file: input.file,
+        title: input.title,
+        message: input.message,
+      });
+
   return {
     id,
     source: 'ui',
     suiteId: suite.id,
-    title: `${input.title}: ${maskString(input.message)}`,
+    title: humanized.systemic
+      ? `App-wide: ${humanized.classification}`
+      : `${input.title}: ${maskString(input.message)}`,
     // Application-level, for a developer who has the app but not our test repo: no internal file path
     // or test command — the screen, the browser, and what went wrong.
-    narrative:
-      `A front-end (UI) defect on the ${suite.label} at ${input.baseURL}, seen in ${input.browser}. ` +
-      `To reproduce: sign in with a test account and open the ${component} screen, then exercise ` +
-      `"${input.title}". Expected vs Actual are below.`,
+    narrative: humanized.systemic
+      ? humanized.systemic.narrative
+      : `A front-end (UI) defect on the ${suite.label} at ${input.baseURL}, seen in ${input.browser}. ` +
+        `To reproduce: sign in with a test account and open the ${component} screen, then exercise ` +
+        `"${input.title}". Expected vs Actual are below.`,
     severity: 'HIGH',
     category: 'Functional',
-    classification: 'UI Test Failure',
+    classification: humanized.classification,
     product: suite.bugzilla.product,
     component,
     version: suite.bugzilla.version,
     assignee: suite.owner.email,
     ownerName: suite.owner.name,
     expected: 'The screen renders and behaves as expected.',
-    actual: maskString(input.message),
+    actual: maskString(humanized.actual),
     browsers: [input.browser],
     occurrences: 1,
     environment: input.environment,

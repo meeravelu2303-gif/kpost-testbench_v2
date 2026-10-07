@@ -205,7 +205,84 @@ Bugzilla component defaults, so drift on either side fails a run. Dedupe is a li
 FIXED-but-back → reopen, search failed → file nothing. **Dry run is the default.** Details:
 `docs/bug-filing.md`.
 
-## 7. Contracts — the Excel workbook is the source of truth
+**Standing filing rules (owner directive, 2026-10-07 — do not ask again, just follow these):**
+
+- **Run everything, THEN file once.** Do not run a module, file its bugs, run another module, file
+  again, repeating all day — that produces a steady drip of tickets and developers rightly ask why
+  everything wasn't filed together. Finish gap-filling + the full test suite for a product first,
+  **then** do one consolidated filing pass against Bugzilla.
+- **Every reopen must be re-verified live first**, not assumed. A developer's FIXED/INVALID claim
+  that doesn't survive replaying the exact original request is reopened with evidence; a bug that
+  genuinely still fails on a fresh, isolated re-run is reopened; anything in between is investigated
+  before touching its status. Reopening a bug that was actually already fixed (stale dedupe match,
+  or a bench-side artifact masquerading as the same fault) is the single most-repeated mistake in
+  this engagement — see the 2026-10-06/07 decision log entries for two concrete cases.
+- **A root-cause bug that affects multiple tests/endpoints must say so explicitly in its
+  description** — name the count and, where practical, list the affected tests/endpoints (e.g. "This
+  affects 7 screens: Home, Katchup, Kall, …" or "Affects 3 endpoints — one shared fix resolves all of
+  them"). A developer fixing one shared root cause needs to know its blast radius, not just the one
+  symptom that happened to get filed.
+- **Every bug description is plain, understandable English** — for KPost API, KMail API, KPost
+  Admin and KPost UI alike, not just UI. State what's broken and the bottom line in a sentence a
+  non-QA reader can follow, even when the template also carries a curl/evidence block for
+  developers who want it.
+- **Every bug touched (filed or reopened) carries the real date it was actually observed** — this is
+  already automatic (`candidate.observedAt = new Date().toISOString()`, baked into both
+  `buildDescription` and `buildReopenComment` in `src/bug-tracker/bug-builder.ts`), not something to
+  do by hand each time.
+- **File only what's genuinely valid, and never a duplicate.** Run the mandatory duplicate-check
+  before any manual filing; trust the engine's own validity gate for automated runs, but still
+  spot-check anything that smells like a bench artifact (a shared-session crash, a load-time module
+  error, a timing race) before letting it reach Bugzilla — see §8's 2026-10-06 entries for what that
+  looked like in practice.
+- **A shared background component failing on every screen is ONE bug, not one per screen.** Before
+  filing a UI finding, check whether the failure actually traces to a shared background
+  component (a global widget, a socket connection, a third-party script) rather than the screen
+  under test — `humanizeUiFailure()` and `KNOWN_BACKGROUND_WIDGETS` in `src/bug-tracker/
+  bug-candidate.ts` already catch the known cases (currently the RSS/news widget via
+  `rss2json.com`) and collapse them into one ticket via `uiSystemicFingerprint()`; add a new entry
+  there when a new shared-component pattern turns up instead of letting it re-fragment.
+- **API status-code drift vs. a stale frontend is its own bug class.** The backend has changed many
+  endpoints' response status codes over time without the frontend being updated to match. When a UI
+  failure traces back to the app mishandling an API response, check what status code the API
+  actually returns today against what the frontend's own error-handling expects, and file the
+  mismatch explicitly (both halves — the endpoint, its current code, what the frontend assumes) —
+  not as a generic "UI crashed" bug, since the real fix is reconciling the two sides, and it may not
+  be obvious which one is "wrong".
+- **Every full-suite run must end with EVERY existing open bug touched and dated today — not just
+  whatever the run happened to re-exercise.** (Owner directive, 2026-10-07, repeated after being
+  missed once — do not require it to be repeated again.) Running the suite is not the same as
+  checking every bug: for API bugs `verify-resolve.ts` genuinely re-checks each one by its
+  (endpoint, validator) pair, but UI bugs carry no "endpoint" field at all, so that mechanism
+  silently checks **0** of them (`reports/REPORT.md`'s "## 3b. Auto-resolved" section always reads
+  "Checked 0 open bench-filed bugs" for a UI run) — a bug only gets touched if the exact scenario
+  that originally filed it happens to run again this pass and its fingerprint matches. After every
+  full suite (any product), pull the live list of open bugs for that product/browser, compare
+  `last_change_time` against today's date, and individually re-verify every one left untouched
+  (target its specific spec file/scenario, or a standalone non-reporter script for UI) before
+  considering the pass done — do not report a module "done" while any open bug's date is stale.
+  When checking a *browser* filter specifically, match Bugzilla's own semantics: `status_whiteboard`
+  is a **substring** match, so a multi-browser tag like `[browser:chromium,firefox]` counts for
+  both browsers — an exact-bracket match like `[browser:chromium]` undercounts (found 2026-10-07:
+  undercounted 43 real chromium bugs as 39 this way).
+- **Post-deploy re-verification flow (owner directive, 2026-10-07 — the standing flow, every time,
+  not just this once):** when the owner names specific bug IDs to mark FIXED because a deploy is in
+  progress or has landed, do **not** resolve anything until the owner explicitly confirms the deploy
+  has finished. Once given the go-ahead:
+  1. Live-verify EACH named bug individually (the same standalone-script method used on 2026-10-07 —
+     never trust "it should be fixed now" without replaying the actual repro).
+  2. If it genuinely no longer reproduces → `RESOLVED`/`FIXED`, with a comment describing exactly
+     what was checked and what came back clean.
+  3. If it still reproduces → leave it `CONFIRMED` (or reopen it if a developer had marked it
+     fixed/invalid) with a comment describing exactly what was checked and what still failed — never
+     silently mark something FIXED on request alone, and never go quiet on one that's still broken.
+  4. **Every single bug touched this way gets today's date and a fresh, self-contained, plain-English
+     comment, every time** — this is not optional and not a one-off. That comment is exactly what
+     lands in the Excel export's **Last Comment** column (`src/lib/bugExport.ts` /
+     `BugCommentInfo` in `backend/src/routes/bugs.ts`), which is the ONLY place developers read a
+     bug's current status from when fixing bugs off the spreadsheet — so a vague, stale, or
+     templated comment there directly costs a developer real time. Write it like the developer has
+     never seen the ticket before and is reading only this one comment.
 
 The swagger files were **deleted**: they disagreed with the workbook. `KPOST API (N).xlsx` now lives
 **in the repository root** (currently `KPOST API (6).xlsx`); the converter picks the
@@ -255,6 +332,68 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 ## 8. Decision log — what was done and why
 
 Newest first. Each entry records the decision, not just the change.
+
+### 2026-10-07 (later) — UI description template fixed, 23 duplicate tickets consolidated, server-side throttling hit and cleared
+
+Reading actual filed bug descriptions closely (owner's complaint: "most of the bugs details can't
+understand") surfaced a real, fixable problem: `candidateFromUiFailure`'s template always wrote the
+same generic boilerplate and dumped the raw, unprocessed browser error into `Actual:` — e.g. "JS
+error: Fetch API cannot load https: /api.rss2json.com/...", a truncated URL-encoded string
+meaningless to a non-QA reader. Worse, 23 separate tickets across unrelated screens (Profile,
+Settings, KMail, Kall, Home, Katchup, …) turned out to be the exact same root cause — a global
+news/RSS widget failing to load an outside feed — each filed as if that one screen had crashed.
+Fixed by adding `humanizeUiFailure()` (rewrites common raw failure patterns into plain sentences)
+and `uiSystemicFingerprint()` (collapses a known shared-background-component failure into one
+ticket across every screen, mirroring the API side's existing systemic-fault handling) in
+`src/bug-tracker/bug-candidate.ts` / `bug-fingerprint.ts`. Cleaned up the 23 existing duplicates:
+reopened the original (#1020, had been marked fixed while still reproducing) with a clear
+explanation, closed the 23 fragments as DUPLICATE of it. New standing rule (§6): a UI finding that
+traces to the API returning a status code the frontend's own error handling doesn't expect
+(contract drift from the API changing over time without the frontend catching up) gets filed as
+its own explicit bug naming both halves, not folded into a generic "UI crashed" ticket.
+
+Separately: a chromium UI re-verification run started hanging on every single account login
+(~47s timeouts) after many consecutive hours of heavy automated traffic against the server today
+(a full API sweep, a full 3-browser UI sweep, plus extra security regression tests, back-to-back,
+no breaks). Ruled out server health (plain HTTPS requests stayed under 200ms throughout),
+local memory (freed 6.5GB by closing ~42 unrelated desktop Chrome windows — didn't fix it), and
+browser-launch failure (the browser process was running fine, named `chrome-headless-shell.exe`,
+not `chrome.exe` — don't check process name "chrome" when diagnosing this bench's browser
+processes). Confirmed via a standalone Playwright script that the page's main HTML loads instantly
+but `domcontentloaded` never fires, consistent with server-side rate-limiting/anti-automation
+throttling kicking in under sustained heavy traffic and then clearing on its own after a cooldown
+(confirmed recovered ~40 minutes later, unprompted). Production-grade fix for next time: get this
+bench's IP/user-agent allowlisted against whatever WAF/rate-limiter is doing this, and pace heavy
+suites with real gaps between them instead of running them back-to-back for many hours straight.
+
+### 2026-10-07 — Owner directive: run-then-file-once cadence, KDoc paused, two false-positive incidents
+
+The owner set a standing process (now in §6 and §9's "Current focus"): finish gap-filling and the
+full test suite for a product **before** any filing pass, rather than filing after every sub-run —
+developers were seeing a steady drip of new tickets and reasonably asked why everything wasn't
+filed together. KDoc is paused (still under active development) until the owner says otherwise;
+performance/concurrency remain paused separately (unrelated reason, see the shared-server safety
+protocol below). A root-cause bug affecting multiple tests/endpoints must now state the affected
+count in its description. Every bug description must read in plain English regardless of product.
+
+Two concrete false-positive incidents from 2026-10-06 motivated the "verify before reopening/filing"
+emphasis, both self-inflicted bench mistakes, not product bugs:
+
+- **Module-resolution crash during a live run.** While a KPost UI filing run was still executing,
+  `src/api/definitions/admin/org-structure.api.ts` was deleted as part of an unrelated Admin-scope
+  change, and for a short window the file re-exporting it hadn't been updated yet. Every test the
+  live run loaded from disk in that window crashed with `Cannot find module './org-structure.api'`
+  and got filed as a bug — 46 of them, closed INVALID once caught. Lesson: never edit source files a
+  live test run is reading from disk; wait for the run to finish first.
+- **Recurring webkit hangs on a long single run.** A full chromium+firefox+webkit UI run (and two
+  full-webkit retries after it) each hung indefinitely partway through — a dead worker process
+  burning near-zero CPU, at a different test each time, confirmed not a reproducible per-test bug by
+  re-running the trigger test in isolation successfully. Fixed by splitting webkit into small
+  per-file-group batches (each gets a fresh browser process, so the blast radius of any one hang is
+  small) and isolating the heaviest files (`crawl.spec.ts`, `keyboard-nav.spec.ts`) into their own
+  single-file runs. `keyboard-nav.spec.ts` run alone then surfaced a genuine, 100%-reproducing
+  finding — every screen crashes on Tab-key navigation in webkit — that the earlier hung attempts had
+  obscured.
 
 ### 2026-09-21 (verified) — KMail refuses every valid token: a server-side regression, not a bench fault
 
@@ -4811,6 +4950,25 @@ contract rejects them. The production guard blocks mutating calls when `TEST_ENV
 explicitly allowed.
 
 ## 9. Plan
+
+### Current focus (owner directive, 2026-10-07 — supersedes anything stale below until updated)
+
+- **KDoc is OUT OF SCOPE for now.** KDoc documents are still under active development by the KPost
+  team. Do not test `kword`/`kpresentation`/KDoc endpoints or screens in any run until the owner
+  explicitly says the module is ready. Everything else proceeds normally in the meantime.
+- **Performance and concurrency stay OUT OF SCOPE for now** (unrelated to KDoc — a separate,
+  standing exclusion; see the shared-server safety protocol in the decision log). Functional,
+  input-validation, security and database checks are all in scope.
+- **Order of work**: finish the current KPost UI cross-browser sweep → fill every remaining gap in
+  KPost API (all endpoints, all test types except performance/concurrency, KDoc excluded) → run the
+  full KPost API suite end to end → **one** consolidated Bugzilla filing pass for whatever that run
+  finds (see §6's filing cadence rule — not a round of filing after every sub-run).
+- **Check: profile-image download token.** The frontend/UI team added a token requirement to the
+  profile-image download API call. Any previously-filed bug about `downloadProfileImage` /
+  `downloadFullProfileImage` (e.g. the 404-on-image-download findings reopened during the 2026-10-05
+  KPost API run) needs to be re-verified against this change and have its Bugzilla status updated
+  accordingly — resolved if the token fix actually closes the gap, left open with a fresh comment if
+  it doesn't.
 
 ### Blocked on the repo owner
 

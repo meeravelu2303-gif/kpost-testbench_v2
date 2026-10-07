@@ -1,6 +1,7 @@
 import { contractPaths } from '../../../contract/workbook-contract';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
 import { kallDirectApis } from './direct.api';
+import { kallLegacyApis } from './legacy.api';
 import { kallReadApis } from './read.api';
 import { kallScheduleApis } from './schedule.api';
 
@@ -13,6 +14,7 @@ import { kallScheduleApis } from './schedule.api';
  *   read.api.ts      call log, today's scheduled, frequent contacts, status   (log reads run live)
  *   direct.api.ts    place a normal call, move its status, end, clear log      (writes — lifecycle)
  *   schedule.api.ts  schedule / reschedule / join / end / repeat / members     (writes — lifecycle)
+ *   legacy.api.ts    dead-from-frontend V1 writes (no /v2 prefix), still live  (security regression)
  *
  * The status / type / mode / repeat-type codes and the flows are analysed in `docs/kall-flow.md`;
  * the codes come from `@api/schemas/kpost-types`.
@@ -26,6 +28,7 @@ export const kallApis: EndpointDefinition[] = [
   ...kallReadApis,
   ...kallDirectApis,
   ...kallScheduleApis,
+  ...kallLegacyApis,
 ];
 
 /**

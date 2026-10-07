@@ -68,6 +68,21 @@ export function systemicFingerprint(input: {
 }
 
 /**
+ * Identity of a PLATFORM-WIDE UI defect: a shared background component (a global widget, a
+ * socket connection, a third-party script) that fails the same way on every screen it appears on
+ * — the screen-under-test has nothing to do with the fault, so including it (as `uiFingerprint`
+ * does) would create one ticket per screen for a single root cause. `causeKey` is a short, STABLE
+ * label the caller picks for the known cause (e.g. `rss-widget-cors`), not the raw message — the
+ * raw message usually carries a screen-specific or request-specific URL that would defeat
+ * deduplication if hashed directly. See `humanizeUiFailure` in `bug-candidate.ts` for the patterns
+ * that resolve to a `causeKey`.
+ */
+export function uiSystemicFingerprint(input: { prefix: string; causeKey: string }): string {
+  const key = `ui-platform|${input.causeKey}`;
+  return `${input.prefix}-${digest(key)}`;
+}
+
+/**
  * Identity of a UI defect: spec file plus test title plus the normalised first error line.
  * The browser project is deliberately excluded, so one fault across three browsers is one
  * ticket that lists them (`[browser:…]`), not three.
