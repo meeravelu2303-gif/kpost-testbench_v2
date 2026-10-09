@@ -9,13 +9,13 @@ cannot drift from what is actually tested.
 | | Count |
 | - | ----: |
 | Documented (workbook, usable) | 446 |
-| **Registered & tested** | **399** |
-| — of those, run on live | 138 |
+| **Registered & tested** | **353** |
+| — of those, run on live | 122 |
 | In "built" modules | 431 |
 
 | Module | Documented | Tested | Live | Status | Note |
 | ------ | ---------: | -----: | ---: | ------ | ---- |
-| `admin` | 125 | 97 | 29 | built | Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here |
+| `admin` | 125 | 51 | 13 | built | Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here |
 | `kmail` | 80 | 79 | 30 | built | KMail — test host testkmail (/testkmail/v2). 27 reads all-types on kmail; 28 data writes fuzzed on kmail:deep; 14 needs-id reads via KMAIL_LIFECYCLE (attachment downloads need a real S3 upload — off-live); getKloudUsedData not in the usable contract |
 | `profile` | 45 | 45 | 12 | built | profile — full API + write lifecycle + screens |
 | `katchup` | 36 | 35 | 9 | built | messaging — full API + write lifecycle + screen |
@@ -40,8 +40,15 @@ cannot drift from what is actually tested.
 
 ### Uncovered documented paths (the backlog, module by module)
 
-**`admin`** (28) — built
+**`admin`** (74) — built
 
+- `/workplaceHierarchy/update`
+- `/workplaceHierarchy/save`
+- `/workplaceHierarchy/delete`
+- `/variable/update`
+- `/variable/save`
+- `/variable/getVariable`
+- `/variable/delete`
 - `/userDetails/validateOTP`
 - `/userDetails/update`
 - `/userDetails/signUp`
@@ -62,12 +69,51 @@ cannot drift from what is actually tested.
 - `/productMaster/save`
 - `/productEmployeeMapping/save`
 - `/productEmployeeMapping/saveKpostIdForKams`
+- `/productEmployeeMapping/getMappedEmployeeByCompanyIdAndProductId`
+- `/productEmployeeMapping/getKpostIDsByCompanyIdAndProductId`
+- `/location/getReportingLocationName`
+- `/hrVariable/update`
+- `/hrVariable/save`
+- `/hrVariable/getVariable`
+- `/hrVariable/delete`
+- `/hrTier/update`
+- `/hrTier/save`
+- `/hrTier/getAttribute`
+- `/hrTier/getAttributeByCompanyId`
+- `/hrTier/delete`
+- `/hrSetUpTierAttribute/getAttribute`
 - `/holiday/saveHoliday`
 - `/employeeRoleMapping/save`
+- `/employeeDetails/getTransferOrPromotionDetails`
+- `/designation/update`
+- `/designation/save`
+- `/designation/getDesignationByCompanyIdAndDepartmentId`
+- `/designation/delete`
+- `/designation/abbreviationAndCodeCreation`
+- `/department/update`
+- `/department/save`
+- `/department/getDepartmentByCompanyId`
+- `/department/delete`
+- `/department/abbreviationAndCodeCreation`
 - `/demo/createDemoRequest`
 - `/country/save`
+- `/attribute/update`
+- `/attribute/save`
+- `/attribute/getAttribute`
+- `/attribute/getAttributeByCompanyId`
+- `/attribute/delete`
+- `/adminTierAttribute/getAttribute`
 - `/adminDetails/save`
+- `/workplaceHierarchy/getOrganization`
 - `/userDetails/getAllUser/{companyId}`
+- `/project/fetchAllProject`
+- `/productPurchase/getPurchaseProductByCompanyId`
+- `/productMaster/productList/{companyId}`
+- `/holiday/getHoliday`
+- `/demo/fetchDemoRequest`
+- `/country/getAddressUsingPincode/{pincode}`
+- `/country/countryList`
+- `/adminTierVariable/getAllVariable`
 - `/`
 - `/userDetails/delete/{id}`
 

@@ -4,7 +4,13 @@ import { componentFor, suiteFor, type SuiteId } from '@config/ownership.config';
 import type { Severity, ValidationReport, ValidationResult } from '@engine/validation-result';
 import { maskSensitive, maskString } from '@utils/masking';
 import { buildCurl } from './curl';
-import { apiFingerprint, systemicFingerprint, uiFingerprint, uiSystemicFingerprint } from './bug-fingerprint';
+import {
+  apiFingerprint,
+  normalizeForFingerprint,
+  systemicFingerprint,
+  uiFingerprint,
+  uiSystemicFingerprint,
+} from './bug-fingerprint';
 
 /**
  * Validators whose failure is ONE platform-wide root cause, not an endpoint's own bug: a defect in
@@ -593,6 +599,34 @@ export function candidateFromUiFailure(
     }),
     proof: input.proof,
   };
+}
+
+/**
+ * One API fault seen through several specs in the same run differs only in its probe counts —
+ * "17/31 error responses failed" vs "18/32 …" — so each sighting hashed to its own tag and became its
+ * own ticket (2026-10-08: 15 tickets #1270–#1285 for 6 faults). The fingerprint itself keeps counts on
+ * purpose: changing it would shift every existing ticket's tag, and a fixed-then-broken bug would then
+ * be filed fresh instead of reopened. So the counts are collapsed HERE, for in-run merging only: same
+ * product + endpoint + validator + message-with-counts-normalised → one candidate under the first id.
+ */
+export function collapseCountVariants(candidates: readonly BugCandidate[]): BugCandidate[] {
+  const canonical = new Map<string, string>();
+  const remapped = candidates.map((candidate) => {
+    if (candidate.source !== 'api' || candidate.systemic) return candidate;
+    const key = [
+      candidate.product,
+      candidate.endpoint ?? '',
+      candidate.classification,
+      normalizeForFingerprint(candidate.title.replace(/\b\d+\/\d+\b/g, '<n>/<n>')),
+    ].join('|');
+    const id = canonical.get(key);
+    if (!id) {
+      canonical.set(key, candidate.id);
+      return candidate;
+    }
+    return { ...candidate, id };
+  });
+  return mergeCandidates(remapped);
 }
 
 /**

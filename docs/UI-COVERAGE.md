@@ -6,7 +6,7 @@ interaction flows, and fails the build if a screen would route a bug to a non-ex
 
 ## Screens
 
-Every screen inherits the **full check catalogue** below. Covered: **13** screens.
+Every screen inherits the **full check catalogue** below. Covered: **12** screens.
 
 | Screen | Route | Bugzilla component | Key controls checked |
 | ------ | ----- | ------------------ | -------------------: |
@@ -17,7 +17,6 @@ Every screen inherits the **full check catalogue** below. Covered: **13** screen
 | Profile | `/userprofile` | User Profile | 1 |
 | Settings | `/settings` | Settings | 1 |
 | KDiary | `/kdiary` | KDiary | 1 |
-| KDoc | `/kdoc` | KDoc | 1 |
 | KCloud | `/kcloud` | KCloud | 1 |
 | KBooking | `/kbooking` | KBooking | 1 |
 | KNews | `/knews` | KNews | 1 |

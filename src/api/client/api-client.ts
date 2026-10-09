@@ -20,9 +20,20 @@ export class ApiClient {
 
   async execute(apiRequest: ApiRequest, label?: string): Promise<ApiResponseWrapper> {
     const started = performance.now();
+    /*
+     * `rawBody` must reach the server byte for byte, so it goes as a Buffer. A STRING under a JSON
+     * content-type is not sent verbatim: Playwright keeps it only when it parses as JSON and otherwise
+     * wraps it in quotes (JSON.stringify), turning `{"field": ` into the valid JSON string
+     * `"{\"field\": "` and an empty body into `""`. Every malformed-JSON and empty-body probe was
+     * silently sending valid JSON, so a server that correctly checks its input still answered 200
+     * and was reported as a defect.
+     */
     const data =
-      apiRequest.rawBody ??
-      (apiRequest.body === undefined ? undefined : JSON.stringify(apiRequest.body));
+      apiRequest.rawBody !== undefined
+        ? Buffer.from(apiRequest.rawBody, 'utf8')
+        : apiRequest.body === undefined
+          ? undefined
+          : JSON.stringify(apiRequest.body);
     try {
       const response = await this.request.fetch(apiRequest.url, {
         method: apiRequest.method,

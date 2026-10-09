@@ -16,6 +16,8 @@ import {
 } from './bug-builder';
 import type { BugCandidate } from './bug-candidate';
 import type { BugSummary, BugzillaClient, ProductMetadata } from './bugzilla-client';
+import { uncertainNewDefect } from './validity-gate';
+import { normalizeForFingerprint } from './bug-fingerprint';
 import { normalizeEndpoint, normalizeValidator } from './verify-resolve';
 
 /**
@@ -53,7 +55,8 @@ export type FilingDecision =
   | 'judged-skip'
   | 'would-file'
   | 'capped'
-  | 'failed';
+  | 'failed'
+  | 'needs-review';
 
 export interface FilingEntry {
   id: string;
@@ -85,6 +88,7 @@ const emptyCounts = (): Record<FilingDecision, number> => ({
   'would-file': 0,
   capped: 0,
   failed: 0,
+  'needs-review': 0,
 });
 
 interface FilingTarget {
@@ -104,6 +108,9 @@ export class BugzillaFiler {
   private readonly judgedTags = new Set<string>();
   /** Bugs already adopted this run, so two candidates never comment on the same ticket. */
   private readonly faultUsed = new Set<number>();
+  /** Bench bugs resolved FIXED, by `partialFixKey` — reopened when the same fault returns. */
+  private readonly fixedIndex = new Map<string, BugSummary>();
+  private readonly fixedUsed = new Set<number>();
 
   constructor(
     private readonly client: BugzillaClient,
@@ -164,8 +171,19 @@ export class BugzillaFiler {
     this.openTags.clear();
     this.judgedTags.clear();
     this.faultUsed.clear();
+    this.fixedIndex.clear();
+    this.fixedUsed.clear();
     const tagRe = /([A-Z]+-[0-9A-F]{6})/gi;
     for (const product of products) {
+      const fixed = await this.client.fixedBenchBugs(product, this.config.tagPrefix);
+      if ('error' in fixed) {
+        this.log.warn(`dedup: could not list fixed ${product} bugs — ${fixed.error}`);
+      } else {
+        for (const bug of fixed.bugs) {
+          const key = partialFixKey(product, bug.summary);
+          if (key && !this.fixedIndex.has(key)) this.fixedIndex.set(key, bug);
+        }
+      }
       const found = await this.client.openBenchBugs(product, this.config.tagPrefix);
       if ('error' in found) {
         this.log.warn(`dedup: could not list open ${product} bugs — ${found.error}`);
@@ -223,6 +241,16 @@ export class BugzillaFiler {
           'same (endpoint, validator) under a shifted fingerprint — would comment, not duplicate',
       });
     }
+    const fixed = this.matchFixed(candidate);
+    if (fixed) {
+      this.fixedUsed.add(fixed.id);
+      return this.entry(candidate, 'reopened', {
+        bugId: fixed.id,
+        reason: 'same fault as a ticket resolved FIXED (partial fix) — would reopen, not re-file',
+      });
+    }
+    const reviewReason = uncertainNewDefect(candidate);
+    if (reviewReason) return this.entry(candidate, 'needs-review', { reason: reviewReason });
     return this.entry(candidate, 'would-file');
   }
 
@@ -308,9 +336,12 @@ export class BugzillaFiler {
 
     const resolved = bugs.find((bug) => bug.resolution);
     if (resolved) {
+      const priorReopens = (await this.client.commentTexts(resolved.id)).filter((text) =>
+        /^Reopening:/i.test(text.trim()),
+      ).length;
       const result = await this.client.reopen(
         resolved.id,
-        buildReopenComment(candidate, String(resolved.resolution)),
+        buildReopenComment(candidate, String(resolved.resolution), priorReopens),
       );
       if (!('error' in result)) await this.attachProof(resolved.id, candidate);
       return 'error' in result
@@ -327,6 +358,15 @@ export class BugzillaFiler {
 
     const adopted = await this.adoptExisting(candidate);
     if (adopted) return adopted;
+
+    const reopened = await this.reopenByFault(candidate);
+    if (reopened) return reopened;
+
+    // Nothing existing matched at all — this would mint a brand new ticket number, the one step
+    // that is hard to undo. Hold it for a human when the evidence itself is not confident enough
+    // (an intermittent repro), rather than filing it as a confirmed defect sight-unseen.
+    const reviewReason = uncertainNewDefect(candidate);
+    if (reviewReason) return this.entry(candidate, 'needs-review', { reason: reviewReason });
 
     const fields = buildBugFields(candidate, target);
     const created = await this.client.createBug(fields as unknown as Record<string, unknown>);
@@ -400,6 +440,40 @@ export class BugzillaFiler {
     });
   }
 
+  /** A FIXED bench ticket for the same partially-fixed fault, if one exists and is not yet used. */
+  private matchFixed(candidate: BugCandidate): BugSummary | undefined {
+    const key = partialFixKey(candidate.product, buildSummary(candidate));
+    const bug = key ? this.fixedIndex.get(key) : undefined;
+    return bug && !this.fixedUsed.has(bug.id) ? bug : undefined;
+  }
+
+  /**
+   * Reopens the FIXED ticket for a fault that came back under a shifted tag — typically a partial fix
+   * ("2/3 cases failed" → "1/3"): the remaining case is the same defect the developer marked fixed, so
+   * the standing rule is to reopen that ticket, never mint a new one (#1063 vs #1269, 2026-10-08).
+   * Tags the ticket with the new fingerprint so the next run matches it by tag directly.
+   */
+  private async reopenByFault(candidate: BugCandidate): Promise<FilingEntry | undefined> {
+    const match = this.matchFixed(candidate);
+    if (!match) return undefined;
+    this.fixedUsed.add(match.id);
+    const priorReopens = (await this.client.commentTexts(match.id)).filter((text) =>
+      /^Reopening:/i.test(text.trim()),
+    ).length;
+    const result = await this.client.reopen(
+      match.id,
+      buildReopenComment(candidate, String(match.resolution ?? 'FIXED'), priorReopens),
+    );
+    if ('error' in result)
+      return this.entry(candidate, 'failed', { reason: result.error, bugId: match.id });
+    await this.client.appendWhiteboard(match.id, match.whiteboard ?? '', candidate.id);
+    await this.attachProof(match.id, candidate);
+    return this.entry(candidate, 'reopened', {
+      bugId: match.id,
+      reason: 'same fault as a ticket resolved FIXED (partial fix) — reopened, not re-filed',
+    });
+  }
+
   /**
    * Finds an OPEN ticket describing the same fault that simply predates our tag (for example one
    * filed by the previous bench or by a human), comments on it and tags it, so this run does not
@@ -467,6 +541,25 @@ function faultKeyFromSummary(product: string, summary: string): string | undefin
   const m = summary.match(/\]\s*(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+?):/i);
   if (!m) return undefined;
   return `${product}||${normalizeEndpoint(`${m[1]} ${m[2]}`)}||${validator}`;
+}
+
+/**
+ * A partially-fixed fault's identity across runs: product + endpoint + validator class + the FIRST
+ * failing case, with probe counts normalised. "2/3 negative request cases failed: body.sourceCityID:
+ * number instead of string (…); body.x …" and, after a partial fix, "1/3 … failed: body.sourceCityID:
+ * number instead of string (…)" share it. Undefined when any part is too weak to pin down — a wrong
+ * reopen of an unrelated ticket is worse than filing.
+ */
+export function partialFixKey(product: string, summary: string): string | undefined {
+  const m = summary.match(/\]\s*(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+?):\s*(.*)$/i);
+  if (!m) return undefined;
+  const validator = normalizeValidator(summary);
+  if (validator === 'other' || validator === 'response.time') return undefined;
+  const rest = (m[3] ?? '').replace(/\b\d+\/\d+\b/g, '<n>/<n>');
+  const afterFailed = rest.match(/failed:\s*(.*)$/i)?.[1] ?? rest;
+  const firstCase = (afterFailed.split(/[;(]/)[0] ?? '').trim().toLowerCase();
+  if (firstCase.length < 8) return undefined;
+  return `${product}||${normalizeEndpoint(`${m[1]} ${m[2]}`)}||${validator}||${normalizeForFingerprint(firstCase)}`;
 }
 
 /** The same key from a candidate, so a finding matches its existing ticket across a build change. */

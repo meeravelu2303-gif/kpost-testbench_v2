@@ -11,7 +11,7 @@ import { expect, test } from '@fixtures';
  * `handleToolSelect` reads the account's token/kpostID and `window.open()`s an EXTERNAL presenter app
  * URL instead, or shows an error toast if the token is missing.
  */
-test.describe('KPost KOS — tool picker', { tag: '@ui' }, () => {
+test.describe('KPost KOS — tool picker', { tag: ['@ui', '@kos'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

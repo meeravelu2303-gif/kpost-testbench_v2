@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **137** |
-| Blocked | 260 |
-| Total registered | 397 |
+| **Runs on live** | **121** |
+| Blocked | 236 |
+| Total registered | 357 |
 
 ---
 
-## Runs on live — 137
+## Runs on live — 121
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -25,29 +25,13 @@ reviewer can check against the comment beside it.
 | ------ | ---- | ------ |
 | `POST` | `/adminTierAttribute/getAttributeByCompanyId` | Admin |
 | `POST` | `/adminTierVariable/getAdminTierVariable` | Admin |
-| `GET` | `/adminTierVariable/getAllVariable` | Admin |
-| `POST` | `/attribute/getAttributeByCompanyId` | Admin |
-| `GET` | `/country/countryList` | Admin |
-| `GET` | `/country/getAddressUsingPincode/{pincode}` | Admin |
 | `GET` | `/country/getAddressUsingPincodeAndCountry/{pincode}/{country}` | Admin |
-| `GET` | `/demo/fetchDemoRequest` | Admin |
-| `POST` | `/department/abbreviationAndCodeCreation` | Admin |
-| `POST` | `/department/getDepartmentByCompanyId` | Admin |
-| `POST` | `/designation/abbreviationAndCodeCreation` | Admin |
 | `POST` | `/employeeDetails/getEmployeeDetails` | Admin |
-| `GET` | `/holiday/getHoliday` | Admin |
 | `POST` | `/hrSetUpTierAttribute/getAttributeByCompanyId` | Admin |
 | `POST` | `/hrSetUpTierVariable/getHrSetUpTierVariable` | Admin |
-| `POST` | `/hrTier/getAttributeByCompanyId` | Admin |
-| `POST` | `/hrVariable/getVariable` | Admin |
 | `POST` | `/location/getAllLocation` | Admin |
-| `GET` | `/productMaster/productList/{companyId}` | Admin |
-| `GET` | `/productPurchase/getPurchaseProductByCompanyId` | Admin |
-| `GET` | `/project/fetchAllProject` | Admin |
 | `POST` | `/rolePosting/getEmployeeByCompanyId` | Admin |
 | `POST` | `/rolePosting/getRolePostingByCompanyId` | Admin |
-| `POST` | `/variable/getVariable` | Admin |
-| `GET` | `/workplaceHierarchy/getOrganization` | Admin |
 | `POST` | `/v2/aws/checkAttachmentS3/` | AWS |
 | `POST` | `/v2/aws/generate-presigned-url` | AWS |
 | `GET` | `/v2/common/countries` | common |
@@ -163,71 +147,41 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 260
+## Blocked on live — 236
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
 | Method | Path | Module | Why |
 | ------ | ---- | ------ | --- |
 | `POST` | `/adminTierAttribute/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/adminTierAttribute/getAttribute` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/adminTierAttribute/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/adminTierAttribute/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/adminTierVariable/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/adminTierVariable/getAllReportingVariableHierarchy` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
 | `POST` | `/adminTierVariable/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/adminTierVariable/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/attribute/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/attribute/getAttribute` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/attribute/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/attribute/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/department/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/department/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/department/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/designation/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/designation/getDesignationByCompanyIdAndDepartmentId` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/designation/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/designation/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/employeeDetails/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/employeeDetails/getTransferOrPromotionDetails` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/employeeDetails/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/employeeDetails/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/hrSetUpTierAttribute/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/hrSetUpTierAttribute/getAttribute` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/hrSetUpTierAttribute/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/hrSetUpTierAttribute/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/hrSetUpTierVariable/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/hrSetUpTierVariable/getAllReportingHrTierVariableHierarchy` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
 | `POST` | `/hrSetUpTierVariable/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/hrSetUpTierVariable/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/hrTier/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/hrTier/getAttribute` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/hrTier/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/hrTier/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/hrVariable/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/hrVariable/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/hrVariable/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/location/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/location/getLocation` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
 | `POST` | `/location/getLocationById` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
-| `POST` | `/location/getReportingLocationName` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/location/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/location/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/productEmployeeMapping/getKpostIDsByCompanyIdAndProductId` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/productEmployeeMapping/getMappedEmployeeByCompanyIdAndProductId` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/rolePosting/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/rolePosting/delete` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/rolePosting/getRolePostingByCompanyIdAndEmployeeId` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
 | `POST` | `/rolePosting/getSuspendOrTerminateEmployee` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/rolePosting/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/rolePosting/suspendOrTerminateEmployee` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/rolePosting/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/variable/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/variable/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/variable/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/workplaceHierarchy/delete` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/rolePosting/save` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
+| `POST` | `/rolePosting/suspendOrTerminateEmployee` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
+| `POST` | `/rolePosting/update` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/workplaceHierarchy/getWorkPlaceHierarchy` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/workplaceHierarchy/save` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
-| `POST` | `/workplaceHierarchy/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/v2/aws/deleteAttachmentFromS3/{uuid}` | AWS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/common/forgotPasswordOTPOrSentKpostIDSms` | common | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
 | `POST` | `/v2/common/forgotPasswordUpdate` | common | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
@@ -258,6 +212,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/contacts/deleteContact/` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/contacts/importPhoneContacts/` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/contacts/updateInviteStatus/` | Contacts | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/group/removeGroupMember/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/group/addOrRemoveAdminAccess/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/group/addUserToGroup/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/group/createUserGroup/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -270,6 +225,9 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/group/removeGroupMember/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/group/removeGroupProfileImage` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/group/updateGroupProfileImage/` | Group | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kall/cancelScheduleKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kall/removeMemberKatchupKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/kall/setKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/kall/clearKallBykallIds` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/v2/kall/clearKallHistory` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/kall/endIndividualKall/` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -284,6 +242,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/kall/scheduledRepeatKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/kall/updateKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/kall/updateSenderAndReceiverKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/katchup/recallMessage` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/deleteKatchUpMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/v2/katchup/download/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/katchup/downloadAttachment/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -294,9 +253,10 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/katchup/forwardMessageBacktrackByMsgID` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/generateThumbnailUsingUUID` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/getBulkMessageInfo/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `GET` | `/v2/katchup/getKatchupMessagesSubject` | Katchup | OFF-LIVE: route not deployed on this test build (confirmed 404 — needs the dev to confirm deployment, not a business-account gap) |
+| `GET` | `/v2/katchup/getKatchupMessagesSubject/{id}` | Katchup | OFF-LIVE: route not deployed on this test build (confirmed 404 — needs the dev to confirm deployment, not a business-account gap) |
 | `POST` | `/v2/katchup/getMessagesByReferenceMessageList` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/getReadStatusGroupMessage/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/katchup/getReferenceMessagesDetails` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/getReferenceMSGDetails/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/katchup/getSharedMessageDetails/{msgID}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/getSharedMessageInfo/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |

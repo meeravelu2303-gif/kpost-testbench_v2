@@ -4,6 +4,7 @@ import type { FullResult, Reporter, Suite, TestCase, TestResult } from '@playwri
 import {
   accessibilityCandidatesFromScreens,
   candidateFromUiFailure,
+  collapseCountVariants,
   candidatesFromReport,
   consolidateCascades,
   mergeCandidates,
@@ -11,15 +12,25 @@ import {
   type BugCandidate,
   type ProofFile,
 } from '../bug-tracker/bug-candidate';
-import { AXE_JSON_ATTACHMENT } from '../ui/accessibility-evidence';
-import { BugzillaClient } from '../bug-tracker/bugzilla-client';
+import { AXE_DETAILS_ATTACHMENT, AXE_JSON_ATTACHMENT } from '../ui/accessibility-evidence';
+import { FAILURE_DIAGNOSIS_ATTACHMENT } from '../ui/failure-diagnostics';
+import { BugzillaClient, type BugSummary } from '../bug-tracker/bugzilla-client';
 import { BugzillaFiler, type FilingOutcome } from '../bug-tracker/bugzilla-filer';
-import { applyValidityGate, assessRunValidity } from '../bug-tracker/validity-gate';
+import {
+  applyValidityGate,
+  assessRunValidity,
+  ENVIRONMENTAL_UI_OR_API_FAILURE,
+} from '../bug-tracker/validity-gate';
 import {
   buildRunIndex,
+  buildUiRunIndex,
   classifyResolve,
+  classifyUiResolve,
   parseAffectedEndpoints,
+  uiTitleMatches,
+  type ResolveDecision,
 } from '../bug-tracker/verify-resolve';
+import { maskString } from '../utils/masking';
 import type { ResolveSummary } from './bug-report';
 import { readBugzillaConfig } from '../config/bugzilla.config';
 import { env } from '../config/env';
@@ -51,8 +62,9 @@ const BROWSER_PROJECTS = new Set(['chromium', 'firefox', 'webkit']);
 const LOG = '[bugzilla]';
 
 /**
- * Only the **observational** UI specs may file bugs: the deep screen sweep (`screens.spec.ts` — 9
- * checks on every screen, calibrated to zero false positives) and the structural smoke
+ * Only the **observational** UI specs may file bugs: the deep screen sweep (`screens-batch1/2/3.spec.ts`
+ * — 9 checks on every screen, calibrated to zero false positives, split into 3 batches 2026-10-07) and
+ * the structural smoke
  * (`navigation`/`shell` — a route that will not open or a missing shell is a real defect). The
  * interaction / write-flow specs (the gated `*_UI_LIFECYCLE` feature tests, compose, search, login,
  * two-session, copies, contacts, group, profile-edit, settings-theme, …) are FUNCTIONAL tests whose
@@ -61,7 +73,12 @@ const LOG = '[bugzilla]';
  * human triage; they are simply never auto-filed.
  */
 const UI_FILING_SPECS = new Set([
-  'screens.spec.ts',
+  // The deep screen sweep was split into 3 batches on 2026-10-07 (same catalogue, same filing
+  // rationale as before) to stop a continuous 13-screen run from tripping a server-side
+  // rate-limiter — see `tests/e2e/support/screen-sweep.ts` for why.
+  'screens-batch1.spec.ts',
+  'screens-batch2.spec.ts',
+  'screens-batch3.spec.ts',
   'navigation.spec.ts',
   'shell.spec.ts',
   // The interaction sweep files too: its signals (a JS crash, a broken asset, or a frozen main
@@ -122,6 +139,10 @@ export default class BugzillaReporter implements Reporter {
   private readonly config = readBugzillaConfig();
   private readonly log = createLogger('bugzilla');
   private readonly validationReports: ValidationReport[] = [];
+  /** This run's failure screenshots, by `project::test title` — attached as dated proof. */
+  private readonly uiProof = new Map<string, ProofFile[]>();
+  /** `project::title` of UI tests whose every failure was environmental (see uiTestRecords). */
+  private readonly uiEnvironmentalOnly = new Set<string>();
   private suite: Suite | undefined;
   private loadErrors = 0;
 
@@ -162,12 +183,15 @@ export default class BugzillaReporter implements Reporter {
     // Candidates and the validity gate need no Bugzilla connection, so they are computed on every
     // run — the in-bench bug report is written even when filing is off (dry run, no host).
     const tests = this.suite?.allTests() ?? [];
+    const uiRecords = this.uiTestRecords(tests);
     const candidates = consolidateCascades(
-      mergeCandidates([
-        ...this.apiCandidates(),
-        ...this.uiCandidates(tests),
-        ...this.accessibilityCandidates(tests),
-      ]),
+      collapseCountVariants(
+        mergeCandidates([
+          ...this.apiCandidates(),
+          ...this.uiCandidates(tests),
+          ...this.accessibilityCandidates(tests),
+        ]),
+      ),
     );
     const gate = applyValidityGate(candidates);
 
@@ -204,7 +228,27 @@ export default class BugzillaReporter implements Reporter {
       // clean run (nothing to file) still closes what the developers already fixed. On a DRY run it
       // only REPORTS what it would close (a reviewable preview); it writes to Bugzilla only for real.
       if (this.config.autoResolve) {
-        resolved = await this.autoResolve(client, candidates, this.config.dryRun);
+        // Bugs the filing pass already wrote a dated comment to moments ago (reproduced, reopened,
+        // adopted) — the status pass must not post a second note on them in the same run.
+        const touchedByFiler = new Set(
+          (outcome?.entries ?? [])
+            .filter((e) => e.bugId && ['commented', 'reopened', 'adopted', 'created'].includes(e.decision))
+            .map((e) => e.bugId as number),
+        );
+        // A candidate the gate rejected as a timeout / bench fault / throttle is not a reproduction:
+        // it must not mark a bug "confirmed still broken".
+        const transient = new Set(
+          gate.rejected
+            .filter(({ reason }) => /transient|infrastructure or bench fault|throttled/i.test(reason))
+            .map(({ candidate }) => candidate.id),
+        );
+        resolved = await this.autoResolve(
+          client,
+          candidates.filter((c) => !transient.has(c.id)),
+          this.config.dryRun,
+          uiRecords,
+          touchedByFiler,
+        );
       }
     }
 
@@ -234,7 +278,7 @@ export default class BugzillaReporter implements Reporter {
       generatedAt,
       profiles: [...new Set(this.validationReports.map((r) => r.profile))],
       validationReports: this.validationReports,
-      uiTests: this.uiTestRecords(tests),
+      uiTests: uiRecords,
     });
     const combined = {
       meta: runSummary.meta,
@@ -279,6 +323,17 @@ export default class BugzillaReporter implements Reporter {
       const project = test.parent.project()?.name ?? '';
       if (!BROWSER_PROJECTS.has(project) && project !== 'admin-ui') continue;
       const failure = [...test.results].reverse().find((attempt) => attempt.error?.message);
+      // Every failed attempt was the app not answering (throttling, a network blip) — not evidence about
+      // the app, either way. The status pass treats such a test as not run, and its "error page"
+      // screenshot is never attached as proof. (The run summary below still shows the true outcome.)
+      const failedAttempts = test.results.filter((attempt) => attempt.error?.message);
+      const envOnly =
+        failedAttempts.length > 0 &&
+        failedAttempts.every((attempt) =>
+          ENVIRONMENTAL_UI_OR_API_FAILURE.test(stripAnsi(attempt.error?.message ?? '')),
+        );
+      if (envOnly) this.uiEnvironmentalOnly.add(`${project}::${test.title}`);
+      else if (failure) this.uiProof.set(`${project}::${test.title}`, proofFrom(failure.attachments, project));
       records.push({
         project,
         spec: path.basename(test.location.file),
@@ -291,15 +346,19 @@ export default class BugzillaReporter implements Reporter {
   }
 
   /**
-   * Closes every OPEN bench-filed bug this run VERIFIED as fixed (its endpoint+validator ran and
-   * passed and the fault did not reproduce). Only touches products actually tested this run, and only
-   * bugs carrying our tag; a human-judged resolution is never reopened here. If the bench is wrong, a
-   * later run reopens the ticket — so a wrong close is self-correcting, never a lost defect.
+   * The per-run status pass over EVERY open bug of each product tested this run. Bench-filed bugs
+   * (carrying our `[KP-xxxxxx]` tag) are closed when this run VERIFIED the fix (their endpoint+validator
+   * ran and passed, and the fault did not reproduce); every bug that stays open gets a dated,
+   * plain-English status note. Hand-filed bugs (manual/security findings, other tag formats) are never
+   * auto-closed — no single automated check stands for them — but still get the dated note, so no open
+   * bug is ever left without an update. A wrong close is self-correcting: a later run reopens it.
    */
   private async autoResolve(
     client: BugzillaClient,
     candidates: readonly BugCandidate[],
     dryRun: boolean,
+    uiRecords: readonly UiTestRecord[],
+    touchedByFiler: ReadonlySet<number>,
   ): Promise<ResolveSummary> {
     const summary: ResolveSummary = {
       resolved: [],
@@ -308,21 +367,57 @@ export default class BugzillaReporter implements Reporter {
       failed: 0,
       confirmedFailing: 0,
       notVerified: 0,
+      touched: 0,
       dryRun,
     };
     const index = buildRunIndex(this.validationReports);
+    const uiIndex = buildUiRunIndex(
+      uiRecords.map((record) => {
+        if (!this.uiEnvironmentalOnly.has(`${record.project}::${record.title}`)) return record;
+        // Failed only because the app did not answer: proves nothing (as if not run); a flaky one that then
+        // passed counts as the clean pass it was.
+        return { ...record, outcome: record.outcome === 'flaky' ? 'expected' : 'skipped' };
+      }),
+    );
     const reproduced = new Set(candidates.map((c) => c.id.replace(/^\[|\]$/g, '')));
-    const products = [
-      ...new Set(this.validationReports.map((r) => suiteFor(r.suite).bugzilla.product)),
-    ];
+    const uiProduct = suiteFor('kpost-ui').bugzilla.product;
+    const products = new Set(
+      this.validationReports.map((r) => suiteFor(r.suite).bugzilla.product),
+    );
+    // UI tests never produce a `ValidationReport` (that's an API-only attachment), so the UI
+    // product would otherwise never appear here at all — which is exactly why a UI run's
+    // auto-resolve pass always reported "checked 0 bugs" before this. Any UI test having run this
+    // pass (regardless of pass/fail) is reason enough to check the UI product's open bugs.
+    if (uiRecords.length) products.add(uiProduct);
+    const benchTag = new RegExp(`\\[${this.config.tagPrefix}-[0-9A-F]{6}\\]`, 'i');
     for (const product of products) {
-      const found = await client.openBenchBugs(product, this.config.tagPrefix);
+      const found = await client.openBugs(product);
       if ('error' in found) {
         this.log.warn(`auto-resolve: could not list ${product} bugs — ${found.error}`);
         continue;
       }
       for (const bug of found.bugs) {
         summary.checked += 1;
+        const touched = touchedByFiler.has(bug.id);
+        if (!benchTag.test(bug.summary)) {
+          const decision: ResolveDecision = {
+            action: 'keep',
+            reason: HAND_FILED,
+            validator: 'manual',
+            systemic: false,
+          };
+          await this.applyResolveDecision(client, bug, decision, summary, dryRun, touched);
+          continue;
+        }
+        if (product === uiProduct) {
+          const decision = classifyUiResolve(bug, uiIndex, reproduced);
+          const proofNote =
+            decision.action === 'keep' && /still failed/i.test(decision.reason) && !dryRun
+              ? await this.attachDatedProof(client, bug)
+              : undefined;
+          await this.applyResolveDecision(client, bug, decision, summary, dryRun, touched, proofNote);
+          continue;
+        }
         // A systemic (platform-wide) ticket is verified against ITS OWN endpoints, not globally — so a
         // ticket whose endpoints are fixed closes even if the same class still fails on an unrelated
         // endpoint (which is a different ticket). Read those from the description.
@@ -332,36 +427,116 @@ export default class BugzillaReporter implements Reporter {
           if (description) affected = parseAffectedEndpoints(description);
         }
         const decision = classifyResolve(bug, index, reproduced, affected);
-        if (decision.action !== 'resolve') {
-          summary.keptOpen += 1;
-          // Split kept-open bugs: did the run confirm the fault still fails on THIS host, or was the
-          // check simply not exercised (a write/OTP endpoint) so it stays unverified on this URL?
-          if (/still fail|fails somewhere|reproduced/i.test(decision.reason)) {
-            summary.confirmedFailing += 1;
-          } else {
-            summary.notVerified += 1;
-          }
-          continue;
-        }
-        if (dryRun) {
-          // Preview only — record what WOULD be closed, write nothing to Bugzilla.
-          summary.resolved.push({ bugId: bug.id, reason: decision.reason, summary: bug.summary });
-          continue;
-        }
-        const comment =
-          `Verified fixed by test run ${env.TEST_RUN_ID} against ${env.TEST_ENV}: ${decision.reason}. ` +
-          `The bench no longer reproduces this fault, so it is auto-resolved. ` +
-          `(If it recurs, the next run will reopen this ticket automatically.)`;
-        const res = await client.resolveFixed(bug.id, comment);
-        if ('error' in res) {
-          summary.failed += 1;
-          this.log.warn(`auto-resolve: bug ${bug.id} not updated — ${res.error}`);
-        } else {
-          summary.resolved.push({ bugId: bug.id, reason: decision.reason, summary: bug.summary });
-        }
+        await this.applyResolveDecision(client, bug, decision, summary, dryRun, touched);
       }
     }
     return summary;
+  }
+
+  /** Shared outcome handling for both the API and UI resolve paths — one decision, one bug. */
+  private async applyResolveDecision(
+    client: BugzillaClient,
+    bug: BugSummary,
+    decision: ResolveDecision,
+    summary: ResolveSummary,
+    dryRun: boolean,
+    touchedByFiler: boolean,
+    proofNote?: string,
+  ): Promise<void> {
+    if (decision.action !== 'resolve') {
+      summary.keptOpen += 1;
+      // Split kept-open bugs: did the run confirm the fault still fails on THIS host, or was the
+      // check simply not exercised (a write/OTP endpoint, a UI test that didn't run, a hand-filed
+      // finding) so it stays unverified on this URL?
+      if (/still fail|fails somewhere|reproduced/i.test(decision.reason)) {
+        summary.confirmedFailing += 1;
+      } else {
+        summary.notVerified += 1;
+      }
+      // Standing owner directive: every open bug is touched every run with today's date. A bug the
+      // filing pass already commented on moments ago (reproduced / reopened / adopted) is skipped —
+      // two notes on one ticket in one run is noise, not a second signal.
+      if (touchedByFiler) {
+        summary.touched += 1;
+        return;
+      }
+      if (dryRun) {
+        summary.touched += 1; // preview — would have been touched
+        return;
+      }
+      const res = await client.addComment(bug.id, plainStatusComment(bug, decision, proofNote));
+      if ('error' in res) {
+        this.log.warn(`auto-resolve: bug ${bug.id} status comment failed — ${res.error}`);
+      } else {
+        summary.touched += 1;
+      }
+      return;
+    }
+    if (dryRun) {
+      // Preview only — record what WOULD be closed, write nothing to Bugzilla.
+      summary.resolved.push({ bugId: bug.id, reason: decision.reason, summary: bug.summary });
+      return;
+    }
+    const res = await client.resolveFixed(bug.id, plainStatusComment(bug, decision));
+    if ('error' in res) {
+      summary.failed += 1;
+      this.log.warn(`auto-resolve: bug ${bug.id} not updated — ${res.error}`);
+    } else {
+      summary.resolved.push({ bugId: bug.id, reason: decision.reason, summary: bug.summary });
+    }
+  }
+
+  /**
+   * Attaches THIS run's failure screenshot to a UI bug whose test just failed again — dated proof that
+   * it is still broken, not the screenshot from when it was first filed. Named by date + browser so a
+   * second run the same day does not upload it twice. Returns a plain-English note for the comment.
+   */
+  private async attachDatedProof(client: BugzillaClient, bug: BugSummary): Promise<string | undefined> {
+    const title = bug.summary.replace(/^\[[^\]]+]\s*/, '').trim();
+    const day = new Date().toISOString().slice(0, 10);
+    const existing = await client.attachmentNames(bug.id);
+    const attached: string[] = [];
+    const upload = async (fileName: string, file: ProofFile, summary: string): Promise<void> => {
+      if (existing.has(fileName)) {
+        attached.push(fileName);
+        return;
+      }
+      let data: Buffer;
+      try {
+        data = readFileSync(file.path);
+      } catch {
+        return;
+      }
+      if (await client.attachFile(bug.id, { fileName, summary, data, contentType: file.contentType })) {
+        attached.push(fileName);
+      }
+    };
+    for (const [key, proof] of this.uiProof) {
+      const split = key.indexOf('::');
+      const project = key.slice(0, split);
+      if (!uiTitleMatches(title, key.slice(split + 2))) continue;
+      const shot = proof.find((p) => p.contentType.startsWith('image/'));
+      if (shot) {
+        await upload(
+          `proof-${day}-${project}-bug${bug.id}${path.extname(shot.path) || '.png'}`,
+          shot,
+          `Proof ${day} (${project}): the screen test failed again in this run — screenshot of the failure`,
+        );
+      }
+      // The developers' diagnostics: JS stack, the steps / Tab path, console errors, failed requests and
+      // the element that made each one, and (layout) the elements wider than the screen.
+      const diagnosis = proof.find((p) => p.label.startsWith('Failure diagnosis'));
+      if (diagnosis) {
+        await upload(
+          `diagnosis-${day}-${project}-bug${bug.id}.txt`,
+          diagnosis,
+          `Failure diagnosis ${day} (${project}): error stack, the steps before the failure, console errors and failed requests`,
+        );
+      }
+    }
+    return attached.length
+      ? `Proof: this run's failure evidence is attached to this bug (${attached.join(', ')}).`
+      : undefined;
   }
 
   private apiCandidates(): BugCandidate[] {
@@ -460,6 +635,104 @@ export default class BugzillaReporter implements Reporter {
   }
 }
 
+/** Decision reason for a bug with no bench tag — a manual/security finding, never auto-closed. */
+const HAND_FILED = 'hand-filed';
+
+/**
+ * The dated status note written to an open bug on every run (and the close note when one is verified
+ * fixed). Written for a developer reading the exported sheet's "Last Comment" column, not for QA: it
+ * restates which bug this is, gives the date, the result in capitals, why, and an explicit bottom line —
+ * never the bench's internal validator jargon on its own.
+ */
+export function plainStatusComment(
+  bug: BugSummary,
+  decision: ResolveDecision,
+  proofNote?: string,
+): string {
+  const when = `${new Date().toISOString().replace('T', ' ').slice(0, 16)} UTC`;
+  const what = bug.summary.replace(/^\[[^\]]+]\s*/, '').trim();
+  const head =
+    `Re-checked by the automated test bench on ${when} (${env.TEST_ENV}, run ${env.TEST_RUN_ID}).\n` +
+    `Bug: ${what}\n\n`;
+  const r = decision.reason;
+
+  if (decision.action === 'resolve') {
+    return (
+      `${head}Result: FIXED. The automated check for this exact problem ran again and passed, so this ` +
+      `bug has been marked RESOLVED/FIXED.\n` +
+      `Bottom line: no action needed. If the problem comes back, the next run reopens this ticket automatically.`
+    );
+  }
+  if (r === HAND_FILED) {
+    return (
+      `${head}Result: NOT AUTOMATICALLY RE-CHECKED. This bug was raised from a manual or security ` +
+      `investigation, not by a single automated check, so the bench cannot confirm on its own whether ` +
+      `it is fixed.\n` +
+      `Bottom line: still open. To close it, re-run the steps in the bug description by hand and confirm the result.`
+    );
+  }
+  if (/still fail|fails somewhere|reproduced/i.test(r)) {
+    return (
+      `${head}Result: STILL BROKEN. The automated check for this exact problem ran again on this date ` +
+      `and did not pass, so the bug stays open.\n` +
+      (decision.evidence
+        ? `What failed on this date: ${maskString(decision.evidence).slice(0, 700)}\n`
+        : '') +
+      (proofNote ? `${proofNote}\n` : '') +
+      `Bottom line: still open — not fixed yet. Use the reproduction steps / curl in the description to confirm before marking it fixed.`
+    );
+  }
+  if (/failed for a different reason/i.test(r)) {
+    const browser = r.match(/this pass on ([\w, ]+?) —/)?.[1] ?? 'this browser';
+    return (
+      `${head}Result: NOT CONFIRMED THIS RUN. The screen test for this bug ran on ${browser}, but it failed for a ` +
+      `different reason — this bug's own problem did not appear in the failure. It is not marked fixed, ` +
+      `because the test did not pass cleanly.\n` +
+      `Bottom line: status unchanged (still open). It closes automatically once its test passes cleanly; the ` +
+      `other failure is tracked on its own ticket.`
+    );
+  }
+  if (/environmental/i.test(r) && decision.validator === 'response.time') {
+    return (
+      `${head}Result: NOT AUTO-CLOSED. This is a speed / response-time finding, which naturally varies ` +
+      `between runs, so the bench never closes it automatically.\n` +
+      `Bottom line: still open — a person needs to judge whether it is acceptable now.`
+    );
+  }
+  if (/\/kword\/|\/kos\/|\bKDoc\b/i.test(`${decision.endpoint ?? ''} ${bug.summary}`)) {
+    return (
+      `${head}Result: NOT RE-CHECKED. The KDoc module is paused from testing by the project owner until ` +
+      `its development is finished, so this bug was not re-tested.\n` +
+      `Bottom line: status unchanged (still open). It will be re-checked once KDoc testing resumes.`
+    );
+  }
+  let why = r;
+  // Order matters: the UI reason "its originating test did not run on firefox this pass" also contains
+  // "did not run on", so it must be matched BEFORE the API one ("validator X did not run on <endpoint>").
+  // Checked the other way round (2026-10-09), ~every Firefox/WebKit-only UI bug was told its check was
+  // "skipped on its endpoint" — a wrong reason, though the status (still open) was right.
+  if (/originating test did not run/i.test(r)) {
+    const browser = r.match(/did not run on (\w+)/i)?.[1];
+    why = browser
+      ? `This bug was found on ${browser}, and this run did not test ${browser} (or its screen test did not run there).`
+      : 'The screen test that originally found this bug did not run in this pass.';
+  } else if (/endpoint not tested this run|none of the ticket|not exercised/i.test(r)) {
+    why = 'The endpoint this bug is about was not exercised in this run.';
+  } else if (/did not run on/i.test(r)) {
+    why =
+      'The specific check for this bug was skipped on its endpoint this time (for example it needs a ' +
+      'write, OTP or test-data step that was switched off, or the server did not answer in time).';
+  } else if (
+    /could not parse endpoint|could not match a single originating test|environmental/i.test(r)
+  ) {
+    why = 'The bench could not match this bug to one automated check, so it could not re-check it on its own.';
+  }
+  return (
+    `${head}Result: NOT RE-CHECKED IN THIS RUN. ${why}\n` +
+    `Bottom line: status unchanged (still open). It will be re-checked automatically the next time this check runs.`
+  );
+}
+
 // Playwright colourises assertion messages; the escape codes are noise in a ticket.
 // Built from a char code so the regex literal carries no control character.
 const ANSI = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g');
@@ -555,6 +828,18 @@ export function proofFrom(
         contentType: a.contentType,
         label: `Crash diagnosis (${browser})`,
       });
+    } else if (a.name === 'trace') {
+      // The full Playwright trace (network, DOM snapshots, console, every action) — lets a developer
+      // step through the exact failure in trace viewer rather than guessing from a still frame. Can
+      // be large; `attachProof`'s own size cap silently skips it rather than failing the ticket.
+      proof.push({ path: a.path, contentType: a.contentType, label: `Playwright trace (${browser})` });
+    } else if (a.name === FAILURE_DIAGNOSIS_ATTACHMENT || a.name === AXE_DETAILS_ATTACHMENT) {
+      // The evidence the UI developers asked for (stack, steps, failed requests + who made them,
+      // overflowing elements / failing elements with colours). Dated label → a fresh copy is attached
+      // on each day it is re-confirmed, not skipped as "already there" from an older run.
+      const day = new Date().toISOString().slice(0, 10);
+      const what = a.name === AXE_DETAILS_ATTACHMENT ? 'Accessibility details' : 'Failure diagnosis';
+      proof.push({ path: a.path, contentType: a.contentType, label: `${what} (${browser}, ${day})` });
     }
   }
   return proof;

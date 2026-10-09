@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import type { Severity } from '@engine/validation-result';
 import type { ScreenDef } from './screens';
 import type { UiHealthReport } from './ui-health';
+import { noteDiagnostic } from './failure-diagnostics';
 
 /**
  * The centralized UI check catalogue — the front-end analogue of the API validators. Each check is
@@ -95,6 +96,84 @@ export const performanceCheck: UiCheck = {
  * for phone widths and testing those would just report a size it never targets. So this checks the
  * supported desktop widths only; overflow there is a real broken-layout bug.
  */
+/**
+ * WHERE the horizontal overflow comes from, in the two shapes it takes:
+ *  1. an element whose CONTENT is wider than its own box (scrollWidth > clientWidth, overflow visible) —
+ *     the deepest such element is where the CSS fix belongs, so it is listed with its children's widths
+ *     and shrink settings (on 2026-10-09 this was the shared page header `.header_back`: 3px too wide
+ *     on every screen, invisible to a "which box crosses the edge" search);
+ *  2. elements whose own box reaches past the viewport's right edge (outermost ones).
+ * Written as a plain string so no build tool can rewrite the in-page code.
+ */
+export const OVERFLOW_PROBE = `(() => {
+  const vw = document.documentElement.clientWidth;
+  const label = function (el) {
+    const parts = []; let n = el;
+    for (let i = 0; n && i < 4; i++) {
+      let p = n.tagName.toLowerCase();
+      if (n.id) { parts.unshift(p + '#' + n.id); break; }
+      const c = (n.getAttribute('class') || '').trim().split(/[ \\t\\n]+/).filter(Boolean).slice(0, 4);
+      if (c.length) p += '.' + c.join('.');
+      parts.unshift(p); n = n.parentElement;
+    }
+    return parts.join(' > ');
+  };
+  const sizing = function (s) {
+    return 'width:' + s.width + '; min-width:' + s.minWidth + '; flex:' + s.flex + '; white-space:' + s.whiteSpace + '; margin:' + s.margin + '; padding:' + s.padding;
+  };
+  const all = Array.from(document.body.querySelectorAll('*'));
+  const contentOverflow = all.filter(function (el) {
+    const s = getComputedStyle(el);
+    return el.scrollWidth > el.clientWidth + 0.5 && el.clientWidth > 0 && s.overflowX === 'visible' && el.getBoundingClientRect().right > vw - 40;
+  });
+  const deepest = contentOverflow.filter(function (el) { return !contentOverflow.some(function (o) { return o !== el && el.contains(o); }); });
+  const inner = deepest.slice(0, 3).map(function (el) {
+    const s = getComputedStyle(el);
+    const kids = Array.from(el.children).map(function (k) {
+      const ks = getComputedStyle(k); const r = k.getBoundingClientRect();
+      return { sel: label(k).split(' > ').pop(), w: Math.round(r.width), shrink: ks.flexShrink, minw: ks.minWidth, ws: ks.whiteSpace };
+    }).sort(function (a, b) { return b.w - a.w; }).slice(0, 6);
+    return { sel: label(el), content: el.scrollWidth, box: el.clientWidth, css: sizing(s), kids: kids };
+  });
+  const edge = all.filter(function (el) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0 || r.right <= vw + 0.5) return false;
+    const p = el.parentElement;
+    return !(p && p !== document.body && p.getBoundingClientRect().right > vw + 0.5);
+  }).slice(0, 4).map(function (el) {
+    const r = el.getBoundingClientRect();
+    return { sel: label(el), left: Math.round(r.left), right: Math.round(r.right), css: sizing(getComputedStyle(el)) };
+  });
+  return { vw: vw, page: document.documentElement.scrollWidth, inner: inner, edge: edge };
+})()`;
+
+async function overflowCulprits(page: Page): Promise<string> {
+  const found = (await page.evaluate(OVERFLOW_PROBE).catch(() => undefined)) as
+    | {
+        vw: number;
+        page: number;
+        inner: { sel: string; content: number; box: number; css: string; kids: { sel: string; w: number; shrink: string; minw: string; ws: string }[] }[];
+        edge: { sel: string; left: number; right: number; css: string }[];
+      }
+    | undefined;
+  if (!found) return '(the page could not be measured)';
+  const lines = [`Screen ${found.vw}px, page ${found.page}px — ${found.page - found.vw}px too wide.`];
+  if (found.inner.length) {
+    lines.push('Element(s) whose CONTENT is wider than their own box — fix the CSS here:');
+    found.inner.forEach((e, i) => {
+      lines.push(`${i + 1}. ${e.sel}`, `   content ${e.content}px in a ${e.box}px box (${e.content - e.box}px too wide)`, `   computed: ${e.css}`);
+      lines.push('   its children, widest first (flex-shrink 0 or a min-width stops them from shrinking):');
+      for (const k of e.kids) lines.push(`     - ${k.sel}: ${k.w}px (flex-shrink ${k.shrink}, min-width ${k.minw}, white-space ${k.ws})`);
+    });
+  }
+  if (found.edge.length) {
+    lines.push('Element(s) whose box reaches past the right edge of the screen:');
+    found.edge.forEach((e, i) => lines.push(`${i + 1}. ${e.sel}: ${e.left}px → ${e.right}px`, `   computed: ${e.css}`));
+  }
+  if (!found.inner.length && !found.edge.length) lines.push('(no single element found — the extra width may come from a pseudo-element or a transform)');
+  return lines.join('\n');
+}
+
 export const responsiveCheck: UiCheck = {
   name: 'ui.layout',
   run: async ({ page }) => {
@@ -107,13 +186,18 @@ export const responsiveCheck: UiCheck = {
           const doc = document.documentElement;
           return { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth };
         });
-        // Tolerance for sub-pixel rounding / a scrollbar.
-        if (overflow.scrollWidth > overflow.clientWidth + 16) {
+        // 1px for sub-pixel rounding only. clientWidth already excludes the scrollbar; the old 16px slack hid
+        // a real 3px overflow (the shared header, 2026-10-09) — and would have auto-closed those bugs as fixed.
+        if (overflow.scrollWidth > overflow.clientWidth + 1) {
           findings.push({
             check: 'ui.layout',
             severity: 'MEDIUM',
             message: `Horizontal overflow at ${width}px (a supported desktop width): content is ${overflow.scrollWidth}px wide, the viewport ${overflow.clientWidth}px — the user must scroll sideways.`,
           });
+          // What the UI developers asked for (2026-10-08): WHICH element sticks out, its measured size
+          // and the CSS that sizes it. Goes into the failure diagnosis — the message above is the bug's
+          // fingerprint and must not change.
+          noteDiagnostic(page, `Elements wider than the screen at ${width}px`, await overflowCulprits(page));
         }
       }
       return findings;

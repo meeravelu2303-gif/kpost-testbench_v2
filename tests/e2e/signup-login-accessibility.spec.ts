@@ -2,7 +2,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { domainFor } from '@fixtures/test-accounts';
 import { testData } from '@config/test-data.config';
-import { AXE_JSON_ATTACHMENT, renderAccessibilityOverlay } from '@ui/accessibility-evidence';
+import {
+  AXE_DETAILS_ATTACHMENT,
+  AXE_JSON_ATTACHMENT,
+  axeDetailsText,
+  renderAccessibilityOverlay,
+} from '@ui/accessibility-evidence';
 import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
 import { writeFileSync } from 'node:fs';
@@ -58,6 +63,13 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
     const evidencePath = testInfo.outputPath('axe-violations.json');
     writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
     await testInfo.attach(AXE_JSON_ATTACHMENT, { path: evidencePath, contentType: 'application/json' });
+    // Every failing element with selector, HTML and (for contrast) colours + ratio — what the UI
+    // developers asked for on the WCAG tickets; uploaded to the ticket as text.
+    if (critical.length + serious.length) {
+      const detailsPath = testInfo.outputPath('a11y-details.txt');
+      writeFileSync(detailsPath, axeDetailsText(screenName, [...critical, ...serious]));
+      await testInfo.attach(AXE_DETAILS_ATTACHMENT, { path: detailsPath, contentType: 'text/plain' });
+    }
 
     if (evidence.violations.length) {
       await renderAccessibilityOverlay(page, screenName, evidence.violations);

@@ -4,8 +4,8 @@
 
 **0** endpoints that run on live (`productionSafe`) omit a field present in
 the documented request *example* — the actual false-bug queue, because only a live-running
-endpoint auto-files a bug. A further **19** example-missing endpoints are GATED writes (payload supplied by their lifecycle spec with
-runtime ids — not fuzzed on live), and **30** omit only *schema-declared* fields with no example (mostly the admin entity DTO — the
+endpoint auto-files a bug. A further **18** example-missing endpoints are GATED writes (payload supplied by their lifecycle spec with
+runtime ids — not fuzzed on live), and **21** omit only *schema-declared* fields with no example (mostly the admin entity DTO — the
 springdoc schema lists every optional field; the measured frontend sends a subset).
 
 ## A — Runs on live AND omits an example field (the false-bug queue)
@@ -29,7 +29,6 @@ spec (`*_LIFECYCLE`), not by the static factory audited here.
 | `POST /redbus/blockTicket/{kpostId}` (`kbooking-block-ticket`) | availableTripId, boardingPointId, destination, source |
 | `POST /v2/profile/updateContactInformation/` (`profile-update-contact`) | addressLine2, alternateMobileno, landLineNumber |
 | `POST /admin/resetPassword/` (`admin-reset-password`) | companyID, userType |
-| `POST /v2/common/validateOTP/` (`common-validate-otp`) | sendDate |
 | `POST /v2/common/validateMailOTP/` (`common-validate-mail-otp`) | sendDate |
 | `POST /admin/holdOrRelease/` (`admin-hold-or-release`) | activeStatus |
 | `POST /v2/admin/updateRole` (`admin-update-role`) | role |
@@ -45,34 +44,25 @@ spec (`*_LIFECYCLE`), not by the static factory audited here.
 
 | Endpoint | Schema-only fields not sent |
 | -------- | --------------------------- |
-| `POST /adminTierAttribute/getAttribute` (`admin-workplace-tier-attribute-get`) | companyId, attributeName, abbreviation, code |
-| `POST /location/getReportingLocationName` (`admin-workplace-location-reporting-name`) | attributeId, variableId, workPlaceLocation, reportingWorkplaceLocation, reportingWorkplaceLocationId, locationName, pincode, state, city, area, addressLine1, addressLine2, abbreviation, code, companyId, countryId, countryName |
-| `POST /workplaceHierarchy/save` (`admin-workplace-hierarchy-save`) | id, parentAttributeId, parentVariableId, reportingAttributeId, reportingVariableId, reportingParentAttributeId, reportingParentVariableId, workplaceJson, reportingJson, abbreviation, code |
-| `POST /workplaceHierarchy/update` (`admin-workplace-hierarchy-update`) | parentAttributeId, parentVariableId, reportingAttributeId, reportingVariableId, reportingParentAttributeId, reportingParentVariableId, workplaceJson, reportingJson, abbreviation, code |
-| `POST /workplaceHierarchy/delete` (`admin-workplace-hierarchy-delete`) | attributeId, variableId, parentAttributeId, parentVariableId, reportingAttributeId, reportingVariableId, reportingParentAttributeId, reportingParentVariableId, workplaceJson, reportingJson, abbreviation, code |
-| `POST /hrSetUpTierAttribute/getAttribute` (`admin-hr-tier-attribute-get`) | companyId, attributeName, abbreviation, code |
-| `POST /attribute/getAttributeByCompanyId` (`admin-attribute-by-company`) | id, attributeName |
-| `POST /attribute/getAttribute` (`admin-attribute-get`) | companyId, attributeName |
-| `POST /attribute/delete` (`admin-attribute-delete`) | companyId, attributeName |
-| `POST /variable/getVariable` (`admin-variable-list`) | id, attributeId, variableName, parentAttributeId, abbreviation, code |
-| `POST /variable/update` (`admin-variable-update`) | parentVariableId, parentAttributeId, abbreviation, code |
-| `POST /variable/delete` (`admin-variable-delete`) | attributeId, companyId, variableName, parentVariableId, parentAttributeId, abbreviation, code |
-| `POST /hrTier/getAttributeByCompanyId` (`admin-hr-tier-extra-by-company`) | id, attributeName, abbreviation, code |
-| `POST /hrTier/getAttribute` (`admin-hr-tier-extra-get`) | companyId, attributeName, abbreviation, code |
-| `POST /hrTier/update` (`admin-hr-tier-extra-update`) | abbreviation, code |
-| `POST /hrTier/delete` (`admin-hr-tier-extra-delete`) | companyId, attributeName, abbreviation, code |
-| `POST /hrVariable/getVariable` (`admin-hr-variable-extra-list`) | id, attributeId, variableName, parentAttributeId, abbreviation, code |
-| `POST /hrVariable/save` (`admin-hr-variable-extra-save`) | id, parentAttributeId, abbreviation, code |
-| `POST /hrVariable/update` (`admin-hr-variable-extra-update`) | parentVariableId, parentAttributeId, abbreviation, code |
-| `POST /hrVariable/delete` (`admin-hr-variable-extra-delete`) | attributeId, companyId, variableName, parentVariableId, parentAttributeId, abbreviation, code |
-| `POST /department/getDepartmentByCompanyId` (`admin-department-by-company`) | id, departmentName, abbreviation, code |
-| `POST /department/update` (`admin-department-update`) | abbreviation, code |
-| `POST /department/delete` (`admin-department-delete`) | companyId, departmentName, abbreviation, code |
-| `POST /department/abbreviationAndCodeCreation` (`admin-department-abbreviation-code`) | id, abbreviation, code |
-| `POST /designation/getDesignationByCompanyIdAndDepartmentId` (`admin-designation-by-company-department`) | id, parentDesignationId, designationName, abbreviation, code, departmentIdList |
-| `POST /designation/update` (`admin-designation-update`) | parentDesignationId, abbreviation, code, departmentIdList |
-| `POST /designation/delete` (`admin-designation-delete`) | departmentId, companyId, parentDesignationId, designationName, abbreviation, code, departmentIdList |
-| `POST /designation/abbreviationAndCodeCreation` (`admin-designation-abbreviation-code`) | id, departmentId, parentDesignationId, abbreviation, code, departmentIdList |
-| `POST /productEmployeeMapping/getMappedEmployeeByCompanyIdAndProductId` (`admin-product-employee-mapping-get`) | id, employeeId, rolePostingId, kpostId |
-| `POST /productEmployeeMapping/getKpostIDsByCompanyIdAndProductId` (`admin-product-employee-mapping-kpost-ids`) | id, employeeId, rolePostingId, kpostId |
+| `POST /adminTierAttribute/getAttributeByCompanyId` (`admin-workplace-tier-attribute-by-company`) | companyId |
+| `POST /adminTierAttribute/update` (`admin-workplace-tier-attribute-update`) | companyId |
+| `POST /adminTierVariable/getAdminTierVariable` (`admin-workplace-tier-variable-list`) | companyId |
+| `POST /adminTierVariable/update` (`admin-workplace-tier-variable-update`) | companyId |
+| `POST /location/getAllLocation` (`admin-workplace-location-all`) | companyId |
+| `POST /location/getLocation` (`admin-workplace-location-get`) | companyId |
+| `POST /location/update` (`admin-workplace-location-update`) | companyId |
+| `POST /workplaceHierarchy/getWorkPlaceHierarchy` (`admin-workplace-hierarchy`) | companyId |
+| `POST /hrSetUpTierAttribute/getAttributeByCompanyId` (`admin-hr-tier-attribute-by-company`) | companyId |
+| `POST /hrSetUpTierAttribute/update` (`admin-hr-tier-attribute-update`) | companyId |
+| `POST /hrSetUpTierVariable/getHrSetUpTierVariable` (`admin-hr-tier-variable-list`) | companyId |
+| `POST /hrSetUpTierVariable/update` (`admin-hr-tier-variable-update`) | companyId |
+| `POST /rolePosting/getRolePostingByCompanyId` (`admin-role-posting-by-company`) | companyId |
+| `POST /rolePosting/getEmployeeByCompanyId` (`admin-role-posting-employees`) | companyId |
+| `POST /rolePosting/getSuspendOrTerminateEmployee` (`admin-role-posting-suspended-list`) | companyId |
+| `POST /rolePosting/getRolePostingByCompanyIdAndEmployeeId` (`admin-role-posting-by-company-and-employee`) | companyId |
+| `POST /rolePosting/save` (`admin-role-posting-save`) | companyId, employeeId, hrVariableId, locationId |
+| `POST /rolePosting/suspendOrTerminateEmployee` (`admin-role-posting-suspend-terminate`) | companyId |
+| `POST /employeeDetails/getEmployeeDetails` (`admin-employee-details`) | companyId |
+| `POST /employeeDetails/save` (`admin-employee-save`) | companyId |
+| `POST /employeeDetails/update` (`admin-employee-update`) | companyId |
 

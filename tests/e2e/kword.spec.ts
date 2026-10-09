@@ -12,7 +12,7 @@ import { expect, test } from '@fixtures';
  * it's gated behind `KOS_UI_LIFECYCLE=true` and self-cleaning: it deletes the document it created via
  * the app's own soft-delete-then-permanent-delete flow before finishing.
  */
-test.describe('KPost KOS · Kompose (KWord) — create-form validation', { tag: '@ui' }, () => {
+test.describe('KPost KOS · Kompose (KWord) — create-form validation', { tag: ['@ui', '@kos'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',
@@ -53,7 +53,7 @@ test.describe('KPost KOS · Kompose (KWord) — create-form validation', { tag: 
   });
 });
 
-test.describe('KPost KOS · Kompose (KWord) — create, save, delete (write)', { tag: '@ui' }, () => {
+test.describe('KPost KOS · Kompose (KWord) — create, save, delete (write)', { tag: ['@ui', '@kos'] }, () => {
   test.skip(
     process.env.KOS_UI_LIFECYCLE !== 'true',
     'creates and deletes a real document; set KOS_UI_LIFECYCLE=true',

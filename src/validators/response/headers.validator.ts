@@ -1,6 +1,6 @@
 import { apiConfig } from '@config/api.config';
 import { defineValidator } from '@engine/validator';
-import { fromChecks, type CheckDetail } from '@engine/validation-result';
+import { fromChecks, outcome, type CheckDetail } from '@engine/validation-result';
 
 export const headersValidator = defineValidator({
   name: 'response.headers',
@@ -13,6 +13,8 @@ export const headersValidator = defineValidator({
       ? true
       : `${endpoint.contract.id} requires no response headers`,
   check: ({ primary, endpoint }) => {
+    if (primary.transportError)
+      return outcome.skipped('no HTTP response was received — headers cannot be judged');
     const checks: CheckDetail[] = endpoint.requiredHeaders.map((name) => {
       const value = primary.header(name);
       return {

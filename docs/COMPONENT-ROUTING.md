@@ -4,19 +4,18 @@
 (`npm run test:framework`). It resolves `componentFor` for every registered endpoint and checks
 each target exists in the live product, so tickets can never route to a non-existent component.
 
-## KPost Admin (84 endpoints)
+## KPost Admin (38 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
-| admin-module-application | 37 |
 | Role Postings | 8 |
-| Workplace Locations | 7 |
-| Workplace Tier — Variables (Nodes) | 6 |
-| Workplace Tier — Attributes (Levels) | 5 |
-| Workplace Hierarchy Links | 5 |
-| HR Set-Up Tier — Levels | 5 |
+| Workplace Locations | 6 |
+| Workplace Tier — Variables (Nodes) | 5 |
 | HR Set-Up Tier — Variables (Nodes) | 5 |
-| Employee Master Data | 5 |
+| Workplace Tier — Attributes (Levels) | 4 |
+| HR Set-Up Tier — Levels | 4 |
+| Employee Master Data | 4 |
+| Workplace Hierarchy Links | 1 |
 | Country & Address Reference Data | 1 |
 
 ### KPost Admin — endpoint → component
@@ -30,14 +29,12 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `admin-employee-delete`
 - `admin-employee-details`
 - `admin-employee-save`
-- `admin-employee-transfer-promotion-details`
 - `admin-employee-update`
 
 **HR Set-Up Tier — Levels**
 
 - `admin-hr-tier-attribute-by-company`
 - `admin-hr-tier-attribute-delete`
-- `admin-hr-tier-attribute-get`
 - `admin-hr-tier-attribute-save`
 - `admin-hr-tier-attribute-update`
 
@@ -63,10 +60,6 @@ each target exists in the live product, so tickets can never route to a non-exis
 **Workplace Hierarchy Links**
 
 - `admin-workplace-hierarchy`
-- `admin-workplace-hierarchy-delete`
-- `admin-workplace-hierarchy-save`
-- `admin-workplace-hierarchy-update`
-- `admin-workplace-organization`
 
 **Workplace Locations**
 
@@ -74,7 +67,6 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `admin-workplace-location-by-id`
 - `admin-workplace-location-delete`
 - `admin-workplace-location-get`
-- `admin-workplace-location-reporting-name`
 - `admin-workplace-location-save`
 - `admin-workplace-location-update`
 
@@ -82,58 +74,16 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `admin-workplace-tier-attribute-by-company`
 - `admin-workplace-tier-attribute-delete`
-- `admin-workplace-tier-attribute-get`
 - `admin-workplace-tier-attribute-save`
 - `admin-workplace-tier-attribute-update`
 
 **Workplace Tier — Variables (Nodes)**
 
 - `admin-workplace-tier-variable-delete`
-- `admin-workplace-tier-variable-get-all`
 - `admin-workplace-tier-variable-list`
 - `admin-workplace-tier-variable-reporting-hierarchy`
 - `admin-workplace-tier-variable-save`
 - `admin-workplace-tier-variable-update`
-
-**admin-module-application**
-
-- `admin-attribute-by-company`
-- `admin-attribute-delete`
-- `admin-attribute-get`
-- `admin-attribute-save`
-- `admin-attribute-update`
-- `admin-country-address-by-pincode-only`
-- `admin-country-list`
-- `admin-demo-request-list`
-- `admin-department-abbreviation-code`
-- `admin-department-by-company`
-- `admin-department-delete`
-- `admin-department-save`
-- `admin-department-update`
-- `admin-designation-abbreviation-code`
-- `admin-designation-by-company-department`
-- `admin-designation-delete`
-- `admin-designation-save`
-- `admin-designation-update`
-- `admin-holiday-list`
-- `admin-hr-tier-extra-by-company`
-- `admin-hr-tier-extra-delete`
-- `admin-hr-tier-extra-get`
-- `admin-hr-tier-extra-save`
-- `admin-hr-tier-extra-update`
-- `admin-hr-variable-extra-delete`
-- `admin-hr-variable-extra-list`
-- `admin-hr-variable-extra-save`
-- `admin-hr-variable-extra-update`
-- `admin-product-employee-mapping-get`
-- `admin-product-employee-mapping-kpost-ids`
-- `admin-product-master-list`
-- `admin-product-purchase-by-company`
-- `admin-project-list`
-- `admin-variable-delete`
-- `admin-variable-list`
-- `admin-variable-save`
-- `admin-variable-update`
 
 ## KMail API (70 endpoints)
 
@@ -240,7 +190,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `kmail-translation`
 
-## KPost API (243 endpoints)
+## KPost API (249 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
@@ -251,10 +201,10 @@ each target exists in the live product, so tickets can never route to a non-exis
 | Company Administration | 19 |
 | Authentication V2 | 18 |
 | KWord Documents | 18 |
+| kpost-webservice-application | 17 |
 | Contacts Directory V2 | 16 |
 | Kdiary - Schedules, Events & Reports | 14 |
 | Groups V2 | 11 |
-| kpost-webservice-application | 11 |
 | General Settings | 7 |
 | Integration - AWS S3 Pre-signed URLs | 4 |
 | Dashboard V2 | 3 |
@@ -539,6 +489,12 @@ each target exists in the live product, so tickets can never route to a non-exis
 **kpost-webservice-application**
 
 - `group-details-by-id`
+- `group-remove-member-v1-legacy`
+- `kall-legacy-cancel-schedule`
+- `kall-legacy-remove-member`
+- `kall-legacy-set-status`
+- `katchup-legacy-recall-message`
+- `katchup-reference-messages-details`
 - `kbooking-available-trips`
 - `kbooking-block-ticket`
 - `kbooking-city-suggestion`
@@ -552,7 +508,13 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 ## On the catch-all component (review — a built module here is a routing gap)
 
+- kpost-api · katchup-reference-messages-details (kpost-api,undocumented-contract,katchup,katchup-read,thread,needs-message-id,security)
+- kpost-api · katchup-legacy-recall-message (kpost-api,undocumented-contract,katchup,katchup-manage,legacy,needs-message-id)
+- kpost-api · group-remove-member-v1-legacy (kpost-api,undocumented-contract,group,group-manage,legacy,security)
 - kpost-api · group-details-by-id (kpost-api,undocumented-contract,group,group-read,needs-group)
+- kpost-api · kall-legacy-set-status (kpost-api,undocumented-contract,kall,kall-legacy,needs-id)
+- kpost-api · kall-legacy-cancel-schedule (kpost-api,undocumented-contract,kall,kall-legacy,needs-id)
+- kpost-api · kall-legacy-remove-member (kpost-api,undocumented-contract,kall,kall-legacy,needs-id)
 - kpost-api · kos-documents-type (kpost-api,undocumented-contract,kos,kos-read,kword)
 - kpost-api · kos-change-document-access (kpost-api,undocumented-contract,kos,kos-write,kword,share)
 - kpost-api · kos-update-job-id (kpost-api,undocumented-contract,kos,kos-write,kword)

@@ -2,7 +2,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { testData } from '@config/test-data.config';
 import { AUTHENTICATED_SCREENS } from '@ui/screens';
-import { AXE_JSON_ATTACHMENT, renderAccessibilityOverlay } from '@ui/accessibility-evidence';
+import {
+  AXE_DETAILS_ATTACHMENT,
+  AXE_JSON_ATTACHMENT,
+  axeDetailsText,
+  renderAccessibilityOverlay,
+} from '@ui/accessibility-evidence';
 import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
 import { writeFileSync } from 'node:fs';
@@ -71,6 +76,13 @@ test.describe('KPost accessibility (axe-core WCAG) — every screen', { tag: '@u
         path: evidencePath,
         contentType: 'application/json',
       });
+      // Every failing element with selector, HTML and (for contrast) colours + ratio — what the UI
+      // developers asked for on the WCAG tickets; uploaded to the ticket as text.
+      if (critical.length + serious.length) {
+        const detailsPath = testInfo.outputPath('a11y-details.txt');
+        writeFileSync(detailsPath, axeDetailsText(screen.name, [...critical, ...serious]));
+        await testInfo.attach(AXE_DETAILS_ATTACHMENT, { path: detailsPath, contentType: 'text/plain' });
+      }
 
       // A WCAG violation is a static property (missing alt text, low contrast, …) — nothing visibly
       // changes on the page, so a plain screenshot/video would show nothing wrong and the recorded

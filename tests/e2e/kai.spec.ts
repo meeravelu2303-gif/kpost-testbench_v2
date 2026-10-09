@@ -7,7 +7,7 @@ import { expect, test } from '@fixtures';
  * stub. Scoped to render + a guarded empty-prompt check — a full generation round trip is
  * nondeterministic and potentially slow/costly, so it isn't driven to completion here.
  */
-test.describe('KPost KOS · K-AI panel', { tag: '@ui' }, () => {
+test.describe('KPost KOS · K-AI panel', { tag: ['@ui', '@kos'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

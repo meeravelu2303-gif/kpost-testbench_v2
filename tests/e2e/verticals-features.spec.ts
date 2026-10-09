@@ -87,7 +87,8 @@ test.describe('KPost verticals — feature render', { tag: '@ui' }, () => {
     },
   ];
 
-  for (const c of cases) {
+  // KDoc/KOS is paused from all testing by the owner (2026-10-07) — remove this filter when un-paused.
+  for (const c of cases.filter((v) => v.route !== '/kdoc')) {
     test(`${c.name} renders its own feature content @ui`, async ({ page }) => {
       await page.goto(c.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
       await page

@@ -46,6 +46,13 @@ export interface ResolveSummary {
    */
   confirmedFailing: number;
   notVerified: number;
+  /**
+   * Of the bugs kept open, how many got a fresh dated status comment this run (the standing
+   * owner directive: every open bug is touched every run, not just the ones a candidate happened
+   * to reproduce). Excludes bugs already commented on via the filing pass itself (reproduced-tag
+   * match), since posting twice on the same bug in one run would be noise, not a second signal.
+   */
+  touched: number;
   /** True on a preview run — the list is what WOULD be closed; nothing was written to Bugzilla. */
   dryRun: boolean;
 }
@@ -259,7 +266,8 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
       : 'Filed to Bugzilla';
     lines.push(
       `**${mode}.** created ${c.created}, commented (already open) ${c.commented}, reopened ${c.reopened}, ` +
-        `adopted ${c.adopted}, judged-not-a-defect ${c['judged-skip']}, failed ${c.failed}` +
+        `adopted ${c.adopted}, judged-not-a-defect ${c['judged-skip']}, needs manual review ${c['needs-review']}, ` +
+        `failed ${c.failed}` +
         (input.outcome.dryRun ? `, would-file ${c['would-file']}` : '') +
         '.',
       '',
@@ -275,12 +283,15 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
     lines.push(
       `## 3b. Auto-resolved (verified fixed)${r.dryRun ? ' — PREVIEW' : ''}`,
       '',
-      `Checked **${r.checked}** open bench-filed bugs against this host; **${r.resolved.length}** ${verb} ` +
-        `(their exact endpoint+validator ran and passed this run). Of the **${r.keptOpen}** that stayed open: ` +
+      `Checked **${r.checked}** open bench-filed bugs against this host (API by endpoint+validator, ` +
+        `UI by its originating test); **${r.resolved.length}** ${verb} (ran again and passed cleanly). ` +
+        `Of the **${r.keptOpen}** that stayed open: ` +
         `**${r.confirmedFailing}** are CONFIRMED still failing on this host, and **${r.notVerified}** were ` +
-        `NOT exercised this run (a write/OTP endpoint) so they are unverified on this host` +
+        `NOT exercised this run (a write/OTP endpoint, or a UI test that didn't run this pass) so they ` +
+        `are unverified on this host` +
         (r.failed ? `; ${r.failed} could not be updated` : '') +
-        `.${r.dryRun ? ' Run the non-dry filing command to apply these.' : ' A later run reopens any that recur.'}`,
+        `. **${r.touched}** of those kept-open bugs got a fresh dated status comment this run.` +
+        `${r.dryRun ? ' Run the non-dry filing command to apply these.' : ' A later run reopens any that recur.'}`,
       '',
     );
     if (r.resolved.length) {
@@ -294,6 +305,28 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
       );
       if (r.resolved.length > 100) lines.push(`…and ${r.resolved.length - 100} more.`, '');
     }
+  }
+
+  // 3c. Needs manual review — a brand new candidate whose evidence wasn't confident enough to
+  // auto-file (currently: an intermittent reproduction). Never a ticket already dedupe-matched to
+  // something existing — those always comment/reopen regardless of how the repro scored.
+  const needsReview = input.outcome?.entries.filter((e) => e.decision === 'needs-review') ?? [];
+  if (needsReview.length) {
+    lines.push(
+      '## 3c. Needs manual review (held back, not auto-filed)',
+      '',
+      `**${needsReview.length}** finding(s) had no existing ticket to match, but the evidence wasn't`,
+      'confident enough to mint a brand new one sight-unseen. Look at each and either file it by hand',
+      "if it's real, or let it be re-collected on a future run if it was a flake.",
+      '',
+      '| Finding | Why it was held |',
+      '| ------- | ---------------- |',
+      ...needsReview
+        .slice(0, 100)
+        .map((e) => `| ${e.summary.replace(/\|/g, '\\|').slice(0, 90)} | ${(e.reason ?? '').replace(/\|/g, '\\|')} |`),
+      '',
+    );
+    if (needsReview.length > 100) lines.push(`…and ${needsReview.length - 100} more.`, '');
   }
 
   // 4. Every ticket

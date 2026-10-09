@@ -24,8 +24,8 @@ export const adminHrApis: EndpointDefinition[] = [
     path: '/hrSetUpTierAttribute/getAttributeByCompanyId',
     summary: 'List HR tier attributes (levels) for the company',
     tags: ['hr-tier-attribute'],
-    // Documented as a string; sent as documented (a 400 on the number would be the real contract).
-    request: body(() => ({ companyId: companyId() })),
+    // No companyId in the body — the company comes from the token (owner requirement, 2026-10-08).
+    request: body(() => ({})),
     requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
@@ -40,7 +40,6 @@ export const adminHrApis: EndpointDefinition[] = [
     // object (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
     request: body(() => [
       {
-        companyId: companyId(),
         attributeName: `QA HR Tier ${Date.now()}`,
         createdBy: companyId(),
       },
@@ -54,7 +53,7 @@ export const adminHrApis: EndpointDefinition[] = [
     path: '/hrSetUpTierAttribute/update',
     summary: 'Update an HR tier attribute',
     tags: ['hr-tier-attribute'],
-    request: body(() => ({ id: 1, companyId: companyId(), attributeName: 'QA HR Tier edited' })),
+    request: body(() => ({ id: 1, attributeName: 'QA HR Tier edited' })),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -76,8 +75,8 @@ export const adminHrApis: EndpointDefinition[] = [
     path: '/hrSetUpTierVariable/getHrSetUpTierVariable',
     summary: 'List HR tier variables (nodes) under a parent',
     tags: ['hr-tier-variable'],
-    // parentVariableId 0 = root; companyId documented as a string on this read.
-    request: body(() => ({ companyId: companyId(), parentVariableId: 0 })),
+    // parentVariableId 0 = root; the company comes from the token, not the body.
+    request: body(() => ({ parentVariableId: 0 })),
     requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
@@ -101,7 +100,6 @@ export const adminHrApis: EndpointDefinition[] = [
     // object (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
     request: body(() => [
       {
-        companyId: companyId(),
         attributeId: 1,
         variableName: `QA HR Var ${Date.now()}`,
         parentVariableId: 0,
@@ -118,7 +116,6 @@ export const adminHrApis: EndpointDefinition[] = [
     tags: ['hr-tier-variable'],
     request: body(() => ({
       id: 1,
-      companyId: companyId(),
       attributeId: 1,
       variableName: 'QA HR Var edited',
     })),

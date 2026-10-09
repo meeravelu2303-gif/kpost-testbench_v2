@@ -33,6 +33,51 @@ export interface AxeScreenResult {
 /** The Playwright attachment name the spec writes and the reporter reads back. */
 export const AXE_JSON_ATTACHMENT = 'axe-violations-json';
 
+/** Attachment name of the per-element accessibility details (uploaded to the ticket as text). */
+export const AXE_DETAILS_ATTACHMENT = 'a11y-details';
+
+/** The parts of an axe-core violation the details text reads (structurally typed — no axe import). */
+interface RawAxeViolation {
+  id: string;
+  impact?: string | null;
+  help: string;
+  nodes: {
+    target: unknown[];
+    html: string;
+    failureSummary?: string;
+    any: { id: string; data?: unknown }[];
+  }[];
+}
+
+/**
+ * Every failing element of every critical/serious rule — not just 3 examples — with its selector, its
+ * HTML, axe's own "fix any of the following", and for colour contrast the actual text colour,
+ * background colour and ratio. This is exactly what the UI developers asked for on the WCAG tickets
+ * (2026-10-08: "obtain the axe target selectors plus computed text and background colors").
+ */
+export function axeDetailsText(screen: string, violations: readonly RawAxeViolation[]): string {
+  const lines = [`ACCESSIBILITY DETAILS — ${screen}`, `Recorded: ${new Date().toISOString()}`, ''];
+  for (const v of violations) {
+    lines.push(`RULE ${v.id} [${v.impact ?? 'unknown'}] — ${v.help} (${v.nodes.length} element(s))`);
+    v.nodes.forEach((n, i) => {
+      lines.push(`  ${i + 1}. selector: ${n.target.map(String).join(' ')}`);
+      lines.push(`     html: ${n.html.replace(/\s+/g, ' ').slice(0, 220)}`);
+      const contrast = n.any.find((c) => c.id === 'color-contrast')?.data as
+        | { fgColor?: string; bgColor?: string; contrastRatio?: number; expectedContrastRatio?: string; fontSize?: string; fontWeight?: string }
+        | undefined;
+      if (contrast) {
+        lines.push(
+          `     colours: text ${contrast.fgColor} on background ${contrast.bgColor} — ratio ${contrast.contrastRatio} ` +
+            `(needs ${contrast.expectedContrastRatio}; font ${contrast.fontSize}, weight ${contrast.fontWeight})`,
+        );
+      }
+      if (n.failureSummary) lines.push(`     ${n.failureSummary.replace(/\n\s*/g, ' / ')}`);
+    });
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
 /**
  * Paints the WCAG violations found on this screen as readable text ONTO the page itself, the same
  * technique used for JS-crash proof (`renderCrashOverlay`) and for the same reason: a WCAG violation

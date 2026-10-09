@@ -122,6 +122,21 @@ function wrap(text: string, width = 78): string[] {
  * instance; it is not something a payload opts into, and it is why these tickets already look the
  * way the older ones do.
  */
+/**
+ * A one-line "what state was the system in before this failed" summary.
+ *
+ * Every other reproduction detail (environment, browser, curl) was already in the ticket; this is
+ * the one piece a developer otherwise has to infer from the narrative prose — made an explicit,
+ * labelled field instead, so it reads the same way across every ticket.
+ */
+function buildPreconditions(candidate: BugCandidate): string {
+  if (candidate.source === 'ui') {
+    const where = candidate.browsers?.length ? `in ${candidate.browsers.join('/')}, ` : '';
+    return `Signed in with a valid test account, ${where}on the ${candidate.component} screen.`;
+  }
+  return 'A valid, authenticated test account calling the endpoint below with a live session token.';
+}
+
 export function buildDescription(candidate: BugCandidate): string {
   const endpointLabel = candidate.source === 'api' ? 'Representative endpoint:' : 'Endpoint:';
   const lines = [
@@ -129,6 +144,9 @@ export function buildDescription(candidate: BugCandidate): string {
     `Category: ${candidate.category}`,
     `${endpointLabel} ${candidate.endpoint ?? '(not applicable)'}`,
     `Module: ${candidate.component}`,
+    `Severity: ${BUGZILLA_SEVERITY[candidate.severity]} / Priority: ${BUGZILLA_PRIORITY[candidate.severity]}`,
+    '',
+    `Preconditions: ${buildPreconditions(candidate)}`,
     '',
     ...wrap(candidate.narrative),
   ];
@@ -286,13 +304,32 @@ export function buildReproducedComment(candidate: BugCandidate): string {
   ).slice(0, BUGZILLA_LIMITS.comment);
 }
 
-export function buildReopenComment(candidate: BugCandidate, resolution: string): string {
+/**
+ * `priorReopens` is how many times this exact ticket has already been through a
+ * resolved-then-reopened cycle (counted from its own comment history). A first reopen reads as a
+ * normal regression note; from the second reopen on, the comment says so explicitly — a ticket
+ * that keeps cycling without a lasting fix is a different situation from a one-off regression, and
+ * the plain "Reopening: observed again" text looked identical either way, which is exactly how a
+ * bug can cycle for weeks before anyone notices the pattern from inside Bugzilla itself.
+ */
+export function buildReopenComment(
+  candidate: BugCandidate,
+  resolution: string,
+  priorReopens = 0,
+): string {
+  const cycleNote =
+    priorReopens >= 1
+      ? `\n\nThis ticket has now been reopened ${priorReopens + 1} time(s) without a lasting fix. ` +
+        `Please run the reproduction below yourself and confirm the response before marking FIXED again.`
+      : '';
   return (
     `Reopening: this defect was observed again by kpost-testbench_v2 on ${candidate.observedAt} ` +
     `(${candidate.environment}, build ${candidate.build}), after the ticket was resolved ${resolution}. ` +
     `Tracked here rather than under a new ticket number.\n` +
     `Check: ${candidate.classification}.` +
-    (candidate.correlationId ? `\nCorrelation ID: ${candidate.correlationId}` : '')
+    (candidate.correlationId ? `\nCorrelation ID: ${candidate.correlationId}` : '') +
+    (candidate.curl ? `\n\ncurl (current host):\n${candidate.curl}` : '') +
+    cycleNote
   ).slice(0, BUGZILLA_LIMITS.comment);
 }
 

@@ -8,7 +8,7 @@ import { expect, test } from '@fixtures';
  * read-only listing/search surface; the share flow is not driven to completion here (it would grant
  * real document access to another account with no simple self-clean available for this pass).
  */
-test.describe('KPost KOS · KAD Document panel', { tag: '@ui' }, () => {
+test.describe('KPost KOS · KAD Document panel', { tag: ['@ui', '@kos'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

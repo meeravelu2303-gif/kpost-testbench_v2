@@ -21,7 +21,6 @@ import { expect, test } from '@fixtures';
 
 const K = AUTH_PROFILES.kpost;
 const businessM: Principal | undefined = K.principals.find((p) => p.key === 'business-m');
-const cid = (): string => String(testData.businessMCompanyId);
 const stamp = Date.now();
 const name = (label: string): string => `QA FUZZ ${label} ${stamp}`;
 
@@ -199,7 +198,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
       const wpAttr = await call(
         endpoints,
         'admin-workplace-tier-attribute-save',
-        [{ attributeName: name('WP Tier'), companyId: cid() }],
+        [{ attributeName: name('WP Tier') }],
         'setup:wp-attr-save',
       );
       wpAttrId = createdId(wpAttr);
@@ -211,7 +210,6 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
             [
               {
                 variableName: name('WP Var'),
-                companyId: cid(),
                 attributeId: wpAttrId,
                 parentVariableId: 0,
                 parentAttributeId: 0,
@@ -230,7 +228,6 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
               'admin-workplace-location-save',
               [
                 {
-                  companyId: cid(),
                   attributeId: wpAttrId,
                   variableId: wpVarId,
                   locationName: name('Location'),
@@ -249,7 +246,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
       const hrAttr = await call(
         endpoints,
         'admin-hr-tier-attribute-save',
-        [{ attributeName: name('HR Tier'), companyId: cid() }],
+        [{ attributeName: name('HR Tier') }],
         'setup:hr-attr-save',
       );
       hrAttrId = createdId(hrAttr);
@@ -261,7 +258,6 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
             [
               {
                 variableName: name('HR Var'),
-                companyId: cid(),
                 attributeId: hrAttrId,
                 parentVariableId: 0,
                 parentAttributeId: 0,
@@ -277,7 +273,6 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         endpoints,
         'admin-employee-save',
         {
-          companyId: cid(),
           personalInformationObj: { firstName: 'QA', lastName: `Fuzz ${stamp}`, disability: false },
           employmentObj: {},
         },
@@ -312,9 +307,9 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         endpoints,
         'admin-workplace-tier-attribute-save',
         'attributeName',
-        (payload) => [{ attributeName: payload, companyId: cid() }],
+        (payload) => [{ attributeName: payload }],
         'admin-workplace-tier-attribute-by-company',
-        { companyId: cid() },
+        {},
         (row, value) => row.attributeName === value,
         'wp-attr-save',
       );
@@ -344,10 +339,10 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         'admin-workplace-tier-variable-save',
         'variableName',
         (payload) => [
-          { variableName: payload, companyId: cid(), attributeId: wpAttrId ?? '0', parentVariableId: 0 },
+          { variableName: payload, attributeId: wpAttrId ?? '0', parentVariableId: 0 },
         ],
         'admin-workplace-tier-variable-list',
-        { companyId: cid(), parentVariableId: 0 },
+        { parentVariableId: 0 },
         (row, value) => row.variableName === value,
         'wp-var-save',
       );
@@ -381,7 +376,6 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
           'locationName',
           (payload) => [
             {
-              companyId: cid(),
               attributeId: wpAttrId,
               variableId: wpVarId,
               locationName: payload,
@@ -390,7 +384,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
             },
           ],
           'admin-workplace-location-all',
-          { companyId: cid() },
+          {},
           (row, value) => row.locationName === value,
           'loc-save',
         );
@@ -416,9 +410,9 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         endpoints,
         'admin-hr-tier-attribute-save',
         'attributeName',
-        (payload) => [{ attributeName: payload, companyId: cid() }],
+        (payload) => [{ attributeName: payload }],
         'admin-hr-tier-attribute-by-company',
-        { companyId: cid() },
+        {},
         (row, value) => row.attributeName === value,
         'hr-attr-save',
       );
@@ -448,10 +442,10 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         'admin-hr-tier-variable-save',
         'variableName',
         (payload) => [
-          { variableName: payload, companyId: cid(), attributeId: hrAttrId ?? '0', parentVariableId: 0 },
+          { variableName: payload, attributeId: hrAttrId ?? '0', parentVariableId: 0 },
         ],
         'admin-hr-tier-variable-list',
-        { companyId: cid(), parentVariableId: 0 },
+        { parentVariableId: 0 },
         (row, value) => row.variableName === value,
         'hr-var-save',
       );
@@ -481,12 +475,11 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         'admin-employee-save',
         'personalInformationObj.lastName',
         (payload) => ({
-          companyId: cid(),
           personalInformationObj: { firstName: 'QA', lastName: payload },
           employmentObj: {},
         }),
         'admin-employee-details',
-        { companyId: cid() },
+        {},
         (row, value) =>
           isPlainObject(row.personalInformationObj) && row.personalInformationObj.lastName === value,
         'employee-save',

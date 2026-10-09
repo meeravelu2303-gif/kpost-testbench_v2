@@ -121,7 +121,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const wpAttr = await call(
         endpoints,
         'admin-workplace-tier-attribute-save',
-        [{ attributeName: name('WP Tier'), companyId: cid() }],
+        [{ attributeName: name('WP Tier') }],
         'wp-attr-save',
       );
       wpAttrId = createdId(wpAttr);
@@ -133,7 +133,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const wpAttrList = await call(
         endpoints,
         'admin-workplace-tier-attribute-by-company',
-        { companyId: cid() },
+        {},
         'wp-attr-by-company',
       );
       expect.soft(statusOf(wpAttrList), 'workplace tier attributes read back').toMatch(/success/i);
@@ -152,7 +152,6 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           [
             {
               variableName: name('WP Var'),
-              companyId: cid(),
               attributeId: wpAttrId,
               parentVariableId: 0,
               parentAttributeId: 0,
@@ -170,7 +169,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const wpVarList = await call(
         endpoints,
         'admin-workplace-tier-variable-list',
-        { companyId: cid(), parentVariableId: 0 },
+        { parentVariableId: 0 },
         'wp-var-list',
       );
       expect.soft(statusOf(wpVarList), 'workplace variables read back').toMatch(/success/i);
@@ -190,7 +189,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         const wpAttrUpd = await call(
           endpoints,
           'admin-workplace-tier-attribute-update',
-          { id: wpAttrId, companyId: cid(), attributeName: wpAttrEdited },
+          { id: wpAttrId, attributeName: wpAttrEdited },
           'wp-attr-update',
         );
         expect.soft(statusOf(wpAttrUpd), 'workplace tier attribute updated').toMatch(/success/i);
@@ -201,7 +200,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         const wpAttrRecheck = await call(
           endpoints,
           'admin-workplace-tier-attribute-by-company',
-          { companyId: cid() },
+          {},
           'wp-attr-recheck',
         );
         const wpAttrRecheckRows = envelope(wpAttrRecheck).value;
@@ -221,7 +220,6 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           'admin-workplace-tier-variable-update',
           {
             id: wpVarId,
-            companyId: cid(),
             attributeId: wpAttrId,
             variableName: name('WP Var edited'),
           },
@@ -237,7 +235,6 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           'admin-workplace-location-save',
           [
             {
-              companyId: cid(),
               attributeId: wpAttrId,
               variableId: wpVarId,
               locationName: name('Location'),
@@ -258,14 +255,14 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         const locAll = await call(
           endpoints,
           'admin-workplace-location-all',
-          { companyId: cid() },
+          {},
           'loc-all',
         );
         expect.soft(statusOf(locAll), 'all locations read').toMatch(/success/i);
         const locGet = await call(
           endpoints,
           'admin-workplace-location-get',
-          { companyId: cid(), attributeId: wpAttrId, variableId: wpVarId },
+          { attributeId: wpAttrId, variableId: wpVarId },
           'loc-get',
         );
         expect.soft(statusOf(locGet), 'locations by tier read').toMatch(/success/i);
@@ -283,7 +280,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           const locUpd = await call(
             endpoints,
             'admin-workplace-location-update',
-            { id: locId, companyId: cid(), locationName: locEdited },
+            { id: locId, locationName: locEdited },
             'loc-update',
           );
           expect.soft(statusOf(locUpd), 'workplace location updated').toMatch(/success/i);
@@ -324,7 +321,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
        */
       const hierarchy = await endpoints.sendTo(
         'admin-workplace-hierarchy',
-        { body: { companyId: cid(), parentAttributeId: wpAttrId ?? '0', parentVariableId: wpVarId ?? '0' } },
+        { body: { parentAttributeId: wpAttrId ?? '0', parentVariableId: wpVarId ?? '0' } },
         { label: 'feature:admin:hierarchy', auth: { principal: businessM! }, allowLiveRead: true },
       );
       expect
@@ -338,7 +335,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const hrAttr = await call(
         endpoints,
         'admin-hr-tier-attribute-save',
-        [{ attributeName: name('HR Tier'), companyId: cid() }],
+        [{ attributeName: name('HR Tier') }],
         'hr-attr-save',
       );
       hrAttrId = createdId(hrAttr);
@@ -350,7 +347,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const hrAttrList = await call(
         endpoints,
         'admin-hr-tier-attribute-by-company',
-        { companyId: cid() },
+        {},
         'hr-attr-by-company',
       );
       expect.soft(statusOf(hrAttrList), 'HR tier attributes read back').toMatch(/success/i);
@@ -369,7 +366,6 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           [
             {
               variableName: name('HR Var'),
-              companyId: cid(),
               attributeId: hrAttrId,
               parentVariableId: 0,
               parentAttributeId: 0,
@@ -386,7 +382,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const hrVarList = await call(
         endpoints,
         'admin-hr-tier-variable-list',
-        { companyId: cid(), parentVariableId: 0 },
+        { parentVariableId: 0 },
         'hr-var-list',
       );
       expect.soft(statusOf(hrVarList), 'HR variables read back').toMatch(/success/i);
@@ -406,7 +402,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         const hrAttrUpd = await call(
           endpoints,
           'admin-hr-tier-attribute-update',
-          { id: hrAttrId, companyId: cid(), attributeName: hrAttrEdited },
+          { id: hrAttrId, attributeName: hrAttrEdited },
           'hr-attr-update',
         );
         expect.soft(statusOf(hrAttrUpd), 'HR tier attribute updated').toMatch(/success/i);
@@ -415,7 +411,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         const hrAttrRecheck = await call(
           endpoints,
           'admin-hr-tier-attribute-by-company',
-          { companyId: cid() },
+          {},
           'hr-attr-recheck',
         );
         const hrAttrRecheckRows = envelope(hrAttrRecheck).value;
@@ -435,7 +431,6 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           'admin-hr-tier-variable-update',
           {
             id: hrVarId,
-            companyId: cid(),
             attributeId: hrAttrId,
             variableName: name('HR Var edited'),
           },
@@ -449,7 +444,6 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         endpoints,
         'admin-employee-save',
         {
-          companyId: cid(),
           personalInformationObj: {
             firstName: 'QA',
             lastName: `Employee ${stamp}`,
@@ -469,14 +463,14 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const empList = await call(
         endpoints,
         'admin-employee-details',
-        { companyId: cid() },
+        {},
         'employee-list',
       );
       expect.soft(statusOf(empList), 'employees read back').toMatch(/success/i);
       const empByCompany = await call(
         endpoints,
         'admin-role-posting-employees',
-        { companyId: cid() },
+        {},
         'role-employees',
       );
       expect.soft(statusOf(empByCompany), 'role-posting employees read').toMatch(/success/i);
@@ -486,7 +480,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const rolePostingsByCompany = await call(
         endpoints,
         'admin-role-posting-by-company',
-        { companyId: cid() },
+        {},
         'role-posting-by-company',
       );
       expect.soft(statusOf(rolePostingsByCompany), 'role postings by company read').toMatch(/success/i);
@@ -506,7 +500,6 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           'admin-employee-update',
           {
             id: empId,
-            companyId: cid(),
             personalInformationObj: { firstName: 'QA', lastName: empLastNameEdited },
             employmentObj: {},
           },
@@ -520,7 +513,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         const empRecheck = await call(
           endpoints,
           'admin-employee-details',
-          { companyId: cid() },
+          {},
           'employee-recheck',
         );
         const empRecheckRows = envelope(empRecheck).value;
@@ -541,7 +534,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         const roleByEmp = await call(
           endpoints,
           'admin-role-posting-by-company-and-employee',
-          { companyId: cid(), employeeId: empId },
+          { employeeId: empId },
           'role-by-employee',
         );
         expect.soft(statusOf(roleByEmp), 'role posting by employee read').toMatch(/success/i);

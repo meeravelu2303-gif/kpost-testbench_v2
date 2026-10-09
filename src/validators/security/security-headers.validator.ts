@@ -1,7 +1,7 @@
 import { apiConfig } from '@config/api.config';
 import { env } from '@config/env';
 import { defineValidator } from '@engine/validator';
-import { fromChecks, type CheckDetail } from '@engine/validation-result';
+import { fromChecks, outcome, type CheckDetail } from '@engine/validation-result';
 
 export const securityHeadersValidator = defineValidator({
   name: 'security.security-headers',
@@ -11,6 +11,10 @@ export const securityHeadersValidator = defineValidator({
     'Security headers (nosniff, frame options, CSP, referrer policy, no-store, HSTS) are set',
   toggle: 'security',
   check: ({ primary }) => {
+    // No HTTP response means no headers to read. Judging that as "all headers missing" reopened a
+    // fixed bug (#1260) after a single dropped connection, while the live server sent every header.
+    if (primary.transportError)
+      return outcome.skipped('no HTTP response was received — headers cannot be judged');
     const required: [string, RegExp][] = Object.entries(apiConfig.securityHeaders);
     if (env.API_BASE_URL.startsWith('https://'))
       required.push([apiConfig.hstsHeader, /max-age=\d+/i]);

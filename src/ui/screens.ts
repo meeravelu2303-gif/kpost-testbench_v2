@@ -34,7 +34,7 @@ export const NAV_LINKS: readonly { icon: string; route: string; name: string }[]
   { icon: '.icon-KP_15-Settings', route: '/settings', name: 'Settings' },
 ];
 
-export const AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
+const ALL_AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
   {
     route: '/home',
     name: 'Home',
@@ -167,3 +167,15 @@ export const AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
     ],
   },
 ];
+
+/**
+ * Screens the owner has paused from ALL testing (API and UI) until their development is finished —
+ * KDoc/KOS since 2026-10-07. Every UI sweep (screens, crawl, keyboard, axe, network, interactions,
+ * visual) reads this list, so this is the one place to exclude it; the KDoc-only specs are tagged
+ * `@kos` and excluded by `--grep-invert @kos` in the UI scripts. Empty this set when KDoc is un-paused.
+ */
+const PAUSED_SCREENS: ReadonlySet<string> = new Set(['kdoc']);
+
+export const AUTHENTICATED_SCREENS: readonly ScreenDef[] = ALL_AUTHENTICATED_SCREENS.filter(
+  (screen) => !PAUSED_SCREENS.has(screen.screen),
+);

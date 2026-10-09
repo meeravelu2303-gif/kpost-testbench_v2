@@ -29,7 +29,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/adminTierAttribute/getAttributeByCompanyId',
     summary: 'List workplace tier attributes (levels) for the company',
     tags: ['workplace-tier-attribute'],
-    request: body(() => ({ companyId: companyId() })),
+    request: body(() => ({})),
     requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
@@ -44,7 +44,6 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     // (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
     request: body(() => [
       {
-        companyId: companyId(),
         attributeName: `QA WP Tier ${Date.now()}`,
         createdBy: companyId(),
       },
@@ -58,7 +57,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/adminTierAttribute/update',
     summary: 'Update a workplace tier attribute',
     tags: ['workplace-tier-attribute'],
-    request: body(() => ({ id: 1, companyId: companyId(), attributeName: 'QA WP Tier edited' })),
+    request: body(() => ({ id: 1, attributeName: 'QA WP Tier edited' })),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -81,7 +80,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     summary: 'List workplace tier variables (nodes) under a parent',
     tags: ['workplace-tier-variable'],
     // parentVariableId 0 = the root level, so this reads without a runtime id.
-    request: body(() => ({ companyId: companyId(), parentVariableId: 0 })),
+    request: body(() => ({ parentVariableId: 0 })),
     requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
@@ -96,7 +95,6 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     // (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
     request: body(() => [
       {
-        companyId: companyId(),
         attributeId: 1,
         variableName: `QA WP Var ${Date.now()}`,
         parentVariableId: 0,
@@ -113,7 +111,6 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     tags: ['workplace-tier-variable'],
     request: body(() => ({
       id: 1,
-      companyId: companyId(),
       attributeId: 1,
       variableName: 'QA WP Var edited',
     })),
@@ -147,7 +144,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/location/getAllLocation',
     summary: 'List all workplace locations for the company',
     tags: ['workplace-location'],
-    request: body(() => ({ companyId: companyId() })),
+    request: body(() => ({})),
     requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
@@ -159,7 +156,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     summary: 'Get locations under a workplace tier attribute + variable',
     tags: ['workplace-location'],
     // Keyed by a runtime attributeId/variableId a write creates — not driven on live standalone.
-    request: body(() => ({ companyId: companyId(), attributeId: 1, variableId: 1 })),
+    request: body(() => ({ attributeId: 1, variableId: 1 })),
   }),
   defineAdminEndpoint({
     id: 'admin-workplace-location-by-id',
@@ -179,7 +176,6 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     // source 2026-10-05) — a bare object 400s "Request body is invalid".
     request: body(() => [
       {
-        companyId: companyId(),
         locationName: `QA Location ${Date.now()}`,
         addressLine1: 'QA address',
         pincode: testData.pinCode,
@@ -195,7 +191,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/location/update',
     summary: 'Update a workplace location',
     tags: ['workplace-location'],
-    request: body(() => ({ id: 1, companyId: companyId(), locationName: 'QA Location edited' })),
+    request: body(() => ({ id: 1, locationName: 'QA Location edited' })),
     destructive: true,
     sideEffect: 'data',
   }),
@@ -223,7 +219,6 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     // So it is NOT productionSafe (a standalone call 400s and reads as a false CRITICAL); the admin
     // lifecycle drives it with an attribute id it created. Left the placeholder fields for the lifecycle.
     request: body(() => ({
-      companyId: companyId(),
       parentVariableId: '0',
       parentAttributeId: '0',
     })),

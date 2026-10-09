@@ -16,8 +16,6 @@ import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
  *   rolePosting/getSuspendOrTerminateEmployee list suspended/terminated members (read)
  */
 
-const companyId = (): string => String(testData.businessMCompanyId);
-
 export const adminRolesApis: EndpointDefinition[] = [
   // ---- reads ---------------------------------------------------------------------------------
   defineAdminEndpoint({
@@ -26,7 +24,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     path: '/rolePosting/getRolePostingByCompanyId',
     summary: 'List role postings for the company',
     tags: ['role-posting'],
-    request: body(() => ({ companyId: companyId() })),
+    request: body(() => ({})),
     requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
@@ -37,7 +35,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     path: '/rolePosting/getEmployeeByCompanyId',
     summary: 'List employees available for role assignment',
     tags: ['role-posting'],
-    request: body(() => ({ companyId: companyId() })),
+    request: body(() => ({})),
     requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
     productionSafe: true,
@@ -54,7 +52,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     // (likely "SUSPEND"/"TERMINATE" or a code — confirm with the dev). Until confirmed this is NOT
     // productionSafe: a standalone call 400s and reads as a false CRITICAL. Driven by the lifecycle,
     // which knows the real value, or re-enable once the dev confirms the enum.
-    request: body(() => ({ companyId: companyId(), requestType: 'SUSPENDED' })),
+    request: body(() => ({ requestType: 'SUSPENDED' })),
     destructive: false,
     note: 'requestType enum "SUSPENDED" rejected (400 "requestType is Empty or Invalid") — confirm the real value with the dev',
   }),
@@ -65,7 +63,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     summary: "Read one employee's role posting",
     tags: ['role-posting'],
     // Keyed by a runtime employeeId a write creates — not driven on live standalone.
-    request: body(() => ({ companyId: companyId(), employeeId: 1 })),
+    request: body(() => ({ employeeId: 1 })),
   }),
 
   // ---- writes (gated) ------------------------------------------------------------------------
@@ -88,7 +86,6 @@ export const adminRolesApis: EndpointDefinition[] = [
     // probes run off-production.
     request: body(() => [
       {
-        companyId: companyId(),
         employeeId: 1,
         hrVariableId: 1,
         locationId: 1,
@@ -132,7 +129,6 @@ export const adminRolesApis: EndpointDefinition[] = [
     // The field is `requestType` (not `status`), value UPPERCASE "SUSPENDED".
     request: body(() => ({
       employeeId: 1,
-      companyId: companyId(),
       requestType: 'SUSPENDED',
       reason: 'QA lifecycle',
     })),

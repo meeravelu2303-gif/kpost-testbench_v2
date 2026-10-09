@@ -9,12 +9,13 @@ import {
 } from '../../src/bug-tracker/bug-builder';
 import {
   candidateFromUiFailure,
+  collapseCountVariants,
   mergeCandidates,
   type BugCandidate,
 } from '../../src/bug-tracker/bug-candidate';
 import { apiFingerprint, normalizeForFingerprint } from '../../src/bug-tracker/bug-fingerprint';
 import { BugzillaClient } from '../../src/bug-tracker/bugzilla-client';
-import { BugzillaFiler } from '../../src/bug-tracker/bugzilla-filer';
+import { BugzillaFiler, partialFixKey } from '../../src/bug-tracker/bugzilla-filer';
 import {
   applyValidityGate,
   assessRunValidity,
@@ -184,6 +185,26 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(
       assessRunValidity({ executed: 28, collected: 30, loadErrors: 0, status: 'failed' }).valid,
     ).toBe(true);
+  });
+
+  test('a browser network error (server unreachable) is never filed as a UI bug', () => {
+    for (const actual of [
+      'Error: page.goto: NS_ERROR_NET_TIMEOUT',
+      'Error: page.goto: net::ERR_CONNECTION_TIMED_OUT at https://test.kpostindia.com/home',
+      'Test timeout of 600000ms exceeded.',
+      'Error: page.goto: Timeout was reached',
+      'Error: page.goto: Could not resolve hostname',
+    ]) {
+      const ui = candidate({ source: 'ui', actual, title: `Home screen — health @ui: ${actual}` });
+      expect(candidateRejection(ui), actual).toContain('transient');
+    }
+    // A real crash on the same screen still files.
+    const crash = candidate({
+      source: 'ui',
+      actual: 'Error: Kall broke while crawling its controls — JS error: Minified React error #327',
+      title: 'Kall — crawl @ui: Error: Kall broke while crawling its controls — JS error: Minified React error #327',
+    });
+    expect(candidateRejection(crash)).toBeUndefined();
   });
 
   test('the candidate gate drops noise but keeps real defects', () => {
@@ -726,6 +747,46 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
 
     expect(gate.rejected).toHaveLength(1);
     expect(outcome.counts.created).toBe(1);
+  });
+
+  test('one fault seen with different probe counts in one run is one ticket, not three', () => {
+    const msg = (n: string): string =>
+      `POST /v2/profile/deleteOtherActivity: ${n} error responses failed: primary (body status 400 != HTTP 404)`;
+    const merged = collapseCountVariants([
+      candidate({ id: 'KP-AAA001', title: msg('17/31'), endpoint: 'POST /v2/profile/deleteOtherActivity' }),
+      candidate({ id: 'KP-AAA002', title: msg('18/32'), endpoint: 'POST /v2/profile/deleteOtherActivity' }),
+      candidate({ id: 'KP-AAA003', title: msg('19/33'), endpoint: 'POST /v2/profile/deleteOtherActivity' }),
+    ]);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.id).toBe('KP-AAA001');
+    expect(merged[0]?.occurrences).toBe(3);
+  });
+
+  test('different faults on the same endpoint are NOT collapsed by the count merge', () => {
+    const merged = collapseCountVariants([
+      candidate({ id: 'KP-BBB001', title: 'POST /users: 1/2 cases failed: body.x null (got 500)' }),
+      candidate({ id: 'KP-BBB002', title: 'POST /users: 1/2 cases failed: body.y null (got 200)' }),
+    ]);
+
+    expect(merged).toHaveLength(2);
+  });
+
+  test('a partially-fixed fault maps back to its FIXED ticket (reopen, not re-file)', () => {
+    const fixed =
+      '[KP-B0743C] POST /redbus/availabletrips/: 2/3 negative request cases failed: body.sourceCityID: number instead of string (expected [400,422], got 200); body.destinationCityID: number instead of string';
+    const back =
+      '[KP-0AFA5C] POST /redbus/availabletrips/: 1/3 negative request cases failed: body.sourceCityID: number instead of string (expected [400,422], got 200)';
+    expect(partialFixKey('KPost API', back)).toBeDefined();
+    expect(partialFixKey('KPost API', back)).toBe(partialFixKey('KPost API', fixed));
+  });
+
+  test('a different first failing case is a different fault — no reopen', () => {
+    const a =
+      '[KP-AAA001] POST /redbus/availabletrips/: 1/3 negative request cases failed: body.sourceCityID: number instead of string';
+    const b =
+      '[KP-AAA002] POST /redbus/availabletrips/: 1/3 negative request cases failed: body.travelDate: number instead of string';
+    expect(partialFixKey('KPost API', a)).not.toBe(partialFixKey('KPost API', b));
   });
 
   test('summaries of the same fault match even when values differ', () => {

@@ -1,42 +1,42 @@
-/* eslint-disable playwright/no-conditional-in-test */
-import { testData } from '@config/test-data.config';
-import { AUTHENTICATED_SCREENS } from '@ui/screens';
+import type { ScreenDef } from '@ui/screens';
 import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from './session';
 
 /**
- * Deep UI sweep across EVERY authenticated screen — the front-end analogue of the API engine's
- * "a case per validation, on every endpoint". For each screen, in the reused authenticated session:
+ * Shared body for the deep UI sweep (`screens-batch*.spec.ts`), extracted so the sweep can run in
+ * smaller BATCHES instead of one single file hammering every screen back to back.
  *
- *   1. navigate and confirm the screen MOUNTED (its ready selector),
- *   2. assert every key CONTROL it should render is present (not an empty shell),
- *   3. run the whole UI check catalogue (`src/ui/ui-checks.ts`) — health (no JS crash / broken
- *      asset), performance (render budget), responsive (no phone-width overflow), accessibility —
- *      and file the MEDIUM+ findings; LOW findings (e.g. missing alt text) and failed backend calls
- *      are logged as context, not filed.
- *
- * A failure files to the KPost UI product → Ayyappan, on the screen's component. Read-only.
+ * Why batches: found 2026-10-07 — one continuous run across all 13 screens in rapid succession
+ * reliably tripped a server-side rate-limiter after 3 independent confirmations (chromium twice,
+ * firefox once, all breaking at this exact sweep's first screen): 429s appeared, then the session's
+ * own token started being rejected (401) on every endpoint, not just the one being probed — a
+ * false-positive storm, not real per-screen defects. Splitting into smaller files is necessary but
+ * not sufficient on its own (Playwright runs sibling spec files back to back with no gap), so this
+ * also adds a deliberate settle delay between screens — the actual lever that reduces request rate.
+ * See `feedback_webkit_hang_mitigation` for the same batching idea applied to a different failure
+ * mode (a hung worker, not a rate limit) found earlier the same week.
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 
-test.describe('KPost deep UI sweep — every screen', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+/** Paced gap between screens — long enough to visibly thin the request burst, short enough that a
+ * 4-5 screen batch still finishes in a reasonable time. */
+const SETTLE_MS = 4_000;
 
-  // A bounced session bounces every screen to /login → the sweep would file false "missing control"
-  // bugs. Skip (not fail/file) when signed out; a session problem is not a UI defect.
+export function runScreenSweep(screens: readonly ScreenDef[]): void {
   test.beforeEach(async ({ page }) => {
     await skipIfSignedOut(page);
   });
 
-  for (const screen of AUTHENTICATED_SCREENS) {
+  for (const [index, screen] of screens.entries()) {
     test(`${screen.name} screen — controls, health, performance, responsive, a11y @ui`, async ({
       page,
     }) => {
+      // Pace every screen but the first in this batch, so the burst that tripped the rate-limiter
+      // never recurs within a batch.
+      if (index > 0) await page.waitForTimeout(SETTLE_MS);
+
       const stop = watchUiHealth(page);
       const started = Date.now();
 
@@ -79,4 +79,4 @@ test.describe('KPost deep UI sweep — every screen', { tag: '@ui' }, () => {
       expect(problems, `${screen.name} UI issues — ${problems.join(' | ')}`).toEqual([]);
     });
   }
-});
+}

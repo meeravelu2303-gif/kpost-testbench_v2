@@ -14,6 +14,7 @@ import { LoginPage } from '@pages/LoginPage';
 import { SettingsPage } from '@pages/SettingsPage';
 import { SignupPage } from '@pages/SignupPage';
 import { attachValidationReport } from '@reporting/report-attachment';
+import { startRecording, writeDiagnosisIfFailed } from '@ui/failure-diagnostics';
 import { businessRuleRegistry } from '@rules/index';
 import { newCorrelationId } from '@utils/correlation';
 import { createLogger, type Logger } from '@utils/logger';
@@ -122,6 +123,18 @@ export const test = base.extend<TestFixtures>({
 
   validationEngine: async ({ createValidationEngine }, use) => {
     await use(createValidationEngine());
+  },
+
+  /*
+   * Every browser test's page records what a developer needs to fix a failure — JS stacks, the last
+   * clicks / Tab path, console errors, failed requests and who made them — and attaches it as a
+   * "failure diagnosis" only when the test fails (see @ui/failure-diagnostics). API tests never ask
+   * for `page`, so they are untouched.
+   */
+  page: async ({ page }, use, testInfo) => {
+    const recording = await startRecording(page);
+    await use(page);
+    await writeDiagnosisIfFailed(page, recording, testInfo).catch(() => undefined);
   },
 
   loginPage: async ({ page }, use) => {

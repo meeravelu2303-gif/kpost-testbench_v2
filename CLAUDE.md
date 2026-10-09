@@ -284,6 +284,149 @@ FIXED-but-back → reopen, search failed → file nothing. **Dry run is the defa
      templated comment there directly costs a developer real time. Write it like the developer has
      never seen the ticket before and is reading only this one comment.
 
+### The complete test-run → Bugzilla pipeline — production-grade workflow spec (owner directive, 2026-10-07; all 4 gaps closed same day once the live run finished)
+
+The owner's goal: run ONE product-specific command and have the entire pipeline — test execution,
+reporting, evidence collection, existing-bug re-verification, duplicate/invalid prevention, and
+Bugzilla filing — happen automatically and consistently, every time, without depending on an
+assistant to drive it by hand. First audited 2026-10-07 against the code as it stood (the four gaps
+below were real then); all four were closed later the same day, once the live firefox run that was
+protecting these files finished. Re-check this against the code before trusting it if it's been a
+while, the same way any other part of this document should be.
+
+**1. Product-wise test commands — CLOSED.** Every Bugzilla product now has a true "run everything"
+command: `kpost:full` (already existed — FULL profile + write-fuzz + destructive, one shot),
+`kmail:full` / `kmail:full:file` and `admin:full` / `admin:full:file` (added — same shape, previously
+missing for these two products), and `ui:all` / `ui:all:file` (added — chains the 3-browser sweep
+with `ui:admin`, the Admin UI project, so the UI product's own secondary surface is covered too).
+`VALIDATION_PROFILE=FULL` is documented in `src/validation-engine/validation-policy.ts`
+(`PROFILE_SETS`) as literally "everything" including every `SECURITY` check, so a `*:full` command
+never needs a separate `*:security` run chained after it — that would just re-run a subset for no
+reason. On top of the four per-product commands sits `product:kpost-api`, `product:kmail-api`,
+`product:kpost-admin`, `product:kpost-ui` (one name per real Bugzilla product, each a thin alias onto
+its `*:full`/`ui:all` command) and `product:all` / `product:all:file` (all four, chained). The older
+`kpost:deep`, `kpost:security`, `admin:deep`, `kmail:deep`, `all`/`test:all` scripts are all still
+present and untouched — these new ones are additive, not a replacement, so nothing already relied on
+keeps working exactly as it did.
+
+**2. Pipeline architecture — fully built, one coherent path.** `src/reporting/bugzilla-reporter.ts`
+(`BugzillaReporter.publish()`) is the one real path every automated run takes:
+candidates built (`candidatesFromReport` / `candidateFromUiFailure` /
+`accessibilityCandidatesFromScreens` in `bug-candidate.ts`) → merged/consolidated
+(`mergeCandidates`, `consolidateCascades`) → validity gate (`applyValidityGate` in
+`validity-gate.ts`) → whole-run sanity gate (`assessRunValidity` — blocks ALL filing if the run
+itself collapsed, was interrupted, or ran zero tests) → filed (`BugzillaFiler.file()` in
+`bugzilla-filer.ts`, actual REST calls via `bugzilla-client.ts`) → existing-bug auto-resolve pass
+(`autoResolve()` → `verify-resolve.ts`) → report rendered (`run-summary.ts` + `bug-report.ts` →
+`reports/REPORT.md` / `.json`). A second, narrower path (`src/bug-tracker/gatekeeper.ts`) exists only
+for hand-authored tickets via `tests/framework/manual-bug.spec.ts` — it is NOT part of the automated
+pipeline above, so don't look there when tracing what an automated run actually does.
+
+**3. Existing-bug re-verification on every run — CLOSED for both API and UI.**
+`autoResolve()` fetches **every** currently-open bench-tagged bug for the product each run via
+`client.openBenchBugs()`. API bugs resolve via `classifyResolve()` when their own
+`(endpoint, validator)` pair genuinely ran and passed THIS run (`index.ranPair`/`failedPair` from
+`buildRunIndex`) — unchanged, and still has its one real limit: an endpoint not exercised this run
+stays `notVerified`, not touched. **UI bugs now have the same mechanism**: `classifyUiResolve()` +
+`buildUiRunIndex()` (`verify-resolve.ts`, added 2026-10-07) match a UI bug back to the Playwright test
+that originally filed it (parsed from the bug's own summary — `[tag] <original test title>` — with a
+prefix match for a title Bugzilla's 255-char summary limit truncated) and resolve it only when that
+exact test ran again this pass and passed CLEANLY (a `flaky` outcome — failed at least once, passed
+on retry — counts as NOT clean, same caution as an intermittent API reproduction). `autoResolve()` now
+adds the "KPost UI" product to its check list whenever any UI test ran this pass (previously it was
+never added at all, since UI tests produce no `ValidationReport` the product list was built from).
+A platform-wide/systemic UI ticket (no single originating test) still isn't covered — it correctly
+falls through to "could not match a single originating test" — see
+[[feedback_ui_bugs_no_auto_verify_mechanism]] for the original incident this closes, and
+`tests/framework/verify-resolve.spec.ts`'s `'auto-resolve verification — UI'` block for the test
+coverage (7 tests: clean pass, still-failing, flaky, not-run, reproduced, truncated-title prefix
+match, skipped).
+
+**4. New-bug creation flow — matches the owner's required sequence exactly.**
+Test Failure → `candidatesFromReport`/`candidateFromUiFailure` (Analyze) → `validity-gate.ts`
+`candidateRejection()` (Validate — rejects transient/infra/environment noise before it's even a
+candidate, see point 5) → `BugzillaFiler.process()`'s live Bugzilla search (Check Existing + Duplicate
+Check, see point 5's outcome table) → severity/category/systemic classification already baked into
+the candidate (Classify Root Cause) → `uncertainNewDefect()` (see point 5 — holds back an uncertain
+brand-new finding instead of auto-filing it) → only a candidate that survives all of the above reaches
+`createBug()` (Confirm Valid → Create). Nothing is ever filed straight off a raw test failure.
+
+**5. Duplicate / invalid / false-positive prevention — CLOSED (manual-review bucket added).**
+Fingerprinting (`bug-fingerprint.ts`): API key = `endpointId|validatorName|normalizedMessage`;
+systemic/platform-wide key drops the endpoint; UI key = `file|title|normalizedMessage`; UI-systemic =
+a stable shared-cause key (`uiSystemicFingerprint`, see
+[[project_kpost_ui_description_template_fixed_2026_10_07]]). Outcomes, from `BugzillaFiler.process()`:
+
+| Existing ticket found?                                | Outcome                                          |
+| ------------------------------------------------------ | ------------------------------------------------ |
+| Tag match, still OPEN                                   | Comment only (never a new ticket)                |
+| Tag match, closed INVALID/WONTFIX/WORKSFORME/DUPLICATE  | `judged-skip` — never re-filed                   |
+| Tag match, closed FIXED (but reproducing again)         | Reopen + `buildReopenComment`                    |
+| No tag match, but same `(endpoint, validator)` fault-key exists | Comment + adopt the existing ticket's tag |
+| No tag/fault match, but an open ticket's summary phrase matches | Adopt (`findOpenByPhrase` + `sameFault`)  |
+| Nothing found at all, AND the reproduction was intermittent | `needs-review` — held back, see below        |
+| Nothing found at all, reproduction was reliable (or has none to score) | `createBug()`                       |
+| The dedupe search itself fails                          | File NOTHING (`'failed'`) — never create blind   |
+
+Separately, `candidateRejection()` rejects, BEFORE a candidate is ever considered for filing:
+anything below the severity floor, pure response-time/timeout findings, gateway 5xx or
+no-response/timeout (transient upstream, not a defect), infra/bench faults (`BENCH_FAULT`:
+ECONNREFUSED, browser-closed, setup faults, `ProductionSafetyError`), 429 throttling, an
+exposure/enumeration claim contradicted by its own 401/403/404 evidence, and anything missing a
+component or an expected/actual pair. `isLenientAcceptanceFalsePositive()` separately suppresses a
+negative-input probe that got accepted (2xx) instead of crashed. Every rejection is recorded with its
+reason and shown in the report (§5 "Findings NOT filed"). **The manual-review gap is closed**:
+`uncertainNewDefect()` (`validity-gate.ts`, added 2026-10-07) sits at the one moment that is hard to
+undo — minting a brand new ticket number — and holds back a candidate with NO existing ticket match
+at all when its own reproduction gate scored it intermittent (`failures < attempts`). It deliberately
+does NOT apply to anything that already matched an existing ticket (commenting/reopening something a
+human already triaged is low-risk regardless of how the repro scored). Surfaced as the `needs-review`
+`FilingDecision` and the report's new §3c (point 7).
+
+**6. Bug description completeness — the three gaps CLOSED.** `bug-builder.ts` `buildDescription()`
+now also writes: a `Severity: X / Priority: Y` text line (previously only set as real Bugzilla fields,
+never narrated in the body); a `Preconditions:` line via the new `buildPreconditions()` helper
+(API: "a valid, authenticated test account calling the endpoint below with a live session token";
+UI: "Signed in with a valid test account, in {browsers}, on the {component} screen"); and the
+Playwright trace.zip is now attached as proof (`proofFrom()` in `bugzilla-reporter.ts` recognises
+Playwright's own `'trace'` attachment name, alongside the existing screenshot/video/a11y-evidence/
+crash-evidence/crash-diagnosis names — `attachProof`'s existing 25MB size cap already handles an
+oversized trace gracefully, skip-with-a-warning, same as it always did for an oversized video). Still
+true as before: the Run date (`candidate.observedAt`) is always `new Date().toISOString()` at
+runtime, **never hardcoded**.
+
+**7. Report categories before filing — CLOSED (manual-review bucket now has its own section).**
+`bug-report.ts`'s `buildBugReportMarkdown()` distinguishes, section by section: execution totals;
+distinct defects (valid vs rejected, systemic breakdown); filed-by-developer (created / commented /
+reopened / adopted / judged-skip / **needs-review** / failed / would-file counts); §3b auto-resolved
+(resolved / confirmedFailing / notVerified / failed — covering "existing and fixed", "existing and
+still reproducing", "existing but not exercised this run", now true for UI too per point 3); the new
+**§3c "Needs manual review"** (added 2026-10-07 — one row per held-back brand-new finding, with the
+reason, so a human can act on exactly what the gate wasn't confident enough to auto-file); a tickets
+table; and §5 "Findings NOT filed" with each rejection's reason (covering invalid/environment and
+automation/test-data).
+
+**8. Dry-run safety gate — fully implemented, safe by default.** `BUGZILLA_DRY_RUN` defaults to
+`true` (`src/config/env.ts`); every `*:file` npm script is what explicitly sets it `false` for a real
+filing pass. `BUGZILLA_AUTO_RESOLVE` defaults to `true` but only actually writes to Bugzilla when
+`dryRun` is false. `BUGZILLA_RESOLVE_ONLY` and `BUGZILLA_MAX_FILE` (`bugzilla.config.ts`) are
+additional scope/safety knobs.
+
+**9. Single command = complete pipeline — all four gaps closed 2026-10-07.** A person can now run
+e.g. `npm run product:kpost-api:file` (or `product:kpost-ui:file`, `product:kmail-api:file`,
+`product:kpost-admin:file`, or `product:all:file` for literally everything) and get: full test
+execution for that product → report → evidence (incl. trace.zip) → existing-bug re-verification
+(API AND UI, each within its one honest limit — an endpoint/test simply not exercised this run stays
+`notVerified`, which is a true statement, not a gap) → dedupe → a manual-review hold for anything too
+uncertain to auto-file → filing — with no manual steps and no assistant required in between. Fixed
+this session: fused per-product commands (point 1), UI existing-bug re-verification (point 3), the
+manual-review bucket (points 5, 7), and the three bug-template gaps (point 6). Verified: `tsc --noEmit`
+clean on every file touched, `npm run framework` still at 178 passed / 5 pre-existing-and-unrelated
+failures (same failures, same count, before and after), plus 7 new dedicated tests for the UI
+auto-resolve logic.
+
+## 7. Contracts — the Excel workbook is the source of truth
+
 The swagger files were **deleted**: they disagreed with the workbook. `KPOST API (N).xlsx` now lives
 **in the repository root** (currently `KPOST API (6).xlsx`); the converter picks the
 highest-numbered copy, so a fresh checkout regenerates everything. Nothing invalid or duplicated is
@@ -332,6 +475,114 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 ## 8. Decision log — what was done and why
 
 Newest first. Each entry records the decision, not just the change.
+
+### 2026-10-08 — Every open bug now gets a dated, plain-English status note on every run; Admin payloads no longer send `companyId`
+
+**Owner requirements:** (1) every run updates EVERY existing open bug with the current date/time — closed if fixed, a proper comment if still open; (2) developers fix bugs from the exported Excel with Claude's help, so the sheet must carry full reproduction detail; (3) Admin APIs: PDF endpoints only, and `companyId` must come from the auth token, never the payload.
+
+**What was wrong:**
+- The status pass (`autoResolve`) only listed bugs whose summary carried the 6-hex `[KP-xxxxxx]` tag (`openBenchBugs`), so 13 of 26 open Admin bugs (every hand-filed `[KPV2-ADMIN…]` security finding) and KPost API #937 (`[KP-SERVERHEADERVERSION]`) were never touched at all. And a bug kept open got NO Bugzilla write — only a local counter — so even bench bugs often went days without a dated update.
+- A check that FAILED only because the server never answered (timeout / disposed context / ECONNRESET / 429) counted as "still failing" in `buildRunIndex` — harmless while nothing was written, but once every kept-open bug gets a comment it would have told developers "confirmed still broken" when nothing was tested.
+- Reopen comments carried no curl and read identically on the 6th reopen as the 1st. A live history audit of the 15 bugs reopened on 2026-10-08 showed every reopen was genuine (fresh curl + correlation ID each time) — e.g. #522 fixed-and-reopened 6× since 2026-09-22, last closed with "Its working fine, recheck." and no verification. A developer-verification gap, not a bench defect.
+- The BUGZILLA-UI Excel export parsed the description's `curl:` block only as a section boundary and discarded it — the most actionable field of an API bug never reached the sheet.
+
+**What changed:**
+- `BugzillaClient.openBugs(product)` lists every open bug; `autoResolve` uses it. Bugs WITHOUT the bench hex tag are hand-filed findings: never auto-closed (no single check stands for them), but still get the dated note. Dedup (`openBenchBugs`) is unchanged.
+- Every kept-open bug gets `plainStatusComment` (in `bugzilla-reporter.ts`): date, which bug, a capitalised Result (STILL BROKEN / NOT RE-CHECKED IN THIS RUN + why / NOT AUTOMATICALLY RE-CHECKED / KDoc paused), and an explicit "Bottom line". The close comment uses the same template. A bug the filing pass already commented on in the same run (commented/reopened/adopted/created) is skipped — one note per bug per run.
+- Gate-rejected transient candidates no longer count as "reproduced"; `buildRunIndex` ignores a FAILED result whose only evidence is a non-answer (kept if it also holds a real `got NNN`). Pinned by two tests in `verify-resolve.spec.ts`.
+- `buildReopenComment` carries the curl and, from the 2nd reopen on, "reopened N times without a lasting fix — run the reproduction yourself before marking FIXED again" (count read from the bug's own comment history).
+- BUGZILLA-UI: `DefectReport.curl` + a monospaced "Reproduction (curl)" column. Lesson: widening `SECTION_START`'s `curl` to `curl[^:\n]*` made the curl command's own first line (`https:`…) look like a heading and truncated the block to nothing — kept bare `curl`.
+- Admin: `companyId` removed from all payloads (`src/api/definitions/admin/*`, `feature.spec.ts`, `write-fuzz-workflow.spec.ts`) and stripped from every contract request schema in `defineAdminEndpoint` (`withoutCompanyId`), so it is never fuzzed. Backend source already showed these controllers call `companyIdFromToken(request)` and ignore the body field. The security specs still send a FOREIGN `companyId` on purpose — that is the test that the backend scopes by the token. Scope re-checked: the 38 definitions match the PDF-derived list in `scripts/apply-admin-pdf-payloads.cjs` exactly; admin tests reference no raw paths.
+- `npm run kpost:full:verify` — the full KPost API sweep in resolve-only mode: files nothing new, closes verified fixes, dates every other open bug.
+
+**Caution:** running ANY Playwright command (even `--project=framework`) after a real run overwrites `reports/REPORT.json`/`.md` — copy the real run's report aside first. Lost the 2026-10-08 KPost API run's local report this way (Bugzilla itself unaffected).
+
+**Follow-up the same night — the source of "new bugs every run", found by validating the 46 open KPost API bugs:**
+- **Same fault, several tickets in one run.** `apiFingerprint` hashes the message, and probe counts ("17/31 error responses failed" vs "18/32 …") are not normalised, so one fault seen through several spec files got several tags: #1270–#1285 were 15 tickets for 6 faults. Fix: `collapseCountVariants` (`bug-candidate.ts`, applied in the reporter before cascade consolidation) merges same product + endpoint + validator + message-with-counts-normalised candidates under the first id. The fingerprint itself is deliberately unchanged — changing it would shift every existing ticket's tag and break reopen-by-tag.
+- **A partially-fixed bug came back as a NEW ticket instead of reopening.** #1063 ("2/3 cases failed: sourceCityID number instead of string") was marked FIXED; the remaining case ("1/3 …") hashed to a new tag and was filed as #1269. Dedup only searched OPEN bugs. Fix: the filer loads FIXED bench bugs (`fixedBenchBugs`) keyed by `partialFixKey` (product + endpoint + validator class + FIRST failing case, counts normalised) and `reopenByFault` reopens the FIXED ticket (with curl + cycle count, new tag appended to the whiteboard) before any new ticket is created. Checked against the live data: of 46 open × 416 fixed bugs, exactly one pair matched — #1269 → #1063.
+- **Bugzilla cleanup (evidence-backed, comments self-contained):** 9 count-variant duplicates closed DUPLICATE of their first sibling; #1263 INVALID (signup 409 — the fixed QA identity 9000000777 already exists, confirmed via `mobileNoExist`); #1273 INVALID (delete of a placeholder activityID → 404 is correct); #1063 reopened with a fresh curl (remaining case now crashes with 500), #1269 DUPLICATE of it; #937 manually re-verified still broken (`Server: nginx/1.24.0 (Ubuntu)`). KPost API open: 46 → 35.
+- **Still open, unconfirmed:** #1262 (adminRegistration bare 400 for a free identity — may be the OTP precondition, not a product bug; a successful call would create a real company, so not probed); #1060 (business rule BR-KU-EDIT-SUBJ — failure-only telemetry, needs an isolated rerun to tell "fixed" from "didn't run").
+- **Bench fixtures still to fix:** signup re-uses one identity every run, and `deleteOtherActivity` uses a placeholder id — both now skip as judged-INVALID, but the definitions should expect 409 / 404 for those inputs.
+
+**Before the per-browser UI runs (same night):**
+- **The KDoc pause was never wired into the UI either** — `kos`/`kword`/`kad-document`/`kai` specs opened `/kdoc`, and every sweep built from `AUTHENTICATED_SCREENS` (screens batch 2, crawl, keyboard-nav, axe, network-resilience, interactions, visual) included it. Fixed: `PAUSED_SCREENS` in `src/ui/screens.ts` filters `kdoc` out of the shared list; the four KDoc-only specs are tagged `@kos`; `ui`/`ui:file` and the new per-browser commands use `--grep-invert @kos`; `verticals-features` skips `/kdoc`. Empty `PAUSED_SCREENS` and drop the tag exclusions when KDoc is un-paused.
+- **UI auto-close was browser-blind** — `classifyUiResolve` matched on test title only, so a chromium-only run could close a Firefox-only bug (e.g. #980) because the same test passes on chromium. Now a bug with a `[browser:…]` whiteboard tag is verified only on its own browsers and closed only when its test ran AND passed on every one; otherwise "not re-checked on <browser> this run". Three tests in `verify-resolve.spec.ts`.
+- New commands `ui:chromium:file`, `ui:firefox:file`, `ui:webkit:file` — one browser per run, same filing/status pipeline. Webkit should still be run in file batches (see the webkit-hang mitigation).
+
+**Chromium run 2026-10-09 — three more fixes, all found by checking the run's own output:**
+- **UI title matching never matched (0 of 24 chromium bugs).** A UI bug's summary is `<test title>: <error>`, but `uiTitleMatches` required an exact title — so every UI bug read as "its test did not run". Caught before the run reported (run stopped at test 84, nothing written), fixed to "summary starts with `<title>: `", pinned by tests. Lesson: test a matcher against REAL Bugzilla summaries, not hand-written fixtures.
+- **Dated proof for still-broken bugs.** UI: the run's failure screenshot is attached as `proof-<date>-<browser>-bug<id>.png` (reporter `attachDatedProof`). API: the note quotes "What failed on this date: …" (`RunIndex.failedMessage` → `ResolveDecision.evidence`).
+- **Wrong reason on 91 UI bugs.** `plainStatusComment` matched "did not run on" (the API reason) before "originating test did not run" (the UI reason), so Firefox/WebKit-only bugs were told their check was "skipped on its endpoint". Status was right, reason wrong. Rule order fixed, many-screen tickets (#508, #1023) now get "could not match a single originating test", pinned by `status-comment.spec.ts`; all 91 corrected in Bugzilla with plain-English comments.
+- **Browser network errors were not recognised as environmental.** The first Firefox run (2026-10-09) hit server throttling after ~12h of continuous bench traffic: 25 of its last 40 failures were `page.goto: NS_ERROR_NET_TIMEOUT`. The gate knew API timeouts but not `NS_ERROR_*` / `net::ERR_*` / "Test timeout of N ms exceeded", so those would have been filed as UI bugs, and the status pass would have marked bugs "STILL BROKEN" with an error-page screenshot as proof. Run stopped before reporting (nothing written). Fixed: `ENVIRONMENTAL_UI_OR_API_FAILURE` (validity-gate.ts) rejects them; the reporter treats a UI test whose EVERY failed attempt was environmental as not run for the status pass (flaky-then-pass → clean pass) and never uses its screenshot as proof; the run summary still shows the true outcome. Pinned by a test. Operational rule: after long runs, give the server a ~25-40 min cool-down before the next browser.
+- Result: 23 open chromium bugs (from 36), all dated 2026-10-09; 14 closed FIXED (verified: their tests passed first try; root cause of most — the profile-image 401 — confirmed fixed live: 401 without token, 200 with, app now sends it); 5 STILL BROKEN with today's screenshot; 1 new (#1286, a JS crash on KCloud, distinct from #1123); 12 hand-filed + 2 many-screen tickets need manual re-checks. **Correction (same day): 7 of the 14 FIXED closures were false** — see the next block.
+
+**Developer evidence gaps filled 2026-10-09 (from the UI developers' review zip):**
+- **Failure diagnosis on every failing UI test** (`src/ui/failure-diagnostics.ts`, wired via the `page` fixture override in `src/fixtures/index.ts`). An init script records the user's steps (clicks, Tab/focus path, keys) and failed assets with their initiator in `sessionStorage`; on failure the fixture writes `failure-diagnosis` with JS-error stacks, console errors, failed/≥400 requests grouped by method + path shape (count, example, "requested by"), the step trail, and any `noteDiagnostic()` notes. The reporter uploads it next to the screenshot as `diagnosis-<day>-<browser>-bug<id>.txt`.
+- **Accessibility details**: `axeDetailsText()` → `a11y-details` attachment: every failing node's selector, HTML, and contrast colours/ratio — not just the rule name.
+- **Layout check tolerance 16px → 1px.** The 16px slack hid a 3px overflow, so the chromium run closed 7 layout bugs as FIXED that were still broken (#1092, #1122, #1144, #1157, #1176, #1187, #1195 — all reopened with measurements). `OVERFLOW_PROBE` / `overflowCulprits()` now name the deepest element whose content is wider than its box, plus edge-crossing elements. **Root cause of every "page wider than 1280px" bug, measured:** the shared header `div#root > div > div.d-flex.align-items-center.justify-content-between.px-3` — children 622px + `div.Name_d_none` 429px + `div.d-flex.gap-4` 196px (both `min-width:auto`) → page 1283px on a 1280px screen. One CSS fix should clear all of them; #904 is the platform ticket.
+- **A multi-check test failing for a different problem no longer marks a bug STILL BROKEN** (`uiProblemSignature`): the failure must show the bug's own signature ([ui.*] tag, js-error, resource-NNN, freeze, offline-crash, logout); otherwise the note is "NOT CONFIRMED THIS RUN".
+- **WebKit network phrases** ("Timeout was reached", "Could not resolve hostname", "network connection was lost") added to `ENVIRONMENTAL_UI_OR_API_FAILURE`.
+- 10 UI bugs whose only evidence was a server outage or a setup timeout closed INVALID (#1078, #1145, #1161, #1252, #1255; #1140, #1164, #1183, #1258, #1259).
+- Validated: tsc at baseline (11 pre-existing errors), framework 204 passed + the same 3 pre-existing failures.
+
+**Admin re-test 2026-10-09 — two bench bugs found by reading request bytes, 13 Admin bugs closed:**
+- **"Malformed JSON" and "empty body" probes never sent malformed JSON or an empty body.** `ApiClient.execute` passed `rawBody` as a string; Playwright wraps a non-JSON string under a JSON content-type in quotes (`isJsonParsable(data) ? data : JSON.stringify(data)`), so `{"field": ` went out as the valid JSON string `"{\"field\": "` and `''` as `""`. Correct servers answered 200 and were reported as defects, which is why the developers' fixes on #629/#828/#829 "kept reopening". Fixed: `rawBody` is sent as a `Buffer`; pinned by `tests/framework/raw-body.spec.ts`. **Any `request.malformed-json` / `request.empty-body` bug filed before 2026-10-09 may be false: re-test KPost API #524 and #789.**
+- **A request with no HTTP response counted as "all security headers missing"** (reopened #1260 after one dropped connection). `security.security-headers` and `response.headers` now skip when `primary.transportError` is set.
+- Result: 27 open Admin bugs → 15. Closed FIXED after live replay: #629 #828 #829 #1260 #632 #636 #639 #643 #647 #650 #879 #882 #1261. Still open: #1287/#1288 (website's own save payloads still refused; re-verified live) and the 13 security bugs #1038–#1050 (no fix in source; not live-confirmed because that needs cross-company writes or unauthenticated calls, so each carries a dated source-review note).
+- The live Admin server is newer than the local source copy, so a source review never closes a bug on its own.
+- Framework suite: 208 passed (204 + 4 new), same 3 pre-existing failures; tsc baseline 11.
+
+### 2026-10-08 — The paused KDoc/KOS module was still running inside `kpost:full` and its siblings — caught live, run killed, every KPost API script fixed
+
+The owner's 2026-10-07 directive paused KDoc (`kword`/`kos`) entirely — not just UI, API too — "until
+they finish the work." When `kpost:full:file` (the fused command built the same day) was actually run
+for real the next day, it was caught **actively executing destructive writes** against
+`kos-delete-heading` and `kos-join-doc` — the exact module that was supposed to be off-limits. The
+QA-identifier guard blocked one dangerous case on its own, but that is not the same as the module
+being excluded, so the run was killed immediately (`taskkill /T /F` on the real native PID, found via
+`Get-CimInstance Win32_Process ... | Where CommandLine -match`, since the bash-reported PID doesn't
+map 1:1 to the Windows PID). Confirmed no bugs were filed from the killed run — `onEnd()` (where
+filing happens) never got to run, verified via `reports/REPORT.md`'s unchanged timestamp.
+
+**Root cause**: every KPost API script (`kpost`, `kpost:file`, `kpost:deep`, `kpost:deep:file`,
+`kpost:security`, `kpost:security:file`, `kpost:full`, `kpost:full:file`, plus `resolve`/`db`/`db:file`)
+set `KOS_LIFECYCLE=true` and pointed at the whole `tests/api/kpost` directory (or an untagged
+`--grep`), so nothing actually excluded KOS — the pause had never been wired into the test commands
+themselves, only remembered as a standing instruction. **Fix**: removed `KOS_LIFECYCLE=true`
+everywhere; the 8 directory-glob scripts now list each `tests/api/kpost/*` subdirectory EXCEPT `kos`
+explicitly, AND add `--grep-invert @kos` as a second layer (two KOS/KWord tests were found hiding
+in `security/kword-object-authorization.spec.ts` and `concurrency/scenarios.spec.ts` — directory
+exclusion alone would have missed both); the 3 grep-based scripts (`resolve`/`db`/`db:file`) add
+`--grep-invert @kos` since they have no directory argument to edit. Verified clean via `--list`
+(zero `kos`/`kword` matches) and `npm run framework` (187 passed, same pre-existing unrelated
+failures as before this change — the package.json edit touches no TypeScript logic).
+
+**The lesson**: a standing exclusion recorded only in memory/CLAUDE.md is not enforcement — it has to
+be wired into the actual commands, or the next "run everything" invocation will silently violate it.
+Re-check this the moment KDoc is un-paused: remove the exclusions here (restore `KOS_LIFECYCLE=true`,
+drop the directory carve-outs and `--grep-invert @kos`) rather than leaving dead exclusions in place.
+
+### 2026-10-08 — The deep screen sweep (`screens.spec.ts`) split into 3 batches, after 3 independent confirmations it trips a rate-limiter
+
+Three full UI runs in a row — chromium twice, firefox once — died at the exact same spot: the very
+first test of the deep per-screen sweep (then one file, `screens.spec.ts`, 13 screens back to back).
+Each time: 429s appeared, then the session's own token started being rejected (401) on every
+endpoint, not just the one being probed — a server-side rate-limiter/anti-abuse response to the
+request burst this sweep produces, not a real per-screen defect. One ticket (#1242, KDirectory) was
+confirmed as a genuine false positive from this: its filed description came from a retry that hit the
+storm and mis-reported a render timeout, while the two earlier attempts actually showed the real,
+already-tracked React #327 crash — closed INVALID after a live re-check confirmed KDirectory renders
+fine outside the incident window.
+
+**Fix**: split into `tests/e2e/screens-batch{1,2,3}.spec.ts` (5+4+4 screens, sharing the test body via
+`tests/e2e/support/screen-sweep.ts`) and added a 4-second paced settle between screens within each
+batch — splitting into files alone does not reduce request rate (Playwright runs sibling spec files
+back to back with no gap), the settle delay is the actual fix. Also updated the hardcoded
+`UI_FILING_SPECS` allow-list in `bugzilla-reporter.ts` (keyed by exact filename) from `screens.spec.ts`
+to the 3 new names — missing this step would have silently stopped these 13 screens' findings from
+ever being auto-filed again. Verified: `tsc --noEmit` clean, all 13 screens still discovered correctly
+across the 3 files, `npm run framework` unchanged (185 passed / same 5 pre-existing unrelated
+failures).
 
 ### 2026-10-07 (later) — UI description template fixed, 23 duplicate tickets consolidated, server-side throttling hit and cleared
 

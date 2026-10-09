@@ -177,6 +177,35 @@ export class BugzillaClient {
   }
 
   /** Every OPEN bug of a product that carries our dedupe tag (`[<prefix>-…]`) — the auto-resolve set. */
+  /**
+   * EVERY open bug of a product, whatever its tag — including hand-filed security findings
+   * (`[KPV2-…]`) and non-hex bench tags. The per-run status pass uses this so no open bug is ever
+   * silently left without a dated update; dedup keeps using `openBenchBugs` (tag-scoped on purpose).
+   */
+  async openBugs(product: string): Promise<{ bugs: BugSummary[] } | { error: string }> {
+    const result = await this.call(
+      'GET',
+      `/bug?product=${encodeURIComponent(product)}&resolution=---&include_fields=${BUG_FIELDS}&limit=0`,
+    );
+    if (!result.ok) return { error: describeFailure(result) };
+    return { bugs: readBugs(result.json).filter((bug) => bug.is_open) };
+  }
+
+  /** Bench-tagged bugs of a product resolved FIXED — candidates for a reopen when the same fault
+   * comes back under a shifted tag (e.g. a partial fix changed "2/3 cases failed" to "1/3"). */
+  async fixedBenchBugs(
+    product: string,
+    tagPrefix: string,
+  ): Promise<{ bugs: BugSummary[] } | { error: string }> {
+    const result = await this.call(
+      'GET',
+      `/bug?product=${encodeURIComponent(product)}&resolution=FIXED&include_fields=${BUG_FIELDS}&limit=0`,
+    );
+    if (!result.ok) return { error: describeFailure(result) };
+    const tag = new RegExp(`\\[${tagPrefix}-[0-9A-F]{6}\\]`, 'i');
+    return { bugs: readBugs(result.json).filter((bug) => tag.test(bug.summary)) };
+  }
+
   async openBenchBugs(
     product: string,
     tagPrefix: string,
@@ -246,6 +275,18 @@ export class BugzillaClient {
     const bugs = (result.json as { bugs?: Record<string, { comments?: { text?: string }[] }> })
       .bugs;
     return bugs?.[String(bugId)]?.comments?.[0]?.text;
+  }
+
+  /** Every comment body on a bug, oldest first — used to count how many times it has already
+   * been reopened, so a repeat reopen can say so instead of reading identically to the first. */
+  async commentTexts(bugId: number): Promise<string[]> {
+    const result = await this.call('GET', `/bug/${bugId}/comment`);
+    if (!result.ok || !result.json) return [];
+    const bugs = (result.json as { bugs?: Record<string, { comments?: { text?: string }[] }> })
+      .bugs;
+    return (bugs?.[String(bugId)]?.comments ?? [])
+      .map((c) => c.text)
+      .filter((t): t is string => Boolean(t));
   }
 
   /** Existing attachment file names on a bug, so proof is never uploaded twice on a re-run. */

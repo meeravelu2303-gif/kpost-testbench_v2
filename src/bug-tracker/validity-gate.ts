@@ -77,6 +77,17 @@ const BENCH_FAULT = [
   /ProductionSafetyError/i,
 ];
 
+/**
+ * A failure whose only evidence is that the app could not be reached or did not answer in time — the
+ * API's timeouts, and the browsers' own network errors (Firefox `NS_ERROR_NET_TIMEOUT`, Chromium
+ * `net::ERR_CONNECTION_TIMED_OUT`, WebKit "Timeout was reached" / "Could not resolve hostname"). Never filed, and never treated as proof
+ * that a bug is still broken. The browser forms were missing until 2026-10-09: a Firefox run hit by
+ * server throttling (25 of its last 40 failures were NS_ERROR_NET_TIMEOUT) would have filed them as
+ * new bugs and marked open bugs "still broken" with a screenshot of an error page as "proof".
+ */
+export const ENVIRONMENTAL_UI_OR_API_FAILURE =
+  /no HTTP response|apiRequestContext\.fetch|Timeout\s*\d+\s*ms exceeded|Test timeout of \d+\s*ms exceeded|NS_ERROR_[A-Z_]+|net::ERR_[A-Z_]+|Could not connect to (the )?server|ERR_CONNECTION|page.goto: Timeout was reached|Could not resolve hostname|The network connection was lost|A server with the specified hostname could not be found/i;
+
 /** The endpoint throttled US: the server working correctly under test load, not a defect. */
 const THROTTLED = /\b429\b|Too many requests|RATE_LIMITED/i;
 
@@ -121,7 +132,7 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
     candidate.responseStatus === 503 ||
     candidate.responseStatus === 504 ||
     /\bgot 50[234]\b/i.test(transient) ||
-    /no HTTP response|apiRequestContext\.fetch|Timeout\s*\d+\s*ms exceeded/i.test(transient)
+    ENVIRONMENTAL_UI_OR_API_FAILURE.test(transient)
   ) {
     return 'a gateway 5xx (502/503/504) or a no-response/timeout is a transient upstream failure (the app did not respond), not a product defect';
   }
@@ -151,6 +162,26 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
   if (!candidate.component) return 'no Bugzilla component could be resolved for this defect';
   if (candidate.expected === '(none)' && candidate.actual === '(none)') {
     return 'the finding carries no expected/actual evidence, so the ticket would not be actionable';
+  }
+  return undefined;
+}
+
+/**
+ * Why a BRAND NEW candidate (no existing ticket found at all) should be held for a human to judge
+ * rather than auto-filed as a confirmed defect — or undefined when it is confident enough to file.
+ *
+ * Only called on the `createBug` path. A finding that already matches an existing ticket is never
+ * held back here: commenting on / reopening something a human already triaged is low-risk and
+ * should never wait on manual review, no matter how the reproduction scored. This only guards the
+ * one moment that is hard to undo — minting a brand new ticket number.
+ */
+export function uncertainNewDefect(candidate: BugCandidate): string | undefined {
+  const { reproduction } = candidate;
+  if (reproduction && reproduction.failures < reproduction.attempts) {
+    return (
+      `only reproduced ${reproduction.failures} of ${reproduction.attempts} attempts — not a ` +
+      'reliable repro, so this was held for manual review instead of auto-filed as a confirmed new defect'
+    );
   }
   return undefined;
 }
