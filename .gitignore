@@ -1,9 +1,10 @@
 # Dependencies
 node_modules/
 
-# Playwright output
-/test-results/
-/playwright-report/
+# Playwright output — traces record request headers and bodies (bearer tokens, login passwords),
+# so every output folder variant stays out of git, including per-project ones like *-admin.
+/test-results*/
+/playwright-report*/
 /blob-report/
 /playwright/.cache/
 /reports/
