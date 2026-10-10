@@ -167,6 +167,23 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
 }
 
 /**
+ * Why a flow-triggered server error must be verified by hand before it creates or reopens a ticket.
+ *
+ * A `flow.server-error` is a 5xx seen once during a lifecycle flow. It carries no reproduction score
+ * and often no replayable request (a multipart upload, a request built from earlier steps), and the
+ * fault can be intermittent (about 1 in 15 for removeGroupMember and scheduledKall) or tied to state
+ * (removing a profile image that does not exist). Auto-reopening on it reopened bugs that did not
+ * reproduce. Commenting on an already-open ticket stays automatic; only create and reopen wait.
+ */
+export function flowFindingHoldReason(candidate: BugCandidate): string | undefined {
+  if (candidate.classification !== 'flow.server-error') return undefined;
+  return (
+    'a server error seen once during a lifecycle flow has no reproduction score and no replayable ' +
+    'request, so it was held for a live replay of the original request before any ticket is created or reopened'
+  );
+}
+
+/**
  * Why a BRAND NEW candidate (no existing ticket found at all) should be held for a human to judge
  * rather than auto-filed as a confirmed defect — or undefined when it is confident enough to file.
  *
@@ -176,6 +193,8 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
  * one moment that is hard to undo — minting a brand new ticket number.
  */
 export function uncertainNewDefect(candidate: BugCandidate): string | undefined {
+  const flowHold = flowFindingHoldReason(candidate);
+  if (flowHold) return flowHold;
   const { reproduction } = candidate;
   if (reproduction && reproduction.failures < reproduction.attempts) {
     return (

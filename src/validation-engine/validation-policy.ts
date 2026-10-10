@@ -122,6 +122,9 @@ export interface ResolvedEndpoint {
 
 const MUTATING_METHODS: readonly HttpMethod[] = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
+/** What an endpoint with a `precondition` may legitimately answer: success or a client rejection. */
+export const PRECONDITION_STATUS: readonly number[] = [200, 201, 204, 400, 403, 404, 409, 422];
+
 export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoint {
   const contract = responseContract(definition.responseContract);
   const roles = definition.authorization?.roles ?? [];
@@ -146,7 +149,9 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
     tags: definition.tags ?? [],
     suite: suiteFor(definition.suite ?? DEFAULT_SUITE),
     contract,
-    expectedStatus: definition.expectedStatus ?? contract.expectedStatus[definition.method],
+    expectedStatus:
+      definition.expectedStatus ??
+      (definition.precondition ? PRECONDITION_STATUS : contract.expectedStatus[definition.method]),
     contentType: definition.contentType ?? apiConfig.defaultContentType,
     envelope: definition.envelope ?? true,
     authentication: {

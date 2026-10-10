@@ -34,13 +34,24 @@ export class ApiClient {
         : apiRequest.body === undefined
           ? undefined
           : JSON.stringify(apiRequest.body);
+    /*
+     * A raw body REPLACES any multipart parts. The malformed-JSON and empty-body probes copy the valid
+     * request and set `rawBody`; when that request was multipart, sending the parts instead silently
+     * delivered the VALID upload, so every multipart endpoint "accepted malformed JSON" (a false
+     * defect) and each probe really sent a message or image.
+     */
+    const sendMultipart = apiRequest.multipart !== undefined && apiRequest.rawBody === undefined;
+    const headers =
+      apiRequest.multipart !== undefined && !sendMultipart
+        ? { 'Content-Type': 'application/json', ...apiRequest.headers }
+        : apiRequest.headers;
     try {
       const response = await this.request.fetch(apiRequest.url, {
         method: apiRequest.method,
-        headers: apiRequest.headers,
+        headers,
         // Playwright builds the boundary and encodes the parts; `data` and `multipart` are
         // mutually exclusive, so only one is ever set.
-        ...(apiRequest.multipart ? { multipart: apiRequest.multipart } : { data }),
+        ...(sendMultipart ? { multipart: apiRequest.multipart } : { data }),
         timeout: apiRequest.timeoutMs,
         failOnStatusCode: false,
         maxRedirects: 0,

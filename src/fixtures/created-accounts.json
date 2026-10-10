@@ -14,7 +14,7 @@
       "mobileNumber": "9000000777",
       "source": "signup-login-signup",
       "note": "otp-signup-lifecycle.spec.ts: personal registration",
-      "createdAt": "2026-10-08T22:19:17.201Z"
+      "createdAt": "2026-10-10T03:04:54.501Z"
     },
     {
       "kpostId": "qabenchweb@kpostindia.com",
@@ -372,6 +372,48 @@
       "source": "kpost:deep (write-fuzz run)",
       "note": "caught by before/after DB diff, not a known hand-written signup path",
       "createdAt": "2026-10-09T11:33:19.870Z"
+    },
+    {
+      "kpostId": "qatest1@kpostindia.com",
+      "mobileNumber": "9626306847",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-10T00:10:27.370Z"
+    },
+    {
+      "kpostId": "qatest2@kpostindia.com",
+      "mobileNumber": "9626306848",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-10T00:10:27.371Z"
+    },
+    {
+      "kpostId": "qatest3@kpostindia.com",
+      "mobileNumber": "9626306849",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-10T00:10:27.372Z"
+    },
+    {
+      "kpostId": "qatest4@kpostindia.com",
+      "mobileNumber": "9626306850",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-10T00:10:27.372Z"
+    },
+    {
+      "kpostId": "qatest5@kpostindia.com",
+      "mobileNumber": "9626306851",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-10T00:10:27.373Z"
+    },
+    {
+      "kpostId": "qatest6@kpostindia.com",
+      "mobileNumber": "9626306852",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-10T00:10:27.373Z"
     }
   ]
 }

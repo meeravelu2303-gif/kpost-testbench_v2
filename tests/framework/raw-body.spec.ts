@@ -19,7 +19,10 @@ test.describe('raw request bodies reach the server verbatim @framework', () => {
       const chunks: Buffer[] = [];
       req.on('data', (c) => chunks.push(c));
       req.on('end', () => {
-        received = { body: Buffer.concat(chunks).toString('utf8'), length: req.headers['content-length'] };
+        received = {
+          body: Buffer.concat(chunks).toString('utf8'),
+          length: req.headers['content-length'],
+        };
         res.statusCode = 200;
         res.end('{}');
       });
@@ -55,5 +58,44 @@ test.describe('raw request bodies reach the server verbatim @framework', () => {
   test('an empty raw body is sent empty, not as ""', async () => {
     await send('');
     expect(received.body).toBe('');
+  });
+
+  test('a raw body REPLACES multipart parts: the probe must not deliver the valid upload', async () => {
+    const context = await request.newContext({ baseURL: base });
+    const log = { debug() {}, info() {}, warn() {}, error() {} } as never;
+    const apiRequest = {
+      method: 'POST',
+      pathTemplate: '/upload',
+      url: '/upload',
+      headers: {},
+      multipart: { text: '{"receiver":"valid"}' },
+      rawBody: '{"field": ',
+      correlationId: 'raw-body-multipart-test',
+      timeoutMs: 5000,
+    } as unknown as ApiRequest;
+    await new ApiClient(context, log).execute(apiRequest);
+    await context.dispose();
+
+    expect(received.body, 'the malformed bytes, not the multipart envelope').toBe('{"field": ');
+    expect(received.body).not.toContain('valid');
+  });
+
+  test('without a raw body, multipart parts are still sent', async () => {
+    const context = await request.newContext({ baseURL: base });
+    const log = { debug() {}, info() {}, warn() {}, error() {} } as never;
+    const apiRequest = {
+      method: 'POST',
+      pathTemplate: '/upload',
+      url: '/upload',
+      headers: {},
+      multipart: { text: 'hello-part' },
+      correlationId: 'multipart-test',
+      timeoutMs: 5000,
+    } as unknown as ApiRequest;
+    await new ApiClient(context, log).execute(apiRequest);
+    await context.dispose();
+
+    expect(received.body).toContain('hello-part');
+    expect(received.body).toMatch(/content-disposition/i);
   });
 });

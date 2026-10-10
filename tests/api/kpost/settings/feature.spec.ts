@@ -1,4 +1,5 @@
 // An orchestrated settings lifecycle (read → change → restore), not simple assertions.
+import { notificationToggleBody } from '@api/definitions/kpost/settings/write.api';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
@@ -51,13 +52,15 @@ test.describe('KPost Settings · feature flow', () => {
     ];
     try {
       for (const [id, label] of toggles) {
-        const off = await write(endpoints, id, { enable: 0 }, `${label}-off`);
+        const off = await write(endpoints, id, notificationToggleBody('On'), `${label}-dnd-on`);
         expect.soft(off, `${label} notification toggle is accepted`).toBeLessThan(300);
       }
     } finally {
       // Restore notifications to enabled.
       for (const [id, label] of toggles) {
-        await write(endpoints, id, { enable: 1 }, `${label}-restore`).catch(() => undefined);
+        await write(endpoints, id, notificationToggleBody('Off'), `${label}-restore`).catch(
+          () => undefined,
+        );
       }
     }
   });

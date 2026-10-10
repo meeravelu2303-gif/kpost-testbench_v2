@@ -202,7 +202,8 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     const crash = candidate({
       source: 'ui',
       actual: 'Error: Kall broke while crawling its controls — JS error: Minified React error #327',
-      title: 'Kall — crawl @ui: Error: Kall broke while crawling its controls — JS error: Minified React error #327',
+      title:
+        'Kall — crawl @ui: Error: Kall broke while crawling its controls — JS error: Minified React error #327',
     });
     expect(candidateRejection(crash)).toBeUndefined();
   });
@@ -704,6 +705,32 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(reopened.counts.created).toBe(0);
   });
 
+  test('a flow-triggered server error never reopens a FIXED ticket: it waits for a live replay', async () => {
+    stubBugzilla([
+      {
+        id: 9,
+        summary: '[KPV2-ABC123] POST /users: write flow received HTTP 500',
+        is_open: false,
+        resolution: 'FIXED',
+      },
+    ]);
+    const held = await filer().file([candidate({ classification: 'flow.server-error' })]);
+
+    expect(held.counts['needs-review'], 'held for a human, not reopened').toBe(1);
+    expect(held.counts.reopened).toBe(0);
+    expect(held.counts.created).toBe(0);
+  });
+
+  test('a flow-triggered server error on an OPEN ticket still just comments', async () => {
+    stubBugzilla([
+      { id: 9, summary: '[KPV2-ABC123] POST /users: write flow received HTTP 500', is_open: true },
+    ]);
+    const commented = await filer().file([candidate({ classification: 'flow.server-error' })]);
+
+    expect(commented.counts.commented).toBe(1);
+    expect(commented.counts['needs-review']).toBe(0);
+  });
+
   test('a failed dedupe search files nothing, so a transient error cannot duplicate', async () => {
     const calls = stubBugzilla([], { searchFails: true });
     const outcome = await filer().file([candidate()]);
@@ -753,9 +780,21 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     const msg = (n: string): string =>
       `POST /v2/profile/deleteOtherActivity: ${n} error responses failed: primary (body status 400 != HTTP 404)`;
     const merged = collapseCountVariants([
-      candidate({ id: 'KP-AAA001', title: msg('17/31'), endpoint: 'POST /v2/profile/deleteOtherActivity' }),
-      candidate({ id: 'KP-AAA002', title: msg('18/32'), endpoint: 'POST /v2/profile/deleteOtherActivity' }),
-      candidate({ id: 'KP-AAA003', title: msg('19/33'), endpoint: 'POST /v2/profile/deleteOtherActivity' }),
+      candidate({
+        id: 'KP-AAA001',
+        title: msg('17/31'),
+        endpoint: 'POST /v2/profile/deleteOtherActivity',
+      }),
+      candidate({
+        id: 'KP-AAA002',
+        title: msg('18/32'),
+        endpoint: 'POST /v2/profile/deleteOtherActivity',
+      }),
+      candidate({
+        id: 'KP-AAA003',
+        title: msg('19/33'),
+        endpoint: 'POST /v2/profile/deleteOtherActivity',
+      }),
     ]);
 
     expect(merged).toHaveLength(1);

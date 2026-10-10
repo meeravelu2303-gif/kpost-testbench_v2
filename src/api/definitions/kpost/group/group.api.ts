@@ -61,7 +61,7 @@ export const createGroupApi = defineGroupEndpoint({
     createdBy: testData.kpostId,
     groupPicturePath: null,
     groupCreateAccess: true,
-    groupKpostName: 'QA Bench Group',
+    groupKpostName: `QA Bench Group ${Date.now()}`,
     isPrivateGroup: 'N',
     memberDetails: [member(testData.victimKpostId), member(testData.kpostId, true)],
   })),

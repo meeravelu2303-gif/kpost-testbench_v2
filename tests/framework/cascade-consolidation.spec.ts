@@ -55,16 +55,94 @@ test.describe('cascade consolidation', () => {
     expect(out[0]?.narrative).toContain('consolidated here');
   });
 
-  test('a 5xx endpoint KEEPS independent input-validation findings @framework', () => {
+  test('a 5xx endpoint KEEPS an input probe that is NOT a crash @framework', () => {
     const out = consolidateCascades([
       cand({ id: 'B1', classification: 'response.status-code', responseStatus: 500 }),
       cand({ id: 'B2', classification: 'response.structure', responseStatus: 500 }),
-      cand({ id: 'B3', classification: 'request.null-value', responseStatus: 500 }),
+      // A probe the server ACCEPTED (200) is its own finding: it says nothing about the crash.
+      cand({
+        id: 'B3',
+        classification: 'request.null-value',
+        responseStatus: 200,
+        actual: 'null value (expected [400,422], got 200)',
+      }),
     ]);
     // status-code (anchor) + request.null-value (independent probe) survive; structure folds in.
     expect(out.map((c) => c.classification).sort()).toEqual([
       'request.null-value',
       'response.status-code',
+    ]);
+  });
+
+  test('when the VALID request crashes, probe 500s are the same root cause @framework', () => {
+    const out = consolidateCascades([
+      cand({ id: 'S1', classification: 'response.status-code', responseStatus: 500 }),
+      cand({ id: 'S2', classification: 'request.null-value', responseStatus: 500 }),
+      cand({ id: 'S3', classification: 'request.data-type', responseStatus: 500 }),
+      cand({ id: 'S4', classification: 'request.empty-body', responseStatus: 500 }),
+      cand({ id: 'S5', classification: 'security.injection', responseStatus: 500 }),
+      cand({ id: 'S6', classification: 'security.xss', responseStatus: 500 }),
+    ]);
+    expect(out, 'six tickets for one crash become one').toHaveLength(1);
+    expect(out[0]?.classification).toBe('response.status-code');
+    expect(out[0]?.narrative).toContain('request.null-value');
+  });
+
+  test('a probe that crashes while the VALID request succeeds stays its own ticket @framework', () => {
+    const out = consolidateCascades([
+      // No status-code finding: the valid request returned 200, only the bad-gender probes crash.
+      cand({
+        id: 'G1',
+        classification: 'common.api-error',
+        responseStatus: 200,
+        actual: 'security.injection:body.gender: SQL tautology (server error 500)',
+      }),
+      cand({
+        id: 'G2',
+        classification: 'security.injection',
+        responseStatus: 200,
+        actual: 'body.gender: SQL tautology (expected any status < 500, got 500)',
+      }),
+    ]);
+    expect(out.map((c) => c.classification).sort()).toEqual([
+      'common.api-error',
+      'security.injection',
+    ]);
+  });
+
+  test('one malformed error body is one ticket, not an error-format plus a structure ticket @framework', () => {
+    const out = consolidateCascades([
+      cand({
+        id: 'E1',
+        classification: 'response.error-format',
+        responseStatus: 400,
+        title: 'primary (message: Invalid input: expected string, received undefined)',
+      }),
+      cand({
+        id: 'E2',
+        classification: 'response.structure',
+        responseStatus: 400,
+        title: 'not a valid error envelope: message: Invalid input: expected string',
+      }),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0]?.classification).toBe('response.error-format');
+    expect(out[0]?.narrative).toContain('consolidated here');
+  });
+
+  test('a FAILURE body behind HTTP 200 (success-envelope) stays its own ticket @framework', () => {
+    const out = consolidateCascades([
+      cand({ id: 'F1', classification: 'response.error-format', responseStatus: 400 }),
+      cand({
+        id: 'F2',
+        classification: 'response.structure',
+        responseStatus: 200,
+        title: 'not a valid success envelope: status: status must be SUCCESS',
+      }),
+    ]);
+    expect(out.map((c) => c.classification).sort()).toEqual([
+      'response.error-format',
+      'response.structure',
     ]);
   });
 

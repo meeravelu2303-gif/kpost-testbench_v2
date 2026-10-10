@@ -16,7 +16,7 @@ import {
 } from './bug-builder';
 import type { BugCandidate } from './bug-candidate';
 import type { BugSummary, BugzillaClient, ProductMetadata } from './bugzilla-client';
-import { uncertainNewDefect } from './validity-gate';
+import { flowFindingHoldReason, uncertainNewDefect } from './validity-gate';
 import { normalizeForFingerprint } from './bug-fingerprint';
 import { normalizeEndpoint, normalizeValidator } from './verify-resolve';
 
@@ -242,6 +242,10 @@ export class BugzillaFiler {
       });
     }
     const fixed = this.matchFixed(candidate);
+    const previewHold = flowFindingHoldReason(candidate);
+    if (fixed && previewHold) {
+      return this.entry(candidate, 'needs-review', { bugId: fixed.id, reason: previewHold });
+    }
     if (fixed) {
       this.fixedUsed.add(fixed.id);
       return this.entry(candidate, 'reopened', {
@@ -335,6 +339,10 @@ export class BugzillaFiler {
     }
 
     const resolved = bugs.find((bug) => bug.resolution);
+    const flowHold = flowFindingHoldReason(candidate);
+    if (resolved && flowHold) {
+      return this.entry(candidate, 'needs-review', { bugId: resolved.id, reason: flowHold });
+    }
     if (resolved) {
       const priorReopens = (await this.client.commentTexts(resolved.id)).filter((text) =>
         /^Reopening:/i.test(text.trim()),
@@ -359,7 +367,7 @@ export class BugzillaFiler {
     const adopted = await this.adoptExisting(candidate);
     if (adopted) return adopted;
 
-    const reopened = await this.reopenByFault(candidate);
+    const reopened = flowHold ? undefined : await this.reopenByFault(candidate);
     if (reopened) return reopened;
 
     // Nothing existing matched at all — this would mint a brand new ticket number, the one step

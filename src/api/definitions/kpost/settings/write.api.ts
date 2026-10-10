@@ -42,6 +42,18 @@ export const changeThemeApi = defineSettingsEndpoint({
   })),
 });
 
+/**
+ * The real toggle body, taken from GeneralSettingServiceImpl: the four keys the server reads, of which
+ * "Do Not Disturb" is required (the service answers FAILURE without it). The workbook documents no
+ * body, and the earlier guess `{ enable: 1 }` was never accepted by any build.
+ */
+export const notificationToggleBody = (doNotDisturb: 'On' | 'Off' = 'Off') => ({
+  'Message Preview': 'On',
+  Sound: 'On',
+  Vibrate: 'On',
+  'Do Not Disturb': doNotDisturb,
+});
+
 export const katchupNotificationApi = defineSettingsEndpoint({
   id: 'settings-katchup-notification',
   // The response says 'Updated Successfully' whatever it stored; only the row can contradict it.
@@ -51,8 +63,8 @@ export const katchupNotificationApi = defineSettingsEndpoint({
   summary: 'Toggle Katchup notifications',
   tags: [...WRITE_TAGS, 'notification'],
   destructive: true,
-  request: body(() => ({ enable: 1 })),
-  note: 'workbook documents no body; toggle shape inferred',
+  request: body(() => notificationToggleBody()),
+  note: 'body keys read from GeneralSettingServiceImpl (workbook documents none)',
 });
 
 export const kmailNotificationApi = defineSettingsEndpoint({
@@ -62,8 +74,8 @@ export const kmailNotificationApi = defineSettingsEndpoint({
   summary: 'Toggle KMail notifications',
   tags: [...WRITE_TAGS, 'notification'],
   destructive: true,
-  request: body(() => ({ enable: 1 })),
-  note: 'workbook documents no body; toggle shape inferred',
+  request: body(() => notificationToggleBody()),
+  note: 'body keys read from GeneralSettingServiceImpl (workbook documents none)',
 });
 
 export const kallNotificationApi = defineSettingsEndpoint({
@@ -73,8 +85,8 @@ export const kallNotificationApi = defineSettingsEndpoint({
   summary: 'Toggle Kall notifications',
   tags: [...WRITE_TAGS, 'notification'],
   destructive: true,
-  request: body(() => ({ enable: 1 })),
-  note: 'workbook documents no body; toggle shape inferred',
+  request: body(() => notificationToggleBody()),
+  note: 'body keys read from GeneralSettingServiceImpl (workbook documents none)',
 });
 
 export const settingsWriteApis = [

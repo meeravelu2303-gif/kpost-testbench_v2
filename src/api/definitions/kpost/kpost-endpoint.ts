@@ -181,8 +181,10 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
  * response-shape checks skip with that reason, same as any endpoint with an undocumented response.
  * Use `workbookContract` once it's updated; this function is a bridge, not a replacement for it.
  */
-export interface UndocumentedKpostEndpointConfig
-  extends Omit<KpostEndpointConfig, 'requestSchema' | 'contractPath' | 'contractMethod'> {
+export interface UndocumentedKpostEndpointConfig extends Omit<
+  KpostEndpointConfig,
+  'requestSchema' | 'contractPath' | 'contractMethod'
+> {
   /**
    * The payload's real shape, in full — there is no workbook schema to fall back on. Omit ONLY when
    * the real frontend call genuinely sends no body/params at all (confirmed from the same call site
@@ -230,9 +232,9 @@ export function defineUndocumentedKpostEndpoint(
   };
 }
 
-/** A request factory for an endpoint that takes a JSON body. */
+/** A request factory for an endpoint that takes a JSON body: an object, or an array for List<...> controllers. */
 export const body =
-  (payload: () => Record<string, unknown>): RequestFactory =>
+  (payload: () => Record<string, unknown> | readonly Record<string, unknown>[]): RequestFactory =>
   (): RequestSpec => ({
     body: payload(),
   });

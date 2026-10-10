@@ -3,6 +3,86 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (afternoon) — Second dry run reviewed; three more bench defects fixed; third dry run
+
+Second dry run (2.9 h): 3,415 passed / 650 failed / 6,990 skipped; **would-file 28 (was 67)**, reopens 2 (was 9),
+valid distinct defects 82 (was 128). Reading the remaining 28 against live replays:
+
+- **Real, replayed 3 of 3**: `removeGroupProfileImage`, `clearKallBykallIds`, `endKoolKall` and `modifyKallMembers`
+  answer 500 for an id that does not exist; `scheduledKall` answers 500 for a null, empty or missing
+  `kallSession`; the error-envelope drift (no `message`, wrong `status`) on `adminRegistration`, `addContact`,
+  `addOrRemoveAdminAccess`, `leaveFromGroup`, KDiary `updateEvent`/`updateScheduleRemarks`, legacy
+  `removeGroupMember` and `deleteUniversityDetail`; HTTP 200 carrying a FAILURE body on the legacy Kall routes.
+- **Bench defect: a raw body never replaced multipart parts.** `api-client.ts` sent `multipart` whenever it
+  existed, so the malformed-JSON and empty-body probes on every multipart endpoint delivered the VALID upload:
+  a false "accepted malformed JSON" finding (KP-C25A02, which would have reopened #754) and a real message
+  sent per probe. The exact request replayed live gets a clean 400. A raw body now wins over multipart
+  (`raw-body.spec.ts` covers both cases).
+- **Flow-triggered server errors no longer create or reopen tickets on their own.** A `flow.server-error`
+  carries no reproduction score and often no replayable request, and it would have reopened #558, which
+  returns a clean 400 for its original request. They are held for a live replay (`flowFindingHoldReason`);
+  commenting on an already-open ticket stays automatic.
+- **One malformed error body is one ticket.** `response.error-format` and `response.structure` ("not a valid
+  error envelope") describe the same response; the structure finding folds into the error-format one. A
+  "not a valid success envelope" finding (HTTP 200 with a FAILURE body) stays separate.
+- **The database firewall allows only one of this machine's two public IPs** (14.96.218.146 works,
+  103.126.43.54 times out); the machine flips between them, so DB-backed checks work only part of the time.
+- **Process slip:** a stray `git stash` in a diagnostic command hid 58 uncommitted files; recovered with
+  `git stash pop --index` and verified by markers. Never put stash/checkout/reset in an inspect-only command.
+
+### 2026-10-10 — Bench fixes after the first dry run, then a second dry run
+
+- **`precondition` on endpoint definitions** (`EndpointDefinition.precondition`, `withPlaceholderPrimary`,
+  `forWriteSweep` in `src/api/sweep-target.ts`): a write whose valid request needs a record the sweep lacks
+  (existing group, call, event, contact, image) or depends on state an earlier run left behind now accepts
+  2xx or a client rejection (400/403/404/409/422) as its primary answer; a 5xx or 401 is still a defect, and
+  `authentication.valid-token` treats 403 there as the owner check, not a rejected token. `group-create` is
+  exempt (its name is now unique per call, so it must succeed). Applied by the Kall, Group, Contacts and
+  KDiary write wrappers; Settings is not, because its toggles are meant to succeed.
+- **`getTotalCountByDate` was declared public by the common module's default**, so the bench sent no token
+  and filed the resulting 401 "Login required" as a product bug (three runs). It now requires auth. Every
+  account gets 200 with a token, so #522-#524 were fine and only ever tested with one account's token.
+- **Notification toggles sent an invalid body** (`{enable: 1}`, a guess). The server source reads
+  `Message Preview`, `Sound`, `Vibrate` and the required `Do Not Disturb`; the definitions and the settings
+  lifecycle now send that. The endpoints still answer 400 "Invalid request" with it: the developer's own
+  comment says the service returns that from a swallowed exception, so the defect is real.
+- **`addMultipleContact` sent a bare object; the controller binds `List<ContactsRO>`.** It now sends an array
+  (200 verified; the bare object is "Malformed or missing request body"). `body()` accepts array payloads
+  (also removed 6 pre-existing type errors; typecheck 11 -> 5).
+- **Probe 500s fold into the primary ticket when the valid request itself crashes** (`consolidateCascades`):
+  six tickets for `removeGroupProfileImage` become one. A probe that crashes while the valid request
+  succeeds (e.g. a bad gender) stays its own ticket.
+- **#1060 (BR-KU-EDIT-SUBJ) reopened**: the rule test records a violation instead of failing, so its green
+  result proved nothing; replayed with the bench reporter the violation is recorded 4 of 4 times.
+- Lesson: **a business-rule test that records instead of asserting is invisible to a pass/fail check**; read
+  the recorded candidates in the report, not the test colour.
+
+### 2026-10-09 (late night) — First full dry run: 3.1 hours, a false-positive class found, five wrong closures corrected
+
+`npm run kpost:full` (dry run, nothing filed): 11,057 tests in **3.1 h** (not 12), 3,416 passed, 691 failed,
+6,941 skipped; 33,726 checks on 180 endpoints; authorization still ran 0 of 3,510. The report would file 67 new
+tickets, comment on 12, reopen 9, and skip 40 as previously judged invalid. Reading them found:
+
+- **33 would-file `response.status-code` tickets are bench artifacts**: the new write wrappers (Kall, Group,
+  Contacts, KDiary, Settings) send a primary request built on placeholder ids or fixed data, so the correct
+  server answer is a 4xx ("groupID not found", "Kall not found", "ContactID is already in your contact list",
+  "Group name is already exist"), yet the check expects 200. 25 sibling tickets of the same class were already
+  closed INVALID by hand in earlier runs. The 500s among them (unknown id making the server crash) are real.
+- **Same root cause filed as several tickets**: `removeGroupProfileImage` would file 6 (null, wrong type, empty
+  body, xss, injection, status) because the endpoint 500s on everything, valid input included.
+- **Five of my closures earlier today were wrong**, reopened with evidence: #559 (no-file request still 500),
+  #763 (remove image 500 whenever the account has none), #1072 (500 for the legacy primary account, 200 for a
+  new one), #945 and #1059 (intermittent: hit once in the full run, 12/12 isolated flow replays passed).
+  #558's original request (no body) is genuinely fixed (400) and stays closed.
+- **Lessons:** a `flow.server-error` bug is verified only by replaying its original request, never by a generic
+  probe such as `common.api-error`; a state-dependent bug (needs an existing image/record) needs both states
+  tested; an intermittent one needs repeats, because one pass proves nothing.
+- **Still to fix before the single filing run:** widen the accepted primary status for placeholder-driven writes
+  (2xx or a client rejection, 5xx still a defect), make the group name and contact fixtures unique per run,
+  collapse probe failures into the primary ticket when the endpoint 500s on everything, check why
+  `getTotalCountByDate` answers "Login required" (401) to the primary account but 200 to the victim's token,
+  and review the remaining response-envelope and null-value findings one by one.
+
 ### 2026-10-09 (night) — qatest1-6 accounts, concurrency actually off, forgot-password capped, cleanup
 
 - **Six accounts created** (`qatest1`..`qatest6@kpostindia.com`, no underscore: the product rejects one), each

@@ -45,8 +45,10 @@ export const addMultipleContactApi = defineContactsEndpoint({
   summary: 'Add several contacts at once',
   tags: [...WRITE_TAGS, 'bulk'],
   destructive: true,
-  request: body(() => contactShape()),
-  note: 'workbook example is a single contact; bulk shape confirmed on the first authorized write',
+  // The controller binds a List<ContactsRO>: a JSON ARRAY. A single object is "Malformed or missing
+  // request body" (the workbook example shows one contact, which is why it was sent bare).
+  request: body(() => [contactShape()]),
+  note: 'backend takes a JSON array of contacts (ContactsDirectoryControllerV2.addMultipleContact)',
 });
 
 export const addContactReferenceApi = defineContactsEndpoint({

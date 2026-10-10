@@ -32,6 +32,34 @@ export function withSacrificialTarget(definition: EndpointDefinition): EndpointD
   };
 }
 
+/**
+ * Writes whose valid request is meant to SUCCEED on its own, so a client rejection is a real finding:
+ * the group name is made unique per call and the caller owns everything it creates.
+ */
+const EXPECTS_SUCCESS: ReadonlySet<string> = new Set(['group-create']);
+
+/**
+ * Marks a write as one whose valid request needs data the sweep cannot supply (an existing group,
+ * call, event, contact or image) or depends on state an earlier run left behind. The sweep's primary
+ * request then legitimately gets a client rejection: "groupID not found", "Kall not found",
+ * "ContactID is already in your contact list". See `EndpointDefinition.precondition`.
+ */
+export function withPlaceholderPrimary(definition: EndpointDefinition): EndpointDefinition {
+  if (definition.precondition || definition.expectedStatus || EXPECTS_SUCCESS.has(definition.id)) {
+    return definition;
+  }
+  return {
+    ...definition,
+    precondition:
+      'the sweep has no real record to act on, so a client rejection of the placeholder is the correct answer',
+  };
+}
+
+/** What every write sweep wrapper applies: act on the throwaway account, accept a client rejection. */
+export function forWriteSweep(definition: EndpointDefinition): EndpointDefinition {
+  return withSacrificialTarget(withPlaceholderPrimary(definition));
+}
+
 /** Replaces `from` with `to` inside every string of plain objects/arrays; leaves buffers and the like alone. */
 export function retarget<T>(value: T, from: string, to: string): T {
   if (typeof value === 'string') return value.split(from).join(to) as T;

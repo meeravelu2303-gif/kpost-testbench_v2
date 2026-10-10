@@ -1,4 +1,4 @@
-import { withSacrificialTarget } from '@api/sweep-target';
+import { forWriteSweep } from '@api/sweep-target';
 import { describeEndpointCases } from '@engine/endpoint-cases';
 import { test } from '@fixtures';
 
@@ -10,6 +10,6 @@ import { test } from '@fixtures';
 test.describe('KPost Group · manage', () => {
   describeEndpointCases(
     { tags: ['group-manage', 'group-read', 'group-image'] },
-    { transform: withSacrificialTarget },
+    { transform: forWriteSweep },
   );
 });

@@ -101,6 +101,9 @@ export const totalCountByDateApi = defineKpostEndpoint({
   summary: 'Usage totals for a date',
   tags: ['common', 'common-platform', 'reporting'],
   destructive: false,
+  // The common module defaults to public, but this one answers 401 "Login required" without a token
+  // (measured 2026-10-09). Declared public, the bench sent no token and filed that 401 as a defect.
+  authentication: { required: true },
   // Epoch milliseconds, as documented. Midnight today keeps the query deterministic.
   request: body(() => ({ date: new Date(new Date().toDateString()).getTime() })),
 });

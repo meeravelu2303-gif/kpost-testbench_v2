@@ -1,4 +1,4 @@
-import { withSacrificialTarget } from '@api/sweep-target';
+import { forWriteSweep } from '@api/sweep-target';
 import { describeEndpointCases } from '@engine/endpoint-cases';
 import { test } from '@fixtures';
 
@@ -9,5 +9,5 @@ import { test } from '@fixtures';
  * messages or calls it.
  */
 test.describe('KPost Contacts · writes', () => {
-  describeEndpointCases({ tags: ['contacts-write'] }, { transform: withSacrificialTarget });
+  describeEndpointCases({ tags: ['contacts-write'] }, { transform: forWriteSweep });
 });

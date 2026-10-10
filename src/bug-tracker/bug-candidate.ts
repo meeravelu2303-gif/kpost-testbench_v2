@@ -443,7 +443,11 @@ export interface UiFailureInput {
  * failing request's own hostname; add to this list whenever a new one turns up (recognisable by
  * the same symptom being filed against many unrelated screens for what is really one component).
  */
-const KNOWN_BACKGROUND_WIDGETS: ReadonlyArray<{ hostMatch: string; causeKey: string; label: string }> = [
+const KNOWN_BACKGROUND_WIDGETS: ReadonlyArray<{
+  hostMatch: string;
+  causeKey: string;
+  label: string;
+}> = [
   {
     hostMatch: 'rss2json.com',
     causeKey: 'rss-widget-cors',
@@ -694,6 +698,31 @@ const looksLikeTimeout = (c: BugCandidate): boolean =>
   /timeout|timed out|exceeds budget|\bms exceeds\b/i.test(`${c.actual} ${c.title}`);
 
 /**
+ * One malformed ERROR body (no `message`, a `status` that is not FAILURE) fails both
+ * `response.error-format` and `response.structure` ("not a valid error envelope"). They describe the
+ * same response, so they are one root cause: the structure finding folds into the error-format one.
+ * A "not a valid SUCCESS envelope" finding (HTTP 200 carrying a FAILURE body) is a different defect
+ * and is left alone.
+ */
+function foldEnvelopePair(group: readonly BugCandidate[]): BugCandidate[] {
+  const format = group.find((c) => c.classification === 'response.error-format');
+  const structure = group.filter(
+    (c) =>
+      c.classification === 'response.structure' &&
+      /not a valid error envelope/i.test(`${c.actual} ${c.title}`),
+  );
+  if (!format || !structure.length) return [...group];
+  const folded: BugCandidate = {
+    ...format,
+    narrative:
+      `${format.narrative}\n\nThe same error response also fails the standard error-envelope check ` +
+      `(response.structure). It is the same root cause and is consolidated here rather than filed separately.`,
+    evidence: { ...format.evidence, envelopeConsolidated: true },
+  };
+  return [folded, ...group.filter((c) => c !== format && !structure.includes(c))];
+}
+
+/**
  * Collapses a per-endpoint CASCADE into one ticket: when an endpoint's primary response is a 5xx or
  * a timeout, every response-reading check on it fails as a consequence — filing 6 tickets for one
  * broken endpoint is noise. Keeps the real anchor (the status-code / server-error finding) plus any
@@ -720,7 +749,9 @@ export function consolidateCascades(candidates: readonly BugCandidate[]): BugCan
     const timedOut = group.some(looksLikeTimeout);
     const serverError = group.some((c) => (c.responseStatus ?? 0) >= 500);
     if (!timedOut && !serverError) {
-      kept.push(...group); // endpoint responds fine; these are genuinely distinct findings
+      // Endpoint responds fine; these are genuinely distinct findings, except that one malformed
+      // error body fails both the error-format and the error-envelope checks.
+      kept.push(...foldEnvelopePair(group));
       continue;
     }
     // Pick the anchor: the status-code finding, else the first.
@@ -728,10 +759,24 @@ export function consolidateCascades(candidates: readonly BugCandidate[]): BugCan
       group.find((c) => c.classification === 'response.status-code') ??
       group.find((c) => !CASCADE_DEPENDENT.has(c.classification)) ??
       group[0]!;
+    /*
+     * When the VALID request itself crashes (the status-code finding is a 5xx), an input probe that
+     * also got a 5xx proves nothing extra: the endpoint answers 500 to everything, valid input
+     * included, so null / wrong-type / empty-body / injection / xss "500"s are the same root cause.
+     * A probe that crashes while the valid request succeeds (e.g. one bad field) stays independent.
+     */
+    const primaryCrashed =
+      anchor.classification === 'response.status-code' && (anchor.responseStatus ?? 0) >= 500;
+    const sameCrash = (c: BugCandidate): boolean =>
+      primaryCrashed &&
+      /^(request\.|security\.(injection|xss))/.test(c.classification) &&
+      ((c.responseStatus ?? 0) >= 500 || /got 5\d\d|server error/i.test(`${c.actual} ${c.title}`));
     // On a timeout the whole endpoint is down → fold everything. On a 5xx, keep independent findings.
     const independents = timedOut
       ? []
-      : group.filter((c) => c !== anchor && !CASCADE_DEPENDENT.has(c.classification));
+      : group.filter(
+          (c) => c !== anchor && !CASCADE_DEPENDENT.has(c.classification) && !sameCrash(c),
+        );
     const folded = group.filter((c) => c !== anchor && !independents.includes(c));
     if (folded.length) {
       const names = [...new Set(folded.map((c) => c.classification))].sort();

@@ -75,6 +75,13 @@ export interface EndpointDefinition {
 
   /** Defaults to apiConfig.defaultExpectedStatus[method]. */
   expectedStatus?: readonly number[];
+  /**
+   * Set when this endpoint's valid request needs data the generic sweep cannot supply (an existing
+   * group, call, event, contact or image) or depends on state an earlier run left behind. The
+   * sweep's primary request then legitimately gets a client rejection, so a 2xx or a 4xx other than
+   * 401 is an acceptable answer; a 5xx or a 401 is still a defect. The text says why.
+   */
+  precondition?: string;
   /** Defaults to apiConfig.defaultContentType. */
   contentType?: string;
   /** Response wrapped in the envelope of `responseContract`. Default: true. */
