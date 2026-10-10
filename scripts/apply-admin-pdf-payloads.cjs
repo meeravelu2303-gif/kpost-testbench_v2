@@ -9,7 +9,7 @@
  * Deterministic + idempotent: re-running produces the same file. Only the 38 endpoints the bench uses are
  * touched; the other ~74 springdoc paths are left as-is. Run: `node scripts/apply-admin-pdf-payloads.cjs`.
  *
- * Structural facts kept from live reality (measured, see CLAUDE.md): the tier/variable/location SAVES take
+ * Structural facts kept from live reality (measured, see docs/DECISION-LOG.md, 2026-09-19 Admin OpenAPI entry): the tier/variable/location SAVES take
  * an ARRAY of the object; everything else is a single object. Fields carry no `required` (an example does
  * not prove a field mandatory — repo convention). Two documented-vs-live notes are preserved as-is on the
  * definitions, not here: `getWorkPlaceHierarchy` needs a runtime `parentAttributeId` the PDF omits, and

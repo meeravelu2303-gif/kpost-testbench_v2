@@ -12,7 +12,7 @@ const SENSITIVE_KEY =
  * (`secretMessageExpireTime` / `…AsLong`, an epoch), so the message stays until that time; **Disappear
  * After Reading** carries no time (`isVanished`), so it stays until read then vanishes. Both, plus the
  * id list `secret_message_msgIDs`, are ordinary metadata the client needs — flagging them as an exposed
- * secret is a false positive (see CLAUDE.md). The name may be camelCase (`secretMessage…`) or snake_case
+ * secret is a false positive (see docs/DECISION-LOG.md, 2026-09-17 secret-message entry). The name may be camelCase (`secretMessage…`) or snake_case
  * (`secret_message_…`), so an optional separator is allowed. Genuinely credential-like `secret` fields
  * (`secretKey`, `secret_key`, `clientSecret`, `secretToken`) do NOT match and stay flagged.
  */

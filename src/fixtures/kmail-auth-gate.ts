@@ -5,7 +5,7 @@
  *
  * `testkmail.kpostindia.com` currently answers `401 "Unauthorized: UNAUTHORIZED USER"` to a token
  * KPost itself accepts — a verified server-side regression, evidenced in
- * `tests/api/kmail/auth-regression.spec.ts` and recorded in CLAUDE.md §8. Until it is fixed, every
+ * `tests/api/kmail/auth-regression.spec.ts` and recorded in docs/DECISION-LOG.md (2026-09-21 "KMail refuses every valid token"). Until it is fixed, every
  * KMail spec fails, and not for its own reason: a content-type check fails because the 401 body is
  * HTML, a security-header check fails on an error page, every negative probe "fails" because it got
  * 401 rather than the 400 it expected.

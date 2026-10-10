@@ -5,7 +5,7 @@
  *
  * The old FullSuite scheme (`FR-S/K/C/M`, `BR-*`) was renumbered into per-module `FR-xx-NNN`. Legacy
  * ids still on some definitions are listed in `LEGACY_REQUIREMENTS` so the guard passes during the
- * migration while that set visibly shrinks to empty (CLAUDE.md §8, to-do item 3). The FR→coverage
+ * migration while that set visibly shrinks to empty (docs/DECISION-LOG.md, 2026-09-16 "NEW DOCS" entry, to-do item 3). The FR→coverage
  * map is `docs/requirements-frd.md`.
  */
 
@@ -26,7 +26,7 @@ export const FR_IDS: readonly string[] = [
   ...range('FR-KD', 6), // KDirectory
 ];
 
-/** Non-functional ids the validators already map onto (CLAUDE.md §4). */
+/** Non-functional ids the validators already map onto (docs/BENCH-REFERENCE.md §4). */
 export const NFR_IDS: readonly string[] = [
   'NFR-SEC01',
   'NFR-SEC02',

@@ -108,6 +108,18 @@ export const forgotPasswordOtpApi = defineKpostEndpoint({
   tags: OTP_TAGS,
   destructive: true,
   sideEffect: 'external',
+  /*
+   * The forgot-password OTP is REAL on the live gateway (owner, 2026-10-09). The engine's probes would
+   * each send another, ~250 per run, so they are off: the run sends this one primary request. The few
+   * negative cases that send nothing live in tests/api/kpost/common/forgot-password-limited.spec.ts.
+   */
+  validations: {
+    request: false,
+    security: false,
+    authentication: false,
+    authorization: false,
+    concurrency: false,
+  },
   request: body(() => ({ kpostID: testData.kpostId, requestType: 'password' })),
 });
 
@@ -148,7 +160,7 @@ export const forgotPasswordUpdateApi = defineKpostEndpoint({
    * without one. But the step that satisfies it is not the documented `validateOTP`: calling
    * `forgotPasswordOTPOrSentKpostIDSms` and then `validateOTP` with the bypass code still leaves it
    * at 400, so the flow keeps its own OTP state reached by some other call. Open with the API owner
-   * (see CLAUDE.md §9). Recorded here so the 400 is not filed as a bug.
+   * (see docs/BENCH-REFERENCE.md §9). Recorded here so the 400 is not filed as a bug.
    */
   request: body(() => ({
     kpostID: testData.forgotPasswordKpostId,

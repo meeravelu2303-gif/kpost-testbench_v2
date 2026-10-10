@@ -3,7 +3,7 @@
 Source of truth: the six per-module FRDs in `D:\Kpost Documents` (2026-09-16), ≈165 FRs across six
 modules (Katchup includes the `FR-GMSG` Group-Messaging sub-scheme). This file is the FR→bench-coverage map — the answer to "which requirement is tested, where,
 and what is still a gap". It is maintained by hand alongside the `requirements` tags on the endpoint
-definitions and specs (CLAUDE.md §4, §8). Status legend:
+definitions and specs (docs/BENCH-REFERENCE.md §4, docs/DECISION-LOG.md). Status legend:
 
 - **COVERED** — an API and/or UI test exercises it (named in the row).
 - **GAP** — in scope, documented, not yet covered → a to-do line item.

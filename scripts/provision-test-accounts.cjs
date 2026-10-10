@@ -1,69 +1,59 @@
 #!/usr/bin/env node
 /* global fetch */
 /**
- * Creates the bench's `qatest_*` accounts on the KPOST_QA test database.
+ * Creates the bench's `qatestN@<domain>` accounts on the KPost test environment, through the product's
+ * own signup API, and records each one in `src/fixtures/test-accounts.json` as it is proven usable.
  *
- * Run once, deliberately, with the repo owner's sign-off — it is not part of any test run.
- * **An account cannot be deleted through the KPost API**, so every row this writes is permanent on
- * the target. That is why it is a standalone script rather than a fixture.
+ * Run deliberately, with the owner's sign-off: **an account cannot be deleted through the KPost API**,
+ * so every row this creates is permanent.
  *
- * ## The signup sequence, and the one step that needs the database
+ * ## Why signup needs a human or the database
  *
- *   1. `sendOTP`          mobile OTP — the test gateway delivers no SMS
- *   2. `validateOTP`      the `QA_BYPASS_OTP` bypass is accepted here
- *   3. `sendOTPtoMail`    e-mail OTP — **the mail server is live, so this really is sent**
- *   4. `validateMailOTP`  the bypass is NOT accepted here; the generated code is required
- *   5. `signup`           creates the account
+ * The mobile OTP is a test gateway (the code `QA_BYPASS_OTP` always validates and no SMS is sent). The
+ * e-mail OTP is NOT: the backend generates a real code, stores it, and sends it. It can only be read
+ * from the mailbox it was sent to, or from `TBL_KPOST_EMAIL_OTP_VALIDATION` when the database is
+ * reachable from this machine. So signup is two phases:
  *
- * Step 4 is why this needs a database connection. The mobile bypass does not extend to e-mail, and
- * `TBL_KPOST_EMAIL_OTP_VALIDATION` holds the generated code beside the address, so on this test
- * database the real value can be read back. That shortcut is legitimate *here* and nowhere else:
- * it works only because the bench already has read access to KPOST_QA, and it is confined to
- * provisioning.
+ *   node scripts/provision-test-accounts.cjs                         status of every account (read-only)
+ *   node scripts/provision-test-accounts.cjs --send                  phase 1: mobile OTP + send the e-mail OTP
+ *   node scripts/provision-test-accounts.cjs --finish --from-db      phase 2: read the codes from the database
+ *   node scripts/provision-test-accounts.cjs --finish --codes=qatest1:123456,qatest2:654321
  *
- * ## Safety properties
+ * Add `--only=qatest1,qatest2` to limit either phase. The e-mail codes expire after about 10 minutes,
+ * so run phase 2 soon after phase 1.
  *
- * - **Idempotent.** An existing account is reported and left alone, never re-created.
- * - **Policy-checked.** Every id must satisfy the `qatest_` prefix and its type's domain before a
- *   single request is sent, so a typo cannot create an account the bench will not own.
- * - **Collision-checked.** Ids and mobile numbers are verified free first — reusing a real
- *   person's number would send them an OTP.
- * - **`provisioned: true` is only written after the account is proven to log in.**
+ * ## Safety
  *
- * Usage: node scripts/provision-test-accounts.cjs [--only=<id>,<id>] [--dry-run]
+ * - Idempotent: an existing account is reported and left alone; the registry is only marked
+ *   `provisioned` after the new account has logged in successfully.
+ * - Every id and mobile is checked free through the product (`kpostIdExist`, `mobileNoExist`) first.
+ * - The e-mail address that receives the codes comes from `QATEST_OTP_MAILBOX_TEMPLATE` (for example
+ *   `qa.bench+{id}@kpost.in`); there is deliberately no default, so a code is never sent to a mailbox
+ *   nobody reads. The password comes from `QATEST_SHARED_PASSWORD` only.
  */
 require('dotenv').config({ path: '.env', quiet: true });
 
 const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const mysql = require('mysql2/promise');
 
 const REGISTRY = path.join(__dirname, '..', 'src', 'fixtures', 'test-accounts.json');
 const BASE = String(process.env.KPOST_API_BASE_URL || '').replace(/\/$/, '');
 const BYPASS = process.env.QA_BYPASS_OTP || '123456';
 const COUNTRY = String(process.env.QA_COUNTRY_ID || 1);
-
-/**
- * The password for the accounts this creates. Environment-only, with no fallback: a literal here
- * would sit in the repository for every future account, which is the exact rule the registry's
- * `passwordEnv` indirection exists to enforce.
- */
 const PASSWORD = process.env.QATEST_SHARED_PASSWORD;
+const MAILBOX = process.env.QATEST_OTP_MAILBOX_TEMPLATE;
 
 const args = process.argv.slice(2);
-const DRY = args.includes('--dry-run');
-const ONLY = (args.find((a) => a.startsWith('--only=')) || '').replace('--only=', '');
-
-/** Mobile numbers reserved for the bench, verified free against the database before use. */
-const MOBILES = {
-  primary: '9626306841',
-  counterparty: '9626306842',
-  observer: '9626306843',
-  'company-admin': '9626306844',
-  'company-member': '9626306845',
-  'company-expendable': '9626306846',
-};
+const flag = (name) => args.includes(name);
+const option = (name) => (args.find((a) => a.startsWith(`${name}=`)) || '').slice(name.length + 1);
+const ONLY = option('--only');
+const CODES = Object.fromEntries(
+  option('--codes')
+    .split(',')
+    .filter(Boolean)
+    .map((pair) => pair.split(':')),
+);
 
 const DEVICE = {
   deviceType: 'Web',
@@ -87,111 +77,99 @@ async function post(pathname, body) {
   try {
     parsed = JSON.parse(text);
   } catch {
-    /* non-JSON body — `text` still carries the message below */
+    /* non-JSON body: `text` still carries the message */
   }
+  // KPost can answer HTTP 200 with statusCode 500 in the envelope, so the envelope is the truth.
   const code = typeof parsed.statusCode === 'number' ? parsed.statusCode : response.status;
-  // KPost answers HTTP 200 with statusCode 500 in the envelope, so the envelope is the truth.
+  return { code, body: parsed, message: String(parsed.message || text).slice(0, 120) };
+}
+
+const idOf = (account) => process.env[account.kpostIdEnv];
+const mailOf = (account) => MAILBOX.replace('{id}', account.id);
+
+async function isFree(account) {
+  const idCheck = await post('/v2/signupLogin/kpostIdExist/', {
+    kpostID: idOf(account),
+    firstName: 'QA',
+    lastName: 'Test',
+    mobileNumber: account.mobile,
+  });
+  const mobileCheck = await post('/v2/common/mobileNoExist/', {
+    mobileNumber: account.mobile,
+    countryID: COUNTRY,
+  });
   return {
-    status: code,
-    http: response.status,
-    body: parsed,
-    message: parsed.message || text.slice(0, 120),
+    id: /available/i.test(idCheck.message),
+    mobile: /can be used/i.test(mobileCheck.message),
+    detail: `id: ${idCheck.message} | mobile: ${mobileCheck.message}`,
   };
 }
 
-function resolveHost(value) {
-  if (!value) return undefined;
-  const authority =
-    String(value)
-      .replace(/^[a-z+]+:(?:\/\/)?/i, '')
-      .split(/[/?]/)[0] || '';
-  return (/^(\[[^\]]+\]|[^:]+)(?::\d+)?$/.exec(authority) || [])[1];
-}
-
-/** The most recent e-mail OTP for `email`, read from the test database. */
-async function emailOtp(pool, email) {
-  const [rows] = await pool.query(
-    'SELECT `otp` FROM `TBL_KPOST_EMAIL_OTP_VALIDATION` WHERE `email` = ? ORDER BY `id` DESC LIMIT 1',
-    [email],
-  );
-  return rows[0] && rows[0].otp;
-}
-
-async function accountExists(pool, kpostId) {
-  const [rows] = await pool.query(
-    'SELECT `kpost_id` FROM `TBL_KPOST_USER_MASTER` WHERE `kpost_id` = ? LIMIT 1',
-    [kpostId],
-  );
-  return rows.length > 0;
-}
-
-async function mobileTaken(pool, mobile) {
-  const [rows] = await pool.query(
-    'SELECT `kpost_id` FROM `TBL_KPOST_USER_MASTER` WHERE `mobile_number` = ? LIMIT 1',
-    [mobile],
-  );
-  return rows[0] && rows[0].kpost_id;
-}
-
-/** Proves the account is usable — the only thing that justifies marking it provisioned. */
-async function canLogIn(kpostId, userType) {
+async function canLogIn(account) {
   const login = await post('/v2/signupLogin/userLogin/', {
     ...DEVICE,
     sessionID: randomUUID(),
-    kpostID: kpostId,
-    loginRO: { countryID: COUNTRY, password: PASSWORD, userType },
+    kpostID: idOf(account),
+    loginRO: { countryID: COUNTRY, password: PASSWORD, userType: account.userType },
     logintime: Date.now(),
   });
   return Boolean(login.body && login.body.accessToken);
 }
 
-async function provision(pool, account, mobile) {
-  const email = `qa.bench+${account.id.replace(/-/g, '_')}@kpost.in`;
-
-  if (await accountExists(pool, account.kpostId)) {
-    const usable = await canLogIn(account.kpostId, account.userType);
-    return { state: usable ? 'already-exists' : 'exists-but-login-failed' };
+async function emailCodeFromDb(email) {
+  // Only works when the DB host allows this machine's IP.
+  const mysql = require('mysql2/promise');
+  const [host, hostPort] = String(process.env.DB_HOST).split(':');
+  const pool = mysql.createPool({
+    host,
+    port: Number(hostPort || process.env.DB_PORT || 3306),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    ssl: { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' },
+    connectTimeout: 8000,
+    connectionLimit: 1,
+  });
+  try {
+    const [rows] = await pool.query(
+      'SELECT `otp` FROM `TBL_KPOST_EMAIL_OTP_VALIDATION` WHERE `email` = ? ORDER BY `id` DESC LIMIT 1',
+      [email],
+    );
+    return rows[0] && String(rows[0].otp);
+  } finally {
+    await pool.end();
   }
+}
 
-  const owner = await mobileTaken(pool, mobile);
-  if (owner) return { state: `mobile ${mobile} already belongs to ${owner} — not touching it` };
-
-  if (DRY) return { state: 'would-create' };
-
+async function send(account) {
+  const free = await isFree(account);
+  if (!free.id || !free.mobile) return `not free (${free.detail})`;
   const sent = await post('/v2/common/sendOTP/', {
     countryID: COUNTRY,
-    mobileNumber: mobile,
+    mobileNumber: account.mobile,
     requestType: 'signup',
   });
-  if (sent.status !== 200) return { state: `sendOTP -> ${sent.status} ${sent.message}` };
-
+  if (sent.code !== 200) return `sendOTP -> ${sent.code} ${sent.message}`;
   const validated = await post('/v2/common/validateOTP/', {
     otp: BYPASS,
     countryID: COUNTRY,
-    mobileNumber: mobile,
+    mobileNumber: account.mobile,
   });
-  if (validated.status !== 200) {
-    return { state: `validateOTP -> ${validated.status} ${validated.message}` };
-  }
+  if (validated.code !== 200) return `validateOTP -> ${validated.code} ${validated.message}`;
+  const mail = await post('/v2/common/sendOTPtoMail/', { otherEmail: mailOf(account) });
+  if (mail.code !== 200) return `sendOTPtoMail -> ${mail.code} ${mail.message}`;
+  return `e-mail OTP sent to ${mailOf(account)}`;
+}
 
-  const mailSent = await post('/v2/common/sendOTPtoMail/', { otherEmail: email });
-  if (mailSent.status !== 200) {
-    return { state: `sendOTPtoMail -> ${mailSent.status} ${mailSent.message}` };
-  }
-
-  const code = await emailOtp(pool, email);
-  if (!code) return { state: 'no e-mail OTP row appeared in the database' };
-
-  const mailValidated = await post('/v2/common/validateMailOTP/', { email, otp: Number(code) });
-  if (mailValidated.status !== 200) {
-    return { state: `validateMailOTP -> ${mailValidated.status} ${mailValidated.message}` };
-  }
-
+async function finish(account, code) {
+  const email = mailOf(account);
+  const checked = await post('/v2/common/validateMailOTP/', { email, otp: Number(code) });
+  if (checked.code !== 200) return `validateMailOTP -> ${checked.code} ${checked.message}`;
   const created = await post('/v2/signupLogin/signup/', {
-    kpostID: account.kpostId,
-    firstName: 'QA',
-    lastName: account.id.replace(/-/g, ' '),
-    mobileNumber: mobile,
+    kpostID: idOf(account),
+    firstName: account.id,
+    lastName: 'Bench',
+    mobileNumber: account.mobile,
     createdDate: Date.now(),
     password: PASSWORD,
     gender: 'female',
@@ -208,91 +186,64 @@ async function provision(pool, account, mobile) {
       city: 'Chennai',
     },
   });
-  if (created.status !== 200) return { state: `signup -> ${created.status} ${created.message}` };
-
-  const usable = await canLogIn(account.kpostId, account.userType);
-  return { state: usable ? 'created' : 'created-but-login-failed' };
+  if (created.code !== 200) return `signup -> ${created.code} ${created.message}`;
+  return (await canLogIn(account)) ? 'created' : 'created-but-login-failed';
 }
 
 (async () => {
-  if (!PASSWORD) {
-    throw new Error('QATEST_SHARED_PASSWORD is not set — refusing to create accounts without it');
-  }
-
   const registry = JSON.parse(fs.readFileSync(REGISTRY, 'utf8'));
-  const policy = registry.domainPolicy;
-  const identifier = new RegExp(policy.identifierPattern);
-
-  const violation = (account) => {
-    const at = account.kpostId.lastIndexOf('@');
-    const local = account.kpostId.slice(0, at);
-    const domain = account.kpostId.slice(at + 1).toLowerCase();
-    if (!local.startsWith(policy.prefix)) return `missing "${policy.prefix}" prefix`;
-    if (!identifier.test(local.slice(policy.prefix.length))) return 'bad identifier';
-    if (domain !== policy[account.userType]) {
-      return `${account.userType} must be on @${policy[account.userType]}, is on @${domain}`;
-    }
-    return undefined;
-  };
-
-  let targets = registry.accounts;
-  if (ONLY) {
-    const wanted = new Set(ONLY.split(','));
-    targets = targets.filter((a) => wanted.has(a.id));
-  }
-
-  // Policy first: a typo must never reach the API.
-  for (const account of targets) {
-    const reason = violation(account);
-    if (reason) throw new Error(`${account.id} (${account.kpostId}): ${reason}`);
-  }
-
-  const pool = mysql.createPool({
-    host: resolveHost(process.env.DB_HOST),
-    port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' },
-    connectionLimit: 3,
-    bigNumberStrings: true,
-    multipleStatements: false,
-  });
-
-  console.log(`Provisioning ${targets.length} account(s) on ${BASE}${DRY ? ' (dry run)' : ''}\n`);
-  const results = [];
-  try {
-    for (const account of targets) {
-      const mobile = MOBILES[account.id];
-      if (!mobile) {
-        results.push([account, { state: 'no mobile number reserved for this id' }]);
-        console.log(`  ${account.kpostId.padEnd(34)} no mobile reserved`);
-        continue;
-      }
-      const result = await provision(pool, account, mobile);
-      console.log(`  ${account.kpostId.padEnd(34)} ${result.state}`);
-      results.push([account, result]);
-    }
-  } finally {
-    await pool.end();
-  }
-
-  const live = results.filter(([, r]) => r.state === 'created' || r.state === 'already-exists');
-  if (!DRY && live.length) {
-    for (const [account] of live) {
-      const entry = registry.accounts.find((a) => a.id === account.id);
-      entry.provisioned = true;
-      entry.provisionedAt = entry.provisionedAt || new Date().toISOString();
-    }
-    fs.writeFileSync(REGISTRY, `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
-    console.log(`\nRegistry updated: ${live.length} account(s) marked provisioned.`);
-  }
-
-  const failed = results.filter(
-    ([, r]) => !['created', 'already-exists', 'would-create'].includes(r.state),
+  const wanted = ONLY ? new Set(ONLY.split(',')) : undefined;
+  const targets = registry.accounts.filter(
+    (a) => a.mobile && !a.provisioned && (!wanted || wanted.has(a.id)),
   );
-  if (failed.length) console.log(`\n${failed.length} account(s) were not provisioned.`);
-  process.exitCode = failed.length ? 1 : 0;
+  if (!targets.length) {
+    console.log('Nothing to do: every account with a reserved mobile is provisioned.');
+    return;
+  }
+
+  for (const account of targets) {
+    if (!idOf(account))
+      throw new Error(`${account.kpostIdEnv} is not set in .env (account ${account.id})`);
+  }
+
+  const phase = flag('--send') ? 'send' : flag('--finish') ? 'finish' : 'status';
+  if (phase !== 'status' && !PASSWORD) throw new Error('QATEST_SHARED_PASSWORD is not set');
+  if (phase !== 'status' && !MAILBOX) {
+    throw new Error('QATEST_OTP_MAILBOX_TEMPLATE is not set (e.g. qa.bench+{id}@kpost.in)');
+  }
+
+  console.log(`${phase}: ${targets.length} account(s) on ${BASE}\n`);
+  let created = 0;
+  for (const account of targets) {
+    const label = `${idOf(account)} (${account.mobile})`.padEnd(46);
+    let result;
+    if (phase === 'status') {
+      const free = await isFree(account);
+      result = free.id && free.mobile ? 'free, ready to create' : `NOT free: ${free.detail}`;
+    } else if (phase === 'send') {
+      result = await send(account);
+    } else {
+      let code = CODES[account.id];
+      if (!code && flag('--from-db')) {
+        try {
+          code = await emailCodeFromDb(mailOf(account));
+        } catch (error) {
+          result = `database not reachable (${error.code || error.message}); pass --codes instead`;
+        }
+      }
+      result = result || (code ? await finish(account, code) : 'no code supplied');
+      if (result === 'created') {
+        const entry = registry.accounts.find((a) => a.id === account.id);
+        entry.provisioned = true;
+        entry.provisionedAt = new Date().toISOString();
+        fs.writeFileSync(REGISTRY, `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
+        created += 1;
+      }
+    }
+    console.log(`  ${label} ${result}`);
+  }
+  if (phase === 'finish')
+    console.log(`\n${created} account(s) created and recorded in the registry.`);
 })().catch((error) => {
   console.error('provisioning failed:', error.message);
   process.exitCode = 1;

@@ -128,7 +128,7 @@ test.describe('KPost Login · behaviour', () => {
      * THE FINDING (soft, so the run continues and reports every defect): on live, a wrong password
      * answers **HTTP 200** `"Invalid Credential"` — the same status as success. A caller reading the
      * HTTP status cannot tell a failed login from a successful one. It must be a 4xx (401). Soft so
-     * this stays red and reported without halting the suite. See docs and CLAUDE.md §8.
+     * this stays red and reported without halting the suite. See docs/DECISION-LOG.md.
      */
     expect
       .soft(wrong.status, 'a wrong password must not answer 2xx — it does (HTTP 200)')
@@ -272,7 +272,9 @@ test.describe('KPost Login · behaviour', () => {
 
     for (const [label, identifier] of validForms) {
       const { status, body } = await login(endpoints, identifier, testData.password);
-      expect.soft(status, `BR-SL-3IDS: login via ${label} ("${identifier}") must succeed`).toBe(200);
+      expect
+        .soft(status, `BR-SL-3IDS: login via ${label} ("${identifier}") must succeed`)
+        .toBe(200);
       // Evaluated unconditionally (a non-200 body has no accessToken, so sameAccount() with an empty
       // subject just reports false) — a failed login is still a failed BR-SL-3IDS case, not a skip.
       const token = typeof body.accessToken === 'string' ? body.accessToken : '';

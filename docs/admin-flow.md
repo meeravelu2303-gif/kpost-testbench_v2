@@ -5,7 +5,7 @@ The authoritative map of the KPost **Admin module** (organisation / workplace / 
 walkthrough (2026-09-15) + the live signup/user-management screens + `Admin_module.xlsx` (converted to
 `openapi/admin-api.openapi.json`).
 
-> Secrets rule: KPost IDs are listed here as identifiers (like the personal QA accounts in CLAUDE.md);
+> Secrets rule: KPost IDs are listed here as identifiers (like the QA accounts in `src/fixtures/test-accounts.json`);
 > passwords live only in `.env`. The shared QA password is the standard one already recorded in the repo.
 
 ---

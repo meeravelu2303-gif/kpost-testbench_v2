@@ -2,7 +2,7 @@
 
 The authoritative build reference for finishing the UI test suite, grounded in a **complete frontend
 analysis** (`D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1\src`, routes in `MenuRoutes.js`) and the KPost
-documents (CLAUDE.md §1–4: the four documented modules Signup/Login, Katchup, Kall, KMail as 55 FRs +
+documents (docs/BENCH-REFERENCE.md §1–4: the four documented modules Signup/Login, Katchup, Kall, KMail as 55 FRs +
 9 BRs). Per module: the real selectors, the test approach, FR traceability, and status.
 
 ## Routing facts that shape the plan (from the analysis)

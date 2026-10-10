@@ -129,6 +129,19 @@ export const forgotPasswordOrKpostIdApi = defineProfileEndpoint({
   destructive: true,
   sideEffect: 'external',
   otpDependent: 'sends',
+  /*
+   * The forgot-password OTP is REAL on the live gateway (owner, 2026-10-09), and this request texts
+   * a registered number. The engine's probes (fuzz, injection, auth, rate limit, ...) would each send
+   * another, ~250 per run, so they are off: the run sends this one primary request. The few negative
+   * cases that send nothing live in tests/api/kpost/common/forgot-password-limited.spec.ts.
+   */
+  validations: {
+    request: false,
+    security: false,
+    authentication: false,
+    authorization: false,
+    concurrency: false,
+  },
   request: body(() => ({ mobileNumber: testData.mobileExists, requestType: 'kpostID' })),
 });
 

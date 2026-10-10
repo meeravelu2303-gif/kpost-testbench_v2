@@ -77,19 +77,22 @@ With `TEST_ENV=local` and no `API_BASE_URL`, Playwright starts the bundled mock 
 
 ## Running tests
 
-**Every command is in one place — [`docs/COMMANDS.md`](docs/COMMANDS.md).** One command per surface,
-each with a `:file` variant that also files bugs. The essentials:
+**Every command is in one place — [`docs/COMMANDS.md`](docs/COMMANDS.md).** One command per Bugzilla
+product, each with a `:file` variant that also files bugs. The essentials:
 
-| Command                        | What it does                                                                |
-| ------------------------------ | --------------------------------------------------------------------------- |
-| `npm run kpost` / `kpost:file` | KPost API — all test types + write flows on the test DB (run / run + file). |
-| `npm run kmail` / `kmail:file` | KMail API — read matrix + write lifecycle.                                  |
-| `npm run admin` / `admin:file` | Admin API — reads + org-build lifecycle.                                    |
-| `npm run ui` / `ui:file`       | UI end-to-end — every screen + feature flow.                                |
-| `npm run all` / `all:file`     | KPost, then KMail, then UI.                                                 |
-| `npm run resolve`              | Close verified-fixed bugs in Bugzilla; file nothing new.                    |
-| `npm run test:framework`       | The bench's own self-tests.                                                 |
-| `npm run check`                | Typecheck + lint + format check (CI gate).                                  |
+| Command                                                           | What it does                                                                             |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `npm run product:kpost-api` / `product:kpost-api:file`            | KPost API — FULL profile, write-fuzz, lifecycle flows on the test DB (run / run + file). |
+| `npm run product:kmail-api` / `product:kmail-api:file`            | KMail API — same tier.                                                                   |
+| `npm run product:kpost-admin` / `product:kpost-admin:file`        | Admin API — the owner's PDF endpoints, same tier (Admin DB stays read-only).             |
+| `npm run product:kpost-ui` / `product:kpost-ui:file`              | KPost UI on 3 browsers, then the Admin UI.                                               |
+| `npm run product:all` / `product:all:file`                        | All four, in order.                                                                      |
+| `npm run ui:chromium:file` · `ui:firefox:file` · `ui:webkit:file` | KPost UI, one browser per run.                                                           |
+| `npm run kpost:full:verify`                                       | Re-check every open KPost API bug; file nothing new.                                     |
+| `npm run framework`                                               | The bench's own self-tests.                                                              |
+| `npm run check`                                                   | Typecheck + lint + format check (CI gate).                                               |
+
+KDoc/KOS is paused and excluded from every command until the owner says it's ready.
 
 Every run writes a single report — `reports/REPORT.md` (human: execution health + bugs) and
 `reports/REPORT.json` (structured). See `docs/COMMANDS.md` for the full list and the safety notes.
@@ -119,6 +122,15 @@ Configure `BASE_URL`, `API_BASE_URL`, `TEST_COMPANY_ID` and `MOCK_API=false` as 
 
 ## Working notes
 
-[CLAUDE.md](CLAUDE.md) is the living record of this bench: the KPost application flow, the decisions
-taken so far, verified environment facts, and the current plan. Read it first, and update it when a
-flow changes.
+Read these in order:
+
+1. [CLAUDE.md](CLAUDE.md) — the short map and rulebook: what is tested, the test flow, the repo structure,
+   the run → Bugzilla pipeline, and every standing rule. Read it first.
+2. [docs/COMMANDS.md](docs/COMMANDS.md) — every command.
+3. [docs/BENCH-REFERENCE.md](docs/BENCH-REFERENCE.md) — the full detail: product, architecture, pipeline
+   spec, contracts, plan and conventions.
+4. [docs/DECISION-LOG.md](docs/DECISION-LOG.md) — every decision and incident, newest first. Add an entry at
+   the top whenever a flow changes.
+
+Keep `CLAUDE.md` short (under ~200 lines, since it is loaded into every Claude session): rules and the map go
+there, history goes in the decision log.

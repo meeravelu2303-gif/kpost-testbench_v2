@@ -1,7 +1,7 @@
 /**
  * THE Katchup UI feature catalogue — every user-facing Katchup feature, enumerated from the three
  * sources of truth so **nothing is missed**:
- *   1. the KPost documents (FRD v2.0: FR-K01..K25, BR-K01..K03) — see CLAUDE.md §1–4,
+ *   1. the KPost documents (FRD v2.0: FR-K01..K25, BR-K01..K03) — see docs/BENCH-REFERENCE.md §1–4,
  *   2. the message-type enum (`katchupMessageType`, 27 codes) — see `docs/katchup-flow.md`,
  *   3. the live front-end action menus (`bellIconContent` = sender, `replyIconContent` = recipient,
  *      in `Katchup/bubble/KatchupMessage/KatchupMessage.js`).

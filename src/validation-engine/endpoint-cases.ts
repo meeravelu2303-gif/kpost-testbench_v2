@@ -1,5 +1,6 @@
 import { apiRegistry } from '@api/definitions/index';
 import type { EndpointFilter } from '@api/registry/api-registry';
+import type { EndpointDefinition } from '@api/registry/endpoint-definition';
 import type { ValidationProfile } from '@config/constants';
 import { env } from '@config/env';
 import { describeTestData } from '@config/test-data.config';
@@ -41,6 +42,8 @@ export interface EndpointCaseOptions {
   profile?: ValidationProfile;
   /** A module whose host is not configured registers nothing; skip rather than fail. */
   allowEmpty?: boolean;
+  /** Rewrites each selected definition before it runs (e.g. `withSacrificialTarget` for writes). */
+  transform?: (definition: EndpointDefinition) => EndpointDefinition;
 }
 
 /** One engine run per endpoint id, shared by that endpoint's cases. */
@@ -102,7 +105,10 @@ export function describeEndpointCases(
   filter: EndpointFilter,
   options: EndpointCaseOptions = {},
 ): void {
-  const endpoints = apiRegistry.find(filter).map(resolveEndpoint);
+  const endpoints = apiRegistry
+    .find(filter)
+    .map((definition) => options.transform?.(definition) ?? definition)
+    .map(resolveEndpoint);
   if (!endpoints.length) {
     if (options.allowEmpty) {
       test.skip(`no endpoints registered for ${JSON.stringify(filter)}`, () => {});

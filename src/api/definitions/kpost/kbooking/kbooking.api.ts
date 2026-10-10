@@ -79,8 +79,14 @@ export const availableTripsApi = defineKBookingEndpoint({
   tags: ['kbooking-read'],
   destructive: false,
   productionSafe: true,
-  // Real shape, KBook.js:436-445 — sourceCityID/destinationCityID/travelDate.
-  request: body(() => ({ sourceCityID: '102', destinationCityID: 104, travelDate: '2024-08-15' })),
+  // Real shape, KBook.js:436-445 — sourceCityID/destinationCityID/travelDate. The date must be today
+  // or later: the server forwards to a bus-booking partner that answers 500 for any past date, and
+  // a hard-coded 2024 date made every run report that partner error as a product defect (#1063, #1067).
+  request: body(() => ({
+    sourceCityID: '102',
+    destinationCityID: 104,
+    travelDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
+  })),
 });
 
 export const tripDetailsApi = defineKBookingEndpoint({

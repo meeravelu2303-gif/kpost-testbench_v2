@@ -3,10 +3,9 @@
     "THE central registry of accounts the bench uses. Specs resolve accounts by ROLE through",
     "src/fixtures/test-accounts.ts and never hard-code a KPost ID.",
     "",
-    "These are the PRE-EXISTING accounts declared in .env, not accounts the bench created. The",
-    "qatest_* provisioning attempt was abandoned for a product reason, recorded in blockedByProduct",
-    "below: KPost rejects any kpostID containing an underscore, so the mandated qatest_<name> shape",
-    "cannot be registered through the product at all.",
+    "The first six accounts are PRE-EXISTING ones declared in .env, not created by the bench.",
+    "The qatestN accounts (no underscore: the product rejects one in a KPost ID) are created by",
+    "scripts/provision-test-accounts.cjs; each is marked provisioned here only after it logs in.",
     "",
     "NO IDs OR PASSWORDS LIVE IN THIS FILE. Both are POINTERS to environment variables",
     "(kpostIdEnv / passwordEnv). The file is committed; .env is not."
@@ -84,6 +83,66 @@
       "companyIdEnv": "QA_BUSINESS_M_COMPANY_ID",
       "purpose": "The third member, so a company of three can be exercised. NEVER terminated — the Admin DB is live-adjacent and members cannot be recreated via API.",
       "provisioned": true
+    },
+    {
+      "id": "qatest1",
+      "kpostIdEnv": "QATEST1_KPOST_ID",
+      "passwordEnv": "QATEST_SHARED_PASSWORD",
+      "userType": "PERSONAL",
+      "purpose": "Record owner in ownership (BOLA) checks: creates the message, call, group or document that a stranger must not reach.",
+      "provisioned": true,
+      "provisionedAt": "2026-10-09T17:42:30.704Z",
+      "mobile": "9626306847"
+    },
+    {
+      "id": "qatest2",
+      "kpostIdEnv": "QATEST2_KPOST_ID",
+      "passwordEnv": "QATEST_SHARED_PASSWORD",
+      "userType": "PERSONAL",
+      "purpose": "The stranger in ownership checks: a different user who must be refused the owner's records.",
+      "provisioned": true,
+      "provisionedAt": "2026-10-09T17:42:33.727Z",
+      "mobile": "9626306848"
+    },
+    {
+      "id": "qatest3",
+      "kpostIdEnv": "QATEST3_KPOST_ID",
+      "passwordEnv": "QATEST_SHARED_PASSWORD",
+      "userType": "PERSONAL",
+      "purpose": "Third party in group, Cc / confidential-copy and multi-recipient flows.",
+      "provisioned": true,
+      "provisionedAt": "2026-10-09T17:42:36.760Z",
+      "mobile": "9626306849"
+    },
+    {
+      "id": "qatest4",
+      "kpostIdEnv": "QATEST4_KPOST_ID",
+      "passwordEnv": "QATEST_SHARED_PASSWORD",
+      "userType": "PERSONAL",
+      "purpose": "Fourth party: second group member and second recipient.",
+      "provisioned": true,
+      "provisionedAt": "2026-10-09T17:42:39.918Z",
+      "mobile": "9626306850"
+    },
+    {
+      "id": "qatest5",
+      "kpostIdEnv": "QATEST5_KPOST_ID",
+      "passwordEnv": "QATEST_SHARED_PASSWORD",
+      "userType": "PERSONAL",
+      "purpose": "Sacrificial target: the account the destructive sweep blocks, deletes, calls and adds, so nothing shared is touched.",
+      "provisioned": true,
+      "provisionedAt": "2026-10-09T17:42:43.034Z",
+      "mobile": "9626306851"
+    },
+    {
+      "id": "qatest6",
+      "kpostIdEnv": "QATEST6_KPOST_ID",
+      "passwordEnv": "QATEST_SHARED_PASSWORD",
+      "userType": "PERSONAL",
+      "purpose": "Spare: account-lockout and limited forgot-password probes (the forgot-password OTP is real on the live host, so keep it to a few calls).",
+      "provisioned": true,
+      "provisionedAt": "2026-10-09T17:42:50.836Z",
+      "mobile": "9626306852"
     }
   ]
 }
