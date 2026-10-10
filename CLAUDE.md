@@ -12,13 +12,17 @@ Read this first. It is the map and the rulebook; the detail lives in `docs/`:
 KPOST is a unified communications platform (chat, calling, mail under one login). The bench finds real
 defects in it and files them to Bugzilla, routed to the developer who owns the module.
 
-| Bugzilla product | Suite       | Owner                                    | Host (from `.env`)                                                 |
-| ---------------- | ----------- | ---------------------------------------- | ------------------------------------------------------------------ |
-| KPost API        | `kpost-api` | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (testingapi.kpostindia.com)                   |
-| KPost Admin      | `admin-api` | Jaganathan Murthy                        | `ADMIN_API_BASE_URL` (http://192.168.0.38:9595)                    |
-| KMail API        | `kmail-api` | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL`                                               |
-| KPost UI         | `kpost-ui`  | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                   |
-| KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (kpostadmin.kpostindia.com), `tests/e2e-admin` |
+| Bugzilla product | Suite       | Owner                                    | Host (from `.env`)                                                      |
+| ---------------- | ----------- | ---------------------------------------- | ----------------------------------------------------------------------- |
+| KPost API        | `kpost-api` | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (testingapi.kpostindia.com)                        |
+| KPost Admin      | `admin-api` | Jaganathan Murthy                        | `ADMIN_API_BASE_URL` (http://192.168.0.38:9595)                         |
+| KMail API        | `kmail-api` | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
+| KPost UI         | `kpost-ui`  | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                        |
+| KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (kpostadmin.kpostindia.com), `tests/e2e-admin`      |
+
+**The target is the TEST deployment only** — `test.kpostindia.com`, `testingapi`, `testkmail`, the Admin
+test box. Never `account.kpostindia.com`, `devapi2`, `kmail5` or `adminmodule.kpostindia.com`; those
+names appear in docs only as "the live counterpart". `TEST_ENV=production` names the safety mode, not a host.
 
 Owners are declared once in `src/config/ownership.config.ts`; a framework test fails on drift.
 

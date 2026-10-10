@@ -23,7 +23,12 @@ process.env.TEST_RUN_ID ||= `run-${randomUUID()}`;
 
 const EnvSchema = z.object({
   TEST_ENV: z.enum(['local', 'dev', 'qa', 'staging', 'production']).default('local'),
-  BASE_URL: z.url().default('https://playwright.dev'),
+  /**
+   * The KPost front end under test. The bench has exactly one UI target, the TEST deployment
+   * (`test.kpostindia.com`) — never the live `account.kpostindia.com` — so that is the default; `.env`
+   * still sets it explicitly and `npm run preflight` refuses to start without it.
+   */
+  BASE_URL: z.url().default('https://test.kpostindia.com'),
   /**
    * The Admin/HR-Setup UI origin (`kpostadmin.kpostindia.com`), a SEPARATE front end from the main
    * KPost app (`BASE_URL`). Backed by `ADMIN_API_BASE_URL` (adminmodule). SSO: the same KPost login
@@ -42,11 +47,12 @@ const EnvSchema = z.object({
   KMAIL_API_BASE_URL: z.url().optional(),
   /**
    * The path prefix KMail serves under, prepended to every KMail request path (the base URL is the
-   * origin — Playwright drops a base-URL path for an absolute request path). Prod is `/kmail5/v2`;
-   * the test host `testkmail.kpostindia.com` serves under `/testkmail/v2`. Set it to match the host,
-   * or every KMail call 404s and reads as a false bug.
+   * origin — Playwright drops a base-URL path for an absolute request path). The test host
+   * `testkmail.kpostindia.com` — the only KMail host the bench targets — serves under
+   * `/testkmail/v2` (the live host uses `/kmail5/v2`). Set it to match the host, or every KMail call
+   * 404s and reads as a false bug.
    */
-  KMAIL_PATH_PREFIX: z.string().default('/kmail5/v2'),
+  KMAIL_PATH_PREFIX: z.string().default('/testkmail/v2'),
 
   APP_USERNAME: z.string().optional(),
   APP_PASSWORD: z.string().optional(),

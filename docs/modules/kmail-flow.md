@@ -69,9 +69,14 @@ not the full body). Bulk uses `postBulkMail`; drafts use `/draft/draftMail/`.
 Reads (dashboard, counts, lists, content-by-id) dominate; the writes are compose/draft/delete/star
 and the settings updates.
 
-## 5. The host — SETTLED: `kmail5.kpostindia.com/kmail5/v2`
+## 5. The host — SETTLED: own host, own path prefix
 
-KMail is its **own suite** (`kmail-api`) on its **own host with a `/kmail5/v2` prefix** — the owner
+**Bench target (current):** the KMail **test** deployment, `testkmail.kpostindia.com` under
+`/testkmail/v2` — `KMAIL_API_BASE_URL` + `KMAIL_PATH_PREFIX` in `.env`. The bench never targets the
+live `kmail5.kpostindia.com`. The route analysis below was done against the live host the owner first
+supplied; the routes and the prefix mechanism are identical on the test host, only the names differ.
+
+KMail is its **own suite** (`kmail-api`) on its **own host with a path prefix** — the owner
 supplied the base `https://kmail5.kpostindia.com/kmail5/v2/`, and the probe confirms it (a first probe
 that omitted `/v2` misled an earlier note toward devapi2):
 

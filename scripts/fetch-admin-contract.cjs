@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Generates the Admin module contract from the LIVE service's own OpenAPI.
+ * Generates the Admin module contract from the Admin service's own OpenAPI (the service under test,
+ * `ADMIN_API_BASE_URL`; the live `adminmodule.kpostindia.com` publishes the same document).
  *
  *   node scripts/fetch-admin-contract.cjs ["<api-docs url>"]
  *
@@ -28,8 +29,20 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const URL = process.argv[2] || 'https://adminmodule.kpostindia.com/v3/api-docs';
-const SERVER = 'https://adminmodule.kpostindia.com';
+require(path.join(ROOT, 'node_modules', 'dotenv')).config({
+  path: path.join(ROOT, '.env'),
+  quiet: true,
+});
+// The Admin service the bench tests — `ADMIN_API_BASE_URL` in `.env` (the test box), never the live
+// `adminmodule.kpostindia.com` host by default. An explicit api-docs URL argument still wins.
+const SERVER = (process.env.ADMIN_API_BASE_URL || '').replace(/\/+$/, '');
+const URL = process.argv[2] || (SERVER ? `${SERVER}/v3/api-docs` : '');
+if (!URL) {
+  console.error(
+    'no Admin service configured: set ADMIN_API_BASE_URL in .env (the Admin test box) or pass the api-docs URL',
+  );
+  process.exit(2);
+}
 const CACHE = path.join(ROOT, 'contracts', 'admin-api.source.json');
 const OUT = path.join(ROOT, 'openapi', 'admin-api.openapi.json');
 

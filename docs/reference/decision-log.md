@@ -3,6 +3,19 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (late) — One target: the TEST deployment; every live-host name corrected
+
+**Owner's rule:** the bench tests `test.kpostindia.com` (and `testingapi` / `testkmail` / the Admin
+test box), never `account.kpostindia.com` or the other live hosts. A sweep of every host string in the
+repo found **no request or navigation aimed at a live host** — the hosts come from `.env` — but it
+found stale names that would mislead: the generated live-endpoints ledger said the target was
+`devapi2` (now read from `KPOST_API_BASE_URL`); `BASE_URL` defaulted to `playwright.dev` and
+`KMAIL_PATH_PREFIX` to the live `/kmail5/v2` (now `test.kpostindia.com` and `/testkmail/v2`);
+`contract:admin` fetched the **live** Admin service's OpenAPI by default (now `ADMIN_API_BASE_URL`);
+two unit-test fixtures and the admin-flow, kmail-flow and ui-screens documents named live hosts (now the
+test ones, with the live names kept only as "not this"). `.env.example` now carries the test hosts
+as values. `TEST_ENV=production` remains the name of the safety mode, not a host choice.
+
 ### 2026-10-10 (late) — Fifth Bugzilla product wired: KPost Admin UI gets its own suite and command
 
 **Finding:** Bugzilla has five products (KPost API, KMail API, KPost Admin, KPost UI, **KPost Admin

@@ -15,10 +15,10 @@ walkthrough (2026-09-15) + the live signup/user-management screens + `docs/api-s
 There are two distinct "admin" things, and they are separate hosts, separate products, reached by
 different tiers:
 
-| Surface                     | Who reaches it                           | Where                                                                                                       | Bench product                                                       |
-| --------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| **In-app User Management**  | **BUSINESS_S** admin                     | `account.kpostindia.com/usermanagement` (inside the KPost app)                                              | core `kpost-api` (`/admin/*` etc. on `devapi2`)                     |
-| **Admin / HR Setup module** | **BUSINESS_M** and **BUSINESS_L** admins | opens a NEW TAB → **UI `https://kpostadmin.kpostindia.com/`**, **API `https://adminmodule.kpostindia.com`** | new **`admin-api`** (this doc / `docs/api-specs/Admin_module.xlsx`) |
+| Surface                     | Who reaches it                           | Where                                                                                                                                                                           | Bench product                                                            |
+| --------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **In-app User Management**  | **BUSINESS_S** admin                     | `test.kpostindia.com/usermanagement` (inside the KPost app; `BASE_URL`)                                                                                                         | core `kpost-api` (`/admin/*` etc. on `testingapi`, `KPOST_API_BASE_URL`) |
+| **Admin / HR Setup module** | **BUSINESS_M** and **BUSINESS_L** admins | opens a NEW TAB → **UI `kpostadmin.kpostindia.com` (`ADMIN_UI_BASE_URL`)**, **API `ADMIN_API_BASE_URL`** (the Admin test box; the live service is `adminmodule.kpostindia.com`) | **`admin-api`** (this doc / `docs/api-specs/`)                           |
 
 So `admin-api` (the 35 endpoints just converted) is the **BUSINESS_M/L** Admin/HR-Setup module. The
 BUSINESS_S "add users" flow is a **different** surface on the core app, not this one.
@@ -30,7 +30,7 @@ BUSINESS_S "add users" flow is a **different** surface on the core app, not this
 **Two account types:** `PERSONAL` and `BUSINESS`. Business has three tiers: **BUSINESS_S / \_M / \_L**.
 (The signup screen also shows **Institutions** and **Governments** verticals — out of current scope.)
 
-**Signup → business account** (`account.kpostindia.com/signup`):
+**Signup → business account** (`test.kpostindia.com/signup` — the bench only ever drives the test front end):
 
 1. "KPOST Verticals — Select Account Option": Personal / **Business** / Institutions / Governments.
 2. Business → **Category**: **Small** (orgs up to 250 users) · **Medium** (above 250 up to 2000) ·

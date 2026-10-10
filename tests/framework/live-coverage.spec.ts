@@ -1,6 +1,7 @@
 // This spec GENERATES docs/generated/live-endpoints.md, so the "conditionals" it is flagged for are string
 // and data formatting (a table cell, a summary line, a filter), not branches guarding an assertion.
 /* eslint-disable playwright/no-conditional-in-test */
+import { env } from '@config/env';
 import fs from 'node:fs';
 import path from 'node:path';
 import { apiRegistry } from '@api/definitions/index';
@@ -166,7 +167,7 @@ test.describe('live endpoint coverage @framework', () => {
       '**GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`',
       '(`npm run test:framework`). Edit the endpoint definitions, not this file.',
       '',
-      `Target: the live application (\`devapi2.kpostindia.com\`). Scope: PERSONAL accounts plus the`,
+      `Target: the test environment (\`${new URL(env.KPOST_API_BASE_URL ?? env.API_BASE_URL ?? 'http://unset.invalid').host}\`, from \`KPOST_API_BASE_URL\`). Scope: PERSONAL accounts plus the`,
       'BUSINESS_S/M/L company accounts (company reads + user-management now run on live).',
       'A clear per-reason list of what stays blocked is in `docs/generated/blocked-endpoints.md`.',
       '',

@@ -21,7 +21,7 @@ import { expect, test } from '@fixtures';
  */
 
 const config = { ...readBugzillaConfig(), tagPrefix: 'KP' };
-const ctx = { baseURL: 'https://devapi2.kpostindia.com' };
+const ctx = { baseURL: 'https://testingapi.kpostindia.com' };
 const endpoint = resolveEndpoint(apiRegistry.get('katchup-recall-message'));
 
 const finding = (status: number): FlowFinding => ({

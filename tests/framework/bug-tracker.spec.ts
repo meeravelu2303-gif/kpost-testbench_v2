@@ -472,7 +472,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
         fullMessage: 'expected the compose button to be visible',
         browser: 'chromium',
         environment: 'production',
-        baseURL: 'https://account.kpostindia.com',
+        baseURL: 'https://test.kpostindia.com',
         build: 'local',
         testRunId: 'run-1',
         observedAt: '2026-09-14T10:00:00.000Z',
@@ -488,7 +488,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(desc, 'no internal repo name').not.toContain('KPOST_REACTJS_2023_V1');
     expect(desc, 'no repository field at all').not.toContain('"repository"');
     // Instead: the app URL and the screen (component), so it is reproducible in the product.
-    expect(desc).toContain('account.kpostindia.com');
+    expect(desc).toContain('test.kpostindia.com');
     expect(ui.component, 'routes to the KMail screen component').toBe('KMail');
     expect(desc).toContain('KMail screen');
   });

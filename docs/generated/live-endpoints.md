@@ -3,7 +3,7 @@
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`
 (`npm run test:framework`). Edit the endpoint definitions, not this file.
 
-Target: the live application (`devapi2.kpostindia.com`). Scope: PERSONAL accounts plus the
+Target: the test environment (`testingapi.kpostindia.com`, from `KPOST_API_BASE_URL`). Scope: PERSONAL accounts plus the
 BUSINESS_S/M/L company accounts (company reads + user-management now run on live).
 A clear per-reason list of what stays blocked is in `docs/generated/blocked-endpoints.md`.
 

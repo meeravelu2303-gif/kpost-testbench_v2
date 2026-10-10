@@ -142,9 +142,10 @@ tests use are listed inline per screen above; the full KP_01–KP_321 range live
 
 Each screen's actions map to a `Services/*.js` function with an explicit method + path — the
 frontend's own record of which control calls which endpoint. Base URLs are in `ServiceURL.js`; note
-the committed file points `EndPointURL`/`KmailEndPointURL` at **LAN IPs** (a dev build), while the
-deployed live UI at `account.kpostindia.com` talks to `devapi2`/`kmail5`. UI tests drive the deployed
-app and should intercept by **path** (`**/katchup/sendMessage/`), never by origin. Per-file function
+the committed file points `EndPointURL`/`KmailEndPointURL` at **LAN IPs** (a dev build), and each
+deployment talks to its own API hosts (the test front end `test.kpostindia.com` → `testingapi` /
+`testkmail`; the live one → `devapi2` / `kmail5`). The bench drives **only the test front end**
+(`BASE_URL`), and UI tests intercept by **path** (`**/katchup/sendMessage/`), never by origin. Per-file function
 lists: `Login.js`, `Katchup.js`, `Kall.js`, `Kmail.js`, `Setting.js` (profile + `/admin/*`),
 `Contacts.js`, `KOS.js`, `ECommerce.js`, `ThemeSettings.js` — see the frontend source for the full
 per-function table.
