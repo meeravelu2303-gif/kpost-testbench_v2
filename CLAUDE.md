@@ -27,6 +27,12 @@ names appear in docs only as "the live counterpart". `TEST_ENV=production` names
 
 Owners are declared once in `src/config/ownership.config.ts`; a framework test fails on drift.
 
+**Application source on this machine (`D:\KPOST_PROJECTS`) — read it before guessing a selector, a
+payload or a rule; the live server may be newer than the copy (verify live before filing):**
+`KPOST_REACTJS_2023_V1` (the React front end, `src/components/*`, `src/Services/*`), `KPOST_V5.0`
+(KPost backend, Java/Spring), `Kpost_Kmail_5.0` (KMail backend), `Admin_Module` (Admin backend),
+`ADMIN_HR_MODULES_25` (Admin/HR-Setup front end). FRDs: `D:\Kpost Documents`.
+
 Modules: Signup & Login, Katchup (chat with a Subject on every message), Group, Kall, KMail, KDirectory,
 Profile, Contacts, Settings, KDiary, KBooking, Admin/HR-Setup. Requirement ids `FR-xx-NNN` come from the
 six per-module FRDs in `D:\Kpost Documents`; map in `docs/reference/requirements-frd.md`.

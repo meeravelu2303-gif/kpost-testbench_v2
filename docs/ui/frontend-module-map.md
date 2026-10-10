@@ -30,42 +30,48 @@ disagreeing with it.
 
 ### Public (no auth token required)
 
-| Route                            | Component             | Notes                                                                               |
-| -------------------------------- | --------------------- | ----------------------------------------------------------------------------------- |
-| `/`                              | `Home` (auth/Home.js) | Landing                                                                             |
-| `/login`                         | `Login`               |                                                                                     |
-| `/signup`                        | `MainSignup`          | `Register.js` exists but is **not routed** — dead code unless reachable another way |
-| `/profile-webview/:id`           | `ProfileWebView`      | Shareable public profile card                                                       |
-| `/koolkall/:id`                  | `GlobalKoolKall`      | Public call-join link                                                               |
-| `/kall-window`                   | `KallWindow`          |                                                                                     |
-| `/digital-card/:id`              | `GloabalDigitalCard`  | Shareable digital business card                                                     |
-| `/child-safety-standards-policy` | `ChildSafetyPolicy`   | Static compliance page — **zero test coverage today**                               |
-| `*`                              | `NotFound`            |                                                                                     |
+| Route                            | Component             | Notes                                                                                   |
+| -------------------------------- | --------------------- | --------------------------------------------------------------------------------------- |
+| `/`                              | `Home` (auth/Home.js) | Landing                                                                                 |
+| `/login`                         | `Login`               |                                                                                         |
+| `/signup`                        | `MainSignup`          | `Register.js` exists but is **not routed** — dead code unless reachable another way     |
+| `/profile-webview/:id`           | `ProfileWebView`      | Shareable public profile card                                                           |
+| `/koolkall/:id`                  | `GlobalKoolKall`      | Public call-join link                                                                   |
+| `/kall-window`                   | `KallWindow`          |                                                                                         |
+| `/digital-card/:id`              | `GloabalDigitalCard`  | Shareable digital business card                                                         |
+| `/child-safety-standards-policy` | `ChildSafetyPolicy`   | Static compliance page — in the public screen sweep since 2026-10-10 (`screens-public`) |
+| `*`                              | `NotFound`            | In the sweep as `NotFound` (signed in; anonymous unknown routes bounce to `/login`)     |
+
+Public-route sweep status (2026-10-10): `/login`, `/signup`, `/child-safety-standards-policy`,
+`/kall-window` (signed-out "Unauthorized" state) and `/kposter` are in `src/ui/screens.ts` as
+`PUBLIC_SCREENS` and swept anonymously with the full check catalogue. `/` redirects to `/login`.
+The three parameterised routes keep their own specs because they need a real id.
 
 ### Authenticated (wrapped in `<Header>` layout, requires `user.user` truthy)
 
-| Route             | Component        | Bench coverage today                                                                          |
-| ----------------- | ---------------- | --------------------------------------------------------------------------------------------- |
-| `/home`           | `MainHomePage`   | breakage-sweep only                                                                           |
-| `/katchup`        | `Katchup`        | **Deep** — API + UI functional + breakage                                                     |
-| `/kmail`          | `Kmail`          | API deep; UI functional not built                                                             |
-| `/writemail`      | `Kmail` ⚠️       | **Anomaly:** routes to `Kmail`, not `WriteMail` — `WriteMail.js` (1 file) looks unrouted/dead |
-| `/kall`           | `Kall`           | API deep; UI functional not built                                                             |
-| `/kdirectory`     | `Kdirectory`     | API (contacts) deep; UI functional partial                                                    |
-| `/kcloud`         | `KCloud`         | **Zero coverage**                                                                             |
-| `/kbooking`       | `KBook`          | **Zero coverage**                                                                             |
-| `/settings`       | `Setting`        | API (generalSetting) partial; UI covers ~4 of 25 real panels                                  |
-| `/knews`          | `Knews`          | **Zero coverage**                                                                             |
-| `/e-commerce`     | `ECommerce`      | **Zero coverage**                                                                             |
-| `/kdoc`           | `KOS`            | API deep (KWord); UI not built                                                                |
-| `/userprofile`    | `UserProfile`    | API deep; UI functional partial                                                               |
-| `/usermanagement` | `UserManagement` | **Zero coverage**                                                                             |
+| Route             | Component        | Bench coverage today                                                                                                                                                                                           |
+| ----------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/home`           | `MainHomePage`   | breakage-sweep only                                                                                                                                                                                            |
+| `/katchup`        | `Katchup`        | **Deep** — API + UI functional + breakage                                                                                                                                                                      |
+| `/kmail`          | `Kmail`          | API deep; UI functional not built                                                                                                                                                                              |
+| `/writemail`      | `Kmail` ⚠️       | Routes to `Kmail` with the compose form opened. In the sweep since 2026-10-10 (`screens-batch4`); that day a PERSONAL user hit the error boundary ("Something went wrong") on 2 of 3 loads — the shape of #990 |
+| `/kall`           | `Kall`           | API deep; UI functional not built                                                                                                                                                                              |
+| `/kdirectory`     | `Kdirectory`     | API (contacts) deep; UI functional partial                                                                                                                                                                     |
+| `/kcloud`         | `KCloud`         | **Zero coverage**                                                                                                                                                                                              |
+| `/kbooking`       | `KBook`          | **Zero coverage**                                                                                                                                                                                              |
+| `/settings`       | `Setting`        | API (generalSetting) partial; UI covers ~4 of 25 real panels                                                                                                                                                   |
+| `/knews`          | `Knews`          | **Zero coverage**                                                                                                                                                                                              |
+| `/e-commerce`     | `ECommerce`      | **Zero coverage**                                                                                                                                                                                              |
+| `/kdoc`           | `KOS`            | API deep (KWord); UI not built                                                                                                                                                                                 |
+| `/userprofile`    | `UserProfile`    | API deep; UI functional partial                                                                                                                                                                                |
+| `/usermanagement` | `UserManagement` | Three functional/security/a11y specs + the business-session sweep (`screens-business`), BUSINESS_S only — a PERSONAL user gets the shell with no workspace (verified 2026-10-10)                               |
+| `/kposter`        | KPoster feed     | Client-side demo, no backend. Swept signed in (`screens-batch4`) and anonymously (`screens-public`)                                                                                                            |
 
 ### Other
 
-| Route      | Component              | Notes                                                                   |
-| ---------- | ---------------------- | ----------------------------------------------------------------------- |
-| `/profile` | `Profile` (dashboard/) | Distinct from `/userprofile` — different component, purpose unclear yet |
+| Route      | Component              | Notes                                                                                                 |
+| ---------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| `/profile` | `Profile` (dashboard/) | **Redirects to `/userprofile`** (verified live 2026-10-10) — an alias, not a screen (`ROUTE_ALIASES`) |
 
 ⚠️ **`/kdiary` has NO route at all** — commented out in `MenuRoutes.js`. `KDiary.js` exists (1 file) and
 the bench already has API tests running against KDiary's backend (`dairyschedule`, 14 endpoints

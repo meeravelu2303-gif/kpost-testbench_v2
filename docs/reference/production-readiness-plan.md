@@ -59,31 +59,31 @@ live for a written, evidence-based reason (`docs/scope/blocked-endpoints-rationa
 
 ### 1.3 Test types — what exists, what is partial, what is missing
 
-| Type                                                                                  | State             | Evidence / gap                                                                                  |
-| ------------------------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------- |
-| Contract (schema from workbook)                                                       | **Built**         | `contract:*` pipeline, `response.schema`, payload audit                                         |
-| API functional per endpoint                                                           | **Built**         | the engine: ~50 validators × every registered endpoint                                          |
-| API flows along the app journey                                                       | **Built**         | `feature.spec.ts` / `*-workflow.spec.ts` per module, `*_LIFECYCLE` gated, self-cleaning         |
-| Negative input / robustness                                                           | **Built**         | request.\* validators; 114 endpoints currently fail them (real findings)                        |
-| Authentication                                                                        | **Built**         | missing/expired/aged token validators                                                           |
-| Authorization (cross-account)                                                         | **Not running**   | 2,320 checks skipped; 12 hand-written BOLA/IDOR specs do exist in `security/`                   |
-| Injection / XSS                                                                       | **Built**         | security validators + UI `*-security.spec.ts` (execution-based, dialog listener)                |
-| Database assertions                                                                   | **Built**         | repositories, named validations and 44 DB-asserted specs; the QA DB is configured and reachable |
-| Business rules (FRD)                                                                  | **Partial**       | ~110 of 165 FRs covered, ~25 GAP, ~30 out of scope (`requirements-frd.md`)                      |
-| Performance (per-request)                                                             | **Built, paused** | validators run; load/soak absent; shared server = night-only by owner rule                      |
-| Concurrency                                                                           | **Built, paused** | `CONCURRENCY_LIFECYCLE`; same rule                                                              |
-| UI functional flows per module                                                        | **Built**         | 123 specs; business-tier specs (7) cannot run under the product command — see 2.1               |
-| UI screen sweep (health, layout, console, images, DOM, security, content, perf, a11y) | **Built**         | 12 screens; the app has ~30 routes — the rest are reached by flow specs only                    |
-| Accessibility (WCAG via axe)                                                          | **Built**         | per-screen sweep + dynamic-state specs; evidence overlays                                       |
-| Cross-browser                                                                         | **Built**         | chromium / firefox / webkit; WebKit needs batching                                              |
-| Responsive / viewport                                                                 | **Partial**       | `ui.layout` check; 3 specs set viewports; no declared viewport matrix                           |
-| Visual regression                                                                     | **Minimal**       | one `visual.spec.ts`; no baseline discipline                                                    |
-| Keyboard / focus                                                                      | **Minimal**       | one `keyboard.spec.ts`                                                                          |
-| Internationalisation                                                                  | **Absent**        | the app ships English / Russian / Japanese; nothing switches language                           |
-| Resilience (UI under API failure)                                                     | **Minimal**       | `home-api-handling.spec.ts` only                                                                |
-| Session / token lifecycle (UI)                                                        | **Partial**       | login-session, cross-account, aged-token API validator                                          |
-| Smoke                                                                                 | **Built**         | `VALIDATION_PROFILE=SMOKE`                                                                      |
-| Admin UI                                                                              | **Partial**       | 5 specs; role-gating limits depth; host reachability varies                                     |
+| Type                                                                                  | State             | Evidence / gap                                                                                                                                           |
+| ------------------------------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract (schema from workbook)                                                       | **Built**         | `contract:*` pipeline, `response.schema`, payload audit                                                                                                  |
+| API functional per endpoint                                                           | **Built**         | the engine: ~50 validators × every registered endpoint                                                                                                   |
+| API flows along the app journey                                                       | **Built**         | `feature.spec.ts` / `*-workflow.spec.ts` per module, `*_LIFECYCLE` gated, self-cleaning                                                                  |
+| Negative input / robustness                                                           | **Built**         | request.\* validators; 114 endpoints currently fail them (real findings)                                                                                 |
+| Authentication                                                                        | **Built**         | missing/expired/aged token validators                                                                                                                    |
+| Authorization (cross-account)                                                         | **Not running**   | 2,320 checks skipped; 12 hand-written BOLA/IDOR specs do exist in `security/`                                                                            |
+| Injection / XSS                                                                       | **Built**         | security validators + UI `*-security.spec.ts` (execution-based, dialog listener)                                                                         |
+| Database assertions                                                                   | **Built**         | repositories, named validations and 44 DB-asserted specs; the QA DB is configured and reachable                                                          |
+| Business rules (FRD)                                                                  | **Partial**       | ~110 of 165 FRs covered, ~25 GAP, ~30 out of scope (`requirements-frd.md`)                                                                               |
+| Performance (per-request)                                                             | **Built, paused** | validators run; load/soak absent; shared server = night-only by owner rule                                                                               |
+| Concurrency                                                                           | **Built, paused** | `CONCURRENCY_LIFECYCLE`; same rule                                                                                                                       |
+| UI functional flows per module                                                        | **Built**         | 123 specs; business-tier specs (7) cannot run under the product command — see 2.1                                                                        |
+| UI screen sweep (health, layout, console, images, DOM, security, content, perf, a11y) | **Built**         | 21 screens since 2026-10-10: every route in the front-end map (15 personal, 1 business, 5 public); 3 id-parameterised public routes keep their own specs |
+| Accessibility (WCAG via axe)                                                          | **Built**         | per-screen sweep + dynamic-state specs; evidence overlays                                                                                                |
+| Cross-browser                                                                         | **Built**         | chromium / firefox / webkit; WebKit needs batching                                                                                                       |
+| Responsive / viewport                                                                 | **Partial**       | `ui.layout` check; 3 specs set viewports; no declared viewport matrix                                                                                    |
+| Visual regression                                                                     | **Minimal**       | one `visual.spec.ts`; no baseline discipline                                                                                                             |
+| Keyboard / focus                                                                      | **Minimal**       | one `keyboard.spec.ts`                                                                                                                                   |
+| Internationalisation                                                                  | **Absent**        | the app ships English / Russian / Japanese; nothing switches language                                                                                    |
+| Resilience (UI under API failure)                                                     | **Minimal**       | `home-api-handling.spec.ts` only                                                                                                                         |
+| Session / token lifecycle (UI)                                                        | **Partial**       | login-session, cross-account, aged-token API validator                                                                                                   |
+| Smoke                                                                                 | **Built**         | `VALIDATION_PROFILE=SMOKE`                                                                                                                               |
+| Admin UI                                                                              | **Partial**       | 5 specs; role-gating limits depth; host reachability varies                                                                                              |
 
 ### 1.4 What is already production-grade and must be protected
 
@@ -115,7 +115,11 @@ live for a written, evidence-based reason (`docs/scope/blocked-endpoints-rationa
 4. **Timing debt.** 115 fixed waits / forced clicks remain; each can produce a wrong verdict either way.
 5. **Flat UI folder.** 123 files with a module prefix in the name instead of a module folder; the API
    side already has the right shape. Harder to see gaps, harder to route, harder to onboard.
-6. **Screen registry covers 12 of ~30 routes.** Settings sub-panels, User Management, KPoster,
+6. ~~**Screen registry covers 12 of ~30 routes.**~~ DONE 2026-10-10: 21 screens, every route in the
+   front-end map, in three session kinds (`AUTHENTICATED_SCREENS`, `BUSINESS_SCREENS`,
+   `PUBLIC_SCREENS`); "~30" was an over-count — the map has 15 authenticated routes (one an alias),
+   8 public (3 need an id). What remains below this line is the Settings sub-panels, which are
+   modal states, not routes. Original text: Settings sub-panels, User Management, KPoster,
    Katchup sub-screens are exercised by flow specs but get no sweep checks and no a11y pass.
 7. **Cross-cutting types are thin or absent**: visual, keyboard, i18n, responsive matrix, resilience.
 8. **Owner pauses with no end date**: KDoc, performance, concurrency.
@@ -216,7 +220,9 @@ Deliverables
   entries; the Group-Messaging UI targeting (Post To All / Selected) is the first.
 - **Business-rule layer at engine level**: the six failing BUSINESS_RULE checks triaged; rules move
   from comments into `src/business-rules/` with a spec each.
-- **Screen registry to every route** (12 → all): sweep + a11y on every screen, with
+- **Screen registry to every route** — DONE 2026-10-10 (12 → 21; `screens-batch4`,
+  `screens-business`, `screens-public`; new sweeps join the filing allow-list after clean runs on all
+  three browsers). Remaining from the original bullet: sweep + a11y on every screen, with
   `PAUSED_SCREENS` as the only exclusion mechanism.
 - **Admin UI depth**: the role-gating blocker resolved (a provisioned admin role) or recorded.
 
@@ -301,16 +307,16 @@ parallel with 1 and 2 on days the server is busy, because they do not need live 
 
 ## 6. The scoreboard (regenerate each full run; targets are the production threshold)
 
-| Metric                                                         |   2026-10-10 | Target                |
-| -------------------------------------------------------------- | -----------: | --------------------- |
-| Timing debt (waits + forced clicks)                            |          115 | 0                     |
-| Skip sites in class "retune" (`skips.md`)                      |           48 | 0                     |
-| Skip sites with no reason / unclassified                       |        0 / 0 | 0 / 0 (enforced)      |
-| Business UI specs runnable by product cmd                      |       0 of 7 | 7 of 7                |
-| AUTHORIZATION checks run per full run                          |            0 | all applicable        |
-| Write flows ending in a row assertion                          | (unmeasured) | all gated write flows |
-| Screens in the registry                                        |           12 | every route           |
-| FRs covered / dated out-of-scope                               |    ~110 / 30 | ≥150 / rest dated     |
-| Test types "Absent" or "Not running"                           |            2 | 0                     |
-| Flaky tests per full run                                       | (unmeasured) | shown, trending to 0  |
-| Open bench-filed bugs without a fresh comment after a full run |            0 | 0 (keep)              |
+| Metric                                                         |       2026-10-10 | Target                |
+| -------------------------------------------------------------- | ---------------: | --------------------- |
+| Timing debt (waits + forced clicks)                            |              115 | 0                     |
+| Skip sites in class "retune" (`skips.md`)                      |               48 | 0                     |
+| Skip sites with no reason / unclassified                       |            0 / 0 | 0 / 0 (enforced)      |
+| Business UI specs runnable by product cmd                      |           0 of 7 | 7 of 7                |
+| AUTHORIZATION checks run per full run                          |                0 | all applicable        |
+| Write flows ending in a row assertion                          |     (unmeasured) | all gated write flows |
+| Screens in the registry                                        | 21 (every route) | every route (keep)    |
+| FRs covered / dated out-of-scope                               |        ~110 / 30 | ≥150 / rest dated     |
+| Test types "Absent" or "Not running"                           |                2 | 0                     |
+| Flaky tests per full run                                       |     (unmeasured) | shown, trending to 0  |
+| Open bench-filed bugs without a fresh comment after a full run |                0 | 0 (keep)              |

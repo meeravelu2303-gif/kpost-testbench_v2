@@ -8,6 +8,13 @@
  * the kind of regression this suite exists to catch.
  */
 
+/**
+ * Which session a screen needs. `personal` (the default) is the qatest PERSONAL login the sweep
+ * batches run in; `business` is the BUSINESS_S company-admin login (`.auth/business.json`); `public`
+ * is no session at all — the screen must render for an anonymous visitor.
+ */
+export type ScreenSession = 'personal' | 'business' | 'public';
+
 export interface ScreenDef {
   /** Route under BASE_URL. */
   route: string;
@@ -19,6 +26,8 @@ export interface ScreenDef {
   ready: string[];
   /** Key controls the screen must render — asserted individually, so a missing one is a finding. */
   controls: Array<{ selector: string; label: string }>;
+  /** The session the screen needs; omitted = `personal`. */
+  session?: ScreenSession;
 }
 
 /**
@@ -166,6 +175,110 @@ const ALL_AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
       },
     ],
   },
+  // --- Added 2026-10-10 from a live route probe (every route in the front-end map now has a screen).
+  {
+    // `/writemail` is the KMail workspace with the compose form opened (Kmail.js reads the path).
+    // Live 2026-10-10: a PERSONAL user landing here got the error boundary ("Something went wrong —
+    // KPOST could not display this page"), the shape of #990 (RESOLVED FIXED). The sweep keeps it
+    // honest: the workspace must mount, or that is the finding.
+    route: '/writemail',
+    name: 'WriteMail',
+    screen: 'writemail',
+    ready: ['.kmail-layout-shell', '.icon-KP_03-KMail'],
+    controls: [
+      { selector: '.kmail-layout-shell', label: 'KMail workspace (compose opens inside)' },
+    ],
+  },
+  {
+    // KPoster: a client-side demo feed (no backend — see the KPoster memory/decision). Signed in it
+    // renders inside the shell; it also renders anonymously (listed again under PUBLIC_SCREENS).
+    route: '/kposter',
+    name: 'KPoster',
+    screen: 'kposter',
+    ready: ['.kp-app', '.icon-KP_01-Home'],
+    controls: [{ selector: '.kp-feed, .kp-main', label: 'poster feed' }],
+  },
+  {
+    // The 404 page is a screen too: it must render its message, pass a11y and layout, and never
+    // crash. Anonymous visitors are bounced to /login instead, so this is a signed-in screen.
+    route: '/this-route-does-not-exist-kpost-bench',
+    name: 'NotFound',
+    screen: 'not-found',
+    ready: ['.PNF_firstLine'],
+    controls: [{ selector: '.PNF_secondLine', label: '"Page not found" message' }],
+  },
+];
+
+/**
+ * Screens that need the BUSINESS_S company-admin session. A PERSONAL user who opens `/usermanagement`
+ * gets the shell with no workspace (verified live 2026-10-10), so these only mean something in the
+ * business session — `screens-business.spec.ts`, gated by `BUSINESS_UI_LIFECYCLE`.
+ */
+const ALL_BUSINESS_SCREENS: readonly ScreenDef[] = [
+  {
+    route: '/usermanagement',
+    name: 'UserManagement',
+    screen: 'usermanagement',
+    session: 'business',
+    ready: ['.channelslist', '.user-body'],
+    controls: [
+      { selector: '.user-button', label: '"Add New Channels" button' },
+      { selector: '[placeholder*="Search members" i]', label: 'member search box' },
+    ],
+  },
+];
+
+/**
+ * Screens an anonymous visitor can open. No session, no `skipIfSignedOut`: a bounce to `/login` is a
+ * FAILURE here, because these pages are public by design. Selectors from the live probe 2026-10-10.
+ * The parameterised public routes (`/digital-card/:id`, `/koolkall/:id`, `/profile-webview/:id`) need
+ * a real id and keep their own specs instead.
+ */
+const ALL_PUBLIC_SCREENS: readonly ScreenDef[] = [
+  {
+    route: '/login',
+    name: 'Login',
+    screen: 'login',
+    session: 'public',
+    ready: ['.login__wrapper'],
+    controls: [
+      { selector: '[placeholder*="KPOST ID" i]', label: 'KPOST ID / mobile field' },
+      { selector: 'button:has-text("Submit")', label: 'Submit button' },
+    ],
+  },
+  {
+    route: '/signup',
+    name: 'Signup',
+    screen: 'signup',
+    session: 'public',
+    ready: ['.signup-v2', '.Select_account'],
+    controls: [{ selector: '.Select_account', label: 'account-type chooser' }],
+  },
+  {
+    route: '/child-safety-standards-policy',
+    name: 'ChildSafetyPolicy',
+    screen: 'child-safety-policy',
+    session: 'public',
+    ready: ['h1:has-text("Child Safety Standards Policy")', '.section'],
+    controls: [{ selector: '.section', label: 'policy sections' }],
+  },
+  {
+    // Signed out it must show its own "Unauthorized — sign in to KPost to use Kall" state screen.
+    route: '/kall-window',
+    name: 'KallWindow',
+    screen: 'kall-window',
+    session: 'public',
+    ready: ['.kw-root'],
+    controls: [{ selector: '.kw-state-screen', label: 'Kall window state screen' }],
+  },
+  {
+    route: '/kposter',
+    name: 'KPosterPublic',
+    screen: 'kposter',
+    session: 'public',
+    ready: ['.kp-app'],
+    controls: [{ selector: '[placeholder*="Find a poster" i]', label: 'poster search box' }],
+  },
 ];
 
 /**
@@ -176,6 +289,28 @@ const ALL_AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
  */
 const PAUSED_SCREENS: ReadonlySet<string> = new Set(['kdoc']);
 
-export const AUTHENTICATED_SCREENS: readonly ScreenDef[] = ALL_AUTHENTICATED_SCREENS.filter(
-  (screen) => !PAUSED_SCREENS.has(screen.screen),
-);
+const notPaused = (screen: ScreenDef): boolean => !PAUSED_SCREENS.has(screen.screen);
+
+/** PERSONAL-session screens — what the sweep batches, axe, crawl, visual and interaction specs drive. */
+export const AUTHENTICATED_SCREENS: readonly ScreenDef[] =
+  ALL_AUTHENTICATED_SCREENS.filter(notPaused);
+/** BUSINESS_S-session screens — `screens-business.spec.ts`. */
+export const BUSINESS_SCREENS: readonly ScreenDef[] = ALL_BUSINESS_SCREENS.filter(notPaused);
+/** No-session screens — `screens-public.spec.ts`. */
+export const PUBLIC_SCREENS: readonly ScreenDef[] = ALL_PUBLIC_SCREENS.filter(notPaused);
+/** Every screen the bench knows, for the coverage ledger. */
+export const ALL_SCREENS: readonly ScreenDef[] = [
+  ...AUTHENTICATED_SCREENS,
+  ...BUSINESS_SCREENS,
+  ...PUBLIC_SCREENS,
+];
+
+/** Routes that exist in the front end but are aliases, not screens (documented so the ledger is complete). */
+export const ROUTE_ALIASES: readonly { route: string; resolvesTo: string; note: string }[] = [
+  { route: '/', resolvesTo: '/login', note: 'anonymous landing redirects to the login screen' },
+  {
+    route: '/profile',
+    resolvesTo: '/userprofile',
+    note: 'redirects to the profile screen (verified live 2026-10-10)',
+  },
+];

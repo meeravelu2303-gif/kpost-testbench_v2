@@ -3,6 +3,42 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (late) — FRD gaps, first batch: Katchup composer controls from source (3 closed, 1 recorded as unreachable)
+
+**Owner:** "frontend and backend code both are available, take reference from that." Source trees
+on this machine are now named in CLAUDE.md §1 (`D:\KPOST_PROJECTS\…`). First FRD gaps taken with it:
+`katchup-composer-controls.spec.ts` covers FR-KU-004 (Maximize → `fullscreen_back_color` on
+`.writeMsg_mainDiv` → Restore), FR-KU-005 (Clear runs `handleCloseEvent`: Subject and body empty,
+composer still usable) and FR-KU-006 (Formatting shows the Quill toolbar configured in
+`QuillEditor.js`; Bold/Italic wrap typed text) — every selector read from `WriteMessage.js`, all
+scoped to the composer root because Katchup renders other Quill instances. Live chromium, isolated:
+3/3. Two things learned on the way: a page-wide `.ql-toolbar` / `.fullscreen_back_color` matched the
+other instances (false red until scoped), and a second Formatting click leaves the toolbar showing
+(the handler re-forces full-screen) — recorded as an annotation, not asserted, because the FR asks
+for formatting, not a hide toggle. **FR-KU-008 (AI-assisted compose) is not reachable in the UI**:
+`showList` is never set true anywhere, so the "Select the AI Tool" modal has no entry point in the
+write composer; "K-AI Reply" exists only on replies (`messageType === 1`) and is metered — marked
+OUT-OF-SCOPE with that reason in `requirements-frd.md`, a product gap for the owner, not a test.
+
+### 2026-10-10 (late) — Screen registry extended to every route: 12 → 21 screens in three session kinds
+
+**Owner:** "first complete the partial coverage to full." First partial taken: the screen sweep,
+because every route added gets the whole check catalogue and the axe pass at once. A live probe of
+every route the front-end map lists but the registry lacked (anonymous, personal and business
+sessions) gave real selectors; from it `src/ui/screens.ts` now carries `session` per screen and three
+lists — `AUTHENTICATED_SCREENS` (+ WriteMail, KPoster, NotFound), `BUSINESS_SCREENS` (User
+Management), `PUBLIC_SCREENS` (Login, Signup, Child-Safety policy, Kall window signed-out, KPoster
+anonymous) — plus `ROUTE_ALIASES` (`/` → `/login`, `/profile` → `/userprofile`, verified live). New
+sweeps `screens-batch4`, `screens-business`, `screens-public` (the public one runs with no session
+and treats a bounce to `/login` as the failure it is); `runScreenSweep` takes a session option; the
+UI coverage ledger lists session and the aliases. **Not yet on `UI_FILING_SPECS`** — new sweeps earn
+that after clean runs on all three browsers. First chromium run: 5 public + NotFound clean;
+KPoster and User Management fail only on the known 1283-px header overflow every shell screen
+carries (systemic ticket); **WriteMail hit the error boundary on 2 of 3 loads** — the shape of #990
+(RESOLVED FIXED), a reopen candidate for the owner, not a new ticket. Also seen in the probe: the
+qatest1 profile still carries a `javascript:alert(1)` payload in a profile field, residue from a
+security spec whose restore did not run — data hygiene to clean by hand.
+
 ### 2026-10-10 (late) — Owner scope decision: exclude concurrency and KWord, test everything else — and the switch that made "everything else" true
 
 **Owner:** "exclude the concurrency tests and the KWord endpoints and UI, otherwise test everything;

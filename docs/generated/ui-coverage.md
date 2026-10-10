@@ -6,22 +6,46 @@ interaction flows, and fails the build if a screen would route a bug to a non-ex
 
 ## Screens
 
-Every screen inherits the **full check catalogue** below. Covered: **12** screens.
+Every screen inherits the **full check catalogue** below. Covered: **21** screens (15 personal-session, 1 business-session, 5 public). Sweeps: `screens-batch1..4`, `screens-business`, `screens-public`.
 
-| Screen | Route | Bugzilla component | Key controls checked |
-| ------ | ----- | ------------------ | -------------------: |
-| Home | `/home` | Home | 1 |
-| Katchup | `/katchup` | Katchup | 2 |
-| Kall | `/kall` | Kall | 1 |
-| KMail | `/kmail` | KMail | 1 |
-| Profile | `/userprofile` | User Profile | 1 |
-| Settings | `/settings` | Settings | 1 |
-| KDiary | `/kdiary` | KDiary | 1 |
-| KCloud | `/kcloud` | KCloud | 1 |
-| KBooking | `/kbooking` | KBooking | 1 |
-| KNews | `/knews` | KNews | 1 |
-| ECommerce | `/e-commerce` | KEcommerce | 1 |
-| KDirectory | `/kdirectory` | KDirectory | 1 |
+| Screen | Route | Session | Bugzilla component | Key controls checked |
+| ------ | ----- | ------- | ------------------ | -------------------: |
+| Home | `/home` | personal | Home | 1 |
+| Katchup | `/katchup` | personal | Katchup | 2 |
+| Kall | `/kall` | personal | Kall | 1 |
+| KMail | `/kmail` | personal | KMail | 1 |
+| Profile | `/userprofile` | personal | User Profile | 1 |
+| Settings | `/settings` | personal | Settings | 1 |
+| KDiary | `/kdiary` | personal | KDiary | 1 |
+| KCloud | `/kcloud` | personal | KCloud | 1 |
+| KBooking | `/kbooking` | personal | KBooking | 1 |
+| KNews | `/knews` | personal | KNews | 1 |
+| ECommerce | `/e-commerce` | personal | KEcommerce | 1 |
+| KDirectory | `/kdirectory` | personal | KDirectory | 1 |
+| WriteMail | `/writemail` | personal | WriteMail | 1 |
+| KPoster | `/kposter` | personal | General | 1 |
+| NotFound | `/this-route-does-not-exist-kpost-bench` | personal | General | 1 |
+| UserManagement | `/usermanagement` | business | User Management | 2 |
+| Login | `/login` | public | Auth | 2 |
+| Signup | `/signup` | public | Auth | 1 |
+| ChildSafetyPolicy | `/child-safety-standards-policy` | public | General | 1 |
+| KallWindow | `/kall-window` | public | Kall | 1 |
+| KPosterPublic | `/kposter` | public | General | 1 |
+
+### Routes that are aliases, not screens
+
+| Route | Resolves to | Note |
+| ----- | ----------- | ---- |
+| `/` | `/login` | anonymous landing redirects to the login screen |
+| `/profile` | `/userprofile` | redirects to the profile screen (verified live 2026-10-10) |
+
+### Public routes that need a real id (kept in their own specs)
+
+| Route | Spec |
+| ----- | ---- |
+| `/digital-card/:id` | `global-digital-card.spec.ts` |
+| `/koolkall/:id` | `global-kool-kall.spec.ts` |
+| `/profile-webview/:id` | `profile-webview.spec.ts` |
 
 ## UI check catalogue — runs on every screen
 

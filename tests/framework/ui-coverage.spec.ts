@@ -2,7 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT_DIR } from '@config/constants';
 import { KNOWN_COMPONENTS, componentFor, suiteFor } from '@config/ownership.config';
-import { AUTHENTICATED_SCREENS, NAV_LINKS } from '@ui/screens';
+import {
+  ALL_SCREENS,
+  AUTHENTICATED_SCREENS,
+  BUSINESS_SCREENS,
+  NAV_LINKS,
+  PUBLIC_SCREENS,
+  ROUTE_ALIASES,
+} from '@ui/screens';
 import { UI_CHECKS } from '@ui/ui-checks';
 import { expect, test } from '@fixtures';
 
@@ -156,7 +163,7 @@ test.describe('UI coverage ledger @framework', () => {
     const known = KNOWN_COMPONENTS['kpost-ui'];
     const misrouted: string[] = [];
 
-    const screenRows = AUTHENTICATED_SCREENS.map((screen) => {
+    const screenRows = ALL_SCREENS.map((screen) => {
       const component = componentFor(ui, [screen.screen]);
       if (known && !known.has(component)) {
         misrouted.push(`${screen.name} → "${component}" (not a KPost UI component)`);
@@ -164,6 +171,7 @@ test.describe('UI coverage ledger @framework', () => {
       return {
         name: screen.name,
         route: screen.route,
+        session: screen.session ?? 'personal',
         component,
         controls: screen.controls.length,
       };
@@ -180,11 +188,29 @@ test.describe('UI coverage ledger @framework', () => {
       '',
       '## Screens',
       '',
-      `Every screen inherits the **full check catalogue** below. Covered: **${screenRows.length}** screens.`,
+      `Every screen inherits the **full check catalogue** below. Covered: **${screenRows.length}** screens ` +
+        `(${AUTHENTICATED_SCREENS.length} personal-session, ${BUSINESS_SCREENS.length} business-session, ` +
+        `${PUBLIC_SCREENS.length} public). Sweeps: \`screens-batch1..4\`, \`screens-business\`, \`screens-public\`.`,
       '',
-      '| Screen | Route | Bugzilla component | Key controls checked |',
-      '| ------ | ----- | ------------------ | -------------------: |',
-      ...screenRows.map((r) => `| ${r.name} | \`${r.route}\` | ${r.component} | ${r.controls} |`),
+      '| Screen | Route | Session | Bugzilla component | Key controls checked |',
+      '| ------ | ----- | ------- | ------------------ | -------------------: |',
+      ...screenRows.map(
+        (r) => `| ${r.name} | \`${r.route}\` | ${r.session} | ${r.component} | ${r.controls} |`,
+      ),
+      '',
+      '### Routes that are aliases, not screens',
+      '',
+      '| Route | Resolves to | Note |',
+      '| ----- | ----------- | ---- |',
+      ...ROUTE_ALIASES.map((a) => `| \`${a.route}\` | \`${a.resolvesTo}\` | ${a.note} |`),
+      '',
+      '### Public routes that need a real id (kept in their own specs)',
+      '',
+      '| Route | Spec |',
+      '| ----- | ---- |',
+      '| `/digital-card/:id` | `global-digital-card.spec.ts` |',
+      '| `/koolkall/:id` | `global-kool-kall.spec.ts` |',
+      '| `/profile-webview/:id` | `profile-webview.spec.ts` |',
       '',
       '## UI check catalogue — runs on every screen',
       '',

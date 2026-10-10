@@ -24,10 +24,17 @@ const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, 
  * 4-5 screen batch still finishes in a reasonable time. */
 const SETTLE_MS = 4_000;
 
-export function runScreenSweep(screens: readonly ScreenDef[]): void {
-  test.beforeEach(async ({ page }) => {
-    await skipIfSignedOut(page);
-  });
+export function runScreenSweep(
+  screens: readonly ScreenDef[],
+  options: { session?: 'personal' | 'business' | 'public' } = {},
+): void {
+  const session = options.session ?? 'personal';
+  // Public screens have no session to lose; a bounce to /login there is the finding, not a skip.
+  if (session !== 'public') {
+    test.beforeEach(async ({ page }) => {
+      await skipIfSignedOut(page);
+    });
+  }
 
   for (const [index, screen] of screens.entries()) {
     test(`${screen.name} screen — controls, health, performance, responsive, a11y @ui`, async ({

@@ -202,6 +202,12 @@ const UI_COMPONENT_BY_SCREEN: Record<string, string> = {
   kpay: 'KPay',
   a11y: 'Accessibility',
   accessibility: 'Accessibility',
+  // Screens added to the registry 2026-10-10. KPoster is a client-side demo with no backend and no
+  // Bugzilla component of its own; the 404 page and the compliance page are platform surfaces.
+  kposter: 'General',
+  'not-found': 'General',
+  'child-safety-policy': 'General',
+  'kall-window': 'Kall',
 };
 
 export const SUITES: Record<SuiteId, SuiteOwnership> = {

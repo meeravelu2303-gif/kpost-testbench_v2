@@ -11,12 +11,12 @@ The plan: `docs/reference/production-readiness-plan.md`, Phase 1.
 | ----- | ----: | ---------: |
 | Retune | 48 | 19 |
 | Blocked by a defect | 37 | 20 |
-| Provision | 236 | 157 |
-| Owner decision | 139 | 97 |
+| Provision | 238 | 159 |
+| Owner decision | 140 | 98 |
 | Live condition | 58 | 22 |
 | No reason string | 0 | 0 |
 | Unclassified | 0 | 0 |
-| **Total** | **518** | **191** |
+| **Total** | **521** | **193** |
 
 ## The last run, by the engine’s own skip classes
 
@@ -96,17 +96,17 @@ Run `run-4e12c048-3378-484f-a232-1bcdf1668de2` at 2026-10-10T12:41:39.886Z: 0 ch
 | 1 | … is genuinely already registered — set a fresh QA_SIGNUP_UI_MOBILE the signup screen's mobile Verify step is broken (a repeat of #720): it misreports this free number as taken, so the OTP modal never opens | `tests/e2e/signup-login-lifecycle.spec.ts:128` |
 | 1 | invalid the OTP box just rejected the bypass code — likely test-infra noise (rate-limiting from concurrent heavy traffic on this host, see #721/INVALID), not a real defect; re-run once no other suite is hitting the same API host | `tests/e2e/signup-login-lifecycle.spec.ts:145` |
 
-## Provision — an account, connection, host or secret this machine lacks (236)
+## Provision — an account, connection, host or secret this machine lacks (238)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
-| 75 | qa.bench needs a real live account (QA_KPOST_ID) | `tests/e2e/contacts-accessibility.spec.ts:45`, `tests/e2e/contacts-breakage.spec.ts:30`, `tests/e2e/contacts-functional.spec.ts:52`, `tests/e2e/contacts-screens-dynamic.spec.ts:55` +71 more |
+| 76 | qa.bench needs a real live account (QA_KPOST_ID) | `tests/e2e/contacts-accessibility.spec.ts:45`, `tests/e2e/contacts-breakage.spec.ts:30`, `tests/e2e/contacts-functional.spec.ts:52`, `tests/e2e/contacts-screens-dynamic.spec.ts:55` +72 more |
 | 33 | needs the KPOST_QA connection | `tests/api/kmail/workflow-db.spec.ts:127`, `tests/api/kmail/workflow-db.spec.ts:162`, `tests/api/kpost/contacts/contacts-workflow.spec.ts:63`, `tests/api/kpost/contacts/contacts-workflow.spec.ts:91` +29 more |
 | 15 | qa.bench needs both QA accounts | `tests/e2e/contacts.spec.ts:72`, `tests/e2e/group-security.spec.ts:19`, `tests/e2e/katchup-accessibility.spec.ts:25`, `tests/e2e/katchup-attach-send-e2e.spec.ts:22` +11 more |
 | 12 | (no reason string) kmailAuthGate() !== undefined, kmailAuthGate() ?? '' | `tests/api/kmail/attachment-idor.spec.ts:40`, `tests/api/kmail/content-idor.spec.ts:48`, `tests/api/kmail/coverage.spec.ts:17`, `tests/api/kmail/credential-disclosure.spec.ts:63` +8 more |
 | 9 | account registry says which role is missing (requireAll) | `tests/api/kmail/workflow-db.spec.ts:60`, `tests/api/kpost/contacts/contacts-workflow.spec.ts:39`, `tests/api/kpost/contacts/contacts-workflow.spec.ts:192`, `tests/api/kpost/profile/profile-workflow.spec.ts:38` +5 more |
 | 8 | needs the KPOST_QA connection to judge by the row | `tests/api/kmail/mutation-idor.spec.ts:38`, `tests/api/kpost/security/kall-object-authorization.spec.ts:37`, `tests/api/kpost/security/kall-object-authorization.spec.ts:132`, `tests/api/kpost/security/kall-object-authorization.spec.ts:266` +4 more |
-| 6 | qa.business needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID) | `tests/e2e/kposter.spec.ts:104`, `tests/e2e/settings-business-bank-details.spec.ts:26`, `tests/e2e/settings-business-company-details.spec.ts:40`, `tests/e2e/usermanagement-accessibility.spec.ts:39` +2 more |
+| 7 | qa.business needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID) | `tests/e2e/kposter.spec.ts:104`, `tests/e2e/screens-business.spec.ts:22`, `tests/e2e/settings-business-bank-details.spec.ts:26`, `tests/e2e/settings-business-company-details.spec.ts:40` +3 more |
 | 5 | qa.business.m needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID) | `tests/api/admin/feature.spec.ts:104`, `tests/api/admin/reads-workflow.spec.ts:18`, `tests/api/admin/security-cross-tenant-reads.spec.ts:27`, `tests/api/admin/security-probes.spec.ts:52` +1 more |
 | 5 | needs two distinct KPost principals | `tests/api/kpost/security/kall-legacy-writes-regression-2026-10-07.spec.ts:16`, `tests/api/kpost/security/kall-object-authorization.spec.ts:527`, `tests/api/kpost/security/katchup-legacy-recall-regression-2026-10-07.spec.ts:17`, `tests/api/kpost/security/katchup-object-authorization.spec.ts:36` +1 more |
 | 5 | qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/e2e/contacts.spec.ts:18`, `tests/e2e/katchup-actions-more.spec.ts:43`, `tests/e2e/katchup-actions.spec.ts:91`, `tests/e2e/katchup-compose.spec.ts:38` +1 more |
@@ -161,14 +161,14 @@ Run `run-4e12c048-3378-484f-a232-1bcdf1668de2` at 2026-10-10T12:41:39.886Z: 0 ch
 | 1 | needs BUGZILLA_URL and BUGZILLA_API_KEY | `tests/framework/ownership.spec.ts:273` |
 | 1 | no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first | `tests/framework/_diff-accounts.local.spec.ts:12` |
 
-## Owner decision — gated flows, pauses and safety choices (139)
+## Owner decision — gated flows, pauses and safety choices (140)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
 | 10 | the mobile OTP bypass code only validates on the confirmed OTP test gateway | `tests/e2e/signup-business-medium-large.spec.ts:37`, `tests/e2e/signup-business-medium-large.spec.ts:191`, `tests/e2e/signup-business.spec.ts:331`, `tests/e2e/signup-login-accessibility.spec.ts:211` +6 more |
 | 7 | (no reason string) process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON | `tests/api/kpost/concurrency/scenarios.spec.ts:71`, `tests/api/kpost/concurrency/scenarios.spec.ts:116`, `tests/api/kpost/concurrency/scenarios.spec.ts:230`, `tests/api/kpost/concurrency/scenarios.spec.ts:287` +3 more |
 | 6 | writes real messages; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup-actions-more.spec.ts:39`, `tests/e2e/katchup-actions.spec.ts:87`, `tests/e2e/katchup-copies.spec.ts:48`, `tests/e2e/katchup-forward-subflow-e2e.spec.ts:55` +2 more |
-| 4 | needs the BUSINESS_S admin session; set BUSINESS_UI_LIFECYCLE=true | `tests/e2e/settings-business-bank-details.spec.ts:22`, `tests/e2e/usermanagement-accessibility.spec.ts:35`, `tests/e2e/usermanagement-security.spec.ts:24`, `tests/e2e/usermanagement.spec.ts:26` |
+| 5 | needs the BUSINESS_S admin session; set BUSINESS_UI_LIFECYCLE=true | `tests/e2e/screens-business.spec.ts:18`, `tests/e2e/settings-business-bank-details.spec.ts:22`, `tests/e2e/usermanagement-accessibility.spec.ts:35`, `tests/e2e/usermanagement-security.spec.ts:24` +1 more |
 | 4 | qa.business needs ADMIN_UI_LIFECYCLE=true, a configured admin host and BUSINESS_M account | `tests/e2e-admin/admin-dead-screens.spec.ts:17`, `tests/e2e-admin/admin-employee-management-pii.spec.ts:27`, `tests/e2e-admin/admin-screens.spec.ts:33`, `tests/e2e-admin/admin-subtabs-health.spec.ts:20` |
 | 3 | sends a real message; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup-compose.spec.ts:72`, `tests/e2e/katchup-digitalcard-share-e2e.spec.ts:49`, `tests/e2e/katchup-secret-message-e2e.spec.ts:15` |
 | 3 | sends a real mail; set KMAIL_UI_LIFECYCLE=true | `tests/e2e/kmail-compose.spec.ts:51`, `tests/e2e/kmail-security.spec.ts:19`, `tests/e2e/kmail-stored-xss-render.spec.ts:43` |
