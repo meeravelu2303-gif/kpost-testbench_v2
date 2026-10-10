@@ -42,6 +42,30 @@ test.describe('KPost Profile · update workflow @api @kpost-api @profile @databa
   let originalAbout: string | undefined;
   let restored = false;
 
+  test.afterAll(async ({ endpoints }) => {
+    /*
+     * Put the profile back. Best-effort and reported: leaving a QA string on a real account is
+     * untidy, but silently failing to restore it is worse — the next reader would not know.
+     */
+    if (!accounts.ok) return;
+    try {
+      await endpoints.sendTo(
+        'profile-update-about',
+        { body: { aboutYourself: originalAbout ?? '' } },
+        { label: 'profile-workflow:restore', allowLiveWrite: true },
+      );
+      restored = true;
+    } catch {
+      restored = false;
+    }
+    test.info().annotations.push({
+      type: 'cleanup',
+      description: restored
+        ? `restored about_yourself to its original value`
+        : `RESTORE FAILED — about_yourself may still read "${aboutText}"`,
+    });
+  });
+
   test('the profile row exists and is readable before anything is written', async ({
     databases,
   }) => {
@@ -152,30 +176,6 @@ test.describe('KPost Profile · update workflow @api @kpost-api @profile @databa
         'API read-back of aboutYourself is blocked: fetchUserDetails omits it, and ' +
         'getUserProfileUsingKpostID 404s for this account (see directory-lookup.spec.ts). ' +
         'Persistence is proven at the database layer instead.',
-    });
-  });
-
-  test.afterAll(async ({ endpoints }) => {
-    /*
-     * Put the profile back. Best-effort and reported: leaving a QA string on a real account is
-     * untidy, but silently failing to restore it is worse — the next reader would not know.
-     */
-    if (!accounts.ok) return;
-    try {
-      await endpoints.sendTo(
-        'profile-update-about',
-        { body: { aboutYourself: originalAbout ?? '' } },
-        { label: 'profile-workflow:restore', allowLiveWrite: true },
-      );
-      restored = true;
-    } catch {
-      restored = false;
-    }
-    test.info().annotations.push({
-      type: 'cleanup',
-      description: restored
-        ? `restored about_yourself to its original value`
-        : `RESTORE FAILED — about_yourself may still read "${aboutText}"`,
     });
   });
 });

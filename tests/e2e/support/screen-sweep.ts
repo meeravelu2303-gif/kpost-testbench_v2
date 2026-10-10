@@ -34,7 +34,9 @@ export function runScreenSweep(screens: readonly ScreenDef[]): void {
       page,
     }) => {
       // Pace every screen but the first in this batch, so the burst that tripped the rate-limiter
-      // never recurs within a batch.
+      // never recurs within a batch. This is a deliberate throttle between screens, not a wait for
+      // a page condition, so there is no condition to replace it with — see the header above.
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- intentional request-rate pacing (rate-limiter, 2026-10-07)
       if (index > 0) await page.waitForTimeout(SETTLE_MS);
 
       const stop = watchUiHealth(page);

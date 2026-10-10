@@ -44,6 +44,18 @@ test.describe('KPost Contacts · relationship workflow @api @kpost-api @contacts
   /** The counterparty's own row, captured so we can prove our writes never touched it. */
   let theirRowBefore: { delete_status: number | null; is_blocked: number | null } | undefined;
 
+  test.afterAll(async ({ endpoints }) => {
+    // Restore: put the contact back, so the suite leaves the address book as it found it.
+    if (!accounts.ok) return;
+    await endpoints
+      .sendTo(
+        'contacts-add',
+        { body: contactShape({ contactID: them() }) },
+        { label: 'contacts-workflow:restore', allowLiveWrite: true },
+      )
+      .catch(() => undefined);
+  });
+
   test('the relationship is stored per direction, and both directions are visible', async ({
     databases,
   }) => {
@@ -164,18 +176,6 @@ test.describe('KPost Contacts · relationship workflow @api @kpost-api @contacts
         'removing them from MY book must not remove me from THEIRS',
       ).toBe(theirRowBefore.delete_status);
     }
-  });
-
-  test.afterAll(async ({ endpoints }) => {
-    // Restore: put the contact back, so the suite leaves the address book as it found it.
-    if (!accounts.ok) return;
-    await endpoints
-      .sendTo(
-        'contacts-add',
-        { body: contactShape({ contactID: them() }) },
-        { label: 'contacts-workflow:restore', allowLiveWrite: true },
-      )
-      .catch(() => undefined);
   });
 });
 

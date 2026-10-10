@@ -27,6 +27,57 @@ test.describe('KPost Settings · personalize (font/theme) @api @kpost-api @setti
   /** The row as we found it, so the account is left exactly as it started. */
   let original: { font?: unknown; theme?: unknown } | undefined;
 
+  test.afterAll(async ({ endpoints }) => {
+    // Restore BOTH font and theme to what this account actually had before this spec ran — not a
+    // guessed default. Leaving the theme changed on a shared QA account silently changes what any
+    // other test or human sees on it next.
+    if (!accounts.ok || !original) return;
+    const font = original.font as { 'Font Size'?: string; 'Font Style'?: string } | undefined;
+    const theme = original.theme as
+      | {
+          'Colour Palette'?: string;
+          'Night Mode Enable'?: number;
+          'Use Local Sunset & Sunrise'?: number;
+          'Sync with Device Setting'?: number;
+          'Schedule Timing'?: string;
+          kpostLayoutTheme?: string;
+          katchupChatStyle?: string;
+          katchupChatTheme?: string;
+          katchupChatBackgroundThemeWallpaper?: unknown;
+        }
+      | undefined;
+    if (font) {
+      await endpoints
+        .sendTo(
+          'settings-font',
+          { body: { fontSize: font['Font Size'], fontStyle: font['Font Style'] } },
+          { label: 'personalize-workflow:font-restore', allowLiveWrite: true },
+        )
+        .catch(() => undefined);
+    }
+    if (theme) {
+      await endpoints
+        .sendTo(
+          'settings-change-theme',
+          {
+            body: {
+              colourPalette: theme['Colour Palette'],
+              nightModeEnable: theme['Night Mode Enable'],
+              'useLocalSunset&Sunrise': theme['Use Local Sunset & Sunrise'],
+              syncwithDeviceSetting: theme['Sync with Device Setting'],
+              scheduleTiming: theme['Schedule Timing'],
+              kpostLayoutTheme: theme.kpostLayoutTheme,
+              katchupChatStyle: theme.katchupChatStyle,
+              katchupChatTheme: theme.katchupChatTheme,
+              katchupChatBackgroundThemeWallpaper: theme.katchupChatBackgroundThemeWallpaper,
+            },
+          },
+          { label: 'personalize-workflow:theme-restore', allowLiveWrite: true },
+        )
+        .catch(() => undefined);
+    }
+  });
+
   test('the caller has a settings row with font and theme columns', async ({ databases }) => {
     const database = databases.for('kpost-api');
     test.skip(!database.enabled, 'needs the KPOST_QA connection');
@@ -135,56 +186,5 @@ test.describe('KPost Settings · personalize (font/theme) @api @kpost-api @setti
       body.data?.changeTheme,
       'getPersonalize reflects the exact stored theme row, not a cached/default value',
     ).toEqual(afterWrite?.theme);
-  });
-
-  test.afterAll(async ({ endpoints }) => {
-    // Restore BOTH font and theme to what this account actually had before this spec ran — not a
-    // guessed default. Leaving the theme changed on a shared QA account silently changes what any
-    // other test or human sees on it next.
-    if (!accounts.ok || !original) return;
-    const font = original.font as { 'Font Size'?: string; 'Font Style'?: string } | undefined;
-    const theme = original.theme as
-      | {
-          'Colour Palette'?: string;
-          'Night Mode Enable'?: number;
-          'Use Local Sunset & Sunrise'?: number;
-          'Sync with Device Setting'?: number;
-          'Schedule Timing'?: string;
-          kpostLayoutTheme?: string;
-          katchupChatStyle?: string;
-          katchupChatTheme?: string;
-          katchupChatBackgroundThemeWallpaper?: unknown;
-        }
-      | undefined;
-    if (font) {
-      await endpoints
-        .sendTo(
-          'settings-font',
-          { body: { fontSize: font['Font Size'], fontStyle: font['Font Style'] } },
-          { label: 'personalize-workflow:font-restore', allowLiveWrite: true },
-        )
-        .catch(() => undefined);
-    }
-    if (theme) {
-      await endpoints
-        .sendTo(
-          'settings-change-theme',
-          {
-            body: {
-              colourPalette: theme['Colour Palette'],
-              nightModeEnable: theme['Night Mode Enable'],
-              'useLocalSunset&Sunrise': theme['Use Local Sunset & Sunrise'],
-              syncwithDeviceSetting: theme['Sync with Device Setting'],
-              scheduleTiming: theme['Schedule Timing'],
-              kpostLayoutTheme: theme.kpostLayoutTheme,
-              katchupChatStyle: theme.katchupChatStyle,
-              katchupChatTheme: theme.katchupChatTheme,
-              katchupChatBackgroundThemeWallpaper: theme.katchupChatBackgroundThemeWallpaper,
-            },
-          },
-          { label: 'personalize-workflow:theme-restore', allowLiveWrite: true },
-        )
-        .catch(() => undefined);
-    }
   });
 });

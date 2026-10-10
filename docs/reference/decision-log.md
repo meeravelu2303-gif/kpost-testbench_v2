@@ -3,6 +3,19 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (late) — Lint debt is paid module by module, never in one blind pass
+
+A fixed wait or a forced click is a guess about the live screen; replacing it is a new guess until
+the spec is run on the test site in isolation. Changing 87 of them at a desk would not fail
+locally — it would fail on the next real run, and the reporter would file those failures as bugs
+(the mid-run edit of 2026-10-07 filed 46 false ones the same way). **Rule:** a warning whose fix
+changes test behaviour is only fixed alongside an isolated live run of that spec; work one module at
+a time; a touched spec leaves with fewer waits and forced clicks, a new spec adds none. Done today
+without a live run because nothing executes differently: the five `afterAll` hooks moved above the
+tests they clean up after (`--list` shows the same 20 tests), and the screen-sweep pacing delay is
+annotated as what it is — a deliberate throttle against the rate-limiter, not a wait for a
+condition, so there is no condition to replace it with. Debt 133 → 127 (86 waits, 41 forced clicks).
+
 ### 2026-10-10 (late) — Lint policy: the gate prints defects, the debt has its own command
 
 `npm run check` printed 390 warnings on a passing run — a wall nobody reads. Measured: 173

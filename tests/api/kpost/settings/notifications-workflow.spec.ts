@@ -112,6 +112,19 @@ for (const field of ['katchup', 'kmail', 'kall'] as const) {
     test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
     const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
 
+    test.afterAll(async ({ endpoints }) => {
+      // Restore the preference. Leaving notifications disabled on a shared QA account would quietly
+      // change behaviour for every later run and for anyone using the account by hand.
+      if (!accounts.ok) return;
+      await endpoints
+        .sendTo(
+          endpointId,
+          { body: { enable: 1 } },
+          { label: `notifications-workflow:restore-${field}`, allowLiveWrite: true },
+        )
+        .catch(() => undefined);
+    });
+
     test(`toggling the ${field} notification preference persists to the settings row`, async ({
       endpoints,
       databases,
@@ -168,19 +181,6 @@ for (const field of ['katchup', 'kmail', 'kall'] as const) {
       expect
         .soft(afterJson, `the stored ${field} preference changed when the toggle was applied`)
         .not.toBe(beforeJson);
-    });
-
-    test.afterAll(async ({ endpoints }) => {
-      // Restore the preference. Leaving notifications disabled on a shared QA account would quietly
-      // change behaviour for every later run and for anyone using the account by hand.
-      if (!accounts.ok) return;
-      await endpoints
-        .sendTo(
-          endpointId,
-          { body: { enable: 1 } },
-          { label: `notifications-workflow:restore-${field}`, allowLiveWrite: true },
-        )
-        .catch(() => undefined);
     });
   });
 }

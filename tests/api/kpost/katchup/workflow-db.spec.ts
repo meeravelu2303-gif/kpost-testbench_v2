@@ -55,6 +55,15 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
     return id === undefined ? undefined : repo.katchupMessage(id);
   }
 
+  test.afterAll(() => {
+    if (msgId !== undefined && !env.CI) {
+      test.info().annotations.push({
+        type: 'note',
+        description: `cross-layer lifecycle used msg_id ${msgId} (recalled)`,
+      });
+    }
+  });
+
   test('send: the API returns a msgID and MySQL holds the message it describes', async ({
     endpoints,
     databases,
@@ -227,14 +236,5 @@ test.describe('KPost Katchup · lifecycle with MySQL assertions @api @kpost-api 
           `stayed at ${recalledMessageType}, so recall changed nothing`,
       )
       .not.toBe(originalMessageType);
-  });
-
-  test.afterAll(() => {
-    if (msgId !== undefined && !env.CI) {
-      test.info().annotations.push({
-        type: 'note',
-        description: `cross-layer lifecycle used msg_id ${msgId} (recalled)`,
-      });
-    }
   });
 });
