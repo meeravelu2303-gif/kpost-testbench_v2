@@ -44,7 +44,11 @@ test.describe('KPost Group · Group Name field security fuzzing', { tag: '@ui' }
         .waitFor({ state: 'hidden', timeout: 30_000 })
         .catch(() => undefined);
 
-      await page.locator('.icon-KP_112-Group-Add').first().click().catch(() => undefined);
+      await page
+        .locator('.icon-KP_112-Group-Add')
+        .first()
+        .click()
+        .catch(() => undefined);
 
       const nameField = page
         .getByRole('textbox', { name: /Group Name/i })
@@ -68,7 +72,9 @@ test.describe('KPost Group · Group Name field security fuzzing', { tag: '@ui' }
         dialogFired,
         `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
       ).toBe(false);
-      await expect(nameField, 'the field holds the raw text, unmodified').toHaveValue(payload.value);
+      await expect(nameField, 'the field holds the raw text, unmodified').toHaveValue(
+        payload.value,
+      );
     });
   }
 });

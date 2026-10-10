@@ -31,7 +31,9 @@ export class AdminPage extends BasePage {
   }
 
   /** Click one of the 6 Employee Management tabs by its exact label. */
-  async openTab(label: 'Promote' | 'Transfer' | 'Suspend' | 'Revoke' | 'Terminate' | 'History'): Promise<void> {
+  async openTab(
+    label: 'Promote' | 'Transfer' | 'Suspend' | 'Revoke' | 'Terminate' | 'History',
+  ): Promise<void> {
     await test.step(`Employee Management: open "${label}" tab`, async () => {
       await this.page.locator('.nav-pills .nav-link', { hasText: label }).first().click();
     });

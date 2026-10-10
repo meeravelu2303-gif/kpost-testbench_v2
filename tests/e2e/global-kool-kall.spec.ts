@@ -52,10 +52,16 @@ test.describe('KPost — /koolkall/:id public call-join link', { tag: '@ui' }, (
 
     const nameInput = page.getByPlaceholder('Enter your name').first();
     const opened = await nameInput.isVisible({ timeout: 10_000 }).catch(() => false);
-    test.skip(!opened, 'the modal did not render (may already be covered by the crash-safety test above)');
+    test.skip(
+      !opened,
+      'the modal did not render (may already be covered by the crash-safety test above)',
+    );
 
     await expect(nameInput, 'the name-capture modal renders').toBeVisible();
-    await expect(page.getByRole('button', { name: /^Cancel$/i }), 'Cancel is present').toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /^Cancel$/i }),
+      'Cancel is present',
+    ).toBeVisible();
     // Submit is confirmed to join a REAL live Jitsi room — present but never clicked.
     await expect(
       page.getByRole('button', { name: /^Submit$/i }),

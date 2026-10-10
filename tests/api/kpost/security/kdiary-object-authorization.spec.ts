@@ -49,10 +49,13 @@ function extractId(bodyObj: Record<string, unknown>): number | undefined {
 }
 
 test.describe('KPost Security · KDiary cross-tenant object authorization @api @kpost-api @security @kdiary', () => {
-  test.skip(process.env.KDIARY_LIFECYCLE !== 'true', 'creates a real diary event; set KDIARY_LIFECYCLE=true');
+  test.skip(
+    process.env.KDIARY_LIFECYCLE !== 'true',
+    'creates a real diary event; set KDIARY_LIFECYCLE=true',
+  );
   test.skip(!A || !C, 'needs the personal and personal-3 principals');
 
-  test('an unrelated principal can read and silently touch another user\'s diary event @api @security', async ({
+  test("an unrelated principal can read and silently touch another user's diary event @api @security", async ({
     endpoints,
   }) => {
     const ownTitle = `QA Bench KDiary IDOR owner — ${Date.now()}`;
@@ -76,15 +79,18 @@ test.describe('KPost Security · KDiary cross-tenant object authorization @api @
       expect(readAttack.status, 'the read request completes').toBeLessThan(500);
       const readJson = readAttack.json();
       const readBody = (readJson.ok ? readJson.value : {}) as Record<string, unknown>;
-      const rows = Array.isArray(readBody.data) ? (readBody.data as Array<Record<string, unknown>>) : [];
+      const rows = Array.isArray(readBody.data)
+        ? (readBody.data as Array<Record<string, unknown>>)
+        : [];
       const leakedViaRead = rows.some((r) => r.title === ownTitle);
 
       if (leakedViaRead) {
         endpoints.recordBusinessRuleViolation({
           endpointId: 'kdiary-get-event-date',
           ruleId: 'IDOR-kdiary-get-event-date-cross-tenant-read',
-          rule: 'A caller must not be able to read another user\'s diary event by naming its eventID.',
-          expected: 'the request is refused, or returns no data for an eventID the caller does not own',
+          rule: "A caller must not be able to read another user's diary event by naming its eventID.",
+          expected:
+            'the request is refused, or returns no data for an eventID the caller does not own',
           actual: `status=${readAttack.status}, disclosed owner's real title "${ownTitle}" for eventID ${eventID}`,
           request: { body: { eventIds: [eventID] } },
         });
@@ -125,7 +131,7 @@ test.describe('KPost Security · KDiary cross-tenant object authorization @api @
         endpoints.recordBusinessRuleViolation({
           endpointId: 'kdiary-update-event',
           ruleId: 'IDOR-kdiary-update-event-cross-tenant-disclosure',
-          rule: 'An unrelated caller\'s updateEvent call must not echo back another user\'s real event content.',
+          rule: "An unrelated caller's updateEvent call must not echo back another user's real event content.",
           expected: 'the request is refused, or returns no content belonging to the real owner',
           actual: `status=${writeAttack.status}, updateEvent's own response disclosed owner's real title "${ownTitle}" for eventID ${eventID}`,
           request: { body: scheduleShape({ eventID, repeat: true, daily: true }) },
@@ -146,7 +152,9 @@ test.describe('KPost Security · KDiary cross-tenant object authorization @api @
       );
       const afterJson = afterTouch.json();
       const afterBody = (afterJson.ok ? afterJson.value : {}) as Record<string, unknown>;
-      const afterRows = Array.isArray(afterBody.data) ? (afterBody.data as Array<Record<string, unknown>>) : [];
+      const afterRows = Array.isArray(afterBody.data)
+        ? (afterBody.data as Array<Record<string, unknown>>)
+        : [];
       const modifiedAfter = afterRows.find((r) => r.eventID === eventID)?.modifiedDate ?? null;
       const touched = modifiedAfter !== null && modifiedAfter !== modifiedBefore;
 
@@ -154,9 +162,9 @@ test.describe('KPost Security · KDiary cross-tenant object authorization @api @
         endpoints.recordBusinessRuleViolation({
           endpointId: 'kdiary-update-event',
           ruleId: 'IDOR-kdiary-update-event-cross-tenant-touch',
-          rule: 'An unrelated caller must not be able to change another user\'s diary event\'s modifiedDate audit field.',
-          expected: 'the request is refused, and the event\'s modifiedDate stays unchanged',
-          actual: `A's event ${eventID} modifiedDate changed from ${modifiedBefore} to ${modifiedAfter} after a write by an unrelated principal`,
+          rule: "An unrelated caller must not be able to change another user's diary event's modifiedDate audit field.",
+          expected: "the request is refused, and the event's modifiedDate stays unchanged",
+          actual: `A's event ${eventID} modifiedDate changed from ${JSON.stringify(modifiedBefore)} to ${JSON.stringify(modifiedAfter)} after a write by an unrelated principal`,
           request: { body: scheduleShape({ eventID, repeat: true, daily: true }) },
         });
       }
@@ -164,7 +172,7 @@ test.describe('KPost Security · KDiary cross-tenant object authorization @api @
         .soft(
           touched,
           `BOLA: C must not be able to touch A's diary event's modifiedDate (eventID ${eventID}) via updateEvent ` +
-            `(was ${modifiedBefore}, now ${modifiedAfter})`,
+            `(was ${JSON.stringify(modifiedBefore)}, now ${JSON.stringify(modifiedAfter)})`,
         )
         .toBe(false);
     } finally {

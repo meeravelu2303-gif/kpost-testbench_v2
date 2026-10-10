@@ -158,7 +158,10 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
      * This is the difference between "the endpoint answered" and "a user was actually created".
      */
     if (database.enabled) {
-      const userRows = await database.findMany<{ kpost_id: string; mobile_number: string | number }>({
+      const userRows = await database.findMany<{
+        kpost_id: string;
+        mobile_number: string | number;
+      }>({
         table: 'TBL_KPOST_USER_MASTER',
         where: { kpost_id: testData.signupKpostId },
       });
@@ -190,7 +193,13 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
   }) => {
     const sendMobile = await endpoints.sendTo(
       'common-send-otp',
-      { body: { countryID: testData.countryId, mobileNumber: testData.signupMobile, requestType: 'signup' } },
+      {
+        body: {
+          countryID: testData.countryId,
+          mobileNumber: testData.signupMobile,
+          requestType: 'signup',
+        },
+      },
       { label: 'br-sl-pwd:send-mobile' },
     );
     expect.soft(sendMobile.status, 'sendOTP accepted').toBeLessThan(500);
@@ -382,12 +391,18 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
       .toMatch(/already exi/);
 
     if (database.enabled) {
-      const userRows = await database.findMany<{ kpost_id: string; mobile_number: string | number }>({
+      const userRows = await database.findMany<{
+        kpost_id: string;
+        mobile_number: string | number;
+      }>({
         table: 'TBL_KPOST_USER_MASTER',
         where: { kpost_id: testData.businessSignupKpostId },
       });
       expect
-        .soft(userRows.length, 'the registration wrote a user row to TBL_KPOST_USER_MASTER (API → DB)')
+        .soft(
+          userRows.length,
+          'the registration wrote a user row to TBL_KPOST_USER_MASTER (API → DB)',
+        )
         .toBeGreaterThan(0);
       if (userRows[0]) {
         recordCreatedAccount({

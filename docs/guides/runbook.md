@@ -40,12 +40,20 @@ sequence; it repeats neither.
 | `QA_BUSINESS_S_*` / `QA_BUSINESS_M_*` / `QA_BUSINESS_L_*`          | the business accounts the Admin commands need (Admin is deliberately not under `QATEST_ONLY`)           |
 | `WORKERS`                                                          | `1` — four concurrent logins already answer 500                                                         |
 
-Then prove the accounts are what the registry says: `npm run accounts:verify`. Browsers are a
-one-time `npm run install:browsers`.
+`.env.example` names every key the bench reads (a self-test fails when the code reads a key the
+template does not list). Browsers are a one-time `npm run install:browsers`; `npm run accounts:verify`
+proves the accounts are what the registry says.
 
-**Before every run:** confirm no other run is in progress (`Get-CimInstance Win32_Process` — the
-bash PID does not map to the Windows PID), and copy `reports/REPORT.json`/`.md` aside if the last
-report still matters: every run overwrites them.
+**Before every run:**
+
+```bash
+npm run preflight
+```
+
+It proves the prerequisites instead of letting the run discover them: `.env` complete and targeting
+production, no other Playwright run in progress, the hosts and Bugzilla answering and the API key
+accepted, and it copies `reports/REPORT.json`/`.md` aside (every run overwrites them). It exits
+non-zero on any hard failure; do not start a run until it prints READY.
 
 ---
 

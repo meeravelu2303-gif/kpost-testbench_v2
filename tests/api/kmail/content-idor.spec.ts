@@ -73,7 +73,9 @@ test.describe('KMail · mail-content IDOR (sentAndInboxMailContent) @api @kmail-
       expect(sent.status, 'the mail is sent').toBeLessThan(300);
       const sentJson = sent.json();
       const sentBody = (sentJson.ok ? sentJson.value : {}) as Record<string, unknown>;
-      const row = Array.isArray(sentBody.data) ? (sentBody.data[0] as Record<string, unknown>) : sentBody.data;
+      const row = Array.isArray(sentBody.data)
+        ? (sentBody.data[0] as Record<string, unknown>)
+        : sentBody.data;
       kmailId = Number((row as Record<string, unknown> | undefined)?.kmailID);
       const txns = (row as Record<string, unknown> | undefined)?.kmailTransactionList;
       transactionIDs = Array.isArray(txns)
@@ -82,7 +84,10 @@ test.describe('KMail · mail-content IDOR (sentAndInboxMailContent) @api @kmail-
             .filter((v): v is number => typeof v === 'number')
         : [];
 
-      test.skip(!kmailId || Number.isNaN(kmailId), `kmail-post-mail did not return a kmailID (${sent.status})`);
+      test.skip(
+        !kmailId || Number.isNaN(kmailId),
+        `kmail-post-mail did not return a kmailID (${sent.status})`,
+      );
 
       // A short settle before the attack: the mail's content appears to be written to its store
       // (likely MongoDB, per source) asynchronously after the send API itself returns 200 — reading
@@ -102,7 +107,12 @@ test.describe('KMail · mail-content IDOR (sentAndInboxMailContent) @api @kmail-
             groupFlag: false,
           },
         },
-        { label: 'idor:content-attack', auth: { principal: C }, allowLiveWrite: true, allowLiveRead: true },
+        {
+          label: 'idor:content-attack',
+          auth: { principal: C },
+          allowLiveWrite: true,
+          allowLiveRead: true,
+        },
       );
 
       const attackJson = attack.json();
@@ -116,7 +126,7 @@ test.describe('KMail · mail-content IDOR (sentAndInboxMailContent) @api @kmail-
           rule:
             'A KMail message body must only be readable by its sender or receiver — an unrelated ' +
             'account must not be able to read it by kmailID alone.',
-          expected: 'the outsider\'s response must not contain the real mail content/subject',
+          expected: "the outsider's response must not contain the real mail content/subject",
           actual:
             `status=${attack.status}, response body contains the secret marker and/or subject — ` +
             `${C.username} (no relationship to this mail) successfully read a mail ${A.username} sent ` +

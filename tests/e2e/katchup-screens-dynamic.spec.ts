@@ -35,58 +35,66 @@ async function assertNoFileableIssues(
   expect(problems, `${screen.name} UI issues — ${problems.join(' | ')}`).toEqual([]);
 }
 
-test.describe('KPost Katchup — dynamic-state health/performance/layout sweep', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
-    'needs both QA accounts',
-  );
+test.describe(
+  'KPost Katchup — dynamic-state health/performance/layout sweep',
+  { tag: '@ui' },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
+      'needs both QA accounts',
+    );
 
-  test('Katchup — conversation list (default): health, performance, layout @ui', async ({ page }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    await gotoKatchup(page);
-    const loadMs = Date.now() - started;
-    const screen: ScreenDef = {
-      route: '/katchup',
-      name: 'Katchup — conversation list',
-      screen: 'katchup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+    test('Katchup — conversation list (default): health, performance, layout @ui', async ({
+      page,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      await gotoKatchup(page);
+      const loadMs = Date.now() - started;
+      const screen: ScreenDef = {
+        route: '/katchup',
+        name: 'Katchup — conversation list',
+        screen: 'katchup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Katchup — open conversation thread: health, performance, layout @ui', async ({ page }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    await openConversation(page, testData.victimKpostId);
-    const loadMs = Date.now() - started;
-    const screen: ScreenDef = {
-      route: '/katchup',
-      name: 'Katchup — open conversation',
-      screen: 'katchup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+    test('Katchup — open conversation thread: health, performance, layout @ui', async ({
+      page,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      await openConversation(page, testData.victimKpostId);
+      const loadMs = Date.now() - started;
+      const screen: ScreenDef = {
+        route: '/katchup',
+        name: 'Katchup — open conversation',
+        screen: 'katchup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Katchup — composer open, Subject focused: health, performance, layout @ui', async ({
-    page,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    await openConversation(page, testData.victimKpostId);
-    await page.locator('.msg-arrow').first().click();
-    await page.getByRole('textbox', { name: 'Subject' }).click();
-    const loadMs = Date.now() - started;
-    const screen: ScreenDef = {
-      route: '/katchup',
-      name: 'Katchup — composer open',
-      screen: 'katchup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
-});
+    test('Katchup — composer open, Subject focused: health, performance, layout @ui', async ({
+      page,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      await openConversation(page, testData.victimKpostId);
+      await page.locator('.msg-arrow').first().click();
+      await page.getByRole('textbox', { name: 'Subject' }).click();
+      const loadMs = Date.now() - started;
+      const screen: ScreenDef = {
+        route: '/katchup',
+        name: 'Katchup — composer open',
+        screen: 'katchup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
+  },
+);

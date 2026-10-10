@@ -81,7 +81,10 @@ test.describe('KPost accessibility (axe-core WCAG) — every screen', { tag: '@u
       if (critical.length + serious.length) {
         const detailsPath = testInfo.outputPath('a11y-details.txt');
         writeFileSync(detailsPath, axeDetailsText(screen.name, [...critical, ...serious]));
-        await testInfo.attach(AXE_DETAILS_ATTACHMENT, { path: detailsPath, contentType: 'text/plain' });
+        await testInfo.attach(AXE_DETAILS_ATTACHMENT, {
+          path: detailsPath,
+          contentType: 'text/plain',
+        });
       }
 
       // A WCAG violation is a static property (missing alt text, low contrast, …) — nothing visibly

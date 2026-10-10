@@ -183,9 +183,9 @@ test.describe('KPost Profile · write lifecycle', () => {
       .soft(after.knownLanguages, 'the new knownLanguages actually persisted')
       .toEqual(['English', 'Tamil']);
     expect.soft(after.city, 'the new city actually persisted').toBe(marker);
-    expect.soft(after.privacyDetails, 'the new privacyDetails actually persisted').toBe(
-      privacyValue,
-    );
+    expect
+      .soft(after.privacyDetails, 'the new privacyDetails actually persisted')
+      .toBe(privacyValue);
 
     // Restore, best-effort.
     await write(
@@ -368,7 +368,10 @@ test.describe('KPost Profile · write lifecycle', () => {
      *    was added this session (`defineUndocumentedProfileEndpoint`, confirmed live), closing it.
      * Mirrors the school/university test above: a unique marker per run, saved → read back → deleted.
      */
-    test.skip(!process.env.QA_COMPANY_NAME, 'set QA_COMPANY_NAME to a real company name to unblock this');
+    test.skip(
+      !process.env.QA_COMPANY_NAME,
+      'set QA_COMPANY_NAME to a real company name to unblock this',
+    );
 
     const marker = Date.now();
     const records: Array<{
@@ -503,7 +506,11 @@ test.describe('KPost Profile · write lifecycle', () => {
       'profile-update-image',
       {
         multipart: {
-          file: { name: 'qa-bench.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(JPEG_1X1, 'base64') },
+          file: {
+            name: 'qa-bench.jpg',
+            mimeType: 'image/jpeg',
+            buffer: Buffer.from(JPEG_1X1, 'base64'),
+          },
           text: JSON.stringify({ kpostID: testData.kpostId }),
         },
       },

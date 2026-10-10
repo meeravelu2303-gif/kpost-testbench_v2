@@ -232,14 +232,19 @@ export default class BugzillaReporter implements Reporter {
         // adopted) — the status pass must not post a second note on them in the same run.
         const touchedByFiler = new Set(
           (outcome?.entries ?? [])
-            .filter((e) => e.bugId && ['commented', 'reopened', 'adopted', 'created'].includes(e.decision))
+            .filter(
+              (e) =>
+                e.bugId && ['commented', 'reopened', 'adopted', 'created'].includes(e.decision),
+            )
             .map((e) => e.bugId as number),
         );
         // A candidate the gate rejected as a timeout / bench fault / throttle is not a reproduction:
         // it must not mark a bug "confirmed still broken".
         const transient = new Set(
           gate.rejected
-            .filter(({ reason }) => /transient|infrastructure or bench fault|throttled/i.test(reason))
+            .filter(({ reason }) =>
+              /transient|infrastructure or bench fault|throttled/i.test(reason),
+            )
             .map(({ candidate }) => candidate.id),
         );
         resolved = await this.autoResolve(
@@ -333,7 +338,8 @@ export default class BugzillaReporter implements Reporter {
           ENVIRONMENTAL_UI_OR_API_FAILURE.test(stripAnsi(attempt.error?.message ?? '')),
         );
       if (envOnly) this.uiEnvironmentalOnly.add(`${project}::${test.title}`);
-      else if (failure) this.uiProof.set(`${project}::${test.title}`, proofFrom(failure.attachments, project));
+      else if (failure)
+        this.uiProof.set(`${project}::${test.title}`, proofFrom(failure.attachments, project));
       records.push({
         project,
         spec: path.basename(test.location.file),
@@ -381,9 +387,7 @@ export default class BugzillaReporter implements Reporter {
     );
     const reproduced = new Set(candidates.map((c) => c.id.replace(/^\[|\]$/g, '')));
     const uiProduct = suiteFor('kpost-ui').bugzilla.product;
-    const products = new Set(
-      this.validationReports.map((r) => suiteFor(r.suite).bugzilla.product),
-    );
+    const products = new Set(this.validationReports.map((r) => suiteFor(r.suite).bugzilla.product));
     // UI tests never produce a `ValidationReport` (that's an API-only attachment), so the UI
     // product would otherwise never appear here at all — which is exactly why a UI run's
     // auto-resolve pass always reported "checked 0 bugs" before this. Any UI test having run this
@@ -415,7 +419,15 @@ export default class BugzillaReporter implements Reporter {
             decision.action === 'keep' && /still failed/i.test(decision.reason) && !dryRun
               ? await this.attachDatedProof(client, bug)
               : undefined;
-          await this.applyResolveDecision(client, bug, decision, summary, dryRun, touched, proofNote);
+          await this.applyResolveDecision(
+            client,
+            bug,
+            decision,
+            summary,
+            dryRun,
+            touched,
+            proofNote,
+          );
           continue;
         }
         // A systemic (platform-wide) ticket is verified against ITS OWN endpoints, not globally — so a
@@ -491,7 +503,10 @@ export default class BugzillaReporter implements Reporter {
    * it is still broken, not the screenshot from when it was first filed. Named by date + browser so a
    * second run the same day does not upload it twice. Returns a plain-English note for the comment.
    */
-  private async attachDatedProof(client: BugzillaClient, bug: BugSummary): Promise<string | undefined> {
+  private async attachDatedProof(
+    client: BugzillaClient,
+    bug: BugSummary,
+  ): Promise<string | undefined> {
     const title = bug.summary.replace(/^\[[^\]]+]\s*/, '').trim();
     const day = new Date().toISOString().slice(0, 10);
     const existing = await client.attachmentNames(bug.id);
@@ -507,7 +522,9 @@ export default class BugzillaReporter implements Reporter {
       } catch {
         return;
       }
-      if (await client.attachFile(bug.id, { fileName, summary, data, contentType: file.contentType })) {
+      if (
+        await client.attachFile(bug.id, { fileName, summary, data, contentType: file.contentType })
+      ) {
         attached.push(fileName);
       }
     };
@@ -725,7 +742,8 @@ export function plainStatusComment(
   } else if (
     /could not parse endpoint|could not match a single originating test|environmental/i.test(r)
   ) {
-    why = 'The bench could not match this bug to one automated check, so it could not re-check it on its own.';
+    why =
+      'The bench could not match this bug to one automated check, so it could not re-check it on its own.';
   }
   return (
     `${head}Result: NOT RE-CHECKED IN THIS RUN. ${why}\n` +
@@ -832,14 +850,23 @@ export function proofFrom(
       // The full Playwright trace (network, DOM snapshots, console, every action) — lets a developer
       // step through the exact failure in trace viewer rather than guessing from a still frame. Can
       // be large; `attachProof`'s own size cap silently skips it rather than failing the ticket.
-      proof.push({ path: a.path, contentType: a.contentType, label: `Playwright trace (${browser})` });
+      proof.push({
+        path: a.path,
+        contentType: a.contentType,
+        label: `Playwright trace (${browser})`,
+      });
     } else if (a.name === FAILURE_DIAGNOSIS_ATTACHMENT || a.name === AXE_DETAILS_ATTACHMENT) {
       // The evidence the UI developers asked for (stack, steps, failed requests + who made them,
       // overflowing elements / failing elements with colours). Dated label → a fresh copy is attached
       // on each day it is re-confirmed, not skipped as "already there" from an older run.
       const day = new Date().toISOString().slice(0, 10);
-      const what = a.name === AXE_DETAILS_ATTACHMENT ? 'Accessibility details' : 'Failure diagnosis';
-      proof.push({ path: a.path, contentType: a.contentType, label: `${what} (${browser}, ${day})` });
+      const what =
+        a.name === AXE_DETAILS_ATTACHMENT ? 'Accessibility details' : 'Failure diagnosis';
+      proof.push({
+        path: a.path,
+        contentType: a.contentType,
+        label: `${what} (${browser}, ${day})`,
+      });
     }
   }
   return proof;

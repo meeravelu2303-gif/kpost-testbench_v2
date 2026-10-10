@@ -246,7 +246,7 @@ test.describe('KPost login · UI functional behaviour @ui', { tag: '@ui' }, () =
     expect(/\/login/.test(page.url()), 'a 500 must not navigate the user into the app').toBe(true);
   });
 
-  test('a disabled-account rejection shows the server\'s own message @ui', async ({
+  test("a disabled-account rejection shows the server's own message @ui", async ({
     loginPage,
     page,
   }) => {

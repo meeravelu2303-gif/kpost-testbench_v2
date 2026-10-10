@@ -164,8 +164,8 @@ test.describe('KPost KMail · stored XSS on thread-view render', { tag: '@ui' },
       });
       await receiver.waitForTimeout(1_500); // let onerror fire if it's going to
 
-      const fired = await receiver.evaluate(
-        () => Boolean((window as unknown as Record<string, unknown>).__xssFired),
+      const fired = await receiver.evaluate(() =>
+        Boolean((window as unknown as Record<string, unknown>).__xssFired),
       );
       const rawHtml = await bodyLocator.innerHTML().catch(() => '(could not read innerHTML)');
       const health = stopReceiver();

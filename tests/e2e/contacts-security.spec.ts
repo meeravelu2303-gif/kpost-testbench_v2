@@ -70,7 +70,10 @@ test.describe('KPost Contacts · search box security fuzzing', { tag: '@ui' }, (
         description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
       });
 
-      expect(health.pageErrors, `no uncaught JS error while filtering by: ${payload.value}`).toEqual([]);
+      expect(
+        health.pageErrors,
+        `no uncaught JS error while filtering by: ${payload.value}`,
+      ).toEqual([]);
       expect(
         dialogFired,
         `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
@@ -79,72 +82,78 @@ test.describe('KPost Contacts · search box security fuzzing', { tag: '@ui' }, (
   }
 });
 
-test.describe('KPost Contacts · Advanced Search mobile-number field security fuzzing', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost Contacts · Advanced Search mobile-number field security fuzzing',
+  { tag: '@ui' },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  for (const payload of PAYLOADS) {
-    test(`the Advanced Search mobile-number field survives a ${payload.name} payload without crashing or executing it @ui`, async ({
-      page,
-    }) => {
-      const opened = await gotoContacts(page);
-      test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
+    for (const payload of PAYLOADS) {
+      test(`the Advanced Search mobile-number field survives a ${payload.name} payload without crashing or executing it @ui`, async ({
+        page,
+      }) => {
+        const opened = await gotoContacts(page);
+        test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
 
-      await page
-        .locator('.icon-KP_107-User-Add')
-        .first()
-        .click({ timeout: 15_000 })
-        .catch(() => undefined);
-      await page
-        .getByText('Personal', { exact: true })
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: 'Continue' })
-        .first()
-        .click({ timeout: 8_000 })
-        .catch(() => undefined);
-      await page
-        .locator('.icon-KP_225_Advanced-Search')
-        .first()
-        .click({ timeout: 10_000 })
-        .catch(() => undefined);
+        await page
+          .locator('.icon-KP_107-User-Add')
+          .first()
+          .click({ timeout: 15_000 })
+          .catch(() => undefined);
+        await page
+          .getByText('Personal', { exact: true })
+          .first()
+          .click({ timeout: 5_000 })
+          .catch(() => undefined);
+        await page
+          .getByRole('button', { name: 'Continue' })
+          .first()
+          .click({ timeout: 8_000 })
+          .catch(() => undefined);
+        await page
+          .locator('.icon-KP_225_Advanced-Search')
+          .first()
+          .click({ timeout: 10_000 })
+          .catch(() => undefined);
 
-      const mobileField = page.getByRole('textbox', { name: 'Enter Mobile Number' }).first();
-      const reachable = await mobileField.isVisible({ timeout: 10_000 }).catch(() => false);
-      test.skip(!reachable, 'advanced search did not open — needs a codegen re-tune');
+        const mobileField = page.getByRole('textbox', { name: 'Enter Mobile Number' }).first();
+        const reachable = await mobileField.isVisible({ timeout: 10_000 }).catch(() => false);
+        test.skip(!reachable, 'advanced search did not open — needs a codegen re-tune');
 
-      const stop = watchUiHealth(page);
-      let dialogFired = false;
-      page.on('dialog', (dialog) => {
-        dialogFired = true;
-        void dialog.dismiss();
+        const stop = watchUiHealth(page);
+        let dialogFired = false;
+        page.on('dialog', (dialog) => {
+          dialogFired = true;
+          void dialog.dismiss();
+        });
+
+        await mobileField.click();
+        await mobileField.fill(payload.value);
+        await page
+          .getByRole('button', { name: 'Search', exact: true })
+          .first()
+          .click({ timeout: 5_000 })
+          .catch(() => undefined);
+        await page.waitForTimeout(1_500);
+
+        const health = stop();
+
+        test.info().annotations.push({
+          type: 'observed',
+          description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+        });
+
+        expect(health.pageErrors, `no uncaught JS error searching by: ${payload.value}`).toEqual(
+          [],
+        );
+        expect(
+          dialogFired,
+          `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
+        ).toBe(false);
       });
-
-      await mobileField.click();
-      await mobileField.fill(payload.value);
-      await page
-        .getByRole('button', { name: 'Search', exact: true })
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => undefined);
-      await page.waitForTimeout(1_500);
-
-      const health = stop();
-
-      test.info().annotations.push({
-        type: 'observed',
-        description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
-      });
-
-      expect(health.pageErrors, `no uncaught JS error searching by: ${payload.value}`).toEqual([]);
-      expect(
-        dialogFired,
-        `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
-      ).toBe(false);
-    });
-  }
-});
+    }
+  },
+);

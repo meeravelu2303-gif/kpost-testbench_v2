@@ -124,7 +124,10 @@ export class LoginPage extends BasePage {
     await test.step(`Forgot password: request OTP for ${loginId}`, async () => {
       await this.enterLoginId(loginId);
       await this.passwordInput.waitFor({ state: 'visible', timeout: 20_000 });
-      await this.page.getByText(/Forgot Password/i).first().click();
+      await this.page
+        .getByText(/Forgot Password/i)
+        .first()
+        .click();
       await this.forgotPasswordOtpFirstBox.waitFor({ state: 'visible', timeout: 15_000 });
     });
   }

@@ -28,7 +28,9 @@ test.describe('KPost KOS — tool picker', { tag: ['@ui', '@kos'] }, () => {
     }
   });
 
-  test('the 4 unbuilt tools show a "Coming Soon" placeholder, not a crash @ui', async ({ page }) => {
+  test('the 4 unbuilt tools show a "Coming Soon" placeholder, not a crash @ui', async ({
+    page,
+  }) => {
     await page.goto('/kdoc', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
     for (const tool of ['K Spread Sheet', 'KNote', 'KBrochure', 'KWeb']) {

@@ -40,7 +40,7 @@ test.describe('KPost K-Booking — search and read-only trip listing', { tag: '@
     await expect(toCityControl, 'the To-city field renders').toBeVisible({ timeout: 15_000 });
     await expect(
       toCityControl,
-      'To-city starts disabled until From is chosen (react-select\'s own isDisabled class)',
+      "To-city starts disabled until From is chosen (react-select's own isDisabled class)",
     ).toHaveClass(/--is-disabled/);
 
     const fromCityControl = page.getByText('Enter your Departure place', { exact: true }).first();
@@ -93,7 +93,10 @@ test.describe('KPost K-Booking — search and read-only trip listing', { tag: '@
       .click({ timeout: 5_000 })
       .catch(() => undefined);
 
-    await page.getByRole('button', { name: /Search Buses/i }).first().click();
+    await page
+      .getByRole('button', { name: /Search Buses/i })
+      .first()
+      .click();
     await page.waitForTimeout(3_000);
 
     // Soft, deliberately: whether a real route has trips is out of this test's control. What matters
@@ -117,10 +120,16 @@ test.describe('KPost K-Booking — search and read-only trip listing', { tag: '@
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    await page.getByText(/My Trips/i).first().click();
+    await page
+      .getByText(/My Trips/i)
+      .first()
+      .click();
 
     await expect(
-      page.getByRole('tab', { name: /Upcoming/i }).or(page.getByText(/Upcoming/i)).first(),
+      page
+        .getByRole('tab', { name: /Upcoming/i })
+        .or(page.getByText(/Upcoming/i))
+        .first(),
       'the My Trips ticket list renders with its Upcoming tab',
     ).toBeVisible({ timeout: 15_000 });
     await expect(

@@ -25,7 +25,7 @@ test.describe('KPost Profile · plain-read business rules @api @kpost-api @profi
     expect(body.data?.kpostID, 'a real account is resolved from the mobile number').toBeTruthy();
   });
 
-  test('getUserProfile returns the caller\'s own profile @api', async ({ endpoints }) => {
+  test("getUserProfile returns the caller's own profile @api", async ({ endpoints }) => {
     /*
      * `profile-get-user-profile` — undocumented in the workbook, added this session via
      * `defineUndocumentedProfileEndpoint` (confirmed live). It is the real call the signup/login flow

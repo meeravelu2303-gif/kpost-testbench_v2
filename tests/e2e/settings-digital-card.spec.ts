@@ -28,7 +28,10 @@ test.describe('KPost Settings · Digital Card Settings panel', { tag: '@ui' }, (
     await settingsPage.goto();
     await settingsPage.openTopLevelPanel('Digital Card Settings');
 
-    const aboutRow = page.getByText(/^About$/i).first().locator('xpath=../..');
+    const aboutRow = page
+      .getByText(/^About$/i)
+      .first()
+      .locator('xpath=../..');
     const aboutCheckbox = aboutRow.getByRole('checkbox');
     await expect(aboutCheckbox, 'the About toggle renders').toBeVisible({ timeout: 15_000 });
 
@@ -69,7 +72,10 @@ test.describe('KPost Settings · Digital Card Settings panel', { tag: '@ui' }, (
     await settingsPage.goto();
     await settingsPage.openTopLevelPanel('Digital Card Settings');
 
-    const experienceRow = page.getByText(/^Experience$/i).first().locator('xpath=../..');
+    const experienceRow = page
+      .getByText(/^Experience$/i)
+      .first()
+      .locator('xpath=../..');
     const experienceCheckbox = experienceRow.getByRole('checkbox');
     await expect(experienceCheckbox, 'the Experience toggle renders').toBeVisible({
       timeout: 15_000,

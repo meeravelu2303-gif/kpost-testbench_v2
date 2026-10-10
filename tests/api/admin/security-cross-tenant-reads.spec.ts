@@ -29,7 +29,7 @@ test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @secu
     'needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID)',
   );
 
-  test('a workplace location created by company 242 must not be readable by id from company 1034\'s token', async ({
+  test("a workplace location created by company 242 must not be readable by id from company 1034's token", async ({
     endpoints,
   }) => {
     const marker = `QA Loc XTENANT ${Date.now()}`;
@@ -56,7 +56,12 @@ test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @secu
     const cross = await endpoints.sendTo(
       'admin-workplace-location-by-id',
       { body: { id: mine.id } },
-      { label: 'admin:xtenant-loc-cross-read', auth: { principal: businessS! }, allowLiveRead: true, allowLiveWrite: true },
+      {
+        label: 'admin:xtenant-loc-cross-read',
+        auth: { principal: businessS! },
+        allowLiveRead: true,
+        allowLiveWrite: true,
+      },
     );
 
     const leaked = cross.status < 300 && cross.bodyText.includes(mine.id);
@@ -65,7 +70,7 @@ test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @secu
         endpointId: 'admin-workplace-location-by-id',
         ruleId: 'IDOR-admin-cross-tenant-read-location',
         rule:
-          'A read-by-id must verify the caller\'s own companyId owns the target record before ' +
+          "A read-by-id must verify the caller's own companyId owns the target record before " +
           'returning it — a BUSINESS_S-authenticated caller must not be able to read a location ' +
           'created by BUSINESS_M by naming its id alone.',
         expected: 'the read is refused; the location is not returned to a non-owning caller',
@@ -75,7 +80,7 @@ test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @secu
     }
     expect(
       leaked,
-      'a workplace location created by company 242 must not be readable by company 1034\'s token',
+      "a workplace location created by company 242 must not be readable by company 1034's token",
     ).toBe(false);
   });
 });

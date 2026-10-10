@@ -69,7 +69,10 @@ test.describe('Admin/HR-Setup Login screen', { tag: '@admin-ui' }, () => {
       await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 45_000 });
       const field = page.getByPlaceholder('Enter KPOST ID / Mobile number');
       await field.fill(payload.value);
-      await page.getByRole('button', { name: /^Submit$/i }).click().catch(() => undefined);
+      await page
+        .getByRole('button', { name: /^Submit$/i })
+        .click()
+        .catch(() => undefined);
       await page.waitForTimeout(1_500);
 
       const health = stop();

@@ -55,7 +55,10 @@ test.describe('KPost Katchup · composer security fuzzing', { tag: '@ui' }, () =
       // The sent message renders back into OUR OWN thread immediately — if the payload were to
       // execute anywhere, this is the first and fastest place it would (before the 2nd account ever
       // opens the thread).
-      await expect(page.getByText(subject).first(), 'the sent message appears, rendered as text').toBeVisible({
+      await expect(
+        page.getByText(subject).first(),
+        'the sent message appears, rendered as text',
+      ).toBeVisible({
         timeout: 20_000,
       });
       await page.waitForTimeout(1_500);
@@ -83,7 +86,9 @@ test.describe('KPost Katchup · composer security fuzzing', { tag: '@ui' }, () =
         .last();
       await openBellMenu(page, sentMessage);
       const recall = page.getByRole('menuitem', { name: /Recall/i });
-      await expect(recall, 'the message action menu offers Recall').toBeVisible({ timeout: 15_000 });
+      await expect(recall, 'the message action menu offers Recall').toBeVisible({
+        timeout: 15_000,
+      });
       await recall.click();
       await expect(recall, 'the recall action was accepted (menu closed)').toHaveCount(0, {
         timeout: 15_000,

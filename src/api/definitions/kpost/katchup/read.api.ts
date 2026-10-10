@@ -244,7 +244,8 @@ export const referenceMessagesDetailsApi = defineUndocumentedKpostEndpoint({
   authentication: { required: true },
   method: 'POST',
   path: '/v2/katchup/getReferenceMessagesDetails',
-  summary: 'Details of referenced messages (forward-hidden/reveal family sibling of getReferenceMSGDetails)',
+  summary:
+    'Details of referenced messages (forward-hidden/reveal family sibling of getReferenceMSGDetails)',
   tags: ['katchup', ...READ_TAGS, 'thread', 'needs-message-id', 'security'],
   destructive: false,
   request: body(() => ({ referenceMessageIDList: [] })),

@@ -52,7 +52,7 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
         : undefined;
     const kallID = [obj?.kallID, obj?.id, row?.kallID, row?.id, body.kallID].find(
       (candidate) => typeof candidate === 'number',
-    ) as number | undefined;
+    );
 
     // No kallID means initiate didn't create one; skip with a reason rather than failing.
     test.skip(
@@ -147,7 +147,7 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
         : undefined;
     const kallID = [obj?.kallID, obj?.id, row?.kallID, row?.id, body.kallID].find(
       (candidate) => typeof candidate === 'number',
-    ) as number | undefined;
+    );
 
     test.skip(
       !kallID,
@@ -191,8 +191,9 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
           ruleId: 'IDOR-kall-accept-meeting-link-disclosure',
           rule:
             'An outsider must not be able to "accept" a call they are not party to, and must not ' +
-            'receive that call\'s real meeting link in the response.',
-          expected: 'the attack is refused; sender_kall_status is unchanged; no meetingLink returned',
+            "receive that call's real meeting link in the response.",
+          expected:
+            'the attack is refused; sender_kall_status is unchanged; no meetingLink returned',
           actual:
             `status=${attackAccept.status}, ok=${attackJson.ok}, meetingLink leaked=${leakedMeetingLink}, ` +
             `sender_kall_status before=${before?.sender_kall_status} after=${after?.sender_kall_status} ` +
@@ -228,14 +229,22 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
         .sendTo(
           'kall-end-individual',
           { body: { kallID } },
-          { label: 'idor:kall-accept-cleanup-end', auth: { principal: owner! }, allowLiveWrite: true },
+          {
+            label: 'idor:kall-accept-cleanup-end',
+            auth: { principal: owner! },
+            allowLiveWrite: true,
+          },
         )
         .catch(() => undefined);
       await endpoints
         .sendTo(
           'kall-clear-by-ids',
           { body: { kallIds: [kallID] } },
-          { label: 'idor:kall-accept-cleanup-clear', auth: { principal: owner! }, allowLiveWrite: true },
+          {
+            label: 'idor:kall-accept-cleanup-clear',
+            auth: { principal: owner! },
+            allowLiveWrite: true,
+          },
         )
         .catch(() => undefined);
     }
@@ -272,7 +281,7 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
         : undefined;
     const kallID = [obj?.kallID, obj?.id, row?.kallID, row?.id, body.kallID].find(
       (candidate) => typeof candidate === 'number',
-    ) as number | undefined;
+    );
 
     test.skip(
       !kallID,
@@ -297,7 +306,11 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
             kallDetails: [{ receiver: receiver!.username }],
           }),
         },
-        { label: 'idor:kall-reschedule-attack', auth: { principal: attacker! }, allowLiveWrite: true },
+        {
+          label: 'idor:kall-reschedule-attack',
+          auth: { principal: attacker! },
+          allowLiveWrite: true,
+        },
       );
       const attackJson = attack.json();
       const attackBody = (attackJson.ok ? attackJson.value : {}) as Record<string, unknown>;
@@ -316,7 +329,7 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
           rule:
             'An outsider must not be able to flip the status of a scheduled call they are not party ' +
             'to, by naming its kallID in their own reschedule request.',
-          expected: 'the original call\'s sender_kall_status is unchanged',
+          expected: "the original call's sender_kall_status is unchanged",
           actual:
             `status=${attack.status}, ok=${attackJson.ok}, sender_kall_status before=` +
             `${before?.sender_kall_status} after=${after?.sender_kall_status} (kallID ${realKallId}, ` +
@@ -338,14 +351,22 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
         .sendTo(
           'kall-end-individual',
           { body: { kallID: realKallId } },
-          { label: 'idor:kall-reschedule-cleanup-owner-end', auth: { principal: owner! }, allowLiveWrite: true },
+          {
+            label: 'idor:kall-reschedule-cleanup-owner-end',
+            auth: { principal: owner! },
+            allowLiveWrite: true,
+          },
         )
         .catch(() => undefined);
       await endpoints
         .sendTo(
           'kall-clear-by-ids',
           { body: { kallIds: [realKallId] } },
-          { label: 'idor:kall-reschedule-cleanup-owner-clear', auth: { principal: owner! }, allowLiveWrite: true },
+          {
+            label: 'idor:kall-reschedule-cleanup-owner-clear',
+            auth: { principal: owner! },
+            allowLiveWrite: true,
+          },
         )
         .catch(() => undefined);
       if (attackerNewKallId) {
@@ -353,14 +374,22 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
           .sendTo(
             'kall-end-individual',
             { body: { kallID: attackerNewKallId } },
-            { label: 'idor:kall-reschedule-cleanup-attacker-end', auth: { principal: attacker! }, allowLiveWrite: true },
+            {
+              label: 'idor:kall-reschedule-cleanup-attacker-end',
+              auth: { principal: attacker! },
+              allowLiveWrite: true,
+            },
           )
           .catch(() => undefined);
         await endpoints
           .sendTo(
             'kall-clear-by-ids',
             { body: { kallIds: [attackerNewKallId] } },
-            { label: 'idor:kall-reschedule-cleanup-attacker-clear', auth: { principal: attacker! }, allowLiveWrite: true },
+            {
+              label: 'idor:kall-reschedule-cleanup-attacker-clear',
+              auth: { principal: attacker! },
+              allowLiveWrite: true,
+            },
           )
           .catch(() => undefined);
       }
@@ -398,7 +427,11 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
       const attack = await endpoints.sendTo(
         'kall-get-status',
         { body: { sender: owner!.username, receiver: receiver!.username, kallID } },
-        { label: 'idor:kall-getstatus-attack', auth: { principal: attacker! }, allowLiveWrite: true },
+        {
+          label: 'idor:kall-getstatus-attack',
+          auth: { principal: attacker! },
+          allowLiveWrite: true,
+        },
       );
       const attackJson = attack.json();
       const attackBody = (attackJson.ok ? attackJson.value : {}) as Record<string, unknown>;
@@ -438,14 +471,22 @@ test.describe('KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost
         .sendTo(
           'kall-end-individual',
           { body: { kallID } },
-          { label: 'idor:kall-getstatus-cleanup-end', auth: { principal: owner! }, allowLiveWrite: true },
+          {
+            label: 'idor:kall-getstatus-cleanup-end',
+            auth: { principal: owner! },
+            allowLiveWrite: true,
+          },
         )
         .catch(() => undefined);
       await endpoints
         .sendTo(
           'kall-clear-by-ids',
           { body: { kallIds: [kallID] } },
-          { label: 'idor:kall-getstatus-cleanup-clear', auth: { principal: owner! }, allowLiveWrite: true },
+          {
+            label: 'idor:kall-getstatus-cleanup-clear',
+            auth: { principal: owner! },
+            allowLiveWrite: true,
+          },
         )
         .catch(() => undefined);
     }
@@ -485,12 +526,12 @@ test.describe('KPost Security · Kall contactInfo PII disclosure (IDOR/BOLA) @ap
 
   test.skip(!attacker || !target, 'needs two distinct KPost principals');
 
-  test('an outsider can fetch a non-contact\'s full PII via contactInfo by omitting fetchType @api @security', async ({
+  test("an outsider can fetch a non-contact's full PII via contactInfo by omitting fetchType @api @security", async ({
     endpoints,
   }) => {
     test.skip(
       !testData.personal5KpostId || testData.personal5KpostId.includes('qa.p5'),
-      'needs a real QA_PERSONAL_5_KPOST_ID account not already in the attacker\'s contacts',
+      "needs a real QA_PERSONAL_5_KPOST_ID account not already in the attacker's contacts",
     );
 
     // --- Control: the SAFE path — fetchType: "knownContact" against a non-contact should disclose
@@ -508,7 +549,11 @@ test.describe('KPost Security · Kall contactInfo PII disclosure (IDOR/BOLA) @ap
     const attack = await endpoints.sendTo(
       'kall-contact-info',
       { body: { contactID: target!.username, kallID: null } },
-      { label: 'idor:kall-contactinfo-attack', auth: { principal: attacker! }, allowLiveRead: true },
+      {
+        label: 'idor:kall-contactinfo-attack',
+        auth: { principal: attacker! },
+        allowLiveRead: true,
+      },
     );
     const attackJson = attack.json();
     const attackBody = (attackJson.ok ? attackJson.value : {}) as Record<string, unknown>;
@@ -518,14 +563,14 @@ test.describe('KPost Security · Kall contactInfo PII disclosure (IDOR/BOLA) @ap
       ? (attackBody.data[0] as Record<string, unknown> | undefined)
       : (attackBody.data as Record<string, unknown> | undefined);
     const leakedMobile =
-      typeof dataObj?.mobileNumber === 'string' && (dataObj.mobileNumber as string).trim().length > 0;
+      typeof dataObj?.mobileNumber === 'string' && dataObj.mobileNumber.trim().length > 0;
 
     if (leakedMobile) {
       endpoints.recordBusinessRuleViolation({
         endpointId: 'kall-contact-info',
         ruleId: 'IDOR-kall-contactinfo-pii-disclosure',
         rule:
-          'An account must not be able to fetch another account\'s PII (mobile number, etc.) via ' +
+          "An account must not be able to fetch another account's PII (mobile number, etc.) via " +
           'contactInfo unless they are an established contact — the fetchType check must not be ' +
           'bypassable by simply omitting the field.',
         expected: 'no PII returned for a non-contact when fetchType is omitted/not "knownContact"',

@@ -79,7 +79,11 @@ async function assertRejectsMalformed(
     const resp = await endpoints.sendTo(
       id,
       c.raw !== undefined ? { rawBody: c.raw } : { body: c.body },
-      { label: `fuzz:admin:${label}:${c.variant}`, auth: { principal: businessM! }, allowLiveWrite: true },
+      {
+        label: `fuzz:admin:${label}:${c.variant}`,
+        auth: { principal: businessM! },
+        allowLiveWrite: true,
+      },
     );
     if (resp.status < 400) {
       endpoints.recordBusinessRuleViolation({
@@ -126,14 +130,22 @@ async function assertPayloadNotStoredVerbatim(
     const save = await endpoints.sendTo(
       saveId,
       { body: makeBody(payload) },
-      { label: `fuzz:admin:${label}:${kind}:save`, auth: { principal: businessM! }, allowLiveWrite: true },
+      {
+        label: `fuzz:admin:${label}:${kind}:save`,
+        auth: { principal: businessM! },
+        allowLiveWrite: true,
+      },
     );
     if (save.status >= 400) continue; // rejected outright — the good outcome, nothing to check further
 
     const read = await endpoints.sendTo(
       readBackId,
       { body: readBackBody },
-      { label: `fuzz:admin:${label}:${kind}:read`, auth: { principal: businessM! }, allowLiveWrite: true },
+      {
+        label: `fuzz:admin:${label}:${kind}:read`,
+        auth: { principal: businessM! },
+        allowLiveWrite: true,
+      },
     );
     const rows: unknown = envelope(read).value;
     const stored =
@@ -149,7 +161,10 @@ async function assertPayloadNotStoredVerbatim(
       });
     }
     expect
-      .soft(stored, `${saveId}: a ${kind} payload in ${textField} is not stored and reflected verbatim`)
+      .soft(
+        stored,
+        `${saveId}: a ${kind} payload in ${textField} is not stored and reflected verbatim`,
+      )
       .toBe(false);
 
     // Best-effort cleanup of whatever this created, so the battery leaves nothing behind.
@@ -161,7 +176,11 @@ async function assertPayloadNotStoredVerbatim(
           .sendTo(
             deleteId,
             { body: { id: created.id } },
-            { label: `fuzz:admin:${label}:${kind}:cleanup`, auth: { principal: businessM! }, allowLiveWrite: true },
+            {
+              label: `fuzz:admin:${label}:${kind}:cleanup`,
+              auth: { principal: businessM! },
+              allowLiveWrite: true,
+            },
           )
           .catch(() => undefined);
       }
@@ -338,9 +357,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         endpoints,
         'admin-workplace-tier-variable-save',
         'variableName',
-        (payload) => [
-          { variableName: payload, attributeId: wpAttrId ?? '0', parentVariableId: 0 },
-        ],
+        (payload) => [{ variableName: payload, attributeId: wpAttrId ?? '0', parentVariableId: 0 }],
         'admin-workplace-tier-variable-list',
         { parentVariableId: 0 },
         (row, value) => row.variableName === value,
@@ -441,9 +458,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         endpoints,
         'admin-hr-tier-variable-save',
         'variableName',
-        (payload) => [
-          { variableName: payload, attributeId: hrAttrId ?? '0', parentVariableId: 0 },
-        ],
+        (payload) => [{ variableName: payload, attributeId: hrAttrId ?? '0', parentVariableId: 0 }],
         'admin-hr-tier-variable-list',
         { parentVariableId: 0 },
         (row, value) => row.variableName === value,
@@ -481,7 +496,8 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         'admin-employee-details',
         {},
         (row, value) =>
-          isPlainObject(row.personalInformationObj) && row.personalInformationObj.lastName === value,
+          isPlainObject(row.personalInformationObj) &&
+          row.personalInformationObj.lastName === value,
         'employee-save',
       );
       if (empId) {

@@ -74,7 +74,10 @@ test.describe('KPost Profile · About field security fuzzing', { tag: '@ui' }, (
       await editor.fill(marker);
       await page.getByRole('button', { name: /^Update$/i }).click();
 
-      await expect(page.getByText(marker).first(), 'the edited About text is shown, rendered as text').toBeVisible({
+      await expect(
+        page.getByText(marker).first(),
+        'the edited About text is shown, rendered as text',
+      ).toBeVisible({
         timeout: 20_000,
       });
       await page.waitForTimeout(1_500);

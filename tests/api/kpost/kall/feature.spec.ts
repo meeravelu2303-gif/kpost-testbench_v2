@@ -259,9 +259,7 @@ test.describe('KPost Kall · feature flow @database', () => {
         const newRow = Array.isArray(rescheduledBody.data)
           ? (rescheduledBody.data[0] as Record<string, unknown> | undefined)
           : undefined;
-        expect
-          .soft(newRow?.senderKallStatus, 'the new call starts fresh as Scheduled (6)')
-          .toBe(6);
+        expect.soft(newRow?.senderKallStatus, 'the new call starts fresh as Scheduled (6)').toBe(6);
 
         if (database.enabled && rescheduledId !== undefined) {
           const originalRow = await database.findOne<{ sender_kall_status: number }>({
@@ -434,7 +432,11 @@ test.describe('KPost Kall · feature flow @database', () => {
     const scheduled = await endpoints.sendTo(
       'kall-scheduled',
       { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
-      { label: 'feature:kall:incomplete-resched-setup', auth: { principal: A }, allowLiveWrite: true },
+      {
+        label: 'feature:kall:incomplete-resched-setup',
+        auth: { principal: A },
+        allowLiveWrite: true,
+      },
     );
     const scheduledJson = scheduled.json();
     const kallID = extractKallId(
@@ -479,7 +481,11 @@ test.describe('KPost Kall · feature flow @database', () => {
       const attempt = await endpoints.sendTo(
         'kall-scheduled',
         { body: scheduleShape({ ...override, kallDetails: [{ receiver: B.username }] }) },
-        { label: `feature:kall:missing-${fieldName}`, auth: { principal: A }, allowLiveWrite: true },
+        {
+          label: `feature:kall:missing-${fieldName}`,
+          auth: { principal: A },
+          allowLiveWrite: true,
+        },
       );
       // If the product unexpectedly accepts the incomplete payload, clean up the real call it created
       // rather than leaving it on the account — the assertion below still reports it as a finding.
@@ -539,10 +545,15 @@ test.describe('KPost Kall · feature flow @database', () => {
         { label: 'feature:kall:log-read', auth: { principal: A } },
       );
       const dashboardJson = dashboard.json();
-      const dashboardValue = (dashboardJson.ok ? dashboardJson.value : {}) as Record<string, unknown>;
+      const dashboardValue = (dashboardJson.ok ? dashboardJson.value : {}) as Record<
+        string,
+        unknown
+      >;
       const entries = (dashboardValue.kall as Array<Record<string, unknown>> | undefined) ?? [];
       const entry = entries.find((row) => row.kallID === kallID);
-      expect.soft(entry, `FR-KL-008: the placed call (kallID ${kallID}) appears in the dashboard log`).toBeTruthy();
+      expect
+        .soft(entry, `FR-KL-008: the placed call (kallID ${kallID}) appears in the dashboard log`)
+        .toBeTruthy();
 
       if (entry) {
         const details = (entry.kallDetails as Array<Record<string, unknown>> | undefined) ?? [];
@@ -551,7 +562,10 @@ test.describe('KPost Kall · feature flow @database', () => {
           .soft(participant, `FR-KL-008: the log entry records ${B.username} as a participant`)
           .toBeTruthy();
         expect
-          .soft((entry.sender as string | undefined), 'FR-KL-008: the log entry records the caller (sender)')
+          .soft(
+            entry.sender as string | undefined,
+            'FR-KL-008: the log entry records the caller (sender)',
+          )
           .toBe(A.username);
       }
     } finally {

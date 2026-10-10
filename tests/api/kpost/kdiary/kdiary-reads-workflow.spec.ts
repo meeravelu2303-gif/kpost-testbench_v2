@@ -75,7 +75,8 @@ test.describe('KPost KDiary · read business rules @api @kpost-api @kdiary', () 
       );
       expect(selected.status, "getEventSelectedDate succeeds for today's date").toBe(200);
       const selectedRows =
-        (JSON.parse(selected.bodyText || '{}') as { data?: Array<{ eventID?: number }> }).data ?? [];
+        (JSON.parse(selected.bodyText || '{}') as { data?: Array<{ eventID?: number }> }).data ??
+        [];
       expect(
         selectedRows.some((r) => r.eventID === eventID),
         "the same event appears in getEventSelectedDate for today's date",
@@ -136,7 +137,7 @@ test.describe('KPost KDiary · read business rules @api @kpost-api @kdiary', () 
         {},
         { label: 'kdiary-reads:report', auth: { principal: A } },
       );
-      expect(report.status, "getTodayReport succeeds once a report for today exists").toBe(200);
+      expect(report.status, 'getTodayReport succeeds once a report for today exists').toBe(200);
       const reportBody = JSON.parse(report.bodyText || '{}') as { data?: { id?: number } };
       expect(reportBody.data?.id, 'getTodayReport returns a real report id').toBeTruthy();
     } finally {

@@ -51,7 +51,10 @@ test.describe('KPost Home — dynamic-state health/performance/layout sweep', { 
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  test('Home — Contacts tab active: health, performance, layout @ui', async ({ page, homePage }) => {
+  test('Home — Contacts tab active: health, performance, layout @ui', async ({
+    page,
+    homePage,
+  }) => {
     const stop = watchUiHealth(page);
     const started = Date.now();
 

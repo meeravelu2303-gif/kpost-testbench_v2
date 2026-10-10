@@ -1,4 +1,3 @@
-import { testData } from '@config/test-data.config';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import { body } from '../kpost/kpost-endpoint';
 import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';

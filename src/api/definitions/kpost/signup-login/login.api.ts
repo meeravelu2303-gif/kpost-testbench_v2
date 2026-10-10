@@ -123,7 +123,7 @@ export const generateJwTokensApi = defineKpostEndpoint({
   path: '/v2/signupLogin/generateJWTokens/',
   summary: 'Exchange a refresh token for a new access token',
   tags: [...LOGIN_TAGS, 'token-refresh', 'needs-id'],
-  note: 'device-scoped: needs a runtime refreshToken AND its own login\'s accessToken as authorization (see session-lifecycle.spec.ts)',
+  note: "device-scoped: needs a runtime refreshToken AND its own login's accessToken as authorization (see session-lifecycle.spec.ts)",
   destructive: false,
   /*
    * Needs a real refresh token, which only a login produces. `helpers.call` runs the login

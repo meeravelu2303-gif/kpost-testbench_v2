@@ -3,6 +3,35 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (late) — Hand-run readiness: preflight, template guard, green gate, green self-tests
+
+**Owner's requirement:** "when I run the test by hand it will run properly and find the valid bugs
+only, then file" — production standard, end to end. The audit after the docs reorganisation found
+four things short of that, all bench hygiene rather than test logic:
+
+1. **`.env.example` had drifted** (59 of the 93 keys in the real `.env` were absent, including the
+   qatest shared password and every `QA_*` identity): a second machine set up from the template could
+   not run. Rewritten to name every key the code reads, with safe defaults (writes off, TLS
+   verification on) and the owner's qatest ids. `tests/framework/env-template.spec.ts` now fails when
+   the schema, the test-data map or the local `.env` names a key the template does not.
+2. **No single preflight.** `npm run preflight` (`scripts/preflight.cjs`) proves, before a live run:
+   `.env` complete and `TEST_ENV=production`, no other Playwright process, hosts and Bugzilla
+   answering, the API key accepted (`whoami`), template drift, and backs up `reports/REPORT.*`.
+   Non-zero exit on a hard failure. The runbook's preflight section now points at it.
+3. **`npm run check` was red** (151 unformatted files, 135 lint errors). Prettier applied repo-wide;
+   48 real lint defects fixed (unused imports, unnecessary assertions, `any` leaks in two profile
+   specs, objects in template strings, missing Node web globals for the `.cjs` scripts). The ~85
+   `waitForTimeout` calls are a **warning by decision, not an error**: they are short settle waits
+   tuned live on a test-id-less SPA, and rewriting them blind would trade a lint error for flaky
+   tests that auto-file false bugs. New code must wait on a condition; an existing wait is replaced
+   when its spec is next tuned live.
+4. **Two self-tests had been failing for days.** `ownership.spec.ts` used an auth validator for its
+   per-case rendering fixture, but auth faults are consolidated into one platform ticket by design,
+   so the fixture (not the renderer) was wrong — it now uses `request.negative-input`.
+   `payload-audit.spec.ts`: `contacts-add-multiple` sends the documented fields inside each array
+   element (the backend binds a list), and `kbooking-block-ticket` is never executed (real
+   third-party seat hold); both now carry a recorded reason in `GATED_WRITE_OMISSIONS`.
+
 ### 2026-10-10 (night) — `docs/` filed by purpose; the owner's workbooks live in one folder
 
 **Decision (owner's):** the flat `docs/` folder (32 markdown files in mixed case, seven of them

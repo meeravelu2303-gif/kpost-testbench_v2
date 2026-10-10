@@ -26,8 +26,14 @@ test.describe('KPost KOS · K-AI panel', { tag: ['@ui', '@kos'] }, () => {
     // visible text — "History" opens the session history panel, "Reset" clears the current chat
     // (there is no separate "New Chat" control on the default view; that text only exists inside
     // the history panel's own session sub-view).
-    await expect(page.locator('[title="History"]').first(), 'the History control is present').toBeVisible();
-    await expect(page.locator('[title="Reset"]').first(), 'the Reset control is present').toBeVisible();
+    await expect(
+      page.locator('[title="History"]').first(),
+      'the History control is present',
+    ).toBeVisible();
+    await expect(
+      page.locator('[title="Reset"]').first(),
+      'the Reset control is present',
+    ).toBeVisible();
   });
 
   test('submitting an empty prompt is guarded client-side, before any API call @ui', async ({

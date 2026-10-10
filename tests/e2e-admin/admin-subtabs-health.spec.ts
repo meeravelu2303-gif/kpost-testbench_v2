@@ -31,7 +31,11 @@ test.describe('Admin/HR-Setup — under-tested sub-tabs, health + a11y', { tag: 
     { route: '/employee-management', name: 'Employee Management — Transfer tab', tab: 'Transfer' },
     { route: '/employee-management', name: 'Employee Management — Suspend tab', tab: 'Suspend' },
     { route: '/employee-management', name: 'Employee Management — Revoke tab', tab: 'Revoke' },
-    { route: '/employee-management', name: 'Employee Management — Terminate tab', tab: 'Terminate' },
+    {
+      route: '/employee-management',
+      name: 'Employee Management — Terminate tab',
+      tab: 'Terminate',
+    },
   ];
 
   for (const { route, name, tab } of TAB_CASES) {
@@ -46,7 +50,13 @@ test.describe('Admin/HR-Setup — under-tested sub-tabs, health + a11y', { tag: 
       const loadMs = Date.now() - started;
       const health = stop();
 
-      const asScreen: ScreenDef = { route, name, screen: 'admin', ready: ['.title-font'], controls: [] };
+      const asScreen: ScreenDef = {
+        route,
+        name,
+        screen: 'admin',
+        ready: ['.title-font'],
+        controls: [],
+      };
       const findings = await runUiChecks({ page, screen: asScreen, health, loadMs });
 
       const problems = findings

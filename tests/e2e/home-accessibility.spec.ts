@@ -1,5 +1,6 @@
 /* eslint-disable playwright/no-wait-for-timeout */
 import AxeBuilder from '@axe-core/playwright';
+import type { Page, TestInfo } from '@playwright/test';
 import { testData } from '@config/test-data.config';
 import { AXE_JSON_ATTACHMENT, renderAccessibilityOverlay } from '@ui/accessibility-evidence';
 import type { AxeScreenResult } from '@ui/accessibility-evidence';
@@ -22,8 +23,8 @@ test.describe('KPost Home · dynamic-state accessibility (axe-core WCAG)', { tag
   );
 
   async function scanCurrentPage(
-    page: import('@playwright/test').Page,
-    testInfo: import('@playwright/test').TestInfo,
+    page: Page,
+    testInfo: TestInfo,
     screenName: string,
   ): Promise<void> {
     const results = await new AxeBuilder({ page })
@@ -57,7 +58,10 @@ test.describe('KPost Home · dynamic-state accessibility (axe-core WCAG)', { tag
     };
     const evidencePath = testInfo.outputPath('axe-violations.json');
     writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
-    await testInfo.attach(AXE_JSON_ATTACHMENT, { path: evidencePath, contentType: 'application/json' });
+    await testInfo.attach(AXE_JSON_ATTACHMENT, {
+      path: evidencePath,
+      contentType: 'application/json',
+    });
 
     if (evidence.violations.length) {
       await renderAccessibilityOverlay(page, screenName, evidence.violations);
@@ -75,14 +79,23 @@ test.describe('KPost Home · dynamic-state accessibility (axe-core WCAG)', { tag
     );
 
     expect
-      .soft(critical, `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`)
+      .soft(
+        critical,
+        `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
     expect
-      .soft(serious, `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`)
+      .soft(
+        serious,
+        `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
   }
 
-  test('Home — Contacts tab active — WCAG violations (axe) @ui', async ({ page, homePage }, testInfo) => {
+  test('Home — Contacts tab active — WCAG violations (axe) @ui', async ({
+    page,
+    homePage,
+  }, testInfo) => {
     await homePage.goto();
     await homePage.switchToContactsTab();
     await page.waitForTimeout(1200);

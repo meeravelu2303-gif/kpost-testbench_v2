@@ -36,9 +36,10 @@ test.describe('KPost core admin (/admin/*) · module coverage', () => {
     const mislabeled = adminUserManagementApis
       .filter((api) => api.destructive && api.sideEffect !== 'global')
       .map((api) => ({ id: api.id, sideEffect: api.sideEffect }));
-    expect(mislabeled, 'every core-admin write is sideEffect:global (shared company/member state)').toEqual(
-      [],
-    );
+    expect(
+      mislabeled,
+      'every core-admin write is sideEffect:global (shared company/member state)',
+    ).toEqual([]);
   });
 
   test('every endpoint plans at least 10 validation cases @framework', () => {

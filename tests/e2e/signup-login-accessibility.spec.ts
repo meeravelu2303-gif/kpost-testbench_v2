@@ -1,5 +1,6 @@
 /* eslint-disable playwright/no-wait-for-timeout */
 import AxeBuilder from '@axe-core/playwright';
+import type { Page, TestInfo } from '@playwright/test';
 import { domainFor } from '@fixtures/test-accounts';
 import { testData } from '@config/test-data.config';
 import {
@@ -26,8 +27,8 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
   test.use({ storageState: { cookies: [], origins: [] } });
 
   async function scanCurrentPage(
-    page: import('@playwright/test').Page,
-    testInfo: import('@playwright/test').TestInfo,
+    page: Page,
+    testInfo: TestInfo,
     screenName: string,
     route: string,
   ): Promise<void> {
@@ -62,13 +63,19 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
     };
     const evidencePath = testInfo.outputPath('axe-violations.json');
     writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
-    await testInfo.attach(AXE_JSON_ATTACHMENT, { path: evidencePath, contentType: 'application/json' });
+    await testInfo.attach(AXE_JSON_ATTACHMENT, {
+      path: evidencePath,
+      contentType: 'application/json',
+    });
     // Every failing element with selector, HTML and (for contrast) colours + ratio — what the UI
     // developers asked for on the WCAG tickets; uploaded to the ticket as text.
     if (critical.length + serious.length) {
       const detailsPath = testInfo.outputPath('a11y-details.txt');
       writeFileSync(detailsPath, axeDetailsText(screenName, [...critical, ...serious]));
-      await testInfo.attach(AXE_DETAILS_ATTACHMENT, { path: detailsPath, contentType: 'text/plain' });
+      await testInfo.attach(AXE_DETAILS_ATTACHMENT, {
+        path: detailsPath,
+        contentType: 'text/plain',
+      });
     }
 
     if (evidence.violations.length) {
@@ -87,10 +94,16 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
     );
 
     expect
-      .soft(critical, `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`)
+      .soft(
+        critical,
+        `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
     expect
-      .soft(serious, `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`)
+      .soft(
+        serious,
+        `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
   }
 
@@ -119,18 +132,26 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
     await scanCurrentPage(page, testInfo, 'Signup — Business category', '/signup');
   });
 
-  test('Login — id entry step — WCAG violations (axe) @ui', async ({ page, loginPage }, testInfo) => {
+  test('Login — id entry step — WCAG violations (axe) @ui', async ({
+    page,
+    loginPage,
+  }, testInfo) => {
     await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await loginPage.expectLoaded();
     await page.waitForTimeout(1200);
     await scanCurrentPage(page, testInfo, 'Login — id entry', '/login');
   });
 
-  test('Login — password step — WCAG violations (axe) @ui', async ({ page, loginPage }, testInfo) => {
+  test('Login — password step — WCAG violations (axe) @ui', async ({
+    page,
+    loginPage,
+  }, testInfo) => {
     await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await loginPage.expectLoaded();
     await loginPage.enterLoginId(testData.kpostId);
-    await loginPage.passwordInput.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+    await loginPage.passwordInput
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .catch(() => undefined);
     test.skip(
       !(await loginPage.passwordInput.isVisible()),
       'the fixed probe id did not exist on this host — step 2 never mounted',
@@ -149,12 +170,17 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
     // step — a known id must advance the flow first (same precondition as the existing, working
     // `login-session.spec.ts` test for this same link).
     await loginPage.enterLoginId(testData.kpostId);
-    await loginPage.passwordInput.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+    await loginPage.passwordInput
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .catch(() => undefined);
     test.skip(
       !(await loginPage.passwordInput.isVisible()),
       'the fixed probe id did not exist on this host — the password step (and its Forgot Password link) never mounted',
     );
-    await page.getByText(/Forgot Password/i).first().click();
+    await page
+      .getByText(/Forgot Password/i)
+      .first()
+      .click();
     await page
       .getByText(/^Forgot Password$/i)
       .first()
@@ -233,6 +259,11 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
     });
     await page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
     await page.waitForTimeout(1200);
-    await scanCurrentPage(page, testInfo, 'Signup — Business Company Details (post-OTP)', '/signup');
+    await scanCurrentPage(
+      page,
+      testInfo,
+      'Signup — Business Company Details (post-OTP)',
+      '/signup',
+    );
   });
 });

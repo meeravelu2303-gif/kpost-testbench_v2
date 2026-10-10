@@ -24,7 +24,9 @@ test.describe('KPost — /profile-webview/:id public profile card', { tag: '@ui'
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error on an invalid id').toEqual([]);
-    await expect(page, 'an unresolvable id redirects to the not-found route').toHaveURL(/not-found/);
+    await expect(page, 'an unresolvable id redirects to the not-found route').toHaveURL(
+      /not-found/,
+    );
   });
 
   /**
@@ -57,16 +59,23 @@ test.describe('KPost — /profile-webview/:id public profile card', { tag: '@ui'
     // has no crypto-js dependency of its own, and hand-rolling AES/OpenSSL-KDF compatibly is not worth
     // it for one id).
     await page.goto('about:blank');
-    await page.addScriptTag({ url: 'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js' });
+    await page.addScriptTag({
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js',
+    });
     const encryptedId = await page.evaluate((kpostID) => {
-      // @ts-expect-error -- CryptoJS global from the injected script tag above.
+      // CryptoJS is the global the injected script tag above defines.
+      type CryptoJsAes = { AES: { encrypt(plain: string, key: string): { toString(): string } } };
+      const { CryptoJS } = globalThis as unknown as { CryptoJS: CryptoJsAes };
       return CryptoJS.AES.encrypt(kpostID, 'your-secret-key').toString();
     }, testData.victimKpostId);
 
     let shareBody: string | undefined;
     page.on('requestfinished', async (req) => {
       if (req.url().includes('shareUserDetails') && req.method() === 'POST') {
-        shareBody = await req.response().then((r) => r?.text()).catch(() => undefined);
+        shareBody = await req
+          .response()
+          .then((r) => r?.text())
+          .catch(() => undefined);
       }
     });
 
@@ -79,15 +88,18 @@ test.describe('KPost — /profile-webview/:id public profile card', { tag: '@ui'
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error rendering a real public card').toEqual([]);
-    await expect(page, 'a valid id stays on the webview, not redirected away').toHaveURL(/profile-webview/);
+    await expect(page, 'a valid id stays on the webview, not redirected away').toHaveURL(
+      /profile-webview/,
+    );
 
     expect(shareBody, 'the shareUserDetails call completed').toBeTruthy();
     if (shareBody) {
       const lower = shareBody.toLowerCase();
       for (const field of ['"password"', '"kmailpassword"', '"accesscode"']) {
-        expect(lower, `the public, unauthenticated share response must never include ${field}`).not.toContain(
-          field,
-        );
+        expect(
+          lower,
+          `the public, unauthenticated share response must never include ${field}`,
+        ).not.toContain(field);
       }
     }
   });

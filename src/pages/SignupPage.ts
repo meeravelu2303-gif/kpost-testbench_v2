@@ -145,7 +145,11 @@ export class SignupPage extends BasePage {
   // ============================================================================================
 
   /** After `chooseAccountType('Personal')`: PersonalSignup's own Country/Language/Domain step. */
-  async selectCountryLanguageDomain(country: string, language: string, domain: string): Promise<void> {
+  async selectCountryLanguageDomain(
+    country: string,
+    language: string,
+    domain: string,
+  ): Promise<void> {
     await test.step(`Signup: country=${country} language=${language} domain=${domain}`, async () => {
       await this.chooseFromSelect(0, country);
       await this.chooseFromSelect(1, language);
@@ -167,7 +171,10 @@ export class SignupPage extends BasePage {
   async requestMobileOtp(mobileNumber: string): Promise<'sent' | 'already-exists'> {
     return test.step(`Signup: verify mobile ${mobileNumber}`, async () => {
       await this.page.getByPlaceholder(/Enter (Mobile Number|the Number)/i).fill(mobileNumber);
-      await this.page.getByText(/^Verify$/i).first().click();
+      await this.page
+        .getByText(/^Verify$/i)
+        .first()
+        .click();
       const otpModal = this.page.getByText(/^Enter your OTP$/i);
       const alreadyExists = this.page.getByText(/Mobile number already exists/i);
       return Promise.race([
@@ -190,7 +197,10 @@ export class SignupPage extends BasePage {
   async attemptVerifyWithInvalidMobile(mobileNumber: string): Promise<void> {
     await test.step(`Signup: verify an invalid mobile number ${mobileNumber}`, async () => {
       await this.page.getByPlaceholder('Enter Mobile Number').fill(mobileNumber);
-      await this.page.getByText(/^Verify$/i).first().click();
+      await this.page
+        .getByText(/^Verify$/i)
+        .first()
+        .click();
       await this.page
         .getByText(/^Invalid Mobile Number$/i)
         .waitFor({ state: 'visible', timeout: 10_000 });
@@ -359,7 +369,9 @@ export class SignupPage extends BasePage {
       const available = this.page.getByText(/KpostID is Available/i);
       const taken = this.page.getByText(/This KpostID is already exists/i);
       return Promise.race([
-        available.waitFor({ state: 'visible', timeout: 15_000 }).then((): 'available' => 'available'),
+        available
+          .waitFor({ state: 'visible', timeout: 15_000 })
+          .then((): 'available' => 'available'),
         taken.waitFor({ state: 'visible', timeout: 15_000 }).then((): 'taken' => 'taken'),
       ]);
     });
@@ -404,7 +416,9 @@ export class SignupPage extends BasePage {
    * target is that SAME card's own "Continue" span, scoped by card so the right one is hit among the
    * (currently 4) identically-labelled "Continue" controls on this screen.
    */
-  async chooseBusinessCategory(category: 'Small' | 'Medium' | 'Large' | 'Multi-National'): Promise<void> {
+  async chooseBusinessCategory(
+    category: 'Small' | 'Medium' | 'Large' | 'Multi-National',
+  ): Promise<void> {
     await test.step(`Signup: business category ${category}`, async () => {
       // The screen renders each category card TWICE (a hidden, `display:none` responsive/mobile
       // duplicate alongside the visible one) — `.filter({ visible: true })` narrows to the one shown.
@@ -456,7 +470,10 @@ export class SignupPage extends BasePage {
     adminDesignation: string;
     preAdminDesignationId: string;
     businessUniqueName: string;
-  }): Promise<{ companyNameOutcome: 'available' | 'taken'; uniqueNameOutcome: 'available' | 'taken' }> {
+  }): Promise<{
+    companyNameOutcome: 'available' | 'taken';
+    uniqueNameOutcome: 'available' | 'taken';
+  }> {
     return test.step('Signup: company details', async () => {
       const companyNameField = this.page.getByPlaceholder('Enter Company Name');
       await companyNameField.fill(details.companyName);
@@ -476,8 +493,16 @@ export class SignupPage extends BasePage {
       await this.page.getByRole('button', { name: /^Confirm$/i }).click();
       await pincodeModalTitle.waitFor({ state: 'hidden', timeout: 15_000 });
 
-      if (details.address1) await this.page.getByPlaceholder('Enter the Business Address').first().fill(details.address1);
-      if (details.address2) await this.page.getByPlaceholder('Enter the Business Address').nth(1).fill(details.address2);
+      if (details.address1)
+        await this.page
+          .getByPlaceholder('Enter the Business Address')
+          .first()
+          .fill(details.address1);
+      if (details.address2)
+        await this.page
+          .getByPlaceholder('Enter the Business Address')
+          .nth(1)
+          .fill(details.address2);
 
       await this.chooseFromSelect(0, details.adminDesignation);
       await this.page
@@ -519,7 +544,9 @@ export class SignupPage extends BasePage {
       const available = this.page.getByText(/KpostID is Available/i);
       const taken = this.page.getByText(/This KpostID is already exists/i);
       return Promise.race([
-        available.waitFor({ state: 'visible', timeout: 15_000 }).then((): 'available' => 'available'),
+        available
+          .waitFor({ state: 'visible', timeout: 15_000 })
+          .then((): 'available' => 'available'),
         taken.waitFor({ state: 'visible', timeout: 15_000 }).then((): 'taken' => 'taken'),
       ]);
     });
@@ -568,7 +595,10 @@ export class SignupPage extends BasePage {
     preAdminDesignationId: string;
     businessUniqueName: string;
     licenses: string;
-  }): Promise<{ companyNameOutcome: 'available' | 'taken'; uniqueNameOutcome: 'available' | 'taken' }> {
+  }): Promise<{
+    companyNameOutcome: 'available' | 'taken';
+    uniqueNameOutcome: 'available' | 'taken';
+  }> {
     return test.step('Signup: Medium/Large company details', async () => {
       await this.page.getByPlaceholder('Type of Business').fill(details.typeOfBusiness);
 
@@ -593,8 +623,16 @@ export class SignupPage extends BasePage {
       await this.page.getByRole('button', { name: /^Confirm$/i }).click();
       await pincodeModalTitle.waitFor({ state: 'hidden', timeout: 15_000 });
 
-      if (details.address1) await this.page.getByPlaceholder('Enter the Business Address').first().fill(details.address1);
-      if (details.address2) await this.page.getByPlaceholder('Enter the Business Address').nth(1).fill(details.address2);
+      if (details.address1)
+        await this.page
+          .getByPlaceholder('Enter the Business Address')
+          .first()
+          .fill(details.address1);
+      if (details.address2)
+        await this.page
+          .getByPlaceholder('Enter the Business Address')
+          .nth(1)
+          .fill(details.address2);
 
       await this.chooseFromSelect(0, details.adminDesignation);
       await this.page

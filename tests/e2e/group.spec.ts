@@ -39,7 +39,11 @@ test.describe('KPost Group — create / rename / delete (write)', { tag: '@ui' }
     // as contacts-functional.spec.ts). A text match on "New Group" is NOT safe here — several existing,
     // real groups in this account are literally named "New Group", so a text-based `.first()` click
     // opens one of THOSE conversations instead of the create-group modal.
-    await page.locator('.icon-KP_112-Group-Add').first().click().catch(() => undefined);
+    await page
+      .locator('.icon-KP_112-Group-Add')
+      .first()
+      .click()
+      .catch(() => undefined);
 
     // The modal exposes a Group Name field — the reliable entry assertion.
     const nameField = page

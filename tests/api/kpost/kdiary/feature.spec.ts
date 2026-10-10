@@ -164,25 +164,24 @@ test.describe('KPost KDiary · feature flow', () => {
           data?: Array<Record<string, unknown>>;
         };
         const eventRow = (eventsParsed.data ?? []).find((r) => r.eventID === eventID);
+        expect.soft(eventRow?.remarks, 'the new remarks code actually persisted').toBe(1);
         expect
-          .soft(eventRow?.remarks, 'the new remarks code actually persisted')
-          .toBe(1);
-        expect
-          .soft(
-            eventRow?.remarksDescription,
-            'the new remarksDescription actually persisted',
-          )
+          .soft(eventRow?.remarksDescription, 'the new remarksDescription actually persisted')
           .toBe('Completed by QA');
 
         // Same fact, confirmed at the database row directly rather than through the API's own
         // read-back — a cross-check that the API's answer and the table it reads from agree.
         if (database.enabled) {
-          const remarksRow = await database.findOne<{ remarks: number; remarks_description: string }>(
-            { table: 'TBL_KPOST_KDIARY_SCHEDULE', where: { event_id: eventID } },
-          );
+          const remarksRow = await database.findOne<{
+            remarks: number;
+            remarks_description: string;
+          }>({ table: 'TBL_KPOST_KDIARY_SCHEDULE', where: { event_id: eventID } });
           expect.soft(remarksRow?.remarks, 'DB: remarks code matches the API read-back').toBe(1);
           expect
-            .soft(remarksRow?.remarks_description, 'DB: remarks description matches the API read-back')
+            .soft(
+              remarksRow?.remarks_description,
+              'DB: remarks description matches the API read-back',
+            )
             .toBe('Completed by QA');
         }
 
@@ -242,7 +241,7 @@ test.describe('KPost KDiary · feature flow', () => {
     }
   });
 
-  test('an unrelated account cannot delete another account\'s private diary event (IDOR) @api @kdiary @security', async ({
+  test("an unrelated account cannot delete another account's private diary event (IDOR) @api @kdiary @security", async ({
     endpoints,
   }) => {
     /*
@@ -278,11 +277,18 @@ test.describe('KPost KDiary · feature flow', () => {
       // Group BOLA test: a 200 that didn't actually delete anything is still a finding worth knowing
       // about, and a clean denial must be confirmed by the event still existing, not assumed from status.
       const stillThere = await endpoints
-        .sendTo('kdiary-get-events', {}, { label: 'kdiary:idor-owner-recheck', auth: { principal: A } })
+        .sendTo(
+          'kdiary-get-events',
+          {},
+          { label: 'kdiary:idor-owner-recheck', auth: { principal: A } },
+        )
         .catch(() => undefined);
       const rows = stillThere
-        ? ((JSON.parse(stillThere.bodyText || '{"data":[]}') as { data?: Array<Record<string, unknown>> })
-            .data ?? [])
+        ? ((
+            JSON.parse(stillThere.bodyText || '{"data":[]}') as {
+              data?: Array<Record<string, unknown>>;
+            }
+          ).data ?? [])
         : [];
       const survived = rows.some((r) => r.eventID === eventID);
 
@@ -292,9 +298,9 @@ test.describe('KPost KDiary · feature flow', () => {
           ruleId: 'IDOR-kdiary-event-delete',
           rule:
             'deleteEvent must refuse a caller who has no relationship to the event (not its owner, ' +
-            'not a participant) — an unrelated account must not be able to delete another account\'s ' +
+            "not a participant) — an unrelated account must not be able to delete another account's " +
             'private diary event by naming its eventID.',
-          expected: 'the event still exists after the unrelated account\'s delete attempt',
+          expected: "the event still exists after the unrelated account's delete attempt",
           actual: `the event no longer appears in the owner's list (attacker delete replied ${attackerDelete.status})`,
           request: { body: { eventID } },
         });

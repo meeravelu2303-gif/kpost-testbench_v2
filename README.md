@@ -124,7 +124,7 @@ Configuration is resolved in this order (first wins): real environment variables
 - **New API endpoint:** add an `EndpointDefinition` in `src/api/definitions/`. No test code is needed. See [the guide](docs/guides/validation-framework.md#17-adding-a-completely-new-api).
 - **New common validation:** add a validator and register it once in `src/validators/index.ts`.
 - **Endpoint-specific logic:** assert a business rule in the module's `feature.spec.ts` (`recordBusinessRuleViolation`, which can set up the multi-step state a rule needs), or add a DB validation (`src/database/validations/`) and reference it from the definition.
-- **UI:** import `test`/`expect` from `@fixtures`, keep locators in page objects, prefer role-based locators, and never use `waitForTimeout`.
+- **UI:** import `test`/`expect` from `@fixtures`, keep locators in page objects, prefer role-based locators, and wait on a condition (`toBeVisible`, `waitForResponse`), not a fixed time — `waitForTimeout` is a lint warning, kept only where a spec was tuned live against this test-id-less SPA.
 
 ## CI
 

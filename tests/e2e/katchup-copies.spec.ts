@@ -65,12 +65,19 @@ test.describe(
      */
     async function addCopy(page: Page, kpostId: string, confidential: boolean): Promise<void> {
       // Single shared trigger for both Copy and Confidential Copy — WriteMessage.js:3366-3388.
-      await page.locator('.icon-KP_229_Copies1').first().click().catch(() => undefined);
+      await page
+        .locator('.icon-KP_229_Copies1')
+        .first()
+        .click()
+        .catch(() => undefined);
       // Each contact row has 2 bare radios sharing one group: [0] = Copy, [1] = Confidential Copy
       // (MultipleContact.js:1444-1473). Row-scoping is best-effort pending a live recording pass.
       const row = page.locator('div').filter({ hasText: kpostId }).last();
       const radios = row.locator('input[type="radio"]');
-      await radios.nth(confidential ? 1 : 0).click().catch(() => undefined);
+      await radios
+        .nth(confidential ? 1 : 0)
+        .click()
+        .catch(() => undefined);
       await page
         .getByRole('button', { name: /Done/i })
         .first()

@@ -26,7 +26,11 @@ test.describe('KPost Home · dashboard API failure handling', { tag: '@ui' }, ()
         contentType: 'application/json',
         // KPost's envelope anti-pattern (HTTP 200 carrying a failure) — the shape confirmed
         // faithfully elsewhere in this suite (e.g. `login-functional.spec.ts`).
-        body: JSON.stringify({ statusCode: 500, status: 'FAILURE', message: 'Internal Server Error' }),
+        body: JSON.stringify({
+          statusCode: 500,
+          status: 'FAILURE',
+          message: 'Internal Server Error',
+        }),
       });
     });
 
@@ -37,7 +41,10 @@ test.describe('KPost Home · dashboard API failure handling', { tag: '@ui' }, ()
     const anyErrorToast = page.locator('.Toastify__toast, [class*="toast"]', {
       hasText: /error|fail|try again|something went wrong/i,
     });
-    const errorVisible = await anyErrorToast.first().isVisible().catch(() => false);
+    const errorVisible = await anyErrorToast
+      .first()
+      .isVisible()
+      .catch(() => false);
 
     test.info().annotations.push({
       type: 'observed',

@@ -30,7 +30,8 @@ test.describe('KPost KNews — content feed', { tag: '@ui' }, () => {
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error on load').toEqual([]);
 
-    const hasArticles = (await page.locator('.jn-card-anchor, .jn-hero-anchor, .jn-v-anchor').count()) > 0;
+    const hasArticles =
+      (await page.locator('.jn-card-anchor, .jn-hero-anchor, .jn-v-anchor').count()) > 0;
     const hasEmptyState = await page
       .getByText(/No articles available|No articles match your search/i)
       .first()
@@ -54,7 +55,9 @@ test.describe('KPost KNews — content feed', { tag: '@ui' }, () => {
     ).toBe(true);
   });
 
-  test('the headline search box filters the already-loaded list client-side @ui', async ({ page }) => {
+  test('the headline search box filters the already-loaded list client-side @ui', async ({
+    page,
+  }) => {
     await page.goto('/knews', { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await page.waitForTimeout(3_000);
 
@@ -75,7 +78,10 @@ test.describe('KPost KNews — content feed', { tag: '@ui' }, () => {
     await page.goto('/knews', { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await page.waitForTimeout(2_000);
 
-    await page.getByText(/^World$/i).first().click();
+    await page
+      .getByText(/^World$/i)
+      .first()
+      .click();
     await expect(
       page.getByPlaceholder(/Filter countries/i).first(),
       'the World panel opens with a country filter',

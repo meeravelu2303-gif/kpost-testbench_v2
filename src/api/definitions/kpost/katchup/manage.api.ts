@@ -52,7 +52,8 @@ export const legacyRecallMessageApi = defineUndocumentedKpostEndpoint({
   id: 'katchup-legacy-recall-message',
   method: 'POST',
   path: '/katchup/recallMessage',
-  summary: '[LEGACY/dead-from-frontend] Recall a message by msgID+sender taken straight from the body',
+  summary:
+    '[LEGACY/dead-from-frontend] Recall a message by msgID+sender taken straight from the body',
   tags: ['katchup', ...MANAGE_TAGS, 'legacy', 'needs-message-id'],
   authentication: { required: true },
   destructive: true,

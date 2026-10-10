@@ -222,10 +222,9 @@ test.describe('KPost Contacts · block @api @kpost-api @contacts @database', () 
     const blockStatus = blockEnvelope.ok
       ? ((blockEnvelope.value as { statusCode?: number }).statusCode ?? block.status)
       : block.status;
-    expect.soft(
-      blockStatus,
-      `block reported failure (body: ${block.bodyText.slice(0, 160)})`,
-    ).toBeLessThan(300);
+    expect
+      .soft(blockStatus, `block reported failure (body: ${block.bodyText.slice(0, 160)})`)
+      .toBeLessThan(300);
 
     const blocked = await repo.contact(me(), them());
     const blockedCheck = kpostDb.isBlocked(blocked, true);
@@ -252,10 +251,9 @@ test.describe('KPost Contacts · block @api @kpost-api @contacts @database', () 
     const unblockStatus = unblockEnvelope.ok
       ? ((unblockEnvelope.value as { statusCode?: number }).statusCode ?? unblock.status)
       : unblock.status;
-    expect.soft(
-      unblockStatus,
-      `unblock reported failure (body: ${unblock.bodyText.slice(0, 160)})`,
-    ).toBeLessThan(300);
+    expect
+      .soft(unblockStatus, `unblock reported failure (body: ${unblock.bodyText.slice(0, 160)})`)
+      .toBeLessThan(300);
 
     const unblocked = await repo.contact(me(), them());
     const unblockedCheck = kpostDb.isBlocked(unblocked, false);

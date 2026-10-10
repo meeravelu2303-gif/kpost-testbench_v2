@@ -78,17 +78,23 @@ test.describe('KPost signup · Personal field validation', { tag: '@ui' }, () =>
     const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
     test.skip(
       otpEntryOutcome === 'invalid',
-      'the OTP box rejected the bypass code this run — see enterMobileOtp\'s own doc comment; re-run',
+      "the OTP box rejected the bypass code this run — see enterMobileOtp's own doc comment; re-run",
     );
 
     const continueButton = page.getByRole('button', { name: /^Continue$/i });
 
     // Nothing filled yet: Continue must be disabled (ValidData requires firstName/lastName/DOB/pincode).
-    await expect(continueButton, 'Continue is disabled with no personal details filled in').toBeDisabled();
+    await expect(
+      continueButton,
+      'Continue is disabled with no personal details filled in',
+    ).toBeDisabled();
 
     // First Name only: still missing Last Name, DOB, pincode.
     await page.getByPlaceholder('Enter the first name').fill('QA');
-    await expect(continueButton, 'Continue stays disabled with Last Name still empty').toBeDisabled();
+    await expect(
+      continueButton,
+      'Continue stays disabled with Last Name still empty',
+    ).toBeDisabled();
 
     // First AND Last Name, but still missing DOB and pincode.
     await page.getByPlaceholder('Enter the last name').fill('Bench');
@@ -134,7 +140,9 @@ test.describe('KPost signup · Personal field validation', { tag: '@ui' }, () =>
       'Continue must stay disabled while First Name holds an unfiltered <script> tag',
     ).toBeDisabled();
     await expect(
-      page.getByText(/can contain only letters, numbers, spaces, periods, apostrophes, and hyphens/i),
+      page.getByText(
+        /can contain only letters, numbers, spaces, periods, apostrophes, and hyphens/i,
+      ),
       'a validation error explains why the name is rejected',
     ).toBeVisible();
   });
@@ -155,7 +163,7 @@ test.describe('KPost signup · Personal field validation', { tag: '@ui' }, () =>
     const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
     test.skip(
       otpEntryOutcome === 'invalid',
-      'the OTP box rejected the bypass code this run — see enterMobileOtp\'s own doc comment; re-run',
+      "the OTP box rejected the bypass code this run — see enterMobileOtp's own doc comment; re-run",
     );
 
     const thisYear = new Date().getFullYear();
@@ -200,7 +208,7 @@ test.describe('KPost signup · Personal field validation', { tag: '@ui' }, () =>
     const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
     test.skip(
       otpEntryOutcome === 'invalid',
-      'the OTP box rejected the bypass code this run — see enterMobileOtp\'s own doc comment; re-run',
+      "the OTP box rejected the bypass code this run — see enterMobileOtp's own doc comment; re-run",
     );
     await signupPage.fillPersonalDetails({
       firstName: 'QA',
@@ -265,7 +273,6 @@ test.describe('KPost signup · Personal field validation', { tag: '@ui' }, () =>
    */
   test('editing the Preferred KPOST ID after a check re-validates the NEW value, not a stale result @ui', async ({
     signupPage,
-    page,
   }) => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

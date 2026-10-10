@@ -55,7 +55,7 @@ test.describe('KPost Katchup · Digital Card share @ui', { tag: '@ui' }, () => {
     'needs both QA accounts',
   );
 
-  test('sharing a contact\'s Digital Card via Katchup actually sends it @ui', async ({ page }) => {
+  test("sharing a contact's Digital Card via Katchup actually sends it @ui", async ({ page }) => {
     // Inside the test body, not at the describe level — see the note in katchup-two-session.spec.ts's
     // unread-badge test for why that placement matters (it silently skips sibling tests otherwise).
     test.fixme(
@@ -96,7 +96,9 @@ test.describe('KPost Katchup · Digital Card share @ui', { tag: '@ui' }, () => {
       timeout: 15_000,
     });
     const searchBox = recipientDialog.getByRole('searchbox');
-    await expect(searchBox, 'the recipient search box is available').toBeVisible({ timeout: 10_000 });
+    await expect(searchBox, 'the recipient search box is available').toBeVisible({
+      timeout: 10_000,
+    });
     await searchBox.fill(SHARE_TARGET_SEARCH_TERM);
     await page.waitForTimeout(1500);
 

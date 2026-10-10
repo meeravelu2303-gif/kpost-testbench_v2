@@ -30,12 +30,16 @@ test.describe('KPost — /profile debug route (real access token exposure)', { t
     const realToken = await page.evaluate(() => {
       try {
         const raw = localStorage.getItem('Authuser');
-        return raw ? (JSON.parse(raw).accessToken ?? '') : '';
+        const parsed = raw ? (JSON.parse(raw) as { accessToken?: unknown }) : undefined;
+        return typeof parsed?.accessToken === 'string' ? parsed.accessToken : '';
       } catch {
         return '';
       }
     });
-    test.skip(!realToken, 'could not read a real access token from localStorage to confirm against');
+    test.skip(
+      !realToken,
+      'could not read a real access token from localStorage to confirm against',
+    );
 
     await page.goto('/profile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 

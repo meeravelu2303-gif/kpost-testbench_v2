@@ -20,10 +20,7 @@ test.describe('KPost KDiary — read-only', { tag: '@ui' }, () => {
   // This stays skipped-with-reason until the app exposes a Diary trigger (or its route is re-enabled).
   // Filed as #812 (2026-09-29) — this had not actually been reported to Bugzilla until confirmed still
   // current on that date.
-  test.skip(
-    true,
-    'KDiary UI has no route/rail entry point in the deployed build — see #812',
-  );
+  test.skip(true, 'KDiary UI has no route/rail entry point in the deployed build — see #812');
 
   test('the Diary panel renders in the Katchup right rail @ui', async ({ page }) => {
     await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });

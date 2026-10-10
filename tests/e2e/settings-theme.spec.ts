@@ -42,7 +42,10 @@ test.describe('KPost Settings · Personalize theme (write)', { tag: '@ui' }, () 
       .first()
       .click();
     // Personalize opens on its "Change Language" tab by default; the swatches live under "Change Theme".
-    await page.getByText(/^Change Theme$/).first().click();
+    await page
+      .getByText(/^Change Theme$/)
+      .first()
+      .click();
 
     // The layout-theme swatches: real buttons with an aria-label = the theme name.
     const swatches = page.locator('.k-color-swatch');
@@ -68,7 +71,9 @@ test.describe('KPost Settings · Personalize theme (write)', { tag: '@ui' }, () 
     // actually got applied (see #810: the previous swatch keeps a stale --active class after applying a
     // new one, so exactly-one-active-swatch cannot be asserted here — that staleness is the tracked bug).
     await expect(
-      page.getByText(new RegExp(targetTheme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { exact: false }).first(),
+      page
+        .getByText(new RegExp(targetTheme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { exact: false })
+        .first(),
       'the Katchup Preview reflects the newly-applied theme',
     ).toBeVisible({ timeout: 15_000 });
     // Re-locate by the captured theme name (not the `target` filter-locator, which re-evaluates against
@@ -82,7 +87,11 @@ test.describe('KPost Settings · Personalize theme (write)', { tag: '@ui' }, () 
     await page.getByRole('button', { name: originalTheme }).first().click();
     await page.getByRole('button', { name: /Apply Theme/i }).click();
     await expect(
-      page.getByText(new RegExp(originalTheme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { exact: false }).first(),
+      page
+        .getByText(new RegExp(originalTheme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), {
+          exact: false,
+        })
+        .first(),
       'the Katchup Preview reflects the restored original theme',
     ).toBeVisible({ timeout: 15_000 });
   });

@@ -164,9 +164,10 @@ export const updateJobIdApi = defineUndocumentedKosEndpoint({
   id: 'kos-update-job-id',
   method: 'POST',
   path: '/kword/updateJobId',
-  summary: "Link (or clear) a Docling conversion job id on a KWord document",
+  summary: 'Link (or clear) a Docling conversion job id on a KWord document',
   tags: [...WRITE_TAGS, 'kword'],
-  evidence: 'KOS.js:207-233 (UpdateKWordJobId); callers KWord.js:3404 (set), :3444 (clear, jobId:null)',
+  evidence:
+    'KOS.js:207-233 (UpdateKWordJobId); callers KWord.js:3404 (set), :3444 (clear, jobId:null)',
   destructive: true,
   requestSchema: z.object({ docId: z.number(), jobId: z.string().nullable() }),
   request: body(() => ({ docId: 0, jobId: null })),

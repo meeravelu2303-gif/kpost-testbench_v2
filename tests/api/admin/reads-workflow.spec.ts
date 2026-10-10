@@ -37,9 +37,8 @@ test.describe('Admin module · plain-read business rules @api @admin-api', () =>
     expect(body.value?.State, 'a real state is resolved').toBeTruthy();
     expect(body.value?.District, 'a real district is resolved').toBeTruthy();
     const areaNames = body.value?.areaName ?? [];
-    expect(
-      areaNames.length > 0,
-      'at least one real area name is resolved for this pincode',
-    ).toBe(true);
+    expect(areaNames.length > 0, 'at least one real area name is resolved for this pincode').toBe(
+      true,
+    );
   });
 });

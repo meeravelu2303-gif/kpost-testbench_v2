@@ -14,7 +14,10 @@ test.describe('KPost KBooking · module coverage', () => {
      * docs/scope/unused-endpoints.md), so they are expected to still show up here. This test asserts the full
      * documented-but-unimplemented list stays exactly what was proven, not a silently growing gap.
      */
-    expect(uncoveredKBookingPaths().sort(), 'documented but not implemented by the frontend').toEqual(
+    expect(
+      uncoveredKBookingPaths().sort(),
+      'documented but not implemented by the frontend',
+    ).toEqual(
       ['/redbus/boardingPoint/', '/redbus/tripdetailsV2/', '/redbus/updatecitylist'].sort(),
     );
   });

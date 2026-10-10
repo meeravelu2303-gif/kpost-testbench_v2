@@ -29,44 +29,57 @@ async function assertNoFileableIssues(
   expect(problems, `${screen.name} UI issues — ${problems.join(' | ')}`).toEqual([]);
 }
 
-test.describe('KPost Profile — dynamic-state health/performance/layout sweep', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost Profile — dynamic-state health/performance/layout sweep',
+  { tag: '@ui' },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  test('Profile — three-dot menu open: health, performance, layout @ui', async ({ page }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.locator('.loader-overlay').waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => undefined);
-    await page.locator('.icon-KP_144---More-Vertical').first().click();
-    const loadMs = Date.now() - started;
-    const screen: ScreenDef = {
-      route: '/userprofile',
-      name: 'Profile — three-dot menu open',
-      screen: 'userprofile',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+    test('Profile — three-dot menu open: health, performance, layout @ui', async ({ page }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
+      await page.locator('.icon-KP_144---More-Vertical').first().click();
+      const loadMs = Date.now() - started;
+      const screen: ScreenDef = {
+        route: '/userprofile',
+        name: 'Profile — three-dot menu open',
+        screen: 'userprofile',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Profile — Share modal open: health, performance, layout @ui', async ({ page }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.locator('.loader-overlay').waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => undefined);
-    await page.locator('.icon-KP_144---More-Vertical').first().click();
-    await page.getByText(/^Share$/i).first().click();
-    const loadMs = Date.now() - started;
-    const screen: ScreenDef = {
-      route: '/userprofile',
-      name: 'Profile — Share modal open',
-      screen: 'userprofile',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
-});
+    test('Profile — Share modal open: health, performance, layout @ui', async ({ page }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
+      await page.locator('.icon-KP_144---More-Vertical').first().click();
+      await page
+        .getByText(/^Share$/i)
+        .first()
+        .click();
+      const loadMs = Date.now() - started;
+      const screen: ScreenDef = {
+        route: '/userprofile',
+        name: 'Profile — Share modal open',
+        screen: 'userprofile',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
+  },
+);

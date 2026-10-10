@@ -19,7 +19,10 @@ async function gotoContacts(page: Page): Promise<boolean> {
     .locator('.loader-overlay')
     .waitFor({ state: 'hidden', timeout: 30_000 })
     .catch(() => undefined);
-  await page.getByRole('tab', { name: 'Contacts' }).click({ timeout: 15_000 }).catch(() => undefined);
+  await page
+    .getByRole('tab', { name: 'Contacts' })
+    .click({ timeout: 15_000 })
+    .catch(() => undefined);
   return page
     .getByRole('searchbox', { name: 'Search' })
     .first()
@@ -45,77 +48,109 @@ async function assertNoFileableIssues(
   expect(problems, `${screen.name} UI issues — ${problems.join(' | ')}`).toEqual([]);
 }
 
-test.describe('KPost Contacts — dynamic-state health/performance/layout sweep', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost Contacts — dynamic-state health/performance/layout sweep',
+  { tag: '@ui' },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  test('Contacts — Add-contact people-search step: health, performance, layout @ui', async ({
-    page,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    const opened = await gotoContacts(page);
-    test.skip(!opened, 'the Contacts tab did not open on this build');
+    test('Contacts — Add-contact people-search step: health, performance, layout @ui', async ({
+      page,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      const opened = await gotoContacts(page);
+      test.skip(!opened, 'the Contacts tab did not open on this build');
 
-    await page.locator('.icon-KP_107-User-Add').first().click({ timeout: 15_000 }).catch(() => undefined);
-    await page.getByText('Personal', { exact: true }).first().click({ timeout: 5_000 }).catch(() => undefined);
-    await page.getByRole('button', { name: 'Continue' }).first().click({ timeout: 8_000 }).catch(() => undefined);
-    const loadMs = Date.now() - started;
+      await page
+        .locator('.icon-KP_107-User-Add')
+        .first()
+        .click({ timeout: 15_000 })
+        .catch(() => undefined);
+      await page
+        .getByText('Personal', { exact: true })
+        .first()
+        .click({ timeout: 5_000 })
+        .catch(() => undefined);
+      await page
+        .getByRole('button', { name: 'Continue' })
+        .first()
+        .click({ timeout: 8_000 })
+        .catch(() => undefined);
+      const loadMs = Date.now() - started;
 
-    const screen: UiScreenDef = {
-      route: '/katchup',
-      name: 'Contacts — Add-contact people-search step',
-      screen: 'katchup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+      const screen: UiScreenDef = {
+        route: '/katchup',
+        name: 'Contacts — Add-contact people-search step',
+        screen: 'katchup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Contacts — Advanced Search step: health, performance, layout @ui', async ({ page }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    const opened = await gotoContacts(page);
-    test.skip(!opened, 'the Contacts tab did not open on this build');
+    test('Contacts — Advanced Search step: health, performance, layout @ui', async ({ page }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      const opened = await gotoContacts(page);
+      test.skip(!opened, 'the Contacts tab did not open on this build');
 
-    await page.locator('.icon-KP_107-User-Add').first().click({ timeout: 15_000 }).catch(() => undefined);
-    await page.getByText('Personal', { exact: true }).first().click({ timeout: 5_000 }).catch(() => undefined);
-    await page.getByRole('button', { name: 'Continue' }).first().click({ timeout: 8_000 }).catch(() => undefined);
-    await page
-      .locator('.icon-KP_225_Advanced-Search')
-      .first()
-      .click({ timeout: 10_000 })
-      .catch(() => undefined);
-    const loadMs = Date.now() - started;
+      await page
+        .locator('.icon-KP_107-User-Add')
+        .first()
+        .click({ timeout: 15_000 })
+        .catch(() => undefined);
+      await page
+        .getByText('Personal', { exact: true })
+        .first()
+        .click({ timeout: 5_000 })
+        .catch(() => undefined);
+      await page
+        .getByRole('button', { name: 'Continue' })
+        .first()
+        .click({ timeout: 8_000 })
+        .catch(() => undefined);
+      await page
+        .locator('.icon-KP_225_Advanced-Search')
+        .first()
+        .click({ timeout: 10_000 })
+        .catch(() => undefined);
+      const loadMs = Date.now() - started;
 
-    const screen: UiScreenDef = {
-      route: '/katchup',
-      name: 'Contacts — Advanced Search step',
-      screen: 'katchup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+      const screen: UiScreenDef = {
+        route: '/katchup',
+        name: 'Contacts — Advanced Search step',
+        screen: 'katchup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Contacts — Create-Group dialog: health, performance, layout @ui', async ({ page }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    const opened = await gotoContacts(page);
-    test.skip(!opened, 'the Contacts tab did not open on this build');
+    test('Contacts — Create-Group dialog: health, performance, layout @ui', async ({ page }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      const opened = await gotoContacts(page);
+      test.skip(!opened, 'the Contacts tab did not open on this build');
 
-    await page.locator('.icon-KP_112-Group-Add').first().click({ timeout: 15_000 }).catch(() => undefined);
-    const loadMs = Date.now() - started;
+      await page
+        .locator('.icon-KP_112-Group-Add')
+        .first()
+        .click({ timeout: 15_000 })
+        .catch(() => undefined);
+      const loadMs = Date.now() - started;
 
-    const screen: UiScreenDef = {
-      route: '/katchup',
-      name: 'Contacts — Create-Group dialog',
-      screen: 'katchup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
-});
+      const screen: UiScreenDef = {
+        route: '/katchup',
+        name: 'Contacts — Create-Group dialog',
+        screen: 'katchup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
+  },
+);

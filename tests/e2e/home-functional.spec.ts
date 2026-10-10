@@ -110,7 +110,7 @@ test.describe('KPost Home · dashboard functional behaviour', { tag: '@ui' }, ()
    * disabled the longest) actually becomes usable once every prior link is filled — the strongest
    * proof the whole chain is wired correctly, not just the first link.
    */
-  test('Advanced Search\'s 4 dropdown filters unlock each other in the documented chain order @ui', async ({
+  test("Advanced Search's 4 dropdown filters unlock each other in the documented chain order @ui", async ({
     homePage,
     page,
   }) => {

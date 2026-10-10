@@ -9,7 +9,6 @@ import {
   gotoKatchup,
   messageBySubject,
   openComposer,
-  openConversation,
   openReceivedConversation,
   receivedMessageBySubject,
   sendMessage,

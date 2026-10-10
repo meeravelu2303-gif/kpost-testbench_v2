@@ -107,14 +107,15 @@ contain tokens and passwords. **Never commit them, and never write run logs into
 
 ## 6. Bugzilla and accounts utilities
 
-| Command                            | What it does                                                                  |
-| ---------------------------------- | ----------------------------------------------------------------------------- |
-| `npm run bugzilla:dupe-check`      | the mandatory duplicate check before filing anything by hand.                 |
-| `npm run bug:preview` / `bug:file` | preview / file a hand-authored ticket (`tests/framework/manual-bug.spec.ts`). |
-| `npm run accounts:verify`          | reconcile the QA account registry against the KPOST_QA database.              |
-| `npm run accounts:provision`       | create the bench's `qatest_*` accounts on the KPOST_QA test database.         |
-| `npm run token:capture`            | capture a real access token now, to use later as `EXPIRED_TOKEN`.             |
-| `npm run kpost:expired`            | the KPost pass with an aged (expired) token, cross-platform.                  |
+| Command                            | What it does                                                                                                                                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run preflight`                | **run before any live run:** proves `.env` is complete, no other Playwright run is in progress, the hosts and Bugzilla answer, and backs up `reports/REPORT.*`. Exits non-zero on any hard failure. |
+| `npm run bugzilla:dupe-check`      | the mandatory duplicate check before filing anything by hand.                                                                                                                                       |
+| `npm run bug:preview` / `bug:file` | preview / file a hand-authored ticket (`tests/framework/manual-bug.spec.ts`).                                                                                                                       |
+| `npm run accounts:verify`          | reconcile the QA account registry against the KPOST_QA database.                                                                                                                                    |
+| `npm run accounts:provision`       | create the bench's `qatest_*` accounts on the KPOST_QA test database.                                                                                                                               |
+| `npm run token:capture`            | capture a real access token now, to use later as `EXPIRED_TOKEN`.                                                                                                                                   |
+| `npm run kpost:expired`            | the KPost pass with an aged (expired) token, cross-platform.                                                                                                                                        |
 
 ## 7. Development utilities
 

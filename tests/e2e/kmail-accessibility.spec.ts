@@ -23,7 +23,9 @@ test.describe('KPost KMail · compose form accessibility (axe-core WCAG)', { tag
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  test('KMail — compose form (/writemail) — WCAG violations (axe) @ui', async ({ page }, testInfo) => {
+  test('KMail — compose form (/writemail) — WCAG violations (axe) @ui', async ({
+    page,
+  }, testInfo) => {
     await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await page
       .locator('.loader-overlay')
@@ -67,7 +69,10 @@ test.describe('KPost KMail · compose form accessibility (axe-core WCAG)', { tag
     };
     const evidencePath = testInfo.outputPath('axe-violations.json');
     writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
-    await testInfo.attach(AXE_JSON_ATTACHMENT, { path: evidencePath, contentType: 'application/json' });
+    await testInfo.attach(AXE_JSON_ATTACHMENT, {
+      path: evidencePath,
+      contentType: 'application/json',
+    });
 
     if (evidence.violations.length) {
       await renderAccessibilityOverlay(page, screenName, evidence.violations);
@@ -85,10 +90,16 @@ test.describe('KPost KMail · compose form accessibility (axe-core WCAG)', { tag
     );
 
     expect
-      .soft(critical, `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`)
+      .soft(
+        critical,
+        `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
     expect
-      .soft(serious, `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`)
+      .soft(
+        serious,
+        `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
   });
 });

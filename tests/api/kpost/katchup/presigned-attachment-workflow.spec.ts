@@ -46,7 +46,11 @@ test.describe('KPost Katchup · presigned attachment upload @api @kpost-api @kat
     expect(uuid, 'the presigned URL names a uuid').toBeTruthy();
 
     // A raw S3 PUT, not a registered KPost endpoint — exactly what the live client does with this URL.
-    const putRes = await fetch(url, { method: 'PUT', headers: { 'Content-Type': contentType }, body: content });
+    const putRes = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: content,
+    });
     expect(putRes.status, 'the direct S3 upload succeeds').toBeLessThan(300);
 
     /*
@@ -93,9 +97,9 @@ test.describe('KPost Katchup · presigned attachment upload @api @kpost-api @kat
     );
     try {
       // The real production flow, unlike the legacy multipart route (#614): the uuid IS attached.
-      expect(attachmentUuid, 'the message carries the uploaded uuid as its attachmentUuid').toEqual([
-        uuid,
-      ]);
+      expect(attachmentUuid, 'the message carries the uploaded uuid as its attachmentUuid').toEqual(
+        [uuid],
+      );
     } finally {
       await cleanup(endpoints, msgID);
     }
@@ -105,7 +109,13 @@ test.describe('KPost Katchup · presigned attachment upload @api @kpost-api @kat
     endpoints,
   }) => {
     const content = 'QA bench presigned attachment content';
-    const { msgID, uuid } = await uploadAndSend(endpoints, 'qa-bench.txt', 'txt', 'text/plain', content);
+    const { msgID, uuid } = await uploadAndSend(
+      endpoints,
+      'qa-bench.txt',
+      'txt',
+      'text/plain',
+      content,
+    );
     try {
       const dl = await endpoints.sendTo(
         'katchup-download',
@@ -160,7 +170,9 @@ test.describe('KPost Katchup · presigned attachment upload @api @kpost-api @kat
       );
       expect(dla.status, 'downloadAttachment succeeds').toBe(200);
       const body = JSON.parse(dla.bodyText || '{}') as { fileName?: string; url?: string };
-      expect(body.fileName, 'the JSON metadata carries the real file name').toBe('another-name.pdf');
+      expect(body.fileName, 'the JSON metadata carries the real file name').toBe(
+        'another-name.pdf',
+      );
 
       /*
        * Live-verified 2026-09-26, reproduced with two different real file names: the presigned GET
@@ -184,7 +196,10 @@ test.describe('KPost Katchup · presigned attachment upload @api @kpost-api @kat
         });
       }
       expect
-        .soft(asciiFilenameHardcoded, 'the ASCII filename fallback is the real file name, not a placeholder')
+        .soft(
+          asciiFilenameHardcoded,
+          'the ASCII filename fallback is the real file name, not a placeholder',
+        )
         .toBe(false);
     } finally {
       await cleanup(endpoints, msgID);
@@ -229,7 +244,9 @@ test.describe('KPost Katchup · presigned attachment upload @api @kpost-api @kat
         { pathParams: { uuid: uuid ?? '' } },
         { label: 'presigned:download-thumbnail', auth: { principal: A }, allowLiveRead: true },
       );
-      expect.soft(thumb.status, 'downloadThumbnail does not crash for a real uuid').toBeLessThan(500);
+      expect
+        .soft(thumb.status, 'downloadThumbnail does not crash for a real uuid')
+        .toBeLessThan(500);
 
       const streaming = await endpoints.sendTo(
         'katchup-media-streaming',
@@ -238,7 +255,9 @@ test.describe('KPost Katchup · presigned attachment upload @api @kpost-api @kat
       );
       // 303 (redirect to the real media URL) is the observed, reasonable shape for a non-media file;
       // asserted as "reachable, not a crash" rather than a specific status.
-      expect.soft(streaming.status, 'mediaStreaming does not crash for a real uuid').toBeLessThan(500);
+      expect
+        .soft(streaming.status, 'mediaStreaming does not crash for a real uuid')
+        .toBeLessThan(500);
     } finally {
       await cleanup(endpoints, msgID);
     }

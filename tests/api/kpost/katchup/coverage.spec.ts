@@ -61,9 +61,10 @@ test.describe('KPost Katchup · module coverage', () => {
     const cleared = katchupApis
       .filter((api) => api.destructive && api.productionSafe)
       .map((api) => api.id);
-    expect(cleared, 'no Katchup write is cleared for live yet (docs/modules/katchup-flow.md §5-6)').toEqual(
-      [],
-    );
+    expect(
+      cleared,
+      'no Katchup write is cleared for live yet (docs/modules/katchup-flow.md §5-6)',
+    ).toEqual([]);
   });
 
   test('every read cleared for live owns nothing it was not given @framework', () => {

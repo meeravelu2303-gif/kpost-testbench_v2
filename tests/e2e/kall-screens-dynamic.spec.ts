@@ -40,8 +40,15 @@ test.describe('KPost Kall — dynamic-state health/performance/layout sweep', { 
     const stop = watchUiHealth(page);
     const started = Date.now();
     await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.locator('.loader-overlay').waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => undefined);
-    await page.getByRole('button', { name: /Kool Kall/i }).first().click().catch(() => undefined);
+    await page
+      .locator('.loader-overlay')
+      .waitFor({ state: 'hidden', timeout: 30_000 })
+      .catch(() => undefined);
+    await page
+      .getByRole('button', { name: /Kool Kall/i })
+      .first()
+      .click()
+      .catch(() => undefined);
     const loadMs = Date.now() - started;
     const screen: ScreenDef = {
       route: '/kall',
@@ -57,8 +64,15 @@ test.describe('KPost Kall — dynamic-state health/performance/layout sweep', { 
     const stop = watchUiHealth(page);
     const started = Date.now();
     await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.locator('.loader-overlay').waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => undefined);
-    await page.getByRole('button', { name: /Kool Kall/i }).first().click().catch(() => undefined);
+    await page
+      .locator('.loader-overlay')
+      .waitFor({ state: 'hidden', timeout: 30_000 })
+      .catch(() => undefined);
+    await page
+      .getByRole('button', { name: /Kool Kall/i })
+      .first()
+      .click()
+      .catch(() => undefined);
 
     const modal = page.locator('.modal-content');
     const titleField = modal.locator('input[placeholder="Enter Meeting Title"]').first();

@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/* global fetch */
 /**
  * Creates the bench's `qatestN@<domain>` accounts on the KPost test environment, through the product's
  * own signup API, and records each one in `src/fixtures/test-accounts.json` as it is proven usable.

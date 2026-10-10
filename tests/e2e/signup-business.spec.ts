@@ -1,4 +1,5 @@
 import { SignupPage } from '@pages/SignupPage';
+import type { Page } from '@playwright/test';
 import { testData } from '@config/test-data.config';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
@@ -53,7 +54,9 @@ test.describe('KPost signup · Business category picker (read-only)', { tag: '@u
     // confirmed live: 8 `.category-contentBox-layout` elements, 4 visible + 4 `display:none`.
     for (const category of ['Small', 'Medium', 'Large', 'Multi-National']) {
       await expect(
-        page.locator('.category-contentBox-layout', { hasText: category }).filter({ visible: true }),
+        page
+          .locator('.category-contentBox-layout', { hasText: category })
+          .filter({ visible: true }),
         `the ${category} category card is offered`,
       ).toBeVisible({ timeout: 15_000 });
     }
@@ -94,7 +97,11 @@ test.describe('KPost signup · mobile viewport (below 992px)', { tag: '@ui' }, (
   test('Personal reaches its registration form on a mobile viewport @ui', async ({ page }) => {
     const signup = new SignupPage(page);
     await signup.goto();
-    await page.getByText(/^Personal$/i).filter({ visible: true }).first().click();
+    await page
+      .getByText(/^Personal$/i)
+      .filter({ visible: true })
+      .first()
+      .click();
 
     await expect(
       page.locator('.react-select__input').first(),
@@ -107,9 +114,17 @@ test.describe('KPost signup · mobile viewport (below 992px)', { tag: '@ui' }, (
   }) => {
     const signup = new SignupPage(page);
     await signup.goto();
-    await page.getByText(/^Business$/i).filter({ visible: true }).first().click();
+    await page
+      .getByText(/^Business$/i)
+      .filter({ visible: true })
+      .first()
+      .click();
     await page.waitForTimeout(500);
-    await page.getByText(/^Small$/i).filter({ visible: true }).first().click();
+    await page
+      .getByText(/^Small$/i)
+      .filter({ visible: true })
+      .first()
+      .click();
     await page.waitForTimeout(1500);
 
     // #825 (fixed, re-verified live 2026-10-05): this used to reset back to the very first "Select
@@ -133,7 +148,7 @@ test.describe('KPost Business signup · field validation', { tag: '@ui' }, () =>
   }
 
   /** Drives every screen up to (not including) Company Details, for the validation tests below. */
-  async function reachCompanyDetails(signup: SignupPage, page: import('@playwright/test').Page) {
+  async function reachCompanyDetails(signup: SignupPage, page: Page) {
     await signup.goto();
     await signup.chooseAccountType('Business');
     await signup.chooseBusinessCategory('Small');
@@ -221,15 +236,17 @@ test.describe('KPost Business signup · field validation', { tag: '@ui' }, () =>
     });
 
     await reachCompanyDetails(signupPage, page);
-    await signupPage.fillCompanyDetails({
-      companyName: `QA Fresh Co ${Date.now()}`,
-      typeOfBusiness: 'QA Testing',
-      pincode: testData.pinCode,
-      area: 'Chennai',
-      adminDesignation: 'Manager',
-      preAdminDesignationId: `q${Date.now().toString().slice(-6)}`,
-      businessUniqueName: 'anything',
-    }).catch(() => undefined); // fillCompanyDetails' own outcome race isn't the point here
+    await signupPage
+      .fillCompanyDetails({
+        companyName: `QA Fresh Co ${Date.now()}`,
+        typeOfBusiness: 'QA Testing',
+        pincode: testData.pinCode,
+        area: 'Chennai',
+        adminDesignation: 'Manager',
+        preAdminDesignationId: `q${Date.now().toString().slice(-6)}`,
+        businessUniqueName: 'anything',
+      })
+      .catch(() => undefined); // fillCompanyDetails' own outcome race isn't the point here
 
     await expect(
       page.getByText(/Business Short Unique Name already exists/i),

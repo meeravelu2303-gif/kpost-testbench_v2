@@ -112,7 +112,10 @@ test.describe('KPost KBooking · feature flow @api @kbooking', () => {
      * the OTP-bypass flag) — so this is deliberately never gated behind a plain env var a future run
      * could set by accident.
      */
-    test.skip(true, 'real third-party seat hold, unconfirmed sandbox — needs explicit authorization');
+    test.skip(
+      true,
+      'real third-party seat hold, unconfirmed sandbox — needs explicit authorization',
+    );
 
     test('blockTicket holds seats on a real trip pending payment', async ({ endpoints }) => {
       const ex = await endpoints.sendTo(

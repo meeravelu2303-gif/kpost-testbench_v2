@@ -17,7 +17,7 @@ test.describe('raw request bodies reach the server verbatim @framework', () => {
   test.beforeAll(async () => {
     server = createServer((req, res) => {
       const chunks: Buffer[] = [];
-      req.on('data', (c) => chunks.push(c));
+      req.on('data', (c: Buffer) => chunks.push(c));
       req.on('end', () => {
         received = {
           body: Buffer.concat(chunks).toString('utf8'),
@@ -43,7 +43,7 @@ test.describe('raw request bodies reach the server verbatim @framework', () => {
       rawBody,
       correlationId: 'raw-body-test',
       timeoutMs: 5000,
-    } as ApiRequest;
+    };
     await new ApiClient(context, log).execute(apiRequest);
     await context.dispose();
   };

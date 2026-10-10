@@ -34,10 +34,9 @@ test.describe('KPost Contacts · list data-quality @api @kpost-api @contacts', (
     };
     const rows = body.unknown_contact_added ?? [];
     for (const row of rows) {
-      expect(
-        row.kpostID?.toLowerCase(),
-        "every row's kpostID is the caller's own account",
-      ).toBe(testData.kpostId.toLowerCase());
+      expect(row.kpostID?.toLowerCase(), "every row's kpostID is the caller's own account").toBe(
+        testData.kpostId.toLowerCase(),
+      );
     }
     const contactIds = rows.map((r) => r.contactID);
     expect(contactIds, 'no duplicate counterparties in the unknown-contacts list').toHaveLength(

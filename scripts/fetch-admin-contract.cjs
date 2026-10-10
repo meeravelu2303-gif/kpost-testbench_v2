@@ -23,7 +23,6 @@
  * Refresh it whenever the Admin service changes: `npm run contract:admin`.
  */
 'use strict';
-/* global fetch, AbortSignal */
 
 const fs = require('fs');
 const path = require('path');

@@ -29,47 +29,51 @@ async function assertNoFileableIssues(
   expect(problems, `${screen.name} UI issues — ${problems.join(' | ')}`).toEqual([]);
 }
 
-test.describe('KPost Settings — dynamic-state health/performance/layout sweep', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost Settings — dynamic-state health/performance/layout sweep',
+  { tag: '@ui' },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  test('Settings — General Settings expanded: health, performance, layout @ui', async ({
-    page,
-    settingsPage,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    await settingsPage.goto();
-    await settingsPage.expandGroup('General Settings');
-    const loadMs = Date.now() - started;
-    const screen: ScreenDef = {
-      route: '/settings',
-      name: 'Settings — General Settings expanded',
-      screen: 'settings',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+    test('Settings — General Settings expanded: health, performance, layout @ui', async ({
+      page,
+      settingsPage,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      await settingsPage.goto();
+      await settingsPage.expandGroup('General Settings');
+      const loadMs = Date.now() - started;
+      const screen: ScreenDef = {
+        route: '/settings',
+        name: 'Settings — General Settings expanded',
+        screen: 'settings',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Settings — Profile Creation expanded: health, performance, layout @ui', async ({
-    page,
-    settingsPage,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
-    await settingsPage.goto();
-    await settingsPage.expandGroup('Profile Creation');
-    const loadMs = Date.now() - started;
-    const screen: ScreenDef = {
-      route: '/settings',
-      name: 'Settings — Profile Creation expanded',
-      screen: 'settings',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
-});
+    test('Settings — Profile Creation expanded: health, performance, layout @ui', async ({
+      page,
+      settingsPage,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
+      await settingsPage.goto();
+      await settingsPage.expandGroup('Profile Creation');
+      const loadMs = Date.now() - started;
+      const screen: ScreenDef = {
+        route: '/settings',
+        name: 'Settings — Profile Creation expanded',
+        screen: 'settings',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
+  },
+);

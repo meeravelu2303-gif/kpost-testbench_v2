@@ -58,10 +58,11 @@ test.describe('KPost Security · Profile getUserProfileUsingKpostID PII over-exp
         endpointId: 'profile-user-profile-by-kpostid',
         ruleId: 'PII-profile-lookup-sensitive-field-disclosure',
         rule:
-          'Fetching another account\'s profile must not return sensitive PII (Aadhaar number, date ' +
+          "Fetching another account's profile must not return sensitive PII (Aadhaar number, date " +
           'of birth, home address, alternate phone/landline) with no privacy control, regardless of ' +
-          'the target account\'s own privacy settings.',
-        expected: 'the response contains no sensitive PII fields with real values for a non-owner caller',
+          "the target account's own privacy settings.",
+        expected:
+          'the response contains no sensitive PII fields with real values for a non-owner caller',
         actual: `fields with real values found in response, with occurrence counts: ${counts.join(', ')}`,
         request: { body: {} },
       });

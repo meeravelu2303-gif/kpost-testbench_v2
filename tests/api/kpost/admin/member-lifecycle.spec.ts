@@ -137,11 +137,15 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
       const makeBackup = await endpoints.sendTo(
         'admin-create-remove-backup-admin',
         { body: { kpostID, isBackUpAdmin: true, companyID } },
-        { label: 'admin-lifecycle:backup-admin-on', auth: { principal: ADMIN }, allowLiveWrite: true },
+        {
+          label: 'admin-lifecycle:backup-admin-on',
+          auth: { principal: ADMIN },
+          allowLiveWrite: true,
+        },
       );
-      expect.soft(makeBackup.status, 'createOrRemoveBackupAdmin(true) succeeds on the throwaway member').toBeLessThan(
-        300,
-      );
+      expect
+        .soft(makeBackup.status, 'createOrRemoveBackupAdmin(true) succeeds on the throwaway member')
+        .toBeLessThan(300);
       const removeBackup = await endpoints.sendTo(
         'admin-create-remove-backup-admin',
         { body: { kpostID, isBackUpAdmin: false, companyID } },
@@ -152,7 +156,10 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
         },
       );
       expect
-        .soft(removeBackup.status, 'createOrRemoveBackupAdmin(false) succeeds on the throwaway member')
+        .soft(
+          removeBackup.status,
+          'createOrRemoveBackupAdmin(false) succeeds on the throwaway member',
+        )
         .toBeLessThan(300);
 
       // --- reset the throwaway member's password (never the shared fixture's) ----------------------
@@ -166,7 +173,11 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
             entityType: 'BUSINESS_M',
           },
         },
-        { label: 'admin-lifecycle:reset-password', auth: { principal: ADMIN }, allowLiveWrite: true },
+        {
+          label: 'admin-lifecycle:reset-password',
+          auth: { principal: ADMIN },
+          allowLiveWrite: true,
+        },
       );
       expect.soft(reset.status, 'resetPassword succeeds on the throwaway member').toBeLessThan(300);
     } finally {
@@ -175,7 +186,11 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
           .sendTo(
             'admin-terminate-user',
             { body: { kpostID, companyID } },
-            { label: 'admin-lifecycle:terminate', auth: { principal: ADMIN }, allowLiveWrite: true },
+            {
+              label: 'admin-lifecycle:terminate',
+              auth: { principal: ADMIN },
+              allowLiveWrite: true,
+            },
           )
           .catch(() => undefined);
       }

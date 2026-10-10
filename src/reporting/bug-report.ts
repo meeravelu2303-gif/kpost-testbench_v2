@@ -323,7 +323,10 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
       '| ------- | ---------------- |',
       ...needsReview
         .slice(0, 100)
-        .map((e) => `| ${e.summary.replace(/\|/g, '\\|').slice(0, 90)} | ${(e.reason ?? '').replace(/\|/g, '\\|')} |`),
+        .map(
+          (e) =>
+            `| ${e.summary.replace(/\|/g, '\\|').slice(0, 90)} | ${(e.reason ?? '').replace(/\|/g, '\\|')} |`,
+        ),
       '',
     );
     if (needsReview.length > 100) lines.push(`…and ${needsReview.length - 100} more.`, '');

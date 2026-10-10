@@ -48,10 +48,7 @@ test.describe('KPost Katchup · shared/reference reads @api @kpost-api @katchup'
     return { msgID: row?.msgID, sharedMessageId: row?.sharedMessageId };
   }
 
-  async function cleanup(
-    endpoints: EndpointExecutor,
-    msgID: number | undefined,
-  ): Promise<void> {
+  async function cleanup(endpoints: EndpointExecutor, msgID: number | undefined): Promise<void> {
     if (!msgID) return;
     await endpoints
       .sendTo(
@@ -92,7 +89,11 @@ test.describe('KPost Katchup · shared/reference reads @api @kpost-api @katchup'
       const ex = await endpoints.sendTo(
         'katchup-reference-details',
         { body: { referenceMessageIDList: [msgID], sourceMsgID: msgID } },
-        { label: 'shared-reference:reference-details', auth: { principal: A }, allowLiveRead: true },
+        {
+          label: 'shared-reference:reference-details',
+          auth: { principal: A },
+          allowLiveRead: true,
+        },
       );
       expect(ex.status, 'getReferenceMSGDetails succeeds').toBe(200);
       const body = JSON.parse(ex.bodyText || '{}') as { data?: Array<{ msgID?: number }> };
@@ -113,7 +114,11 @@ test.describe('KPost Katchup · shared/reference reads @api @kpost-api @katchup'
       const ex = await endpoints.sendTo(
         'katchup-messages-by-reference',
         { body: { referenceMessageIDList: [msgID] } },
-        { label: 'shared-reference:messages-by-reference', auth: { principal: A }, allowLiveRead: true },
+        {
+          label: 'shared-reference:messages-by-reference',
+          auth: { principal: A },
+          allowLiveRead: true,
+        },
       );
       // Not yet confirmed positive (see module docstring) — asserted as "reachable, not a crash".
       expect(

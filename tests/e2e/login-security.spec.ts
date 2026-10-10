@@ -72,7 +72,9 @@ test.describe('KPost login · security fuzzing', { tag: '@ui' }, () => {
         description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
       });
 
-      expect(health.pageErrors, `no uncaught JS error while processing: ${payload.value}`).toEqual([]);
+      expect(health.pageErrors, `no uncaught JS error while processing: ${payload.value}`).toEqual(
+        [],
+      );
       expect(
         dialogFired,
         `the payload must never execute (no alert/confirm/prompt fired) — reflected/DOM XSS: ${payload.value}`,

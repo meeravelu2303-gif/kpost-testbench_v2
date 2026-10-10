@@ -59,8 +59,7 @@ const GATED_WRITE_OMISSIONS: Record<string, string> = {
   // The workbook example documents `sendDate`, but the owner-verified WORKING live curl (2026-09-19)
   // sends { otp, countryID, mobileNumber } WITHOUT it — a `sendDate: Date.now()` epoch pushed the API
   // into a failure path that answered 500. Deliberately omitted to match the real, working contract.
-  'common-validate-otp':
-    'workbook `sendDate` omitted — the working live curl does not send it (a sendDate epoch 500s)',
+  // (`common-validate-otp` itself no longer under-sends per the audit, so it carries no entry.)
   'common-validate-mail-otp': 'workbook `sendDate` omitted — matches the working validateOTP shape',
   // Katchup forwards/bulk — the reference-message object + source msgIDs are minted by the running
   // conversation and supplied by the KATCHUP_LIFECYCLE spec; a static value would be a fabricated id.
@@ -96,7 +95,16 @@ const GATED_WRITE_OMISSIONS: Record<string, string> = {
   // lifecycle spec fills, self-cleaning on our own QA records only.
   'profile-update-contact':
     'gated PROFILE_LIFECYCLE, self-restoring; optional contact fields (addressLine2/alternateMobile/landline)',
-  'common-save-enquiry-details': 'public write, off-live only; optional `timeToContact`',
+  // The backend binds a List<ContactsRO>, so the definition sends a JSON ARRAY whose elements carry
+  // every documented field; the workbook example documents one bare contact object, so the audit
+  // sees its top-level keys as "missing" when they are in fact sent inside each element.
+  'contacts-add-multiple':
+    'documented fields are sent inside each array element (backend takes a JSON array, the example shows one object)',
+  // Never driven: a real seat hold on third-party bus inventory, unconditionally skipped in
+  // feature.spec.ts until the owner authorises it; the trip/boarding/route ids only exist after a
+  // live search, so a static payload would be fabricated.
+  'kbooking-block-ticket':
+    'never executed (real third-party seat hold, needs owner authorisation); trip/boarding/route ids come from a live search',
   'kmail-draft-content':
     'read keyed by a runtime draftMailID/senderUniqueMailID a draft-save mints',
   'kmail-draft-delete': 'gated KMAIL_LIFECYCLE; kmailSendDate of the runtime draft being deleted',
@@ -249,7 +257,10 @@ test.describe('payload completeness audit @framework', () => {
       ),
       '',
     ];
-    fs.writeFileSync(path.join(ROOT_DIR, 'docs', 'generated', 'payload-audit.md'), `${lines.join('\n')}\n`);
+    fs.writeFileSync(
+      path.join(ROOT_DIR, 'docs', 'generated', 'payload-audit.md'),
+      `${lines.join('\n')}\n`,
+    );
 
     console.log(
       `PAYLOAD AUDIT: ${liveRisks.length} live+example-missing (fix), ${gatedRisks.length} gated, ${schemaOnly.length} schema-only. See docs/generated/payload-audit.md`,

@@ -27,14 +27,21 @@ test.describe('KPost Settings · Data Storage panel', { tag: '@ui' }, () => {
     });
 
     const requestPromise = page
-      .waitForRequest((req) => req.url().includes('/kmailData/getKloudUsedData'), { timeout: 10_000 })
+      .waitForRequest((req) => req.url().includes('/kmailData/getKloudUsedData'), {
+        timeout: 10_000,
+      })
       .then(() => true)
       .catch(() => false);
 
-    await page.getByText(/^KPOST Cloud Storage$/i).first().click();
+    await page
+      .getByText(/^KPOST Cloud Storage$/i)
+      .first()
+      .click();
     const fired = await requestPromise;
 
-    expect(fired, 'selecting KPOST Cloud Storage fires the real getKloudUsedData request').toBe(true);
+    expect(fired, 'selecting KPOST Cloud Storage fires the real getKloudUsedData request').toBe(
+      true,
+    );
   });
 
   test('the top-level "Buy" button and a plan\'s "Buy Monthly" are confirmed dead (no purchase path exists) @ui', async ({
@@ -68,8 +75,14 @@ test.describe('KPost Settings · Data Storage panel', { tag: '@ui' }, () => {
     await settingsPage.openPanel('General Settings', 'Data Storage');
 
     // Reach the plans view — selecting any non-KPOSTCLOUD radio surfaces the 3 plan rows.
-    await page.getByText(/^Phone Storage$/i).first().click();
-    await page.getByText(/Buy Yearly/i).first().click();
+    await page
+      .getByText(/^Phone Storage$/i)
+      .first()
+      .click();
+    await page
+      .getByText(/Buy Yearly/i)
+      .first()
+      .click();
 
     await expect(page.getByText(/^Buy Yearly$/i).last(), 'the plan modal opens').toBeVisible({
       timeout: 10_000,

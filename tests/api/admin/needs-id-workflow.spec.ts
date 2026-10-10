@@ -12,7 +12,7 @@ test.describe('Admin module · recorded gaps', () => {
       'getSuspendOrTerminateEmployee always 400s "requestType is Empty or Invalid" (or "...is ' +
         'required" when omitted/null). Tried live 2026-09-26: SUSPEND, TERMINATE, SUSPEND_TERMINATE, ' +
         'ACTIVE, INACTIVE, ALL, Suspended, suspended, SUSPENDED_TERMINATED, BOTH, numeric 0/1/2, ' +
-        "boolean true, and alternate field names (status/type/requestStatus/employeeStatus) — none " +
+        'boolean true, and alternate field names (status/type/requestStatus/employeeStatus) — none ' +
         'accepted. The originally documented "SUSPENDED" (owner\'s PDF) is also rejected. No frontend ' +
         'source was available to confirm the real value. Needs the dev to confirm the accepted ' +
         'requestType enum before this can be driven live without risking a false CRITICAL.',
@@ -25,7 +25,7 @@ test.describe('Admin module · recorded gaps', () => {
       true,
       'These four provision/mutate a real, non-reversible external KSMACC account ' +
         '(RolePostingSetUpServiceImpl.sendKPostUserRequest → login.ksmacc.in) — the same class of ' +
-        'irreversible external side effect as KOS\'s metered AI, meant to be held behind a second, ' +
+        "irreversible external side effect as KOS's metered AI, meant to be held behind a second, " +
         'explicit, owner-authorized flag (ADMIN_ROLE_POSTING_LIVE) on top of ADMIN_LIFECYCLE. Found ' +
         '2026-09-26: no code anywhere in this repo actually reads process.env.ADMIN_ROLE_POSTING_LIVE ' +
         '— the flag exists only in a comment, so this flow could not run even with it set. Wiring it ' +

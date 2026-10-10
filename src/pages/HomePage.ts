@@ -22,7 +22,10 @@ export class HomePage extends BasePage {
 
   /** The signed-in header (avatar pill) is the fastest confirmation a session is live on Home. */
   async expectLoaded(): Promise<void> {
-    await this.page.locator('.header-user-pill').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await this.page
+      .locator('.header-user-pill')
+      .first()
+      .waitFor({ state: 'visible', timeout: 20_000 });
     await this.page
       .locator('.loader-overlay')
       .waitFor({ state: 'hidden', timeout: 30_000 })
@@ -68,7 +71,9 @@ export class HomePage extends BasePage {
   async openAdvancedSearch(): Promise<void> {
     await test.step('Home: open Advanced Search', async () => {
       await this.page.locator('.icon-KP_225_Advanced-Search').first().click();
-      await this.page.getByText(/^Advanced Search$/i).waitFor({ state: 'visible', timeout: 10_000 });
+      await this.page
+        .getByText(/^Advanced Search$/i)
+        .waitFor({ state: 'visible', timeout: 10_000 });
     });
   }
 
@@ -113,7 +118,8 @@ export class HomePage extends BasePage {
 
       if (dataType) await this.chooseAdvancedSearchDropdown('Select by Data Type', dataType);
       if (messageBy) await this.chooseAdvancedSearchDropdown('Select Message by', messageBy);
-      if (messageType) await this.chooseAdvancedSearchDropdown('Select Type of Message', messageType);
+      if (messageType)
+        await this.chooseAdvancedSearchDropdown('Select Type of Message', messageType);
       if (contentType) await this.chooseAdvancedSearchDropdown('Select Content Type', contentType);
       if (filters.word) await this.page.getByPlaceholder('Enter Word').fill(filters.word);
       if (filters.fromDate) await this.page.getByPlaceholder('From').fill(filters.fromDate);
@@ -128,8 +134,13 @@ export class HomePage extends BasePage {
    * screens), so this locates the SPECIFIC input belonging to the labelled dropdown rather than
    * addressing by position.
    */
-  private async chooseAdvancedSearchDropdown(placeholderLabel: string, optionLabel: string): Promise<void> {
-    const container = this.page.locator('.d-flex.flex-column', { hasText: placeholderLabel }).last();
+  private async chooseAdvancedSearchDropdown(
+    placeholderLabel: string,
+    optionLabel: string,
+  ): Promise<void> {
+    const container = this.page
+      .locator('.d-flex.flex-column', { hasText: placeholderLabel })
+      .last();
     const input = container.locator('.react-select__input').first();
     await input.click({ force: true });
     await this.page.waitForTimeout(300);
@@ -158,7 +169,9 @@ export class HomePage extends BasePage {
    */
   async openFirstRecentConversation(): Promise<boolean> {
     return test.step('Home: open the first Recents item', async () => {
-      const items = this.page.locator('.RecentMessage, [class*="recent-msg"], [class*="RecentMessage"]');
+      const items = this.page.locator(
+        '.RecentMessage, [class*="recent-msg"], [class*="RecentMessage"]',
+      );
       const count = await items.count();
       if (count === 0) return false;
       await items.first().click();

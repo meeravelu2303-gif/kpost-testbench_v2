@@ -203,7 +203,8 @@ test.describe('KPost Katchup · feature flow', () => {
         ruleId: 'BR-KU-EDIT-SUBJ',
         rule: 'editMessage must not change the Subject — the body is the only editable field.',
         expected: `the Subject stays "${originalSubject}"`,
-        actual: `the Subject changed to "${attemptedSubject}" (server accepted it; the real UI client ` +
+        actual:
+          `the Subject changed to "${attemptedSubject}" (server accepted it; the real UI client ` +
           'disables the Subject field during edit, so this is unreachable from the product today)',
       });
     }
@@ -304,12 +305,17 @@ test.describe('KPost Katchup · feature flow', () => {
         );
         expect.soft(receiptsBefore.status, 'read-receipt status reads back').toBe(200);
         const beforeParsed = receiptsBefore.json();
-        const beforeList = (beforeParsed.ok
-          ? ((beforeParsed.value as Record<string, unknown>).data as unknown[])
-          : []) as Array<{ receiver?: string; readStatus?: string }>;
-        const bBefore = beforeList.find((r) => r.receiver?.toLowerCase() === B.username.toLowerCase());
+        const beforeList = (
+          beforeParsed.ok ? ((beforeParsed.value as Record<string, unknown>).data as unknown[]) : []
+        ) as Array<{ receiver?: string; readStatus?: string }>;
+        const bBefore = beforeList.find(
+          (r) => r.receiver?.toLowerCase() === B.username.toLowerCase(),
+        );
         expect
-          .soft(bBefore?.readStatus, 'BR-KU-RECEIPTS: B has not read it yet, before opening the thread')
+          .soft(
+            bBefore?.readStatus,
+            'BR-KU-RECEIPTS: B has not read it yet, before opening the thread',
+          )
           .not.toBe('Y');
 
         // B opens the group conversation — this is what marks a group message read FOR B specifically
@@ -323,14 +329,23 @@ test.describe('KPost Katchup · feature flow', () => {
           { label: 'feature:read-receipts-after', auth: { principal: A }, allowLiveRead: true },
         );
         const afterParsed = receiptsAfter.json();
-        const afterList = (afterParsed.ok
-          ? ((afterParsed.value as Record<string, unknown>).data as unknown[])
-          : []) as Array<{ receiver?: string; readStatus?: string }>;
-        const bAfter = afterList.find((r) => r.receiver?.toLowerCase() === B.username.toLowerCase());
-        const cAfter = afterList.find((r) => r.receiver?.toLowerCase() === C.username.toLowerCase());
-        const dAfter = afterList.find((r) => r.receiver?.toLowerCase() === D.username.toLowerCase());
+        const afterList = (
+          afterParsed.ok ? ((afterParsed.value as Record<string, unknown>).data as unknown[]) : []
+        ) as Array<{ receiver?: string; readStatus?: string }>;
+        const bAfter = afterList.find(
+          (r) => r.receiver?.toLowerCase() === B.username.toLowerCase(),
+        );
+        const cAfter = afterList.find(
+          (r) => r.receiver?.toLowerCase() === C.username.toLowerCase(),
+        );
+        const dAfter = afterList.find(
+          (r) => r.receiver?.toLowerCase() === D.username.toLowerCase(),
+        );
         expect
-          .soft(bAfter?.readStatus, 'BR-KU-RECEIPTS: B shows read AFTER opening the thread, independently')
+          .soft(
+            bAfter?.readStatus,
+            'BR-KU-RECEIPTS: B shows read AFTER opening the thread, independently',
+          )
           .toBe('Y');
         expect
           .soft(cAfter?.readStatus, 'BR-KU-RECEIPTS: C (never opened it) must NOT show read')
@@ -514,7 +529,9 @@ test.describe('KPost Katchup · feature flow', () => {
       { body: { groupKpostID: B.username, msgIDs: [seed.msgID], groupFlag: 'false' } },
       { label: 'feature:save', auth: { principal: A }, allowLiveWrite: true },
     );
-    expect.soft(saved.status, `save accepted (body: ${saved.bodyText?.slice(0, 200)})`).toBeLessThan(300);
+    expect
+      .soft(saved.status, `save accepted (body: ${saved.bodyText?.slice(0, 200)})`)
+      .toBeLessThan(300);
 
     const marked = await endpoints.sendTo(
       'katchup-mark-important',
@@ -529,8 +546,10 @@ test.describe('KPost Katchup · feature flow', () => {
     if (database.enabled && seed.msgID) {
       const row = await new KpostRepository(database).katchupMessage(seed.msgID);
       const marked_ =
-        row?.marked_by_sender === 1 || row?.marked_by_receiver === 1 ||
-        row?.marked_by_sender === true || row?.marked_by_receiver === true;
+        row?.marked_by_sender === 1 ||
+        row?.marked_by_receiver === 1 ||
+        row?.marked_by_sender === true ||
+        row?.marked_by_receiver === true;
       expect
         .soft(
           marked_,
@@ -700,7 +719,7 @@ test.describe('KPost Katchup · feature flow', () => {
     }
   });
 
-  test('deleting a received message removes it only from the deleter\'s view (BR-KU-DELETE-OWN) @api @katchup', async ({
+  test("deleting a received message removes it only from the deleter's view (BR-KU-DELETE-OWN) @api @katchup", async ({
     endpoints,
   }) => {
     const marker = `QA delete-own ${Date.now()}`;
@@ -720,7 +739,7 @@ test.describe('KPost Katchup · feature flow', () => {
       // BR-KU-DELETE-OWN: gone from B's own view...
       const viewB = await conversation(endpoints, B, A.username);
       expect
-        .soft(viewB.text, 'the deleter\'s own view must no longer show the message')
+        .soft(viewB.text, "the deleter's own view must no longer show the message")
         .not.toContain(marker);
 
       // ...but UNCHANGED in A's (the sender's) view — a delete is per-viewer, not a recall.
@@ -729,7 +748,7 @@ test.describe('KPost Katchup · feature flow', () => {
         .soft(
           viewA.text,
           'BR-KU-DELETE-OWN: deleting a received message must not remove it from the ' +
-            'sender\'s own view — only recall does that',
+            "sender's own view — only recall does that",
         )
         .toContain(marker);
     } finally {
@@ -871,14 +890,22 @@ test.describe('KPost Katchup · feature flow', () => {
           .sendTo(
             'group-remove-member',
             { body: { memberKpostIdList: [B.username, C.username], groupID, groupKpostID } },
-            { label: 'feature:recall-scope-group-remove', auth: { principal: A }, allowLiveWrite: true },
+            {
+              label: 'feature:recall-scope-group-remove',
+              auth: { principal: A },
+              allowLiveWrite: true,
+            },
           )
           .catch(() => undefined);
         await endpoints
           .sendTo(
             'group-delete',
             { body: { groupID } },
-            { label: 'feature:recall-scope-group-delete', auth: { principal: A }, allowLiveWrite: true },
+            {
+              label: 'feature:recall-scope-group-delete',
+              auth: { principal: A },
+              allowLiveWrite: true,
+            },
           )
           .catch(() => undefined);
       }

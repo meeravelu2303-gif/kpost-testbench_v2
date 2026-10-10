@@ -117,7 +117,7 @@ test.describe('KPost Security · Katchup message authorization (IDOR/BOLA) @api 
     expect(testData.victimKpostId, 'the message went to the counterparty').toBeTruthy();
   });
 
-  test('an outsider cannot mark-important another account\'s message @api @security', async ({
+  test("an outsider cannot mark-important another account's message @api @security", async ({
     endpoints,
     databases,
   }) => {
@@ -141,10 +141,12 @@ test.describe('KPost Security · Katchup message authorization (IDOR/BOLA) @api 
         `automatically once one is issued`,
     );
 
-    const before = await database.findOne<{ marked_by_sender: number; marked_by_receiver: number }>({
-      table: 'TBL_KPOST_KATCHUP_MESSAGES',
-      where: { msg_id: msgID as string },
-    });
+    const before = await database.findOne<{ marked_by_sender: number; marked_by_receiver: number }>(
+      {
+        table: 'TBL_KPOST_KATCHUP_MESSAGES',
+        where: { msg_id: msgID as string },
+      },
+    );
 
     // --- Attack: the outsider tries to mark the owner's message as important ------------------
     const mark = await endpoints.sendTo(
@@ -180,7 +182,7 @@ test.describe('KPost Security · Katchup message authorization (IDOR/BOLA) @api 
       .catch(() => undefined);
   });
 
-  test('an outsider who is not a group member cannot read the group\'s read receipts @api @security', async ({
+  test("an outsider who is not a group member cannot read the group's read receipts @api @security", async ({
     endpoints,
   }) => {
     /*
@@ -237,7 +239,10 @@ test.describe('KPost Security · Katchup message authorization (IDOR/BOLA) @api 
         Record<string, unknown> | undefined;
       groupKpostID = gData?.groupKpostID as string | undefined;
       groupID = gData?.groupID as number | undefined;
-      test.skip(!groupKpostID, `group-create did not return a groupKpostID (replied ${created.status})`);
+      test.skip(
+        !groupKpostID,
+        `group-create did not return a groupKpostID (replied ${created.status})`,
+      );
 
       const sent = await endpoints.sendTo(
         'katchup-send-message',
@@ -252,9 +257,7 @@ test.describe('KPost Security · Katchup message authorization (IDOR/BOLA) @api 
         { label: 'idor:group-send', auth: { principal: owner! }, allowLiveWrite: true },
       );
       const sentParsed = sent.json();
-      const sentData = sentParsed.ok
-        ? (sentParsed.value as { data?: unknown }).data
-        : undefined;
+      const sentData = sentParsed.ok ? (sentParsed.value as { data?: unknown }).data : undefined;
       const sentRow = (Array.isArray(sentData) ? sentData[0] : sentData) as
         Record<string, unknown> | undefined;
       const msgID = sentRow?.msgID as number | string | undefined;
@@ -264,7 +267,11 @@ test.describe('KPost Security · Katchup message authorization (IDOR/BOLA) @api 
       const attack = await endpoints.sendTo(
         'katchup-read-status-group',
         { body: { msgID } },
-        { label: 'idor:group-read-status-outsider', auth: { principal: outsider! }, allowLiveRead: true },
+        {
+          label: 'idor:group-read-status-outsider',
+          auth: { principal: outsider! },
+          allowLiveRead: true,
+        },
       );
 
       let leaked = false;
@@ -300,14 +307,22 @@ test.describe('KPost Security · Katchup message authorization (IDOR/BOLA) @api 
           .sendTo(
             'group-remove-member',
             { body: { memberKpostIdList: [member!.username], groupID, groupKpostID } },
-            { label: 'idor:group-cleanup-remove', auth: { principal: owner! }, allowLiveWrite: true },
+            {
+              label: 'idor:group-cleanup-remove',
+              auth: { principal: owner! },
+              allowLiveWrite: true,
+            },
           )
           .catch(() => undefined);
         await endpoints
           .sendTo(
             'group-delete',
             { body: { groupID } },
-            { label: 'idor:group-cleanup-delete', auth: { principal: owner! }, allowLiveWrite: true },
+            {
+              label: 'idor:group-cleanup-delete',
+              auth: { principal: owner! },
+              allowLiveWrite: true,
+            },
           )
           .catch(() => undefined);
       }

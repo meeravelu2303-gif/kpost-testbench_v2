@@ -45,10 +45,16 @@ test.describe('KPost Katchup · attach-and-send E2E @ui', { tag: '@ui' }, () => 
 
     // The "Done" button is disabled until the presigned upload finishes and the file gets a uuid.
     const doneButton = page.getByRole('button', { name: /^Done$/i });
-    await expect(doneButton, 'the attachment modal appears with Done initially disabled or pending upload').toBeVisible({
+    await expect(
+      doneButton,
+      'the attachment modal appears with Done initially disabled or pending upload',
+    ).toBeVisible({
       timeout: 15_000,
     });
-    await expect(doneButton, 'Done becomes enabled once the presigned upload completes').toBeEnabled({
+    await expect(
+      doneButton,
+      'Done becomes enabled once the presigned upload completes',
+    ).toBeEnabled({
       timeout: 30_000,
     });
     await doneButton.click();

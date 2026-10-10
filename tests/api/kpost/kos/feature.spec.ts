@@ -162,7 +162,12 @@ test.describe('KPost KOS · feature flow', () => {
          * test never reaches this point while #499 (kword/create) is still broken (docId is always
          * undefined), so this is the correct assertion to have ready, not a live-confirmed one.
          */
-        const getDoc = await run(endpoints, 'kos-get-document', { pathParams: { docId } }, 'get-document');
+        const getDoc = await run(
+          endpoints,
+          'kos-get-document',
+          { pathParams: { docId } },
+          'get-document',
+        );
         expect.soft(getDoc.status, 'get-document returns a status').toBeLessThan(600);
         if (getDoc.status < 300) {
           const headings = (getDoc.data as { heading?: Array<{ topic?: string }> } | undefined)

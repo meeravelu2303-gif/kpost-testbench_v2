@@ -212,7 +212,12 @@ export function buildUiRunIndex(records: readonly UiTestOutcome[]): UiRunIndex {
 /** The browsers a UI bug was filed for, from its whiteboard `[browser:chromium,firefox]` tag. */
 function bugBrowsers(bug: BugSummary): string[] {
   const m = (bug.whiteboard ?? '').match(/\[browser:([^\]]+)\]/i);
-  return m?.[1] ? m[1].split(',').map((b) => b.trim().toLowerCase()).filter(Boolean) : [];
+  return m?.[1]
+    ? m[1]
+        .split(',')
+        .map((b) => b.trim().toLowerCase())
+        .filter(Boolean)
+    : [];
 }
 
 /**
@@ -240,7 +245,8 @@ export function uiTitleMatches(wantedFromSummary: string, actualTestTitle: strin
 export function uiProblemSignature(text: string): Set<string> {
   const sig = new Set<string>();
   for (const m of text.matchAll(/\[(ui\.[a-z-]+)\]/gi)) sig.add(m[1]!.toLowerCase());
-  if (/JS error|Uncaught|TypeError|ReferenceError|SyntaxError|React error/i.test(text)) sig.add('js-error');
+  if (/JS error|Uncaught|TypeError|ReferenceError|SyntaxError|React error/i.test(text))
+    sig.add('js-error');
   for (const m of text.matchAll(/broken resource (\d{3})/gi)) sig.add(`resource-${m[1]}`);
   if (/froze|freez|unresponsive|blocked the main thread/i.test(text)) sig.add('freeze');
   if (/crashed when the network/i.test(text)) sig.add('offline-crash');
@@ -251,7 +257,8 @@ export function uiProblemSignature(text: string): Set<string> {
 function failureMessageFor(index: UiRunIndex, browser: string, title: string): string {
   for (const [key, message] of index.failedMessage) {
     const split = key.indexOf('::');
-    if (key.slice(0, split) === browser && uiTitleMatches(title, key.slice(split + 2))) return message;
+    if (key.slice(0, split) === browser && uiTitleMatches(title, key.slice(split + 2)))
+      return message;
   }
   return '';
 }
@@ -288,7 +295,11 @@ export function classifyUiResolve(
       const ranHere = [...(index.ranBy.get(browser) ?? [])].some((t) => uiTitleMatches(title, t));
       // The browser DID run this pass, yet no test matches the title — a many-screen ticket (platform-wide
       // crash, one WCAG rule across screens), not "this browser was not tested".
-      if (!ranHere && index.ranBy.has(browser) && ![...index.ranTitle].some((t) => uiTitleMatches(title, t))) {
+      if (
+        !ranHere &&
+        index.ranBy.has(browser) &&
+        ![...index.ranTitle].some((t) => uiTitleMatches(title, t))
+      ) {
         return {
           action: 'keep',
           reason: 'could not match a single originating test (it covers many screens)',

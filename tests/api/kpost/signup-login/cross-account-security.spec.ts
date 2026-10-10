@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import type { Principal } from '@config/auth.config';
-import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
@@ -56,7 +55,9 @@ test.describe('KPost signup-login · cross-account security @api @kpost-api @sig
     ).toBe(testData.victimKpostId.toLowerCase());
   });
 
-  test('userLogout cannot end a session belonging to a different account', async ({ endpoints }) => {
+  test('userLogout cannot end a session belonging to a different account', async ({
+    endpoints,
+  }) => {
     /*
      * Opens a REAL session for VICTIM on its own device (never the shared cached token any other
      * test reuses — same reasoning as `session-lifecycle.spec.ts`'s `freshLogin`). Then, authorized
@@ -97,7 +98,9 @@ test.describe('KPost signup-login · cross-account security @api @kpost-api @sig
     const wasActive = (beforeBody.data ?? []).some(
       (row) => row.deviceIdentity_primary === victimDevice,
     );
-    expect(wasActive, "the fresh session is visible in VICTIM's own active-session list").toBe(true);
+    expect(wasActive, "the fresh session is visible in VICTIM's own active-session list").toBe(
+      true,
+    );
 
     // --- The attack: A (not VICTIM) calls userLogout naming VICTIM's device ----------------------
     await endpoints

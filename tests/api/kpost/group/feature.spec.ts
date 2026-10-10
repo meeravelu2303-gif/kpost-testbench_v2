@@ -389,9 +389,13 @@ test.describe('KPost Group · feature flow @database', () => {
     const groupID = created.data.groupID as number | undefined;
     const groupKpostID = created.data.groupKpostID as string | undefined;
     if (groupID) {
-      await as(endpoints, A, 'group-delete', { groupID, groupKpostID }, 'cleanup-solo-delete').catch(
-        () => undefined,
-      );
+      await as(
+        endpoints,
+        A,
+        'group-delete',
+        { groupID, groupKpostID },
+        'cleanup-solo-delete',
+      ).catch(() => undefined);
     }
     expect
       .soft(
@@ -455,9 +459,13 @@ test.describe('KPost Group · feature flow @database', () => {
         .toBe('Y');
     } finally {
       if (groupID) {
-        await as(endpoints, A, 'group-delete', { groupID, groupKpostID }, 'cleanup-sole-admin-delete').catch(
-          () => undefined,
-        );
+        await as(
+          endpoints,
+          A,
+          'group-delete',
+          { groupID, groupKpostID },
+          'cleanup-sole-admin-delete',
+        ).catch(() => undefined);
       }
     }
   });

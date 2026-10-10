@@ -26,7 +26,11 @@ test.describe('KPost Kall · dynamic-state accessibility (axe-core WCAG)', { tag
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  async function scanCurrentPage(page: Page, testInfo: TestInfo, screenName: string): Promise<void> {
+  async function scanCurrentPage(
+    page: Page,
+    testInfo: TestInfo,
+    screenName: string,
+  ): Promise<void> {
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
@@ -58,7 +62,10 @@ test.describe('KPost Kall · dynamic-state accessibility (axe-core WCAG)', { tag
     };
     const evidencePath = testInfo.outputPath('axe-violations.json');
     writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
-    await testInfo.attach(AXE_JSON_ATTACHMENT, { path: evidencePath, contentType: 'application/json' });
+    await testInfo.attach(AXE_JSON_ATTACHMENT, {
+      path: evidencePath,
+      contentType: 'application/json',
+    });
 
     if (evidence.violations.length) {
       await renderAccessibilityOverlay(page, screenName, evidence.violations);
@@ -76,10 +83,16 @@ test.describe('KPost Kall · dynamic-state accessibility (axe-core WCAG)', { tag
     );
 
     expect
-      .soft(critical, `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`)
+      .soft(
+        critical,
+        `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
     expect
-      .soft(serious, `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`)
+      .soft(
+        serious,
+        `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
   }
 

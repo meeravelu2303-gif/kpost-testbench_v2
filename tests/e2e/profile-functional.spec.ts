@@ -46,7 +46,13 @@ const UPDATE = { role: 'button' as const, name: 'Update' };
 /** Opens a Profile Creation sub-section from Settings — the one real path, see the file doc above. */
 async function openProfileCreationSection(
   page: Page,
-  section: 'About' | 'Basic Information' | 'Contact Information' | 'Education' | 'Experience' | 'Other Activities',
+  section:
+    | 'About'
+    | 'Basic Information'
+    | 'Contact Information'
+    | 'Education'
+    | 'Experience'
+    | 'Other Activities',
 ): Promise<void> {
   await page.goto('/settings', { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await page
@@ -224,7 +230,10 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
     // verified mobile number goes through its own OTP flow elsewhere, not this editor) — correctly so,
     // and not something this test can exercise by filling it directly.
     const readOnly = await mobile.evaluate((el) => (el as HTMLInputElement).readOnly);
-    test.skip(readOnly, 'the mobile field is read-only in this editor — changing it needs its own OTP flow, not testable here');
+    test.skip(
+      readOnly,
+      'the mobile field is read-only in this editor — changing it needs its own OTP flow, not testable here',
+    );
 
     await mobile.click();
     await mobile.fill('abc123xyz'); // letters — not a phone number

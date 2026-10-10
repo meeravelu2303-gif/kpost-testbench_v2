@@ -15,9 +15,12 @@ const attacker = K.principals.find((p) => p.key === 'personal-3');
 
 test.describe('KPost Security · Katchup legacy recallMessage body-sender trust @api @kpost-api @security @katchup', () => {
   test.skip(!owner || !attacker, 'needs two distinct KPost principals');
-  test.skip(process.env.KATCHUP_LIFECYCLE !== 'true', 'sends a real message; set KATCHUP_LIFECYCLE=true');
+  test.skip(
+    process.env.KATCHUP_LIFECYCLE !== 'true',
+    'sends a real message; set KATCHUP_LIFECYCLE=true',
+  );
 
-  test('an attacker can recall the owner\'s message via the legacy path by naming the owner as sender', async ({
+  test("an attacker can recall the owner's message via the legacy path by naming the owner as sender", async ({
     endpoints,
   }) => {
     const sent = await endpoints.sendTo(
@@ -27,7 +30,8 @@ test.describe('KPost Security · Katchup legacy recallMessage body-sender trust 
     );
     const parsed = sent.json();
     const rawData = parsed.ok ? (parsed.value as { data?: unknown }).data : undefined;
-    const data = (Array.isArray(rawData) ? rawData[0] : rawData) as Record<string, unknown> | undefined;
+    const data = (Array.isArray(rawData) ? rawData[0] : rawData) as
+      Record<string, unknown> | undefined;
     const msgID = (data?.msgID ?? data?.msgId ?? data?.messageId) as number | string | undefined;
     test.skip(!msgID, `sendMessage did not return a msgID (status ${sent.status})`);
     if (!msgID) return;
@@ -46,17 +50,18 @@ test.describe('KPost Security · Katchup legacy recallMessage body-sender trust 
           endpointId: 'katchup-legacy-recall-message',
           ruleId: 'KPV2-LEGACYRECALLSENDERSPOOF',
           rule:
-            'recallMessage must identify the sender from the authenticated caller\'s token, never ' +
+            "recallMessage must identify the sender from the authenticated caller's token, never " +
             'from a client-supplied body field — an attacker authenticated as a different account ' +
-            'must not be able to recall another user\'s message by naming that user as `sender`.',
-          expected: 'the attack is refused (non-2xx) because the token identity does not match the real sender',
+            "must not be able to recall another user's message by naming that user as `sender`.",
+          expected:
+            'the attack is refused (non-2xx) because the token identity does not match the real sender',
           actual: `the attack succeeded (${attack.status}): ${attack.bodyText.slice(0, 300)}`,
           request: { body: { msgID, sender: owner!.username, groupFlag: false } },
         });
       }
       expect(
         succeeded,
-        'an attacker must not be able to recall another account\'s message via the legacy path',
+        "an attacker must not be able to recall another account's message via the legacy path",
       ).toBe(false);
     } finally {
       // Cleanup regardless of outcome: owner recalls their own message via the safe V2 path.

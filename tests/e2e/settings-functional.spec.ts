@@ -189,10 +189,9 @@ test.describe('KPost Settings · UI functional behaviour @ui @database', { tag: 
     await lastName.fill('Tester');
 
     const designation = page.getByPlaceholder('Enter Designation').first();
-    await expect(
-      designation,
-      'Designation becomes enabled once Last Name is set',
-    ).toBeEnabled({ timeout: 5_000 });
+    await expect(designation, 'Designation becomes enabled once Last Name is set').toBeEnabled({
+      timeout: 5_000,
+    });
     await designation.fill('QA Engineer');
 
     const emailField = page.getByPlaceholder('Enter your Email ID').first();
@@ -201,7 +200,10 @@ test.describe('KPost Settings · UI functional behaviour @ui @database', { tag: 
     });
     await emailField.fill('notanemailaddress'); // no @ / domain — no client validation exists either
 
-    await page.getByRole('button', { name: /^Save$/i }).first().click({ timeout: 8_000 });
+    await page
+      .getByRole('button', { name: /^Save$/i })
+      .first()
+      .click({ timeout: 8_000 });
     await page.waitForTimeout(1_500);
 
     const health = stop();

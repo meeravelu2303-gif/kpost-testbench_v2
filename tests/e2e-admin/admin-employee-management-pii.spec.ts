@@ -21,40 +21,47 @@ import { expect, test } from '@fixtures';
  * until a bench-owned company has a real role posting to pick from; this file will produce live,
  * screenshotted proof automatically the moment one exists.
  */
-test.describe('Admin/HR-Setup Employee Management — PAN card exposure', { tag: '@admin-ui' }, () => {
-  test.skip(
-    process.env.ADMIN_UI_LIFECYCLE !== 'true' ||
-      !env.ADMIN_UI_BASE_URL ||
-      testData.businessMKpostId.includes('qa.business'),
-    'needs ADMIN_UI_LIFECYCLE=true, a configured admin host and BUSINESS_M account',
-  );
+test.describe(
+  'Admin/HR-Setup Employee Management — PAN card exposure',
+  { tag: '@admin-ui' },
+  () => {
+    test.skip(
+      process.env.ADMIN_UI_LIFECYCLE !== 'true' ||
+        !env.ADMIN_UI_BASE_URL ||
+        testData.businessMKpostId.includes('qa.business'),
+      'needs ADMIN_UI_LIFECYCLE=true, a configured admin host and BUSINESS_M account',
+    );
 
-  const TABS: Array<{ tab: 'Promote' | 'Transfer' | 'Suspend' | 'Revoke' | 'Terminate'; action: string }> = [
-    { tab: 'Promote', action: 'Promote Employee' },
-    { tab: 'Transfer', action: 'Transfer Employee' },
-    { tab: 'Suspend', action: 'Suspend Employee' },
-    { tab: 'Revoke', action: 'Revoke Employee' },
-    { tab: 'Terminate', action: 'Terminate Employee' },
-  ];
+    const TABS: Array<{
+      tab: 'Promote' | 'Transfer' | 'Suspend' | 'Revoke' | 'Terminate';
+      action: string;
+    }> = [
+      { tab: 'Promote', action: 'Promote Employee' },
+      { tab: 'Transfer', action: 'Transfer Employee' },
+      { tab: 'Suspend', action: 'Suspend Employee' },
+      { tab: 'Revoke', action: 'Revoke Employee' },
+      { tab: 'Terminate', action: 'Terminate Employee' },
+    ];
 
-  for (const { tab, action } of TABS) {
-    test(`${tab}: the employee card must not show the PAN card number in plain text @ui`, async ({
-      adminPage,
-    }) => {
-      await adminPage.goto();
-      await adminPage.openTab(tab);
-      await adminPage.openActionForm(action);
+    for (const { tab, action } of TABS) {
+      test(`${tab}: the employee card must not show the PAN card number in plain text @ui`, async ({
+        adminPage,
+      }) => {
+        await adminPage.goto();
+        await adminPage.openTab(tab);
+        await adminPage.openActionForm(action);
 
-      const picked = await adminPage.selectFirstEmployee();
-      test.skip(!picked, `no employee was available to pick on the ${tab} tab`);
-      if (!picked) return;
+        const picked = await adminPage.selectFirstEmployee();
+        test.skip(!picked, `no employee was available to pick on the ${tab} tab`);
+        if (!picked) return;
 
-      const pan = await adminPage.visiblePanCardText();
+        const pan = await adminPage.visiblePanCardText();
 
-      expect(
-        pan,
-        `the ${tab} tab's employee card must not render the real PAN card number as plain text`,
-      ).toBeNull();
-    });
-  }
-});
+        expect(
+          pan,
+          `the ${tab} tab's employee card must not render the real PAN card number as plain text`,
+        ).toBeNull();
+      });
+    }
+  },
+);

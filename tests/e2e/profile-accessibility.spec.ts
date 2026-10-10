@@ -25,7 +25,11 @@ test.describe('KPost Profile · dynamic-state accessibility (axe-core WCAG)', { 
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  async function scanCurrentPage(page: Page, testInfo: TestInfo, screenName: string): Promise<void> {
+  async function scanCurrentPage(
+    page: Page,
+    testInfo: TestInfo,
+    screenName: string,
+  ): Promise<void> {
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
@@ -57,7 +61,10 @@ test.describe('KPost Profile · dynamic-state accessibility (axe-core WCAG)', { 
     };
     const evidencePath = testInfo.outputPath('axe-violations.json');
     writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
-    await testInfo.attach(AXE_JSON_ATTACHMENT, { path: evidencePath, contentType: 'application/json' });
+    await testInfo.attach(AXE_JSON_ATTACHMENT, {
+      path: evidencePath,
+      contentType: 'application/json',
+    });
 
     if (evidence.violations.length) {
       await renderAccessibilityOverlay(page, screenName, evidence.violations);
@@ -75,14 +82,22 @@ test.describe('KPost Profile · dynamic-state accessibility (axe-core WCAG)', { 
     );
 
     expect
-      .soft(critical, `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`)
+      .soft(
+        critical,
+        `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
     expect
-      .soft(serious, `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`)
+      .soft(
+        serious,
+        `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
   }
 
-  test('Profile — three-dot action menu open — WCAG violations (axe) @ui', async ({ page }, testInfo) => {
+  test('Profile — three-dot action menu open — WCAG violations (axe) @ui', async ({
+    page,
+  }, testInfo) => {
     await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await page
       .locator('.loader-overlay')
@@ -106,7 +121,10 @@ test.describe('KPost Profile · dynamic-state accessibility (axe-core WCAG)', { 
       .catch(() => undefined);
 
     await page.locator('.icon-KP_144---More-Vertical').first().click();
-    await page.getByText(/^Share$/i).first().click();
+    await page
+      .getByText(/^Share$/i)
+      .first()
+      .click();
     // `.first()` on each side independently still lets `.or()` match 2 elements (both the dialog
     // role AND the modal-content div exist at once) - wrap `.first()` around the combined OR instead.
     await expect(

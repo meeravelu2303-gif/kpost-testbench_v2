@@ -34,7 +34,12 @@ export default defineConfig(
     extends: [playwright.configs['flat/recommended']],
     rules: {
       'playwright/no-focused-test': 'error',
-      'playwright/no-wait-for-timeout': 'error',
+      // A warning, not an error, by decision (2026-10-10): the KPost SPA has almost no test ids and
+      // pushes state over sockets, so ~85 short "settle" waits exist in UI specs that were tuned live.
+      // Rewriting them blind would trade a lint error for flaky tests that auto-file false bugs. New
+      // code must prefer a condition (`expect(...).toBeVisible()`, `waitForResponse`); an existing
+      // wait is replaced when its spec is next tuned live. The warning keeps the count visible.
+      'playwright/no-wait-for-timeout': 'warn',
       'playwright/no-page-pause': 'error',
       // Environment-conditional skips (e.g. a module whose host is not configured) are intentional.
       'playwright/no-skipped-test': ['warn', { allowConditional: true }],
@@ -65,6 +70,12 @@ export default defineConfig(
         console: 'readonly',
         Buffer: 'readonly',
         __dirname: 'readonly',
+        // Node ≥ 18 web globals the Bugzilla/account scripts use.
+        fetch: 'readonly',
+        URLSearchParams: 'readonly',
+        AbortSignal: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
       },
     },
   },

@@ -54,7 +54,9 @@ async function main() {
     process.exit(2);
   }
 
-  console.log(`Checking for existing bugs in "${product}" / "${component}" matching: ${keywords.join(', ')}\n`);
+  console.log(
+    `Checking for existing bugs in "${product}" / "${component}" matching: ${keywords.join(', ')}\n`,
+  );
 
   const seen = new Map();
   for (const kw of keywords) {
@@ -80,7 +82,9 @@ async function main() {
   for (const b of [...seen.values()].sort((a, b2) => a.id - b2.id)) {
     const judged = JUDGED_NOT_A_DEFECT.has((b.resolution || '').toUpperCase());
     const tag = judged ? '  <- judged not a defect, NEVER refile this' : '';
-    console.log(`  #${b.id}  ${b.status}${b.resolution ? ' ' + b.resolution : ''}  — ${b.summary}${tag}`);
+    console.log(
+      `  #${b.id}  ${b.status}${b.resolution ? ' ' + b.resolution : ''}  — ${b.summary}${tag}`,
+    );
     anyBlocking = true;
   }
   console.log(

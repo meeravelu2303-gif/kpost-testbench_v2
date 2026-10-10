@@ -73,7 +73,7 @@ test.describe('KMail · credential-disclosure IDOR proof (plan item 0b) @api @km
       'compares real credential material — see docs/scope/blocked-endpoints-rationale.md',
   );
 
-  test('baseline: the endpoint accepts A\'s own kpostID with the shared default password', async ({
+  test("baseline: the endpoint accepts A's own kpostID with the shared default password", async ({
     endpoints,
   }) => {
     const ex = await endpoints.sendTo(
@@ -88,10 +88,13 @@ test.describe('KMail · credential-disclosure IDOR proof (plan item 0b) @api @km
     // Not a pass/fail claim by design — a baseline reading only. A 200 means kmailPassword equals
     // the shared default for THIS account; anything else means it does not, which the cross-account
     // test below must then be read in light of. The one assertion here is just "got a response".
-    expect(ex.status, 'the endpoint answers (any status) for a well-formed self-lookup').toBeLessThan(600);
+    expect(
+      ex.status,
+      'the endpoint answers (any status) for a well-formed self-lookup',
+    ).toBeLessThan(600);
   });
 
-  test('IDOR: A\'s token can query B\'s kmailPassword by naming B\'s kpostID, never B\'s own session', async ({
+  test("IDOR: A's token can query B's kmailPassword by naming B's kpostID, never B's own session", async ({
     endpoints,
   }) => {
     const ex = await endpoints.sendTo(
@@ -109,7 +112,7 @@ test.describe('KMail · credential-disclosure IDOR proof (plan item 0b) @api @km
         rule:
           "getMailCredentials must only return the AUTHENTICATED CALLER's own mail credentials — " +
           "it must not disclose another account's credentials just because the caller's token is " +
-          'valid and happens to know (or share) that other account\'s kmailPassword.',
+          "valid and happens to know (or share) that other account's kmailPassword.",
         expected: `refused (A's token is not B's session) — status >= 400`,
         actual: `status=${ex.status}, credentials disclosed for ${B.username} to a request authenticated as ${A.username}`,
         request: { body: { kpostID: B.username, password: '(shared QA default — redacted)' } },

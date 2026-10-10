@@ -104,9 +104,12 @@ test.describe('KPost signup · personal registration → login', { tag: '@ui' },
      * provisioned one.
      */
     if (otpOutcome === 'already-exists') {
-      const recheck = await page.request.post(`${env.KPOST_API_BASE_URL}/v2/common/mobileNoExist/`, {
-        data: { countryID: testData.countryId, mobileNumber },
-      });
+      const recheck = await page.request.post(
+        `${env.KPOST_API_BASE_URL}/v2/common/mobileNoExist/`,
+        {
+          data: { countryID: testData.countryId, mobileNumber },
+        },
+      );
       const reallyExists = recheck.status() === 200 && /"data":true/.test(await recheck.text());
       if (!reallyExists) {
         endpoints.recordBusinessRuleViolation({
@@ -126,7 +129,7 @@ test.describe('KPost signup · personal registration → login', { tag: '@ui' },
         true,
         reallyExists
           ? `${mobileNumber} is genuinely already registered — set a fresh QA_SIGNUP_UI_MOBILE`
-          : 'the signup screen\'s mobile Verify step is broken (a repeat of #720): it misreports ' +
+          : "the signup screen's mobile Verify step is broken (a repeat of #720): it misreports " +
               'this free number as taken, so the OTP modal never opens',
       );
     }

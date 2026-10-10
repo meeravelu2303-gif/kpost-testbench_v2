@@ -27,7 +27,9 @@ test.describe('KPost signup/login · responsive matrix (tablet + landscape)', { 
     await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await loginPage.expectLoaded();
     await loginPage.enterLoginId(testData.kpostId);
-    await loginPage.passwordInput.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+    await loginPage.passwordInput
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .catch(() => undefined);
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error at 768×1024').toEqual([]);
@@ -47,7 +49,9 @@ test.describe('KPost signup/login · responsive matrix (tablet + landscape)', { 
     await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await loginPage.expectLoaded();
     await loginPage.enterLoginId(testData.kpostId);
-    await loginPage.passwordInput.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+    await loginPage.passwordInput
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .catch(() => undefined);
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error at 667×375 landscape').toEqual([]);

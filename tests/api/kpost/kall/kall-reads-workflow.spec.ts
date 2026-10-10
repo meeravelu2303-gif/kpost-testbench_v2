@@ -76,7 +76,9 @@ test.describe('KPost Kall · read business rules @api @kpost-api @kall', () => {
     await endpoints
       .sendTo(
         'contacts-add',
-        { body: { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' } },
+        {
+          body: { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
+        },
         { label: 'kall-reads:restore-contact', auth: { principal: A }, allowLiveWrite: true },
       )
       .catch(() => undefined);
@@ -96,8 +98,9 @@ test.describe('KPost Kall · read business rules @api @kpost-api @kall', () => {
         { body: { kallID: '' } },
         { label: 'kall-reads:dashboard', auth: { principal: A } },
       );
-      const dashRows = (JSON.parse(dashboard.bodyText || '{}') as { kall?: Array<{ kallID?: number }> })
-        .kall ?? [];
+      const dashRows =
+        (JSON.parse(dashboard.bodyText || '{}') as { kall?: Array<{ kallID?: number }> }).kall ??
+        [];
       expect(
         dashRows.some((r) => r.kallID === kallID),
         'the placed call appears on the kallDashboard',
@@ -181,7 +184,7 @@ test.describe('KPost Kall · read business rules @api @kpost-api @kall', () => {
         (JSON.parse(today.bodyText || '{}') as { data?: Array<{ kallID?: number }> }).data ?? [];
       expect(
         todayRows.some((r) => r.kallID === kallID),
-        "a call scheduled for later today appears in todayKoolKall",
+        'a call scheduled for later today appears in todayKoolKall',
       ).toBe(true);
     } finally {
       if (kallID) {
@@ -213,7 +216,9 @@ test.describe('KPost Kall · read business rules @api @kpost-api @kall', () => {
     ).toBe(0);
   });
 
-  test('scheduling a repeating call surfaces in fetchScheduledRepeatKall', async ({ endpoints }) => {
+  test('scheduling a repeating call surfaces in fetchScheduledRepeatKall', async ({
+    endpoints,
+  }) => {
     test.skip(
       process.env.KALL_LIFECYCLE !== 'true',
       'schedules a real repeating call; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5)',

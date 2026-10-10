@@ -46,7 +46,10 @@ test.describe('KPost Settings · Add Other Mail Accounts panel', { tag: '@ui' },
     await settingsPage.openPanel('KMail Settings', 'Add Other Mail Accounts');
 
     const providerControl = page.getByText('Select your email provider', { exact: true }).first();
-    await expect(providerControl, 'the (correctly labelled) Mail Provider control renders').toBeVisible({
+    await expect(
+      providerControl,
+      'the (correctly labelled) Mail Provider control renders',
+    ).toBeVisible({
       timeout: 15_000,
     });
     await providerControl.click({ force: true });
@@ -70,7 +73,9 @@ test.describe('KPost Settings · Add Other Mail Accounts panel', { tag: '@ui' },
     await settingsPage.openPanel('KMail Settings', 'Add Other Mail Accounts');
 
     const providerControl = page.getByText('Select your email provider', { exact: true }).first();
-    await expect(providerControl, 'the Mail Provider control renders').toBeVisible({ timeout: 15_000 });
+    await expect(providerControl, 'the Mail Provider control renders').toBeVisible({
+      timeout: 15_000,
+    });
     await providerControl.click({ force: true });
     await page.locator('.react-select__menu').getByText('Gmail', { exact: true }).click();
 
@@ -104,7 +109,9 @@ test.describe('KPost Settings · Add Other Mail Accounts panel', { tag: '@ui' },
     await settingsPage.openPanel('KMail Settings', 'Add Other Mail Accounts');
 
     const providerControl = page.getByText('Select your email provider', { exact: true }).first();
-    await expect(providerControl, 'the Mail Provider control renders').toBeVisible({ timeout: 15_000 });
+    await expect(providerControl, 'the Mail Provider control renders').toBeVisible({
+      timeout: 15_000,
+    });
     await providerControl.click({ force: true });
     await page.locator('.react-select__menu').getByText('Gmail', { exact: true }).click();
 
@@ -113,11 +120,17 @@ test.describe('KPost Settings · Add Other Mail Accounts panel', { tag: '@ui' },
       timeout: 10_000,
     });
     await gmailIdControl.click({ force: true });
-    await page.locator('.react-select__menu').getByText('ramraj1985@gmail.com', { exact: true }).click();
+    await page
+      .locator('.react-select__menu')
+      .getByText('ramraj1985@gmail.com', { exact: true })
+      .click();
 
     const [popup] = await Promise.all([
       context.waitForEvent('page', { timeout: 10_000 }),
-      page.getByRole('button', { name: /^Next$/i }).first().click(),
+      page
+        .getByRole('button', { name: /^Next$/i })
+        .first()
+        .click(),
     ]);
 
     expect(popup.url(), 'Next opens a Google sign-in URL for the chosen Gmail ID').toContain(

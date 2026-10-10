@@ -166,32 +166,35 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
   test('a multi-case validator renders a clean case → code Expected/Actual, not a masked blob', () => {
     const config = readBugzillaConfig();
     const report = reportWith('kpost-api', ['kpost-api', 'dashboard']);
+    // A per-endpoint multi-case validator. (An auth-family validator would be consolidated into one
+    // platform-wide ticket by design — `SYSTEMIC_VALIDATORS` — and rendered differently; that path
+    // is covered by systemic-collapse.spec.ts.)
     report.results[0] = {
       ...report.results[0]!,
-      validatorName: 'authentication.malformed-token',
-      category: 'AUTHENTICATION',
-      message: '3/3 malformed-token cases failed',
+      validatorName: 'request.negative-input',
+      category: 'REQUEST',
+      message: '3/3 negative-input cases failed',
       // The confusing raw top-level shape — masking turns half of it into "***".
-      expected: { 'empty token': '***', 'not a JWT': [401] },
-      actual: { 'empty token': '***', 'not a JWT': 400 },
+      expected: { 'empty body': '***', 'unknown field': [400] },
+      actual: { 'empty body': '***', 'unknown field': 200 },
       details: [
-        { name: 'empty token', status: 'FAILED', expected: [401], actual: 403 },
-        { name: 'Basic credentials', status: 'FAILED', expected: [401], actual: 403 },
-        { name: 'not a JWT', status: 'FAILED', expected: [401], actual: 400 },
+        { name: 'empty body', status: 'FAILED', expected: [400], actual: 500 },
+        { name: 'Basic credentials', status: 'FAILED', expected: [400], actual: 500 },
+        { name: 'unknown field', status: 'FAILED', expected: [400], actual: 200 },
       ],
     };
     const candidate = candidatesFromReport(report, { baseURL: 'http://api' }, config)[0]!;
 
     // Expected box: one clean line per case, the real code, and the FULL static label — a validator
     // case name like "Basic credentials" is not user data, so it must not be masked to "Basic ***".
-    expect(candidate.expected).toContain('empty token');
+    expect(candidate.expected).toContain('empty body');
     expect(candidate.expected).toContain('Basic credentials');
-    expect(candidate.expected).toContain('401');
+    expect(candidate.expected).toContain('400');
     expect(candidate.expected).not.toContain('***');
     // Actual box: the real observed codes, per case.
-    expect(candidate.actual).toContain('empty token');
-    expect(candidate.actual).toContain('403');
-    expect(candidate.actual).toContain('400');
+    expect(candidate.actual).toContain('empty body');
+    expect(candidate.actual).toContain('500');
+    expect(candidate.actual).toContain('200');
     expect(candidate.actual).not.toContain('***');
     // One line per failed case, reading as an aligned diff.
     expect(candidate.actual.split('\n')).toHaveLength(3);

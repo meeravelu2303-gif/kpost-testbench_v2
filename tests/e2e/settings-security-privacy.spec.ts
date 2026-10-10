@@ -29,14 +29,11 @@ test.describe('KPost Settings · Security & Privacy panel', { tag: '@ui' }, () =
     await settingsPage.goto();
     await settingsPage.openPanel('General Settings', 'Security & Privacy');
 
-    const selectByLabel = (label: string) =>
-      page.locator('.d-flex.flex-column, .settings-select-wrapper, div', { hasText: label }).last();
-
     // Confirmed copy/paste bug: this panel's intro text belongs to Account Recovery.
     test.info().annotations.push({
       type: 'observed',
       description:
-        'Security & Privacy shows Account Recovery\'s intro sentence verbatim (copy/paste leftover) — ' +
+        "Security & Privacy shows Account Recovery's intro sentence verbatim (copy/paste leftover) — " +
         'confirmed from source, not asserted as a hard failure here.',
     });
 
@@ -53,7 +50,9 @@ test.describe('KPost Settings · Security & Privacy panel', { tag: '@ui' }, () =
         .first();
       // react-select inputs in this app are addressed by clicking the container then typing —
       // fall back to a native <select> if that's what's actually rendered.
-      const container = page.locator('.d-flex.flex-column', { hasText: dropdownLabelPlaceholder }).last();
+      const container = page
+        .locator('.d-flex.flex-column', { hasText: dropdownLabelPlaceholder })
+        .last();
       const reactSelectInput = container.locator('.react-select__input').first();
       if (await reactSelectInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
         await reactSelectInput.click({ force: true });
@@ -78,7 +77,10 @@ test.describe('KPost Settings · Security & Privacy panel', { tag: '@ui' }, () =
     await pick('Access to All KPOST Users', 'Access to All KPOST Users');
     await pick('Access to All KPOST Users', 'Access to All KPOST Users');
 
-    await expect(submitButton, 'Submit becomes enabled once every dropdown in the chain is set').toBeEnabled({
+    await expect(
+      submitButton,
+      'Submit becomes enabled once every dropdown in the chain is set',
+    ).toBeEnabled({
       timeout: 10_000,
     });
 

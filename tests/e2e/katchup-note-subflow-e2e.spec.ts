@@ -54,7 +54,7 @@ test.describe('KPost Katchup · Note sub-flow completion @ui', { tag: '@ui' }, (
     // is user-entered.
     await expect(
       page.getByText(sourceSubject, { exact: false }).first(),
-      'the Note composer shows the source message\'s subject as inherited, read-only context',
+      "the Note composer shows the source message's subject as inherited, read-only context",
     ).toBeVisible({ timeout: 10_000 });
 
     const noteBody = `QA UI note body ${Date.now()} — completing the documented sub-flow gap`;

@@ -36,9 +36,12 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
       { label: 'regression952:send', auth: { principal: A! }, allowLiveWrite: true },
     );
     const sentData = sent.json();
-    const row = (sentData.ok
-      ? ((sentData.value as Record<string, unknown>).data as Array<Record<string, unknown>> | undefined)?.[0]
-      : undefined);
+    const row = sentData.ok
+      ? (
+          (sentData.value as Record<string, unknown>).data as
+            Array<Record<string, unknown>> | undefined
+        )?.[0]
+      : undefined;
     const msgID = row?.msgID as number | undefined;
     test.skip(!msgID, `send did not return a msgID (replied ${sent.status})`);
 
@@ -60,15 +63,22 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
         });
       }
       expect
-        .soft(succeeded, `#952: receiver-initiated recall must be refused (replied ${attack.status})`)
+        .soft(
+          succeeded,
+          `#952: receiver-initiated recall must be refused (replied ${attack.status})`,
+        )
         .toBe(false);
     } finally {
       await endpoints
-        .sendTo('katchup-delete-message', { body: { messageIds: [msgID], groupFlag: false } }, {
-          label: 'regression952:cleanup',
-          auth: { principal: A! },
-          allowLiveWrite: true,
-        })
+        .sendTo(
+          'katchup-delete-message',
+          { body: { messageIds: [msgID], groupFlag: false } },
+          {
+            label: 'regression952:cleanup',
+            auth: { principal: A! },
+            allowLiveWrite: true,
+          },
+        )
         .catch(() => undefined);
     }
   });
@@ -83,9 +93,12 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
       { label: 'regression953:send', auth: { principal: A! }, allowLiveWrite: true },
     );
     const sentData = sent.json();
-    const row = (sentData.ok
-      ? ((sentData.value as Record<string, unknown>).data as Array<Record<string, unknown>> | undefined)?.[0]
-      : undefined);
+    const row = sentData.ok
+      ? (
+          (sentData.value as Record<string, unknown>).data as
+            Array<Record<string, unknown>> | undefined
+        )?.[0]
+      : undefined;
     const sharedMessageId = row?.sharedMessageId as number | undefined;
     const msgID = row?.msgID as number | undefined;
     test.skip(!sharedMessageId, `send did not return a sharedMessageId (replied ${sent.status})`);
@@ -108,15 +121,22 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
         });
       }
       expect
-        .soft(leaked, `#953: an unrelated account must not see this message's recipient data (replied ${attack.status})`)
+        .soft(
+          leaked,
+          `#953: an unrelated account must not see this message's recipient data (replied ${attack.status})`,
+        )
         .toBe(false);
     } finally {
       await endpoints
-        .sendTo('katchup-delete-message', { body: { messageIds: [msgID], groupFlag: false } }, {
-          label: 'regression953:cleanup',
-          auth: { principal: A! },
-          allowLiveWrite: true,
-        })
+        .sendTo(
+          'katchup-delete-message',
+          { body: { messageIds: [msgID], groupFlag: false } },
+          {
+            label: 'regression953:cleanup',
+            auth: { principal: A! },
+            allowLiveWrite: true,
+          },
+        )
         .catch(() => undefined);
     }
   });
@@ -131,9 +151,12 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
       { label: 'regression954958:send', auth: { principal: A! }, allowLiveWrite: true },
     );
     const sentData = sent.json();
-    const row = (sentData.ok
-      ? ((sentData.value as Record<string, unknown>).data as Array<Record<string, unknown>> | undefined)?.[0]
-      : undefined);
+    const row = sentData.ok
+      ? (
+          (sentData.value as Record<string, unknown>).data as
+            Array<Record<string, unknown>> | undefined
+        )?.[0]
+      : undefined;
     const msgID = row?.msgID as number | undefined;
     test.skip(!msgID, `send did not return a msgID (replied ${sent.status})`);
 
@@ -156,7 +179,10 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
         });
       }
       expect
-        .soft(leaked954, `#954: getReferenceMSGDetails must not leak content to an unrelated account (replied ${attack954.status})`)
+        .soft(
+          leaked954,
+          `#954: getReferenceMSGDetails must not leak content to an unrelated account (replied ${attack954.status})`,
+        )
         .toBe(false);
 
       // #958 — getReferenceMessagesDetails (plural "Messages"), a DISTINCT backend method
@@ -177,15 +203,22 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
         });
       }
       expect
-        .soft(leaked958, `#958: getReferenceMessagesDetails must not leak content to an unrelated account (replied ${attack958.status})`)
+        .soft(
+          leaked958,
+          `#958: getReferenceMessagesDetails must not leak content to an unrelated account (replied ${attack958.status})`,
+        )
         .toBe(false);
     } finally {
       await endpoints
-        .sendTo('katchup-delete-message', { body: { messageIds: [msgID], groupFlag: false } }, {
-          label: 'regression954958:cleanup',
-          auth: { principal: A! },
-          allowLiveWrite: true,
-        })
+        .sendTo(
+          'katchup-delete-message',
+          { body: { messageIds: [msgID], groupFlag: false } },
+          {
+            label: 'regression954958:cleanup',
+            auth: { principal: A! },
+            allowLiveWrite: true,
+          },
+        )
         .catch(() => undefined);
     }
   });
@@ -200,9 +233,12 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
       { label: 'regression957:send', auth: { principal: A! }, allowLiveWrite: true },
     );
     const sentData = sent.json();
-    const row = (sentData.ok
-      ? ((sentData.value as Record<string, unknown>).data as Array<Record<string, unknown>> | undefined)?.[0]
-      : undefined);
+    const row = sentData.ok
+      ? (
+          (sentData.value as Record<string, unknown>).data as
+            Array<Record<string, unknown>> | undefined
+        )?.[0]
+      : undefined;
     const msgID = row?.msgID as number | undefined;
     test.skip(!msgID, `send did not return a msgID (replied ${sent.status})`);
 
@@ -220,24 +256,33 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
           rule: 'getMessagesByReferenceMessageList must only return a message to a party to it.',
           expected: 'the message content is withheld from an unrelated caller',
           actual: `replied ${attack.status} with the real message text`,
-          request: { body: { referenceMessageList: JSON.stringify([{ ids: [msgID] }]), messageType: 20 } },
+          request: {
+            body: { referenceMessageList: JSON.stringify([{ ids: [msgID] }]), messageType: 20 },
+          },
         });
       }
       expect
-        .soft(leaked, `#957: getMessagesByReferenceMessageList must not leak content to an unrelated account (replied ${attack.status})`)
+        .soft(
+          leaked,
+          `#957: getMessagesByReferenceMessageList must not leak content to an unrelated account (replied ${attack.status})`,
+        )
         .toBe(false);
     } finally {
       await endpoints
-        .sendTo('katchup-delete-message', { body: { messageIds: [msgID], groupFlag: false } }, {
-          label: 'regression957:cleanup',
-          auth: { principal: A! },
-          allowLiveWrite: true,
-        })
+        .sendTo(
+          'katchup-delete-message',
+          { body: { messageIds: [msgID], groupFlag: false } },
+          {
+            label: 'regression957:cleanup',
+            auth: { principal: A! },
+            allowLiveWrite: true,
+          },
+        )
         .catch(() => undefined);
     }
   });
 
-  test('#960: downloading a group\'s profile image must require authentication @api @security', async ({
+  test("#960: downloading a group's profile image must require authentication @api @security", async ({
     endpoints,
   }) => {
     const created = await endpoints.sendTo(
@@ -250,15 +295,17 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
           groupCreateAccess: true,
           groupKpostName: `Qreg Img ${Date.now()}`,
           isPrivateGroup: 'N',
-          memberDetails: [{
-            createdBy: A!.username,
-            hasAdminAccess: 'Y',
-            kpostID: A!.username,
-            name: 'QA Bench',
-            memberDesignation: '',
-            privacyStatus: 'Y',
-            remarks: 'created',
-          }],
+          memberDetails: [
+            {
+              createdBy: A!.username,
+              hasAdminAccess: 'Y',
+              kpostID: A!.username,
+              name: 'QA Bench',
+              memberDesignation: '',
+              privacyStatus: 'Y',
+              remarks: 'created',
+            },
+          ],
         },
       },
       { label: 'regression960:create', auth: { principal: A! }, allowLiveWrite: true },
@@ -268,7 +315,10 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
       Record<string, unknown> | undefined;
     const groupKpostID = data?.groupKpostID as string | undefined;
     const groupID = data?.groupID as number | undefined;
-    test.skip(!groupKpostID, `group-create did not return a groupKpostID (replied ${created.status})`);
+    test.skip(
+      !groupKpostID,
+      `group-create did not return a groupKpostID (replied ${created.status})`,
+    );
 
     try {
       const upload = await endpoints.sendTo(
@@ -307,18 +357,29 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
         });
       }
       expect
-        .soft(leaked, `#960: an anonymous request must not download the group image (replied ${anonThumb.status})`)
+        .soft(
+          leaked,
+          `#960: an anonymous request must not download the group image (replied ${anonThumb.status})`,
+        )
         .toBe(false);
     } finally {
       if (groupID) {
         await endpoints
-          .sendTo('group-delete', { body: { groupID } }, { label: 'regression960:cleanup-delete', auth: { principal: A! }, allowLiveWrite: true })
+          .sendTo(
+            'group-delete',
+            { body: { groupID } },
+            {
+              label: 'regression960:cleanup-delete',
+              auth: { principal: A! },
+              allowLiveWrite: true,
+            },
+          )
           .catch(() => undefined);
       }
     }
   });
 
-  test('#961: getGroupDetailsUsingGroupKpostID must not disclose a private group\'s full record to a non-member @api @security', async ({
+  test("#961: getGroupDetailsUsingGroupKpostID must not disclose a private group's full record to a non-member @api @security", async ({
     endpoints,
   }) => {
     const created = await endpoints.sendTo(
@@ -331,15 +392,17 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
           groupCreateAccess: true,
           groupKpostName: `Qreg Priv ${Date.now()}`,
           isPrivateGroup: 'Y',
-          memberDetails: [{
-            createdBy: A!.username,
-            hasAdminAccess: 'Y',
-            kpostID: A!.username,
-            name: 'QA Bench',
-            memberDesignation: '',
-            privacyStatus: 'Y',
-            remarks: 'created',
-          }],
+          memberDetails: [
+            {
+              createdBy: A!.username,
+              hasAdminAccess: 'Y',
+              kpostID: A!.username,
+              name: 'QA Bench',
+              memberDesignation: '',
+              privacyStatus: 'Y',
+              remarks: 'created',
+            },
+          ],
         },
       },
       { label: 'regression961:create', auth: { principal: A! }, allowLiveWrite: true },
@@ -349,7 +412,10 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
       Record<string, unknown> | undefined;
     const groupKpostID = data?.groupKpostID as string | undefined;
     const groupID = data?.groupID as number | undefined;
-    test.skip(!groupKpostID, `group-create did not return a groupKpostID (replied ${created.status})`);
+    test.skip(
+      !groupKpostID,
+      `group-create did not return a groupKpostID (replied ${created.status})`,
+    );
 
     try {
       const attack = await endpoints.sendTo(
@@ -362,19 +428,30 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
         endpoints.recordBusinessRuleViolation({
           endpointId: 'group-details-by-id',
           ruleId: 'KP-6D9A41',
-          rule: 'getGroupDetailsUsingGroupKpostID must not disclose a private group\'s full record to a non-member, non-contact caller.',
+          rule: "getGroupDetailsUsingGroupKpostID must not disclose a private group's full record to a non-member, non-contact caller.",
           expected: 'the record (and especially passCode) is withheld from an unrelated caller',
           actual: `replied ${attack.status} with the full group record for a private group`,
           request: { pathParams: { groupKpostID: groupKpostID! } },
         });
       }
       expect
-        .soft(leaked, `#961: a non-member must not receive this private group's full record (replied ${attack.status})`)
+        .soft(
+          leaked,
+          `#961: a non-member must not receive this private group's full record (replied ${attack.status})`,
+        )
         .toBe(false);
     } finally {
       if (groupID) {
         await endpoints
-          .sendTo('group-delete', { body: { groupID } }, { label: 'regression961:cleanup-delete', auth: { principal: A! }, allowLiveWrite: true })
+          .sendTo(
+            'group-delete',
+            { body: { groupID } },
+            {
+              label: 'regression961:cleanup-delete',
+              auth: { principal: A! },
+              allowLiveWrite: true,
+            },
+          )
           .catch(() => undefined);
       }
     }

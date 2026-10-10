@@ -26,9 +26,13 @@ test.describe('KPost — /digital-card/:id public digital card', { tag: '@ui' },
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error on an invalid id').toEqual([]);
 
-    const degradedToBlankCard = await page.getByText('-', { exact: true }).first().isVisible({
-      timeout: 3_000,
-    }).catch(() => false);
+    const degradedToBlankCard = await page
+      .getByText('-', { exact: true })
+      .first()
+      .isVisible({
+        timeout: 3_000,
+      })
+      .catch(() => false);
     const redirectedToNotFound = /not-found/.test(page.url());
 
     test.info().annotations.push({

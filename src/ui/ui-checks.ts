@@ -152,25 +152,47 @@ async function overflowCulprits(page: Page): Promise<string> {
     | {
         vw: number;
         page: number;
-        inner: { sel: string; content: number; box: number; css: string; kids: { sel: string; w: number; shrink: string; minw: string; ws: string }[] }[];
+        inner: {
+          sel: string;
+          content: number;
+          box: number;
+          css: string;
+          kids: { sel: string; w: number; shrink: string; minw: string; ws: string }[];
+        }[];
         edge: { sel: string; left: number; right: number; css: string }[];
       }
     | undefined;
   if (!found) return '(the page could not be measured)';
-  const lines = [`Screen ${found.vw}px, page ${found.page}px — ${found.page - found.vw}px too wide.`];
+  const lines = [
+    `Screen ${found.vw}px, page ${found.page}px — ${found.page - found.vw}px too wide.`,
+  ];
   if (found.inner.length) {
     lines.push('Element(s) whose CONTENT is wider than their own box — fix the CSS here:');
     found.inner.forEach((e, i) => {
-      lines.push(`${i + 1}. ${e.sel}`, `   content ${e.content}px in a ${e.box}px box (${e.content - e.box}px too wide)`, `   computed: ${e.css}`);
-      lines.push('   its children, widest first (flex-shrink 0 or a min-width stops them from shrinking):');
-      for (const k of e.kids) lines.push(`     - ${k.sel}: ${k.w}px (flex-shrink ${k.shrink}, min-width ${k.minw}, white-space ${k.ws})`);
+      lines.push(
+        `${i + 1}. ${e.sel}`,
+        `   content ${e.content}px in a ${e.box}px box (${e.content - e.box}px too wide)`,
+        `   computed: ${e.css}`,
+      );
+      lines.push(
+        '   its children, widest first (flex-shrink 0 or a min-width stops them from shrinking):',
+      );
+      for (const k of e.kids)
+        lines.push(
+          `     - ${k.sel}: ${k.w}px (flex-shrink ${k.shrink}, min-width ${k.minw}, white-space ${k.ws})`,
+        );
     });
   }
   if (found.edge.length) {
     lines.push('Element(s) whose box reaches past the right edge of the screen:');
-    found.edge.forEach((e, i) => lines.push(`${i + 1}. ${e.sel}: ${e.left}px → ${e.right}px`, `   computed: ${e.css}`));
+    found.edge.forEach((e, i) =>
+      lines.push(`${i + 1}. ${e.sel}: ${e.left}px → ${e.right}px`, `   computed: ${e.css}`),
+    );
   }
-  if (!found.inner.length && !found.edge.length) lines.push('(no single element found — the extra width may come from a pseudo-element or a transform)');
+  if (!found.inner.length && !found.edge.length)
+    lines.push(
+      '(no single element found — the extra width may come from a pseudo-element or a transform)',
+    );
   return lines.join('\n');
 }
 
@@ -197,7 +219,11 @@ export const responsiveCheck: UiCheck = {
           // What the UI developers asked for (2026-10-08): WHICH element sticks out, its measured size
           // and the CSS that sizes it. Goes into the failure diagnosis — the message above is the bug's
           // fingerprint and must not change.
-          noteDiagnostic(page, `Elements wider than the screen at ${width}px`, await overflowCulprits(page));
+          noteDiagnostic(
+            page,
+            `Elements wider than the screen at ${width}px`,
+            await overflowCulprits(page),
+          );
         }
       }
       return findings;

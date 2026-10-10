@@ -45,7 +45,7 @@ test.describe('KPost login · forgot-password full reset cycle', { tag: '@ui' },
     'needs a real spare account — set QA_FORGOT_PASSWORD_KPOST_ID (never QA_KPOST_ID)',
   );
 
-  test('resetting the spare account\'s password via OTP actually takes effect @ui', async ({
+  test("resetting the spare account's password via OTP actually takes effect @ui", async ({
     loginPage,
     page,
   }) => {
@@ -73,7 +73,11 @@ test.describe('KPost login · forgot-password full reset cycle', { tag: '@ui' },
 
     async function logout(): Promise<void> {
       await page.locator('.header-user-pill').first().click();
-      await page.getByText(/^Log ?out$/i).first().click().catch(() => undefined);
+      await page
+        .getByText(/^Log ?out$/i)
+        .first()
+        .click()
+        .catch(() => undefined);
       await page
         .getByRole('button', { name: /^Logout$/i })
         .first()

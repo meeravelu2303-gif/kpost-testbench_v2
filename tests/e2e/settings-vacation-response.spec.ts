@@ -43,12 +43,12 @@ test.describe('KPost Settings · Vacation Response panel', { tag: '@ui' }, () =>
     await page.locator('.icon-KP_289_Toggle-On, .icon-KP_285_Toggle-Off').first().click();
     await page.waitForTimeout(300);
 
-    expect(
-      await fromInput.isEnabled(),
+    await expect(
+      fromInput,
       'confirmed from source: the toggle disables a wrapping <div>, not the input — the From field ' +
         'stays interactable regardless of the toggle state, which is a real UX bug (the on/off ' +
         'control visually implies it gates editing, but does not)',
-    ).toBe(true);
+    ).toBeEnabled();
   });
 
   test('completing the full chain (From -> To -> Response -> Message) and clicking Save does not crash the page @ui', async ({

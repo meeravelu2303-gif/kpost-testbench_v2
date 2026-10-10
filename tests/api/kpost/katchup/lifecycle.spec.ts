@@ -133,7 +133,9 @@ test.describe('KPost Katchup · 1:1 lifecycle', () => {
     const created = firstCreated(body);
 
     expect(status, 'an empty subject is accepted, not rejected').toBeLessThan(300);
-    expect(created?.subject, 'the empty subject is stored as sent, not silently defaulted').toBe('');
+    expect(created?.subject, 'the empty subject is stored as sent, not silently defaulted').toBe(
+      '',
+    );
 
     // Clean up whatever was created (harmless when there is no id).
     await endpoints

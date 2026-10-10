@@ -23,7 +23,9 @@ test.describe('KPost login · issued-token inspection', { tag: '@ui' }, () => {
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  test('the issued access token is a well-formed JWT with a bounded expiry @ui', async ({ page }) => {
+  test('the issued access token is a well-formed JWT with a bounded expiry @ui', async ({
+    page,
+  }) => {
     await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await page
       .locator('.loader-overlay')
@@ -31,10 +33,16 @@ test.describe('KPost login · issued-token inspection', { tag: '@ui' }, () => {
       .catch(() => undefined);
 
     const token = await page.evaluate(() => localStorage.getItem('accessToken'));
-    expect(token, 'an authenticated session must store a top-level accessToken in localStorage').toBeTruthy();
+    expect(
+      token,
+      'an authenticated session must store a top-level accessToken in localStorage',
+    ).toBeTruthy();
 
     const parts = (token ?? '').split('.');
-    expect(parts, 'a JWT has exactly three dot-separated parts (header.payload.signature)').toHaveLength(3);
+    expect(
+      parts,
+      'a JWT has exactly three dot-separated parts (header.payload.signature)',
+    ).toHaveLength(3);
 
     const payload = JSON.parse(Buffer.from(parts[1]!, 'base64url').toString('utf8')) as {
       exp?: number;
@@ -46,7 +54,10 @@ test.describe('KPost login · issued-token inspection', { tag: '@ui' }, () => {
       description: `token payload claims: ${JSON.stringify(payload)}`,
     });
 
-    expect(payload.exp, 'the token must carry an expiry (exp) claim — an unbounded token never expires').toBeDefined();
+    expect(
+      payload.exp,
+      'the token must carry an expiry (exp) claim — an unbounded token never expires',
+    ).toBeDefined();
 
     const nowSeconds = Date.now() / 1000;
     expect(payload.exp!, 'the token must not already be expired').toBeGreaterThan(nowSeconds);

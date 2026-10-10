@@ -58,7 +58,10 @@ test.describe('KPost Kall · contact search box security fuzzing', { tag: '@ui' 
         description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
       });
 
-      expect(health.pageErrors, `no uncaught JS error while filtering by: ${payload.value}`).toEqual([]);
+      expect(
+        health.pageErrors,
+        `no uncaught JS error while filtering by: ${payload.value}`,
+      ).toEqual([]);
       expect(
         dialogFired,
         `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
@@ -128,7 +131,9 @@ test.describe('KPost Kall · Meeting Title field security fuzzing', { tag: '@ui'
         dialogFired,
         `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
       ).toBe(false);
-      await expect(titleField, 'the field holds the raw text, unmodified').toHaveValue(payload.value);
+      await expect(titleField, 'the field holds the raw text, unmodified').toHaveValue(
+        payload.value,
+      );
     });
   }
 });

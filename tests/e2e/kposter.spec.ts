@@ -23,7 +23,9 @@ test.describe('KPost KPoster — embedded nav and feed', { tag: '@ui' }, () => {
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  test('the 4 nav links switch between Home / Discover / Saved / Activity @ui', async ({ page }) => {
+  test('the 4 nav links switch between Home / Discover / Saved / Activity @ui', async ({
+    page,
+  }) => {
     await page.goto('/kposter', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
     for (const label of ['Home', 'Discover', 'Saved', 'Activity']) {
@@ -121,7 +123,9 @@ test.describe('KPost KPoster — Composer (BUSINESS_S)', { tag: '@ui' }, () => {
     ).toBeVisible({ timeout: 10_000 });
     const caption = page.getByLabel('Post caption');
     await expect(caption, 'the caption field renders').toBeVisible();
-    await caption.fill('QA UI test post — demo mode only, local IndexedDB, never touches KPost backend.');
+    await caption.fill(
+      'QA UI test post — demo mode only, local IndexedDB, never touches KPost backend.',
+    );
     await expect(caption, 'the caption holds the typed text').toHaveValue(
       'QA UI test post — demo mode only, local IndexedDB, never touches KPost backend.',
     );

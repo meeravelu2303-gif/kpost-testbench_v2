@@ -101,12 +101,20 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
       const own = await endpoints.sendTo(
         candidate.id,
         { [candidate.shape]: ownParams },
-        { label: `admin:0d-extended:${candidate.id}:own`, auth: { principal: businessM! }, allowLiveRead: true },
+        {
+          label: `admin:0d-extended:${candidate.id}:own`,
+          auth: { principal: businessM! },
+          allowLiveRead: true,
+        },
       );
       const other = await endpoints.sendTo(
         candidate.id,
         { [candidate.shape]: otherParams },
-        { label: `admin:0d-extended:${candidate.id}:other`, auth: { principal: businessM! }, allowLiveRead: true },
+        {
+          label: `admin:0d-extended:${candidate.id}:other`,
+          auth: { principal: businessM! },
+          allowLiveRead: true,
+        },
       );
 
       // Identical bytes means the endpoint ignored companyId and returned the caller's own data
@@ -116,7 +124,10 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
       let returnedOtherCompanyData = false;
       if (!identicalToOwn && other.status < 300) {
         try {
-          const parsed = JSON.parse(other.bodyText || '{}') as { value?: unknown[]; data?: unknown[] };
+          const parsed = JSON.parse(other.bodyText || '{}') as {
+            value?: unknown[];
+            data?: unknown[];
+          };
           const rows = parsed.value ?? parsed.data ?? [];
           const rowArray = Array.isArray(rows) ? rows : [];
           // A real leak: the different content actually carries the OTHER company's id, not just
@@ -134,10 +145,10 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
           endpointId: candidate.id,
           ruleId: `IDOR-admin-cross-company-tenant-${candidate.id}`,
           rule:
-            'An Admin endpoint must scope company-scoped data by the CALLER\'S OWN companyId (from ' +
+            "An Admin endpoint must scope company-scoped data by the CALLER'S OWN companyId (from " +
             `their token), not by whatever companyId the request names — a BUSINESS_M-authenticated ` +
-            'caller must not be able to read BUSINESS_S\'s company data by naming company 1034.',
-          expected: 'company 1034\'s data is refused, empty, or identical to the caller\'s own',
+            "caller must not be able to read BUSINESS_S's company data by naming company 1034.",
+          expected: "company 1034's data is refused, empty, or identical to the caller's own",
           actual: `${candidate.id}(companyId=1034) answered ${other.status} with company-1034-tagged data, distinct from the caller's own (company ${ownCompanyId}) response`,
           request: { [candidate.shape]: otherParams },
         });

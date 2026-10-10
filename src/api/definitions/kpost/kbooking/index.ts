@@ -17,7 +17,9 @@ export { kbookingApis };
 export function uncoveredKBookingPaths(): string[] {
   // Use contractPath where set (citysuggestion's workbook entry bakes in a literal sample city
   // rather than a {query} template) so this comparison matches the same key workbookContract() uses.
-  const covered = new Set(kbookingApis.map((api) => `${api.method} ${api.contractPath ?? api.path}`));
+  const covered = new Set(
+    kbookingApis.map((api) => `${api.method} ${api.contractPath ?? api.path}`),
+  );
   return contractPaths('kpost-api')
     .filter((path) => /^\/redbus\//i.test(path))
     .filter((path) => ![...covered].some((key) => key.endsWith(` ${path}`)));

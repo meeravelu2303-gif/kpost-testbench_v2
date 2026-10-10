@@ -14,67 +14,77 @@ import { expect, test } from '@fixtures';
  * reachable. Same execution-based check as the other `*-security.spec.ts` files (a `dialog` listener,
  * not string-matching).
  */
-test.describe('KPost User Management · Designation field security fuzzing (BUSINESS_S)', { tag: '@ui' }, () => {
-  test.use({ storageState: STORAGE_STATE_BUSINESS });
+test.describe(
+  'KPost User Management · Designation field security fuzzing (BUSINESS_S)',
+  { tag: '@ui' },
+  () => {
+    test.use({ storageState: STORAGE_STATE_BUSINESS });
 
-  test.skip(
-    process.env.BUSINESS_UI_LIFECYCLE !== 'true',
-    'needs the BUSINESS_S admin session; set BUSINESS_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.businessSKpostId || testData.businessSKpostId.includes('qa.business'),
-    'needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID)',
-  );
+    test.skip(
+      process.env.BUSINESS_UI_LIFECYCLE !== 'true',
+      'needs the BUSINESS_S admin session; set BUSINESS_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.businessSKpostId || testData.businessSKpostId.includes('qa.business'),
+      'needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID)',
+    );
 
-  const PAYLOADS: Array<{ name: string; value: string }> = [
-    { name: 'script tag', value: '<script>alert(1)</script>' },
-    { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
-    { name: 'SQL-style OR-true', value: "' OR '1'='1" },
-  ];
+    const PAYLOADS: Array<{ name: string; value: string }> = [
+      { name: 'script tag', value: '<script>alert(1)</script>' },
+      { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
+      { name: 'SQL-style OR-true', value: "' OR '1'='1" },
+    ];
 
-  for (const payload of PAYLOADS) {
-    test(`the Designation search field survives a ${payload.name} payload without crashing or executing it @ui`, async ({
-      page,
-    }) => {
-      const stop = watchUiHealth(page);
-      let dialogFired = false;
-      page.on('dialog', (dialog) => {
-        dialogFired = true;
-        void dialog.dismiss();
+    for (const payload of PAYLOADS) {
+      test(`the Designation search field survives a ${payload.name} payload without crashing or executing it @ui`, async ({
+        page,
+      }) => {
+        const stop = watchUiHealth(page);
+        let dialogFired = false;
+        page.on('dialog', (dialog) => {
+          dialogFired = true;
+          void dialog.dismiss();
+        });
+
+        await page.goto('/usermanagement', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await page
+          .locator('.loader-overlay')
+          .waitFor({ state: 'hidden', timeout: 30_000 })
+          .catch(() => undefined);
+        await page.waitForTimeout(1000);
+        await page
+          .getByText(/Add New\s*\d*\s*Channels/i)
+          .first()
+          .click();
+        await page.waitForTimeout(500);
+        await page
+          .getByText(/Add Manually/i)
+          .first()
+          .click();
+        await page.waitForTimeout(1000);
+
+        const modal = page.locator('.modal.show, [role="dialog"]').last();
+        const designationInput = modal.locator('.react-select__input').first();
+        const opened = await designationInput.isVisible({ timeout: 10_000 }).catch(() => false);
+        test.skip(!opened, 'the Add Manually form did not open — needs a codegen re-tune');
+
+        await designationInput.click({ force: true });
+        await page.keyboard.type(payload.value);
+        await page.waitForTimeout(1_500);
+
+        const health = stop();
+
+        test.info().annotations.push({
+          type: 'observed',
+          description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+        });
+
+        expect(health.pageErrors, `no uncaught JS error typing: ${payload.value}`).toEqual([]);
+        expect(
+          dialogFired,
+          `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
+        ).toBe(false);
       });
-
-      await page.goto('/usermanagement', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
-      await page.waitForTimeout(1000);
-      await page.getByText(/Add New\s*\d*\s*Channels/i).first().click();
-      await page.waitForTimeout(500);
-      await page.getByText(/Add Manually/i).first().click();
-      await page.waitForTimeout(1000);
-
-      const modal = page.locator('.modal.show, [role="dialog"]').last();
-      const designationInput = modal.locator('.react-select__input').first();
-      const opened = await designationInput.isVisible({ timeout: 10_000 }).catch(() => false);
-      test.skip(!opened, 'the Add Manually form did not open — needs a codegen re-tune');
-
-      await designationInput.click({ force: true });
-      await page.keyboard.type(payload.value);
-      await page.waitForTimeout(1_500);
-
-      const health = stop();
-
-      test.info().annotations.push({
-        type: 'observed',
-        description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
-      });
-
-      expect(health.pageErrors, `no uncaught JS error typing: ${payload.value}`).toEqual([]);
-      expect(
-        dialogFired,
-        `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
-      ).toBe(false);
-    });
-  }
-});
+    }
+  },
+);

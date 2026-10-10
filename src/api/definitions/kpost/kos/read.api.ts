@@ -14,7 +14,8 @@ export const listDocumentsApi = defineKosEndpoint({
   id: 'kos-list-documents',
   method: 'GET',
   path: '/kword/documents/',
-  summary: "The caller's KWord documents (workbook-documented path — confirmed not the real one, see kos-documents-type)",
+  summary:
+    "The caller's KWord documents (workbook-documented path — confirmed not the real one, see kos-documents-type)",
   tags: [...READ_TAGS, 'kword', 'needs-id'],
   // testingapi answers 404 "No matching endpoint for this request" — the KWord route is not deployed
   // on the test build. CONFIRMED 2026-10-02 via frontend trace: this path has no caller anywhere in
@@ -38,7 +39,8 @@ export const documentsTypeApi = defineUndocumentedKosEndpoint({
   path: '/kword/documentsType',
   summary: "The caller's KWord documents (the real list call, confirmed no query param)",
   tags: [...READ_TAGS, 'kword'],
-  evidence: 'KOS.js:235-263 (GetAllKWordDocs); callers KWord.js:2375,2747 — always called with no args',
+  evidence:
+    'KOS.js:235-263 (GetAllKWordDocs); callers KWord.js:2375,2747 — always called with no args',
   productionSafe: true,
 });
 

@@ -103,17 +103,26 @@ const cap = <T>(list: T[], item: T): void => {
   if (list.length > MAX) list.shift();
 };
 const ESC = String.fromCharCode(27);
-const stripAnsi = (text: string): string => text.split(ESC).map((part, i) => (i ? part.replace(/^\[[0-9;]*m/, '') : part)).join('');
+const stripAnsi = (text: string): string =>
+  text
+    .split(ESC)
+    .map((part, i) => (i ? part.replace(/^\[[0-9;]*m/, '') : part))
+    .join('');
 
 /** Starts recording on a fresh page. Call before the test navigates. */
 export async function startRecording(page: Page): Promise<Recorded> {
   const rec: Recorded = { errors: [], console: [], requests: [], navigations: [] };
   await page.addInitScript(PAGE_RECORDER);
-  page.on('pageerror', (err) => cap(rec.errors, { at: now(), text: err.stack || `${err.name}: ${err.message}` }));
+  page.on('pageerror', (err) =>
+    cap(rec.errors, { at: now(), text: err.stack || `${err.name}: ${err.message}` }),
+  );
   page.on('console', (msg) => {
     if (msg.type() !== 'error') return;
     const loc = msg.location();
-    cap(rec.console, { at: now(), text: `${msg.text()}${loc.url ? `  (${loc.url}:${loc.lineNumber})` : ''}` });
+    cap(rec.console, {
+      at: now(),
+      text: `${msg.text()}${loc.url ? `  (${loc.url}:${loc.lineNumber})` : ''}`,
+    });
   });
   page.on('requestfailed', (req) =>
     cap(rec.requests, {
@@ -127,7 +136,13 @@ export async function startRecording(page: Page): Promise<Recorded> {
   page.on('response', (res) => {
     if (res.status() < 400) return;
     const req = res.request();
-    cap(rec.requests, { at: now(), method: req.method(), url: res.url(), outcome: `HTTP ${res.status()}`, type: req.resourceType() });
+    cap(rec.requests, {
+      at: now(),
+      method: req.method(),
+      url: res.url(),
+      outcome: `HTTP ${res.status()}`,
+      type: req.resourceType(),
+    });
   });
   page.on('framenavigated', (frame) => {
     if (frame === page.mainFrame()) cap(rec.navigations, { at: now(), url: frame.url() });
@@ -137,7 +152,10 @@ export async function startRecording(page: Page): Promise<Recorded> {
 
 /** A page call that can never hang the teardown — a frozen page is exactly the case we must still report. */
 async function within<T>(ms: number, work: Promise<T>): Promise<T | undefined> {
-  return Promise.race([work.catch(() => undefined), new Promise<undefined>((r) => setTimeout(() => r(undefined), ms))]);
+  return Promise.race([
+    work.catch(() => undefined),
+    new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
+  ]);
 }
 
 async function readSession<T>(page: Page, key: string): Promise<T[]> {
@@ -164,7 +182,10 @@ function groupRequests(requests: Recorded['requests'], assets: FailedAsset[]): s
     const base = url.split('?')[0];
     return assets.find((a) => a.src === url || a.src.split('?')[0] === base)?.by;
   };
-  const groups = new Map<string, { n: number; first: string; last: string; example: string; by?: string }>();
+  const groups = new Map<
+    string,
+    { n: number; first: string; last: string; example: string; by?: string }
+  >();
   for (const r of requests) {
     let where = r.url;
     try {
@@ -175,7 +196,15 @@ function groupRequests(requests: Recorded['requests'], assets: FailedAsset[]): s
     }
     const shape = where
       .split('/')
-      .map((seg) => (/%40|@/.test(seg) ? '{id}' : /^[0-9a-f-]{8,}$/i.test(seg) ? '{id}' : /^\d+$/.test(seg) ? '{n}' : seg))
+      .map((seg) =>
+        /%40|@/.test(seg)
+          ? '{id}'
+          : /^[0-9a-f-]{8,}$/i.test(seg)
+            ? '{id}'
+            : /^\d+$/.test(seg)
+              ? '{n}'
+              : seg,
+      )
       .join('/');
     const key = `${r.method} ${shape} → ${r.outcome} (${r.type})`;
     const g = groups.get(key);
@@ -194,7 +223,11 @@ function groupRequests(requests: Recorded['requests'], assets: FailedAsset[]): s
 }
 
 /** Writes and attaches the diagnosis — only for a failed test. */
-export async function writeDiagnosisIfFailed(page: Page, rec: Recorded, testInfo: TestInfo): Promise<void> {
+export async function writeDiagnosisIfFailed(
+  page: Page,
+  rec: Recorded,
+  testInfo: TestInfo,
+): Promise<void> {
   if (testInfo.status === testInfo.expectedStatus) return;
 
   const alive = !page.isClosed();
@@ -209,18 +242,30 @@ export async function writeDiagnosisIfFailed(page: Page, rec: Recorded, testInfo
     `Page at the time of failure: ${alive ? page.url() : '(page already closed)'}`,
     '',
     'WHAT FAILED',
-    ...testInfo.errors.map((e) => stripAnsi(e.message ?? '').split('\n').slice(0, 4).join('\n')),
+    ...testInfo.errors.map((e) =>
+      stripAnsi(e.message ?? '')
+        .split('\n')
+        .slice(0, 4)
+        .join('\n'),
+    ),
     '',
     `JAVASCRIPT ERRORS IN THE PAGE (${rec.errors.length}) — full stack, oldest first`,
     ...(rec.errors.length ? rec.errors.map((e, i) => `${i + 1}. [${e.at}] ${e.text}`) : ['(none)']),
     '',
     `STEPS BEFORE THE FAILURE (last ${Math.min(steps.length, 25)}, oldest first) — clicks, Tab/focus path, keys`,
     ...(steps.length
-      ? steps.slice(-25).map((s, i) => `${String(i + 1).padStart(2)}. [${s.t}] ${s.k.padEnd(14)} ${s.p}${s.d ? `  —  ${s.d}` : ''}  (${s.u})`)
+      ? steps
+          .slice(-25)
+          .map(
+            (s, i) =>
+              `${String(i + 1).padStart(2)}. [${s.t}] ${s.k.padEnd(14)} ${s.p}${s.d ? `  —  ${s.d}` : ''}  (${s.u})`,
+          )
       : ['(no clicks or key presses in this test — it only loaded and measured the screen)']),
     '',
     `CONSOLE ERRORS (${rec.console.length})`,
-    ...(rec.console.length ? rec.console.slice(-30).map((c) => `- [${c.at}] ${c.text}`) : ['(none)']),
+    ...(rec.console.length
+      ? rec.console.slice(-30).map((c) => `- [${c.at}] ${c.text}`)
+      : ['(none)']),
     '',
     `FAILED OR ERROR REQUESTS (${rec.requests.length}, grouped by endpoint and result)`,
     ...(rec.requests.length ? groupRequests(rec.requests, assets) : ['(none)']),

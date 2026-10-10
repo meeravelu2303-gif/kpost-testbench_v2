@@ -90,9 +90,15 @@ test.describe('KPost company-admin · User Management (BUSINESS_S)', { tag: '@ui
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
     await page.waitForTimeout(1000);
-    await page.getByText(/Add New\s*\d*\s*Channels/i).first().click();
+    await page
+      .getByText(/Add New\s*\d*\s*Channels/i)
+      .first()
+      .click();
     await page.waitForTimeout(500);
-    await page.getByText(/Add Manually/i).first().click();
+    await page
+      .getByText(/Add Manually/i)
+      .first()
+      .click();
     await page.waitForTimeout(1000);
 
     const modal = page.locator('.modal.show, [role="dialog"]').last();
@@ -112,7 +118,10 @@ test.describe('KPost company-admin · User Management (BUSINESS_S)', { tag: '@ui
     // brittle way to guarantee a genuine same-company collision. Plain 10-digit format: the field's
     // own mask mangles a leading "+91"/country-code prefix despite its placeholder claiming to want
     // one — a separate, minor defect noted but not filed on its own.
-    const memberMobile = await page.getByText(/\+91\s?\d{10}/).first().textContent();
+    const memberMobile = await page
+      .getByText(/\+91\s?\d{10}/)
+      .first()
+      .textContent();
     const digitsOnly = (memberMobile ?? '').replace(/\D/g, '').slice(-10);
     test.skip(digitsOnly.length !== 10, 'could not read a real member mobile number off the page');
 

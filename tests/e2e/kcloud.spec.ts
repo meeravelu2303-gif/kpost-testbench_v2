@@ -50,14 +50,23 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
       requestFired = true;
     });
 
-    await page.getByText(/^Documents$/i).first().click();
+    await page
+      .getByText(/^Documents$/i)
+      .first()
+      .click();
     await expect(
       page.getByText(/Clear All Data/i).first(),
       'the app-data breakdown view renders',
     ).toBeVisible({ timeout: 10_000 });
 
-    await page.getByText(/Clear All Data/i).first().click();
-    await page.getByText(/Clear By Date/i).first().click();
+    await page
+      .getByText(/Clear All Data/i)
+      .first()
+      .click();
+    await page
+      .getByText(/Clear By Date/i)
+      .first()
+      .click();
     await page.waitForTimeout(1_000);
 
     expect(
@@ -94,13 +103,19 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
     });
 
     // "Buy Monthly" is confirmed dead (no onClick) — clicking it must do nothing.
-    await page.getByText(/Buy Monthly/i).first().click();
+    await page
+      .getByText(/Buy Monthly/i)
+      .first()
+      .click();
     await page.waitForTimeout(500);
     expect(requestFired, '"Buy Monthly" is confirmed from source to have no onClick handler').toBe(
       false,
     );
 
-    await page.getByText(/Buy Yearly/i).first().click();
+    await page
+      .getByText(/Buy Yearly/i)
+      .first()
+      .click();
     await expect(page.getByText(/^Buy Yearly$/i).last(), 'the plan modal opens').toBeVisible({
       timeout: 10_000,
     });
@@ -118,6 +133,9 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
       'the entire "buy" flow is confirmed from source to be local-only — no network request at any step',
     ).toBe(false);
 
-    await page.getByRole('button', { name: /^Done$/i }).first().click();
+    await page
+      .getByRole('button', { name: /^Done$/i })
+      .first()
+      .click();
   });
 });

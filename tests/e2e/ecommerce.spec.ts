@@ -58,7 +58,10 @@ test.describe('KPost K-ECommerce — merchant grid', { tag: '@ui' }, () => {
       firstCard.click(),
     ]);
 
-    expect(popup, 'clicking a merchant card opens a new tab (window.open), not an in-app navigation').toBeTruthy();
+    expect(
+      popup,
+      'clicking a merchant card opens a new tab (window.open), not an in-app navigation',
+    ).toBeTruthy();
     await popup.close();
   });
 });

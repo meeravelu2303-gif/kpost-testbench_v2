@@ -94,7 +94,9 @@ test.describe('KPost Katchup · Forward sub-flow completion @ui', { tag: '@ui' }
       timeout: 15_000,
     });
     const searchBox = recipientDialog.getByRole('searchbox');
-    await expect(searchBox, 'the recipient search box is available').toBeVisible({ timeout: 10_000 });
+    await expect(searchBox, 'the recipient search box is available').toBeVisible({
+      timeout: 10_000,
+    });
     // This search matches contacts by DISPLAY NAME, not kpostID/email. The Hamza Ali conversation
     // partner is excluded from this specific picker (see class comment), so the target here is a
     // different real contact already in the account's own address book.
@@ -124,7 +126,10 @@ test.describe('KPost Katchup · Forward sub-flow completion @ui', { tag: '@ui' }
 
     // Back in the forward view: the final send button (post_button_size, no accessible name — #963).
     const finalSend = page.locator('.post_button_size').last();
-    await expect(finalSend, 'the final Forward send button is enabled once a recipient is picked').toBeEnabled({
+    await expect(
+      finalSend,
+      'the final Forward send button is enabled once a recipient is picked',
+    ).toBeEnabled({
       timeout: 10_000,
     });
     await finalSend.click();
@@ -132,7 +137,11 @@ test.describe('KPost Katchup · Forward sub-flow completion @ui', { tag: '@ui' }
     // Verify delivery: the sender is also a party to their own 1:1 thread with the forward target, so
     // the forwarded content should appear there without needing a second browser session. This is a
     // different conversation than the Hamza Ali one the source message was sent in.
-    await page.locator(EDITOR).first().waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => undefined);
+    await page
+      .locator(EDITOR)
+      .first()
+      .waitFor({ state: 'hidden', timeout: 5_000 })
+      .catch(() => undefined);
     await openConversation(page, FORWARD_TARGET_CONTACT_ID);
     await expect(
       page.getByText('QA UI Forward — source message', { exact: false }).first(),

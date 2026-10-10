@@ -21,7 +21,7 @@ test.describe('KPost Security · Katchup attachment IDOR @api @kpost-api @securi
     'uploads a real file to S3 and sends a real message; set KATCHUP_LIFECYCLE=true and AWS_LIFECYCLE=true',
   );
 
-  test('an unrelated account cannot fetch another pair\'s Katchup attachment by uuid alone', async ({
+  test("an unrelated account cannot fetch another pair's Katchup attachment by uuid alone", async ({
     endpoints,
   }) => {
     const content = 'QA bench attachment — safe to ignore, not a real document.';
@@ -31,12 +31,20 @@ test.describe('KPost Security · Katchup attachment IDOR @api @kpost-api @securi
       // --- A uploads a real file to S3 and sends it to B -------------------------------------
       const presign = await endpoints.sendTo(
         'aws-katchup-presigned',
-        { body: { extension: 'txt', fileName: `qa-idor-${Date.now()}.txt`, fileSize: String(content.length) } },
+        {
+          body: {
+            extension: 'txt',
+            fileName: `qa-idor-${Date.now()}.txt`,
+            fileSize: String(content.length),
+          },
+        },
         { label: 'katchup-idor:presign', auth: { principal: A }, allowLiveWrite: true },
       );
       expect(presign.status, 'generate-presigned-url succeeds').toBeLessThan(300);
       const url = presign.bodyText.trim().replace(/^"|"$/, '');
-      const uuid = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)?.[1];
+      const uuid = url.match(
+        /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
+      )?.[1];
       expect(uuid, 'the presigned URL names a uuid').toBeTruthy();
       if (!uuid) return;
 
@@ -65,7 +73,11 @@ test.describe('KPost Security · Katchup attachment IDOR @api @kpost-api @securi
       const downloadAttachment = await endpoints.sendTo(
         'katchup-download-attachment',
         { pathParams: { uuid } },
-        { label: 'katchup-idor:attacker-download-attachment', auth: { principal: C }, allowLiveRead: true },
+        {
+          label: 'katchup-idor:attacker-download-attachment',
+          auth: { principal: C },
+          allowLiveRead: true,
+        },
       );
       const downloadFromS3 = await endpoints.sendTo(
         'katchup-download-from-s3',
@@ -100,7 +112,8 @@ test.describe('KPost Security · Katchup attachment IDOR @api @kpost-api @securi
             "A Katchup attachment must only be fetchable by the message's sender or receiver — an " +
             'unrelated account must not be able to download it by uuid alone.',
           expected: 'every route refuses an unrelated caller',
-          actual: `${leaked.map(([name, status]) => `${name}=${status}`).join(', ')} — at least one ` +
+          actual:
+            `${leaked.map(([name, status]) => `${name}=${status}`).join(', ')} — at least one ` +
             `succeeded for uuid ${uuid}, which ${A.username} uploaded for a message to ${B.username} ` +
             `that ${C.username} (attacker) has no relationship to`,
           request: { pathParams: { uuid } },
@@ -109,7 +122,10 @@ test.describe('KPost Security · Katchup attachment IDOR @api @kpost-api @securi
 
       for (const [name, status] of results) {
         expect
-          .soft(status, `IDOR: an unrelated account must not fetch another pair's attachment via ${name} (uuid ${uuid})`)
+          .soft(
+            status,
+            `IDOR: an unrelated account must not fetch another pair's attachment via ${name} (uuid ${uuid})`,
+          )
           .toBeGreaterThanOrEqual(400);
       }
     } finally {

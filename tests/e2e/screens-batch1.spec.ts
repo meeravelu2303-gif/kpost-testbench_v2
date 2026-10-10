@@ -10,11 +10,15 @@ import { runScreenSweep } from './support/screen-sweep';
  */
 const BATCH = new Set(['home', 'katchup', 'kall', 'kmail', 'profile']);
 
-test.describe('KPost deep UI sweep — batch 1 (Home, Katchup, Kall, KMail, Profile)', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost deep UI sweep — batch 1 (Home, Katchup, Kall, KMail, Profile)',
+  { tag: '@ui' },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  runScreenSweep(AUTHENTICATED_SCREENS.filter((s) => BATCH.has(s.name.toLowerCase())));
-});
+    runScreenSweep(AUTHENTICATED_SCREENS.filter((s) => BATCH.has(s.name.toLowerCase())));
+  },
+);

@@ -22,7 +22,7 @@ import { expect, test } from '@fixtures';
  * member-count/plan data for that other company?
  */
 test.describe('KPost Security · Admin userManagementDetails cross-company disclosure @api @kpost-api @security @admin', () => {
-  test('a company admin can read another company\'s member counts and subscription plan @api @security', async ({
+  test("a company admin can read another company's member counts and subscription plan @api @security", async ({
     endpoints,
   }) => {
     const attacker = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'business-s');
@@ -30,13 +30,17 @@ test.describe('KPost Security · Admin userManagementDetails cross-company discl
     const otherCompanyId = String(testData.businessMCompanyId);
     test.skip(
       !otherCompanyId || otherCompanyId === '1',
-      'needs a real QA_BUSINESS_M_COMPANY_ID distinct from the attacker\'s own company',
+      "needs a real QA_BUSINESS_M_COMPANY_ID distinct from the attacker's own company",
     );
 
     const attack = await endpoints.sendTo(
       'admin-user-management-details',
       { pathParams: { companyID: otherCompanyId } },
-      { label: 'idor:admin-usermanagement-cross-company', auth: { principal: attacker! }, allowLiveRead: true },
+      {
+        label: 'idor:admin-usermanagement-cross-company',
+        auth: { principal: attacker! },
+        allowLiveRead: true,
+      },
     );
 
     expect(attack.status, 'the request completes').toBeLessThan(500);
@@ -56,7 +60,7 @@ test.describe('KPost Security · Admin userManagementDetails cross-company discl
         endpointId: 'admin-user-management-details',
         ruleId: 'IDOR-admin-usermanagement-cross-company-metrics',
         rule:
-          'A company admin must not be able to read another company\'s member counts or ' +
+          "A company admin must not be able to read another company's member counts or " +
           'subscription plan by naming its companyID in the path.',
         expected: 'the request is refused, or returns no usable member-count/plan data',
         actual: `status=${attack.status}, memberCountDetails=${JSON.stringify(counts)} for companyID ${otherCompanyId}`,

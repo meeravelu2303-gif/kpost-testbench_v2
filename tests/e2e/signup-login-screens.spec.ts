@@ -126,7 +126,9 @@ test.describe('KPost signed-out screens — deep UI sweep', { tag: '@ui' }, () =
     await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await loginPage.expectLoaded();
     await loginPage.enterLoginId(testData.kpostId);
-    await loginPage.passwordInput.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+    await loginPage.passwordInput
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .catch(() => undefined);
     const loadMs = Date.now() - started;
 
     // A genuinely unknown id never reaches step 2 — skip (not fail) rather than file a false
@@ -162,12 +164,17 @@ test.describe('KPost signed-out screens — deep UI sweep', { tag: '@ui' }, () =
     // step — a known id must advance the flow first (same precondition as the existing, working
     // `login-session.spec.ts` test for this same link).
     await loginPage.enterLoginId(testData.kpostId);
-    await loginPage.passwordInput.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+    await loginPage.passwordInput
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .catch(() => undefined);
     test.skip(
       !(await loginPage.passwordInput.isVisible()),
       'the fixed probe id did not exist on this host — the password step (and its Forgot Password link) never mounted',
     );
-    await page.getByText(/Forgot Password/i).first().click();
+    await page
+      .getByText(/Forgot Password/i)
+      .first()
+      .click();
     await page
       .getByText(/^Forgot Password$/i)
       .first()

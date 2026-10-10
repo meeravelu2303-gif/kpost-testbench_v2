@@ -59,9 +59,10 @@ test.describe('KPost Contacts · reference and search business rules @api @kpost
       data?: Array<{ userType?: string; country?: string; kpostID?: string }>;
     };
     const rows = body.data ?? [];
-    expect(rows.length, 'the broad search returns real results to check filters against').toBeGreaterThan(
-      0,
-    );
+    expect(
+      rows.length,
+      'the broad search returns real results to check filters against',
+    ).toBeGreaterThan(0);
     for (const row of rows) {
       expect(row.userType, `every result matches the userTypeList filter (${row.kpostID})`).toBe(
         'PERSONAL',

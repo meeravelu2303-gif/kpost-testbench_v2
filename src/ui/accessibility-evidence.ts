@@ -58,12 +58,21 @@ interface RawAxeViolation {
 export function axeDetailsText(screen: string, violations: readonly RawAxeViolation[]): string {
   const lines = [`ACCESSIBILITY DETAILS — ${screen}`, `Recorded: ${new Date().toISOString()}`, ''];
   for (const v of violations) {
-    lines.push(`RULE ${v.id} [${v.impact ?? 'unknown'}] — ${v.help} (${v.nodes.length} element(s))`);
+    lines.push(
+      `RULE ${v.id} [${v.impact ?? 'unknown'}] — ${v.help} (${v.nodes.length} element(s))`,
+    );
     v.nodes.forEach((n, i) => {
       lines.push(`  ${i + 1}. selector: ${n.target.map(String).join(' ')}`);
       lines.push(`     html: ${n.html.replace(/\s+/g, ' ').slice(0, 220)}`);
       const contrast = n.any.find((c) => c.id === 'color-contrast')?.data as
-        | { fgColor?: string; bgColor?: string; contrastRatio?: number; expectedContrastRatio?: string; fontSize?: string; fontWeight?: string }
+        | {
+            fgColor?: string;
+            bgColor?: string;
+            contrastRatio?: number;
+            expectedContrastRatio?: string;
+            fontSize?: string;
+            fontWeight?: string;
+          }
         | undefined;
       if (contrast) {
         lines.push(

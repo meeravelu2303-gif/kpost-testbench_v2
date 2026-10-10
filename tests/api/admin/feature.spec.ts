@@ -140,7 +140,8 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const wpAttrRows = envelope(wpAttrList).value;
       expect
         .soft(
-          Array.isArray(wpAttrRows) && wpAttrRows.some((r) => isPlainObject(r) && r.id === wpAttrId),
+          Array.isArray(wpAttrRows) &&
+            wpAttrRows.some((r) => isPlainObject(r) && r.id === wpAttrId),
           'the newly created workplace tier attribute appears in the company list',
         )
         .toBe(true);
@@ -252,12 +253,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         expect.soft(locId, 'workplace location returns an id').toBeTruthy();
 
         // The location reads, now with real ids.
-        const locAll = await call(
-          endpoints,
-          'admin-workplace-location-all',
-          {},
-          'loc-all',
-        );
+        const locAll = await call(endpoints, 'admin-workplace-location-all', {}, 'loc-all');
         expect.soft(statusOf(locAll), 'all locations read').toMatch(/success/i);
         const locGet = await call(
           endpoints,
@@ -354,7 +350,8 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       const hrAttrRows = envelope(hrAttrList).value;
       expect
         .soft(
-          Array.isArray(hrAttrRows) && hrAttrRows.some((r) => isPlainObject(r) && r.id === hrAttrId),
+          Array.isArray(hrAttrRows) &&
+            hrAttrRows.some((r) => isPlainObject(r) && r.id === hrAttrId),
           'the newly created HR tier attribute appears in the company list',
         )
         .toBe(true);
@@ -460,12 +457,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
       expect.soft(statusOf(emp), 'employee saved').toMatch(/success/i);
       expect.soft(empId, 'employee returns an id').toBeTruthy();
 
-      const empList = await call(
-        endpoints,
-        'admin-employee-details',
-        {},
-        'employee-list',
-      );
+      const empList = await call(endpoints, 'admin-employee-details', {}, 'employee-list');
       expect.soft(statusOf(empList), 'employees read back').toMatch(/success/i);
       const empByCompany = await call(
         endpoints,
@@ -483,7 +475,9 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         {},
         'role-posting-by-company',
       );
-      expect.soft(statusOf(rolePostingsByCompany), 'role postings by company read').toMatch(/success/i);
+      expect
+        .soft(statusOf(rolePostingsByCompany), 'role postings by company read')
+        .toMatch(/success/i);
       const rolePostingRows = envelope(rolePostingsByCompany).value;
       expect
         .soft(
@@ -510,12 +504,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         // Live-verified 2026-09-26: re-read the company's employee list (the exact endpoint already
         // used above) and confirm the new name actually landed for THIS employee, not just that the
         // write said so.
-        const empRecheck = await call(
-          endpoints,
-          'admin-employee-details',
-          {},
-          'employee-recheck',
-        );
+        const empRecheck = await call(endpoints, 'admin-employee-details', {}, 'employee-recheck');
         const empRecheckRows = envelope(empRecheck).value;
         expect
           .soft(

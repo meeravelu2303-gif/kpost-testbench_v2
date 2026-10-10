@@ -528,7 +528,11 @@ test.describe('KPost KMail · feature flow', () => {
     const sent = await send(
       endpoints,
       A,
-      { toAddress: B.username, kmailSubject: `QA salute ${Date.now()}`, saluation: 'NotARealSalutation' },
+      {
+        toAddress: B.username,
+        kmailSubject: `QA salute ${Date.now()}`,
+        saluation: 'NotARealSalutation',
+      },
       'bad-salute',
     );
     try {
@@ -538,7 +542,12 @@ test.describe('KPost KMail · feature flow', () => {
         const readBack = await endpoints.sendTo(
           'kmail-details-by-id',
           { body: { kmailIDs: [sent.kmailID] } },
-          { label: 'kmail:salute-readback', auth: { principal: A }, allowLiveWrite: true, allowLiveRead: true },
+          {
+            label: 'kmail:salute-readback',
+            auth: { principal: A },
+            allowLiveWrite: true,
+            allowLiveRead: true,
+          },
         );
         const readJson = readBack.json();
         const readValue = row((readJson.ok ? readJson.value : {}) as Record<string, unknown>);
@@ -550,7 +559,9 @@ test.describe('KPost KMail · feature flow', () => {
           )
           .not.toBe('NotARealSalutation');
       } else {
-        expect.soft(sent.status, 'BR-KM-SALUTE: an out-of-set salutation is rejected at write time').toBeGreaterThanOrEqual(400);
+        expect
+          .soft(sent.status, 'BR-KM-SALUTE: an out-of-set salutation is rejected at write time')
+          .toBeGreaterThanOrEqual(400);
       }
     } finally {
       await del(endpoints, A, sent.transactionIDs);
@@ -567,7 +578,10 @@ test.describe('KPost KMail · feature flow', () => {
     );
     try {
       expect
-        .soft(sent.status, `BR-KM-BODY: an empty mail body must be rejected (postMail replied ${sent.status})`)
+        .soft(
+          sent.status,
+          `BR-KM-BODY: an empty mail body must be rejected (postMail replied ${sent.status})`,
+        )
         .toBeGreaterThanOrEqual(400);
     } finally {
       await del(endpoints, A, sent.transactionIDs);

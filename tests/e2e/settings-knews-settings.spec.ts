@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import type { Page } from '@playwright/test';
 import { expect, test } from '@fixtures';
 
 /**
@@ -31,12 +32,7 @@ test.describe('KPost Settings · KNews Settings panel', { tag: '@ui' }, () => {
    * menu and commit the field as "set" (the component only cares that `knewsdata.<field>` is
    * non-empty to unlock the next field, per the `isDisabled={knewsdata.X ? false : true}` chain).
    */
-  async function pick(
-    page: import('@playwright/test').Page,
-    placeholder: string,
-    option: string,
-    multi = false,
-  ) {
+  async function pick(page: Page, placeholder: string, option: string, multi = false) {
     const control = page.getByText(placeholder, { exact: true }).first();
     await expect(control, `the "${placeholder}" control is visible and enabled`).toBeVisible({
       timeout: 10_000,
@@ -109,7 +105,10 @@ test.describe('KPost Settings · KNews Settings panel', { tag: '@ui' }, () => {
       'submitting reveals the summary screen',
     ).toBeVisible({ timeout: 10_000 });
     // Confirmed hardcoded regardless of selections made above.
-    await expect(page.getByText(/384/).first(), 'the hardcoded total payable amount renders').toBeVisible();
+    await expect(
+      page.getByText(/384/).first(),
+      'the hardcoded total payable amount renders',
+    ).toBeVisible();
 
     expect(
       requestFired,

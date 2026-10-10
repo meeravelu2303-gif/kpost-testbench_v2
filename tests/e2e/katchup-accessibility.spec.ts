@@ -27,7 +27,11 @@ test.describe('KPost Katchup · dynamic-state accessibility (axe-core WCAG)', { 
     'needs both QA accounts',
   );
 
-  async function scanCurrentPage(page: Page, testInfo: TestInfo, screenName: string): Promise<void> {
+  async function scanCurrentPage(
+    page: Page,
+    testInfo: TestInfo,
+    screenName: string,
+  ): Promise<void> {
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
@@ -59,7 +63,10 @@ test.describe('KPost Katchup · dynamic-state accessibility (axe-core WCAG)', { 
     };
     const evidencePath = testInfo.outputPath('axe-violations.json');
     writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
-    await testInfo.attach(AXE_JSON_ATTACHMENT, { path: evidencePath, contentType: 'application/json' });
+    await testInfo.attach(AXE_JSON_ATTACHMENT, {
+      path: evidencePath,
+      contentType: 'application/json',
+    });
 
     if (evidence.violations.length) {
       await renderAccessibilityOverlay(page, screenName, evidence.violations);
@@ -77,20 +84,30 @@ test.describe('KPost Katchup · dynamic-state accessibility (axe-core WCAG)', { 
     );
 
     expect
-      .soft(critical, `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`)
+      .soft(
+        critical,
+        `${screenName}: critical WCAG violations — ${critical.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
     expect
-      .soft(serious, `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`)
+      .soft(
+        serious,
+        `${screenName}: serious WCAG violations — ${serious.map((v) => v.id).join(', ')}`,
+      )
       .toEqual([]);
   }
 
-  test('Katchup — conversation list (default) — WCAG violations (axe) @ui', async ({ page }, testInfo) => {
+  test('Katchup — conversation list (default) — WCAG violations (axe) @ui', async ({
+    page,
+  }, testInfo) => {
     await gotoKatchup(page);
     await page.waitForTimeout(1200);
     await scanCurrentPage(page, testInfo, 'Katchup — conversation list');
   });
 
-  test('Katchup — open conversation thread — WCAG violations (axe) @ui', async ({ page }, testInfo) => {
+  test('Katchup — open conversation thread — WCAG violations (axe) @ui', async ({
+    page,
+  }, testInfo) => {
     await openConversation(page, testData.victimKpostId);
     await page.waitForTimeout(1200);
     await scanCurrentPage(page, testInfo, 'Katchup — open conversation');

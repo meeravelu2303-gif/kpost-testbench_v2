@@ -96,7 +96,8 @@ export const sendMultipartApi = defineKatchupEndpoint({
   requirements: ['FR-KU-016'],
   method: 'POST',
   path: '/v2/katchup/sendKatchupMsgMultiPart/',
-  summary: 'Send a message with attachments (multipart) — LEGACY, superseded by presigned S3 upload',
+  summary:
+    'Send a message with attachments (multipart) — LEGACY, superseded by presigned S3 upload',
   tags: [...SEND_TAGS, 'attachment', 'legacy'],
   /*
    * Confirmed by the owner 2026-09-26: this direct-multipart-upload path is the OLD attachment flow

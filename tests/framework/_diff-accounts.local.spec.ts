@@ -9,7 +9,10 @@ test.describe('probe: diff accounts against the pre-run snapshot and log anythin
   test('diff and record', async ({ databases }) => {
     const database = databases.for('kpost-api');
     test.skip(!database.enabled, 'needs the KPOST_QA connection');
-    test.skip(!fs.existsSync(SNAPSHOT_PATH), 'no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first');
+    test.skip(
+      !fs.existsSync(SNAPSHOT_PATH),
+      'no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first',
+    );
 
     const before = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8')) as string[];
     const beforeSet = new Set(before);
@@ -21,7 +24,9 @@ test.describe('probe: diff accounts against the pre-run snapshot and log anythin
 
     const created = after.filter((r) => !beforeSet.has(r.kpost_id));
     // eslint-disable-next-line no-console
-    console.log(`[diff] before=${before.length} after=${after.length} newly-created=${created.length}`);
+    console.log(
+      `[diff] before=${before.length} after=${after.length} newly-created=${created.length}`,
+    );
     for (const r of created) {
       // eslint-disable-next-line no-console
       console.log(`  NEW ACCOUNT: ${r.kpost_id} / ${r.mobile_number}`);
@@ -33,6 +38,9 @@ test.describe('probe: diff accounts against the pre-run snapshot and log anythin
       });
     }
 
-    expect(created.length, 'every newly-created account this run was logged').toBeGreaterThanOrEqual(0);
+    expect(
+      created.length,
+      'every newly-created account this run was logged',
+    ).toBeGreaterThanOrEqual(0);
   });
 });

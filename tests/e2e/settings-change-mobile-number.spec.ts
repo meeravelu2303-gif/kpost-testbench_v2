@@ -48,12 +48,18 @@ test.describe('KPost Settings · Change Mobile Number panel', { tag: '@ui' }, ()
     });
     await numberInput.fill('9998887771');
 
-    await page.getByRole('button', { name: /^Change Number$/i }).first().click();
+    await page
+      .getByRole('button', { name: /^Change Number$/i })
+      .first()
+      .click();
     await expect(page.getByText(/Enter OTP/i).first(), 'the first OTP modal opens').toBeVisible({
       timeout: 10_000,
     });
     // Confirmed from source: Submit never reads the OTP digits — it advances unconditionally.
-    await page.getByRole('button', { name: /^Submit$/i }).first().click();
+    await page
+      .getByRole('button', { name: /^Submit$/i })
+      .first()
+      .click();
 
     const newNumberInput = page.getByPlaceholder('Enter your No').last();
     await expect(newNumberInput, 'the New Primary Mobile Number input appears').toBeVisible({
@@ -61,12 +67,17 @@ test.describe('KPost Settings · Change Mobile Number panel', { tag: '@ui' }, ()
     });
     await newNumberInput.fill('9998887772');
 
-    await page.getByRole('button', { name: /^Continue$/i }).first().click();
-    await expect(
-      page.getByText(/Enter OTP/i).first(),
-      'the second OTP modal opens',
-    ).toBeVisible({ timeout: 10_000 });
-    await page.getByRole('button', { name: /^Submit$/i }).first().click();
+    await page
+      .getByRole('button', { name: /^Continue$/i })
+      .first()
+      .click();
+    await expect(page.getByText(/Enter OTP/i).first(), 'the second OTP modal opens').toBeVisible({
+      timeout: 10_000,
+    });
+    await page
+      .getByRole('button', { name: /^Submit$/i })
+      .first()
+      .click();
 
     await expect(
       page.getByText(/Change Primary Mobile Number/i).first(),
@@ -74,7 +85,7 @@ test.describe('KPost Settings · Change Mobile Number panel', { tag: '@ui' }, ()
     ).toBeVisible({ timeout: 10_000 });
     await expect(
       page.getByText(/data from the previous mobile number will be automatically deleted/i).first(),
-      'the warning text about the old number\'s data being deleted is shown',
+      "the warning text about the old number's data being deleted is shown",
     ).toBeVisible();
 
     await page.getByRole('button', { name: /^Ok$/i }).first().click();
@@ -110,7 +121,10 @@ test.describe('KPost Settings · Change Mobile Number panel', { tag: '@ui' }, ()
       requestFired = true;
     });
 
-    await page.getByText(/Make Primary as Secondary/i).first().click();
+    await page
+      .getByText(/Make Primary as Secondary/i)
+      .first()
+      .click();
     await page.waitForTimeout(1_000);
 
     expect(

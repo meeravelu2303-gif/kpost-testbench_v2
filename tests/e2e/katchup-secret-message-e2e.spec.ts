@@ -31,9 +31,11 @@ test.describe('KPost Katchup · secret/confidential message UI @ui', { tag: '@ui
     await page.keyboard.type('QA UI confidential message body');
 
     const secretIcon = page.getByTitle('Secret message').first();
-    await expect(secretIcon, 'the Secret message trigger is available in the composer').toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(secretIcon, 'the Secret message trigger is available in the composer').toBeVisible(
+      {
+        timeout: 10_000,
+      },
+    );
     await secretIcon.click();
 
     await expect(

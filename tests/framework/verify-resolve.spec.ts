@@ -78,8 +78,9 @@ test.describe('auto-resolve verification', () => {
   test('a still-failing bug carries what failed this run, as dated proof @framework', () => {
     const failed = {
       ...result('POST /v2/common/domain/', 'request.null-value', 'FAILED'),
-      message: '1/1 negative request cases failed: body.x: null value (expected [400,422], got 500)',
-    } as ValidationResult;
+      message:
+        '1/1 negative request cases failed: body.x: null value (expected [400,422], got 500)',
+    };
     const d = classifyResolve(
       bug('[KP-AAA111] POST /v2/common/domain/: body.x: null value (expected 400, got 200)'),
       buildRunIndex([report([failed])]),
@@ -92,7 +93,7 @@ test.describe('auto-resolve verification', () => {
     const timedOut = {
       ...result('POST /v2/common/domain/', 'request.null-value', 'FAILED'),
       message: 'body.x: null value (apiRequestContext.fetch: Timeout 10000ms exceeded.)',
-    } as ValidationResult;
+    };
     const d = classifyResolve(
       bug('[KP-AAA111] POST /v2/common/domain/: body.x: null value (expected 400, got 200)'),
       buildRunIndex([report([timedOut])]),
@@ -105,8 +106,9 @@ test.describe('auto-resolve verification', () => {
   test('a mixed check with one timeout but a real "got 200" is still evidence @framework', () => {
     const mixed = {
       ...result('POST /v2/common/domain/', 'request.null-value', 'FAILED'),
-      message: 'body.x: null value (expected [400,422], got 200); body.y (Timeout 10000ms exceeded.)',
-    } as ValidationResult;
+      message:
+        'body.x: null value (expected [400,422], got 200); body.y (Timeout 10000ms exceeded.)',
+    };
     const d = classifyResolve(
       bug('[KP-AAA111] POST /v2/common/domain/: body.x: null value (expected 400, got 200)'),
       buildRunIndex([report([mixed])]),
@@ -240,11 +242,18 @@ test.describe('auto-resolve verification — UI', () => {
   test('a multi-check test failing for ANOTHER problem does not mark this bug still broken @framework', () => {
     const screen = 'Kall screen — controls, health, performance, responsive, a11y @ui';
     const layoutBug: BugSummary = {
-      ...uiBug(`[KP-0F1104] ${screen}: Error: Kall UI issues — [ui.layout] Horizontal overflow at 1280px`),
+      ...uiBug(
+        `[KP-0F1104] ${screen}: Error: Kall UI issues — [ui.layout] Horizontal overflow at 1280px`,
+      ),
       whiteboard: '[cat:Functional][browser:chromium]',
     };
     const otherReason = buildUiRunIndex([
-      { title: screen, outcome: 'unexpected', project: 'chromium', message: 'Error: Kall UI issues — [ui.performance] The screen took 12174ms' },
+      {
+        title: screen,
+        outcome: 'unexpected',
+        project: 'chromium',
+        message: 'Error: Kall UI issues — [ui.performance] The screen took 12174ms',
+      },
     ]);
     const d = classifyUiResolve(layoutBug, otherReason, NONE);
     expect(d.action).toBe('keep');
@@ -252,7 +261,12 @@ test.describe('auto-resolve verification — UI', () => {
     expect(d.reason).not.toContain('still failed');
 
     const sameProblem = buildUiRunIndex([
-      { title: screen, outcome: 'unexpected', project: 'chromium', message: 'Error: Kall UI issues — [ui.layout] Horizontal overflow at 1280px' },
+      {
+        title: screen,
+        outcome: 'unexpected',
+        project: 'chromium',
+        message: 'Error: Kall UI issues — [ui.layout] Horizontal overflow at 1280px',
+      },
     ]);
     expect(classifyUiResolve(layoutBug, sameProblem, NONE).reason).toContain('still failed');
   });
@@ -306,7 +320,9 @@ test.describe('auto-resolve verification — UI', () => {
   });
 
   test('closes a UI bug whose originating test ran and passed cleanly @framework', () => {
-    const index = buildUiRunIndex([{ title: 'Home — crawl every control @ui', outcome: 'expected' }]);
+    const index = buildUiRunIndex([
+      { title: 'Home — crawl every control @ui', outcome: 'expected' },
+    ]);
     const d = classifyUiResolve(uiBug('[KP-AAA111] Home — crawl every control @ui'), index, NONE);
     expect(d.action).toBe('resolve');
   });
@@ -336,7 +352,9 @@ test.describe('auto-resolve verification — UI', () => {
   });
 
   test('keeps a UI bug that reproduced this run @framework', () => {
-    const index = buildUiRunIndex([{ title: 'Home — crawl every control @ui', outcome: 'expected' }]);
+    const index = buildUiRunIndex([
+      { title: 'Home — crawl every control @ui', outcome: 'expected' },
+    ]);
     const d = classifyUiResolve(
       uiBug('[KP-AAA111] Home — crawl every control @ui'),
       index,
@@ -356,7 +374,9 @@ test.describe('auto-resolve verification — UI', () => {
   });
 
   test('ignores a skipped test — it verifies nothing @framework', () => {
-    const index = buildUiRunIndex([{ title: 'Home — crawl every control @ui', outcome: 'skipped' }]);
+    const index = buildUiRunIndex([
+      { title: 'Home — crawl every control @ui', outcome: 'skipped' },
+    ]);
     const d = classifyUiResolve(uiBug('[KP-AAA111] Home — crawl every control @ui'), index, NONE);
     expect(d.action).toBe('keep');
     expect(d.reason).toContain('did not run');

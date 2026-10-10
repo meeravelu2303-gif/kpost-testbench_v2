@@ -29,10 +29,7 @@ const C = K.principals.find((p) => p.key === 'personal-3')!; // attacker — no 
 
 test.describe('KMail · mutation-endpoint IDOR (star/delete) @api @kmail-api @kmail @security', () => {
   test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
-  test.skip(
-    process.env.KMAIL_LIFECYCLE !== 'true',
-    'sends a real mail; set KMAIL_LIFECYCLE=true',
-  );
+  test.skip(process.env.KMAIL_LIFECYCLE !== 'true', 'sends a real mail; set KMAIL_LIFECYCLE=true');
 
   test('an outsider cannot star or delete a mail they did not send or receive @api @security', async ({
     endpoints,
@@ -66,7 +63,7 @@ test.describe('KMail · mutation-endpoint IDOR (star/delete) @api @kmail-api @km
       );
 
       const repo = new KmailRepository(database);
-      const before = (await repo.recipients(kmailId as number))[0];
+      const before = (await repo.recipients(kmailId))[0];
       const transactionId = before?.id;
 
       test.skip(!transactionId, 'no transaction row was created to attack');
@@ -83,18 +80,20 @@ test.describe('KMail · mutation-endpoint IDOR (star/delete) @api @kmail-api @km
         { label: 'idor:kmail-delete', auth: { principal: C }, allowLiveWrite: true },
       );
 
-      const after = (await repo.recipients(kmailId as number))[0];
+      const after = (await repo.recipients(kmailId))[0];
 
       expect
         .soft(
-          kmailFlag(after?.marked_by_sender) === 'set' || kmailFlag(after?.marked_by_receiver) === 'set',
+          kmailFlag(after?.marked_by_sender) === 'set' ||
+            kmailFlag(after?.marked_by_receiver) === 'set',
           `BOLA: an outsider must not star a mail they did not send or receive ` +
             `(setKmailAsImportant replied ${attackStar.status})`,
         )
         .toBe(false);
       expect
         .soft(
-          kmailFlag(after?.deleted_by_sender) === 'set' || kmailFlag(after?.deleted_by_receiver) === 'set',
+          kmailFlag(after?.deleted_by_sender) === 'set' ||
+            kmailFlag(after?.deleted_by_receiver) === 'set',
           `BOLA: an outsider must not delete a mail they did not send or receive ` +
             `(kmailDelete replied ${attackDelete.status})`,
         )

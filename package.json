@@ -51,6 +51,7 @@
     "admin:deep:file": "cross-env CONCURRENCY_PROBES=false BUGZILLA_DRY_RUN=false BUGZILLA_AUTO_RESOLVE=true WRITE_FUZZ=true ALLOW_DESTRUCTIVE_TESTS=true ADMIN_LIFECYCLE=true ADMIN_ROLE_POSTING_LIVE=false playwright test --project=api tests/api/admin --workers=1",
     "ui:visual:update": "cross-env QATEST_ONLY=true VISUAL_REGRESSION=true playwright test visual.spec.ts --project=chromium --project=firefox --project=webkit --workers=1 --update-snapshots",
     "ui:visual": "cross-env QATEST_ONLY=true VISUAL_REGRESSION=true playwright test visual.spec.ts --project=chromium --project=firefox --project=webkit --workers=1",
+    "preflight": "node scripts/preflight.cjs",
     "accounts:verify": "node scripts/verify-test-accounts.cjs",
     "accounts:provision": "node scripts/provision-test-accounts.cjs",
     "ui:admin": "cross-env BUGZILLA_DRY_RUN=true ADMIN_UI_LIFECYCLE=true KATCHUP_LIFECYCLE=true LOGIN_UI_LIFECYCLE=true PROFILE_UI_LIFECYCLE=true KATCHUP_UI_LIFECYCLE=true CONTACTS_UI_LIFECYCLE=true GROUP_UI_LIFECYCLE=true KALL_UI_LIFECYCLE=true KMAIL_UI_LIFECYCLE=true KDIARY_UI_LIFECYCLE=true SETTINGS_UI_LIFECYCLE=true BUSINESS_UI_LIFECYCLE=true playwright test --project=admin-ui --workers=1",

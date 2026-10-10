@@ -51,7 +51,9 @@ test.describe('KPost Katchup · Transfer sub-flow completion @ui', { tag: '@ui' 
     // Scope everything to the "Transfer Message" dialog so this never collides with the many other
     // places in the app that reuse the same "Katchup" icon/label (left nav, switch-account, etc).
     const transferDialog = page.getByRole('dialog').filter({ hasText: 'Transfer Message' });
-    await expect(transferDialog, 'the Transfer Message modal opens').toBeVisible({ timeout: 15_000 });
+    await expect(transferDialog, 'the Transfer Message modal opens').toBeVisible({
+      timeout: 15_000,
+    });
 
     await transferDialog.getByText('Katchup', { exact: true }).click();
 
@@ -62,7 +64,9 @@ test.describe('KPost Katchup · Transfer sub-flow completion @ui', { tag: '@ui' 
 
     // Same name-based search as the Forward picker — matches by display name, not kpostID/email.
     const searchBox = recipientDialog.getByRole('searchbox');
-    await expect(searchBox, 'the recipient search box is available').toBeVisible({ timeout: 10_000 });
+    await expect(searchBox, 'the recipient search box is available').toBeVisible({
+      timeout: 10_000,
+    });
     await searchBox.fill('Hamza Ali');
     await page.waitForTimeout(1500); // let the search debounce/filter re-render before interacting
 

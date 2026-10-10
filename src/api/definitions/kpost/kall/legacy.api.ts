@@ -26,12 +26,16 @@ export const legacySetKallStatusApi = defineUndocumentedKpostEndpoint({
   id: 'kall-legacy-set-status',
   method: 'POST',
   path: '/kall/setKallStatus',
-  summary: '[LEGACY/dead-from-frontend] Set a Kall tracker row\'s status by raw kallID',
+  summary: "[LEGACY/dead-from-frontend] Set a Kall tracker row's status by raw kallID",
   tags: ['kall', 'kall-legacy', 'needs-id'],
   authentication: { required: true },
   destructive: true,
   sideEffect: 'data',
-  request: body(() => ({ kallID: 0, kallStatus: 'cancelled', kallEndTime: new Date().toISOString() })),
+  request: body(() => ({
+    kallID: 0,
+    kallStatus: 'cancelled',
+    kallEndTime: new Date().toISOString(),
+  })),
   evidence:
     'KallController.setKallStatus (KallController.java:129) — confirmed zero frontend callers; no ' +
     'HttpServletRequest param at all; KallDaoImpl.setKallStatus (line ~117) updates by raw kallID ' +
@@ -42,12 +46,17 @@ export const legacyCancelScheduleKallApi = defineUndocumentedKpostEndpoint({
   id: 'kall-legacy-cancel-schedule',
   method: 'POST',
   path: '/kall/cancelScheduleKall',
-  summary: '[LEGACY/dead-from-frontend] Cancel a scheduled Kall by raw kallID (same fault as setKallStatus, different route)',
+  summary:
+    '[LEGACY/dead-from-frontend] Cancel a scheduled Kall by raw kallID (same fault as setKallStatus, different route)',
   tags: ['kall', 'kall-legacy', 'needs-id'],
   authentication: { required: true },
   destructive: true,
   sideEffect: 'data',
-  request: body(() => ({ kallID: 0, kallStatus: 'cancelled', kallEndTime: new Date().toISOString() })),
+  request: body(() => ({
+    kallID: 0,
+    kallStatus: 'cancelled',
+    kallEndTime: new Date().toISOString(),
+  })),
   evidence:
     'KallController.cancelScheduleKall (KallController.java:391) calls the identical ' +
     'kallService.setKallStatus(kallTracker) that kall-legacy-set-status calls — same unscoped ' +

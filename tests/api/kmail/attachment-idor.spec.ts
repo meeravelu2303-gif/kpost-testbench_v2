@@ -44,7 +44,7 @@ test.describe('KMail · attachment IDOR proof (plan item 0a) @api @kmail-api @km
     'uploads a real file to S3 and sends a real mail; set KMAIL_LIFECYCLE=true and AWS_LIFECYCLE=true',
   );
 
-  test('an unrelated account can fetch another pair\'s KMail attachment by UUID alone', async ({
+  test("an unrelated account can fetch another pair's KMail attachment by UUID alone", async ({
     endpoints,
   }) => {
     const content = '%PDF-1.4 QA bench attachment — safe to ignore, not a real document.';
@@ -54,12 +54,20 @@ test.describe('KMail · attachment IDOR proof (plan item 0a) @api @kmail-api @km
       // --- A uploads a real file to S3 and sends it to B -------------------------------------
       const presign = await endpoints.sendTo(
         'aws-generate-presigned',
-        { body: { extension: 'pdf', fileName: `qa-idor-${Date.now()}.pdf`, fileSize: String(content.length) } },
+        {
+          body: {
+            extension: 'pdf',
+            fileName: `qa-idor-${Date.now()}.pdf`,
+            fileSize: String(content.length),
+          },
+        },
         { label: 'idor:presign', auth: { principal: A }, allowLiveWrite: true },
       );
       expect(presign.status, 'generate-presigned-url succeeds').toBeLessThan(300);
       const url = presign.bodyText.trim().replace(/^"|"$/, '');
-      const uuid = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)?.[1];
+      const uuid = url.match(
+        /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
+      )?.[1];
       expect(uuid, 'the presigned URL names a uuid').toBeTruthy();
       if (!uuid) return;
 
@@ -85,7 +93,9 @@ test.describe('KMail · attachment IDOR proof (plan item 0a) @api @kmail-api @km
       expect(sent.status, 'the mail with its attachment is sent').toBeLessThan(300);
       const sentJson = sent.json();
       const sentBody = (sentJson.ok ? sentJson.value : {}) as Record<string, unknown>;
-      const row = Array.isArray(sentBody.data) ? (sentBody.data[0] as Record<string, unknown>) : sentBody.data;
+      const row = Array.isArray(sentBody.data)
+        ? (sentBody.data[0] as Record<string, unknown>)
+        : sentBody.data;
       const txns = (row as Record<string, unknown> | undefined)?.kmailTransactionList;
       transactionIDs = Array.isArray(txns)
         ? (txns as Array<Record<string, unknown>>)
@@ -117,7 +127,7 @@ test.describe('KMail · attachment IDOR proof (plan item 0a) @api @kmail-api @km
           endpointId: 'kmail-download-attachment',
           ruleId: 'IDOR-kmail-attachment-by-uuid',
           rule:
-            'A KMail attachment must only be fetchable by the mail\'s sender or receiver — an ' +
+            "A KMail attachment must only be fetchable by the mail's sender or receiver — an " +
             'unrelated account (or an anonymous caller, for the thumbnail) must not be able to ' +
             'download it by UUID alone.',
           expected: 'download/stream/thumbnail all refused to an unrelated or anonymous caller',

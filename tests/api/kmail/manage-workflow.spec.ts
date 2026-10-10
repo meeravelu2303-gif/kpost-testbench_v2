@@ -234,7 +234,9 @@ test.describe('KMail · manage workflow @api @kmail-api @kmail', () => {
       { pathParams: { fromAddress: testData.kpostId } },
       { label: 'kmail:bulk-status', auth: { principal: A }, allowLiveRead: true },
     );
-    expect.soft(status.status, 'bulkMail/status reads back after a real bulk send').toBeLessThan(300);
+    expect
+      .soft(status.status, 'bulkMail/status reads back after a real bulk send')
+      .toBeLessThan(300);
     const statusBody = JSON.parse(status.bodyText || '{}') as { total?: number };
     expect
       .soft(statusBody.total, 'the status reflects at least the mail just sent')
