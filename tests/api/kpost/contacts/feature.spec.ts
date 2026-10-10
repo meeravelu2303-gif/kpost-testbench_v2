@@ -1,6 +1,6 @@
 // An orchestrated address-book lifecycle (add → verify → block → unblock → delete), not simple
 // assertions; the conditionals guard optional steps and restore of real live data.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';

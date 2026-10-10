@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-conditional-in-test */
 /* eslint-disable playwright/no-wait-for-timeout -- the pause BETWEEN sends is the whole point: the
    reported bug is that a second message will not send until you refresh, and it appears only after a
    real gap. The fixed wait reproduces that gap on purpose. */

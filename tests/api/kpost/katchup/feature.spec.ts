@@ -1,6 +1,6 @@
 // An orchestrated multi-step feature flow (send → read → recall → clean up), not simple assertions;
 // the conditionals guard optional steps and best-effort cleanup of real live data.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/schemas/kpost-types';

@@ -117,7 +117,7 @@ test.describe('KPost Security · sessions and concurrency @api @kpost-api @signu
     });
 
     const statuses = burst.outcomes.flatMap((o) => (o.value === undefined ? [] : [o.value]));
-    expect(statuses.length, 'all three logins completed').toBe(3);
+    expect(statuses, 'all three logins completed').toHaveLength(3);
     /*
      * Every login is answered — that is the floor, and it holds even while #496 is open, because
      * the defect is a 500 response rather than a hang or a dropped connection. A request that never
@@ -188,7 +188,7 @@ test.describe('KPost Security · sessions and concurrency @api @kpost-api @signu
      * Every request must be ANSWERED. A 500 is the known defect; a request that never returns is a
      * different fault, and one this assertion would catch.
      */
-    expect(statuses.length, 'all 15 logins were answered').toBe(15);
+    expect(statuses, 'all 15 logins were answered').toHaveLength(15);
 
     /*
      * Re-verified live 2026-10-03: 15/15 simultaneous logins succeeded across 3 passes, zero 5xx,
@@ -196,11 +196,11 @@ test.describe('KPost Security · sessions and concurrency @api @kpost-api @signu
      * confirmed. The assertion now holds the fix: any 5xx here is a regression, not an open defect.
      */
     expect(
-      serverErrors.length,
+      serverErrors,
       `Bugzilla #496 regressed: ${serverErrors.length}/15 simultaneous logins answered 5xx across ` +
         `3 passes (statuses: ${statuses.join(', ')}). This was fixed and verified 2026-10-03 — a ` +
         `failure here means it came back.`,
-    ).toBe(0);
+    ).toHaveLength(0);
 
     test.info().annotations.push({
       type: 'observed',

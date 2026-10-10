@@ -11,7 +11,7 @@
 // findings. Local source is still consulted as reference documentation (e.g. it is how the
 // role-posting external-call risk below was found), but every assertion here runs against the real,
 // live host, using data this test creates itself and cleans up.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';

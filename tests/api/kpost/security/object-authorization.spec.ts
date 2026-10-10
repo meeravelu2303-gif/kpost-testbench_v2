@@ -1,6 +1,6 @@
 // A cross-account authorization (IDOR / BOLA) flow: an outsider acting on another account's group.
 // Conditionals guard the setup/teardown of real live data, so they are intentional here.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';

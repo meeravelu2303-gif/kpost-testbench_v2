@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-conditional-in-test */
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { mailShape } from '@api/definitions/kmail/send.api';

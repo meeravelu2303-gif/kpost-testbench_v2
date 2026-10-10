@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-conditional-in-test */
 /* eslint-disable playwright/no-wait-for-timeout -- the short settle waits here are deliberate: a
    search filter and a scroll re-render need a beat to run so a hang/crash can surface. */
 import { testData } from '@config/test-data.config';

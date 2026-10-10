@@ -24,6 +24,7 @@ test.describe('KPost visual regression — every screen', { tag: '@ui' }, () => 
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real account (QA_KPOST_ID)',
   );
+
   test.beforeEach(async ({ page }) => {
     await skipIfSignedOut(page);
   });

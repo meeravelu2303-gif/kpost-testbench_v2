@@ -1,4 +1,4 @@
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-wait-for-timeout */
+/* eslint-disable playwright/no-wait-for-timeout */
 import { testData } from '@config/test-data.config';
 import { AUTHENTICATED_SCREENS } from '@ui/screens';
 import { healthFailures, isResponsive, watchUiHealth } from '@ui/ui-health';
@@ -20,6 +20,7 @@ test.describe('KPost network resilience — offline mid-session', { tag: '@ui' }
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real account (QA_KPOST_ID)',
   );
+
   test.beforeEach(async ({ page }) => {
     await skipIfSignedOut(page);
   });

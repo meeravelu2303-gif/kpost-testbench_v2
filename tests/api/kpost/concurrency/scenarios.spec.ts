@@ -5,7 +5,7 @@
 // endpoint-agnostic; the scenarios below encode what a SPECIFIC double-fire actually means for each
 // workflow (does a second simultaneous call create a duplicate record, corrupt a shared field, or
 // collide on an id?) — a question the generic probes don't ask.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';

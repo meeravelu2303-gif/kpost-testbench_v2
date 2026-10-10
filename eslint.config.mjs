@@ -43,12 +43,25 @@ export default defineConfig(
       'playwright/no-page-pause': 'error',
       // Environment-conditional skips (e.g. a module whose host is not configured) are intentional.
       'playwright/no-skipped-test': ['warn', { allowConditional: true }],
-    },
-  },
-  {
-    // Setup legitimately branches on whether credentials are configured.
-    files: ['tests/setup/**/*.ts'],
-    rules: {
+      // The screen sweeps and accessibility scans assert through shared helpers (every check in
+      // the catalogue ends in an `expect`); the rule only recognises a literal `expect` unless told.
+      'playwright/expect-expect': [
+        'warn',
+        {
+          assertFunctionNames: [
+            'expect',
+            'assertNoFileableIssues',
+            'runUiChecks',
+            'scanCurrentPage',
+          ],
+        },
+      ],
+      // Off by decision (2026-10-10). The bench runs against a live, shared deployment and its
+      // standing rule is "a check that could not run says SKIPPED with a reason, never PASSED" —
+      // which means a spec must look at the live state (is the control reachable? did the
+      // precondition hold?) and branch. ~200 such branches exist on purpose; a rule that flags all of
+      // them carries no signal. The guard against a test that silently does nothing is
+      // `expect-expect` above, and the live run itself.
       'playwright/no-conditional-in-test': 'off',
       'playwright/no-conditional-expect': 'off',
     },

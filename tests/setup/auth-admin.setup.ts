@@ -18,6 +18,7 @@ import { test as setup } from '@fixtures';
  * and the admin host are configured; otherwise it saves an anonymous state and the admin-UI specs
  * self-skip — so a normal run never touches the admin host.
  */
+// eslint-disable-next-line playwright/expect-expect -- a setup step that saves a storage state; it has nothing to assert and self-skips when the Admin UI is not configured.
 setup('authenticate admin UI (BUSINESS_M SSO)', async ({ page, endpoints, log }) => {
   const wanted = process.env.ADMIN_UI_LIFECYCLE === 'true';
   const adminUrl = env.ADMIN_UI_BASE_URL;

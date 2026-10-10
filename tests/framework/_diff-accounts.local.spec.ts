@@ -23,12 +23,11 @@ test.describe('probe: diff accounts against the pre-run snapshot and log anythin
     });
 
     const created = after.filter((r) => !beforeSet.has(r.kpost_id));
-    // eslint-disable-next-line no-console
+
     console.log(
       `[diff] before=${before.length} after=${after.length} newly-created=${created.length}`,
     );
     for (const r of created) {
-      // eslint-disable-next-line no-console
       console.log(`  NEW ACCOUNT: ${r.kpost_id} / ${r.mobile_number}`);
       recordCreatedAccount({
         kpostId: r.kpost_id,

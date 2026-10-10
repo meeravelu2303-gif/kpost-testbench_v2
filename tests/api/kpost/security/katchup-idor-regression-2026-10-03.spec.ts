@@ -9,7 +9,7 @@
 // access to anything they legitimately received, from any device, forever — unlike WhatsApp's
 // device-local cache model). What looked like "a former group member can still fetch old history"
 // is the correct, intended behavior for this product, not a bug.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { expect, test } from '@fixtures';

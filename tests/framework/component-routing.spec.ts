@@ -1,5 +1,5 @@
 // Generates docs/generated/component-routing.md, so the "conditionals" flagged here are table formatting.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { apiRegistry } from '@api/definitions/index';

@@ -98,7 +98,7 @@ test.describe('KMail · lifecycle with MySQL assertions @api @kmail-api @kmail @
     }
 
     // One transaction row per recipient — the fan-out a single send produced.
-    expect(rows.length, 'a single-recipient send creates exactly one transaction row').toBe(1);
+    expect(rows, 'a single-recipient send creates exactly one transaction row').toHaveLength(1);
     const row: KmailTransactionRecord | undefined = rows[0];
     for (const check of kmailDb.addressedTo(row, {
       kmailId: kmailId,

@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-conditional-in-test */
 // Reconciles the Katchup feature catalogue and generates a doc — the "conditionals" are classification.
 import fs from 'node:fs';
 import path from 'node:path';

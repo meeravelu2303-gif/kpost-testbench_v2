@@ -1,4 +1,3 @@
-/* eslint-disable no-undef -- fetch is a Node 18+ global; this cjs block does not include it */
 /*
  * Capture a real access token so it can be used as EXPIRED_TOKEN later.
  *

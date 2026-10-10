@@ -1,7 +1,7 @@
 // The OTP + signup flows, driven end to end on the disposable test DB whose OTP subsystem is a TEST
 // GATEWAY (no real SMS/e-mail; 123456 validates). Not simple assertions: orchestrated flows with
 // best-effort steps, so the conditionals are intentional.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+
 import { testData } from '@config/test-data.config';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';

@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-conditional-in-test */
 import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';

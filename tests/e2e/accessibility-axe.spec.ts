@@ -30,6 +30,7 @@ test.describe('KPost accessibility (axe-core WCAG) — every screen', { tag: '@u
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real account (QA_KPOST_ID)',
   );
+
   test.beforeEach(async ({ page }) => {
     await skipIfSignedOut(page);
   });

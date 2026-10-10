@@ -59,10 +59,14 @@ test.describe('KPost Home · dashboard functional behaviour', { tag: '@ui' }, ()
       description: `searched for a query with no plausible real match: "${improbableQuery}"`,
     });
 
-    // Soft: the exact "no results" affordance isn't pinned (a spinner, an empty-state message, or
-    // simply zero list rows are all valid implementations) — what matters functionally is that
-    // SOMETHING visibly changed, i.e. the filter is wired up at all.
+    // The exact "no results" affordance isn't pinned (a spinner, an empty-state message, or simply
+    // zero list rows are all valid implementations), so this asserts only what the title claims and
+    // what is selector-independent: a client-side filter keeps the user on the Home screen — it must
+    // not navigate away or reload into a search results route.
     await page.waitForTimeout(1500);
+    await expect(page, 'filtering Recents stays on the Home screen (client-side filter)').toHaveURL(
+      /\/home/,
+    );
   });
 
   test('Advanced Search opens from the search box and its Search button requires a To-date @ui', async ({

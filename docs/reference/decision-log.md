@@ -3,6 +3,17 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (late) — Lint policy: the gate prints defects, the debt has its own command
+
+`npm run check` printed 390 warnings on a passing run — a wall nobody reads. Measured: 173
+`no-conditional-in-test` + 23 `no-conditional-expect` (branching on live state is the bench's standing
+rule — "SKIPPED with a reason, never PASSED" — so the rule carried no signal; **off**, with the
+reasoning in `eslint.config.mjs`), 41 `expect-expect` false alarms (the sweeps assert through
+`assertNoFileableIssues` / `runUiChecks` / `scanCurrentPage`; the rule now knows those names), 20
+mechanical ones auto-fixed. What remains is real debt: 87 fixed-time waits, 41 forced clicks, 5
+hook-order — kept as warnings. `npm run lint` (the gate) now runs `--quiet`: errors fail it, output
+stays readable; **`npm run lint:debt`** prints the full list for the burn-down.
+
 ### 2026-10-10 (late) — One target: the TEST deployment; every live-host name corrected
 
 **Owner's rule:** the bench tests `test.kpostindia.com` (and `testingapi` / `testkmail` / the Admin

@@ -1,5 +1,5 @@
 // An orchestrated flow with a genuine fork (already-registered vs fresh signup), not a plain assertion.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import { domainFor } from '@fixtures/test-accounts';
 import { env } from '@config/env';
 import { testData } from '@config/test-data.config';

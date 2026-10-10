@@ -1,6 +1,6 @@
 // An orchestrated KMail lifecycle (compose → read back → act → delete), not simple assertions; the
 // conditionals guard optional steps and cleanup of real live data.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import type { Principal } from '@config/auth.config';

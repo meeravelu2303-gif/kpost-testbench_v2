@@ -1,6 +1,6 @@
 // This spec GENERATES docs/generated/live-endpoints.md, so the "conditionals" it is flagged for are string
 // and data formatting (a table cell, a summary line, a filter), not branches guarding an assertion.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import { env } from '@config/env';
 import fs from 'node:fs';
 import path from 'node:path';

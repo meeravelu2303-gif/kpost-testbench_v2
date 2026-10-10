@@ -68,6 +68,7 @@ test.describe(
       ).toBe(false);
     });
 
+    // eslint-disable-next-line playwright/expect-expect -- deliberately ends in test.skip(true, reason): no assertion can run without a known current password, and a skip with a reason is the honest outcome.
     test('the New Password field enforces its complexity rule and Confirm must match, without ever submitting @ui', async ({
       settingsPage,
     }) => {

@@ -13,7 +13,7 @@ test.describe('probe: snapshot every kpost_id before a deep write-fuzz run', () 
       where: {},
     });
     fs.writeFileSync(SNAPSHOT_PATH, JSON.stringify(rows.map((r) => r.kpost_id)), 'utf8');
-    // eslint-disable-next-line no-console
+
     console.log(`[snapshot] ${rows.length} accounts snapshotted -> ${SNAPSHOT_PATH}`);
     expect(rows.length).toBeGreaterThan(0);
   });

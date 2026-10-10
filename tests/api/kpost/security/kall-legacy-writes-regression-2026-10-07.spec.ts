@@ -3,7 +3,7 @@
 // `setKallStatus` and `cancelScheduleKall` share the SAME root cause (cancelScheduleKall calls the
 // identical kallService.setKallStatus) and are filed under the same ruleId so the bug-filing engine
 // consolidates them into one ticket covering both routes, per the "state the affected count" rule.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
 import { expect, test } from '@fixtures';

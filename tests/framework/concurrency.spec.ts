@@ -224,7 +224,7 @@ test.describe('SQL identifier safety @framework', () => {
     const { clause, values } = buildWhere({ a: 1, b: null, c: 2, d: null, e: 3 });
 
     expect(clause).toBe('WHERE `a` = ? AND `b` IS NULL AND `c` = ? AND `d` IS NULL AND `e` = ?');
-    expect((clause.match(/\?/g) ?? []).length, 'one placeholder per bound value').toBe(
+    expect(clause.match(/\?/g) ?? [], 'one placeholder per bound value').toHaveLength(
       values.length,
     );
     expect(values).toEqual([1, 2, 3]);

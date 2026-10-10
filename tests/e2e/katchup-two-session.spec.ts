@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-conditional-in-test */
 import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';

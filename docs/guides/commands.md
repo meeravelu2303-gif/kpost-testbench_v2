@@ -125,6 +125,7 @@ contain tokens and passwords. **Never commit them, and never write run logs into
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `npm run check`                                                | typecheck + lint + format — must be clean before anything is "done".                                         |
 | `npm run lint:fix` / `format` / `format:check`                 | fix lint, apply / check Prettier.                                                                            |
+| `npm run lint:debt`                                            | the full warning list the gate does not print (fixed-time waits, forced clicks, hook order) — the burn-down. |
 | `npm run framework`                                            | the bench's own self-tests, dry-run (safety, coverage, routing, payload guards).                             |
 | `npm run test:framework`                                       | the same project without the dry-run flag.                                                                   |
 | `npm run test` / `test:headed`                                 | plain Playwright run, every project, no flags / with a visible browser. Prefer a named command above.        |

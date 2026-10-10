@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-conditional-in-test */
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { expect, test } from '@fixtures';

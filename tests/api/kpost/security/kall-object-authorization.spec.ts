@@ -1,5 +1,5 @@
 // Cross-account authorization (IDOR/BOLA) for Kall. Conditionals guard live setup.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { KALL_STATUS } from '@api/schemas/kpost-types';

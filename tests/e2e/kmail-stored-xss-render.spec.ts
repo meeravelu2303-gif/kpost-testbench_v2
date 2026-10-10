@@ -176,7 +176,7 @@ test.describe('KPost KMail · stored XSS on thread-view render', { tag: '@ui' },
         `rendered body innerHTML: ${rawHtml.slice(0, 1000)}`;
       test.info().annotations.push({ type: 'observed', description: summary });
       // Also on stdout so it shows up directly in the run log, not just the HTML report.
-      // eslint-disable-next-line no-console
+
       console.log(`[kmail-stored-xss-render] ${summary}`);
 
       // NOTE: a pre-existing, unrelated `TypeError: Cannot read properties of undefined (reading

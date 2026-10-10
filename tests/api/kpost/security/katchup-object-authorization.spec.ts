@@ -1,5 +1,5 @@
 // Cross-account authorization (IDOR/BOLA) for Katchup messages. Conditionals guard live setup.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';

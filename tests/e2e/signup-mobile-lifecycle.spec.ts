@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-conditional-in-test */
 import { domainFor } from '@fixtures/test-accounts';
 import { testData } from '@config/test-data.config';
 import { recordCreatedAccount } from '@fixtures/created-accounts';

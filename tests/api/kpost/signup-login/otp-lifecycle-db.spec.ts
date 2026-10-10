@@ -288,9 +288,9 @@ test.describe('KPost OTP · lifecycle with MySQL assertions @database', { tag: '
     }
 
     expect(
-      statuses.filter((s) => s >= 500).length,
+      statuses.filter((s) => s >= 500),
       `resending must not crash the OTP service (statuses: ${statuses.join(', ')})`,
-    ).toBe(0);
+    ).toHaveLength(0);
 
     const throttled = statuses.filter((s) => s === 429).length;
     test.info().annotations.push({

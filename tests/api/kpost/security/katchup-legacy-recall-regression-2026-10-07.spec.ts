@@ -4,7 +4,7 @@
 // overrides sender from the JWT. Dead from the real frontend (EndPointURL bakes in /v2, see
 // src/api/definitions/kpost/katchup/manage.api.ts's own comment on legacyRecallMessageApi) but still
 // deployed and directly callable.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { expect, test } from '@fixtures';

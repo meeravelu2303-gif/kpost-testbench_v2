@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';

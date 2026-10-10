@@ -1,7 +1,7 @@
 // The conditional below is in an ANNOTATION, not an assertion: the test reports what the UI
 // actually showed so a human can compare it against the server message, and the pass/fail decision
 // itself stays unconditional.
-/* eslint-disable playwright/no-conditional-in-test */
+
 import { testData } from '@config/test-data.config';
 import { KpostRepository } from '@database/repositories/kpost.repository';
 import { expect, test } from '@fixtures';

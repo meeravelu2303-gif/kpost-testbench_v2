@@ -133,6 +133,7 @@ function loadCandidate(): BugCandidate {
   } as BugCandidate;
 }
 
+// eslint-disable-next-line playwright/expect-expect -- a filing tool, not a check: it skips unless a finding is supplied and its outcome is the Bugzilla write it logs.
 test('file a hand-authored finding through the standard formatter', async () => {
   /*
    * Inert unless a finding is supplied. This spec lives in the framework project so it can reuse the

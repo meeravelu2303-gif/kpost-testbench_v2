@@ -1,6 +1,6 @@
 // An orchestrated Admin/HR org-setup lifecycle (tier → variable → location → HR → employee → clean up),
 // not simple assertions; the conditionals guard optional steps and best-effort teardown of real records.
-/* eslint-disable playwright/no-conditional-in-test, playwright/no-conditional-expect */
+
 import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
