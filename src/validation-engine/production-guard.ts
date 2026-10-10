@@ -25,11 +25,6 @@ export interface SafetyFlags {
    */
   allowLiveRead?: boolean;
   /**
-   * True when requests go to the bundled mock server (`MOCK_API=true`), which cannot send a real
-   * SMS/email. False means a real host — where the SMS/OTP kill-switch below applies in EVERY mode.
-   */
-  mockApi?: boolean;
-  /**
    * Deep write-fuzzing on a disposable TEST DB. When both this and `testDbMode` are set, the engine
    * may run its fuzzers on a `data`-side-effect WRITE endpoint (which persists junk — hence test-DB
    * only). It never unlocks `external`/`global`/OTP writes, and the QA-identifier guard stays armed.
@@ -75,8 +70,6 @@ export type GuardedEndpoint = Pick<ResolvedEndpoint, 'destructive' | 'label'> & 
   sideEffect?: SideEffect;
   productionSafe?: boolean;
   otpDependent?: 'sends' | 'consumes' | 'requires';
-  /** The bench's own fixture, always served by `mock-server/` — it cannot reach the live API. */
-  mockFixture?: boolean;
 };
 
 const OTP_REASONS: Record<NonNullable<GuardedEndpoint['otpDependent']>, string> = {
@@ -98,7 +91,6 @@ export function destructiveBlockReason(
   flags: SafetyFlags = {
     isProduction: env.IS_PRODUCTION,
     allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
-    mockApi: env.MOCK_API,
     writeFuzz: env.WRITE_FUZZ,
     testDbMode: env.TEST_DB_MODE,
     otpTestGateway: env.OTP_TEST_GATEWAY,
@@ -108,12 +100,12 @@ export function destructiveBlockReason(
    * ## SMS / OTP kill-switch — the FIRST check, un-bypassable, in EVERY mode
    *
    * An endpoint that delivers a real OTP / SMS / e-mail (`otpDependent`, or `sideEffect: 'external'`)
-   * must NEVER be sent to a real host — not on production, not on dev, not on any run — because it
-   * costs money and exhausts the SMS gateway. The only safe target is the bundled mock. No flag
-   * (`allowDestructive`, `allowLiveWrite`, a wrong `TEST_ENV`) can unlock it. This sits above every
-   * other check so nothing downstream can reach an SMS sender against a real host.
+   * must NEVER be sent — not on production, not on dev, not on any run — because it costs money and
+   * exhausts the SMS gateway. Every host this bench talks to is a real one. No flag
+   * (`allowDestructive`, `allowLiveWrite`, a wrong `TEST_ENV`) can unlock it; only a CONFIRMED test
+   * gateway (below) can. This sits above every other check so nothing downstream can reach an SMS
+   * sender.
    */
-  const realHost = !endpoint.mockFixture && flags.mockApi !== true;
   // A path/label backstop: even if an endpoint were mis-flagged (no `otpDependent`/`external`), any
   // OTP / SMS / send-code / forgot-password path is caught here so it can NEVER send against a real host.
   const looksLikeSmsSender = /otp|sms|sendcode|forgotpassword|sentkpostidsms/i.test(endpoint.label);
@@ -143,11 +135,10 @@ export function destructiveBlockReason(
     flags.otpTestGateway === true && flags.testDbMode === true && isOtpFlow && !isSessionDestroyer;
 
   if (
-    realHost &&
     (endpoint.otpDependent || endpoint.sideEffect === 'external' || looksLikeSmsSender) &&
     !otpTestAuthorized
   ) {
-    return `${endpoint.label}: sends a real OTP/SMS/e-mail — BLOCKED against any real host (SMS kill-switch); it may run only against the bundled mock or a confirmed test gateway (OTP_TEST_GATEWAY+TEST_DB_MODE)`;
+    return `${endpoint.label}: sends a real OTP/SMS/e-mail — BLOCKED (SMS kill-switch); it may run only against a confirmed test gateway (OTP_TEST_GATEWAY+TEST_DB_MODE)`;
   }
   /*
    * ## On the live application, default deny
@@ -159,13 +150,7 @@ export function destructiveBlockReason(
    * A blocklist would have been less code and is the wrong shape — it admits every endpoint nobody
    * has thought about yet, which is exactly the set most likely to be dangerous.
    */
-  /*
-   * A mock fixture is never "live", whatever TEST_ENV says: the executor routes it to the bundled
-   * mock server's base URL, so it physically cannot reach the live application. Without this the
-   * live rules below would block the bench's own self-tests — the suite that proves the engine
-   * works — and a run configured for live would report nothing at all, including about itself.
-   */
-  const isLive = flags.isProduction && !endpoint.mockFixture;
+  const isLive = flags.isProduction;
 
   /*
    * A `data` write the caller has explicitly authorized for this run (an owner-approved feature
@@ -268,13 +253,7 @@ export function destructiveBlockReason(
   if (sideEffect !== 'data') {
     return `${endpoint.label} ${REASONS[sideEffect]} (set ALLOW_DESTRUCTIVE_TESTS=true to run it)`;
   }
-  /*
-   * A plain `data` write off the live application needs no flag — that is what a test-owned record
-   * is for. The pre-`mockFixture` guard also blocked these whenever TEST_ENV=production, which is
-   * now redundant: a non-fixture endpoint on production was already stopped by the allowlist at the
-   * top, and a fixture on production writes only to the bundled mock. Keeping that rule here would
-   * mean the framework's own self-tests could not run while the bench is configured for live —
-   * losing the ability to verify the engine at exactly the moment it matters most.
-   */
+  // A plain `data` write off the live application needs no flag — that is what a test-owned
+  // record is for. On production the same endpoint was already stopped by the allowlist above.
   return undefined;
 }

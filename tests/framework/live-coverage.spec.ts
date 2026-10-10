@@ -63,7 +63,7 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
      * branch for every future destructive write without a real, grep-confirmed env gate.
      */
     if (definition.id === 'kbooking-block-ticket') {
-      return 'OFF-LIVE (WRITTEN, execution blocked): no env flag actually gates this (KBOOKING_LIFECYCLE is referenced only in comments) — unconditionally test.skip\'d pending explicit owner authorization, not driven by any lifecycle flow';
+      return "OFF-LIVE (WRITTEN, execution blocked): no env flag actually gates this (KBOOKING_LIFECYCLE is referenced only in comments) — unconditionally test.skip'd pending explicit owner authorization, not driven by any lifecycle flow";
     }
     return 'COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning';
   }
@@ -143,7 +143,7 @@ test.describe('live endpoint coverage @framework', () => {
   test('write docs/LIVE-ENDPOINTS.md from the definitions', () => {
     const all = apiRegistry
       .all()
-      .filter((definition: EndpointDefinition) => !definition.mockFixture)
+
       .sort(
         (a: EndpointDefinition, b: EndpointDefinition) =>
           moduleOf(a).localeCompare(moduleOf(b)) || a.path.localeCompare(b.path),
@@ -239,8 +239,10 @@ test.describe('live endpoint coverage @framework', () => {
       if (r.includes('SMS or email')) return 'Real SMS / email to a real recipient';
       if (r.includes('shared record')) return 'Public record write (enquiry / unsubscribe)';
       if (r.includes('shared by the whole environment')) return 'Shared / global write (by choice)';
-      if (r.includes('not deployed on this test build')) return 'Route not deployed on this test build (confirmed 404)';
-      if (r.includes('WRITTEN, execution blocked')) return 'Written, execution blocked pending explicit owner authorization';
+      if (r.includes('not deployed on this test build'))
+        return 'Route not deployed on this test build (confirmed 404)';
+      if (r.includes('WRITTEN, execution blocked'))
+        return 'Written, execution blocked pending explicit owner authorization';
       return 'Needs setup we lack (business login 403, company logo 500)';
     };
     const catCounts = new Map<string, number>();
@@ -321,7 +323,7 @@ test.describe('live endpoint coverage @framework', () => {
 
     const unsafe = apiRegistry
       .all()
-      .filter((d: EndpointDefinition) => d.productionSafe && !d.mockFixture)
+      .filter((d: EndpointDefinition) => d.productionSafe)
       .filter(
         (d: EndpointDefinition) =>
           (d.sideEffect ?? 'data') !== 'data' || (d.destructive === true && !LIVE_OWN_WRITES[d.id]),
@@ -358,7 +360,7 @@ test.describe('live endpoint coverage @framework', () => {
     const LIVE_CLEARED_WRITES = new Set(['signup-login-user-logout']);
     const dropped = apiRegistry
       .all()
-      .filter((d: EndpointDefinition) => d.productionSafe && !d.mockFixture)
+      .filter((d: EndpointDefinition) => d.productionSafe)
       .filter((d: EndpointDefinition) => !LIVE_CLEARED_WRITES.has(d.id))
       .filter((d: EndpointDefinition) => resolveEndpoint(d).destructive)
       .map((d: EndpointDefinition) => d.id);

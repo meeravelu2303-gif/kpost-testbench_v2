@@ -95,7 +95,7 @@ export interface EndpointDefinition {
   authentication?: {
     /** Default: true. */
     required?: boolean;
-    /** Role used for the primary request. Default: authConfig.defaultRole or the first allowed role. */
+    /** Role used for the primary request. Default: the auth profile's role (USER) or the first allowed role. */
     role?: Role;
     /**
      * The exact principal (by `key`) to authenticate the primary request as, when a role alone is
@@ -188,13 +188,6 @@ export interface EndpointDefinition {
   database?: { validations: readonly string[] };
   /** Mutates or deletes data. Default: true for POST/PUT/PATCH/DELETE. */
   destructive?: boolean;
-  /**
-   * This endpoint is the BENCH'S OWN fixture, served by `mock-server/`, not part of KPost's API.
-   * It is called on the mock's base URL whatever the module hosts are set to - otherwise
-   * configuring a real KPOST_API_BASE_URL silently redirects the framework's self-tests at the
-   * live API, which is exactly what happened the first time a real host was configured.
-   */
-  mockFixture?: boolean;
   /**
    * How far the side effect reaches: `data` (test-owned records, the default), `external` (sends
    * a real SMS or email) or `global` (changes shared environment state). See production-guard.ts.

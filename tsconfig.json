@@ -19,7 +19,6 @@
     "paths": {
       "@api/*": ["./src/api/*"],
       "@config/*": ["./src/config/*"],
-      "@data/*": ["./src/data/*"],
       "@database/*": ["./src/database/*"],
       "@engine/*": ["./src/validation-engine/*"],
       "@fixtures": ["./src/fixtures/index.ts"],

@@ -1,24 +1,13 @@
-name: Playwright Tests
+name: Quality gate
 
+# CI runs the static checks only. The test suites run against the live KPost application from the
+# QA machine, where the credentials and the shared-server safety rules live (docs/COMMANDS.md) —
+# they are not something a hosted runner should drive on every push.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-  schedule:
-    - cron: '30 1 * * *' # nightly FULL validation, 07:00 IST
-  workflow_dispatch:
-    inputs:
-      test_env:
-        description: Target environment
-        type: choice
-        options: [dev, qa, staging, production]
-        default: staging
-      validation_profile:
-        description: Validation profile
-        type: choice
-        options: [SMOKE, REGRESSION, SECURITY, FULL]
-        default: REGRESSION
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,18 +16,9 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  TEST_ENV: ${{ inputs.test_env || 'dev' }}
-  VALIDATION_PROFILE: ${{ inputs.validation_profile || (github.event_name == 'schedule' && 'FULL') || 'REGRESSION' }}
-  # Until a deployed KPost API is configured (vars.API_BASE_URL), tests run against the mock API.
-  MOCK_API: ${{ vars.MOCK_API || 'true' }}
-  ALLOW_DESTRUCTIVE_TESTS: ${{ vars.ALLOW_DESTRUCTIVE_TESTS || 'false' }}
-  BUGZILLA_URL: ${{ vars.BUGZILLA_URL }}
-  BUGZILLA_API_KEY: ${{ secrets.BUGZILLA_API_KEY }}
-
 jobs:
   quality:
-    name: Lint & typecheck
+    name: Typecheck, lint, format
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -49,100 +29,3 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-
-  test:
-    name: Tests (shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
-    needs: quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # Per-environment vars/secrets live in GitHub "Environments" (Settings > Environments).
-    environment: ${{ inputs.test_env || 'dev' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        shardIndex: [1, 2]
-        shardTotal: [2]
-    env:
-      BASE_URL: ${{ vars.BASE_URL }}
-      API_BASE_URL: ${{ vars.API_BASE_URL }}
-      TEST_COMPANY_ID: ${{ vars.TEST_COMPANY_ID }}
-      APP_USERNAME: ${{ secrets.APP_USERNAME }}
-      APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
-      AUTH_PRINCIPALS: ${{ secrets.AUTH_PRINCIPALS }}
-      EXPIRED_TOKEN: ${{ secrets.EXPIRED_TOKEN }}
-      DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
-      LOG_FORMAT: json
-      # Shards never file: bugs are filed once from the merged report, so two shards
-      # cannot race to file the same defect.
-      BUGZILLA_DRY_RUN: 'true'
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps
-      - run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
-        with:
-          name: blob-report-${{ matrix.shardIndex }}
-          path: blob-report
-          retention-days: 1
-
-  merge-reports:
-    name: Merge reports & quality gate
-    if: ${{ !cancelled() }}
-    needs: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - uses: actions/download-artifact@v8
-        with:
-          path: all-blob-reports
-          pattern: blob-report-*
-          merge-multiple: true
-      - name: Merge reports, then file bugs once for the whole run
-        # Filing stays off until the BUGZILLA_DRY_RUN repository variable is set to 'false'.
-        env:
-          BUGZILLA_DRY_RUN: ${{ vars.BUGZILLA_DRY_RUN || 'true' }}
-        run: npx playwright merge-reports --config merge.config.ts ./all-blob-reports
-      - uses: actions/upload-artifact@v7
-        if: ${{ hashFiles('reports/REPORT.json') != '' }}
-        with:
-          name: run-report-${{ github.run_attempt }}
-          path: |
-            reports/REPORT.md
-            reports/REPORT.json
-          retention-days: 30
-      - name: Publish run report
-        if: ${{ hashFiles('reports/REPORT.md') != '' }}
-        run: cat reports/REPORT.md >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report-${{ github.run_attempt }}
-          path: playwright-report
-          retention-days: 14
-      - uses: actions/upload-artifact@v7
-        with:
-          name: junit-report-${{ github.run_attempt }}
-          path: junit-report
-          retention-days: 14
-      - name: Quality gate
-        if: ${{ hashFiles('reports/REPORT.json') != '' }}
-        run: |
-          node -e "
-            const s = require('./reports/REPORT.json');
-            console.log('Checks:', JSON.stringify(s.api.checks));
-            if (!s.qualityGate.passed) {
-              console.error('Quality gate FAILED for: ' + s.qualityGate.blockingEndpoints.join(', '));
-              process.exit(1);
-            }
-          "

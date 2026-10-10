@@ -12,12 +12,12 @@ import { env } from './env';
  * someone spends an afternoon proving otherwise. So no spec and no endpoint definition contains a
  * literal identifier: they read from here, and this reads from the environment.
  *
- * ## Defaults are the mock server's seed, deliberately
+ * ## Defaults are placeholders, deliberately visible
  *
- * With nothing configured the whole suite still runs, against `mock-server/`. That is what makes
- * the tests reviewable before the environment is reachable — but it also means a default value
- * silently standing in for a real one would be dangerous, so `unconfirmed()` lists exactly which
- * values are still placeholders and `describeTestData()` surfaces that on every non-mock run.
+ * Every value has a schema default so the bench loads and type-checks with nothing configured —
+ * but a default silently standing in for a real account would be dangerous, so `unconfirmed()`
+ * lists exactly which values are still placeholders and `describeTestData()` surfaces that on
+ * every run. On the live application the identity values must be set explicitly (see below).
  *
  * ## The accounts are real
  *
@@ -394,7 +394,7 @@ export const testData = resolved;
 export type TestData = typeof testData;
 
 /**
- * Values that are still mock defaults, as `QA_*` names.
+ * Values that are still schema defaults, as `QA_*` names.
  *
  * Anything listed here is a value the tests will send that nobody has confirmed exists in the
  * target database — so a "not found" result may be the test data rather than a defect.
@@ -405,9 +405,8 @@ export function unconfirmed(): string[] {
     .map(([, variable]) => variable);
 }
 
-/** A warning for a run against a real host that is still using placeholder data. */
+/** A warning for a run that is still using placeholder data. */
 export function describeTestData(): string | undefined {
-  if (env.MOCK_API) return undefined;
   const missing = unconfirmed();
   if (!missing.length) return undefined;
   return (

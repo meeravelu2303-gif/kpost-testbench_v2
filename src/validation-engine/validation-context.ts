@@ -126,16 +126,15 @@ export class EngineValidationContext implements ValidationContext {
   }
 
   principal(role: Role, options?: { foreignTenantOf?: string }): Principal | undefined {
-    return principalForRole(authProfileFor(this.endpoint.definition), role, options);
+    return principalForRole(authProfileFor(), role, options);
   }
 
   principals(role: Role): readonly Principal[] {
-    return authProfileFor(this.endpoint.definition).principals.filter((p) => p.role === role);
+    return authProfileFor().principals.filter((p) => p.role === role);
   }
 
   tokenFor(principal: Principal): Promise<string> {
-    // The endpoint under validation decides which API issues the token.
-    return this.deps.executor.tokens.tokenFor(principal, authProfileFor(this.endpoint.definition));
+    return this.deps.executor.tokens.tokenFor(principal, authProfileFor());
   }
 
   expiredToken(): Promise<string | undefined> {

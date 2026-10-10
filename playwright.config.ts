@@ -3,7 +3,6 @@ import { STORAGE_STATE, STORAGE_STATE_ADMIN, TAGS, TIMEOUTS } from './src/config
 import { env } from './src/config/env';
 
 const BUGZILLA_REPORTER = './src/reporting/bugzilla-reporter.ts';
-const MOCK_API_STARTUP_TIMEOUT_MS = 30_000;
 
 /** UI projects reuse the session saved by the `setup` project. */
 const browserProject = (name: string, device: Project['use']): Project => ({
@@ -33,25 +32,10 @@ export default defineConfig({
   grepInvert:
     env.IS_PRODUCTION && !env.ALLOW_DESTRUCTIVE_TESTS ? new RegExp(TAGS.destructive) : undefined,
 
-  // CI emits blob reports so sharded runs can be merged (see merge.config.ts). In CI the shards only
-  // produce blobs; the single report (reports/REPORT.{md,json}) and bug filing happen once from the
-  // merged report (merge.config.ts), so two shards can never file the same defect twice.
-  reporter: env.CI
-    ? [['blob'], ['github'], ['list']]
-    : [['list'], ['html', { open: 'never' }], [BUGZILLA_REPORTER]],
-
-  // Local stand-in for the KPost API (MOCK_API=true, the default for TEST_ENV=local).
-  webServer: env.MOCK_API
-    ? {
-        command: 'node mock-server/server.ts',
-        url: `${env.API_BASE_URL}/health`,
-        reuseExistingServer: !env.CI,
-        timeout: MOCK_API_STARTUP_TIMEOUT_MS,
-        env: { MOCK_API_PORT: String(env.MOCK_API_PORT) },
-        stdout: 'ignore',
-        stderr: 'pipe',
-      }
-    : undefined,
+  // One run, one report: the Bugzilla reporter writes reports/REPORT.{md,json} (execution health +
+  // bugs) and files once from the complete run. Every run is a single serial process on this
+  // machine (see docs/COMMANDS.md), so there is nothing to shard or merge.
+  reporter: [['list'], ['html', { open: 'never' }], [BUGZILLA_REPORTER]],
 
   use: {
     baseURL: env.BASE_URL,
@@ -92,7 +76,6 @@ export default defineConfig({
       retries: env.RETRIES ?? 2,
     },
     { name: 'api', testDir: './tests/api' },
-    { name: 'integration', testDir: './tests/integration' },
     { name: 'framework', testDir: './tests/framework' },
   ],
 });

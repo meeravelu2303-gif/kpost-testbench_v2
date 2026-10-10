@@ -1,6 +1,5 @@
 import { databaseConfig } from '@config/database.config';
 import { SUITE_IDS, type SuiteId } from '@config/ownership.config';
-import { env } from '@config/env';
 import { isReadOnlyStatement } from '@database/database-client';
 import { expect, test } from '@fixtures';
 
@@ -93,9 +92,7 @@ test.describe('Admin database is never writable @framework', () => {
 
     const admin = databaseConfig.forSuite('admin-api');
 
-    expect(admin.kind, 'no connection means no client').toBe(
-      env.MOCK_API || env.DB_TYPE === 'mock' ? 'mock' : 'none',
-    );
+    expect(admin.kind, 'no connection means no client').toBe('none');
     /*
      * The important half: "we could not check Admin's database" must never be recorded as "Admin's
      * database is correct". The engine turns a disabled client into SKIPPED with the reason

@@ -7,7 +7,18 @@ const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'perso
 /** Matches the bench's own QA-generated markers, never a real user's data. */
 const QA_MARKER = /^QA( Bench)?( College| School \d+| University \d+)?( \d{10,})?$/i;
 
-test('scratch: clean up orphaned QA junk records on the primary account @framework', async ({
+/*
+ * A MANUAL probe, never part of an ordinary `npm run framework`: it logs into the live application
+ * and reads the primary account's profile. CLEANUP_PLAN=true lists the orphaned QA records (college,
+ * school, university, experience and other-activity entries left behind by earlier write-fuzz runs);
+ * CLEANUP_EXECUTE=true deletes them. Without either flag the file skips with this reason.
+ */
+test.skip(
+  process.env.CLEANUP_PLAN !== 'true' && process.env.CLEANUP_EXECUTE !== 'true',
+  'manual probe — set CLEANUP_PLAN=true to list orphaned QA records on the primary account, CLEANUP_EXECUTE=true to delete them',
+);
+
+test('manual: clean up orphaned QA records on the primary account @framework', async ({
   endpoints,
 }) => {
   const profileEx = await endpoints.sendTo(
@@ -25,7 +36,11 @@ test('scratch: clean up orphaned QA junk records on the primary account @framewo
 
   const otherActivities = (profile.otherActivitiesAsJson ?? []) as Array<Record<string, unknown>>;
   for (const a of otherActivities) {
-    if (typeof a.title === 'string' && QA_MARKER.test(a.title) && typeof a.activityID === 'string') {
+    if (
+      typeof a.title === 'string' &&
+      QA_MARKER.test(a.title) &&
+      typeof a.activityID === 'string'
+    ) {
       plans.push({
         deleteId: 'profile-delete-other-activity',
         idField: 'activityID',
@@ -54,7 +69,11 @@ test('scratch: clean up orphaned QA junk records on the primary account @framewo
 
   const colleges = (profile.collegeDetailsAsJson ?? []) as Array<Record<string, unknown>>;
   for (const c of colleges) {
-    if (typeof c.collegeName === 'string' && QA_MARKER.test(c.collegeName) && typeof c.collegeID === 'string') {
+    if (
+      typeof c.collegeName === 'string' &&
+      QA_MARKER.test(c.collegeName) &&
+      typeof c.collegeID === 'string'
+    ) {
       plans.push({
         deleteId: 'profile-delete-college',
         idField: 'collegeID',
@@ -66,7 +85,11 @@ test('scratch: clean up orphaned QA junk records on the primary account @framewo
 
   const schools = (profile.schoolDetailsAsJson ?? []) as Array<Record<string, unknown>>;
   for (const s of schools) {
-    if (typeof s.schoolName === 'string' && QA_MARKER.test(s.schoolName) && typeof s.schoolID === 'string') {
+    if (
+      typeof s.schoolName === 'string' &&
+      QA_MARKER.test(s.schoolName) &&
+      typeof s.schoolID === 'string'
+    ) {
       plans.push({
         deleteId: 'profile-delete-school',
         idField: 'schoolID',
@@ -107,10 +130,14 @@ test('scratch: clean up orphaned QA junk records on the primary account @framewo
       if (ex.status < 300) deleted++;
       else {
         failed++;
-        console.log(`CLEANUP FAILED: ${p.label} (${p.id}) -> ${ex.status} ${ex.bodyText.slice(0, 120)}`);
+        console.log(
+          `CLEANUP FAILED: ${p.label} (${p.id}) -> ${ex.status} ${ex.bodyText.slice(0, 120)}`,
+        );
       }
     }
-    console.log(`CLEANUP RESULT: ${deleted} deleted, ${failed} failed, ${plans.length} total planned`);
+    console.log(
+      `CLEANUP RESULT: ${deleted} deleted, ${failed} failed, ${plans.length} total planned`,
+    );
   } else {
     console.log('DRY RUN — set CLEANUP_EXECUTE=true to actually delete the planned records above');
   }

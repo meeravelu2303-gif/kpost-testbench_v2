@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import type { RequestSpec } from '@api/client/request-builder';
-import mockSeed from '../../mock-server/seed.json';
 import { env } from './env';
 
 export const ROLES = ['SUPER_ADMIN', 'ADMIN', 'COMPANY_ADMIN', 'USER'] as const;
@@ -27,13 +25,13 @@ const PrincipalSchema = z.object({
 });
 export type Principal = z.infer<typeof PrincipalSchema>;
 
+/**
+ * Generic `AUTH_PRINCIPALS` (JSON) principals. KPost's own accounts come from the `QA_*` values via
+ * `auth-profile.ts`; this list only matters when a run supplies explicit principals.
+ */
 function loadPrincipals(): readonly Principal[] {
-  const source: unknown = env.AUTH_PRINCIPALS
-    ? JSON.parse(env.AUTH_PRINCIPALS)
-    : // Credentials of the local mock API only — real environments must provide AUTH_PRINCIPALS.
-      env.MOCK_API
-      ? mockSeed.principals
-      : [];
+  if (!env.AUTH_PRINCIPALS) return [];
+  const source: unknown = JSON.parse(env.AUTH_PRINCIPALS);
   const parsed = z.array(PrincipalSchema).safeParse(source);
   if (!parsed.success)
     throw new Error(`Invalid AUTH_PRINCIPALS:\n${z.prettifyError(parsed.error)}`);
@@ -45,20 +43,11 @@ const principals = loadPrincipals();
 export const authConfig = {
   roles: ROLES,
   principals,
-  /** Role used for the primary (happy-path) request when an endpoint does not specify one. */
-  defaultRole: 'ADMIN' as Role,
   /** Tenant (company) that tests create data in. */
   testTenantId: env.TEST_COMPANY_ID ?? principals.find((p) => p.role === 'COMPANY_ADMIN')?.tenantId,
 
-  /** Registered endpoint used by the token provider to log in, and how to call it. */
-  loginEndpointId: 'auth-login',
-  loginRequest: (principal: Principal): RequestSpec => ({
-    body: { username: principal.username, password: principal.password },
-  }),
-  tokenPath: 'data.accessToken',
+  /** How a token travels: `Authorization: Bearer <token>`. The login itself is the auth profile's. */
   scheme: 'Bearer',
-  /** Mock-only endpoint that mints an expired token (real envs use EXPIRED_TOKEN). */
-  mockExpiredTokenPath: '/__test/tokens/expired',
 
   /** Expected status per authentication failure mode; endpoints may override. */
   failureStatus: {

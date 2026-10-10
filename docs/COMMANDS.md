@@ -62,9 +62,8 @@ What each one does:
 | Signup → login UI lifecycle (Chromium)                   | `npm run ui:signup`                         | `npm run ui:signup:file`                                          |
 | Every `@database` check (API + Chromium)                 | `npm run db`                                | `npm run db:file`                                                 |
 | Security-focused subset (FULL already includes it)       | `npm run kpost:security` · `kmail:security` | `npm run kpost:security:file`                                     |
-| Cross-layer integration project                          | `npm run integration`                       | —                                                                 |
 | Visual snapshots (3 browsers) / refresh baselines        | `npm run ui:visual`                         | `npm run ui:visual:update`                                        |
-| Old chained runs (`kpost`→`kmail`→`admin`→`ui`)          | `npm run all`                                | `npm run all:file`                                                 |
+| Old chained runs (`kpost`→`kmail`→`admin`→`ui`)          | `npm run all`                               | `npm run all:file`                                                |
 
 Run WebKit in small file batches (`npx playwright test --project=webkit <files>`) — a long single WebKit run
 can hang; kill a hung run with PowerShell `Stop-Process` on the real node PID.
@@ -125,9 +124,8 @@ contain tokens and passwords. **Never commit them, and never write run logs into
 | `npm run lint:fix` / `format` / `format:check`                 | fix lint, apply / check Prettier.                                                                            |
 | `npm run framework`                                            | the bench's own self-tests, dry-run (safety, coverage, routing, payload guards).                             |
 | `npm run test:framework`                                       | the same project without the dry-run flag.                                                                   |
-| `npm run test` / `test:headed`                                 | plain Playwright run against the local mock / with a visible browser.                                        |
+| `npm run test` / `test:headed`                                 | plain Playwright run, every project, no flags / with a visible browser. Prefer a named command above.        |
 | `npm run codegen`                                              | record UI selectors.                                                                                         |
-| `npm run mock:api`                                             | start the bundled mock KPost API.                                                                            |
 | `npm run install:browsers`                                     | install the Playwright browsers (one-time).                                                                  |
 | `npm run accounts:provision`                                   | create the `qatestN` accounts: no flag = status; `--send` then `--finish --from-db` (see the script header). |
 | `npm run contract:excel`                                       | regenerate the KPost/KMail contracts from the workbook.                                                      |

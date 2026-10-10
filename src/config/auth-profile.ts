@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { RequestSpec } from '@api/client/request-builder';
-import { authConfig, type Principal, type Role } from './auth.config';
+import type { Principal, Role } from './auth.config';
 import { env } from './env';
 import { isProvided, testData, type TestData } from './test-data.config';
 
@@ -34,7 +34,7 @@ import { isProvided, testData, type TestData } from './test-data.config';
  * The mapping is declared here, in one place, rather than assumed in a validator.
  */
 export interface AuthProfile {
-  id: 'mock' | 'kpost';
+  id: 'kpost';
   description: string;
   /** Registered endpoint the token provider logs in at. */
   loginEndpointId: string;
@@ -202,19 +202,7 @@ export const KPOST_PRINCIPALS: readonly Principal[] = ALL_KPOST_PRINCIPALS.filte
 ).map(({ account: _account, ...principal }) => principal);
 
 export const AUTH_PROFILES: Record<AuthProfile['id'], AuthProfile> = {
-  /** The bench's own mock API, used by the framework self-tests. */
-  mock: {
-    id: 'mock',
-    description: 'mock API: username/password, token at data.accessToken',
-    loginEndpointId: authConfig.loginEndpointId,
-    loginRequest: authConfig.loginRequest,
-    tokenPath: authConfig.tokenPath,
-    scheme: authConfig.scheme,
-    principals: authConfig.principals,
-    defaultRole: authConfig.defaultRole,
-  },
-
-  /** The real KPost auth service, shared by KPost core, Admin and KMail. */
+  /** The KPost auth service, shared by KPost core, Admin and KMail. */
   kpost: {
     id: 'kpost',
     description: 'KPost: loginRO payload, token at the top-level accessToken',
@@ -242,14 +230,11 @@ export const AUTH_PROFILES: Record<AuthProfile['id'], AuthProfile> = {
 };
 
 /**
- * Bench fixtures authenticate against the mock; everything else against KPost.
- *
- * Deliberately the same signal as the base URL (`mockFixture`), so a host and its credentials can
- * never disagree — a token minted by the mock and sent to the live API would fail as "invalid
- * token" and look like an API defect.
+ * The auth profile every endpoint authenticates through. One product, one login service: KPost
+ * core, Admin and KMail all accept the token `signup-login-user-login` mints.
  */
-export function authProfileFor(definition: { mockFixture?: boolean }): AuthProfile {
-  return definition.mockFixture ? AUTH_PROFILES.mock : AUTH_PROFILES.kpost;
+export function authProfileFor(): AuthProfile {
+  return AUTH_PROFILES.kpost;
 }
 
 /**

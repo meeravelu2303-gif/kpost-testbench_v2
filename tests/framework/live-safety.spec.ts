@@ -161,10 +161,10 @@ test.describe('live-application safety @framework', () => {
     }
   });
 
-  test('SMS/OTP kill-switch: an OTP/SMS sender is blocked against a real host in EVERY mode', () => {
+  test('SMS/OTP kill-switch: an OTP/SMS sender is blocked in EVERY mode', () => {
     // The endpoints that deliver a real SMS: flagged (otpDependent / external) AND a mis-flagged one
-    // caught only by the path/label backstop. Each must be refused against a real host regardless of
-    // TEST_ENV or any unlock flag — and allowed only against the bundled mock.
+    // caught only by the path/label backstop. Each must be refused regardless of TEST_ENV or any
+    // unlock flag — every host this bench talks to is a real one.
     const senders: GuardedEndpoint[] = [
       { label: 'POST /v2/common/sendOTP/', destructive: true, otpDependent: 'sends' },
       { label: 'POST /v2/common/sendOTPtoMail/', destructive: true, sideEffect: 'external' },
@@ -172,25 +172,16 @@ test.describe('live-application safety @framework', () => {
       { label: 'POST /v2/common/forgotPasswordOTPOrSentKpostIDSms', destructive: true },
     ];
     for (const s of senders) {
-      // Real host, every mode + every unlock flag → BLOCKED.
       for (const flags of [
-        { isProduction: true, allowDestructive: false, mockApi: false },
-        { isProduction: false, allowDestructive: true, mockApi: false }, // NOT production, flag on
-        { isProduction: false, allowDestructive: false, mockApi: false, allowLiveWrite: true },
-        { isProduction: false, allowDestructive: false, mockApi: undefined }, // mockApi unknown → fail-safe
+        { isProduction: true, allowDestructive: false },
+        { isProduction: false, allowDestructive: true }, // NOT production, flag on
+        { isProduction: false, allowDestructive: false, allowLiveWrite: true },
       ]) {
         expect(
           destructiveBlockReason(s, flags),
-          `${s.label} must be blocked against a real host (flags ${JSON.stringify(flags)})`,
+          `${s.label} must be blocked (flags ${JSON.stringify(flags)})`,
         ).toMatch(/kill-switch|OTP|SMS/i);
       }
-      // Against the bundled mock the kill-switch does NOT fire (no real SMS is possible there); the
-      // request is routed to the mock, so any OTP self-test still works.
-      expect(
-        destructiveBlockReason(s, { isProduction: false, allowDestructive: true, mockApi: true }) ??
-          '',
-        `${s.label}: the kill-switch must not fire against the mock`,
-      ).not.toMatch(/kill-switch/i);
     }
   });
 
@@ -210,7 +201,6 @@ test.describe('live-application safety @framework', () => {
     const gateway = {
       isProduction: true,
       allowDestructive: false,
-      mockApi: false,
       otpTestGateway: true,
       testDbMode: true,
     };
@@ -275,7 +265,7 @@ test.describe('live-application safety @framework', () => {
     // No definition can slip through: every OTP sender in the real registry is refused on a real host.
     const senders = apiRegistry
       .all()
-      .filter((d: EndpointDefinition) => !d.mockFixture)
+
       .filter((d: EndpointDefinition) => d.otpDependent || d.sideEffect === 'external');
     for (const d of senders) {
       const g: GuardedEndpoint = {
@@ -286,8 +276,8 @@ test.describe('live-application safety @framework', () => {
         otpDependent: d.otpDependent,
       };
       expect(
-        destructiveBlockReason(g, { isProduction: false, allowDestructive: true, mockApi: false }),
-        `${d.method} ${d.path} must be blocked against a real host even off-production`,
+        destructiveBlockReason(g, { isProduction: false, allowDestructive: true }),
+        `${d.method} ${d.path} must be blocked even off-production`,
       ).toBeDefined();
     }
   });
@@ -299,17 +289,20 @@ test.describe('live-application safety @framework', () => {
       'a test-owned data write needs no flag off production',
     ).toBeUndefined();
 
-    // An external SMS endpoint — off production, AGAINST THE MOCK (mockApi:true), the kill-switch does
-    // not fire, so the normal side-effect rule applies (gated, unlockable by the flag). Against a real
-    // host it is unconditionally blocked by the kill-switch (asserted in the kill-switch test above).
-    const sms: GuardedEndpoint = { label: 'POST /x', destructive: true, sideEffect: 'external' };
+    // A shared-state (`global`) write off production is gated, and the flag unlocks it. An SMS
+    // (`external`) is NOT: the kill-switch fires in every mode (asserted in its own test above).
+    const globalWrite: GuardedEndpoint = {
+      label: 'POST /x',
+      destructive: true,
+      sideEffect: 'global',
+    };
     expect(
-      destructiveBlockReason(sms, { isProduction: false, allowDestructive: false, mockApi: true }),
-      'an SMS is still gated off production',
+      destructiveBlockReason(globalWrite, { isProduction: false, allowDestructive: false }),
+      'a global write is still gated off production',
     ).toContain('ALLOW_DESTRUCTIVE_TESTS=true');
     expect(
-      destructiveBlockReason(sms, { isProduction: false, allowDestructive: true, mockApi: true }),
-      'and the flag still unlocks it off production against the mock',
+      destructiveBlockReason(globalWrite, { isProduction: false, allowDestructive: true }),
+      'and the flag unlocks it off production',
     ).toBeUndefined();
   });
 
@@ -623,7 +616,6 @@ test.describe('live-application safety @framework', () => {
     const fuzz = {
       isProduction: true,
       allowDestructive: false,
-      mockApi: false,
       writeFuzz: true,
       testDbMode: true,
     };

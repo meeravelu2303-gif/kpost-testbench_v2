@@ -36,7 +36,7 @@ export default defineConfig(
       'playwright/no-focused-test': 'error',
       'playwright/no-wait-for-timeout': 'error',
       'playwright/no-page-pause': 'error',
-      // Environment-conditional skips (e.g. mock-only routes) are intentional.
+      // Environment-conditional skips (e.g. a module whose host is not configured) are intentional.
       'playwright/no-skipped-test': ['warn', { allowConditional: true }],
     },
   },

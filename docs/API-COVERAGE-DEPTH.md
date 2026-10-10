@@ -7,7 +7,7 @@ asked for: **for a REGISTERED endpoint, does it get anything beyond the generic 
 sweep (auth, authz, request/negative-input, response/schema, security, common data-quality,
 concurrency, performance), or does it also have a hand-written business-rule/functional-flow test?**
 An endpoint can be "tested" per COVERAGE.md and still have zero assertions about what the endpoint is
-*supposed to do* beyond "didn't crash, matched its schema, rejected garbage input, enforced auth."
+_supposed to do_ beyond "didn't crash, matched its schema, rejected garbage input, enforced auth."
 
 **Do not assume a test existing means the endpoint is covered.** This document exists because that
 assumption was checked and found false for just over half the registry.
@@ -22,35 +22,35 @@ ticket's resolution, without a fresh live re-check first. That risk pattern was 
 across the whole suite (any test whose comment claims a bug "reported fixed" without describing a
 dated, specific, freshly-observed behaviour) and every match was re-verified live. Findings:
 
-| Ticket | Module / file | Believed | Actually found (2026-09-26) |
-| --- | --- | --- | --- |
-| #501 | Kall `reScheduleKall` | RESOLVED/INVALID | Reopened same-day on the belief it was "still broken" (creates a new `kallID`) — **then corrected back**: the owner confirmed a new `kallID` on reschedule IS the requirement. The original INVALID resolution was right all along; see the follow-up note below. |
-| #500 | Kall `scheduledRepeatKall` | RESOLVED/FIXED | **Partially fixed** — the 500 crash is gone, but every repeat interval now 400s "Invalid Request" instead; a repeating call still cannot be created at all. Filed separately as #622 (4xx findings aren't auto-tracked). |
-| #507 | Security `object-authorization.spec.ts` (BOLA) | RESOLVED/FIXED | **Still exploitable** — `removeGroupMember` lets an outsider remove a member from a group they don't belong to, confirmed at the database level. The other two attack paths in the same test (grant-self-admin, rename) ARE correctly denied. Reopened. |
-| #499 | KOS `feature.spec.ts` (KWord lifecycle) | RESOLVED/FIXED | **Still broken** — `/kword/create` still fails to return a `docId`, so the entire downstream lifecycle still cannot run. A second file (`security/kword-object-authorization.spec.ts`) had already correctly assumed this was still open. Reopened. |
-| #495 | Settings `notifications-workflow.spec.ts` | RESOLVED/FIXED | **Still broken** — the Katchup notification toggle reports success but never persists to the row. Reopened. |
-| #497 | Signup-login `domain-policy.spec.ts` | RESOLVED/FIXED | **Genuinely fixed** — verified clean. |
-| #498 | Profile `directory-lookup.spec.ts` | RESOLVED/FIXED | **Genuinely fixed** — verified clean (all 6 tests in the file pass). |
-| — | Profile `profile-download-cover`'s 500→204 claim | (undated comment) | **Genuinely correct** — verified live, 204 with no body as claimed. |
+| Ticket | Module / file                                    | Believed          | Actually found (2026-09-26)                                                                                                                                                                                                                                       |
+| ------ | ------------------------------------------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #501   | Kall `reScheduleKall`                            | RESOLVED/INVALID  | Reopened same-day on the belief it was "still broken" (creates a new `kallID`) — **then corrected back**: the owner confirmed a new `kallID` on reschedule IS the requirement. The original INVALID resolution was right all along; see the follow-up note below. |
+| #500   | Kall `scheduledRepeatKall`                       | RESOLVED/FIXED    | **Partially fixed** — the 500 crash is gone, but every repeat interval now 400s "Invalid Request" instead; a repeating call still cannot be created at all. Filed separately as #622 (4xx findings aren't auto-tracked).                                          |
+| #507   | Security `object-authorization.spec.ts` (BOLA)   | RESOLVED/FIXED    | **Still exploitable** — `removeGroupMember` lets an outsider remove a member from a group they don't belong to, confirmed at the database level. The other two attack paths in the same test (grant-self-admin, rename) ARE correctly denied. Reopened.           |
+| #499   | KOS `feature.spec.ts` (KWord lifecycle)          | RESOLVED/FIXED    | **Still broken** — `/kword/create` still fails to return a `docId`, so the entire downstream lifecycle still cannot run. A second file (`security/kword-object-authorization.spec.ts`) had already correctly assumed this was still open. Reopened.               |
+| #495   | Settings `notifications-workflow.spec.ts`        | RESOLVED/FIXED    | **Still broken** — the Katchup notification toggle reports success but never persists to the row. Reopened.                                                                                                                                                       |
+| #497   | Signup-login `domain-policy.spec.ts`             | RESOLVED/FIXED    | **Genuinely fixed** — verified clean.                                                                                                                                                                                                                             |
+| #498   | Profile `directory-lookup.spec.ts`               | RESOLVED/FIXED    | **Genuinely fixed** — verified clean (all 6 tests in the file pass).                                                                                                                                                                                              |
+| —      | Profile `profile-download-cover`'s 500→204 claim | (undated comment) | **Genuinely correct** — verified live, 204 with no body as claimed.                                                                                                                                                                                               |
 
 **Two new self-inflicted duplicates found and resolved the same way as earlier this session**: adding
 explicit filing (`recordBusinessRuleViolation`) to a finding that previously relied on an
-unmonitored soft/hard assertion always mints a *new* Bugzilla fingerprint on its first run, even when
-reopening the *original* ticket for the same fault in the same edit — #623 (dup of #507) and #624
+unmonitored soft/hard assertion always mints a _new_ Bugzilla fingerprint on its first run, even when
+reopening the _original_ ticket for the same fault in the same edit — #623 (dup of #507) and #624
 (dup of #499) were both filed this way, then closed as duplicates pointing at the reopened original.
 
 **A second, independent structural bug found while fixing these**: in three separate files this
 session (Katchup, Admin, and now Settings), a test asserting a known, permanently-open regression was
-sitting *mid-chain* in a `mode: 'serial'` describe block. Playwright's serial mode skips every later
-test once *any* earlier one fails — soft assertions included — so each of these was silently
+sitting _mid-chain_ in a `mode: 'serial'` describe block. Playwright's serial mode skips every later
+test once _any_ earlier one fails — soft assertions included — so each of these was silently
 preventing a later, unrelated, otherwise-passing test from ever running. Fixed the same way each
 time: move the known-failing assertion to the end of its serial chain (or make it independent of
 shared state, when order itself mattered for something else).
 
 **The lesson, applied going forward**: a Bugzilla resolution (`FIXED`/`INVALID`/`WONTFIX`) is a claim
 someone made at a point in time, not a durable fact. Every place in this suite that encodes "X is
-fixed" as a hard assertion or a skip condition should describe *what was actually observed, and
-when* — a bare "#NNN reported fixed" comment is exactly the pattern that produced five wrong beliefs
+fixed" as a hard assertion or a skip condition should describe _what was actually observed, and
+when_ — a bare "#NNN reported fixed" comment is exactly the pattern that produced five wrong beliefs
 in one afternoon, three of them about defects that were still live and, in one case, exploitable.
 
 **Follow-up, same day — #501 correction reversed by the owner**: the owner confirmed that
@@ -73,7 +73,7 @@ caught that too.
 `request` field is what `buildCurl` (`src/bug-tracker/curl.ts`) turns into the ticket's reproduction
 `curl` — and the `scheduledRepeatKall` finding had only been given `{ repeatType: 1 }` there, not the
 full body actually sent. The ticket's auto-generated curl was therefore genuinely misleading: pasting
-it reproduces a *different, correct* 400 ("scheduledStartTime is required") rather than the "Invalid
+it reproduces a _different, correct_ 400 ("scheduledStartTime is required") rather than the "Invalid
 Request" the ticket is actually about — exactly the kind of wrong repro that gets a real defect closed
 as "cannot reproduce". Fixed in `feature.spec.ts` (the full `scheduleShape()`-built body is now what
 gets attached); a clarifying comment was added to #622 pointing at the corrected reproduction and
@@ -100,20 +100,20 @@ endpoint whose test checks only the write's own status code (or, worse, only tha
 never reading the record back to confirm the specific field actually changed. Every candidate found
 was live-verified. Results:
 
-| Endpoint | Module | Found | Fix |
-| --- | --- | --- | --- |
-| `kmail-sig-graphics/-style/-social/-template` | kmail | Readback existed but never compared field values | Genuinely works — strengthened the assertion to compare real markers |
-| `kmail-edit-od-contact` | kmail | `contactName` wrongly guard-blocked as a resource id — the edit could only ever be a no-op back to the same owned address | Exempted in `qa-identifier-guard.ts`; no read endpoint exists to verify the name itself (structural limit, documented) |
-| `profile-update-basic/-contact/-privacy` | profile | Status-only | Genuinely works (`knownLanguages`, `city`, `privacyDetails` all confirmed persisting) — strengthened |
-| `profile-update-image` | profile | **Real defect**: rejects the bench's own PNG fixture ("Invalid File Format") while the identical bytes succeed on `uploadCoverImage`/`uploadImageToS3` | Filed **#626** [KP-6E793F], HIGH. Definition switched to JPEG so the lifecycle still runs |
-| `profile-upload-attachments` | profile | **Bench bug**: wrong multipart field name (`file` instead of `files`) — had 400d every run | Fixed in `image.api.ts` |
-| `profile-update-signature` | profile | 500s regardless of format | Already tracked, **#559** [KP-7D1F6B], CRITICAL — not new |
-| `kdiary-update-remarks` | kdiary | Status-only | Genuinely works (`remarks`, `remarksDescription` both confirmed persisting) — strengthened |
-| `contacts-update-invite` | contacts | Status-only | Structurally unverifiable — no read endpoint exposes invite status; documented, not worked around |
-| `group-edit-name` | group | Status-only | Structurally unverifiable — no "get group details" read exists; documented |
-| `group-update-image` | group | **Real bug, bench-side**: sent a plain JSON body to a multipart-only route — had 400d "Request must be multipart/form-data" on every single run in this bench's history | Fixed in `group.api.ts` (multipart, `file` part, JPEG — PNG also rejected here); the test now uploads for real and confirms non-empty content on download |
-| `kos-update-doc` | kos | Status-only | Assertion added and ready, but **cannot be live-verified yet** — blocked transitively by #499 (`kword/create` still failing, see above) |
-| `admin-workplace-tier-attribute-update`, `admin-hr-tier-attribute-update`, `admin-workplace-location-update`, `admin-employee-update` | admin | Status-only (unlike their sibling SAVE calls, which already cross-check) | Genuinely work — all 4 strengthened with a real before/after read comparison |
+| Endpoint                                                                                                                              | Module   | Found                                                                                                                                                                   | Fix                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kmail-sig-graphics/-style/-social/-template`                                                                                         | kmail    | Readback existed but never compared field values                                                                                                                        | Genuinely works — strengthened the assertion to compare real markers                                                                                      |
+| `kmail-edit-od-contact`                                                                                                               | kmail    | `contactName` wrongly guard-blocked as a resource id — the edit could only ever be a no-op back to the same owned address                                               | Exempted in `qa-identifier-guard.ts`; no read endpoint exists to verify the name itself (structural limit, documented)                                    |
+| `profile-update-basic/-contact/-privacy`                                                                                              | profile  | Status-only                                                                                                                                                             | Genuinely works (`knownLanguages`, `city`, `privacyDetails` all confirmed persisting) — strengthened                                                      |
+| `profile-update-image`                                                                                                                | profile  | **Real defect**: rejects the bench's own PNG fixture ("Invalid File Format") while the identical bytes succeed on `uploadCoverImage`/`uploadImageToS3`                  | Filed **#626** [KP-6E793F], HIGH. Definition switched to JPEG so the lifecycle still runs                                                                 |
+| `profile-upload-attachments`                                                                                                          | profile  | **Bench bug**: wrong multipart field name (`file` instead of `files`) — had 400d every run                                                                              | Fixed in `image.api.ts`                                                                                                                                   |
+| `profile-update-signature`                                                                                                            | profile  | 500s regardless of format                                                                                                                                               | Already tracked, **#559** [KP-7D1F6B], CRITICAL — not new                                                                                                 |
+| `kdiary-update-remarks`                                                                                                               | kdiary   | Status-only                                                                                                                                                             | Genuinely works (`remarks`, `remarksDescription` both confirmed persisting) — strengthened                                                                |
+| `contacts-update-invite`                                                                                                              | contacts | Status-only                                                                                                                                                             | Structurally unverifiable — no read endpoint exposes invite status; documented, not worked around                                                         |
+| `group-edit-name`                                                                                                                     | group    | Status-only                                                                                                                                                             | Structurally unverifiable — no "get group details" read exists; documented                                                                                |
+| `group-update-image`                                                                                                                  | group    | **Real bug, bench-side**: sent a plain JSON body to a multipart-only route — had 400d "Request must be multipart/form-data" on every single run in this bench's history | Fixed in `group.api.ts` (multipart, `file` part, JPEG — PNG also rejected here); the test now uploads for real and confirms non-empty content on download |
+| `kos-update-doc`                                                                                                                      | kos      | Status-only                                                                                                                                                             | Assertion added and ready, but **cannot be live-verified yet** — blocked transitively by #499 (`kword/create` still failing, see above)                   |
+| `admin-workplace-tier-attribute-update`, `admin-hr-tier-attribute-update`, `admin-workplace-location-update`, `admin-employee-update` | admin    | Status-only (unlike their sibling SAVE calls, which already cross-check)                                                                                                | Genuinely work — all 4 strengthened with a real before/after read comparison                                                                              |
 
 **Two more real, previously-hidden bugs found only because a genuine multipart upload was finally
 attempted** (both endpoints had never once succeeded before, in either case): `profile-update-image`
@@ -171,7 +171,7 @@ one still needs its own dependency-flow test written as that module is reached.
 4. **UI-only tests** (`tests/e2e/**`, `tests/e2e-admin/**`) were checked too: none of them reference
    endpoint id literals directly (they drive the page and assert screen/DB state), so they don't
    currently register as coverage for any specific endpoint id by this method. That's a gap in the
-   *method*, not a claim that the UI specs assert nothing — it means this document cannot yet credit a
+   _method_, not a claim that the UI specs assert nothing — it means this document cannot yet credit a
    UI-driven cross-layer check for a specific endpoint. This is also moot for now: UI test work is
    paused per current direction.
 5. Raw per-module id lists are in `coverage-depth-raw.local.json` (git-ignored scratch — see cleanup
@@ -179,39 +179,36 @@ one still needs its own dependency-flow test written as that module is reached.
 
 ## Summary
 
-| Module | Registered | API-rich | Generic-only | Depth |
-| --- | ---: | ---: | ---: | ---: |
-| `kmail` | 70 | 67 | 3 | 96% ✅ done 2026-09-26 (3 recorded gaps, see below) |
-| `kpost/profile` | 45 | 32 | 13 | 71% ✅ done 2026-09-24 (10 permanently by design, 3 real gaps) |
-| `admin` | 38 | 33 | 5 | 87% ✅ done 2026-09-26 (5 genuinely blocked, see note) |
-| `kpost/katchup` | 36 | 34 | 2 | 94% ✅ done 2026-09-26 (2 genuinely blocked, see note) |
-| `kpost/common` | 33 | 28 | 5 | 85% ✅ done 2026-09-24 |
-| `kpost/kall` | 20 | 20 | 0 | 100% ✅ done 2026-09-24 |
-| `kpost/kos` | 18 | 17 | 1 | 94% ✅ done 2026-09-24 |
-| `kpost/contacts` | 16 | 16 | 0 | 100% ✅ done 2026-09-24 |
-| `kpost/signup-login` | 14 | 11 | 3 | 79% ✅ done 2026-09-24 |
-| `kpost/kdiary` | 14 | 13 | 1 | 93% ✅ done 2026-09-24 (1 recorded gap) |
-| `kpost/admin` | 12 | 0 | 12 | **0%** |
-| `kpost/group` | 11 | 11 | 0 | 100% ✅ done 2026-09-24 |
-| `kpost/settings` | 7 | 7 | 0 | 100% ✅ done 2026-09-24 |
-| `kpost/aws` | 4 | 4 | 0 | 100% ✅ done 2026-09-24 |
-| `kpost/dashboard` | 3 | 3 | 0 | 100% ✅ done 2026-09-24 |
-| **Total (real KPost/KMail/Admin surface)** | **341** | **295** | **46** | **87%** |
+| Module                                     | Registered | API-rich | Generic-only |                                                          Depth |
+| ------------------------------------------ | ---------: | -------: | -----------: | -------------------------------------------------------------: |
+| `kmail`                                    |         70 |       67 |            3 |            96% ✅ done 2026-09-26 (3 recorded gaps, see below) |
+| `kpost/profile`                            |         45 |       32 |           13 | 71% ✅ done 2026-09-24 (10 permanently by design, 3 real gaps) |
+| `admin`                                    |         38 |       33 |            5 |         87% ✅ done 2026-09-26 (5 genuinely blocked, see note) |
+| `kpost/katchup`                            |         36 |       34 |            2 |         94% ✅ done 2026-09-26 (2 genuinely blocked, see note) |
+| `kpost/common`                             |         33 |       28 |            5 |                                         85% ✅ done 2026-09-24 |
+| `kpost/kall`                               |         20 |       20 |            0 |                                        100% ✅ done 2026-09-24 |
+| `kpost/kos`                                |         18 |       17 |            1 |                                         94% ✅ done 2026-09-24 |
+| `kpost/contacts`                           |         16 |       16 |            0 |                                        100% ✅ done 2026-09-24 |
+| `kpost/signup-login`                       |         14 |       11 |            3 |                                         79% ✅ done 2026-09-24 |
+| `kpost/kdiary`                             |         14 |       13 |            1 |                        93% ✅ done 2026-09-24 (1 recorded gap) |
+| `kpost/admin`                              |         12 |        0 |           12 |                                                         **0%** |
+| `kpost/group`                              |         11 |       11 |            0 |                                        100% ✅ done 2026-09-24 |
+| `kpost/settings`                           |          7 |        7 |            0 |                                        100% ✅ done 2026-09-24 |
+| `kpost/aws`                                |          4 |        4 |            0 |                                        100% ✅ done 2026-09-24 |
+| `kpost/dashboard`                          |          3 |        3 |            0 |                                        100% ✅ done 2026-09-24 |
+| **Total (real KPost/KMail/Admin surface)** |    **341** |  **295** |       **46** |                                                        **87%** |
 
-**Excluded from the table above — bench-internal scaffolding, not KPost product endpoints**
-(`users`, `auth`, `companies`, `dictionary`, `health` — 9 endpoints): every one of these carries
-`mockFixture: true` in its definition. They run against the bench's own bundled mock server and exist
-to test the VALIDATION ENGINE ITSELF (auth/authz/schema/negative-input machinery, the concurrency
-harness, the bug-tracker pipeline) — `tests/framework/*.spec.ts`, `tests/integration/user-lifecycle.spec.ts`,
-and the per-module contract-suite specs already exercise them for that purpose. There is no real
-KPost backend behind `/users`, `/users/{id}` etc. to have a "business rule" about, so writing
-product-style business-rule tests against them would assert nothing real. Originally miscounted as
-part of the "KPost API" gap (see the corrected total above, which excludes them) — corrected
-2026-09-24 before any work was done against them.
+**Excluded from the table above — bench-internal scaffolding (removed 2026-10-10).** When this audit was
+written, nine endpoints (`users`, `auth`, `companies`, `dictionary`, `health`) existed only to exercise the
+validation engine against the bench's own bundled mock server; they had no KPost backend behind them and
+were correctly excluded from the gap count (corrected 2026-09-24). The whole mock layer has since been
+removed (see `docs/DECISION-LOG.md`, 2026-10-10 evening), so the registry now holds only real KPost, KMail
+and Admin endpoints and the exclusion is moot.
 
 ## Priority gaps (ordered by risk, for Phase 2–4 planning)
 
 ### 1. `kpost/admin` — 0/12, zero business-rule coverage
+
 Business-tier admin actions with real state-mutation semantics (terminate user, reset password,
 hold/release, backup-admin create/remove, role update, bank/company detail updates) — exactly the
 class of endpoint Phase 4 calls out ("role-based behavior, permission rules, record ownership rules").
@@ -223,14 +220,16 @@ admin-display-name-suggestion, admin-adding-user-by-admin, admin-terminate-user,
 admin-hold-or-release, admin-create-remove-backup-admin, admin-update-company-details,
 admin-update-bank-account, admin-update-role
 ```
+
 Note: this module is `needs-business` per `docs/COVERAGE.md` (needs a business company with members)
 — any Phase 2–4 work here needs that fixture data first.
 
 ### 2. `kpost/dashboard` — ✅ done (2026-09-24)
+
 `tests/api/kpost/dashboard/feature.spec.ts`. `dashboard-home-msgs` and `dashboard-katchup-msg` are
 live-verified: the batch's `firstMsgID`/`lastMsgID` ordering invariant, the `katchup` array's
 newest-first ordering, and — the real cross-endpoint finding — that both endpoints report the
-*identical* recent-activity window (same markers, same message ids) for the same account, so they are
+_identical_ recent-activity window (same markers, same message ids) for the same account, so they are
 one underlying query surfaced twice, not two independently-drifting reads. `dashboard-home-new-msgs`
 could not be given a live business-rule test: it is `destructive: false` with no `productionSafe`
 flag, and the engine's safety gate (`destructiveBlockReason`) only grants a live-write unlock
@@ -248,7 +247,7 @@ pushed changes, to re-verify every open ticket and check for anything the update
 - **Prerequisite finding**: `testkmail.kpostindia.com`'s long-standing 401-on-every-token regression
   (`auth-regression.spec.ts`, `KMAIL_AUTH_FIXED` gate) is fixed — verified live across 3 accounts
   before starting this module. `KMAIL_AUTH_FIXED=true` was already set in `.env`.
-- Fixed a real, reproducible bug in the *existing* settings-writes test: it created a saluation and
+- Fixed a real, reproducible bug in the _existing_ settings-writes test: it created a saluation and
   instant-reply every run and never deleted either, permanently accumulating junk on the shared QA
   account. Replaced with a unique-marker create→read-back→verify-on-digital-signature→delete flow.
 - Fixed a real request-shape bug in the (gated, not-yet-run) `kmail-ai-assist`-adjacent
@@ -258,6 +257,7 @@ pushed changes, to re-verify every open ticket and check for anything the update
   (`SQLGrammarException: could not extract ResultSet`) — not a flake, reproduced across 2 accounts.
 
 **3 of the original 10 gaps closed**:
+
 - `kmail-sig-company` — `QA_COMPANY_NAME` is now set in `.env` to `Nebius Solutions`, confirmed live
   via `common-company-details` authenticated AS the `business-m` principal itself (co 242) — genuinely
   owner-confirmed via the account's own data, not invented. `saveOrUpdateMailSignatureCompanyData` now
@@ -267,7 +267,7 @@ pushed changes, to re-verify every open ticket and check for anything the update
   verified against the guard's own 25-test regression suite. A real mail is now sent and its real
   `kmailID` fed to the endpoint live — but the exact request shape remains Unknown/Requires
   Clarification: every shape tried (`{referenceMails:[id]}` as number and string, `{referenceKmailID:
-  id}`, `{kmailIDs:[id]}`, `{kmailIds:[id]}`, a raw `[id]` array body, and both as query params) 400s
+id}`, `{kmailIDs:[id]}`, `{kmailIds:[id]}`, a raw `[id]` array body, and both as query params) 400s
   with a generic Spring deserialization failure. Recorded with a real id now available whenever the
   correct shape is confirmed — not worked around by guessing further.
 - `kmail-download-thumbnail` / `kmail-media-streaming` / `kmail-download-attachment` — the HAPPY PATH
@@ -307,10 +307,11 @@ those dates, shifting the fingerprint hash for the same underlying fault. Not an
 (today's re-runs matched correctly); both newer duplicates resolved, pointing at the older tickets.
 
 **Dev answered 4 of the original open questions on 2026-09-26 — 2 gaps closed for real, 2 reclassified**:
+
 - **`kmail-post-bulk` (`postBulkMail`) — closed, genuinely fixed.** The dev supplied a working curl
   showing `postBulkMail` is NOT `postMail`'s shape plus `toAddressList` — it has its own small, distinct
   contract: `{toAddressList, kmailSubject, kmailContent, priority, kmailType: 13 (bulkmail),
-  attachmentUuid: []}`. Spreading the full `mailShape()` in (saluation, groupFlag,
+attachmentUuid: []}`. Spreading the full `mailShape()` in (saluation, groupFlag,
   senderLatitde/Longitude, forwardList, …) is what caused the previous bare 400 with no detail — none of
   those fields belong here. Fixed in the endpoint definition (`send.api.ts`) and live-verified against
   `testkmail.kpostindia.com`: 202 `"Bulk PostMail Send SuccessFully"` to both an internal `.kpost.in`
@@ -330,6 +331,7 @@ those dates, shifting the fingerprint hash for the same underlying fault. Not an
   question blocking further work; recorded as permanent by-design exclusions.
 
 **Dev answered questions 3 and 4 on 2026-09-26 too — both narrowed the problem instead of closing it**:
+
 - **Question 3, `clearStatusOfKmailsContacts` / `clearStatusOfAllKmailsContacts`** — dev said the
   original 500 "was fixed by using some custom annotations." Re-tested live the same day: only PARTLY
   true. `selectedContact` alone (the old default body) still 500s
@@ -363,6 +365,7 @@ question). `postbox-contacts` and `draft-multipart` are also permanent by-design
 open questions.
 
 ### 4. `kpost/common` — ✅ done (2026-09-24): 6→28/33
+
 **Methodology correction first**: the original 6/33 estimate was itself measured wrong. This
 module's 6 OTP endpoints (`common-send-otp`, `common-validate-otp`, etc.) are richly tested — just
 from `tests/api/kpost/signup-login/otp-signup-lifecycle.spec.ts`, not from within `common`'s own
@@ -396,6 +399,7 @@ needed real duplicate-prevention testing):
   install prompt), and `common-save-unsubscriber-details` (404, route not deployed on this build).
 
 ### 5. `kpost/profile` — ✅ done (2026-09-24): 32/45, 13 recorded gaps
+
 Went from 18→32 rich (40%→71%) across `feature.spec.ts`, `reads-workflow.spec.ts`,
 `device-workflow.spec.ts`. Highlights:
 
@@ -491,6 +495,7 @@ That fix unblocked everything the module needed a real sent message for:
 
 **Two structural test-authoring bugs, unrelated to `groupFlag`, found and fixed while re-verifying
 the whole module**:
+
 - `lifecycle.spec.ts`'s entire suite could never run at all, at any point in this bench's history —
   its own `send()` helper never set `allowLiveWrite: true`, so every call threw
   `ProductionSafetyError` before the `groupFlag` bug was even reachable. Its delete calls also used
@@ -573,13 +578,14 @@ CRITICAL, and kept red permanently by `admin-login-regression.spec.ts` (same pat
 `send-regression.spec.ts`), so it re-files/re-confirms every run until fixed.
 
 **Two of the module's own definitions were stale, corrected during this pass**:
+
 - `generateJWTokens`'s comment claimed testingapi's login "does not expose a `refreshToken` where the
   chain can read it". False — it does, but only on a login that runs on its own device id, not the
   shared cached session every other test reuses (a different device's token). Once driven from a
   dedicated login, the endpoint is fully testable and turned out to enforce a real, undocumented
   business rule: **redeeming a refresh token is session-scoped** — it succeeds only when the caller
   is authorized with THAT SAME login's own access token, and is refused (401) when authorized with a
-  *different*, even currently-valid, session of the same account. `auth-profile.ts`'s comment on the
+  _different_, even currently-valid, session of the same account. `auth-profile.ts`'s comment on the
   `business-m` principal also asserted `adminUserLogin answers 403` for it — superseded by the #598
   regression above; both comments now point at the current, live-verified reality.
 
@@ -613,6 +619,7 @@ REAL cascade: `country` -> `provienceName` (a ZONE, e.g. "Southern Zone", not a 
 chain end to end in `contacts-reference-workflow.spec.ts`, confirming the baseline check now passes.
 
 **Real business-rule tests added**:
+
 - `globalSearch` verified to enforce every filter it is given (`userTypeList`, `countryList`), not
   just the free-text search term — checked across all 534 results for a broad query, zero violations.
 - `myUnknownKatchupContacts`, `myGroups`, `myUnknownGroups`, `getImportedPhoneContacts` — ownership
@@ -717,6 +724,7 @@ never executed before this, exactly the same class of bug found earlier this ses
 `lifecycle.spec.ts`.
 
 **4 of the module's 9 undocumented gaps closed** with real cross-checks, not just "status success":
+
 - `admin-workplace-tier-attribute-by-company` / `admin-hr-tier-attribute-by-company` — each now
   asserts the just-created tier attribute genuinely appears on a fresh company-scoped read.
 - `admin-role-posting-by-company` — asserts every returned row genuinely belongs to the caller's
@@ -725,6 +733,7 @@ never executed before this, exactly the same class of bug found earlier this ses
   `reads-workflow.spec.ts` and asserted to resolve a real state/district/area for a known pincode.
 
 **5 remain genuinely blocked**, recorded in a new `needs-id-workflow.spec.ts`:
+
 - `admin-role-posting-suspended-list` — `requestType` enum Unknown/Requires Clarification. Tried live:
   `SUSPEND`, `TERMINATE`, `SUSPEND_TERMINATE`, `ACTIVE`, `INACTIVE`, `ALL`, `Suspended`, `suspended`,
   `SUSPENDED_TERMINATED`, `BOTH`, numeric/boolean/null variants, and alternate field names
@@ -745,10 +754,10 @@ clearly-commented assertion in `feature.spec.ts` pending the real contract from 
 
 ## What this document does NOT yet claim
 
-"API-rich" above means *at least one* business-rule/flow assertion exists — it is a presence check,
+"API-rich" above means _at least one_ business-rule/flow assertion exists — it is a presence check,
 not a completeness check. An endpoint counted as API-rich may still be missing individual Phase 2/3/4
 scenarios (boundary values, specific negative-input shapes, a particular state transition). Auditing
-scenario-level completeness *within* the 156 API-rich endpoints is the next layer of Phase 1 and has
+scenario-level completeness _within_ the 156 API-rich endpoints is the next layer of Phase 1 and has
 not been done yet — this document only separates "has a business-rule test at all" from "generic-only."
 
 No business rules have been fabricated for any endpoint listed above; where a rule isn't yet known

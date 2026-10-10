@@ -5,14 +5,8 @@ import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import { TokenProvider } from '@api/client/token-provider';
 import type { ApiRegistry } from '@api/registry/api-registry';
 import type { RequestFactoryHelpers } from '@api/registry/endpoint-definition';
-import {
-  AUTH_PROFILES,
-  authProfileFor,
-  principalForRole,
-  type AuthProfile,
-} from '@config/auth-profile';
+import { authProfileFor, principalForRole, type AuthProfile } from '@config/auth-profile';
 import { authConfig, type Principal, type Role } from '@config/auth.config';
-import { suiteFor } from '@config/ownership.config';
 import { env } from '@config/env';
 import { newCorrelationId } from '@utils/correlation';
 import { deepMerge, getPath } from '@utils/json';
@@ -136,9 +130,6 @@ export class EndpointExecutor {
       allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
       allowLiveWrite: options.allowLiveWrite,
       allowLiveRead: options.allowLiveRead,
-      // Threads the mock/real-host signal so the SMS/OTP kill-switch blocks OTP senders against a
-      // real host in EVERY mode, while still letting them run against the bundled mock.
-      mockApi: env.MOCK_API,
       // Deep write-fuzz on a disposable test DB (both required); opens only `data` writes.
       writeFuzz: env.WRITE_FUZZ,
       testDbMode: env.TEST_DB_MODE,
@@ -156,8 +147,7 @@ export class EndpointExecutor {
     assertQaOwnedIdentifiers(
       { body: spec.body, query: spec.query, pathParams: spec.pathParams },
       options.label ?? endpoint.label,
-      // A mock fixture goes to the bundled mock server, so its ids name nothing real.
-      env.IS_PRODUCTION && !endpoint.definition.mockFixture,
+      env.IS_PRODUCTION,
     );
 
     const request = RequestBuilder.for(options.method ?? endpoint.method, endpoint.path)
@@ -169,24 +159,15 @@ export class EndpointExecutor {
       .timeoutMs(options.timeoutMs ?? endpoint.performance.timeoutMs)
       .authorization(await this.authorizationFor(endpoint, options.auth))
       .build();
-    // Each module has its own host, so the client follows the endpoint's suite - unless the
-    // endpoint is one of the bench's own mock fixtures, which always uses the mock's base URL.
-    const client = await this.clients.get(
-      endpoint.definition.mockFixture
-        ? { ...endpoint.suite, id: `${endpoint.suite.id}:mock`, baseUrl: env.API_BASE_URL }
-        : endpoint.suite,
-    );
+    // Each module has its own host, so the client follows the endpoint's suite.
+    const client = await this.clients.get(endpoint.suite);
     const exchange = await client.execute(request, options.label);
 
     // A server error while an owner-authorized lifecycle flow drove a real write OR read is a
     // fileable product defect (a server must never 5xx — even bad input warrants a 4xx). Collected
     // here, at the one chokepoint every flow call passes through, and filed by the fixture. A 4xx is
     // NOT collected: it might be our payload, and the feature spec's own assertions surface it.
-    if (
-      (options.allowLiveWrite || options.allowLiveRead) &&
-      isServerError(exchange.status) &&
-      !endpoint.definition.mockFixture
-    ) {
+    if ((options.allowLiveWrite || options.allowLiveRead) && isServerError(exchange.status)) {
       this.flowFindings.push({
         endpoint,
         method: options.method ?? endpoint.method,
@@ -204,9 +185,9 @@ export class EndpointExecutor {
     return this.send(resolveEndpoint(this.apiRegistry.get(endpointId)), spec, options);
   }
 
-  /** A principal for `role` from the profile that owns `endpoint`. */
-  principal(role: Role, endpoint?: ResolvedEndpoint): Principal {
-    const profile = endpoint ? authProfileFor(endpoint.definition) : AUTH_PROFILES.mock;
+  /** A principal for `role` from the auth profile. */
+  principal(role: Role): Principal {
+    const profile = authProfileFor();
     const principal = principalForRole(profile, role);
     if (!principal)
       throw new Error(
@@ -223,7 +204,7 @@ export class EndpointExecutor {
   private principalFor(endpoint: ResolvedEndpoint, roleOverride?: Role): Principal {
     const key = endpoint.authentication.principalKey;
     if (key) {
-      const profile = authProfileFor(endpoint.definition);
+      const profile = authProfileFor();
       const principal = profile.principals.find((p) => p.key === key);
       if (!principal)
         throw new Error(
@@ -232,7 +213,7 @@ export class EndpointExecutor {
         );
       return principal;
     }
-    return this.principal(roleOverride ?? endpoint.authentication.role, endpoint);
+    return this.principal(roleOverride ?? endpoint.authentication.role);
   }
 
   /** Runs another registered endpoint as test setup and returns its response `data`. */
@@ -257,23 +238,11 @@ export class EndpointExecutor {
    * A genuinely expired token, in order of preference:
    *   1. EXPIRED_TOKEN, when someone set it explicitly (a manual override always wins);
    *   2. the newest token from an EARLIER run that has since aged past its exp (the automatic path —
-   *      see token-history.ts, this is what stops the check skipping without any manual step);
-   *   3. one minted on demand by the mock API, when running against the mock.
+   *      see token-history.ts, this is what stops the check skipping without any manual step).
    * Undefined only on a brand-new checkout that has not yet run long enough for a token to mature.
    */
-  async expiredToken(): Promise<string | undefined> {
-    if (env.EXPIRED_TOKEN) return env.EXPIRED_TOKEN;
-    const aged = oldestExpiredToken();
-    if (aged) return aged;
-    if (!env.MOCK_API) return undefined;
-    const client = await this.clients.get(suiteFor());
-    const exchange = await client.execute(
-      RequestBuilder.for('GET', authConfig.mockExpiredTokenPath).build(),
-      'setup:expired-token',
-    );
-    const parsed = exchange.json();
-    const token = parsed.ok ? getPath(parsed.value, 'data.token') : undefined;
-    return typeof token === 'string' ? token : undefined;
+  expiredToken(): Promise<string | undefined> {
+    return Promise.resolve(env.EXPIRED_TOKEN ?? oldestExpiredToken());
   }
 
   private async authorizationFor(
@@ -282,23 +251,16 @@ export class EndpointExecutor {
   ): Promise<string | undefined> {
     if (auth && 'header' in auth) return auth.header;
     if (!auth && !endpoint.authentication.required) return undefined;
-    const profile = authProfileFor(endpoint.definition);
+    const profile = authProfileFor();
     const principal =
       auth && 'principal' in auth ? auth.principal : this.principalFor(endpoint, auth?.role);
     const token = await this.tokens.tokenFor(principal, profile);
-    /*
-     * Record every real KPost token as it is minted, so a later run's expired-token check has an
-     * aged one to use and never has to skip. Gated on the live KPost auth: the mock's tokens are not
-     * worth aging, and only KPost issues the ones the check is about.
-     */
-    if (!env.MOCK_API && profile.id === 'kpost') recordToken(token);
+    // Record every token as it is minted, so a later run's expired-token check has an aged one to
+    // use and never has to skip.
+    recordToken(token);
     return `${profile.scheme} ${token}`;
   }
 
-  /*
-   * The profile follows the endpoint being tested, not a global: a token minted by the mock and
-   * sent to the live API would be rejected as invalid and read like an API defect.
-   */
   /**
    * Log in and return a token the resource endpoints will actually ACCEPT.
    *
@@ -351,15 +313,14 @@ export class EndpointExecutor {
    * Does a resource endpoint actually accept this token? Canaries it against a lightweight, read-only
    * authed endpoint (fetchUserDetails on the caller's own account). 401/403 means the token was NOT
    * accepted (the intermittent-auth defect); anything else (200, 404, even 500) means auth passed and
-   * only the resource result differs. Only the real KPost auth is affected, so the mock is exempt. A
-   * transport error is not a verdict — treat as accepted rather than loop on a network blip.
+   * only the resource result differs. A transport error is not a verdict — treat as accepted rather
+   * than loop on a network blip.
    */
   private async tokenIsAccepted(
     profile: AuthProfile,
     principal: Principal,
     token: string,
   ): Promise<boolean> {
-    if (env.MOCK_API || profile.id !== 'kpost') return true;
     try {
       // Canary MUST be a token-REQUIRED endpoint. fetchUserDetails is public (returns 200 with no
       // token at all), so it cannot tell a good token from a bad one and would pass every token —

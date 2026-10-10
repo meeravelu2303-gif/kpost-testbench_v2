@@ -239,6 +239,8 @@ calls: a definition names the module (which sets the host, the Bugzilla product 
 developer) and adds what a spec cannot express — a request factory, business rules, DB checks. See
 [validation-framework.md](validation-framework.md).
 
-Today KMail loads read-only GET operations from its generated spec; the KPost core endpoints are
-hand-written against the mock until the method gap closes. The Admin module has **no contract at
-all** — it is absent from the workbook — so it has no endpoints yet.
+Every module's definitions are hand-written in `src/api/definitions/<module>/`, and each looks its
+request/response schemas and documented examples up in the generated OpenAPI through
+`src/api/contract/workbook-contract.ts` — a path the workbook does not list throws at definition
+time. The Admin module is absent from the workbook, so its contract comes from the live springdoc
+api-docs reconciled against the owner's PDF (`npm run contract:admin`).

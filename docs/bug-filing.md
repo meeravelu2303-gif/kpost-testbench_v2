@@ -156,7 +156,7 @@ npm run kpost:file       # files for real (BUGZILLA_DRY_RUN=false)
 BUGZILLA_MAX_FILE=5 npm run kpost:file   # stage a rollout
 
 npm run kpost      # one module at a time
-npm run test:admin
+npm run admin
 npm run kmail
 ```
 
@@ -164,9 +164,10 @@ Every run writes `reports/REPORT.json` — its `bugs` object holds the accepted 
 
 ## 8. CI
 
-Shards never file. Each sharded job produces a blob report, and bugs are filed **once** from the merged report in the `merge-reports` job ([`merge.config.ts`](../merge.config.ts)) — otherwise two shards would race to file the same defect.
-
-Set `BUGZILLA_URL` as a variable and `BUGZILLA_API_KEY` as a secret. Filing stays off until the `BUGZILLA_DRY_RUN` repository variable is set to `false`.
+CI never files. The workflow runs only the quality gate (typecheck, lint, format); every test run is
+one serial process on the QA machine, so each defect is filed exactly once, from the complete run,
+by the `*:file` command the owner chose to run. `BUGZILLA_URL` / `BUGZILLA_API_KEY` live in that
+machine's `.env` and nowhere else.
 
 ## 9. Verified against the live instance
 

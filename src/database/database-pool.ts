@@ -1,4 +1,3 @@
-import type { APIRequestContext } from '@playwright/test';
 import type { SuiteId } from '@config/ownership.config';
 import { createDatabaseClient, type DatabaseClient } from './database-client';
 
@@ -16,13 +15,11 @@ import { createDatabaseClient, type DatabaseClient } from './database-client';
 export class DatabasePool {
   private readonly clients = new Map<SuiteId, DatabaseClient>();
 
-  constructor(private readonly request: APIRequestContext) {}
-
   /** The client serving this suite, created on first use. */
   for(suite: SuiteId): DatabaseClient {
     const existing = this.clients.get(suite);
     if (existing) return existing;
-    const client = createDatabaseClient(suite, this.request);
+    const client = createDatabaseClient(suite);
     this.clients.set(suite, client);
     return client;
   }

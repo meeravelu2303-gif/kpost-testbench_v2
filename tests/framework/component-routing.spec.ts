@@ -3,7 +3,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { apiRegistry } from '@api/definitions/index';
-import type { EndpointDefinition } from '@api/registry/endpoint-definition';
 import { ROOT_DIR } from '@config/constants';
 import { KNOWN_COMPONENTS, componentFor, suiteFor, type SuiteId } from '@config/ownership.config';
 import { expect, test } from '@fixtures';
@@ -25,7 +24,7 @@ const FALLBACKS = new Set(['kpost-webservice-application', 'kmail-application', 
 
 test.describe('component routing @framework', () => {
   test('every endpoint routes to a real component, and the map is written', () => {
-    const endpoints = apiRegistry.all().filter((d: EndpointDefinition) => !d.mockFixture);
+    const endpoints = apiRegistry.all();
 
     // suite → component → endpoint ids
     const bySuite = new Map<SuiteId, Map<string, string[]>>();

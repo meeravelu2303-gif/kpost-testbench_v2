@@ -108,8 +108,6 @@ export interface ResolvedEndpoint {
   productionSafe: boolean;
   /** Cannot complete without a real OTP, so it is skipped on the live application. */
   otpDependent?: 'sends' | 'consumes' | 'requires';
-  /** The bench's own fixture: always served by the mock, so the live rules do not apply to it. */
-  mockFixture: boolean;
   performance: { maxResponseTimeMs: number; maxPayloadBytes: number; timeoutMs: number };
   security: NonNullable<EndpointDefinition['security']>;
   concurrency: NonNullable<EndpointDefinition['concurrency']>;
@@ -134,7 +132,7 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
    * the mock's ADMIN default made every authenticated KPost endpoint fail with "no principal
    * configured for role ADMIN": 82 cases reporting a configuration mismatch as an API failure.
    */
-  const profileDefaultRole = authProfileFor(definition).defaultRole;
+  const profileDefaultRole = authProfileFor().defaultRole;
   const primaryRole =
     definition.authentication?.role ??
     (roles.length === 0 || roles.includes(profileDefaultRole) ? profileDefaultRole : roles[0]) ??
@@ -179,7 +177,6 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
      */
     productionSafe: definition.productionSafe ?? false,
     otpDependent: definition.otpDependent,
-    mockFixture: definition.mockFixture ?? false,
     requiredHeaders: [...contract.requiredHeaders, ...(definition.headers?.required ?? [])],
     performance: {
       maxResponseTimeMs:
@@ -210,7 +207,7 @@ export function policyExclusion(
    * there at all, whatever the endpoint's own policy says. Checked before the per-endpoint
    * toggles so that no endpoint configuration can re-enable it. See production-validators.ts.
    */
-  if (env.IS_PRODUCTION && !endpoint.mockFixture) {
+  if (env.IS_PRODUCTION) {
     // A read endpoint (destructive === false) additionally clears the input-validation fuzzers:
     // a read persists nothing, and the identifier guard still confines every mutation to our data.
     const excluded = productionExclusion(validator.name, { destructive: endpoint.destructive });

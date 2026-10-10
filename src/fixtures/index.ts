@@ -83,25 +83,22 @@ export const test = base.extend<TestFixtures>({
     }
   },
 
-  databases: async ({ playwright }, use) => {
-    // Its own request context: the mock adapter reads the mock's store over HTTP, and a workflow
-    // spec must be able to query between steps without borrowing the engine's lifecycle.
-    const request = await playwright.request.newContext({ baseURL: env.API_BASE_URL });
-    const pool = new DatabasePool(request);
+  // Its own pool, so a workflow spec can query between steps without borrowing the engine's lifecycle.
+  // eslint-disable-next-line no-empty-pattern
+  databases: async ({}, use) => {
+    const pool = new DatabasePool();
     await use(pool);
     await pool.dispose();
-    await request.dispose();
   },
 
-  createValidationEngine: async ({ apiClients, log, playwright }, use, testInfo) => {
-    const dbRequest = await playwright.request.newContext({ baseURL: env.API_BASE_URL });
+  createValidationEngine: async ({ apiClients, log }, use, testInfo) => {
     /*
      * One pool per test, built here rather than inside the factory: the MySQL adapter owns
      * connection pools, and building one per `createValidationEngine()` call would leave a pool
      * open for every engine a framework test constructs. The pool itself creates a client per
      * suite lazily, so a run that never touches Admin never opens its (live) database.
      */
-    const databases = new DatabasePool(dbRequest);
+    const databases = new DatabasePool();
     await use(
       (overrides = {}) =>
         new ValidationEngine({
@@ -116,9 +113,8 @@ export const test = base.extend<TestFixtures>({
           ...overrides,
         }),
     );
-    // Closes pooled connections; a no-op on the mock and disabled adapters, which hold none.
+    // Closes pooled connections; a no-op on the disabled adapter, which holds none.
     await databases.dispose();
-    await dbRequest.dispose();
   },
 
   validationEngine: async ({ createValidationEngine }, use) => {

@@ -1,5 +1,4 @@
 import { apiRegistry } from '@api/definitions/index';
-import type { EndpointDefinition } from '@api/registry/endpoint-definition';
 import {
   FR_IDS,
   LEGACY_REQUIREMENTS,
@@ -20,7 +19,7 @@ import { expect, test } from '@fixtures';
  * The `docs/requirements-frd.md` FR→coverage map is the human-readable companion to this guard.
  */
 test.describe('requirements traceability @framework', () => {
-  const endpoints = apiRegistry.all().filter((d: EndpointDefinition) => !d.mockFixture);
+  const endpoints = apiRegistry.all();
 
   test('every requirement id on every endpoint is a known FR / NFR / pending-legacy id', () => {
     const unknown: string[] = [];

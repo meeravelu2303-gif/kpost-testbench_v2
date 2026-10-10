@@ -129,13 +129,12 @@ src/api/                client (pool, request builder, token provider) · regist
 src/validation-engine/  engine · registry · context · policy · probe · production guard
 src/validators/         49 centralized validators (auth, authz, request, response, security,
                         performance, concurrency, common)
-src/business-rules/     endpoint-specific rules (licence limit, duplicates, blocked company)
-src/database/           DB client (MySQL · mock · disabled) · per-suite pool · repositories ·
+src/business-rules/     business-rule registry (KPost's rules are asserted in the module feature specs)
+src/database/           DB client (MySQL · disabled) · per-suite pool · repositories ·
                         assertions · named DB validations
 src/bug-tracker/        Bugzilla client · fingerprint · candidate · validity gate · filer
 src/reporting/          validation reporter · bugzilla reporter · formatters
 src/utils/              logging · JSON · masking · correlation · simultaneous dispatch
-mock-server/            local stand-in for the KPost API (the framework runs with no environment)
 contracts/              GENERATED from the Excel workbook
 openapi/                GENERATED per product
 ```
@@ -162,8 +161,8 @@ rather than from `Promise.all(map(...))`, and a burst whose requests left more t
 probe that quietly degrades into a sequential one is worse than none, because it looks green. All
 four are blocked on live (§8, 2026-09-21).
 
-**Database layer — MySQL, and one target per suite.** Three adapters behind one interface: MySQL
-(`DB_HOST`/`DB_NAME`, via `mysql2/promise`), the mock store (`MOCK_API=true`), and disabled.
+**Database layer — MySQL, and one target per suite.** Two adapters behind one interface: MySQL
+(`DB_HOST`/`DB_NAME`, via `mysql2/promise`) and disabled.
 `DatabasePool.for(suite)` decides which a suite gets, because **they do not share a database**:
 
 | Suite                    | Database              | Writes                                           |
@@ -177,10 +176,10 @@ bench could produce. Identifiers are validated and backtick-quoted, values are b
 placeholders, `null` becomes `IS NULL`, and `WITH` is **not** a read (MySQL 8 allows a CTE to head a
 `DELETE`). See §8 (2026-09-21, later) and `tests/framework/admin-db-safety.spec.ts`.
 
-**Verified state:** `npm run check` clean; the framework project runs **134 pass, 6 skip** (the
-skips need a configured API host or the mock). The module suites skip until their hosts are
-configured. The MySQL connection itself is **not yet usable**: the server requires TLS and presents
-a self-signed certificate, so it needs `DB_SSL_CA` — see §8.
+**Verified state (2026-10-10):** typecheck clean; the framework project runs **229 pass, 1 skip**
+with two standing self-test gaps (`ownership.spec.ts` case rendering, `payload-audit.spec.ts` two
+incomplete gated-write payloads) recorded in the decision log. The framework project needs no host
+or credentials; the module suites need their `.env` hosts and the qatest accounts.
 
 ## 6. Bug filing — routed to the developer who owns the module
 
@@ -593,10 +592,10 @@ do not exist on live; its PERSONAL cases move into the login flow tests). `fetch
      server; on a public host that means the credentials could be read by anything positioned in
      between, so it is a decision for the owner rather than a default the bench should take.
    - **The table and column names** behind the endpoints under test. The validations in
-     `src/database/validations/` were written against the mock's shape (`users`, `companies`,
-     `createdAt`, `deletedAt`) and need remapping to the real KPOST_QA schema before they assert
-     anything true — a validation pointed at a table that does not exist fails as a query error,
-     which is loud, but a column that exists under a _different meaning_ fails silently.
+     `src/database/validations/kpost.db.ts` are written against the columns KPOST_QA actually
+     reports (`kpost_id`, `created_date`, `active_status`), so once connected they assert something
+     true — a validation pointed at a table that does not exist fails as a query error, which is
+     loud, but a column that exists under a _different meaning_ fails silently.
 
    Once connected, the endpoints worth wiring first are the ones whose response cannot prove
    persistence: the Katchup send lifecycle (did the message row land, with the Subject BR-K01

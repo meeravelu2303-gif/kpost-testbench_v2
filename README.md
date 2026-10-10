@@ -23,59 +23,65 @@ KPost is one product built from separately maintained modules. Each suite target
 
 - **@playwright/test**: runner, browsers, API requests
 - **TypeScript** (strict) with path aliases
-- **zod + Ajv (JSON Schema 2020-12)**: contracts, response validation, negative-case generation, OpenAPI import
+- **zod + Ajv (JSON Schema 2020-12)**: contracts, response validation, negative-case generation
 - **dotenv**: per-environment configuration, validated at startup
 - **ESLint** (typescript-eslint + eslint-plugin-playwright) and **Prettier**
-- **GitHub Actions**: quality gate, sharded runs, merged HTML, JUnit and validation reports
+- **GitHub Actions**: the quality gate (typecheck, lint, format) on every push and PR. Test runs stay on the QA machine, where the credentials and the shared-server safety rules live.
 
 ## Project structure
 
 ```
 .
-├── playwright.config.ts          # Projects, reporters, mock API web server, prod safety
-├── merge.config.ts               # CI: merge sharded reports
-├── openapi/                      # OpenAPI documents (contract-first endpoints)
-├── mock-server/                  # Local in-memory KPost API stand-in (MOCK_API=true)
+├── playwright.config.ts          # Projects, reporters, prod safety
+├── KPOST API (N).xlsx            # The product owner's API workbook — the source of every contract
+├── contracts/                    # GENERATED from the workbook: per-suite contract JSON + gap reports
+├── openapi/                      # GENERATED OpenAPI (KPost, KMail, Admin) the engine validates against
+├── scripts/                      # Node tooling: contract generation, account provisioning, Bugzilla checks
+├── docs/                         # Reference, runbook, decision log — see "Working notes"
 ├── src/
 │   ├── config/                   # env, api, auth, database and threshold configuration
 │   ├── api/
 │   │   ├── client/               # api-client, request-builder, response-wrapper, token-provider
-│   │   ├── registry/             # api-registry, endpoint-definition, endpoint-loader (OpenAPI)
+│   │   ├── contract/             # workbook-contract: schemas/examples looked up from the generated OpenAPI
+│   │   ├── registry/             # api-registry, endpoint-definition
 │   │   ├── schema/               # contract-schema (zod / JSON Schema → Ajv)
-│   │   ├── schemas/              # request/response contracts
-│   │   └── definitions/          # ENDPOINT DEFINITIONS: users, companies, auth, health, dictionary
+│   │   ├── schemas/              # kpost-types — the shared KPost field types
+│   │   └── definitions/          # ENDPOINT DEFINITIONS, one folder per module (kpost/*, kmail, admin)
 │   ├── validation-engine/        # engine, registry, context, result, policy, probe, prod guard
 │   ├── validators/               # CENTRAL VALIDATORS (authentication, authorization, request,
 │   │                             #   response, security, performance, common) + index.ts registry
-│   ├── business-rules/           # Endpoint-specific rules (users/, companies/)
-│   ├── database/                 # DB client, repositories, assertions, named DB validations
+│   ├── business-rules/           # Business-rule registry (KPost's rules are asserted in module feature specs)
+│   ├── database/                 # MySQL client, per-suite pool, repositories, named DB validations
 │   ├── bug-tracker/              # Candidate → validity gate → dedupe → Bugzilla filer/client
 │   ├── reporting/                # Report formatter, attachment, Playwright validation reporter
-│   ├── fixtures/                 # Custom `test` (engine, endpoints, api, pages, logger)
-│   ├── data/                     # Test data factories
+│   ├── fixtures/                 # Custom `test` (engine, endpoints, databases, pages, logger)
 │   ├── pages/                    # UI page objects
 │   ├── ui/                       # UI health, crawler, screens and breakage-sweep helpers
 │   └── utils/                    # Structured logger, masking, correlation IDs, JSON helpers
 └── tests/
-    ├── api/                      # One thin spec per API area (endpoints come from the registry)
-    ├── integration/              # Cross-endpoint workflows
-    ├── framework/                # Self-tests proving the framework's guarantees
-    ├── e2e/                      # UI specs
+    ├── api/                      # One thin spec per module area (endpoints come from the registry)
+    ├── framework/                # Self-tests proving the framework's guarantees (+ `_*.local` manual probes)
+    ├── e2e/                      # KPost UI specs
+    ├── e2e-admin/                # Admin/HR-Setup UI specs (a separate SPA)
     └── setup/                    # UI auth setup
 ```
 
 ## Getting started
 
-Requires Node.js 22.18 or newer (24 recommended, see `.nvmrc`). The mock API runs `.ts` files directly using Node's built-in type stripping.
+Requires Node.js 22.18 or newer (24 recommended, see `.nvmrc`).
 
 ```bash
 npm ci
 npx playwright install --with-deps
-cp .env.example .env        # optional: the defaults run against the bundled mock API
-npm test
+cp .env.example .env        # then fill in the hosts and the qatest accounts (see the comments inside)
+npm run framework           # the bench's own self-tests: no host or credentials needed
+npm run kpost               # the KPost API sweep against the live application, files nothing
 ```
 
-With `TEST_ENV=local` and no `API_BASE_URL`, Playwright starts the bundled mock KPost API (`mock-server/`) automatically. To target a real environment, set `API_BASE_URL` and `AUTH_PRINCIPALS`.
+The bench has one target: the live KPost application, driven from the QA machine. Every host and
+account is read from `.env` (`TEST_ENV=production` arms the live-safety controls — do not change
+it to make something run). There is no bundled mock; `npm run framework` is the only command that
+runs without an environment.
 
 ## Running tests
 
@@ -109,18 +115,12 @@ Configuration is resolved in this order (first wins): real environment variables
 
 - **New API endpoint:** add an `EndpointDefinition` in `src/api/definitions/`. No test code is needed. See [the guide](docs/validation-framework.md#17-adding-a-completely-new-api).
 - **New common validation:** add a validator and register it once in `src/validators/index.ts`.
-- **Endpoint-specific logic:** add a business rule (`src/business-rules/`) or a DB validation (`src/database/validations/`).
+- **Endpoint-specific logic:** assert a business rule in the module's `feature.spec.ts` (`recordBusinessRuleViolation`, which can set up the multi-step state a rule needs), or add a DB validation (`src/database/validations/`) and reference it from the definition.
 - **UI:** import `test`/`expect` from `@fixtures`, keep locators in page objects, prefer role-based locators, and never use `waitForTimeout`.
 
 ## CI
 
-[.github/workflows/playwright.yml](.github/workflows/playwright.yml) runs on pushes and PRs (`REGRESSION`), nightly (`FULL`), and on manual dispatch (choose the environment and profile):
-
-1. **quality**: `npm run check`
-2. **test**: sharded runs (JSON logs, retries, traces on first retry)
-3. **merge-reports**: HTML, JUnit and the validation summary (published to the job summary), then the **quality gate**
-
-Configure `BASE_URL`, `API_BASE_URL`, `TEST_COMPANY_ID` and `MOCK_API=false` as variables. Configure `AUTH_PRINCIPALS`, `EXPIRED_TOKEN`, `DB_CONNECTION_STRING`, `APP_USERNAME` and `APP_PASSWORD` as secrets. Set them under _Settings → Environments_ for each environment.
+[.github/workflows/playwright.yml](.github/workflows/playwright.yml) runs `npm run check` (typecheck, lint, format) on every push and pull request. That is all CI does: the test suites run against the live application from the QA machine, where the credentials and the shared-server safety rules live, and every run files its bugs once from one serial process.
 
 ## Working notes
 

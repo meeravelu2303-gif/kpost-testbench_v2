@@ -3,6 +3,48 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (evening) — The mock-server scaffold is gone: one flow, the live application
+
+**Decision (owner's):** remove the bundled mock API and everything that existed only for it, and
+make CI a quality gate only. The bench was scaffolded in September against `mock-server/` with
+placeholder `users / companies / auth / health / dictionary` endpoints; by October every real module
+was wired and nothing in the KPost, KMail or Admin flow touched the mock — but it still imported
+itself in a closed loop, so no "unused file" check could see it, and CI was still running every push
+against the fake server.
+
+**Removed (29 files):** `mock-server/`, `openapi/dictionary.openapi.json`, the five scaffold
+definitions and their three schemas, `src/data/factories.ts` (+ the `@data` alias), the four scaffold
+business rules (the registry held nothing else), the two mock-schema DB validations, the OpenAPI
+`endpoint-loader`, the five root scaffold specs, `tests/integration/` (+ its Playwright project),
+`merge.config.ts`, and the `mock`, `mock:api` and `integration` scripts.
+
+**Unpicked:** `MOCK_API`/`MOCK_API_PORT`/`DB_TYPE` from `env.ts`; the mock web server from
+`playwright.config.ts`; the `mock` auth profile and the mock seed from `auth.config.ts`; the
+`mockFixture` field and every branch on it (production guard, executor, policy); the mock DB adapter;
+`MOCK_API=false` from every command (it meant nothing any more). `authProfileFor()` now takes no
+argument: there is one login service.
+
+**Consequences, deliberately accepted:**
+
+- The SMS/OTP kill-switch now fires in **every** mode — there is no host it is safe to send an OTP
+  to. Only `OTP_TEST_GATEWAY` + `TEST_DB_MODE` opens the OTP flows, exactly as before on live.
+- `.github/workflows/playwright.yml` runs `npm run check` only. Test runs stay on the QA machine
+  (credentials, shared-server rules); each run files once from one serial process.
+- `validation-engine.spec.ts` now plans against real endpoints (`kpostIdExist`, `getUserProfile`,
+  `sendMessage`) and honours `CONCURRENCY_PROBES`, which also closed its standing failure. The two
+  remaining framework failures (`ownership.spec.ts` case rendering; `payload-audit.spec.ts` —
+  `contacts-add-multiple` and `kbooking-block-ticket` omit documented-example fields) pre-date this
+  change and are still open.
+- Pre-existing lint debt, untouched by this change and not hidden: `waitForTimeout` in three e2e
+  files, and unnecessary assertions in `raw-body.spec.ts` / `verify-resolve.spec.ts`. `npm run check`
+  is red until those are fixed.
+
+Same day, earlier: the root-level docs were consolidated into `docs/` (`BLOCKED-ENDPOINTS-RATIONALE`,
+`UNUSED-ENDPOINTS`, `archive/`, `reference/`), the duplicate `test:all` scripts removed, the 7 Admin
+scripts un-pointed from `QATEST_ONLY` (they need the business login), and
+`_scratch-cleanup-junk.spec.ts` renamed/moved to `tests/framework/_cleanup-orphaned-records.local.spec.ts`
+so it stops running inside every KPost sweep.
+
 ### 2026-10-10 (afternoon) — Second dry run reviewed; three more bench defects fixed; third dry run
 
 Second dry run (2.9 h): 3,415 passed / 650 failed / 6,990 skipped; **would-file 28 (was 67)**, reopens 2 (was 9),

@@ -37,16 +37,18 @@ src/
 ├── config/
 │   ├── env.ts                    # environment config (dev/qa/staging/production), validated
 │   ├── api.config.ts             # API contract: envelope, headers, error codes, conventions
-│   ├── auth.config.ts            # roles, principals, token path, failure statuses
+│   ├── auth.config.ts            # roles, generic principals, token scheme, failure statuses
+│   ├── auth-profile.ts           # the KPost login (loginRO payload, token path, the QA_* accounts by role)
 │   ├── database.config.ts        # DB enablement/client/connection (env only)
 │   ├── thresholds.config.ts      # response-time/payload/timeout budgets, quality gate
 │   └── constants.ts              # paths, tags, validation profiles
 ├── api/
 │   ├── client/                   # api-client · request-builder · response-wrapper · token-provider
-│   ├── registry/                 # api-registry · endpoint-definition · endpoint-loader (OpenAPI)
+│   ├── contract/                 # workbook-contract: schemas/examples looked up from the generated OpenAPI
+│   ├── registry/                 # api-registry · endpoint-definition
 │   ├── schema/contract-schema.ts # zod | JSON Schema → Ajv (single schema engine)
-│   ├── schemas/                  # user / company / auth contracts
-│   └── definitions/              # auth · health · users · companies · dictionary (OpenAPI) · index
+│   ├── schemas/                  # kpost-types — the shared KPost field types
+│   └── definitions/              # one folder per module: kpost/<module>/*.api.ts · kmail/ · admin/ · index
 ├── validation-engine/
 │   ├── validation-engine.ts      # orchestration
 │   ├── validation-registry.ts    # validator registry
@@ -70,16 +72,16 @@ src/
 │   ├── performance/              # response-time · timeout · payload-size
 │   ├── common/                   # id · email · date · url · boolean · common-error
 │   └── index.ts                  # ← THE registration point
-├── business-rules/               # business-rule.ts · users/ · companies/ · index.ts
-├── database/                     # database-client · repositories/ · db-assertions · validations/
+├── business-rules/               # business-rule.ts · index.ts (the registry; KPost's rules live in module feature specs)
+├── database/                     # database-client · database-pool · repositories/ · kpost-assertions · validations/
+├── bug-tracker/                  # candidate · validity gate · fingerprint · dedupe · Bugzilla filer/client · verify-resolve
 ├── reporting/                    # bugzilla-reporter (writes the single REPORT.md/json + files bugs) · run-summary · bug-report · report-formatter · report-attachment
-├── fixtures/ data/ pages/ utils/
-openapi/                          # OpenAPI 3.1 documents
-mock-server/                      # local stand-in for the KPost API
-tests/api · tests/integration · tests/framework · tests/e2e · tests/setup
+├── fixtures/ pages/ ui/ utils/
+contracts/ openapi/               # GENERATED from the workbook (and the Admin spec): the contracts the engine validates against
+tests/api · tests/framework · tests/e2e · tests/e2e-admin · tests/setup
 ```
 
-The folder layout follows the requested target architecture, adapted to the existing project. `src/config/env.ts` stays as the environment config rather than being renamed to `environment.config.ts`. `tests/` is split by _kind_ of test (api, integration, framework, e2e). Smoke, regression, security and full are **validation profiles**, not folders. This way one spec file per API area serves every profile, and nothing is duplicated across `smoke/` and `regression/` folders.
+`tests/` is split by _kind_ of test (api, framework, e2e). Smoke, regression, security and full are **validation profiles**, not folders. This way one spec file per module area serves every profile, and nothing is duplicated across `smoke/` and `regression/` folders.
 
 ## 2. What each folder is for
 
@@ -87,19 +89,20 @@ The folder layout follows the requested target architecture, adapted to the exis
 | -------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------ |
 | `config/`            | Every URL, credential source, threshold, header rule and error code. Nothing is hard-coded in tests. | No                       |
 | `api/client/`        | HTTP: builds requests, adds credentials and correlation IDs, measures time, never throws on status.  | No                       |
-| `api/registry/`      | Endpoint catalogue and its type. OpenAPI import.                                                     | No                       |
+| `api/registry/`      | Endpoint catalogue and its type.                                                                     | No                       |
+| `api/contract/`      | Looks a definition's request/response schemas and examples up in the generated OpenAPI.              | No                       |
 | `api/definitions/`   | **One definition per endpoint.** Only endpoint facts.                                                | No                       |
 | `validation-engine/` | Decides which validators run, runs them, handles dependencies, aggregates results.                   | No                       |
 | `validators/`        | **Reusable technical validation.** Each validator is implemented once.                               | **No, never**            |
-| `business-rules/`    | Licence limits, duplicates, blocked companies, cross-service workflows.                              | **Yes (only here)**      |
+| `business-rules/`    | The registry for definition-level rules. KPost's rules are asserted in module feature specs.         | **Yes (only here)**      |
 | `database/`          | DB access (client → repositories) and endpoint-specific persistence checks.                          | Persistence checks only  |
-| `reporting/`         | Human and machine reports, CI summary.                                                               | No                       |
-| `mock-server/`       | Local system under test, so the framework runs without a deployed API.                               | Simulated API            |
+| `bug-tracker/`       | Turns failures into deduplicated, validity-gated Bugzilla tickets routed to the module's owner.      | No                       |
+| `reporting/`         | The single run report (`reports/REPORT.md/json`) and the Playwright reporter that files bugs.        | No                       |
 
 ## 3. Central validator architecture
 
 ```
-Endpoint definition (users.api.ts)             ← endpoint facts only
+Endpoint definition (kpost/<module>/*.api.ts)  ← endpoint facts only
         │  resolveEndpoint()  (defaults + endpoint overrides)
         ▼
 ValidationEngine.validate(endpointId)
@@ -170,8 +173,8 @@ export interface ValidationResult {
   validatorName: string; // e.g. 'authentication.missing-token'
   category: ValidationCategory; // AUTHENTICATION | AUTHORIZATION | REQUEST | RESPONSE | SECURITY |
   // PERFORMANCE | COMMON_DATA | BUSINESS_RULE | DATABASE
-  endpointId: string; // 'create-user'
-  endpoint: string; // 'POST /users'
+  endpointId: string; // 'dashboard-home-msgs'
+  endpoint: string; // 'POST /v2/dashboard/homeDashboardMsgs/'
   method: HttpMethod;
   expected: unknown;
   actual: unknown;
@@ -237,9 +240,9 @@ The registry is an injected instance, not a static class. The engine receives it
 [`src/validation-engine/validation-engine.ts`](../src/validation-engine/validation-engine.ts)
 
 ```ts
-const report = await validationEngine.validate('create-user'); // env profile
-const report = await validationEngine.validate('create-user', { profile: 'SECURITY' });
-const planned = validationEngine.plan('create-user', 'FULL'); // what would run
+const report = await validationEngine.validate('dashboard-home-msgs'); // env profile
+const report = await validationEngine.validate('dashboard-home-msgs', { profile: 'SECURITY' });
+const planned = validationEngine.plan('dashboard-home-msgs', 'FULL'); // what would run
 ```
 
 Failure handling:
@@ -321,86 +324,102 @@ interface EndpointDefinition {
 
 ## 11. Example endpoint
 
-[`src/api/definitions/users.api.ts`](../src/api/definitions/users.api.ts)
+[`src/api/definitions/kpost/dashboard/dashboard.api.ts`](../src/api/definitions/kpost/dashboard/dashboard.api.ts) — the Home screen's recent-messages panel, three authenticated reads:
 
 ```ts
-export const createUserApi: EndpointDefinition = {
-  id: 'create-user',
+function defineDashboardEndpoint(config: KpostEndpointConfig): EndpointDefinition {
+  return defineKpostEndpoint({
+    ...config,
+    authentication: config.authentication ?? { required: true },
+    tags: ['dashboard', ...(config.tags ?? [])],
+  });
+}
+
+export const homeDashboardMsgsApi = defineDashboardEndpoint({
+  id: 'dashboard-home-msgs',
   method: 'POST',
-  path: '/users',
-  tags: ['users', 'critical'],
-  authorization: {
-    roles: ['SUPER_ADMIN', 'ADMIN', 'COMPANY_ADMIN'],
-    tenantScoped: true,
-    privilegeEscalation: { role: 'COMPANY_ADMIN', overrides: { body: { role: 'ADMIN' } } },
-  },
-  request: ({ tenantId }) => ({ body: buildUserPayload(tenantId) }),
-  requestSchema: createUserRequestSchema,
-  responseSchema: userSchema,
-  businessRules: ['duplicate-user', 'company-user-limit', 'blocked-company'],
-  database: { validations: ['user-created'] },
-};
-
-export const getUserApi: EndpointDefinition = {
-  id: 'get-user',
-  method: 'GET',
-  path: '/users/{id}',
-  authorization: { roles: ['SUPER_ADMIN', 'ADMIN', 'COMPANY_ADMIN'], tenantScoped: true },
-  // reuses create-user's payload instead of duplicating it
-  request: async (helpers) => ({
-    pathParams: { id: (await helpers.call<{ id: string }>('create-user')).id },
-  }),
-  pathParamsSchema: userIdParamsSchema,
-  responseSchema: userSchema,
-};
-```
-
-`get-user` has no business rules, no auth code and no status code. It inherits `expectedStatus: [200]` and the whole default policy.
-
-## 12. Example test using the generic engine
-
-[`tests/api/users.spec.ts`](../tests/api/users.spec.ts). This is the entire file:
-
-```ts
-import { describeEndpointContracts } from '@engine/contract-suite';
-import { test } from '@fixtures';
-
-test.describe('Users API', () => {
-  describeEndpointContracts({ tags: ['users'] });
+  path: '/v2/dashboard/homeDashboardMsgs/',
+  summary: 'The Home dashboard message list (initial page)',
+  tags: ['dashboard-read'],
+  // Reads our own recent messages; nulls fetch the latest page, as the client sends on first load.
+  destructive: false,
+  productionSafe: true,
+  request: body(() => ({ serverTime: null, lastMsgID: null })),
 });
 ```
 
-`describeEndpointContracts` creates one Playwright test per matching endpoint, tagged `@api @users @critical` (plus `@destructive` for mutating endpoints). Each test calls `validationEngine.validate(endpoint)` and asserts the quality gate. On failure, the test's error message is the full formatted report.
+That is the whole definition. It states only endpoint facts — the path, the token requirement, the
+payload the real client sends, and the two live-safety facts (`destructive: false`, `productionSafe:
+true`). It inherits `expectedStatus: [200]`, the KPost response envelope and the whole default
+policy, and its request/response schemas are looked up from the workbook contract by path
+(`defineKpostEndpoint`). A definition for a path the workbook does not list throws at load time.
+
+Where a valid request needs a value only the product can mint (a message id, a document id), the
+definition says so — `tags: ['needs-id']` and a `note:` — and the endpoint is driven by a lifecycle
+flow in the module's `feature.spec.ts` instead of standalone. `homeDashboardNewMsgs` in the same
+file is the example: with null markers the backend 500s, which would read as a false CRITICAL.
+
+## 12. Example test using the generic engine
+
+[`tests/api/kpost/dashboard/read.spec.ts`](../tests/api/kpost/dashboard/read.spec.ts). This is the entire file:
+
+```ts
+import { describeEndpointCases } from '@engine/endpoint-cases';
+import { test } from '@fixtures';
+
+test.describe('KPost Dashboard · reads', () => {
+  describeEndpointCases({ tags: ['dashboard-read'] });
+});
+```
+
+`describeEndpointCases` creates **one Playwright test per endpoint × validator**, so a run reads
+like a test plan (`response.status-code — …`, `security.injection — …`), each tagged
+`@api @kpost-api @dashboard @dashboard-read`. The engine still sends each endpoint's requests once;
+every case asserts its own slice of that one report. `describeEndpointContracts`
+(`@engine/contract-suite`) is the coarser form — one test per endpoint — used by the KMail and
+Admin root wrappers. Write endpoints go through `forWriteSweep` (`src/api/sweep-target.ts`), which
+points "the other party" at the sacrificial qatest account.
 
 Hand-written tests use the same engine and fixtures:
 
 ```ts
-test('create-user under the security profile', async ({ validationEngine }) => {
-  const report = await validationEngine.validate('create-user', { profile: 'SECURITY' });
+test('dashboard under the security profile', async ({ validationEngine }) => {
+  const report = await validationEngine.validate('dashboard-home-msgs', { profile: 'SECURITY' });
   expect(report.gate.blocking).toEqual([]);
 });
 ```
 
 ## 13. Example business rule
 
-[`src/business-rules/users/company-user-limit.rule.ts`](../src/business-rules/users/company-user-limit.rule.ts)
+KPost's business rules are asserted in the module feature specs, because a real rule needs state
+the generic sweep cannot set up (a second account, a created record, a prior step). The pattern,
+from [`tests/api/kpost/kall/feature.spec.ts`](../tests/api/kpost/kall/feature.spec.ts):
 
 ```ts
-export const companyUserLimitRule: BusinessRule = {
-  id: 'company-user-limit',
-  description: 'A company cannot exceed its licensed user limit (409 COMPANY_USER_LIMIT_REACHED)',
-  severity: 'CRITICAL',
-  async check(context) {
-    const company = await context.call<{ id: string }>('create-company', { body: { maxUsers: 1 } });
-    const inCompany = { body: { companyId: company.id } };
-    await context.call('create-user', inCompany); // uses the only licence
-    const exceeding = await context.send(await context.nextRequest(inCompany), {
-      label: 'business-rule.company-user-limit',
-    });
-    return expectBusinessError(exceeding, 409, 'COMPANY_USER_LIMIT_REACHED');
-  },
-};
+const repeat = await endpoints.sendTo(
+  'kall-scheduled-repeat',
+  { body: repeatBody },
+  { label: 'feature:kall:repeat', auth: { principal: A }, allowLiveWrite: true },
+);
+if (repeat.status >= 400) {
+  endpoints.recordBusinessRuleViolation({
+    endpointId: 'kall-scheduled-repeat',
+    ruleId: 'REGRESSION-kall-repeat-still-broken-v2',
+    rule: 'scheduledRepeatKall must actually create a repeating call for a real repeat interval, not reject every one.',
+    expected: 'status < 300 for a well-formed repeat interval',
+    actual: `status=${repeat.status}, body=${repeat.bodyText}`,
+    request: { body: repeatBody },
+  });
+}
 ```
+
+`recordBusinessRuleViolation` turns a confirmed violation into a bug candidate with the same
+dedupe, validity gate and owner routing as an engine finding — and the test itself **passes**, so
+judge a rule by the recorded candidates in the report, not by the test's colour. The
+`businessRules: [...]` registry on a definition (`src/business-rules/`) still exists for a rule that
+can be checked from the endpoint's own request alone; nothing registered there today.
+
+````
 
 Rules are registered in `src/business-rules/index.ts` and referenced by ID from `businessRules: [...]`. They run in the `business` stage with REGRESSION/FULL profiles by default. The error envelope of every response they trigger is still checked by the central error-format validator.
 
@@ -434,11 +453,11 @@ export const userCreatedValidation: DatabaseValidation = {
     );
   },
 };
-```
+````
 
-`dbAssert` provides record exists / not exists, field values, audit fields, created and updated timestamps, update detection, soft delete and foreign keys. Also included: `user-updated`, `user-deleted` (soft delete) and `company-created`. When `DB_ENABLED=false`, DB validations are `SKIPPED` with that reason.
+`dbAssert` provides record exists / not exists, field values, audit fields, created and updated timestamps, update detection, soft delete and foreign keys. The registered validations (`src/database/validations/index.ts`) cover KPOST_QA persistence — user active, profile updated, Katchup message persisted, login session created, company licence integrity, settings persisted — and KMail mail persisted. When the database is unreachable or `DB_ENABLED=false`, DB validations are `SKIPPED` with that reason, never passed.
 
-**Real database:** KPost runs on **MySQL**, and `MysqlDatabaseClient` (`mysql2/promise`) is the real adapter; the mock adapter reads the mock API's store instead. Identifiers are validated against a strict pattern and backtick-quoted, values are bound as `?` placeholders, and a `null` in a `where` becomes `IS NULL`. Credentials come from `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` only.
+**Real database:** KPost runs on **MySQL**, and `MysqlDatabaseClient` (`mysql2/promise`) is the only live adapter. Identifiers are validated against a strict pattern and backtick-quoted, values are bound as `?` placeholders, and a `null` in a `where` becomes `IS NULL`. Credentials come from `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` only.
 
 **One database per suite.** `DatabasePool.for(suite)` gives each suite its own client, because they do not share a target: **KPost and KMail** point at the KPOST_QA **test** database, where `DB_ALLOW_WRITES=true` is the intended setting, while **Admin** points at a **live production** database. `admin-api` is on `WRITE_BANNED_SUITES`, so non-`SELECT` statements are refused there regardless of `DB_ALLOW_WRITES` — the ban lives in code precisely so an environment variable cannot lift it. Note that `WITH` is **not** treated as a read: MySQL 8 allows a CTE to head an `UPDATE`/`DELETE`. See `tests/framework/admin-db-safety.spec.ts`.
 
@@ -446,23 +465,11 @@ export const userCreatedValidation: DatabaseValidation = {
 
 - **One schema engine.** Contracts may be zod schemas (code-first) or JSON Schema/OpenAPI (contract-first). [`contract-schema.ts`](../src/api/schema/contract-schema.ts) normalises both to JSON Schema 2020-12 and validates with **Ajv + ajv-formats**. zod schemas are converted in `input` mode, so `z.object()` stays open and `z.strictObject()` is closed (`additionalProperties: false`, which enables the unknown-field checks).
 - **Negative cases come from the contract.** Required fields, types, null/empty, min/max length and value, enums, formats (email, uri, uuid, date-time, …), patterns, closed objects, nested objects and array items are all read from the JSON Schema. Nothing is hand-listed per endpoint.
-- **OpenAPI import.** [`endpoint-loader.ts`](../src/api/registry/endpoint-loader.ts) turns [`openapi/dictionary.openapi.json`](../openapi/dictionary.openapi.json) into EndpointDefinitions. It maps operationId → id, security → authentication, `x-roles` → authorization, 2xx → expectedStatus, parameters → path/query schemas, and the response `data` → responseSchema, resolving local `$ref`s. Only what OpenAPI cannot express is added in code:
-
-```ts
-export const dictionaryApis = loadOpenApiEndpoints(
-  path.join(OPENAPI_DIR, 'dictionary.openapi.json'),
-  {
-    'list-dictionary-terms': {
-      request: () => ({ query: { page: 1, pageSize: 20, language: 'en' } }),
-      pagination: true,
-    },
-  },
-);
-```
+- **Workbook contracts.** The generated OpenAPI (`openapi/kpost-api.openapi.json`, `kmail-api`, `admin-api`) is not loaded as endpoints; definitions are hand-written per module and look their schemas and documented examples up through [`workbook-contract.ts`](../src/api/contract/workbook-contract.ts). A hand-typed path the workbook does not list throws at definition time, so a typo cannot quietly become an untested endpoint. See [api-contracts.md](api-contracts.md).
 
 ## 16. Example report output
 
-Real output for `POST /users` under the `REGRESSION` profile against the mock API. It is attached to the Playwright test and becomes the failure message if the gate fails:
+Illustrative output of one endpoint under the `REGRESSION` profile (the shape is exact; the endpoint and values are a placeholder). It is attached to the Playwright test and becomes the failure message if the gate fails:
 
 ```
 Endpoint: POST /users (create-user)
@@ -530,25 +537,29 @@ Every run writes exactly two files: `reports/REPORT.md` (human) and `reports/REP
 
 ## 17. Adding a completely new API
 
-`POST /companies` was added after the Users API. Only the definition and its rule were added:
+The Dashboard module (§11–12) was added this way, and every KPost module follows the same four
+steps. Nothing in the engine, the validators or any other spec changes.
 
-```ts
-// src/api/definitions/companies.api.ts
-export const createCompanyApi: EndpointDefinition = {
-  id: 'create-company',
-  method: 'POST',
-  path: '/companies',
-  tags: ['companies', 'critical'],
-  authorization: { roles: ['SUPER_ADMIN', 'ADMIN'] },
-  request: () => ({ body: buildCompanyPayload() }),
-  requestSchema: createCompanyRequestSchema,
-  responseSchema: companySchema,
-  businessRules: ['duplicate-company-name'], // src/business-rules/companies/
-  database: { validations: ['company-created'] }, // optional
-};
-```
+1. **Definitions** — `src/api/definitions/kpost/<module>/<module>.api.ts`, one `defineKpostEndpoint`
+   per endpoint (the module's own `define<Module>Endpoint` wrapper sets the shared tag and the
+   token default, as `defineDashboardEndpoint` does). The path must exist in the workbook contract,
+   or the definition throws at load time; the request is the payload the real client sends; and the
+   two live-safety facts are stated explicitly — `destructive` and `productionSafe` — because the
+   production guard is default-deny.
+2. **Module index** — `src/api/definitions/kpost/<module>/index.ts` exports the module's definitions
+   as one array (`dashboardApis`), and `src/api/definitions/index.ts` spreads it into the registry.
+3. **Wrapper spec** — `tests/api/kpost/<module>/read.spec.ts` (and `write.spec.ts` with
+   `{ transform: forWriteSweep }` for writes): three lines calling `describeEndpointCases` on the
+   module's tag. `tests/framework/sweep-completeness.spec.ts` fails until every new endpoint is
+   reachable by a wrapper or listed as exempt with a reason — a definition cannot be quietly left out
+   of the sweep.
+4. **Feature spec** — `tests/api/kpost/<module>/feature.spec.ts` for anything the sweep cannot do
+   alone: lifecycle flows (create → act → clean up, behind a `<MODULE>_LIFECYCLE` flag), `needs-id`
+   endpoints fed real ids, and the module's business rules via `recordBusinessRuleViolation` (§13).
 
-Then: add `...companyApis` to `src/api/definitions/index.ts`, and add a 3-line `tests/api/companies.spec.ts` (or just tag it with an existing area). **No validator, engine or other spec file changed.** It automatically received all 40+ applicable validations (see §21).
+Then add the module's path to the `kpost*` commands in `package.json` and its Bugzilla component to
+`src/config/ownership.config.ts`, so its defects route to the right developer. On the next run the
+new endpoints receive every applicable validator automatically (see §21).
 
 ## 18. Adding a new centralized validator
 
@@ -569,9 +580,9 @@ export const cacheControlValidator = defineValidator({
 });
 ```
 
-Register it once in `src/validators/index.ts`. **Every** endpoint then runs it on the next test run, with no change to `users.spec.ts`, `companies.spec.ts` or any definition. The framework self-test `a newly registered validator runs for every endpoint without editing endpoint tests` proves this for all 9 registered endpoints.
+Register it once in `src/validators/index.ts`. **Every** endpoint then runs it on the next test run, with no change to any wrapper spec or definition. The framework self-test _"a public endpoint, an authenticated read and a write all receive the same central validators"_ (`tests/framework/validation-engine.spec.ts`) proves the plan is the full registry for every kind of endpoint.
 
-`SensitiveDataValidator` ([`security/sensitive-data.validator.ts`](../src/validators/security/sensitive-data.validator.ts)) was added the same way. It scans **every** JSON response of the run for passwords and hashes, tokens, keys, private keys and Luhn-valid card numbers. It runs for all 9 endpoints (for example, it inspected 77 responses for `POST /users`). The login endpoint legitimately returns a token, so it allowlists that one field: `security: { sensitiveFieldAllowlist: ['accessToken'] }`.
+`SensitiveDataValidator` ([`security/sensitive-data.validator.ts`](../src/validators/security/sensitive-data.validator.ts)) was added the same way. It scans **every** JSON response of the run for passwords and hashes, tokens, keys, private keys and Luhn-valid card numbers. The login endpoint legitimately returns a token, so it allowlists that one field: `security: { sensitiveFieldAllowlist: ['accessToken'] }`.
 
 ## 19. Disabling one validation for one endpoint
 
@@ -600,8 +611,7 @@ The complete, canonical list is in **[`docs/COMMANDS.md`](COMMANDS.md)** — one
 npm run kpost            # KPost API — all test types on the test DB + write flows (files nothing)
 npm run kpost:file       # same, and file valid bugs
 npm run kmail            # KMail API      npm run admin   # Admin API      npm run ui   # UI e2e
-npm run test:framework   # framework self-tests
-npm test                 # plain run against the local mock
+npm run framework        # framework self-tests (no host or credentials needed)
 
 # A specific validation profile / environment / subset (the profiles still exist as an axis):
 VALIDATION_PROFILE=SECURITY npx playwright test --project=api --grep @kpost-api
@@ -610,25 +620,24 @@ npx playwright test --project=api --grep @critical
 
 ## 21. Acceptance scenario and how it is proven
 
-| Requirement                                                                                                                                 | Evidence                                                                                                                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /users` and `GET /users/{id}` share **all** central validators without duplicated code                                                | Self-test _"POST /users, GET /users/{id} and POST /companies receive the same central validators"_ asserts that the planned central validators of all three equal the full registry. Neither definition contains validation code. |
-| Both receive auth, authz, status, request, structure, schema, required fields, content-type, headers, error format, response time, security | Report above (`POST /users`: 45 validations). `GET /users/{id}`: 31 passed; request checks apply to its path parameter.                                                                                                           |
-| `POST /companies` needs only a definition and a business rule                                                                               | `companies.api.ts` + `duplicate-company-name.rule.ts`. The report shows 40 passed, 0 failed. No central validation code changed.                                                                                                  |
-| A new validator applies without touching endpoint tests                                                                                     | Self-test _"a newly registered validator runs for every endpoint…"_. `SensitiveDataValidator` runs for every endpoint.                                                                                                            |
-| Failures collected; dependent validators skipped with a reason                                                                              | Self-tests _"all results are collected; dependents of a failed validator are SKIPPED with a reason"_ and _"response schema is SKIPPED when the body is not JSON"_.                                                                |
-| Disable one validation for one endpoint                                                                                                     | Self-test _"health-check override disables only authentication and authorization"_.                                                                                                                                               |
-| Production safety                                                                                                                           | Self-test _"production guard blocks destructive endpoints unless explicitly allowed"_.                                                                                                                                            |
-| Secret masking                                                                                                                              | Self-test _"secrets and personal data are masked"_.                                                                                                                                                                               |
+| Requirement                                                                                  | Evidence (`tests/framework/`)                                                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A public endpoint, an authenticated read and a write share **all** central validators        | `validation-engine.spec.ts` _"a public endpoint, an authenticated read and a write all receive the same central validators"_ — the planned validators of `kpostIdExist`, `getUserProfile` and `sendMessage` equal the full registry. |
+| Endpoint-specific checks stay endpoint-specific                                              | _"database validations stay endpoint-specific"_: `sendMessage` plans `katchup-message-persisted`, the login plans `kpost-login-session-created`, and neither leaks into the other.                                                   |
+| Every registered endpoint is reached by a sweep, and every exemption carries a reason        | `sweep-completeness.spec.ts`.                                                                                                                                                                                                        |
+| Production safety: allowlist, OTP kill-switch, `ALLOW_DESTRUCTIVE_TESTS` grants nothing live | `live-safety.spec.ts` (the full matrix) and the guard test in `validation-engine.spec.ts`.                                                                                                                                           |
+| Defects route to the right Bugzilla component and owner                                      | `ownership.spec.ts`, `component-routing.spec.ts`.                                                                                                                                                                                    |
+| One fault → one ticket (cascades, count variants, systemic faults collapse)                  | `cascade-consolidation.spec.ts`, `systemic-collapse.spec.ts`, `bug-tracker.spec.ts`.                                                                                                                                                 |
+| Secret masking                                                                               | _"secrets and personal data are masked"_.                                                                                                                                                                                            |
 
-The latest local run was 27/27 Playwright tests passing: 7 UI, 9 endpoint contracts, 10 framework self-tests and 1 integration test. The endpoint contracts covered 377 validations: 274 passed, 0 failed, 103 skipped as not applicable. They pass in all four profiles.
+`npm run framework` runs the whole project without a host or credentials.
 
 ## 22. Design decisions and known limits
 
-- **Mock API.** No KPost API environment was available, so `mock-server/` simulates one (auth, roles, tenants, validation, business errors, soft delete, rate limiting, security headers). Point `API_BASE_URL`/`AUTH_PRINCIPALS` at a real environment and set `MOCK_API=false`. The mock's credentials exist only in `mock-server/seed.json`.
+- **One target, the live application.** The bench was scaffolded against a bundled mock API; that layer was removed on 2026-10-10 once every real module was wired, so there is exactly one flow and nothing fake left to maintain. The framework self-tests run on the registry alone and need no host.
 - **Registry instances instead of static classes**, for dependency injection and isolated tests.
 - **Validators return outcomes through `defineValidator`**, and the wrapper produces the `ValidationResult`. This keeps the contract uniform and removes timing and error-handling boilerplate from 44 validators.
 - **Response time is a functional per-request budget, not load testing.** Keep load tests (k6, Artillery, …) separate.
 - **Probe volume** is bounded (`thresholds.request.maxCasesPerValidator`, `security.maxInjectionFields`, `maxRateLimitBurst`). Flooding checks run only in SECURITY/FULL.
 - **Login probes** use a dedicated `login-probe` principal, so negative login attempts never lock real accounts.
-- **Not included yet:** a real SQL adapter for `DatabaseClient`, and speciality/dictionary business rules (there are no such rules yet; add them under `src/business-rules/<area>/`). Test-data cleanup is not implemented: the mock resets on restart, and real environments need a cleanup strategy per data type.
+- **Test data cleans itself up.** Writes run inside self-cleaning lifecycle flows (`*_LIFECYCLE` flags, `tests/api/kpost/<module>/feature.spec.ts`), and anything the bench creates that cannot be deleted is recorded in `src/fixtures/created-accounts.json`.

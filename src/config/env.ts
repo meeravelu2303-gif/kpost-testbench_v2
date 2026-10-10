@@ -35,7 +35,7 @@ const EnvSchema = z.object({
   /**
    * Per-module API base URLs. KPost is one product built from separately maintained modules
    * that are deployed independently, so each suite targets its own host. Unset falls back to
-   * API_BASE_URL (which is the bundled mock API locally).
+   * API_BASE_URL.
    */
   KPOST_API_BASE_URL: z.url().optional(),
   ADMIN_API_BASE_URL: z.url().optional(),
@@ -47,26 +47,21 @@ const EnvSchema = z.object({
    * or every KMail call 404s and reads as a false bug.
    */
   KMAIL_PATH_PREFIX: z.string().default('/kmail5/v2'),
-  /** Start and target the bundled mock KPost API. Defaults to on for `local` without API_BASE_URL. */
-  MOCK_API: z.stringbool().optional(),
-  MOCK_API_PORT: z.coerce.number().int().positive().default(4010),
 
   APP_USERNAME: z.string().optional(),
   APP_PASSWORD: z.string().optional(),
   /** JSON array of API principals: [{ key, role, tenantId?, username, password }] */
   AUTH_PRINCIPALS: z.string().optional(),
-  /** A genuinely expired token for the target environment (optional; mock mode generates one). */
+  /** A genuinely expired token for the target environment (optional). */
   EXPIRED_TOKEN: z.string().optional(),
-  /** Tenant/company used for data created by tests (mock mode uses the seeded company). */
+  /** Tenant/company used for data created by tests. */
   TEST_COMPANY_ID: z.string().optional(),
 
   /**
-   * Force database access on or off. Unset, it follows what is reachable: the mock's store under
-   * `MOCK_API=true`, a real MySQL when `DB_HOST`/`DB_NAME` are set, otherwise nothing.
+   * Force database access on or off. Unset, it follows what is reachable: MySQL when
+   * `DB_HOST`/`DB_NAME` are set, otherwise nothing.
    */
   DB_ENABLED: z.stringbool().optional(),
-  /** `mysql` is the only real engine KPost runs on; `mock` is the bundled in-memory store. */
-  DB_TYPE: z.enum(['mysql', 'mock']).default('mysql'),
   /**
    * MySQL host. A JDBC URL (`jdbc:mysql://host:3306`) is accepted and reduced to its host, because
    * that is the form the connection details are normally handed over in — see `mysqlHost()` below.
@@ -223,7 +218,6 @@ if (!parsed.success) {
 }
 
 const data = parsed.data;
-const mockApi = data.MOCK_API ?? (data.TEST_ENV === 'local' && !data.API_BASE_URL);
 
 /**
  * Reduces a MySQL host setting to a bare host and, when the value carries one, a port.
@@ -271,9 +265,7 @@ const adminDb = parseMysqlHost(data.ADMIN_DB_HOST, data.ADMIN_DB_PORT, 'ADMIN_DB
 
 export const env = Object.freeze({
   ...data,
-  MOCK_API: mockApi,
-  API_BASE_URL:
-    data.API_BASE_URL ?? (mockApi ? `http://127.0.0.1:${data.MOCK_API_PORT}` : data.BASE_URL),
+  API_BASE_URL: data.API_BASE_URL ?? data.BASE_URL,
   IS_PRODUCTION: data.TEST_ENV === 'production',
   BUILD_ID: data.BUILD_ID ?? data.GITHUB_RUN_NUMBER ?? 'local',
   // Normalized above, so everything downstream sees a host a driver can actually resolve.

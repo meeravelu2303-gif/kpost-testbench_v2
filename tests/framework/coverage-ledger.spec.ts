@@ -107,7 +107,11 @@ const SCREENS: Array<{ route: string; spec: string | null; note: string }> = [
   { route: '/kall', spec: 'kall.spec.ts', note: 'calling' },
   { route: '/kmail', spec: 'kmail.spec.ts', note: 'email' },
   { route: '/userprofile', spec: 'profile.spec.ts', note: 'profile + settings' },
-  { route: '/settings', spec: 'settings-sections.spec.ts', note: 'settings workspace + section nav' },
+  {
+    route: '/settings',
+    spec: 'settings-sections.spec.ts',
+    note: 'settings workspace + section nav',
+  },
   { route: '/kdirectory', spec: null, note: 'out of scope per BRD §4.2' },
   { route: '/kcloud', spec: 'auxiliary.spec.ts', note: 'smoke (no API)' },
   { route: '/kbooking', spec: 'auxiliary.spec.ts', note: 'smoke (no API)' },
@@ -126,13 +130,13 @@ test.describe('coverage ledger @framework', () => {
     const registered = new Set(
       apiRegistry
         .all()
-        .filter((d: EndpointDefinition) => !d.mockFixture)
+
         .flatMap((d: EndpointDefinition) => [d.path, ...(d.contractPath ? [d.contractPath] : [])]),
     );
     const runsLive = new Set(
       apiRegistry
         .all()
-        .filter((d: EndpointDefinition) => d.productionSafe && !d.mockFixture)
+        .filter((d: EndpointDefinition) => d.productionSafe)
         // include contractPath too — KMail's request path is prefixed (/kmail5/v2), while the
         // documented path (what we bucket by) is the unprefixed contractPath.
         .flatMap((d: EndpointDefinition) => [d.path, ...(d.contractPath ? [d.contractPath] : [])]),
@@ -269,7 +273,7 @@ test.describe('coverage ledger @framework', () => {
     const documentedPaths = new Set(documented.map((d) => d.path));
     const phantom = apiRegistry
       .all()
-      .filter((d: EndpointDefinition) => !d.mockFixture)
+
       .filter((d: EndpointDefinition) => !(d.tags ?? []).includes('undocumented-contract'))
       .map((d: EndpointDefinition) => d.contractPath ?? d.path)
       .filter((p: string) => !documentedPaths.has(p) && !p.includes('{'));

@@ -7,15 +7,11 @@ import { kpostDb, text } from '../kpost-assertions';
 import { KpostRepository } from '../repositories/kpost.repository';
 
 /**
- * Persistence checks against the **real KPOST_QA database**.
+ * Persistence checks against the **KPOST_QA database**.
  *
- * ## Why these exist alongside `users.db.ts` / `companies.db.ts`
- *
- * Those validate the mock server's own `users` and `companies` tables and are attached only to
- * `mockFixture` endpoints — the bench's self-tests. They are not KPost. These are, and they are
- * written against the columns `information_schema` actually reports: `kpost_id` rather than `id`,
+ * Written against the columns `information_schema` actually reports: `kpost_id` rather than `id`,
  * `created_date` rather than `createdAt`, `active_status = 'no'` rather than a `deletedAt`
- * tombstone.
+ * tombstone — `kpost-assertions.ts` encodes those conventions once.
  *
  * ## What a DB validation is for
  *

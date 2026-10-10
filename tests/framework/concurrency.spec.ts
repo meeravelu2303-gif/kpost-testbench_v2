@@ -1,4 +1,3 @@
-import { env } from '@config/env';
 import { thresholds } from '@config/thresholds.config';
 import {
   buildWhere,
@@ -280,61 +279,5 @@ test.describe('concurrency validators are registered and gated @framework', () =
       ).toBe('concurrency');
       expect(validator?.stage, `${name} sends its own requests, so it is a probe`).toBe('probe');
     }
-  });
-
-  test.describe('against the API', () => {
-    test.skip(!env.MOCK_API, 'drives real HTTP against the bundled mock');
-
-    test('the read probes actually dispatch and report against a live server', async ({
-      createValidationEngine,
-    }) => {
-      /*
-       * The unit tests above prove the dispatcher and the comparators in isolation. This proves the
-       * part they cannot: that the validators are reachable through the engine, survive a real
-       * request/response cycle and return a verdict. A probe that throws on its first live exchange
-       * would pass every test above and still be useless.
-       */
-      const report = await createValidationEngine({ onReport: undefined }).validate('get-user', {
-        profile: 'FULL',
-      });
-
-      const readConsistency = report.results.find(
-        (r) => r.validatorName === 'concurrency.read-consistency',
-      );
-      expect(readConsistency, 'the read-consistency probe ran').toBeDefined();
-      expect(
-        readConsistency?.status,
-        `a consistent mock must not look like a race: ${readConsistency?.message}`,
-      ).toBe('PASSED');
-
-      const burst = report.results.find((r) => r.validatorName === 'concurrency.burst-resilience');
-      expect(burst, 'the burst-resilience probe ran').toBeDefined();
-      expect(burst?.status, `the mock served the burst: ${burst?.message}`).toBe('PASSED');
-    });
-
-    test('a write endpoint is skipped by the read probes with the reason attached', async ({
-      createValidationEngine,
-    }) => {
-      const report = await createValidationEngine({ onReport: undefined }).validate('create-user', {
-        profile: 'FULL',
-      });
-
-      const readConsistency = report.results.find(
-        (r) => r.validatorName === 'concurrency.read-consistency',
-      );
-      expect(readConsistency?.status, 'a write is not a read-consistency subject').toBe('SKIPPED');
-      expect(readConsistency?.message).toContain('duplicate-write');
-
-      /*
-       * And the duplicate-write probe skips too, because `create-user` does not declare
-       * `singleWriteWins`. Both skipping is the correct outcome for an undeclared write — the point
-       * is that each says which one it is rather than reporting a silent pass.
-       */
-      const duplicate = report.results.find(
-        (r) => r.validatorName === 'concurrency.duplicate-write',
-      );
-      expect(duplicate?.status).toBe('SKIPPED');
-      expect(duplicate?.message).toContain('singleWriteWins');
-    });
   });
 });

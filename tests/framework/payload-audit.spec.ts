@@ -140,7 +140,7 @@ function documentedFields(d: EndpointDefinition): DocumentedFields {
 
 test.describe('payload completeness audit @framework', () => {
   test('every live-running endpoint sends every documented-example field (no false-bug risk)', async () => {
-    const endpoints = apiRegistry.all().filter((d: EndpointDefinition) => !d.mockFixture);
+    const endpoints = apiRegistry.all();
     const rows: AuditRow[] = [];
 
     for (const d of endpoints) {

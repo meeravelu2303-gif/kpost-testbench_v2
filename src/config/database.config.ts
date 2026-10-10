@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import type { SuiteId } from './ownership.config';
 import { env } from './env';
 
-export type DatabaseClientKind = 'mock' | 'mysql' | 'none';
+export type DatabaseClientKind = 'mysql' | 'none';
 
 /**
  * Which database each suite talks to, and what it is allowed to do there.
@@ -54,7 +54,7 @@ export interface DatabaseTarget {
   /** Which suite's data this connection holds. */
   suite: SuiteId;
   kind: DatabaseClientKind;
-  /** Undefined for `mock` and `none`. */
+  /** Undefined for `none`. */
   connection?: MysqlConnection;
   /** Non-SELECT SQL permitted. False on every live target, whatever the environment says. */
   allowWrites: boolean;
@@ -66,10 +66,10 @@ const hasKpostConnection = Boolean(env.DB_HOST && env.DB_NAME);
 const hasAdminConnection = Boolean(env.ADMIN_DB_HOST && env.ADMIN_DB_NAME);
 
 /*
- * `DB_ENABLED` overrides in both directions. Left unset, the database is used when something is
- * genuinely reachable — the mock, or a configured connection.
+ * `DB_ENABLED` overrides in both directions. Left unset, the database is used when a connection is
+ * actually configured.
  */
-const enabled = env.DB_ENABLED ?? (env.MOCK_API || hasKpostConnection);
+const enabled = env.DB_ENABLED ?? hasKpostConnection;
 
 /** Reads a CA file once, at configuration time, so a bad path fails loudly rather than per query. */
 function readCa(path: string | undefined, variable: string): string | undefined {
@@ -131,11 +131,6 @@ function targetFor(suite: SuiteId): DatabaseTarget {
     : undefined;
 
   if (!enabled) return { suite, kind: 'none', allowWrites: false, writeBanReason };
-
-  // The mock serves every suite: it is the bench's own store, and nothing in it is real.
-  if (env.MOCK_API || env.DB_TYPE === 'mock') {
-    return { suite, kind: 'mock', allowWrites: !banned && env.DB_ALLOW_WRITES, writeBanReason };
-  }
 
   const connection = mysqlConnection(banned ? 'admin' : 'kpost');
   if (!connection) return { suite, kind: 'none', allowWrites: false, writeBanReason };

@@ -1,9 +1,5 @@
 import { ApiRegistry } from '../registry/api-registry';
 import { adminApis } from './admin.api';
-import { loginApi } from './auth.api';
-import { companyApis } from './companies.api';
-import { dictionaryApis } from './dictionary.api';
-import { healthCheckApi } from './health.api';
 import { adminUserManagementApis } from './kpost/admin/user-management.api';
 import { commonApis } from './kpost/common/index';
 import { groupApis } from './kpost/group/index';
@@ -19,7 +15,6 @@ import { kbookingApis } from './kpost/kbooking/index';
 import { profileApis } from './kpost/profile/index';
 import { signupLoginApis } from './kpost/signup-login/index';
 import { kmailApis } from './kmail.api';
-import { userApis } from './users.api';
 
 /**
  * Every endpoint under test, across all KPost modules.
@@ -30,11 +25,6 @@ import { userApis } from './users.api';
  */
 export const apiRegistry = new ApiRegistry().register(
   // KPost core API (suite: kpost-api, default) — Jaganathan Murthy
-  healthCheckApi,
-  loginApi,
-  ...userApis,
-  ...companyApis,
-  ...dictionaryApis,
   // KPost common module - public endpoints, no token required.
   ...commonApis,
   // Business-admin / User Management (/admin/* on devapi2) - reads live, member writes gated.

@@ -54,8 +54,8 @@ src/config/             env (zod, all flags + defaults), api, auth profiles, dat
 src/api/                client (pool, request builder, token provider) · registry · schemas · definitions/<product>/<module>/*.api.ts
 src/validation-engine/  engine · policy (profiles) · endpoint-cases.ts (one test per endpoint×validator) · flow-finding · production guard
 src/validators/         centralized validators (auth, authz, request, response, security, performance, concurrency, common)
-src/business-rules/     endpoint-specific rules
-src/database/           MySQL / mock / disabled adapters, per-suite pool, repositories, named DB validations
+src/business-rules/     business-rule registry (KPost's rules are asserted in the module feature specs)
+src/database/           MySQL / disabled adapters, per-suite pool, repositories, named DB validations
 src/bug-tracker/        Bugzilla client · fingerprint · candidate · validity gate · filer · verify-resolve · bug-builder
 src/reporting/          bugzilla-reporter (the filing pipeline) · run-summary · bug-report
 src/ui/                 screens registry (PAUSED_SCREENS), failure-diagnostics

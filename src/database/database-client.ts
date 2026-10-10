@@ -1,4 +1,3 @@
-import type { APIRequestContext } from '@playwright/test';
 /*
  * Type-only, so it is erased at compile time and `mysql2` is still loaded lazily at runtime by the
  * dynamic import inside `connect()`. A value import here would pull the driver into every run,
@@ -7,14 +6,14 @@ import type { APIRequestContext } from '@playwright/test';
 import type { Pool as MysqlPool } from 'mysql2/promise';
 import { databaseConfig, type DatabaseTarget } from '@config/database.config';
 import type { SuiteId } from '@config/ownership.config';
-import { isPlainObject, type JsonObject } from '@utils/json';
+import type { JsonObject } from '@utils/json';
 
 /**
  * Minimal, adapter-agnostic query surface used by repositories. Validators never talk to the
  * database; DB validations use repositories, repositories use this client.
  *
- * Three adapters implement it — the disabled one, the mock server's in-memory store, and real
- * MySQL — so a DB validation is written once and runs wherever its suite is pointed.
+ * Two adapters implement it — the disabled one and real MySQL — so a DB validation is written once
+ * and runs wherever its suite is pointed, and reports SKIPPED (never PASSED) where nothing is.
  */
 export interface DbQuery {
   table: string;
@@ -46,10 +45,9 @@ export interface DatabaseClient {
  *
  * `DbQuery` is deliberately too simple for transaction-isolation work: proving that one
  * transaction cannot see another's uncommitted row needs two connections held open across several
- * statements, which no table/where pair can express. Rather than inflate the shared interface with
- * operations the mock cannot honour, that power lives here and callers test for it — so a probe
- * that needs real transactions reports SKIPPED against the mock instead of silently checking
- * something weaker.
+ * statements, which no table/where pair can express. Rather than inflate the shared interface,
+ * that power lives here and callers test for it with `isSqlClient` — so a probe that needs real
+ * transactions reports SKIPPED on a disabled target instead of silently checking something weaker.
  */
 export interface SqlTransaction {
   query<T extends JsonObject>(text: string, params?: readonly unknown[]): Promise<T[]>;
@@ -193,42 +191,6 @@ class DisabledDatabaseClient implements DatabaseClient {
 
   count(): Promise<number> {
     return this.refuse();
-  }
-}
-
-/** Reads the mock API's in-memory store through its test-only data endpoint. */
-class MockDatabaseClient implements DatabaseClient {
-  readonly enabled = true;
-
-  constructor(
-    readonly suite: SuiteId,
-    readonly writable: boolean,
-    private readonly request: APIRequestContext,
-  ) {}
-
-  async findOne<T extends JsonObject>(
-    query: DbQuery,
-    correlationId?: string,
-  ): Promise<T | undefined> {
-    return (await this.findMany<T>(query, correlationId))[0];
-  }
-
-  async findMany<T extends JsonObject>(query: DbQuery, correlationId?: string): Promise<T[]> {
-    const params = Object.fromEntries(Object.entries(query.where).map(([k, v]) => [k, String(v)]));
-    const response = await this.request.get(`/__test/db/${encodeURIComponent(query.table)}`, {
-      params,
-      headers: correlationId ? { 'x-correlation-id': correlationId } : {},
-      timeout: databaseConfig.queryTimeoutMs,
-    });
-    if (!response.ok())
-      throw new Error(`Mock DB query on "${query.table}" failed with ${response.status()}`);
-    const body: unknown = await response.json();
-    const rows = isPlainObject(body) && Array.isArray(body.rows) ? body.rows : [];
-    return rows.filter(isPlainObject) as T[];
-  }
-
-  async count(query: DbQuery, correlationId?: string): Promise<number> {
-    return (await this.findMany(query, correlationId)).length;
   }
 }
 
@@ -415,11 +377,9 @@ class MysqlDatabaseClient implements SqlDatabaseClient {
  * Prefer `DatabasePool` (`src/database/database-pool.ts`) — it caches one client per suite and
  * disposes them together. This is the factory underneath it.
  */
-export function createDatabaseClient(suite: SuiteId, request: APIRequestContext): DatabaseClient {
+export function createDatabaseClient(suite: SuiteId): DatabaseClient {
   const target = databaseConfig.forSuite(suite);
   switch (target.kind) {
-    case 'mock':
-      return new MockDatabaseClient(suite, target.allowWrites, request);
     case 'mysql':
       return new MysqlDatabaseClient(target);
     case 'none':
