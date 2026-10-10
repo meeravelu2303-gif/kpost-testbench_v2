@@ -1,12 +1,12 @@
 # API coverage depth — Phase 1 (existing-coverage audit)
 
-Companion to `docs/COVERAGE.md`. That ledger answers "does a test exist for this endpoint?" (349/446
+Companion to `docs/generated/coverage.md`. That ledger answers "does a test exist for this endpoint?" (349/446
 documented endpoints — 350 by direct registry count, off by one from a documentation-vs-registration
 edge case not yet reconciled). This document answers the deeper question the coverage-depth audit was
 asked for: **for a REGISTERED endpoint, does it get anything beyond the generic 50-auto-validator
 sweep (auth, authz, request/negative-input, response/schema, security, common data-quality,
 concurrency, performance), or does it also have a hand-written business-rule/functional-flow test?**
-An endpoint can be "tested" per COVERAGE.md and still have zero assertions about what the endpoint is
+An endpoint can be "tested" per docs/generated/coverage.md and still have zero assertions about what the endpoint is
 _supposed to do_ beyond "didn't crash, matched its schema, rejected garbage input, enforced auth."
 
 **Do not assume a test existing means the endpoint is covered.** This document exists because that
@@ -202,7 +202,7 @@ one still needs its own dependency-flow test written as that module is reached.
 written, nine endpoints (`users`, `auth`, `companies`, `dictionary`, `health`) existed only to exercise the
 validation engine against the bench's own bundled mock server; they had no KPost backend behind them and
 were correctly excluded from the gap count (corrected 2026-09-24). The whole mock layer has since been
-removed (see `docs/DECISION-LOG.md`, 2026-10-10 evening), so the registry now holds only real KPost, KMail
+removed (see `docs/reference/decision-log.md`, 2026-10-10 evening), so the registry now holds only real KPost, KMail
 and Admin endpoints and the exclusion is moot.
 
 ## Priority gaps (ordered by risk, for Phase 2–4 planning)
@@ -221,7 +221,7 @@ admin-hold-or-release, admin-create-remove-backup-admin, admin-update-company-de
 admin-update-bank-account, admin-update-role
 ```
 
-Note: this module is `needs-business` per `docs/COVERAGE.md` (needs a business company with members)
+Note: this module is `needs-business` per `docs/generated/coverage.md` (needs a business company with members)
 — any Phase 2–4 work here needs that fixture data first.
 
 ### 2. `kpost/dashboard` — ✅ done (2026-09-24)
@@ -485,7 +485,7 @@ That fix unblocked everything the module needed a real sent message for:
 - `recallMessage` answers 200 "success" for a real message but leaves both `deleted_by_sender` and
   `deleted_by_receiver` DB flags at 0 — a false success, confirmed by a direct MySQL check. Filed as
   **#610** [KP-80AC38], HIGH. See `workflow-db.spec.ts`.
-- An empty `subject` is stored as sent (200), answering the open question in `docs/katchup-flow.md`
+- An empty `subject` is stored as sent (200), answering the open question in `docs/modules/katchup-flow.md`
   §6 Q1. Initially filed as **#615** [KP-9DD851] on the assumption Subject was mandatory; the owner
   then amended FR-K02/BR-K01 (2026-09-25) — Subject is no longer required, so this is the correct,
   intended behaviour. **#615 closed as INVALID**; `lifecycle.spec.ts` now asserts acceptance instead

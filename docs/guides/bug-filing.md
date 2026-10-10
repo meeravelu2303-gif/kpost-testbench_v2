@@ -21,7 +21,7 @@ Bugzilla has no delete, only resolve. A wrong ticket costs a person's attention 
 
 ## 1. Who gets which bug
 
-KPost is one product built from modules that are maintained in **separate repositories by different developers**. A defect is only useful when it reaches the person who owns that module, so ownership is declared once, in [`src/config/ownership.config.ts`](../src/config/ownership.config.ts):
+KPost is one product built from modules that are maintained in **separate repositories by different developers**. A defect is only useful when it reaches the person who owns that module, so ownership is declared once, in [`src/config/ownership.config.ts`](../../src/config/ownership.config.ts):
 
 | Suite       | Module                | Repository              | Bugzilla product | Ticket goes to                               |
 | ----------- | --------------------- | ----------------------- | ---------------- | -------------------------------------------- |
@@ -67,11 +67,11 @@ Filer .............. live Bugzilla search per candidate, then:
 reports/REPORT.json + console summary
 ```
 
-Implementation: [`src/bug-tracker/`](../src/bug-tracker/), reporter in [`src/reporting/bugzilla-reporter.ts`](../src/reporting/bugzilla-reporter.ts). Nothing in this path can fail a run or change its exit code.
+Implementation: [`src/bug-tracker/`](../../src/bug-tracker), reporter in [`src/reporting/bugzilla-reporter.ts`](../../src/reporting/bugzilla-reporter.ts). Nothing in this path can fail a run or change its exit code.
 
 ## 3. Configuration
 
-Environment-driven ([`.env.example`](../.env.example), validated in [`src/config/env.ts`](../src/config/env.ts)). With `BUGZILLA_URL` or `BUGZILLA_API_KEY` unset, the reporter says so in one line and files nothing.
+Environment-driven ([`.env.example`](../../.env.example), validated in [`src/config/env.ts`](../../src/config/env.ts)). With `BUGZILLA_URL` or `BUGZILLA_API_KEY` unset, the reporter says so in one line and files nothing.
 
 | Variable                    | Default  | Purpose                                                                           |
 | --------------------------- | -------- | --------------------------------------------------------------------------------- |
@@ -90,7 +90,7 @@ The key is a secret: keep it in `.env` (git-ignored) or a CI secret. It is never
 
 ### The run gate — is this run trustworthy?
 
-A bench that cannot run must be loud, never clean. If every spec fails to import, the run finds zero defects, which looks exactly like a healthy API. [`assessRunValidity`](../src/bug-tracker/validity-gate.ts) files nothing when:
+A bench that cannot run must be loud, never clean. If every spec fails to import, the run finds zero defects, which looks exactly like a healthy API. [`assessRunValidity`](../../src/bug-tracker/validity-gate.ts) files nothing when:
 
 - errors occurred outside any test (specs failed to load, setup faulted),
 - the run was interrupted or timed out,
@@ -99,7 +99,7 @@ A bench that cannot run must be loud, never clean. If every spec fails to import
 
 ### The candidate gate — does the evidence support the claim?
 
-[`candidateRejection`](../src/bug-tracker/validity-gate.ts) drops a finding when:
+[`candidateRejection`](../../src/bug-tracker/validity-gate.ts) drops a finding when:
 
 - its severity is below `BUGZILLA_MIN_SEVERITY`,
 - the evidence is an **infrastructure or bench fault** (`ECONNREFUSED`, timeouts, a closed browser, a framework error, a missing principal, the production guard),
@@ -114,7 +114,7 @@ Every rejection is printed and written to `reports/REPORT.json`. A gate nobody c
 
 ## 5. How duplicates are prevented
 
-Each defect gets a **stable identity** — `KPV2-XXXXXX`, a hash of the endpoint, the check and the _normalised_ failure message. Normalising is what makes dedupe work: correlation IDs, generated e-mails, UUIDs, ports and durations change every run and would otherwise mint a new id each night ([`bug-fingerprint.ts`](../src/bug-tracker/bug-fingerprint.ts)).
+Each defect gets a **stable identity** — `KPV2-XXXXXX`, a hash of the endpoint, the check and the _normalised_ failure message. Normalising is what makes dedupe work: correlation IDs, generated e-mails, UUIDs, ports and durations change every run and would otherwise mint a new id each night ([`bug-fingerprint.ts`](../../src/bug-tracker/bug-fingerprint.ts)).
 
 The id is carried as `[KPV2-XXXXXX]` in the summary, and every run searches for it — in summaries and on whiteboards — before deciding:
 

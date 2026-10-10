@@ -8,7 +8,7 @@ import { defineKallEndpoint } from './kall-endpoint';
  * The log/contact reads need only our own account, so they run on live. The two `kallID`-keyed
  * status reads need a real call id we do not have on live (a fabricated one would 404 or name a
  * stranger's call), so they stay registered and blocked, tagged `needs-kall-id`, until the write
- * lifecycle (`docs/kall-flow.md` §5) creates one. All are POST reads except the two GETs, so each
+ * lifecycle (`docs/modules/kall-flow.md` §5) creates one. All are POST reads except the two GETs, so each
  * POST states `destructive: false` — without it the resolved endpoint defaults destructive true for
  * POST, is tagged `@destructive`, and the production `grepInvert` silently drops every one of its
  * tests (see the Dashboard decision-log entry).

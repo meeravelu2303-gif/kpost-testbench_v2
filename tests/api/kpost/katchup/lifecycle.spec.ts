@@ -14,7 +14,7 @@ import { sendShape } from '@api/definitions/kpost/katchup/send.api';
  * ## Why it is gated behind an explicit opt-in
  *
  * It writes to a real conversation. Until the owner signs off on sending between our own accounts on
- * the live application (`docs/katchup-flow.md` §6 Q4), this must not run there by accident — so it
+ * the live application (`docs/modules/katchup-flow.md` §6 Q4), this must not run there by accident — so it
  * needs `KATCHUP_LIFECYCLE=true`, and it self-skips otherwise. Off-live (mock) it also needs the
  * flag, because the mock has no Katchup handlers; it exists to run against a real KPost host once a
  * human has said yes.

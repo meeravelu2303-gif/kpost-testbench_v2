@@ -43,9 +43,14 @@ if (missing.length) {
  * change - append it, never insert it, or every other column letter shifts.
  */
 const reportPath = path.join(CONTRACTS, '_conversion-report.json');
-const tabLayouts = fs.existsSync(reportPath)
-  ? (JSON.parse(fs.readFileSync(reportPath, 'utf8')).tabs ?? [])
-  : [];
+if (!fs.existsSync(reportPath)) {
+  // Without it every FillCell would be blank and the gap list would quietly stop naming cells.
+  console.error(
+    'contracts/_conversion-report.json is missing (a gitignored intermediate) — run "npm run contract:excel" first.',
+  );
+  process.exit(2);
+}
+const tabLayouts = JSON.parse(fs.readFileSync(reportPath, 'utf8')).tabs ?? [];
 const methodCellColumn = new Map(
   tabLayouts.map((t) => [t.sheet, t.methodColumn ?? t.firstFreeColumn]),
 );

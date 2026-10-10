@@ -5,7 +5,7 @@ import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
  * Admin module — **Employee Data** (step 5: create the employee record) and the pincode→address
- * reference helper. See `docs/admin-flow.md` §4.
+ * reference helper. See `docs/modules/admin-flow.md` §4.
  *
  *   employeeDetails/getEmployeeDetails    the company's employees (read, GET)
  *   employeeDetails/save|update|delete    the employee master record (gated writes)

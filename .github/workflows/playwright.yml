@@ -1,7 +1,7 @@
 name: Quality gate
 
 # CI runs the static checks only. The test suites run against the live KPost application from the
-# QA machine, where the credentials and the shared-server safety rules live (docs/COMMANDS.md) —
+# QA machine, where the credentials and the shared-server safety rules live (docs/guides/commands.md) —
 # they are not something a hosted runner should drive on every push.
 on:
   push:

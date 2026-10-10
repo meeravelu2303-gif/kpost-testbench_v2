@@ -211,8 +211,6 @@ P3,kpost-api,KatchupAPI,234,AI,,/ai/chatResponse,POST,payload-rule,,KatchupAPI!Q
 P3,kpost-api,KatchupAPI,237,Kword,,/kword/create,POST,payload-rule,,KatchupAPI!Q237,payload (sample broken),no,"Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred."
 P3,kpost-api,KatchupAPI,250,AI,,/ai/messageAssist,POST,payload-rule,,KatchupAPI!Q250,payload (sample broken),no,"Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred."
 P3,kpost-api,KDIARY,5,KDIARY- Schedule,,/dairySchedule/createEvent,POST,method-column,,,no payload,text only,"Fix the response sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred."
-P4,kpost-api,KatchupAPI,3,Signup,fetchUserDetails,/v2/profile/fetchUserDetails/,POST,payload-rule,,KatchupAPI!Q3,payload,yes,Confirm which row is current (duplicate-of KatchupAPI:R2).
-P4,kpost-api,KatchupAPI,3,Signup,,/v2/signupLogin/fetchUserDetails/,POST,payload-rule,,KatchupAPI!Q3,payload,yes,one payload is documented for the two endpoints in this row — split the row so each endpoint has its own payload.
 P4,kpost-api,KatchupAPI,6,common,msStatus,/v2/common/msStatus/,GET,payload-rule,,KatchupAPI!Q6,no payload,text only,Confirm which row is current (duplicate-of V2 TESTED APIS:R6).
 P4,kpost-api,KatchupAPI,8,common,sendOTP,/v2/common/sendOTP/,POST,payload-rule,,KatchupAPI!Q8,payload (sample broken),yes,Confirm which row is current (duplicate-of V2 TESTED APIS:R8).
 P4,kpost-api,Sheet3,10,,,/common/mobileNoExist/,POST,payload-rule,,Sheet3!H10,payload,yes,Confirm the v1 row is retired now that a /v2 row exists.

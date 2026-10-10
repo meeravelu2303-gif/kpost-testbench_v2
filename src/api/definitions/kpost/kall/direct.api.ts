@@ -10,7 +10,7 @@ import { defineKallEndpoint } from './kall-endpoint';
  * Every one is a write and **none is `productionSafe`**. `initiateKall` rings the receiver's device
  * in real time — a real-time side effect on a real recipient, even our own second account — so it is
  * treated like a Katchup send: `data` + destructive, exercised only through the gated feature flow
- * (`docs/kall-flow.md` §5, `KALL_LIFECYCLE=true`) with `allowLiveWrite`, never by the engine. The
+ * (`docs/modules/kall-flow.md` §5, `KALL_LIFECYCLE=true`) with `allowLiveWrite`, never by the engine. The
  * clear endpoints delete the caller's own log and are gated for the same reason.
  */
 const DIRECT_TAGS = ['kall-direct'] as const;

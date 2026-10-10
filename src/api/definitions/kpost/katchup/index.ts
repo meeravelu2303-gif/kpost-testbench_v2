@@ -17,11 +17,11 @@ import { katchupSendApis } from './send.api';
  *   attachments.api.ts download / thumbnail / stream / generate              (need a real uuid)
  *
  * The message-type/status/share-type codes and the send contract are analysed in
- * `docs/katchup-flow.md`; the codes come from `@api/schemas/kpost-types`.
+ * `docs/modules/katchup-flow.md`; the codes come from `@api/schemas/kpost-types`.
  *
  * **Scope on live today:** two PERSONAL accounts, so the no-write reads run, group / Cc /
  * confidential-copy / bulk wait on more accounts, and every send waits on the owner's sign-off.
- * `docs/LIVE-ENDPOINTS.md` shows the per-endpoint status.
+ * `docs/generated/live-endpoints.md` shows the per-endpoint status.
  */
 export const katchupApis: EndpointDefinition[] = [
   ...katchupReadApis,

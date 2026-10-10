@@ -36,7 +36,7 @@ import { expect, test } from '@fixtures';
  * | `Bearer <token>` | KMail's **own** `UNAUTHORIZED USER` |
  *
  * The last pair is decisive: the two 401s come from different layers, so the scheme is right and the
- * application is refusing the authenticated principal. `docs/LIVE-ENDPOINTS.md` — generated from
+ * application is refusing the authenticated principal. `docs/generated/live-endpoints.md` — generated from
  * earlier runs of this bench — records these same endpoints as working, so this is a regression on
  * the host rather than a change here.
  */

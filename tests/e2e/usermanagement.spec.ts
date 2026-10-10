@@ -6,7 +6,7 @@ import { expect, test } from '@fixtures';
  * **Company-admin UI** — the BUSINESS_S in-app **User Management** screen (`/usermanagement`), which a
  * PERSONAL account does not have. Runs in the BUSINESS_S admin session (`.auth/business.json`, from
  * `auth-business.setup.ts`), so the whole spec is gated behind `BUSINESS_UI_LIFECYCLE=true` (the
- * session is only a real login then). See `docs/admin-flow.md` §3.
+ * session is only a real login then). See `docs/modules/admin-flow.md` §3.
  *
  * Read-only: it asserts the Business User Management workspace, the licence summary and the member
  * list render, and that **Add New Channels** opens its "Add Communication Channels" chooser (Add

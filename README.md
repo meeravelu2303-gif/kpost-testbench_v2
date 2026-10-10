@@ -2,11 +2,11 @@
 
 The KPost test bench automation framework, built on [Playwright](https://playwright.dev) and TypeScript. It contains:
 
-- **A centralized API validation framework.** You define an endpoint once, and 44 common validators (auth, authz, status, request, response, schema, headers, errors, performance, security, data conventions) apply automatically. See **[docs/validation-framework.md](docs/validation-framework.md)**.
+- **A centralized API validation framework.** You define an endpoint once, and 44 common validators (auth, authz, status, request, response, schema, headers, errors, performance, security, data conventions) apply automatically. See **[docs/guides/validation-framework.md](docs/guides/validation-framework.md)**.
 - **UI end-to-end tests** built on the Page Object Model, running on Chromium, Firefox and WebKit.
-- **Automatic Bugzilla filing, routed to the right developer.** Real failures become tickets — deduplicated, validity-gated, never re-filed once a human closes them, and assigned to the module's maintainer (KMail → Jitendra, KPost API and Admin → Jagan, KPost UI → Ayyappan). Dry run by default. See **[docs/bug-filing.md](docs/bug-filing.md)**.
+- **Automatic Bugzilla filing, routed to the right developer.** Real failures become tickets — deduplicated, validity-gated, never re-filed once a human closes them, and assigned to the module's maintainer (KMail → Jitendra, KPost API and Admin → Jagan, KPost UI → Ayyappan). Dry run by default. See **[docs/guides/bug-filing.md](docs/guides/bug-filing.md)**.
 
-- **Contracts come from the Excel workbook**, not from swagger. One script converts it into separate KPost and KMail contracts plus generated OpenAPI, excluding anything invalid or duplicated. See **[docs/api-contracts.md](docs/api-contracts.md)**.
+- **Contracts come from the Excel workbook**, not from swagger. One script converts it into separate KPost and KMail contracts plus generated OpenAPI, excluding anything invalid or duplicated. See **[docs/guides/api-contracts.md](docs/guides/api-contracts.md)**.
 
 ## Modules
 
@@ -33,11 +33,19 @@ KPost is one product built from separately maintained modules. Each suite target
 ```
 .
 ├── playwright.config.ts          # Projects, reporters, prod safety
-├── KPOST API (N).xlsx            # The product owner's API workbook — the source of every contract
 ├── contracts/                    # GENERATED from the workbook: per-suite contract JSON + gap reports
 ├── openapi/                      # GENERATED OpenAPI (KPost, KMail, Admin) the engine validates against
 ├── scripts/                      # Node tooling: contract generation, account provisioning, Bugzilla checks
-├── docs/                         # Reference, runbook, decision log — see "Working notes"
+├── docs/                         # Index in docs/README.md
+│   ├── guides/                   # How to run it: commands, runbook, bug filing, validation framework, contracts
+│   ├── reference/                # What the bench is: bench reference, business rules, FRD map, decision log
+│   ├── modules/                  # Per-module analyses: Katchup, Kall, KMail (+ schema), Admin
+│   ├── ui/                       # Front-end maps the e2e specs are built from
+│   ├── scope/                    # Why an endpoint is blocked or unused (hand-written, evidence-based)
+│   ├── generated/                # Ledgers written by `npm run framework` — never hand-edit
+│   ├── audits/                   # Dated, point-in-time audits
+│   ├── api-specs/                # The product owner's API workbooks and PDF — the source of every contract
+│   └── archive/                  # Superseded plans, kept only because other comments cite them
 ├── src/
 │   ├── config/                   # env, api, auth, database and threshold configuration
 │   ├── api/
@@ -85,7 +93,7 @@ runs without an environment.
 
 ## Running tests
 
-**Every command is in one place — [`docs/COMMANDS.md`](docs/COMMANDS.md).** One command per Bugzilla
+**Every command is in one place — [`docs/guides/commands.md`](docs/guides/commands.md).** One command per Bugzilla
 product, each with a `:file` variant that also files bugs. The essentials:
 
 | Command                                                           | What it does                                                                             |
@@ -103,7 +111,7 @@ product, each with a `:file` variant that also files bugs. The essentials:
 KDoc/KOS is paused and excluded from every command until the owner says it's ready.
 
 Every run writes a single report — `reports/REPORT.md` (human: execution health + bugs) and
-`reports/REPORT.json` (structured). See `docs/COMMANDS.md` for the full list and the safety notes.
+`reports/REPORT.json` (structured). See `docs/guides/commands.md` for the full list and the safety notes.
 
 ## Environments
 
@@ -113,7 +121,7 @@ Configuration is resolved in this order (first wins): real environment variables
 
 ## Writing tests
 
-- **New API endpoint:** add an `EndpointDefinition` in `src/api/definitions/`. No test code is needed. See [the guide](docs/validation-framework.md#17-adding-a-completely-new-api).
+- **New API endpoint:** add an `EndpointDefinition` in `src/api/definitions/`. No test code is needed. See [the guide](docs/guides/validation-framework.md#17-adding-a-completely-new-api).
 - **New common validation:** add a validator and register it once in `src/validators/index.ts`.
 - **Endpoint-specific logic:** assert a business rule in the module's `feature.spec.ts` (`recordBusinessRuleViolation`, which can set up the multi-step state a rule needs), or add a DB validation (`src/database/validations/`) and reference it from the definition.
 - **UI:** import `test`/`expect` from `@fixtures`, keep locators in page objects, prefer role-based locators, and never use `waitForTimeout`.
@@ -128,19 +136,19 @@ Read these in order:
 
 1. [CLAUDE.md](CLAUDE.md) — the short map and rulebook: what is tested, the test flow, the repo structure,
    the run → Bugzilla pipeline, and every standing rule. Read it first.
-2. [docs/COMMANDS.md](docs/COMMANDS.md) — every command.
-3. [docs/BENCH-REFERENCE.md](docs/BENCH-REFERENCE.md) — the full detail: product, architecture, pipeline
+2. [docs/guides/commands.md](docs/guides/commands.md) — every command.
+3. [docs/reference/bench-reference.md](docs/reference/bench-reference.md) — the full detail: product, architecture, pipeline
    spec, contracts, plan and conventions.
-4. [docs/DECISION-LOG.md](docs/DECISION-LOG.md) — every decision and incident, newest first. Add an entry at
+4. [docs/reference/decision-log.md](docs/reference/decision-log.md) — every decision and incident, newest first. Add an entry at
    the top whenever a flow changes.
 
-Everything else in `docs/` is either generated (regenerate it, never hand-edit — each file says so
-at the top) or a focused reference: [docs/BLOCKED-ENDPOINTS-RATIONALE.md](docs/BLOCKED-ENDPOINTS-RATIONALE.md)
-and [docs/UNUSED-ENDPOINTS.md](docs/UNUSED-ENDPOINTS.md) are the hand-written "why" behind what
-`docs/BLOCKED-ENDPOINTS.md` (generated) lists; `docs/reference/` holds source material supplied by
-the product owner (the Admin module's PDF/Excel spec — the `KPOST API (N).xlsx` workbook itself
-stays in the repo root, since `scripts/excel-to-contract.cjs` reads it from there by convention);
-`docs/archive/` holds superseded planning documents, kept only because other comments cite them.
+[docs/README.md](docs/README.md) indexes everything else, one line per document. The folders mean
+what they say: `guides/` is how to operate the bench, `reference/` is what it is and tests against,
+`modules/` and `ui/` are the analyses the specs were built from, `scope/` is the evidence behind every
+blocked or unused endpoint, `generated/` is written by `npm run framework` and never hand-edited,
+`audits/` holds dated snapshots, `api-specs/` holds the product owner's workbooks (the KPost workbook
+`scripts/excel-to-contract.cjs` converts, and the Admin workbook and PDF), and `archive/` keeps
+superseded plans only because other comments cite them.
 
 Keep `CLAUDE.md` short (under ~200 lines, since it is loaded into every Claude session): rules and the map go
 there, history goes in the decision log.

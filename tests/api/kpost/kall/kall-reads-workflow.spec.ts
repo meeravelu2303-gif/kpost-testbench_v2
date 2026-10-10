@@ -69,7 +69,7 @@ test.describe('KPost Kall · read business rules @api @kpost-api @kall', () => {
   }) => {
     test.skip(
       process.env.KALL_LIFECYCLE !== 'true',
-      'places a real call; set KALL_LIFECYCLE=true (owner sign-off, docs/kall-flow.md §5)',
+      'places a real call; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5)',
     );
 
     // A contact must be genuinely present (not soft-deleted) for this to test contactInfo fairly.
@@ -158,7 +158,7 @@ test.describe('KPost Kall · read business rules @api @kpost-api @kall', () => {
   test('scheduling a call for today surfaces in todayKoolKall', async ({ endpoints }) => {
     test.skip(
       process.env.KALL_LIFECYCLE !== 'true',
-      'schedules a real call; set KALL_LIFECYCLE=true (owner sign-off, docs/kall-flow.md §5)',
+      'schedules a real call; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5)',
     );
     let kallID: number | undefined;
     try {
@@ -216,7 +216,7 @@ test.describe('KPost Kall · read business rules @api @kpost-api @kall', () => {
   test('scheduling a repeating call surfaces in fetchScheduledRepeatKall', async ({ endpoints }) => {
     test.skip(
       process.env.KALL_LIFECYCLE !== 'true',
-      'schedules a real repeating call; set KALL_LIFECYCLE=true (owner sign-off, docs/kall-flow.md §5)',
+      'schedules a real repeating call; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5)',
     );
     const startDate = new Date().toISOString().slice(0, 10);
     const endDate = new Date(Date.now() + 6 * 86_400_000).toISOString().slice(0, 10);

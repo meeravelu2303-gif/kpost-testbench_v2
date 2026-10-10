@@ -10,7 +10,7 @@ import { defineKatchupEndpoint } from './katchup-endpoint';
  * registered separately (which would collide on the path).
  *
  * Every send is destructive and reaches a real inbox, so **none is `productionSafe`** until the
- * owner signs off (`docs/katchup-flow.md` §6 Q4). Payload mirrors the live web client (flow doc §3).
+ * owner signs off (`docs/modules/katchup-flow.md` §6 Q4). Payload mirrors the live web client (flow doc §3).
  */
 const SEND_TAGS = ['katchup-send'] as const;
 
@@ -71,7 +71,7 @@ export const sendMessageApi = defineKatchupEndpoint({
   requirements: ['FR-KU-003', 'FR-KU-003', 'FR-KU-003', 'FR-K07'],
   /*
    * BR-K01 (a message's Subject, when given, is carried as sent — Subject itself is optional per the
-   * FR-K02 amendment 2026-09-25, see docs/katchup-flow.md §2.3) is only genuinely verifiable in the
+   * FR-K02 amendment 2026-09-25, see docs/modules/katchup-flow.md §2.3) is only genuinely verifiable in the
    * database: the send response echoes back the subject it was handed, whatever it actually stored.
    * The column is a BLOB, so the validation decodes it before comparing — see kpost-assertions.text().
    */

@@ -2,7 +2,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * **Kall** feature flows (FR-C01..C09, BR-C01), from `components/Kall/` (see `docs/ui-build-plan.md`).
+ * **Kall** feature flows (FR-C01..C09, BR-C01), from `components/Kall/` (see `docs/ui/ui-build-plan.md`).
  * Root `.kall-layout-shell`; tabs "Recents" / "Contacts" / "Kool Kall".
  *
  * Direct calling **rings a real device**, so it is **assert-only** (open the Kall-Info modal, confirm

@@ -12,7 +12,7 @@ import { defineKatchupEndpoint } from './katchup-endpoint';
  * test once it has minted an id. None is `productionSafe`: they all mutate.
  *
  * `recallMessage` follows the **live client** (`{msgID, groupFlag}`), not the workbook's stale
- * `{msgID, status:5}` — see `docs/katchup-flow.md` §2.1.
+ * `{msgID, status:5}` — see `docs/modules/katchup-flow.md` §2.1.
  */
 const MANAGE_TAGS = ['katchup-manage'] as const;
 

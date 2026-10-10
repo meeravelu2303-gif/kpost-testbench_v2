@@ -4,7 +4,7 @@ import { body } from '../kpost/kpost-endpoint';
 import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
- * Admin module — **HR Breakdown Setup** (step 3 of the org-build). See `docs/admin-flow.md` §4.
+ * Admin module — **HR Breakdown Setup** (step 3 of the org-build). See `docs/modules/admin-flow.md` §4.
  *
  *   hrSetUpTierAttribute/*  the HR TIERS (levels), e.g. Department / Designation / Role
  *   hrSetUpTierVariable/*    the HR VARIABLES (nodes), e.g. IT / Developer / Team Lead

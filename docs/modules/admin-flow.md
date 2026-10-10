@@ -1,8 +1,8 @@
 # Admin module — flow, endpoints, accounts, and test plan
 
 The authoritative map of the KPost **Admin module** (organisation / workplace / HR setup), the way
-`katchup-flow.md` / `kall-flow.md` / `kmail-flow.md` are for their modules. Source: the owner's
-walkthrough (2026-09-15) + the live signup/user-management screens + `docs/reference/Admin_module.xlsx` (converted to
+`docs/modules/katchup-flow.md` / `docs/modules/kall-flow.md` / `docs/modules/kmail-flow.md` are for their modules. Source: the owner's
+walkthrough (2026-09-15) + the live signup/user-management screens + `docs/api-specs/Admin_module.xlsx` (converted to
 `openapi/admin-api.openapi.json`).
 
 > Secrets rule: KPost IDs are listed here as identifiers (like the QA accounts in `src/fixtures/test-accounts.json`);
@@ -15,10 +15,10 @@ walkthrough (2026-09-15) + the live signup/user-management screens + `docs/refer
 There are two distinct "admin" things, and they are separate hosts, separate products, reached by
 different tiers:
 
-| Surface                     | Who reaches it                           | Where                                                                                                       | Bench product                                        |
-| --------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| **In-app User Management**  | **BUSINESS_S** admin                     | `account.kpostindia.com/usermanagement` (inside the KPost app)                                              | core `kpost-api` (`/admin/*` etc. on `devapi2`)      |
-| **Admin / HR Setup module** | **BUSINESS_M** and **BUSINESS_L** admins | opens a NEW TAB → **UI `https://kpostadmin.kpostindia.com/`**, **API `https://adminmodule.kpostindia.com`** | new **`admin-api`** (this doc / `docs/reference/Admin_module.xlsx`) |
+| Surface                     | Who reaches it                           | Where                                                                                                       | Bench product                                                       |
+| --------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **In-app User Management**  | **BUSINESS_S** admin                     | `account.kpostindia.com/usermanagement` (inside the KPost app)                                              | core `kpost-api` (`/admin/*` etc. on `devapi2`)                     |
+| **Admin / HR Setup module** | **BUSINESS_M** and **BUSINESS_L** admins | opens a NEW TAB → **UI `https://kpostadmin.kpostindia.com/`**, **API `https://adminmodule.kpostindia.com`** | new **`admin-api`** (this doc / `docs/api-specs/Admin_module.xlsx`) |
 
 So `admin-api` (the 35 endpoints just converted) is the **BUSINESS_M/L** Admin/HR-Setup module. The
 BUSINESS_S "add users" flow is a **different** surface on the core app, not this one.
@@ -133,7 +133,7 @@ admin`. That Bearer token authenticates every `admin-api` call. Discovered compa
 
 ## 7. Test plan
 
-1. **Convert (done):** `admin-api` OpenAPI/contract generated from `docs/reference/Admin_module.xlsx`.
+1. **Convert (done):** `admin-api` OpenAPI/contract generated from `docs/api-specs/Admin_module.xlsx`.
 2. **Register:** `admin-api` endpoint definitions + suite (`defineAdminEndpoint`), host
    `adminmodule.kpostindia.com`, auth per §6.1. Reads = `productionSafe`; writes = gated lifecycle.
 3. **Live reads:** the `get*` endpoints on the BUSINESS_M/S companies (contract validators).

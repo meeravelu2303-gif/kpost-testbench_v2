@@ -39,18 +39,18 @@ function withoutCompanyId(schema: unknown): unknown {
  * An **Admin module** endpoint. The Admin/HR-Setup module is its own suite (`admin-api`) on its own
  * host (`ADMIN_API_BASE_URL=https://adminmodule.kpostindia.com`), reached by BUSINESS_M/L admins from
  * the "Admin / HR Setup" nav item (BUSINESS_S manages members in-app instead). Full flow, endpoint→step
- * mapping and accounts: `docs/admin-flow.md`.
+ * mapping and accounts: `docs/modules/admin-flow.md`.
  *
  * Unlike KMail there is **no path prefix** — the host serves routes at root (`/adminTierAttribute/save`),
  * confirmed against `openapi/admin-api.openapi.json`. Schemas come from the `admin-api` contract
- * (generated from `docs/reference/Admin_module.xlsx`), and the module is **post-login**: the SAME KPost login token
+ * (generated from `docs/api-specs/Admin_module.xlsx`), and the module is **post-login**: the SAME KPost login token
  * authenticates it (SSO — owner-confirmed), so no separate auth profile shape is needed, only the right
  * principal (a business admin whose login mints the `companyID` claim).
  *
  * **Response envelope is `admin`**, measured from the backend source (`ApiResponseEnvelope.java`):
  * `{ value, status, statusCode, urlPath, error?, message? }` — the payload key is `value` (not `data`),
  * and any handled failure returns HTTP 500. Ids are MongoDB ObjectIds (24-hex) and `companyId` is a
- * string. See `response-contract.ts` and `docs/admin-flow.md`.
+ * string. See `response-contract.ts` and `docs/modules/admin-flow.md`.
  */
 export function defineAdminEndpoint(config: KpostEndpointConfig): EndpointDefinition {
   const contract = workbookContract(

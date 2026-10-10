@@ -16,12 +16,12 @@ import { kallScheduleApis } from './schedule.api';
  *   schedule.api.ts  schedule / reschedule / join / end / repeat / members     (writes — lifecycle)
  *   legacy.api.ts    dead-from-frontend V1 writes (no /v2 prefix), still live  (security regression)
  *
- * The status / type / mode / repeat-type codes and the flows are analysed in `docs/kall-flow.md`;
+ * The status / type / mode / repeat-type codes and the flows are analysed in `docs/modules/kall-flow.md`;
  * the codes come from `@api/schemas/kpost-types`.
  *
  * **Scope on live today:** the log reads run on our own account; every write is gated behind
  * `KALL_LIFECYCLE=true` (a call rings a real device / notifies participants), and the two
- * `kallID`-keyed status reads wait on a real call id the lifecycle creates. `docs/LIVE-ENDPOINTS.md`
+ * `kallID`-keyed status reads wait on a real call id the lifecycle creates. `docs/generated/live-endpoints.md`
  * shows the per-endpoint status.
  */
 export const kallApis: EndpointDefinition[] = [

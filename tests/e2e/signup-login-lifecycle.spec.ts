@@ -9,7 +9,7 @@ import { expect, test } from '@fixtures';
 /**
  * KPost personal signup → login, driven end to end through the real screens.
  *
- * `docs/ui-write-flows.md` never had a signup entry (`signup-domain.spec.ts` covers only the
+ * `docs/archive/ui-write-flows-2026-09-28.md` never had a signup entry (`signup-domain.spec.ts` covers only the
  * read-only domain-binding rule and deliberately never submits). This is the first UI test that
  * actually creates an account: Personal → country/language/domain → mobile OTP (the confirmed test
  * gateway's bypass code) → personal details + pincode confirm → preferred KPOST ID → password →

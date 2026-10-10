@@ -1,4 +1,4 @@
-// This spec GENERATES docs/LIVE-ENDPOINTS.md, so the "conditionals" it is flagged for are string
+// This spec GENERATES docs/generated/live-endpoints.md, so the "conditionals" it is flagged for are string
 // and data formatting (a table cell, a summary line, a filter), not branches guarding an assertion.
 /* eslint-disable playwright/no-conditional-in-test */
 import fs from 'node:fs';
@@ -140,7 +140,7 @@ function moduleOf(definition: EndpointDefinition): string {
 }
 
 test.describe('live endpoint coverage @framework', () => {
-  test('write docs/LIVE-ENDPOINTS.md from the definitions', () => {
+  test('write docs/generated/live-endpoints.md from the definitions', () => {
     const all = apiRegistry
       .all()
 
@@ -168,7 +168,7 @@ test.describe('live endpoint coverage @framework', () => {
       '',
       `Target: the live application (\`devapi2.kpostindia.com\`). Scope: PERSONAL accounts plus the`,
       'BUSINESS_S/M/L company accounts (company reads + user-management now run on live).',
-      'A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.',
+      'A clear per-reason list of what stays blocked is in `docs/generated/blocked-endpoints.md`.',
       '',
       '| | Count |',
       '| - | ----: |',
@@ -220,7 +220,7 @@ test.describe('live endpoint coverage @framework', () => {
       '',
     ];
 
-    const outPath = path.join(ROOT_DIR, 'docs', 'LIVE-ENDPOINTS.md');
+    const outPath = path.join(ROOT_DIR, 'docs', 'generated', 'live-endpoints.md');
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
 
@@ -294,7 +294,7 @@ test.describe('live endpoint coverage @framework', () => {
         ]),
     ];
     fs.writeFileSync(
-      path.join(ROOT_DIR, 'docs', 'BLOCKED-ENDPOINTS.md'),
+      path.join(ROOT_DIR, 'docs', 'generated', 'blocked-endpoints.md'),
       `${blockedLines.join('\n')}\n`,
     );
 

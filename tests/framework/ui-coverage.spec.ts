@@ -12,7 +12,7 @@ import { expect, test } from '@fixtures';
  * and it **fails the build** if a screen would route a bug to a component that does not exist in the
  * KPost UI product. So UI coverage is measurable and self-checking, not asserted by hand.
  *
- * Generated to `docs/UI-COVERAGE.md`, never hand-kept.
+ * Generated to `docs/generated/ui-coverage.md`, never hand-kept.
  */
 
 /** The interaction flows that exist today (spec files under tests/e2e), for the ledger. */
@@ -137,7 +137,8 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
 
 /**
  * The deep write flows still to build (need the gated-write approval + live tuning). Selectors are
- * mined and the flows are specified in `docs/ui-write-flows.md`; each has a green API lifecycle.
+ * mined in `docs/ui/ui-build-plan.md` (the original flow plan is archived as
+ * `docs/archive/ui-write-flows-2026-09-28.md`); each has a green API lifecycle.
  */
 const PLANNED_FLOWS = [
   'Katchup group send + per-recipient read receipts (needs 3 QA accounts + recording — confidential-copy and attachments are now built, see Interaction flows above)',
@@ -203,7 +204,7 @@ test.describe('UI coverage ledger @framework', () => {
       '',
     ];
 
-    const outPath = path.join(ROOT_DIR, 'docs', 'UI-COVERAGE.md');
+    const outPath = path.join(ROOT_DIR, 'docs', 'generated', 'ui-coverage.md');
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
 

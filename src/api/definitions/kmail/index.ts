@@ -8,7 +8,7 @@ import { kmailSettingsApis } from './settings.api';
 
 /**
  * The KPost **KMail** module — email. Suite `kmail-api`, host `kmail5.kpostindia.com/kmail5/v2`.
- * FR-M01..M09, BR-M01. Codes/flow analysed in `docs/kmail-flow.md`.
+ * FR-M01..M09, BR-M01. Codes/flow analysed in `docs/modules/kmail-flow.md`.
  *
  *   read.api.ts     dashboards, counts, lists, subjects, drafts, settings, translation (reads live)
  *   send.api.ts     compose / multipart / bulk                                          (gated)

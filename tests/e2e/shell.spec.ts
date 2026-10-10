@@ -8,7 +8,7 @@ import { skipIfSignedOut } from './support/session';
  *
  * This is the one place the app's navigation lives, so testing it once covers the entry point to
  * every module. The nav is an `icon-KP_*` rail (always in the DOM); each icon routes to a module
- * (`docs/ui-screens.md`). Read-only: it asserts the controls are present, it does not click through.
+ * (`docs/ui/ui-screens.md`). Read-only: it asserts the controls are present, it does not click through.
  */
 test.describe('KPost app shell', { tag: '@ui' }, () => {
   test.skip(
@@ -31,7 +31,7 @@ test.describe('KPost app shell', { tag: '@ui' }, () => {
   test('the navigation rail links to every core module @ui', async ({ page }) => {
     await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
-    // One icon per destination (docs/ui-screens.md · shell). The rail is always in the DOM; assert
+    // One icon per destination (docs/ui/ui-screens.md · shell). The rail is always in the DOM; assert
     // each nav icon is attached, so a renamed/removed nav entry fails here rather than silently.
     for (const icon of [
       'icon-KP_01-Home',

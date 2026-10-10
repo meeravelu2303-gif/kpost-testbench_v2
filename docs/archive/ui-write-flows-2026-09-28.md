@@ -1,5 +1,11 @@
 # UI write-flow plan — every module, mined selectors, gating, self-clean
 
+**ARCHIVED 2026-10-10 — superseded, kept for history only.** This was the 2026-09-28 plan for the
+UI write flows; most are now built and gated behind their `*_UI_LIFECYCLE` flags. The current
+per-module selectors and status are in `docs/ui/ui-build-plan.md`; the measured ledger is
+`docs/generated/ui-coverage.md`. The "6 QA PERSONAL accounts" rule below predates the dedicated
+`qatest1..6` accounts (`QATEST_ONLY=true`). Nothing below is current.
+
 The read-only UI is covered and green on live: `screens.spec.ts` (deep check sweep on every screen),
 `navigation.spec.ts`, `shell.spec.ts`, `login.spec.ts`, and the Katchup composer (`katchup-compose.spec.ts`,
 3 tests green — safe compose + gated send + recall). This file is the plan for the **write** flows —
@@ -9,7 +15,7 @@ the interactions that create/modify data through the UI.
 one live tuning pass (a `codegen` recording), exactly as recall did. So each flow below is shipped
 **gated behind a `*_UI_LIFECYCLE` flag** (never runs on a default run, cannot file a false bug) and is
 **self-cleaning** (the account ends as it started). The selectors are mined from the frontend
-(`D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1`) — the same source `docs/ui-screens.md` maps — so tuning is
+(`D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1`) — the same source `docs/ui/ui-screens.md` maps — so tuning is
 a verification pass, not a rediscovery.
 
 **Hard rule (persists across every flow):** every write targets only the 6 QA PERSONAL accounts
@@ -72,7 +78,7 @@ Delete-confirm dialog text: `"Do you want to Delete this Message? Please confirm
 
 ## 3. KMail — compose/send · `WriteMail/WriteMail.js`, screen `Kmail/Kmail.js` (plan)
 
-Gate: `KMAIL_UI_LIFECYCLE=true`. API lifecycle is 5/5 green (`kmail-flow.md`): New mail issues a
+Gate: `KMAIL_UI_LIFECYCLE=true`. API lifecycle is 5/5 green (`docs/modules/kmail-flow.md`): New mail issues a
 `kmailID`; recipient model is `toAddress` (TO) + `ccList` (COPY) + `bccList` (CONFIDENTIAL, hidden).
 UI flow: `/kmail` → compose → recipient (2nd QA mailbox) + subject + body → send → verify in Sent →
 delete/recall. `WriteMail.js` is a large component — record it fresh; the API contract is the truth
@@ -116,7 +122,7 @@ search a 2nd QA account → add → verify in list → block → unblock → rem
 Gate: `KALL_UI_LIFECYCLE=true`. API lifecycle 12/12 green; BR-C01 (Scheduled → ReScheduled) confirmed.
 `initiateKall` rings a real device, so the **direct-call** UI stays assertion-only (open dialer, assert
 controls — do not place). **Schedule** is safe: `/kall` → schedule → title/date/time/participant (2nd QA
-acct) → save → verify in log → reschedule (status tag flips) → delete. Selectors from `kall-flow.md` +
+acct) → save → verify in log → reschedule (status tag flips) → delete. Selectors from `docs/modules/kall-flow.md` +
 recording.
 
 ## 8. KDiary — event (plan)
@@ -155,7 +161,7 @@ test changes needed.
 | Katchup Delete + Edit                                        | built, gated, needs one tuning pass (`katchup-actions.spec.ts`) |
 | Katchup group/copy/attach                                    | planned — selectors mined, needs 3 QA accts + recording         |
 | KMail / Settings / Profile / Contacts / Kall / KDiary writes | planned — API-proven, UI selectors mined, need recording        |
-| Signup — Personal registration → login                      | built, gated — **blocked by #720** (mobile Verify always fails) |
+| Signup — Personal registration → login                       | built, gated — **blocked by #720** (mobile Verify always fails) |
 
 Every planned write flow already has a **green API lifecycle** proving the operation works on live; the
 UI track proves the _screen_ drives that same operation. Nothing here runs on a default run, and nothing

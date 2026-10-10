@@ -10,7 +10,7 @@ import { defineKallEndpoint } from './kall-endpoint';
  *
  * Every one is a write and **none is `productionSafe`**: scheduling notifies the participants and
  * puts an entry on their calendars, so it is treated like a Katchup send — exercised only through
- * the gated feature flow (`docs/kall-flow.md` §5, `KALL_LIFECYCLE=true`) with `allowLiveWrite`.
+ * the gated feature flow (`docs/modules/kall-flow.md` §5, `KALL_LIFECYCLE=true`) with `allowLiveWrite`.
  * Payloads mirror the live web client (`Services/Kall.js`).
  */
 const SCHEDULE_TAGS = ['kall-schedule'] as const;

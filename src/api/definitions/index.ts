@@ -31,11 +31,11 @@ export const apiRegistry = new ApiRegistry().register(
   ...adminUserManagementApis,
   // KPost Signup & Login - the gate, and the source of every module's token.
   ...signupLoginApis,
-  // KPost Katchup - instant messaging. See docs/katchup-flow.md.
+  // KPost Katchup - instant messaging. See docs/modules/katchup-flow.md.
   ...katchupApis,
   // KPost Group - group membership; underpins Katchup group messaging (FR-K06).
   ...groupApis,
-  // KPost Kall - voice/video calling. See docs/kall-flow.md (FR-C01..C09, BR-C01).
+  // KPost Kall - voice/video calling. See docs/modules/kall-flow.md (FR-C01..C09, BR-C01).
   ...kallApis,
   // KPost Contacts - the address book the messaging/calling/mail modules act on.
   ...contactsApis,

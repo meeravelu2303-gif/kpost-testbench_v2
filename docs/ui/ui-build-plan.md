@@ -2,7 +2,7 @@
 
 The authoritative build reference for finishing the UI test suite, grounded in a **complete frontend
 analysis** (`D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1\src`, routes in `MenuRoutes.js`) and the KPost
-documents (docs/BENCH-REFERENCE.md §1–4: the four documented modules Signup/Login, Katchup, Kall, KMail as 55 FRs +
+documents (docs/reference/bench-reference.md §1–4: the four documented modules Signup/Login, Katchup, Kall, KMail as 55 FRs +
 9 BRs). Per module: the real selectors, the test approach, FR traceability, and status.
 
 ## Routing facts that shape the plan (from the analysis)
@@ -33,7 +33,7 @@ verticals (KOS/KCloud/KBooking/KNews/E-Com/KDirectory) → Admin (needs a busine
 Green: compose · send · recall · Delete · Edit · Save · Copy · Reply · Comment · Clarify · read
 receipts (two-session) · Note · Reminder · Forward · search · Cc/Confidential/Bulk (3-account). Tail:
 Transfer (hover flake), Forward-with-thread (covered by Forward), Recall&Repost (api-only). Full status
-in `docs/KATCHUP-UI-COVERAGE.md`. **Key learned selectors reused everywhere** (`tests/e2e/support/
+in `docs/generated/katchup-ui-coverage.md`. **Key learned selectors reused everywhere** (`tests/e2e/support/
 katchup.ts`): menu items match by **substring** (icon-glyph prefix); **send = press Enter** in the
 editor (`WriteMessage` handleKeyDown); received-message conversation opened by subject; unknown-contact
 rows not keyed by id.

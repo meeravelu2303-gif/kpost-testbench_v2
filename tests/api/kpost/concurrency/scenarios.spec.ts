@@ -33,7 +33,7 @@ import { expect, test } from '@fixtures';
  * (or that this run targets an environment where an outage is acceptable) before setting it `true`
  * against anything other than a throwaway/local target.
  *
- * See `docs/archive/TEST-BENCH-PLAN-2026-10-02.md` §"Concurrency" for the full catalog, including scenarios not
+ * See `docs/archive/test-bench-plan-2026-10-02.md` §"Concurrency" for the full catalog, including scenarios not
  * yet encoded here.
  */
 const DEFERRED_REASON =
@@ -224,7 +224,7 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
        * Scenario: two simultaneous reschedule calls on the SAME kallID (e.g. a double-tap on
        * "reschedule" in the UI before the first response returns).
        * Endpoint: kall-reschedule (POST /v2/kall/reScheduleKall). Per the 2026-09-26 finding
-       * (API-COVERAGE-DEPTH.md), a reschedule is EXPECTED to mint a brand-new kallID each time and
+       * (docs/audits/api-coverage-depth.md), a reschedule is EXPECTED to mint a brand-new kallID each time and
        * flip the original's senderKallStatus 6 (Scheduled) -> 7 (ReScheduled) — this is confirmed
        * correct product behavior, not a bug, so the concurrency question here is narrower: what
        * happens when the SAME original kallID is rescheduled twice before either completes?
@@ -515,7 +515,7 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
  *   a permanently-skipped test against this endpoint risks someone later removing the skip without
  *   fully appreciating the blast radius. Deferred until a disposable "expendable" employee record and
  *   explicit owner sign-off exist for this specific scenario — tracked in
- *   docs/archive/TEST-BENCH-PLAN-2026-10-02.md rather than half-implemented here.
+ *   docs/archive/test-bench-plan-2026-10-02.md rather than half-implemented here.
  * - KBooking seat/order concurrency (two simultaneous attempts to hold the same seat): applicable in
  *   principle (classic double-booking race), but no KBooking endpoint definitions exist in the bench
  *   yet (search/seat-selection API coverage is itself still TODO, independent of concurrency). Revisit

@@ -4,7 +4,7 @@ import { expect, test } from '@fixtures';
 
 /**
  * K-ECommerce (`/e-commerce`) — has a real, correctly-wired backend
- * (`Fetch_ECommerceDetails()` -> `GET /v2/ecommerce/getEcommerceDetails/`), which `docs/COVERAGE.md`
+ * (`Fetch_ECommerceDetails()` -> `GET /v2/ecommerce/getEcommerceDetails/`), which `docs/generated/coverage.md`
  * marks **out-of-scope — third-party commerce; confirm scope with owner** for API testing. UI testing
  * matches that same caution: read-only render check only, no assumption that a purchase/click-through
  * action is safe to drive.

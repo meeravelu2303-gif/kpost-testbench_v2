@@ -53,17 +53,20 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
+/** The owner's API documents — this workbook, the Admin workbook and the Admin PDF — all live here. */
+const SPECS_DIR = path.join(ROOT, 'docs', 'api-specs');
 /**
  * The workbook lives in the repository, so a checkout has everything needed to regenerate the
  * contracts. The highest-numbered "KPOST API (N).xlsx" wins, since that is how the dumps arrive.
  */
 function newestWorkbook() {
+  if (!fs.existsSync(SPECS_DIR)) return undefined;
   const candidates = fs
-    .readdirSync(ROOT)
+    .readdirSync(SPECS_DIR)
     .filter((file) => /^KPOST API.*\.xlsx$/i.test(file) && !file.startsWith('~$'))
     .map((file) => ({ file, version: Number(/\((\d+)\)/.exec(file)?.[1] ?? 0) }))
     .sort((a, b) => b.version - a.version);
-  return candidates.length ? path.join(ROOT, candidates[0].file) : undefined;
+  return candidates.length ? path.join(SPECS_DIR, candidates[0].file) : undefined;
 }
 
 const SOURCE = process.argv[2] || process.env.KPOST_WORKBOOK || newestWorkbook();
@@ -72,7 +75,7 @@ if (!SOURCE || !fs.existsSync(SOURCE)) {
   console.error(
     SOURCE
       ? `workbook not found: ${SOURCE}`
-      : 'no workbook found: put "KPOST API (N).xlsx" in the repository root',
+      : 'no workbook found: put "KPOST API (N).xlsx" in docs/api-specs/',
   );
   console.error('usage: node scripts/excel-to-contract.cjs "<path to KPOST API (N).xlsx>"');
   process.exit(2);

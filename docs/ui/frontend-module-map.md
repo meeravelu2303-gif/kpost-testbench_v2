@@ -69,14 +69,14 @@ disagreeing with it.
 
 ⚠️ **`/kdiary` has NO route at all** — commented out in `MenuRoutes.js`. `KDiary.js` exists (1 file) and
 the bench already has API tests running against KDiary's backend (`dairyschedule`, 14 endpoints
-tested per `docs/COVERAGE.md`), but **the screen is currently unreachable by a real user**. This is
+tested per `docs/generated/coverage.md`), but **the screen is currently unreachable by a real user**. This is
 either a genuine defect (a feature the backend supports but the frontend never shipped a route for)
 or a deliberate hide-while-incomplete — needs a product-owner answer, not a guess, before deciding
 whether to file it as a bug.
 
 ## Module inventory (component file count = rough complexity signal)
 
-| Module                |       Files | Bench status                     | Backend API (docs/COVERAGE.md)                                |
+| Module                |       Files | Bench status                     | Backend API (docs/generated/coverage.md)                      |
 | --------------------- | ----------: | -------------------------------- | ------------------------------------------------------------- |
 | Katchup               |         120 | Deep (API+UI+breakage)           | `katchup` 36/36 tested                                        |
 | Settings              |          27 | Partial UI (4/25 panels)         | `generalsetting` 7/7 + pieces of `kmail`/`profile`/`contacts` |
@@ -84,10 +84,10 @@ whether to file it as a bug.
 | Kall                  |          21 | API only                         | `kall` 20/20 tested                                           |
 | KOS                   |           8 | API only                         | `kword` 14/14 tested                                          |
 | Kdirectory (Contacts) |           4 | API + UI functional              | `contacts` 16/16 tested                                       |
-| K-Booking             |           3 | **Zero**                         | not in COVERAGE.md — verify a backend exists                  |
-| KNews                 |           3 | **Zero**                         | not in COVERAGE.md — verify a backend exists                  |
-| KCloud                |           2 | **Zero**                         | not in COVERAGE.md — verify a backend exists                  |
-| K-ECommerce           |           2 | **Zero**                         | not in COVERAGE.md — verify a backend exists                  |
+| K-Booking             |           3 | **Zero**                         | not in docs/generated/coverage.md — verify a backend exists   |
+| KNews                 |           3 | **Zero**                         | not in docs/generated/coverage.md — verify a backend exists   |
+| KCloud                |           2 | **Zero**                         | not in docs/generated/coverage.md — verify a backend exists   |
+| K-ECommerce           |           2 | **Zero**                         | not in docs/generated/coverage.md — verify a backend exists   |
 | UserProfile           | 1 (+nested) | API deep + UI functional partial | `profile` 45/45 tested                                        |
 | UserManagement        |           1 | **Zero**                         | check `admin`-module scope                                    |
 | KDiary                |           1 | API only, **unrouted**           | `dairyschedule` 14/14 tested                                  |
@@ -137,5 +137,5 @@ work, not an exhaustive one. It does **not** yet enumerate: every button/action 
 client-side validation rule, every role/permission branch, or a full component-by-component icon
 catalogue. That level of detail is better produced **incrementally, per module**, as each module's
 test suite is built — reading 120 Katchup files up front, most of which won't be exercised for months,
-is not a good use of time. The phased plan in `FRONTEND-TEST-PLAN.md` reflects that: each module's
+is not a good use of time. The phased plan in `docs/archive/frontend-test-plan-2026-09-30.md` reflects that: each module's
 "analyze" step happens immediately before that module's "implement" step, not all up front.

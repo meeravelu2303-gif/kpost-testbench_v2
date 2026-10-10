@@ -520,7 +520,7 @@ test.describe('KPost KMail · feature flow', () => {
     endpoints,
   }) => {
     /*
-     * BR-KM-SALUTE (business-rules.md, ⬜ to-do): salutation must be one of
+     * BR-KM-SALUTE (docs/reference/business-rules.md, ⬜ to-do): salutation must be one of
      * {Hi,Hello,Dear,Sir,Madam,Respect}, default Hi. `mailShape()`'s own default is 'Hello' (a valid
      * member), so this test overrides it with a value outside the set and expects rejection or
      * normalization — never silent storage of an out-of-set value.

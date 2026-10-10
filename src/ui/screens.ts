@@ -2,7 +2,7 @@
  * THE screen registry — every authenticated KPost screen the deep UI suite drives, with the stable
  * selectors that prove it (a) mounted and (b) rendered its own key controls, not just an empty shell.
  *
- * Selectors come from the front-end source map (`docs/ui-screens.md`, mined from
+ * Selectors come from the front-end source map (`docs/ui/ui-screens.md`, mined from
  * `KPOST_REACTJS_2023_V1`). The app ships almost no `data-testid`s, so these are structural — each
  * one is the element the screen is known to render at load. A UI change that removes one is exactly
  * the kind of regression this suite exists to catch.

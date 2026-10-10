@@ -13,6 +13,10 @@ node_modules/
 # Saved auth sessions (contain live cookies/tokens)
 /.auth/
 
+# Contract-pipeline intermediates: `npm run contract:excel` writes them, the coverage and gap
+# audits read them. Regenerated, never reviewed, so not tracked.
+/contracts/_*.json
+
 # Mutable diagnostic-tool state (snapshot/diff accounts for the write-fuzz workflows) — generated
 # working data, not source; see tests/framework/_snapshot-accounts.local.spec.ts.
 *.local.json

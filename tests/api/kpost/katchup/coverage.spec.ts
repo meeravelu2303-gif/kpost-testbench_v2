@@ -8,7 +8,7 @@ import { expect, test } from '@fixtures';
 /**
  * Self-tests for the Katchup module. No HTTP — these assert the wiring a reviewer would otherwise
  * take on trust: full coverage, contract agreement, that the enum codes still mean what
- * `docs/katchup-flow.md` says, and that every send is authenticated and gated.
+ * `docs/modules/katchup-flow.md` says, and that every send is authenticated and gated.
  */
 test.describe('KPost Katchup · module coverage', () => {
   test('every documented katchup endpoint has a definition @framework', () => {
@@ -37,7 +37,7 @@ test.describe('KPost Katchup · module coverage', () => {
 
   test('the message-type, status and share-type codes match the analysis @framework', () => {
     /*
-     * Pins the codes the payloads use against the owner's definitions (docs/katchup-flow.md §1). A
+     * Pins the codes the payloads use against the owner's definitions (docs/modules/katchup-flow.md §1). A
      * workbook edit that renumbered them would fail here rather than silently change what a send
      * means.
      */
@@ -61,7 +61,7 @@ test.describe('KPost Katchup · module coverage', () => {
     const cleared = katchupApis
       .filter((api) => api.destructive && api.productionSafe)
       .map((api) => api.id);
-    expect(cleared, 'no Katchup write is cleared for live yet (docs/katchup-flow.md §5-6)').toEqual(
+    expect(cleared, 'no Katchup write is cleared for live yet (docs/modules/katchup-flow.md §5-6)').toEqual(
       [],
     );
   });

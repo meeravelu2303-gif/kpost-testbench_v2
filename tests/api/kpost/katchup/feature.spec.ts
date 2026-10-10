@@ -98,7 +98,7 @@ test.describe('KPost Katchup · feature flow', () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     process.env.KATCHUP_LIFECYCLE !== 'true',
-    'writes real messages; set KATCHUP_LIFECYCLE=true (owner sign-off, docs/katchup-flow.md §6)',
+    'writes real messages; set KATCHUP_LIFECYCLE=true (owner sign-off, docs/modules/katchup-flow.md §6)',
   );
 
   test('a message carries its Subject and issues a msgID (BR-K01) @api @katchup', async ({

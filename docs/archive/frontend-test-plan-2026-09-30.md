@@ -1,6 +1,10 @@
 # KPost frontend — phased test implementation plan
 
-Companion to `FRONTEND-MODULE-MAP.md`. Built from that structural analysis; each phase's "analyze"
+**ARCHIVED 2026-10-10 — superseded, kept for history only.** This was the phased UI plan of
+2026-09-30; its phases have since been built. The per-module status is in `docs/ui/ui-build-plan.md`
+and the measured ledger in `docs/generated/ui-coverage.md`. Nothing below is current.
+
+Companion to `docs/ui/frontend-module-map.md`. Built from that structural analysis; each phase's "analyze"
 step happens just before that phase's "implement" step (see that doc's closing note on why).
 
 ## Standing conventions (apply to every phase — already proven this session)
@@ -62,7 +66,7 @@ step happens just before that phase's "implement" step (see that doc's closing n
   - **K-ECommerce**: HAS a real, correctly-wired backend — `Fetch_ECommerceDetails()` in
     `Services/ECommerce.js` calls the genuine `/v2/ecommerce/getEcommerceDetails/` endpoint (the
     module-map's caution about that file being "KDiary leftover" applies to its OTHER exports, not this
-    one). `docs/COVERAGE.md` marks the whole `ecommerce` API (2 endpoints) **out-of-scope — third-party
+    one). `docs/generated/coverage.md` marks the whole `ecommerce` API (2 endpoints) **out-of-scope — third-party
     commerce; confirm scope with owner** — UI testing should match that same caution: a read-only render
     check is fine, no assumption that write/purchase actions are safe to drive.
 
@@ -105,7 +109,7 @@ candidates once live-verified:
       selector, and the Share-to-Katchup Forward modal opening (never completes a real send).
 - [x] **K-Booking** — confirmed a REAL redbus.in payment integration; scoped strictly to the safe
       surface (city search validation, trip listing, read-only "My Trips") per the hard safety boundary
-      already documented in `FRONTEND-MODULE-MAP.md` — the "Show seats" link is the boundary, never
+      already documented in `docs/ui/frontend-module-map.md` — the "Show seats" link is the boundary, never
       clicked.
 - [x] **KCloud** — confirmed NO backend at all; fully driven (buy-flow dead buttons, the local-only
       "Payment SuccessFul" round trip, Documents/Clear-buttons dead-button confirmation).
@@ -151,6 +155,6 @@ candidates once live-verified:
 
 ## Reporting cadence
 
-After each phase: update `docs/COVERAGE.md`-style numbers for the UI side (currently that ledger is
+After each phase: update `docs/generated/coverage.md`-style numbers for the UI side (currently that ledger is
 API-only), and a short note in this file marking phases done/in-progress — so this plan stays a
 living document, not a one-time snapshot.

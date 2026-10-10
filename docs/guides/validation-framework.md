@@ -130,7 +130,7 @@ Key properties:
 
 ## 4. Validator interface
 
-[`src/validation-engine/validator.ts`](../src/validation-engine/validator.ts)
+[`src/validation-engine/validator.ts`](../../src/validation-engine/validator.ts)
 
 ```ts
 export interface Validator<TContext extends ValidationContext = ValidationContext> {
@@ -165,7 +165,7 @@ export const statusCodeValidator = defineValidator({
 
 ## 5. ValidationResult model
 
-[`src/validation-engine/validation-result.ts`](../src/validation-engine/validation-result.ts)
+[`src/validation-engine/validation-result.ts`](../../src/validation-engine/validation-result.ts)
 
 ```ts
 export interface ValidationResult {
@@ -193,7 +193,7 @@ A `ValidationReport` wraps the results of one endpoint run. It adds environment,
 
 ## 6. ValidationContext model
 
-[`src/validation-engine/validation-context.ts`](../src/validation-engine/validation-context.ts). This is everything a validator may use. Validators never touch Playwright, config files or credentials directly.
+[`src/validation-engine/validation-context.ts`](../../src/validation-engine/validation-context.ts). This is everything a validator may use. Validators never touch Playwright, config files or credentials directly.
 
 ```ts
 export interface ValidationContext {
@@ -218,7 +218,7 @@ export interface ValidationContext {
 
 ## 7. ValidationRegistry
 
-[`src/validation-engine/validation-registry.ts`](../src/validation-engine/validation-registry.ts) and the **single registration point** [`src/validators/index.ts`](../src/validators/index.ts):
+[`src/validation-engine/validation-registry.ts`](../../src/validation-engine/validation-registry.ts) and the **single registration point** [`src/validators/index.ts`](../../src/validators/index.ts):
 
 ```ts
 export const validationRegistry = new ValidationRegistry().register(
@@ -237,7 +237,7 @@ The registry is an injected instance, not a static class. The engine receives it
 
 ## 8. ValidationEngine
 
-[`src/validation-engine/validation-engine.ts`](../src/validation-engine/validation-engine.ts)
+[`src/validation-engine/validation-engine.ts`](../../src/validation-engine/validation-engine.ts)
 
 ```ts
 const report = await validationEngine.validate('dashboard-home-msgs'); // env profile
@@ -255,7 +255,7 @@ Failure handling:
 
 ## 9. Default validation policy and profiles
 
-[`src/validation-engine/validation-policy.ts`](../src/validation-engine/validation-policy.ts)
+[`src/validation-engine/validation-policy.ts`](../../src/validation-engine/validation-policy.ts)
 
 ```ts
 export const DEFAULT_POLICY: Readonly<ValidationToggles> = Object.freeze({
@@ -290,7 +290,7 @@ Expensive or flooding checks (rate limit, injection, XSS) are **not** in SMOKE/R
 
 ## 10. EndpointDefinition
 
-[`src/api/registry/endpoint-definition.ts`](../src/api/registry/endpoint-definition.ts). Only `id`, `method` and `path` are required:
+[`src/api/registry/endpoint-definition.ts`](../../src/api/registry/endpoint-definition.ts). Only `id`, `method` and `path` are required:
 
 ```ts
 interface EndpointDefinition {
@@ -324,7 +324,7 @@ interface EndpointDefinition {
 
 ## 11. Example endpoint
 
-[`src/api/definitions/kpost/dashboard/dashboard.api.ts`](../src/api/definitions/kpost/dashboard/dashboard.api.ts) — the Home screen's recent-messages panel, three authenticated reads:
+[`src/api/definitions/kpost/dashboard/dashboard.api.ts`](../../src/api/definitions/kpost/dashboard/dashboard.api.ts) — the Home screen's recent-messages panel, three authenticated reads:
 
 ```ts
 function defineDashboardEndpoint(config: KpostEndpointConfig): EndpointDefinition {
@@ -361,7 +361,7 @@ file is the example: with null markers the backend 500s, which would read as a f
 
 ## 12. Example test using the generic engine
 
-[`tests/api/kpost/dashboard/read.spec.ts`](../tests/api/kpost/dashboard/read.spec.ts). This is the entire file:
+[`tests/api/kpost/dashboard/read.spec.ts`](../../tests/api/kpost/dashboard/read.spec.ts). This is the entire file:
 
 ```ts
 import { describeEndpointCases } from '@engine/endpoint-cases';
@@ -393,7 +393,7 @@ test('dashboard under the security profile', async ({ validationEngine }) => {
 
 KPost's business rules are asserted in the module feature specs, because a real rule needs state
 the generic sweep cannot set up (a second account, a created record, a prior step). The pattern,
-from [`tests/api/kpost/kall/feature.spec.ts`](../tests/api/kpost/kall/feature.spec.ts):
+from [`tests/api/kpost/kall/feature.spec.ts`](../../tests/api/kpost/kall/feature.spec.ts):
 
 ```ts
 const repeat = await endpoints.sendTo(
@@ -463,9 +463,9 @@ export const userCreatedValidation: DatabaseValidation = {
 
 ## 15. OpenAPI and schema integration
 
-- **One schema engine.** Contracts may be zod schemas (code-first) or JSON Schema/OpenAPI (contract-first). [`contract-schema.ts`](../src/api/schema/contract-schema.ts) normalises both to JSON Schema 2020-12 and validates with **Ajv + ajv-formats**. zod schemas are converted in `input` mode, so `z.object()` stays open and `z.strictObject()` is closed (`additionalProperties: false`, which enables the unknown-field checks).
+- **One schema engine.** Contracts may be zod schemas (code-first) or JSON Schema/OpenAPI (contract-first). [`contract-schema.ts`](../../src/api/schema/contract-schema.ts) normalises both to JSON Schema 2020-12 and validates with **Ajv + ajv-formats**. zod schemas are converted in `input` mode, so `z.object()` stays open and `z.strictObject()` is closed (`additionalProperties: false`, which enables the unknown-field checks).
 - **Negative cases come from the contract.** Required fields, types, null/empty, min/max length and value, enums, formats (email, uri, uuid, date-time, …), patterns, closed objects, nested objects and array items are all read from the JSON Schema. Nothing is hand-listed per endpoint.
-- **Workbook contracts.** The generated OpenAPI (`openapi/kpost-api.openapi.json`, `kmail-api`, `admin-api`) is not loaded as endpoints; definitions are hand-written per module and look their schemas and documented examples up through [`workbook-contract.ts`](../src/api/contract/workbook-contract.ts). A hand-typed path the workbook does not list throws at definition time, so a typo cannot quietly become an untested endpoint. See [api-contracts.md](api-contracts.md).
+- **Workbook contracts.** The generated OpenAPI (`openapi/kpost-api.openapi.json`, `kmail-api`, `admin-api`) is not loaded as endpoints; definitions are hand-written per module and look their schemas and documented examples up through [`workbook-contract.ts`](../../src/api/contract/workbook-contract.ts). A hand-typed path the workbook does not list throws at definition time, so a typo cannot quietly become an untested endpoint. See [api-contracts.md](api-contracts.md).
 
 ## 16. Example report output
 
@@ -582,7 +582,7 @@ export const cacheControlValidator = defineValidator({
 
 Register it once in `src/validators/index.ts`. **Every** endpoint then runs it on the next test run, with no change to any wrapper spec or definition. The framework self-test _"a public endpoint, an authenticated read and a write all receive the same central validators"_ (`tests/framework/validation-engine.spec.ts`) proves the plan is the full registry for every kind of endpoint.
 
-`SensitiveDataValidator` ([`security/sensitive-data.validator.ts`](../src/validators/security/sensitive-data.validator.ts)) was added the same way. It scans **every** JSON response of the run for passwords and hashes, tokens, keys, private keys and Luhn-valid card numbers. The login endpoint legitimately returns a token, so it allowlists that one field: `security: { sensitiveFieldAllowlist: ['accessToken'] }`.
+`SensitiveDataValidator` ([`security/sensitive-data.validator.ts`](../../src/validators/security/sensitive-data.validator.ts)) was added the same way. It scans **every** JSON response of the run for passwords and hashes, tokens, keys, private keys and Luhn-valid card numbers. The login endpoint legitimately returns a token, so it allowlists that one field: `security: { sensitiveFieldAllowlist: ['accessToken'] }`.
 
 ## 19. Disabling one validation for one endpoint
 
@@ -604,7 +604,7 @@ Everything else still runs. The report shows the disabled ones as `SKIPPED — d
 
 ## 20. Commands
 
-The complete, canonical list is in **[`docs/COMMANDS.md`](COMMANDS.md)** — one command per surface
+The complete, canonical list is in **[`docs/guides/commands.md`](commands.md)** — one command per surface
 (`kpost` / `kmail` / `admin` / `ui` / `all`, each with a `:file` twin). The most common:
 
 ```bash

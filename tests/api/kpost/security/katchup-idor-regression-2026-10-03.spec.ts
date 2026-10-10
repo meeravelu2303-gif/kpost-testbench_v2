@@ -2,7 +2,7 @@
 // Bugzilla #952, #953, #954, #957, #958, #960, #961. Each test is the exact reproduction used to
 // file its bug — kept here so a future run re-flags it automatically if the fix regresses or was
 // never deployed, instead of relying on the one-off scratch files used during the original
-// investigation (see docs/katchup-ground-truth-coverage-2026-10-03.md §4 for the full writeup).
+// investigation (see docs/audits/katchup-ground-truth-2026-10-03.md §4 for the full writeup).
 //
 // #959 is deliberately NOT covered here: it was closed INVALID after the developer clarified that
 // KPost's message history is intentionally account-scoped and device-independent (a user keeps

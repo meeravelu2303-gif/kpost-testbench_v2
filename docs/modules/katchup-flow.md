@@ -172,7 +172,7 @@ of Katchup either writes to a real inbox or needs recipients we do not have.
 | bulk / broadcast (`sendBulk*`, messageType 19/25/26)                                     | "to many" needs many                                   |
 | `reportAbuse`, `sendMessageForForwardSelectedAttachment`, id-keyed share/reference reads | need a real msgID or a counterparty we do not have     |
 
-Blocked ≠ untested: each definition stays registered with the reason, so `docs/LIVE-ENDPOINTS.md`
+Blocked ≠ untested: each definition stays registered with the reason, so `docs/generated/live-endpoints.md`
 counts it and it runs the moment the accounts arrive.
 
 ## 6. Open questions for the owner

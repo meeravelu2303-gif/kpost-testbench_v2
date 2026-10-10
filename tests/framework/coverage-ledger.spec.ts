@@ -1,4 +1,4 @@
-// Generates docs/COVERAGE.md, so the "conditionals" flagged here are string/table formatting.
+// Generates docs/generated/coverage.md, so the "conditionals" flagged here are string/table formatting.
 /* eslint-disable playwright/no-conditional-in-test */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,7 +9,7 @@ import { ROOT_DIR } from '@config/constants';
 import { expect, test } from '@fixtures';
 
 /**
- * THE coverage ledger — one generated file (`docs/COVERAGE.md`) that accounts for **every** endpoint
+ * THE coverage ledger — one generated file (`docs/generated/coverage.md`) that accounts for **every** endpoint
  * the workbook documents and **every** screen the app has, with a status for each. It is the answer
  * to "did we miss anything": nothing can be silently uncovered, because every documented path lands
  * in exactly one bucket and every module carries an explicit scope decision.
@@ -126,7 +126,7 @@ const SCREENS: Array<{ route: string; spec: string | null; note: string }> = [
 ];
 
 test.describe('coverage ledger @framework', () => {
-  test('write docs/COVERAGE.md accounting for every endpoint and screen', () => {
+  test('write docs/generated/coverage.md accounting for every endpoint and screen', () => {
     const registered = new Set(
       apiRegistry
         .all()
@@ -255,7 +255,7 @@ test.describe('coverage ledger @framework', () => {
       '',
     ];
 
-    const outPath = path.join(ROOT_DIR, 'docs', 'COVERAGE.md');
+    const outPath = path.join(ROOT_DIR, 'docs', 'generated', 'coverage.md');
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
 

@@ -5,7 +5,7 @@
 
 Target: the live application (`devapi2.kpostindia.com`). Scope: PERSONAL accounts plus the
 BUSINESS_S/M/L company accounts (company reads + user-management now run on live).
-A clear per-reason list of what stays blocked is in `docs/BLOCKED-ENDPOINTS.md`.
+A clear per-reason list of what stays blocked is in `docs/generated/blocked-endpoints.md`.
 
 | | Count |
 | - | ----: |

@@ -1,6 +1,6 @@
 # Excel gaps — what to confirm or fill in the workbook
 
-Generated from the parsed contracts. 233 rows need attention; open
+Generated from the parsed contracts. 231 rows need attention; open
 `contracts/excel-gaps.csv` in Excel for the full list — it has **Tab**, **Row** and **FillCell**,
 so every line names the cell it is talking about.
 
@@ -33,7 +33,7 @@ below. They stay in `*.contract.json` marked `usable: false` so the decision is 
 | P1 | **Confirm the HTTP method** — the workbook contradicts itself | 0 |
 | P2 | Request payload and/or sample response missing | 185 |
 | P3 | The JSON sample does not parse, so no schema is inferred | 27 |
-| P4 | Duplicate, legacy, or two endpoints in one row | 21 |
+| P4 | Duplicate, legacy, or two endpoints in one row | 19 |
 
 ## Resolved without you: 7 rows where the request cell won
 
@@ -116,12 +116,10 @@ Only needed where the derived method is wrong. Per tab:
 | KatchupAPI:R96 | `/v2/kall/contactInfo/` | POST | payload-rule | payload (sample broken) / yes | Fix the request sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
 | KatchupAPI:R118 | `/v2/katchup/forwardKatchupMessage/` | POST | payload-rule | payload / text only | Fix the response sample — it is not valid JSON (prose or `0 or 1 or 2` style alternatives mixed in), so no schema can be inferred. |
 
-### P4 (21 rows)
+### P4 (19 rows)
 
 | Tab:Row | Path | Method | From | Request / Response | Action |
 | --- | --- | --- | --- | --- | --- |
-| KatchupAPI:R3 | `/v2/profile/fetchUserDetails/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R2). |
-| KatchupAPI:R3 | `/v2/signupLogin/fetchUserDetails/` | POST | payload-rule | payload / yes | one payload is documented for the two endpoints in this row — split the row so each endpoint has its own payload. |
 | KatchupAPI:R6 | `/v2/common/msStatus/` | GET | payload-rule | no payload / text only | Confirm which row is current (duplicate-of V2 TESTED APIS:R6). |
 | KatchupAPI:R8 | `/v2/common/sendOTP/` | POST | payload-rule | payload (sample broken) / yes | Confirm which row is current (duplicate-of V2 TESTED APIS:R8). |
 | Sheet3:R10 | `/common/mobileNoExist/` | POST | payload-rule | payload / yes | Confirm the v1 row is retired now that a /v2 row exists. |
@@ -135,6 +133,8 @@ Only needed where the derived method is wrong. Per tab:
 | Sheet3:R22 | `/v2/common/sendOTPtoMail/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R12). |
 | Sheet3:R23 | `/v2/common/validateMailOTP/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R13). |
 | Sheet3:R24 | `/v2/signupLogin/kpostIDsuggestionList/` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R16). |
+| Sheet3:R25 | `/v2/signupLogin/fetchUserDetails` | POST | payload-rule | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R3). |
+| V2 TESTED APIS:R5 | `/v2/signupLogin/fetchUserDetails` | POST | method-column | payload / yes | Confirm which row is current (duplicate-of KatchupAPI:R3). |
 
 ## Gaps that are not per-row
 

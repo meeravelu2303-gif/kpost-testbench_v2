@@ -8,7 +8,7 @@ import { defineKatchupEndpoint } from './katchup-endpoint';
  * Counts and subjects need only our own account; conversation reads use `QA_VICTIM_KPOST_ID` (our
  * second account), so no stranger's id is ever sent — these run on live. Id-keyed share/reference
  * reads need a real message id we lack on live, so they stay registered and blocked until a
- * lifecycle test creates one (`docs/katchup-flow.md` §5).
+ * lifecycle test creates one (`docs/modules/katchup-flow.md` §5).
  */
 const READ_TAGS = ['katchup-read'] as const;
 

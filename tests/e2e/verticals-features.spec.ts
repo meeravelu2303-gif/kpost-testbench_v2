@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test';
 /**
  * **Verticals** — feature-level read-only coverage on top of the deep screen sweep (which already
  * runs the 9 checks on each). Each vertical asserts a distinctive feature control from the frontend
- * (see `docs/ui-build-plan.md`), proving the screen renders its OWN content, not just the shell.
+ * (see `docs/ui/ui-build-plan.md`), proving the screen renders its OWN content, not just the shell.
  * All read-only and safe (no writes; external links are not followed).
  */
 test.describe('KPost verticals — feature render', { tag: '@ui' }, () => {

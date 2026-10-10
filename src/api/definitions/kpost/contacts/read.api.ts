@@ -15,7 +15,7 @@ const READ_TAGS = ['contacts-read'] as const;
 export const myContactsApi = defineContactsEndpoint({
   id: 'contacts-my-contacts',
   // KDirectory directory listing + total count (FR-KD-001/004) — the org directory is the same
-  // contacts surface (see docs/requirements-frd.md § KDirectory).
+  // contacts surface (see docs/reference/requirements-frd.md § KDirectory).
   requirements: ['FR-KD-001', 'FR-KD-004'],
   method: 'POST',
   path: '/v2/contacts/myContacts/',

@@ -221,7 +221,7 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
     ...(t.skipped
       ? [
           `**Why ${t.skipped} checks skipped** — the three production safety controls, not a coverage gap.`,
-          'Each has a reason (see `docs/LIVE-ENDPOINTS.md`); the write PROCESSES are covered separately by',
+          'Each has a reason (see `docs/generated/live-endpoints.md`); the write PROCESSES are covered separately by',
           'the gated self-cleaning lifecycle flows (`*_LIFECYCLE`), off during a filing run.',
           '',
           '| Reason skipped | Count |',

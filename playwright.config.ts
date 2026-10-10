@@ -34,7 +34,7 @@ export default defineConfig({
 
   // One run, one report: the Bugzilla reporter writes reports/REPORT.{md,json} (execution health +
   // bugs) and files once from the complete run. Every run is a single serial process on this
-  // machine (see docs/COMMANDS.md), so there is nothing to shard or merge.
+  // machine (see docs/guides/commands.md), so there is nothing to shard or merge.
   reporter: [['list'], ['html', { open: 'never' }], [BUGZILLA_REPORTER]],
 
   use: {

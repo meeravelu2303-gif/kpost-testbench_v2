@@ -2,7 +2,7 @@
 
 Moved verbatim out of `CLAUDE.md` on 2026-10-09 (original sections 1–7, 9 and 10). `CLAUDE.md` keeps
 the short map and the standing rules; this file keeps the full detail. The decision log is in
-`docs/DECISION-LOG.md`. Section numbers are the originals, so older references like "§6" still resolve.
+`docs/reference/decision-log.md`. Section numbers are the originals, so older references like "§6" still resolve.
 
 ## 1. What KPOST is
 
@@ -94,7 +94,7 @@ the API.
 
 **Source of truth (2026-09-16): the six per-module FRDs** in `D:\Kpost Documents` (see §8), ≈165 FRs (incl. FR-GMSG Group Messaging)
 across six modules. These supersede the old FullSuite FRD (55 FRs/4 modules). The `requirements` field
-on each definition now carries the new `FR-xx-NNN` ids; the map lives in `docs/requirements-frd.md`.
+on each definition now carries the new `FR-xx-NNN` ids; the map lives in `docs/reference/requirements-frd.md`.
 
 | Module         |                                  FRs | Bench suite      | Scope note                                            |
 | -------------- | -----------------------------------: | ---------------- | ----------------------------------------------------- |
@@ -117,7 +117,7 @@ cross-resource access), password strength (NFR-SEC03 → request validators), au
 the response-time budget, which is a functional check, not load testing).
 
 **Mapping status (2026-09-16):** re-tagging to the new scheme is to-do item 3 in the §8 entry above;
-`docs/requirements-frd.md` (item 2) is the measured FR→coverage ledger.
+`docs/reference/requirements-frd.md` (item 2) is the measured FR→coverage ledger.
 
 ## 5. What the bench is today
 
@@ -142,7 +142,7 @@ openapi/                GENERATED per product
 **The central idea:** common validations exist **once**. An endpoint definition states only what is
 specific to it; the engine applies every applicable validator automatically. Adding an endpoint is
 one definition; adding a validator is one line in `src/validators/index.ts` and it applies to every
-endpoint. Details: `docs/validation-framework.md`.
+endpoint. Details: `docs/guides/validation-framework.md`.
 
 **Profiles:** `SMOKE` → `REGRESSION` (default) → `SECURITY` → `FULL`.
 
@@ -194,7 +194,7 @@ Declared once in `src/config/ownership.config.ts`; a framework test compares it 
 Bugzilla component defaults, so drift on either side fails a run. Dedupe is a live search on a
 `[KPV2-XXXXXX]` summary tag: open → comment, INVALID/WONTFIX/WORKSFORME/DUPLICATE → never re-file,
 FIXED-but-back → reopen, search failed → file nothing. **Dry run is the default.** Details:
-`docs/bug-filing.md`.
+`docs/guides/bug-filing.md`.
 
 **Standing filing rules (owner directive, 2026-10-07 — do not ask again, just follow these):**
 
@@ -418,10 +418,10 @@ auto-resolve logic.
 
 ## 7. Contracts — the Excel workbook is the source of truth
 
-The swagger files were **deleted**: they disagreed with the workbook. `KPOST API (N).xlsx` now lives
-**in the repository root** (currently `KPOST API (6).xlsx`); the converter picks the
+The swagger files were **deleted**: they disagreed with the workbook. `KPOST API (N).xlsx` lives
+**in the repository, under `docs/api-specs/`** (currently `KPOST API (6).xlsx`); the converter picks the
 highest-numbered copy, so a fresh checkout regenerates everything. Nothing invalid or duplicated is
-converted. Details: `docs/api-contracts.md`.
+converted. Details: `docs/guides/api-contracts.md`.
 
 |                               | KPost | KMail |   Total |
 | ----------------------------- | ----: | ----: | ------: |
@@ -509,7 +509,7 @@ repo) → `npm run contract:coverage` → `npm run contract:gaps`.
 
 API **and** screen, one module finished before the next starts. Signup is **out of scope**: the QA
 accounts were created by hand, and both registration endpoints are OTP-gated on live anyway. The
-per-endpoint status lives in `docs/LIVE-ENDPOINTS.md` (generated); this is the order and what each
+per-endpoint status lives in `docs/generated/live-endpoints.md` (generated); this is the order and what each
 step needs.
 
 | #   | Module                                                                      | API endpoints (usable) | Screen                      | Documents cover it?         | Needs before it can finish                                                      |

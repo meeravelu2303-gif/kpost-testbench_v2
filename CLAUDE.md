@@ -2,10 +2,10 @@
 
 Read this first. It is the map and the rulebook; the detail lives in `docs/`:
 
-- `docs/BENCH-REFERENCE.md`: full product, architecture, pipeline, contracts, plan and conventions
+- `docs/reference/bench-reference.md`: full product, architecture, pipeline, contracts, plan and conventions
   (the original long sections, verbatim; "§6", "§8" in older notes refer to it)
-- `docs/DECISION-LOG.md`: every decision and incident, newest first. **After changing a flow, add an entry at the top.**
-- `docs/COMMANDS.md`: every npm script · `docs/RUNBOOK.md` · `docs/bug-filing.md` · `docs/validation-framework.md`
+- `docs/reference/decision-log.md`: every decision and incident, newest first. **After changing a flow, add an entry at the top.**
+- `docs/guides/commands.md`: every npm script · `docs/guides/runbook.md` · `docs/guides/bug-filing.md` · `docs/guides/validation-framework.md`
 
 ## 1. What this bench tests
 
@@ -23,7 +23,7 @@ Owners are declared once in `src/config/ownership.config.ts`; a framework test f
 
 Modules: Signup & Login, Katchup (chat with a Subject on every message), Group, Kall, KMail, KDirectory,
 Profile, Contacts, Settings, KDiary, KBooking, Admin/HR-Setup. Requirement ids `FR-xx-NNN` come from the
-six per-module FRDs in `D:\Kpost Documents`; map in `docs/requirements-frd.md`.
+six per-module FRDs in `D:\Kpost Documents`; map in `docs/reference/requirements-frd.md`.
 
 **Scope right now (owner directives):**
 
@@ -62,13 +62,16 @@ src/ui/                 screens registry (PAUSED_SCREENS), failure-diagnostics
 tests/api/<product>/    per-module specs: *.spec.ts wrappers + feature.spec.ts lifecycle flows; tests/api/kpost/security/*
 tests/e2e/, tests/e2e-admin/, tests/framework/   UI specs, Admin UI specs, bench self-tests
 contracts/, openapi/    GENERATED from the Excel workbook. Never hand-edit
+docs/                   guides/ (how to run) · reference/ (what the bench is + the decision log) · modules/ · ui/ · scope/
+                        · generated/ (written by `framework`; never hand-edit) · audits/ · api-specs/ (the owner's
+                        workbooks and PDF) · archive/. Index: docs/README.md
 ```
 
 **The central idea:** a validation exists once. An endpoint definition states only what is specific to it;
 the engine applies every applicable validator. Test title format: `<label> [<endpoint-id>] › <validator> — …`,
 so `--grep "\[endpoint-id\]"` targets one endpoint.
 
-Playwright projects: `setup`, browser projects (chromium/firefox/webkit), `admin-ui`, `api`, `integration`, `framework`.
+Playwright projects: `setup`, browser projects (chromium/firefox/webkit), `admin-ui`, `api`, `framework`.
 Profiles: `SMOKE` → `REGRESSION` (default) → `SECURITY` → `FULL` (= everything, incl. security).
 
 Key flags (defaults in `src/config/env.ts`): `BUGZILLA_DRY_RUN` (true), `BUGZILLA_AUTO_RESOLVE` (true),
@@ -108,7 +111,7 @@ tests run ─► candidates built (API reports, UI failures, a11y) ─► merge 
 ```
 
 API bugs re-verify by their `(endpoint, validator)` pair; UI bugs by their originating test title, only on
-the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/BENCH-REFERENCE.md` §6.
+the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/reference/bench-reference.md` §6.
 
 ## 5. Running safely: hard rules
 
@@ -168,7 +171,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/BENCH-REF
 
 ## 8. Contracts and conventions
 
-- **The Excel workbook wins** (`KPOST API (N).xlsx` in the repo root; the highest N is used).
+- **The Excel workbook wins** (`docs/api-specs/KPOST API (N).xlsx`; the highest N is used).
   `npm run contract:excel` → `contract:coverage` → `contract:gaps`. Never hand-edit `contracts/` or `openapi/`.
 - **Only POST and GET exist.** Documented payload = POST, none = GET; every derived method records its source.
 - **Never invent a contract or a payload value.** Send what the real frontend sends; `payload-audit.spec.ts`

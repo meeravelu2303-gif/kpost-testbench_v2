@@ -179,7 +179,7 @@ test.describe('Signup & OTP lifecycle (test gateway) @database', { tag: '@api' }
 
   /*
    * BR-SL-PWD (NFR-SEC03): password must be ≥8 chars with upper/lower/digit/special, or rejected.
-   * Previously marked ⛔ "OTP-gated" in docs/business-rules.md — signup is back in scope (the OTP
+   * Previously marked ⛔ "OTP-gated" in docs/reference/business-rules.md — signup is back in scope (the OTP
    * gateway fix earlier this session), so this is now testable. Confirmed live 2026-10-03: password
    * validation runs BEFORE the "already exists" check, so this works even against the already-
    * registered `signupKpostId` from the test above — every weak variant below gets a clean,

@@ -23,7 +23,7 @@ import { expect, test } from '@fixtures';
  *     example. On the admin surface the springdoc schema lists the *whole entity DTO* (every optional
  *     field); the frontend, measured, sends a subset. Omitting these is correct, not a defect.
  *
- * It writes `docs/PAYLOAD-AUDIT.md`. The example-missing column is the queue to fix.
+ * It writes `docs/generated/payload-audit.md`. The example-missing column is the queue to fix.
  */
 
 // A stub `call` for the static audit — it never chains to a real endpoint, so an empty object is
@@ -44,7 +44,7 @@ const LIVE_OMISSIONS: Record<string, string> = {};
 /**
  * GATED writes / needs-id reads that omit a documented-example field for a REAL, recorded reason.
  *
- * Why this must be exhaustive — the contamination rule (docs/BENCH-REFERENCE.md §3): KPost runs on a **shared
+ * Why this must be exhaustive — the contamination rule (docs/reference/bench-reference.md §3): KPost runs on a **shared
  * monolithic database with circular module dependencies**, so a wrong or incomplete payload sent to
  * ONE write can persist bad data that a DIFFERENT endpoint later reads — the failure then surfaces
  * somewhere else entirely and looks like that endpoint's bug. A write's payload is therefore
@@ -249,10 +249,10 @@ test.describe('payload completeness audit @framework', () => {
       ),
       '',
     ];
-    fs.writeFileSync(path.join(ROOT_DIR, 'docs', 'PAYLOAD-AUDIT.md'), `${lines.join('\n')}\n`);
+    fs.writeFileSync(path.join(ROOT_DIR, 'docs', 'generated', 'payload-audit.md'), `${lines.join('\n')}\n`);
 
     console.log(
-      `PAYLOAD AUDIT: ${liveRisks.length} live+example-missing (fix), ${gatedRisks.length} gated, ${schemaOnly.length} schema-only. See docs/PAYLOAD-AUDIT.md`,
+      `PAYLOAD AUDIT: ${liveRisks.length} live+example-missing (fix), ${gatedRisks.length} gated, ${schemaOnly.length} schema-only. See docs/generated/payload-audit.md`,
     );
     for (const r of liveRisks)
       console.log(`  LIVE RISK  ${r.id}: ${r.missingFromExample.join(', ')}`);
@@ -268,7 +268,7 @@ test.describe('payload completeness audit @framework', () => {
       'a productionSafe endpoint under-sends a documented-example field (false-bug risk) — complete its payload or record it in LIVE_OMISSIONS',
     ).toEqual([]);
 
-    // Tier 2 — contamination risk (docs/BENCH-REFERENCE.md §3). A gated WRITE with a wrong/incomplete payload can
+    // Tier 2 — contamination risk (docs/reference/bench-reference.md §3). A gated WRITE with a wrong/incomplete payload can
     // persist bad data the shared DB then serves to OTHER endpoints. So every gated omission must be
     // recorded in GATED_WRITE_OMISSIONS with the reason it is safe (runtime/lifecycle-supplied, or a
     // deliberate frontend-authoritative omission). A new one fails here until it is examined.

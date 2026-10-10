@@ -3,6 +3,42 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (night) — `docs/` filed by purpose; the owner's workbooks live in one folder
+
+**Decision (owner's):** the flat `docs/` folder (32 markdown files in mixed case, seven of them
+generated, three overlapping UI plans, two OTP lists) is reorganised so that a folder name says what a
+document is for, and all of the product owner's API source files sit together.
+
+**Layout now:** `guides/` (commands, runbook, bug-filing, validation-framework, api-contracts) ·
+`reference/` (bench-reference, business-rules, requirements-frd, this log) · `modules/` (katchup,
+kall, kmail, kmail-schema, admin flow analyses) · `ui/` (ui-screens, ui-build-plan,
+frontend-module-map) · `scope/` (blocked-endpoints-rationale, unused-endpoints) · `generated/` (the
+seven ledgers the framework project writes) · `audits/` (api-coverage-depth, the dated Katchup
+ground-truth report) · `api-specs/` (`KPOST API (6).xlsx` moved out of the repo root, plus the Admin
+workbook and PDF moved from `docs/reference/`) · `archive/`. File names are lowercase kebab-case;
+`docs/README.md` indexes every file. 34 files moved, references rewritten in 105 files (code
+comments, generator output paths, `.prettierignore`, markdown links re-relativised), zero dangling.
+
+**Removed / archived, with the reason:**
+
+- `docs/OTP-ENDPOINTS.md` — a hand copy of the generated `contracts/otp-dependent-endpoints.md`
+  (same 16 endpoints). Its two extra facts (KMail: no dedicated OTP route, the mail-OTP is a
+  `postMail` variant; Admin: SSO, no OTP) now come out of the generator itself.
+- `FRONTEND-TEST-PLAN.md` (2026-09-30) and `ui-write-flows.md` (2026-09-28) → `archive/`, each with a
+  banner naming what replaced it (`ui/ui-build-plan.md` + `generated/ui-coverage.md`). The two code
+  comments that cited the write-flow plan now point at the build plan, with the archive named.
+- `RUNBOOK.md` was rewritten: it still named commands that no longer exist (`all`, `flow:file`,
+  `bugs:file`), a KMail host that is not the one in use, and `BUGZILLA_DRY_RUN=false` in `.env`.
+  The new `guides/runbook.md` is the sequence only (preflight → self-test → dry run → read → file →
+  status pass) and defers every command to `guides/commands.md`.
+
+**Pipeline fixes found on the way:** `scripts/excel-to-contract.cjs` now looks for the workbook in
+`docs/api-specs/` (was the repo root). The earlier cleanup had deleted `contracts/_conversion-report.json`
+and `_coverage.json`, which the coverage and gap audits read; they are regenerated intermediates, so
+they are now gitignored (`/contracts/_*.json`) and `contract:gaps` refuses to run without the report
+instead of silently blanking every FillCell. `CLAUDE.md` no longer lists the removed `integration`
+project. The dead `MOCK_API` / `DB_TYPE` keys were dropped from `.env`.
+
 ### 2026-10-10 (evening) — The mock-server scaffold is gone: one flow, the live application
 
 **Decision (owner's):** remove the bundled mock API and everything that existed only for it, and
@@ -199,7 +235,7 @@ controls, instead of trusting the bench sweep (see the 401-blip lesson in the en
 **CLAUDE.md: 5,392 lines (427 KB, about 100k tokens loaded into every session) → 180 lines.** It had grown
 into a history book. Anthropic's guidance is under ~200 lines, because the whole file is read into context
 every session and length lowers adherence. The decision log moved here verbatim; the original sections
-1–7, 9, 10 moved verbatim to `docs/BENCH-REFERENCE.md` (both byte-checked against the original). CLAUDE.md
+1–7, 9, 10 moved verbatim to `docs/reference/bench-reference.md` (both byte-checked against the original). CLAUDE.md
 now holds the flow, the structure and every standing rule, and links to the detail.
 
 **Leak: `QA_PASSWORD` and live tokens on public GitHub.** Commit `fae2d15` (branch `02-10-2026`, repo
@@ -400,7 +436,7 @@ emphasis, both self-inflicted bench mistakes, not product bugs:
 ### 2026-09-21 (verified) — KMail refuses every valid token: a server-side regression, not a bench fault
 
 **Every KMail endpoint answers `401 "Unauthorized: UNAUTHORIZED USER"` to a valid KPost token —
-including the ones this repository's own generated `docs/LIVE-ENDPOINTS.md` records as running on
+including the ones this repository's own generated `docs/generated/live-endpoints.md` records as running on
 live.** The bench's KMail auth is unchanged and correct; the host stopped accepting it.
 
 The controls that make this a product finding rather than a setup mistake:
@@ -417,7 +453,7 @@ The controls that make this a product finding rather than a setup mistake:
 That last pair is the decisive one: the two 401s come from different layers. The transport and the
 scheme are fine; the application is rejecting the authenticated principal.
 
-Endpoints confirmed 401 that `LIVE-ENDPOINTS.md` lists as live: `common/getSaluations/`,
+Endpoints confirmed 401 that `docs/generated/live-endpoints.md` lists as live: `common/getSaluations/`,
 `common/getAllMailCount`, `common/getKmailDashboardMsg/`. Also `sentMail/postMail/` and
 `sentMail/getMailCredentials/`. Shared-password auth was tested and is not the gate — the 401 is
 raised before the body's password is read.
@@ -551,7 +587,7 @@ it cannot be recreated). That is outward-facing and irreversible, so it waits fo
 go-ahead rather than being done on inference. Everything downstream is built and skips with that
 reason attached.
 
-**KMail schema is now mapped** (`docs/KMAIL-SCHEMA.md`, `kmail.repository.ts`,
+**KMail schema is now mapped** (`docs/modules/kmail-schema.md`, `kmail.repository.ts`,
 `kmail-assertions.ts`). Three facts contradict what the task assumed, and each would have produced
 a test that fails against a healthy API:
 
@@ -1163,7 +1199,7 @@ continuous-send open/send selectors) still want **one live tuning pass** on the 
 sure they exercise the exact controls — but they can only SKIP or SURFACE on a selector gap, never file a
 false bug. Run `npm run install:browsers` once before the first 3-browser run.
 
-### 2026-09-18 — One command per surface, one command doc (`docs/COMMANDS.md`); scripts rationalised 60 → 31
+### 2026-09-18 — One command per surface, one command doc (`docs/guides/commands.md`); scripts rationalised 60 → 31
 
 The owner wanted a clear, single command per surface (KPost API / KMail / Admin / UI) and all commands
 in ONE readable file. The `package.json` had ~60 scripts across overlapping families (`bugs:*`,
@@ -1182,10 +1218,10 @@ in ONE readable file. The `package.json` had ~60 scripts across overlapping fami
   `TEST_DB_MODE` enables injection/XSS on reads) — they run the safe read matrix + lifecycle. Only
   KPost (testingapi, disposable) gets the full matrix and the deep write-fuzz tier.
 
-**One command doc.** Created **`docs/COMMANDS.md`** — the single, neat reference (run-one-surface table,
+**One command doc.** Created **`docs/guides/commands.md`** — the single, neat reference (run-one-surface table,
 deep tier, resolve, where the report is, utilities, the always-on safety notes). Deleted the redundant
-`docs/RUN-COMMANDS.md` and `docs/PRODUCTION-GRADE-RUN.md`; repointed `README.md` and `docs/RUNBOOK.md`
-to `COMMANDS.md` and off the removed command names. Kept the utility scripts (check, test:framework,
+`docs/RUN-COMMANDS.md` and `docs/PRODUCTION-GRADE-RUN.md`; repointed `README.md` and `docs/guides/runbook.md`
+to `docs/guides/commands.md` and off the removed command names. Kept the utility scripts (check, test:framework,
 test, test:headed, report, codegen, mock:api, install:browsers, contract:\*). `npm run check` clean;
 the new commands select correctly (`kpost` → the KPost API matrix, `ui` → the chromium e2e). Nothing
 committed.
@@ -1272,7 +1308,7 @@ bug) fails the build, the same way `payload-audit` guards the example-documented
 green; `npm run check` clean; **106 framework guards pass** (was 104).
 
 **The production-grade run** (commands since renamed to `kpost`/`kmail`/`admin`/`ui`/`all` — see
-`docs/COMMANDS.md`). Scope KPost API + KMail
+`docs/guides/commands.md`). Scope KPost API + KMail
 API + UI e2e (owner's call; admin-api stays its own gated flow). Default is **preview** (dry-run:
 runs everything, writes the report, files nothing); `:file` arms filing + auto-resolve. Tiers:
 `prodgrade:api:{preview,file}` (full read matrix via `TEST_DB_MODE` + the write lifecycles),
@@ -1505,7 +1541,7 @@ exit code. `npm run check` must stay clean.
   duplicate of the new neat report. Stopped writing it — the human report is now the single
   `reports/RUN-SUMMARY.md`; `reports/validation/summary.json` stays (machine-readable, feeds the CI
   quality gate). Pointed the CI job summary (`playwright.yml`) at `RUN-SUMMARY.md`, and updated
-  `docs/RUNBOOK.md` / `docs/validation-framework.md` / the `bug-report.ts` header accordingly. So the
+  `docs/guides/runbook.md` / `docs/guides/validation-framework.md` / the `bug-report.ts` header accordingly. So the
   reports are now: **`RUN-SUMMARY.md`** (execution health, human) · **`bugs/REPORT.md`** (defects filed,
   human) · the `.json` companions (machine) — no overlapping human reports. `npm run check` clean.
 
@@ -1522,7 +1558,7 @@ wants every documented business rule tested against the real behaviour, for ever
 
 1. **Re-read the six FRDs** (source of truth) and extract EVERY testable business rule per module
    (sub-agent, from the raw `.docx`). Reconcile with the flow docs (`docs/*-flow.md`) already mined.
-2. **The format — a catalog + a guard.** `docs/business-rules.md`: one row per rule — `id` (BR-/FR-),
+2. **The format — a catalog + a guard.** `docs/reference/business-rules.md`: one row per rule — `id` (BR-/FR-),
    module, the rule (one MUST-sentence), the endpoint/action it constrains, **how it is verified** (the
    concrete response/state check), test status, and the spec that owns it. A framework guard
    (`business-rules-coverage.spec.ts`) fails if a catalogued rule is untested or unmapped — so coverage
@@ -1546,7 +1582,7 @@ substitutes for an assertion (the reschedule lesson). `npm run check` stays clea
 - **Step 1 DONE** — a sub-agent re-read all six FRDs (+ BRD/SRS/PRD/FSD) and extracted every testable
   business rule per module. It corrected two assumed rules: "one role per employee" and "last name no
   digits" are **not** in the documents (only "names as on official ID"), so they are not catalogued.
-- **Step 2 DONE** — `docs/business-rules.md`, the catalog: every rule with its endpoint/action, the
+- **Step 2 DONE** — `docs/reference/business-rules.md`, the catalog: every rule with its endpoint/action, the
   concrete response/state check, and a honest test-status (✅ verified / 🟡 partial / ⬜ to-do / ⛔ OTP-
   out-of-scope). It is the tracker for the rest.
 - **Step 4 DONE** — the filing enabler: `BusinessRuleFinding` + `businessRuleFindingReports`
@@ -1772,7 +1808,7 @@ validates and answers an error the bench reads as a defect. The owner asked to a
 endpoint's payload against its contract. Built `tests/framework/payload-audit.spec.ts` — it builds
 each non-fixture endpoint's real request from its own factory and compares the sent keys (body + query
 
-- pathParams, case-insensitive) against the documented request fields, generating `docs/PAYLOAD-AUDIT.md`.
+- pathParams, case-insensitive) against the documented request fields, generating `docs/generated/payload-audit.md`.
 
 **The signal that matters is the documented request _example_, not the schema.** Splitting "missing"
 that way collapsed 57 raw rows to the real risk:
@@ -1852,11 +1888,11 @@ against the bundled mock (`mockApi: true`, which sends no real SMS). Threaded `m
 sender is refused on a real host); the older tests that used `sendOTP`/external as examples were
 updated to the stronger behaviour. `npm run check` clean; **73 framework guards pass**.
 
-### 2026-09-16 — `docs/BLOCKED-ENDPOINTS.md` rebuilt: module-by-module, covered-vs-truly-off-live
+### 2026-09-16 — `docs/generated/blocked-endpoints.md` rebuilt: module-by-module, covered-vs-truly-off-live
 
 The owner asked which endpoints are TRULY not tested on live (vs merely off the default run).
 `blockedReason()` now classifies every blocked endpoint as **COVERED via lifecycle** or **OFF-LIVE**.
-`docs/BLOCKED-ENDPOINTS.md` was refocused to list **ONLY the not-tested-on-live endpoints** (41), with
+`docs/generated/blocked-endpoints.md` was refocused to list **ONLY the not-tested-on-live endpoints** (41), with
 a count-by-category table and a module-by-module breakdown; the lifecycle-covered ones are excluded
 (listing them would misrepresent them as untested). The two coverage tiers behind it:
 
@@ -1891,7 +1927,7 @@ company tests, and to list the blocked endpoints clearly in one file. Three thin
   download, a known 500). `blockedReason()` in `live-coverage.spec.ts` now categorises accurately by
   runtime-id path/tag, so the false "needs a business account" impression is gone. The writes (144),
   OTP (15) and runtime-id reads (37) are all **covered by the gated lifecycle flows**, not gaps.
-- **New file `docs/BLOCKED-ENDPOINTS.md`** — the single clear list of everything that does NOT run on
+- **New file `docs/generated/blocked-endpoints.md`** — the single clear list of everything that does NOT run on
   live, grouped by reason with a summary table, generated every framework run. `REPORT.md` also gained
   a per-reason skip breakdown (earlier this day).
 
@@ -1936,7 +1972,7 @@ component on all four products, and closed the one asymmetry:
   API **9→10** (routes to 7 + systemic), KPost UI **~22** (routes by screen), KPost Admin **25**
   (routes to 9). Every routing target exists; **zero endpoints hit any catch-all**.
 - **Correctness, not just existence:** `component-routing.spec.ts` now emits the full **endpoint →
-  component** map in `docs/COMPONENT-ROUTING.md` (was counts-only), so routing is auditable per
+  component** map in `docs/generated/component-routing.md` (was counts-only), so routing is auditable per
   endpoint. Spot-checked: all `admin-*` + `common-company-*` + the logo trio → **Company
   Administration**; auth/OTP/login → **Authentication V2**; M/L login → its own component; KMail
   drafts → **Draft Mail**, signatures → **Settings**; UI kmail → **KMail**, kdirectory → **KDirectory**.
@@ -2007,7 +2043,7 @@ bench already proves). The bench's 35-feature Katchup catalogue does **not** cov
 **TO-DO (ordered, execute line by line):**
 
 1. CLAUDE.md §1 modules table + §4 traceability rewritten to the 6-module / 153-FR / FR-xx scheme (this pass).
-2. `docs/requirements-frd.md` (new) — the authoritative FR→endpoint/spec map, generated-or-maintained, one row per FR with its coverage state, so "153 FRs, N covered" is measured not claimed.
+2. `docs/reference/requirements-frd.md` (new) — the authoritative FR→endpoint/spec map, generated-or-maintained, one row per FR with its coverage state, so "153 FRs, N covered" is measured not claimed.
 3. FR-traceability on definitions: re-tag Kall→`FR-KL-*`, KMail→`FR-KM-*`, Group→`FR-GC/GM-*`, Katchup→`FR-KU-*`, login→`FR-SL-*`; a framework test fails if an FR is unmapped or names a nonexistent id.
 4. Katchup **Disappearing Messages** — verify the secret-message API shape on live (expiry field), add the API lifecycle (send secret → expiry set → read-back), gated; add the UI compose flow (lock icon → mode → send) blocked-with-reason if selector-walled.
 5. KMail **FR-KM-005 single-recipient BR** + priority-flag assertions (API/UI).
@@ -2021,7 +2057,7 @@ before touching flows, per the working agreement. Executing the to-do from item 
 
 **Progress (2026-09-16, same day):**
 
-- **Items 1–2 DONE** — CLAUDE.md (§1/§4/§8) + `docs/requirements-frd.md` (the FR→coverage map, all
+- **Items 1–2 DONE** — CLAUDE.md (§1/§4/§8) + `docs/reference/requirements-frd.md` (the FR→coverage map, all
   ~165 FRs incl. the 7th sub-scheme `FR-GMSG` Group Messaging found on re-check).
 - **Item 3 DONE** — `src/config/frd-requirements.ts` (canonical FR registry, 165 ids) +
   `tests/framework/requirements-traceability.spec.ts` (guard: every `requirements` id must be a known
@@ -2267,7 +2303,7 @@ endpoints collect as contract tests under "Admin API".
   samples; same-vendor envelope until the first live read confirms it, then measure an `admin` profile
   if it differs — the way `kmail` was measured).
 - **35 definitions** in `src/api/definitions/admin/{workplace,hr,roles,employee}.api.ts`, grouped by
-  the org-build flow (`docs/admin-flow.md`). **11 productionSafe reads** (the `get*ByCompanyId` /
+  the org-build flow (`docs/modules/admin-flow.md`). **11 productionSafe reads** (the `get*ByCompanyId` /
   hierarchy / employee-list / address reads — company-scoped, safe on live); **24 gated writes/needs-id**
   (all `save/update/delete`, role assign, suspend/terminate — destructive, `sideEffect: 'data'`, gated).
   Every POST read carries `destructive: false` (the grep-drop trap). `admin.api.ts` re-exports
@@ -2304,7 +2340,7 @@ gated self-cleaning write lifecycle and the `kpostadmin.kpostindia.com` UI.
 ### 2026-09-15 — Admin module FLOW captured (owner walkthrough); business accounts arrive — Admin unblocked
 
 The owner explained the Admin module's process and provided the live business accounts, so the module
-can now be tested. Full detail in **`docs/admin-flow.md`**; the decisions that shape the bench:
+can now be tested. Full detail in **`docs/modules/admin-flow.md`**; the decisions that shape the bench:
 
 **There are TWO different "admin" surfaces — not to be conflated:**
 
@@ -2353,7 +2389,7 @@ so a request always targets the caller's own company; the QA-identifier guard mu
 equal to the principal's own token `companyID` (discover each numeric id on first login, record as
 `QA_BUSINESS_{S,M,L}_COMPANY_ID`). Next: register `admin-api` (definitions + suite), live reads, the
 gated self-cleaning write lifecycle on BUSINESS_M, and the `kpostadmin.kpostindia.com` UI. Filing routes
-to **KPost Admin → Jaganathan**. Full detail in `docs/admin-flow.md`.
+to **KPost Admin → Jaganathan**. Full detail in `docs/modules/admin-flow.md`.
 
 ### 2026-09-15 — Admin module workbook converted to OpenAPI, its own product `admin-api`
 
@@ -2509,7 +2545,7 @@ module, **finish one module completely before starting the next**. This entry is
 each module's completion is recorded as it lands. A module is **done** when every _assertable_ feature
 has a passing test (a read-only check green, or a gated write tuned green on live) and every
 _non-assertable_ or _blocked_ feature is documented-with-reason — the same honesty bar the API side
-uses. Selectors per feature live in **`docs/ui-build-plan.md`**; the grammar is fixed (substring menu
+uses. Selectors per feature live in **`docs/ui/ui-build-plan.md`**; the grammar is fixed (substring menu
 match, **send = Enter**, ModalComponent title+submit, assert the toast). Order = the API build order.
 
 **The two hard blocks (documented, not chased):** KDiary UI has **no route/rail entry point** in the
@@ -2553,7 +2589,7 @@ Executing now from the top: **Module 1 (Login) → logout**, then down the list.
 
 ### 2026-09-15 — Executing the UI build plan module by module; KMail · Kall · Settings · verticals · Home green on live
 
-Building from `docs/ui-build-plan.md` in the API order, validating each on live as I go (I now have
+Building from `docs/ui/ui-build-plan.md` in the API order, validating each on live as I go (I now have
 terminal access to run the suite). The **Enter-send discovery finished the Katchup tail**: the app
 submits on **Enter** in the editor (`WriteMessage.handleKeyDown`), not a button — the shared
 `submitComposer(page)` presses Enter, so Note/Reminder/Transfer/Forward/copies all send now (the
@@ -2585,7 +2621,7 @@ triggers), and one live tuning pass on the gated writes (KMail send, Kall schedu
 The owner asked to stop patching individual specs and instead **analyse the complete frontend + the
 KPost documents, plan it, then build the UI systematically**. Done: a full read of the React source
 (`KPOST_REACTJS_2023_V1`, all modules) reconciled with the documents (§1–4: the four documented
-modules as 55 FRs + 9 BRs) into **`docs/ui-build-plan.md`** — per module, the real selectors, the test
+modules as 55 FRs + 9 BRs) into **`docs/ui/ui-build-plan.md`** — per module, the real selectors, the test
 approach (gated / self-cleaning / multi-account), FR traceability, and status. It is the authoritative
 map for finishing the UI, the front-end analogue of the Excel workbook for the API.
 
@@ -2698,7 +2734,7 @@ into the sweep and removed.
 FR-K01..K25/BR-K01..K03, the `katchupMessageType` enum, the frontend `bellIconContent`/
 `replyIconContent` menus); `tests/framework/katchup-ui-coverage.spec.ts` fails the build if a feature
 is unclassified, a `built` feature's spec is missing, or any FR-K is unrepresented, and generates
-`docs/KATCHUP-UI-COVERAGE.md`. **23 of 35 built**; the rest are blocked-with-reason exactly like a
+`docs/generated/katchup-ui-coverage.md`. **23 of 35 built**; the rest are blocked-with-reason exactly like a
 blocked API endpoint (7 need one recording pass, 1 needs a file upload, 2 api-only, 2 ui-only). Specs:
 
 - `katchup-actions.spec.ts` — Delete · Edit (Edited marker, BR-K03) · Save · Copy (bell menu, self-clean)
@@ -2748,14 +2784,14 @@ run and reads as "done" until someone runs it. So the decision was to build only
   `Confirm`). Both are **self-cleaning** — Delete _is_ its cleanup; Edit re-sends an edited body
   (asserts the `Edited` marker, BR-K03) then deletes. Gated `KATCHUP_UI_LIFECYCLE=true`, so it never
   runs on a default run and cannot file a false bug. Carries a FIRST-RUN NOTE to remove after tuning.
-- **`docs/ui-write-flows.md`** (new) — the write-flow plan for **every** module: Katchup
+- **`docs/archive/ui-write-flows-2026-09-28.md`** (new) — the write-flow plan for **every** module: Katchup
   (group / confidential-copy / attachments / Save / Note / Reminder / Forward / Transfer), KMail
   compose, Settings theme, Profile edit, Contacts, Kall, KDiary. Each carries its **mined selectors**,
   its `*_UI_LIFECYCLE` gate, its self-clean strategy, and the fact that **each already has a green API
   lifecycle** proving the operation works on live — the UI track only has to prove the _screen_ drives
   it. Plus the per-flow tuning loop (setup → codegen → reconcile → run headed → green).
 - **`ui-coverage.spec.ts`** — the ledger now lists the actions flow as built and the seven remaining
-  write-flows as planned-with-selectors, so `docs/UI-COVERAGE.md` reflects the real state.
+  write-flows as planned-with-selectors, so `docs/generated/ui-coverage.md` reflects the real state.
 
 Why this is the right shape, not a shortfall: the read-only UI is **green on live across every
 screen** (deep check sweep, navigation, shell, login, compose+recall), and every _write_ the product
@@ -2798,7 +2834,7 @@ bugs while the (deep) API suite finds many. First layer built:
   expands to reveal its items (Basic Information).
 
 **Measurable & self-checking (the production-grade part):** `tests/framework/ui-coverage.spec.ts` is
-the front-end analogue of the coverage ledger — it generates **`docs/UI-COVERAGE.md`** (every screen,
+the front-end analogue of the coverage ledger — it generates **`docs/generated/ui-coverage.md`** (every screen,
 its component, the check catalogue each inherits, the interaction flows) and **fails the build** if a
 screen would route a bug to a component that does not exist in the KPost UI product. So UI coverage is
 measured, not asserted by hand — the same rigor as the API side.
@@ -2919,7 +2955,7 @@ process**, and the one hard rule — **never touch another real user's data**. T
   and the **OTP** flows. The write **processes** are fully covered by the lifecycle flows on the six
   accounts; only malformed-write _inputs_ want a throwaway host.
 
-Also added the operator guide **`docs/RUNBOOK.md`** (verify the bench → dry-preview → full run →
+Also added the operator guide **`docs/guides/runbook.md`** (verify the bench → dry-preview → full run →
 read results → boundaries → safety rules) and two commands: **`npm run flow:preview`** /
 **`npm run flow:file`** — the complete end-to-end run (all reads incl. live read-fuzzing, all ten
 write lifecycles, UI screens), serial, self-cleaning, filed to the right developer. `npm run check`
@@ -2967,7 +3003,7 @@ Two real routing bugs found and fixed, plus a guard so they cannot recur:
   prefixed tags.
 - **A guard + a map you can read:** `tests/framework/component-routing.spec.ts` resolves `componentFor`
   for every registered endpoint, **fails if any routes to a component that does not exist** in its
-  product (`KNOWN_COMPONENTS`, exported for this), and writes **`docs/COMPONENT-ROUTING.md`** — a
+  product (`KNOWN_COMPONENTS`, exported for this), and writes **`docs/generated/component-routing.md`** — a
   component → endpoint-count map per product. So a typo or a renamed component is caught mechanically.
 
 Also **relaxed the first-live-run dry-run guard**: `live-safety.spec.ts` no longer forces
@@ -2981,7 +3017,7 @@ tests pass**, including the live-Bugzilla component-default check.
 The largest module — email — built in stages. Suite `kmail-api`, **host `kmail5.kpostindia.com` with
 a `/kmail5/v2` path prefix** (the owner supplied it; a first probe that omitted `/v2` had misled an
 earlier note toward devapi2). Registry 217 → **291**; runs-on-live 71 → **101**. Codes/flow analysed
-first in `docs/kmail-flow.md`; all three enums (`kmailType` 0–13, `kmailReceiverType` 1–3,
+first in `docs/modules/kmail-flow.md`; all three enums (`kmailType` 0–13, `kmailReceiverType` 1–3,
 `kmailPriority` 0–2) match the workbook.
 
 - **`defineKmailEndpoint`** — a parallel wrapper (own suite, `kmail` envelope, auth). 71 endpoints
@@ -3171,7 +3207,7 @@ already asserted there. Ledger updated: `contacts` → built.
 ### 2026-09-13 — Coverage ledger: completeness made measurable and self-checking
 
 The goal is complete coverage — every endpoint, every screen, nothing missed. You cannot _claim_
-that; you have to _measure_ it. `tests/framework/coverage-ledger.spec.ts` generates **`docs/COVERAGE.md`**
+that; you have to _measure_ it. `tests/framework/coverage-ledger.spec.ts` generates **`docs/generated/coverage.md`**
 by reconciling the registry against both generated contracts (kpost-api + kmail-api). It buckets
 every documented path into a module, each module carrying an explicit **scope decision**
 (`built` / `backlog` / `needs-business` / `external` / `out-of-scope`), and it **fails the build** if
@@ -3192,11 +3228,11 @@ BRD §4.2). Screens still to add: settings (own spec), kcloud, kbooking, kdoc, u
 The ledger is the definition of done: complete = every `backlog` module built, every buildable screen
 speced, and every `needs-business`/`out-of-scope` item either unblocked or recorded as a decision.
 
-### 2026-09-13 — The frontend becomes the UI source of truth; `docs/ui-screens.md`; shell + KMail screens
+### 2026-09-13 — The frontend becomes the UI source of truth; `docs/ui/ui-screens.md`; shell + KMail screens
 
 The owner pointed at the React source (`D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1`). It is to the UI
 what the Excel workbook is to the API — the authoritative map of screens, controls and the
-icon→action→API wiring. Mined it into **`docs/ui-screens.md`**: per screen, the stable selectors
+icon→action→API wiring. Mined it into **`docs/ui/ui-screens.md`**: per screen, the stable selectors
 present at initial load, and each control (`icon-KP_*`) → what it does → which endpoint it calls, plus
 the app-shape facts a test must respect. So e2e tests now anchor on a documented map instead of
 selectors reverse-engineered per module.
@@ -3234,7 +3270,7 @@ the map matches the deployment, so the new selectors were trustworthy before run
 
 The calling module, built to the Katchup/Profile bar: `/v2/kall/*` — **20 usable endpoints** (the
 converter correctly retired 16 superseded duplicates), the two call flows analysed first in
-`docs/kall-flow.md`. Registry: 137 → **157**; live doc: **51 run / 106 blocked**. Coverage 7/7,
+`docs/modules/kall-flow.md`. Registry: 137 → **157**; live doc: **51 run / 106 blocked**. Coverage 7/7,
 `/kall` UI cross-browser.
 
 **The codes were already right.** All four enums the owner supplied — `kallStatus` (0–11),
@@ -3371,7 +3407,7 @@ So the one-off consolidate-and-resolve script was **removed**, and the setup is 
   the reason. Written even on a dry run or with no host configured, so "what did this run find and file"
   never needs the scrollback. The 376-line per-bug console dump is gone.
 
-Generated `docs/COVERAGE.md` and `docs/LIVE-ENDPOINTS.md` added to `.prettierignore` (they regenerate
+Generated `docs/generated/coverage.md` and `docs/generated/live-endpoints.md` added to `.prettierignore` (they regenerate
 every framework run, like the contracts). `npm run check` clean; 17 bug-tracker + 7 ownership/coverage
 framework tests green, including the live-Bugzilla component-default check.
 
@@ -3402,7 +3438,7 @@ turned the dashboard's baffling symptom into a mechanical check, and immediately
 reads that had been silently dropped from every live run since they were written**: five in Katchup
 (`conversation`, `message-count`, `search-message`, `search-subject`, `filter-message`) and five in
 Profile (`user-profile-by-kpostid`, `user-basic-by-kpostid`, `digital-card`, `auto-search`,
-`advanced-search`). All ten now carry `destructive: false` and run on live. `docs/LIVE-ENDPOINTS.md`
+`advanced-search`). All ten now carry `destructive: false` and run on live. `docs/generated/live-endpoints.md`
 went **42 → 45** as the dashboard trio joined; the Katchup/Profile ten were already counted as
 "runs on live" by the generator (which reads the raw definition) even though the engine had been
 dropping them — the exact split-brain the guard closes. The guard is green.
@@ -3764,7 +3800,7 @@ The third module, at the owner's direction (Profile deferred behind it). The own
 Types tab exactly** (`katchupStatus`, `katchupMessageType`, `katchupShareType` in
 `contracts/kpost-types.json`, exposed as `KATCHUP_STATUS` / `KATCHUP_MESSAGE_TYPE` /
 `KATCHUP_SHARE_TYPE`). So the codes were already captured; what was new was verifying them against
-the live web client and writing the flow down. Full analysis: **`docs/katchup-flow.md`**.
+the live web client and writing the flow down. Full analysis: **`docs/modules/katchup-flow.md`**.
 
 #### The send contract came from the live client, not the workbook
 
@@ -3917,7 +3953,7 @@ comes later.
     PERSONAL  Qatesting@kpostindia.com    9944556677   primary
     PERSONAL  Qatesting2@kpostindia.com   9876543211   counterparty
 
-#### The single reference: `docs/LIVE-ENDPOINTS.md`
+#### The single reference: `docs/generated/live-endpoints.md`
 
 One file, **generated** from the definitions by `tests/framework/live-coverage.spec.ts`, listing
 what runs on live and what does not with a reason for each. Generated rather than written, because

@@ -10,7 +10,7 @@ import { expect, test } from '@fixtures';
 /**
  * The KMail lifecycle asserted across API and MySQL: send → star → delete.
  *
- * Schema, and the three ways it contradicts the obvious assumption: `docs/KMAIL-SCHEMA.md`. The
+ * Schema, and the three ways it contradicts the obvious assumption: `docs/modules/kmail-schema.md`. The
  * two that shape this file:
  *
  *  - **Per-recipient state is not on the mail.** `TBL_KPOST_KMAIL_MASTER` holds the mail once;

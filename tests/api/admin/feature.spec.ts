@@ -12,7 +12,7 @@ import { expect, test } from '@fixtures';
 /**
  * Admin module **feature flow** — the organisation-build sequence a BUSINESS_M admin runs in the
  * Admin/HR-Setup module (`kpostadmin.kpostindia.com` UI / `adminmodule.kpostindia.com` API), end to
- * end on live, self-cleaning. Full flow: `docs/admin-flow.md`. Payloads measured from the frontend
+ * end on live, self-cleaning. Full flow: `docs/modules/admin-flow.md`. Payloads measured from the frontend
  * (`ADMIN_HR_MODULES_25/src/Services/{AdminSetup,HumanResources}.js`), not guessed:
  *
  *   - tier/variable/location **saves are ARRAYS**; the created id is at `value[i].id`.

@@ -338,6 +338,13 @@ function main() {
           '',
         ]
       : []),
+    '## Scope — KMail and Admin',
+    '',
+    'The scan covers the KPost and KMail contracts. KMail has no dedicated OTP endpoint: the mail-OTP is',
+    'a variant of `POST /kmail5/v2/sentMail/postMail/` sent with `kmailType = 12`, not a separate route,',
+    'and that variant is never sent on live. The Admin / HR-Setup module reuses the KPost login token',
+    '(no login screen, no OTP of its own), so none of its endpoints send, consume or require an OTP.',
+    '',
     '## The evidence behind each `REQUIRES` entry',
     '',
     ...REQUIRES_PRIOR_OTP.flatMap((entry) => [

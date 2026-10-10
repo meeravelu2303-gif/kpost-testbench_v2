@@ -10,7 +10,7 @@ import { kallReadApis } from '@api/definitions/kpost/kall/read.api';
 /**
  * Self-tests for the Kall module. No HTTP — these assert the wiring a reviewer would otherwise take
  * on trust: full coverage, contract agreement, that the status/type/mode/repeat codes still mean
- * what `docs/kall-flow.md` says, that every write is gated, and — the one that matters most on live
+ * what `docs/modules/kall-flow.md` says, that every write is gated, and — the one that matters most on live
  * — that every cleared read's payload passes the QA-identifier guard.
  */
 test.describe('KPost Kall · module coverage', () => {
@@ -36,7 +36,7 @@ test.describe('KPost Kall · module coverage', () => {
 
   test('the status, type, mode and repeat-type codes match the analysis @framework', () => {
     /*
-     * Pins the codes the payloads use against the owner's definitions (docs/kall-flow.md §1). A
+     * Pins the codes the payloads use against the owner's definitions (docs/modules/kall-flow.md §1). A
      * workbook edit that renumbered them would fail here rather than silently change what a call
      * placement or status transition means.
      */
@@ -61,7 +61,7 @@ test.describe('KPost Kall · module coverage', () => {
     const cleared = kallApis
       .filter((api) => api.destructive && api.productionSafe)
       .map((api) => api.id);
-    expect(cleared, 'no Kall write is cleared for live (docs/kall-flow.md §5)').toEqual([]);
+    expect(cleared, 'no Kall write is cleared for live (docs/modules/kall-flow.md §5)').toEqual([]);
   });
 
   test('every cleared read passes the QA-identifier guard on live @framework', async () => {

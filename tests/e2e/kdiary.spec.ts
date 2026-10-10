@@ -4,7 +4,7 @@ import { expect, test } from '@fixtures';
 /**
  * **KDiary** — schedules / events / reports. `/kdiary` is commented out in `MenuRoutes.js`; the UI is
  * the `Diary` component (`components/Katchup/components/Diary/Diary.js`), rendered in the **right rail**
- * of `/home` (and `/katchup`) via `Overall/Knews.js` → `<Diary />`. Selectors from `docs/ui-build-plan.md`:
+ * of `/home` (and `/katchup`) via `Overall/Knews.js` → `<Diary />`. Selectors from `docs/ui/ui-build-plan.md`:
  * root `.Dairy-Container`, header `t("Diary")`, add-schedule `button.btn.btn-dark.rounded-pill` ("+ Add")
  * → modal `"KDiary"` (`.DiaryInput` "Enter Title", `.DiaryTextArea` "Enter Description", save
  * `.DiarySaveBtn` → toast "Schedule created successfully!").

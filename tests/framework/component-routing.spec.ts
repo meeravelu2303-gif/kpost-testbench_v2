@@ -1,4 +1,4 @@
-// Generates docs/COMPONENT-ROUTING.md, so the "conditionals" flagged here are table formatting.
+// Generates docs/generated/component-routing.md, so the "conditionals" flagged here are table formatting.
 /* eslint-disable playwright/no-conditional-in-test */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +14,7 @@ import { expect, test } from '@fixtures';
  * component of that endpoint's product — the exact set that exists live in the instance
  * (`KNOWN_COMPONENTS`, verified against Bugzilla on 2026-09-14) — so a typo or a renamed component can
  * never silently send tickets to a component that does not exist; and (2) writes
- * `docs/COMPONENT-ROUTING.md`, a component → endpoints map, so the routing is auditable at a glance.
+ * `docs/generated/component-routing.md`, a component → endpoints map, so the routing is auditable at a glance.
  *
  * The catch-all fallback components (`kpost-webservice-application`, `kmail-application`) are allowed
  * but surfaced: a built module's endpoints landing there is a routing gap to fix, not an error here.
@@ -89,7 +89,7 @@ test.describe('component routing @framework', () => {
       );
     }
 
-    const outPath = path.join(ROOT_DIR, 'docs', 'COMPONENT-ROUTING.md');
+    const outPath = path.join(ROOT_DIR, 'docs', 'generated', 'component-routing.md');
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
 

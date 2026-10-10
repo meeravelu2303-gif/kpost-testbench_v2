@@ -63,7 +63,7 @@ test.describe('KPost signup · domain policy @api @kpost-api @signup-login @data
    * The COMPLETE documented payload, not just the id. `kpostIdExist` requires `firstName`,
    * `lastName` and `mobileNumber` alongside it and answers 500 when they are missing — sending a
    * partial body would report the bench's own omission as an API crash. That mistake has been made
-   * here before (see the validateOTP entry in docs/DECISION-LOG.md); a payload is safety-critical, never
+   * here before (see the validateOTP entry in docs/reference/decision-log.md); a payload is safety-critical, never
    * cosmetic.
    *
    * `mobileNumber` is the configured known-absent fixture: it matches no account, so it names

@@ -4,7 +4,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Admin module security probes — proofs for plan items 0c and 0d (docs/archive/TEST-BENCH-PLAN-2026-10-02.md
+ * Admin module security probes — proofs for plan items 0c and 0d (docs/archive/test-bench-plan-2026-10-02.md
  * §16 P0), both READ-ONLY and both against the bench's already-configured `ADMIN_API_BASE_URL`
  * (confirmed on-prem/local test box, never the live `adminmodule.kpostindia.com` host — see the
  * plan's §3/§5 notes on this). Nothing here writes to the Admin database, which the bench's own
@@ -38,7 +38,7 @@ import { expect, test } from '@fixtures';
  *
  * **2026-10-06**: the standalone `admin-department-by-company` probes for 0c (missing-header bypass)
  * and the 0d baseline (both below) were removed along with the `department/*` endpoint definitions —
- * the Admin module's test scope is now restricted to `docs/reference/Admin_module - API Services.pdf`'s 36
+ * the Admin module's test scope is now restricted to `docs/api-specs/Admin_module - API Services.pdf`'s 36
  * endpoints, which do not include any `department/*` path. These two tests were the clearest,
  * already-filed CRITICAL reproduction of 0c/0d combined; that finding loses bench regression coverage
  * as a result. Six `CROSS_TENANT_CANDIDATES` entries were removed for the same reason (their

@@ -9,33 +9,45 @@ Everything in `contracts/` and `openapi/` is **generated**. Nothing in them is h
 ## Commands
 
 ```bash
-npm run contract:excel      # convert the newest "KPOST API (N).xlsx" in the repo root
+npm run contract:excel      # convert the newest "KPOST API (N).xlsx" in docs/api-specs/
 npm run contract:coverage   # prove every workbook endpoint reached the contracts (gate)
 npm run contract:gaps       # list what the workbook is still missing, for filling in
+npm run contract:otp        # list the OTP-dependent endpoints (blocked on live)
 
 npm run contract:excel -- "C:/path/KPOST API (7).xlsx"   # or a specific workbook
 ```
 
-Run all three after every new dump, and commit the results: the diff shows exactly which endpoint
-or field changed — the review a binary spreadsheet cannot give you.
+Run them in that order after every new dump (a new dump goes into `docs/api-specs/` next to the old
+one; the highest `(N)` wins), and commit the results: the diff shows exactly which endpoint or field
+changed — the review a binary spreadsheet cannot give you.
 
 ## What is generated
 
 ```
+docs/api-specs/KPOST API (N).xlsx   the owner's workbook — the only input
+        │
 scripts/excel-to-contract.cjs   the converter
 scripts/contract-coverage.cjs   the independent coverage audit
 scripts/excel-gap-report.cjs    the "what to fill in" report
+scripts/otp-dependency-report.cjs  the OTP-dependency report
         │
-        ├── contracts/kpost-api.contract.json   every KPost row, usable or not, with reasons
-        ├── contracts/kmail-api.contract.json   every KMail row, same shape
-        ├── contracts/kpost-types.json          the Types tab (13 enum groups)
-        ├── contracts/_conversion-report.json   every excluded row and why
-        ├── contracts/_coverage.json            audit result: anything in the workbook we missed
-        ├── contracts/excel-gaps.csv            one row per gap, opens in Excel
-        ├── contracts/excel-gaps.md             the same, summarised
-        ├── openapi/kpost-api.openapi.json      ONLY the usable KPost rows
-        └── openapi/kmail-api.openapi.json      ONLY the usable KMail rows
+        ├── contracts/kpost-api.contract.json      every KPost row, usable or not, with reasons
+        ├── contracts/kmail-api.contract.json      every KMail row, same shape
+        ├── contracts/kpost-types.json             the Types tab (13 enum groups)
+        ├── contracts/excel-gaps.csv               one row per gap, opens in Excel
+        ├── contracts/excel-gaps.md                the same, summarised
+        ├── contracts/otp-dependent-endpoints.md   every endpoint that sends, consumes or requires an OTP
+        ├── openapi/kpost-api.openapi.json         ONLY the usable KPost rows
+        ├── openapi/kmail-api.openapi.json         ONLY the usable KMail rows
+        │
+        ├── contracts/_conversion-report.json   intermediate: every excluded row and why; the audits read it
+        └── contracts/_coverage.json            intermediate: audit result, anything in the workbook we missed
 ```
+
+The two `_*.json` intermediates are gitignored — `contract:excel` recreates them, and `contract:gaps`
+refuses to run without the conversion report rather than silently dropping the cell references.
+(The Admin contract is separate: `npm run contract:admin` fetches the live service's OpenAPI and
+applies the owner's PDF payloads from `docs/api-specs/`; see `docs/modules/admin-flow.md`.)
 
 KPost and KMail are separate products maintained by different developers, so they get separate
 documents — never one merged file.
@@ -212,7 +224,7 @@ separately as `mentionsOnly`, never as gaps.
 `kmailReceiverType`, `kmailPriority`, `kdiaryRemarks`, `module` (0–17) and `userType`.
 
 These numbers are part of the contract — a payload sends `kmailType: 11` and means "share". So they
-are **not** retyped into test data. [`src/api/schemas/kpost-types.ts`](../src/api/schemas/kpost-types.ts)
+are **not** retyped into test data. [`src/api/schemas/kpost-types.ts`](../../src/api/schemas/kpost-types.ts)
 is the typed way to read the generated file:
 
 ```ts
@@ -228,7 +240,7 @@ Named maps exist for every group payloads reference (`KATCHUP_MESSAGE_TYPE`, `KA
 `KALL_MODE`, `KMAIL_PRIORITY`, `KDIARY_REMARKS`, `KPOST_MODULE`, …), plus `USER_TYPES` for the
 business tiers — the one group the workbook gives as labels only, with no numeric codes.
 
-[`tests/framework/types-contract.spec.ts`](../tests/framework/types-contract.spec.ts) pins the
+[`tests/framework/types-contract.spec.ts`](../../tests/framework/types-contract.spec.ts) pins the
 groups and the load-bearing values, so a workbook edit that renames or renumbers something fails a
 test instead of silently changing what the bench sends.
 

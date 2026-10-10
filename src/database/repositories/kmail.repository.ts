@@ -2,7 +2,7 @@ import type { JsonObject } from '@utils/json';
 import type { DatabaseClient } from '../database-client';
 
 /**
- * Repository over the KMail tables on KPOST_QA. Full mapping and its surprises: `docs/KMAIL-SCHEMA.md`.
+ * Repository over the KMail tables on KPOST_QA. Full mapping and its surprises: `docs/modules/kmail-schema.md`.
  *
  * The one structural fact worth repeating here, because it shapes every method below: **per-recipient
  * state is not on the mail.** `TBL_KPOST_KMAIL_MASTER` holds the mail once; read, star, delete and
@@ -14,7 +14,7 @@ import type { DatabaseClient } from '../database-client';
 /** `TBL_KPOST_KMAIL_MASTER` — the mail. `kmail_subject` is ENCRYPTED at rest (longtext, not BLOB). */
 export interface KmailMasterRecord extends JsonObject {
   kmail_id: number | string;
-  /** Ciphertext. Never equal to the plaintext that was sent — see `docs/KMAIL-SCHEMA.md`. */
+  /** Ciphertext. Never equal to the plaintext that was sent — see `docs/modules/kmail-schema.md`. */
   kmail_subject: string | null;
   kmail_type: number | null;
   priority: number | null;

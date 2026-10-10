@@ -128,7 +128,7 @@ test.describe('KPost Login · behaviour', () => {
      * THE FINDING (soft, so the run continues and reports every defect): on live, a wrong password
      * answers **HTTP 200** `"Invalid Credential"` — the same status as success. A caller reading the
      * HTTP status cannot tell a failed login from a successful one. It must be a 4xx (401). Soft so
-     * this stays red and reported without halting the suite. See docs/DECISION-LOG.md.
+     * this stays red and reported without halting the suite. See docs/reference/decision-log.md.
      */
     expect
       .soft(wrong.status, 'a wrong password must not answer 2xx — it does (HTTP 200)')
@@ -250,7 +250,7 @@ test.describe('KPost Login · behaviour', () => {
     endpoints,
   }) => {
     /*
-     * BR-SL-3IDS (business-rules.md): the FRD text this rule was originally transcribed from reads as
+     * BR-SL-3IDS (docs/reference/business-rules.md): the FRD text this rule was originally transcribed from reads as
      * if mobile, bare KPost ID, and full domain-qualified ID were three equally valid login
      * identifiers for the same account. That reading is wrong — confirmed by the developer 2026-10-03
      * (Bugzilla #949, closed INVALID): a KPost ID's local part (before the `@`) is not unique across

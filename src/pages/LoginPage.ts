@@ -14,7 +14,7 @@ import { BasePage } from './BasePage';
  *           inline error under the field (the server's message, e.g. "Invalid Credential").
  *
  * The component ships **no `data-testid` hooks**, so every locator here is by role, label or text —
- * more brittle than an id, and the reason `docs/LIVE-ENDPOINTS.md` flags test-ids as a UI-bench
+ * more brittle than an id, and the reason `docs/generated/live-endpoints.md` flags test-ids as a UI-bench
  * prerequisite. Each locator notes what it is anchored to so a UI change points here.
  */
 export class LoginPage extends BasePage {

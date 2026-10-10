@@ -5,7 +5,7 @@ import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
  * Admin module — **Role Posting Setup** (step 4: map roles to a workplace) and **Assign Role
- * Posting** (step 6: assign a role to an employee — ONE role per employee). See `docs/admin-flow.md`.
+ * Posting** (step 6: assign a role to an employee — ONE role per employee). See `docs/modules/admin-flow.md`.
  *
  *   rolePosting/getRolePostingByCompanyId    the role postings for the company (read)
  *   rolePosting/getEmployeeByCompanyId       the employees available to assign (read)

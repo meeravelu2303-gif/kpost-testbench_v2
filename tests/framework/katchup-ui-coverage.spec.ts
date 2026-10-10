@@ -16,7 +16,7 @@ import { expect, test } from '@fixtures';
  *   - a non-`built` feature has no reason,
  *   - any FR-K / BR-K / NFR the FRD defines for Katchup is represented by no feature.
  *
- * It also writes `docs/KATCHUP-UI-COVERAGE.md` so the picture is legible without reading code.
+ * It also writes `docs/generated/katchup-ui-coverage.md` so the picture is legible without reading code.
  */
 test.describe('Katchup UI coverage @framework', () => {
   test('every Katchup feature is classified, specced or blocked-with-reason, and every FR is covered', () => {
@@ -71,7 +71,7 @@ test.describe('Katchup UI coverage @framework', () => {
       `Every Katchup FR/BR/NFR the FRD defines maps to ≥1 feature. Requirements: **${KATCHUP_REQUIREMENTS.length}**, uncovered: **${uncoveredReqs.length}**.`,
       '',
     ];
-    const outPath = path.join(ROOT_DIR, 'docs', 'KATCHUP-UI-COVERAGE.md');
+    const outPath = path.join(ROOT_DIR, 'docs', 'generated', 'katchup-ui-coverage.md');
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
 

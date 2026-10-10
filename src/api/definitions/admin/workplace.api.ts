@@ -5,7 +5,7 @@ import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
  * Admin module — **Work Place Setup** (step 1 of the org-build) and **Work Place Location Setup**
- * (step 2). See `docs/admin-flow.md` §4.
+ * (step 2). See `docs/modules/admin-flow.md` §4.
  *
  *   adminTierAttribute/*   the workplace TIERS (levels), e.g. "category of workplace"
  *   adminTierVariable/*     the workplace VARIABLES (nodes), e.g. "Head office" under a tier

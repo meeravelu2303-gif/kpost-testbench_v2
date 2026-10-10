@@ -160,7 +160,7 @@ export const forgotPasswordUpdateApi = defineKpostEndpoint({
    * without one. But the step that satisfies it is not the documented `validateOTP`: calling
    * `forgotPasswordOTPOrSentKpostIDSms` and then `validateOTP` with the bypass code still leaves it
    * at 400, so the flow keeps its own OTP state reached by some other call. Open with the API owner
-   * (see docs/BENCH-REFERENCE.md §9). Recorded here so the 400 is not filed as a bug.
+   * (see docs/reference/bench-reference.md §9). Recorded here so the 400 is not filed as a bug.
    */
   request: body(() => ({
     kpostID: testData.forgotPasswordKpostId,

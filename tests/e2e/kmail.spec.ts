@@ -5,7 +5,7 @@ import { expect, test } from '@fixtures';
  * The **KMail** screen on the live front end, across all browsers, using the session `setup` saved.
  *
  * Read-only screen check (KMail's own API module is a later target). Structural selectors from
- * `components/Kmail/Kmail.js` (`docs/ui-screens.md`). The `<Knews>`/`<Ecommerce>` fillers sit in the
+ * `components/Kmail/Kmail.js` (`docs/ui/ui-screens.md`). The `<Knews>`/`<Ecommerce>` fillers sit in the
  * right columns before a mail is opened, so the assertion anchors on the KMail shell, not those.
  */
 test.describe('KPost KMail screen', { tag: '@ui' }, () => {

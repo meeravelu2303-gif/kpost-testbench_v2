@@ -78,7 +78,7 @@ test.describe('KPost Kall · feature flow @database', () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     process.env.KALL_LIFECYCLE !== 'true',
-    'places/schedules real calls; set KALL_LIFECYCLE=true (owner sign-off, docs/kall-flow.md §5)',
+    'places/schedules real calls; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5)',
   );
 
   test('direct call: place → read status (both ways) → transition → end → clear (FR-C05/C08) @api @kall', async ({
@@ -463,7 +463,7 @@ test.describe('KPost Kall · feature flow @database', () => {
     endpoints,
   }) => {
     /*
-     * FR-KL-001 (business-rules.md, ⬜ to-do as of 2026-10-02): a scheduled Kall requires subject
+     * FR-KL-001 (docs/reference/business-rules.md, ⬜ to-do as of 2026-10-02): a scheduled Kall requires subject
      * (title), a date and start/end time; a request missing one of these must be rejected, not
      * accepted as if the field were optional. Each case omits exactly one required field from an
      * otherwise-valid scheduleShape() body. `expect.soft` so one run reports every field, not just
@@ -500,7 +500,7 @@ test.describe('KPost Kall · feature flow @database', () => {
     endpoints,
   }) => {
     /*
-     * FR-KL-008 (business-rules.md, ⬜ to-do as of 2026-10-02): "the call log records participants,
+     * FR-KL-008 (docs/reference/business-rules.md, ⬜ to-do as of 2026-10-02): "the call log records participants,
      * role/team, duration". Response shape measured live 2026-10-02 (kall-dashboard, `kall[]` array,
      * each entry carrying `kallID`/`sender`/`senderName` and a `kallDetails[]` array of
      * `receiver`/`receiverName`) before writing this assertion — not guessed.

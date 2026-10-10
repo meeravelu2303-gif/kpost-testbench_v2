@@ -14,7 +14,7 @@ import type { KmailMasterRecord, KmailTransactionRecord } from './repositories/k
  *    reports every mail as deleted, starred and read at once, and every assertion built on it
  *    passes for the wrong reason.
  *
- * See `docs/KMAIL-SCHEMA.md` for the full mapping and the sampled value distributions.
+ * See `docs/modules/kmail-schema.md` for the full mapping and the sampled value distributions.
  */
 
 /**

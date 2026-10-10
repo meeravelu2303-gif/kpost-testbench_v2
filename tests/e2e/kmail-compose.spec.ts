@@ -5,7 +5,7 @@ import { expect, test } from '@fixtures';
  * **KMail compose → send** (FR-M01). Navigating to `/writemail` opens the compose form directly
  * (`Kmail.js` sets `showWriteMail` when the path is `/writemail` → renders `WriteMailPage.js`).
  *
- * Selectors from `WriteMailPage.js` (see `docs/ui-build-plan.md`):
+ * Selectors from `WriteMailPage.js` (see `docs/ui/ui-build-plan.md`):
  *   To      `input[name="to"]` (`.subjectTextboxKmailTO`)
  *   Subject `.toInput` (maxlen 70)
  *   Body    the Quill editor (placeholder "Type your mail here")

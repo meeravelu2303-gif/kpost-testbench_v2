@@ -5,7 +5,7 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import { expect, test } from '@fixtures';
 
 /**
- * KMail attachment IDOR — proof for plan item 0a (docs/archive/TEST-BENCH-PLAN-2026-10-02.md §16 P0).
+ * KMail attachment IDOR — proof for plan item 0a (docs/archive/test-bench-plan-2026-10-02.md §16 P0).
  *
  * ## What this proves
  *

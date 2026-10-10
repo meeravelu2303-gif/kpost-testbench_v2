@@ -5,7 +5,7 @@ import { expect, test } from '@fixtures';
  * **Profile** actions beyond the About edit (`profile-edit.spec.ts`, green): the three-dot menu
  * (Change Cover/Profile Picture · Share · Logout), the Share modal, and the section add flows
  * (Experience / Education). Selectors from `components/UserProfile/UserProfile.js` (see
- * `docs/ui-build-plan.md`): three-dot `.icon-KP_144---More-Vertical.more_back`; sections `#Experience`
+ * `docs/ui/ui-build-plan.md`): three-dot `.icon-KP_144---More-Vertical.more_back`; sections `#Experience`
  * / `#Education` with add `.icon-KP_45-Add` and edit `.icon-KP_236_Edit`; profile-pic input `#ImgInput`.
  *
  * The menu-open and Share-modal checks are read-only (nothing is sent). The section add is gated behind
