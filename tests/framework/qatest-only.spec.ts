@@ -1,10 +1,11 @@
-import { applyQatestOnly, qatestOnlyOverrides } from '../../src/config/qatest-only';
+import { applyQatestOnly, KEPT_BUSINESS, qatestOnlyOverrides } from '../../src/config/qatest-only';
 import { expect, test } from '@fixtures';
 
 /**
- * QATEST_ONLY must put the bench on the qatest accounts alone. These pin that every role is
- * re-pointed, that no older or business account survives, and that a missing qatest account fails
- * loudly instead of quietly falling back to a shared one.
+ * QATEST_ONLY must put the PERSONAL roles on the qatest accounts alone, keep the business tiers
+ * (owner decision 2026-10-10: they have no qatest stand-in and must stay tested) with their own
+ * password, drop the older personal-6 account, and fail loudly on a missing qatest account instead
+ * of quietly falling back to a shared one.
  */
 
 const base = {
@@ -29,32 +30,43 @@ test.describe('qatest-only account switch', () => {
     expect(out.QA_PASSWORD).toBe('shared-pw');
   });
 
-  test('business and older-only accounts are removed, not kept @framework', () => {
+  test('the older personal-6 account is removed, the business tiers are not @framework', () => {
     const out = qatestOnlyOverrides(base);
-    for (const name of [
-      'QA_BUSINESS_M_KPOST_ID',
-      'QA_BUSINESS_M_USER_1_KPOST_ID',
-      'QA_BUSINESS_S_KPOST_ID',
-      'QA_PERSONAL_6_KPOST_ID',
-      'QA_COMPANY_ID',
-    ]) {
-      expect(name in out, `${name} must be listed for removal`).toBe(true);
-      expect(out[name], `${name} must be removed`).toBeUndefined();
+    expect('QA_PERSONAL_6_KPOST_ID' in out, 'personal-6 is listed for removal').toBe(true);
+    expect(out.QA_PERSONAL_6_KPOST_ID).toBeUndefined();
+    for (const name of KEPT_BUSINESS) {
+      expect(name in out, `${name} must not be touched by the switch`).toBe(false);
     }
   });
 
-  test('applying it leaves no older account in the environment @framework', () => {
+  test('applying it re-points the personal roles and keeps the business accounts logging in @framework', () => {
     const env: Record<string, string | undefined> = {
       ...base,
       QATEST_ONLY: 'true',
       QA_KPOST_ID: 'old@kpost.in',
       QA_PASSWORD: 'old-pw',
+      QA_PERSONAL_6_KPOST_ID: 'old6@kpost.in',
       QA_BUSINESS_M_KPOST_ID: 'biz@kpost.in',
+      QA_BUSINESS_M_COMPANY_ID: '242',
     };
     expect(applyQatestOnly(env)).toBe(true);
     expect(env.QA_KPOST_ID).toBe('qatest1@x');
     expect(env.QA_PASSWORD).toBe('shared-pw');
-    expect('QA_BUSINESS_M_KPOST_ID' in env).toBe(false);
+    expect('QA_PERSONAL_6_KPOST_ID' in env, 'personal-6 is gone').toBe(false);
+    expect(env.QA_BUSINESS_M_KPOST_ID, 'the business account survives').toBe('biz@kpost.in');
+    expect(env.QA_BUSINESS_M_COMPANY_ID, 'its company id survives').toBe('242');
+    expect(env.QA_BUSINESS_PASSWORD, 'its password is captured before QA_PASSWORD moves').toBe(
+      'old-pw',
+    );
+  });
+
+  test('an explicit QA_BUSINESS_PASSWORD is respected @framework', () => {
+    const out = qatestOnlyOverrides({
+      ...base,
+      QA_PASSWORD: 'old-pw',
+      QA_BUSINESS_PASSWORD: 'biz-pw',
+    });
+    expect('QA_BUSINESS_PASSWORD' in out, 'not overwritten').toBe(false);
   });
 
   test('it does nothing unless switched on @framework', () => {

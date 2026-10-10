@@ -109,21 +109,29 @@ const ALL_KPOST_PRINCIPALS: readonly (Principal & { account: keyof TestData })[]
    * BUSINESS_S account in as PERSONAL is rejected ("Invalid Credential") - so each tier is a
    * separate identity, not a role flag on one account.
    */
+  /*
+   * `tenantId` is the company each business account administers. It is what lets the cross-tenant
+   * authorization validator pick "a COMPANY_ADMIN of ANOTHER company" (business-s vs business-m) —
+   * without it every tenant-scoped endpoint skipped with "no principals of a second tenant".
+   * `password` is the business tiers' own; see `businessPassword` in test-data.config.ts.
+   */
   {
     key: 'business-s',
     account: 'businessSKpostId',
     role: 'COMPANY_ADMIN',
     username: testData.businessSKpostId,
-    password: testData.password,
+    password: testData.businessPassword ?? testData.password,
     userType: 'BUSINESS_S',
+    tenantId: String(testData.businessSCompanyId),
   },
   {
     key: 'business-m',
     account: 'businessMKpostId',
     role: 'COMPANY_ADMIN',
     username: testData.businessMKpostId,
-    password: testData.password,
+    password: testData.businessPassword ?? testData.password,
     userType: 'BUSINESS_M',
+    tenantId: String(testData.businessMCompanyId),
     // Verified on live (2026-09-15): these accounts log in via plain `userLogin` (the default) and the
     // token carries companyID + role:admin, which also authenticates the Admin module — so no
     // `loginEndpointId` override. `adminUserLogin` itself now 500s for every tier, business-m
@@ -135,8 +143,9 @@ const ALL_KPOST_PRINCIPALS: readonly (Principal & { account: keyof TestData })[]
     account: 'businessLKpostId',
     role: 'COMPANY_ADMIN',
     username: testData.businessLKpostId,
-    password: testData.password,
+    password: testData.businessPassword ?? testData.password,
     userType: 'BUSINESS_L',
+    tenantId: String(testData.businessLCompanyId),
   },
   /*
    * A second real account owning data the first must not see. The cross-resource validators use it

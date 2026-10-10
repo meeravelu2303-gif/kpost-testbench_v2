@@ -1,6 +1,13 @@
 import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import {
+  chooseDesignation,
+  MOBILE_FIELD,
+  openAddChannelsChooser,
+  openAddMemberForm,
+  openUserManagement,
+} from './support/usermanagement';
 
 /**
  * **Company-admin UI** — the BUSINESS_S in-app **User Management** screen (`/usermanagement`), which a
@@ -28,16 +35,7 @@ test.describe('KPost company-admin · User Management (BUSINESS_S)', { tag: '@ui
   test('the Business User Management workspace renders licences + members @ui', async ({
     page,
   }) => {
-    await page.goto('/usermanagement', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-
-    await expect(
-      page.getByText(/Business User Management/i).first(),
-      'the User Management workspace renders',
-    ).toBeVisible({ timeout: 20_000 });
+    await openUserManagement(page);
     // The licence summary and channel counts (the business-tier accounting).
     await expect(
       page.getByText(/Total Licenses|Free Licenses|Channels/i).first(),
@@ -51,23 +49,17 @@ test.describe('KPost company-admin · User Management (BUSINESS_S)', { tag: '@ui
   });
 
   test('Add New Channels opens the Add Communication Channels chooser @ui', async ({ page }) => {
-    await page.goto('/usermanagement', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-
-    await page
-      .getByText(/Add New\s*\d*\s*Channels/i)
-      .first()
-      .click();
-
     // The chooser modal: Add Manually · Bulk-Upload MS Excel File. We STOP here (completing it
     // provisions a real member account).
+    await openAddChannelsChooser(page);
     await expect(
-      page.getByText(/Add Manually|Bulk-?Upload/i).first(),
-      'the Add Communication Channels chooser opens',
-    ).toBeVisible({ timeout: 15_000 });
+      page.getByText(/Add Manually/i).first(),
+      'the chooser offers Add Manually',
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Bulk-?Upload/i).first(),
+      'the chooser offers Bulk-Upload',
+    ).toBeVisible();
   });
 
   /**
@@ -80,50 +72,36 @@ test.describe('KPost company-admin · User Management (BUSINESS_S)', { tag: '@ui
    *
    * Read-only in effect: it deliberately never reaches ADD, so it never provisions a real member —
    * safe to run unattended, unlike completing the flow (see the note on the test above).
+   *
+   * Re-tuned live 2026-10-10. This test had been SKIPPING on every run ("the Mobile No field did
+   * not enable"): the field's placeholder had changed to "Enter 10-digit Mobile No (country code
+   * optional)", so the old selector matched nothing, and the forced click + fixed sleeps around the
+   * Designation picker hid that. Re-verified by hand the same day: the collision message appears,
+   * First Name locks while it shows, and a fresh number clears it again.
    */
   test('adding a member with a mobile already used in THIS company is rejected @ui', async ({
     page,
   }) => {
-    await page.goto('/usermanagement', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-    await page.waitForTimeout(1000);
-    await page
-      .getByText(/Add New\s*\d*\s*Channels/i)
-      .first()
-      .click();
-    await page.waitForTimeout(500);
-    await page
-      .getByText(/Add Manually/i)
-      .first()
-      .click();
-    await page.waitForTimeout(1000);
+    const modal = await openAddMemberForm(page);
 
-    const modal = page.locator('.modal.show, [role="dialog"]').last();
-    // Designation must be set first (async-search react-select) before Mobile No is enabled.
-    await modal.locator('.react-select__input').first().click({ force: true });
-    await page.waitForTimeout(700);
-    await page.keyboard.type('Accounts Officer');
-    await page.waitForTimeout(1200);
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(700);
-
-    const mobileField = modal.getByPlaceholder('Enter Mobile No with Country Code');
-    const enabled = await mobileField.isEnabled().catch(() => false);
-    test.skip(!enabled, 'the Mobile No field did not enable — needs a codegen re-tune');
-
-    // Any existing member's own mobile, read straight off the rendered member list, is the least
-    // brittle way to guarantee a genuine same-company collision. Plain 10-digit format: the field's
-    // own mask mangles a leading "+91"/country-code prefix despite its placeholder claiming to want
-    // one — a separate, minor defect noted but not filed on its own.
-    const memberMobile = await page
+    // Any existing member's own mobile, read straight off the rendered member list (still in the
+    // DOM behind the modal), is the least brittle way to guarantee a genuine same-company collision.
+    const listedMobile = await page
       .getByText(/\+91\s?\d{10}/)
       .first()
       .textContent();
-    const digitsOnly = (memberMobile ?? '').replace(/\D/g, '').slice(-10);
+    const digitsOnly = (listedMobile ?? '').replace(/\D/g, '').slice(-10);
     test.skip(digitsOnly.length !== 10, 'could not read a real member mobile number off the page');
+
+    // Designation first: the form only enables Mobile No once a designation is chosen.
+    await chooseDesignation(page, modal, 'Accounts Officer');
+    const mobileField = modal.getByPlaceholder(MOBILE_FIELD);
+    await expect(mobileField, 'Mobile No enables once a Designation is chosen').toBeEnabled({
+      timeout: 10_000,
+    });
+
+    const firstName = modal.getByPlaceholder('Enter First Name');
+    await expect(firstName, 'First Name is editable before any mobile is typed').toBeEnabled();
 
     await mobileField.pressSequentially(digitsOnly, { delay: 20 });
 
@@ -132,8 +110,12 @@ test.describe('KPost company-admin · User Management (BUSINESS_S)', { tag: '@ui
       'reusing a mobile already registered to another member of THIS company is rejected',
     ).toBeVisible({ timeout: 10_000 });
     await expect(
-      modal.getByPlaceholder('Enter First Name'),
+      firstName,
       'the rest of the form stays blocked while the mobile collision is unresolved',
+    ).toBeDisabled();
+    await expect(
+      modal.getByRole('button', { name: /^ADD$/ }),
+      'ADD stays disabled while the collision is unresolved',
     ).toBeDisabled();
   });
 });

@@ -15,12 +15,13 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 
 ## `reference/` — what the bench is and what it tests against
 
-| Document                                               | What it is                                                                                          |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| [`bench-reference.md`](reference/bench-reference.md)   | The full detail: the product, architecture, pipeline spec, contracts, conventions (§ numbers kept). |
-| [`business-rules.md`](reference/business-rules.md)     | The catalogue of product rules the bench asserts, with status and the spec that proves each.        |
-| [`requirements-frd.md`](reference/requirements-frd.md) | The FR → test map against the six per-module FRDs: covered, gap, out of scope.                      |
-| [`decision-log.md`](reference/decision-log.md)         | Every decision and incident, newest first. **Add an entry at the top after changing a flow.**       |
+| Document                                                                 | What it is                                                                                                   |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| [`bench-reference.md`](reference/bench-reference.md)                     | The full detail: the product, architecture, pipeline spec, contracts, conventions (§ numbers kept).          |
+| [`business-rules.md`](reference/business-rules.md)                       | The catalogue of product rules the bench asserts, with status and the spec that proves each.                 |
+| [`requirements-frd.md`](reference/requirements-frd.md)                   | The FR → test map against the six per-module FRDs: covered, gap, out of scope.                               |
+| [`decision-log.md`](reference/decision-log.md)                           | Every decision and incident, newest first. **Add an entry at the top after changing a flow.**                |
+| [`production-readiness-plan.md`](reference/production-readiness-plan.md) | Where the bench stands (measured), what production grade means here, and the phased plan with exit criteria. |
 
 ## `modules/` — per-module analyses the API specs were built from
 
@@ -60,6 +61,7 @@ The OTP-dependent list is generated: [`contracts/otp-dependent-endpoints.md`](..
 | [`payload-audit.md`](generated/payload-audit.md)             | `payload-audit.spec.ts`       | Every documented example field is actually sent.             |
 | [`ui-coverage.md`](generated/ui-coverage.md)                 | `ui-coverage.spec.ts`         | Every screen, the check catalogue and the interaction flows. |
 | [`katchup-ui-coverage.md`](generated/katchup-ui-coverage.md) | `katchup-ui-coverage.spec.ts` | Every Katchup feature against its UI spec.                   |
+| [`skips.md`](generated/skips.md)                             | `skip-ledger.spec.ts`         | Every skip reason in the suite, in one of four classes.      |
 
 ## `audits/` — dated, point-in-time
 

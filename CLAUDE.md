@@ -5,6 +5,7 @@ Read this first. It is the map and the rulebook; the detail lives in `docs/`:
 - `docs/reference/bench-reference.md`: full product, architecture, pipeline, contracts, plan and conventions
   (the original long sections, verbatim; "§6", "§8" in older notes refer to it)
 - `docs/reference/decision-log.md`: every decision and incident, newest first. **After changing a flow, add an entry at the top.**
+- `docs/reference/production-readiness-plan.md`: the measured state of the bench, the phased plan to production grade, and its scoreboard
 - `docs/guides/commands.md`: every npm script · `docs/guides/runbook.md` · `docs/guides/bug-filing.md` · `docs/guides/validation-framework.md`
 
 ## 1. What this bench tests
@@ -30,12 +31,19 @@ Modules: Signup & Login, Katchup (chat with a Subject on every message), Group, 
 Profile, Contacts, Settings, KDiary, KBooking, Admin/HR-Setup. Requirement ids `FR-xx-NNN` come from the
 six per-module FRDs in `D:\Kpost Documents`; map in `docs/reference/requirements-frd.md`.
 
-**Scope right now (owner directives):**
+**Scope right now (owner directives, restated 2026-10-10: "exclude concurrency and KWord, test everything else"):**
 
-- **KDoc/KOS (`/kword/*`, `/kdoc`) is PAUSED from ALL testing (API and UI)** until the owner says it's
-  ready. The pause is wired into the commands (`--grep-invert @kos`, KOS dir excluded, `PAUSED_SCREENS`);
-  a memory note alone is not enforcement. Open KDoc bugs only get a dated "paused" note.
-- **Performance and concurrency are paused** (one shared server; night-only with a manual kill-switch if ever re-enabled).
+- **KDoc/KOS/KWord (`/kword/*`, `/kdoc`) is EXCLUDED from ALL testing (API and UI)** until the owner says
+  otherwise. Wired into the commands (`--grep-invert @kos`, KOS dir excluded, `PAUSED_SCREENS`); a memory
+  note alone is not enforcement. Open KDoc bugs only get a dated "paused" note.
+- **Concurrency is EXCLUDED** (`CONCURRENCY_PROBES=false` on every command, the `concurrency/` dir is never
+  listed, `@concurrency` is grep-inverted). Load/soak tests do not exist; per-request performance validators
+  DO run as part of every FULL profile.
+- **Everything else is in scope, business tiers included.** `QATEST_ONLY=true` re-points the PERSONAL roles
+  at qatest1-6 but KEEPS the business accounts (`QA_BUSINESS_*`, with their own `QA_BUSINESS_PASSWORD`),
+  so business UI specs, the admin-api suite and the role/cross-tenant authorization validators run under
+  the product commands. The business accounts are shared with developers: a lost session there is noise,
+  not a defect.
 - **Admin API scope = the owner's PDF list** (38 definitions, `scripts/apply-admin-pdf-payloads.cjs`). Admin payloads never send `companyId`; the
   backend takes it from the token (security specs send a FOREIGN one on purpose).
 

@@ -18,7 +18,11 @@ setup('authenticate BUSINESS_S admin', async ({ page, loginPage, log }) => {
 
   if (wanted && configured) {
     await loginPage.goto();
-    await loginPage.login(testData.businessSKpostId, testData.password);
+    // The business tiers' own password: under QATEST_ONLY `testData.password` is the shared qatest one.
+    await loginPage.login(
+      testData.businessSKpostId,
+      testData.businessPassword ?? testData.password,
+    );
     await expect(page, 'BUSINESS_S admin login should reach the app').toHaveURL(/\/home/, {
       timeout: 25_000,
     });

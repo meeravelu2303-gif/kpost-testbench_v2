@@ -158,6 +158,38 @@ async function probe(label, url, { hard } = { hard: true }) {
     (hard ? fail : warn)(`${label} does not answer`, e instanceof Error ? e.message : String(e));
   }
 }
+// The KPOST_QA database: a TCP open, no login. Off = every DB-asserted spec skips with a reason.
+function probeDatabase() {
+  // DB_HOST may carry its port ("host:3306"), exactly as src/config/env.ts accepts it.
+  const raw = env('DB_HOST');
+  const [host, inlinePort] = raw.includes(':') ? raw.split(':') : [raw, undefined];
+  const port = Number(inlinePort || env('DB_PORT') || 3306);
+  if (!host || !env('DB_NAME')) {
+    warn('KPOST_QA database not configured', 'DB_HOST/DB_NAME unset — DB-asserted specs will skip');
+    return Promise.resolve();
+  }
+  if (env('DB_ENABLED') === 'false') {
+    warn('KPOST_QA database disabled', 'DB_ENABLED=false — DB-asserted specs will skip');
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const socket = require('node:net').connect({ host, port });
+    const done = (level, detail) => {
+      socket.destroy();
+      (level === 'ok' ? ok : warn)(
+        level === 'ok' ? 'KPOST_QA database answers' : 'KPOST_QA database does not answer',
+        detail,
+      );
+      resolve();
+    };
+    socket.setTimeout(8_000, () =>
+      done('warn', `tcp ${host}:${port} timed out — DB specs will skip`),
+    );
+    socket.once('connect', () => done('ok', `tcp ${host}:${port}`));
+    socket.once('error', (e) => done('warn', `${e.message} — DB-asserted specs will skip`));
+  });
+}
+
 async function bugzilla() {
   const base = env('BUGZILLA_URL').replace(/\/+$/, '');
   if (!base) return;
@@ -206,6 +238,8 @@ function backupReports() {
   await probe('KMail API host', env('KMAIL_API_BASE_URL'));
   await probe('front end (BASE_URL)', env('BASE_URL'));
   await probe('Admin API host', env('ADMIN_API_BASE_URL'), { hard: false });
+  await probe('Admin UI host', env('ADMIN_UI_BASE_URL'), { hard: false });
+  await probeDatabase();
   await bugzilla();
   if (!results.some((r) => r.level === 'fail')) backupReports();
 

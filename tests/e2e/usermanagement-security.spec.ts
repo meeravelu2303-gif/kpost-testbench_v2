@@ -2,6 +2,7 @@ import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { openAddMemberForm, typeIntoDesignation } from './support/usermanagement';
 
 /**
  * Security-fuzzing angle for User Management's **Designation** field — an async-search `react-select`
@@ -46,37 +47,29 @@ test.describe(
           void dialog.dismiss();
         });
 
-        await page.goto('/usermanagement', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-        await page
-          .locator('.loader-overlay')
-          .waitFor({ state: 'hidden', timeout: 30_000 })
-          .catch(() => undefined);
-        await page.waitForTimeout(1000);
-        await page
-          .getByText(/Add New\s*\d*\s*Channels/i)
-          .first()
-          .click();
-        await page.waitForTimeout(500);
-        await page
-          .getByText(/Add Manually/i)
-          .first()
-          .click();
-        await page.waitForTimeout(1000);
+        const modal = await openAddMemberForm(page);
 
-        const modal = page.locator('.modal.show, [role="dialog"]').last();
-        const designationInput = modal.locator('.react-select__input').first();
-        const opened = await designationInput.isVisible({ timeout: 10_000 }).catch(() => false);
-        test.skip(!opened, 'the Add Manually form did not open — needs a codegen re-tune');
+        // Type into the real, visible control — the 4px-wide inner input needed a forced click.
+        await typeIntoDesignation(page, modal, payload.value);
 
-        await designationInput.click({ force: true });
-        await page.keyboard.type(payload.value);
-        await page.waitForTimeout(1_500);
+        // The moment that matters is when the async search answers and react-select renders the
+        // result list (that is where a reflected payload would land), so wait for the menu rather
+        // than a fixed pause. "No options" is a menu too. If no menu ever appears, that is recorded,
+        // not failed — the assertions below are about execution, not about search results.
+        const menuAppeared = await page
+          .locator('.react-select__menu')
+          .first()
+          .waitFor({ state: 'visible', timeout: 10_000 })
+          .then(() => true)
+          .catch(() => false);
 
         const health = stop();
 
         test.info().annotations.push({
           type: 'observed',
-          description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+          description:
+            `search menu rendered: ${menuAppeared}; page errors: ${JSON.stringify(health.pageErrors)}; ` +
+            `dialog fired: ${dialogFired}`,
         });
 
         expect(health.pageErrors, `no uncaught JS error typing: ${payload.value}`).toEqual([]);

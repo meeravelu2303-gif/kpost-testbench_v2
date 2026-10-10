@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-wait-for-timeout */
 import AxeBuilder from '@axe-core/playwright';
 import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
@@ -7,6 +6,11 @@ import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
 import type { Page, TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
+import {
+  openAddChannelsChooser,
+  openAddMemberForm,
+  settleAnimations,
+} from './support/usermanagement';
 
 /**
  * Deep WCAG scan (axe-core) for User Management's own DYNAMIC states — the "Add Communication
@@ -16,7 +20,8 @@ import { writeFileSync } from 'node:fs';
  * never advances toward the same-company mobile-collision guard or Add — same boundary
  * `usermanagement.spec.ts` and `usermanagement-security.spec.ts` both keep.
  *
- * Navigation reuses `usermanagement.spec.ts`'s own proven selectors exactly.
+ * Navigation goes through `support/usermanagement.ts`, shared with the other two User Management
+ * specs and re-tuned live on 2026-10-10 (no forced clicks, no fixed sleeps).
  *
  * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new screens
  * need their own clean run(s) before earning a place in the auto-filing allow-list.
@@ -36,12 +41,22 @@ test.describe(
       'needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID)',
     );
 
+    /**
+     * Scoped to the open modal. This spec exists for the form's OWN dynamic states; the page behind
+     * it (`/usermanagement` with the Katchup Recent sidebar) is the per-screen sweep's job. Scanning
+     * the whole page here re-reported the sidebar's known findings — an avatar with no alt text
+     * (#1011) and the Recent name/date labels' contrast (#926, platform-wide #1022) — as if they
+     * were defects of the Add Manually form. Found live 2026-10-10.
+     */
+    const OPEN_MODAL = '.modal.show, [role="dialog"]';
+
     async function scanCurrentPage(
       page: Page,
       testInfo: TestInfo,
       screenName: string,
     ): Promise<void> {
       const results = await new AxeBuilder({ page })
+        .include(OPEN_MODAL)
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
         .analyze();
 
@@ -109,50 +124,19 @@ test.describe(
     test('User Management — Add Communication Channels chooser open — WCAG violations (axe) @ui', async ({
       page,
     }, testInfo) => {
-      await page.goto('/usermanagement', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
-      await page
-        .getByText(/Add New\s*\d*\s*Channels/i)
-        .first()
-        .click();
-      await expect(
-        page.getByText(/Add Manually|Bulk-?Upload/i).first(),
-        'the Add Communication Channels chooser opens',
-      ).toBeVisible({ timeout: 15_000 });
-      await page.waitForTimeout(1000);
+      await openAddChannelsChooser(page);
+      // Let the chooser's fade-in finish before axe measures colour contrast on it. Scoped to the
+      // chooser itself: the page behind it has a looping animation that never "finishes".
+      await settleAnimations(page.locator('.modal.show, [role="dialog"]').last());
       await scanCurrentPage(page, testInfo, 'User Management — Add Channels chooser');
     });
 
     test('User Management — Add Manually member-form modal open — WCAG violations (axe) @ui', async ({
       page,
     }, testInfo) => {
-      await page.goto('/usermanagement', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
-      await page.waitForTimeout(1000);
-      await page
-        .getByText(/Add New\s*\d*\s*Channels/i)
-        .first()
-        .click();
-      await page.waitForTimeout(500);
-      await page
-        .getByText(/Add Manually/i)
-        .first()
-        .click();
-
-      const modal = page.locator('.modal.show, [role="dialog"]').last();
-      const reachable = await modal
-        .locator('.react-select__input')
-        .first()
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
-      test.skip(!reachable, 'the Add Manually form did not open — needs a codegen re-tune');
-      await page.waitForTimeout(1000);
+      // openAddMemberForm asserts the form and its Designation picker are up and waits for the
+      // modal's fade to finish, so a form that fails to open is a failure here, not a silent skip.
+      await openAddMemberForm(page);
       await scanCurrentPage(page, testInfo, 'User Management — Add Manually form');
     });
   },

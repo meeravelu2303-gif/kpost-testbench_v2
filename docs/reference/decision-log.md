@@ -3,6 +3,90 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (late) — Owner scope decision: exclude concurrency and KWord, test everything else — and the switch that made "everything else" true
+
+**Owner:** "exclude the concurrency tests and the KWord endpoints and UI, otherwise test everything;
+make the setup cover all tests, I will run them by hand." Both exclusions were already wired
+(`CONCURRENCY_PROBES=false` + the `concurrency/` dir never listed; `--grep-invert @kos` + the KOS dir
+never listed + `PAUSED_SCREENS`); the `db` commands now also grep-invert `@concurrency` explicitly.
+
+**The real change is on the "everything else" side.** `QATEST_ONLY=true` — on every product command —
+used to DELETE every `QA_BUSINESS_*` and company variable (the qatest accounts are all PERSONAL). That
+single rule had silently switched off: the seven business-tier UI specs (`BUSINESS_UI_LIFECYCLE` could
+never take effect), the `tests/api/kpost/admin` suite (BUSINESS_M), and the engine's whole
+AUTHORIZATION category (role validators had no COMPANY_ADMIN principal; the cross-tenant validator
+skipped on every tenant-scoped endpoint — 2,320 checks in the last full run — because no principal
+carried a `tenantId` at all, independent of the switch). Now: the switch re-points only the PERSONAL
+roles and drops personal-6; the business tiers are kept, with their own password preserved as
+`QA_BUSINESS_PASSWORD` (new, `testData.businessPassword`); and the three business principals carry
+`tenantId` = their company id, so "a COMPANY_ADMIN of another company" exists. Trade-off accepted by
+the owner: the business accounts are shared with developers, so a lost session there is noise.
+`preflight` now also probes the KPOST_QA database (TCP) and the Admin UI host. Verified live the same
+day: the business login works under the switch (User Management, 8/8 in chromium) and the QA
+database IS reachable and asserting (three read-only DB checks passed) — the plan's earlier "44 skips
+wait on the database" was wrong; those are guards that do not fire on a configured machine. What is
+genuinely unreachable from the QA machine is the **Admin API box** (192.168.0.38:9595): the Admin API
+suite stays skipped until that is opened, a network task, not a bench one.
+
+### 2026-10-10 (late) — Production-readiness plan written: measured state, phases, scoreboard
+
+Owner's mission restated: a production-grade bench covering every test type along the application's
+flows, skipping nothing silently, finding every valid bug. `docs/reference/production-readiness-plan.md`
+records what was measured (inventory, the last dry run's skip classes, a test-type matrix), what
+"production grade" means in checkable terms, the target structure (module folders on both sides,
+ledgers per layer), and five phases with exit criteria. Headline findings behind it: **AUTHORIZATION
+checks never ran** (2,320 skipped in the last full run), the DB layer is mostly off without the QA
+connection (44 static skips), 48 skips say "needs a re-tune" and cannot be told apart from defects,
+and 7 business UI specs cannot run under the product command. Phase 0 is six owner decisions.
+Phase 0's first deliverable landed the same day: `tests/framework/skip-ledger.spec.ts` generates
+`docs/generated/skips.md` — every `test.skip` site in the suite (518 across 191 files) in one of
+five classes (retune / blocked by a defect / provision / owner decision / live condition), and
+fails the build on a reason it cannot classify, so a new skip must say what kind it is. First
+reading: 47 retune sites, 22 of them in Contacts ("the Contacts tab did not open on this build") —
+the first candidate for the Phase 1 module order.
+
+### 2026-10-10 (late) — User Management: first module through the debt burn-down, and what it found
+
+**Debt:** 12 warnings (9 fixed sleeps, 1 forced click, 2 more in the security spec) plus 4 sleeps the
+accessibility spec hid behind a file-level `eslint-disable` → **0**. The three specs now share
+`tests/e2e/support/usermanagement.ts`, which waits on what the screen does: the loader, the
+workspace heading, the licence summary (the "Add New N Channels" button re-renders until that data
+arrives — a click before it was lost once in four openings), the route, the modal, the Designation
+menu, the selected value. The Designation picker is clicked on its visible 500px control, not its
+4px-wide inner `<input>` (the reason for the forced click). Verified in isolation on the test
+deployment, chromium and firefox, three runs.
+
+**Found by doing it, not by linting:**
+
+1. The same-company mobile-collision test had been **skipping on every run** ("the Mobile No field
+   did not enable"). Not timing: the field's placeholder changed to "Enter 10-digit Mobile No
+   (country code optional)", the old selector matched nothing, and the sleeps hid it. Re-tuned; the
+   rule still holds live (message shown, First Name and ADD lock, a fresh number clears it).
+2. **`npm run ui` cannot run any business-tier UI spec.** It sets `QATEST_ONLY=true`, which removes
+   every `QA_BUSINESS_*` variable by design (the qatest accounts are all PERSONAL), and also sets
+   `BUSINESS_UI_LIFECYCLE=true` — a flag that can then never take effect. Seven specs are affected
+   (`usermanagement*` ×3, `signup-business`, `settings-business-company-details`,
+   `settings-business-bank-details`, `kposter`): under the product command they all skip with
+   "needs the BUSINESS_S account". This burn-down ran them with `QATEST_ONLY` off, on the shared
+   business account, by hand. **Decision needed from the owner:** a separate business-UI command
+   on the shared account, or a qatest business account — not changed unilaterally.
+3. The whole-page axe scan in the dynamic-state accessibility spec re-reported the **Recent
+   sidebar's** known findings — the avatar with no alt text (#1011, RESOLVED FIXED) and the
+   name/date label contrast (#926 RESOLVED FIXED; platform-wide #1022 CONFIRMED) — as defects of the
+   Add Manually form. The scan is now scoped to the open modal (its real subject; the sidebar is the
+   per-screen sweep's job), and **both modals are clean**. Separately: #1011 and #926 still
+   reproduce on the test deployment on 2026-10-10 — a by-hand re-check/reopen call for the owner.
+4. Observed once, not asserted: after `/usermanagement` rendered, the app itself navigated to
+   `/home`. The helper pins the route so a recurrence names itself.
+5. **Firefox-only product defect, pre-existing** (the committed specs fail identically): on
+   `/usermanagement` Firefox throws React runtime error #327 three times on load and again on
+   every keystroke in the Add Manually form; the member list never renders (no rows, no Admin
+   badge, the summary reads "Allocatedundefined Channels"), and the duplicate-mobile check returns
+   200 from `mobileNoExistInsideCompany` but the "already exists" message never appears. Chromium is
+   clean. The specs are left failing in Firefox on purpose — that is the bench finding a valid bug —
+   and the finding goes to the owner for a duplicate check and filing by hand (KPost UI / User
+   Management, `[browser:firefox]`).
+
 ### 2026-10-10 (late) — Lint debt is paid module by module, never in one blind pass
 
 A fixed wait or a forced click is a guess about the live screen; replacing it is a new guess until

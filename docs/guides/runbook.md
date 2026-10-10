@@ -15,8 +15,9 @@ sequence; it repeats neither.
   unguarded), the validator allowlist (nothing that mutates and re-sends is aimed at live), and the
   QA-identifier guard (no request may name a record the bench does not own).
 - **Writes are gated, scoped and self-cleaning.** A write runs only inside a `*_LIFECYCLE` flow,
-  only on the bench's own `qatest1..6` accounts (`QATEST_ONLY=true` on every KPost, KMail and UI
-  command), and deletes or restores what it made.
+  on the bench's own `qatest1..6` accounts for every PERSONAL role (`QATEST_ONLY=true` on every KPost,
+  KMail and UI command) and on the shared business-tier accounts for company-admin flows (they have
+  no qatest stand-in; owner decision 2026-10-10), and deletes or restores what it made.
 - **Only valid, non-duplicate bugs are filed.** The validity gate drops infrastructure noise, the run
   gate blocks filing from a collapsed run, and a live search on the ticket tag means a re-run comments
   on an existing ticket instead of creating another.
@@ -28,17 +29,18 @@ sequence; it repeats neither.
 
 ## 1. Preflight — once, and after any `.env` change
 
-| Key                                                                | Value                                                                                                   |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `TEST_ENV`                                                         | `production` — arms the live-safety controls; never change it to make something run                     |
-| `BASE_URL`                                                         | the live front end                                                                                      |
-| `KPOST_API_BASE_URL` / `KMAIL_API_BASE_URL` / `ADMIN_API_BASE_URL` | the hosts the owner named (KPost and KMail point at the disposable test database; the Admin DB is live) |
-| `BUGZILLA_URL` / `BUGZILLA_API_KEY`                                | the live instance                                                                                       |
-| `BUGZILLA_DRY_RUN`                                                 | `true` — every command sets it explicitly, so this is only the fallback                                 |
-| `BUGZILLA_MAX_FILE` / `BUGZILLA_MIN_SEVERITY`                      | `0` (no cap) / `MEDIUM` (LOW findings are reported, not filed)                                          |
-| `QATEST1_KPOST_ID` … `QATEST6_KPOST_ID`, `QATEST_SHARED_PASSWORD`  | the bench's own accounts — the only ones KPost, KMail and UI runs log into                              |
-| `QA_BUSINESS_S_*` / `QA_BUSINESS_M_*` / `QA_BUSINESS_L_*`          | the business accounts the Admin commands need (Admin is deliberately not under `QATEST_ONLY`)           |
-| `WORKERS`                                                          | `1` — four concurrent logins already answer 500                                                         |
+| Key                                                                               | Value                                                                                                      |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `TEST_ENV`                                                                        | `production` — arms the live-safety controls; never change it to make something run                        |
+| `BASE_URL`                                                                        | the live front end                                                                                         |
+| `KPOST_API_BASE_URL` / `KMAIL_API_BASE_URL` / `ADMIN_API_BASE_URL`                | the hosts the owner named (KPost and KMail point at the disposable test database; the Admin DB is live)    |
+| `BUGZILLA_URL` / `BUGZILLA_API_KEY`                                               | the live instance                                                                                          |
+| `BUGZILLA_DRY_RUN`                                                                | `true` — every command sets it explicitly, so this is only the fallback                                    |
+| `BUGZILLA_MAX_FILE` / `BUGZILLA_MIN_SEVERITY`                                     | `0` (no cap) / `MEDIUM` (LOW findings are reported, not filed)                                             |
+| `QATEST1_KPOST_ID` … `QATEST6_KPOST_ID`, `QATEST_SHARED_PASSWORD`                 | the bench's own PERSONAL accounts — every personal role in KPost, KMail and UI runs logs in as these       |
+| `QA_BUSINESS_S_*` / `QA_BUSINESS_M_*` / `QA_BUSINESS_L_*`, `QA_BUSINESS_PASSWORD` | the business accounts: Admin, business UI specs and the authorization validators; kept under `QATEST_ONLY` |
+| `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`                                 | the KPOST_QA test database; unreachable = every DB-asserted spec skips (preflight probes it)               |
+| `WORKERS`                                                                         | `1` — four concurrent logins already answer 500                                                            |
 
 `.env.example` names every key the bench reads (a self-test fails when the code reads a key the
 template does not list). Browsers are a one-time `npm run install:browsers`; `npm run accounts:verify`

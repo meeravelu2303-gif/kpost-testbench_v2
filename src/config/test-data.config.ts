@@ -45,6 +45,12 @@ const schema = z.object({
   businessSKpostId: z.string().min(3).default('qa.business.s@kpost.in'),
   businessMKpostId: z.string().min(3).default('qa.business.m@kpost.in'),
   businessLKpostId: z.string().min(3).default('qa.business.l@kpost.in'),
+  /**
+   * The business tiers' password. Unset, it is `QA_PASSWORD`; under `QATEST_ONLY` the switch
+   * captures the original `QA_PASSWORD` here before re-pointing it at the shared qatest password,
+   * so the business accounts (which have no qatest stand-in) keep logging in.
+   */
+  businessPassword: z.string().min(1).optional(),
 
   /** Business-tier administrator, for the company and admin-facing lookups. */
   adminKpostId: z.string().min(3).default('qa.admin@kpost.in'),
@@ -216,6 +222,7 @@ const SOURCES = {
   businessSKpostId: 'QA_BUSINESS_S_KPOST_ID',
   businessMKpostId: 'QA_BUSINESS_M_KPOST_ID',
   businessLKpostId: 'QA_BUSINESS_L_KPOST_ID',
+  businessPassword: 'QA_BUSINESS_PASSWORD',
   adminKpostId: 'QA_ADMIN_KPOST_ID',
   adminPassword: 'QA_ADMIN_PASSWORD',
   adminUserType: 'QA_ADMIN_USER_TYPE',
