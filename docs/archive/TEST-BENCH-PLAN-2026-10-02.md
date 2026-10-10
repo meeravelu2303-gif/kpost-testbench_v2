@@ -1,6 +1,13 @@
 # KPost Test Bench — 100% Applicable Coverage Plan
 
-**Status:** living document. Created 2026-10-02. Updated continuously per module as work proceeds — see §21 rules (checkbox legend: `[x]` done/verified, `[ ]` pending, `[~]` in progress, `[!]` blocked, `[N/A]` not applicable).
+**ARCHIVED 2026-10-10 — superseded, kept for historical context only.** This was the living plan
+from 2026-10-02; every number and status in it has since been overtaken by actual work (most
+modules are now at or near 100%, many listed defects are filed and resolved). For the CURRENT state,
+read [`CLAUDE.md`](../../CLAUDE.md) and [`docs/DECISION-LOG.md`](../DECISION-LOG.md) instead — this
+file is left in place only because source comments elsewhere cite it by section number (e.g. "§16
+P0 item 2") and that history should stay traceable. Do not treat anything below as current.
+
+**Status (as of 2026-10-02, no longer true):** living document. Updated continuously per module as work proceeds — see §21 rules (checkbox legend: `[x]` done/verified, `[ ]` pending, `[~]` in progress, `[!]` blocked, `[N/A]` not applicable).
 
 **GOVERNANCE RULE, set 2026-10-02, supersedes anything earlier in this document that conflicts with it:**
 

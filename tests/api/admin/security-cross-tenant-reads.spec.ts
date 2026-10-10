@@ -13,7 +13,7 @@ const businessS = K.principals.find((p) => p.key === 'business-s');
  *
  * 2026-10-06: the companion `adminTierAttribute/getAttribute` cross-tenant case (and the department
  * cross-tenant update case below it) were removed along with their endpoint definitions — the Admin
- * module's test scope is now restricted to the endpoints in `Admin_module - API Services.pdf`, which
+ * module's test scope is now restricted to the endpoints in `docs/reference/Admin_module - API Services.pdf`, which
  * does not document either `adminTierAttribute/getAttribute` or any `department/*` path. The
  * already-filed finding on `adminTierAttribute/getAttribute` (bug #KPV2-ADMINV2READBYID, worse than
  * the already-filed #KPV2-ADMINV1LEGACYLEAK on the dead legacy controller) loses bench regression

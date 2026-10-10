@@ -86,9 +86,16 @@ export function qatestOnlyOverrides(source: Env): Env {
   return out;
 }
 
-/** Applies `qatestOnlyOverrides` to the process environment when `QATEST_ONLY=true`. */
+/**
+ * Applies `qatestOnlyOverrides` to the process environment when `QATEST_ONLY=true`.
+ *
+ * A no-op under `MOCK_API=true`: the qatest accounts are real identities on the live
+ * application, meaningless against the bundled in-memory mock, whose fixtures expect the
+ * schema's own default ids. A script that sets both flags together is a mistake, not a request —
+ * see `npm run mock`, which does not (and must not) set QATEST_ONLY.
+ */
 export function applyQatestOnly(target: Env = process.env): boolean {
-  if (target.QATEST_ONLY !== 'true') return false;
+  if (target.QATEST_ONLY !== 'true' || target.MOCK_API === 'true') return false;
   for (const [variable, value] of Object.entries(qatestOnlyOverrides(target))) {
     if (value === undefined) delete target[variable];
     else target[variable] = value;

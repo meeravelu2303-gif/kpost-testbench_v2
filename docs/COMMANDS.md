@@ -64,7 +64,7 @@ What each one does:
 | Security-focused subset (FULL already includes it)       | `npm run kpost:security` · `kmail:security` | `npm run kpost:security:file`                                     |
 | Cross-layer integration project                          | `npm run integration`                       | —                                                                 |
 | Visual snapshots (3 browsers) / refresh baselines        | `npm run ui:visual`                         | `npm run ui:visual:update`                                        |
-| Old chained runs (`kpost`→`kmail`→`admin`→`ui`)          | `npm run all` · `test:all`                  | `npm run all:file` · `test:all:file`                              |
+| Old chained runs (`kpost`→`kmail`→`admin`→`ui`)          | `npm run all`                                | `npm run all:file`                                                 |
 
 Run WebKit in small file batches (`npx playwright test --project=webkit <files>`) — a long single WebKit run
 can hang; kill a hung run with PowerShell `Stop-Process` on the real node PID.

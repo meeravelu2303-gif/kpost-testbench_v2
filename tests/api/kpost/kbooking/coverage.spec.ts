@@ -11,7 +11,7 @@ test.describe('KPost KBooking · module coverage', () => {
      * `uncoveredKBookingPaths()` already excludes nothing by assumption — `boardingPoint`,
      * `tripdetailsV2` and `updatecitylist` are workbook-documented but have NO wrapper function and
      * NO caller anywhere in the frontend (confirmed by an exhaustive source trace, recorded in
-     * UNUSED_ENDPOINTS.md), so they are expected to still show up here. This test asserts the full
+     * docs/UNUSED-ENDPOINTS.md), so they are expected to still show up here. This test asserts the full
      * documented-but-unimplemented list stays exactly what was proven, not a silently growing gap.
      */
     expect(uncoveredKBookingPaths().sort(), 'documented but not implemented by the frontend').toEqual(

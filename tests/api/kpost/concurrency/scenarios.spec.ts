@@ -33,7 +33,7 @@ import { expect, test } from '@fixtures';
  * (or that this run targets an environment where an outage is acceptable) before setting it `true`
  * against anything other than a throwaway/local target.
  *
- * See `TEST_BENCH_100_PERCENT_PLAN.md` §"Concurrency" for the full catalog, including scenarios not
+ * See `docs/archive/TEST-BENCH-PLAN-2026-10-02.md` §"Concurrency" for the full catalog, including scenarios not
  * yet encoded here.
  */
 const DEFERRED_REASON =
@@ -515,7 +515,7 @@ test.describe('KPost · concurrency scenarios (hand-written races) @concurrency'
  *   a permanently-skipped test against this endpoint risks someone later removing the skip without
  *   fully appreciating the blast radius. Deferred until a disposable "expendable" employee record and
  *   explicit owner sign-off exist for this specific scenario — tracked in
- *   TEST_BENCH_100_PERCENT_PLAN.md rather than half-implemented here.
+ *   docs/archive/TEST-BENCH-PLAN-2026-10-02.md rather than half-implemented here.
  * - KBooking seat/order concurrency (two simultaneous attempts to hold the same seat): applicable in
  *   principle (classic double-booking race), but no KBooking endpoint definitions exist in the bench
  *   yet (search/seat-selection API coverage is itself still TODO, independent of concurrency). Revisit

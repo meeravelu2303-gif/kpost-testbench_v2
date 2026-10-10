@@ -6,7 +6,7 @@ import { expect, test } from '@fixtures';
 
 /**
  * Admin **throwaway-member lifecycle** — closes the real testability gap behind 4 of
- * `BLOCKED_ENDPOINTS.md`'s "Admin company-admin writes": `addingUserByAdmin`,
+ * `docs/BLOCKED-ENDPOINTS-RATIONALE.md`'s "Admin company-admin writes": `addingUserByAdmin`,
  * `createOrRemoveBackupAdmin`, `resetPassword`, `terminateUser`.
  *
  * ## Why these were blocked, and why that premise was wrong
@@ -46,7 +46,7 @@ import { expect, test } from '@fixtures';
  * production environment). This test is written and ready, but it will throw
  * `ProductionSafetyError` on this environment every time, by design, not by accident. It would run
  * if this suite ever pointed at a genuine non-production/staging environment — see
- * `BLOCKED_ENDPOINTS.md`.
+ * `docs/BLOCKED-ENDPOINTS-RATIONALE.md`.
  */
 
 const ADMIN: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'business-m')!;
@@ -79,7 +79,7 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
     true,
     'PERMANENT on this environment: addingUserByAdmin/createOrRemoveBackupAdmin/resetPassword/' +
       'terminateUser are all sideEffect:"global", which production-guard.ts refuses unconditionally ' +
-      'on TEST_ENV=production — needs a non-production environment, not a flag (see BLOCKED_ENDPOINTS.md)',
+      'on TEST_ENV=production — needs a non-production environment, not a flag (see docs/BLOCKED-ENDPOINTS-RATIONALE.md)',
   );
 
   test('create → backup-admin toggle → reset password → terminate, on a throwaway member only', async ({

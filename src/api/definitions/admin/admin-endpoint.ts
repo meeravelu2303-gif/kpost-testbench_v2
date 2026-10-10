@@ -43,7 +43,7 @@ function withoutCompanyId(schema: unknown): unknown {
  *
  * Unlike KMail there is **no path prefix** — the host serves routes at root (`/adminTierAttribute/save`),
  * confirmed against `openapi/admin-api.openapi.json`. Schemas come from the `admin-api` contract
- * (generated from `Admin_module.xlsx`), and the module is **post-login**: the SAME KPost login token
+ * (generated from `docs/reference/Admin_module.xlsx`), and the module is **post-login**: the SAME KPost login token
  * authenticates it (SSO — owner-confirmed), so no separate auth profile shape is needed, only the right
  * principal (a business admin whose login mints the `companyID` claim).
  *

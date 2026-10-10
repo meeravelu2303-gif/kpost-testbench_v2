@@ -63,6 +63,17 @@ test.describe('qatest-only account switch', () => {
     expect(env.QA_KPOST_ID).toBe('old@kpost.in');
   });
 
+  test('it does nothing against the mock, even if switched on @framework', () => {
+    const env: Record<string, string | undefined> = {
+      ...base,
+      QATEST_ONLY: 'true',
+      MOCK_API: 'true',
+      QA_KPOST_ID: 'qa.bench@kpost.in',
+    };
+    expect(applyQatestOnly(env)).toBe(false);
+    expect(env.QA_KPOST_ID).toBe('qa.bench@kpost.in');
+  });
+
   test('a missing qatest account fails loudly instead of falling back @framework', () => {
     const { QATEST3_KPOST_ID: _omit, ...partial } = base;
     expect(() => qatestOnlyOverrides(partial)).toThrow(/QATEST3_KPOST_ID/);

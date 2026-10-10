@@ -132,5 +132,13 @@ Read these in order:
 4. [docs/DECISION-LOG.md](docs/DECISION-LOG.md) — every decision and incident, newest first. Add an entry at
    the top whenever a flow changes.
 
+Everything else in `docs/` is either generated (regenerate it, never hand-edit — each file says so
+at the top) or a focused reference: [docs/BLOCKED-ENDPOINTS-RATIONALE.md](docs/BLOCKED-ENDPOINTS-RATIONALE.md)
+and [docs/UNUSED-ENDPOINTS.md](docs/UNUSED-ENDPOINTS.md) are the hand-written "why" behind what
+`docs/BLOCKED-ENDPOINTS.md` (generated) lists; `docs/reference/` holds source material supplied by
+the product owner (the Admin module's PDF/Excel spec — the `KPOST API (N).xlsx` workbook itself
+stays in the repo root, since `scripts/excel-to-contract.cjs` reads it from there by convention);
+`docs/archive/` holds superseded planning documents, kept only because other comments cite them.
+
 Keep `CLAUDE.md` short (under ~200 lines, since it is loaded into every Claude session): rules and the map go
 there, history goes in the decision log.

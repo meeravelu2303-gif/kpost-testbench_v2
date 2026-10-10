@@ -10,7 +10,7 @@ spelled out, not a vague "someday").
 
 This is one of three category files, kept strictly separate:
 - **This file** — genuinely can't test it right now, and exactly why.
-- [`UNUSED_ENDPOINTS.md`](UNUSED_ENDPOINTS.md) — confirmed dead/legacy, zero callers, proven not guessed.
+- [`UNUSED-ENDPOINTS.md`](UNUSED-ENDPOINTS.md) — confirmed dead/legacy, zero callers, proven not guessed.
 - Everything else (391 registered endpoints minus the ~34 below minus ~15 confirmed-unused) is
   **active test-bench scope** — see `docs/COVERAGE.md` / `docs/LIVE-ENDPOINTS.md` for what's actually
   exercised today.
@@ -81,7 +81,7 @@ neighbor; every endpoint in a category was individually checked against that cat
 | `/common/postBoxContacts/` (documented path) | POST | KMail | the documented path is a dead/renamed route (`unusedpostBoxContacts` is the real one) **and** the real route is itself undocumented in the workbook | `CommonMailController.java:223`, contract search | TEMPORARY — two stacked blockers, both external (dead doc + undocumented real route) |
 | `/kmail5/v2/kmailData/getKloudUsedData` | GET | KMail (cross-suite) | real, confirmed-active (`GetKlouDUsedDataList`, caller `DataStorage.js:64`) — IS present in the workbook, but documented under the `kpost-api` contract while the real call goes to a **different host** (`kmail5.kpostindia.com`), and is absent from the separate `kmail-api` contract entirely. Neither `defineKpostEndpoint` (wrong host) nor `defineKmailEndpoint` (path not in that suite's contract) can cleanly model this as currently architected | `Setting.js:1010-1038`, frontend trace 2026-10-02; both `openapi/kpost-api.openapi.json` and `openapi/kmail-api.openapi.json` checked directly | TEMPORARY — needs either the workbook corrected to the right suite, or a cross-suite endpoint mechanism this bench doesn't have yet |
 
-**6 rows removed 2026-10-02** (`getUserProfile`, `deleteOtherActivity`, `getGroupDetailsUsingGroupKpostID`, `documentsType`, `changeDocumentAccess`, `updateJobId`) — no longer blocked at all. Per explicit direction ("take the payload from the frontend, cover it anyway, don't wait on the workbook"), built a new `defineUndocumentedKpostEndpoint()` definition path that uses the frontend-measured payload shape directly instead of the workbook contract, with a mandatory `evidence` citation on every use. See `TEST_BENCH_100_PERCENT_PLAN.md` §28 for the full build and what it immediately found.
+**6 rows removed 2026-10-02** (`getUserProfile`, `deleteOtherActivity`, `getGroupDetailsUsingGroupKpostID`, `documentsType`, `changeDocumentAccess`, `updateJobId`) — no longer blocked at all. Per explicit direction ("take the payload from the frontend, cover it anyway, don't wait on the workbook"), built a new `defineUndocumentedKpostEndpoint()` definition path that uses the frontend-measured payload shape directly instead of the workbook contract, with a mandatory `evidence` citation on every use. See `docs/archive/TEST-BENCH-PLAN-2026-10-02.md` (archived) §28 for the full build and what it immediately found.
 
 **Total: 47.**
 
@@ -266,18 +266,18 @@ documentation before this bench's generator will even accept the path.
   auto-generated classifier (`tests/framework/live-coverage.spec.ts`) was fixed today to stop
   special-casing these paths as permanently blocked.
 - **KBooking reclassified from "whole module undecided" to "built, only payment blocked"**
-  (2026-10-02) — confirmed frontend-active via a full source trace; see `UNUSED_ENDPOINTS.md` and
+  (2026-10-02) — confirmed frontend-active via a full source trace; see `UNUSED-ENDPOINTS.md` and
   `kbooking.api.ts` for the detail.
 - **Admin company-admin writes: the premise "no admin auth available" was false, but the real reason
   is a HARDER wall than first thought.** Business-tier auth already works; a full throwaway-member
   lifecycle test was built and run; it surfaced that all 11 of these writes (plus `getMailCredentials`)
   are `sideEffect: 'global'`, which this bench's own `production-guard.ts` refuses unconditionally on
   `TEST_ENV=production` — correctly reclassified `PERMANENT on this environment`, not "buildable."
-  `holdOrRelease`/`updateRole` were separately moved to `UNUSED_ENDPOINTS.md` (confirmed-incomplete
+  `holdOrRelease`/`updateRole` were separately moved to `UNUSED-ENDPOINTS.md` (confirmed-incomplete
   frontend wiring — no modal ever consumes the open-flag their click handlers set).
 - **This file's new total is 46** — not directly comparable to the old auto-generated list's count:
   7 stale "attachment" entries were removed, but this file also adds endpoints the old generated doc
   never covered at all (KBooking's `blockTicket`/`bookticket` family, the TAWallet rows, the dead
   `postBoxContacts` path, `getMailCredentials` moved here from "shared write"), while `holdOrRelease`/
-  `updateRole` moved OUT to `UNUSED_ENDPOINTS.md`. Every row above carries a reason checked today, not
+  `updateRole` moved OUT to `UNUSED-ENDPOINTS.md`. Every row above carries a reason checked today, not
   inherited from the old list.

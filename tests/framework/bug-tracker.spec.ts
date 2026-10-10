@@ -406,6 +406,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
         'would-file': 0,
         capped: 0,
         failed: 0,
+        'needs-review': 0,
       },
     };
     const input = {

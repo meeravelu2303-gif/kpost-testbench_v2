@@ -132,9 +132,9 @@ export const deleteDocApi = defineKosEndpoint({
   // CAUTION (2026-10-02 frontend trace): the real client (KWord.js:4339, KPresenter.js:4419) always
   // sends POST /kword/delete with a JSON body {docId} — NEVER this GET+query form, which is only what
   // the workbook documents. Not yet live-verified which form (if either) the backend still honors;
-  // flagged in BLOCKED_ENDPOINTS.md as a priority investigation, blocked on #499 providing a real
+  // flagged in docs/BLOCKED-ENDPOINTS-RATIONALE.md as a priority investigation, blocked on #499 providing a real
   // docId to test against. Left unchanged pending that live check — do not assume this form is wrong.
-  note: 'a GET with a docId query param; needs a real docId — see BLOCKED_ENDPOINTS.md for a GET-vs-POST discrepancy found 2026-10-02, not yet resolved',
+  note: 'a GET with a docId query param; needs a real docId — see docs/BLOCKED-ENDPOINTS-RATIONALE.md for a GET-vs-POST discrepancy found 2026-10-02, not yet resolved',
 });
 
 /**

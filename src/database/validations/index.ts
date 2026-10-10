@@ -24,7 +24,7 @@ import { kmailMailPersistedValidation } from './kmail.db';
  *    `TBL_KPOST_USER_PROFILE`, `TBL_KPOST_KATCHUP_MESSAGES`, `TBL_KPOST_LOGIN_SESSION`,
  *    `TBL_KPOST_ADMIN_REGISTRATION` — and is attached to real endpoints.
  *  - **`kmail.db`** validates the real KMail tables (`TBL_KPOST_KMAIL_MASTER`/`_TRANSACTION`).
- *    Added 2026-10-02 — see `TEST_BENCH_100_PERCENT_PLAN.md` §16 P0 item 2: not yet independently
+ *    Added 2026-10-02 — see `docs/archive/TEST-BENCH-PLAN-2026-10-02.md` §16 P0 item 2: not yet independently
  *    executable (every DB validation reports SKIPPED until `DB_SSL_CA` is supplied), written now so
  *    it is ready the moment that's resolved.
  */

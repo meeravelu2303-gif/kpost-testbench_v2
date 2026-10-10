@@ -11,7 +11,7 @@ import { KmailRepository } from '../repositories/kmail.repository';
  * independently from the KMail backend source audit — entity fields match exactly).
  *
  * **Not yet executable**: `KPOST_QA` requires TLS and the bench correctly refuses to disable
- * certificate verification without `DB_SSL_CA` (see `TEST_BENCH_100_PERCENT_PLAN.md` §16 P0 item 2)
+ * certificate verification without `DB_SSL_CA` (see `docs/archive/TEST-BENCH-PLAN-2026-10-02.md` §16 P0 item 2)
  * — every DB validation currently reports SKIPPED, this one included. Written now so it is ready to
  * run the instant that's resolved, per the same "write now, verify later" discipline this plan
  * already applies to concurrency.

@@ -4,7 +4,7 @@ Per the 2026-10-02 scope-rebuild directive: an endpoint is only listed here when
 caller was **proven** (exhaustive grep across `KPOST_REACTJS_2023_V1/src/` outside the defining
 file, or an explicit "legacy"/dead-code marker in the source itself) — never because the test
 bench simply doesn't have a test for it yet. This file is a byproduct of the frontend-call-tracing
-agent dispatched from `TEST_BENCH_100_PERCENT_PLAN.md` §24, cross-referencing every exported
+agent dispatched from `docs/archive/TEST-BENCH-PLAN-2026-10-02.md` (archived) §24, cross-referencing every exported
 function in every `src/Services/*.js` file against every other file in the frontend repo.
 
 This is a **first pass**, covering what that trace found. It does not yet include backend
@@ -28,7 +28,7 @@ the backend side, not the frontend side, and are out of scope for this file unti
 
 ## Entire module confirmed out of scope for backend coverage (not "unused endpoints", but related)
 
-- **KNews** — confirmed to never call the KPost backend at all (no `EndPointURL`/`KmailEndPointURL` import anywhere in `KNews.js`); 100% third-party RSS aggregation via `rss2json.com` and two CORS proxies. Already correctly marked `NOT_APPLICABLE` in `TEST_BENCH_100_PERCENT_PLAN.md`'s module inventory — this trace confirms it with full evidence rather than inference.
+- **KNews** — confirmed to never call the KPost backend at all (no `EndPointURL`/`KmailEndPointURL` import anywhere in `KNews.js`); 100% third-party RSS aggregation via `rss2json.com` and two CORS proxies. Already correctly marked `NOT_APPLICABLE` in `docs/archive/TEST-BENCH-PLAN-2026-10-02.md` (archived)'s module inventory — this trace confirms it with full evidence rather than inference.
 
 ## Dead/stale imports found (not endpoints, but worth fixing)
 
@@ -47,6 +47,6 @@ the backend side, not the frontend side, and are out of scope for this file unti
 
 - **KPoster's ~18 real REST routes** (`bootstrap`, `profiles/*`, `posts/*`, `events`, `reports`, `notifications/read`, `analytics`, `attachments`) — the frontend's own default build (`KPOSTER_DEMO = true` unless `REACT_APP_KPOSTER_MODE=api`) never calls any of them; it runs against a local IndexedDB demo store instead. This is **not** "unused" in the usual sense — the code is real and would be called under a different build config. Whether the actual deployed, real-world build sets `REACT_APP_KPOSTER_MODE=api` is a deployment fact this session cannot read from source. **DEPLOYMENT CONFIGURATION UNKNOWN** — needs the real deployed `REACT_APP_KPOSTER_MODE` value confirmed before these routes can be correctly classified either way; not guessed, not silently excluded, not counted as tested or as unused.
 
-## TAWallet — confirmed frontend-active, NOT unused (see `BLOCKED_ENDPOINTS.md` / active scope instead)
+## TAWallet — confirmed frontend-active, NOT unused (see `BLOCKED-ENDPOINTS-RATIONALE.md` / active scope instead)
 
-Per the 2026-10-02 directive (§16), traced in full. `taWallet/createHash` and `taWallet/fetchTransactionDetailsByOrderId` are confirmed frontend-active (`KBook.js:1036-1096`) and safe to test live (hash generation / read-only lookup, no real money movement) — these belong in active test-bench scope, not here or in `BLOCKED_ENDPOINTS.md`. The real-money surface is the live auto-submitting HTML form at `KBook.js:3161-3519` (`action="https://api.tapay.in/v2/paymentrequest"`, a native browser form POST, not a fetch call — distinct from the two already-dead `getpaymentgatewayUI`/`redirectui` functions above, same host) and `taWallet/paymentRequest1` (the settlement callback) — both documented in `BLOCKED_ENDPOINTS.md` under TAWallet.
+Per the 2026-10-02 directive (§16), traced in full. `taWallet/createHash` and `taWallet/fetchTransactionDetailsByOrderId` are confirmed frontend-active (`KBook.js:1036-1096`) and safe to test live (hash generation / read-only lookup, no real money movement) — these belong in active test-bench scope, not here or in `BLOCKED-ENDPOINTS-RATIONALE.md`. The real-money surface is the live auto-submitting HTML form at `KBook.js:3161-3519` (`action="https://api.tapay.in/v2/paymentrequest"`, a native browser form POST, not a fetch call — distinct from the two already-dead `getpaymentgatewayUI`/`redirectui` functions above, same host) and `taWallet/paymentRequest1` (the settlement callback) — both documented in `BLOCKED-ENDPOINTS-RATIONALE.md` under TAWallet.

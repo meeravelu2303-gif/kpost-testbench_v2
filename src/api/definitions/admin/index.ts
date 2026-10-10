@@ -9,7 +9,7 @@ import { adminWorkplaceApis } from './workplace.api';
  * `adminmodule.kpostindia.com`, reached by BUSINESS_M/L admins from "Admin / HR Setup".
  *
  * Scope is deliberately the **36 endpoints in the owner's authoritative payload doc**
- * (`Admin_module - API Services.pdf`, 2026-09-19) and nothing else — a 2026-10-06 decision to stop
+ * (`docs/reference/Admin_module - API Services.pdf`, 2026-09-19) and nothing else — a 2026-10-06 decision to stop
  * testing/filing against anything the module's documentation doesn't cover, even endpoints this
  * bench previously found real, filed security defects on (department/*, attribute/*, variable/*,
  * hrTier/*, hrVariable/*, workplaceHierarchy save/update/delete/getOrganization, every

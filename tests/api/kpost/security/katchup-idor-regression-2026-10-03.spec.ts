@@ -292,7 +292,7 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
 
       const anonThumb = await endpoints.sendTo(
         'group-download-image',
-        { pathParams: { groupKpostID, kpostID: A!.username } },
+        { pathParams: { groupKpostID: groupKpostID!, kpostID: A!.username } },
         { label: 'regression960:anon-thumb', auth: { header: undefined }, allowLiveRead: true },
       );
       const leaked = anonThumb.status < 300;
@@ -303,7 +303,7 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
           rule: 'Downloading a group profile image must require authentication.',
           expected: '401/403 for a request with no Authorization header',
           actual: `an anonymous request replied ${anonThumb.status}`,
-          request: { pathParams: { groupKpostID, kpostID: A!.username } },
+          request: { pathParams: { groupKpostID: groupKpostID!, kpostID: A!.username } },
         });
       }
       expect
@@ -354,7 +354,7 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
     try {
       const attack = await endpoints.sendTo(
         'group-details-by-id',
-        { pathParams: { groupKpostID } },
+        { pathParams: { groupKpostID: groupKpostID! } },
         { label: 'regression961:attack', auth: { principal: C! }, allowLiveRead: true },
       );
       const leaked = attack.status < 300 && /passCode|memberDetails/.test(attack.bodyText);
@@ -365,7 +365,7 @@ test.describe('KPost Security · Katchup IDOR/disclosure regression (2026-10-03 
           rule: 'getGroupDetailsUsingGroupKpostID must not disclose a private group\'s full record to a non-member, non-contact caller.',
           expected: 'the record (and especially passCode) is withheld from an unrelated caller',
           actual: `replied ${attack.status} with the full group record for a private group`,
-          request: { pathParams: { groupKpostID } },
+          request: { pathParams: { groupKpostID: groupKpostID! } },
         });
       }
       expect
