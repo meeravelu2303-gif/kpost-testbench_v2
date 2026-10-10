@@ -49,10 +49,12 @@ KPost is one product built from separately maintained modules. Each suite target
 │   │                             #   response, security, performance, common) + index.ts registry
 │   ├── business-rules/           # Endpoint-specific rules (users/, companies/)
 │   ├── database/                 # DB client, repositories, assertions, named DB validations
+│   ├── bug-tracker/              # Candidate → validity gate → dedupe → Bugzilla filer/client
 │   ├── reporting/                # Report formatter, attachment, Playwright validation reporter
 │   ├── fixtures/                 # Custom `test` (engine, endpoints, api, pages, logger)
 │   ├── data/                     # Test data factories
 │   ├── pages/                    # UI page objects
+│   ├── ui/                       # UI health, crawler, screens and breakage-sweep helpers
 │   └── utils/                    # Structured logger, masking, correlation IDs, JSON helpers
 └── tests/
     ├── api/                      # One thin spec per API area (endpoints come from the registry)
