@@ -3,6 +3,7 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 import { ROOT_DIR, VALIDATION_PROFILES } from './constants';
+import { applyQatestOnly } from './qatest-only';
 
 const testEnv = process.env.TEST_ENV || 'local';
 
@@ -12,6 +13,9 @@ dotenv.config({
   path: [path.join(ROOT_DIR, `.env.${testEnv}`), path.join(ROOT_DIR, '.env')],
   quiet: true,
 });
+
+// QATEST_ONLY=true re-points the QA_* accounts at qatest1..6 (see qatest-only.ts) before they are read.
+applyQatestOnly();
 
 // Generated once in the Playwright main process; workers inherit it, so every worker,
 // log line and report entry of one run shares the same ID.
