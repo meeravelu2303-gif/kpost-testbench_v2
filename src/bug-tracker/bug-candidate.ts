@@ -542,12 +542,22 @@ function humanizeUiFailure(message: string): {
   return { classification: 'UI Test Failure', actual: message };
 }
 
+/**
+ * Which UI product a browser test belongs to, from where its spec lives: `tests/e2e-admin/` is the
+ * Admin/HR-Setup SPA (Bugzilla "KPost Admin UI"); everything else is the KPost React app ("KPost UI").
+ * The spec path is the one fact every failure carries, so routing cannot depend on a tag someone
+ * forgot to add.
+ */
+export function uiSuiteForFile(file: string): 'kpost-ui' | 'admin-ui' {
+  return /(^|[\\/])tests[\\/]e2e-admin[\\/]/.test(file) ? 'admin-ui' : 'kpost-ui';
+}
+
 /** Turns a browser test failure into a candidate for the UI module and its developer. */
 export function candidateFromUiFailure(
   input: UiFailureInput,
   config: BugzillaConfig,
 ): BugCandidate {
-  const suite = suiteFor('kpost-ui');
+  const suite = suiteFor(uiSuiteForFile(input.file));
   // The component doubles as the screen name for the reproduction steps.
   const component = componentFor(suite, screenTokens(input.file, input.title));
   const humanized = humanizeUiFailure(input.message);

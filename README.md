@@ -18,6 +18,7 @@ KPost is one product built from separately maintained modules. Each suite target
 | `admin-api` | Admin module          | `ADMIN_API_BASE_URL` | KPost Admin      | Jaganathan Murthy |
 | `kmail-api` | KMail module          | `KMAIL_API_BASE_URL` | KMail API        | Jitendra Kumar    |
 | `kpost-ui`  | KPost React front end | `BASE_URL`           | KPost UI         | Ayyappan Ashok    |
+| `admin-ui`  | Admin/HR-Setup SPA    | `ADMIN_UI_BASE_URL`  | KPost Admin UI   | Ayyappan Ashok    |
 
 ## Stack
 
@@ -101,8 +102,9 @@ product, each with a `:file` variant that also files bugs. The essentials:
 | `npm run product:kpost-api` / `product:kpost-api:file`            | KPost API — FULL profile, write-fuzz, lifecycle flows on the test DB (run / run + file). |
 | `npm run product:kmail-api` / `product:kmail-api:file`            | KMail API — same tier.                                                                   |
 | `npm run product:kpost-admin` / `product:kpost-admin:file`        | Admin API — the owner's PDF endpoints, same tier (Admin DB stays read-only).             |
-| `npm run product:kpost-ui` / `product:kpost-ui:file`              | KPost UI on 3 browsers, then the Admin UI.                                               |
-| `npm run product:all` / `product:all:file`                        | All four, in order.                                                                      |
+| `npm run product:kpost-ui` / `product:kpost-ui:file`              | KPost UI on Chromium, Firefox and WebKit.                                                |
+| `npm run product:kpost-admin-ui` / `product:kpost-admin-ui:file`  | The Admin/HR-Setup UI (a separate SPA).                                                  |
+| `npm run product:all` / `product:all:file`                        | All five, in order.                                                                      |
 | `npm run ui:chromium:file` · `ui:firefox:file` · `ui:webkit:file` | KPost UI, one browser per run.                                                           |
 | `npm run kpost:full:verify`                                       | Re-check every open KPost API bug; file nothing new.                                     |
 | `npm run framework`                                               | The bench's own self-tests.                                                              |

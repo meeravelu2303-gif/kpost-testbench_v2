@@ -3,6 +3,23 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-10 (late) — Fifth Bugzilla product wired: KPost Admin UI gets its own suite and command
+
+**Finding:** Bugzilla has five products (KPost API, KMail API, KPost Admin, KPost UI, **KPost Admin
+UI**) but the bench knew four. Worse than misrouting: the reporter only turned failures from the three
+browser projects into candidates, so a failing Admin/HR-Setup UI test (`admin-ui` project,
+`tests/e2e-admin`) was never auto-filed at all — the five bugs in that product were hand-filed — and
+its status pass commented on **KPost UI** bugs instead of its own.
+
+**Change:** new suite `admin-ui` in `ownership.config.ts` (product "KPost Admin UI", components
+"User Management" for the employee screens and "General" otherwise, owner Ayyappan, host
+`ADMIN_UI_BASE_URL`); `candidateFromUiFailure` picks the suite from the spec path (`tests/e2e-admin/`
+→ `admin-ui`), the reporter accepts the `admin-ui` project, names the Admin host in the ticket and
+runs the status pass per UI product; the four observational Admin specs (screens, sub-tab health,
+dead-screen pins, login injection probes) join the UI filing allow-list — the PII-masking spec stays
+review-only. Commands: `product:kpost-ui` is now the KPost UI alone (`ui`), **`product:kpost-admin-ui`**
+is the Admin UI (`ui:admin`); `product:all` still runs all five. The ownership self-test pins the routing.
+
 ### 2026-10-10 (late) — Hand-run readiness: preflight, template guard, green gate, green self-tests
 
 **Owner's requirement:** "when I run the test by hand it will run properly and find the valid bugs

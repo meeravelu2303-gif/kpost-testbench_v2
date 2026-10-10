@@ -19,13 +19,14 @@ them. Give the server a 25–40 min cool-down between long runs. Full rules: `CL
 
 ## 1. One command per Bugzilla product — the standard flow
 
-| Product         | Run (files nothing)           | File the bugs                      | Runs                             |
-| --------------- | ----------------------------- | ---------------------------------- | -------------------------------- |
-| **KPost API**   | `npm run product:kpost-api`   | `npm run product:kpost-api:file`   | `kpost:full` / `kpost:full:file` |
-| **KMail API**   | `npm run product:kmail-api`   | `npm run product:kmail-api:file`   | `kmail:full` / `kmail:full:file` |
-| **KPost Admin** | `npm run product:kpost-admin` | `npm run product:kpost-admin:file` | `admin:full` / `admin:full:file` |
-| **KPost UI**    | `npm run product:kpost-ui`    | `npm run product:kpost-ui:file`    | `ui:all` / `ui:all:file`         |
-| **Everything**  | `npm run product:all`         | `npm run product:all:file`         | all four above, in order         |
+| Product            | Run (files nothing)              | File the bugs                         | Runs                             |
+| ------------------ | -------------------------------- | ------------------------------------- | -------------------------------- |
+| **KPost API**      | `npm run product:kpost-api`      | `npm run product:kpost-api:file`      | `kpost:full` / `kpost:full:file` |
+| **KMail API**      | `npm run product:kmail-api`      | `npm run product:kmail-api:file`      | `kmail:full` / `kmail:full:file` |
+| **KPost Admin**    | `npm run product:kpost-admin`    | `npm run product:kpost-admin:file`    | `admin:full` / `admin:full:file` |
+| **KPost UI**       | `npm run product:kpost-ui`       | `npm run product:kpost-ui:file`       | `ui` / `ui:file`                 |
+| **KPost Admin UI** | `npm run product:kpost-admin-ui` | `npm run product:kpost-admin-ui:file` | `ui:admin` / `ui:admin:file`     |
+| **Everything**     | `npm run product:all`            | `npm run product:all:file`            | all five above, in order         |
 
 What each one does:
 
@@ -37,8 +38,9 @@ What each one does:
   compose/draft/settings lifecycle.
 - **`admin:full`** — every Admin API endpoint (the owner's PDF list), FULL + write-fuzz + destructive, plus
   the org-build lifecycle. The Admin **database** is live and stays read-only in code whatever the flags.
-- **`ui:all`** — `ui` (KPost UI on Chromium, Firefox and WebKit, KDoc screens excluded) then `ui:admin` (the
-  Admin UI project). `ui` runs four layers on every screen:
+- **`ui`** — the KPost UI on Chromium, Firefox and WebKit (KDoc screens excluded); files to **KPost UI**.
+  **`ui:admin`** — the Admin/HR-Setup SPA (`tests/e2e-admin`, the `admin-ui` project); files to
+  **KPost Admin UI**. `ui:all` runs both. `ui` runs four layers on every screen:
   1. **static screen sweep** — crash, broken asset, render budget, responsive layout, a11y, raw `undefined`/`NaN`
      (split into 3 paced batch files to stay under the server's rate limiter);
   2. **interaction sweep** — search, scroll, open a conversation, and a **hang detector**;

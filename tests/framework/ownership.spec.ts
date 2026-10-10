@@ -126,6 +126,33 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
       component: 'WriteMail',
       assignee: 'ayyappan@kpostindia.com',
     });
+
+    // The Admin/HR-Setup SPA is a separate Bugzilla product: a failure under tests/e2e-admin must
+    // never land in KPost UI. Its two components: User Management for the employee screens, else General.
+    const adminUi = (file: string, title: string) =>
+      candidateFromUiFailure(
+        {
+          file,
+          title,
+          message: 'expected heading to be visible',
+          fullMessage: 'expected heading to be visible',
+          browser: 'chromium',
+          environment: 'dev',
+          baseURL: 'http://admin-ui',
+          build: 'local',
+          testRunId: 'run-1',
+          observedAt: '2026-10-10T10:00:00.000Z',
+        },
+        config,
+      );
+    expect(adminUi('tests/e2e-admin/admin-screens.spec.ts', 'Dashboard renders')).toMatchObject({
+      product: 'KPost Admin UI',
+      component: 'General',
+      assignee: 'ayyappan@kpostindia.com',
+    });
+    expect(
+      adminUi('tests/e2e-admin/admin-employee-management-pii.spec.ts', 'Employee list masks PAN'),
+    ).toMatchObject({ product: 'KPost Admin UI', component: 'User Management' });
   });
 
   test('a platform-wide auth/security defect files on the real security component, not the catch-all', () => {

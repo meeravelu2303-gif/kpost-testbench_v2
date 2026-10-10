@@ -29,6 +29,7 @@ KPost is one product built from modules that are maintained in **separate reposi
 | `admin-api` | Admin module API      | admin-module (own repo) | `KPost Admin`    | **Jaganathan Murthy** (jagan@kpost.in)       |
 | `kmail-api` | KMail module API      | kmail (own repo)        | `KMail API`      | **Jitendra Kumar** (jitendra@kpost.in)       |
 | `kpost-ui`  | KPost React front end | KPOST_REACTJS_2023_V1   | `KPost UI`       | **Ayyappan Ashok** (ayyappan@kpostindia.com) |
+| `admin-ui`  | Admin/HR-Setup SPA    | Admin_Module frontend   | `KPost Admin UI` | **Ayyappan Ashok** (ayyappan@kpostindia.com) |
 
 How a defect finds its owner:
 

@@ -73,12 +73,13 @@ commit those with the run. If the owner delivered a new workbook, regenerate the
 
 ## 3. Dry run — one product at a time, files nothing
 
-| Product     | Command                       | Covers                                                                                                        |
-| ----------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| KPost API   | `npm run product:kpost-api`   | every KPost endpoint, FULL profile, write-fuzz, the self-cleaning lifecycle flows; KDoc/KOS excluded (paused) |
-| KMail API   | `npm run product:kmail-api`   | every KMail endpoint, same tier, plus the compose/draft/settings lifecycle                                    |
-| KPost Admin | `npm run product:kpost-admin` | the owner's PDF endpoints, same tier, plus the org-build lifecycle; the Admin DB stays read-only in code      |
-| KPost UI    | `npm run product:kpost-ui`    | the KPost UI on Chromium, Firefox and WebKit, then the Admin UI                                               |
+| Product        | Command                          | Covers                                                                                                        |
+| -------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| KPost API      | `npm run product:kpost-api`      | every KPost endpoint, FULL profile, write-fuzz, the self-cleaning lifecycle flows; KDoc/KOS excluded (paused) |
+| KMail API      | `npm run product:kmail-api`      | every KMail endpoint, same tier, plus the compose/draft/settings lifecycle                                    |
+| KPost Admin    | `npm run product:kpost-admin`    | the owner's PDF endpoints, same tier, plus the org-build lifecycle; the Admin DB stays read-only in code      |
+| KPost UI       | `npm run product:kpost-ui`       | the KPost UI on Chromium, Firefox and WebKit                                                                  |
+| KPost Admin UI | `npm run product:kpost-admin-ui` | the Admin/HR-Setup SPA (needs `ADMIN_UI_BASE_URL` and the BUSINESS_M account)                                 |
 
 Run them serially. Give the server a 25–40 minute cool-down between long runs; run WebKit in small
 file batches if it hangs. Concurrency and performance probes stay off (`CONCURRENCY_PROBES=false` is

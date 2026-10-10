@@ -82,8 +82,10 @@
     "product:kmail-api:file": "npm run kmail:full:file",
     "product:kpost-admin": "npm run admin:full",
     "product:kpost-admin:file": "npm run admin:full:file",
-    "product:kpost-ui": "npm run ui:all",
-    "product:kpost-ui:file": "npm run ui:all:file",
+    "product:kpost-ui": "npm run ui",
+    "product:kpost-ui:file": "npm run ui:file",
+    "product:kpost-admin-ui": "npm run ui:admin",
+    "product:kpost-admin-ui:file": "npm run ui:admin:file",
     "product:all": "npm run kpost:full && npm run kmail:full && npm run admin:full && npm run ui:all",
     "product:all:file": "npm run kpost:full:file && npm run kmail:full:file && npm run admin:full:file && npm run ui:all:file"
   },

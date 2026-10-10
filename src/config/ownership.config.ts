@@ -15,6 +15,7 @@ import { env } from './env';
  * | admin-api   | Admin module (own repo)   | KPost Admin      | Jaganathan Murthy  |
  * | kmail-api   | KMail module (own repo)   | KMail API        | Jitendra Kumar     |
  * | kpost-ui    | KPost React front end     | KPost UI         | Ayyappan Ashok     |
+ * | admin-ui    | Admin/HR-Setup SPA        | KPost Admin UI   | Ayyappan Ashok     |
  *
  * This file is the single source of truth. Endpoint definitions declare a `suite`, and
  * everything else — base URL, product, component, assignee — follows from here. A test in
@@ -22,7 +23,7 @@ import { env } from './env';
  * drift on either side is caught instead of silently misrouting tickets.
  */
 
-export const SUITE_IDS = ['kpost-api', 'admin-api', 'kmail-api', 'kpost-ui'] as const;
+export const SUITE_IDS = ['kpost-api', 'admin-api', 'kmail-api', 'kpost-ui', 'admin-ui'] as const;
 export type SuiteId = (typeof SUITE_IDS)[number];
 
 export interface SuiteOwnership {
@@ -158,6 +159,20 @@ const ADMIN_COMPONENT_BY_TAG: Record<string, string> = {
   'country-address': 'Country & Address Reference Data',
 };
 
+/**
+ * Admin/HR-Setup SPA screens (tests/e2e-admin, kpostadmin.kpostindia.com) → components of the
+ * **KPost Admin UI** product, which has exactly two: the employee/user administration screens and
+ * a catch-all. (The in-app `/usermanagement` screen of the KPost React app is a KPost UI screen and
+ * stays in `UI_COMPONENT_BY_SCREEN` below.)
+ */
+const ADMIN_UI_COMPONENT_BY_SCREEN: Record<string, string> = {
+  employee: 'User Management',
+  'employee-data': 'User Management',
+  'employee-management': 'User Management',
+  usermanagement: 'User Management',
+  'user-management': 'User Management',
+};
+
 /** UI screens → components of the KPost UI product. */
 const UI_COMPONENT_BY_SCREEN: Record<string, string> = {
   login: 'Auth',
@@ -256,6 +271,22 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       componentByTag: UI_COMPONENT_BY_SCREEN,
     },
     baseUrl: env.BASE_URL,
+  },
+  'admin-ui': {
+    id: 'admin-ui',
+    label: 'KPost Admin/HR-Setup front end',
+    kind: 'ui',
+    repository: 'Admin_Module frontend (separate SPA)',
+    owner: { name: 'Ayyappan Ashok', email: 'ayyappan@kpostindia.com' },
+    bugzilla: {
+      product: 'KPost Admin UI',
+      version: 'unspecified',
+      fallbackComponent: 'General',
+      componentByTag: ADMIN_UI_COMPONENT_BY_SCREEN,
+    },
+    // The Admin SPA has its own host; the reporter names it in the ticket. Falls back to the KPost
+    // front end only for type completeness — the Admin UI command needs ADMIN_UI_BASE_URL set.
+    baseUrl: env.ADMIN_UI_BASE_URL ?? env.BASE_URL,
   },
 };
 
@@ -436,4 +467,5 @@ export const KNOWN_COMPONENTS: Partial<Record<SuiteId, Set<string>>> = {
     'User Profile',
     'WriteMail',
   ]),
+  'admin-ui': new Set(['General', 'User Management']),
 };

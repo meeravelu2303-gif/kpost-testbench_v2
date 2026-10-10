@@ -12,12 +12,13 @@ Read this first. It is the map and the rulebook; the detail lives in `docs/`:
 KPOST is a unified communications platform (chat, calling, mail under one login). The bench finds real
 defects in it and files them to Bugzilla, routed to the developer who owns the module.
 
-| Bugzilla product | Suite       | Owner                                    | Host (from `.env`)                                                   |
-| ---------------- | ----------- | ---------------------------------------- | -------------------------------------------------------------------- |
-| KPost API        | `kpost-api` | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (testingapi.kpostindia.com)                     |
-| KPost Admin      | `admin-api` | Jaganathan Murthy                        | `ADMIN_API_BASE_URL` (http://192.168.0.38:9595)                      |
-| KMail API        | `kmail-api` | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL`                                                 |
-| KPost UI         | `kpost-ui`  | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com); Admin UI kpostadmin.kpostindia.com |
+| Bugzilla product | Suite       | Owner                                    | Host (from `.env`)                                                 |
+| ---------------- | ----------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| KPost API        | `kpost-api` | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (testingapi.kpostindia.com)                   |
+| KPost Admin      | `admin-api` | Jaganathan Murthy                        | `ADMIN_API_BASE_URL` (http://192.168.0.38:9595)                    |
+| KMail API        | `kmail-api` | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL`                                               |
+| KPost UI         | `kpost-ui`  | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                   |
+| KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (kpostadmin.kpostindia.com), `tests/e2e-admin` |
 
 Owners are declared once in `src/config/ownership.config.ts`; a framework test fails on drift.
 
@@ -83,13 +84,14 @@ the OTP/SMS kill-switch, and `sideEffect: 'global'`/`external` blocks.
 
 ## 4. The run → Bugzilla flow (one command per product)
 
-| Product     | Preview (dry run)             | Real filing                        |
-| ----------- | ----------------------------- | ---------------------------------- |
-| KPost API   | `npm run product:kpost-api`   | `npm run product:kpost-api:file`   |
-| KMail API   | `npm run product:kmail-api`   | `npm run product:kmail-api:file`   |
-| KPost Admin | `npm run product:kpost-admin` | `npm run product:kpost-admin:file` |
-| KPost UI    | `npm run product:kpost-ui`    | `npm run product:kpost-ui:file`    |
-| Everything  | `npm run product:all`         | `npm run product:all:file`         |
+| Product        | Preview (dry run)                | Real filing                           |
+| -------------- | -------------------------------- | ------------------------------------- |
+| KPost API      | `npm run product:kpost-api`      | `npm run product:kpost-api:file`      |
+| KMail API      | `npm run product:kmail-api`      | `npm run product:kmail-api:file`      |
+| KPost Admin    | `npm run product:kpost-admin`    | `npm run product:kpost-admin:file`    |
+| KPost UI       | `npm run product:kpost-ui`       | `npm run product:kpost-ui:file`       |
+| KPost Admin UI | `npm run product:kpost-admin-ui` | `npm run product:kpost-admin-ui:file` |
+| Everything     | `npm run product:all`            | `npm run product:all:file`            |
 
 Also: `kpost:full:verify` (status pass only: closes verified fixes, dates every open bug, files nothing),
 `ui:chromium:file` / `ui:firefox:file` / `ui:webkit:file` (one browser per run), `framework` (bench self-tests),

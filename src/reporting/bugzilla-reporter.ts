@@ -108,6 +108,14 @@ const UI_FILING_SPECS = new Set([
   // cannot reach (it requires a live session). Confirmed clean across two consecutive live runs
   // (2026-09-29) before being added here.
   'signup-login-screens.spec.ts',
+  // The Admin/HR-Setup SPA (`admin-ui` project → Bugzilla "KPost Admin UI"): its screen/sub-tab
+  // health sweeps, the dead-screen crash pins and the login-screen injection probes report only
+  // crashes, JS errors, broken assets or an executed payload — selector-independent defects. The
+  // PII-masking spec stays review-only: a masking verdict needs a person to confirm the cell read.
+  'admin-screens.spec.ts',
+  'admin-subtabs-health.spec.ts',
+  'admin-dead-screens.spec.ts',
+  'admin-login.spec.ts',
 ]);
 
 /**
@@ -121,6 +129,7 @@ const SUITE_FILING_ORDER: Record<string, number> = {
   'admin-api': 1,
   'kmail-api': 2,
   'kpost-ui': 3,
+  'admin-ui': 4,
 };
 
 function orderedForFiling(candidates: readonly BugCandidate[]): BugCandidate[] {
@@ -386,13 +395,20 @@ export default class BugzillaReporter implements Reporter {
       }),
     );
     const reproduced = new Set(candidates.map((c) => c.id.replace(/^\[|\]$/g, '')));
-    const uiProduct = suiteFor('kpost-ui').bugzilla.product;
+    // Two UI products, one per front end: the browser projects drive the KPost React app, the
+    // `admin-ui` project the Admin/HR-Setup SPA. A product's open bugs are re-checked only when its
+    // own front end actually ran this pass.
+    const uiProducts = new Set<string>();
+    if (uiRecords.some((r) => r.project !== 'admin-ui'))
+      uiProducts.add(suiteFor('kpost-ui').bugzilla.product);
+    if (uiRecords.some((r) => r.project === 'admin-ui'))
+      uiProducts.add(suiteFor('admin-ui').bugzilla.product);
     const products = new Set(this.validationReports.map((r) => suiteFor(r.suite).bugzilla.product));
-    // UI tests never produce a `ValidationReport` (that's an API-only attachment), so the UI
+    // UI tests never produce a `ValidationReport` (that's an API-only attachment), so a UI
     // product would otherwise never appear here at all — which is exactly why a UI run's
     // auto-resolve pass always reported "checked 0 bugs" before this. Any UI test having run this
-    // pass (regardless of pass/fail) is reason enough to check the UI product's open bugs.
-    if (uiRecords.length) products.add(uiProduct);
+    // pass (regardless of pass/fail) is reason enough to check that product's open bugs.
+    for (const product of uiProducts) products.add(product);
     const benchTag = new RegExp(`\\[${this.config.tagPrefix}-[0-9A-F]{6}\\]`, 'i');
     for (const product of products) {
       const found = await client.openBugs(product);
@@ -413,7 +429,7 @@ export default class BugzillaReporter implements Reporter {
           await this.applyResolveDecision(client, bug, decision, summary, dryRun, touched);
           continue;
         }
-        if (product === uiProduct) {
+        if (uiProducts.has(product)) {
           const decision = classifyUiResolve(bug, uiIndex, reproduced);
           const proofNote =
             decision.action === 'keep' && /still failed/i.test(decision.reason) && !dryRun
@@ -567,8 +583,10 @@ export default class BugzillaReporter implements Reporter {
     if (!this.config.fileUiFailures) return [];
     return tests.flatMap((test) => {
       const project = test.parent.project()?.name ?? '';
-      // Only consistently failing browser tests: a flaky pass-on-retry is not solid evidence.
-      if (!BROWSER_PROJECTS.has(project) || test.outcome() !== 'unexpected') return [];
+      // Only consistently failing UI tests: a flaky pass-on-retry is not solid evidence. The three
+      // browser projects drive the KPost React app; `admin-ui` drives the Admin/HR-Setup SPA.
+      if (!BROWSER_PROJECTS.has(project) && project !== 'admin-ui') return [];
+      if (test.outcome() !== 'unexpected') return [];
       // Only the observational specs file; a feature/write-flow selector failure is not a defect.
       if (!UI_FILING_SPECS.has(path.basename(test.location.file))) return [];
       const failure = [...test.results].reverse().find((attempt) => attempt.error?.message);
@@ -583,7 +601,9 @@ export default class BugzillaReporter implements Reporter {
             fullMessage: message,
             browser: project,
             environment: env.TEST_ENV,
-            baseURL: env.BASE_URL,
+            // The host the failing screen actually lives on, so the ticket names the right SPA.
+            baseURL:
+              project === 'admin-ui' ? (env.ADMIN_UI_BASE_URL ?? env.BASE_URL) : env.BASE_URL,
             build: env.BUILD_ID,
             testRunId: env.TEST_RUN_ID,
             observedAt: new Date().toISOString(),
