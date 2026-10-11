@@ -29,6 +29,11 @@ export interface KnownFalsePositive {
   validator?: string;
   /** Substring that must appear in the finding's title/narrative (e.g. 'deviceType'). */
   field?: string;
+  /**
+   * Substring that must appear in the finding's ACTUAL evidence (e.g. the seeded value '12345').
+   * Anchors a class match to the judged value, so a future genuinely-bad value still files.
+   */
+  actualContains?: string;
   reason: string;
   judgedBy: string;
   /** ISO date the judgment was made. */
@@ -41,19 +46,60 @@ export interface KnownFalsePositive {
  * reflecting it) — confirm them before relying on the suppression.
  */
 export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
+  /*
+   * The two date judgments below are CLASS matches (endpoint + field + the judged value), not
+   * fingerprints: the finding's count ("21/625" → "42/1295") changes every run, which mints a new
+   * fingerprint and let the same false positive back in on run-23c39a35 (as KP-56E4B1/KP-CB27D6/
+   * KP-61D743/KP-B95D16). `actualContains` anchors each to the judged value, so a genuinely bad
+   * date on the same field still files.
+   */
   {
-    fingerprint: 'KP-928DF1',
     endpoint: '/v2/dashboard/homeDashboardMsgs',
+    field: 'repeatedDate',
+    actualContains: '12345',
     reason:
-      'repeatedDate "12345" is the QA suite\'s own seeded value on a scheduled call, echoed back — not a product date-format defect.',
+      'repeatedDate "12345" is the QA suite\'s own seeded value on scheduled calls, echoed back — not a product date-format defect. (Supersedes fingerprint KP-928DF1.)',
     judgedBy: 'QA triage (run-96b9c68c)',
     date: '2026-10-11',
   },
   {
-    fingerprint: 'KP-8330EC',
-    endpoint: '/dairySchedule/getTodaySchedules',
+    endpoint: '/v2/kall/todayKoolKall',
+    field: 'repeatedDate',
+    actualContains: '12345',
     reason:
-      'preferredDate null is a valid "not set" state for an optional date, not a malformed date value.',
+      'Same seeded repeatedDate "12345" surfacing through the Kall list read — QA test data, not a product defect.',
+    judgedBy: 'QA triage (run-23c39a35)',
+    date: '2026-10-11',
+  },
+  {
+    endpoint: '/dairySchedule/getTodaySchedules',
+    field: 'preferredDate',
+    actualContains: 'null',
+    reason:
+      'preferredDate null is a valid "not set" state for an optional date, not a malformed date value. (Supersedes fingerprint KP-8330EC.)',
+    judgedBy: 'QA triage (run-96b9c68c)',
+    date: '2026-10-11',
+  },
+  {
+    endpoint: '/dairySchedule/getEventSelectedDate',
+    field: 'preferredDate',
+    actualContains: 'null',
+    reason:
+      'Same optional preferredDate returned as null on the selected-date read — valid not-set, not a defect.',
+    judgedBy: 'QA triage (run-23c39a35)',
+    date: '2026-10-11',
+  },
+  /*
+   * NOT a product bug and NOT a reopen: the bench's kallDashboard happy-path fixture sends an EMPTY
+   * kallID, and the server correctly rejects it with FAILURE/400 (verified by live replay,
+   * run-96b9c68c triage). Without this entry the gate tries to REOPEN resolved #117 every run.
+   * Remove this entry once the fixture sends a valid kallID.
+   */
+  {
+    endpoint: '/v2/kall/kallDashboard',
+    field: 'status must be SUCCESS',
+    reason:
+      "bench-fixture fault: the kallDashboard happy-path request sends an empty kallID and the server's FAILURE/400 is correct behaviour (#117 was closed rightly). Fix the fixture, then delete this entry.",
     judgedBy: 'QA triage (run-96b9c68c)',
     date: '2026-10-11',
   },
@@ -90,6 +136,7 @@ export function knownFalsePositiveReason(candidate: BugCandidate): string | unde
   const id = norm(candidate.id);
   const haystack =
     `${candidate.title ?? ''} ${candidate.narrative ?? ''} ${candidate.endpoint ?? ''}`.toLowerCase();
+  const actual = String(candidate.actual ?? '').toLowerCase();
   for (const fp of KNOWN_FALSE_POSITIVES) {
     const keys = [fp.fingerprint, fp.endpoint, fp.validator, fp.field].filter(Boolean);
     if (!keys.length) continue;
@@ -97,6 +144,7 @@ export function knownFalsePositiveReason(candidate: BugCandidate): string | unde
     if (fp.endpoint && !haystack.includes(fp.endpoint.toLowerCase())) continue;
     if (fp.validator && candidate.classification !== fp.validator) continue;
     if (fp.field && !haystack.includes(fp.field.toLowerCase())) continue;
+    if (fp.actualContains && !actual.includes(fp.actualContains.toLowerCase())) continue;
     return `known false positive (judged ${fp.date} by ${fp.judgedBy}): ${fp.reason}`;
   }
   return undefined;
