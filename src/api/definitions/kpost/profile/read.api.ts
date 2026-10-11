@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { pathParamSchema } from '@api/schema/sample-schema';
 import { body, pathParams } from '../kpost-endpoint';
 import { defineProfileEndpoint, defineUndocumentedProfileEndpoint } from './profile-endpoint';
 
@@ -185,6 +186,7 @@ export const downloadProfileImageApi = defineProfileEndpoint({
   // Only 200 (image) or 204 (none) are valid; a 500 here would (rightly) still fail.
   expectedStatus: [200, 204],
   request: pathParams(() => ({ kpostID: testData.kpostId })),
+  pathParamsSchema: pathParamSchema('kpostID'),
 });
 
 export const downloadFullProfileImageApi = defineProfileEndpoint({
@@ -199,6 +201,7 @@ export const downloadFullProfileImageApi = defineProfileEndpoint({
   // 204 (no image) is correct — see downloadProfileImage above.
   expectedStatus: [200, 204],
   request: pathParams(() => ({ kpostID: testData.kpostId })),
+  pathParamsSchema: pathParamSchema('kpostID'),
 });
 
 export const downloadCoverImageApi = defineProfileEndpoint({
@@ -214,6 +217,7 @@ export const downloadCoverImageApi = defineProfileEndpoint({
   // 200 (image) / 204 (none) are the valid responses.
   expectedStatus: [200, 204],
   request: pathParams(() => ({ kpostID: testData.kpostId })),
+  pathParamsSchema: pathParamSchema('kpostID'),
 });
 
 export const getSignatureImageApi = defineProfileEndpoint({

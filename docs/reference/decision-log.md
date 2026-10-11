@@ -3,6 +3,94 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-11 (night) — Frontend end-to-end trace: scope is the endpoints the app calls; admin path mismatch fixed
+
+**Owner:** "analyse the frontend end to end; cover the endpoints the application uses with all test
+types; endpoints the frontend doesn't use we don't need to test." Deterministic extraction over
+`KPOST_REACTJS_2023_V1/src` (every base-URL-constant + path concatenation, comments stripped) →
+`docs/scope/frontend-endpoint-usage-2026-10-11.md`.
+
+**Result:** the app constructs **212** distinct endpoints; **199** are already registered and tested.
+Of the 15 constructed-but-unregistered, after caller-liveness + backend checks: 3 are a real bench
+path bug (fixed), 2 are dead service wrappers (commented/never-invoked callers — not used), 1 is a
+frontend defect, 2 are KMail-suite (separate pass), 7 are out-of-scope third-party (RazorPay/RedBus/
+e-commerce/KPoster — already in `blocked-endpoints-rationale.md`).
+
+**Fixed — admin path mismatch.** The frontend calls `/admin/updateCompanyDetails`,
+`/admin/updateBankAccountDetails`, `/admin/createKpostIDAndDesignationSuggestion` (Setting.js); the
+backend serves these only on `AdminController` `@RequestMapping("/admin")` — there is no `/v2/admin/`
+route. The bench had registered the `/v2/admin/*` paths, so it was validating a route the backend does
+not serve while the real, app-used `/admin/*` route went untested. Repointed all three to `/admin/*`
+with the workbook's `/v2/admin/*` kept as `contractPath` (schema from the documented path, request to
+the real one). They are `global` writes (blocked on live), so no change to a live run — this corrects
+the path for off-live/future runs and makes the definition match reality. `admin-update-role` stays on
+`/v2/admin/updateRole` and unused: its frontend wiring is incomplete (`unused-endpoints.md`).
+
+**Frontend defect flagged (not a bench gap):** Login.js builds profile-avatar URLs on
+`/v2/common/downloadProfileImage/{kpostID}`, which the backend does not have; every other caller uses
+`/v2/profile/downloadProfileImage/{kpostID}` (tested as `profile-download-image`). For the frontend team.
+
+**120 registered endpoints the app does not call — kept, not mass-deleted.** They split into legacy V1
+BOLA security probes (keep — real live vulns), OTP/global/credential writes (blocked already), and
+~100 genuinely dead-from-frontend reads/writes (the app drifted off them). The dead ones are recorded
+as not-frontend-integrated rather than deleted: removing ~100 cheap contract/negative-input specs
+removes regression safety for no runtime saving. The owner can descope any of them; none counts as
+frontend coverage. Mass deletion was deliberately NOT done unilaterally.
+
+### 2026-10-11 (evening) — KPost API: request/path schema gaps closed by test type; engine authorization recorded N/A-by-design
+
+**Owner:** before running the KPost API by hand, "make sure we cover all type of test with all endpoints."
+Measured the kpost-api suite against the registry, the validator engine and the backend route source
+(`D:\KPOST_PROJECTS\KPOST_V5.0`, 355 distinct routes); the full audit is in
+`docs/scope/kpost-api-coverage-gaps-2026-10-11.md`. Three real gaps, each resolved as below.
+
+**Schema-less endpoints (the real test-type gap): CLOSED.** 31 body-sending endpoints had no
+`requestSchema` and 21 path-parameter endpoints no `pathParamsSchema`, so the schema-driven probes —
+negative input (`request.*`), **injection and XSS** — all skipped on them. New helper
+`src/api/schema/sample-schema.ts` (`typesOnlySchema` / `pathParamSchema`) derives an **open,
+types-only** schema from each endpoint's own measured payload: accurate JSON types (so injection/XSS
+reach the real string fields and `request.data-type` fires), every field **optional and nullable** so
+`request.required-fields` / `request.null-value` do **not** fire without evidence and cannot file a
+false bug on a field the server treats as optional. Applied across kdiary, settings, katchup, kall,
+contacts, group, admin, signup-login and the download/id GETs; `pathParamsSchema`/`querySchema` are now
+threaded through `defineKpostEndpoint`/`defineUndocumentedKpostEndpoint` (they weren't before). Measured
+after: body-without-schema 31 → **0**, path-without-schema 21 → **0**; `npm run check` green; the
+sweep-completeness, coverage-ledger and katchup `≥10 planned cases` guards still pass.
+
+**Caveat recorded so it is not misread as new bugs:** KPost answers many bad requests `HTTP 200` with a
+`{"status":"FAILURE"}` envelope instead of a 4xx. Enabling the schemas means `request.empty-body` and
+`request.invalid-payload` now fire on these 31 too and will mostly re-surface that **one known
+contract class** as apparent per-endpoint failures (the last dry run already showed 127 + 90 of them).
+The clean signal from this change is injection/XSS (5xx or leak only) and wrong-type; the empty-body /
+invalid-payload results are the 200-FAILURE class and are absorbed by the dedupe gate and the manual
+review before filing.
+
+**Engine AUTHORIZATION category: recorded N/A-by-design for kpost-api, NOT force-wired.** The category
+shows 0 run because no kpost-api endpoint declares `roles`/`tenantScoped` — and that is correct, not an
+oversight: KPost's authorization is **per-record ownership (BOLA)**, not roles or tenants, so the
+engine's role/permission/cross-tenant validators do not model it. Investigated wiring it anyway and
+found it would be brittle and false-bug-prone: the authz validators resolve the owner with
+`context.principal(role)` (the first principal of a role), **not** the endpoint's `principalKey`, and
+the first `COMPANY_ADMIN` principal (`business-admin`) carries no `tenantId` — so the probes would run
+as the wrong account and the cross-tenant probe would skip regardless. The authorization layer is the
+**12 hand-written BOLA/IDOR specs** in `tests/api/kpost/security/`, which DO cover the high-risk
+id-bearing endpoints: group (remove-member/admin-access/edit-name, V1 legacy), katchup
+(recall/delete/mark/reads/attachments/references), kall (status/end/clear/reschedule, V1 legacy),
+kdiary (event date/update/delete), profile (user-profile-by-kpostid, PII), contacts (global-search),
+admin (user-management cross-company). **Remaining BOLA gap, documented not closed:** the
+`profile-delete-{college,school,university,experience,other-activity}` sub-record deletes are keyed by
+a record id and have no owner-vs-stranger spec yet — writing one needs the lifecycle to mint a real
+sub-record id and a careful owner control, a later pass.
+
+**~40 backend routes are registered by no definition (audit, owner decision).** The sweep-completeness
+guard only proves _registered_ endpoints are swept; it cannot see a real backend route never added to
+the registry. The route diff found ~40 current (non-legacy, non-paused) routes with no definition. Most
+are dead-from-frontend V1 twins, but a handful look frontend-active and real and are flagged for the
+workbook owner in the scope doc: `getStorageDetails`, `setProfilePrivacy`, `getProfession`,
+`getDesignationByProfessionId`, `/v2/common/country`, `/dairySchedule/deleteReport`,
+`/v2/dashboard/getKmailDashboardMsg`, `fetchPersonalUserDetails`. Not registered now (each needs
+frontend-evidence + a workbook/undocumented decision per endpoint).
+
 ### 2026-10-11 (afternoon) — The balance: retune skips, three cross-cutting test types, timing debt 108 → 32, three-browser verification started
 
 **Owner:** "First finish everything, fill the balance gaps also." The plan's remaining gaps were taken in

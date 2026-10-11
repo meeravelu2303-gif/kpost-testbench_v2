@@ -1,3 +1,4 @@
+import { pathParamSchema } from '@api/schema/sample-schema';
 import { body, pathParams } from '../kpost-endpoint';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
@@ -28,6 +29,7 @@ export const downloadApi = defineKatchupEndpoint({
   envelope: false,
   contentType: 'application/octet-stream',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
+  pathParamsSchema: pathParamSchema('uuid'),
   // Live-verified 2026-09-26: serves the exact uploaded bytes, but Content-Type is hardcoded to
   // image/jpeg regardless of the real file type. Filed as #617 [KP-CBBC90], HIGH, KPost API.
   note: 'bytes correct, Content-Type wrong (hardcoded image/jpeg) — see #617',
@@ -43,6 +45,7 @@ export const downloadAttachmentApi = defineKatchupEndpoint({
   envelope: false,
   contentType: 'application/octet-stream',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
+  pathParamsSchema: pathParamSchema('uuid'),
   // Live-verified 2026-09-26: the JSON metadata's real fileName is correct, but the presigned GET
   // URL's Content-Disposition ASCII filename fallback is hardcoded to "file.xlsx" for every
   // attachment. Filed as #618 [KP-2CAEB3], HIGH, KPost API.
@@ -59,6 +62,7 @@ export const downloadFromS3Api = defineKatchupEndpoint({
   envelope: false,
   contentType: 'application/octet-stream',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
+  pathParamsSchema: pathParamSchema('uuid'),
   // Live-verified 2026-09-26: confirmed working — resolves to a real S3 URL naming the same uuid.
   note: 'confirmed working live 2026-09-26 with a real attachment uuid',
 });
@@ -72,6 +76,7 @@ export const downloadThumbnailApi = defineKatchupEndpoint({
   envelope: false,
   contentType: 'image/png',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
+  pathParamsSchema: pathParamSchema('uuid'),
   // Live-verified 2026-09-26: reachable, does not crash for a real attachment uuid.
   note: 'confirmed reachable live 2026-09-26 with a real attachment uuid',
 });
@@ -85,6 +90,7 @@ export const mediaStreamingApi = defineKatchupEndpoint({
   envelope: false,
   contentType: 'application/octet-stream',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
+  pathParamsSchema: pathParamSchema('uuid'),
   // Live-verified 2026-09-26: answers 303 (redirect to the real media URL) for a real, non-media
   // attachment uuid — reachable, not a crash.
   note: 'confirmed reachable live 2026-09-26 with a real attachment uuid (303 redirect)',

@@ -1,3 +1,4 @@
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';
 import { defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 
@@ -36,6 +37,11 @@ export const legacySetKallStatusApi = defineUndocumentedKpostEndpoint({
     kallStatus: 'cancelled',
     kallEndTime: new Date().toISOString(),
   })),
+  requestSchema: typesOnlySchema({
+    kallID: 0,
+    kallStatus: 'cancelled',
+    kallEndTime: new Date().toISOString(),
+  }),
   evidence:
     'KallController.setKallStatus (KallController.java:129) — confirmed zero frontend callers; no ' +
     'HttpServletRequest param at all; KallDaoImpl.setKallStatus (line ~117) updates by raw kallID ' +
@@ -57,6 +63,11 @@ export const legacyCancelScheduleKallApi = defineUndocumentedKpostEndpoint({
     kallStatus: 'cancelled',
     kallEndTime: new Date().toISOString(),
   })),
+  requestSchema: typesOnlySchema({
+    kallID: 0,
+    kallStatus: 'cancelled',
+    kallEndTime: new Date().toISOString(),
+  }),
   evidence:
     'KallController.cancelScheduleKall (KallController.java:391) calls the identical ' +
     'kallService.setKallStatus(kallTracker) that kall-legacy-set-status calls — same unscoped ' +
@@ -73,6 +84,7 @@ export const legacyRemoveMemberKatchupKallApi = defineUndocumentedKpostEndpoint(
   destructive: true,
   sideEffect: 'data',
   request: body(() => ({ idsList: [] as number[] })),
+  requestSchema: typesOnlySchema({ idsList: [] as number[] }),
   evidence:
     'KallController.removeMemberKatchupKall (KallController.java:341) — confirmed zero frontend ' +
     'callers; no HttpServletRequest param at all; KallDaoImpl.removeMemberKatchupKall (line ~363) ' +

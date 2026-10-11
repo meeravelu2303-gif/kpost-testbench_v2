@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
 import { body, defineKpostEndpoint, pathParams } from '../kpost-endpoint';
 
@@ -39,6 +40,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,
     request: pathParams(() => ({ companyID: companyId() })),
+    pathParamsSchema: pathParamSchema('companyID'),
     destructive: false,
     productionSafe: true,
   }),
@@ -50,13 +52,19 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
     request: pathParams(() => ({ companyID: companyId() })),
+    pathParamsSchema: pathParamSchema('companyID'),
     destructive: false,
     productionSafe: true,
   }),
   defineKpostEndpoint({
     id: 'admin-kpostid-designation-suggestion',
     method: 'POST',
-    path: '/v2/admin/createKpostIDAndDesignationSuggestion',
+    // Frontend calls `/admin/...` (no `/v2`), Setting.js getKpostIDSugestion:708; backend serves it
+    // only on AdminController `@RequestMapping("/admin")` — there is NO `/v2/admin/` route. The
+    // workbook documents the `/v2/admin/` form, so schema comes from there via contractPath while the
+    // request goes to the real path. Corrected 2026-10-11 from the frontend end-to-end trace.
+    path: '/admin/createKpostIDAndDesignationSuggestion',
+    contractPath: '/v2/admin/createKpostIDAndDesignationSuggestion',
     summary: 'Suggest a KPost ID for a new member (no persistence)',
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
@@ -105,6 +113,19 @@ export const adminUserManagementApis: EndpointDefinition[] = [
       language: 'english',
       activeStatus: 'yes',
     })),
+    // Off-live only: this is a `global` write, blocked on production by the guard, so no probe runs
+    // against it there regardless. The schema makes its negative cases exercisable on a non-prod host.
+    requestSchema: typesOnlySchema({
+      companyID: companyId(),
+      firstName: 'QA',
+      lastName: 'Member',
+      mobileNumber: testData.mobileAbsent,
+      designation: 'QA Tester',
+      userType: 'BUSINESS_M',
+      requestType: 'newUser',
+      language: 'english',
+      activeStatus: 'yes',
+    }),
     destructive: true,
     sideEffect: 'global',
   }),
@@ -164,7 +185,10 @@ export const adminUserManagementApis: EndpointDefinition[] = [
   defineKpostEndpoint({
     id: 'admin-update-company-details',
     method: 'POST',
-    path: '/v2/admin/updateCompanyDetails',
+    // Real path is `/admin/updateCompanyDetails` (Setting.js UpdateCompanyDetails:829; backend
+    // AdminController, no `/v2/admin/` route). Schema from the documented `/v2/admin/` via contractPath.
+    path: '/admin/updateCompanyDetails',
+    contractPath: '/v2/admin/updateCompanyDetails',
     summary: 'Update the company details (shared state)',
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
@@ -175,7 +199,10 @@ export const adminUserManagementApis: EndpointDefinition[] = [
   defineKpostEndpoint({
     id: 'admin-update-bank-account',
     method: 'POST',
-    path: '/v2/admin/updateBankAccountDetails',
+    // Real path is `/admin/updateBankAccountDetails` (Setting.js UpdateBankAccountDetails:858; backend
+    // AdminController, no `/v2/admin/` route). Schema from the documented `/v2/admin/` via contractPath.
+    path: '/admin/updateBankAccountDetails',
+    contractPath: '/v2/admin/updateBankAccountDetails',
     summary: 'Update the company bank account (shared state)',
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,

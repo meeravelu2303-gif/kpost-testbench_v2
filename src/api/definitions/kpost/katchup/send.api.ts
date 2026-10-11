@@ -1,6 +1,7 @@
 import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/schemas/kpost-types';
 import { testData } from '@config/test-data.config';
 import type { RequestSpec } from '@api/client/request-builder';
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
@@ -88,6 +89,9 @@ export const sendMessageApi = defineKatchupEndpoint({
   destructive: true,
   sideEffect: 'data',
   request: sendBody(),
+  // Types-only so injection/XSS reach the free-text fields (subject, actualMessage); no required/null
+  // assertion — the send shape's optionality is not documented. See sample-schema.ts.
+  requestSchema: typesOnlySchema(sendShape()),
   note: 'payload from the live client (sendMessage temp); workbook has none',
 });
 

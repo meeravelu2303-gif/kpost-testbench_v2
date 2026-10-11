@@ -61,6 +61,14 @@ export interface KpostEndpointConfig {
    * them). Every use must reflect the endpoint's MEASURED payload, not a guess.
    */
   requestSchema?: ContractSchema;
+  /**
+   * Schema for path parameters (a `/{uuid}` or `/{companyID}` segment). The generated contract does
+   * not produce one, so an endpoint that wants path-parameter probing (data-type, format) declares it
+   * here — otherwise those validators skip with "no fuzzable path schema". See sample-schema.ts.
+   */
+  pathParamsSchema?: ContractSchema;
+  /** Schema for query-string parameters, same rationale as `pathParamsSchema`. */
+  querySchema?: ContractSchema;
   /** Bugzilla component candidates and test filters; `kpost-api` is added automatically. */
   tags?: readonly string[];
   /** FRD requirement ids this endpoint exercises, e.g. ['FR-SL-026', 'NFR-SEC01']. */
@@ -140,6 +148,8 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     contentType: config.contentType,
     request: config.request,
     requestSchema: config.requestSchema ?? contract.requestSchema,
+    pathParamsSchema: config.pathParamsSchema,
+    querySchema: config.querySchema,
     responseSchema: contract.responseSchema,
     destructive: config.destructive,
     sideEffect: config.sideEffect,
@@ -217,6 +227,8 @@ export function defineUndocumentedKpostEndpoint(
     contentType: config.contentType,
     request: config.request,
     requestSchema: config.requestSchema,
+    pathParamsSchema: config.pathParamsSchema,
+    querySchema: config.querySchema,
     responseSchema: undefined,
     destructive: config.destructive,
     sideEffect: config.sideEffect,

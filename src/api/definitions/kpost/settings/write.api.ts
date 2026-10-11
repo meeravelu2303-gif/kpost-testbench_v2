@@ -1,3 +1,4 @@
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';
 import { defineSettingsEndpoint } from './settings-endpoint';
 
@@ -64,6 +65,7 @@ export const katchupNotificationApi = defineSettingsEndpoint({
   tags: [...WRITE_TAGS, 'notification'],
   destructive: true,
   request: body(() => notificationToggleBody()),
+  requestSchema: typesOnlySchema(notificationToggleBody()),
   note: 'body keys read from GeneralSettingServiceImpl (workbook documents none)',
 });
 
@@ -75,6 +77,7 @@ export const kmailNotificationApi = defineSettingsEndpoint({
   tags: [...WRITE_TAGS, 'notification'],
   destructive: true,
   request: body(() => notificationToggleBody()),
+  requestSchema: typesOnlySchema(notificationToggleBody()),
   note: 'body keys read from GeneralSettingServiceImpl (workbook documents none)',
 });
 
@@ -86,6 +89,7 @@ export const kallNotificationApi = defineSettingsEndpoint({
   tags: [...WRITE_TAGS, 'notification'],
   destructive: true,
   request: body(() => notificationToggleBody()),
+  requestSchema: typesOnlySchema(notificationToggleBody()),
   note: 'body keys read from GeneralSettingServiceImpl (workbook documents none)',
 });
 

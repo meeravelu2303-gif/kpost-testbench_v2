@@ -1,6 +1,11 @@
 import { AUTH_PROFILES, KPOST_DEVICE_IDENTITY } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body, defineKpostEndpoint } from '../kpost-endpoint';
+
+/** A representative login body, for deriving a types-only schema (injection targets `kpostID`). */
+const loginSampleBody = AUTH_PROFILES.kpost.loginRequest(AUTH_PROFILES.kpost.principals[0]!)
+  .body as Record<string, unknown>;
 
 /**
  * Login, session and token endpoints — the gate to the entire product.
@@ -46,6 +51,9 @@ export const userLoginApi = defineKpostEndpoint({
   destructive: false,
   // The exact payload the token provider uses, so the two can never drift apart.
   request: () => AUTH_PROFILES.kpost.loginRequest(AUTH_PROFILES.kpost.principals[0]!),
+  // Types-only, so injection/XSS attack the top-level `kpostID` (the login's SQL-injection surface);
+  // `injectionMustBeRejected` below then requires a 4xx, not an accepted payload. See sample-schema.ts.
+  requestSchema: typesOnlySchema(loginSampleBody),
   security: {
     /*
      * The tokens are supposed to be in the response, so the sensitive-data validator must not
@@ -174,6 +182,7 @@ export const loginHistoryApi = defineKpostEndpoint({
    * and empty-string variants are what the central null-value and empty-value probes already try.
    */
   request: body(() => ({ selectedDate: new Date().toISOString().slice(0, 10) })),
+  requestSchema: typesOnlySchema({ selectedDate: new Date().toISOString().slice(0, 10) }),
 });
 
 export const userLogoutApi = defineKpostEndpoint({

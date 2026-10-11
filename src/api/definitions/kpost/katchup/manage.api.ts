@@ -1,5 +1,6 @@
 import { KATCHUP_MESSAGE_TYPE } from '@api/schemas/kpost-types';
 import { testData } from '@config/test-data.config';
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
@@ -59,6 +60,7 @@ export const legacyRecallMessageApi = defineUndocumentedKpostEndpoint({
   destructive: true,
   sideEffect: 'data',
   request: body(() => ({ msgID: 0, sender: '', groupFlag: false })),
+  requestSchema: typesOnlySchema({ msgID: 0, sender: 'x', groupFlag: false }),
   evidence:
     'KatchupController.recallMessage (KatchupController.java) — confirmed zero frontend callers 2026-10-05; no HttpServletRequest param at all in the controller, sender is trusted from the body',
 });
@@ -76,6 +78,7 @@ export const deleteMessageApi = defineKatchupEndpoint({
   // Sending `msgID` is the wrong shape and can leave the message undeleted (orphan). Verified
   // against the frontend, 2026-09-18. The lifecycle test supplies the real msgID it created.
   request: body(() => ({ messageIds: [0], groupFlag: false })),
+  requestSchema: typesOnlySchema({ messageIds: [0], groupFlag: false }),
   note: 'live-client payload {messageIds:[...], groupFlag}; needs a real owned msgID',
 });
 

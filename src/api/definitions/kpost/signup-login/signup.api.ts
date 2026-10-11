@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body, defineKpostEndpoint } from '../kpost-endpoint';
 
 /**
@@ -58,6 +59,22 @@ export const signupApi = defineKpostEndpoint({
       city: 'Chennai',
     },
   })),
+  // OTP-gated + global, so it never runs on production; the schema lets its negative/injection cases
+  // run on a non-prod OTP-gateway host. Types only — signup field required-ness is not asserted here.
+  requestSchema: typesOnlySchema({
+    kpostID: testData.signupKpostId,
+    firstName: 'QA',
+    lastName: 'Bench',
+    mobileNumber: testData.signupMobile,
+    createdDate: Date.now(),
+    password: testData.password,
+    gender: 'female',
+    dateOfBirth: '1995-01-01',
+    module: 0,
+    countryCode: '91',
+    email: testData.otpEmail,
+    userProfile: {},
+  }),
 });
 
 export const signupGetApi = defineKpostEndpoint({
@@ -117,6 +134,34 @@ export const adminRegistrationApi = defineKpostEndpoint({
     pinCode: testData.pinCode,
     referenceName: 'QABENCH',
   })),
+  // OTP-gated + global (never runs on production); schema enables off-live negative/injection cases.
+  requestSchema: typesOnlySchema({
+    kpostID: testData.businessSignupKpostId,
+    companyName: testData.businessSignupCompanyName,
+    entity: 'Vegetable Shop',
+    uniqueName: testData.businessSignupUniqueName,
+    firstName: 'QA',
+    lastName: 'Bench',
+    mobileNumber: testData.businessSignupMobile,
+    otherEmail: testData.otpEmail,
+    password: testData.password,
+    gender: 'female',
+    dateOfBirth: '1995-01-01',
+    countryID: String(testData.countryId),
+    countryCode: '91',
+    language: 'english',
+    userType: 'BUSINESS_M',
+    address1: '39 Chettinad Chamber',
+    address2: 'Dr. Radhakrishnan Salai',
+    country: 'india',
+    state: 'TamilNadu',
+    city: 'Chennai',
+    areaName: 'Mylapore',
+    designation: 'Managing Director',
+    role: '',
+    pinCode: testData.pinCode,
+    referenceName: 'QABENCH',
+  }),
 });
 
 export const kpostIdExistApi = defineKpostEndpoint({

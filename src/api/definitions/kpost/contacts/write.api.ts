@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';
 import { defineContactsEndpoint } from './contacts-endpoint';
 
@@ -83,6 +84,7 @@ export const blockContactApi = defineContactsEndpoint({
    */
   destructive: true,
   request: body(() => ({ contactID: testData.victimKpostId, isBlocked: true })),
+  requestSchema: typesOnlySchema({ contactID: testData.victimKpostId, isBlocked: true }),
   note: 'workbook documents no body; shape from the live client',
 });
 

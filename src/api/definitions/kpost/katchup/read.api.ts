@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
 import { body, pathParams, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
@@ -53,6 +54,7 @@ export const messagesSubjectApi = defineKatchupEndpoint({
    * shape; a group id would need a real groupKpostID this account belongs to.
    */
   request: pathParams(() => ({ id: testData.victimKpostId })),
+  pathParamsSchema: pathParamSchema('id'),
   note: 'needs a real contact or group id — see the live-client evidence above',
 });
 
@@ -149,6 +151,11 @@ export const filterMessageApi = defineKatchupEndpoint({
     groupFlag: false,
     messageBy: 'All',
   })),
+  requestSchema: typesOnlySchema({
+    selectedContact: testData.victimKpostId,
+    groupFlag: false,
+    messageBy: 'All',
+  }),
   note: 'needs a filter body: selectedContact, groupFlag AND messageBy (All/sent/received)',
 });
 
@@ -221,6 +228,7 @@ export const sharedMessageDetailsApi = defineKatchupEndpoint({
   tags: [...READ_TAGS, 'share', 'needs-message-id'],
   destructive: false,
   request: pathParams(() => ({ msgID: 0 })),
+  pathParamsSchema: pathParamSchema('msgID'),
   // Live-verified 2026-09-25: fed a real msgID from a plain send, this 500s ("FAILURE", no message).
   // See `shared-reference-workflow.spec.ts`.
   note: 'needs a real msgID; 500s when given a real one',
@@ -249,6 +257,7 @@ export const referenceMessagesDetailsApi = defineUndocumentedKpostEndpoint({
   tags: ['katchup', ...READ_TAGS, 'thread', 'needs-message-id', 'security'],
   destructive: false,
   request: body(() => ({ referenceMessageIDList: [] })),
+  requestSchema: typesOnlySchema({ referenceMessageIDList: [] }),
   evidence:
     'KatchupControllerV2.java:1486-1526 (@PostMapping("getReferenceMessagesDetails")) -> ' +
     'KatchupServiceImpl.getReferenceMessagesDetails:2093-2099, which calls ' +

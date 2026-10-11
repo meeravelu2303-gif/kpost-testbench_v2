@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { pathParamSchema } from '@api/schema/sample-schema';
 import { body, pathParams } from '../kpost-endpoint';
 import { defineProfileEndpoint } from './profile-endpoint';
 
@@ -37,6 +38,7 @@ export const sendPrimaryOrSecondaryDeviceOtpApi = defineProfileEndpoint({
   sideEffect: 'external',
   otpDependent: 'sends',
   request: pathParams(() => ({ requestType: 'primary' })),
+  pathParamsSchema: pathParamSchema('requestType'),
 });
 
 export const sendDeactivationOtpApi = defineProfileEndpoint({

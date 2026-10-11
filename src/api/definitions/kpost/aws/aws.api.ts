@@ -1,3 +1,4 @@
+import { pathParamSchema } from '@api/schema/sample-schema';
 import { body, pathParams } from '../kpost-endpoint';
 import { defineKpostEndpoint, type KpostEndpointConfig } from '../kpost-endpoint';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
@@ -65,6 +66,7 @@ export const deleteAttachmentApi = defineAwsEndpoint({
   tags: ['attachment', 'needs-attachment'],
   destructive: true,
   request: pathParams(() => ({ uuid: '' })),
+  pathParamsSchema: pathParamSchema('uuid'),
   note: 'a GET that deletes; needs a real owned uuid',
 });
 

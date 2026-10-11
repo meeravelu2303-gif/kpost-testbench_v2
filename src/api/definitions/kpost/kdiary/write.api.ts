@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';
 import { defineKdiaryEndpoint } from './kdiary-endpoint';
 
@@ -40,6 +41,7 @@ export const createEventApi = defineKdiaryEndpoint({
   tags: [...WRITE_TAGS, 'critical', 'event'],
   destructive: true,
   request: body(() => scheduleShape()),
+  requestSchema: typesOnlySchema(scheduleShape()),
 });
 
 export const createScheduleApi = defineKdiaryEndpoint({
@@ -50,6 +52,7 @@ export const createScheduleApi = defineKdiaryEndpoint({
   tags: [...WRITE_TAGS, 'schedule'],
   destructive: true,
   request: body(() => scheduleShape()),
+  requestSchema: typesOnlySchema(scheduleShape()),
   note: 'workbook documents no body; reuses the createEvent shape',
 });
 
@@ -61,6 +64,7 @@ export const updateEventApi = defineKdiaryEndpoint({
   tags: [...WRITE_TAGS, 'event'],
   destructive: true,
   request: body(() => scheduleShape({ eventID: 0 })),
+  requestSchema: typesOnlySchema(scheduleShape({ eventID: 0 })),
   note: 'needs a real eventID from createEvent; exercised by the lifecycle',
 });
 
@@ -72,6 +76,7 @@ export const editScheduleEventApi = defineKdiaryEndpoint({
   tags: [...WRITE_TAGS, 'event'],
   destructive: true,
   request: body(() => scheduleShape({ eventID: 0 })),
+  requestSchema: typesOnlySchema(scheduleShape({ eventID: 0 })),
   note: 'needs a real eventID; exercised by the lifecycle',
 });
 
@@ -83,6 +88,7 @@ export const deleteEventApi = defineKdiaryEndpoint({
   tags: [...WRITE_TAGS, 'critical', 'event'],
   destructive: true,
   request: body(() => ({ eventID: 0 })),
+  requestSchema: typesOnlySchema({ eventID: 0 }),
   note: 'needs a real eventID from createEvent; exercised by the lifecycle',
 });
 
@@ -98,6 +104,7 @@ export const addParticipantsApi = defineKdiaryEndpoint({
   // this endpoint. Verified against the frontend, 2026-09-18. `participants` is a list the app maps
   // from selected contacts; a QA kpostID exercises the path.
   request: body(() => ({ eventID: 0, participants: [testData.victimKpostId] })),
+  requestSchema: typesOnlySchema({ eventID: 0, participants: [testData.victimKpostId] }),
   note: 'live-client payload {eventID, participants}; needs a real eventID from createEvent',
 });
 
@@ -113,6 +120,11 @@ export const updateRemarksApi = defineKdiaryEndpoint({
    */
   destructive: true,
   request: body(() => ({ eventIds: [0], remarks: 1, remarksDescription: 'Completed by QA' })),
+  requestSchema: typesOnlySchema({
+    eventIds: [0],
+    remarks: 1,
+    remarksDescription: 'Completed by QA',
+  }),
 });
 
 export const saveReportApi = defineKdiaryEndpoint({
@@ -129,6 +141,7 @@ export const saveReportApi = defineKdiaryEndpoint({
    * matching the exact key every read response already returns it under.
    */
   request: body(() => ({ eventID: 0, taskReport: 'QA bench report' })),
+  requestSchema: typesOnlySchema({ eventID: 0, taskReport: 'QA bench report' }),
   note: 'field is `taskReport`, not `report` (live-verified 2026-09-24 — see saveReportApi comment)',
 });
 
@@ -148,6 +161,7 @@ export const editReportApi = defineKdiaryEndpoint({
    * `saveReport` in the same lifecycle.
    */
   request: body(() => ({ id: 0, taskReport: 'QA bench report edited' })),
+  requestSchema: typesOnlySchema({ id: 0, taskReport: 'QA bench report edited' }),
   note: 'needs the REPORT id (not eventID) from saveReport/getTodayReport; field is `taskReport`',
 });
 

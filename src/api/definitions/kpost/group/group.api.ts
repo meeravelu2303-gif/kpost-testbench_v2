@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
 import {
   body,
@@ -122,6 +123,11 @@ export const removeGroupMemberV1LegacyApi = defineUndocumentedGroupEndpoint({
     groupID: 0,
     groupKpostID: testData.kpostIdAbsent,
   })),
+  requestSchema: typesOnlySchema({
+    memberKpostIdList: [testData.victimKpostId],
+    groupID: 0,
+    groupKpostID: testData.kpostIdAbsent,
+  }),
   evidence:
     'GroupController.java:72-86 (@RequestMapping("group"), @PostMapping("removeGroupMember")) -> ' +
     'GroupServiceImpl.deleteUserFromGroup -> GroupServiceDaoImpl.deleteUserFromGroup:102-109, a raw ' +
@@ -241,6 +247,7 @@ export const downloadGroupImageApi = defineGroupEndpoint({
   envelope: false,
   contentType: 'image/png',
   request: pathParams(() => ({ groupKpostID: testData.kpostIdAbsent, kpostID: testData.kpostId })),
+  pathParamsSchema: pathParamSchema('groupKpostID', 'kpostID'),
   note: 'needs a real groupKpostID with an image',
 });
 
@@ -255,6 +262,7 @@ export const downloadGroupFullImageApi = defineGroupEndpoint({
   envelope: false,
   contentType: 'image/png',
   request: pathParams(() => ({ groupKpostID: testData.kpostIdAbsent, kpostID: testData.kpostId })),
+  pathParamsSchema: pathParamSchema('groupKpostID', 'kpostID'),
   note: 'needs a real groupKpostID with an image',
 });
 
@@ -275,6 +283,7 @@ export const groupDetailsByIdApi = defineUndocumentedGroupEndpoint({
     'MainHomePage.js, 3 Katchup UI variants, Kmail MessageContainer.js',
   productionSafe: false,
   request: pathParams(() => ({ groupKpostID: testData.kpostIdAbsent })),
+  pathParamsSchema: pathParamSchema('groupKpostID'),
   note:
     'needs a real groupKpostID from a group this account belongs to. Confirmed live 2026-10-02: ' +
     'the group record comes back under a `known_group` key, not the usual `data` envelope key — ' +

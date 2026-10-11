@@ -1,3 +1,4 @@
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';
 import { defineKdiaryEndpoint } from './kdiary-endpoint';
 
@@ -55,6 +56,7 @@ export const getEventDateApi = defineKdiaryEndpoint({
   // (the app uses getEvents + getEventSelectedDate instead), but it is live, authenticated, and
   // directly callable.
   request: body(() => ({ eventIds: [0] })),
+  requestSchema: typesOnlySchema({ eventIds: [0] }),
   note: 'needs a real eventID; CONFIRMED cross-tenant read-IDOR (no ownership check) — see tests/api/kpost/security/kdiary-object-authorization.spec.ts',
 });
 
@@ -73,6 +75,10 @@ export const getEventSelectedDateApi = defineKdiaryEndpoint({
     scheduleStartDateAndTime: '2026-09-14',
     scheduleEndDateAndTime: null,
   })),
+  requestSchema: typesOnlySchema({
+    scheduleStartDateAndTime: '2026-09-14',
+    scheduleEndDateAndTime: null,
+  }),
   note: 'body matches the live client (start date + null end); verified against the frontend',
 });
 

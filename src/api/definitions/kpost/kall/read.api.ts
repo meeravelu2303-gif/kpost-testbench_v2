@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';
 import { defineKallEndpoint } from './kall-endpoint';
 
@@ -77,6 +78,7 @@ export const contactInfoApi = defineKallEndpoint({
   destructive: false,
   productionSafe: true,
   request: body(() => ({ contactID: testData.victimKpostId, kallID: null })),
+  requestSchema: typesOnlySchema({ contactID: testData.victimKpostId, kallID: null }),
   note: 'needs a contactID in the body (empty body 400s "Malformed or missing request body")',
 });
 

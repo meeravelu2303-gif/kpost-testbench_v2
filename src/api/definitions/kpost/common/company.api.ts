@@ -1,5 +1,11 @@
 import { testData } from '@config/test-data.config';
-import { body, defineKpostEndpoint, pathParams } from '../kpost-endpoint';
+import { pathParamSchema } from '@api/schema/sample-schema';
+import {
+  body,
+  defineKpostEndpoint,
+  defineUndocumentedKpostEndpoint,
+  pathParams,
+} from '../kpost-endpoint';
 
 /**
  * Company lookups and the company logo.
@@ -71,6 +77,7 @@ export const companyNameExistApi = defineKpostEndpoint({
    * path parameters too, which is why the parameter is declared here rather than inlined.
    */
   request: pathParams(() => ({ companyName: testData.companyNameAbsent })),
+  pathParamsSchema: pathParamSchema('companyName'),
 });
 
 /*
@@ -165,6 +172,7 @@ export const downloadCompanyLogoApi = defineKpostEndpoint({
   contentType: 'image/png',
   destructive: false,
   request: pathParams(() => ({ companyID: testData.companyId })),
+  pathParamsSchema: pathParamSchema('companyID'),
 });
 
 export const removeCompanyLogoApi = defineKpostEndpoint({
@@ -181,8 +189,38 @@ export const removeCompanyLogoApi = defineKpostEndpoint({
   request: body(() => ({ companyId: testData.companyId })),
 });
 
+/**
+ * **Public, pre-login** profile-image download. The login screen shows a user's avatar before any
+ * token exists (Login.js:1754, 2040 build `${EndPointURL}/common/downloadProfileImage/${kpostID}`);
+ * after login the app switches to the authenticated `/v2/profile/downloadProfileImage/{kpostID}`
+ * (`profile-download-image`). Both are real: backend `CommonControllerV2.getProfileImage`
+ * (`@GetMapping("downloadProfileImage/{kpostID}")`, no token) and the profile controller's own, with
+ * `/v2/common/**` public per `SecurityConfiguration`. Owner-confirmed 2026-10-11. Undocumented in the
+ * workbook, so the schema is frontend-confirmed; returns an image, so `envelope:false`.
+ */
+export const downloadProfileImagePublicApi = defineUndocumentedKpostEndpoint({
+  id: 'common-download-profile-image',
+  method: 'GET',
+  path: '/v2/common/downloadProfileImage/{kpostID}',
+  summary: "Download a user's profile image (public, pre-login variant used by the login screen)",
+  tags: ['common', 'profile-image', 'binary'],
+  authentication: { required: false },
+  envelope: false,
+  contentType: 'image/*',
+  destructive: false,
+  // Public and read-only; names our own allowlisted kpostID. 204 = no image set (valid empty state).
+  productionSafe: true,
+  expectedStatus: [200, 204],
+  request: pathParams(() => ({ kpostID: testData.kpostId })),
+  pathParamsSchema: pathParamSchema('kpostID'),
+  evidence:
+    'Login.js:1754,2040 (pre-login avatar, no auth token); backend CommonControllerV2.getProfileImage ' +
+    '@GetMapping("downloadProfileImage/{kpostID}"), public per SecurityConfiguration /v2/common/**',
+});
+
 export const companyApis = [
   companyDetailsApi,
+  downloadProfileImagePublicApi,
   companyDetailsByAdminApi,
   companyDetailsByMobileAndProductApi,
   companyNameExistApi,

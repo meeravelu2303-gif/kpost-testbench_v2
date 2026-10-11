@@ -1,5 +1,6 @@
 import { KALL_MODE, KALL_REPEAT_TYPE } from '@api/schemas/kpost-types';
 import { testData } from '@config/test-data.config';
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';
 import { defineKallEndpoint } from './kall-endpoint';
 
@@ -104,6 +105,12 @@ export const scheduledRepeatKallApi = defineKallEndpoint({
    */
   destructive: true,
   request: body(() =>
+    scheduleShape({
+      repeatType: KALL_REPEAT_TYPE.daily,
+      repeatedDate: JSON.stringify({ start_date: '2026-09-14', end_date: '2026-09-20' }),
+    }),
+  ),
+  requestSchema: typesOnlySchema(
     scheduleShape({
       repeatType: KALL_REPEAT_TYPE.daily,
       repeatedDate: JSON.stringify({ start_date: '2026-09-14', end_date: '2026-09-20' }),

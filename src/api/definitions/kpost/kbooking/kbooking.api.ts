@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { pathParamSchema } from '@api/schema/sample-schema';
 import { body, pathParams } from '../kpost-endpoint';
 import { defineKpostEndpoint, type KpostEndpointConfig } from '../kpost-endpoint';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
@@ -57,6 +58,7 @@ export const citySuggestionApi = defineKBookingEndpoint({
   destructive: false,
   productionSafe: true,
   request: pathParams(() => ({ query: 'chennai' })),
+  pathParamsSchema: pathParamSchema('query'),
 });
 
 export const destinationsApi = defineKBookingEndpoint({
@@ -124,6 +126,7 @@ export const blockTicketApi = defineKBookingEndpoint({
   // that, so this is an inline RequestFactory combining both, matching the real call shape exactly.
   // kpostId is the CALLER'S OWN kpost account id — KBook.js:867 passes `User.kpostID` (the logged-in
   // user's own identifier, read from their session), not a booking/order resource id.
+  pathParamsSchema: pathParamSchema('kpostId'),
   request: () => ({
     pathParams: { kpostId: testData.kpostId },
     body: {
