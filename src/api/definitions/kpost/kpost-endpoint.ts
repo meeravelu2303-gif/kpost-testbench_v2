@@ -62,6 +62,16 @@ export interface KpostEndpointConfig {
    */
   requestSchema?: ContractSchema;
   /**
+   * Overrides the contract's response schema for THIS endpoint. The workbook documents no response
+   * for some real endpoints (several `/admin/*` reads), so `response-shape`/`response-schema` skip
+   * with "no documented response". Where the shape has been CAPTURED from a live read, declare a
+   * types-only schema here (see `typesOnlySchema` in sample-schema.ts) so those checks run against
+   * the measured shape. Must reflect a real captured response, never a guess — an invented shape
+   * manufactures false schema-mismatch bugs. A types-only schema keeps every field optional+nullable,
+   * so it asserts field TYPES without inventing required/null contracts.
+   */
+  responseSchema?: ContractSchema;
+  /**
    * Schema for path parameters (a `/{uuid}` or `/{companyID}` segment). The generated contract does
    * not produce one, so an endpoint that wants path-parameter probing (data-type, format) declares it
    * here — otherwise those validators skip with "no fuzzable path schema". See sample-schema.ts.
@@ -150,7 +160,7 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     requestSchema: config.requestSchema ?? contract.requestSchema,
     pathParamsSchema: config.pathParamsSchema,
     querySchema: config.querySchema,
-    responseSchema: contract.responseSchema,
+    responseSchema: config.responseSchema ?? contract.responseSchema,
     destructive: config.destructive,
     sideEffect: config.sideEffect,
     productionSafe: config.productionSafe,

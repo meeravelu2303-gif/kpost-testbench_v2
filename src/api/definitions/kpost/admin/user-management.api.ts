@@ -53,6 +53,20 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     authentication: asBusinessAdmin,
     request: pathParams(() => ({ companyID: companyId() })),
     pathParamsSchema: pathParamSchema('companyID'),
+    // Types-only, from a CAPTURED live body (2026-10-11): the workbook documents no response for this
+    // path, so response-schema skipped. Shape: { data:{companyDetails:[{gstNumber,address1,address2,
+    // companyName,panNumber}]}, message, urlPath, status, statusCode }. Open + nullable throughout.
+    responseSchema: typesOnlySchema({
+      data: {
+        companyDetails: [
+          { gstNumber: null, address1: '', address2: '', companyName: '', panNumber: null },
+        ],
+      },
+      message: '',
+      urlPath: '',
+      status: 'SUCCESS',
+      statusCode: 200,
+    }),
     destructive: false,
     productionSafe: true,
   }),
@@ -75,6 +89,15 @@ export const adminUserManagementApis: EndpointDefinition[] = [
       companyID: companyId(),
       companyName: testData.companyName,
     })),
+    // Types-only, from a CAPTURED live body (2026-10-11): { designationSuggestion, kpostID, urlPath,
+    // status, statusCode } — NO envelope `data` wrapper on this one. Open + nullable throughout.
+    responseSchema: typesOnlySchema({
+      designationSuggestion: '',
+      kpostID: '',
+      urlPath: '',
+      status: 'SUCCESS',
+      statusCode: 200,
+    }),
     destructive: false,
     productionSafe: true,
   }),
@@ -90,6 +113,15 @@ export const adminUserManagementApis: EndpointDefinition[] = [
       designation: 'QA Tester',
       companyName: testData.companyName,
     })),
+    // Types-only, from a CAPTURED live body (2026-10-11): { data:<string>, message, urlPath, status,
+    // statusCode } — here `data` is the suggested NAME string, not an object. Open + nullable.
+    responseSchema: typesOnlySchema({
+      data: '',
+      message: '',
+      urlPath: '',
+      status: 'SUCCESS',
+      statusCode: 200,
+    }),
     destructive: false,
     productionSafe: true,
   }),

@@ -39,6 +39,20 @@ export interface SafetyFlags {
    * the disposable test DB. Never unlocks a non-`otpDependent` write; the QA-identifier guard stays armed.
    */
   otpTestGateway?: boolean;
+  /**
+   * Env `ADMIN_LIFECYCLE`: the owner has opted the run into the admin member/company lifecycle. On its
+   * own it unlocks NOTHING — it only takes effect together with a per-call `allowGlobalLifecycle` set
+   * by the one deliberate lifecycle spec (never by the engine), so fuzzers can never reach a `global`
+   * write. The QA-identifier guard stays armed regardless.
+   */
+  adminLifecycle?: boolean;
+  /**
+   * Set per call by the owner-approved admin lifecycle spec to authorize THIS `global` admin write on
+   * the live host. Scoped tightly: it unlocks only a `global` destructive write and only when
+   * `adminLifecycle` (env) is also on; it never touches the OTP/SMS kill-switch or `external`, and the
+   * QA-identifier guard still confines every id to accounts we own. The engine never sets it.
+   */
+  allowGlobalLifecycle?: boolean;
 }
 
 /**
@@ -94,6 +108,7 @@ export function destructiveBlockReason(
     writeFuzz: env.WRITE_FUZZ,
     testDbMode: env.TEST_DB_MODE,
     otpTestGateway: env.OTP_TEST_GATEWAY,
+    adminLifecycle: env.ADMIN_LIFECYCLE,
   },
 ): string | undefined {
   /*

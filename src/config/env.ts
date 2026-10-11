@@ -198,6 +198,17 @@ const EnvSchema = z.object({
    * test gateway** — against a real gateway it would send real messages. Off by default.
    */
   OTP_TEST_GATEWAY: z.stringbool().default(false),
+  /**
+   * Owner-gated unlock for the **admin member/company lifecycle** on the live test host. The admin
+   * writes (`addingUserByAdmin`, `terminateUser`, `resetPassword`, `createOrRemoveBackupAdmin`,
+   * `updateCompanyDetails`, `updateBankAccountDetails`) are `sideEffect: 'global'` and blocked on
+   * production because they change shared state. This flag lets ONE deliberate, self-cleaning
+   * lifecycle spec exercise them — and ONLY in combination with the spec's own per-call
+   * `allowGlobalLifecycle` authorization, so the engine's fuzzers can never reach a `global` write
+   * (the flag alone unlocks nothing). The QA-identifier guard stays armed, so every id is still
+   * confined to accounts we own. Intended for a DISPOSABLE business company. Off by default.
+   */
+  ADMIN_LIFECYCLE: z.stringbool().default(false),
 
   HEADLESS: z.stringbool().default(true),
   WORKERS: z.coerce.number().int().positive().optional(),

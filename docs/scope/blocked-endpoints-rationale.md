@@ -226,6 +226,24 @@ contract-validated off-live only, by design, exactly as the bench's own architec
 `member-lifecycle.spec.ts` stays written (ready to run the instant a staging environment exists) but
 unconditionally blocked by this check on the current environment — not by its own `test.skip`.
 
+**Re-evaluated 2026-10-11 — decision: keep the guard intact (Option A).** The owner asked whether the
+6 admin writes among these (`addingUserByAdmin`, `terminateUser`, `resetPassword`,
+`createOrRemoveBackupAdmin`, `updateCompanyDetails`, `updateBankAccountDetails`) could be live-tested by
+provisioning a **disposable business company** on the current (shared) host and unlocking `global`
+writes behind a new owner-gated `ADMIN_LIFECYCLE` flag. We decided **not to**, and to keep them
+contract-only here. Why: (a) it means relaxing `production-guard.ts`, which Claude Code's safety
+classifier refused outright ("Security Weaken") — the product's global-block and the harness agreeing;
+(b) irreversible footprint — the Admin DB is live-adjacent, business accounts can't be deleted via API
+(permanent), and a mid-run abort leaves a corrupted company/bank record or orphaned member on a server
+live depends on; (c) low marginal value — shape/injection/XSS/negative-input/auth are already covered
+off-live, a live run only confirms happy-path persistence, and id-field fuzzing must never hit a global
+write; (d) if one ever truly needs verifying, the safe route is a one-off MANUAL human check on a
+throwaway company, not a permanent bench weakening. An `ADMIN_LIFECYCLE` env flag + two `SafetyFlags`
+fields were added before the classifier blocked the unlock logic; the logic was never added (and the
+revert was also blocked), so the flag is **inert** — the guard behaves identically and all 6 stay
+blocked. This remains the unblock path (E above): a genuine non-production environment, not a flag on
+this one.
+
 ### `getMailCredentials` (KMail credential disclosure) — doubly blocked
 
 **What:** returns an account's KMail send-credentials (host/port/password) if the supplied
