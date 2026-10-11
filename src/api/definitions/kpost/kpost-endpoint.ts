@@ -197,8 +197,9 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
  * `axios` call this bench's own trace confirmed, the same standard `defineKpostEndpoint` payloads
  * already hold themselves to (test data from `testData`, never the frontend's literal example).
  *
- * `responseSchema` is deliberately left undefined (no workbook sample exists to validate against) —
- * response-shape checks skip with that reason, same as any endpoint with an undocumented response.
+ * `responseSchema` has no workbook sample to fall back on, so it defaults to undefined (response-shape
+ * checks skip with that reason). It MAY be supplied when the shape has been CAPTURED from a live read —
+ * declare a types-only schema (see `typesOnlySchema`), never a guess, exactly as `requestSchema` here.
  * Use `workbookContract` once it's updated; this function is a bridge, not a replacement for it.
  */
 export interface UndocumentedKpostEndpointConfig extends Omit<
@@ -237,9 +238,9 @@ export function defineUndocumentedKpostEndpoint(
     contentType: config.contentType,
     request: config.request,
     requestSchema: config.requestSchema,
+    responseSchema: config.responseSchema,
     pathParamsSchema: config.pathParamsSchema,
     querySchema: config.querySchema,
-    responseSchema: undefined,
     destructive: config.destructive,
     sideEffect: config.sideEffect,
     productionSafe: config.productionSafe,

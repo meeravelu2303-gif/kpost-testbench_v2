@@ -1,3 +1,4 @@
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';
 import { defineContactsEndpoint } from './contacts-endpoint';
 
@@ -83,6 +84,8 @@ export const blockedContactsApi = defineContactsEndpoint({
   summary: 'The contacts the caller has blocked',
   tags: [...READ_TAGS, 'block'],
   productionSafe: true,
+  // Types-only, from a CAPTURED live body (2026-10-11): { data:[kpostID…], urlPath, status, statusCode }.
+  responseSchema: typesOnlySchema({ data: [], urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 
 export const globalSearchApi = defineContactsEndpoint({

@@ -1,5 +1,5 @@
 import { testData } from '@config/test-data.config';
-import { pathParamSchema } from '@api/schema/sample-schema';
+import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
 import {
   body,
   defineKpostEndpoint,
@@ -78,6 +78,8 @@ export const companyNameExistApi = defineKpostEndpoint({
    */
   request: pathParams(() => ({ companyName: testData.companyNameAbsent })),
   pathParamsSchema: pathParamSchema('companyName'),
+  // Types-only, from a CAPTURED live body (2026-10-11): { message, urlPath, status, statusCode }.
+  responseSchema: typesOnlySchema({ message: '', urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 
 /*

@@ -1,4 +1,4 @@
-import { pathParamSchema } from '@api/schema/sample-schema';
+import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
 import { body, pathParams } from '../kpost-endpoint';
 import { defineKpostEndpoint, type KpostEndpointConfig } from '../kpost-endpoint';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
@@ -21,6 +21,11 @@ function defineAwsEndpoint(config: KpostEndpointConfig): EndpointDefinition {
 
 const fileMeta = () => ({ extension: 'pdf', fileName: 'qa-bench.pdf', fileSize: '940' });
 
+// Types-only, from a CAPTURED live body (2026-10-11): { presignedURL, urlPath, status, statusCode }.
+// The workbook documents no response for these; open + nullable so a varying signed URL never fails.
+const presignedResponse = () =>
+  typesOnlySchema({ presignedURL: '', urlPath: '', status: 'SUCCESS', statusCode: 200 });
+
 export const generatePresignedApi = defineAwsEndpoint({
   id: 'aws-generate-presigned',
   method: 'POST',
@@ -31,6 +36,7 @@ export const generatePresignedApi = defineAwsEndpoint({
   destructive: false,
   productionSafe: true,
   request: body(fileMeta),
+  responseSchema: presignedResponse(),
 });
 
 export const katchupPresignedApi = defineAwsEndpoint({
@@ -42,6 +48,7 @@ export const katchupPresignedApi = defineAwsEndpoint({
   destructive: false,
   productionSafe: true,
   request: body(fileMeta),
+  responseSchema: presignedResponse(),
 });
 
 export const checkAttachmentApi = defineAwsEndpoint({

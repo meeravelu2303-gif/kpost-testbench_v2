@@ -99,6 +99,13 @@ export const messageCountApi = defineKatchupEndpoint({
   tags: [...READ_TAGS, 'conversation'],
   productionSafe: true,
   request: body(() => ({ receiver: testData.victimKpostId, groupFlag: 'false' })),
+  // Types-only, from a CAPTURED live body (2026-10-11): { messageCount, urlPath, status, statusCode }.
+  responseSchema: typesOnlySchema({
+    messageCount: 0,
+    urlPath: '',
+    status: 'SUCCESS',
+    statusCode: 200,
+  }),
 });
 
 export const searchMessageApi = defineKatchupEndpoint({

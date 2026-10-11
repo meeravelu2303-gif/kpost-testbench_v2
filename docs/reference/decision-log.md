@@ -3,6 +3,37 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-11 (latest) — Bench-wide response-schema sweep; "all tests on all 201" is not a real target
+
+**Owner:** "cover all types of test for all 201 endpoints, don't miss any bug, regenerate the Word doc."
+Analysed the coverage matrix module-by-module and separated genuinely-closeable gaps from by-design
+blanks. **Finding, stated honestly:** most blank cells are by-design and cannot go green without
+faking — authorization-engine (N/A; KPost is ownership-based, hand BOLA is the layer), concurrency
+(owner-paused on the shared server), pagination/rate-limit (KPost declares neither), perf
+timeout/payload (off-live only), auth/auth-neg (blank only on public endpoints), DB (only where the
+response can't prove persistence — forcing it on all 57 writes would duplicate response checks and
+double-file), blocked `global`/OTP writes, and binary-only columns.
+
+**Closed (the real, clean lever): response-schema on 14 safe reads.** Captured each one's real body
+live (own data, dump-only throwaway spec, REPORT backed up+restored) and attached a `typesOnlySchema`
+of the whole body (KPost `schemaTarget:'body'`; open+nullable, so it passes the captured body by
+construction and never false-fails): admin ×3 (prior entry), aws-generate-presigned, aws-katchup-
+presigned, common-company-name-exist, common-mobile-no-exist-in-company, common-unique-name-exist,
+contacts-blocked, katchup-message-count, kbooking-available-trips, kbooking-destinations,
+kdiary-get-events, profile-get-user-profile. Also threaded `responseSchema` through
+`defineUndocumentedKpostEndpoint` (was hardcoded undefined) for profile-get-user-profile. Run
+response-schema coverage 108/167. `npm run check` green.
+
+**BOLA "candidates" from the analysis were mostly false positives** — profile image downloads are
+public (shown pre-login), the suggestion reads return generic computed values (no owned resource), and
+attachment-by-uuid is already covered by `katchup-attachment-idor.spec.ts`. The one real automatable
+gap (admin bank cross-company) was closed in the prior entry. No noise specs added.
+
+**Word doc regenerated** from the patched matrix (`scratchpad/gen-docx.cjs` + `zipdocx.ps1`) →
+`Documents/KPost-API-Frontend-Endpoint-Test-Coverage-updated-2026-10-11.docx` (the original was open
+in Word / locked, so a dated copy). The doc marks by-design blanks and blocked-on-live endpoints
+explicitly, so it reads as decisions, not holes.
+
 ### 2026-10-11 (late) — Admin module closed to its honest ceiling; 6 global writes kept contract-only (Option A)
 
 **Context.** Owner asked to maximise test coverage of the Admin / User Management module — the 10

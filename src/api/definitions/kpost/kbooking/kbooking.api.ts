@@ -1,5 +1,5 @@
 import { testData } from '@config/test-data.config';
-import { pathParamSchema } from '@api/schema/sample-schema';
+import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
 import { body, pathParams } from '../kpost-endpoint';
 import { defineKpostEndpoint, type KpostEndpointConfig } from '../kpost-endpoint';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
@@ -71,6 +71,9 @@ export const destinationsApi = defineKBookingEndpoint({
   productionSafe: true,
   // Real shape, KBook.js:378 — `GetDestinations({ sourceCityID: selectedOption.value })`.
   request: body(() => ({ sourceCityID: '102' })),
+  // Types-only, from a CAPTURED live body (2026-10-11). RedBus partner envelope (no KPost statusCode):
+  // { errorvalue, value:{cities:[…]}, errorcode, status }. Open + nullable so the city list never fails.
+  responseSchema: typesOnlySchema({ errorvalue: '', value: {}, errorcode: '', status: 'SUCCESS' }),
 });
 
 export const availableTripsApi = defineKBookingEndpoint({
@@ -89,6 +92,15 @@ export const availableTripsApi = defineKBookingEndpoint({
     destinationCityID: 104,
     travelDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
   })),
+  // Types-only, from a CAPTURED live body (2026-10-11). RedBus partner envelope (no KPost statusCode):
+  // { value1:{…}, errorvalue, value:{availableTrips:[…]}, errorcode, status }. Open + nullable.
+  responseSchema: typesOnlySchema({
+    value1: {},
+    errorvalue: '',
+    value: {},
+    errorcode: '',
+    status: 'SUCCESS',
+  }),
 });
 
 export const tripDetailsApi = defineKBookingEndpoint({

@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body, defineKpostEndpoint } from '../kpost-endpoint';
 
 /**
@@ -58,6 +59,14 @@ export const mobileNoExistInsideCompanyApi = defineKpostEndpoint({
     mobileNumber: testData.businessMMobile,
     companyID: testData.businessMCompanyId,
   })),
+  // Types-only, from a CAPTURED live body (2026-10-11): { statusCode, status, message, urlPath, data }.
+  responseSchema: typesOnlySchema({
+    statusCode: 200,
+    status: 'SUCCESS',
+    message: '',
+    urlPath: '',
+    data: true,
+  }),
 });
 
 export const userDetailsByMobileApi = defineKpostEndpoint({
@@ -99,6 +108,8 @@ export const uniqueNameExistApi = defineKpostEndpoint({
     uniqueName: testData.uniqueName,
     domain: testData.domain,
   })),
+  // Types-only, from a CAPTURED live body (2026-10-11): { message, urlPath, status, statusCode }.
+  responseSchema: typesOnlySchema({ message: '', urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 
 export const domainApi = defineKpostEndpoint({

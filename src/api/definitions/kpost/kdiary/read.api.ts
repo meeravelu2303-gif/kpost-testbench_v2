@@ -26,6 +26,8 @@ export const getEventsApi = defineKdiaryEndpoint({
   summary: 'All diary events for the caller',
   tags: [...READ_TAGS, 'event'],
   productionSafe: true,
+  // Types-only, from a CAPTURED live body (2026-10-11): { data:[event…], urlPath, status, statusCode }.
+  responseSchema: typesOnlySchema({ data: [], urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 
 export const todayReportApi = defineKdiaryEndpoint({
