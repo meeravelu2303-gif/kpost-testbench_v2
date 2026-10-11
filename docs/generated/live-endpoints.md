@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/generated/blocked-endp
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **121** |
+| **Runs on live** | **122** |
 | Blocked | 236 |
-| Total registered | 357 |
+| Total registered | 358 |
 
 ---
 
-## Runs on live — 121
+## Runs on live — 122
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -36,6 +36,7 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/aws/generate-presigned-url` | AWS |
 | `GET` | `/v2/common/countries` | common |
 | `POST` | `/v2/common/domain/` | common |
+| `GET` | `/v2/common/downloadProfileImage/{kpostID}` | common |
 | `POST` | `/v2/common/generateDomainAndUniqueName` | common |
 | `POST` | `/v2/common/getCitiesByRegionId/` | common |
 | `POST` | `/v2/common/getDesignation/` | common |
@@ -51,10 +52,10 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/common/pinCode` | common |
 | `POST` | `/v2/common/postalPinCode/` | common |
 | `POST` | `/v2/common/uniqueNameExist` | common |
+| `POST` | `/admin/createKpostIDAndDesignationSuggestion` | common · company |
 | `POST` | `/admin/displayNameSuggestion` | common · company |
 | `GET` | `/admin/getBankAndCompanyDetails/{companyID}` | common · company |
 | `GET` | `/admin/userManagementDetails/{companyID}` | common · company |
-| `POST` | `/v2/admin/createKpostIDAndDesignationSuggestion` | common · company |
 | `POST` | `/v2/common/getCompanyDetails` | common · company |
 | `POST` | `/v2/common/getCompanyDetailsByAdmin` | common · company |
 | `POST` | `/v2/common/getCompanyDetailsByMobileNoAndproductId` | common · company |
@@ -198,8 +199,8 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/admin/removeCompanyLogo` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/resetPassword/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/terminateUser/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/v2/admin/updateBankAccountDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/v2/admin/updateCompanyDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/updateBankAccountDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/updateCompanyDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/admin/updateRole` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `GET` | `/v2/common/downloadCompanyLogo/{companyID}` | common · company | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/common/updateCompanyLogo` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |

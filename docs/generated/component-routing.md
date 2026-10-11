@@ -190,7 +190,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `kmail-translation`
 
-## KPost API (249 endpoints)
+## KPost API (250 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
@@ -200,8 +200,8 @@ each target exists in the live product, so tickets can never route to a non-exis
 | Kall (Voice/Video) V2 - current | 20 |
 | Company Administration | 19 |
 | Authentication V2 | 18 |
+| kpost-webservice-application | 18 |
 | KWord Documents | 18 |
-| kpost-webservice-application | 17 |
 | Contacts Directory V2 | 16 |
 | Kdiary - Schedules, Events & Reports | 14 |
 | Groups V2 | 11 |
@@ -488,6 +488,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 **kpost-webservice-application**
 
+- `common-download-profile-image`
 - `group-details-by-id`
 - `group-remove-member-v1-legacy`
 - `kall-legacy-cancel-schedule`
@@ -508,6 +509,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 ## On the catch-all component (review — a built module here is a routing gap)
 
+- kpost-api · common-download-profile-image (kpost-api,undocumented-contract,common,profile-image,binary)
 - kpost-api · katchup-reference-messages-details (kpost-api,undocumented-contract,katchup,katchup-read,thread,needs-message-id,security)
 - kpost-api · katchup-legacy-recall-message (kpost-api,undocumented-contract,katchup,katchup-manage,legacy,needs-message-id)
 - kpost-api · group-remove-member-v1-legacy (kpost-api,undocumented-contract,group,group-manage,legacy,security)

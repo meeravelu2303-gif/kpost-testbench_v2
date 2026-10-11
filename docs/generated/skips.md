@@ -11,24 +11,24 @@ The plan: `docs/reference/production-readiness-plan.md`, Phase 1.
 | ----- | ----: | ---------: |
 | Retune | 0 | 0 |
 | Blocked by a defect | 40 | 23 |
-| Provision | 249 | 167 |
+| Provision | 251 | 168 |
 | Owner decision | 145 | 103 |
 | Live condition | 100 | 41 |
 | No reason string | 0 | 0 |
 | Unclassified | 0 | 0 |
-| **Total** | **534** | **203** |
+| **Total** | **536** | **204** |
 
 ## The last run, by the engine’s own skip classes
 
-Run `run-4e12c048-3378-484f-a232-1bcdf1668de2` at 2026-10-10T12:41:39.886Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
+Run `run-96b9c68c-31f1-4f7b-9b01-1e3c65620260` at 2026-10-11T09:45:02.243Z: 25942 checks, 12379 applicable ran (86% passed), 13560 skipped:
 
 | Engine skip class | Checks | Meaning |
 | ----------------- | -----: | ------- |
-| notApplicable | 0 | the validator does not apply to that endpoint (by design) |
-| recoverable | 0 | needs a fixture, an id or a second principal — a gap to close |
-| blockedByDefect | 0 | an open defect stops the check from being meaningful |
-| deliberate | 0 | an owner pause or a safety choice |
-| environmental | 0 | host or transport trouble this run |
+| notApplicable | 10578 | the validator does not apply to that endpoint (by design) |
+| recoverable | 1573 | needs a fixture, an id or a second principal — a gap to close |
+| blockedByDefect | 1286 | an open defect stops the check from being meaningful |
+| deliberate | 96 | an owner pause or a safety choice |
+| environmental | 27 | host or transport trouble this run |
 
 ## Retune — a selector that no longer matches, or a defect; Phase 1 drives this to 0 (0)
 
@@ -70,7 +70,7 @@ _None._
 | 1 | … is genuinely already registered — set a fresh QA_SIGNUP_UI_MOBILE the signup screen's mobile Verify step is broken (a repeat of #720): it misreports this free number as taken, so the OTP modal never opens | `tests/e2e/signup-login-lifecycle.spec.ts:128` |
 | 1 | invalid the OTP box just rejected the bypass code — likely test-infra noise (rate-limiting from concurrent heavy traffic on this host, see #721/INVALID), not a real defect; re-run once no other suite is hitting the same API host | `tests/e2e/signup-login-lifecycle.spec.ts:145` |
 
-## Provision — an account, connection, host or secret this machine lacks (249)
+## Provision — an account, connection, host or secret this machine lacks (251)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -89,6 +89,8 @@ _None._
 | 3 | needs the primary account | `tests/api/kpost/profile/profile-workflow.spec.ts:75`, `tests/api/kpost/profile/profile-workflow.spec.ts:91`, `tests/api/kpost/profile/profile-workflow.spec.ts:142` |
 | 3 | qa.bench needs a real live account | `tests/e2e/kall-features.spec.ts:42`, `tests/e2e/kdiary.spec.ts:47`, `tests/e2e/profile-actions.spec.ts:60` |
 | 3 | qa.bench qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/e2e/katchup-received-actions.spec.ts:97`, `tests/e2e/katchup-two-session.spec.ts:55`, `tests/e2e/kmail-stored-xss-render.spec.ts:52` |
+| 2 | needs the BUSINESS_S admin principal | `tests/api/kpost/security/admin-bank-company-cross-company.spec.ts:28`, `tests/api/kpost/security/admin-usermanagement-cross-company.spec.ts:29` |
+| 2 | needs a real QA_BUSINESS_M_COMPANY_ID distinct from the attacker's own company | `tests/api/kpost/security/admin-bank-company-cross-company.spec.ts:30`, `tests/api/kpost/security/admin-usermanagement-cross-company.spec.ts:31` |
 | 2 | needs three distinct KPost principals | `tests/api/kpost/security/kall-object-authorization.spec.ts:29`, `tests/api/kpost/security/katchup-idor-regression-2026-10-03.spec.ts:23` |
 | 2 | needs QA_PASSWORD | `tests/api/kpost/signup-login/security-session.spec.ts:93`, `tests/api/kpost/signup-login/security-session.spec.ts:152` |
 | 2 | no KPost principal configured | `tests/api/kpost/signup-login/security-session.spec.ts:108`, `tests/api/kpost/signup-login/security-session.spec.ts:155` |
@@ -98,8 +100,6 @@ _None._
 | 1 | needs the KPOST_QA connection to resolve the real membership id | `tests/api/kpost/group/feature.spec.ts:282` |
 | 1 | needs the KPOST_QA connection (DB_HOST/DB_NAME) to prove the account exists | `tests/api/kpost/profile/directory-lookup.spec.ts:69` |
 | 1 | set QA_COMPANY_NAME to a real company name to unblock this | `tests/api/kpost/profile/feature.spec.ts:371` |
-| 1 | needs the BUSINESS_S admin principal | `tests/api/kpost/security/admin-usermanagement-cross-company.spec.ts:29` |
-| 1 | needs a real QA_BUSINESS_M_COMPANY_ID distinct from the attacker's own company | `tests/api/kpost/security/admin-usermanagement-cross-company.spec.ts:31` |
 | 1 | qa.p5 needs a real QA_PERSONAL_5_KPOST_ID account not already in the attacker's contacts | `tests/api/kpost/security/kall-object-authorization.spec.ts:532` |
 | 1 | needs the personal-5 and victim principals | `tests/api/kpost/security/katchup-object-authorization.spec.ts:198` |
 | 1 | needs the personal and personal-3 principals | `tests/api/kpost/security/kdiary-object-authorization.spec.ts:56` |

@@ -24,8 +24,8 @@ spec (`*_LIFECYCLE`), not by the static factory audited here.
 | `POST /v2/katchup/sendMessageForForwardSelectedAttachment` (`katchup-send-forward-selected-attachment`) | actualMessage, attachmentCaption, messageTime, serverTime, referenceMessage, groupFlag, forwardReceiverList, groupForwardList, groupmemberList, sharedMessageDetails, selectedMembers, secretMessageExpireTime, isVanished, sharedType, temporaryMsgID, uuid, isHtml, isVoiceMessage, referenceMessageIDList, referenceMessageList |
 | `POST /v2/katchup/forwardKatchupMessageNew` (`katchup-forward-message-new`) | attachmentCaption, status, sessionID, referenceMessage, groupFlag, forwardReceiverList, groupForwardList, groupmemberList, sharedMessageDetails, sharedType, temporaryMsgID, uuid, isVoiceMessage |
 | `POST /v2/katchup/forwardKatchupMultipleMsgs` (`katchup-forward-multiple`) | forwardMessageIDList, attachmentCaption, uuid, messageType, sessionID, actualMessage |
-| `POST /v2/admin/updateCompanyDetails` (`admin-update-company-details`) | companyName, address1, address2, panNumber, gstNumber |
-| `POST /v2/admin/updateBankAccountDetails` (`admin-update-bank-account`) | accountNumber, accountHolderName, ifscCode, bankName, branch |
+| `POST /admin/updateCompanyDetails` (`admin-update-company-details`) | companyName, address1, address2, panNumber, gstNumber |
+| `POST /admin/updateBankAccountDetails` (`admin-update-bank-account`) | accountNumber, accountHolderName, ifscCode, bankName, branch |
 | `POST /v2/contacts/addMultipleContact` (`contacts-add-multiple`) | contactID, firstName, lastName, userType |
 | `POST /redbus/blockTicket/{kpostId}` (`kbooking-block-ticket`) | availableTripId, boardingPointId, destination, source |
 | `POST /v2/profile/updateContactInformation/` (`profile-update-contact`) | addressLine2, alternateMobileno, landLineNumber |

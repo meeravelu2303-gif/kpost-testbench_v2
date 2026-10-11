@@ -2,8 +2,8 @@
 
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`.
 
-**43 of 357** registered endpoints are **not driven against the live app**.
-The rest ARE tested on live: **121** on the default run + **193** via the
+**43 of 358** registered endpoints are **not driven against the live app**.
+The rest ARE tested on live: **122** on the default run + **193** via the
 gated self-cleaning lifecycle flows (`npm run kpost:file`). This file lists ONLY the not-tested.
 
 They are not silent gaps — each is refused for a permanent constraint or a deliberate safety
@@ -36,8 +36,8 @@ choice, and every one is still contract-validated OFF live.
 | `POST` | `/admin/removeCompanyLogo` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/resetPassword/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/terminateUser/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/v2/admin/updateBankAccountDetails` | writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/v2/admin/updateCompanyDetails` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/updateBankAccountDetails` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/updateCompanyDetails` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/admin/updateRole` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `GET` | `/v2/common/downloadCompanyLogo/{companyID}` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/common/updateCompanyLogo` | writes state shared by the whole environment (no self-cleaning lifecycle) |
