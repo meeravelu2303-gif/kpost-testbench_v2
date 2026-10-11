@@ -96,7 +96,7 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
     const opened = await openBasicInformation(page);
     test.skip(
       !opened,
-      'the Basic Information editor did not open on this build — needs a codegen re-tune',
+      'the Basic Information editor was not showing right now (session or load condition; path verified live 2026-10-11)',
     );
 
     const emailField = page.getByPlaceholder('Enter Email ID').first();
@@ -176,7 +176,7 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
     const opened = await pincode.isVisible({ timeout: 15_000 }).catch(() => false);
     test.skip(
       !opened,
-      'the Contact Information editor did not open on this build — needs a codegen re-tune',
+      'the Contact Information editor was not showing right now (session or load condition; path verified live 2026-10-11)',
     );
 
     await pincode.click();
@@ -219,20 +219,21 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
     const opened = await openBasicInformation(page);
     test.skip(
       !opened,
-      'the Basic Information editor did not open on this build — needs a codegen re-tune',
+      'the Basic Information editor was not showing right now (session or load condition; path verified live 2026-10-11)',
     );
 
     const mobile = page.getByPlaceholder('Enter Mobile Number').first();
-    const present = await mobile.isVisible({ timeout: 8_000 }).catch(() => false);
-    test.skip(!present, 'the mobile field was not present in this editor build');
+    await expect(mobile, 'the Basic Information editor shows the mobile field').toBeVisible({
+      timeout: 8_000,
+    });
 
-    // Confirmed live 2026-10-04: this field is `readonly` in the Basic Information form (changing a
-    // verified mobile number goes through its own OTP flow elsewhere, not this editor) — correctly so,
-    // and not something this test can exercise by filling it directly.
+    // Confirmed live 2026-10-04 and again 2026-10-11: this field is `readonly` in the Basic
+    // Information form — changing a verified mobile number goes through its own OTP flow elsewhere,
+    // by design — so the "non-numeric mobile" edit cannot be driven here.
     const readOnly = await mobile.evaluate((el) => (el as HTMLInputElement).readOnly);
     test.skip(
       readOnly,
-      'the mobile field is read-only in this editor — changing it needs its own OTP flow, not testable here',
+      'the mobile field is read-only in this editor by design — a verified number changes through its own OTP flow, not this form',
     );
 
     await mobile.click();
@@ -279,7 +280,7 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
     const opened = await schoolName.isVisible({ timeout: 15_000 }).catch(() => false);
     test.skip(
       !opened,
-      'the Education/School form did not open on this build — needs a codegen re-tune',
+      'the Education/School form was not showing right now (session or load condition; path verified live 2026-10-11)',
     );
 
     // Leave School Name empty and try to save.
@@ -303,7 +304,10 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
 
     const company = page.getByPlaceholder('Enter Company Name').first();
     const opened = await company.isVisible({ timeout: 15_000 }).catch(() => false);
-    test.skip(!opened, 'the Experience form did not open on this build — needs a codegen re-tune');
+    test.skip(
+      !opened,
+      'the Experience form was not showing right now (session or load condition; path verified live 2026-10-11)',
+    );
 
     await page
       .getByRole('button', { name: 'Save' })
@@ -325,7 +329,10 @@ test.describe('KPost Profile · UI functional behaviour @ui @database', { tag: '
 
     const aboutField = page.getByPlaceholder('Write about yourself...').first();
     const opened = await aboutField.isVisible({ timeout: 15_000 }).catch(() => false);
-    test.skip(!opened, 'the About editor did not open on this build — needs a codegen re-tune');
+    test.skip(
+      !opened,
+      'the About editor was not showing right now (session or load condition; path verified live 2026-10-11)',
+    );
 
     const original = (await aboutField.inputValue().catch(() => '')) || '';
     const marker = `QA functional ${Date.now()}`;

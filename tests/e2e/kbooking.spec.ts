@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { pickReactSelect } from './support/react-select';
 
 /**
  * K-Booking (`/kbooking`) — a REAL redbus.in bus-ticket booking integration
@@ -43,18 +44,9 @@ test.describe('KPost K-Booking — search and read-only trip listing', { tag: '@
       "To-city starts disabled until From is chosen (react-select's own isDisabled class)",
     ).toHaveClass(/--is-disabled/);
 
-    const fromCityControl = page.getByText('Enter your Departure place', { exact: true }).first();
-    await fromCityControl.click({ force: true });
-    await page.keyboard.type('Bangalore');
-    await page.waitForTimeout(1_000);
-    // Pick the first suggestion if one surfaces, scoped to the open menu (a bare page-wide text
-    // match can also hit an unrelated hidden element elsewhere on the page).
-    await page
-      .locator('.react-select__menu')
-      .getByText(/Bangalore/i)
-      .first()
-      .click({ timeout: 5_000 })
-      .catch(() => undefined);
+    // Type into the control's own input and pick the suggestion (support/react-select.ts) — no
+    // forced click on the placeholder, no fixed wait for the menu.
+    await pickReactSelect(page.locator('.react-select__control').first(), 'Bangalore');
 
     await expect(
       toCityControl,
@@ -71,33 +63,26 @@ test.describe('KPost K-Booking — search and read-only trip listing', { tag: '@
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    const fromCityControl = page.getByText('Enter your Departure place', { exact: true }).first();
-    await fromCityControl.click({ force: true });
-    await page.keyboard.type('Delhi');
-    await page.waitForTimeout(1_000);
-    await page
-      .locator('.react-select__menu')
-      .getByText(/Delhi/i)
-      .first()
-      .click({ timeout: 5_000 })
-      .catch(() => undefined);
+    await pickReactSelect(page.locator('.react-select__control').first(), 'Delhi');
+    await pickReactSelect(page.locator('.react-select__control').nth(1), 'Jaipur');
 
-    const toCityControl = page.locator('.react-select__control').nth(1);
-    await toCityControl.click({ force: true });
-    await page.keyboard.type('Jaipur');
-    await page.waitForTimeout(1_000);
-    await page
-      .locator('.react-select__menu')
-      .getByText(/Jaipur/i)
-      .first()
-      .click({ timeout: 5_000 })
+    // The search is a backend round-trip: wait for its answer (any POST the click triggers), then
+    // for the screen to settle into a result list or an empty state.
+    const answered = page
+      .waitForResponse((r) => r.request().method() === 'POST', { timeout: 20_000 })
       .catch(() => undefined);
-
     await page
       .getByRole('button', { name: /Search Buses/i })
       .first()
       .click();
-    await page.waitForTimeout(3_000);
+    await answered;
+    // Settle into a visible outcome — trips ("Show seats") or an empty/no-service message; whichever
+    // the route produces. Best-effort: a route with neither is still a non-crash.
+    await page
+      .getByText(/Show seats|No (buses|trips|service)|not available|no results/i)
+      .first()
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .catch(() => undefined);
 
     // Soft, deliberately: whether a real route has trips is out of this test's control. What matters
     // is the screen doesn't crash and, if trips exist, the safety boundary control ("Show seats") is

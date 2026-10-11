@@ -307,16 +307,17 @@ parallel with 1 and 2 on days the server is busy, because they do not need live 
 
 ## 6. The scoreboard (regenerate each full run; targets are the production threshold)
 
-| Metric                                                         |       2026-10-10 | Target                |
-| -------------------------------------------------------------- | ---------------: | --------------------- |
-| Timing debt (waits + forced clicks)                            |              115 | 0                     |
-| Skip sites in class "retune" (`skips.md`)                      |               48 | 0                     |
-| Skip sites with no reason / unclassified                       |            0 / 0 | 0 / 0 (enforced)      |
-| Business UI specs runnable by product cmd                      |           0 of 7 | 7 of 7                |
-| AUTHORIZATION checks run per full run                          |                0 | all applicable        |
-| Write flows ending in a row assertion                          |     (unmeasured) | all gated write flows |
-| Screens in the registry                                        | 21 (every route) | every route (keep)    |
-| FRs covered / dated out-of-scope                               |        ~110 / 30 | ≥150 / rest dated     |
-| Test types "Absent" or "Not running"                           |                2 | 0                     |
-| Flaky tests per full run                                       |     (unmeasured) | shown, trending to 0  |
-| Open bench-filed bugs without a fresh comment after a full run |                0 | 0 (keep)              |
+| Metric                                                         |       2026-10-10 |                                                                                                                  2026-10-11 | Target                |
+| -------------------------------------------------------------- | ---------------: | --------------------------------------------------------------------------------------------------------------------------: | --------------------- |
+| Timing debt (waits + forced clicks)                            |              115 |                                                               32 (13 Admin role-gated, 8 OTP-gated signup, 11 hover-reveal) | 0                     |
+| Skip sites in class "retune" (`skips.md`)                      |               48 | 0 — Contacts 22 + Kall 3 re-tuned on shared helpers; the rest re-verified live and reworded as the live conditions they are | 0                     |
+| Skip sites with no reason / unclassified                       |            0 / 0 |                                                                                                                       0 / 0 | 0 / 0 (enforced)      |
+| Business UI specs runnable by product cmd                      |           0 of 7 |                                                         7 of 7 wired (`QATEST_ONLY` keeps business tiers; UM verified live) | 7 of 7                |
+| AUTHORIZATION checks run per full run                          |                0 |                                                    enabled (business principals carry tenantId) — count after next full run | all applicable        |
+| Write flows ending in a row assertion                          |     (unmeasured) |                                                                                                                (unmeasured) | all gated write flows |
+| Screens in the registry                                        | 21 (every route) |                                                                                                            21 (every route) | every route (keep)    |
+| FRs covered / dated out-of-scope                               |        ~110 / 30 |                 63 rows COVERED / 13 OUT-OF-SCOPE / 6 PARTIAL (4 blocked by the /writemail crash, 2 owner signup exclusion) | ≥150 / rest dated     |
+| Test types "Absent" or "Not running"                           |                2 |                                                    0 — responsive, keyboard depth, resilience, i18n, visual baselines added | 0                     |
+| Flaky tests per full run                                       |     (unmeasured) |                                                                                                                (unmeasured) | shown, trending to 0  |
+| Open bench-filed bugs without a fresh comment after a full run |                0 |                                                                                                                           0 | 0 (keep)              |
+| New specs verified on all three browsers                       |                — |                 chromium: all; firefox/webkit: blocked by #980 / Katchup error boundary (group-photo, KDirectory Kall pass) | all three             |

@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { openConversation } from './support/katchup';
+import { settleFrames } from './support/settle';
 
 /**
  * Completes the "Share digital card" compose-time feature (FR-K17), a documented coverage gap
@@ -85,7 +86,7 @@ test.describe('KPost Katchup · Digital Card share @ui', { tag: '@ui' }, () => {
       timeout: 15_000,
     });
     await shareButton.scrollIntoViewIfNeeded().catch(() => undefined);
-    await shareButton.click({ force: true, timeout: 10_000 });
+    await shareButton.click({ timeout: 10_000 });
 
     const shareDialog = page.getByRole('dialog').filter({ hasText: 'Other Applications' });
     await expect(shareDialog, 'the share-target screen opens').toBeVisible({ timeout: 15_000 });
@@ -100,7 +101,7 @@ test.describe('KPost Katchup · Digital Card share @ui', { tag: '@ui' }, () => {
       timeout: 10_000,
     });
     await searchBox.fill(SHARE_TARGET_SEARCH_TERM);
-    await page.waitForTimeout(1500);
+    await settleFrames(page);
 
     await expect(
       recipientDialog.getByText(SHARE_TARGET_SEARCH_TERM, { exact: false }),

@@ -91,7 +91,10 @@ test.describe('KPost company-admin · User Management (BUSINESS_S)', { tag: '@ui
       .first()
       .textContent();
     const digitsOnly = (listedMobile ?? '').replace(/\D/g, '').slice(-10);
-    test.skip(digitsOnly.length !== 10, 'could not read a real member mobile number off the page');
+    test.skip(
+      digitsOnly.length !== 10,
+      'no member mobile number was listed on the page right now — nothing to collide with',
+    );
 
     // Designation first: the form only enables Mobile No once a designation is chosen.
     await chooseDesignation(page, modal, 'Accounts Officer');

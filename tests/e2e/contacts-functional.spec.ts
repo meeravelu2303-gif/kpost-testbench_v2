@@ -1,18 +1,22 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import type { Page } from '@playwright/test';
+import {
+  contactsSearchBox,
+  gotoContacts,
+  openAdvancedSearch,
+  openCreateGroup,
+  openPeopleSearch,
+} from './support/contacts';
 
 /**
  * Contacts **functional** UI testing — the client's own behaviour, and whether an action in the UI
  * actually reaches the server, that a pure API test cannot see.
  *
- * Selectors captured from a live codegen pass over the Contacts tab:
- *   - the tab: `getByRole('tab', { name: 'Contacts' })`; the list search: `searchbox "Search"`;
- *   - add a contact: `.icon-KP_107-User-Add` → account type → "Continue" → search → select → "Add To
- *     Contact" → "Add" → optional "Add Reference" → "Save";
- *   - advanced search: `.icon-KP_225_Advanced-Search`, field `Enter Mobile Number`, "Search";
- *   - create a group: `.icon-KP_112-Group-Add`, field `Group Name`, "Add Members", "Create".
+ * Navigation and selectors come from `support/contacts.ts` (read from the front-end source,
+ * 2026-10-11): the Contacts tab, its search box, the Add-contact wizard (now the KDirectory page:
+ * Country → Language → vertical → Continue → people search → Advanced Search), and the Create New
+ * Group modal.
  *
  * ## What each angle proves
  *  - **search** narrows the list (client filtering works);
@@ -25,28 +29,10 @@ import type { Page } from '@playwright/test';
  * ## Safety
  * The read/validation angles write nothing. The one add-and-verify test is gated behind
  * `CONTACTS_UI_LIFECYCLE`, captures the exact contactID the UI dispatched, and deletes only that in a
- * `finally`, so it removes precisely what it created and nothing else (same convention as the API
- * Contacts feature flow, which routinely adds/removes the QA account).
+ * `finally`, so it removes precisely what it created and nothing else.
  */
 
 const PERSONAL = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
-
-async function gotoContacts(page: Page): Promise<boolean> {
-  await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-  await page
-    .locator('.loader-overlay')
-    .waitFor({ state: 'hidden', timeout: 30_000 })
-    .catch(() => undefined);
-  await page
-    .getByRole('tab', { name: 'Contacts' })
-    .click({ timeout: 15_000 })
-    .catch(() => undefined);
-  return page
-    .getByRole('searchbox', { name: 'Search' })
-    .first()
-    .isVisible({ timeout: 15_000 })
-    .catch(() => false);
-}
 
 test.describe('KPost Contacts · UI functional behaviour @ui', { tag: '@ui' }, () => {
   test.skip(
@@ -56,157 +42,112 @@ test.describe('KPost Contacts · UI functional behaviour @ui', { tag: '@ui' }, (
 
   test('searching the contact list narrows it to the query @ui', async ({ page }) => {
     const opened = await gotoContacts(page);
-    test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
+    test.skip(
+      !opened,
+      'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+    );
 
-    // Both tab panels stay mounted and slide horizontally; the Recents panel's identical "Search" box
-    // sits off-screen (negative x) rather than being unmounted, so `.first()` grabs the wrong one —
-    // the Contacts panel's box is the one that renders second.
-    const search = page.getByRole('searchbox', { name: 'Search' }).last();
+    // Contact rows are `ContactBar`s; count the visible names before and after a nonsense query.
+    const names = page.locator('.Bar-Name:visible');
+    const before = await names.count();
+    expect(before, 'the Contacts panel lists at least one contact to filter').toBeGreaterThan(0);
+
+    const search = contactsSearchBox(page);
     await search.click();
     await search.fill('zzzzzznomatch');
-    // A no-match query must not still show a full list of contacts. The 2nd QA account has no attribute
-    // anywhere in the DOM carrying its KPOST ID — only its display name — so it's matched by name
-    // (exact lowercase, as the Personal list renders it) rather than `testData.victimKpostId`. `.last()`
-    // picks the on-screen Contacts-panel copy of the avatar, not the off-screen Recents-panel one or the
-    // separate, search-independent Frequently-Accessed strip (which renders the same name title-cased).
-    await expect(
-      page.getByRole('img', { name: 'hamza ali', exact: true }).last(),
-      'a nonsense search does not still show every contact',
-    ).toBeHidden({ timeout: 10_000 });
+    await expect
+      .poll(() => names.count(), {
+        message: 'a nonsense search does not still show the full list',
+        timeout: 10_000,
+      })
+      .toBeLessThan(before);
   });
 
   test('the Add-contact wizard opens and reaches its people-search step @ui', async ({ page }) => {
     const opened = await gotoContacts(page);
-    test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
-
-    await page
-      .locator('.icon-KP_107-User-Add')
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
-    await page
-      .getByText('Personal', { exact: true })
-      .first()
-      .click({ timeout: 5_000 })
-      .catch(() => undefined);
-    await page
-      .getByRole('button', { name: 'Continue' })
-      .first()
-      .click({ timeout: 8_000 })
-      .catch(() => undefined);
-
-    await expect(
-      page.getByRole('searchbox', { name: 'Search' }).first(),
-      'the Add-contact wizard reaches a people search',
-    ).toBeVisible({ timeout: 12_000 });
+    test.skip(
+      !opened,
+      'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+    );
+    const search = await openPeopleSearch(page);
+    expect(search, 'the Add-contact wizard reaches a people search').not.toBeNull();
+    await expect(search!, 'the people search box is usable').toBeEditable();
   });
 
   test('“Add To Contact” does not dispatch an add when nothing is selected @ui', async ({
     page,
   }) => {
     const opened = await gotoContacts(page);
-    test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
-
-    await page
-      .locator('.icon-KP_107-User-Add')
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
-    await page
-      .getByText('Personal', { exact: true })
-      .first()
-      .click({ timeout: 5_000 })
-      .catch(() => undefined);
-    await page
-      .getByRole('button', { name: 'Continue' })
-      .first()
-      .click({ timeout: 8_000 })
-      .catch(() => undefined);
+    test.skip(
+      !opened,
+      'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+    );
+    const search = await openPeopleSearch(page);
+    expect(search, 'the people-search step renders').not.toBeNull();
 
     const addBtn = page.getByRole('button', { name: 'Add To Contact' }).first();
-    const reachable = await addBtn.isVisible({ timeout: 10_000 }).catch(() => false);
-    test.skip(!reachable, 'the add step did not render — needs a codegen re-tune');
-
-    // Click Add-To-Contact with NOTHING selected — no addContact call must go out.
-    await addBtn.click({ timeout: 5_000 }).catch(() => undefined);
-    const dispatched = await page
+    const dispatched = page
       .waitForRequest('**/contacts/addContact**', { timeout: 4_000 })
       .then(() => true)
       .catch(() => false);
-
-    expect(dispatched, 'adding with no contact selected must not dispatch an add').toBe(false);
+    // The button is either disabled with nothing selected (ideal) or enabled but a no-op.
+    if (await addBtn.isVisible().catch(() => false)) {
+      await addBtn.click({ timeout: 5_000 }).catch(() => undefined);
+    }
+    expect(await dispatched, 'adding with no contact selected must not dispatch an add').toBe(
+      false,
+    );
   });
 
   test('the Create-Group dialog does not create a group with no name @ui', async ({ page }) => {
     const opened = await gotoContacts(page);
-    test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
-
-    await page
-      .locator('.icon-KP_112-Group-Add')
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
-
-    const nameField = page.getByRole('textbox', { name: 'Group Name' }).first();
-    const reachable = await nameField.isVisible({ timeout: 10_000 }).catch(() => false);
-    test.skip(!reachable, 'the Create-Group dialog did not open — needs a codegen re-tune');
+    test.skip(
+      !opened,
+      'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+    );
+    const modal = await openCreateGroup(page);
+    expect(modal, 'the Create New Group modal opens').not.toBeNull();
+    await expect(modal!.getByRole('textbox', { name: 'Group Name' }).first()).toBeVisible();
 
     // Leave the name empty and try to Create — no createUserGroup call must go out.
-    await page
+    const dispatched = page
+      .waitForRequest('**/group/createUserGroup**', { timeout: 4_000 })
+      .then(() => true)
+      .catch(() => false);
+    await modal!
       .getByRole('button', { name: 'Create' })
       .first()
       .click({ timeout: 5_000 })
       .catch(() => undefined);
-    const dispatched = await page
-      .waitForRequest('**/group/createUserGroup**', { timeout: 4_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    expect(dispatched, 'creating a group with no name must not be dispatched').toBe(false);
+    expect(await dispatched, 'creating a group with no name must not be dispatched').toBe(false);
   });
 
   test('advanced search opens and a mobile-number search responds @ui', async ({ page }) => {
     const opened = await gotoContacts(page);
-    test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
+    test.skip(
+      !opened,
+      'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+    );
+    const search = await openPeopleSearch(page);
+    expect(search, 'the people-search step renders').not.toBeNull();
+    const mobileField = await openAdvancedSearch(page);
+    expect(mobileField, 'Advanced Search opens with a mobile-number field').not.toBeNull();
 
-    await page
-      .locator('.icon-KP_107-User-Add')
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
-    await page
-      .getByText('Personal', { exact: true })
-      .first()
-      .click({ timeout: 5_000 })
-      .catch(() => undefined);
-    await page
-      .getByRole('button', { name: 'Continue' })
-      .first()
-      .click({ timeout: 8_000 })
-      .catch(() => undefined);
-    await page
-      .locator('.icon-KP_225_Advanced-Search')
-      .first()
-      .click({ timeout: 10_000 })
-      .catch(() => undefined);
-
-    const mobileField = page.getByRole('textbox', { name: 'Enter Mobile Number' }).first();
-    const reachable = await mobileField.isVisible({ timeout: 10_000 }).catch(() => false);
-    test.skip(!reachable, 'advanced search did not open — needs a codegen re-tune');
-
-    await mobileField.click();
-    await mobileField.fill(testData.mobileExists);
-    const responded = await page
-      .waitForResponse('**/contacts/**', { timeout: 10_000 })
-      .then(() => true)
-      .catch(() => false);
-    await page
-      .getByRole('button', { name: 'Search', exact: true })
-      .first()
-      .click({ timeout: 5_000 })
-      .catch(() => undefined);
-
-    expect(reachable && (responded || true), 'advanced search accepts a mobile number').toBe(true);
+    await mobileField!.click();
+    await mobileField!.fill(testData.mobileExists);
+    const responded = page
+      .waitForResponse((r) => r.url().includes('/profile/advancedSearch/'), {
+        timeout: 15_000,
+      })
+      .then((r) => r.status())
+      .catch(() => 0);
+    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
+    const status = await responded;
+    test
+      .info()
+      .annotations.push({ type: 'observed', description: `mobile search → HTTP ${status}` });
+    expect(status, 'a mobile-number search reaches the server and is answered').toBeGreaterThan(0);
+    expect(status, 'the search is not a server error').toBeLessThan(500);
   });
 
   test('a contact added in the UI appears in My Contacts (UI → API → DB) @ui', async ({
@@ -218,7 +159,10 @@ test.describe('KPost Contacts · UI functional behaviour @ui', { tag: '@ui' }, (
       'adds a real contact; set CONTACTS_UI_LIFECYCLE=true',
     );
     const opened = await gotoContacts(page);
-    test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
+    test.skip(
+      !opened,
+      'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+    );
 
     // Capture the exact contactID the UI dispatches, so cleanup removes only what we add.
     let addedId: string | undefined;
@@ -233,52 +177,28 @@ test.describe('KPost Contacts · UI functional behaviour @ui', { tag: '@ui' }, (
     });
 
     try {
-      await page
-        .locator('.icon-KP_107-User-Add')
-        .first()
-        .click({ timeout: 15_000 })
-        .catch(() => undefined);
-      await page
-        .getByText('Personal', { exact: true })
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: 'Continue' })
-        .first()
-        .click({ timeout: 8_000 })
-        .catch(() => undefined);
-
-      const search = page.getByRole('searchbox', { name: 'Search' }).first();
-      await search.click().catch(() => undefined);
-      await search.fill(testData.mobileExists);
+      const search = await openPeopleSearch(page);
+      expect(search, 'the people-search step renders').not.toBeNull();
+      await search!.click();
+      await search!.fill(testData.mobileExists);
 
       const firstResult = page.getByRole('checkbox').first();
-      const hasResult = await firstResult.isVisible({ timeout: 10_000 }).catch(() => false);
+      const hasResult = await firstResult.isVisible({ timeout: 15_000 }).catch(() => false);
       test.skip(
         !hasResult,
-        'the directory returned no result for the QA mobile — cannot drive add',
+        'the directory returned no result for the QA mobile — cannot drive add (live condition)',
       );
-      await firstResult.check().catch(() => undefined);
-
-      await page
-        .getByRole('button', { name: 'Add To Contact' })
-        .first()
-        .click({ timeout: 8_000 })
-        .catch(() => undefined);
+      await firstResult.check();
+      await page.getByRole('button', { name: 'Add To Contact' }).first().click();
       await page
         .getByRole('button', { name: 'Add', exact: true })
         .first()
         .click({ timeout: 8_000 })
         .catch(() => undefined);
-
       await page
         .waitForRequest('**/contacts/addContact**', { timeout: 15_000 })
         .catch(() => undefined);
-      test.skip(
-        !addedId,
-        'no addContact was dispatched — the add flow did not complete this build',
-      );
+      expect(addedId, 'the UI dispatched addContact with a contactID').toBeTruthy();
 
       // Cross-layer: the contact the UI added must be present in myContacts.
       await expect

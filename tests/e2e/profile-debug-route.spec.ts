@@ -27,8 +27,14 @@ test.describe('KPost — /profile debug route (real access token exposure)', { t
   test('visiting /profile must not render the real access token as plain visible text @ui', async ({
     page,
   }) => {
+    // localStorage belongs to the app's origin, so read it only after navigating there (reading it
+    // on about:blank — what this test did until 2026-10-11 — always came back empty and skipped).
+    // The session keeps the token under the top-level `accessToken` key; `Authuser` is the profile.
+    await page.goto('/profile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
     const realToken = await page.evaluate(() => {
       try {
+        const direct = localStorage.getItem('accessToken');
+        if (direct && direct.length > 20) return direct.replace(/^"|"$/g, '');
         const raw = localStorage.getItem('Authuser');
         const parsed = raw ? (JSON.parse(raw) as { accessToken?: unknown }) : undefined;
         return typeof parsed?.accessToken === 'string' ? parsed.accessToken : '';
@@ -36,12 +42,9 @@ test.describe('KPost — /profile debug route (real access token exposure)', { t
         return '';
       }
     });
-    test.skip(
-      !realToken,
-      'could not read a real access token from localStorage to confirm against',
+    expect(realToken, 'the signed-in session holds an access token to compare against').not.toBe(
+      '',
     );
-
-    await page.goto('/profile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
     const bodyText = (await page.locator('body').textContent()) ?? '';
     const tokenExposed = bodyText.includes(realToken);

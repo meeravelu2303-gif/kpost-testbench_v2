@@ -3,6 +3,142 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-11 (afternoon) — The balance: retune skips, three cross-cutting test types, timing debt 108 → 32, three-browser verification started
+
+**Owner:** "First finish everything, fill the balance gaps also." The plan's remaining gaps were taken in
+order; this entry records what each one turned out to be.
+
+**Retune skips (48 sites → the ones that were really stale).** 22 Contacts sites and 3 Kall sites
+had the same cause: private copies of navigation that the product had moved from under them — the
+Add-contact wizard is now the `/kdirectory` page (Country → Language → vertical → Continue → search →
+Advanced Search, which posts to `/profile/advancedSearch/`), and "Kool Kall" is a tab, not a button.
+`tests/e2e/support/contacts.ts` and `support/kall.ts` now hold those steps once; the five Contacts specs,
+`group-security`, the three Kall specs and `kall-features` use them. Also closed: the profile debug
+route read `localStorage` on `about:blank` (always empty, always skipped); the profile mobile field
+skip is now classed as the owner's OTP-by-design; the Contacts "did not open" wording is a live
+condition. Still honest skips: signup OTP steps (owner decision), Advanced-Search data conditions.
+
+**Cross-cutting test types (plan Phase 4, all new, chromium green or failing on real findings):**
+`responsive-sweep.spec.ts` (every screen at 390 and 820 px: mount, no sideways scroll, no error — one
+test per viewport so a shared root cause is one failure listing every screen),
+`keyboard-nav-depth.spec.ts` (side-menu focusability, every tab stop visible, Escape stays put),
+`resilience.spec.ts` (500 from a backend call, offline/online, a slow Recents fetch),
+`i18n-switch.spec.ts` (bundle coverage for the languages the header offers; live switch and
+persistence), `visual-baselines.spec.ts` (pixel baselines for the five public screens, created this
+run, 2 % tolerance). Findings they produced are in the owner's notes: nav icons Home/KMail not
+focusable, a hard page load when navigating offline, Japanese bundle 32 % English, every screen 3 px
+wider than an 820 px tablet, /kmail now crashing too.
+
+**Timing debt 108 → 32.** The pattern behind most of it was react-select: a forced click on the
+placeholder plus a sleep. `support/react-select.ts` drives the control through its own input (works
+for the KNews checkbox lists too); `support/settle.ts` gives the two deterministic waits that replace
+"sleep then look" (`settleFrames`, `settleNetwork`). Every behaviour-changing edit was re-run in
+isolation on chromium; the stale assertions it exposed were corrected from the live screen
+(KNews feed loading state, the Add Other Mail "Email=undefined" flow — Next is now disabled until an
+ID is chosen, i.e. fixed in the product — and the two-section Change Mobile Number panel). What
+remains is role-gated Admin UI (13), OTP-gated business signup (8) and hover-revealed icons where
+`force` is the honest click (profile edit pencils, bell/reply triggers, 11).
+
+**Three browsers.** Firefox: the Katchup list never leaves its loading skeletons and every Katchup
+screen throws React #327 — #980, CONFIRMED and open — so the new Katchup/KDirectory specs cannot be
+verified there until it is fixed; group-photo passed. WebKit batch 1: group-photo and the KDirectory
+Kall launch pass; the Katchup composer specs hit the same error boundary. The allow-list step for the
+new specs therefore waits on #980, not on the bench.
+
+**Save false pass, generalised.** Any action behind `window.confirm` silently no-ops under Playwright;
+both Katchup Save tests now assert the confirmation and cancel it (accepting deletes the rest of the
+folder). Rule in memory and in the specs.
+
+### 2026-10-11 (early) — FRD gaps, third batch: the last PARTIAL/GAP rows are closed or named
+
+**Owner:** "before I commit you will cover the balance tests also." Every row the requirement map
+still showed as GAP or PARTIAL was taken in turn, from the FRD text and the front-end source.
+
+**What landed (all green on chromium in isolation, behind `KATCHUP_UI_LIFECYCLE=true` where they
+write).**
+
+- `katchup-recall-repost.spec.ts` — FR-KU-029..031: recall, the reduced post-recall menu (Edit &
+  Repost / Delete only), repost with an edited body, Recall offered again on the repost, Delete via
+  the Delete Message confirmation. One of two runs did not offer Recall on the repost; the assertion
+  now prints the menu it saw so a repeat is evidence, not a mystery.
+- `katchup-received-actions.spec.ts` — FR-KU-048..057 on a message the 2nd QA account sends through
+  the API: the full recipient menu (and no Edit/Recall), Transfer, Forward and Forward With Thread
+  each with Hide / Reveal Source (Reveal is the default), Copy with the clipboard toast, Save, TTS
+  (the text handed to `speechSynthesis.speak` is recorded; no audio device needed), Delete.
+- `group-photo.spec.ts` — FR-GC-004/005: picker → Image Cropper → cropped photo; no group created.
+- `kdirectory-launch.spec.ts` — FR-KD-006: directory entry → Digital Card → Katchup opens the
+  conversation; Kall opens the call sheet (dismissed). Skips with the API's own count when the
+  directory has no entry for the search term (`KDIRECTORY_SEARCH_TERM`).
+- `kmail-composer-controls.spec.ts` += FR-KM-014 (attachment count) and FR-KM-022 (external
+  address adopted / malformed rejected); they skip with their reason until `/writemail` loads again.
+  FR-KM-015 is recorded OUT-OF-SCOPE: the web composer has no audio record/insert control, only a
+  speech-to-text mic.
+- FR-SL-016..018 and FR-SL-031 stay PARTIAL by the owner's standing signup exclusion; the rows now
+  say so instead of reading like a to-do.
+
+**A false pass found and fixed.** Katchup **Save** asks through a native `window.confirm` whose text
+warns that the other messages in the folder will be deleted. Playwright auto-dismisses dialogs, so
+the sent-side Save test in `katchup-actions.spec.ts` had been calling "menu closed" an accepted
+save for weeks while nothing was ever saved. Both Save tests now assert the confirmation through a
+dialog handler and cancel it (accepting would wipe the shared QA conversation). Rule recorded: an
+action with no request and no toast is a missing dialog handler first, a product bug second.
+
+**Two helper repairs that other specs inherit.** `openConversation` now falls back to the list's
+own search box when the Recents list (which renders only the newest threads) no longer shows the
+2nd account — the QA UI groups had pushed it out; `katchup-actions.spec.ts` dropped its private copy
+of the helpers for the shared ones. `openReplyMenu` is the receive-side twin of `openBellMenu`.
+
+**Still outside the bench's reach, named in the owner's notes:** `/writemail` crash (two KMail API
+failures behind it), `removeGroupMember` 500 (group teardown), and now 29 "QA UI …" groups awaiting
+`qa-ui-group-cleanup.spec.ts`.
+
+### 2026-10-10 (night) — FRD gaps, second batch: Group Info, group targeting, KMail composer — and the server bug that stops group teardown
+
+**What landed.** `tests/e2e/group-info.spec.ts` (FR-GM-001/002, 004–006, 007, 016 — header → Group
+Info panel, Admin badges, per-member Write/KMail/Katchup/Kall actions with KMail navigating, the
+three-dot management sheet, the "added" activity message) and `tests/e2e/group-post-targeting.spec.ts`
+(FR-GMSG Post To All / Selected Members, picker opens, draft cleared) — both green on chromium in
+isolation, both behind `GROUP_UI_LIFECYCLE=true` because they create a real group through the API.
+`tests/e2e/kmail-composer-controls.spec.ts` (FR-KM-016/017) is written but skips with its reason:
+`/writemail` crashed to the error boundary on every load tonight (see below). Rows updated in
+`requirements-frd.md`; FR-KM-013 stays OUT-OF-SCOPE (no control in the source).
+
+**Three bench lessons, each measured before being written into a helper.**
+
+1. _Never authenticate the API as the account the browser is signed in as._ The first Group Info run
+   minted a token for qatest1 while the browser was qatest1: KPost keeps one session per account and
+   every reload landed on `/login` (12/12). `tests/e2e/support/groups.ts` now creates every UI group
+   as personal-3 with the browser's account as a second admin.
+2. _The side menu widens on hover and stays open while the pointer is inside it._ `.menu.menuss1`
+   (60 → `clamp(190px,12vw,240px)`, z-index 99999) covers the Recents row centre (x≈269); Playwright
+   then reports "`.menu` subtree intercepts pointer events" until timeout (4/4). A geometry probe
+   proved it; `parkPointerAwayFromSideMenu()` in `support/katchup.ts` parks the pointer mid-page
+   first. No `force`.
+3. _`ContactBar` attaches `onClick` to its name column, not its wrapper._ Clicking the header
+   wrapper's centre opened nothing; the spec clicks `.line_height` inside it. And the viewer's own
+   "You" row sits outside `.group_info_height`, so admin badges are counted on the panel.
+
+**Server bug found on the way — `removeGroupMember` 500 (27/27).** Teardown is remove-members-then-
+delete because `deleteGroup` refuses a group with members. Every well-formed removal (owner or
+co-admin, fresh or old group, bench or real names, member listed at creation or added later)
+answers `500 "Remove user from an Existing Group failed"`; the local source (2026-10-07) only
+reaches that catch when posting the "X Removed Y" message throws inside the transaction. Result:
+the UI group specs leave their groups behind (27 "QA UI … <timestamp>" groups tonight), and
+`tests/api/kpost/group/qa-ui-group-cleanup.spec.ts` (`QA_GROUP_CLEANUP=true`) exists to clear them
+once the route works. Duplicate gate: #945 (CONFIRMED) is the malformed-request 500 on the same
+route; #623/#956 closed. Draft for the owner to file or to comment on #945 — not filed by the bench.
+
+**`/writemail` crash, pinned to two KMail API failures.** 5/5 loads show "Something went wrong"
+with `TypeError: Cannot read properties of undefined (reading 'length')`; the only failing calls are
+`GET /common/unOpenedMailCountBySenderID/` → 500 `SQLGrammarException: could not extract ResultSet`
+(#376 was closed WORKSFORME — reopen candidate with this body) and
+`POST /common/knownPostBoxContacts/ {"lastFetchTime":null}` → 400 (the app's own request; unfiled).
+#990 (FIXED) was a different TypeError on this screen. All four items are in the owner's notes;
+none is filed from here.
+
+**Also seen:** opening a group thread fires `katchupMessagesForSelectedContactID` → 500 once and the
+thread still renders; eight earlier bugs on that route are all resolved — left for the next API run.
+
 ### 2026-10-10 (late) — FRD gaps, first batch: Katchup composer controls from source (3 closed, 1 recorded as unreachable)
 
 **Owner:** "frontend and backend code both are available, take reference from that." Source trees

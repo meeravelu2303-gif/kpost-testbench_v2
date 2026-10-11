@@ -65,13 +65,14 @@ test.describe('KPost Chat · session safety @ui', { tag: '@ui' }, () => {
 
     // The contact's profile image/avatar in the chat header — the element that logged the user out
     // during the codegen pass.
-    const avatar = page.locator('#ChatTop img, .chat-header img').first();
+    // `ContactBar` renders the header avatar through react-avatar (`.sb-avatar`, initials or img).
+    const avatar = page.locator('#ChatTop .sb-avatar, #ChatTop img, .chat-header img').first();
     const found = await avatar.isVisible({ timeout: 8_000 }).catch(() => false);
     // Skip (do NOT pass) if we cannot find an avatar to click — a green result must mean we actually
     // clicked one and the session survived, never that there was nothing to click.
     test.skip(
       !found,
-      'no chat-header avatar found to click — share the contact display name / avatar selector',
+      'no chat-header avatar rendered right now (header still loading) — nothing to click',
     );
 
     await avatar.click({ timeout: 10_000 }).catch(() => undefined);

@@ -3,6 +3,7 @@ import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall';
 
 /**
  * The health/performance/layout counterpart to `kall-accessibility.spec.ts`'s 2 dynamic states — the
@@ -63,26 +64,10 @@ test.describe('KPost Kall — dynamic-state health/performance/layout sweep', { 
   test('Kall — schedule modal open: health, performance, layout @ui', async ({ page }) => {
     const stop = watchUiHealth(page);
     const started = Date.now();
-    await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-    await page
-      .getByRole('button', { name: /Kool Kall/i })
-      .first()
-      .click()
-      .catch(() => undefined);
-
-    const modal = page.locator('.modal-content');
-    const titleField = modal.locator('input[placeholder="Enter Meeting Title"]').first();
-    const createBtn = page.locator('.create_font').first();
-    await createBtn.click({ force: true }).catch(() => undefined);
-    if (!(await titleField.isVisible().catch(() => false))) {
-      await createBtn.click({ force: true }).catch(() => undefined);
-    }
-    const opened = await titleField.isVisible({ timeout: 15_000 }).catch(() => false);
-    test.skip(!opened, 'the schedule modal did not open on this build');
+    await gotoKoolKall(page);
+    const modal = await openCreateKall(page);
+    expect(modal, 'the Create Kool Kall modal opens').not.toBeNull();
+    await expect(meetingTitleField(modal!), 'the meeting title field renders').toBeVisible();
     const loadMs = Date.now() - started;
 
     const screen: ScreenDef = {

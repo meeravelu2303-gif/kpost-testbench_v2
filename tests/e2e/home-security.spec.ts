@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames, settleNetwork } from './support/settle';
 
 /**
  * Security-fuzzing angle for Home's two free-text inputs — the Recents search box (client-side
@@ -38,7 +39,7 @@ test.describe('KPost Home · search box security fuzzing', { tag: '@ui' }, () =>
       await homePage.goto();
       await homePage.switchToRecentsTab();
       await homePage.searchRecents(payload.value);
-      await page.waitForTimeout(1_500);
+      await settleFrames(page);
 
       const health = stop();
 
@@ -100,8 +101,15 @@ test.describe(
         await expect(homePage.advancedSearchSubmitButton, 'Search becomes enabled').toBeEnabled({
           timeout: 10_000,
         });
+        // The submitted search is a backend round-trip: wait for its answer, then a frame.
+        const answered = settleNetwork(
+          page,
+          (url, method) => method === 'POST' && /search/i.test(url),
+          15_000,
+        );
         await homePage.advancedSearchSubmitButton.click();
-        await page.waitForTimeout(1_500);
+        await answered;
+        await settleFrames(page);
 
         const health = stop();
 

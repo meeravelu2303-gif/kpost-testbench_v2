@@ -1,4 +1,5 @@
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * `/kposter` — the STANDALONE, logged-out shell (`MenuRoutes.js` line 404: `{!user.user &&
@@ -35,7 +36,7 @@ test.describe('KPost KPoster — public/standalone shell', { tag: '@ui' }, () =>
     const search = page.getByLabel('Search KPoster');
     await expect(search, 'the search bar renders').toBeVisible({ timeout: 15_000 });
     await search.fill(`zzqanomatch${Date.now()}`);
-    await page.waitForTimeout(1_000);
+    await settleFrames(page);
     // Soft: the exact "no results" UI isn't pinned — what matters is the filter is wired up (no crash).
     await expect(page.locator('body')).toBeVisible();
   });

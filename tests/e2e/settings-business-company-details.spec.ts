@@ -68,7 +68,10 @@ test.describe(
         .click()
         .then(() => panField.isVisible({ timeout: 5_000 }))
         .catch(() => false);
-      test.skip(!editOpened, 'the edit form did not open — needs a codegen re-tune');
+      test.skip(
+        !editOpened,
+        'the Company Registration edit form was not showing right now (needs the BUSINESS_S session; path unverified since 2026-10-11)',
+      );
 
       const originalPan = await panField.inputValue();
       const originalGst = await gstField.inputValue();

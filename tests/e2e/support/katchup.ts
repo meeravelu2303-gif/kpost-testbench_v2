@@ -23,11 +23,28 @@ export async function openConversation(page: Page, kpostId: string): Promise<voi
     .waitFor({ state: 'hidden', timeout: 30_000 })
     .catch(() => undefined);
 
+  await parkPointerAwayFromSideMenu(page);
   const conversation = page.locator(`[id="${kpostId}"]`).first();
-  await expect(conversation, `the conversation with ${kpostId} is in the list`).toBeVisible({
-    timeout: 20_000,
-  });
-  await conversation.click();
+  const listed = await conversation
+    .waitFor({ state: 'visible', timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (listed) {
+    await conversation.click();
+    return;
+  }
+  // The Recents list only renders the most recent conversations ("Today 20"); once other threads
+  // (e.g. the QA UI groups, 2026-10-11) push this one out, find it through the list's own search box
+  // (`RecentMessage.js` → search categories; result rows are keyed `<kpostId>-<msgID|time>`).
+  const search = page.getByPlaceholder('Search').first();
+  await expect(search, 'the Katchup list search box renders').toBeVisible({ timeout: 10_000 });
+  await search.fill(kpostId);
+  const hit = page.locator(`[id="${kpostId}"], [id^="${kpostId}-"]`).first();
+  await expect(
+    hit,
+    `the conversation with ${kpostId} is found through the list search`,
+  ).toBeVisible({ timeout: 20_000 });
+  await hit.click();
 }
 
 /** Open the conversation with `kpostId` and open its composer (the `.msg-arrow`). */
@@ -57,6 +74,46 @@ export async function openReceivedConversation(page: Page, subject: string): Pro
     timeout: 25_000,
   });
   await preview.click();
+}
+
+/**
+ * Open a GROUP conversation by its `groupKpostID`. A freshly created group is in the Recents list
+ * (its row `id` is the groupKpostID — `RecentMessage.js`): creating it posts the "<creator> added
+ * <members>" activity message, which gives it a Recents entry. A group created moments ago through the
+ * API can take a reload or two to appear (the list is fetched once per load). Returns false, without
+ * failing, when the group never shows: the caller decides what that means.
+ *
+ * Measured live 2026-10-10: the row sits at x≈82–455 in a 1280px viewport, and the left side menu
+ * (`.menu.menuss1`, `Header.js`) widens from 60px to `clamp(190px, 12vw, 240px)` while the pointer
+ * is over it and stays open as long as the pointer stays inside — which it does once Playwright moves
+ * the pointer to the row's centre (x≈269) while the menu is already open. Every row click then reports
+ * "`.menu` subtree intercepts pointer events" until it times out (4/4 Group Info failures). Parking
+ * the pointer over the thread area first collapses the menu, and the click lands.
+ */
+export async function openGroupConversation(page: Page, groupKpostID: string): Promise<boolean> {
+  const groupRow = page.locator(`[id="${groupKpostID}"]`).first();
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    await gotoKatchup(page);
+    const found = await groupRow
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (found) {
+      await parkPointerAwayFromSideMenu(page);
+      await groupRow.click();
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Move the pointer over the main content area so the hover-expanding side menu (`.menu.menuss1`)
+ * collapses back to 60px and stops covering the left list column. Idempotent and cheap.
+ */
+export async function parkPointerAwayFromSideMenu(page: Page): Promise<void> {
+  const size = page.viewportSize() ?? { width: 1280, height: 720 };
+  await page.mouse.move(Math.round(size.width / 2), Math.round(size.height / 2));
 }
 
 /** Open the 2nd QA account's conversation + composer (the common sender case). */
@@ -111,6 +168,16 @@ export async function openBellMenu(page: Page, message: Locator): Promise<void> 
   // regardless of the hover-reveal opacity, and `force` skips the stability wait that was flaking.
   await message.hover().catch(() => undefined);
   await message.getByTestId('NotificationsNoneIcon').first().click({ force: true });
+}
+
+/**
+ * Open the recipient action menu (the `ReplyIcon` trigger) on a RECEIVED message — the receive-side
+ * twin of `openBellMenu`, same hover-reveal caveat, so the same best-effort hover + forced click.
+ */
+export async function openReplyMenu(page: Page, message: Locator): Promise<void> {
+  await message.scrollIntoViewIfNeeded().catch(() => undefined);
+  await message.hover().catch(() => undefined);
+  await message.getByTestId('ReplyIcon').first().click({ force: true });
 }
 
 /** Locate the sent message carrying `subject` (with its own bell trigger). */

@@ -61,7 +61,9 @@ test.describe('KPost Settings · Change Mobile Number panel', { tag: '@ui' }, ()
       .first()
       .click();
 
-    const newNumberInput = page.getByPlaceholder('Enter your No').last();
+    // The panel now renders a "New Primary Mobile Number" and a "Secondary Mobile Number" section
+    // (2026-10-11); after the OTP step the input to fill is the VISIBLE one in the new-primary card.
+    const newNumberInput = page.locator('input[placeholder="Enter your No"]:visible').first();
     await expect(newNumberInput, 'the New Primary Mobile Number input appears').toBeVisible({
       timeout: 10_000,
     });
@@ -89,7 +91,10 @@ test.describe('KPost Settings · Change Mobile Number panel', { tag: '@ui' }, ()
     ).toBeVisible();
 
     await page.getByRole('button', { name: /^Ok$/i }).first().click();
-    await page.waitForTimeout(1_500);
+    // Give a request one second to appear after the final confirmation, no longer.
+    await page
+      .waitForRequest((r) => !/health|\.js|\.css/.test(r.url()), { timeout: 1_000 })
+      .catch(() => undefined);
 
     expect(
       requestFired,
@@ -125,7 +130,9 @@ test.describe('KPost Settings · Change Mobile Number panel', { tag: '@ui' }, ()
       .getByText(/Make Primary as Secondary/i)
       .first()
       .click();
-    await page.waitForTimeout(1_000);
+    await page
+      .waitForRequest((r) => !/health|\.js|\.css/.test(r.url()), { timeout: 1_000 })
+      .catch(() => undefined);
 
     expect(
       requestFired,

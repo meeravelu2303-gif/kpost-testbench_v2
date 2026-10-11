@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * Settings · Digital Card Settings panel (`DigitalCardSettings.js`) — 7 real, optimistic toggles
@@ -88,7 +89,7 @@ test.describe('KPost Settings · Digital Card Settings panel', { tag: '@ui' }, (
     );
 
     await experienceCheckbox.click();
-    await page.waitForTimeout(1_500);
+    await settleFrames(page);
 
     await expect(
       experienceCheckbox,

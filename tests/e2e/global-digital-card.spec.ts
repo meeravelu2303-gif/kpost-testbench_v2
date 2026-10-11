@@ -1,5 +1,6 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * `/digital-card/:id` (`GloabalDigitalCard.js`) — a PUBLIC, read-only shareable digital business
@@ -21,7 +22,8 @@ test.describe('KPost — /digital-card/:id public digital card', { tag: '@ui' },
       waitUntil: 'domcontentloaded',
       timeout: 45_000,
     });
-    await page.waitForTimeout(2_000);
+    await page.waitForLoadState('load');
+    await settleFrames(page);
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error on an invalid id').toEqual([]);

@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * Settings · Vacation Response panel (`Vacationresponse.js`) — no `Services/*` import, no API calls;
@@ -41,7 +42,7 @@ test.describe('KPost Settings · Vacation Response panel', { tag: '@ui' }, () =>
     // Toggle once, whichever direction it lands in — the bug is that `disabled` on a wrapping <div>
     // has no effect on the real inputs regardless of which state the toggle shows.
     await page.locator('.icon-KP_289_Toggle-On, .icon-KP_285_Toggle-Off').first().click();
-    await page.waitForTimeout(300);
+    await settleFrames(page);
 
     await expect(
       fromInput,
@@ -87,7 +88,9 @@ test.describe('KPost Settings · Vacation Response panel', { tag: '@ui' }, () =>
       timeout: 5_000,
     });
     await saveButton.click();
-    await page.waitForTimeout(1_500);
+    // Save is confirmed source-side to make no network call; two frames let any render-time throw
+    // surface before the health snapshot.
+    await settleFrames(page);
 
     const health = stop();
     test.info().annotations.push({

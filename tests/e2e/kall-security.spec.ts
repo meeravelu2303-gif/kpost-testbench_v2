@@ -1,6 +1,8 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall';
+import { settleFrames } from './support/settle';
 
 /**
  * Security-fuzzing angle for Kall's two free-text fields — the main screen's contact search box
@@ -49,7 +51,7 @@ test.describe('KPost Kall · contact search box security fuzzing', { tag: '@ui' 
       await expect(search, 'the contact search box is present').toBeVisible({ timeout: 20_000 });
       await search.click();
       await search.fill(payload.value);
-      await page.waitForTimeout(1_500);
+      await settleFrames(page);
 
       const health = stop();
 
@@ -92,32 +94,17 @@ test.describe('KPost Kall · Meeting Title field security fuzzing', { tag: '@ui'
         void dialog.dismiss();
       });
 
-      await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: /Kool Kall/i })
-        .first()
-        .click()
-        .catch(() => undefined);
-
-      const modal = page.locator('.modal-content');
-      const titleField = modal.locator('input[placeholder="Enter Meeting Title"]').first();
-      const createBtn = page.locator('.create_font').first();
-      await expect(createBtn, 'the Create control is present on the Kool Kall tab').toBeVisible({
-        timeout: 20_000,
-      });
-      await createBtn.click({ force: true });
-      if (!(await titleField.isVisible().catch(() => false))) {
-        await createBtn.click({ force: true });
-      }
-      const opened = await titleField.isVisible({ timeout: 15_000 }).catch(() => false);
-      test.skip(!opened, 'the schedule modal did not open on this build — needs a codegen re-tune');
-
+      await gotoKoolKall(page);
+      const modal = await openCreateKall(page);
+      expect(modal, 'the Create Kool Kall modal opens').not.toBeNull();
+      const titleField = meetingTitleField(modal!);
       await titleField.fill(payload.value);
-      await page.waitForTimeout(1_500);
+      await expect(titleField, 'the field holds the raw text').toHaveValue(payload.value);
+      // Two frames: any handler an injected payload could have attached has had its chance to run.
+      await page.evaluate(
+        () =>
+          new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+      );
 
       const health = stop();
 

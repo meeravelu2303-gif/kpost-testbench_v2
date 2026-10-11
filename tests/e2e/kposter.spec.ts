@@ -1,6 +1,7 @@
 import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * KPoster (`/kposter`, embedded in the authenticated app per `MenuRoutes.js` line 435) — a
@@ -30,7 +31,7 @@ test.describe('KPost KPoster — embedded nav and feed', { tag: '@ui' }, () => {
 
     for (const label of ['Home', 'Discover', 'Saved', 'Activity']) {
       await page.getByText(label, { exact: true }).first().click();
-      await page.waitForTimeout(500);
+      await settleFrames(page);
     }
     await expect(page.locator('body')).toBeVisible();
   });
@@ -53,7 +54,7 @@ test.describe('KPost KPoster — embedded nav and feed', { tag: '@ui' }, () => {
 
     for (const tab of ['All posts', 'Photos', 'Videos', 'Brochures']) {
       await page.getByRole('button', { name: tab }).first().click();
-      await page.waitForTimeout(500);
+      await settleFrames(page);
     }
     await expect(page.locator('body')).toBeVisible();
   });

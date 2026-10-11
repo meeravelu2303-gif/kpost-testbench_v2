@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import type { Page } from '@playwright/test';
 
 /**
  * KNews (`/knews`) — confirmed from source: NO KPost backend for content at all. `NewsList.js`
@@ -20,12 +21,44 @@ test.describe('KPost KNews — content feed', { tag: '@ui' }, () => {
     'needs a real live account (QA_KPOST_ID)',
   );
 
+  /**
+   * KNews settles into one of three documented states — articles, the empty state, or the feed-error
+   * state. Waiting for whichever arrives first replaces the fixed sleeps this file used until
+   * 2026-10-11 (the feed is slow and third-party; a timer was either too short or wasted time).
+   */
+  async function settledKnews(page: Page): Promise<void> {
+    // First let the feed's own loading state finish (a "Loading…" label plus the app's spinner
+    // overlay); the skeleton cards it shows meanwhile must not count as articles.
+    await page
+      .locator('.loader-overlay')
+      .waitFor({ state: 'hidden', timeout: 45_000 })
+      .catch(() => undefined);
+    await page
+      .getByText(/^Loading/i)
+      .first()
+      .waitFor({ state: 'hidden', timeout: 45_000 })
+      .catch(() => undefined);
+    await expect(
+      page
+        .locator('.jn-card-anchor, .jn-hero-anchor, .jn-v-anchor')
+        .first()
+        .or(
+          page
+            .getByText(
+              /No articles available|No articles match your search|Feed failed|News providers are temporarily unavailable/i,
+            )
+            .first(),
+        ),
+      'KNews reaches articles, its empty state, or its feed-error state',
+    ).toBeVisible({ timeout: 30_000 });
+  }
+
   test('the KNews screen loads into a real state: articles, an empty state, or a feed-error state — never a silent blank @ui', async ({
     page,
   }) => {
     const stop = watchUiHealth(page);
     await page.goto('/knews', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForTimeout(4_000);
+    await settledKnews(page);
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error on load').toEqual([]);
@@ -59,12 +92,11 @@ test.describe('KPost KNews — content feed', { tag: '@ui' }, () => {
     page,
   }) => {
     await page.goto('/knews', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForTimeout(3_000);
+    await settledKnews(page);
 
     const search = page.getByPlaceholder(/Search headlines/i).first();
     await expect(search, 'the search input renders').toBeVisible({ timeout: 15_000 });
     await search.fill(`zzqanomatch${Date.now()}`);
-    await page.waitForTimeout(1_000);
 
     const clearButton = page.locator('.jn-search-clear').first();
     await expect(clearButton, 'a Clear button appears once search text is entered').toBeVisible({
@@ -76,7 +108,7 @@ test.describe('KPost KNews — content feed', { tag: '@ui' }, () => {
 
   test('the World nav item opens the country selector @ui', async ({ page }) => {
     await page.goto('/knews', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForTimeout(2_000);
+    await settledKnews(page);
 
     await page
       .getByText(/^World$/i)
@@ -92,7 +124,7 @@ test.describe('KPost KNews — content feed', { tag: '@ui' }, () => {
     page,
   }) => {
     await page.goto('/knews', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForTimeout(4_000);
+    await settledKnews(page);
 
     const shareButton = page.locator('[title="Share"]').first();
     const hasArticle = await shareButton.isVisible({ timeout: 8_000 }).catch(() => false);

@@ -1,36 +1,20 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import type { Page } from '@playwright/test';
+import {
+  contactsSearchBox,
+  gotoContacts,
+  openAdvancedSearch,
+  openPeopleSearch,
+} from './support/contacts';
 
 /**
  * Security-fuzzing angle for Contacts' two free-text query fields — the contact-list search box
  * (client-side filter) and the Add-contact wizard's Advanced Search mobile-number field (a real
- * network round-trip: `waitForResponse('**\/contacts/**')` in `contacts-functional.spec.ts`). Same
- * execution-based check as `login-security.spec.ts`/`home-security.spec.ts`/`katchup-security.spec.ts`
- * (a `dialog` listener, not string-matching). Both fields are read-only queries — no lifecycle gate
- * needed, matching `contacts-functional.spec.ts`'s own no-gate treatment of these same two fields.
- *
- * Navigation mirrors `contacts-functional.spec.ts`'s own `gotoContacts` helper and Advanced-Search
- * path exactly (no shared `support/contacts.ts` module exists yet to import from).
+ * network round-trip). Same execution-based check as `login-security.spec.ts` /
+ * `katchup-security.spec.ts` (a `dialog` listener, not string-matching). Both fields are read-only
+ * queries — no lifecycle gate needed. Navigation: `support/contacts.ts` (re-tuned 2026-10-11).
  */
-
-async function gotoContacts(page: Page): Promise<boolean> {
-  await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-  await page
-    .locator('.loader-overlay')
-    .waitFor({ state: 'hidden', timeout: 30_000 })
-    .catch(() => undefined);
-  await page
-    .getByRole('tab', { name: 'Contacts' })
-    .click({ timeout: 15_000 })
-    .catch(() => undefined);
-  return page
-    .getByRole('searchbox', { name: 'Search' })
-    .first()
-    .isVisible({ timeout: 15_000 })
-    .catch(() => false);
-}
 
 const PAYLOADS: Array<{ name: string; value: string }> = [
   { name: 'script tag', value: '<script>alert(1)</script>' },
@@ -49,7 +33,10 @@ test.describe('KPost Contacts · search box security fuzzing', { tag: '@ui' }, (
       page,
     }) => {
       const opened = await gotoContacts(page);
-      test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
+      test.skip(
+        !opened,
+        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+      );
 
       const stop = watchUiHealth(page);
       let dialogFired = false;
@@ -58,18 +45,22 @@ test.describe('KPost Contacts · search box security fuzzing', { tag: '@ui' }, (
         void dialog.dismiss();
       });
 
-      const search = page.getByRole('searchbox', { name: 'Search' }).last();
+      const search = contactsSearchBox(page);
       await search.click();
       await search.fill(payload.value);
-      await page.waitForTimeout(1_500);
+      // The filter is synchronous on the client; give any injected handler a moment to fire.
+      await expect(search, 'the field holds the raw text').toHaveValue(payload.value);
+      // Two frames: any handler an injected payload could have attached has had its chance to run.
+      await page.evaluate(
+        () =>
+          new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+      );
 
       const health = stop();
-
       test.info().annotations.push({
         type: 'observed',
         description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
       });
-
       expect(
         health.pageErrors,
         `no uncaught JS error while filtering by: ${payload.value}`,
@@ -96,32 +87,14 @@ test.describe(
         page,
       }) => {
         const opened = await gotoContacts(page);
-        test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
-
-        await page
-          .locator('.icon-KP_107-User-Add')
-          .first()
-          .click({ timeout: 15_000 })
-          .catch(() => undefined);
-        await page
-          .getByText('Personal', { exact: true })
-          .first()
-          .click({ timeout: 5_000 })
-          .catch(() => undefined);
-        await page
-          .getByRole('button', { name: 'Continue' })
-          .first()
-          .click({ timeout: 8_000 })
-          .catch(() => undefined);
-        await page
-          .locator('.icon-KP_225_Advanced-Search')
-          .first()
-          .click({ timeout: 10_000 })
-          .catch(() => undefined);
-
-        const mobileField = page.getByRole('textbox', { name: 'Enter Mobile Number' }).first();
-        const reachable = await mobileField.isVisible({ timeout: 10_000 }).catch(() => false);
-        test.skip(!reachable, 'advanced search did not open — needs a codegen re-tune');
+        test.skip(
+          !opened,
+          'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+        );
+        const search = await openPeopleSearch(page);
+        expect(search, 'the people-search step renders').not.toBeNull();
+        const mobileField = await openAdvancedSearch(page);
+        expect(mobileField, 'Advanced Search opens with a mobile-number field').not.toBeNull();
 
         const stop = watchUiHealth(page);
         let dialogFired = false;
@@ -130,22 +103,24 @@ test.describe(
           void dialog.dismiss();
         });
 
-        await mobileField.click();
-        await mobileField.fill(payload.value);
+        await mobileField!.click();
+        await mobileField!.fill(payload.value);
+        const answered = page
+          .waitForResponse((r) => r.url().includes('/profile/advancedSearch/'), { timeout: 10_000 })
+          .then((r) => r.status())
+          .catch(() => 0);
         await page
           .getByRole('button', { name: 'Search', exact: true })
           .first()
           .click({ timeout: 5_000 })
           .catch(() => undefined);
-        await page.waitForTimeout(1_500);
+        const status = await answered;
 
         const health = stop();
-
         test.info().annotations.push({
           type: 'observed',
-          description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+          description: `search → HTTP ${status || 'none'}; page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
         });
-
         expect(health.pageErrors, `no uncaught JS error searching by: ${payload.value}`).toEqual(
           [],
         );
@@ -153,6 +128,9 @@ test.describe(
           dialogFired,
           `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
         ).toBe(false);
+        expect(status, `the server does not fail on the payload: ${payload.value}`).toBeLessThan(
+          500,
+        );
       });
     }
   },

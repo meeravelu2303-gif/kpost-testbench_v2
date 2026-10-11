@@ -1,6 +1,8 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames, settleNetwork } from './support/settle';
+import type { Page } from '@playwright/test';
 
 /**
  * K-ECommerce (`/e-commerce`) — has a real, correctly-wired backend
@@ -21,12 +23,25 @@ test.describe('KPost K-ECommerce — merchant grid', { tag: '@ui' }, () => {
     'needs a real live account (QA_KPOST_ID)',
   );
 
+  /** The grid is populated by one fetch after mount; wait for a card or for that fetch to answer. */
+  async function settledCommerce(page: Page): Promise<void> {
+    await Promise.race([
+      page
+        .locator('.ECommerce_Card')
+        .first()
+        .waitFor({ state: 'visible', timeout: 15_000 })
+        .catch(() => undefined),
+      settleNetwork(page, /commerce|merchant|vendor/i, 15_000),
+    ]);
+    await settleFrames(page);
+  }
+
   test('the E-Commerce screen loads without crashing, whether the merchant grid is populated or empty @ui', async ({
     page,
   }) => {
     const stop = watchUiHealth(page);
     await page.goto('/e-commerce', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForTimeout(2_500);
+    await settledCommerce(page);
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error on load').toEqual([]);
@@ -47,7 +62,7 @@ test.describe('KPost K-ECommerce — merchant grid', { tag: '@ui' }, () => {
     context,
   }) => {
     await page.goto('/e-commerce', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForTimeout(2_500);
+    await settledCommerce(page);
 
     const firstCard = page.locator('.ECommerce_Card').first();
     const hasCard = await firstCard.isVisible({ timeout: 5_000 }).catch(() => false);

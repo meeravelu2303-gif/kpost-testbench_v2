@@ -12,6 +12,7 @@ import {
 import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
 import { writeFileSync } from 'node:fs';
+import { settleFrames } from './support/settle';
 
 /**
  * Deep WCAG accessibility angle (axe-core, full ruleset) for the SIGNED-OUT screens — the same tool
@@ -113,7 +114,7 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
   }, testInfo) => {
     await page.goto(signupPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await signupPage.expectLoaded();
-    await page.waitForTimeout(1200);
+    await settleFrames(page, 3);
     await scanCurrentPage(page, testInfo, 'Signup — account type', '/signup');
   });
 
@@ -128,7 +129,7 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
       .locator('.category-contentBox-layout')
       .first()
       .waitFor({ state: 'visible', timeout: 20_000 });
-    await page.waitForTimeout(1200);
+    await settleFrames(page, 3);
     await scanCurrentPage(page, testInfo, 'Signup — Business category', '/signup');
   });
 
@@ -138,7 +139,7 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
   }, testInfo) => {
     await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
     await loginPage.expectLoaded();
-    await page.waitForTimeout(1200);
+    await settleFrames(page, 3);
     await scanCurrentPage(page, testInfo, 'Login — id entry', '/login');
   });
 
@@ -154,9 +155,9 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
       .catch(() => undefined);
     test.skip(
       !(await loginPage.passwordInput.isVisible()),
-      'the fixed probe id did not exist on this host — step 2 never mounted',
+      'the fixed probe id was not accepted right now — step 2 was not shown',
     );
-    await page.waitForTimeout(1200);
+    await settleFrames(page, 3);
     await scanCurrentPage(page, testInfo, 'Login — password entry', '/login');
   });
 
@@ -175,7 +176,7 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
       .catch(() => undefined);
     test.skip(
       !(await loginPage.passwordInput.isVisible()),
-      'the fixed probe id did not exist on this host — the password step (and its Forgot Password link) never mounted',
+      'the fixed probe id was not accepted right now — the password step (and its Forgot Password link) was not shown',
     );
     await page
       .getByText(/Forgot Password/i)
@@ -185,7 +186,7 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
       .getByText(/^Forgot Password$/i)
       .first()
       .waitFor({ state: 'visible', timeout: 15_000 });
-    await page.waitForTimeout(1200);
+    await settleFrames(page, 3);
     await scanCurrentPage(page, testInfo, 'Login — Forgot Password modal', '/login');
   });
 
@@ -222,7 +223,7 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
     const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
     test.skip(otpEntryOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
 
-    await page.waitForTimeout(1200);
+    await settleFrames(page, 3);
     await scanCurrentPage(page, testInfo, 'Signup — Personal details (post-OTP)', '/signup');
   });
 
@@ -257,8 +258,8 @@ test.describe('KPost signed-out screens — accessibility (axe-core WCAG)', { ta
       dobMonth: 'June',
       dobYear: 1995,
     });
-    await page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
-    await page.waitForTimeout(1200);
+    await page.getByRole('button', { name: /^Continue$/i }).click();
+    await settleFrames(page, 3);
     await scanCurrentPage(
       page,
       testInfo,

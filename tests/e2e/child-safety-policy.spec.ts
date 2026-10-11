@@ -1,5 +1,6 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * `/child-safety-standards-policy` — a PUBLIC route (explicitly excluded from the auth-redirect check
@@ -28,7 +29,8 @@ test.describe('KPost Child Safety Policy — public route', { tag: '@ui' }, () =
       waitUntil: 'domcontentloaded',
       timeout: 45_000,
     });
-    await page.waitForTimeout(2_000);
+    await page.waitForLoadState('load');
+    await settleFrames(page);
 
     const health = stop();
 

@@ -1,5 +1,6 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * `/kall-window` (`KallWindow.js`) — listed as a public/no-redirect route in `MenuRoutes.js`, but
@@ -19,7 +20,8 @@ test.describe('KPost — /kall-window (no session)', { tag: '@ui' }, () => {
   }) => {
     const stop = watchUiHealth(page);
     await page.goto('/kall-window', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForTimeout(2_000);
+    await page.waitForLoadState('load');
+    await settleFrames(page);
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error with no session').toEqual([]);

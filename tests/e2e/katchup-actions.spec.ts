@@ -1,6 +1,12 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import type { Locator, Page } from '@playwright/test';
+import {
+  EDITOR,
+  deleteSentMessage,
+  openBellMenu,
+  openComposer,
+  sendMessage,
+} from './support/katchup';
 
 /**
  * Katchup **sender message actions** — the post-send control set that is KPost's reason to exist
@@ -25,63 +31,9 @@ import type { Locator, Page } from '@playwright/test';
  * file a false bug. Tune with a `codegen` recording, then remove this note.
  */
 
-/** The composer's editable Quill area (not a read-only sent-message display). */
-const EDITOR = '.ql-editor[contenteditable="true"]';
-
-/** Open Katchup, wait out the loader overlay, open the 2nd QA account's conversation + composer. */
-async function openComposer(page: Page): Promise<void> {
-  await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-  await page
-    .locator('.loader-overlay')
-    .waitFor({ state: 'hidden', timeout: 30_000 })
-    .catch(() => undefined);
-
-  const conversation = page.locator(`[id="${testData.victimKpostId}"]`).first();
-  await expect(conversation, 'the 2nd QA account is in the conversation list').toBeVisible({
-    timeout: 20_000,
-  });
-  await conversation.click();
-  await page.locator('.msg-arrow').first().click();
-}
-
-/** Send a uniquely-subjected message to the 2nd QA account and return the sent-message element. */
-async function sendMessage(page: Page, subject: string, body: string): Promise<Locator> {
-  await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
-  await page.locator(EDITOR).first().click();
-  await page.keyboard.type(body);
-  await page.keyboard.press('Enter');
-
-  await expect(page.getByText(subject).first(), 'the sent message appears').toBeVisible({
-    timeout: 20_000,
-  });
-  // The message is a DOM element with its own action trigger; scope to the one carrying our subject.
-  return page
-    .locator('[id]')
-    .filter({ hasText: subject })
-    .filter({ has: page.getByTestId('NotificationsNoneIcon') })
-    .last();
-}
-
-/** Open the sender action (bell) menu on a specific sent message. */
-async function openBellMenu(page: Page, message: Locator): Promise<void> {
-  await message.hover();
-  await message.getByTestId('NotificationsNoneIcon').first().click();
-}
-
-/** Delete the message carrying `subject` (bell → Delete → Confirm) — the shared self-clean step. */
-async function deleteSentMessage(page: Page, subject: string): Promise<void> {
-  const sent = page
-    .locator('[id]')
-    .filter({ hasText: subject })
-    .filter({ has: page.getByTestId('NotificationsNoneIcon') })
-    .last();
-  await openBellMenu(page, sent);
-  await page.getByRole('menuitem', { name: /Delete/i }).click();
-  await page
-    .getByRole('button', { name: /^Confirm$/i })
-    .click()
-    .catch(() => undefined);
-}
+// Shared Katchup steps live in support/katchup.ts (2026-10-11: this file's private copies were
+// retired — its `openComposer` could not find the 2nd account once the Recents list filled up with
+// other threads; the shared one falls back to the list search).
 
 test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' }, () => {
   test.skip(
@@ -175,15 +127,42 @@ test.describe('KPost Katchup · sender message actions (write)', { tag: '@ui' },
     await openComposer(page);
     const message = await sendMessage(page, subject, 'QA UI save — self-cleaning');
 
-    // Bell menu → Save. This is a single-click action (`handleSaveButtonClickBell([msgID])`) that
-    // bookmarks the message; there is no dialog, so acceptance = the menu closing.
+    // Bell menu → Save. `handleSaveButtonClickBell([msgID])` opens a NATIVE `window.confirm`
+    // ("Only the selected message will be saved, the rest will be deleted. Click OK to confirm" /
+    // "You have selected only N out of M …") and only then POSTs /katchup/saveKatchupMessages/.
+    // Until 2026-10-11 this test called the menu closing "accepted" while Playwright silently
+    // auto-dismissed that confirm — nothing was ever saved. Accepting it would delete every other
+    // message in the shared QA conversation, so the test verifies the confirmation and cancels.
+    const confirms: string[] = [];
+    page.on('dialog', (d) => {
+      confirms.push(`${d.type()}: ${d.message()}`);
+      void d.dismiss();
+    });
+    let saveRequests = 0;
+    page.on('request', (r) => {
+      if (r.url().includes('/katchup/saveKatchupMessages/')) saveRequests++;
+    });
     await openBellMenu(page, message);
-    const save = page.getByRole('menuitem', { name: /Save/i });
+    const save = page
+      .getByRole('menuitem')
+      .filter({ hasText: /^\s*Save\s*$/i })
+      .first();
     await expect(save, 'the sender action menu offers Save').toBeVisible({ timeout: 15_000 });
     await save.click();
-    await expect(save, 'the Save action was accepted (menu closed)').toHaveCount(0, {
-      timeout: 15_000,
-    });
+    await expect
+      .poll(() => confirms.length, {
+        message: 'Save opens a Save Messages confirmation dialog',
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0);
+    test.info().annotations.push({ type: 'observed', description: confirms.join(' || ') });
+    expect(confirms[0], 'the dialog is a confirm about saving the selected message').toMatch(
+      /confirm: .*(saved|Message Folder)/i,
+    );
+    await page
+      .waitForRequest((r) => r.url().includes('/katchup/saveKatchupMessages/'), { timeout: 1_500 })
+      .catch(() => undefined);
+    expect(saveRequests, 'cancelling the confirmation saves nothing').toBe(0);
 
     await deleteSentMessage(page, subject);
   });

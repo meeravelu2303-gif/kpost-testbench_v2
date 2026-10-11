@@ -1,5 +1,6 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * Security-fuzzing angle for the Login screen's id field — the counterpart to
@@ -63,7 +64,7 @@ test.describe('KPost login · security fuzzing', { tag: '@ui' }, () => {
         .waitFor({ state: 'visible', timeout: 10_000 })
         .catch(() => undefined);
       // A dialog from an injected handler can fire slightly after the toast settles.
-      await page.waitForTimeout(1_000);
+      await settleFrames(page, 3);
 
       const health = stop();
 

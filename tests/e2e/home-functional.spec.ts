@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * Functional coverage for what is UNIQUELY Home's own: the Recents/Contacts tab switcher and the
@@ -63,7 +64,7 @@ test.describe('KPost Home · dashboard functional behaviour', { tag: '@ui' }, ()
     // zero list rows are all valid implementations), so this asserts only what the title claims and
     // what is selector-independent: a client-side filter keeps the user on the Home screen — it must
     // not navigate away or reload into a search results route.
-    await page.waitForTimeout(1500);
+    await settleFrames(page);
     await expect(page, 'filtering Recents stays on the Home screen (client-side filter)').toHaveURL(
       /\/home/,
     );
@@ -175,7 +176,7 @@ test.describe('KPost Home · dashboard functional behaviour', { tag: '@ui' }, ()
 
     // Soft, deliberately: the exact "conversation opened" UI (an expanded chat panel, a route
     // change, a modal) isn't pinned — this only confirms the click didn't leave the page broken.
-    await page.waitForTimeout(1500);
+    await settleFrames(page);
     await expect(page.locator('body')).toBeVisible();
   });
 });

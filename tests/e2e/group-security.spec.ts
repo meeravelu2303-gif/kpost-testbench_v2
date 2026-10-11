@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { gotoContacts, openCreateGroup } from './support/contacts';
 
 /**
  * Security-fuzzing angle for Group's **Group Name** field. Deliberately never reaches Create: unlike
@@ -38,27 +39,26 @@ test.describe('KPost Group · Group Name field security fuzzing', { tag: '@ui' }
         void dialog.dismiss();
       });
 
-      await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
-
-      await page
-        .locator('.icon-KP_112-Group-Add')
-        .first()
-        .click()
-        .catch(() => undefined);
-
-      const nameField = page
-        .getByRole('textbox', { name: /Group Name/i })
-        .or(page.getByPlaceholder(/Group Name/i))
-        .first();
-      const opened = await nameField.isVisible({ timeout: 15_000 }).catch(() => false);
-      test.skip(!opened, 'the Create New Group modal did not open — needs a codegen re-tune');
+      // The create-group icon lives in the Contacts tab (support/contacts.ts, re-tuned 2026-10-11).
+      const tabOpened = await gotoContacts(page);
+      test.skip(
+        !tabOpened,
+        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+      );
+      const modal = await openCreateGroup(page);
+      expect(modal, 'the Create New Group modal opens').not.toBeNull();
+      const nameField = modal!.getByRole('textbox', { name: /Group Name/i }).first();
+      await expect(nameField, 'the Group Name field renders').toBeVisible();
 
       await nameField.fill(payload.value);
-      await page.waitForTimeout(1_500);
+      await expect(nameField, 'the field holds the raw text, unmodified').toHaveValue(
+        payload.value,
+      );
+      // Two frames: any handler an injected payload could have attached has had its chance to run.
+      await page.evaluate(
+        () =>
+          new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+      );
 
       const health = stop();
 

@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import type { Page } from '@playwright/test';
 import { expect, test } from '@fixtures';
+import { pickReactSelect, reactSelectByPlaceholder } from './support/react-select';
 
 /**
  * Settings · KNews Settings panel (`Knewssettings.js`) — an 11-field cascading form (Country ->
@@ -33,18 +34,13 @@ test.describe('KPost Settings · KNews Settings panel', { tag: '@ui' }, () => {
    * non-empty to unlock the next field, per the `isDisabled={knewsdata.X ? false : true}` chain).
    */
   async function pick(page: Page, placeholder: string, option: string, multi = false) {
-    const control = page.getByText(placeholder, { exact: true }).first();
-    await expect(control, `the "${placeholder}" control is visible and enabled`).toBeVisible({
-      timeout: 10_000,
+    // The control still SHOWING its placeholder is the unfilled one (support/react-select.ts) —
+    // typed into its own input, option clicked, menu confirmed closed; no forced click, no timers.
+    // The isMulti checkbox lists do not filter on typed text, so they are opened and read instead.
+    await pickReactSelect(reactSelectByPlaceholder(page, placeholder), option, {
+      multi,
+      typeToFilter: !multi,
     });
-    await control.click({ force: true });
-    await page.waitForTimeout(250);
-    await page.locator('.react-select__menu').getByText(option, { exact: true }).click();
-    await page.waitForTimeout(250);
-    if (multi) {
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(250);
-    }
   }
 
   test('the full 11-field chain unlocks in order, and Submit reveals a hardcoded summary regardless of selections @ui', async ({

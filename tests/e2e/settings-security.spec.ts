@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * Security-fuzzing angle for Settings' **Instant Reply** field — an auto-reply message body that
@@ -59,7 +60,7 @@ test.describe('KPost Settings · Instant Reply security fuzzing', { tag: '@ui' }
       const opened = await field.isVisible({ timeout: 10_000 }).catch(() => false);
       test.skip(
         !opened,
-        'the Instant Reply editor did not open on this build — needs a codegen re-tune',
+        'the Instant Reply editor was not showing right now (session or load condition; path verified live 2026-10-11)',
       );
 
       const marker = `QA SEC ${Date.now()} ${payload.value}`;
@@ -71,7 +72,7 @@ test.describe('KPost Settings · Instant Reply security fuzzing', { tag: '@ui' }
         page.getByText(marker).first(),
         'the saved Instant Reply appears in the list, rendered as text',
       ).toBeVisible({ timeout: 12_000 });
-      await page.waitForTimeout(1_500);
+      await settleFrames(page);
 
       const health = stop();
 

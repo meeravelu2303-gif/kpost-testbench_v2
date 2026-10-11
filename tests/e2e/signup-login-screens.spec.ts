@@ -135,7 +135,7 @@ test.describe('KPost signed-out screens — deep UI sweep', { tag: '@ui' }, () =
     // "missing control" finding for a step this run never got to.
     test.skip(
       !(await loginPage.passwordInput.isVisible()),
-      'the fixed probe id did not exist on this host — step 2 never mounted',
+      'the fixed probe id was not accepted right now — step 2 was not shown',
     );
 
     const screen: ScreenDef = {
@@ -169,7 +169,7 @@ test.describe('KPost signed-out screens — deep UI sweep', { tag: '@ui' }, () =
       .catch(() => undefined);
     test.skip(
       !(await loginPage.passwordInput.isVisible()),
-      'the fixed probe id did not exist on this host — the password step (and its Forgot Password link) never mounted',
+      'the fixed probe id was not accepted right now — the password step (and its Forgot Password link) was not shown',
     );
     await page
       .getByText(/Forgot Password/i)

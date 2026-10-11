@@ -2,6 +2,7 @@ import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * Stored-XSS verification for KMail's thread-view mail-bubble renderer.
@@ -83,7 +84,7 @@ test.describe('KPost KMail · stored XSS on thread-view render', { tag: '@ui' },
     // Body FIRST — filling the To field opens a recipient autocomplete that destabilises the layout
     // (same proven order as `kmail-compose.spec.ts` / `kmail-security.spec.ts`).
     const body = page.locator('.ql-editor[contenteditable="true"]').first();
-    await body.click({ force: true });
+    await body.click();
     await page.keyboard.type(`QA UI stored-XSS render check — ${payload}`);
 
     const to = page.locator('.subjectTextboxKmailTO, input[name="to"]').first();
@@ -111,7 +112,7 @@ test.describe('KPost KMail · stored XSS on thread-view render', { tag: '@ui' },
         .or(page.locator('.Toastify__toast--success').first()),
       'the mail was sent',
     ).toBeVisible({ timeout: 20_000 });
-    await page.waitForTimeout(1_500);
+    await settleFrames(page);
 
     const healthSender = stopSender();
     // Logged as context, not asserted: the sender screen can throw unrelated JS errors (other
@@ -146,7 +147,7 @@ test.describe('KPost KMail · stored XSS on thread-view render', { tag: '@ui' },
       // mail list by `kmailSubject` against this search box (`.Serach_input`, `SearchBar.js`).
       const search = receiver.locator('.Serach_input').first();
       await search.fill(subject);
-      await receiver.waitForTimeout(1_000);
+      // The list filter is client-side; the visibility wait below is the only wait it needs.
 
       const received = receiver.getByText(subject, { exact: false }).first();
       await expect(received, 'account 2 receives the mail account 1 sent').toBeVisible({
@@ -162,7 +163,23 @@ test.describe('KPost KMail · stored XSS on thread-view render', { tag: '@ui' },
       await expect(bodyLocator, 'the mail body renders in the thread view').toBeVisible({
         timeout: 20_000,
       });
-      await receiver.waitForTimeout(1_500); // let onerror fire if it's going to
+      // An injected `onerror` fires when its image fails to load — wait for the body's images to
+      // settle (loaded or errored) instead of guessing a delay.
+      await bodyLocator
+        .evaluate((el) =>
+          Promise.all(
+            Array.from(el.querySelectorAll('img')).map(
+              (img) =>
+                new Promise<void>((done) => {
+                  if (img.complete) return done();
+                  img.addEventListener('load', () => done(), { once: true });
+                  img.addEventListener('error', () => done(), { once: true });
+                }),
+            ),
+          ),
+        )
+        .catch(() => undefined);
+      await settleFrames(receiver);
 
       const fired = await receiver.evaluate(() =>
         Boolean((window as unknown as Record<string, unknown>).__xssFired),

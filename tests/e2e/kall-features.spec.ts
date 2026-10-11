@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall';
 
 /**
  * **Kall** feature flows (FR-C01..C09, BR-C01), from `components/Kall/` (see `docs/ui/ui-build-plan.md`).
@@ -61,31 +62,12 @@ test.describe('KPost Kall · schedule a Kool Kall (write)', { tag: '@ui' }, () =
     page,
   }) => {
     const title = `QA UI kall ${Date.now()}`;
-    await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-
-    // Switch to the Kool Kall TAB (the nav button, not the "Today's Kool Kalls" heading).
-    await page
-      .getByRole('button', { name: /Kool Kall/i })
-      .first()
-      .click()
-      .catch(() => undefined);
-
-    // Open the CreateKallModal via the cursor-pointer `.create_font`. Wait for it, and retry the open
-    // once if the first click does not surface the modal (the SPA occasionally swallows the first tap).
-    const modal = page.locator('.modal-content');
-    const titleField = modal.locator('input[placeholder="Enter Meeting Title"]').first();
-    const createBtn = page.locator('.create_font').first();
-    await expect(createBtn, 'the Create control is present on the Kool Kall tab').toBeVisible({
-      timeout: 20_000,
-    });
-    await createBtn.click({ force: true });
-    if (!(await titleField.isVisible().catch(() => false))) {
-      await createBtn.click({ force: true });
-    }
+    // Kool Kall tab + Create → the Create Kool Kall modal (support/kall.ts, re-tuned 2026-10-11).
+    await gotoKoolKall(page);
+    const opened = await openCreateKall(page);
+    expect(opened, 'the schedule modal opens').not.toBeNull();
+    const modal = opened!;
+    const titleField = meetingTitleField(modal);
     await expect(titleField, 'the schedule modal opens with a Meeting Title field').toBeVisible({
       timeout: 15_000,
     });
@@ -104,14 +86,16 @@ test.describe('KPost Kall · schedule a Kool Kall (write)', { tag: '@ui' }, () =
 
     // The participant picker opens (Invite Participants reveals the contact list) — the last step before
     // Submit; selecting a contact from it is the codegen-pending piece documented above.
+    // The "Invite" action beside the Participant field opens the picker (the field text itself is
+    // a placeholder, not the trigger — screenshot 2026-10-11).
     await modal
-      .getByText(/Invite Participants/i)
+      .getByText(/^Invite$/)
       .first()
-      .click({ force: true });
-    // "Qa Tester2" was a stale name that no longer exists in this account's contacts; the 2nd QA account
-    // (testData.victimKpostId) renders here as "Hamza Ali" (confirmed live in the picker's contact list).
+      .click();
+    // The picker lists this account's contacts as selectable rows; the names depend on the account
+    // in use, so assert the list (a row avatar or checkbox), not a name.
     await expect(
-      page.getByText(/^Hamza Ali$/i).first(),
+      page.locator('[role="dialog"] .sb-avatar, [role="dialog"] input[type="checkbox"]').first(),
       'the participant picker lists selectable contacts',
     ).toBeVisible({ timeout: 15_000 });
   });

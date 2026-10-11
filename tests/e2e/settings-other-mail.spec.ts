@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { pickReactSelect, reactSelectByPlaceholder } from './support/react-select';
 
 /**
  * Settings · Add Other Mail Accounts panel (`Othermail.js`) — confirmed from source: no
@@ -45,15 +46,10 @@ test.describe('KPost Settings · Add Other Mail Accounts panel', { tag: '@ui' },
     await settingsPage.goto();
     await settingsPage.openPanel('KMail Settings', 'Add Other Mail Accounts');
 
-    const providerControl = page.getByText('Select your email provider', { exact: true }).first();
-    await expect(
-      providerControl,
-      'the (correctly labelled) Mail Provider control renders',
-    ).toBeVisible({
-      timeout: 15_000,
-    });
-    await providerControl.click({ force: true });
-    await page.locator('.react-select__menu').getByText('Yahoo Gmail', { exact: true }).click();
+    await pickReactSelect(
+      reactSelectByPlaceholder(page, /Select your email provider/),
+      /^Yahoo Gmail$/,
+    );
 
     // Confirmed from source: Next (and the Gmail ID picker) only render inside `{gmailopen && (...)}`,
     // and a non-Gmail provider sets `gmailopen` to the boolean `false` — so Next must never appear.
@@ -64,40 +60,46 @@ test.describe('KPost Settings · Add Other Mail Accounts panel', { tag: '@ui' },
     ).toHaveCount(0);
   });
 
-  test('picking Gmail but no specific Gmail ID, then Next, opens a broken sign-in URL with "Email=undefined" @ui', async ({
+  test('picking Gmail but no specific Gmail ID leaves Next disabled — no sign-in URL can open without an address @ui', async ({
     page,
     context,
     settingsPage,
   }) => {
+    /*
+     * History: until 2026-10-11 this test proved the opposite — Next was live before any Gmail ID
+     * was chosen and opened Google sign-in with the literal "Email=undefined". The live build now
+     * renders Next disabled until an ID is picked (screenshot 2026-10-11), so the assertion is the
+     * correct behaviour; if Next ever becomes clickable again without an address, the popup/URL
+     * check below catches the regression.
+     */
     await settingsPage.goto();
     await settingsPage.openPanel('KMail Settings', 'Add Other Mail Accounts');
 
-    const providerControl = page.getByText('Select your email provider', { exact: true }).first();
-    await expect(providerControl, 'the Mail Provider control renders').toBeVisible({
-      timeout: 15_000,
-    });
-    await providerControl.click({ force: true });
-    await page.locator('.react-select__menu').getByText('Gmail', { exact: true }).click();
+    await pickReactSelect(reactSelectByPlaceholder(page, /Select your email provider/), /^Gmail$/);
 
     const nextButton = page.getByRole('button', { name: /^Next$/i });
-    await expect(
-      nextButton,
-      'choosing Gmail reveals Next immediately — before any specific Gmail ID is picked',
-    ).toBeVisible({ timeout: 10_000 });
-
-    const [popup] = await Promise.all([
-      context.waitForEvent('page', { timeout: 10_000 }),
+    await expect(nextButton, 'choosing Gmail reveals the Next button').toBeVisible({
+      timeout: 10_000,
+    });
+    const enabled = await nextButton.isEnabled();
+    test.info().annotations.push({
+      type: 'observed',
+      description: `Next enabled before a Gmail ID is chosen: ${enabled}`,
+    });
+    if (!enabled) {
+      await expect(nextButton, 'Next stays disabled until a Gmail ID is chosen').toBeDisabled();
+      return;
+    }
+    const popup = await Promise.all([
+      context.waitForEvent('page', { timeout: 10_000 }).catch(() => undefined),
       nextButton.click(),
-    ]);
-
-    // Confirmed from source: no validation alert fires here (the else-branch is unreachable), and
-    // `gmailopen` is still the bare boolean `true`, so `gmailopen.value` is `undefined`.
+    ]).then(([p]) => p);
+    const url = popup?.url() ?? '(no popup)';
+    await popup?.close().catch(() => undefined);
     expect(
-      popup.url(),
-      'with no Gmail ID ever chosen, the opened URL carries the literal string "Email=undefined" — ' +
-        'proof the validation guard never ran',
-    ).toContain('Email=undefined');
-    await popup.close();
+      url,
+      'with no Gmail ID chosen, Next must not open a sign-in URL (and never one with "Email=undefined")',
+    ).not.toMatch(/Email=undefined|accounts\.google/);
   });
 
   test('selecting a specific Gmail ID, then Next, opens Google sign-in with that email @ui', async ({
@@ -108,22 +110,13 @@ test.describe('KPost Settings · Add Other Mail Accounts panel', { tag: '@ui' },
     await settingsPage.goto();
     await settingsPage.openPanel('KMail Settings', 'Add Other Mail Accounts');
 
-    const providerControl = page.getByText('Select your email provider', { exact: true }).first();
-    await expect(providerControl, 'the Mail Provider control renders').toBeVisible({
-      timeout: 15_000,
-    });
-    await providerControl.click({ force: true });
-    await page.locator('.react-select__menu').getByText('Gmail', { exact: true }).click();
+    await pickReactSelect(reactSelectByPlaceholder(page, /Select your email provider/), /^Gmail$/);
 
-    const gmailIdControl = page.getByText('Select your Gmail ID', { exact: true }).first();
+    const gmailIdControl = reactSelectByPlaceholder(page, /Select your Gmail ID/);
     await expect(gmailIdControl, 'choosing Gmail reveals the Gmail ID picker').toBeVisible({
       timeout: 10_000,
     });
-    await gmailIdControl.click({ force: true });
-    await page
-      .locator('.react-select__menu')
-      .getByText('ramraj1985@gmail.com', { exact: true })
-      .click();
+    await pickReactSelect(gmailIdControl, /^ramraj1985@gmail\.com$/);
 
     const [popup] = await Promise.all([
       context.waitForEvent('page', { timeout: 10_000 }),

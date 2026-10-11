@@ -6,6 +6,8 @@ import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
 import type { Page, TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
+import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall';
+import { settleAnimations } from './support/usermanagement';
 
 /**
  * Deep WCAG scan (axe-core) for Kall's own DYNAMIC states — the Kool Kall tab active, and the
@@ -117,31 +119,11 @@ test.describe('KPost Kall · dynamic-state accessibility (axe-core WCAG)', { tag
   test('Kall — schedule modal (CreateKallModal) open — WCAG violations (axe) @ui', async ({
     page,
   }, testInfo) => {
-    await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-    await page
-      .getByRole('button', { name: /Kool Kall/i })
-      .first()
-      .click()
-      .catch(() => undefined);
-
-    const modal = page.locator('.modal-content');
-    const titleField = modal.locator('input[placeholder="Enter Meeting Title"]').first();
-    const createBtn = page.locator('.create_font').first();
-    await expect(createBtn, 'the Create control is present on the Kool Kall tab').toBeVisible({
-      timeout: 20_000,
-    });
-    await createBtn.click({ force: true });
-    if (!(await titleField.isVisible().catch(() => false))) {
-      await createBtn.click({ force: true });
-    }
-    const opened = await titleField.isVisible({ timeout: 15_000 }).catch(() => false);
-    test.skip(!opened, 'the schedule modal did not open on this build — needs a codegen re-tune');
-
-    await page.waitForTimeout(1000);
+    await gotoKoolKall(page);
+    const modal = await openCreateKall(page);
+    expect(modal, 'the Create Kool Kall modal opens').not.toBeNull();
+    await expect(meetingTitleField(modal!), 'the meeting title field renders').toBeVisible();
+    await settleAnimations(modal!);
     await scanCurrentPage(page, testInfo, 'Kall — schedule modal open');
   });
 });

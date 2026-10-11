@@ -18,37 +18,19 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
   test('the KCloud screen loads and shows the storage usage summary @ui', async ({ page }) => {
     const stop = watchUiHealth(page);
     await page.goto('/kcloud', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForTimeout(1500);
-
-    const health = stop();
-    expect(health.pageErrors, 'no uncaught JS error on load').toEqual([]);
     await expect(
       page.getByText(/GB of .* used/i).first(),
       'the storage usage summary renders',
     ).toBeVisible({ timeout: 15_000 });
+
+    const health = stop();
+    expect(health.pageErrors, 'no uncaught JS error on load').toEqual([]);
   });
 
   test('"Documents" switches to the app-data breakdown, whose "Clear" buttons are confirmed dead @ui', async ({
     page,
   }) => {
     await page.goto('/kcloud', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-
-    let requestFired = false;
-    page.on('request', (req) => {
-      const url = req.url();
-      // katchupDashboardMsg is an unrelated background poll (confirmed live 2026-10-01: it fires
-      // continuously on this page regardless of what's clicked) - excluding it so it can't produce a
-      // false "a request fired" result for these confirmed-dead buttons.
-      if (
-        url.includes('/health') ||
-        url.includes('.js') ||
-        url.includes('.css') ||
-        url.includes('katchupDashboardMsg')
-      ) {
-        return;
-      }
-      requestFired = true;
-    });
 
     await page
       .getByText(/^Documents$/i)
@@ -59,6 +41,15 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
       'the app-data breakdown view renders',
     ).toBeVisible({ timeout: 10_000 });
 
+    // Listen only from here: the screen's own data loads (POSTs on mount and on the Documents
+    // switch) must not be mistaken for the buttons doing something. A WRITE to the API after the
+    // clicks is the only thing that would mean a handler exists; background polls are excluded.
+    const fired: string[] = [];
+    page.on('request', (req) => {
+      const url = req.url();
+      if (req.method() === 'GET' || /health|katchupDashboardMsg/.test(url)) return;
+      fired.push(`${req.method()} ${url.replace(/^https?:\/\/[^/]+/, '')}`);
+    });
     await page
       .getByText(/Clear All Data/i)
       .first()
@@ -67,12 +58,17 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
       .getByText(/Clear By Date/i)
       .first()
       .click();
-    await page.waitForTimeout(1_000);
+    // Both buttons are confirmed handler-less; give a request one second to appear, no longer.
+    await page
+      .waitForRequest((r) => r.method() !== 'GET' && !/health|katchupDashboardMsg/.test(r.url()), {
+        timeout: 1_000,
+      })
+      .catch(() => undefined);
 
     expect(
-      requestFired,
-      '"Clear All Data" and "Clear By Date" are confirmed from source to have no onClick handlers',
-    ).toBe(false);
+      fired,
+      '"Clear All Data" and "Clear By Date" are confirmed from source to have no onClick handlers — no write must follow the clicks',
+    ).toEqual([]);
   });
 
   test('"Buy" opens the storage-plans view, and "Buy Yearly" opens a purchase modal ending in a real "Payment SuccessFul" screen @ui', async ({
@@ -88,13 +84,11 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
     let requestFired = false;
     page.on('request', (req) => {
       const url = req.url();
-      // katchupDashboardMsg is an unrelated background poll (confirmed live 2026-10-01) - excluding it
-      // so it can't produce a false "a request fired" result for this confirmed-dead button, or for
-      // the local-only "buy" flow's own no-network-call assertion below.
+      // Only a WRITE to the API would be this button (or the local-only "buy" flow) doing something;
+      // background GETs must not count as "the button fired".
       if (
+        req.method() === 'GET' ||
         url.includes('/health') ||
-        url.includes('.js') ||
-        url.includes('.css') ||
         url.includes('katchupDashboardMsg')
       ) {
         return;
@@ -107,7 +101,11 @@ test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
       .getByText(/Buy Monthly/i)
       .first()
       .click();
-    await page.waitForTimeout(500);
+    await page
+      .waitForRequest((r) => !/health|\.js|\.css|katchupDashboardMsg/.test(r.url()), {
+        timeout: 1_000,
+      })
+      .catch(() => undefined);
     expect(requestFired, '"Buy Monthly" is confirmed from source to have no onClick handler').toBe(
       false,
     );

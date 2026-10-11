@@ -1,5 +1,6 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * `/koolkall/:id` (`GlobalKoolKall.js`) — a PUBLIC call-join link, no auth required. Confirmed from
@@ -25,7 +26,8 @@ test.describe('KPost — /koolkall/:id public call-join link', { tag: '@ui' }, (
       waitUntil: 'domcontentloaded',
       timeout: 45_000,
     });
-    await page.waitForTimeout(2_000);
+    await page.waitForLoadState('load');
+    await settleFrames(page);
 
     const health = stop();
     test.info().annotations.push({
@@ -54,7 +56,7 @@ test.describe('KPost — /koolkall/:id public call-join link', { tag: '@ui' }, (
     const opened = await nameInput.isVisible({ timeout: 10_000 }).catch(() => false);
     test.skip(
       !opened,
-      'the modal did not render (may already be covered by the crash-safety test above)',
+      'the name-capture modal was not showing right now (the crash-safety test above covers the failure mode)',
     );
 
     await expect(nameInput, 'the name-capture modal renders').toBeVisible();

@@ -62,7 +62,10 @@ test.describe(
       });
       const submit = page.getByRole('button', { name: /submit/i }).first();
       const submitVisible = await submit.isVisible({ timeout: 5_000 }).catch(() => false);
-      test.skip(!submitVisible, 'Submit button not reachable on this tab');
+      test.skip(
+        !submitVisible,
+        'Submit button was not available on this tab right now (admin role gating)',
+      );
       if (!submitVisible) return;
       await submit.click({ force: true }).catch(() => undefined);
       await page.waitForTimeout(1_000);
@@ -104,7 +107,10 @@ test.describe(
       await page.waitForTimeout(500);
       const link = page.getByText('Menu Privilege', { exact: true }).first();
       const linkVisible = await link.isVisible({ timeout: 10_000 }).catch(() => false);
-      test.skip(!linkVisible, '"Menu Privilege" nav link not reachable this run');
+      test.skip(
+        !linkVisible,
+        '"Menu Privilege" nav link was not available right now (admin role gating)',
+      );
       if (!linkVisible) return;
 
       const stop = watchUiHealth(page);
@@ -128,7 +134,10 @@ test.describe(
       await page.waitForTimeout(500);
       const link = page.getByText('Postal Code Library', { exact: true }).first();
       const linkVisible = await link.isVisible({ timeout: 10_000 }).catch(() => false);
-      test.skip(!linkVisible, '"Postal Code Library" nav link not reachable this run');
+      test.skip(
+        !linkVisible,
+        '"Postal Code Library" nav link was not available right now (admin role gating)',
+      );
       if (!linkVisible) return;
 
       const stop = watchUiHealth(page);

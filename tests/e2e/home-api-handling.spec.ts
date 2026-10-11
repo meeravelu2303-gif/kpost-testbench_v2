@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * Does the Home dashboard actually surface a failing API response, or does it silently show an
@@ -36,14 +37,17 @@ test.describe('KPost Home · dashboard API failure handling', { tag: '@ui' }, ()
 
     await homePage.goto();
     await homePage.switchToRecentsTab();
-    await page.waitForTimeout(2_000);
+    await settleFrames(page);
 
-    const anyErrorToast = page.locator('.Toastify__toast, [class*="toast"]', {
-      hasText: /error|fail|try again|something went wrong/i,
+    // Any visible feedback counts: a toast, or an inline error/empty-state message. Give the app a
+    // real chance to render it after the failed call (a wait on the condition, not a timer).
+    const anyErrorToast = page.locator('.Toastify__toast, [class*="toast"], [class*="error"]', {
+      hasText: /error|fail|try again|something went wrong|unable|could not/i,
     });
     const errorVisible = await anyErrorToast
       .first()
-      .isVisible()
+      .waitFor({ state: 'visible', timeout: 8_000 })
+      .then(() => true)
       .catch(() => false);
 
     test.info().annotations.push({

@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { settleFrames, settleNetwork } from './support/settle';
 
 /**
  * `/profile-webview/:id` (`ProfileWebView.js`) — a PUBLIC, read-only shareable profile card, no auth
@@ -20,13 +21,14 @@ test.describe('KPost — /profile-webview/:id public profile card', { tag: '@ui'
       waitUntil: 'domcontentloaded',
       timeout: 45_000,
     });
-    await page.waitForTimeout(2_000);
+    await expect(page, 'an unresolvable id redirects to the not-found route').toHaveURL(
+      /not-found/,
+      { timeout: 20_000 },
+    );
+    await settleFrames(page);
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error on an invalid id').toEqual([]);
-    await expect(page, 'an unresolvable id redirects to the not-found route').toHaveURL(
-      /not-found/,
-    );
   });
 
   /**
@@ -80,11 +82,13 @@ test.describe('KPost — /profile-webview/:id public profile card', { tag: '@ui'
     });
 
     const stop = watchUiHealth(page);
+    const shared = settleNetwork(page, /shareUserDetails/, 20_000);
     await page.goto(`/profile-webview/${encodeURIComponent(encryptedId)}`, {
       waitUntil: 'domcontentloaded',
       timeout: 45_000,
     });
-    await page.waitForTimeout(3_000);
+    await shared;
+    await settleFrames(page);
 
     const health = stop();
     expect(health.pageErrors, 'no uncaught JS error rendering a real public card').toEqual([]);

@@ -3,6 +3,7 @@ import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * The health/performance/layout counterpart to `home-accessibility.spec.ts`'s two dynamic states —
@@ -60,7 +61,7 @@ test.describe('KPost Home — dynamic-state health/performance/layout sweep', { 
 
     await homePage.goto();
     await homePage.switchToContactsTab();
-    await page.waitForTimeout(1200);
+    await settleFrames(page);
     const loadMs = Date.now() - started;
 
     const screen: ScreenDef = {
@@ -83,7 +84,7 @@ test.describe('KPost Home — dynamic-state health/performance/layout sweep', { 
     await homePage.goto();
     await homePage.switchToRecentsTab();
     await homePage.openAdvancedSearch();
-    await page.waitForTimeout(1200);
+    await settleFrames(page);
     const loadMs = Date.now() - started;
 
     const screen: ScreenDef = {

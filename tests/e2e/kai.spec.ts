@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { settleFrames } from './support/settle';
 
 /**
  * KOS · K-AI (`KAI.js`) — a real, backend-integrated AI chat (`Services/KOS.js`:
@@ -51,7 +52,7 @@ test.describe('KPost KOS · K-AI panel', { tag: ['@ui', '@kos'] }, () => {
     await expect(prompt, 'the prompt input renders').toBeVisible({ timeout: 15_000 });
     await prompt.click();
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(1_000);
+    await settleFrames(page);
 
     expect(
       chatRequestFired,

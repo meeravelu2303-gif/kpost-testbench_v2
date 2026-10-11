@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { pickReactSelect, reactSelectByPlaceholder } from './support/react-select';
 
 /**
  * Settings · Security & Privacy panel (`Securityprivacies.js`) — confirmed from source: NO
@@ -43,39 +44,45 @@ test.describe('KPost Settings · Security & Privacy panel', { tag: '@ui' }, () =
     await expect(profileSelect, 'Profile dropdown starts present').toBeVisible({ timeout: 15_000 });
 
     // Chain: Profile Picture -> Profile -> Mobile No -> Digital Card -> Address.
-    const pick = async (dropdownLabelPlaceholder: string, optionText: string) => {
-      const input = page
-        .locator('.react-select__input, select')
-        .filter({ has: page.getByText(dropdownLabelPlaceholder) })
-        .first();
-      // react-select inputs in this app are addressed by clicking the container then typing —
-      // fall back to a native <select> if that's what's actually rendered.
-      const container = page
-        .locator('.d-flex.flex-column', { hasText: dropdownLabelPlaceholder })
-        .last();
-      const reactSelectInput = container.locator('.react-select__input').first();
-      if (await reactSelectInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await reactSelectInput.click({ force: true });
-        await page.waitForTimeout(300);
-        await page.keyboard.type(optionText);
-        await page.waitForTimeout(300);
-        await page.keyboard.press('Enter');
-      } else {
-        await input.selectOption({ label: optionText }).catch(() => undefined);
-      }
-      await page.waitForTimeout(300);
+    // Each dropdown is addressed by the react-select control still SHOWING the given placeholder
+    // (the filled ones no longer do), driven through its own input — support/react-select.ts.
+    const pick = async (dropdownLabelPlaceholder: string, optionText: string | RegExp) => {
+      // The text is either the control's own placeholder ("Access to All KPOST Users") or the field
+      // LABEL beside it ("Mobile No", whose placeholder is a phone number); try the control first,
+      // then the labelled field's control.
+      const byPlaceholder = reactSelectByPlaceholder(page, dropdownLabelPlaceholder);
+      const control = (await byPlaceholder.count())
+        ? byPlaceholder
+        : page
+            .locator('.d-flex.flex-column', { hasText: dropdownLabelPlaceholder })
+            .locator('.react-select__control:visible')
+            .first();
+      await pickReactSelect(control, optionText, { typeToFilter: false });
     };
 
     const submitButton = page.getByRole('button', { name: /^Submit$/i });
     await expect(submitButton, 'Submit starts disabled until every dropdown is set').toBeDisabled();
 
-    await pick('Access to All KPOST Users', 'Access to All KPOST Users');
-    await pick('Access to All KPOST Users', 'Access to All KPOST Users');
-    // "Mobile No" dropdown's options are literal phone numbers, confirmed from source — pick whichever
-    // first option renders rather than asserting specific digits (that's the observed content bug).
-    await pick('Mobile No', '9875656955');
-    await pick('Access to All KPOST Users', 'Access to All KPOST Users');
-    await pick('Access to All KPOST Users', 'Access to All KPOST Users');
+    // The panel's dropdown set changes between builds (five on 2026-10-01; on 2026-10-11 four —
+    // Profile Picture, Profile, Mobile No, Digital Card — screenshot). The "Mobile No" list offers
+    // literal phone numbers rather than visibility levels (the content bug noted above), so each
+    // dropdown is set to whatever its FIRST option is: the chain only needs a value to unlock the
+    // next field.
+    const controls = page.locator('.react-select__control:visible');
+    const total = await controls.count();
+    test.info().annotations.push({
+      type: 'observed',
+      description: `${total} visibility dropdowns rendered`,
+    });
+    expect(total, 'the panel renders at least one visibility dropdown').toBeGreaterThan(0);
+    for (let i = 0; i < total; i++) {
+      await expect(
+        controls.nth(i),
+        `dropdown ${i + 1} is enabled once the previous one is set`,
+      ).not.toHaveClass(/--is-disabled/, { timeout: 10_000 });
+      await pickReactSelect(controls.nth(i), /\S/, { typeToFilter: false });
+    }
+    void pick;
 
     await expect(
       submitButton,
@@ -86,12 +93,14 @@ test.describe('KPost Settings · Security & Privacy panel', { tag: '@ui' }, () =
 
     // The real assertion: clicking the now-enabled Submit dispatches NO request — confirming the
     // button is a dead end, not silently failing a real call.
-    let requestFired = false;
-    page.on('request', (req) => {
-      if (req.method() !== 'GET' || !req.url().includes('/health')) requestFired = true;
-    });
+    const fired = page
+      .waitForRequest((req) => req.method() !== 'GET' || !req.url().includes('/health'), {
+        timeout: 1_500,
+      })
+      .then(() => true)
+      .catch(() => false);
     await submitButton.click();
-    await page.waitForTimeout(1_500);
+    const requestFired = await fired;
 
     expect(
       requestFired,

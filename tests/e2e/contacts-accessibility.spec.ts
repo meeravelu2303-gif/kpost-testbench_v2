@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-wait-for-timeout */
 import AxeBuilder from '@axe-core/playwright';
 import { testData } from '@config/test-data.config';
 import { AXE_JSON_ATTACHMENT, renderAccessibilityOverlay } from '@ui/accessibility-evidence';
@@ -6,6 +5,13 @@ import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
 import type { Page, TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
+import {
+  gotoContacts,
+  openAdvancedSearch,
+  openCreateGroup,
+  openPeopleSearch,
+} from './support/contacts';
+import { settleAnimations } from './support/usermanagement';
 
 /**
  * Deep WCAG scan (axe-core) for Contacts' own DYNAMIC states — the Add-contact wizard's people-search
@@ -20,23 +26,6 @@ import { writeFileSync } from 'node:fs';
  * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new screens
  * need their own clean run(s) before earning a place in the auto-filing allow-list.
  */
-
-async function gotoContacts(page: Page): Promise<boolean> {
-  await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-  await page
-    .locator('.loader-overlay')
-    .waitFor({ state: 'hidden', timeout: 30_000 })
-    .catch(() => undefined);
-  await page
-    .getByRole('tab', { name: 'Contacts' })
-    .click({ timeout: 15_000 })
-    .catch(() => undefined);
-  return page
-    .getByRole('searchbox', { name: 'Search' })
-    .first()
-    .isVisible({ timeout: 15_000 })
-    .catch(() => false);
-}
 
 test.describe(
   'KPost Contacts · dynamic-state accessibility (axe-core WCAG)',
@@ -121,30 +110,13 @@ test.describe(
       page,
     }, testInfo) => {
       const opened = await gotoContacts(page);
-      test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
-
-      await page
-        .locator('.icon-KP_107-User-Add')
-        .first()
-        .click({ timeout: 15_000 })
-        .catch(() => undefined);
-      await page
-        .getByText('Personal', { exact: true })
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: 'Continue' })
-        .first()
-        .click({ timeout: 8_000 })
-        .catch(() => undefined);
-      const reachable = await page
-        .getByRole('searchbox', { name: 'Search' })
-        .first()
-        .isVisible({ timeout: 12_000 })
-        .catch(() => false);
-      test.skip(!reachable, 'the Add-contact wizard did not reach the people-search step');
-      await page.waitForTimeout(1000);
+      test.skip(
+        !opened,
+        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+      );
+      const search = await openPeopleSearch(page);
+      expect(search, 'the Add-contact wizard reaches the people-search step').not.toBeNull();
+      await settleAnimations(page.locator('.kdirectModaltoScreen').first());
       await scanCurrentPage(page, testInfo, 'Contacts — Add-contact people-search step');
     });
 
@@ -152,35 +124,15 @@ test.describe(
       page,
     }, testInfo) => {
       const opened = await gotoContacts(page);
-      test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
-
-      await page
-        .locator('.icon-KP_107-User-Add')
-        .first()
-        .click({ timeout: 15_000 })
-        .catch(() => undefined);
-      await page
-        .getByText('Personal', { exact: true })
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: 'Continue' })
-        .first()
-        .click({ timeout: 8_000 })
-        .catch(() => undefined);
-      await page
-        .locator('.icon-KP_225_Advanced-Search')
-        .first()
-        .click({ timeout: 10_000 })
-        .catch(() => undefined);
-      const reachable = await page
-        .getByRole('textbox', { name: 'Enter Mobile Number' })
-        .first()
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
-      test.skip(!reachable, 'advanced search did not open — needs a codegen re-tune');
-      await page.waitForTimeout(1000);
+      test.skip(
+        !opened,
+        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+      );
+      const search = await openPeopleSearch(page);
+      expect(search, 'the people-search step renders').not.toBeNull();
+      const mobile = await openAdvancedSearch(page);
+      expect(mobile, 'Advanced Search opens').not.toBeNull();
+      await settleAnimations(page.locator('.busCardE').first());
       await scanCurrentPage(page, testInfo, 'Contacts — Advanced Search step');
     });
 
@@ -188,20 +140,13 @@ test.describe(
       page,
     }, testInfo) => {
       const opened = await gotoContacts(page);
-      test.skip(!opened, 'the Contacts tab did not open on this build — needs a codegen re-tune');
-
-      await page
-        .locator('.icon-KP_112-Group-Add')
-        .first()
-        .click({ timeout: 15_000 })
-        .catch(() => undefined);
-      const reachable = await page
-        .getByRole('textbox', { name: 'Group Name' })
-        .first()
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
-      test.skip(!reachable, 'the Create-Group dialog did not open — needs a codegen re-tune');
-      await page.waitForTimeout(1000);
+      test.skip(
+        !opened,
+        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+      );
+      const modal = await openCreateGroup(page);
+      expect(modal, 'the Create New Group modal opens').not.toBeNull();
+      await settleAnimations(modal!);
       await scanCurrentPage(page, testInfo, 'Contacts — Create-Group dialog');
     });
   },

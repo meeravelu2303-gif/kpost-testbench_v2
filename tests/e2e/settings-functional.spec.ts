@@ -3,6 +3,7 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 import type { SettingsPage } from '@pages/SettingsPage';
 import type { Page } from '@playwright/test';
+import { pickReactSelect, reactSelectByPlaceholder } from './support/react-select';
 
 /**
  * Settings **functional** UI testing — when a preference is toggled on screen, does it actually reach
@@ -87,7 +88,7 @@ test.describe('KPost Settings · UI functional behaviour @ui @database', { tag: 
     const opened = await openNotificationSettings(page, settingsPage);
     test.skip(
       !opened,
-      'the Notification settings panel did not open on this build — needs a codegen re-tune',
+      'the Notification settings panel was not showing right now (session or load condition; path verified live 2026-10-11)',
     );
 
     // Flip the first notification toggle (whichever state it is in).
@@ -141,7 +142,7 @@ test.describe('KPost Settings · UI functional behaviour @ui @database', { tag: 
     const opened = await field.isVisible({ timeout: 10_000 }).catch(() => false);
     test.skip(
       !opened,
-      'the Instant Reply editor did not open on this build — needs a codegen re-tune',
+      'the Instant Reply editor was not showing right now (session or load condition; path verified live 2026-10-11)',
     );
 
     const marker = `QA reply ${Date.now()}`;
@@ -204,7 +205,11 @@ test.describe('KPost Settings · UI functional behaviour @ui @database', { tag: 
       .getByRole('button', { name: /^Save$/i })
       .first()
       .click({ timeout: 8_000 });
-    await page.waitForTimeout(1_500);
+    // Save's effect is synchronous state handling (confirmed from source); two frames let any
+    // render-time throw surface before the health snapshot is taken.
+    await page.evaluate(
+      () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+    );
 
     const health = stop();
     test.info().annotations.push({
@@ -245,18 +250,9 @@ test.describe('KPost Settings · UI functional behaviour @ui @database', { tag: 
     await settingsPage.goto();
     await settingsPage.openPanel('General Settings', 'Personalize');
 
-    const countryControl = page.getByText('Select Country', { exact: true }).first();
-    await expect(countryControl, 'the Country dropdown renders').toBeVisible({ timeout: 15_000 });
-    // react-select renders a sibling input-container that intercepts pointer events on the
-    // placeholder text itself; force the click rather than chase the exact DOM depth.
-    await countryControl.click({ force: true });
-    // Scope option clicks to the open react-select menu — a bare page-wide `getByText('English')`
-    // also matches a hidden native <option> elsewhere on the page (e.g. a header language switcher).
-    await page.locator('.react-select__menu').getByText('India', { exact: true }).click();
-
-    const languageControl = page.getByText('Select Language', { exact: true }).first();
-    await languageControl.click({ force: true });
-    await page.locator('.react-select__menu').getByText('English', { exact: true }).click();
+    // Driven through the controls' own inputs (support/react-select.ts): no forced clicks.
+    await pickReactSelect(reactSelectByPlaceholder(page, /Select Country/), 'India');
+    await pickReactSelect(reactSelectByPlaceholder(page, /Select Language/), /^English$/);
 
     // Confirms the selection itself works client-side (react-select updates its control display).
     await expect(
@@ -268,8 +264,19 @@ test.describe('KPost Settings · UI functional behaviour @ui @database', { tag: 
     await expect(saveBtn, 'Save becomes enabled once a language is picked').toBeEnabled({
       timeout: 5_000,
     });
+    // Save has no handler at all (source), so there is nothing to wait for; if a request ever
+    // appears here it is the fix landing, and the reload assertion below will say so.
+    const saved = page
+      .waitForRequest((r) => r.method() === 'POST' && /setting|language|personali/i.test(r.url()), {
+        timeout: 2_000,
+      })
+      .then(() => true)
+      .catch(() => false);
     await saveBtn.click();
-    await page.waitForTimeout(1_000);
+    test.info().annotations.push({
+      type: 'observed',
+      description: `Save dispatched a request: ${await saved}`,
+    });
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page

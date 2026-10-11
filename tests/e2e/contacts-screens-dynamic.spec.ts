@@ -4,6 +4,12 @@ import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import {
+  gotoContacts,
+  openAdvancedSearch,
+  openCreateGroup,
+  openPeopleSearch,
+} from './support/contacts';
 
 /**
  * The health/performance/layout counterpart to `contacts-accessibility.spec.ts`'s 3 dynamic states —
@@ -12,23 +18,6 @@ import { expect, test } from '@fixtures';
  * shared `support/contacts.ts` module exists).
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
-
-async function gotoContacts(page: Page): Promise<boolean> {
-  await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-  await page
-    .locator('.loader-overlay')
-    .waitFor({ state: 'hidden', timeout: 30_000 })
-    .catch(() => undefined);
-  await page
-    .getByRole('tab', { name: 'Contacts' })
-    .click({ timeout: 15_000 })
-    .catch(() => undefined);
-  return page
-    .getByRole('searchbox', { name: 'Search' })
-    .first()
-    .isVisible({ timeout: 15_000 })
-    .catch(() => false);
-}
 
 async function assertNoFileableIssues(
   page: Page,
@@ -63,27 +52,16 @@ test.describe(
       const stop = watchUiHealth(page);
       const started = Date.now();
       const opened = await gotoContacts(page);
-      test.skip(!opened, 'the Contacts tab did not open on this build');
-
-      await page
-        .locator('.icon-KP_107-User-Add')
-        .first()
-        .click({ timeout: 15_000 })
-        .catch(() => undefined);
-      await page
-        .getByText('Personal', { exact: true })
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: 'Continue' })
-        .first()
-        .click({ timeout: 8_000 })
-        .catch(() => undefined);
+      test.skip(
+        !opened,
+        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+      );
+      const search = await openPeopleSearch(page);
+      expect(search, 'the people-search step renders').not.toBeNull();
       const loadMs = Date.now() - started;
 
       const screen: UiScreenDef = {
-        route: '/katchup',
+        route: '/kdirectory',
         name: 'Contacts — Add-contact people-search step',
         screen: 'katchup',
         ready: [],
@@ -96,32 +74,18 @@ test.describe(
       const stop = watchUiHealth(page);
       const started = Date.now();
       const opened = await gotoContacts(page);
-      test.skip(!opened, 'the Contacts tab did not open on this build');
-
-      await page
-        .locator('.icon-KP_107-User-Add')
-        .first()
-        .click({ timeout: 15_000 })
-        .catch(() => undefined);
-      await page
-        .getByText('Personal', { exact: true })
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: 'Continue' })
-        .first()
-        .click({ timeout: 8_000 })
-        .catch(() => undefined);
-      await page
-        .locator('.icon-KP_225_Advanced-Search')
-        .first()
-        .click({ timeout: 10_000 })
-        .catch(() => undefined);
+      test.skip(
+        !opened,
+        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+      );
+      const search = await openPeopleSearch(page);
+      expect(search, 'the people-search step renders').not.toBeNull();
+      const mobile = await openAdvancedSearch(page);
+      expect(mobile, 'Advanced Search opens').not.toBeNull();
       const loadMs = Date.now() - started;
 
       const screen: UiScreenDef = {
-        route: '/katchup',
+        route: '/kdirectory',
         name: 'Contacts — Advanced Search step',
         screen: 'katchup',
         ready: [],
@@ -134,13 +98,12 @@ test.describe(
       const stop = watchUiHealth(page);
       const started = Date.now();
       const opened = await gotoContacts(page);
-      test.skip(!opened, 'the Contacts tab did not open on this build');
-
-      await page
-        .locator('.icon-KP_112-Group-Add')
-        .first()
-        .click({ timeout: 15_000 })
-        .catch(() => undefined);
+      test.skip(
+        !opened,
+        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+      );
+      const modal = await openCreateGroup(page);
+      expect(modal, 'the Create New Group modal opens').not.toBeNull();
       const loadMs = Date.now() - started;
 
       const screen: UiScreenDef = {
