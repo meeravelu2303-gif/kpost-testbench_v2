@@ -10,6 +10,7 @@ import {
 import {
   candidateFromUiFailure,
   collapseCountVariants,
+  holdAggregatesForReview,
   mergeCandidates,
   type BugCandidate,
 } from '../../src/bug-tracker/bug-candidate';
@@ -810,6 +811,76 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     ]);
 
     expect(merged).toHaveLength(2);
+  });
+
+  test('an aggregate error-response finding is held for review when the endpoint has specific findings', () => {
+    const held = holdAggregatesForReview([
+      candidate({
+        id: 'KP-AGG001',
+        classification: 'common.api-error',
+        endpoint: 'POST /v2/signupLogin/getLoginHistory',
+        title: 'POST /v2/signupLogin/getLoginHistory: 9/31 error responses failed',
+      }),
+      candidate({
+        id: 'KP-SPEC01',
+        classification: 'request.data-type',
+        endpoint: 'POST /v2/signupLogin/getLoginHistory',
+        title:
+          'POST /v2/signupLogin/getLoginHistory: selectedDate number instead of string (got 500)',
+      }),
+    ]);
+    const aggregate = held.find((c) => c.id === 'KP-AGG001');
+    const specific = held.find((c) => c.id === 'KP-SPEC01');
+    expect(aggregate?.reviewHold, 'the aggregate is held for review').toBeTruthy();
+    expect(specific?.reviewHold, 'the specific finding is not held').toBeFalsy();
+  });
+
+  test('an aggregate error-response finding with no specific findings still files (not held)', () => {
+    const held = holdAggregatesForReview([
+      candidate({
+        id: 'KP-AGG002',
+        classification: 'common.api-error',
+        endpoint: 'GET /v2/profile/downloadCoverImage/{kpostID}',
+        title: 'GET /v2/profile/downloadCoverImage/{kpostID}: 3/13 error responses failed',
+      }),
+      candidate({
+        id: 'KP-OTHER1',
+        classification: 'request.data-type',
+        endpoint: 'POST /some/other/endpoint',
+        title: 'POST /some/other/endpoint: body.x number (got 500)',
+      }),
+    ]);
+    expect(
+      held.find((c) => c.id === 'KP-AGG002')?.reviewHold,
+      'an aggregate alone on its endpoint still files',
+    ).toBeFalsy();
+  });
+
+  test('the aggregate hold reaches needs-review on the create path, but a matching open ticket still just comments', async () => {
+    const agg = holdAggregatesForReview([
+      candidate({
+        id: 'KP-AGG003',
+        classification: 'common.api-error',
+        endpoint: 'POST /ep',
+        title: 'POST /ep: 5/10 error responses failed',
+      }),
+      candidate({ id: 'KP-SPEC02', classification: 'request.null-value', endpoint: 'POST /ep' }),
+    ]);
+    const aggregate = agg.find((c) => c.id === 'KP-AGG003');
+    expect(aggregate?.reviewHold).toBeTruthy();
+
+    // Brand-new (no existing ticket): the hold sends it to needs-review, nothing is created.
+    const freshCalls = stubBugzilla([]);
+    const newRun = await filer().file([aggregate!]);
+    expect(newRun.entries[0]?.decision).toBe('needs-review');
+    expect(freshCalls.some((c) => c.method === 'POST' && /\/bug\?/.test(c.url))).toBe(false);
+
+    // Already tracked (open ticket with the same tag): comment, never held.
+    stubBugzilla([
+      { id: 700, summary: '[KP-AGG003] POST /ep: error responses failed', is_open: true },
+    ]);
+    const reRun = await filer().file([aggregate!]);
+    expect(reRun.entries[0]?.decision).toBe('commented');
   });
 
   test('a partially-fixed fault maps back to its FIXED ticket (reopen, not re-file)', () => {

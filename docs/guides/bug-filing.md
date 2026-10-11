@@ -148,12 +148,35 @@ The same fault on several browsers or tests is merged into one ticket that recor
 
 `blocker` and `enhancement` are never used. Category comes from the validator: authentication, authorization and security checks are `Security`, performance checks `Performance`, everything else `Functional`.
 
-## 7. Commands
+## 7. Commands — the review-checkpoint workflow
+
+The standing workflow is three commands per product (added 2026-10-11):
 
 ```bash
-npm run kpost    # dry run: prints exactly what would be filed, and to whom
-npm run kpost:file       # files for real (BUGZILLA_DRY_RUN=false)
+npm run product:kpost-api          # 1. dry run — decisions now MATCH what the live run will do
+npm run report:filing              # 2. the plan in plain English: WILL CREATE / REOPEN / COMMENT /
+                                   #    CLOSE, NEEDS YOUR REVIEW (held), SUPPRESSED (judged non-defects)
+npm run product:kpost-api:file     # 3. files/reopens/comments/closes exactly what the plan showed
+```
 
+The checkpoint (step 2) exists because some false positives are SEMANTIC — only a human knows
+"12345 is our seeded value" or "that field is inert metadata". When a WILL CREATE item is not a real
+bug, record it in `src/bug-tracker/known-false-positives.ts` (fingerprint + reason + judgedBy + date);
+it is then suppressed on every run, visibly, instead of littering Bugzilla with INVALID tickets.
+
+Findings the engine is not confident enough to auto-file (intermittent repros, one-off flow 500s,
+aggregate error-response findings overlapping specific ones) are HELD as `needs-review` — never filed
+by `:file`. After you review them:
+
+```bash
+npm run bug:file-reviewed -- KP-A082D1            # preview the approved item (dry)
+npm run bug:file-reviewed -- KP-A082D1 --live     # file it, with the engine's own prepared ticket text
+```
+
+It refuses to create when ANY ticket already carries the tag (and tells you to reopen that id if the
+finding is a regression), and only accepts entries the report holds as `needs-review`.
+
+```bash
 BUGZILLA_MAX_FILE=5 npm run kpost:file   # stage a rollout
 
 npm run kpost      # one module at a time
@@ -195,4 +218,8 @@ Two instance facts worth knowing:
 - **To stop filing immediately:** unset `BUGZILLA_API_KEY`, or set `BUGZILLA_DRY_RUN=true`.
 - **Rotate the API key** if it has ever been pasted into a chat, ticket or log.
 - **A ticket that is not a defect:** resolve it `INVALID` (or `WONTFIX`). The bench never re-files it.
+- **Auto-close safety:** a bug closes only when its own (endpoint, validator) check re-ran clean this
+  run — the run itself is the live replay — and a wrong close self-corrects (the next reproduction
+  reopens the same id). BOLA/ownership and other business-rule exploit tickets classify as
+  non-verifiable and are NEVER auto-closed; they stay open for a by-hand exploit replay.
 - **Ownership changes** (a developer hands a module over): edit `ownership.config.ts`, and update the component defaults in Bugzilla. The drift test fails until both agree.

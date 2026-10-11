@@ -1,5 +1,6 @@
 import { meetsSeverityFloor } from '@config/bugzilla.config';
 import type { BugCandidate } from './bug-candidate';
+import { knownFalsePositiveReason } from './known-false-positives';
 
 /**
  * Two gates stand between a failing run and a Bugzilla ticket. Filing is irreversible (Bugzilla
@@ -108,6 +109,11 @@ function statusIn(text: string): number | undefined {
  * cannot rest on a 404 where nothing resolved.
  */
 export function candidateRejection(candidate: BugCandidate): string | undefined {
+  // A reviewer has judged this finding a non-defect (see known-false-positives.ts). Checked first so
+  // the reason is recorded verbatim, rather than the finding being rejected for an incidental reason.
+  const knownFp = knownFalsePositiveReason(candidate);
+  if (knownFp) return knownFp;
+
   if (!meetsSeverityFloor(candidate.severity)) {
     return `severity ${candidate.severity} is below the filing floor`;
   }

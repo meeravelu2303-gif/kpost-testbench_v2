@@ -182,6 +182,12 @@ export interface BugCandidate {
   systemic?: boolean;
   /** For a systemic defect: every endpoint the same fault was observed on, listed in the ticket. */
   affectedEndpoints?: string[];
+  /**
+   * Why this brand-new candidate is held for human review instead of auto-filed (see
+   * `holdAggregatesForReview`). Only consulted on the create path — a finding that matches an
+   * existing ticket still comments/reopens automatically. Cleared once a human files it.
+   */
+  reviewHold?: string;
 }
 
 /** The path out of an endpoint label like "POST /v2/common/validateOTP/". */
@@ -641,6 +647,53 @@ export function collapseCountVariants(candidates: readonly BugCandidate[]): BugC
     return { ...candidate, id };
   });
   return mergeCandidates(remapped);
+}
+
+/** The aggregate error-response validator — rolls up many error cases for one endpoint into one finding. */
+const AGGREGATE_ERROR_VALIDATOR = 'common.api-error';
+
+/**
+ * Holds the aggregate error-response finding (`common.api-error`, "N/M error responses failed") for
+ * human review when the SAME endpoint also produced specific per-case findings this run (e.g.
+ * `request.data-type`, `security.injection`). The aggregate and the specifics overlap — the aggregate
+ * says "this endpoint's error handling is broadly wrong", the specifics pin the exact inputs — so
+ * filing both auto-creates two overlapping tickets. This drops nothing: the aggregate becomes a
+ * `needs-review` entry (via `reviewHold`), so a human decides whether the broader ticket adds value
+ * on top of the specific ones. An aggregate on an endpoint with NO specific findings is left alone
+ * (it is that endpoint's only finding and files normally). Only the create path honours the hold, so
+ * an aggregate that already matches an existing ticket still comments/reopens automatically.
+ */
+export function holdAggregatesForReview(candidates: readonly BugCandidate[]): BugCandidate[] {
+  const endpointsWithSpecifics = new Set(
+    candidates
+      .filter(
+        (c) =>
+          c.source === 'api' &&
+          !c.systemic &&
+          c.classification !== AGGREGATE_ERROR_VALIDATOR &&
+          c.endpoint,
+      )
+      .map((c) => c.endpoint),
+  );
+  return candidates.map((c) => {
+    if (
+      c.source === 'api' &&
+      !c.systemic &&
+      c.classification === AGGREGATE_ERROR_VALIDATOR &&
+      c.endpoint &&
+      endpointsWithSpecifics.has(c.endpoint) &&
+      !c.reviewHold
+    ) {
+      return {
+        ...c,
+        reviewHold:
+          'an aggregate error-response finding for an endpoint that also has specific per-case ' +
+          'findings this run — held so you can decide whether this broader ticket adds value on top ' +
+          'of the specific ones (nothing is dropped)',
+      };
+    }
+    return c;
+  });
 }
 
 /**

@@ -110,6 +110,13 @@ export class BugzillaFiler {
   private readonly faultUsed = new Set<number>();
   /** Bench bugs resolved FIXED, by `partialFixKey` — reopened when the same fault returns. */
   private readonly fixedIndex = new Map<string, BugSummary>();
+  /**
+   * Bench bugs resolved FIXED, by their `[KP-]` TAG. The live path reopens an exact-tag match to a
+   * resolved bug via `findByTag` (process(), the `resolved` branch); the dry-run preview must show
+   * the SAME decision, or it mislabels a guaranteed reopen as `would-file` and the report cannot be
+   * trusted. This index gives the preview that exact-tag reopen without a per-candidate network call.
+   */
+  private readonly fixedTags = new Map<string, BugSummary>();
   private readonly fixedUsed = new Set<number>();
 
   constructor(
@@ -172,6 +179,7 @@ export class BugzillaFiler {
     this.judgedTags.clear();
     this.faultUsed.clear();
     this.fixedIndex.clear();
+    this.fixedTags.clear();
     this.fixedUsed.clear();
     const tagRe = /([A-Z]+-[0-9A-F]{6})/gi;
     for (const product of products) {
@@ -182,6 +190,9 @@ export class BugzillaFiler {
         for (const bug of fixed.bugs) {
           const key = partialFixKey(product, bug.summary);
           if (key && !this.fixedIndex.has(key)) this.fixedIndex.set(key, bug);
+          const tag = bug.summary.match(/\[([A-Z]+-[0-9A-F]{6})\]/i)?.[1];
+          if (tag && !this.fixedTags.has(tag.toUpperCase()))
+            this.fixedTags.set(tag.toUpperCase(), bug);
         }
       }
       const found = await this.client.openBenchBugs(product, this.config.tagPrefix);
@@ -232,6 +243,19 @@ export class BugzillaFiler {
         reason: 'existing ticket (same tag) — would comment',
       });
     }
+    // Exact-tag match to a FIXED bug: the live path (process(), `resolved` branch) reopens it via
+    // findByTag. Show that here so the preview matches the live decision, not a false `would-file`.
+    const fixedByTag = this.fixedTags.get(tag);
+    if (fixedByTag) {
+      const hold = flowFindingHoldReason(candidate);
+      if (hold)
+        return this.entry(candidate, 'needs-review', { bugId: fixedByTag.id, reason: hold });
+      this.fixedUsed.add(fixedByTag.id);
+      return this.entry(candidate, 'reopened', {
+        bugId: fixedByTag.id,
+        reason: 'same tag as a ticket resolved FIXED — would reopen the original, not re-file',
+      });
+    }
     const fault = this.matchFault(candidate);
     if (fault) {
       this.faultUsed.add(fault.id);
@@ -253,7 +277,7 @@ export class BugzillaFiler {
         reason: 'same fault as a ticket resolved FIXED (partial fix) — would reopen, not re-file',
       });
     }
-    const reviewReason = uncertainNewDefect(candidate);
+    const reviewReason = candidate.reviewHold ?? uncertainNewDefect(candidate);
     if (reviewReason) return this.entry(candidate, 'needs-review', { reason: reviewReason });
     return this.entry(candidate, 'would-file');
   }
@@ -373,7 +397,7 @@ export class BugzillaFiler {
     // Nothing existing matched at all — this would mint a brand new ticket number, the one step
     // that is hard to undo. Hold it for a human when the evidence itself is not confident enough
     // (an intermittent repro), rather than filing it as a confirmed defect sight-unseen.
-    const reviewReason = uncertainNewDefect(candidate);
+    const reviewReason = candidate.reviewHold ?? uncertainNewDefect(candidate);
     if (reviewReason) return this.entry(candidate, 'needs-review', { reason: reviewReason });
 
     const fields = buildBugFields(candidate, target);

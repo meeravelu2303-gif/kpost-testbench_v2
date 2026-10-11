@@ -111,6 +111,14 @@ the OTP/SMS kill-switch, and `sideEffect: 'global'`/`external` blocks.
 | KPost Admin UI | `npm run product:kpost-admin-ui` | `npm run product:kpost-admin-ui:file` |
 | Everything     | `npm run product:all`            | `npm run product:all:file`            |
 
+**The review checkpoint (do this between the dry run and the real filing):** after a dry run, run
+`npm run report:filing` to read the plan in plain English — WILL CREATE / REOPEN / COMMENT / CLOSE,
+a **NEEDS YOUR REVIEW** list (held back until you approve), and a **SUPPRESSED** list (human-judged
+non-defects). If a WILL CREATE item is not a real bug, record it in `src/bug-tracker/known-false-positives.ts`
+(fingerprint + reason + judgedBy + date) rather than filing-and-resolving-INVALID — it is then suppressed
+every run, auditably. When the plan looks right, run the `:file` command. (The dry preview now shows the
+SAME reopen/comment/close decisions the live run will make — it no longer mislabels a reopen as would-file.)
+
 Also: `kpost:full:verify` (status pass only: closes verified fixes, dates every open bug, files nothing),
 `ui:chromium:file` / `ui:firefox:file` / `ui:webkit:file` (one browser per run), `framework` (bench self-tests),
 `check` (typecheck + lint + format; must pass before anything is "done"). `cross-env` works only via `npm run`;

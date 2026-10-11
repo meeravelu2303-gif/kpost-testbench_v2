@@ -5,6 +5,7 @@ import {
   accessibilityCandidatesFromScreens,
   candidateFromUiFailure,
   collapseCountVariants,
+  holdAggregatesForReview,
   candidatesFromReport,
   consolidateCascades,
   mergeCandidates,
@@ -228,8 +229,10 @@ export default class BugzillaReporter implements Reporter {
           'resolve-only mode — verified-fixed bugs are being closed; no new tickets filed';
       } else if (gate.filed.length) {
         const filer = new BugzillaFiler(client, this.config, this.log);
-        // File in module order so created bug ids are ascending (KPost → KMail → UI).
-        outcome = await filer.file(orderedForFiling(gate.filed));
+        // File in module order so created bug ids are ascending (KPost → KMail → UI). Aggregate
+        // error-response findings whose endpoint also has specific per-case findings are held for
+        // review rather than auto-filed as an overlapping ticket (holdAggregatesForReview).
+        outcome = await filer.file(orderedForFiling(holdAggregatesForReview(gate.filed)));
       } else {
         notFiledReason = `no valid defects (${gate.rejected.length} rejected by the validity gate)`;
       }
