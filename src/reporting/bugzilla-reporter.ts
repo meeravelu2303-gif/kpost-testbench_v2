@@ -14,7 +14,11 @@ import {
   type ProofFile,
 } from '../bug-tracker/bug-candidate';
 import { AXE_DETAILS_ATTACHMENT, AXE_JSON_ATTACHMENT } from '../ui/accessibility-evidence';
-import { FAILURE_DIAGNOSIS_ATTACHMENT } from '../ui/failure-diagnostics';
+import {
+  FAILURE_DIAGNOSIS_ATTACHMENT,
+  FAILURE_SIGNALS_ATTACHMENT,
+  type FailureSignals,
+} from '../ui/failure-diagnostics';
 import { BugzillaClient, type BugSummary } from '../bug-tracker/bugzilla-client';
 import { BugzillaFiler, type FilingOutcome } from '../bug-tracker/bugzilla-filer';
 import {
@@ -595,6 +599,7 @@ export default class BugzillaReporter implements Reporter {
       const failure = [...test.results].reverse().find((attempt) => attempt.error?.message);
       const message = stripAnsi(failure?.error?.message ?? '');
       if (!message) return [];
+      const signals = readFailureSignals(failure?.attachments);
       return [
         candidateFromUiFailure(
           {
@@ -611,6 +616,8 @@ export default class BugzillaReporter implements Reporter {
             testRunId: env.TEST_RUN_ID,
             observedAt: new Date().toISOString(),
             proof: proofFrom(failure?.attachments, project),
+            endedOnAuthScreen: signals.endedOnAuthScreen,
+            failedApiCalls: signals.failedApiCalls,
           },
           this.config,
         ),
@@ -810,6 +817,24 @@ function largestByName(
   const matches = attachments.filter((a) => a.name === name && a.path);
   if (!matches.length) return undefined;
   return matches.reduce((best, a) => (fileSize(a.path!) > fileSize(best.path!) ? a : best));
+}
+
+/** Reads the structured failure signals the UI harness attached, tolerant of any read/parse failure. */
+export function readFailureSignals(
+  attachments: readonly { name: string; path?: string; contentType: string }[] | undefined,
+): FailureSignals {
+  const empty: FailureSignals = { endedOnAuthScreen: false, failedApiCalls: [] };
+  const file = (attachments ?? []).find((a) => a.name === FAILURE_SIGNALS_ATTACHMENT);
+  if (!file?.path) return empty;
+  try {
+    const parsed = JSON.parse(readFileSync(file.path, 'utf8')) as Partial<FailureSignals>;
+    return {
+      endedOnAuthScreen: parsed.endedOnAuthScreen === true,
+      failedApiCalls: Array.isArray(parsed.failedApiCalls) ? parsed.failedApiCalls : [],
+    };
+  } catch {
+    return empty;
+  }
 }
 
 export function proofFrom(

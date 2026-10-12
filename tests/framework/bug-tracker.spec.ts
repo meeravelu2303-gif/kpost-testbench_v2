@@ -15,6 +15,7 @@ import {
   type BugCandidate,
 } from '../../src/bug-tracker/bug-candidate';
 import { apiFingerprint, normalizeForFingerprint } from '../../src/bug-tracker/bug-fingerprint';
+import { deriveFailureSignals } from '../../src/ui/failure-diagnostics';
 import { BugzillaClient } from '../../src/bug-tracker/bugzilla-client';
 import { BugzillaFiler, partialFixKey } from '../../src/bug-tracker/bugzilla-filer';
 import {
@@ -466,6 +467,99 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(merged, 'the browser must not be part of the identity').toHaveLength(1);
     expect(merged[0]?.browsers).toEqual(['chromium', 'firefox', 'webkit']);
     expect(merged[0]?.occurrences).toBe(3);
+  });
+
+  test('a UI failure that lost its login session is rejected (environmental, not a screen bug)', () => {
+    const lost = candidateFromUiFailure(
+      {
+        file: 'tests/e2e/profile-settings-breakage.spec.ts',
+        title: 'the Profile screen and all its sections load without a crash or broken asset',
+        message: 'Error: Profile mounted\nexpect(locator).toBeVisible() failed',
+        fullMessage: 'Error: Profile mounted\nexpect(locator).toBeVisible() failed',
+        browser: 'chromium',
+        environment: 'production',
+        baseURL: 'https://test.kpostindia.com',
+        build: 'local',
+        testRunId: 'run-1',
+        observedAt: '2026-10-12T00:00:00.000Z',
+        endedOnAuthScreen: true,
+      },
+      config,
+    );
+    expect(candidateRejection(lost), 'a logged-out test proves nothing about the screen').toContain(
+      'transient',
+    );
+  });
+
+  test('a UI bug names the API calls that failed during the screen failure (contract drift)', () => {
+    const ui = candidateFromUiFailure(
+      {
+        file: 'tests/e2e/contacts.spec.ts',
+        title: 'the Katchup contact rail lists contacts and is searchable',
+        message: 'Error: a known contact is listed\nexpect(locator).toBeVisible() failed',
+        fullMessage: 'Error: a known contact is listed',
+        browser: 'chromium',
+        environment: 'production',
+        baseURL: 'https://test.kpostindia.com',
+        build: 'local',
+        testRunId: 'run-1',
+        observedAt: '2026-10-12T00:00:00.000Z',
+        failedApiCalls: [
+          'GET /v2/contacts/knownPostBoxContacts → 400',
+          'POST /v2/contacts/list → 500',
+        ],
+      },
+      config,
+    );
+    expect(ui.narrative, 'names the drifting endpoint').toContain(
+      'GET /v2/contacts/knownPostBoxContacts → 400',
+    );
+    expect(ui.narrative, 'explains it is likely contract drift').toContain('Likely API cause');
+    expect(ui.narrative, 'tells the triager to file both halves').toContain('both halves');
+    // A real UI failure with a failing API is NOT environmental — it still files.
+    expect(candidateRejection(ui)).toBeUndefined();
+  });
+
+  test('deriveFailureSignals flags a lost session and lists the failed API calls', () => {
+    const lost = deriveFailureSignals('https://test.kpostindia.com/login', [
+      {
+        at: '0',
+        method: 'GET',
+        url: 'https://api.kpostindia.com/v2/profile/x',
+        outcome: 'HTTP 401',
+        type: 'xhr',
+      },
+    ]);
+    expect(lost.endedOnAuthScreen, 'login URL + a 401 is a dropped session').toBe(true);
+    expect(lost.failedApiCalls, 'a dropped session suppresses the API list').toEqual([]);
+
+    const drift = deriveFailureSignals('https://test.kpostindia.com/contacts', [
+      {
+        at: '0',
+        method: 'GET',
+        url: 'https://api.kpostindia.com/v2/contacts/list?x=1',
+        outcome: 'HTTP 400',
+        type: 'fetch',
+      },
+      {
+        at: '1',
+        method: 'GET',
+        url: 'https://api.kpostindia.com/v2/contacts/list?x=2',
+        outcome: 'HTTP 400',
+        type: 'fetch',
+      },
+      {
+        at: '2',
+        method: 'GET',
+        url: 'https://cdn.kpostindia.com/logo.png',
+        outcome: 'HTTP 404',
+        type: 'image',
+      },
+    ]);
+    expect(drift.endedOnAuthScreen).toBe(false);
+    expect(drift.failedApiCalls, 'dedupes the repeated call and ignores the image').toEqual([
+      'GET /v2/contacts/list → 400',
+    ]);
   });
 
   test('a UI ticket is application-level: no internal repo path or test command', () => {

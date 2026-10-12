@@ -15,6 +15,59 @@ import type { Page, TestInfo } from '@playwright/test';
  */
 
 export const FAILURE_DIAGNOSIS_ATTACHMENT = 'failure-diagnosis';
+/** Structured signals the reporter reads to classify the failure (session-drop vs real, API drift). */
+export const FAILURE_SIGNALS_ATTACHMENT = 'failure-signals';
+
+export interface FailureSignals {
+  /** The test lost its login session: the page ended on the sign-in screen with API calls returning 401. */
+  endedOnAuthScreen: boolean;
+  /** Non-2xx API (xhr/fetch) responses during the failure, as "METHOD /path → STATUS", deduped. */
+  failedApiCalls: string[];
+}
+
+/** URL path of a sign-in screen — the app routes here only when the session is gone. */
+const AUTH_SCREEN = /\/(login|signin|sign-in|logout)(\/|$|\?)/i;
+
+/** Derives the structured signals from the final page URL and the recorded requests. */
+export function deriveFailureSignals(
+  finalUrl: string,
+  requests: readonly RecordedRequest[],
+): FailureSignals {
+  const count401 = requests.filter((r) => r.outcome === 'HTTP 401').length;
+  const endedOnAuthScreen = AUTH_SCREEN.test(finalUrl) && count401 >= 1;
+  const seen = new Set<string>();
+  const failedApiCalls: string[] = [];
+  if (!endedOnAuthScreen) {
+    for (const r of requests) {
+      if (r.type !== 'xhr' && r.type !== 'fetch') continue;
+      const status = /^HTTP (\d{3})$/.exec(r.outcome)?.[1];
+      if (!status) continue; // a transport 'failed:' is environmental, handled elsewhere
+      let path = r.url;
+      try {
+        const u = new URL(r.url);
+        path = u.pathname
+          .split('/')
+          .map((seg) =>
+            /%40|@/.test(seg) || /^[0-9a-f-]{8,}$/i.test(seg)
+              ? '{id}'
+              : /^\d+$/.test(seg)
+                ? '{n}'
+                : seg,
+          )
+          .join('/');
+      } catch {
+        /* keep the raw URL */
+      }
+      const line = `${r.method} ${path} → ${status}`;
+      if (!seen.has(line)) {
+        seen.add(line);
+        failedApiCalls.push(line);
+      }
+      if (failedApiCalls.length >= 8) break;
+    }
+  }
+  return { endedOnAuthScreen, failedApiCalls };
+}
 
 /** Raw events kept per test; requests are grouped when written, so this is generous on purpose. */
 const MAX = 400;
@@ -87,10 +140,18 @@ const PAGE_RECORDER = `(() => {
   }, true);
 })();`;
 
+export interface RecordedRequest {
+  at: string;
+  method: string;
+  url: string;
+  outcome: string;
+  type: string;
+}
+
 interface Recorded {
   errors: { at: string; text: string }[];
   console: { at: string; text: string }[];
-  requests: { at: string; method: string; url: string; outcome: string; type: string }[];
+  requests: RecordedRequest[];
   navigations: { at: string; url: string }[];
 }
 
@@ -278,4 +339,15 @@ export async function writeDiagnosisIfFailed(
   const file = testInfo.outputPath('failure-diagnosis.txt');
   writeFileSync(file, `${lines.join('\n')}\n`);
   await testInfo.attach(FAILURE_DIAGNOSIS_ATTACHMENT, { path: file, contentType: 'text/plain' });
+
+  // Structured signals for the reporter: did the test lose its session (→ not a screen defect), and
+  // which API calls failed during the failure (→ likely contract drift the UI did not handle).
+  const finalUrl = alive ? page.url() : '';
+  const signals = deriveFailureSignals(finalUrl, rec.requests);
+  const signalsFile = testInfo.outputPath('failure-signals.json');
+  writeFileSync(signalsFile, JSON.stringify(signals));
+  await testInfo.attach(FAILURE_SIGNALS_ATTACHMENT, {
+    path: signalsFile,
+    contentType: 'application/json',
+  });
 }

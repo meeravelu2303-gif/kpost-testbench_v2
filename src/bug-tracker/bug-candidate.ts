@@ -441,6 +441,16 @@ export interface UiFailureInput {
   observedAt: string;
   /** Screenshot / video captured for this failure, uploaded to the ticket as proof. */
   proof?: ProofFile[];
+  /**
+   * The test lost its login session (bounced to the sign-in screen with 401s) — the screen under
+   * test never loaded, so this is a test-session/auth issue, not a defect in this screen.
+   */
+  endedOnAuthScreen?: boolean;
+  /**
+   * API calls that returned a non-2xx status while this screen was loading, as "METHOD /path →
+   * STATUS". Named in the ticket as the likely cause (the API changed and the UI did not adapt).
+   */
+  failedApiCalls?: readonly string[];
 }
 
 /**
@@ -566,7 +576,27 @@ export function candidateFromUiFailure(
   const suite = suiteFor(uiSuiteForFile(input.file));
   // The component doubles as the screen name for the reproduction steps.
   const component = componentFor(suite, screenTokens(input.file, input.title));
-  const humanized = humanizeUiFailure(input.message);
+  // A test that lost its login session proves nothing about the screen — classify it as the auth
+  // drop it is, so the validity gate rejects it (environmental) instead of filing a false screen bug.
+  const humanized = input.endedOnAuthScreen
+    ? {
+        classification: 'The test lost its login session and was bounced to the sign-in screen',
+        actual:
+          'auth session dropped — during this test the account was logged out (the page ended on ' +
+          'the login screen and background requests returned HTTP 401), so the screen under test ' +
+          'never loaded. This is a test-session / auth-reliability issue, not a defect in this screen.',
+      }
+    : humanizeUiFailure(input.message);
+  // When the screen broke while specific API calls were failing, name those endpoints as the likely
+  // cause: a status the UI did not handle usually means the API contract changed and the UI did not.
+  const apiCauseNarrative =
+    !input.endedOnAuthScreen && input.failedApiCalls && input.failedApiCalls.length
+      ? `\n\nLikely API cause (contract drift — the UI did not handle these responses): while this ` +
+        `screen was loading, these API calls returned an unexpected status, which the UI does not ` +
+        `handle:\n${input.failedApiCalls.map((c) => `  • ${c}`).join('\n')}\nEither the UI must handle ` +
+        `the new response, or the API must restore the documented one — this is likely two bugs ` +
+        `(file both halves).`
+      : '';
 
   const id = humanized.systemic
     ? uiSystemicFingerprint({ prefix: config.tagPrefix, causeKey: humanized.systemic.causeKey })
@@ -590,7 +620,7 @@ export function candidateFromUiFailure(
       ? humanized.systemic.narrative
       : `A front-end (UI) defect on the ${suite.label} at ${input.baseURL}, seen in ${input.browser}. ` +
         `To reproduce: sign in with a test account and open the ${component} screen, then exercise ` +
-        `"${input.title}". Expected vs Actual are below.`,
+        `"${input.title}". Expected vs Actual are below.${apiCauseNarrative}`,
     severity: 'HIGH',
     category: 'Functional',
     classification: humanized.classification,
@@ -616,6 +646,9 @@ export function candidateFromUiFailure(
       title: input.title,
       browser: input.browser,
       error: input.fullMessage,
+      ...(input.failedApiCalls && input.failedApiCalls.length
+        ? { failedApiCalls: [...input.failedApiCalls] }
+        : {}),
     }),
     proof: input.proof,
   };
