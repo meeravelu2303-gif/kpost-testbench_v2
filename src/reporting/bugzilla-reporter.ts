@@ -121,14 +121,31 @@ const UI_FILING_SPECS = new Set([
   'admin-subtabs-health.spec.ts',
   'admin-dead-screens.spec.ts',
   'admin-login.spec.ts',
-  // Home API-response mishandling: DETERMINISTIC stub tests (they fulfil the dashboard/badge-count
-  // responses themselves, so a failure is a real code defect, never a selector/tuning miss). Added
-  // 2026-10-12 after confirming each failure reproduces 3/3 with screenshot proof: an empty inbox
-  // renders a blank panel with no "no messages" state; an unread badge renders "[object Object]" for
-  // a non-numeric count. Both are selector-INDEPENDENT (assert on the error-boundary / empty-state /
-  // badge text, not on a brittle locator chain).
+  // Home API-response mishandling: DETERMINISTIC stub tests (they fulfil the dashboard response
+  // themselves, so a failure is a real code defect, never a selector/tuning miss). The one filing
+  // failure is the empty-but-successful load (#1322, LOW): a brand-new user's genuinely-empty inbox
+  // renders a blank panel with no "no messages" state. That empty SUCCESS body is a real server
+  // state, so it clears the realistic bar. Selector-INDEPENDENT (asserts on the empty-state text /
+  // error banner, not a brittle locator chain).
   'home-api-handling.spec.ts',
-  'home-resilience.spec.ts',
+  // NOTE (2026-10-12): `home-resilience.spec.ts` was REMOVED from this list. Its two failures (a
+  // malformed Kall row crashing the app; an object-valued unread badge rendering "[object Object]")
+  // are DEFENSIVE GAPS forced by stubs the server never actually produces — the live dashboard
+  // returns well-formed rows and a NUMERIC msgsCount, and accounts show a welcome message, not an
+  // empty inbox. Per the realistic-bug bar (a stub is only a real bug if the server returns that
+  // shape), those are not user-facing defects and must not auto-file. The spec still runs for human
+  // triage; it is simply not an auto-filing source.
+  // Katchup thread API handling (katchup-api-handling.spec.ts): DETERMINISTIC stub tests of
+  // server-returnable states, added 2026-10-12.
+  //  - Stored XSS on open: PROVEN end-to-end — the live `sendMessage` API accepts a raw-HTML
+  //    `actualMessage`, stores it and echoes it back VERBATIM (round-trip confirmed, msgID 855056),
+  //    and `renderMessage()` (KatchupMessage.js:4386) feeds any non-JSON body straight to
+  //    `dangerouslySetInnerHTML` (L4408) with no sanitiser. The stub mirrors that exact message; the
+  //    test asserts the payload must NOT execute and fails because it does. CRITICAL, selector-
+  //    independent (asserts on JS execution with a render-guard against false pass).
+  //  - Thread-load 500 -> silent empty conversation: a real server 500 makes the catch do
+  //    `setMessageArr([])`, so the user sees an empty thread with no error. Deterministic 500 stub.
+  'katchup-api-handling.spec.ts',
 ]);
 
 /**

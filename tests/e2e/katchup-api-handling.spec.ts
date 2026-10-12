@@ -19,9 +19,12 @@ import { settleFrames } from './support/settle';
  *  - A 500/timeout on the thread-load is a real server failure; the catch (`KatchupMessage.js:5710`)
  *    does `setMessageArr([])`, so the user sees an EMPTY conversation with no error.
  *
- * NEEDS-LIVE-TUNING: the stubbed message shape is modelled from the source consumer; if the live
- * markup differs the XSS assertion can only PASS falsely (never fail falsely — a non-rendering stub
- * simply won't fire the payload), so it is safe to ship and refine from the first run's screenshot.
+ * LIVE-PROVEN (2026-10-12): the stubbed message shape is NOT guesswork — the real `sendMessage` API
+ * was driven end-to-end (qatest1 -> qatest2): it accepted a raw-HTML `actualMessage`, stored it, and
+ * `katchupMessagesForSelectedContactID` echoed it back BYTE-FOR-BYTE (msgID 855056, isJSON-parseable
+ * === false), then the probe was recalled. The stub below mirrors that captured message field-for-
+ * field. A render-guard still fails the test if the stub does not render, so the XSS verdict can
+ * never be a false pass.
  */
 test.describe('KPost Katchup · thread API handling + stored-XSS on open', { tag: '@ui' }, () => {
   test.skip(
@@ -45,6 +48,13 @@ test.describe('KPost Katchup · thread API handling + stored-XSS on open', { tag
       (window as unknown as { __xss?: boolean }).__xss = false;
     });
 
+    // The message object below mirrors a REAL thread response field-for-field (captured live
+    // 2026-10-12, msgID 855056): a raw-HTML `actualMessage` that the live `sendMessage` API accepts,
+    // stores and echoes back VERBATIM (confirmed round-trip — HTTP 200, returned unchanged,
+    // isJSON-parseable === false). So this is exactly what the server returns, not a contrived shape;
+    // `renderMessage()` (KatchupMessage.js:4386) branches only on `isJSON(text)` and feeds a non-JSON
+    // body straight to `dangerouslySetInnerHTML` (L4408) with no sanitiser — `isHtml` is never read.
+    const sent = Date.now();
     await page.route(THREAD, (route) =>
       route.fulfill({
         status: 200,
@@ -52,19 +62,49 @@ test.describe('KPost Katchup · thread API handling + stored-XSS on open', { tag
         body: JSON.stringify({
           status: 'SUCCESS',
           statusCode: 200,
+          lastMsgID: 855056,
           data: [
             {
-              msgID: 999999001,
+              msgID: 855056,
+              sender: testData.victimKpostId,
+              receiver: testData.kpostId,
               messageType: 0,
-              groupFlag: 'false',
-              subject: 'QA XSS probe',
-              senderKpostID: testData.victimKpostId,
-              receiverKpostID: testData.kpostId,
-              senderName: 'QA Victim',
-              createdDate: Date.now(),
               // Non-JSON raw HTML → hits the unsanitised dangerouslySetInnerHTML sink (L4408).
               actualMessage:
-                '<img src=x onerror="window.__xss=true;document.title=\'XSSFIRED\'"><svg onload="window.__xss=true">',
+                '<img src=x onerror="window.__xss=true;document.title=\'XSSFIRED\'">QA XSS PROBE safe-to-delete',
+              status: 0,
+              deviceID: null,
+              sessionID: 'Web-Reactjs',
+              attachmentUuid: null,
+              groupFlag: false,
+              messageTime: new Date(sent).toISOString(),
+              messageTimeAsLong: sent,
+              readTime: null,
+              readTimeAsLong: 0,
+              serverTime: new Date(sent).toISOString(),
+              serverTimeAsLong: sent,
+              subject: 'QA XSS PROBE safe-to-delete',
+              isDeleted: false,
+              isMarked: false,
+              referenceMessage: null,
+              referenceMessageList: null,
+              secretMessageExpireTime: null,
+              secretMessageExpireTimeAsLong: 0,
+              selectedMembers: 'N',
+              isBlockedContact: false,
+              isVanished: false,
+              sharedMessageDetails: null,
+              sharedMessageId: sent,
+              senderName: 'QA Victim',
+              receiverName: 'QA Tester',
+              sharedType: 0,
+              isCopyMessage: false,
+              isHtml: false,
+              referenceMessageIDList: [],
+              isVoiceMessage: false,
+              attachmentCaptionDetails: null,
+              temporaryMsgID: 0,
+              contactDetails: null,
             },
           ],
         }),
@@ -76,8 +116,9 @@ test.describe('KPost Katchup · thread API handling + stored-XSS on open', { tag
 
     // Guard against a FALSE PASS: the stubbed message must actually render (so the sink was exercised).
     // If the thread shows "No messages" instead, the stub shape is wrong and the XSS result is meaningless.
+    // The visible text is everything after the <img> tag in the raw-HTML body.
     const rendered = await page
-      .getByText('QA XSS probe')
+      .getByText('QA XSS PROBE safe-to-delete')
       .first()
       .isVisible()
       .catch(() => false);
