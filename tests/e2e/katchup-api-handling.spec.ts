@@ -73,6 +73,19 @@ test.describe('KPost Katchup · thread API handling + stored-XSS on open', { tag
 
     await openConversation(page, testData.victimKpostId);
     await settleFrames(page);
+
+    // Guard against a FALSE PASS: the stubbed message must actually render (so the sink was exercised).
+    // If the thread shows "No messages" instead, the stub shape is wrong and the XSS result is meaningless.
+    const rendered = await page
+      .getByText('QA XSS probe')
+      .first()
+      .isVisible()
+      .catch(() => false);
+    expect(
+      rendered,
+      'the stubbed message must render (else the XSS sink was never exercised — fix the stub shape)',
+    ).toBe(true);
+
     const onerrorFired = await page.evaluate(
       () => (window as unknown as { __xss?: boolean }).__xss === true,
     );
