@@ -103,6 +103,35 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     judgedBy: 'QA triage (run-96b9c68c)',
     date: '2026-10-11',
   },
+  /*
+   * KMail getInstantReply: the "id must be a positive integer" check is wrong for THIS endpoint —
+   * its default replies use numeric ids ("1","2") but CUSTOMIZED replies legitimately use UUIDs
+   * (e.g. cb0b8d19-7de7-...). So a UUID id is correct data, not a defect. Class match on the
+   * endpoint + validator so a genuinely bad id on a different endpoint still files. (run-42e9a1f1,
+   * was KP-16FB8E.)
+   */
+  {
+    endpoint: '/common/getInstantReply',
+    validator: 'common.id',
+    reason:
+      'getInstantReply customized replies use UUID ids by design; the "id must be a positive integer" check does not apply to this endpoint.',
+    judgedBy: 'QA triage (run-42e9a1f1)',
+    date: '2026-10-12',
+  },
+  /*
+   * KMail sentAndInboxMailContent 403: the bench sends a PLACEHOLDER kmailID:0 (a mail that does not
+   * exist / is not the caller's), so a 403 is correct — it is a bench-fixture gap, not a defect.
+   * Fix the fixture to send a real owned kmailID, then DELETE this entry (a 403 on a real owned mail
+   * would be a genuine bug). (run-42e9a1f1, was KP-6CDA7E / KP-6B74E1.)
+   */
+  {
+    endpoint: '/readMail/sentAndInboxMailContent',
+    actualContains: '403',
+    reason:
+      'bench-fixture fault: the request sends kmailID:0 (a non-existent / non-owned mail), so the 403 is correct. Fix the fixture to use a real owned kmailID, then delete this entry.',
+    judgedBy: 'QA triage (run-42e9a1f1)',
+    date: '2026-10-12',
+  },
   {
     fingerprint: 'KP-39A349',
     endpoint: '/v2/signupLogin/userLogin',
