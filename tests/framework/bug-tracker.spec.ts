@@ -195,6 +195,10 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
       'Test timeout of 600000ms exceeded.',
       'Error: page.goto: Timeout was reached',
       'Error: page.goto: Could not resolve hostname',
+      // A navigation race / redirect-in-flight is a test-harness artifact, not a product crash —
+      // on a throttled server a whole run of these must never become new bugs (run-2f18b0d8).
+      'Error: page.goto: Navigation to "https://test.kpostindia.com/home" is interrupted by another navigation to "https://test.kpostindia.com/login"',
+      'Error: Execution context was destroyed, most likely because of a navigation',
     ]) {
       const ui = candidate({ source: 'ui', actual, title: `Home screen — health @ui: ${actual}` });
       expect(candidateRejection(ui), actual).toContain('transient');

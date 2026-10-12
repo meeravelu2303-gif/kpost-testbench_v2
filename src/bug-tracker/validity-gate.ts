@@ -87,7 +87,7 @@ const BENCH_FAULT = [
  * new bugs and marked open bugs "still broken" with a screenshot of an error page as "proof".
  */
 export const ENVIRONMENTAL_UI_OR_API_FAILURE =
-  /no HTTP response|apiRequestContext\.fetch|Timeout\s*\d+\s*ms exceeded|Test timeout of \d+\s*ms exceeded|NS_ERROR_[A-Z_]+|net::ERR_[A-Z_]+|Could not connect to (the )?server|ERR_CONNECTION|page.goto: Timeout was reached|Could not resolve hostname|The network connection was lost|A server with the specified hostname could not be found/i;
+  /no HTTP response|apiRequestContext\.fetch|Timeout\s*\d+\s*ms exceeded|Test timeout of \d+\s*ms exceeded|NS_ERROR_[A-Z_]+|net::ERR_[A-Z_]+|Could not connect to (the )?server|ERR_CONNECTION|page\.goto: Timeout was reached|is interrupted by another navigation|interrupted by another navigation to|frame was detached|Execution context was destroyed|Could not resolve hostname|The network connection was lost|A server with the specified hostname could not be found/i;
 
 /** The endpoint throttled US: the server working correctly under test load, not a defect. */
 const THROTTLED = /\b429\b|Too many requests|RATE_LIMITED/i;
