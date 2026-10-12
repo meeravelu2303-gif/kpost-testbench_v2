@@ -146,6 +146,15 @@ const UI_FILING_SPECS = new Set([
   //  - Thread-load 500 -> silent empty conversation: a real server 500 makes the catch do
   //    `setMessageArr([])`, so the user sees an empty thread with no error. Deterministic 500 stub.
   'katchup-api-handling.spec.ts',
+  // Katchup write-action failure feedback (katchup-write-handling.spec.ts), added 2026-10-12.
+  // DETERMINISTIC stubs of a FAILURE envelope the server genuinely returns on write edge cases
+  // (deleted/blocked recipient, already-deleted message, transient 5xx). The Delete handler
+  // (KatchupMessage.js:3222) gates success on status==="SUCCESS" with NO else branch, so a rejected
+  // delete is silent — no toast, message left as-is, user cannot tell it failed. The test drives the
+  // real bell->Delete->Confirm flow and GUARDS on the delete call actually firing, so a selector drift
+  // cannot fake the bug. (The send-failure test in the same file PASSES — send already surfaces an
+  // error — so it never files; only a genuine silent-failure regression would.)
+  'katchup-write-handling.spec.ts',
 ]);
 
 /**
