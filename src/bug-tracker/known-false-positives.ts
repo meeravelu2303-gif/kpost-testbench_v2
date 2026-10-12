@@ -150,6 +150,44 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     judgedBy: 'QA triage (run-96b9c68c)',
     date: '2026-10-11',
   },
+  /*
+   * Live re-verification of run-420b3816's would-file/reopen plan (2026-10-12). Each was replayed on
+   * testingapi and judged NOT a product defect — see the per-entry reason. (The 4 genuine findings
+   * from the same run — KP-06F947, KP-86FC80, KP-E667CA, and the #1267 reopen — were filed.)
+   */
+  {
+    // Class match (the "1 schema violation" count is stable, but keep it endpoint+field anchored).
+    endpoint: '/v2/kall/scheduledKall',
+    field: 'must be object,null',
+    reason:
+      'scheduledKall correctly returns `data` as an ARRAY of scheduled calls; the bench response schema wrongly requires object|null. Bench-schema gap, not a server bug — fix the response schema. (Supersedes fingerprint KP-223254.)',
+    judgedBy: 'QA live re-verify (run-420b3816)',
+    date: '2026-10-12',
+  },
+  {
+    fingerprint: 'KP-EBB10B',
+    endpoint: '/v2/signupLogin/adminRegistration',
+    reason:
+      'adminRegistration returns 400 because the mobile/email OTP is not verified (or a required field is blank) — correct server behaviour. The "expected 200" is a test-flow limitation (OTP not completed), not a regression. Do NOT reopen #1262.',
+    judgedBy: 'QA live re-verify (run-420b3816)',
+    date: '2026-10-12',
+  },
+  {
+    fingerprint: 'KP-EB57B9',
+    endpoint: '/katchup/recallMessage',
+    field: 'status must be SUCCESS',
+    reason:
+      'The request was a negative case (msgID:0, sender:"") and the server correctly returns FAILURE; the success-envelope check was misapplied to a failing input. Not a defect. Do NOT reopen #1268. (The real legacy-recall bug is the IDOR, KP-6F5E6B/#1267.)',
+    judgedBy: 'QA live re-verify (run-420b3816)',
+    date: '2026-10-12',
+  },
+  {
+    fingerprint: 'KP-C760BC',
+    reason:
+      'Legacy POST /group/removeGroupMember/ (no /v2) returns 403 "Not Applicable"; it is a dead path the frontend never calls (it uses /v2/group/removeGroupMember/, which correctly returns a 400 with a proper envelope). Envelope-only nit on a dead path, ~zero user impact — not worth a ticket. Fingerprint-matched so the real /v2 removeGroupMember findings still file.',
+    judgedBy: 'QA live re-verify (run-420b3816)',
+    date: '2026-10-12',
+  },
 ];
 
 function norm(tag: string): string {
