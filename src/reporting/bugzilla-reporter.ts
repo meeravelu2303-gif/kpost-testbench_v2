@@ -121,6 +121,14 @@ const UI_FILING_SPECS = new Set([
   'admin-subtabs-health.spec.ts',
   'admin-dead-screens.spec.ts',
   'admin-login.spec.ts',
+  // Home API-response mishandling: DETERMINISTIC stub tests (they fulfil the dashboard/badge-count
+  // responses themselves, so a failure is a real code defect, never a selector/tuning miss). Added
+  // 2026-10-12 after confirming each failure reproduces 3/3 with screenshot proof: an empty inbox
+  // renders a blank panel with no "no messages" state; an unread badge renders "[object Object]" for
+  // a non-numeric count. Both are selector-INDEPENDENT (assert on the error-boundary / empty-state /
+  // badge text, not on a brittle locator chain).
+  'home-api-handling.spec.ts',
+  'home-resilience.spec.ts',
 ]);
 
 /**
