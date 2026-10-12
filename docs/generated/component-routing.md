@@ -190,14 +190,14 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `kmail-translation`
 
-## KPost API (250 endpoints)
+## KPost API (249 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
 | User Profile V2 | 45 |
 | Katchup Messaging V2 | 35 |
-| Common Reference Data & Utilities V2 | 20 |
 | Kall (Voice/Video) V2 - current | 20 |
+| Common Reference Data & Utilities V2 | 19 |
 | Company Administration | 19 |
 | Authentication V2 | 18 |
 | kpost-webservice-application | 18 |
@@ -254,7 +254,6 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `common-pincode`
 - `common-postal-pincode`
 - `common-save-enquiry-details`
-- `common-save-unsubscriber-details`
 - `common-states`
 - `common-total-count-by-date`
 - `common-unique-name-exist`

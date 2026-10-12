@@ -9,7 +9,7 @@ cannot drift from what is actually tested.
 | | Count |
 | - | ----: |
 | Documented (workbook, usable) | 446 |
-| **Registered & tested** | **353** |
+| **Registered & tested** | **352** |
 | — of those, run on live | 122 |
 | In "built" modules | 431 |
 
@@ -19,7 +19,7 @@ cannot drift from what is actually tested.
 | `kmail` | 80 | 79 | 30 | built | KMail — test host testkmail (/testkmail/v2). 27 reads all-types on kmail; 28 data writes fuzzed on kmail:deep; 14 needs-id reads via KMAIL_LIFECYCLE (attachment downloads need a real S3 upload — off-live); getKloudUsedData not in the usable contract |
 | `profile` | 45 | 45 | 12 | built | profile — full API + write lifecycle + screens |
 | `katchup` | 36 | 35 | 9 | built | messaging — full API + write lifecycle + screen |
-| `common` | 32 | 32 | 21 | built | reference data, identity, company, OTP (OTP writes gated) |
+| `common` | 32 | 31 | 21 | built | reference data, identity, company, OTP (OTP writes gated) |
 | `kall` | 20 | 20 | 6 | built | calling — full API + write lifecycle + screen |
 | `contacts` | 16 | 16 | 8 | built | address book — reads live, writes gated lifecycle |
 | `dairyschedule` | 14 | 14 | 4 | built | KDiary — schedules/events/reports; reads live, writes gated |
@@ -124,6 +124,10 @@ cannot drift from what is actually tested.
 **`katchup`** (1) — built
 
 - `/v2/katchup/forwardKatchupMessage/`
+
+**`common`** (1) — built
+
+- `/v2/common/saveUnsubscriberDetails`
 
 **`redbus`** (3) — built
 

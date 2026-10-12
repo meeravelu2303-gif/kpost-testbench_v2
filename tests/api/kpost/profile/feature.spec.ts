@@ -472,11 +472,11 @@ test.describe('KPost Profile · write lifecycle', () => {
      * Live-verified 2026-09-26: previously this whole test only checked `status < 600` for every
      * write — accepting a 4xx/5xx as "fine" — which is exactly how two real, previously-hidden
      * defects went unnoticed:
-     *   - `profile-update-image` rejected the bench's own PNG fixture outright (400 "Invalid File
-     *     Format"), even though the IDENTICAL bytes succeed on `profile-upload-cover`/
-     *     `-upload-image-s3`. Its own definition (image.api.ts) was switched to a JPEG so the
-     *     lifecycle can still exercise the rest of the flow; the PNG rejection itself is filed below
-     *     as the real, still-open finding.
+     *   - `profile-update-image` rejects a PNG with 400 "Invalid File Format" — this endpoint is
+     *     JPEG-only by design (owner-confirmed 2026-10-12), even though the sibling uploads accept the
+     *     same PNG bytes. That product inconsistency is NOT a defect (#626 closed FIXED). Its own
+     *     definition (image.api.ts) uses a JPEG so the lifecycle exercises the real flow; the PNG
+     *     check below now only guards against a 5xx CRASH, which would be the one genuine defect.
      *   - `profile-upload-attachments` 400d "Required part 'files' is missing" every time — the
      *     bench was sending the wrong multipart field name (`file` instead of `files`). Fixed in
      *     image.api.ts; this was a bench bug, not a product defect.
@@ -500,8 +500,8 @@ test.describe('KPost Profile · write lifecycle', () => {
       return ex.status;
     };
 
-    // profile-update-image: confirm the JPEG fixture now works, AND that the PNG rejection is a
-    // real, still-open finding (not fixed by switching this test's own fixture).
+    // profile-update-image: confirm the JPEG fixture works, AND that a PNG is rejected CLEANLY
+    // (4xx, not a 5xx crash) — the endpoint is JPEG-only by design, so the rejection itself is fine.
     const jpegUploadEx = await endpoints.sendTo(
       'profile-update-image',
       {
@@ -535,19 +535,27 @@ test.describe('KPost Profile · write lifecycle', () => {
       },
       { label: 'profile:upload-profile-image-png', auth: { principal: A }, allowLiveWrite: true },
     );
-    if (pngUpload.status >= 400) {
+    // updateProfileImage is JPEG-only BY DESIGN: a PNG is correctly rejected with 400 "File size
+    // should be less than 500 KB or Invalid File Format" (owner-confirmed 2026-10-12; #626 closed
+    // FIXED as not-a-defect). The sibling uploads happen to accept PNG, but this endpoint does not —
+    // that is a product choice, not a bug. The ONLY real defect here would be a 5xx CRASH on a PNG
+    // instead of a clean client-error rejection, so that is what we assert.
+    if (pngUpload.status >= 500) {
       endpoints.recordBusinessRuleViolation({
         endpointId: 'profile-update-image',
-        ruleId: 'REGRESSION-profile-update-image-rejects-png',
-        rule: 'updateProfileImage must accept a valid PNG, same as its sibling uploadCoverImage/uploadImageToS3 do with the identical bytes.',
-        expected: 'status < 300 for a valid PNG',
+        ruleId: 'profile-update-image-png-5xx-crash',
+        rule: 'updateProfileImage must reject a PNG with a clean 4xx (it is JPEG-only), never crash with a 5xx.',
+        expected: 'a 4xx rejection (e.g. 400 "Invalid File Format"), never a 5xx',
         actual: `status=${pngUpload.status}, body=${pngUpload.bodyText}`,
         request: { multipart: { file: 'qa-bench.png (image/png)' } },
       });
     }
     expect
-      .soft(pngUpload.status, 'updateProfileImage accepts a valid PNG (rejected 2026-09-26)')
-      .toBeLessThan(300);
+      .soft(
+        pngUpload.status,
+        'updateProfileImage rejects a PNG cleanly (JPEG-only: a 4xx, never a 5xx crash)',
+      )
+      .toBeLessThan(500);
 
     for (const [id, label] of [
       ['profile-upload-cover', 'upload-cover'],

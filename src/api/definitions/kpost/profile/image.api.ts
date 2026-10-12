@@ -16,14 +16,13 @@ const PNG_1X1 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AL+6ZlWAAAAAElFTkSuQmCC';
 
 /*
- * A tiny valid JPEG — `updateProfileImage`/`updateSignatureImage` (unlike their siblings) reject
- * the PNG above outright. Live-verified 2026-09-26: the exact same PNG bytes succeed on
- * `uploadCoverImage`/`uploadImageToS3` (200) but `updateProfileImage` answers 400 "File size should
- * be less than 500 KB or Invalid File Format" for both a 1x1 and a 10x10 PNG — so it is a real
- * format restriction on this specific pair of endpoints, not a size problem or a bench fixture
- * problem. JPEG is accepted (200) on `updateProfileImage`. See `feature.spec.ts` for the filed
- * finding (the PNG rejection itself is the tracked defect; this constant exists so the lifecycle
- * can still exercise the rest of the upload→download round trip while it's open).
+ * A tiny valid JPEG — `updateProfileImage`/`updateSignatureImage` (unlike their siblings) are
+ * JPEG-only and reject the PNG above with 400 "File size should be less than 500 KB or Invalid File
+ * Format" for both a 1x1 and a 10x10 PNG (live-verified 2026-09-26; the same bytes succeed on
+ * `uploadCoverImage`/`uploadImageToS3` at 200). Owner-confirmed 2026-10-12 this format restriction
+ * is BY DESIGN, not a defect — #626 closed FIXED. This constant lets the lifecycle exercise the real
+ * upload→download round trip; `feature.spec.ts` now only guards that a PNG is rejected CLEANLY (a
+ * 4xx, never a 5xx crash).
  */
 export const JPEG_1X1 =
   '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';

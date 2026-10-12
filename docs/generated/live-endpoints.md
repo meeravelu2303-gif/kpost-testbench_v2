@@ -10,8 +10,8 @@ A clear per-reason list of what stays blocked is in `docs/generated/blocked-endp
 | | Count |
 | - | ----: |
 | **Runs on live** | **122** |
-| Blocked | 236 |
-| Total registered | 358 |
+| Blocked | 235 |
+| Total registered | 357 |
 
 ---
 
@@ -148,7 +148,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 236
+## Blocked on live — 235
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -187,7 +187,6 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/common/forgotPasswordOTPOrSentKpostIDSms` | common | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
 | `POST` | `/v2/common/forgotPasswordUpdate` | common | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `POST` | `/v2/common/saveEnquiryDetails` | common | OFF-LIVE by choice: persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle |
-| `POST` | `/v2/common/saveUnsubscriberDetails` | common | OFF-LIVE by choice: persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle |
 | `POST` | `/v2/common/sendOTP/` | common | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
 | `POST` | `/v2/common/sendOTPtoMail/` | common | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
 | `POST` | `/v2/common/updateFlutterAppVersion` | common | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |

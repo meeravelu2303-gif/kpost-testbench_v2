@@ -77,20 +77,17 @@ export const saveEnquiryDetailsApi = defineKpostEndpoint({
   })),
 });
 
-export const saveUnsubscriberDetailsApi = defineKpostEndpoint({
-  id: 'common-save-unsubscriber-details',
-  method: 'POST',
-  path: '/v2/common/saveUnsubscriberDetails',
-  summary: 'Record an unsubscribe request',
-  tags: ['common', 'common-platform', 'public-write'],
-  destructive: true,
-  request: body(() => ({
-    sender: testData.kpostId,
-    receiver: testData.otpEmail,
-    reason: 'QA bench unsubscribe check',
-    createdBy: testData.kpostId,
-  })),
-});
+/*
+ * `saveUnsubscriberDetails` is NOT a KPost API endpoint — it belongs to KMail. It was defined here
+ * against the KPost API host (`/v2/common/saveUnsubscriberDetails` on testingapi.kpostindia.com),
+ * which does not serve it, so every call 404'd — a wrong-service artifact tracked as #725 (KP-D25BBE),
+ * closed WORKSFORME 2026-10-12. The real endpoint is KMail's CommonMailController
+ * (`@RequestMapping("v2/common")` + `@PostMapping("/saveUnsubscriberDetails")`):
+ *   https://testkmail.kpostindia.com/testkmail/v2/common/saveUnsubscriberDetails
+ * The KPost React frontend never calls it (it is a server-side email-footer unsubscribe endpoint).
+ * Removed from the KPost API here; add it to the KMail suite (defineKmailEndpoint, path
+ * '/common/saveUnsubscriberDetails') with a verified KmailUnsubscriber body if KMail coverage is wanted.
+ */
 
 export const totalCountByDateApi = defineKpostEndpoint({
   id: 'common-total-count-by-date',
@@ -113,6 +110,5 @@ export const platformApis = [
   flutterAppVersionApi,
   updateFlutterAppVersionApi,
   saveEnquiryDetailsApi,
-  saveUnsubscriberDetailsApi,
   totalCountByDateApi,
 ];

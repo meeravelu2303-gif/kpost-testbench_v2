@@ -20,15 +20,15 @@ The plan: `docs/reference/production-readiness-plan.md`, Phase 1.
 
 ## The last run, by the engine’s own skip classes
 
-Run `run-96b9c68c-31f1-4f7b-9b01-1e3c65620260` at 2026-10-11T09:45:02.243Z: 25942 checks, 12379 applicable ran (86% passed), 13560 skipped:
+Run `run-f6d8b4c7-6601-406c-864c-d274aa585492` at 2026-10-12T07:46:56.540Z: 5 checks, 5 applicable ran (0% passed), 0 skipped:
 
 | Engine skip class | Checks | Meaning |
 | ----------------- | -----: | ------- |
-| notApplicable | 10578 | the validator does not apply to that endpoint (by design) |
-| recoverable | 1573 | needs a fixture, an id or a second principal — a gap to close |
-| blockedByDefect | 1286 | an open defect stops the check from being meaningful |
-| deliberate | 96 | an owner pause or a safety choice |
-| environmental | 27 | host or transport trouble this run |
+| notApplicable | 0 | the validator does not apply to that endpoint (by design) |
+| recoverable | 0 | needs a fixture, an id or a second principal — a gap to close |
+| blockedByDefect | 0 | an open defect stops the check from being meaningful |
+| deliberate | 0 | an owner pause or a safety choice |
+| environmental | 0 | host or transport trouble this run |
 
 ## Retune — a selector that no longer matches, or a defect; Phase 1 drives this to 0 (0)
 
