@@ -20,11 +20,13 @@ export const msStatusApi = defineKpostEndpoint({
   method: 'GET',
   path: '/v2/common/msStatus/',
   summary: 'Microservice health status',
-  tags: ['common', 'common-platform', 'smoke'],
+  tags: ['common', 'common-platform'],
   /*
-   * The cheapest possible reachability check, and the only common endpoint whose documented
-   * response is just `{ status }`. Tagged smoke so `--grep @smoke` answers "is the API up?"
-   * without sending an SMS or touching data.
+   * The cheapest possible reachability check, and the only common endpoint whose documented response
+   * is just `{ status }`. The run-level "is the API up?" smoke check lives in the curated smoke spec
+   * (tests/api/smoke.spec.ts); `@smoke` is reserved for run levels, so it is NOT an endpoint tag here.
+   * (Live this returns plaintext `SUCCESS` instead of the documented `{ status }` JSON — an API
+   * contract drift the engine surfaces for the normal review workflow; not suppressed, not filed here.)
    */
   destructive: false,
 });

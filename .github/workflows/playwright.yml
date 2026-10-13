@@ -29,3 +29,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      # Tag governance is its OWN step and runs even when `npm run check` fails (`!cancelled()`), so a
+      # formatting failure never masks a tag violation. Lists tests via `playwright --list` (no server
+      # contact, no live creds — env defaults suffice), so it is safe on a hosted runner. Live test
+      # suites deliberately do NOT run in CI; they run from the QA machine (see docs/TEST-RUN-LEVELS.md).
+      - name: Tag governance (lint:tags)
+        if: ${{ !cancelled() }}
+        run: npm run lint:tags

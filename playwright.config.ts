@@ -4,18 +4,42 @@ import { env } from './src/config/env';
 
 const BUGZILLA_REPORTER = './src/reporting/bugzilla-reporter.ts';
 
+/**
+ * The KPost test bench runs against a LOW-CAPACITY shared server. Workers are hard-capped at 2 and
+ * default to 1, enforced here (not only in npm scripts) so no invocation can overload the server.
+ * `WORKERS` may lower it to 1 but can never raise it past 2.
+ */
+const WORKERS_CAP = 2;
+const resolveWorkers = (): number => Math.min(Math.max(1, env.WORKERS ?? 1), WORKERS_CAP);
+
+/** One retry everywhere: absorbs a single transient blip without masking a repeatable failure. */
+const RETRIES = env.RETRIES ?? 1;
+
 /** UI projects reuse the session saved by the `setup` project. */
-const browserProject = (name: string, device: Project['use']): Project => ({
+const browserProject = (
+  name: string,
+  device: Project['use'],
+  extraUse: Project['use'] = {},
+): Project => ({
   name,
   testDir: './tests/e2e',
-  use: { ...device, storageState: STORAGE_STATE },
+  use: { ...device, storageState: STORAGE_STATE, ...extraUse },
   dependencies: ['setup'],
-  // A live SPA over a throttling third-party host is inherently flakier than an API call: a slow
-  // navigation or a transient render can fail one test per full run, rotating between engines. Two
-  // retries absorb that intermittent variance without masking a real, repeatable failure (a genuine
-  // break fails all three attempts).
-  retries: env.RETRIES ?? 2,
+  retries: RETRIES,
 });
+
+/**
+ * Chromium needs fake media so Kall (voice/video) can reach ringing/connecting without a real
+ * camera or microphone, with the permissions pre-granted. Harmless for non-media tests. Firefox and
+ * WebKit are not used for smoke/sanity (and only Chromium has the fake-device flags), so Kall media
+ * flows run on Chromium.
+ */
+const CHROMIUM_MEDIA: Project['use'] = {
+  launchOptions: {
+    args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+  },
+  permissions: ['camera', 'microphone'],
+};
 
 export default defineConfig({
   testDir: './tests',
@@ -23,10 +47,12 @@ export default defineConfig({
   timeout: TIMEOUTS.test,
   expect: { timeout: TIMEOUTS.expect },
 
+  // Kept true (pre-existing); with workers defaulting to 1 the run is effectively serial, which is
+  // what the low-capacity server needs. The hard worker cap below is the real throughput guard.
   fullyParallel: true,
   forbidOnly: env.CI,
-  retries: env.RETRIES ?? (env.CI ? 2 : 0),
-  workers: env.WORKERS ?? (env.CI ? '50%' : undefined),
+  retries: RETRIES,
+  workers: resolveWorkers(),
 
   // Never run data-mutating tests against production unless explicitly allowed.
   grepInvert:
@@ -56,9 +82,9 @@ export default defineConfig({
       name: 'setup',
       testDir: './tests/setup',
       testMatch: /.*\.setup\.ts/,
-      retries: env.RETRIES ?? 2,
+      retries: RETRIES,
     },
-    browserProject('chromium', devices['Desktop Chrome']),
+    browserProject('chromium', devices['Desktop Chrome'], CHROMIUM_MEDIA),
     browserProject('firefox', devices['Desktop Firefox']),
     browserProject('webkit', devices['Desktop Safari']),
     // The Admin/HR-Setup UI is a SEPARATE SPA (kpostadmin.kpostindia.com) on its own origin, SSO'd
@@ -73,7 +99,7 @@ export default defineConfig({
         storageState: STORAGE_STATE_ADMIN,
       },
       dependencies: ['setup'],
-      retries: env.RETRIES ?? 2,
+      retries: RETRIES,
     },
     { name: 'api', testDir: './tests/api' },
     { name: 'framework', testDir: './tests/framework' },

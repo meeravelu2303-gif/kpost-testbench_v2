@@ -66,7 +66,20 @@ export default defineConfig(
       'playwright/no-conditional-expect': 'off',
     },
   },
-  { files: ['**/*.mjs'], extends: [tseslint.configs.disableTypeChecked] },
+  {
+    files: ['**/*.mjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+    // Node globals for the ESM build/runner scripts (scripts/*.mjs).
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
+    },
+  },
   {
     // Build-time Node scripts: CommonJS, outside the TypeScript program.
     files: ['**/*.cjs'],

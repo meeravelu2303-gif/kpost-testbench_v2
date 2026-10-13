@@ -94,6 +94,10 @@ runs without an environment.
 
 ## Running tests
 
+**Run levels (smoke / sanity / regression) — [`docs/TEST-RUN-LEVELS.md`](docs/TEST-RUN-LEVELS.md).**
+Tag-driven, server-safe, and never file bugs: `npm run test:smoke`, `npm run test:sanity -- --module <m>`,
+`npm run test:regression`. Tag governance: `npm run lint:tags`.
+
 **Every command is in one place — [`docs/guides/commands.md`](docs/guides/commands.md).** One command per Bugzilla
 product, each with a `:file` variant that also files bugs. The essentials:
 

@@ -24,12 +24,11 @@ export const TIMEOUTS = {
   navigation: 30_000,
 } as const;
 
-export const TAGS = {
-  smoke: '@smoke',
-  regression: '@regression',
-  /** Tests that create/modify/delete data. Excluded in production unless explicitly allowed. */
-  destructive: '@destructive',
-} as const;
+// The tag taxonomy lives in the PURE `./tags` module (no Node built-ins) so the plain-Node runner and
+// lint:tags can import it directly; re-exported here so existing `import { TAGS } from './constants'`
+// keeps working unchanged.
+export { TAGS, MODULE_TAGS, bugTag, ALL_TAGS, isValidTag } from './tags';
+export type { Tag } from './tags';
 
 /** Validation profiles decide which centralized validators run (see validation-policy.ts). */
 export const VALIDATION_PROFILES = ['SMOKE', 'REGRESSION', 'SECURITY', 'FULL'] as const;
