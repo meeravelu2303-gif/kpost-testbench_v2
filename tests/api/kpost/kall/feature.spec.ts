@@ -155,169 +155,174 @@ test.describe(
       }
     });
 
-    test('scheduled call: schedule → modify members → join → reschedule (BR-C01) → end (FR-C01/C03/C04/C07) @api @kall', async ({
-      endpoints,
-      databases,
-    }) => {
-      const database = databases.for('kpost-api');
-      try {
-        const scheduled = await endpoints.sendTo(
-          'kall-scheduled',
-          { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
-          { label: 'feature:kall:schedule', auth: { principal: A }, allowLiveWrite: true },
-        );
-        expect.soft(scheduled.status, 'scheduling a call succeeds').toBeLessThan(300);
-
-        const scheduledJson = scheduled.json();
-        const body = (scheduledJson.ok ? scheduledJson.value : {}) as Record<string, unknown>;
-        const kallID = extractKallId(body);
-        expect.soft(kallID, 'the scheduled call issues a kallID').toBeTruthy();
-
-        if (kallID) {
-          const byId = await endpoints.sendTo(
-            'kall-get-status-by-id',
-            { body: { kpostID: A.username, kallID } },
-            { label: 'feature:kall:sched-status', auth: { principal: A }, allowLiveWrite: true },
+    test(
+      'scheduled call: schedule → modify members → join → reschedule (BR-C01) → end (FR-C01/C03/C04/C07) @api @kall',
+      { annotation: [{ type: 'requirement', description: 'BR-C01' }] },
+      async ({ endpoints, databases }) => {
+        const database = databases.for('kpost-api');
+        try {
+          const scheduled = await endpoints.sendTo(
+            'kall-scheduled',
+            { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
+            { label: 'feature:kall:schedule', auth: { principal: A }, allowLiveWrite: true },
           );
-          expect.soft(byId.status, 'the scheduled call is readable by id').toBeLessThan(300);
+          expect.soft(scheduled.status, 'scheduling a call succeeds').toBeLessThan(300);
 
-          // FR-C07: add a third member to the scheduled call.
-          const modified = await endpoints.sendTo(
-            'kall-modify-members',
-            { body: { kallID, addingUserIds: [C.username], removingUserIds: [] } },
-            { label: 'feature:kall:modify-members', auth: { principal: A }, allowLiveWrite: true },
-          );
-          expect.soft(modified.status, 'modifyKallMembers is accepted').toBeLessThan(300);
+          const scheduledJson = scheduled.json();
+          const body = (scheduledJson.ok ? scheduledJson.value : {}) as Record<string, unknown>;
+          const kallID = extractKallId(body);
+          expect.soft(kallID, 'the scheduled call issues a kallID').toBeTruthy();
 
-          /*
-           * FR-C04: the invitee joins.
-           *
-           * `id` is the **participant** row — `TBL_KPOST_KOOL_KALL_DETAILS.id` for this receiver on
-           * this call — NOT the kallID. The bench sent `id: kallID` and read the resulting
-           * 500 "Failed to Join KatchupKall" as a product defect; it was ours. Measured directly:
-           *
-           *   { id: <kallID>,        kallID }  -> 500
-           *   { id: <detail row id>, kallID }  -> 200
-           *
-           * So the id is resolved from the database, the same way the Group flow resolves a
-           * membership id. A placeholder or a guessed id here produces a server error that looks
-           * exactly like a broken endpoint, which is how this one stayed misdiagnosed.
-           */
-          const detail = database.enabled
-            ? await database.findOne<{ id: number }>({
+          if (kallID) {
+            const byId = await endpoints.sendTo(
+              'kall-get-status-by-id',
+              { body: { kpostID: A.username, kallID } },
+              { label: 'feature:kall:sched-status', auth: { principal: A }, allowLiveWrite: true },
+            );
+            expect.soft(byId.status, 'the scheduled call is readable by id').toBeLessThan(300);
+
+            // FR-C07: add a third member to the scheduled call.
+            const modified = await endpoints.sendTo(
+              'kall-modify-members',
+              { body: { kallID, addingUserIds: [C.username], removingUserIds: [] } },
+              {
+                label: 'feature:kall:modify-members',
+                auth: { principal: A },
+                allowLiveWrite: true,
+              },
+            );
+            expect.soft(modified.status, 'modifyKallMembers is accepted').toBeLessThan(300);
+
+            /*
+             * FR-C04: the invitee joins.
+             *
+             * `id` is the **participant** row — `TBL_KPOST_KOOL_KALL_DETAILS.id` for this receiver on
+             * this call — NOT the kallID. The bench sent `id: kallID` and read the resulting
+             * 500 "Failed to Join KatchupKall" as a product defect; it was ours. Measured directly:
+             *
+             *   { id: <kallID>,        kallID }  -> 500
+             *   { id: <detail row id>, kallID }  -> 200
+             *
+             * So the id is resolved from the database, the same way the Group flow resolves a
+             * membership id. A placeholder or a guessed id here produces a server error that looks
+             * exactly like a broken endpoint, which is how this one stayed misdiagnosed.
+             */
+            const detail = database.enabled
+              ? await database.findOne<{ id: number }>({
+                  table: 'TBL_KPOST_KOOL_KALL_DETAILS',
+                  where: { kall_id: kallID, receiver: B.username },
+                })
+              : undefined;
+            expect.soft(detail?.id, `B has a participant row on call ${kallID}`).toBeTruthy();
+
+            const joined = await endpoints.sendTo(
+              'kall-join-schedule',
+              { body: { id: detail?.id, kallID } },
+              { label: 'feature:kall:join', auth: { principal: B }, allowLiveWrite: true },
+            );
+            expect.soft(joined.status, 'joinScheduleKall is accepted').toBeLessThan(300);
+
+            // The join must be RECORDED, not just accepted — join_status on the participant row is
+            // what a "who turned up" report reads, and an accepted join that stores nothing is invisible
+            // from the response.
+            if (detail?.id) {
+              const afterJoin = await database.findOne<{ join_status: number }>({
                 table: 'TBL_KPOST_KOOL_KALL_DETAILS',
-                where: { kall_id: kallID, receiver: B.username },
-              })
-            : undefined;
-          expect.soft(detail?.id, `B has a participant row on call ${kallID}`).toBeTruthy();
+                where: { id: detail.id },
+              });
+              expect
+                .soft(afterJoin?.join_status, 'FR-C04: the join is stored on the participant row')
+                .not.toBe(0);
+            }
 
-          const joined = await endpoints.sendTo(
-            'kall-join-schedule',
-            { body: { id: detail?.id, kallID } },
-            { label: 'feature:kall:join', auth: { principal: B }, allowLiveWrite: true },
-          );
-          expect.soft(joined.status, 'joinScheduleKall is accepted').toBeLessThan(300);
+            /*
+             * BR-C01, CORRECTED 2026-09-26 by the owner: rescheduling a call is REQUIRED to create a new
+             * call (a new kallID) — this is the intended design, not a defect. The original entry is
+             * superseded, not overwritten. Live-verified against the database (not just the response):
+             * the ORIGINAL row's senderKallStatus moves 6 (Scheduled) -> 7 (ReScheduled), correctly
+             * marking it superseded, while the NEW row starts fresh at 6 (Scheduled) — exactly what a
+             * "new call" should do. The bench had this backwards for a while: #501 (new kallID),
+             * #620 (new row not linked back) and #621 (status not moved) were all filed against a wrong
+             * reading of the requirement — the status transition IS correct, just on the original row,
+             * not the response's row (the earlier check read the wrong one). All three closed INVALID.
+             */
+            const rescheduled = await endpoints.sendTo(
+              'kall-reschedule',
+              { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
+              { label: 'feature:kall:reschedule', auth: { principal: A }, allowLiveWrite: true },
+            );
+            expect.soft(rescheduled.status, 'reScheduleKall is accepted').toBeLessThan(300);
 
-          // The join must be RECORDED, not just accepted — join_status on the participant row is
-          // what a "who turned up" report reads, and an accepted join that stores nothing is invisible
-          // from the response.
-          if (detail?.id) {
-            const afterJoin = await database.findOne<{ join_status: number }>({
-              table: 'TBL_KPOST_KOOL_KALL_DETAILS',
-              where: { id: detail.id },
-            });
+            const rescheduledJson = rescheduled.json();
+            const rescheduledBody = (rescheduledJson.ok ? rescheduledJson.value : {}) as Record<
+              string,
+              unknown
+            >;
+            const rescheduledId = extractKallId(rescheduledBody);
             expect
-              .soft(afterJoin?.join_status, 'FR-C04: the join is stored on the participant row')
-              .not.toBe(0);
-          }
-
-          /*
-           * BR-C01, CORRECTED 2026-09-26 by the owner: rescheduling a call is REQUIRED to create a new
-           * call (a new kallID) — this is the intended design, not a defect. The original entry is
-           * superseded, not overwritten. Live-verified against the database (not just the response):
-           * the ORIGINAL row's senderKallStatus moves 6 (Scheduled) -> 7 (ReScheduled), correctly
-           * marking it superseded, while the NEW row starts fresh at 6 (Scheduled) — exactly what a
-           * "new call" should do. The bench had this backwards for a while: #501 (new kallID),
-           * #620 (new row not linked back) and #621 (status not moved) were all filed against a wrong
-           * reading of the requirement — the status transition IS correct, just on the original row,
-           * not the response's row (the earlier check read the wrong one). All three closed INVALID.
-           */
-          const rescheduled = await endpoints.sendTo(
-            'kall-reschedule',
-            { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
-            { label: 'feature:kall:reschedule', auth: { principal: A }, allowLiveWrite: true },
-          );
-          expect.soft(rescheduled.status, 'reScheduleKall is accepted').toBeLessThan(300);
-
-          const rescheduledJson = rescheduled.json();
-          const rescheduledBody = (rescheduledJson.ok ? rescheduledJson.value : {}) as Record<
-            string,
-            unknown
-          >;
-          const rescheduledId = extractKallId(rescheduledBody);
-          expect
-            .soft(rescheduledId, 'reschedule issues a real, NEW kallID for the rescheduled call')
-            .toBeTruthy();
-          expect
-            .soft(
-              rescheduledId,
-              'BR-C01: rescheduling creates a new call — a different kallID from the original, by design',
-            )
-            .not.toBe(kallID);
-
-          const newRow = Array.isArray(rescheduledBody.data)
-            ? (rescheduledBody.data[0] as Record<string, unknown> | undefined)
-            : undefined;
-          expect
-            .soft(newRow?.senderKallStatus, 'the new call starts fresh as Scheduled (6)')
-            .toBe(6);
-
-          if (database.enabled && rescheduledId !== undefined) {
-            const originalRow = await database.findOne<{ sender_kall_status: number }>({
-              table: 'TBL_KPOST_KOOL_KALL_MASTER',
-              where: { kall_id: kallID },
-            });
+              .soft(rescheduledId, 'reschedule issues a real, NEW kallID for the rescheduled call')
+              .toBeTruthy();
             expect
               .soft(
-                originalRow?.sender_kall_status,
-                'BR-C01: the ORIGINAL call moves to ReScheduled (7), marking it superseded',
+                rescheduledId,
+                'BR-C01: rescheduling creates a new call — a different kallID from the original, by design',
               )
-              .toBe(7);
-          }
+              .not.toBe(kallID);
 
-          /*
-           * `kallID` ALONE. Sending `id` alongside it makes the endpoint answer
-           * 500 {"urlPath":"endKoolKall","status":"error"} — measured:
-           *
-           *   { id: <kallID>, kallID }  -> 500
-           *   { kallID }                -> 200, sender_kall_status moves to 8 (closed)
-           *
-           * The second "helpful" field was the whole defect. This was the third of three Kall
-           * endpoints previously written down as a server-side cluster; two of the three were the
-           * bench's own payloads.
-           */
-          const ended = await endpoints.sendTo(
-            'kall-end-kool',
-            { body: { kallID } },
-            { label: 'feature:kall:end-kool', auth: { principal: A }, allowLiveWrite: true },
-          );
-          expect.soft(ended.status, 'endKoolKall is accepted').toBeLessThan(300);
-
-          // Ending a call is a state transition, so it is asserted where the state lives: 8 = closed.
-          if (database.enabled) {
-            const master = await database.findOne<{ sender_kall_status: number }>({
-              table: 'TBL_KPOST_KOOL_KALL_MASTER',
-              where: { kall_id: kallID },
-            });
+            const newRow = Array.isArray(rescheduledBody.data)
+              ? (rescheduledBody.data[0] as Record<string, unknown> | undefined)
+              : undefined;
             expect
-              .soft(master?.sender_kall_status, 'FR-C07: ending the call closes it (status 8)')
-              .toBe(8);
+              .soft(newRow?.senderKallStatus, 'the new call starts fresh as Scheduled (6)')
+              .toBe(6);
+
+            if (database.enabled && rescheduledId !== undefined) {
+              const originalRow = await database.findOne<{ sender_kall_status: number }>({
+                table: 'TBL_KPOST_KOOL_KALL_MASTER',
+                where: { kall_id: kallID },
+              });
+              expect
+                .soft(
+                  originalRow?.sender_kall_status,
+                  'BR-C01: the ORIGINAL call moves to ReScheduled (7), marking it superseded',
+                )
+                .toBe(7);
+            }
+
+            /*
+             * `kallID` ALONE. Sending `id` alongside it makes the endpoint answer
+             * 500 {"urlPath":"endKoolKall","status":"error"} — measured:
+             *
+             *   { id: <kallID>, kallID }  -> 500
+             *   { kallID }                -> 200, sender_kall_status moves to 8 (closed)
+             *
+             * The second "helpful" field was the whole defect. This was the third of three Kall
+             * endpoints previously written down as a server-side cluster; two of the three were the
+             * bench's own payloads.
+             */
+            const ended = await endpoints.sendTo(
+              'kall-end-kool',
+              { body: { kallID } },
+              { label: 'feature:kall:end-kool', auth: { principal: A }, allowLiveWrite: true },
+            );
+            expect.soft(ended.status, 'endKoolKall is accepted').toBeLessThan(300);
+
+            // Ending a call is a state transition, so it is asserted where the state lives: 8 = closed.
+            if (database.enabled) {
+              const master = await database.findOne<{ sender_kall_status: number }>({
+                table: 'TBL_KPOST_KOOL_KALL_MASTER',
+                where: { kall_id: kallID },
+              });
+              expect
+                .soft(master?.sender_kall_status, 'FR-C07: ending the call closes it (status 8)')
+                .toBe(8);
+            }
           }
+        } finally {
+          await clearHistory(endpoints, [A, B, C]);
         }
-      } finally {
-        await clearHistory(endpoints, [A, B, C]);
-      }
-    });
+      },
+    );
 
     test('a repeating scheduled call is created (FR-C02) @api @kall', async ({ endpoints }) => {
       /*
@@ -365,72 +370,77 @@ test.describe(
       }
     });
 
-    test('BR-C01 · reschedule creates a new call, and moves the ORIGINAL to ReScheduled @api @kall', async ({
-      endpoints,
-      databases,
-    }) => {
-      /*
-       * BR-C01, CORRECTED 2026-09-26 by the owner: creating a new call on reschedule is the intended
-       * requirement, not a defect. #501, #620 and #621 were all filed against a wrong reading of the
-       * rule and are closed INVALID. The real rule, live-verified against the database: rescheduling
-       * issues a genuinely NEW kallID, that new call starts fresh at senderKallStatus 6 (Scheduled),
-       * and the ORIGINAL call's row moves to senderKallStatus 7 (ReScheduled) — marking it superseded.
-       * This test was previously checking the RESPONSE's row (the new call) for the 6->7 transition,
-       * which is why it looked broken: the transition is real, it just happens on the ORIGINAL row.
-       */
-      const database = databases.for('kpost-api');
+    test(
+      'BR-C01 · reschedule creates a new call, and moves the ORIGINAL to ReScheduled @api @kall',
+      { annotation: [{ type: 'requirement', description: 'BR-C01' }] },
+      async ({ endpoints, databases }) => {
+        /*
+         * BR-C01, CORRECTED 2026-09-26 by the owner: creating a new call on reschedule is the intended
+         * requirement, not a defect. #501, #620 and #621 were all filed against a wrong reading of the
+         * rule and are closed INVALID. The real rule, live-verified against the database: rescheduling
+         * issues a genuinely NEW kallID, that new call starts fresh at senderKallStatus 6 (Scheduled),
+         * and the ORIGINAL call's row moves to senderKallStatus 7 (ReScheduled) — marking it superseded.
+         * This test was previously checking the RESPONSE's row (the new call) for the 6->7 transition,
+         * which is why it looked broken: the transition is real, it just happens on the ORIGINAL row.
+         */
+        const database = databases.for('kpost-api');
 
-      const scheduled = await endpoints.sendTo(
-        'kall-scheduled',
-        { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
-        { label: 'feature:kall:brc01-schedule', auth: { principal: A }, allowLiveWrite: true },
-      );
-      const scheduledJson = scheduled.json();
-      const scheduledBody = (scheduledJson.ok ? scheduledJson.value : {}) as Record<
-        string,
-        unknown
-      >;
-      const kallID = extractKallId(scheduledBody);
-      expect(kallID, 'the call was scheduled and issued an id').toBeTruthy();
-
-      try {
-        const rescheduled = await endpoints.sendTo(
-          'kall-reschedule',
-          { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
-          { label: 'feature:kall:brc01-reschedule', auth: { principal: A }, allowLiveWrite: true },
+        const scheduled = await endpoints.sendTo(
+          'kall-scheduled',
+          { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
+          { label: 'feature:kall:brc01-schedule', auth: { principal: A }, allowLiveWrite: true },
         );
-        const rescheduledJson = rescheduled.json();
-        const rescheduledBody = (rescheduledJson.ok ? rescheduledJson.value : {}) as Record<
+        const scheduledJson = scheduled.json();
+        const scheduledBody = (scheduledJson.ok ? scheduledJson.value : {}) as Record<
           string,
           unknown
         >;
-        const rescheduledId = extractKallId(rescheduledBody);
+        const kallID = extractKallId(scheduledBody);
+        expect(kallID, 'the call was scheduled and issued an id').toBeTruthy();
 
-        expect(rescheduledId, 'reschedule issues a real, NEW kallID').toBeTruthy();
-        expect(
-          String(rescheduledId),
-          'BR-C01: reschedule creates a NEW call — a different kallID from the original, by design',
-        ).not.toBe(String(kallID));
+        try {
+          const rescheduled = await endpoints.sendTo(
+            'kall-reschedule',
+            { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
+            {
+              label: 'feature:kall:brc01-reschedule',
+              auth: { principal: A },
+              allowLiveWrite: true,
+            },
+          );
+          const rescheduledJson = rescheduled.json();
+          const rescheduledBody = (rescheduledJson.ok ? rescheduledJson.value : {}) as Record<
+            string,
+            unknown
+          >;
+          const rescheduledId = extractKallId(rescheduledBody);
 
-        const newRow = Array.isArray(rescheduledBody.data)
-          ? (rescheduledBody.data[0] as Record<string, unknown> | undefined)
-          : undefined;
-        expect(newRow?.senderKallStatus, 'the new call starts fresh as Scheduled (6)').toBe(6);
-
-        if (database.enabled && kallID !== undefined) {
-          const originalRow = await database.findOne<{ sender_kall_status: number }>({
-            table: 'TBL_KPOST_KOOL_KALL_MASTER',
-            where: { kall_id: kallID },
-          });
+          expect(rescheduledId, 'reschedule issues a real, NEW kallID').toBeTruthy();
           expect(
-            originalRow?.sender_kall_status,
-            'BR-C01: the ORIGINAL call moves to ReScheduled (7), marking it superseded',
-          ).toBe(7);
+            String(rescheduledId),
+            'BR-C01: reschedule creates a NEW call — a different kallID from the original, by design',
+          ).not.toBe(String(kallID));
+
+          const newRow = Array.isArray(rescheduledBody.data)
+            ? (rescheduledBody.data[0] as Record<string, unknown> | undefined)
+            : undefined;
+          expect(newRow?.senderKallStatus, 'the new call starts fresh as Scheduled (6)').toBe(6);
+
+          if (database.enabled && kallID !== undefined) {
+            const originalRow = await database.findOne<{ sender_kall_status: number }>({
+              table: 'TBL_KPOST_KOOL_KALL_MASTER',
+              where: { kall_id: kallID },
+            });
+            expect(
+              originalRow?.sender_kall_status,
+              'BR-C01: the ORIGINAL call moves to ReScheduled (7), marking it superseded',
+            ).toBe(7);
+          }
+        } finally {
+          await clearHistory(endpoints, [A, B]);
         }
-      } finally {
-        await clearHistory(endpoints, [A, B]);
-      }
-    });
+      },
+    );
 
     test('reScheduleKall: an incomplete payload crashes (500) instead of a clean validation error @api @kall', async ({
       endpoints,
@@ -479,116 +489,123 @@ test.describe(
       }
     });
 
-    test('scheduledKall requires title/date/start/end — missing a required field is blocked (FR-KL-001) @api @kall', async ({
-      endpoints,
-    }) => {
-      /*
-       * FR-KL-001 (docs/reference/business-rules.md, ⬜ to-do as of 2026-10-02): a scheduled Kall requires subject
-       * (title), a date and start/end time; a request missing one of these must be rejected, not
-       * accepted as if the field were optional. Each case omits exactly one required field from an
-       * otherwise-valid scheduleShape() body. `expect.soft` so one run reports every field, not just
-       * the first failure — and any field that unexpectedly succeeds still gets cleaned up below.
-       */
-      const requiredFieldCases: Array<[string, Record<string, unknown>]> = [
-        ['subject', { subject: undefined }],
-        ['scheduledStartTime', { scheduledStartTime: undefined }],
-        ['scheduledEndTime', { scheduledEndTime: undefined }],
-      ];
+    test(
+      'scheduledKall requires title/date/start/end — missing a required field is blocked (FR-KL-001) @api @kall',
+      { annotation: [{ type: 'requirement', description: 'FR-KL-001' }] },
+      async ({ endpoints }) => {
+        /*
+         * FR-KL-001 (docs/reference/business-rules.md, ⬜ to-do as of 2026-10-02): a scheduled Kall requires subject
+         * (title), a date and start/end time; a request missing one of these must be rejected, not
+         * accepted as if the field were optional. Each case omits exactly one required field from an
+         * otherwise-valid scheduleShape() body. `expect.soft` so one run reports every field, not just
+         * the first failure — and any field that unexpectedly succeeds still gets cleaned up below.
+         */
+        const requiredFieldCases: Array<[string, Record<string, unknown>]> = [
+          ['subject', { subject: undefined }],
+          ['scheduledStartTime', { scheduledStartTime: undefined }],
+          ['scheduledEndTime', { scheduledEndTime: undefined }],
+        ];
 
-      for (const [fieldName, override] of requiredFieldCases) {
-        const attempt = await endpoints.sendTo(
-          'kall-scheduled',
-          { body: scheduleShape({ ...override, kallDetails: [{ receiver: B.username }] }) },
-          {
-            label: `feature:kall:missing-${fieldName}`,
-            auth: { principal: A },
-            allowLiveWrite: true,
-          },
-        );
-        // If the product unexpectedly accepts the incomplete payload, clean up the real call it created
-        // rather than leaving it on the account — the assertion below still reports it as a finding.
-        if (attempt.status < 300) {
-          await clearHistory(endpoints, [A, B]).catch(() => undefined);
-        }
-        expect
-          .soft(
-            attempt.status,
-            `FR-KL-001: scheduledKall must reject a payload missing "${fieldName}" ` +
-              `(replied ${attempt.status})`,
-          )
-          .toBeGreaterThanOrEqual(400);
-      }
-    });
-
-    test('a placed call appears in the dashboard log with its participants (FR-KL-008) @api @kall', async ({
-      endpoints,
-    }) => {
-      /*
-       * FR-KL-008 (docs/reference/business-rules.md, ⬜ to-do as of 2026-10-02): "the call log records participants,
-       * role/team, duration". Response shape measured live 2026-10-02 (kall-dashboard, `kall[]` array,
-       * each entry carrying `kallID`/`sender`/`senderName` and a `kallDetails[]` array of
-       * `receiver`/`receiverName`) before writing this assertion — not guessed.
-       *
-       * The PARTICIPANT half is fully testable here and is what this test asserts. The DURATION half
-       * (and FR-KL-009's exact start/end timestamps) is NOT independently testable by this bench: a
-       * plain initiate→end flow with no real WebRTC peer measured `kallStartTime`/`kallEndTime`/
-       * `kallDuration` as `null` even after `endIndividualKall`, consistent with this file's own
-       * documented constraint ("a call cannot connect headlessly — no WebRTC peer"). Asserting those
-       * fields would either be vacuously true (null is 'fine' because nothing ever connects) or require
-       * infrastructure this bench does not have. Recorded as a genuine, named limitation rather than a
-       * test that looks green for the wrong reason.
-       */
-      let kallID: number | undefined;
-      try {
-        const placed = await endpoints.sendTo(
-          'kall-initiate',
-          { body: initiateShape({ receiver: B.username }) },
-          { label: 'feature:kall:log-setup', auth: { principal: A }, allowLiveWrite: true },
-        );
-        const placedJson = placed.json();
-        const placedValue = (placedJson.ok ? placedJson.value : {}) as Record<string, unknown>;
-        kallID = extractKallId(placedValue);
-        expect(kallID, 'a call was placed').toBeTruthy();
-        if (!kallID) return;
-
-        await endpoints.sendTo(
-          'kall-end-individual',
-          { body: { kallID } },
-          { label: 'feature:kall:log-end', auth: { principal: A }, allowLiveWrite: true },
-        );
-
-        const dashboard = await endpoints.sendTo(
-          'kall-dashboard',
-          { body: { kallID: '' } },
-          { label: 'feature:kall:log-read', auth: { principal: A } },
-        );
-        const dashboardJson = dashboard.json();
-        const dashboardValue = (dashboardJson.ok ? dashboardJson.value : {}) as Record<
-          string,
-          unknown
-        >;
-        const entries = (dashboardValue.kall as Array<Record<string, unknown>> | undefined) ?? [];
-        const entry = entries.find((row) => row.kallID === kallID);
-        expect
-          .soft(entry, `FR-KL-008: the placed call (kallID ${kallID}) appears in the dashboard log`)
-          .toBeTruthy();
-
-        if (entry) {
-          const details = (entry.kallDetails as Array<Record<string, unknown>> | undefined) ?? [];
-          const participant = details.find((d) => d.receiver === B.username);
-          expect
-            .soft(participant, `FR-KL-008: the log entry records ${B.username} as a participant`)
-            .toBeTruthy();
+        for (const [fieldName, override] of requiredFieldCases) {
+          const attempt = await endpoints.sendTo(
+            'kall-scheduled',
+            { body: scheduleShape({ ...override, kallDetails: [{ receiver: B.username }] }) },
+            {
+              label: `feature:kall:missing-${fieldName}`,
+              auth: { principal: A },
+              allowLiveWrite: true,
+            },
+          );
+          // If the product unexpectedly accepts the incomplete payload, clean up the real call it created
+          // rather than leaving it on the account — the assertion below still reports it as a finding.
+          if (attempt.status < 300) {
+            await clearHistory(endpoints, [A, B]).catch(() => undefined);
+          }
           expect
             .soft(
-              entry.sender as string | undefined,
-              'FR-KL-008: the log entry records the caller (sender)',
+              attempt.status,
+              `FR-KL-001: scheduledKall must reject a payload missing "${fieldName}" ` +
+                `(replied ${attempt.status})`,
             )
-            .toBe(A.username);
+            .toBeGreaterThanOrEqual(400);
         }
-      } finally {
-        if (kallID) await clearHistory(endpoints, [A, B]);
-      }
-    });
+      },
+    );
+
+    test(
+      'a placed call appears in the dashboard log with its participants (FR-KL-008) @api @kall',
+      { annotation: [{ type: 'requirement', description: 'FR-KL-008' }] },
+      async ({ endpoints }) => {
+        /*
+         * FR-KL-008 (docs/reference/business-rules.md, ⬜ to-do as of 2026-10-02): "the call log records participants,
+         * role/team, duration". Response shape measured live 2026-10-02 (kall-dashboard, `kall[]` array,
+         * each entry carrying `kallID`/`sender`/`senderName` and a `kallDetails[]` array of
+         * `receiver`/`receiverName`) before writing this assertion — not guessed.
+         *
+         * The PARTICIPANT half is fully testable here and is what this test asserts. The DURATION half
+         * (and FR-KL-009's exact start/end timestamps) is NOT independently testable by this bench: a
+         * plain initiate→end flow with no real WebRTC peer measured `kallStartTime`/`kallEndTime`/
+         * `kallDuration` as `null` even after `endIndividualKall`, consistent with this file's own
+         * documented constraint ("a call cannot connect headlessly — no WebRTC peer"). Asserting those
+         * fields would either be vacuously true (null is 'fine' because nothing ever connects) or require
+         * infrastructure this bench does not have. Recorded as a genuine, named limitation rather than a
+         * test that looks green for the wrong reason.
+         */
+        let kallID: number | undefined;
+        try {
+          const placed = await endpoints.sendTo(
+            'kall-initiate',
+            { body: initiateShape({ receiver: B.username }) },
+            { label: 'feature:kall:log-setup', auth: { principal: A }, allowLiveWrite: true },
+          );
+          const placedJson = placed.json();
+          const placedValue = (placedJson.ok ? placedJson.value : {}) as Record<string, unknown>;
+          kallID = extractKallId(placedValue);
+          expect(kallID, 'a call was placed').toBeTruthy();
+          if (!kallID) return;
+
+          await endpoints.sendTo(
+            'kall-end-individual',
+            { body: { kallID } },
+            { label: 'feature:kall:log-end', auth: { principal: A }, allowLiveWrite: true },
+          );
+
+          const dashboard = await endpoints.sendTo(
+            'kall-dashboard',
+            { body: { kallID: '' } },
+            { label: 'feature:kall:log-read', auth: { principal: A } },
+          );
+          const dashboardJson = dashboard.json();
+          const dashboardValue = (dashboardJson.ok ? dashboardJson.value : {}) as Record<
+            string,
+            unknown
+          >;
+          const entries = (dashboardValue.kall as Array<Record<string, unknown>> | undefined) ?? [];
+          const entry = entries.find((row) => row.kallID === kallID);
+          expect
+            .soft(
+              entry,
+              `FR-KL-008: the placed call (kallID ${kallID}) appears in the dashboard log`,
+            )
+            .toBeTruthy();
+
+          if (entry) {
+            const details = (entry.kallDetails as Array<Record<string, unknown>> | undefined) ?? [];
+            const participant = details.find((d) => d.receiver === B.username);
+            expect
+              .soft(participant, `FR-KL-008: the log entry records ${B.username} as a participant`)
+              .toBeTruthy();
+            expect
+              .soft(
+                entry.sender as string | undefined,
+                'FR-KL-008: the log entry records the caller (sender)',
+              )
+              .toBe(A.username);
+          }
+        } finally {
+          if (kallID) await clearHistory(endpoints, [A, B]);
+        }
+      },
+    );
   },
 );

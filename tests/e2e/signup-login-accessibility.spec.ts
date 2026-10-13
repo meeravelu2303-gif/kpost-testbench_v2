@@ -26,7 +26,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost signed-out screens — accessibility (axe-core WCAG)',
-  { tag: ['@ui', '@auth', '@signup', '@regression'] },
+  {
+    tag: ['@ui', '@auth', '@signup', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'accessibility' }],
+  },
   () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 

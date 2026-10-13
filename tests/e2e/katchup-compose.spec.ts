@@ -40,26 +40,28 @@ test.describe('KPost Katchup compose', { tag: ['@ui', '@katchup', '@regression']
     'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
   );
 
-  test('open a conversation, open the composer, and enter a Subject + message (BR-K01) @ui', async ({
-    page,
-  }) => {
-    await openComposer(page);
+  test(
+    'open a conversation, open the composer, and enter a Subject + message (BR-K01) @ui',
+    { annotation: [{ type: 'requirement', description: 'BR-K01' }] },
+    async ({ page }) => {
+      await openComposer(page);
 
-    // The Subject field — BR-K01, the product differentiator: a subject on every chat message.
-    const subject = page.getByRole('textbox', { name: 'Subject' });
-    await expect(subject, 'a chat message carries a Subject field (BR-K01)').toBeVisible({
-      timeout: 15_000,
-    });
-    await subject.click();
-    await subject.fill('QA subject');
-    await expect(subject, 'the Subject field accepts text').toHaveValue('QA subject');
+      // The Subject field — BR-K01, the product differentiator: a subject on every chat message.
+      const subject = page.getByRole('textbox', { name: 'Subject' });
+      await expect(subject, 'a chat message carries a Subject field (BR-K01)').toBeVisible({
+        timeout: 15_000,
+      });
+      await subject.click();
+      await subject.fill('QA subject');
+      await expect(subject, 'the Subject field accepts text').toHaveValue('QA subject');
 
-    // The message body is a contenteditable Quill DIV, so type into it (not `.fill()`). No send.
-    const messageBody = page.locator(EDITOR).first();
-    await messageBody.click();
-    await page.keyboard.type('QA test message');
-    await expect(messageBody, 'the message body accepts text').toContainText('QA test message');
-  });
+      // The message body is a contenteditable Quill DIV, so type into it (not `.fill()`). No send.
+      const messageBody = page.locator(EDITOR).first();
+      await messageBody.click();
+      await page.keyboard.type('QA test message');
+      await expect(messageBody, 'the message body accepts text').toContainText('QA test message');
+    },
+  );
 });
 
 /**

@@ -13,7 +13,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost visual baselines — public screens',
-  { tag: ['@ui', '@platform', '@regression'] },
+  {
+    tag: ['@ui', '@platform', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'performance' }],
+  },
   () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 

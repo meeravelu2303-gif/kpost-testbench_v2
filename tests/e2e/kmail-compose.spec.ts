@@ -75,54 +75,58 @@ test.describe(
       'needs both QA accounts',
     );
 
-    test('compose a mail to the 2nd QA account and send it (FR-M01) @ui', async ({ page }) => {
-      const subject = `QA UI mail ${Date.now()}`;
+    test(
+      'compose a mail to the 2nd QA account and send it (FR-M01) @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-M01' }] },
+      async ({ page }) => {
+        const subject = `QA UI mail ${Date.now()}`;
 
-      await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
-      await skipIfWriteMailCrashed(page);
+        await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await page
+          .locator('.loader-overlay')
+          .waitFor({ state: 'hidden', timeout: 30_000 })
+          .catch(() => undefined);
+        await skipIfWriteMailCrashed(page);
 
-      // Body FIRST — filling the To field opens a recipient autocomplete dropdown that destabilises the
-      // layout, so interacting with the Quill body before that keeps the body click stable.
-      const body = page.locator('.ql-editor[contenteditable="true"]').first();
-      await body.click();
-      await page.keyboard.type('QA UI KMail body — self-cleaning');
+        // Body FIRST — filling the To field opens a recipient autocomplete dropdown that destabilises the
+        // layout, so interacting with the Quill body before that keeps the body click stable.
+        const body = page.locator('.ql-editor[contenteditable="true"]').first();
+        await body.click();
+        await page.keyboard.type('QA UI KMail body — self-cleaning');
 
-      // Recipient (our own 2nd QA account): type the address, then pick it from the suggestion dropdown
-      // if one surfaces (KMail resolves the recipient from the picker, not from raw text).
-      const to = page.locator('.subjectTextboxKmailTO, input[name="to"]').first();
-      await to.click();
-      await to.fill(testData.victimKpostId);
-      // Pick the recipient from the suggestion dropdown if one surfaces (the click waits for it; the
-      // typed value alone may not register the recipient). Best-effort — some builds accept raw text.
-      await page
-        .getByText(testData.victimKpostId, { exact: false })
-        .last()
-        .click({ timeout: 4_000 })
-        .catch(() => undefined);
+        // Recipient (our own 2nd QA account): type the address, then pick it from the suggestion dropdown
+        // if one surfaces (KMail resolves the recipient from the picker, not from raw text).
+        const to = page.locator('.subjectTextboxKmailTO, input[name="to"]').first();
+        await to.click();
+        await to.fill(testData.victimKpostId);
+        // Pick the recipient from the suggestion dropdown if one surfaces (the click waits for it; the
+        // typed value alone may not register the recipient). Best-effort — some builds accept raw text.
+        await page
+          .getByText(testData.victimKpostId, { exact: false })
+          .last()
+          .click({ timeout: 4_000 })
+          .catch(() => undefined);
 
-      // Subject.
-      await page.locator('.toInput').first().fill(subject);
+        // Subject.
+        await page.locator('.toInput').first().fill(subject);
 
-      // Send (PostMail): the button carries the send icon KP_3164.
-      await page
-        .locator('.post_button_size')
-        .filter({ has: page.locator('.icon-KP_3164') })
-        .first()
-        .click()
-        .catch(() => page.locator('.post_button_size').first().click());
-
-      // Sent: a react-toastify success message appears, or the compose surface clears. Accept either.
-      await expect(
-        page
-          .getByText(/sent|success/i)
+        // Send (PostMail): the button carries the send icon KP_3164.
+        await page
+          .locator('.post_button_size')
+          .filter({ has: page.locator('.icon-KP_3164') })
           .first()
-          .or(page.locator('.Toastify__toast--success').first()),
-        'the mail was sent (success toast / compose cleared)',
-      ).toBeVisible({ timeout: 20_000 });
-    });
+          .click()
+          .catch(() => page.locator('.post_button_size').first().click());
+
+        // Sent: a react-toastify success message appears, or the compose surface clears. Accept either.
+        await expect(
+          page
+            .getByText(/sent|success/i)
+            .first()
+            .or(page.locator('.Toastify__toast--success').first()),
+          'the mail was sent (success toast / compose cleared)',
+        ).toBeVisible({ timeout: 20_000 });
+      },
+    );
   },
 );

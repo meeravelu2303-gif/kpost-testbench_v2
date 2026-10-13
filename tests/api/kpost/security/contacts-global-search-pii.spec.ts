@@ -19,7 +19,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Security · Contacts globalSearch PII over-exposure @api @kpost-api @security @contacts',
-  { tag: ['@api', '@platform', '@security', '@regression'] },
+  {
+    tag: ['@api', '@platform', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test('a broad directory search must not return Aadhaar numbers or other sensitive PII for other users @api @security', async ({
       endpoints,

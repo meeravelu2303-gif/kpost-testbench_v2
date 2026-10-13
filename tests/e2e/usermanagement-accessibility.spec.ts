@@ -28,7 +28,10 @@ import {
  */
 test.describe(
   'KPost User Management · dynamic-state accessibility (axe-core WCAG, BUSINESS_S)',
-  { tag: ['@ui', '@user-management', '@regression'] },
+  {
+    tag: ['@ui', '@user-management', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'accessibility' }],
+  },
   () => {
     test.use({ storageState: STORAGE_STATE_BUSINESS });
 

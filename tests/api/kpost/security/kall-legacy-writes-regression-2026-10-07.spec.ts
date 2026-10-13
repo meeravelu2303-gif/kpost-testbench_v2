@@ -14,7 +14,10 @@ const attacker = K.principals.find((p) => p.key === 'personal-3');
 
 test.describe(
   'KPost Security · Kall V1 legacy writes — unscoped by kallID/id @api @kpost-api @security @kall',
-  { tag: ['@api', '@kall', '@security', '@regression'] },
+  {
+    tag: ['@api', '@kall', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(!owner || !attacker, 'needs two distinct KPost principals');
     test.skip(

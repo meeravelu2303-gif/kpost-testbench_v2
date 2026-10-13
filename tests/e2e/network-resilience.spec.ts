@@ -17,7 +17,10 @@ import { skipIfSignedOut } from './support/session';
  */
 test.describe(
   'KPost network resilience — offline mid-session',
-  { tag: ['@ui', '@platform', '@regression'] },
+  {
+    tag: ['@ui', '@platform', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'resilience' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

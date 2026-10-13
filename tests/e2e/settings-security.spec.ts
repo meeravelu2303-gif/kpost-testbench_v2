@@ -20,7 +20,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost Settings · Instant Reply security fuzzing',
-  { tag: ['@ui', '@settings', '@regression'] },
+  {
+    tag: ['@ui', '@settings', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       process.env.SETTINGS_UI_LIFECYCLE !== 'true',

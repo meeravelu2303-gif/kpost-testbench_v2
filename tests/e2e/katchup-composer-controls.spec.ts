@@ -56,106 +56,112 @@ test.describe(
         .catch(() => undefined);
     });
 
-    test('FR-KU-004 — Maximize puts the composer full-screen and Restore brings it back @ui', async ({
-      page,
-    }) => {
-      await openComposer(page);
-      await expect(maximize(page), 'the composer header offers Maximize').toBeVisible({
-        timeout: 15_000,
-      });
+    test(
+      'FR-KU-004 — Maximize puts the composer full-screen and Restore brings it back @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KU-004' }] },
+      async ({ page }) => {
+        await openComposer(page);
+        await expect(maximize(page), 'the composer header offers Maximize').toBeVisible({
+          timeout: 15_000,
+        });
 
-      await maximize(page).click();
-      await expect(composer(page), 'the composer root takes the full-screen class').toHaveClass(
-        /fullscreen_back_color/,
-        { timeout: 10_000 },
-      );
-      await expect(restore(page), 'Maximize is replaced by Restore').toBeVisible();
-      await expect(maximize(page), 'Maximize is no longer offered').toHaveCount(0);
+        await maximize(page).click();
+        await expect(composer(page), 'the composer root takes the full-screen class').toHaveClass(
+          /fullscreen_back_color/,
+          { timeout: 10_000 },
+        );
+        await expect(restore(page), 'Maximize is replaced by Restore').toBeVisible();
+        await expect(maximize(page), 'Maximize is no longer offered').toHaveCount(0);
 
-      await restore(page).click();
-      await expect(composer(page), 'Restore drops the full-screen class').not.toHaveClass(
-        /fullscreen_back_color/,
-        { timeout: 10_000 },
-      );
-      await expect(maximize(page), 'Maximize is offered again').toBeVisible();
-    });
+        await restore(page).click();
+        await expect(composer(page), 'Restore drops the full-screen class').not.toHaveClass(
+          /fullscreen_back_color/,
+          { timeout: 10_000 },
+        );
+        await expect(maximize(page), 'Maximize is offered again').toBeVisible();
+      },
+    );
 
-    test('FR-KU-005 — Clear discards a typed Subject and body, and the composer stays usable @ui', async ({
-      page,
-    }) => {
-      await openComposer(page);
-      const subject = page.getByRole('textbox', { name: 'Subject' });
-      await expect(subject, 'the Subject field is up').toBeVisible({ timeout: 15_000 });
+    test(
+      'FR-KU-005 — Clear discards a typed Subject and body, and the composer stays usable @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KU-005' }] },
+      async ({ page }) => {
+        await openComposer(page);
+        const subject = page.getByRole('textbox', { name: 'Subject' });
+        await expect(subject, 'the Subject field is up').toBeVisible({ timeout: 15_000 });
 
-      await subject.fill('QA discard subject');
-      await page.locator(EDITOR).first().click();
-      await page.keyboard.type('QA discard body — must not survive Clear');
-      await expect(subject).toHaveValue('QA discard subject');
-      await expect(page.locator(EDITOR).first()).toContainText('must not survive Clear');
+        await subject.fill('QA discard subject');
+        await page.locator(EDITOR).first().click();
+        await page.keyboard.type('QA discard body — must not survive Clear');
+        await expect(subject).toHaveValue('QA discard subject');
+        await expect(page.locator(EDITOR).first()).toContainText('must not survive Clear');
 
-      await clear(page).click();
+        await clear(page).click();
 
-      await expect(subject, 'Clear empties the Subject').toHaveValue('', { timeout: 10_000 });
-      await expect(
-        page.locator(EDITOR).first(),
-        'Clear empties the message body',
-      ).not.toContainText('must not survive Clear');
-      // Still a working composer afterwards — not torn down or wedged.
-      await expect(subject, 'the Subject field remains editable').toBeEditable();
-      await subject.fill('still works');
-      await expect(subject).toHaveValue('still works');
-    });
+        await expect(subject, 'Clear empties the Subject').toHaveValue('', { timeout: 10_000 });
+        await expect(
+          page.locator(EDITOR).first(),
+          'Clear empties the message body',
+        ).not.toContainText('must not survive Clear');
+        // Still a working composer afterwards — not torn down or wedged.
+        await expect(subject, 'the Subject field remains editable').toBeEditable();
+        await subject.fill('still works');
+        await expect(subject).toHaveValue('still works');
+      },
+    );
 
-    test('FR-KU-006 — Formatting reveals the Quill toolbar and Bold / Italic apply to typed text @ui', async ({
-      page,
-    }) => {
-      await openComposer(page);
-      await expect(formatting(page), 'the composer offers Formatting').toBeVisible({
-        timeout: 15_000,
-      });
+    test(
+      'FR-KU-006 — Formatting reveals the Quill toolbar and Bold / Italic apply to typed text @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KU-006' }] },
+      async ({ page }) => {
+        await openComposer(page);
+        await expect(formatting(page), 'the composer offers Formatting').toBeVisible({
+          timeout: 15_000,
+        });
 
-      const toolbar = composer(page).locator('.ql-toolbar').first();
-      await formatting(page).click();
-      await expect(toolbar, 'the Formatting toggle shows the Quill toolbar').toBeVisible({
-        timeout: 10_000,
-      });
-      // The toolbar the source configures: the essentials must be there.
-      for (const [sel, label] of [
-        ['.ql-bold', 'Bold'],
-        ['.ql-italic', 'Italic'],
-        ['.ql-underline', 'Underline'],
-        ['.ql-list', 'List'],
-        ['.ql-link', 'Link'],
-      ] as const) {
-        await expect(toolbar.locator(sel).first(), `${label} is in the toolbar`).toBeVisible();
-      }
+        const toolbar = composer(page).locator('.ql-toolbar').first();
+        await formatting(page).click();
+        await expect(toolbar, 'the Formatting toggle shows the Quill toolbar').toBeVisible({
+          timeout: 10_000,
+        });
+        // The toolbar the source configures: the essentials must be there.
+        for (const [sel, label] of [
+          ['.ql-bold', 'Bold'],
+          ['.ql-italic', 'Italic'],
+          ['.ql-underline', 'Underline'],
+          ['.ql-list', 'List'],
+          ['.ql-link', 'Link'],
+        ] as const) {
+          await expect(toolbar.locator(sel).first(), `${label} is in the toolbar`).toBeVisible();
+        }
 
-      const editor = page.locator(EDITOR).first();
-      await editor.click();
-      await toolbar.locator('.ql-bold').first().click();
-      await page.keyboard.type('bold text');
-      await toolbar.locator('.ql-bold').first().click();
-      await toolbar.locator('.ql-italic').first().click();
-      await page.keyboard.type(' italic text');
+        const editor = page.locator(EDITOR).first();
+        await editor.click();
+        await toolbar.locator('.ql-bold').first().click();
+        await page.keyboard.type('bold text');
+        await toolbar.locator('.ql-bold').first().click();
+        await toolbar.locator('.ql-italic').first().click();
+        await page.keyboard.type(' italic text');
 
-      await expect(
-        editor.locator('strong, b').filter({ hasText: 'bold text' }).first(),
-        'Bold wraps the typed text in a strong element',
-      ).toBeVisible();
-      await expect(
-        editor.locator('em, i').filter({ hasText: 'italic text' }).first(),
-        'Italic wraps the typed text in an em element',
-      ).toBeVisible();
+        await expect(
+          editor.locator('strong, b').filter({ hasText: 'bold text' }).first(),
+          'Bold wraps the typed text in a strong element',
+        ).toBeVisible();
+        await expect(
+          editor.locator('em, i').filter({ hasText: 'italic text' }).first(),
+          'Italic wraps the typed text in an em element',
+        ).toBeVisible();
 
-      // Observed live 2026-10-10, recorded not asserted: a second click on Formatting leaves the
-      // toolbar showing (the handler re-forces full-screen on every click). FR-KU-006 asks for
-      // formatting, not for a hide toggle, so this is an annotation for the owner, not a failure.
-      await formatting(page).click();
-      const stillShown = await toolbar.isVisible().catch(() => false);
-      test.info().annotations.push({
-        type: 'observed',
-        description: `after a second Formatting click the toolbar is ${stillShown ? 'still shown' : 'hidden'}`,
-      });
-    });
+        // Observed live 2026-10-10, recorded not asserted: a second click on Formatting leaves the
+        // toolbar showing (the handler re-forces full-screen on every click). FR-KU-006 asks for
+        // formatting, not for a hide toggle, so this is an annotation for the owner, not a failure.
+        await formatting(page).click();
+        const stillShown = await toolbar.isVisible().catch(() => false);
+        test.info().annotations.push({
+          type: 'observed',
+          description: `after a second Formatting click the toolbar is ${stillShown ? 'still shown' : 'hidden'}`,
+        });
+      },
+    );
   },
 );

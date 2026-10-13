@@ -73,56 +73,58 @@ test.describe(
       'needs both QA accounts',
     );
 
-    test('the composer does not dispatch a message with no Subject (BR-K01) @ui', async ({
-      page,
-    }) => {
-      /*
-       * BR-K01 is KPost's defining rule — a Subject on every message. The question is whether the
-       * COMPOSER enforces it, or hands an empty-subject message to the server and hopes.
-       */
-      const sends: string[] = [];
-      await page.route('**/katchup/sendMessage**', async (route) => {
-        sends.push(route.request().postData() ?? '');
-        await route.continue();
-      });
+    test(
+      'the composer does not dispatch a message with no Subject (BR-K01) @ui',
+      { annotation: [{ type: 'requirement', description: 'BR-K01' }] },
+      async ({ page }) => {
+        /*
+         * BR-K01 is KPost's defining rule — a Subject on every message. The question is whether the
+         * COMPOSER enforces it, or hands an empty-subject message to the server and hopes.
+         */
+        const sends: string[] = [];
+        await page.route('**/katchup/sendMessage**', async (route) => {
+          sends.push(route.request().postData() ?? '');
+          await route.continue();
+        });
 
-      await openComposer(page);
+        await openComposer(page);
 
-      // A body, but deliberately NO subject.
-      await page.locator(EDITOR).first().click();
-      await page.keyboard.type('QA functional — body without a subject');
-      await clickSend(page);
+        // A body, but deliberately NO subject.
+        await page.locator(EDITOR).first().click();
+        await page.keyboard.type('QA functional — body without a subject');
+        await clickSend(page);
 
-      /*
-       * Wait for a send to go out; if none does within the window, the client validated (the pass).
-       * Asserting on the absence of a request is where a fixed sleep is least trustworthy, so this
-       * uses waitForRequest with a timeout instead.
-       */
-      const dispatched = await page
-        .waitForRequest('**/katchup/sendMessage**', { timeout: 5_000 })
-        .then(() => true)
-        .catch(() => false);
+        /*
+         * Wait for a send to go out; if none does within the window, the client validated (the pass).
+         * Asserting on the absence of a request is where a fixed sleep is least trustworthy, so this
+         * uses waitForRequest with a timeout instead.
+         */
+        const dispatched = await page
+          .waitForRequest('**/katchup/sendMessage**', { timeout: 5_000 })
+          .then(() => true)
+          .catch(() => false);
 
-      test.info().annotations.push({
-        type: 'observed',
-        description: dispatched
-          ? `the composer dispatched a send with body: ${sends[0]?.slice(0, 120) ?? '(unknown)'}`
-          : 'the composer sent nothing — BR-K01 enforced client-side',
-      });
+        test.info().annotations.push({
+          type: 'observed',
+          description: dispatched
+            ? `the composer dispatched a send with body: ${sends[0]?.slice(0, 120) ?? '(unknown)'}`
+            : 'the composer sent nothing — BR-K01 enforced client-side',
+        });
 
-      /*
-       * If a send DID go out, it must at least carry a non-empty subject — an empty one dispatched to
-       * the server means BR-K01 is not enforced on the client. (Whether the client blocks entirely or
-       * lets the server decide is a design choice; dispatching an EMPTY subject is not.)
-       */
-      if (dispatched && sends[0]) {
-        const emptySubject = /"subject"\s*:\s*""/.test(sends[0]);
-        expect(
-          emptySubject,
-          'BR-K01: the composer must not dispatch a message with an empty Subject',
-        ).toBe(false);
-      }
-    });
+        /*
+         * If a send DID go out, it must at least carry a non-empty subject — an empty one dispatched to
+         * the server means BR-K01 is not enforced on the client. (Whether the client blocks entirely or
+         * lets the server decide is a design choice; dispatching an EMPTY subject is not.)
+         */
+        if (dispatched && sends[0]) {
+          const emptySubject = /"subject"\s*:\s*""/.test(sends[0]);
+          expect(
+            emptySubject,
+            'BR-K01: the composer must not dispatch a message with an empty Subject',
+          ).toBe(false);
+        }
+      },
+    );
 
     test('the composer does not dispatch an empty message @ui', async ({ page }) => {
       const sends: number[] = [];

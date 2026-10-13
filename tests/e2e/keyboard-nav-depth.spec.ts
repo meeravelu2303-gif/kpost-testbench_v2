@@ -51,7 +51,10 @@ async function tabStops(page: Page, max: number): Promise<Stop[]> {
 
 test.describe(
   'KPost keyboard navigation — depth',
-  { tag: ['@ui', '@platform', '@regression'] },
+  {
+    tag: ['@ui', '@platform', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'accessibility' }],
+  },
   () => {
     test.describe.configure({ timeout: 600_000 });
 

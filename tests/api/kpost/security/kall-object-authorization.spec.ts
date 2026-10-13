@@ -22,7 +22,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost-api @security @kall @database',
-  { tag: ['@api', '@kall', '@security', '@regression'] },
+  {
+    tag: ['@api', '@kall', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     const K = AUTH_PROFILES.kpost;
     const owner = K.principals.find((p) => p.key === 'personal');
@@ -543,7 +546,10 @@ function extractKallIdLoose(body: Record<string, unknown>): number | undefined {
  */
 test.describe(
   'KPost Security · Kall contactInfo PII disclosure (IDOR/BOLA) @api @kpost-api @security @kall',
-  { tag: ['@api', '@kall', '@security', '@regression'] },
+  {
+    tag: ['@api', '@kall', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     const K = AUTH_PROFILES.kpost;
     const attacker = K.principals.find((p) => p.key === 'personal-3');

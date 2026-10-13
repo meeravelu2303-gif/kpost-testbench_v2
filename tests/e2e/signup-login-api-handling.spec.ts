@@ -22,7 +22,10 @@ function freshMobile(): string {
 
 test.describe(
   'KPost signup · API failure handling',
-  { tag: ['@ui', '@auth', '@signup', '@regression'] },
+  {
+    tag: ['@ui', '@auth', '@signup', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'resilience' }],
+  },
   () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 

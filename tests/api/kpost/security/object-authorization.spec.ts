@@ -42,7 +42,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Security · object-level authorization (IDOR/BOLA) @api @kpost-api @security @database',
-  { tag: ['@api', '@auth', '@security', '@regression'] },
+  {
+    tag: ['@api', '@auth', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     const K = AUTH_PROFILES.kpost;
     const owner = K.principals.find((p) => p.key === 'personal');

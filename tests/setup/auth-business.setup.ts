@@ -1,6 +1,7 @@
 import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test as setup } from '@fixtures';
+import { reuseValidSession } from './session-reuse';
 
 /**
  * Logs in as the **BUSINESS_S company admin** (`sma.qa@kpost.in`) and saves its session to
@@ -11,7 +12,8 @@ import { expect, test as setup } from '@fixtures';
  * otherwise it saves an anonymous state so a normal browser run does not do an extra fresh login
  * (which re-hits the throttling country-list endpoint).
  */
-setup('authenticate BUSINESS_S admin', async ({ page, loginPage, log }) => {
+setup('authenticate BUSINESS_S admin', async ({ page, browser, loginPage, log }) => {
+  if (await reuseValidSession(browser, STORAGE_STATE_BUSINESS, log)) setup.skip();
   const wanted = process.env.BUSINESS_UI_LIFECYCLE === 'true';
   const configured =
     testData.businessSKpostId && !testData.businessSKpostId.includes('qa.business');

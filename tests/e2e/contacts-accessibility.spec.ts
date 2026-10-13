@@ -29,7 +29,10 @@ import { settleAnimations } from './support/usermanagement';
 
 test.describe(
   'KPost Contacts · dynamic-state accessibility (axe-core WCAG)',
-  { tag: ['@ui', '@contacts', '@regression'] },
+  {
+    tag: ['@ui', '@contacts', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'accessibility' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

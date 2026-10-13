@@ -18,7 +18,10 @@ import { gotoContacts, openCreateGroup } from './support/contacts';
  */
 test.describe(
   'KPost Group · Group Name field security fuzzing',
-  { tag: ['@ui', '@group', '@regression'] },
+  {
+    tag: ['@ui', '@group', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,

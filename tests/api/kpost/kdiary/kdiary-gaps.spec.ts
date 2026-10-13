@@ -16,7 +16,10 @@ import { expect, test } from '@fixtures';
 
 test.describe(
   'KPost KDiary · recorded gaps',
-  { tag: ['@api', '@verticals', '@regression'] },
+  {
+    tag: ['@api', '@verticals', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'resilience' }],
+  },
   () => {
     test('kdiary-get-event-date: resolved — see kdiary-object-authorization.spec.ts', () => {
       expect(

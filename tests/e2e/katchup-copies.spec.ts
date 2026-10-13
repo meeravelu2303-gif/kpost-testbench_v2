@@ -119,43 +119,47 @@ test.describe(
       }
     });
 
-    test('a Confidential Copy is hidden from the other recipient but delivered to the copied one (NFR-SEC02) @ui', async ({
-      page,
-      browser,
-    }) => {
-      const subject = `QA UI conf ${Date.now()}`;
-      const acct2 = await contextFor(browser, STORAGE_STATE_2);
-      const acct3 = await contextFor(browser, STORAGE_STATE_3);
-      try {
-        await openComposer(page); // to account 2 (TO)
-        await addCopy(page, testData.personal3KpostId, true); // account 3 as a CONFIDENTIAL copy
-        await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
-        await page.locator('.ql-editor[contenteditable="true"]').first().click();
-        await page.keyboard.type('QA UI Confidential — self-cleaning');
-        await page.keyboard.press('Enter');
+    test(
+      'a Confidential Copy is hidden from the other recipient but delivered to the copied one (NFR-SEC02) @ui',
+      { annotation: [{ type: 'requirement', description: 'NFR-SEC02' }] },
+      async ({ page, browser }) => {
+        const subject = `QA UI conf ${Date.now()}`;
+        const acct2 = await contextFor(browser, STORAGE_STATE_2);
+        const acct3 = await contextFor(browser, STORAGE_STATE_3);
+        try {
+          await openComposer(page); // to account 2 (TO)
+          await addCopy(page, testData.personal3KpostId, true); // account 3 as a CONFIDENTIAL copy
+          await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
+          await page.locator('.ql-editor[contenteditable="true"]').first().click();
+          await page.keyboard.type('QA UI Confidential — self-cleaning');
+          await page.keyboard.press('Enter');
 
-        // Account 3 (the confidential copy) DOES receive it.
-        await gotoKatchup(acct3);
-        await expect(
-          acct3.getByText(subject).first(),
-          'the confidential-copy recipient (account 3) receives the message',
-        ).toBeVisible({ timeout: 25_000 });
+          // Account 3 (the confidential copy) DOES receive it.
+          await gotoKatchup(acct3);
+          await expect(
+            acct3.getByText(subject).first(),
+            'the confidential-copy recipient (account 3) receives the message',
+          ).toBeVisible({ timeout: 25_000 });
 
-        // Account 2 (TO) receives it BUT must NOT see account 3 anywhere — NFR-SEC02.
-        await gotoKatchup(acct2);
-        await expect(acct2.getByText(subject).first(), 'the TO recipient receives it').toBeVisible({
-          timeout: 25_000,
-        });
-        await expect(
-          acct2.getByText(testData.personal3KpostId),
-          'the TO recipient must NOT see the confidential-copy recipient (NFR-SEC02)',
-        ).toHaveCount(0, { timeout: 10_000 });
-      } finally {
-        await deleteSentMessage(page, subject).catch(() => undefined);
-        await acct2.context().close();
-        await acct3.context().close();
-      }
-    });
+          // Account 2 (TO) receives it BUT must NOT see account 3 anywhere — NFR-SEC02.
+          await gotoKatchup(acct2);
+          await expect(
+            acct2.getByText(subject).first(),
+            'the TO recipient receives it',
+          ).toBeVisible({
+            timeout: 25_000,
+          });
+          await expect(
+            acct2.getByText(testData.personal3KpostId),
+            'the TO recipient must NOT see the confidential-copy recipient (NFR-SEC02)',
+          ).toHaveCount(0, { timeout: 10_000 });
+        } finally {
+          await deleteSentMessage(page, subject).catch(() => undefined);
+          await acct2.context().close();
+          await acct3.context().close();
+        }
+      },
+    );
 
     test('a bulk message reaches multiple recipients @ui', async ({ page, browser }) => {
       const subject = `QA UI bulk ${Date.now()}`;

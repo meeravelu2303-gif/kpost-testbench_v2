@@ -61,10 +61,65 @@ if (moduleArg && !MODULES.includes(moduleArg)) {
 const IS_PROD = String(process.env.TEST_ENV || '').toLowerCase() === 'production';
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 
+/** Output dirs produced this invocation, scanned at the end for login-throttling (an ENVIRONMENT
+ * condition, not a product failure). */
+const RUN_DIRS = new Set();
+const THROTTLE_RE =
+  /\b429\b|too many (requests|attempts)|rate.?limit|throttl|try again (in|later)|temporarily (locked|blocked)|maximum login attempts/i;
+
+/**
+ * Scan this run's report.json files for login-throttling markers. One throttled account can fail
+ * hundreds of tests for a single environment reason, so surface it distinctly instead of letting it
+ * read as ordinary test failures. Returns the number of throttle-tainted test results found.
+ */
+function reportThrottle() {
+  let hits = 0;
+  const examples = [];
+  for (const dir of RUN_DIRS) {
+    const file = path.join(dir, 'report.json');
+    if (!fs.existsSync(file)) continue;
+    let json;
+    try {
+      json = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+      continue;
+    }
+    const walk = (s) => {
+      for (const sp of s.specs || [])
+        for (const t of sp.tests || [])
+          for (const r of t.results || []) {
+            const text = [
+              r.error?.message,
+              r.error?.stack,
+              ...(r.errors || []).map((e) => e.message),
+            ]
+              .filter(Boolean)
+              .join('\n');
+            if (text && THROTTLE_RE.test(text)) {
+              hits++;
+              if (examples.length < 3) examples.push(`${sp.title.slice(0, 50)}`);
+            }
+          }
+      for (const c of s.suites || []) walk(c);
+    };
+    (json.suites || []).forEach(walk);
+  }
+  if (hits) {
+    console.error(
+      `\n⚠ ENVIRONMENT: login throttled — ${hits} test result(s) carry a throttling/rate-limit/lockout ` +
+        `signal (e.g. ${examples.join('; ')}). This is an environment condition, NOT a product defect: ` +
+        `one throttled account can fail many tests. Re-run after the cool-down, or ask the test env for a ` +
+        `higher QA login limit. Do NOT treat these as bugs.`,
+    );
+  }
+  return hits;
+}
+
 /** Build and run one Playwright invocation; returns the exit code. */
 function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
   const outDir = path.join(ROOT, 'reports', level, suite, stamp);
   fs.mkdirSync(outDir, { recursive: true });
+  RUN_DIRS.add(outDir);
   const args = ['playwright', 'test', `--project=${project}`, ...(paths || []), '--grep', grep];
   if (grepInvert) args.push('--grep-invert', grepInvert);
   // Reporters: human list + the three machine artifacts. This REPLACES the config's Bugzilla reporter,
@@ -258,5 +313,10 @@ if (level === 'smoke') {
       }) === 0 && ok;
 }
 
+const throttled = reportThrottle();
 console.log(`\n${ok ? '✓' : '✗'} ${level} finished — reports under reports/${level}/`);
+if (throttled && !ok)
+  console.error(
+    '  (note: some/all failures above may be the login-throttling environment condition)',
+  );
 process.exit(ok ? 0 : 1);

@@ -16,7 +16,10 @@ const C = K.principals.find((p) => p.key === 'personal-3')!; // attacker — no 
 
 test.describe(
   'KPost Security · Katchup attachment IDOR @api @kpost-api @security @katchup',
-  { tag: ['@api', '@katchup', '@security', '@regression'] },
+  {
+    tag: ['@api', '@katchup', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       process.env.KATCHUP_LIFECYCLE !== 'true' || process.env.AWS_LIFECYCLE !== 'true',

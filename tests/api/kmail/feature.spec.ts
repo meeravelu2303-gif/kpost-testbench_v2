@@ -90,32 +90,34 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
   test.describe.configure({ mode: 'default' });
   test.skip(process.env.KMAIL_LIFECYCLE !== 'true', 'sends real mail; set KMAIL_LIFECYCLE=true');
 
-  test('compose a New mail → read back → mark important → delete (FR-M01/M07) @api @kmail', async ({
-    endpoints,
-  }) => {
-    const subject = `QA Mail ${Date.now()}`;
-    const sent = await send(
-      endpoints,
-      A,
-      { toAddress: B.username, kmailSubject: subject },
-      'compose',
-    );
-    expect.soft(sent.status, 'compose succeeds').toBeLessThan(300);
-    expect.soft(sent.kmailID, 'a kmailID is issued (FR-M01)').toBeTruthy();
+  test(
+    'compose a New mail → read back → mark important → delete (FR-M01/M07) @api @kmail',
+    { annotation: [{ type: 'requirement', description: 'FR-M01' }] },
+    async ({ endpoints }) => {
+      const subject = `QA Mail ${Date.now()}`;
+      const sent = await send(
+        endpoints,
+        A,
+        { toAddress: B.username, kmailSubject: subject },
+        'compose',
+      );
+      expect.soft(sent.status, 'compose succeeds').toBeLessThan(300);
+      expect.soft(sent.kmailID, 'a kmailID is issued (FR-M01)').toBeTruthy();
 
-    try {
-      if (sent.kmailID) {
-        const important = await endpoints.sendTo(
-          'kmail-set-important',
-          { body: { kmailID: sent.kmailID } },
-          { label: 'kmail:important', auth: { principal: A }, allowLiveWrite: true },
-        );
-        expect.soft(important.status, 'mark-important is accepted').toBeLessThan(300);
+      try {
+        if (sent.kmailID) {
+          const important = await endpoints.sendTo(
+            'kmail-set-important',
+            { body: { kmailID: sent.kmailID } },
+            { label: 'kmail:important', auth: { principal: A }, allowLiveWrite: true },
+          );
+          expect.soft(important.status, 'mark-important is accepted').toBeLessThan(300);
+        }
+      } finally {
+        await del(endpoints, A, sent.transactionIDs);
       }
-    } finally {
-      await del(endpoints, A, sent.transactionIDs);
-    }
-  });
+    },
+  );
 
   test('read the composed mail back through every kmailID-keyed endpoint @api @kmail', async ({
     endpoints,
@@ -197,53 +199,62 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
     }
   });
 
-  test('the To: field takes a single recipient; extra people go to Cc (FR-KM-005) @api @kmail', async ({
-    endpoints,
-  }) => {
-    /*
-     * FR-KM-005 — Enforce Single Recipient in To:. The mail model carries exactly ONE `toAddress`
-     * (a string, not a list); additional recipients ride in `ccList`. This asserts the model
-     * structurally (the contract) AND drives a real send with one TO + one Cc.
-     */
-    const shape = mailShape({ toAddress: B.username, ccList: [C.username] });
-    expect
-      .soft(typeof shape.toAddress, 'the To: field is a single address, not a list (FR-KM-005)')
-      .toBe('string');
-    expect
-      .soft(Array.isArray(shape.ccList), 'additional recipients ride in the Cc list')
-      .toBe(true);
-
-    const subject = `QA Single-TO ${Date.now()}`;
-    const sent = await send(
-      endpoints,
-      A,
-      { toAddress: B.username, ccList: [C.username], kmailSubject: subject },
-      'single-recipient',
-    );
-    expect.soft(sent.status, 'a single-TO + Cc send is accepted').toBeLessThan(300);
-    expect.soft(sent.kmailID, 'a kmailID is issued').toBeTruthy();
-    await del(endpoints, A, sent.transactionIDs);
-  });
-
-  test('a high-priority mail carries its priority flag (FR-KM-010 / FR-KM-011) @api @kmail', async ({
-    endpoints,
-  }) => {
-    const subject = `QA Priority ${Date.now()}`;
-    const sent = await send(
-      endpoints,
-      A,
-      { toAddress: B.username, kmailSubject: subject, priority: KMAIL_PRIORITY.high },
-      'priority',
-    );
-    expect.soft(sent.status, 'a high-priority send is accepted').toBeLessThan(300);
-    const r = row(sent.body);
-    if (r.priority != null) {
+  test(
+    'the To: field takes a single recipient; extra people go to Cc (FR-KM-005) @api @kmail',
+    { annotation: [{ type: 'requirement', description: 'FR-KM-005' }] },
+    async ({ endpoints }) => {
+      /*
+       * FR-KM-005 — Enforce Single Recipient in To:. The mail model carries exactly ONE `toAddress`
+       * (a string, not a list); additional recipients ride in `ccList`. This asserts the model
+       * structurally (the contract) AND drives a real send with one TO + one Cc.
+       */
+      const shape = mailShape({ toAddress: B.username, ccList: [C.username] });
       expect
-        .soft(Number(r.priority), 'the high-priority flag is carried back (FR-KM-011)')
-        .toBe(KMAIL_PRIORITY.high);
-    }
-    await del(endpoints, A, sent.transactionIDs);
-  });
+        .soft(typeof shape.toAddress, 'the To: field is a single address, not a list (FR-KM-005)')
+        .toBe('string');
+      expect
+        .soft(Array.isArray(shape.ccList), 'additional recipients ride in the Cc list')
+        .toBe(true);
+
+      const subject = `QA Single-TO ${Date.now()}`;
+      const sent = await send(
+        endpoints,
+        A,
+        { toAddress: B.username, ccList: [C.username], kmailSubject: subject },
+        'single-recipient',
+      );
+      expect.soft(sent.status, 'a single-TO + Cc send is accepted').toBeLessThan(300);
+      expect.soft(sent.kmailID, 'a kmailID is issued').toBeTruthy();
+      await del(endpoints, A, sent.transactionIDs);
+    },
+  );
+
+  test(
+    'a high-priority mail carries its priority flag (FR-KM-010 / FR-KM-011) @api @kmail',
+    {
+      annotation: [
+        { type: 'requirement', description: 'FR-KM-010' },
+        { type: 'requirement', description: 'FR-KM-011' },
+      ],
+    },
+    async ({ endpoints }) => {
+      const subject = `QA Priority ${Date.now()}`;
+      const sent = await send(
+        endpoints,
+        A,
+        { toAddress: B.username, kmailSubject: subject, priority: KMAIL_PRIORITY.high },
+        'priority',
+      );
+      expect.soft(sent.status, 'a high-priority send is accepted').toBeLessThan(300);
+      const r = row(sent.body);
+      if (r.priority != null) {
+        expect
+          .soft(Number(r.priority), 'the high-priority flag is carried back (FR-KM-011)')
+          .toBe(KMAIL_PRIORITY.high);
+      }
+      await del(endpoints, A, sent.transactionIDs);
+    },
+  );
 
   test('the post-send action types are each accepted (Reply/Forward/Note/Comment/Clarify) @api @kmail', async ({
     endpoints,
@@ -276,37 +287,42 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
     }
   });
 
-  test('a confidential recipient (bccList) is hidden from the others (BR / NFR-SEC02) @api @kmail @security', async ({
-    endpoints,
-  }) => {
-    // A: sender, B: TO, C: COPY (ccList), D: confidential (bccList).
-    const sent = await send(
-      endpoints,
-      A,
-      {
-        toAddress: B.username,
-        ccList: [C.username],
-        bccList: [D.username],
-        kmailSubject: 'QA confidential',
-      },
-      'confidential',
-    );
-    expect.soft(sent.status, 'confidential send succeeds').toBeLessThan(300);
-
-    try {
-      // Read B's thread with A; the confidential recipient D must not appear in it.
-      const view = await endpoints.sendTo(
-        'kmail-selected-contact-mails',
-        { body: { selectedContact: A.username } },
-        { label: 'kmail:view', auth: { principal: B } },
+  test(
+    'a confidential recipient (bccList) is hidden from the others (BR / NFR-SEC02) @api @kmail @security',
+    { annotation: [{ type: 'requirement', description: 'NFR-SEC02' }] },
+    async ({ endpoints }) => {
+      // A: sender, B: TO, C: COPY (ccList), D: confidential (bccList).
+      const sent = await send(
+        endpoints,
+        A,
+        {
+          toAddress: B.username,
+          ccList: [C.username],
+          bccList: [D.username],
+          kmailSubject: 'QA confidential',
+        },
+        'confidential',
       );
-      expect
-        .soft(view.bodyText ?? '', 'the confidential recipient is not revealed to the TO recipient')
-        .not.toContain(D.username);
-    } finally {
-      await del(endpoints, A, sent.transactionIDs);
-    }
-  });
+      expect.soft(sent.status, 'confidential send succeeds').toBeLessThan(300);
+
+      try {
+        // Read B's thread with A; the confidential recipient D must not appear in it.
+        const view = await endpoints.sendTo(
+          'kmail-selected-contact-mails',
+          { body: { selectedContact: A.username } },
+          { label: 'kmail:view', auth: { principal: B } },
+        );
+        expect
+          .soft(
+            view.bodyText ?? '',
+            'the confidential recipient is not revealed to the TO recipient',
+          )
+          .not.toContain(D.username);
+      } finally {
+        await del(endpoints, A, sent.transactionIDs);
+      }
+    },
+  );
 
   test('a draft is saved, appears in the draft lists, is readable, and delete removes it @api @kmail', async ({
     endpoints,
@@ -516,99 +532,107 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
     }
   });
 
-  test('postMail rejects a salutation outside the allowed set (BR-KM-SALUTE) @api @kmail', async ({
-    endpoints,
-  }) => {
-    /*
-     * BR-KM-SALUTE (docs/reference/business-rules.md, ⬜ to-do): salutation must be one of
-     * {Hi,Hello,Dear,Sir,Madam,Respect}, default Hi. `mailShape()`'s own default is 'Hello' (a valid
-     * member), so this test overrides it with a value outside the set and expects rejection or
-     * normalization — never silent storage of an out-of-set value.
-     */
-    const sent = await send(
-      endpoints,
-      A,
-      {
-        toAddress: B.username,
-        kmailSubject: `QA salute ${Date.now()}`,
-        saluation: 'NotARealSalutation',
-      },
-      'bad-salute',
-    );
-    try {
-      if (sent.status < 300 && sent.kmailID) {
-        // Accepted — the rule must still hold at the data layer: read it back and check it was
-        // either rejected at write time (caught above) or normalized, never stored verbatim.
-        const readBack = await endpoints.sendTo(
-          'kmail-details-by-id',
-          { body: { kmailIDs: [sent.kmailID] } },
-          {
-            label: 'kmail:salute-readback',
-            auth: { principal: A },
-            allowLiveWrite: true,
-            allowLiveRead: true,
-          },
-        );
-        const readJson = readBack.json();
-        const readValue = row((readJson.ok ? readJson.value : {}) as Record<string, unknown>);
+  test(
+    'postMail rejects a salutation outside the allowed set (BR-KM-SALUTE) @api @kmail',
+    { annotation: [{ type: 'requirement', description: 'BR-KM-SALUTE' }] },
+    async ({ endpoints }) => {
+      /*
+       * BR-KM-SALUTE (docs/reference/business-rules.md, ⬜ to-do): salutation must be one of
+       * {Hi,Hello,Dear,Sir,Madam,Respect}, default Hi. `mailShape()`'s own default is 'Hello' (a valid
+       * member), so this test overrides it with a value outside the set and expects rejection or
+       * normalization — never silent storage of an out-of-set value.
+       */
+      const sent = await send(
+        endpoints,
+        A,
+        {
+          toAddress: B.username,
+          kmailSubject: `QA salute ${Date.now()}`,
+          saluation: 'NotARealSalutation',
+        },
+        'bad-salute',
+      );
+      try {
+        if (sent.status < 300 && sent.kmailID) {
+          // Accepted — the rule must still hold at the data layer: read it back and check it was
+          // either rejected at write time (caught above) or normalized, never stored verbatim.
+          const readBack = await endpoints.sendTo(
+            'kmail-details-by-id',
+            { body: { kmailIDs: [sent.kmailID] } },
+            {
+              label: 'kmail:salute-readback',
+              auth: { principal: A },
+              allowLiveWrite: true,
+              allowLiveRead: true,
+            },
+          );
+          const readJson = readBack.json();
+          const readValue = row((readJson.ok ? readJson.value : {}) as Record<string, unknown>);
+          expect
+            .soft(
+              readValue.saluation,
+              'BR-KM-SALUTE: an out-of-set salutation must not be stored verbatim ' +
+                `(postMail replied ${sent.status})`,
+            )
+            .not.toBe('NotARealSalutation');
+        } else {
+          expect
+            .soft(sent.status, 'BR-KM-SALUTE: an out-of-set salutation is rejected at write time')
+            .toBeGreaterThanOrEqual(400);
+        }
+      } finally {
+        await del(endpoints, A, sent.transactionIDs);
+      }
+    },
+  );
+
+  test(
+    'postMail rejects an empty body (BR-KM-BODY) @api @kmail',
+    { annotation: [{ type: 'requirement', description: 'BR-KM-BODY' }] },
+    async ({ endpoints }) => {
+      // BR-KM-BODY (⬜ to-do): send requires body text — an empty kmailContent must not be accepted.
+      const sent = await send(
+        endpoints,
+        A,
+        { toAddress: B.username, kmailSubject: `QA empty-body ${Date.now()}`, kmailContent: '' },
+        'empty-body',
+      );
+      try {
         expect
           .soft(
-            readValue.saluation,
-            'BR-KM-SALUTE: an out-of-set salutation must not be stored verbatim ' +
-              `(postMail replied ${sent.status})`,
+            sent.status,
+            `BR-KM-BODY: an empty mail body must be rejected (postMail replied ${sent.status})`,
           )
-          .not.toBe('NotARealSalutation');
-      } else {
-        expect
-          .soft(sent.status, 'BR-KM-SALUTE: an out-of-set salutation is rejected at write time')
           .toBeGreaterThanOrEqual(400);
+      } finally {
+        await del(endpoints, A, sent.transactionIDs);
       }
-    } finally {
-      await del(endpoints, A, sent.transactionIDs);
-    }
-  });
+    },
+  );
 
-  test('postMail rejects an empty body (BR-KM-BODY) @api @kmail', async ({ endpoints }) => {
-    // BR-KM-BODY (⬜ to-do): send requires body text — an empty kmailContent must not be accepted.
-    const sent = await send(
-      endpoints,
-      A,
-      { toAddress: B.username, kmailSubject: `QA empty-body ${Date.now()}`, kmailContent: '' },
-      'empty-body',
-    );
-    try {
-      expect
-        .soft(
-          sent.status,
-          `BR-KM-BODY: an empty mail body must be rejected (postMail replied ${sent.status})`,
-        )
-        .toBeGreaterThanOrEqual(400);
-    } finally {
-      await del(endpoints, A, sent.transactionIDs);
-    }
-  });
-
-  test('postMail accepts a non-KPost external address as recipient (BR-KM-EXTERNAL) @api @kmail', async ({
-    endpoints,
-  }) => {
-    // BR-KM-EXTERNAL (⬜ to-do): a non-KPost email is accepted as a recipient. Uses the bench's own
-    // reserved OTP-destination mailbox (testData.otpEmail) — a real, bench-owned external address —
-    // never an invented third-party inbox, consistent with the qa-identifier-guard's email policy.
-    const sent = await send(
-      endpoints,
-      A,
-      { toAddress: testData.otpEmail, kmailSubject: `QA external ${Date.now()}` },
-      'external-recipient',
-    );
-    try {
-      expect
-        .soft(
-          sent.status,
-          `BR-KM-EXTERNAL: a non-KPost external address must be accepted as a recipient (replied ${sent.status})`,
-        )
-        .toBeLessThan(300);
-    } finally {
-      await del(endpoints, A, sent.transactionIDs);
-    }
-  });
+  test(
+    'postMail accepts a non-KPost external address as recipient (BR-KM-EXTERNAL) @api @kmail',
+    { annotation: [{ type: 'requirement', description: 'BR-KM-EXTERNAL' }] },
+    async ({ endpoints }) => {
+      // BR-KM-EXTERNAL (⬜ to-do): a non-KPost email is accepted as a recipient. Uses the bench's own
+      // reserved OTP-destination mailbox (testData.otpEmail) — a real, bench-owned external address —
+      // never an invented third-party inbox, consistent with the qa-identifier-guard's email policy.
+      const sent = await send(
+        endpoints,
+        A,
+        { toAddress: testData.otpEmail, kmailSubject: `QA external ${Date.now()}` },
+        'external-recipient',
+      );
+      try {
+        expect
+          .soft(
+            sent.status,
+            `BR-KM-EXTERNAL: a non-KPost external address must be accepted as a recipient (replied ${sent.status})`,
+          )
+          .toBeLessThan(300);
+      } finally {
+        await del(endpoints, A, sent.transactionIDs);
+      }
+    },
+  );
 });

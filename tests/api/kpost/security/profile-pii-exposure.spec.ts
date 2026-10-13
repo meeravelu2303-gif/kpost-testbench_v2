@@ -21,7 +21,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Security · Profile getUserProfileUsingKpostID PII over-exposure @api @kpost-api @security @profile',
-  { tag: ['@api', '@platform', '@security', '@regression'] },
+  {
+    tag: ['@api', '@platform', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test("fetching another account's profile must not return sensitive PII with no privacy control @api @security", async ({
       endpoints,

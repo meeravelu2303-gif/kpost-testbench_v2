@@ -23,7 +23,10 @@ import { gotoKatchup, openConversation } from './support/katchup';
 
 test.describe(
   'KPost Katchup · dynamic-state accessibility (axe-core WCAG)',
-  { tag: ['@ui', '@katchup', '@regression'] },
+  {
+    tag: ['@ui', '@katchup', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'accessibility' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,

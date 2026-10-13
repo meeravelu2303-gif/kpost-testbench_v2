@@ -24,7 +24,10 @@ const PAYLOADS: Array<{ name: string; value: string }> = [
 
 test.describe(
   'KPost Contacts · search box security fuzzing',
-  { tag: ['@ui', '@contacts', '@regression'] },
+  {
+    tag: ['@ui', '@contacts', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),
@@ -79,7 +82,10 @@ test.describe(
 
 test.describe(
   'KPost Contacts · Advanced Search mobile-number field security fuzzing',
-  { tag: ['@ui', '@contacts', '@regression'] },
+  {
+    tag: ['@ui', '@contacts', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

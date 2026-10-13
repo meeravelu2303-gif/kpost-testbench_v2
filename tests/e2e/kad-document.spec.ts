@@ -10,7 +10,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost KOS · KAD Document panel',
-  { tag: ['@ui', '@kos', '@verticals', '@regression'] },
+  {
+    tag: ['@ui', '@kos', '@verticals', '@quarantine'],
+    annotation: [{ type: 'quarantine', description: 'out of scope: not a supported feature' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

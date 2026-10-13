@@ -1,6 +1,7 @@
 import { STORAGE_STATE } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test as setup } from '@fixtures';
+import { reuseValidSession } from './session-reuse';
 
 /**
  * Logs in once through the real login screen and saves the session for every browser project.
@@ -10,7 +11,8 @@ import { expect, test as setup } from '@fixtures';
  * account configured (a mock or unconfigured run) an anonymous state is saved and the UI tests
  * self-skip.
  */
-setup('authenticate', async ({ page, loginPage, log }) => {
+setup('authenticate', async ({ page, browser, loginPage, log }) => {
+  if (await reuseValidSession(browser, STORAGE_STATE, log)) setup.skip();
   const configured = testData.kpostId && !testData.kpostId.includes('qa.bench');
 
   if (configured) {

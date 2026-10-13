@@ -15,7 +15,10 @@ const attacker = K.principals.find((p) => p.key === 'personal-3');
 
 test.describe(
   'KPost Security · Katchup legacy recallMessage body-sender trust @api @kpost-api @security @katchup',
-  { tag: ['@api', '@katchup', '@security', '@regression'] },
+  {
+    tag: ['@api', '@katchup', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(!owner || !attacker, 'needs two distinct KPost principals');
     test.skip(

@@ -17,7 +17,10 @@ import { skipIfSignedOut } from './support/session';
  */
 test.describe(
   'KPost keyboard navigation — every screen',
-  { tag: ['@ui', '@platform', '@regression'] },
+  {
+    tag: ['@ui', '@platform', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'accessibility' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

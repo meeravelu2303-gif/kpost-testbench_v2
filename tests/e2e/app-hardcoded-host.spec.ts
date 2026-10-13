@@ -18,7 +18,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost · no hard-coded (non-configured) hosts on load',
-  { tag: ['@ui', '@platform', '@regression'] },
+  {
+    tag: ['@ui', '@platform', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

@@ -124,53 +124,60 @@ test.describe(
      */
 
     for (const action of RECIPIENT_ACTIONS) {
-      test(`${action.id}: the 2nd account ${action.id.toLowerCase()}s a received message (recipient menu) @ui`, async ({
-        page,
-        browser,
-      }) => {
-        const subject = `QA UI 2s ${action.id} ${Date.now()}`;
-        const response = `QA UI ${action.id} response ${Date.now()}`;
-        const receiver = await openReceiver(browser);
-        try {
-          // Account 1 sends.
-          await openComposer(page);
-          await sendMessage(page, subject, `QA UI ${action.id} source — self-cleaning`);
+      test(
+        `${action.id}: the 2nd account ${action.id.toLowerCase()}s a received message (recipient menu) @ui`,
+        {
+          annotation: [
+            { type: 'requirement', description: 'FR-KU-043' },
+            { type: 'requirement', description: 'FR-KU-044' },
+            { type: 'requirement', description: 'FR-KU-045' },
+          ],
+        },
+        async ({ page, browser }) => {
+          const subject = `QA UI 2s ${action.id} ${Date.now()}`;
+          const response = `QA UI ${action.id} response ${Date.now()}`;
+          const receiver = await openReceiver(browser);
+          try {
+            // Account 1 sends.
+            await openComposer(page);
+            await sendMessage(page, subject, `QA UI ${action.id} source — self-cleaning`);
 
-          // Account 2 opens the received conversation (by the unique subject) and acts on the message.
-          await openReceivedConversation(receiver, subject);
-          const received = receivedMessageBySubject(receiver, subject);
-          await expect(received, `account 2 received the ${action.id} source`).toBeVisible({
-            timeout: 25_000,
-          });
-          await received.hover();
-          await received.getByTestId('ReplyIcon').first().click();
+            // Account 2 opens the received conversation (by the unique subject) and acts on the message.
+            await openReceivedConversation(receiver, subject);
+            const received = receivedMessageBySubject(receiver, subject);
+            await expect(received, `account 2 received the ${action.id} source`).toBeVisible({
+              timeout: 25_000,
+            });
+            await received.hover();
+            await received.getByTestId('ReplyIcon').first().click();
 
-          const item = receiver.getByRole('menuitem', { name: action.menu });
-          await expect(item, `the recipient menu offers ${action.id}`).toBeVisible({
-            timeout: 15_000,
-          });
-          await item.click();
+            const item = receiver.getByRole('menuitem', { name: action.menu });
+            await expect(item, `the recipient menu offers ${action.id}`).toBeVisible({
+              timeout: 15_000,
+            });
+            await item.click();
 
-          // The composer opens in that mode; type the response and send.
-          const editor = receiver.locator(EDITOR).first();
-          await expect(editor, 'the recipient composer opens').toBeVisible({ timeout: 15_000 });
-          await editor.click();
-          await receiver.keyboard.type(response);
-          await clickSend(receiver);
+            // The composer opens in that mode; type the response and send.
+            const editor = receiver.locator(EDITOR).first();
+            await expect(editor, 'the recipient composer opens').toBeVisible({ timeout: 15_000 });
+            await editor.click();
+            await receiver.keyboard.type(response);
+            await clickSend(receiver);
 
-          await expect(
-            receiver.getByText(response).first(),
-            `the ${action.id} response appears`,
-          ).toBeVisible({ timeout: 20_000 });
-        } finally {
-          // Account 2 deletes its response; account 1 deletes the source.
-          if (await messageBySubject(receiver, response).count()) {
-            await deleteSentMessage(receiver, response).catch(() => undefined);
+            await expect(
+              receiver.getByText(response).first(),
+              `the ${action.id} response appears`,
+            ).toBeVisible({ timeout: 20_000 });
+          } finally {
+            // Account 2 deletes its response; account 1 deletes the source.
+            if (await messageBySubject(receiver, response).count()) {
+              await deleteSentMessage(receiver, response).catch(() => undefined);
+            }
+            await deleteSentMessage(page, subject).catch(() => undefined);
+            await receiver.context().close();
           }
-          await deleteSentMessage(page, subject).catch(() => undefined);
-          await receiver.context().close();
-        }
-      });
+        },
+      );
     }
   },
 );

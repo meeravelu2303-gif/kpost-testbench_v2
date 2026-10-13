@@ -17,7 +17,10 @@ import { skipIfSignedOut } from './support/session';
  */
 test.describe(
   'KPost visual regression — every screen',
-  { tag: ['@ui', '@platform', '@regression'] },
+  {
+    tag: ['@ui', '@platform', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'performance' }],
+  },
   () => {
     test.skip(
       process.env.VISUAL_REGRESSION !== 'true',

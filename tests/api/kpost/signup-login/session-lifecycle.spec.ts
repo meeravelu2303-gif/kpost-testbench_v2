@@ -71,35 +71,38 @@ test.describe(
   'KPost signup-login · session and token business rules @api @kpost-api @signup-login',
   { tag: ['@api', '@auth', '@regression'] },
   () => {
-    test('fetchUserDetails resolves a real account and rejects an unknown kpostID', async ({
-      endpoints,
-    }) => {
-      const [known, absent] = await Promise.all([
-        endpoints.sendTo(
-          'signup-login-fetch-user-details',
-          { body: { kpostID: testData.kpostId, countryID: testData.countryId } },
-          { label: 'session-lifecycle:fetch-known', auth: { principal: A } },
-        ),
-        endpoints.sendTo(
-          'signup-login-fetch-user-details',
-          { body: { kpostID: testData.kpostIdAbsent, countryID: testData.countryId } },
-          { label: 'session-lifecycle:fetch-absent', auth: { principal: A } },
-        ),
-      ]);
-      expect(known.status, 'a real kpostID resolves').toBe(200);
-      const knownBody = JSON.parse(known.bodyText || '{}') as { data?: { kpostID?: string } };
-      expect(
-        knownBody.data?.kpostID?.toLowerCase(),
-        'the resolved record is the account we asked for',
-      ).toBe(testData.kpostId.toLowerCase());
-      expect(
-        absent.status,
-        'a known-absent kpostID is rejected, not silently resolved',
-      ).toBeGreaterThanOrEqual(400);
-      expect(absent.status, 'rejecting an unknown id is a client error, not a crash').toBeLessThan(
-        500,
-      );
-    });
+    test(
+      'fetchUserDetails resolves a real account and rejects an unknown kpostID',
+      { annotation: [{ type: 'requirement', description: 'FR-SL-024' }] },
+      async ({ endpoints }) => {
+        const [known, absent] = await Promise.all([
+          endpoints.sendTo(
+            'signup-login-fetch-user-details',
+            { body: { kpostID: testData.kpostId, countryID: testData.countryId } },
+            { label: 'session-lifecycle:fetch-known', auth: { principal: A } },
+          ),
+          endpoints.sendTo(
+            'signup-login-fetch-user-details',
+            { body: { kpostID: testData.kpostIdAbsent, countryID: testData.countryId } },
+            { label: 'session-lifecycle:fetch-absent', auth: { principal: A } },
+          ),
+        ]);
+        expect(known.status, 'a real kpostID resolves').toBe(200);
+        const knownBody = JSON.parse(known.bodyText || '{}') as { data?: { kpostID?: string } };
+        expect(
+          knownBody.data?.kpostID?.toLowerCase(),
+          'the resolved record is the account we asked for',
+        ).toBe(testData.kpostId.toLowerCase());
+        expect(
+          absent.status,
+          'a known-absent kpostID is rejected, not silently resolved',
+        ).toBeGreaterThanOrEqual(400);
+        expect(
+          absent.status,
+          'rejecting an unknown id is a client error, not a crash',
+        ).toBeLessThan(500);
+      },
+    );
 
     test('getLoginHistory returns well-shaped rows for the caller only, matching TBL_KPOST_LOGIN_HISTORY', async ({
       endpoints,

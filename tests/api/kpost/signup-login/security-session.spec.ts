@@ -36,7 +36,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Security · sessions and concurrency @api @kpost-api @signup-login @database',
-  { tag: ['@api', '@auth', '@regression'] },
+  {
+    tag: ['@api', '@auth', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     const accounts = requireAll('primary');
     test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);

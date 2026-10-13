@@ -23,7 +23,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost Home · dashboard API failure handling',
-  { tag: ['@ui', '@home', '@regression'] },
+  {
+    tag: ['@ui', '@home', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'resilience' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

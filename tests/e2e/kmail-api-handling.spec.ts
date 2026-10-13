@@ -14,7 +14,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost KMail · inbox API failure handling',
-  { tag: ['@ui', '@kmail', '@regression'] },
+  {
+    tag: ['@ui', '@kmail', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'resilience' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

@@ -101,16 +101,18 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     'writes real messages; set KATCHUP_LIFECYCLE=true (owner sign-off, docs/modules/katchup-flow.md §6)',
   );
 
-  test('a message carries its Subject and issues a msgID (BR-K01) @api @katchup', async ({
-    endpoints,
-  }) => {
-    const subject = `QA Feature ${Date.now()}`;
-    const sent = await send(endpoints, A, { receiver: B.username, subject });
-    expect(sent.status, 'send succeeds').toBeLessThan(300);
-    expect(firstRow(sent.body)?.subject, 'subject is carried (BR-K01)').toBe(subject);
-    expect(sent.msgID, 'a msgID is issued').toBeTruthy();
-    await cleanup(endpoints, A, sent.msgID);
-  });
+  test(
+    'a message carries its Subject and issues a msgID (BR-K01) @api @katchup',
+    { annotation: [{ type: 'requirement', description: 'BR-K01' }] },
+    async ({ endpoints }) => {
+      const subject = `QA Feature ${Date.now()}`;
+      const sent = await send(endpoints, A, { receiver: B.username, subject });
+      expect(sent.status, 'send succeeds').toBeLessThan(300);
+      expect(firstRow(sent.body)?.subject, 'subject is carried (BR-K01)').toBe(subject);
+      expect(sent.msgID, 'a msgID is issued').toBeTruthy();
+      await cleanup(endpoints, A, sent.msgID);
+    },
+  );
 
   test('reply, note, comment and clarify are each accepted with their type @api @katchup', async ({
     endpoints,
@@ -171,47 +173,49 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     await cleanup(endpoints, A, edited.msgID);
   });
 
-  test('an edit cannot change the Subject, only the body (BR-KU-EDIT-SUBJ) @api @katchup', async ({
-    endpoints,
-  }) => {
-    const originalSubject = `QA subj-lock ${Date.now()}`;
-    const seed = await send(endpoints, A, { receiver: B.username, subject: originalSubject });
-    expect(seed.msgID, 'seed created').toBeTruthy();
+  test(
+    'an edit cannot change the Subject, only the body (BR-KU-EDIT-SUBJ) @api @katchup',
+    { annotation: [{ type: 'requirement', description: 'BR-KU-EDIT-SUBJ' }] },
+    async ({ endpoints }) => {
+      const originalSubject = `QA subj-lock ${Date.now()}`;
+      const seed = await send(endpoints, A, { receiver: B.username, subject: originalSubject });
+      expect(seed.msgID, 'seed created').toBeTruthy();
 
-    const attemptedSubject = `${originalSubject} CHANGED`;
-    const edited = await send(endpoints, A, {
-      receiver: B.username,
-      messageType: KATCHUP_MESSAGE_TYPE.editMessage,
-      sharedType: KATCHUP_MESSAGE_TYPE.editMessage,
-      subject: attemptedSubject,
-      actualMessage: 'QA subj-lock edited body',
-      temporaryMsgID: seed.msgID,
-    });
-    expect.soft(edited.status, 'edit is accepted').toBeLessThan(300);
-
-    const view = await conversation(endpoints, B, A.username);
-    expect.soft(view.text, 'the body itself still changes').toContain('QA subj-lock edited body');
-
-    // The real UI client locks the Subject field during edit (WriteMessage.js: `isDisabled={isEdited
-    // || isEditedandRepost}` on both Subject inputs) — a normal user can never trigger this. But the
-    // server itself has no equivalent guard: calling editMessage with a different `subject` silently
-    // accepts and persists it. Recorded as a confirmed (defense-in-depth) rule violation, not a hard
-    // failure — the real product is not reachable through this path today.
-    if (view.text.includes(attemptedSubject)) {
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'katchup-send-message',
-        ruleId: 'BR-KU-EDIT-SUBJ',
-        rule: 'editMessage must not change the Subject — the body is the only editable field.',
-        expected: `the Subject stays "${originalSubject}"`,
-        actual:
-          `the Subject changed to "${attemptedSubject}" (server accepted it; the real UI client ` +
-          'disables the Subject field during edit, so this is unreachable from the product today)',
+      const attemptedSubject = `${originalSubject} CHANGED`;
+      const edited = await send(endpoints, A, {
+        receiver: B.username,
+        messageType: KATCHUP_MESSAGE_TYPE.editMessage,
+        sharedType: KATCHUP_MESSAGE_TYPE.editMessage,
+        subject: attemptedSubject,
+        actualMessage: 'QA subj-lock edited body',
+        temporaryMsgID: seed.msgID,
       });
-    }
+      expect.soft(edited.status, 'edit is accepted').toBeLessThan(300);
 
-    await cleanup(endpoints, A, seed.msgID);
-    await cleanup(endpoints, A, edited.msgID);
-  });
+      const view = await conversation(endpoints, B, A.username);
+      expect.soft(view.text, 'the body itself still changes').toContain('QA subj-lock edited body');
+
+      // The real UI client locks the Subject field during edit (WriteMessage.js: `isDisabled={isEdited
+      // || isEditedandRepost}` on both Subject inputs) — a normal user can never trigger this. But the
+      // server itself has no equivalent guard: calling editMessage with a different `subject` silently
+      // accepts and persists it. Recorded as a confirmed (defense-in-depth) rule violation, not a hard
+      // failure — the real product is not reachable through this path today.
+      if (view.text.includes(attemptedSubject)) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'katchup-send-message',
+          ruleId: 'BR-KU-EDIT-SUBJ',
+          rule: 'editMessage must not change the Subject — the body is the only editable field.',
+          expected: `the Subject stays "${originalSubject}"`,
+          actual:
+            `the Subject changed to "${attemptedSubject}" (server accepted it; the real UI client ` +
+            'disables the Subject field during edit, so this is unreachable from the product today)',
+        });
+      }
+
+      await cleanup(endpoints, A, seed.msgID);
+      await cleanup(endpoints, A, edited.msgID);
+    },
+  );
 
   test('a recalled message is removed from the recipient view (FR-K10 / BR-K03) @api @katchup @security', async ({
     endpoints,
@@ -381,48 +385,53 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     }
   });
 
-  test('a Confidential Copy is hidden from the other recipients (FR-K05 / NFR-SEC02) @api @katchup @security', async ({
-    endpoints,
-  }) => {
-    /*
-     * The crown-jewel security test. A sends to B (TO), Copies C (visible), Confidential-Copies D.
-     * B and C must NOT be able to see that D was copied; D must receive it. Needs four distinct
-     * people, which is why it waited on the extra accounts.
-     */
-    const marker = `QA confidential ${Date.now()}`;
-    /*
-     * A copies message (messageType 14) is shaped as the client builds it (KatchupMessage.js):
-     * `sharedMessageDetails` carries revealContactList (visible Copy = C) and hiddenContactList
-     * (Confidential Copy = D), and `forwardReceiverList` is copies + confidential + the TO recipient.
-     */
-    const sent = await send(endpoints, A, {
-      receiver: B.username,
-      messageType: KATCHUP_MESSAGE_TYPE.copiesMessage,
-      sharedType: KATCHUP_MESSAGE_TYPE.normalMessage,
-      actualMessage: marker,
-      forwardReceiverList: [C.username, D.username, B.username],
-      sharedMessageDetails: JSON.stringify({
-        revealContactList: [C.username],
-        hiddenContactList: [D.username],
+  test(
+    'a Confidential Copy is hidden from the other recipients (FR-K05 / NFR-SEC02) @api @katchup @security',
+    { annotation: [{ type: 'requirement', description: 'NFR-SEC02' }] },
+    async ({ endpoints }) => {
+      /*
+       * The crown-jewel security test. A sends to B (TO), Copies C (visible), Confidential-Copies D.
+       * B and C must NOT be able to see that D was copied; D must receive it. Needs four distinct
+       * people, which is why it waited on the extra accounts.
+       */
+      const marker = `QA confidential ${Date.now()}`;
+      /*
+       * A copies message (messageType 14) is shaped as the client builds it (KatchupMessage.js):
+       * `sharedMessageDetails` carries revealContactList (visible Copy = C) and hiddenContactList
+       * (Confidential Copy = D), and `forwardReceiverList` is copies + confidential + the TO recipient.
+       */
+      const sent = await send(endpoints, A, {
         receiver: B.username,
-        receiverName: 'QA Bench',
-        shareType: KATCHUP_MESSAGE_TYPE.normalMessage,
-      }),
-    });
-    expect.soft(sent.status, 'the copies message is accepted').toBeLessThan(300);
+        messageType: KATCHUP_MESSAGE_TYPE.copiesMessage,
+        sharedType: KATCHUP_MESSAGE_TYPE.normalMessage,
+        actualMessage: marker,
+        forwardReceiverList: [C.username, D.username, B.username],
+        sharedMessageDetails: JSON.stringify({
+          revealContactList: [C.username],
+          hiddenContactList: [D.username],
+          receiver: B.username,
+          receiverName: 'QA Bench',
+          shareType: KATCHUP_MESSAGE_TYPE.normalMessage,
+        }),
+      });
+      expect.soft(sent.status, 'the copies message is accepted').toBeLessThan(300);
 
-    // B's and C's view of the message must not reveal D (the confidential recipient).
-    const bView = await conversation(endpoints, B, A.username);
-    const cView = await conversation(endpoints, C, A.username);
-    expect
-      .soft(bView.text, "the TO recipient must not see the confidential copy's address (NFR-SEC02)")
-      .not.toContain(D.username);
-    expect
-      .soft(cView.text, 'the Copy recipient must not see the confidential copy (NFR-SEC02)')
-      .not.toContain(D.username);
+      // B's and C's view of the message must not reveal D (the confidential recipient).
+      const bView = await conversation(endpoints, B, A.username);
+      const cView = await conversation(endpoints, C, A.username);
+      expect
+        .soft(
+          bView.text,
+          "the TO recipient must not see the confidential copy's address (NFR-SEC02)",
+        )
+        .not.toContain(D.username);
+      expect
+        .soft(cView.text, 'the Copy recipient must not see the confidential copy (NFR-SEC02)')
+        .not.toContain(D.username);
 
-    await cleanup(endpoints, A, sent.msgID);
-  });
+      await cleanup(endpoints, A, sent.msgID);
+    },
+  );
 
   test('a reminder message is accepted (FR-K13) @api @katchup', async ({ endpoints }) => {
     const sent = await send(endpoints, A, {
@@ -471,49 +480,58 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     await cleanup(endpoints, A, seed.msgID);
   });
 
-  test('forward variants — hidden/revealed × with/without thread each validate (FR-KU-035..038) @api @katchup', async ({
-    endpoints,
-  }) => {
-    /*
-     * The four Forward variants the FRD splits out (source Hidden vs Revealed × single vs
-     * with-thread), mapped to the message-type enum: 16 Hidden, 15 Reveal, 21 thread-Hidden,
-     * 20 thread-Reveal. As with the single forward above, the minimal payload 400s (the endpoint
-     * validates a full referenceMessage object), so each is asserted as "handled, no 5xx".
-     */
-    const T = KATCHUP_MESSAGE_TYPE as Record<string, number>;
-    const seed = await send(endpoints, A, {
-      receiver: B.username,
-      actualMessage: 'QA fwd variants',
-    });
-    expect(seed.msgID, 'seed created').toBeTruthy();
+  test(
+    'forward variants — hidden/revealed × with/without thread each validate (FR-KU-035..038) @api @katchup',
+    {
+      annotation: [
+        { type: 'requirement', description: 'FR-KU-035' },
+        { type: 'requirement', description: 'FR-KU-036' },
+        { type: 'requirement', description: 'FR-KU-037' },
+        { type: 'requirement', description: 'FR-KU-038' },
+      ],
+    },
+    async ({ endpoints }) => {
+      /*
+       * The four Forward variants the FRD splits out (source Hidden vs Revealed × single vs
+       * with-thread), mapped to the message-type enum: 16 Hidden, 15 Reveal, 21 thread-Hidden,
+       * 20 thread-Reveal. As with the single forward above, the minimal payload 400s (the endpoint
+       * validates a full referenceMessage object), so each is asserted as "handled, no 5xx".
+       */
+      const T = KATCHUP_MESSAGE_TYPE as Record<string, number>;
+      const seed = await send(endpoints, A, {
+        receiver: B.username,
+        actualMessage: 'QA fwd variants',
+      });
+      expect(seed.msgID, 'seed created').toBeTruthy();
 
-    const variants: Array<[string, number]> = [
-      ['forward source-hidden (FR-KU-035)', T.forwardMessageHidden!],
-      ['forward source-revealed (FR-KU-036)', T.forwardMessageReveal!],
-      ['forward-with-thread hidden (FR-KU-037)', T.forwardMultipleThreadHidden!],
-      ['forward-with-thread revealed (FR-KU-038)', T.forwardMultipleThreadReveal!],
-    ];
-    for (const [label, type] of variants) {
-      const fwd = await endpoints.sendTo(
-        'katchup-forward-message-new',
-        {
-          body: {
-            messageType: type,
-            subject: 'QA forward',
-            actualMessage: 'QA fwd variants',
-            referenceMessage: null,
-            forwardReceiverList: [C.username],
-            groupForwardList: [],
-            temporaryMsgID: 8989,
-            referenceMessageIDList: [seed.msgID],
+      const variants: Array<[string, number]> = [
+        ['forward source-hidden (FR-KU-035)', T.forwardMessageHidden!],
+        ['forward source-revealed (FR-KU-036)', T.forwardMessageReveal!],
+        ['forward-with-thread hidden (FR-KU-037)', T.forwardMultipleThreadHidden!],
+        ['forward-with-thread revealed (FR-KU-038)', T.forwardMultipleThreadReveal!],
+      ];
+      for (const [label, type] of variants) {
+        const fwd = await endpoints.sendTo(
+          'katchup-forward-message-new',
+          {
+            body: {
+              messageType: type,
+              subject: 'QA forward',
+              actualMessage: 'QA fwd variants',
+              referenceMessage: null,
+              forwardReceiverList: [C.username],
+              groupForwardList: [],
+              temporaryMsgID: 8989,
+              referenceMessageIDList: [seed.msgID],
+            },
           },
-        },
-        { label: `feature:fwd:${type}`, auth: { principal: A }, allowLiveWrite: true },
-      );
-      expect.soft(fwd.status, `${label} validates without crashing (no 5xx)`).toBeLessThan(500);
-    }
-    await cleanup(endpoints, A, seed.msgID);
-  });
+          { label: `feature:fwd:${type}`, auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(fwd.status, `${label} validates without crashing (no 5xx)`).toBeLessThan(500);
+      }
+      await cleanup(endpoints, A, seed.msgID);
+    },
+  );
 
   test('save and mark-important act on a message (FR-K18) @api @katchup @database', async ({
     endpoints,
@@ -586,53 +604,68 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     await cleanup(endpoints, A, seed.msgID);
   });
 
-  test('a disappearing / secret message is accepted in both modes (FR-KU-017..024) @api @katchup @security', async ({
-    endpoints,
-  }) => {
-    /*
-     * Disappearing / Secret Messages — the compose lock-icon feature (Katchup FRD FR-KU-017..024).
-     * The frontend composer (WriteMessage.js) offers two modes and adds two fields to the normal send:
-     *   DeleteAfterRead     → isVanished: true            (vanishes once the recipient opens it)
-     *   DeleteAsPerSchedule → secretMessageExpireTime: ms (auto-deletes at that future time)
-     * Both fields already exist in sendShape(); this proves the API accepts and carries them.
-     */
+  test(
+    'a disappearing / secret message is accepted in both modes (FR-KU-017..024) @api @katchup @security',
+    {
+      annotation: [
+        { type: 'requirement', description: 'FR-KU-017' },
+        { type: 'requirement', description: 'FR-KU-018' },
+        { type: 'requirement', description: 'FR-KU-019' },
+        { type: 'requirement', description: 'FR-KU-020' },
+        { type: 'requirement', description: 'FR-KU-021' },
+        { type: 'requirement', description: 'FR-KU-022' },
+        { type: 'requirement', description: 'FR-KU-023' },
+        { type: 'requirement', description: 'FR-KU-024' },
+      ],
+    },
+    async ({ endpoints }) => {
+      /*
+       * Disappearing / Secret Messages — the compose lock-icon feature (Katchup FRD FR-KU-017..024).
+       * The frontend composer (WriteMessage.js) offers two modes and adds two fields to the normal send:
+       *   DeleteAfterRead     → isVanished: true            (vanishes once the recipient opens it)
+       *   DeleteAsPerSchedule → secretMessageExpireTime: ms (auto-deletes at that future time)
+       * Both fields already exist in sendShape(); this proves the API accepts and carries them.
+       */
 
-    // Mode 1 — Disappear After Reading.
-    const afterRead = await send(endpoints, A, {
-      receiver: B.username,
-      actualMessage: `QA vanish-after-read ${Date.now()}`,
-      isVanished: true,
-      secretMessageExpireTime: null,
-    });
-    expect.soft(afterRead.status, 'disappear-after-reading send is accepted').toBeLessThan(300);
-    expect.soft(afterRead.msgID, 'a msgID is issued for the vanishing message').toBeTruthy();
-    const row1 = firstRow(afterRead.body);
-    if (row1 && 'isVanished' in row1) {
-      expect.soft(row1.isVanished, 'the message is flagged as vanishing (isVanished)').toBeTruthy();
-    }
+      // Mode 1 — Disappear After Reading.
+      const afterRead = await send(endpoints, A, {
+        receiver: B.username,
+        actualMessage: `QA vanish-after-read ${Date.now()}`,
+        isVanished: true,
+        secretMessageExpireTime: null,
+      });
+      expect.soft(afterRead.status, 'disappear-after-reading send is accepted').toBeLessThan(300);
+      expect.soft(afterRead.msgID, 'a msgID is issued for the vanishing message').toBeTruthy();
+      const row1 = firstRow(afterRead.body);
+      if (row1 && 'isVanished' in row1) {
+        expect
+          .soft(row1.isVanished, 'the message is flagged as vanishing (isVanished)')
+          .toBeTruthy();
+      }
 
-    // Mode 2 — Disappear As Per Schedule (auto-delete at a future time, one hour out).
-    const expireAt = Date.now() + 60 * 60 * 1000;
-    const scheduled = await send(endpoints, A, {
-      receiver: B.username,
-      actualMessage: `QA vanish-scheduled ${Date.now()}`,
-      isVanished: false,
-      secretMessageExpireTime: expireAt,
-    });
-    expect.soft(scheduled.status, 'disappear-as-per-schedule send is accepted').toBeLessThan(300);
-    const row2 = firstRow(scheduled.body);
-    // Live-verified 2026-09-25: `secretMessageExpireTime` comes back as an ISO string; the numeric
-    // epoch is `secretMessageExpireTimeAsLong`, same `...AsLong` convention as messageTime/serverTime
-    // in this same response.
-    if (row2 && row2.secretMessageExpireTimeAsLong != null) {
-      expect
-        .soft(Number(row2.secretMessageExpireTimeAsLong), 'the scheduled expiry is carried back')
-        .toBeGreaterThan(Date.now());
-    }
+      // Mode 2 — Disappear As Per Schedule (auto-delete at a future time, one hour out).
+      const expireAt = Date.now() + 60 * 60 * 1000;
+      const scheduled = await send(endpoints, A, {
+        receiver: B.username,
+        actualMessage: `QA vanish-scheduled ${Date.now()}`,
+        isVanished: false,
+        secretMessageExpireTime: expireAt,
+      });
+      expect.soft(scheduled.status, 'disappear-as-per-schedule send is accepted').toBeLessThan(300);
+      const row2 = firstRow(scheduled.body);
+      // Live-verified 2026-09-25: `secretMessageExpireTime` comes back as an ISO string; the numeric
+      // epoch is `secretMessageExpireTimeAsLong`, same `...AsLong` convention as messageTime/serverTime
+      // in this same response.
+      if (row2 && row2.secretMessageExpireTimeAsLong != null) {
+        expect
+          .soft(Number(row2.secretMessageExpireTimeAsLong), 'the scheduled expiry is carried back')
+          .toBeGreaterThan(Date.now());
+      }
 
-    await cleanup(endpoints, A, afterRead.msgID);
-    await cleanup(endpoints, A, scheduled.msgID);
-  });
+      await cleanup(endpoints, A, afterRead.msgID);
+      await cleanup(endpoints, A, scheduled.msgID);
+    },
+  );
 
   test('send variants (multipart, bulk) and forward variants, all self-cleaning @api @katchup', async ({
     endpoints,
@@ -719,196 +752,206 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     }
   });
 
-  test("deleting a received message removes it only from the deleter's view (BR-KU-DELETE-OWN) @api @katchup", async ({
-    endpoints,
-  }) => {
-    const marker = `QA delete-own ${Date.now()}`;
-    const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
-    expect(sent.msgID, 'message created').toBeTruthy();
-    if (!sent.msgID) return;
+  test(
+    "deleting a received message removes it only from the deleter's view (BR-KU-DELETE-OWN) @api @katchup",
+    { annotation: [{ type: 'requirement', description: 'BR-KU-DELETE-OWN' }] },
+    async ({ endpoints }) => {
+      const marker = `QA delete-own ${Date.now()}`;
+      const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
+      expect(sent.msgID, 'message created').toBeTruthy();
+      if (!sent.msgID) return;
 
-    try {
-      // B (the receiver) deletes their own copy of the message.
-      const del = await endpoints.sendTo(
-        'katchup-delete-message',
-        { body: { messageIds: [sent.msgID], groupFlag: false } },
-        { label: 'feature:delete-own:receiver', auth: { principal: B }, allowLiveWrite: true },
-      );
-      expect.soft(del.status, 'deleteKatchUpMessage is accepted').toBeLessThan(300);
+      try {
+        // B (the receiver) deletes their own copy of the message.
+        const del = await endpoints.sendTo(
+          'katchup-delete-message',
+          { body: { messageIds: [sent.msgID], groupFlag: false } },
+          { label: 'feature:delete-own:receiver', auth: { principal: B }, allowLiveWrite: true },
+        );
+        expect.soft(del.status, 'deleteKatchUpMessage is accepted').toBeLessThan(300);
 
-      // BR-KU-DELETE-OWN: gone from B's own view...
-      const viewB = await conversation(endpoints, B, A.username);
-      expect
-        .soft(viewB.text, "the deleter's own view must no longer show the message")
-        .not.toContain(marker);
+        // BR-KU-DELETE-OWN: gone from B's own view...
+        const viewB = await conversation(endpoints, B, A.username);
+        expect
+          .soft(viewB.text, "the deleter's own view must no longer show the message")
+          .not.toContain(marker);
 
-      // ...but UNCHANGED in A's (the sender's) view — a delete is per-viewer, not a recall.
-      const viewA = await conversation(endpoints, A, B.username);
-      expect
-        .soft(
-          viewA.text,
-          'BR-KU-DELETE-OWN: deleting a received message must not remove it from the ' +
-            "sender's own view — only recall does that",
-        )
-        .toContain(marker);
-    } finally {
-      // The sender's own copy still needs cleaning up.
-      await cleanup(endpoints, A, sent.msgID);
-    }
-  });
-
-  test('recall is blocked once the recipient has already read the message (BR-KU-RECALL-UNREAD) @api @katchup @security', async ({
-    endpoints,
-  }) => {
-    // BR-KU-RECALL-UNREAD (⬜ to-do): recall is allowed ONLY before the recipient has read it.
-    const marker = `QA recall-unread ${Date.now()}`;
-    const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
-    expect(sent.msgID, 'message created').toBeTruthy();
-    if (!sent.msgID) return;
-
-    try {
-      // B opens the conversation — the live client's own read action.
-      await conversation(endpoints, B, A.username);
-
-      const recall = await endpoints.sendTo(
-        'katchup-recall-message',
-        { body: { msgID: sent.msgID, groupFlag: false } },
-        { label: 'feature:recall-after-read', auth: { principal: A }, allowLiveWrite: true },
-      );
-
-      // Asserted against B's view, not the status code: whatever recall replies, an already-read
-      // message must still be visible to B afterward — recalling history B has already seen is
-      // exactly what this rule exists to prevent.
-      const viewAfter = await conversation(endpoints, B, A.username);
-      if (!viewAfter.text.includes(marker)) {
-        endpoints.recordBusinessRuleViolation({
-          endpointId: 'katchup-recall-message',
-          ruleId: 'BR-KU-RECALL-UNREAD',
-          rule: 'recallMessage must refuse to recall a message the recipient has already read.',
-          expected: 'the message remains visible to B after an already-read recall attempt',
-          actual: `the message was removed from B's view (recall replied ${recall.status}) despite B having already opened the conversation`,
-          request: { body: { msgID: sent.msgID, groupFlag: false } },
-        });
+        // ...but UNCHANGED in A's (the sender's) view — a delete is per-viewer, not a recall.
+        const viewA = await conversation(endpoints, A, B.username);
+        expect
+          .soft(
+            viewA.text,
+            'BR-KU-DELETE-OWN: deleting a received message must not remove it from the ' +
+              "sender's own view — only recall does that",
+          )
+          .toContain(marker);
+      } finally {
+        // The sender's own copy still needs cleaning up.
+        await cleanup(endpoints, A, sent.msgID);
       }
-      expect
-        .soft(
-          viewAfter.text,
-          `BR-KU-RECALL-UNREAD: an already-read message must survive a recall attempt (recall replied ${recall.status})`,
-        )
-        .toContain(marker);
-    } finally {
-      await cleanup(endpoints, A, sent.msgID);
-    }
-  });
+    },
+  );
 
-  test('recall is unavailable for a group message (BR-KU-RECALL-SCOPE) @api @katchup @security', async ({
-    endpoints,
-  }) => {
-    // BR-KU-RECALL-SCOPE (⬜ to-do): recall is unavailable for copies and group messages.
-    const members = [B, C].map((p) => ({
-      createdBy: A.username,
-      hasAdminAccess: 'N',
-      kpostID: p.username,
-      name: 'QA Bench',
-      memberDesignation: '',
-      privacyStatus: 'Y',
-      remarks: 'created',
-    }));
-    members.push({
-      createdBy: A.username,
-      hasAdminAccess: 'Y',
-      kpostID: A.username,
-      name: 'QA Bench',
-      memberDesignation: '',
-      privacyStatus: 'Y',
-      remarks: 'created',
-    });
-    const created = await endpoints.sendTo(
-      'group-create',
-      {
-        body: {
-          activeStatus: 'Y',
-          createdBy: A.username,
-          groupPicturePath: null,
-          groupCreateAccess: true,
-          groupKpostName: `QA Recall-Scope Group ${Date.now()}`,
-          isPrivateGroup: 'N',
-          memberDetails: members,
-        },
-      },
-      { label: 'feature:recall-scope-group-create', auth: { principal: A }, allowLiveWrite: true },
-    );
-    const gBody = created.json();
-    const gData = (gBody.ok ? (gBody.value as Record<string, unknown>).data : undefined) as
-      Record<string, unknown> | undefined;
-    const groupKpostID = gData?.groupKpostID as string | undefined;
-    const groupID = gData?.groupID as number | undefined;
-    expect(created.status, 'group is created').toBeLessThan(300);
-    if (!groupKpostID) return;
+  test(
+    'recall is blocked once the recipient has already read the message (BR-KU-RECALL-UNREAD) @api @katchup @security',
+    { annotation: [{ type: 'requirement', description: 'BR-KU-RECALL-UNREAD' }] },
+    async ({ endpoints }) => {
+      // BR-KU-RECALL-UNREAD (⬜ to-do): recall is allowed ONLY before the recipient has read it.
+      const marker = `QA recall-unread ${Date.now()}`;
+      const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
+      expect(sent.msgID, 'message created').toBeTruthy();
+      if (!sent.msgID) return;
 
-    let msgID: number | undefined;
-    try {
-      const marker = `QA recall-scope ${Date.now()}`;
-      const sent = await send(endpoints, A, {
-        receiver: groupKpostID,
-        status: KATCHUP_STATUS.group,
-        groupFlag: 'true',
-        groupmemberList: [B.username, C.username],
-        actualMessage: marker,
+      try {
+        // B opens the conversation — the live client's own read action.
+        await conversation(endpoints, B, A.username);
+
+        const recall = await endpoints.sendTo(
+          'katchup-recall-message',
+          { body: { msgID: sent.msgID, groupFlag: false } },
+          { label: 'feature:recall-after-read', auth: { principal: A }, allowLiveWrite: true },
+        );
+
+        // Asserted against B's view, not the status code: whatever recall replies, an already-read
+        // message must still be visible to B afterward — recalling history B has already seen is
+        // exactly what this rule exists to prevent.
+        const viewAfter = await conversation(endpoints, B, A.username);
+        if (!viewAfter.text.includes(marker)) {
+          endpoints.recordBusinessRuleViolation({
+            endpointId: 'katchup-recall-message',
+            ruleId: 'BR-KU-RECALL-UNREAD',
+            rule: 'recallMessage must refuse to recall a message the recipient has already read.',
+            expected: 'the message remains visible to B after an already-read recall attempt',
+            actual: `the message was removed from B's view (recall replied ${recall.status}) despite B having already opened the conversation`,
+            request: { body: { msgID: sent.msgID, groupFlag: false } },
+          });
+        }
+        expect
+          .soft(
+            viewAfter.text,
+            `BR-KU-RECALL-UNREAD: an already-read message must survive a recall attempt (recall replied ${recall.status})`,
+          )
+          .toContain(marker);
+      } finally {
+        await cleanup(endpoints, A, sent.msgID);
+      }
+    },
+  );
+
+  test(
+    'recall is unavailable for a group message (BR-KU-RECALL-SCOPE) @api @katchup @security',
+    { annotation: [{ type: 'requirement', description: 'BR-KU-RECALL-SCOPE' }] },
+    async ({ endpoints }) => {
+      // BR-KU-RECALL-SCOPE (⬜ to-do): recall is unavailable for copies and group messages.
+      const members = [B, C].map((p) => ({
+        createdBy: A.username,
+        hasAdminAccess: 'N',
+        kpostID: p.username,
+        name: 'QA Bench',
+        memberDesignation: '',
+        privacyStatus: 'Y',
+        remarks: 'created',
+      }));
+      members.push({
+        createdBy: A.username,
+        hasAdminAccess: 'Y',
+        kpostID: A.username,
+        name: 'QA Bench',
+        memberDesignation: '',
+        privacyStatus: 'Y',
+        remarks: 'created',
       });
-      expect.soft(sent.status, 'group send is accepted').toBeLessThan(300);
-      msgID = sent.msgID;
-      if (!msgID) return;
-
-      const recall = await endpoints.sendTo(
-        'katchup-recall-message',
-        { body: { msgID, groupFlag: true } },
-        { label: 'feature:recall-group', auth: { principal: A }, allowLiveWrite: true },
+      const created = await endpoints.sendTo(
+        'group-create',
+        {
+          body: {
+            activeStatus: 'Y',
+            createdBy: A.username,
+            groupPicturePath: null,
+            groupCreateAccess: true,
+            groupKpostName: `QA Recall-Scope Group ${Date.now()}`,
+            isPrivateGroup: 'N',
+            memberDetails: members,
+          },
+        },
+        {
+          label: 'feature:recall-scope-group-create',
+          auth: { principal: A },
+          allowLiveWrite: true,
+        },
       );
+      const gBody = created.json();
+      const gData = (gBody.ok ? (gBody.value as Record<string, unknown>).data : undefined) as
+        Record<string, unknown> | undefined;
+      const groupKpostID = gData?.groupKpostID as string | undefined;
+      const groupID = gData?.groupID as number | undefined;
+      expect(created.status, 'group is created').toBeLessThan(300);
+      if (!groupKpostID) return;
 
-      // Asserted against a member's view: a group message must survive a recall attempt.
-      const viewAfter = await conversation(endpoints, B, groupKpostID, true);
-      if (!viewAfter.text.includes(marker)) {
-        endpoints.recordBusinessRuleViolation({
-          endpointId: 'katchup-recall-message',
-          ruleId: 'BR-KU-RECALL-SCOPE',
-          rule: 'recallMessage must refuse to recall a group message (recall is 1-to-1 only).',
-          expected: 'the group message remains visible to members after a recall attempt',
-          actual: `the message was removed from a member's view (recall replied ${recall.status})`,
-          request: { body: { msgID, groupFlag: true } },
+      let msgID: number | undefined;
+      try {
+        const marker = `QA recall-scope ${Date.now()}`;
+        const sent = await send(endpoints, A, {
+          receiver: groupKpostID,
+          status: KATCHUP_STATUS.group,
+          groupFlag: 'true',
+          groupmemberList: [B.username, C.username],
+          actualMessage: marker,
         });
-      }
-      expect
-        .soft(
-          viewAfter.text,
-          `BR-KU-RECALL-SCOPE: a group message must survive a recall attempt (recall replied ${recall.status})`,
-        )
-        .toContain(marker);
-    } finally {
-      if (groupID && groupKpostID) {
-        await endpoints
-          .sendTo(
-            'group-remove-member',
-            { body: { memberKpostIdList: [B.username, C.username], groupID, groupKpostID } },
-            {
-              label: 'feature:recall-scope-group-remove',
-              auth: { principal: A },
-              allowLiveWrite: true,
-            },
+        expect.soft(sent.status, 'group send is accepted').toBeLessThan(300);
+        msgID = sent.msgID;
+        if (!msgID) return;
+
+        const recall = await endpoints.sendTo(
+          'katchup-recall-message',
+          { body: { msgID, groupFlag: true } },
+          { label: 'feature:recall-group', auth: { principal: A }, allowLiveWrite: true },
+        );
+
+        // Asserted against a member's view: a group message must survive a recall attempt.
+        const viewAfter = await conversation(endpoints, B, groupKpostID, true);
+        if (!viewAfter.text.includes(marker)) {
+          endpoints.recordBusinessRuleViolation({
+            endpointId: 'katchup-recall-message',
+            ruleId: 'BR-KU-RECALL-SCOPE',
+            rule: 'recallMessage must refuse to recall a group message (recall is 1-to-1 only).',
+            expected: 'the group message remains visible to members after a recall attempt',
+            actual: `the message was removed from a member's view (recall replied ${recall.status})`,
+            request: { body: { msgID, groupFlag: true } },
+          });
+        }
+        expect
+          .soft(
+            viewAfter.text,
+            `BR-KU-RECALL-SCOPE: a group message must survive a recall attempt (recall replied ${recall.status})`,
           )
-          .catch(() => undefined);
-        await endpoints
-          .sendTo(
-            'group-delete',
-            { body: { groupID } },
-            {
-              label: 'feature:recall-scope-group-delete',
-              auth: { principal: A },
-              allowLiveWrite: true,
-            },
-          )
-          .catch(() => undefined);
+          .toContain(marker);
+      } finally {
+        if (groupID && groupKpostID) {
+          await endpoints
+            .sendTo(
+              'group-remove-member',
+              { body: { memberKpostIdList: [B.username, C.username], groupID, groupKpostID } },
+              {
+                label: 'feature:recall-scope-group-remove',
+                auth: { principal: A },
+                allowLiveWrite: true,
+              },
+            )
+            .catch(() => undefined);
+          await endpoints
+            .sendTo(
+              'group-delete',
+              { body: { groupID } },
+              {
+                label: 'feature:recall-scope-group-delete',
+                auth: { principal: A },
+                allowLiveWrite: true,
+              },
+            )
+            .catch(() => undefined);
+        }
       }
-    }
-  });
+    },
+  );
 });

@@ -28,7 +28,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost Katchup · thread API handling + stored-XSS on open',
-  { tag: ['@ui', '@katchup', '@regression'] },
+  {
+    tag: ['@ui', '@katchup', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'resilience' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,

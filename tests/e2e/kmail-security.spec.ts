@@ -18,7 +18,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost KMail · compose security fuzzing',
-  { tag: ['@ui', '@kmail', '@regression'] },
+  {
+    tag: ['@ui', '@kmail', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       process.env.KMAIL_UI_LIFECYCLE !== 'true',

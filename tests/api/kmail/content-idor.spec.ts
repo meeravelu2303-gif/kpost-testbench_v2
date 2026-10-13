@@ -46,7 +46,10 @@ const C = K.principals.find((p) => p.key === 'personal-3')!; // attacker — no 
 
 test.describe(
   'KMail · mail-content IDOR (sentAndInboxMailContent) @api @kmail-api @kmail @security',
-  { tag: ['@api', '@kmail', '@regression'] },
+  {
+    tag: ['@api', '@kmail', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
     test.skip(

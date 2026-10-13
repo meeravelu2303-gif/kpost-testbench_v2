@@ -1,6 +1,7 @@
 import { STORAGE_STATE_3 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test as setup } from '@fixtures';
+import { reuseValidSession } from './session-reuse';
 
 /**
  * Logs in as the **3rd QA account** and saves its session to `.auth/user3.json`, for the Cc /
@@ -11,7 +12,8 @@ import { expect, test as setup } from '@fixtures';
  * (`KATCHUP_UI_LIFECYCLE=true`); otherwise it saves an anonymous state so a normal run does not do a
  * third fresh login.
  */
-setup('authenticate third account', async ({ page, loginPage, log }) => {
+setup('authenticate third account', async ({ page, browser, loginPage, log }) => {
+  if (await reuseValidSession(browser, STORAGE_STATE_3, log)) setup.skip();
   const wanted = process.env.KATCHUP_UI_LIFECYCLE === 'true';
   const configured = testData.personal3KpostId && !testData.personal3KpostId.includes('qa.p3');
 

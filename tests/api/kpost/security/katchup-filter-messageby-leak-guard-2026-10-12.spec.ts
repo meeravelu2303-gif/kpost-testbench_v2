@@ -14,7 +14,10 @@ const A = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal');
 
 test.describe(
   'KPost Security · Katchup filter messageBy leak guard @api @kpost-api @security @katchup',
-  { tag: ['@api', '@katchup', '@security', '@regression'] },
+  {
+    tag: ['@api', '@katchup', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(!A, 'needs a KPost principal');
 

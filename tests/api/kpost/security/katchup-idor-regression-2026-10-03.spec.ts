@@ -21,7 +21,10 @@ const C = K.principals.find((p) => p.key === 'personal-3');
 
 test.describe(
   'KPost Security · Katchup IDOR/disclosure regression (2026-10-03 batch) @api @kpost-api @security @katchup',
-  { tag: ['@api', '@katchup', '@security', '@regression'] },
+  {
+    tag: ['@api', '@katchup', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(!A || !B || !C, 'needs three distinct KPost principals');
     test.skip(
@@ -31,7 +34,7 @@ test.describe(
 
     test(
       '#952: a 1:1 message receiver cannot recall a message they only received @api @security',
-      { tag: ['@bug-952'] },
+      { tag: ['@bug-952'], annotation: [{ type: 'non-functional', description: 'security' }] },
       async ({ endpoints }) => {
         const marker = `QA regression-952 ${Date.now()}`;
         const sent = await endpoints.sendTo(
@@ -90,7 +93,7 @@ test.describe(
 
     test(
       '#953: getBulkMessageInfo must not reveal a message to an unrelated account @api @security',
-      { tag: ['@bug-953'] },
+      { tag: ['@bug-953'], annotation: [{ type: 'non-functional', description: 'security' }] },
       async ({ endpoints }) => {
         const marker = `QA regression-953 ${Date.now()}`;
         const sent = await endpoints.sendTo(
@@ -153,7 +156,10 @@ test.describe(
 
     test(
       '#954/#958: both reference-message-details endpoints must not reveal content to an unrelated account @api @security',
-      { tag: ['@bug-954', '@bug-958'] },
+      {
+        tag: ['@bug-954', '@bug-958'],
+        annotation: [{ type: 'non-functional', description: 'security' }],
+      },
       async ({ endpoints }) => {
         const marker = `QA regression-954-958 ${Date.now()}`;
         const sent = await endpoints.sendTo(
@@ -237,7 +243,7 @@ test.describe(
 
     test(
       '#957: getMessagesByReferenceMessageList must not reveal content to an unrelated account @api @security',
-      { tag: ['@bug-957'] },
+      { tag: ['@bug-957'], annotation: [{ type: 'non-functional', description: 'security' }] },
       async ({ endpoints }) => {
         const marker = `QA regression-957 ${Date.now()}`;
         const sent = await endpoints.sendTo(

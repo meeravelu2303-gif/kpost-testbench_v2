@@ -65,6 +65,16 @@ const schema = z.object({
   businessReceiverKpostId: z.string().min(3).default('qa.receiver@kpost.in'),
 
   /**
+   * A DEDICATED throwaway account for negative-login tests (wrong password, lockout, throttling).
+   * Kept separate from every other account so a lockout/throttle it triggers can never affect
+   * `kpostId`/`victimKpostId` and cascade-fail hundreds of tests. Unset (the `qa.neg` sentinel) →
+   * the negative-login specs skip with a clear reason rather than hammering the primary account.
+   * Provision via `QA_NEG_KPOST_ID` + `QA_NEG_PASSWORD`.
+   */
+  negLoginKpostId: z.string().min(3).default('qa.neg@kpost.in'),
+  negLoginPassword: z.string().default(''),
+
+  /**
    * Extra PERSONAL accounts for group messaging, Copy/Confidential-Copy and multi-recipient tests.
    * Six real accounts exist on live; these are 3-6 (1 is `kpostId`, 2 is `victimKpostId`).
    */
@@ -227,6 +237,8 @@ const SOURCES = {
   adminPassword: 'QA_ADMIN_PASSWORD',
   adminUserType: 'QA_ADMIN_USER_TYPE',
   victimKpostId: 'QA_VICTIM_KPOST_ID',
+  negLoginKpostId: 'QA_NEG_KPOST_ID',
+  negLoginPassword: 'QA_NEG_PASSWORD',
   businessReceiverKpostId: 'QA_BUSINESS_RECEIVER_KPOST_ID',
   personal3KpostId: 'QA_PERSONAL_3_KPOST_ID',
   personal4KpostId: 'QA_PERSONAL_4_KPOST_ID',

@@ -48,7 +48,10 @@ async function assertNoFileableIssues(
 
 test.describe(
   'KPost Home — dynamic-state health/performance/layout sweep',
-  { tag: ['@ui', '@home', '@regression'] },
+  {
+    tag: ['@ui', '@home', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'performance' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

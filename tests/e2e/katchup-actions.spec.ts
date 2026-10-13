@@ -77,51 +77,53 @@ test.describe(
       });
     });
 
-    test('Edit re-sends an edited body and marks it Edited (send → Edit → resend → Edited), then deletes @ui', async ({
-      page,
-    }) => {
-      const subject = `QA UI edit ${Date.now()}`;
-      const editedBody = 'QA UI edited body — self-cleaning';
-      await openComposer(page);
-      const message = await sendMessage(page, subject, 'QA UI original body');
+    test(
+      'Edit re-sends an edited body and marks it Edited (send → Edit → resend → Edited), then deletes @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KU-027' }] },
+      async ({ page }) => {
+        const subject = `QA UI edit ${Date.now()}`;
+        const editedBody = 'QA UI edited body — self-cleaning';
+        await openComposer(page);
+        const message = await sendMessage(page, subject, 'QA UI original body');
 
-      // Bell menu → Edit → the composer reopens pre-filled (EditMsg mode).
-      await openBellMenu(page, message);
-      const edit = page.getByRole('menuitem', { name: /Edit/i });
-      await expect(edit, 'the sender action menu offers Edit').toBeVisible({ timeout: 15_000 });
-      await edit.click();
+        // Bell menu → Edit → the composer reopens pre-filled (EditMsg mode).
+        await openBellMenu(page, message);
+        const edit = page.getByRole('menuitem', { name: /Edit/i });
+        await expect(edit, 'the sender action menu offers Edit').toBeVisible({ timeout: 15_000 });
+        await edit.click();
 
-      // Replace the body and re-send with the same composer send button.
-      const editor = page.locator(EDITOR).first();
-      await expect(editor, 'the composer reopens for editing').toBeVisible({ timeout: 15_000 });
-      await editor.click();
-      await page.keyboard.press('Control+A');
-      await page.keyboard.press('Delete');
-      await page.keyboard.type(editedBody);
-      await page.keyboard.press('Enter');
+        // Replace the body and re-send with the same composer send button.
+        const editor = page.locator(EDITOR).first();
+        await expect(editor, 'the composer reopens for editing').toBeVisible({ timeout: 15_000 });
+        await editor.click();
+        await page.keyboard.press('Control+A');
+        await page.keyboard.press('Delete');
+        await page.keyboard.type(editedBody);
+        await page.keyboard.press('Enter');
 
-      // An edited message keeps a visible "Edited" marker (BR-K03), and shows the new body.
-      await expect(
-        page.getByText(/Edited/i).first(),
-        'the edited message shows an Edited marker (BR-K03)',
-      ).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText(editedBody).first(), 'the edited body is shown').toBeVisible({
-        timeout: 20_000,
-      });
+        // An edited message keeps a visible "Edited" marker (BR-K03), and shows the new body.
+        await expect(
+          page.getByText(/Edited/i).first(),
+          'the edited message shows an Edited marker (BR-K03)',
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText(editedBody).first(), 'the edited body is shown').toBeVisible({
+          timeout: 20_000,
+        });
 
-      // Clean up: delete the (edited) message so the account ends as it started.
-      const edited = page
-        .locator('[id]')
-        .filter({ hasText: subject })
-        .filter({ has: page.getByTestId('NotificationsNoneIcon') })
-        .last();
-      await openBellMenu(page, edited);
-      await page.getByRole('menuitem', { name: /Delete/i }).click();
-      await page
-        .getByRole('button', { name: /^Confirm$/i })
-        .click()
-        .catch(() => undefined);
-    });
+        // Clean up: delete the (edited) message so the account ends as it started.
+        const edited = page
+          .locator('[id]')
+          .filter({ hasText: subject })
+          .filter({ has: page.getByTestId('NotificationsNoneIcon') })
+          .last();
+        await openBellMenu(page, edited);
+        await page.getByRole('menuitem', { name: /Delete/i }).click();
+        await page
+          .getByRole('button', { name: /^Confirm$/i })
+          .click()
+          .catch(() => undefined);
+      },
+    );
 
     test('Save bookmarks a sent message (send → Save → accepted), then deletes @ui', async ({
       page,

@@ -14,7 +14,10 @@ import { settleFrames, settleNetwork } from './support/settle';
  */
 test.describe(
   'KPost Home · search box security fuzzing',
-  { tag: ['@ui', '@home', '@regression'] },
+  {
+    tag: ['@ui', '@home', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),
@@ -66,7 +69,10 @@ test.describe(
 
 test.describe(
   'KPost Home · Advanced Search "Enter Word" field security fuzzing',
-  { tag: ['@ui', '@home', '@regression'] },
+  {
+    tag: ['@ui', '@home', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

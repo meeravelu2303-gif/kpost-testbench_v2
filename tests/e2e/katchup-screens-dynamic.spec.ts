@@ -37,7 +37,10 @@ async function assertNoFileableIssues(
 
 test.describe(
   'KPost Katchup — dynamic-state health/performance/layout sweep',
-  { tag: ['@ui', '@katchup', '@regression'] },
+  {
+    tag: ['@ui', '@katchup', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'performance' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,

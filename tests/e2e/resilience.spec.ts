@@ -15,7 +15,10 @@ const BOUNDARY = /Something went wrong/i;
 
 test.describe(
   'KPost resilience — failing backend calls and offline',
-  { tag: ['@ui', '@platform', '@regression'] },
+  {
+    tag: ['@ui', '@platform', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'resilience' }],
+  },
   () => {
     test.describe.configure({ timeout: 180_000 });
 

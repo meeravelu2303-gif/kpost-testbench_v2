@@ -81,44 +81,60 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
    */
   test.describe.configure({ mode: 'default' });
 
-  test('the happy path issues a token whose subject is our account @api @signup-login', async ({
-    endpoints,
-  }) => {
-    const { status, body } = await login(endpoints, testData.kpostId, testData.password);
+  test(
+    'the happy path issues a token whose subject is our account @api @signup-login',
+    { annotation: [{ type: 'requirement', description: 'FR-SL-026' }] },
+    async ({ endpoints }) => {
+      const { status, body } = await login(endpoints, testData.kpostId, testData.password);
 
-    expect(status, 'our own credentials must log in').toBe(200);
-    expect(String(body.status).toUpperCase(), 'application status').toBe('SUCCESS');
-    expect(body.accessToken, 'an access token is issued').toBeTruthy();
-    expect(
-      sameAccount(jwtSubject(String(body.accessToken)), testData.kpostId),
-      'token subject is our account (case-insensitive: the API lower-cases it)',
-    ).toBe(true);
-  });
+      expect(status, 'our own credentials must log in').toBe(200);
+      expect(String(body.status).toUpperCase(), 'application status').toBe('SUCCESS');
+      expect(body.accessToken, 'an access token is issued').toBeTruthy();
+      expect(
+        sameAccount(jwtSubject(String(body.accessToken)), testData.kpostId),
+        'token subject is our account (case-insensitive: the API lower-cases it)',
+      ).toBe(true);
+    },
+  );
 
-  test('the access token is a signed JWT that expires and hides no secret @api @signup-login @security', async ({
-    endpoints,
-  }) => {
-    const { body } = await login(endpoints, testData.kpostId, testData.password);
-    const decoded = decodeJwt(String(body.accessToken));
+  test(
+    'the access token is a signed JWT that expires and hides no secret @api @signup-login @security',
+    { annotation: [{ type: 'requirement', description: 'BR-SL-JWT' }] },
+    async ({ endpoints }) => {
+      const { body } = await login(endpoints, testData.kpostId, testData.password);
+      const decoded = decodeJwt(String(body.accessToken));
 
-    expect(decoded, 'a well-formed JWT').toBeTruthy();
-    expect(decoded?.signature, 'it is signed — not alg:none').toBeTruthy();
-    expect(decoded?.payload.exp, 'it expires — a token without exp never dies').toBeTruthy();
-    // The claims must not carry the password or anything password-shaped.
-    const claims = JSON.stringify(decoded?.payload ?? {}).toLowerCase();
-    expect(claims, 'no password in the token claims').not.toContain(
-      testData.password.toLowerCase(),
-    );
-  });
+      expect(decoded, 'a well-formed JWT').toBeTruthy();
+      expect(decoded?.signature, 'it is signed — not alg:none').toBeTruthy();
+      expect(decoded?.payload.exp, 'it expires — a token without exp never dies').toBeTruthy();
+      // The claims must not carry the password or anything password-shaped.
+      const claims = JSON.stringify(decoded?.payload ?? {}).toLowerCase();
+      expect(claims, 'no password in the token claims').not.toContain(
+        testData.password.toLowerCase(),
+      );
+    },
+  );
 
   test('a wrong password is rejected, and the account still logs in afterwards @api @signup-login @security', async ({
     endpoints,
   }) => {
-    // The one wrong-password attempt this test makes against the primary account.
-    const wrong = await login(endpoints, testData.kpostId, 'DefinitelyNotMyPassword!9f2a');
+    // Negative-login attempts run against a DEDICATED throwaway account, never the primary
+    // `kpostId`: a wrong password can trigger lockout/throttling, and that must not cascade into
+    // the account every setup + test depends on. Skip (don't hammer the primary) if unprovisioned.
+    const negConfigured =
+      testData.negLoginKpostId &&
+      !testData.negLoginKpostId.includes('qa.neg') &&
+      testData.negLoginPassword.length > 0;
+    test.skip(
+      !negConfigured,
+      'set QA_NEG_KPOST_ID + QA_NEG_PASSWORD to a dedicated throwaway account so wrong-password attempts never lock the primary QATEST account',
+    );
+
+    // The one wrong-password attempt this test makes — against the DEDICATED account.
+    const wrong = await login(endpoints, testData.negLoginKpostId, 'DefinitelyNotMyPassword!9f2a');
 
     // Safety net first, and HARD: the account must still work after a wrong attempt.
-    const good = await login(endpoints, testData.kpostId, testData.password);
+    const good = await login(endpoints, testData.negLoginKpostId, testData.negLoginPassword);
     expect(good.status, 'the account must still log in after one wrong attempt').toBe(200);
 
     // No token is the one thing the API gets right here — assert it hard.
@@ -246,55 +262,57 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
     expect(shared.status, 'the shared session still logs in').toBe(200);
   });
 
-  test('mobile and the full domain-qualified ID log in; the bare KPost ID is correctly rejected (BR-SL-3IDS) @api @signup-login', async ({
-    endpoints,
-  }) => {
-    /*
-     * BR-SL-3IDS (docs/reference/business-rules.md): the FRD text this rule was originally transcribed from reads as
-     * if mobile, bare KPost ID, and full domain-qualified ID were three equally valid login
-     * identifiers for the same account. That reading is wrong — confirmed by the developer 2026-10-03
-     * (Bugzilla #949, closed INVALID): a KPost ID's local part (before the `@`) is not unique across
-     * domains, so a bare ID is genuinely ambiguous and login correctly requires either the mobile
-     * number or the full, domain-qualified ID. The bare form must be REJECTED, not accepted.
-     *
-     * The primary test account's real mobile number was confirmed directly against
-     * TBL_KPOST_USER_MASTER (2026-10-02) — `8122016145` — not taken from `QA_MOBILE_EXISTS`, which was
-     * checked and found to belong to a DIFFERENT account entirely; using it here would have produced a
-     * meaningless mismatch, not a rule violation.
-     */
-    const bareId = testData.kpostId.split('@')[0] ?? testData.kpostId;
-    const primaryMobile = '8122016145';
+  test(
+    'mobile and the full domain-qualified ID log in; the bare KPost ID is correctly rejected (BR-SL-3IDS) @api @signup-login',
+    { annotation: [{ type: 'requirement', description: 'BR-SL-3IDS' }] },
+    async ({ endpoints }) => {
+      /*
+       * BR-SL-3IDS (docs/reference/business-rules.md): the FRD text this rule was originally transcribed from reads as
+       * if mobile, bare KPost ID, and full domain-qualified ID were three equally valid login
+       * identifiers for the same account. That reading is wrong — confirmed by the developer 2026-10-03
+       * (Bugzilla #949, closed INVALID): a KPost ID's local part (before the `@`) is not unique across
+       * domains, so a bare ID is genuinely ambiguous and login correctly requires either the mobile
+       * number or the full, domain-qualified ID. The bare form must be REJECTED, not accepted.
+       *
+       * The primary test account's real mobile number was confirmed directly against
+       * TBL_KPOST_USER_MASTER (2026-10-02) — `8122016145` — not taken from `QA_MOBILE_EXISTS`, which was
+       * checked and found to belong to a DIFFERENT account entirely; using it here would have produced a
+       * meaningless mismatch, not a rule violation.
+       */
+      const bareId = testData.kpostId.split('@')[0] ?? testData.kpostId;
+      const primaryMobile = '8122016145';
 
-    const validForms: Array<[string, string]> = [
-      ['full domain-qualified ID', testData.kpostId],
-      ['mobile number', primaryMobile],
-    ];
+      const validForms: Array<[string, string]> = [
+        ['full domain-qualified ID', testData.kpostId],
+        ['mobile number', primaryMobile],
+      ];
 
-    for (const [label, identifier] of validForms) {
-      const { status, body } = await login(endpoints, identifier, testData.password);
-      expect
-        .soft(status, `BR-SL-3IDS: login via ${label} ("${identifier}") must succeed`)
-        .toBe(200);
-      // Evaluated unconditionally (a non-200 body has no accessToken, so sameAccount() with an empty
-      // subject just reports false) — a failed login is still a failed BR-SL-3IDS case, not a skip.
-      const token = typeof body.accessToken === 'string' ? body.accessToken : '';
+      for (const [label, identifier] of validForms) {
+        const { status, body } = await login(endpoints, identifier, testData.password);
+        expect
+          .soft(status, `BR-SL-3IDS: login via ${label} ("${identifier}") must succeed`)
+          .toBe(200);
+        // Evaluated unconditionally (a non-200 body has no accessToken, so sameAccount() with an empty
+        // subject just reports false) — a failed login is still a failed BR-SL-3IDS case, not a skip.
+        const token = typeof body.accessToken === 'string' ? body.accessToken : '';
+        expect
+          .soft(
+            sameAccount(jwtSubject(token), testData.kpostId),
+            `BR-SL-3IDS: login via ${label} must resolve to the SAME account as the full ID (status ${status})`,
+          )
+          .toBe(true);
+      }
+
+      // The bare (no-domain) form is correctly ambiguous across domains and must be refused, not
+      // silently accepted — this is the behavior #949 incorrectly flagged as a defect.
+      const bare = await login(endpoints, bareId, testData.password);
       expect
         .soft(
-          sameAccount(jwtSubject(token), testData.kpostId),
-          `BR-SL-3IDS: login via ${label} must resolve to the SAME account as the full ID (status ${status})`,
+          bare.status,
+          `BR-SL-3IDS: login via the bare KPost ID ("${bareId}", no domain) must be rejected — ` +
+            `the local part is not unique across domains, so this is correct, not a bug (status ${bare.status})`,
         )
-        .toBe(true);
-    }
-
-    // The bare (no-domain) form is correctly ambiguous across domains and must be refused, not
-    // silently accepted — this is the behavior #949 incorrectly flagged as a defect.
-    const bare = await login(endpoints, bareId, testData.password);
-    expect
-      .soft(
-        bare.status,
-        `BR-SL-3IDS: login via the bare KPost ID ("${bareId}", no domain) must be rejected — ` +
-          `the local part is not unique across domains, so this is correct, not a bug (status ${bare.status})`,
-      )
-      .toBe(401);
-  });
+        .toBe(401);
+    },
+  );
 });

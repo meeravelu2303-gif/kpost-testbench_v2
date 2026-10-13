@@ -18,7 +18,10 @@ const VICTIM: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === '
 
 test.describe(
   'KPost signup-login · cross-account security @api @kpost-api @signup-login @security',
-  { tag: ['@api', '@auth', '@regression'] },
+  {
+    tag: ['@api', '@auth', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test('fetchUserDetails exposes only login-card fields for an account that is not the caller', async ({
       endpoints,

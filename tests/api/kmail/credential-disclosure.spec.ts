@@ -61,7 +61,10 @@ interface CredentialsResponse {
 
 test.describe(
   'KMail · credential-disclosure IDOR proof (plan item 0b) @api @kmail-api @kmail @security',
-  { tag: ['@api', '@kmail', '@regression'] },
+  {
+    tag: ['@api', '@kmail', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
     // Confirmed live 2026-10-02: `kmail-credentials` is `sideEffect: 'global'`, which

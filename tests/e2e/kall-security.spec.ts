@@ -18,7 +18,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost Kall · contact search box security fuzzing',
-  { tag: ['@ui', '@kall', '@regression'] },
+  {
+    tag: ['@ui', '@kall', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),
@@ -78,7 +81,10 @@ test.describe(
 
 test.describe(
   'KPost Kall · Meeting Title field security fuzzing',
-  { tag: ['@ui', '@kall', '@regression'] },
+  {
+    tag: ['@ui', '@kall', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

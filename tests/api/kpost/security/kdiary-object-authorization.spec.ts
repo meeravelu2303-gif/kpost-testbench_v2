@@ -50,7 +50,10 @@ function extractId(bodyObj: Record<string, unknown>): number | undefined {
 
 test.describe(
   'KPost Security · KDiary cross-tenant object authorization @api @kpost-api @security @kdiary',
-  { tag: ['@api', '@auth', '@security', '@regression'] },
+  {
+    tag: ['@api', '@auth', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       process.env.KDIARY_LIFECYCLE !== 'true',

@@ -59,7 +59,8 @@ const walk = (suite) => {
   for (const sp of suite.specs || []) {
     const key = `${sp.file}::${sp.title}`;
     if (seen.has(key)) continue;
-    seen.set(key, { file: sp.file, title: sp.title, tags: normalizeTags(sp.tags) });
+    const anns = (sp.tests || []).flatMap((t) => t.annotations || []);
+    seen.set(key, { file: sp.file, title: sp.title, tags: normalizeTags(sp.tags), anns });
   }
   for (const c of suite.suites || []) walk(c);
 };
@@ -67,12 +68,14 @@ for (const s of report.suites || []) walk(s);
 
 // 3) Validate.
 const errors = [];
+const warnings = []; // non-fatal: in-scope tests with no requirement/non-functional annotation
+const REQ_ID_RE = /\b(?:FR|BR|NFR)-[A-Z0-9][A-Z0-9-]*\b/;
 const smokeCount = {}; // `${module}|${suite}` -> count
 const sanityCount = {}; // `${module}|${suite}` -> count
 const fileMap = new Map(); // file -> { modules:Set, levels:Set, count }
 const moduleCount = {}; // module -> total in-scope tests
 let inScope = 0;
-for (const { file, title, tags } of seen.values()) {
+for (const { file, title, tags, anns } of seen.values()) {
   if (isMetaPath(file) || isMetaTags(tags)) continue;
   if (isAdminPath(file) || isAdminTags(tags)) {
     // Admin is out of scope and left untouched. Only a problem if it leaked a RUN-LEVEL tag, which
@@ -86,6 +89,15 @@ for (const { file, title, tags } of seen.values()) {
   }
   inScope += 1;
   const where = `${path.basename(file)} › ${title.slice(0, 60)}`;
+  // Governance (WARN, not error for now): every in-scope test should carry a requirement or
+  // non-functional annotation (an FR id in the title counts as a requirement link).
+  const annTypes = (anns || []).map((a) => a.type);
+  if (
+    !annTypes.includes('requirement') &&
+    !annTypes.includes('non-functional') &&
+    !REQ_ID_RE.test(title)
+  )
+    warnings.push(where);
   if (!tags.includes('@regression') && !tags.includes('@quarantine'))
     errors.push(`no @regression / @quarantine: ${where}`);
   if (!tags.some((t) => modules.has(t))) errors.push(`no module tag: ${where}`);
@@ -132,6 +144,20 @@ if (WANT_REPORT) {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'tag-map.md'), out.join('\n') + '\n', 'utf8');
   console.log(`tag-map written to reports/tag-map.md (${fileMap.size} files).`);
+  // Regenerate the RTM from the same listing (annotation-driven).
+  try {
+    const { generateRtm } = await import(
+      pathToFileURL(path.join(ROOT, 'scripts/rtm-lib.mjs')).href
+    );
+    const r = await generateRtm({ report, root: ROOT });
+    console.log(
+      `rtm written to reports/rtm.xlsx — verified coverage ${r.covered}/${r.inScopeReqs} = ${r.overall}% ` +
+        `(${r.covPass} covered & passing); ${r.partial} partial; orphans ${r.orphanTests} tests / ${r.orphanFiles} files; ` +
+        `review links ${r.reviewPending} (${r.reviewMedium} medium / ${r.reviewLow} low).`,
+    );
+  } catch (e) {
+    console.error('rtm generation skipped:', e.message);
+  }
 }
 
 // 4) Budgets: smoke (default 3) and sanity (default 8) per module per suite.
@@ -154,6 +180,11 @@ if (Object.keys(smokeCount).length)
   console.log('smoke by module/suite:', JSON.stringify(smokeCount));
 if (Object.keys(sanityCount).length)
   console.log('sanity by module/suite:', JSON.stringify(sanityCount));
+if (warnings.length)
+  console.warn(
+    `\nWARN — ${warnings.length} in-scope test(s) have no requirement/non-functional annotation ` +
+      `(governance warning, not a failure). Run with --report for the RTM + Review-links sheet.`,
+  );
 if (errors.length) {
   // Group by the file (last path segment before ' › ') for a readable triage summary.
   const byFile = {};

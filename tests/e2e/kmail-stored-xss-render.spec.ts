@@ -42,7 +42,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost KMail · stored XSS on thread-view render',
-  { tag: ['@ui', '@kmail', '@regression'] },
+  {
+    tag: ['@ui', '@kmail', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       process.env.KMAIL_UI_LIFECYCLE !== 'true',

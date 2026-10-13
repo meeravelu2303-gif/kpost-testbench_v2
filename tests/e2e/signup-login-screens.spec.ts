@@ -44,7 +44,10 @@ async function assertNoFileableIssues(
 
 test.describe(
   'KPost signed-out screens — deep UI sweep',
-  { tag: ['@ui', '@auth', '@signup', '@regression'] },
+  {
+    tag: ['@ui', '@auth', '@signup', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'performance' }],
+  },
   () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 

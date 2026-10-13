@@ -43,28 +43,39 @@ test.describe(
       'needs a real live account (QA_KPOST_ID)',
     );
 
-    test('searching the contact list narrows it to the query @ui', async ({ page }) => {
-      const opened = await gotoContacts(page);
-      test.skip(
-        !opened,
-        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
-      );
+    test(
+      'searching the contact list narrows it to the query @ui',
+      {
+        annotation: [
+          { type: 'requirement', description: 'FR-KD-001' },
+          { type: 'requirement', description: 'FR-KD-002' },
+        ],
+      },
+      async ({ page }) => {
+        const opened = await gotoContacts(page);
+        test.skip(
+          !opened,
+          'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+        );
 
-      // Contact rows are `ContactBar`s; count the visible names before and after a nonsense query.
-      const names = page.locator('.Bar-Name:visible');
-      const before = await names.count();
-      expect(before, 'the Contacts panel lists at least one contact to filter').toBeGreaterThan(0);
+        // Contact rows are `ContactBar`s; count the visible names before and after a nonsense query.
+        const names = page.locator('.Bar-Name:visible');
+        const before = await names.count();
+        expect(before, 'the Contacts panel lists at least one contact to filter').toBeGreaterThan(
+          0,
+        );
 
-      const search = contactsSearchBox(page);
-      await search.click();
-      await search.fill('zzzzzznomatch');
-      await expect
-        .poll(() => names.count(), {
-          message: 'a nonsense search does not still show the full list',
-          timeout: 10_000,
-        })
-        .toBeLessThan(before);
-    });
+        const search = contactsSearchBox(page);
+        await search.click();
+        await search.fill('zzzzzznomatch');
+        await expect
+          .poll(() => names.count(), {
+            message: 'a nonsense search does not still show the full list',
+            timeout: 10_000,
+          })
+          .toBeLessThan(before);
+      },
+    );
 
     test('the Add-contact wizard opens and reaches its people-search step @ui', async ({
       page,

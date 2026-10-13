@@ -1,6 +1,7 @@
 import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test as setup } from '@fixtures';
+import { reuseValidSession } from './session-reuse';
 
 /**
  * Logs in as the **2nd QA account** and saves its session to `.auth/user2.json`, for the two-session
@@ -10,7 +11,8 @@ import { expect, test as setup } from '@fixtures';
  * (`KATCHUP_UI_LIFECYCLE=true`) — otherwise it saves an anonymous state, so a normal browser run does
  * not do a second fresh login (which would hit the throttling country-list endpoint again).
  */
-setup('authenticate second account', async ({ page, loginPage, log }) => {
+setup('authenticate second account', async ({ page, browser, loginPage, log }) => {
+  if (await reuseValidSession(browser, STORAGE_STATE_2, log)) setup.skip();
   const wanted = process.env.KATCHUP_UI_LIFECYCLE === 'true';
   const configured = testData.victimKpostId && !testData.victimKpostId.includes('qa.bench');
 

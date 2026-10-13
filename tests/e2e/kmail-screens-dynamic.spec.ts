@@ -14,7 +14,10 @@ const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, 
 
 test.describe(
   'KPost KMail — compose form dynamic-state health/performance/layout sweep',
-  { tag: ['@ui', '@kmail', '@regression'] },
+  {
+    tag: ['@ui', '@kmail', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'performance' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

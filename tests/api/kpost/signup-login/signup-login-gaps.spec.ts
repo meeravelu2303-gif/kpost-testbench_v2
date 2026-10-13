@@ -22,7 +22,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost signup-login · permanently-walled endpoints @api @signup-login',
-  { tag: ['@api', '@auth', '@regression'] },
+  {
+    tag: ['@api', '@auth', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'resilience' }],
+  },
   () => {
     test('signup-login-logout-all-devices is refused by the production guard, not merely untested', async ({
       endpoints,

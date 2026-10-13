@@ -32,7 +32,10 @@ function threadMsgIDs(bodyText: string): Array<number | string> {
 
 test.describe(
   'KPost Security · Katchup cross-account IDOR guards @api @kpost-api @security @katchup',
-  { tag: ['@api', '@katchup', '@security', '@regression'] },
+  {
+    tag: ['@api', '@katchup', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(!owner || !recipient || !attacker, 'needs three distinct KPost principals');
     test.skip(

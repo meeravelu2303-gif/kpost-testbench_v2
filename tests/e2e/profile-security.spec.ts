@@ -18,7 +18,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Profile · About field security fuzzing',
-  { tag: ['@ui', '@profile', '@regression'] },
+  {
+    tag: ['@ui', '@profile', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       process.env.PROFILE_UI_LIFECYCLE !== 'true',

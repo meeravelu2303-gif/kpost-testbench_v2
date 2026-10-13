@@ -19,7 +19,10 @@ import { pickReactSelect, reactSelectByPlaceholder } from './support/react-selec
  */
 test.describe(
   'KPost Settings · Security & Privacy panel',
-  { tag: ['@ui', '@settings', '@regression'] },
+  {
+    tag: ['@ui', '@settings', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

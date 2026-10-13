@@ -19,7 +19,10 @@ import { writeFileSync } from 'node:fs';
  */
 test.describe(
   'KPost KMail · compose form accessibility (axe-core WCAG)',
-  { tag: ['@ui', '@kmail', '@regression'] },
+  {
+    tag: ['@ui', '@kmail', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'accessibility' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

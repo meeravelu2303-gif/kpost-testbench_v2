@@ -23,7 +23,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost Katchup · composer security fuzzing',
-  { tag: ['@ui', '@katchup', '@regression'] },
+  {
+    tag: ['@ui', '@katchup', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,

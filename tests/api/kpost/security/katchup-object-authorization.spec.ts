@@ -30,7 +30,10 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Security · Katchup message authorization (IDOR/BOLA) @api @kpost-api @security @katchup @database',
-  { tag: ['@api', '@katchup', '@security', '@regression'] },
+  {
+    tag: ['@api', '@katchup', '@security', '@regression'],
+    annotation: [{ type: 'non-functional', description: 'security' }],
+  },
   () => {
     const K = AUTH_PROFILES.kpost;
     const owner = K.principals.find((p) => p.key === 'personal');
