@@ -64,7 +64,9 @@ async function main() {
   const r = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
   const entries = (r.bugs && r.bugs.filing && r.bugs.filing.entries) || [];
   const candidates = (r.bugs && r.bugs.candidates) || [];
-  console.log(LIVE ? '=== LIVE — filing approved items ===\n' : '=== DRY — preview only (add --live) ===\n');
+  console.log(
+    LIVE ? '=== LIVE — filing approved items ===\n' : '=== DRY — preview only (add --live) ===\n',
+  );
 
   let created = 0;
   let reopened = 0;
@@ -96,11 +98,17 @@ async function main() {
         console.log(`  #${existingId} not found — skipping.\n`);
         continue;
       }
-      if ((b.status || '').toUpperCase() !== 'RESOLVED' && (b.status || '').toUpperCase() !== 'VERIFIED' && (b.status || '').toUpperCase() !== 'CLOSED') {
+      if (
+        (b.status || '').toUpperCase() !== 'RESOLVED' &&
+        (b.status || '').toUpperCase() !== 'VERIFIED' &&
+        (b.status || '').toUpperCase() !== 'CLOSED'
+      ) {
         console.log(`  #${existingId} is ${b.status} (already open) — would comment, not reopen.`);
       }
       if (!LIVE) {
-        console.log(`  WOULD REOPEN #${existingId} (${b.status}/${b.resolution || '-'}) and add evidence comment.\n`);
+        console.log(
+          `  WOULD REOPEN #${existingId} (${b.status}/${b.resolution || '-'}) and add evidence comment.\n`,
+        );
         continue;
       }
       const upd = await bz('PUT', `/bug/${existingId}`, {
@@ -108,8 +116,7 @@ async function main() {
         status: 'CONFIRMED',
         resolution: '',
         comment: {
-          body:
-            `Reopened after live re-verification on testingapi (2026-10-12): the finding reproduces.\n\n${entry.description}`,
+          body: `Reopened after live re-verification on testingapi (2026-10-12): the finding reproduces.\n\n${entry.description}`,
         },
       });
       if (upd.bugs || upd.error === false || upd.id) {
@@ -125,7 +132,9 @@ async function main() {
     if (dupes.length) {
       console.log('  ALREADY TRACKED — not creating a duplicate:');
       for (const d of dupes)
-        console.log(`    #${d.id} ${d.status}/${d.resolution || '-'} ${(d.summary || '').slice(0, 90)}`);
+        console.log(
+          `    #${d.id} ${d.status}/${d.resolution || '-'} ${(d.summary || '').slice(0, 90)}`,
+        );
       console.log('');
       continue;
     }
@@ -158,7 +167,9 @@ async function main() {
     }
   }
   console.log(
-    LIVE ? `Done — ${created} created, ${reopened} reopened.` : 'Dry preview done — nothing written.',
+    LIVE
+      ? `Done — ${created} created, ${reopened} reopened.`
+      : 'Dry preview done — nothing written.',
   );
 }
 main().catch((e) => {

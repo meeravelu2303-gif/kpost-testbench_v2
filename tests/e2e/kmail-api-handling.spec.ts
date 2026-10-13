@@ -12,69 +12,92 @@ import { settleFrames } from './support/settle';
  * DETERMINISTIC stubs of the real inbox-load endpoint. Each guards that the load actually fired, so a
  * flow difference surfaces as a clear failure rather than a false pass. Asserts correct behaviour.
  */
-test.describe('KPost KMail · inbox API failure handling', { tag: '@ui' }, () => {
-  test.skip(!testData.kpostId || testData.kpostId.includes('qa.bench'), 'needs a live QA account');
+test.describe(
+  'KPost KMail · inbox API failure handling',
+  { tag: ['@ui', '@kmail', '@regression'] },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a live QA account',
+    );
 
-  const INBOX = '**/common/getKmailDashboardMsg/**';
-  const errorSignal =
-    '.Toastify__toast, [role="alert"], .alert-danger, [class*="error" i], [class*="danger" i]';
+    const INBOX = '**/common/getKmailDashboardMsg/**';
+    const errorSignal =
+      '.Toastify__toast, [role="alert"], .alert-danger, [class*="error" i], [class*="danger" i]';
 
-  test('a failing inbox load (FAILURE envelope) shows an error, not a silent-empty inbox @ui', async ({
-    page,
-  }) => {
-    let called = false;
-    await page.route(INBOX, (route) => {
-      called = true;
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ status: 'FAILURE', statusCode: 500, message: 'Internal Server Error' }),
+    test('a failing inbox load (FAILURE envelope) shows an error, not a silent-empty inbox @ui', async ({
+      page,
+    }) => {
+      let called = false;
+      await page.route(INBOX, (route) => {
+        called = true;
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            status: 'FAILURE',
+            statusCode: 500,
+            message: 'Internal Server Error',
+          }),
+        });
       });
+
+      await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => undefined);
+      await settleFrames(page).catch(() => undefined);
+
+      expect(
+        called,
+        'the inbox-load endpoint must fire on /kmail (else the stub/flow is wrong)',
+      ).toBe(true);
+      const shown = await page
+        .locator(errorSignal, { hasText: /error|fail|unable|could not|try again|went wrong/i })
+        .first()
+        .waitFor({ state: 'visible', timeout: 8_000 })
+        .then(() => true)
+        .catch(() => false);
+      test.info().annotations.push({
+        type: 'observed',
+        description: shown
+          ? 'error shown on failed inbox load'
+          : 'inbox load failed with NO visible error',
+      });
+      expect(
+        shown,
+        'a failed inbox load must surface an error — otherwise an outage is indistinguishable from an empty inbox',
+      ).toBe(true);
     });
 
-    await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined);
-    await settleFrames(page).catch(() => undefined);
+    test('an inbox load that errors at the network level still tells the user @ui', async ({
+      page,
+    }) => {
+      let called = false;
+      await page.route(INBOX, (route) => {
+        called = true;
+        return route.abort('failed');
+      });
 
-    expect(called, 'the inbox-load endpoint must fire on /kmail (else the stub/flow is wrong)').toBe(true);
-    const shown = await page
-      .locator(errorSignal, { hasText: /error|fail|unable|could not|try again|went wrong/i })
-      .first()
-      .waitFor({ state: 'visible', timeout: 8_000 })
-      .then(() => true)
-      .catch(() => false);
-    test.info().annotations.push({
-      type: 'observed',
-      description: shown ? 'error shown on failed inbox load' : 'inbox load failed with NO visible error',
+      await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => undefined);
+      await settleFrames(page).catch(() => undefined);
+
+      expect(called, 'the inbox-load endpoint must fire on /kmail').toBe(true);
+      const shown = await page
+        .locator(errorSignal, { hasText: /error|fail|unable|could not|try again|went wrong/i })
+        .first()
+        .waitFor({ state: 'visible', timeout: 8_000 })
+        .then(() => true)
+        .catch(() => false);
+      test.info().annotations.push({
+        type: 'observed',
+        description: shown
+          ? 'error shown on network error'
+          : 'network error produced NO visible feedback',
+      });
+      expect(
+        shown,
+        'a network-level inbox load error must surface feedback, not a silent blank',
+      ).toBe(true);
     });
-    expect(
-      shown,
-      'a failed inbox load must surface an error — otherwise an outage is indistinguishable from an empty inbox',
-    ).toBe(true);
-  });
-
-  test('an inbox load that errors at the network level still tells the user @ui', async ({ page }) => {
-    let called = false;
-    await page.route(INBOX, (route) => {
-      called = true;
-      return route.abort('failed');
-    });
-
-    await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined);
-    await settleFrames(page).catch(() => undefined);
-
-    expect(called, 'the inbox-load endpoint must fire on /kmail').toBe(true);
-    const shown = await page
-      .locator(errorSignal, { hasText: /error|fail|unable|could not|try again|went wrong/i })
-      .first()
-      .waitFor({ state: 'visible', timeout: 8_000 })
-      .then(() => true)
-      .catch(() => false);
-    test.info().annotations.push({
-      type: 'observed',
-      description: shown ? 'error shown on network error' : 'network error produced NO visible feedback',
-    });
-    expect(shown, 'a network-level inbox load error must surface feedback, not a silent blank').toBe(true);
-  });
-});
+  },
+);
