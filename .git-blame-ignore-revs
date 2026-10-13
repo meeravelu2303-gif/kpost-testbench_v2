@@ -1,0 +1,8 @@
+# Revisions git blame should skip: purely mechanical tagging / reformatting
+# churn with no behavioural change. Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub applies it automatically.)
+
+# test: tag remaining in-scope specs with @regression + module tags
+# (tag arrays + consequent Prettier describe-wrap/reindent across 243 specs)
+4a38c5d077a63943737f516a1b8b163f18a5b671
