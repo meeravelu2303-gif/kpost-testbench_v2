@@ -106,7 +106,7 @@ test.describe(
       'needs both QA accounts',
     );
 
-    test('Voice Transcription must call the configured API host, not a hard-coded devapi2 host @ui', async ({
+    test('Voice Transcription reaches the voice/translate service (devapi2 is the voice host by design) @ui', async ({
       page,
     }) => {
       let translateUrl = '';
@@ -145,10 +145,15 @@ test.describe(
         type: 'observed',
         description: `voice transcription requested: ${translateUrl}`,
       });
+      // Correct behaviour: Voice Transcription reaches the voice/translate service. Unlike the rest of
+      // the app, the voice/transcription service is hosted on devapi2 BY DESIGN (owner-confirmed
+      // 2026-10-13: hitting Voice Transcription on the test environment is expected to call devapi2),
+      // so this asserts the call reaches the voice endpoint rather than policing the host. The earlier
+      // "must not be devapi2" assertion encoded a wrong assumption and would file a false bug.
       expect(
-        /devapi2\.kpostindia\.com/i.test(translateUrl),
-        `Voice Transcription must use the configured API host, not the hard-coded devapi2 host (saw: ${translateUrl})`,
-      ).toBe(false);
+        /\/voice\/translate/i.test(translateUrl),
+        `Voice Transcription must reach the voice/translate service (saw: ${translateUrl})`,
+      ).toBe(true);
     });
 
     test('Print opens the print preview and drives the browser print dialog @ui', async ({
