@@ -19,7 +19,7 @@ import { gotoKatchup, parkPointerAwayFromSideMenu } from './support/katchup';
  */
 test.describe(
   'KPost Katchup · create group photo select + crop (FR-GC-004/005)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@group', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

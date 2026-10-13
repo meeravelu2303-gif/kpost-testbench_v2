@@ -89,49 +89,58 @@ async function drive(page: Page): Promise<string[]> {
   return skipped;
 }
 
-test.describe('KPost UI interaction sweep — search, scroll, open, freeze', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost UI interaction sweep — search, scroll, open, freeze',
+  { tag: ['@ui', '@platform', '@regression'] },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  test.beforeEach(async ({ page }) => {
-    await skipIfSignedOut(page);
-  });
-
-  // The interactive screens — the ones with a search box / list / thread a user drives.
-  const INTERACTIVE = new Set(['home', 'katchup', 'kall', 'kmail', 'settings']);
-  for (const screen of AUTHENTICATED_SCREENS.filter((s) => INTERACTIVE.has(s.name.toLowerCase()))) {
-    test(`${screen.name} — interact without crashing or freezing @ui`, async ({ page }) => {
-      const stop = watchUiHealth(page);
-
-      await page.goto(screen.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await expect(
-        page.locator(screen.ready.join(', ')).first(),
-        `${screen.name} mounted`,
-      ).toBeVisible({ timeout: 20_000 });
-
-      const skipped = await drive(page);
-
-      // After the interactions, is the page still alive and responsive — or frozen?
-      const responsive = await isResponsive(page);
-      const health = stop();
-
-      if (skipped.length) {
-        console.log(`[ui-interaction] ${screen.name}: not performed here — ${skipped.join(', ')}`);
-      }
-      for (const c of failedUserActions(health)) {
-        console.log(`[ui-interaction] ${screen.name}: action call failed ${c.status} ${c.url}`);
-      }
-
-      // The fileable defects — a crash, a broken asset, or a freeze during real use.
-      const problems = [
-        ...healthFailures(health),
-        ...(responsive ? [] : [`the screen FROZE (main thread unresponsive) after interacting`]),
-      ];
-      expect(problems, `${screen.name} broke during interaction — ${problems.join(' | ')}`).toEqual(
-        [],
-      );
+    test.beforeEach(async ({ page }) => {
+      await skipIfSignedOut(page);
     });
-  }
-});
+
+    // The interactive screens — the ones with a search box / list / thread a user drives.
+    const INTERACTIVE = new Set(['home', 'katchup', 'kall', 'kmail', 'settings']);
+    for (const screen of AUTHENTICATED_SCREENS.filter((s) =>
+      INTERACTIVE.has(s.name.toLowerCase()),
+    )) {
+      test(`${screen.name} — interact without crashing or freezing @ui`, async ({ page }) => {
+        const stop = watchUiHealth(page);
+
+        await page.goto(screen.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await expect(
+          page.locator(screen.ready.join(', ')).first(),
+          `${screen.name} mounted`,
+        ).toBeVisible({ timeout: 20_000 });
+
+        const skipped = await drive(page);
+
+        // After the interactions, is the page still alive and responsive — or frozen?
+        const responsive = await isResponsive(page);
+        const health = stop();
+
+        if (skipped.length) {
+          console.log(
+            `[ui-interaction] ${screen.name}: not performed here — ${skipped.join(', ')}`,
+          );
+        }
+        for (const c of failedUserActions(health)) {
+          console.log(`[ui-interaction] ${screen.name}: action call failed ${c.status} ${c.url}`);
+        }
+
+        // The fileable defects — a crash, a broken asset, or a freeze during real use.
+        const problems = [
+          ...healthFailures(health),
+          ...(responsive ? [] : [`the screen FROZE (main thread unresponsive) after interacting`]),
+        ];
+        expect(
+          problems,
+          `${screen.name} broke during interaction — ${problems.join(' | ')}`,
+        ).toEqual([]);
+      });
+    }
+  },
+);

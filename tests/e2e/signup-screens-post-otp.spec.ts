@@ -44,90 +44,100 @@ function freshMobile(): string {
   return `77${Date.now().toString().slice(-8)}`;
 }
 
-test.describe('KPost signup post-OTP screens — deep UI sweep', { tag: '@ui' }, () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+test.describe(
+  'KPost signup post-OTP screens — deep UI sweep',
+  { tag: ['@ui', '@auth', '@signup', '@regression'] },
+  () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-  test.skip(
-    process.env.SIGNUP_UI_LIFECYCLE !== 'true',
-    'drives a real mobile OTP to reach these screens; set SIGNUP_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',
-    'the mobile OTP bypass code only validates on the confirmed OTP test gateway',
-  );
+    test.skip(
+      process.env.SIGNUP_UI_LIFECYCLE !== 'true',
+      'drives a real mobile OTP to reach these screens; set SIGNUP_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',
+      'the mobile OTP bypass code only validates on the confirmed OTP test gateway',
+    );
 
-  test('Signup — Personal details step (post-OTP): controls, health, performance, layout @ui', async ({
-    page,
-    signupPage,
-  }) => {
-    const stop = watchUiHealth(page);
+    test('Signup — Personal details step (post-OTP): controls, health, performance, layout @ui', async ({
+      page,
+      signupPage,
+    }) => {
+      const stop = watchUiHealth(page);
 
-    await signupPage.goto();
-    await signupPage.chooseAccountType('Personal');
-    await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
+      await signupPage.goto();
+      await signupPage.chooseAccountType('Personal');
+      await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
 
-    const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-    test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
-    /*
-     * #896 (closed INVALID 2026-10-03): the timer used to start at `goto()`, which folded the entire
-     * page-load + account-type + country/language/domain flow (~10s, confirmed by direct
-     * instrumentation) into what the bug then called "time for the screen to appear after OTP". The
-     * real post-OTP render is under a second. Starting the clock HERE — right before OTP entry, same
-     * boundary the bug's own wording describes ("the screen right after entering the mobile OTP") —
-     * is what the performance budget below should actually be judging.
-     */
-    const started = Date.now();
-    const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-    test.skip(otpEntryOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
-    const loadMs = Date.now() - started;
+      const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
+      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      /*
+       * #896 (closed INVALID 2026-10-03): the timer used to start at `goto()`, which folded the entire
+       * page-load + account-type + country/language/domain flow (~10s, confirmed by direct
+       * instrumentation) into what the bug then called "time for the screen to appear after OTP". The
+       * real post-OTP render is under a second. Starting the clock HERE — right before OTP entry, same
+       * boundary the bug's own wording describes ("the screen right after entering the mobile OTP") —
+       * is what the performance budget below should actually be judging.
+       */
+      const started = Date.now();
+      const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
+      test.skip(
+        otpEntryOutcome === 'invalid',
+        'the OTP bypass code was rejected this run — re-run',
+      );
+      const loadMs = Date.now() - started;
 
-    const screen: ScreenDef = {
-      route: '/signup',
-      name: 'Signup — Personal details (post-OTP)',
-      screen: 'signup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
-
-  test('Signup — Business Company Details step (post-OTP): controls, health, performance, layout @ui', async ({
-    page,
-    signupPage,
-  }) => {
-    const stop = watchUiHealth(page);
-
-    await signupPage.goto();
-    await signupPage.chooseAccountType('Business');
-    await signupPage.chooseBusinessCategory('Small');
-    await signupPage.selectCountryLanguageDomain('India', 'English', 'kpost.in');
-
-    const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-    test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
-    const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-    test.skip(otpEntryOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
-
-    await signupPage.fillBusinessPersonalDetails({
-      firstName: 'QA',
-      lastName: 'Sweep',
-      gender: 'Female',
-      dobDay: 15,
-      dobMonth: 'June',
-      dobYear: 1995,
+      const screen: ScreenDef = {
+        route: '/signup',
+        name: 'Signup — Personal details (post-OTP)',
+        screen: 'signup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
     });
-    // Same #896 fix as the Personal test above: time THIS screen's own transition (Continue ->
-    // Company Details rendering), not the whole flow since page load.
-    const started = Date.now();
-    await page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
-    const loadMs = Date.now() - started;
 
-    const screen: ScreenDef = {
-      route: '/signup',
-      name: 'Signup — Business Company Details (post-OTP)',
-      screen: 'signup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
-});
+    test('Signup — Business Company Details step (post-OTP): controls, health, performance, layout @ui', async ({
+      page,
+      signupPage,
+    }) => {
+      const stop = watchUiHealth(page);
+
+      await signupPage.goto();
+      await signupPage.chooseAccountType('Business');
+      await signupPage.chooseBusinessCategory('Small');
+      await signupPage.selectCountryLanguageDomain('India', 'English', 'kpost.in');
+
+      const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
+      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
+      test.skip(
+        otpEntryOutcome === 'invalid',
+        'the OTP bypass code was rejected this run — re-run',
+      );
+
+      await signupPage.fillBusinessPersonalDetails({
+        firstName: 'QA',
+        lastName: 'Sweep',
+        gender: 'Female',
+        dobDay: 15,
+        dobMonth: 'June',
+        dobYear: 1995,
+      });
+      // Same #896 fix as the Personal test above: time THIS screen's own transition (Continue ->
+      // Company Details rendering), not the whole flow since page load.
+      const started = Date.now();
+      await page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
+      const loadMs = Date.now() - started;
+
+      const screen: ScreenDef = {
+        route: '/signup',
+        name: 'Signup — Business Company Details (post-OTP)',
+        screen: 'signup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
+  },
+);

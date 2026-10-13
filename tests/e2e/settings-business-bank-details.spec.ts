@@ -15,7 +15,7 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Settings · Business Bank Account Details (BUSINESS_S, validation only)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@settings', '@regression'] },
   () => {
     test.use({ storageState: STORAGE_STATE_BUSINESS });
 

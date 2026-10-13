@@ -6,6 +6,6 @@ import { test } from '@fixtures';
  * check/delete (blocked `needs-attachment` until the lifecycle mints a uuid). HOW is owned by the
  * central validation engine.
  */
-test.describe('KPost AWS · endpoints', () => {
+test.describe('KPost AWS · endpoints', { tag: ['@api', '@platform', '@regression'] }, () => {
   describeEndpointCases({ tags: ['aws'] });
 });

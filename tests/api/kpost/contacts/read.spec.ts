@@ -6,6 +6,6 @@ import { test } from '@fixtures';
  * search surfaces. HOW is owned by the central validation engine. All run on live (our own account /
  * a harmless search).
  */
-test.describe('KPost Contacts · reads', () => {
+test.describe('KPost Contacts · reads', { tag: ['@api', '@contacts', '@regression'] }, () => {
   describeEndpointCases({ tags: ['contacts-read'] });
 });

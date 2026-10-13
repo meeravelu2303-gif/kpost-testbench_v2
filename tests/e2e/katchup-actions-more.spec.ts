@@ -35,46 +35,50 @@ const SUBFLOW_ACTIONS: ReadonlyArray<{ id: string; menu: RegExp }> = [
   { id: 'Forward', menu: /Forward\s*$/i },
 ];
 
-test.describe('KPost Katchup · sender sub-flow actions (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-    'writes real messages; set KATCHUP_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
-    'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
-  );
+test.describe(
+  'KPost Katchup · sender sub-flow actions (write)',
+  { tag: ['@ui', '@katchup', '@regression'] },
+  () => {
+    test.skip(
+      process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+      'writes real messages; set KATCHUP_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
+      'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
+    );
 
-  for (const action of SUBFLOW_ACTIONS) {
-    test(`${action.id} opens from the bell menu (entry wired), then self-cleans @ui`, async ({
-      page,
-    }) => {
-      const subject = `QA UI ${action.id.replace(/\W+/g, '')} ${Date.now()}`;
-      await openComposer(page);
-      const message = await sendMessage(page, subject, `QA UI ${action.id} — self-cleaning`);
+    for (const action of SUBFLOW_ACTIONS) {
+      test(`${action.id} opens from the bell menu (entry wired), then self-cleans @ui`, async ({
+        page,
+      }) => {
+        const subject = `QA UI ${action.id.replace(/\W+/g, '')} ${Date.now()}`;
+        await openComposer(page);
+        const message = await sendMessage(page, subject, `QA UI ${action.id} — self-cleaning`);
 
-      // Open the bell menu and click the action. The menu item must be present (the action exists on
-      // a message we sent) and, once clicked, must be dismissed — the action was accepted and its next
-      // surface (modal / picker / composer) has taken over.
-      await openBellMenu(page, message);
-      const item = page.getByRole('menuitem', { name: action.menu });
-      await expect(item, `the bell menu offers ${action.id}`).toBeVisible({ timeout: 15_000 });
-      await item.click();
-      await expect(item, `${action.id} was accepted (menu item dismissed)`).toBeHidden({
-        timeout: 15_000,
+        // Open the bell menu and click the action. The menu item must be present (the action exists on
+        // a message we sent) and, once clicked, must be dismissed — the action was accepted and its next
+        // surface (modal / picker / composer) has taken over.
+        await openBellMenu(page, message);
+        const item = page.getByRole('menuitem', { name: action.menu });
+        await expect(item, `the bell menu offers ${action.id}`).toBeVisible({ timeout: 15_000 });
+        await item.click();
+        await expect(item, `${action.id} was accepted (menu item dismissed)`).toBeHidden({
+          timeout: 15_000,
+        });
+
+        // Dismiss whatever surface opened (modal / picker), without submitting, so no extra state is
+        // left. A sub-flow modal (the Transfer/Forward contact picker is a ModalComponent that Escape
+        // does not always close) can overlay the thread and block the bell menu the self-clean needs, so
+        // reopen the conversation fresh — that unmounts any open modal — before deleting.
+        await page.keyboard.press('Escape').catch(() => undefined);
+        await openConversation(page, testData.victimKpostId).catch(() => undefined);
+
+        // Self-clean: delete the source message so the account ends as it started.
+        if (await messageBySubject(page, subject).count()) {
+          await deleteSentMessage(page, subject);
+        }
       });
-
-      // Dismiss whatever surface opened (modal / picker), without submitting, so no extra state is
-      // left. A sub-flow modal (the Transfer/Forward contact picker is a ModalComponent that Escape
-      // does not always close) can overlay the thread and block the bell menu the self-clean needs, so
-      // reopen the conversation fresh — that unmounts any open modal — before deleting.
-      await page.keyboard.press('Escape').catch(() => undefined);
-      await openConversation(page, testData.victimKpostId).catch(() => undefined);
-
-      // Self-clean: delete the source message so the account ends as it started.
-      if (await messageBySubject(page, subject).count()) {
-        await deleteSentMessage(page, subject);
-      }
-    });
-  }
-});
+    }
+  },
+);

@@ -5,6 +5,6 @@ import { test } from '@fixtures';
  * WHAT is tested: the Profile reads — fetch, search, digital card, downloads (live-safe).
  * HOW is owned by the central validation engine.
  */
-test.describe('KPost Profile · read', () => {
+test.describe('KPost Profile · read', { tag: ['@api', '@profile', '@regression'] }, () => {
   describeEndpointCases({ tags: ['profile-read'] });
 });

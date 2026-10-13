@@ -11,8 +11,12 @@ import { runScreenSweep } from './support/screen-sweep';
  *
  * Not yet on the reporter's UI filing allow-list (needs clean runs first; see bug-filing.md).
  */
-test.describe('KPost deep UI sweep — public screens (no session)', { tag: '@ui' }, () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+test.describe(
+  'KPost deep UI sweep — public screens (no session)',
+  { tag: ['@ui', '@platform', '@regression'] },
+  () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-  runScreenSweep(PUBLIC_SCREENS, { session: 'public' });
-});
+    runScreenSweep(PUBLIC_SCREENS, { session: 'public' });
+  },
+);

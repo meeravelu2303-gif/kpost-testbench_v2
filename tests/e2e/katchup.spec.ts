@@ -12,7 +12,7 @@ import { expect, test } from '@fixtures';
  * same authorization as the API feature flow). Without it, this file asserts the screen renders and
  * carries its differentiator — the Subject field (BR-K01) — which no mainstream chat product has.
  */
-test.describe('KPost Katchup screen', { tag: '@ui' }, () => {
+test.describe('KPost Katchup screen', { tag: ['@ui', '@katchup', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

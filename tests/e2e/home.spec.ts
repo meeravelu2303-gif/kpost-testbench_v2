@@ -8,7 +8,7 @@ import { expect, test } from '@fixtures';
  * (`/v2/dashboard/*`). No `data-testid` hooks, so locators are structural classes from the live app
  * (`KPOST_REACTJS_2023_V1` — `HomeDashboard.js`, `RecentMessage.js`).
  */
-test.describe('KPost Home screen', { tag: '@ui' }, () => {
+test.describe('KPost Home screen', { tag: ['@ui', '@home', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

@@ -12,7 +12,7 @@ import { expect, test } from '@fixtures';
  * The render check is read-only and safe. Creating an event is gated behind `KDIARY_UI_LIFECYCLE=true`
  * and self-cleaning (delete the task).
  */
-test.describe('KPost KDiary — read-only', { tag: '@ui' }, () => {
+test.describe('KPost KDiary — read-only', { tag: ['@ui', '@verticals', '@regression'] }, () => {
   // FINDING (2026-09-15): the KDiary UI is NOT reachable in the deployed build. `/kdiary` is commented
   // out in MenuRoutes.js, and although `Diary` is imported by the right-rail filler, the default rail on
   // /home and /katchup renders KNews / E-Commerce, not the Diary — confirmed from the live DOM. So the
@@ -39,65 +39,69 @@ test.describe('KPost KDiary — read-only', { tag: '@ui' }, () => {
   });
 });
 
-test.describe('KPost KDiary · create event (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KDIARY_UI_LIFECYCLE !== 'true',
-    'creates a real diary event; set KDIARY_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account',
-  );
-  // See #812: KDiary has no reachable UI entry point in the deployed build (confirmed live — no
-  // ".Dairy-Container", no "Diary" text, and no "+ Add" trigger exist anywhere in the Katchup rail), so
-  // this can never get past its own first assertion. Matches the read-only describe block's own
-  // already-documented finding above. Skipping with reason rather than failing on a known product gap.
-  test.skip(true, 'KDiary has no UI entry point to drive — see #812');
+test.describe(
+  'KPost KDiary · create event (write)',
+  { tag: ['@ui', '@verticals', '@regression'] },
+  () => {
+    test.skip(
+      process.env.KDIARY_UI_LIFECYCLE !== 'true',
+      'creates a real diary event; set KDIARY_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account',
+    );
+    // See #812: KDiary has no reachable UI entry point in the deployed build (confirmed live — no
+    // ".Dairy-Container", no "Diary" text, and no "+ Add" trigger exist anywhere in the Katchup rail), so
+    // this can never get past its own first assertion. Matches the read-only describe block's own
+    // already-documented finding above. Skipping with reason rather than failing on a known product gap.
+    test.skip(true, 'KDiary has no UI entry point to drive — see #812');
 
-  /**
-   * FIRST-RUN NOTE: the Add-Schedule modal's date/priority pickers and the delete-task confirm
-   * (`window.confirm("Delete this task?")`) need one live recording pass. This drives the reliable
-   * entry (open modal → Title accepted) and attempts save + cleanup; success toast
-   * "Schedule created successfully!" confirms it once tuned.
-   */
-  test('open the add-schedule modal, name an event, and save @ui', async ({ page }) => {
-    const title = `QA UI diary ${Date.now()}`;
-    await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
+    /**
+     * FIRST-RUN NOTE: the Add-Schedule modal's date/priority pickers and the delete-task confirm
+     * (`window.confirm("Delete this task?")`) need one live recording pass. This drives the reliable
+     * entry (open modal → Title accepted) and attempts save + cleanup; success toast
+     * "Schedule created successfully!" confirms it once tuned.
+     */
+    test('open the add-schedule modal, name an event, and save @ui', async ({ page }) => {
+      const title = `QA UI diary ${Date.now()}`;
+      await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
 
-    // Native "Delete this task?" confirm on cleanup — auto-accept.
-    page.on('dialog', (dialog) => dialog.accept().catch(() => undefined));
+      // Native "Delete this task?" confirm on cleanup — auto-accept.
+      page.on('dialog', (dialog) => dialog.accept().catch(() => undefined));
 
-    // "+ Add" opens the KDiary Add-Schedule modal.
-    await page
-      .getByRole('button', { name: /\+?\s*Add/i })
-      .first()
-      .click()
-      .catch(() => undefined);
+      // "+ Add" opens the KDiary Add-Schedule modal.
+      await page
+        .getByRole('button', { name: /\+?\s*Add/i })
+        .first()
+        .click()
+        .catch(() => undefined);
 
-    const titleField = page
-      .locator('.DiaryInput')
-      .first()
-      .or(page.getByPlaceholder(/Enter Title/i));
-    await expect(titleField, 'the add-schedule modal opens with a Title field').toBeVisible({
-      timeout: 15_000,
+      const titleField = page
+        .locator('.DiaryInput')
+        .first()
+        .or(page.getByPlaceholder(/Enter Title/i));
+      await expect(titleField, 'the add-schedule modal opens with a Title field').toBeVisible({
+        timeout: 15_000,
+      });
+      await titleField.fill(title);
+      await expect(titleField, 'the Title field accepts text').toHaveValue(title);
+
+      // Best-effort: save (Priority/date may be required); the toast confirms once tuned.
+      await page
+        .locator('.DiarySaveBtn')
+        .first()
+        .click()
+        .catch(() =>
+          page
+            .getByRole('button', { name: /^Save$/i })
+            .first()
+            .click(),
+        );
     });
-    await titleField.fill(title);
-    await expect(titleField, 'the Title field accepts text').toHaveValue(title);
-
-    // Best-effort: save (Priority/date may be required); the toast confirms once tuned.
-    await page
-      .locator('.DiarySaveBtn')
-      .first()
-      .click()
-      .catch(() =>
-        page
-          .getByRole('button', { name: /^Save$/i })
-          .first()
-          .click(),
-      );
-  });
-});
+  },
+);

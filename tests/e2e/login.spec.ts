@@ -17,7 +17,7 @@ import { expect, test } from '@fixtures';
  * does not advance → a valid id advances → a wrong password is rejected. That both mirrors a real
  * session and keeps the suite reliable in Chromium, Firefox and WebKit.
  */
-test.describe('KPost login screen', { tag: '@ui' }, () => {
+test.describe('KPost login screen', { tag: ['@ui', '@auth', '@regression'] }, () => {
   // Log OUT: the login screen must be tested from a fresh session, not the one `setup` saved.
   test.use({ storageState: { cookies: [], origins: [] } });
 

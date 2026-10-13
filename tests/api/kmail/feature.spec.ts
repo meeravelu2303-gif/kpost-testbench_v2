@@ -83,7 +83,7 @@ async function del(
     .catch(() => undefined);
 }
 
-test.describe('KPost KMail · feature flow', () => {
+test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regression'] }, () => {
   // Gated while KMail refuses every valid token — see src/fixtures/kmail-auth-gate.ts.
   test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
 

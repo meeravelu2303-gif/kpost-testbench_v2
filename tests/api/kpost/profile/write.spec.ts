@@ -5,6 +5,6 @@ import { test } from '@fixtures';
  * WHAT is tested: the Profile writes — about, designation, education, privacy (own profile).
  * HOW is owned by the central validation engine.
  */
-test.describe('KPost Profile · write', () => {
+test.describe('KPost Profile · write', { tag: ['@api', '@profile', '@regression'] }, () => {
   describeEndpointCases({ tags: ['profile-write'] });
 });

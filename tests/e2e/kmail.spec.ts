@@ -8,7 +8,7 @@ import { expect, test } from '@fixtures';
  * `components/Kmail/Kmail.js` (`docs/ui/ui-screens.md`). The `<Knews>`/`<Ecommerce>` fillers sit in the
  * right columns before a mail is opened, so the assertion anchors on the KMail shell, not those.
  */
-test.describe('KPost KMail screen', { tag: '@ui' }, () => {
+test.describe('KPost KMail screen', { tag: ['@ui', '@kmail', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

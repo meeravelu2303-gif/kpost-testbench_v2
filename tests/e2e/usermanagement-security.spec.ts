@@ -17,7 +17,7 @@ import { openAddMemberForm, typeIntoDesignation } from './support/usermanagement
  */
 test.describe(
   'KPost User Management · Designation field security fuzzing (BUSINESS_S)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@user-management', '@regression'] },
   () => {
     test.use({ storageState: STORAGE_STATE_BUSINESS });
 

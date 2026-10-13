@@ -29,7 +29,7 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Settings · Company Details (BUSINESS_S, self-restoring)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@settings', '@regression'] },
   () => {
     test.use({ storageState: STORAGE_STATE_BUSINESS });
 

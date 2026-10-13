@@ -15,59 +15,64 @@ import { expect, test } from '@fixtures';
  * opens and accepts a Group Name (the entry), then attempts the member-add + submit + delete as
  * best-effort. Never runs on a default run.
  */
-test.describe('KPost Group — create / rename / delete (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.GROUP_UI_LIFECYCLE !== 'true',
-    'creates a real group; set GROUP_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
-    'needs both QA accounts (a group needs at least one other member)',
-  );
-
-  test('open the create-group modal, name a group, add a member, then clean up @ui', async ({
-    page,
-  }) => {
-    const groupName = `QA UI grp ${Date.now()}`;
-    await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-
-    // Open the "Create New Group" modal via its icon trigger (`.icon-KP_112-Group-Add`, same convention
-    // as contacts-functional.spec.ts). A text match on "New Group" is NOT safe here — several existing,
-    // real groups in this account are literally named "New Group", so a text-based `.first()` click
-    // opens one of THOSE conversations instead of the create-group modal.
-    await page
-      .locator('.icon-KP_112-Group-Add')
-      .first()
-      .click()
-      .catch(() => undefined);
-
-    // The modal exposes a Group Name field — the reliable entry assertion.
-    const nameField = page
-      .getByRole('textbox', { name: /Group Name/i })
-      .or(page.getByPlaceholder(/Group Name/i))
-      .first();
-    await expect(nameField, 'the Create New Group modal opens with a Group Name field').toBeVisible(
-      {
-        timeout: 15_000,
-      },
+test.describe(
+  'KPost Group — create / rename / delete (write)',
+  { tag: ['@ui', '@group', '@regression', '@sanity'] },
+  () => {
+    test.skip(
+      process.env.GROUP_UI_LIFECYCLE !== 'true',
+      'creates a real group; set GROUP_UI_LIFECYCLE=true',
     );
-    await nameField.fill(groupName);
-    await expect(nameField, 'the Group Name field accepts text').toHaveValue(groupName);
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
+      'needs both QA accounts (a group needs at least one other member)',
+    );
 
-    // Best-effort: add the 2nd QA account as a member and submit, then delete the group to clean up.
-    await page
-      .getByText(testData.victimKpostId)
-      .first()
-      .click()
-      .catch(() => undefined);
-    await page
-      .getByRole('button', { name: /Create|Submit|Done|Next/i })
-      .first()
-      .click()
-      .catch(() => undefined);
-  });
-});
+    test('open the create-group modal, name a group, add a member, then clean up @ui', async ({
+      page,
+    }) => {
+      const groupName = `QA UI grp ${Date.now()}`;
+      await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
+
+      // Open the "Create New Group" modal via its icon trigger (`.icon-KP_112-Group-Add`, same convention
+      // as contacts-functional.spec.ts). A text match on "New Group" is NOT safe here — several existing,
+      // real groups in this account are literally named "New Group", so a text-based `.first()` click
+      // opens one of THOSE conversations instead of the create-group modal.
+      await page
+        .locator('.icon-KP_112-Group-Add')
+        .first()
+        .click()
+        .catch(() => undefined);
+
+      // The modal exposes a Group Name field — the reliable entry assertion.
+      const nameField = page
+        .getByRole('textbox', { name: /Group Name/i })
+        .or(page.getByPlaceholder(/Group Name/i))
+        .first();
+      await expect(
+        nameField,
+        'the Create New Group modal opens with a Group Name field',
+      ).toBeVisible({
+        timeout: 15_000,
+      });
+      await nameField.fill(groupName);
+      await expect(nameField, 'the Group Name field accepts text').toHaveValue(groupName);
+
+      // Best-effort: add the 2nd QA account as a member and submit, then delete the group to clean up.
+      await page
+        .getByText(testData.victimKpostId)
+        .first()
+        .click()
+        .catch(() => undefined);
+      await page
+        .getByRole('button', { name: /Create|Submit|Done|Next/i })
+        .first()
+        .click()
+        .catch(() => undefined);
+    });
+  },
+);

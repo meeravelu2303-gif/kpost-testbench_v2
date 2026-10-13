@@ -40,179 +40,185 @@ import { settleFrames } from './support/settle';
  * KMail has no recall, so — like `kmail-security.spec.ts` — this does NOT clean up after itself; it
  * leaves one real mail in the 2nd QA account's inbox.
  */
-test.describe('KPost KMail · stored XSS on thread-view render', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KMAIL_UI_LIFECYCLE !== 'true',
-    'sends a real mail; set KMAIL_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-    'needs auth2.setup.ts to log STORAGE_STATE_2 in as a real 2nd account; set KATCHUP_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId ||
-      testData.kpostId.includes('qa.bench') ||
-      !testData.victimKpostId ||
-      testData.victimKpostId.includes('qa.bench'),
-    'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
-  );
+test.describe(
+  'KPost KMail · stored XSS on thread-view render',
+  { tag: ['@ui', '@kmail', '@regression'] },
+  () => {
+    test.skip(
+      process.env.KMAIL_UI_LIFECYCLE !== 'true',
+      'sends a real mail; set KMAIL_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+      'needs auth2.setup.ts to log STORAGE_STATE_2 in as a real 2nd account; set KATCHUP_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId ||
+        testData.kpostId.includes('qa.bench') ||
+        !testData.victimKpostId ||
+        testData.victimKpostId.includes('qa.bench'),
+      'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
+    );
 
-  test('an onerror-based payload in a received mail body must not execute when the receiver opens it @ui', async ({
-    page,
-    browser,
-  }) => {
-    const marker = `qaxss${Date.now()}`;
-    const subject = `QA XSS RENDER ${marker}`;
-    const payload = `<img src=x onerror="window.__xssFired=true">`;
+    test('an onerror-based payload in a received mail body must not execute when the receiver opens it @ui', async ({
+      page,
+      browser,
+    }) => {
+      const marker = `qaxss${Date.now()}`;
+      const subject = `QA XSS RENDER ${marker}`;
+      const payload = `<img src=x onerror="window.__xssFired=true">`;
 
-    // --- Account A (sender, the default session): compose and send a real mail carrying the
-    // payload in the BODY (the field the audit flagged; subject stays plain so the receiver-side
-    // search match below is unambiguous). ---
-    const stopSender = watchUiHealth(page);
-    let dialogFiredSender = false;
-    page.on('dialog', (dialog) => {
-      dialogFiredSender = true;
-      void dialog.dismiss();
-    });
-
-    await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-
-    // Body FIRST — filling the To field opens a recipient autocomplete that destabilises the layout
-    // (same proven order as `kmail-compose.spec.ts` / `kmail-security.spec.ts`).
-    const body = page.locator('.ql-editor[contenteditable="true"]').first();
-    await body.click();
-    await page.keyboard.type(`QA UI stored-XSS render check — ${payload}`);
-
-    const to = page.locator('.subjectTextboxKmailTO, input[name="to"]').first();
-    await to.click();
-    await to.fill(testData.victimKpostId);
-    await page
-      .getByText(testData.victimKpostId, { exact: false })
-      .last()
-      .click({ timeout: 4_000 })
-      .catch(() => undefined);
-
-    await page.locator('.toInput').first().fill(subject);
-
-    await page
-      .locator('.post_button_size')
-      .filter({ has: page.locator('.icon-KP_3164') })
-      .first()
-      .click()
-      .catch(() => page.locator('.post_button_size').first().click());
-
-    await expect(
-      page
-        .getByText(/sent|success/i)
-        .first()
-        .or(page.locator('.Toastify__toast--success').first()),
-      'the mail was sent',
-    ).toBeVisible({ timeout: 20_000 });
-    await settleFrames(page);
-
-    const healthSender = stopSender();
-    // Logged as context, not asserted: the sender screen can throw unrelated JS errors (other
-    // screen chrome, notification polling, etc.) that have nothing to do with THIS payload — that
-    // general sender-screen health is already `kmail-security.spec.ts`'s job. The only thing this
-    // test cares about on the sender side is that the payload itself never executes there either.
-    test.info().annotations.push({
-      type: 'observed-sender',
-      description: `sender pageErrors: ${JSON.stringify(healthSender.pageErrors)}`,
-    });
-    expect(dialogFiredSender, 'the payload must not fire on the sender screen either').toBe(false);
-
-    // --- Account B (the receiver): a second browser context restored from STORAGE_STATE_2, the
-    // established two-session pattern (`katchup-two-session.spec.ts`). ---
-    const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
-    const receiver = await context.newPage();
-    try {
-      const stopReceiver = watchUiHealth(receiver);
-      let dialogFiredReceiver = false;
-      receiver.on('dialog', (dialog) => {
-        dialogFiredReceiver = true;
+      // --- Account A (sender, the default session): compose and send a real mail carrying the
+      // payload in the BODY (the field the audit flagged; subject stays plain so the receiver-side
+      // search match below is unambiguous). ---
+      const stopSender = watchUiHealth(page);
+      let dialogFiredSender = false;
+      page.on('dialog', (dialog) => {
+        dialogFiredSender = true;
         void dialog.dismiss();
       });
 
-      await receiver.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await receiver
+      await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
         .locator('.loader-overlay')
         .waitFor({ state: 'hidden', timeout: 30_000 })
         .catch(() => undefined);
 
-      // Filter the recent-mail list down to our unique subject. `MessageContainer.js` filters its
-      // mail list by `kmailSubject` against this search box (`.Serach_input`, `SearchBar.js`).
-      const search = receiver.locator('.Serach_input').first();
-      await search.fill(subject);
-      // The list filter is client-side; the visibility wait below is the only wait it needs.
+      // Body FIRST — filling the To field opens a recipient autocomplete that destabilises the layout
+      // (same proven order as `kmail-compose.spec.ts` / `kmail-security.spec.ts`).
+      const body = page.locator('.ql-editor[contenteditable="true"]').first();
+      await body.click();
+      await page.keyboard.type(`QA UI stored-XSS render check — ${payload}`);
 
-      const received = receiver.getByText(subject, { exact: false }).first();
-      await expect(received, 'account 2 receives the mail account 1 sent').toBeVisible({
-        timeout: 25_000,
-      });
-
-      // Click the mail row to expand it — `KmailMessageBox.showMailContent()`, wired to the
-      // collapsed row's own onClick — which is what actually renders the body through
-      // `dangerouslySetInnerHTML` (the code path the source audit flagged).
-      await received.click();
-
-      const bodyLocator = receiver.locator('.para_fontkm.ql-editor.parent-container').first();
-      await expect(bodyLocator, 'the mail body renders in the thread view').toBeVisible({
-        timeout: 20_000,
-      });
-      // An injected `onerror` fires when its image fails to load — wait for the body's images to
-      // settle (loaded or errored) instead of guessing a delay.
-      await bodyLocator
-        .evaluate((el) =>
-          Promise.all(
-            Array.from(el.querySelectorAll('img')).map(
-              (img) =>
-                new Promise<void>((done) => {
-                  if (img.complete) return done();
-                  img.addEventListener('load', () => done(), { once: true });
-                  img.addEventListener('error', () => done(), { once: true });
-                }),
-            ),
-          ),
-        )
+      const to = page.locator('.subjectTextboxKmailTO, input[name="to"]').first();
+      await to.click();
+      await to.fill(testData.victimKpostId);
+      await page
+        .getByText(testData.victimKpostId, { exact: false })
+        .last()
+        .click({ timeout: 4_000 })
         .catch(() => undefined);
-      await settleFrames(receiver);
 
-      const fired = await receiver.evaluate(() =>
-        Boolean((window as unknown as Record<string, unknown>).__xssFired),
-      );
-      const rawHtml = await bodyLocator.innerHTML().catch(() => '(could not read innerHTML)');
-      const health = stopReceiver();
+      await page.locator('.toInput').first().fill(subject);
 
-      const summary =
-        `__xssFired: ${fired}; dialog fired: ${dialogFiredReceiver}; ` +
-        `pageErrors: ${JSON.stringify(health.pageErrors)}; ` +
-        `rendered body innerHTML: ${rawHtml.slice(0, 1000)}`;
-      test.info().annotations.push({ type: 'observed', description: summary });
-      // Also on stdout so it shows up directly in the run log, not just the HTML report.
+      await page
+        .locator('.post_button_size')
+        .filter({ has: page.locator('.icon-KP_3164') })
+        .first()
+        .click()
+        .catch(() => page.locator('.post_button_size').first().click());
 
-      console.log(`[kmail-stored-xss-render] ${summary}`);
+      await expect(
+        page
+          .getByText(/sent|success/i)
+          .first()
+          .or(page.locator('.Toastify__toast--success').first()),
+        'the mail was sent',
+      ).toBeVisible({ timeout: 20_000 });
+      await settleFrames(page);
 
-      // NOTE: a pre-existing, unrelated `TypeError: Cannot read properties of undefined (reading
-      // 'status')` fires on BOTH the sender and receiver screens regardless of this payload (seen
-      // identically with the payload absent) — almost certainly a background notification/socket
-      // poll race, not caused by this test. Logged for context, not asserted here; the two hard
-      // gates below are what this test exists to prove.
+      const healthSender = stopSender();
+      // Logged as context, not asserted: the sender screen can throw unrelated JS errors (other
+      // screen chrome, notification polling, etc.) that have nothing to do with THIS payload — that
+      // general sender-screen health is already `kmail-security.spec.ts`'s job. The only thing this
+      // test cares about on the sender side is that the payload itself never executes there either.
       test.info().annotations.push({
-        type: 'context-pageErrors',
-        description: `receiver pageErrors (not asserted, see note above): ${JSON.stringify(health.pageErrors)}`,
+        type: 'observed-sender',
+        description: `sender pageErrors: ${JSON.stringify(healthSender.pageErrors)}`,
       });
+      expect(dialogFiredSender, 'the payload must not fire on the sender screen either').toBe(
+        false,
+      );
 
-      expect(dialogFiredReceiver, 'no dialog fired rendering the received mail').toBe(false);
-      expect(
-        fired,
-        'the onerror payload must not execute when the receiver opens the received mail',
-      ).toBe(false);
-    } finally {
-      await context.close();
-    }
-  });
-});
+      // --- Account B (the receiver): a second browser context restored from STORAGE_STATE_2, the
+      // established two-session pattern (`katchup-two-session.spec.ts`). ---
+      const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const receiver = await context.newPage();
+      try {
+        const stopReceiver = watchUiHealth(receiver);
+        let dialogFiredReceiver = false;
+        receiver.on('dialog', (dialog) => {
+          dialogFiredReceiver = true;
+          void dialog.dismiss();
+        });
+
+        await receiver.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await receiver
+          .locator('.loader-overlay')
+          .waitFor({ state: 'hidden', timeout: 30_000 })
+          .catch(() => undefined);
+
+        // Filter the recent-mail list down to our unique subject. `MessageContainer.js` filters its
+        // mail list by `kmailSubject` against this search box (`.Serach_input`, `SearchBar.js`).
+        const search = receiver.locator('.Serach_input').first();
+        await search.fill(subject);
+        // The list filter is client-side; the visibility wait below is the only wait it needs.
+
+        const received = receiver.getByText(subject, { exact: false }).first();
+        await expect(received, 'account 2 receives the mail account 1 sent').toBeVisible({
+          timeout: 25_000,
+        });
+
+        // Click the mail row to expand it — `KmailMessageBox.showMailContent()`, wired to the
+        // collapsed row's own onClick — which is what actually renders the body through
+        // `dangerouslySetInnerHTML` (the code path the source audit flagged).
+        await received.click();
+
+        const bodyLocator = receiver.locator('.para_fontkm.ql-editor.parent-container').first();
+        await expect(bodyLocator, 'the mail body renders in the thread view').toBeVisible({
+          timeout: 20_000,
+        });
+        // An injected `onerror` fires when its image fails to load — wait for the body's images to
+        // settle (loaded or errored) instead of guessing a delay.
+        await bodyLocator
+          .evaluate((el) =>
+            Promise.all(
+              Array.from(el.querySelectorAll('img')).map(
+                (img) =>
+                  new Promise<void>((done) => {
+                    if (img.complete) return done();
+                    img.addEventListener('load', () => done(), { once: true });
+                    img.addEventListener('error', () => done(), { once: true });
+                  }),
+              ),
+            ),
+          )
+          .catch(() => undefined);
+        await settleFrames(receiver);
+
+        const fired = await receiver.evaluate(() =>
+          Boolean((window as unknown as Record<string, unknown>).__xssFired),
+        );
+        const rawHtml = await bodyLocator.innerHTML().catch(() => '(could not read innerHTML)');
+        const health = stopReceiver();
+
+        const summary =
+          `__xssFired: ${fired}; dialog fired: ${dialogFiredReceiver}; ` +
+          `pageErrors: ${JSON.stringify(health.pageErrors)}; ` +
+          `rendered body innerHTML: ${rawHtml.slice(0, 1000)}`;
+        test.info().annotations.push({ type: 'observed', description: summary });
+        // Also on stdout so it shows up directly in the run log, not just the HTML report.
+
+        console.log(`[kmail-stored-xss-render] ${summary}`);
+
+        // NOTE: a pre-existing, unrelated `TypeError: Cannot read properties of undefined (reading
+        // 'status')` fires on BOTH the sender and receiver screens regardless of this payload (seen
+        // identically with the payload absent) — almost certainly a background notification/socket
+        // poll race, not caused by this test. Logged for context, not asserted here; the two hard
+        // gates below are what this test exists to prove.
+        test.info().annotations.push({
+          type: 'context-pageErrors',
+          description: `receiver pageErrors (not asserted, see note above): ${JSON.stringify(health.pageErrors)}`,
+        });
+
+        expect(dialogFiredReceiver, 'no dialog fired rendering the received mail').toBe(false);
+        expect(
+          fired,
+          'the onerror payload must not execute when the receiver opens the received mail',
+        ).toBe(false);
+      } finally {
+        await context.close();
+      }
+    });
+  },
+);

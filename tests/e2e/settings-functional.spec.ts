@@ -58,239 +58,247 @@ async function openNotificationSettings(page: Page, settingsPage: SettingsPage):
     .catch(() => false);
 }
 
-test.describe('KPost Settings · UI functional behaviour @ui @database', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.SETTINGS_UI_LIFECYCLE !== 'true',
-    'toggles a real preference; set SETTINGS_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost Settings · UI functional behaviour @ui @database',
+  { tag: ['@ui', '@settings', '@regression', '@sanity'] },
+  () => {
+    test.skip(
+      process.env.SETTINGS_UI_LIFECYCLE !== 'true',
+      'toggles a real preference; set SETTINGS_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  test('toggling a notification preference persists to the settings row @ui', async ({
-    page,
-    settingsPage,
-    databases,
-  }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection to judge by the row');
+    test('toggling a notification preference persists to the settings row @ui', async ({
+      page,
+      settingsPage,
+      databases,
+    }) => {
+      const database = databases.for('kpost-api');
+      test.skip(!database.enabled, 'needs the KPOST_QA connection to judge by the row');
 
-    const read = (): Promise<SettingsRow | undefined> =>
-      database.findOne<SettingsRow>({
-        table: 'TBL_KPOST_GENERAL_SETTINGS',
-        where: { kpost_id: testData.kpostId },
+      const read = (): Promise<SettingsRow | undefined> =>
+        database.findOne<SettingsRow>({
+          table: 'TBL_KPOST_GENERAL_SETTINGS',
+          where: { kpost_id: testData.kpostId },
+        });
+
+      const before = await read();
+      expect(before, 'the account has a settings row').toBeDefined();
+
+      const opened = await openNotificationSettings(page, settingsPage);
+      test.skip(
+        !opened,
+        'the Notification settings panel was not showing right now (session or load condition; path verified live 2026-10-11)',
+      );
+
+      // Flip the first notification toggle (whichever state it is in).
+      const toggle = page.locator('.icon-KP_289_Toggle-On, .icon-KP_285_Toggle-Off').first();
+      await toggle.click();
+
+      /*
+       * Give the save its round-trip, then read the row. The assertion is on the DATABASE: a toggle
+       * that changed nothing in the notification columns means the preference did not persist — the
+       * #495 behaviour, now proven (or ruled out) from the UI.
+       */
+      await page.waitForResponse('**/generalSetting/**', { timeout: 8_000 }).catch(() => undefined);
+      const after = await read();
+
+      expect(
+        snapshot(after),
+        'a toggled notification preference must change the stored settings row (UI → DB); if it does ' +
+          'not, the preference silently reverts — the same fault as Bugzilla #495, from the UI side',
+      ).not.toBe(snapshot(before));
+
+      // Restore: flip it back so the account's preferences end as they started.
+      await toggle.click().catch(() => undefined);
+      await page.waitForResponse('**/generalSetting/**', { timeout: 8_000 }).catch(() => undefined);
+    });
+
+    test('adding an Instant Reply shows it in the list (state reflects the write) @ui', async ({
+      page,
+      settingsPage,
+    }) => {
+      /*
+       * Instant Reply is an additive setting: adding one must appear in the list. A dialog that
+       * accepts the text and shows nothing afterwards is a stale-state defect. Selectors from the
+       * recording: Instant Reply panel → Add → "Enter your Instant Reply" → dialog Add.
+       *
+       * Kept UI-state level (the added reply is visible) rather than DB, because the instant-reply
+       * store is a KMail-settings shape not yet mapped; the visible-in-list check is the honest,
+       * reliable assertion here.
+       *
+       * Nested under "KMail Settings", per source (`Settingdetails.js`) — must be expanded first or
+       * the item is not in the DOM at all (see SettingsPage.ts's openPanel).
+       */
+      await settingsPage.goto();
+      await settingsPage.openPanel('KMail Settings', 'Instant Reply');
+      await page
+        .getByRole('button', { name: 'Add' })
+        .first()
+        .click({ timeout: 10_000 })
+        .catch(() => undefined);
+
+      const field = page.getByRole('textbox', { name: 'Enter your Instant Reply' });
+      const opened = await field.isVisible({ timeout: 10_000 }).catch(() => false);
+      test.skip(
+        !opened,
+        'the Instant Reply editor was not showing right now (session or load condition; path verified live 2026-10-11)',
+      );
+
+      const marker = `QA reply ${Date.now()}`;
+      await field.click();
+      await field.fill(marker);
+      await page.getByRole('dialog').getByRole('button', { name: 'Add' }).click();
+
+      await expect(
+        page.getByText(marker).first(),
+        'a saved Instant Reply appears in the list',
+      ).toBeVisible({ timeout: 12_000 });
+    });
+
+    test('completing the Mail Signature chain with a malformed email does not crash the page @ui', async ({
+      page,
+      settingsPage,
+    }) => {
+      /*
+       * Confirmed from source (`Mailsignature.js`): this panel imports no `Services/*` at all — every
+       * "Save" button (five of them, one per sub-section) is wired to `onClick={() => setInputvalue("")}`,
+       * which replaces the whole `inputvalue` OBJECT state with a bare STRING. Every control in this
+       * component reads `inputvalue.firstname`/`inputvalue.email`/etc., so this is a live crash
+       * candidate on the next render — the same bug class already confirmed and exercised for Vacation
+       * Response (`settings-vacation-response.spec.ts`).
+       *
+       * There is no network call to assert against here (asserting "no kmailSetting request fires" would
+       * be vacuously true — it never fires for ANY input, valid or not), so the honest, real assertion is
+       * whether the confirmed state-corruption bug actually throws on this build. The fields are also
+       * progressively disabled (First Name -> Last Name -> Designation -> Email), so the full chain must
+       * be filled to even reach the Email field.
+       */
+      await settingsPage.goto();
+      await settingsPage.openPanel('KMail Settings', 'Mail Signature');
+
+      const stop = watchUiHealth(page);
+
+      const firstName = page.getByPlaceholder('Enter your First Name').first();
+      await expect(firstName, 'the Mail Signature form renders').toBeVisible({ timeout: 15_000 });
+      await firstName.fill('QA');
+
+      const lastName = page.getByPlaceholder('Enter your Last Name').first();
+      await expect(lastName, 'Last Name becomes enabled once First Name is set').toBeEnabled({
+        timeout: 5_000,
+      });
+      await lastName.fill('Tester');
+
+      const designation = page.getByPlaceholder('Enter Designation').first();
+      await expect(designation, 'Designation becomes enabled once Last Name is set').toBeEnabled({
+        timeout: 5_000,
+      });
+      await designation.fill('QA Engineer');
+
+      const emailField = page.getByPlaceholder('Enter your Email ID').first();
+      await expect(emailField, 'Email becomes enabled once Designation is set').toBeEnabled({
+        timeout: 5_000,
+      });
+      await emailField.fill('notanemailaddress'); // no @ / domain — no client validation exists either
+
+      await page
+        .getByRole('button', { name: /^Save$/i })
+        .first()
+        .click({ timeout: 8_000 });
+      // Save's effect is synchronous state handling (confirmed from source); two frames let any
+      // render-time throw surface before the health snapshot is taken.
+      await page.evaluate(
+        () =>
+          new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+      );
+
+      const health = stop();
+      test.info().annotations.push({
+        type: 'observed',
+        description: `page errors after clicking Save: ${JSON.stringify(health.pageErrors)}`,
       });
 
-    const before = await read();
-    expect(before, 'the account has a settings row').toBeDefined();
-
-    const opened = await openNotificationSettings(page, settingsPage);
-    test.skip(
-      !opened,
-      'the Notification settings panel was not showing right now (session or load condition; path verified live 2026-10-11)',
-    );
-
-    // Flip the first notification toggle (whichever state it is in).
-    const toggle = page.locator('.icon-KP_289_Toggle-On, .icon-KP_285_Toggle-Off').first();
-    await toggle.click();
-
-    /*
-     * Give the save its round-trip, then read the row. The assertion is on the DATABASE: a toggle
-     * that changed nothing in the notification columns means the preference did not persist — the
-     * #495 behaviour, now proven (or ruled out) from the UI.
-     */
-    await page.waitForResponse('**/generalSetting/**', { timeout: 8_000 }).catch(() => undefined);
-    const after = await read();
-
-    expect(
-      snapshot(after),
-      'a toggled notification preference must change the stored settings row (UI → DB); if it does ' +
-        'not, the preference silently reverts — the same fault as Bugzilla #495, from the UI side',
-    ).not.toBe(snapshot(before));
-
-    // Restore: flip it back so the account's preferences end as they started.
-    await toggle.click().catch(() => undefined);
-    await page.waitForResponse('**/generalSetting/**', { timeout: 8_000 }).catch(() => undefined);
-  });
-
-  test('adding an Instant Reply shows it in the list (state reflects the write) @ui', async ({
-    page,
-    settingsPage,
-  }) => {
-    /*
-     * Instant Reply is an additive setting: adding one must appear in the list. A dialog that
-     * accepts the text and shows nothing afterwards is a stale-state defect. Selectors from the
-     * recording: Instant Reply panel → Add → "Enter your Instant Reply" → dialog Add.
-     *
-     * Kept UI-state level (the added reply is visible) rather than DB, because the instant-reply
-     * store is a KMail-settings shape not yet mapped; the visible-in-list check is the honest,
-     * reliable assertion here.
-     *
-     * Nested under "KMail Settings", per source (`Settingdetails.js`) — must be expanded first or
-     * the item is not in the DOM at all (see SettingsPage.ts's openPanel).
-     */
-    await settingsPage.goto();
-    await settingsPage.openPanel('KMail Settings', 'Instant Reply');
-    await page
-      .getByRole('button', { name: 'Add' })
-      .first()
-      .click({ timeout: 10_000 })
-      .catch(() => undefined);
-
-    const field = page.getByRole('textbox', { name: 'Enter your Instant Reply' });
-    const opened = await field.isVisible({ timeout: 10_000 }).catch(() => false);
-    test.skip(
-      !opened,
-      'the Instant Reply editor was not showing right now (session or load condition; path verified live 2026-10-11)',
-    );
-
-    const marker = `QA reply ${Date.now()}`;
-    await field.click();
-    await field.fill(marker);
-    await page.getByRole('dialog').getByRole('button', { name: 'Add' }).click();
-
-    await expect(
-      page.getByText(marker).first(),
-      'a saved Instant Reply appears in the list',
-    ).toBeVisible({ timeout: 12_000 });
-  });
-
-  test('completing the Mail Signature chain with a malformed email does not crash the page @ui', async ({
-    page,
-    settingsPage,
-  }) => {
-    /*
-     * Confirmed from source (`Mailsignature.js`): this panel imports no `Services/*` at all — every
-     * "Save" button (five of them, one per sub-section) is wired to `onClick={() => setInputvalue("")}`,
-     * which replaces the whole `inputvalue` OBJECT state with a bare STRING. Every control in this
-     * component reads `inputvalue.firstname`/`inputvalue.email`/etc., so this is a live crash
-     * candidate on the next render — the same bug class already confirmed and exercised for Vacation
-     * Response (`settings-vacation-response.spec.ts`).
-     *
-     * There is no network call to assert against here (asserting "no kmailSetting request fires" would
-     * be vacuously true — it never fires for ANY input, valid or not), so the honest, real assertion is
-     * whether the confirmed state-corruption bug actually throws on this build. The fields are also
-     * progressively disabled (First Name -> Last Name -> Designation -> Email), so the full chain must
-     * be filled to even reach the Email field.
-     */
-    await settingsPage.goto();
-    await settingsPage.openPanel('KMail Settings', 'Mail Signature');
-
-    const stop = watchUiHealth(page);
-
-    const firstName = page.getByPlaceholder('Enter your First Name').first();
-    await expect(firstName, 'the Mail Signature form renders').toBeVisible({ timeout: 15_000 });
-    await firstName.fill('QA');
-
-    const lastName = page.getByPlaceholder('Enter your Last Name').first();
-    await expect(lastName, 'Last Name becomes enabled once First Name is set').toBeEnabled({
-      timeout: 5_000,
-    });
-    await lastName.fill('Tester');
-
-    const designation = page.getByPlaceholder('Enter Designation').first();
-    await expect(designation, 'Designation becomes enabled once Last Name is set').toBeEnabled({
-      timeout: 5_000,
-    });
-    await designation.fill('QA Engineer');
-
-    const emailField = page.getByPlaceholder('Enter your Email ID').first();
-    await expect(emailField, 'Email becomes enabled once Designation is set').toBeEnabled({
-      timeout: 5_000,
-    });
-    await emailField.fill('notanemailaddress'); // no @ / domain — no client validation exists either
-
-    await page
-      .getByRole('button', { name: /^Save$/i })
-      .first()
-      .click({ timeout: 8_000 });
-    // Save's effect is synchronous state handling (confirmed from source); two frames let any
-    // render-time throw surface before the health snapshot is taken.
-    await page.evaluate(
-      () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
-    );
-
-    const health = stop();
-    test.info().annotations.push({
-      type: 'observed',
-      description: `page errors after clicking Save: ${JSON.stringify(health.pageErrors)}`,
+      expect(
+        health.pageErrors,
+        'Save is confirmed from source to call setInputvalue("") — replacing an object-shaped state ' +
+          'with a string — this asserts whether that actually throws on the live build',
+      ).toEqual([]);
     });
 
-    expect(
-      health.pageErrors,
-      'Save is confirmed from source to call setInputvalue("") — replacing an object-shaped state ' +
-        'with a string — this asserts whether that actually throws on the live build',
-    ).toEqual([]);
-  });
+    // The Vacation Response empty-message validation test that used to live here was removed
+    // 2026-10-02: it asserted "no `kmailSetting` network request fires" as its success condition, but
+    // `settings-vacation-response.spec.ts` confirmed from source (`Vacationresponse.js`) that this
+    // panel makes NO network call at all, ever, regardless of input — `Services/*` is never imported.
+    // That made the old test vacuously true for the wrong reason (it would "pass" even if a real
+    // message were filled in correctly), not a genuine validation check. The replacement file instead
+    // exercises the panel's three real, source-confirmed bugs (toggle doesn't actually disable fields,
+    // broken `textarea` value binding, Save corrupts component state) directly — see that file.
 
-  // The Vacation Response empty-message validation test that used to live here was removed
-  // 2026-10-02: it asserted "no `kmailSetting` network request fires" as its success condition, but
-  // `settings-vacation-response.spec.ts` confirmed from source (`Vacationresponse.js`) that this
-  // panel makes NO network call at all, ever, regardless of input — `Services/*` is never imported.
-  // That made the old test vacuously true for the wrong reason (it would "pass" even if a real
-  // message were filled in correctly), not a genuine validation check. The replacement file instead
-  // exercises the panel's three real, source-confirmed bugs (toggle doesn't actually disable fields,
-  // broken `textarea` value binding, Save corrupts component state) directly — see that file.
+    test('the Change Language Save button is confirmed non-functional — selection does not survive a reload @ui', async ({
+      page,
+      settingsPage,
+    }) => {
+      /*
+       * Confirmed directly from source (`Personalize.js`'s "Change Language" tab, lines ~338-351): the
+       * Save button there carries NO `onClick` at all — only a `disabled`/background-color binding on
+       * whether a language is chosen. (Personalize.js DOES call a real backend for its Theme tabs via
+       * `Services/ThemeSettings`, so this is a narrow, confirmed gap in ONE control, not a blanket "this
+       * component never calls the backend" claim like Mail Signature/Vacation Response.)
+       *
+       * The honest assertion is the real, user-visible consequence: pick a Country + Language, click
+       * Save, reload, and the selection is gone — because nothing was ever wired to persist it.
+       */
+      await settingsPage.goto();
+      await settingsPage.openPanel('General Settings', 'Personalize');
 
-  test('the Change Language Save button is confirmed non-functional — selection does not survive a reload @ui', async ({
-    page,
-    settingsPage,
-  }) => {
-    /*
-     * Confirmed directly from source (`Personalize.js`'s "Change Language" tab, lines ~338-351): the
-     * Save button there carries NO `onClick` at all — only a `disabled`/background-color binding on
-     * whether a language is chosen. (Personalize.js DOES call a real backend for its Theme tabs via
-     * `Services/ThemeSettings`, so this is a narrow, confirmed gap in ONE control, not a blanket "this
-     * component never calls the backend" claim like Mail Signature/Vacation Response.)
-     *
-     * The honest assertion is the real, user-visible consequence: pick a Country + Language, click
-     * Save, reload, and the selection is gone — because nothing was ever wired to persist it.
-     */
-    await settingsPage.goto();
-    await settingsPage.openPanel('General Settings', 'Personalize');
+      // Driven through the controls' own inputs (support/react-select.ts): no forced clicks.
+      await pickReactSelect(reactSelectByPlaceholder(page, /Select Country/), 'India');
+      await pickReactSelect(reactSelectByPlaceholder(page, /Select Language/), /^English$/);
 
-    // Driven through the controls' own inputs (support/react-select.ts): no forced clicks.
-    await pickReactSelect(reactSelectByPlaceholder(page, /Select Country/), 'India');
-    await pickReactSelect(reactSelectByPlaceholder(page, /Select Language/), /^English$/);
+      // Confirms the selection itself works client-side (react-select updates its control display).
+      await expect(
+        page.getByText('India', { exact: true }).first(),
+        'the Country control shows the picked value',
+      ).toBeVisible({ timeout: 5_000 });
 
-    // Confirms the selection itself works client-side (react-select updates its control display).
-    await expect(
-      page.getByText('India', { exact: true }).first(),
-      'the Country control shows the picked value',
-    ).toBeVisible({ timeout: 5_000 });
+      const saveBtn = page.getByRole('button', { name: /^Save$/i }).first();
+      await expect(saveBtn, 'Save becomes enabled once a language is picked').toBeEnabled({
+        timeout: 5_000,
+      });
+      // Save has no handler at all (source), so there is nothing to wait for; if a request ever
+      // appears here it is the fix landing, and the reload assertion below will say so.
+      const saved = page
+        .waitForRequest(
+          (r) => r.method() === 'POST' && /setting|language|personali/i.test(r.url()),
+          {
+            timeout: 2_000,
+          },
+        )
+        .then(() => true)
+        .catch(() => false);
+      await saveBtn.click();
+      test.info().annotations.push({
+        type: 'observed',
+        description: `Save dispatched a request: ${await saved}`,
+      });
 
-    const saveBtn = page.getByRole('button', { name: /^Save$/i }).first();
-    await expect(saveBtn, 'Save becomes enabled once a language is picked').toBeEnabled({
-      timeout: 5_000,
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
+      // A reload remounts the accordion collapsed — the group must be re-expanded before the
+      // nested "Personalize" item is in the DOM again.
+      await settingsPage.openPanel('General Settings', 'Personalize');
+
+      await expect(
+        page.getByText('Select Country', { exact: true }).first(),
+        'confirmed: the Country selection reverts to the blank placeholder after reload — Save has no ' +
+          'onClick handler in source, so the choice was never persisted anywhere',
+      ).toBeVisible({ timeout: 12_000 });
     });
-    // Save has no handler at all (source), so there is nothing to wait for; if a request ever
-    // appears here it is the fix landing, and the reload assertion below will say so.
-    const saved = page
-      .waitForRequest((r) => r.method() === 'POST' && /setting|language|personali/i.test(r.url()), {
-        timeout: 2_000,
-      })
-      .then(() => true)
-      .catch(() => false);
-    await saveBtn.click();
-    test.info().annotations.push({
-      type: 'observed',
-      description: `Save dispatched a request: ${await saved}`,
-    });
-
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-    // A reload remounts the accordion collapsed — the group must be re-expanded before the
-    // nested "Personalize" item is in the DOM again.
-    await settingsPage.openPanel('General Settings', 'Personalize');
-
-    await expect(
-      page.getByText('Select Country', { exact: true }).first(),
-      'confirmed: the Country selection reverts to the blank placeholder after reload — Save has no ' +
-        'onClick handler in source, so the choice was never persisted anywhere',
-    ).toBeVisible({ timeout: 12_000 });
-  });
-});
+  },
+);

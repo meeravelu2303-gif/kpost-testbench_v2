@@ -10,6 +10,6 @@ import { test } from '@fixtures';
  * created a real message id. All of it runs fully off-live against the mock, where the aggressive
  * probes (injection, null, type, boundary) are safe to send.
  */
-test.describe('KPost Katchup · reads', () => {
+test.describe('KPost Katchup · reads', { tag: ['@api', '@katchup', '@regression'] }, () => {
   describeEndpointCases({ tags: ['katchup-read'] });
 });

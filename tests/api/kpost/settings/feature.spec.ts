@@ -35,33 +35,37 @@ async function write(
   return ex.status;
 }
 
-test.describe('KPost Settings · feature flow', () => {
-  test.describe.configure({ mode: 'default' });
-  test.skip(
-    process.env.SETTINGS_LIFECYCLE !== 'true',
-    'changes account preferences; set SETTINGS_LIFECYCLE=true',
-  );
+test.describe(
+  'KPost Settings · feature flow',
+  { tag: ['@api', '@settings', '@regression'] },
+  () => {
+    test.describe.configure({ mode: 'default' });
+    test.skip(
+      process.env.SETTINGS_LIFECYCLE !== 'true',
+      'changes account preferences; set SETTINGS_LIFECYCLE=true',
+    );
 
-  test('the three notification toggles are each accepted, then restored on @api @settings', async ({
-    endpoints,
-  }) => {
-    const toggles: Array<[string, string]> = [
-      ['settings-katchup-notification', 'katchup'],
-      ['settings-kmail-notification', 'kmail'],
-      ['settings-kall-notification', 'kall'],
-    ];
-    try {
-      for (const [id, label] of toggles) {
-        const off = await write(endpoints, id, notificationToggleBody('On'), `${label}-dnd-on`);
-        expect.soft(off, `${label} notification toggle is accepted`).toBeLessThan(300);
+    test('the three notification toggles are each accepted, then restored on @api @settings', async ({
+      endpoints,
+    }) => {
+      const toggles: Array<[string, string]> = [
+        ['settings-katchup-notification', 'katchup'],
+        ['settings-kmail-notification', 'kmail'],
+        ['settings-kall-notification', 'kall'],
+      ];
+      try {
+        for (const [id, label] of toggles) {
+          const off = await write(endpoints, id, notificationToggleBody('On'), `${label}-dnd-on`);
+          expect.soft(off, `${label} notification toggle is accepted`).toBeLessThan(300);
+        }
+      } finally {
+        // Restore notifications to enabled.
+        for (const [id, label] of toggles) {
+          await write(endpoints, id, notificationToggleBody('Off'), `${label}-restore`).catch(
+            () => undefined,
+          );
+        }
       }
-    } finally {
-      // Restore notifications to enabled.
-      for (const [id, label] of toggles) {
-        await write(endpoints, id, notificationToggleBody('Off'), `${label}-restore`).catch(
-          () => undefined,
-        );
-      }
-    }
-  });
-});
+    });
+  },
+);

@@ -5,6 +5,6 @@ import { test } from '@fixtures';
  * WHAT is tested: the Profile image uploads (own profile).
  * HOW is owned by the central validation engine.
  */
-test.describe('KPost Profile · image', () => {
+test.describe('KPost Profile · image', { tag: ['@api', '@profile', '@regression'] }, () => {
   describeEndpointCases({ tags: ['profile-image'] });
 });

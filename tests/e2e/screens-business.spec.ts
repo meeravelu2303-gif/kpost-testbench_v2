@@ -12,17 +12,21 @@ import { runScreenSweep } from './support/screen-sweep';
  *
  * Not yet on the reporter's UI filing allow-list (needs clean runs first; see bug-filing.md).
  */
-test.describe('KPost deep UI sweep — business screens (BUSINESS_S session)', { tag: '@ui' }, () => {
-  test.use({ storageState: STORAGE_STATE_BUSINESS });
+test.describe(
+  'KPost deep UI sweep — business screens (BUSINESS_S session)',
+  { tag: ['@ui', '@platform', '@regression'] },
+  () => {
+    test.use({ storageState: STORAGE_STATE_BUSINESS });
 
-  test.skip(
-    process.env.BUSINESS_UI_LIFECYCLE !== 'true',
-    'needs the BUSINESS_S admin session; set BUSINESS_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.businessSKpostId || testData.businessSKpostId.includes('qa.business'),
-    'needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID)',
-  );
+    test.skip(
+      process.env.BUSINESS_UI_LIFECYCLE !== 'true',
+      'needs the BUSINESS_S admin session; set BUSINESS_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.businessSKpostId || testData.businessSKpostId.includes('qa.business'),
+      'needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID)',
+    );
 
-  runScreenSweep(BUSINESS_SCREENS, { session: 'business' });
-});
+    runScreenSweep(BUSINESS_SCREENS, { session: 'business' });
+  },
+);

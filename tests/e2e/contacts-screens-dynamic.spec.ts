@@ -39,7 +39,7 @@ async function assertNoFileableIssues(
 
 test.describe(
   'KPost Contacts — dynamic-state health/performance/layout sweep',
-  { tag: '@ui' },
+  { tag: ['@ui', '@contacts', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

@@ -14,12 +14,16 @@ import { expect, test } from '@fixtures';
  *     `tests/api/kpost/security/kdiary-object-authorization.spec.ts`. Nothing left unresolved here.
  */
 
-test.describe('KPost KDiary · recorded gaps', () => {
-  test('kdiary-get-event-date: resolved — see kdiary-object-authorization.spec.ts', () => {
-    expect(
-      true,
-      'the real payload is confirmed ({eventIds: [...]}), the endpoint is live-exercised, and its ' +
-        'confirmed IDOR is filed as #1017 — nothing remains unresolved on this route',
-    ).toBe(true);
-  });
-});
+test.describe(
+  'KPost KDiary · recorded gaps',
+  { tag: ['@api', '@verticals', '@regression'] },
+  () => {
+    test('kdiary-get-event-date: resolved — see kdiary-object-authorization.spec.ts', () => {
+      expect(
+        true,
+        'the real payload is confirmed ({eventIds: [...]}), the endpoint is live-exercised, and its ' +
+          'confirmed IDOR is filed as #1017 — nothing remains unresolved on this route',
+      ).toBe(true);
+    });
+  },
+);

@@ -34,7 +34,7 @@ async function offeredLanguages(page: Page): Promise<string[]> {
     .evaluateAll((opts) => opts.map((o) => (o as HTMLOptionElement).value).filter(Boolean));
 }
 
-test.describe('KPost internationalisation', { tag: '@ui' }, () => {
+test.describe('KPost internationalisation', { tag: ['@ui', '@platform', '@regression'] }, () => {
   test('every language offered in the header has a bundle that covers the English keys @ui', async ({
     page,
   }) => {

@@ -10,7 +10,7 @@ import { skipIfSignedOut } from './support/session';
  * every module. The nav is an `icon-KP_*` rail (always in the DOM); each icon routes to a module
  * (`docs/ui/ui-screens.md`). Read-only: it asserts the controls are present, it does not click through.
  */
-test.describe('KPost app shell', { tag: '@ui' }, () => {
+test.describe('KPost app shell', { tag: ['@ui', '@platform', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

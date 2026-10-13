@@ -94,7 +94,7 @@ async function cleanup(endpoints: EndpointExecutor, as: Principal, msgID?: numbe
     .catch(() => undefined);
 }
 
-test.describe('KPost Katchup · feature flow', () => {
+test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@regression'] }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     process.env.KATCHUP_LIFECYCLE !== 'true',

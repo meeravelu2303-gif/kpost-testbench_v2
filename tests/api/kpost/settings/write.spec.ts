@@ -6,6 +6,6 @@ import { test } from '@fixtures';
  * toggles on the caller's own account. HOW is owned by the central validation engine. They act on
  * no other person, so no retargeting is needed.
  */
-test.describe('KPost Settings · writes', () => {
+test.describe('KPost Settings · writes', { tag: ['@api', '@settings', '@regression'] }, () => {
   describeEndpointCases({ tags: ['settings-write'] });
 });

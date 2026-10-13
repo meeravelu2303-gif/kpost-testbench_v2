@@ -88,7 +88,7 @@ async function openFirstProfileCard(page: Page): Promise<Locator> {
 
 test.describe(
   'KPost KDirectory · launch Katchup / Kall from a profile (FR-KD-006)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@contacts', '@regression'] },
   () => {
     test.describe.configure({ timeout: 120_000 });
     test.skip(

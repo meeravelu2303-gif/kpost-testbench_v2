@@ -7,6 +7,6 @@ import { test } from '@fixtures';
  * (our own account); the two `kallID`-keyed status reads are blocked (`needs-kall-id`) and skip
  * with that reason on a live pass.
  */
-test.describe('KPost Kall · reads', () => {
+test.describe('KPost Kall · reads', { tag: ['@api', '@kall', '@regression'] }, () => {
   describeEndpointCases({ tags: ['kall-read'] });
 });

@@ -8,7 +8,7 @@ import { test } from '@fixtures';
  * throwaway account, so the sweep never rings, schedules with, or clears history against the shared
  * counterparty that the lifecycle flows rely on.
  */
-test.describe('KPost Kall · writes', () => {
+test.describe('KPost Kall · writes', { tag: ['@api', '@kall', '@regression'] }, () => {
   describeEndpointCases(
     { tags: ['kall-direct', 'kall-schedule', 'kall-legacy'] },
     { transform: forWriteSweep },

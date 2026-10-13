@@ -47,126 +47,130 @@ async function clickSend(page: Page): Promise<void> {
   await submitComposer(page);
 }
 
-test.describe('KPost Katchup · two-session (sender + receiver)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-    'writes real messages between two accounts; set KATCHUP_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId ||
-      testData.kpostId.includes('qa.bench') ||
-      !testData.victimKpostId ||
-      testData.victimKpostId.includes('qa.bench'),
-    'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
-  );
+test.describe(
+  'KPost Katchup · two-session (sender + receiver)',
+  { tag: ['@ui', '@katchup', '@regression'] },
+  () => {
+    test.skip(
+      process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+      'writes real messages between two accounts; set KATCHUP_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId ||
+        testData.kpostId.includes('qa.bench') ||
+        !testData.victimKpostId ||
+        testData.victimKpostId.includes('qa.bench'),
+      'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
+    );
 
-  /** Open account 2's session in its own context. */
-  async function openReceiver(browser: Browser): Promise<Page> {
-    const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
-    return context.newPage();
-  }
-
-  test('a message is delivered to the 2nd account and marks a read receipt (FR-K07) @ui', async ({
-    page,
-    browser,
-  }) => {
-    const subject = `QA UI 2s recv ${Date.now()}`;
-    const receiver = await openReceiver(browser);
-    try {
-      // Account 1 → account 2.
-      await openComposer(page);
-      await sendMessage(page, subject, 'QA UI two-session delivery — self-cleaning');
-
-      // Account 2 SEES the message in its conversation list — the subject appears (delivery + receipt).
-      // (Account 1 may be an unknown contact to account 2, so we match the message, not a contact row.)
-      await gotoKatchup(receiver);
-      await expect(
-        receiver.getByText(subject).first(),
-        'account 2 receives the message account 1 sent',
-      ).toBeVisible({ timeout: 25_000 });
-
-      // Account 1's side now reflects that the message exists (and, once opened, its read state — the
-      // exact open-time is the API lifecycle's assertion; here we prove the cross-account path works).
-      await expect(
-        page.getByText(subject).first(),
-        'account 1 still shows the sent message',
-      ).toBeVisible({ timeout: 15_000 });
-    } finally {
-      await deleteSentMessage(page, subject).catch(() => undefined);
-      await receiver.context().close();
+    /** Open account 2's session in its own context. */
+    async function openReceiver(browser: Browser): Promise<Page> {
+      const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      return context.newPage();
     }
-  });
 
-  /**
-   * Unread badge / message count (FR-K07) — RESOLVED as a confirmed product gap, filed as #978, not
-   * an automatable test.
-   *
-   * Three rounds of live DOM diagnostics (across two sessions) traced this conclusively: the one
-   * working unread-badge mechanism (`.Msg-Count` / `.Msg-Count-Font`, real and functional — confirmed
-   * showing correct non-zero counts for established contacts) exists ONLY on the "Frequently
-   * Accessed" strip (`components/FrequentlyAccessed/FrequentlyAccessed.js`), which is populated from
-   * a separate, server-ranked `FetchFrequentContact` call — not recency, not unread status. A
-   * freshly-sent, still-unopened message's own Recents row (confirmed found correctly, `id=<sender
-   * kpostID>`, class `recent-hover-card`) has ZERO unread-related markup anywhere in its DOM subtree
-   * — no `.Msg-Count`, no `.contact_msgCount`, no conditional bold/weight class (`ContactBar.js`, the
-   * real row renderer, has no `isRead`/unread-conditional styling at all). `Recent.js` (which DOES
-   * contain `msgCount` markup) is confirmed dead code — hardcoded mock data, never imported from the
-   * live `bubble/Katchup.js` entry point.
-   *
-   * This means the Recents list — the primary, default way any user checks for new messages — has no
-   * unread indicator at all, independent of whether the sender happens to also be a long-standing
-   * frequent contact. Filed as **#978** from this source+live-DOM evidence directly (the same
-   * standard used for #976): there is no reliable automated repro to build here because the gap is an
-   * absence of a code path, not a flaky live behavior.
-   */
-
-  for (const action of RECIPIENT_ACTIONS) {
-    test(`${action.id}: the 2nd account ${action.id.toLowerCase()}s a received message (recipient menu) @ui`, async ({
+    test('a message is delivered to the 2nd account and marks a read receipt (FR-K07) @ui', async ({
       page,
       browser,
     }) => {
-      const subject = `QA UI 2s ${action.id} ${Date.now()}`;
-      const response = `QA UI ${action.id} response ${Date.now()}`;
+      const subject = `QA UI 2s recv ${Date.now()}`;
       const receiver = await openReceiver(browser);
       try {
-        // Account 1 sends.
+        // Account 1 → account 2.
         await openComposer(page);
-        await sendMessage(page, subject, `QA UI ${action.id} source — self-cleaning`);
+        await sendMessage(page, subject, 'QA UI two-session delivery — self-cleaning');
 
-        // Account 2 opens the received conversation (by the unique subject) and acts on the message.
-        await openReceivedConversation(receiver, subject);
-        const received = receivedMessageBySubject(receiver, subject);
-        await expect(received, `account 2 received the ${action.id} source`).toBeVisible({
-          timeout: 25_000,
-        });
-        await received.hover();
-        await received.getByTestId('ReplyIcon').first().click();
-
-        const item = receiver.getByRole('menuitem', { name: action.menu });
-        await expect(item, `the recipient menu offers ${action.id}`).toBeVisible({
-          timeout: 15_000,
-        });
-        await item.click();
-
-        // The composer opens in that mode; type the response and send.
-        const editor = receiver.locator(EDITOR).first();
-        await expect(editor, 'the recipient composer opens').toBeVisible({ timeout: 15_000 });
-        await editor.click();
-        await receiver.keyboard.type(response);
-        await clickSend(receiver);
-
+        // Account 2 SEES the message in its conversation list — the subject appears (delivery + receipt).
+        // (Account 1 may be an unknown contact to account 2, so we match the message, not a contact row.)
+        await gotoKatchup(receiver);
         await expect(
-          receiver.getByText(response).first(),
-          `the ${action.id} response appears`,
-        ).toBeVisible({ timeout: 20_000 });
+          receiver.getByText(subject).first(),
+          'account 2 receives the message account 1 sent',
+        ).toBeVisible({ timeout: 25_000 });
+
+        // Account 1's side now reflects that the message exists (and, once opened, its read state — the
+        // exact open-time is the API lifecycle's assertion; here we prove the cross-account path works).
+        await expect(
+          page.getByText(subject).first(),
+          'account 1 still shows the sent message',
+        ).toBeVisible({ timeout: 15_000 });
       } finally {
-        // Account 2 deletes its response; account 1 deletes the source.
-        if (await messageBySubject(receiver, response).count()) {
-          await deleteSentMessage(receiver, response).catch(() => undefined);
-        }
         await deleteSentMessage(page, subject).catch(() => undefined);
         await receiver.context().close();
       }
     });
-  }
-});
+
+    /**
+     * Unread badge / message count (FR-K07) — RESOLVED as a confirmed product gap, filed as #978, not
+     * an automatable test.
+     *
+     * Three rounds of live DOM diagnostics (across two sessions) traced this conclusively: the one
+     * working unread-badge mechanism (`.Msg-Count` / `.Msg-Count-Font`, real and functional — confirmed
+     * showing correct non-zero counts for established contacts) exists ONLY on the "Frequently
+     * Accessed" strip (`components/FrequentlyAccessed/FrequentlyAccessed.js`), which is populated from
+     * a separate, server-ranked `FetchFrequentContact` call — not recency, not unread status. A
+     * freshly-sent, still-unopened message's own Recents row (confirmed found correctly, `id=<sender
+     * kpostID>`, class `recent-hover-card`) has ZERO unread-related markup anywhere in its DOM subtree
+     * — no `.Msg-Count`, no `.contact_msgCount`, no conditional bold/weight class (`ContactBar.js`, the
+     * real row renderer, has no `isRead`/unread-conditional styling at all). `Recent.js` (which DOES
+     * contain `msgCount` markup) is confirmed dead code — hardcoded mock data, never imported from the
+     * live `bubble/Katchup.js` entry point.
+     *
+     * This means the Recents list — the primary, default way any user checks for new messages — has no
+     * unread indicator at all, independent of whether the sender happens to also be a long-standing
+     * frequent contact. Filed as **#978** from this source+live-DOM evidence directly (the same
+     * standard used for #976): there is no reliable automated repro to build here because the gap is an
+     * absence of a code path, not a flaky live behavior.
+     */
+
+    for (const action of RECIPIENT_ACTIONS) {
+      test(`${action.id}: the 2nd account ${action.id.toLowerCase()}s a received message (recipient menu) @ui`, async ({
+        page,
+        browser,
+      }) => {
+        const subject = `QA UI 2s ${action.id} ${Date.now()}`;
+        const response = `QA UI ${action.id} response ${Date.now()}`;
+        const receiver = await openReceiver(browser);
+        try {
+          // Account 1 sends.
+          await openComposer(page);
+          await sendMessage(page, subject, `QA UI ${action.id} source — self-cleaning`);
+
+          // Account 2 opens the received conversation (by the unique subject) and acts on the message.
+          await openReceivedConversation(receiver, subject);
+          const received = receivedMessageBySubject(receiver, subject);
+          await expect(received, `account 2 received the ${action.id} source`).toBeVisible({
+            timeout: 25_000,
+          });
+          await received.hover();
+          await received.getByTestId('ReplyIcon').first().click();
+
+          const item = receiver.getByRole('menuitem', { name: action.menu });
+          await expect(item, `the recipient menu offers ${action.id}`).toBeVisible({
+            timeout: 15_000,
+          });
+          await item.click();
+
+          // The composer opens in that mode; type the response and send.
+          const editor = receiver.locator(EDITOR).first();
+          await expect(editor, 'the recipient composer opens').toBeVisible({ timeout: 15_000 });
+          await editor.click();
+          await receiver.keyboard.type(response);
+          await clickSend(receiver);
+
+          await expect(
+            receiver.getByText(response).first(),
+            `the ${action.id} response appears`,
+          ).toBeVisible({ timeout: 20_000 });
+        } finally {
+          // Account 2 deletes its response; account 1 deletes the source.
+          if (await messageBySubject(receiver, response).count()) {
+            await deleteSentMessage(receiver, response).catch(() => undefined);
+          }
+          await deleteSentMessage(page, subject).catch(() => undefined);
+          await receiver.context().close();
+        }
+      });
+    }
+  },
+);

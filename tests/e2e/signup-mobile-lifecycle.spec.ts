@@ -21,7 +21,7 @@ const SIGNUP_PASSWORD = 'QaBench@2026';
 
 test.describe(
   'KPost signup · Personal registration → login (mobile viewport)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@auth', '@signup', '@regression'] },
   () => {
     test.use({
       storageState: { cookies: [], origins: [] },

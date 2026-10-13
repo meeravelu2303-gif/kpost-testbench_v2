@@ -11,26 +11,33 @@ import { expect, test } from '@fixtures';
  * are created on the first run with `--update-snapshots`; a later diff above 2% of pixels fails.
  * Animations are disabled for the capture and the viewport is the project's default.
  */
-test.describe('KPost visual baselines — public screens', { tag: '@ui' }, () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+test.describe(
+  'KPost visual baselines — public screens',
+  { tag: ['@ui', '@platform', '@regression'] },
+  () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-  for (const screen of PUBLIC_SCREENS) {
-    test(`${screen.name} matches its baseline @ui`, async ({ page }) => {
-      await page.goto(screen.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
-      await expect(page.locator(screen.ready.join(', ')).first(), 'the screen mounts').toBeVisible({
-        timeout: 20_000,
+    for (const screen of PUBLIC_SCREENS) {
+      test(`${screen.name} matches its baseline @ui`, async ({ page }) => {
+        await page.goto(screen.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await page
+          .locator('.loader-overlay')
+          .waitFor({ state: 'hidden', timeout: 30_000 })
+          .catch(() => undefined);
+        await expect(
+          page.locator(screen.ready.join(', ')).first(),
+          'the screen mounts',
+        ).toBeVisible({
+          timeout: 20_000,
+        });
+        await expect(page).toHaveScreenshot(`${screen.screen}.png`, {
+          fullPage: false,
+          animations: 'disabled',
+          caret: 'hide',
+          maxDiffPixelRatio: 0.02,
+          mask: [page.locator('video, canvas, [class*="carousel"], [class*="slider"]')],
+        });
       });
-      await expect(page).toHaveScreenshot(`${screen.screen}.png`, {
-        fullPage: false,
-        animations: 'disabled',
-        caret: 'hide',
-        maxDiffPixelRatio: 0.02,
-        mask: [page.locator('video, canvas, [class*="carousel"], [class*="slider"]')],
-      });
-    });
-  }
-});
+    }
+  },
+);

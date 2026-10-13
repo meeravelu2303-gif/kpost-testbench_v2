@@ -10,6 +10,6 @@ import { test } from '@fixtures';
  * the live-executing cases exactly as it already does for KOS's needs-doc-id reads, so wiring this in
  * costs nothing in risk and gives every write its missing-token/auth checks it previously had none of.
  */
-test.describe('KPost KOS · write', () => {
+test.describe('KPost KOS · write', { tag: ['@api', '@platform', '@regression'] }, () => {
   describeEndpointCases({ tags: ['kos-write'] });
 });

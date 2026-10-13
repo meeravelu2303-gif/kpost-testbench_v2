@@ -88,277 +88,286 @@ const FORWARD_MODES = [
   { id: 'FR-KU-053', item: /Forward With Thread/i, mode: 'Reveal Source', thread: true },
 ] as const;
 
-test.describe('KPost Katchup · received-message actions (FR-KU-048..057)', { tag: '@ui' }, () => {
-  test.describe.configure({ timeout: 150_000 });
-  test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-    'writes real messages; set KATCHUP_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !SENDER ||
-      !testData.kpostId ||
-      testData.kpostId.includes('qa.bench') ||
-      !testData.victimKpostId ||
-      testData.victimKpostId.includes('qa.bench'),
-    'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
-  );
+test.describe(
+  'KPost Katchup · received-message actions (FR-KU-048..057)',
+  { tag: ['@ui', '@katchup', '@regression'] },
+  () => {
+    test.describe.configure({ timeout: 150_000 });
+    test.skip(
+      process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+      'writes real messages; set KATCHUP_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !SENDER ||
+        !testData.kpostId ||
+        testData.kpostId.includes('qa.bench') ||
+        !testData.victimKpostId ||
+        testData.victimKpostId.includes('qa.bench'),
+      'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
+    );
 
-  test('FR-KU-048 — the received message menu lists every recipient action and no sender-only one @ui', async ({
-    page,
-    endpoints,
-  }) => {
-    const subject = `QA UI recv menu ${Date.now()}`;
-    try {
-      await receiveFromSecondAccount(endpoints, subject, 'QA UI received menu — body');
-      const message = await openReceived(page, subject);
-      await openReplyMenu(page, message);
-      const items = page.getByRole('menuitem');
-      await expect(items.first(), 'the extended action menu opens').toBeVisible({
-        timeout: 15_000,
-      });
-      for (const name of [
-        'Reply',
-        'Comment',
-        'Clarify',
-        'Transfer',
-        'Forward',
-        'Forward With Thread',
-        'Copy',
-        'Save',
-        'Delete',
-        'Print',
-        'Text-To-Speech',
-      ]) {
-        await expect(
-          items.filter({ hasText: new RegExp(`^\\s*${name}\\s*$`, 'i') }),
-          `the menu offers ${name}`,
-        ).toHaveCount(1);
-      }
-      for (const senderOnly of ['Edit', 'Recall']) {
-        await expect(
-          items.filter({ hasText: new RegExp(`^\\s*${senderOnly}\\s*$`, 'i') }),
-          `${senderOnly} is not offered on a message the user did not send`,
-        ).toHaveCount(0);
-      }
-      await page.keyboard.press('Escape');
-    } finally {
-      await deleteReceived(page, subject);
-    }
-  });
-
-  test('FR-KU-049 — Transfer opens the Transfer Message picker for a received message @ui', async ({
-    page,
-    endpoints,
-  }) => {
-    const subject = `QA UI recv transfer ${Date.now()}`;
-    try {
-      await receiveFromSecondAccount(endpoints, subject, 'QA UI received transfer — body');
-      const message = await openReceived(page, subject);
-      await openReplyMenu(page, message);
-      await page.getByRole('menuitem', { name: /Transfer/i }).click();
-      await expect(
-        page.getByRole('dialog').filter({ hasText: /Transfer Message/i }),
-        'the Transfer Message modal opens',
-      ).toBeVisible({ timeout: 15_000 });
-    } finally {
-      await deleteReceived(page, subject);
-    }
-  });
-
-  for (const variant of FORWARD_MODES) {
-    test(`${variant.id} — ${variant.thread ? 'Forward With Thread' : 'Forward'} offers ${variant.mode} and the mode can be selected @ui`, async ({
+    test('FR-KU-048 — the received message menu lists every recipient action and no sender-only one @ui', async ({
       page,
       endpoints,
     }) => {
-      const subject = `QA UI recv fwd ${variant.id} ${Date.now()}`;
+      const subject = `QA UI recv menu ${Date.now()}`;
       try {
-        await receiveFromSecondAccount(
-          endpoints,
-          subject,
-          `QA UI received forward — ${variant.id}`,
-        );
+        await receiveFromSecondAccount(endpoints, subject, 'QA UI received menu — body');
         const message = await openReceived(page, subject);
         await openReplyMenu(page, message);
-        const item = page.getByRole('menuitem').filter({ hasText: variant.item }).first();
-        await expect(item, 'the menu offers the forward action').toBeVisible({ timeout: 15_000 });
-        await item.click();
-
-        // The forward view: the two source modes, Reveal Source checked by default.
-        const hide = page.getByLabel(/Hide Source/i).first();
-        const reveal = page.getByLabel(/Reveal Source/i).first();
-        await expect(hide, 'Hide Source is offered').toBeVisible({ timeout: 15_000 });
-        await expect(reveal, 'Reveal Source is offered').toBeVisible();
-        await expect(reveal, 'Reveal Source is the default').toBeChecked();
-        if (variant.thread) {
-          await expect(
-            page.getByText(/Forward With All Threads/i).first(),
-            'the thread variant forwards the whole thread',
-          ).toBeVisible();
-        }
-        if (variant.mode === 'Hide Source') {
-          await hide.check();
-          await expect(hide, 'Hide Source is selected').toBeChecked();
-          await expect(reveal, 'Reveal Source is cleared').not.toBeChecked();
-        } else {
-          await expect(reveal).toBeChecked();
-        }
-        test.info().annotations.push({
-          type: 'observed',
-          description: `${variant.id}: mode controls present; selected "${variant.mode}" (recipient send is covered by katchup-forward-subflow-e2e)`,
+        const items = page.getByRole('menuitem');
+        await expect(items.first(), 'the extended action menu opens').toBeVisible({
+          timeout: 15_000,
         });
+        for (const name of [
+          'Reply',
+          'Comment',
+          'Clarify',
+          'Transfer',
+          'Forward',
+          'Forward With Thread',
+          'Copy',
+          'Save',
+          'Delete',
+          'Print',
+          'Text-To-Speech',
+        ]) {
+          await expect(
+            items.filter({ hasText: new RegExp(`^\\s*${name}\\s*$`, 'i') }),
+            `the menu offers ${name}`,
+          ).toHaveCount(1);
+        }
+        for (const senderOnly of ['Edit', 'Recall']) {
+          await expect(
+            items.filter({ hasText: new RegExp(`^\\s*${senderOnly}\\s*$`, 'i') }),
+            `${senderOnly} is not offered on a message the user did not send`,
+          ).toHaveCount(0);
+        }
+        await page.keyboard.press('Escape');
       } finally {
         await deleteReceived(page, subject);
       }
     });
-  }
 
-  test('FR-KU-054 — Copy puts the received message on the clipboard and confirms with a toast @ui', async ({
-    page,
-    endpoints,
-    context,
-  }) => {
-    const subject = `QA UI recv copy ${Date.now()}`;
-    const body = `QA UI received copy — ${Date.now()}`;
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => undefined);
-    try {
-      await receiveFromSecondAccount(endpoints, subject, body);
-      const message = await openReceived(page, subject);
-      await openReplyMenu(page, message);
-      await page.getByRole('menuitem', { name: /Copy/i }).click();
-      await expect(
-        page.getByText(/copied to clipboard/i).first(),
-        'a clipboard toast confirms the copy',
-      ).toBeVisible({ timeout: 10_000 });
-      const clip = await page
-        .evaluate(() => navigator.clipboard.readText())
-        .catch(() => '(clipboard not readable in this browser)');
-      test
-        .info()
-        .annotations.push({ type: 'observed', description: `clipboard: ${clip.slice(0, 80)}` });
-      if (!clip.startsWith('('))
-        expect(clip, 'the clipboard holds the message text').toContain(body);
-    } finally {
-      await deleteReceived(page, subject);
-    }
-  });
-
-  test('FR-KU-055 — Save asks for confirmation first; cancelling keeps the folder untouched @ui', async ({
-    page,
-    endpoints,
-  }) => {
-    const subject = `QA UI recv save ${Date.now()}`;
-    // `handleSaveButtonClickBell` opens a NATIVE `window.confirm` ("You have selected only N out of
-    // M. The remaining … message(s) will be deleted from <contact> Message Folder" / "Only the
-    // selected message will be saved, the rest will be deleted. Click OK to confirm") and only then
-    // POSTs /katchup/saveKatchupMessages/. Accepting would delete every other message in the shared
-    // QA conversation, so this verifies the confirmation step (FR-KU-055 steps 1–2) and cancels;
-    // Playwright would otherwise auto-dismiss the confirm and the action would silently do nothing.
-    const confirms: string[] = [];
-    page.on('dialog', (d) => {
-      confirms.push(`${d.type()}: ${d.message()}`);
-      void d.dismiss();
+    test('FR-KU-049 — Transfer opens the Transfer Message picker for a received message @ui', async ({
+      page,
+      endpoints,
+    }) => {
+      const subject = `QA UI recv transfer ${Date.now()}`;
+      try {
+        await receiveFromSecondAccount(endpoints, subject, 'QA UI received transfer — body');
+        const message = await openReceived(page, subject);
+        await openReplyMenu(page, message);
+        await page.getByRole('menuitem', { name: /Transfer/i }).click();
+        await expect(
+          page.getByRole('dialog').filter({ hasText: /Transfer Message/i }),
+          'the Transfer Message modal opens',
+        ).toBeVisible({ timeout: 15_000 });
+      } finally {
+        await deleteReceived(page, subject);
+      }
     });
-    let saveRequests = 0;
-    page.on('request', (r) => {
-      if (r.url().includes('/katchup/saveKatchupMessages/')) saveRequests++;
-    });
-    try {
-      await receiveFromSecondAccount(endpoints, subject, 'QA UI received save — body');
-      const message = await openReceived(page, subject);
-      await openReplyMenu(page, message);
-      await page
-        .getByRole('menuitem')
-        .filter({ hasText: /^\s*Save\s*$/i })
-        .first()
-        .click();
-      await expect
-        .poll(() => confirms.length, {
-          message: 'Save opens a Save Messages confirmation dialog',
-          timeout: 15_000,
-        })
-        .toBeGreaterThan(0);
-      test.info().annotations.push({ type: 'observed', description: confirms.join(' || ') });
-      expect(confirms[0], 'the dialog is a confirm about saving the selected message').toMatch(
-        /confirm: .*(saved|Message Folder)/i,
-      );
-      await page
-        .waitForRequest((r) => r.url().includes('/katchup/saveKatchupMessages/'), {
-          timeout: 1_500,
-        })
-        .catch(() => undefined);
-      expect(saveRequests, 'cancelling the confirmation saves nothing').toBe(0);
-    } finally {
-      await deleteReceived(page, subject);
-    }
-  });
 
-  test('FR-KU-056 — Text-To-Speech opens the playback screen and reads the message aloud @ui', async ({
-    page,
-    endpoints,
-  }) => {
-    const subject = `QA UI recv tts ${Date.now()}`;
-    const body = 'QA UI received text to speech body';
-    // Record what the app hands to the speech engine instead of relying on audio hardware.
-    await page.addInitScript(() => {
-      const spoken: string[] = [];
-      (window as unknown as { __qaSpoken: string[] }).__qaSpoken = spoken;
-      const synth = window.speechSynthesis;
-      if (!synth) return;
-      const original = synth.speak.bind(synth);
-      synth.speak = (u: SpeechSynthesisUtterance) => {
-        spoken.push(u.text);
+    for (const variant of FORWARD_MODES) {
+      test(`${variant.id} — ${variant.thread ? 'Forward With Thread' : 'Forward'} offers ${variant.mode} and the mode can be selected @ui`, async ({
+        page,
+        endpoints,
+      }) => {
+        const subject = `QA UI recv fwd ${variant.id} ${Date.now()}`;
         try {
-          original(u);
-        } catch {
-          /* no audio device in CI */
+          await receiveFromSecondAccount(
+            endpoints,
+            subject,
+            `QA UI received forward — ${variant.id}`,
+          );
+          const message = await openReceived(page, subject);
+          await openReplyMenu(page, message);
+          const item = page.getByRole('menuitem').filter({ hasText: variant.item }).first();
+          await expect(item, 'the menu offers the forward action').toBeVisible({ timeout: 15_000 });
+          await item.click();
+
+          // The forward view: the two source modes, Reveal Source checked by default.
+          const hide = page.getByLabel(/Hide Source/i).first();
+          const reveal = page.getByLabel(/Reveal Source/i).first();
+          await expect(hide, 'Hide Source is offered').toBeVisible({ timeout: 15_000 });
+          await expect(reveal, 'Reveal Source is offered').toBeVisible();
+          await expect(reveal, 'Reveal Source is the default').toBeChecked();
+          if (variant.thread) {
+            await expect(
+              page.getByText(/Forward With All Threads/i).first(),
+              'the thread variant forwards the whole thread',
+            ).toBeVisible();
+          }
+          if (variant.mode === 'Hide Source') {
+            await hide.check();
+            await expect(hide, 'Hide Source is selected').toBeChecked();
+            await expect(reveal, 'Reveal Source is cleared').not.toBeChecked();
+          } else {
+            await expect(reveal).toBeChecked();
+          }
+          test.info().annotations.push({
+            type: 'observed',
+            description: `${variant.id}: mode controls present; selected "${variant.mode}" (recipient send is covered by katchup-forward-subflow-e2e)`,
+          });
+        } finally {
+          await deleteReceived(page, subject);
         }
-      };
+      });
+    }
+
+    test('FR-KU-054 — Copy puts the received message on the clipboard and confirms with a toast @ui', async ({
+      page,
+      endpoints,
+      context,
+    }) => {
+      const subject = `QA UI recv copy ${Date.now()}`;
+      const body = `QA UI received copy — ${Date.now()}`;
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => undefined);
+      try {
+        await receiveFromSecondAccount(endpoints, subject, body);
+        const message = await openReceived(page, subject);
+        await openReplyMenu(page, message);
+        await page.getByRole('menuitem', { name: /Copy/i }).click();
+        await expect(
+          page.getByText(/copied to clipboard/i).first(),
+          'a clipboard toast confirms the copy',
+        ).toBeVisible({ timeout: 10_000 });
+        const clip = await page
+          .evaluate(() => navigator.clipboard.readText())
+          .catch(() => '(clipboard not readable in this browser)');
+        test
+          .info()
+          .annotations.push({ type: 'observed', description: `clipboard: ${clip.slice(0, 80)}` });
+        if (!clip.startsWith('('))
+          expect(clip, 'the clipboard holds the message text').toContain(body);
+      } finally {
+        await deleteReceived(page, subject);
+      }
     });
-    try {
-      await receiveFromSecondAccount(endpoints, subject, body);
+
+    test('FR-KU-055 — Save asks for confirmation first; cancelling keeps the folder untouched @ui', async ({
+      page,
+      endpoints,
+    }) => {
+      const subject = `QA UI recv save ${Date.now()}`;
+      // `handleSaveButtonClickBell` opens a NATIVE `window.confirm` ("You have selected only N out of
+      // M. The remaining … message(s) will be deleted from <contact> Message Folder" / "Only the
+      // selected message will be saved, the rest will be deleted. Click OK to confirm") and only then
+      // POSTs /katchup/saveKatchupMessages/. Accepting would delete every other message in the shared
+      // QA conversation, so this verifies the confirmation step (FR-KU-055 steps 1–2) and cancels;
+      // Playwright would otherwise auto-dismiss the confirm and the action would silently do nothing.
+      const confirms: string[] = [];
+      page.on('dialog', (d) => {
+        confirms.push(`${d.type()}: ${d.message()}`);
+        void d.dismiss();
+      });
+      let saveRequests = 0;
+      page.on('request', (r) => {
+        if (r.url().includes('/katchup/saveKatchupMessages/')) saveRequests++;
+      });
+      try {
+        await receiveFromSecondAccount(endpoints, subject, 'QA UI received save — body');
+        const message = await openReceived(page, subject);
+        await openReplyMenu(page, message);
+        await page
+          .getByRole('menuitem')
+          .filter({ hasText: /^\s*Save\s*$/i })
+          .first()
+          .click();
+        await expect
+          .poll(() => confirms.length, {
+            message: 'Save opens a Save Messages confirmation dialog',
+            timeout: 15_000,
+          })
+          .toBeGreaterThan(0);
+        test.info().annotations.push({ type: 'observed', description: confirms.join(' || ') });
+        expect(confirms[0], 'the dialog is a confirm about saving the selected message').toMatch(
+          /confirm: .*(saved|Message Folder)/i,
+        );
+        await page
+          .waitForRequest((r) => r.url().includes('/katchup/saveKatchupMessages/'), {
+            timeout: 1_500,
+          })
+          .catch(() => undefined);
+        expect(saveRequests, 'cancelling the confirmation saves nothing').toBe(0);
+      } finally {
+        await deleteReceived(page, subject);
+      }
+    });
+
+    test('FR-KU-056 — Text-To-Speech opens the playback screen and reads the message aloud @ui', async ({
+      page,
+      endpoints,
+    }) => {
+      const subject = `QA UI recv tts ${Date.now()}`;
+      const body = 'QA UI received text to speech body';
+      // Record what the app hands to the speech engine instead of relying on audio hardware.
+      await page.addInitScript(() => {
+        const spoken: string[] = [];
+        (window as unknown as { __qaSpoken: string[] }).__qaSpoken = spoken;
+        const synth = window.speechSynthesis;
+        if (!synth) return;
+        const original = synth.speak.bind(synth);
+        synth.speak = (u: SpeechSynthesisUtterance) => {
+          spoken.push(u.text);
+          try {
+            original(u);
+          } catch {
+            /* no audio device in CI */
+          }
+        };
+      });
+      try {
+        await receiveFromSecondAccount(endpoints, subject, body);
+        const message = await openReceived(page, subject);
+        await openReplyMenu(page, message);
+        await page.getByRole('menuitem', { name: /Text-To-Speech/i }).click();
+        await expect(
+          page.locator('.tts-modal-advanced').first(),
+          'the TTS playback screen opens',
+        ).toBeVisible({ timeout: 10_000 });
+        await expect
+          .poll(
+            () =>
+              page.evaluate(() => (window as unknown as { __qaSpoken: string[] }).__qaSpoken ?? []),
+            { message: 'the message text is handed to the speech engine', timeout: 10_000 },
+          )
+          .toContainEqual(expect.stringContaining(body));
+        await expect(
+          page.locator('.tts-actions .tts-btn').first(),
+          'playback controls (stop / pause / cancel) are offered',
+        ).toBeVisible();
+        await page
+          .locator('.tts-actions .tts-btn')
+          .last()
+          .click()
+          .catch(() => undefined);
+      } finally {
+        await deleteReceived(page, subject);
+      }
+    });
+
+    test('FR-KU-057 — Delete removes a received message from the view after confirmation @ui', async ({
+      page,
+      endpoints,
+    }) => {
+      const subject = `QA UI recv delete ${Date.now()}`;
+      await receiveFromSecondAccount(endpoints, subject, 'QA UI received delete — body');
       const message = await openReceived(page, subject);
       await openReplyMenu(page, message);
-      await page.getByRole('menuitem', { name: /Text-To-Speech/i }).click();
+      await page.getByRole('menuitem', { name: /Delete/i }).click();
+      const confirm = page.getByRole('dialog').filter({ hasText: /Delete Message/i });
+      await expect(confirm, 'the Delete Message confirmation opens').toBeVisible({
+        timeout: 10_000,
+      });
       await expect(
-        page.locator('.tts-modal-advanced').first(),
-        'the TTS playback screen opens',
-      ).toBeVisible({ timeout: 10_000 });
-      await expect
-        .poll(
-          () =>
-            page.evaluate(() => (window as unknown as { __qaSpoken: string[] }).__qaSpoken ?? []),
-          { message: 'the message text is handed to the speech engine', timeout: 10_000 },
-        )
-        .toContainEqual(expect.stringContaining(body));
-      await expect(
-        page.locator('.tts-actions .tts-btn').first(),
-        'playback controls (stop / pause / cancel) are offered',
+        confirm.getByRole('button', { name: /^Cancel$/i }),
+        'offers Cancel',
       ).toBeVisible();
-      await page
-        .locator('.tts-actions .tts-btn')
-        .last()
-        .click()
-        .catch(() => undefined);
-    } finally {
-      await deleteReceived(page, subject);
-    }
-  });
-
-  test('FR-KU-057 — Delete removes a received message from the view after confirmation @ui', async ({
-    page,
-    endpoints,
-  }) => {
-    const subject = `QA UI recv delete ${Date.now()}`;
-    await receiveFromSecondAccount(endpoints, subject, 'QA UI received delete — body');
-    const message = await openReceived(page, subject);
-    await openReplyMenu(page, message);
-    await page.getByRole('menuitem', { name: /Delete/i }).click();
-    const confirm = page.getByRole('dialog').filter({ hasText: /Delete Message/i });
-    await expect(confirm, 'the Delete Message confirmation opens').toBeVisible({ timeout: 10_000 });
-    await expect(confirm.getByRole('button', { name: /^Cancel$/i }), 'offers Cancel').toBeVisible();
-    await confirm.getByRole('button', { name: /^Confirm$/i }).click();
-    await expect(message, 'the message is removed from the user’s view').toBeHidden({
-      timeout: 15_000,
+      await confirm.getByRole('button', { name: /^Confirm$/i }).click();
+      await expect(message, 'the message is removed from the user’s view').toBeHidden({
+        timeout: 15_000,
+      });
     });
-  });
-});
+  },
+);

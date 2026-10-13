@@ -9,7 +9,7 @@ import { expect, test } from '@fixtures';
  * all (pure `useState`, no `Services`/`fetch`/`axios` import) — every "buy more storage" control is
  * either a dead button (no `onClick`) or a local-only modal round trip. Safe to fully drive.
  */
-test.describe('KPost KCloud — storage panel', { tag: '@ui' }, () => {
+test.describe('KPost KCloud — storage panel', { tag: ['@ui', '@verticals', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

@@ -45,90 +45,94 @@ import { expect, test } from '@fixtures';
  * "you may not see this one", and neither can the bench — which is why the enumeration validators
  * treat this endpoint as an enumeration surface in the first place.
  */
-test.describe('KPost Profile · directory lookup @api @kpost-api @profile @database', () => {
-  test('an account that exists in MySQL is resolvable through getUserProfileUsingKpostID', async ({
-    endpoints,
-    databases,
-  }) => {
-    /*
-     * Declared as an EXPECTED failure rather than removed or skipped.
-     *
-     * `test.fail()` inverts the verdict: the run stays green while the defect is live, and turns RED
-     * the moment the endpoint starts working — which is exactly when someone needs to be told, so the
-     * spec can be flipped back and the ticket closed. A `skip` would go quiet forever; a plain
-     * failure would leave the bench permanently red and train people to ignore it.
-     */
-    // Bugzilla #498 reported fixed — now asserted normally (an active account must resolve, not
-    // 404). Was pinned with test.fail() while the lookup 404'd.
-    /*
-     * The database half runs first and is asserted separately, so a failure names the right layer:
-     * if the row were genuinely missing this would be a data problem, not an API defect, and the
-     * ticket would go to the wrong person.
-     */
-    const database = databases.for('kpost-api');
-    test.skip(
-      !database.enabled,
-      'needs the KPOST_QA connection (DB_HOST/DB_NAME) to prove the account exists',
-    );
+test.describe(
+  'KPost Profile · directory lookup @api @kpost-api @profile @database',
+  { tag: ['@api', '@profile', '@regression'] },
+  () => {
+    test('an account that exists in MySQL is resolvable through getUserProfileUsingKpostID', async ({
+      endpoints,
+      databases,
+    }) => {
+      /*
+       * Declared as an EXPECTED failure rather than removed or skipped.
+       *
+       * `test.fail()` inverts the verdict: the run stays green while the defect is live, and turns RED
+       * the moment the endpoint starts working — which is exactly when someone needs to be told, so the
+       * spec can be flipped back and the ticket closed. A `skip` would go quiet forever; a plain
+       * failure would leave the bench permanently red and train people to ignore it.
+       */
+      // Bugzilla #498 reported fixed — now asserted normally (an active account must resolve, not
+      // 404). Was pinned with test.fail() while the lookup 404'd.
+      /*
+       * The database half runs first and is asserted separately, so a failure names the right layer:
+       * if the row were genuinely missing this would be a data problem, not an API defect, and the
+       * ticket would go to the wrong person.
+       */
+      const database = databases.for('kpost-api');
+      test.skip(
+        !database.enabled,
+        'needs the KPOST_QA connection (DB_HOST/DB_NAME) to prove the account exists',
+      );
 
-    const repo = new KpostRepository(database);
-    const account = await repo.user(testData.kpostId);
-    const profile = await repo.profile(testData.kpostId);
+      const repo = new KpostRepository(database);
+      const account = await repo.user(testData.kpostId);
+      const profile = await repo.profile(testData.kpostId);
 
-    expect(account, `${testData.kpostId} must exist in TBL_KPOST_USER_MASTER`).toBeDefined();
-    expect(text(account?.active_status)?.toLowerCase(), 'and be active').toBe('yes');
-    expect(profile, 'and have a TBL_KPOST_USER_PROFILE row').toBeDefined();
+      expect(account, `${testData.kpostId} must exist in TBL_KPOST_USER_MASTER`).toBeDefined();
+      expect(text(account?.active_status)?.toLowerCase(), 'and be active').toBe('yes');
+      expect(profile, 'and have a TBL_KPOST_USER_PROFILE row').toBeDefined();
 
-    // With existence established in the database, the API must not deny it.
-    const exchange = await endpoints.sendTo(
-      'profile-user-profile-by-kpostid',
-      { body: { kpostID: testData.kpostId } },
-      { label: 'directory-lookup:self' },
-    );
+      // With existence established in the database, the API must not deny it.
+      const exchange = await endpoints.sendTo(
+        'profile-user-profile-by-kpostid',
+        { body: { kpostID: testData.kpostId } },
+        { label: 'directory-lookup:self' },
+      );
 
-    expect(
-      exchange.status,
-      `the account is active in TBL_KPOST_USER_MASTER with a profile row, so "no user found" is ` +
-        `contradicted by the database (body: ${exchange.bodyText.slice(0, 200)})`,
-    ).not.toBe(404);
-  });
+      expect(
+        exchange.status,
+        `the account is active in TBL_KPOST_USER_MASTER with a profile row, so "no user found" is ` +
+          `contradicted by the database (body: ${exchange.bodyText.slice(0, 200)})`,
+      ).not.toBe(404);
+    });
 
-  test('the second personal account resolves, so the endpoint itself works', async ({
-    endpoints,
-  }) => {
-    /*
-     * The control. Without it, a 404 above could equally mean the endpoint is broken for everyone,
-     * the path is wrong, or the token is bad — and the finding would not be actionable. This proves
-     * the endpoint, the path and the credentials are all fine, which is what narrows the defect
-     * down to the subject account.
-     */
-    const exchange = await endpoints.sendTo(
-      'profile-user-profile-by-kpostid',
-      { body: { kpostID: testData.personal3KpostId } },
-      { label: 'directory-lookup:control' },
-    );
+    test('the second personal account resolves, so the endpoint itself works', async ({
+      endpoints,
+    }) => {
+      /*
+       * The control. Without it, a 404 above could equally mean the endpoint is broken for everyone,
+       * the path is wrong, or the token is bad — and the finding would not be actionable. This proves
+       * the endpoint, the path and the credentials are all fine, which is what narrows the defect
+       * down to the subject account.
+       */
+      const exchange = await endpoints.sendTo(
+        'profile-user-profile-by-kpostid',
+        { body: { kpostID: testData.personal3KpostId } },
+        { label: 'directory-lookup:control' },
+      );
 
-    expect(exchange.status, 'the control account resolves').toBe(200);
-  });
+      expect(exchange.status, 'the control account resolves').toBe(200);
+    });
 
-  test('a genuinely absent account is refused the same way, without leaking which is which', async ({
-    endpoints,
-  }) => {
-    /*
-     * The enumeration question this endpoint's tags already claim to care about: an account that
-     * does not exist and one that is merely hidden must be indistinguishable. Today they are — both
-     * 404 — which is the *right* privacy answer and the reason the defect above is ambiguous rather
-     * than obviously a leak. Pinned so that a future fix does not accidentally split them apart.
-     */
-    const absent = await endpoints.sendTo(
-      'profile-user-profile-by-kpostid',
-      { body: { kpostID: testData.kpostIdAbsent } },
-      { label: 'directory-lookup:absent' },
-    );
+    test('a genuinely absent account is refused the same way, without leaking which is which', async ({
+      endpoints,
+    }) => {
+      /*
+       * The enumeration question this endpoint's tags already claim to care about: an account that
+       * does not exist and one that is merely hidden must be indistinguishable. Today they are — both
+       * 404 — which is the *right* privacy answer and the reason the defect above is ambiguous rather
+       * than obviously a leak. Pinned so that a future fix does not accidentally split them apart.
+       */
+      const absent = await endpoints.sendTo(
+        'profile-user-profile-by-kpostid',
+        { body: { kpostID: testData.kpostIdAbsent } },
+        { label: 'directory-lookup:absent' },
+      );
 
-    expect(absent.status, 'an unknown id is refused').toBe(404);
-  });
-});
+      expect(absent.status, 'an unknown id is refused').toBe(404);
+    });
+  },
+);
 
 /**
  * Directory search and discovery, asserted against the user views.
@@ -146,81 +150,88 @@ test.describe('KPost Profile · directory lookup @api @kpost-api @profile @datab
  * own — but any endpoint that ever selects `*` from it would expose credentials. The
  * `security.sensitive-data` validator covers the API side; this is recorded so the risk is known.
  */
-test.describe('KPost Directory · search and discovery @api @kpost-api @profile @database', () => {
-  test('a name search returns results, and every hit is a real, active account', async ({
-    endpoints,
-    databases,
-  }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection');
+test.describe(
+  'KPost Directory · search and discovery @api @kpost-api @profile @database',
+  { tag: ['@api', '@profile', '@regression'] },
+  () => {
+    test('a name search returns results, and every hit is a real, active account', async ({
+      endpoints,
+      databases,
+    }) => {
+      const database = databases.for('kpost-api');
+      test.skip(!database.enabled, 'needs the KPOST_QA connection');
 
-    const exchange = await endpoints.sendTo(
-      'profile-auto-search',
-      { body: { fullName: 'qa', country: 'india' } },
-      { label: 'directory-search:auto' },
-    );
-    expect(exchange.status, 'the search responds').toBe(200);
+      const exchange = await endpoints.sendTo(
+        'profile-auto-search',
+        { body: { fullName: 'qa', country: 'india' } },
+        { label: 'directory-search:auto' },
+      );
+      expect(exchange.status, 'the search responds').toBe(200);
 
-    /*
-     * The response is an array of NAME SUGGESTIONS, not of profiles (a documented mismatch — see
-     * `profile-auto-search`). So the assertion is about the CONTRACT of a discovery surface rather
-     * than about individual rows: it must answer, and it must not leak a credential while doing so.
-     */
-    const parsed = exchange.json();
-    expect(parsed.ok, 'the search returns JSON').toBe(true);
+      /*
+       * The response is an array of NAME SUGGESTIONS, not of profiles (a documented mismatch — see
+       * `profile-auto-search`). So the assertion is about the CONTRACT of a discovery surface rather
+       * than about individual rows: it must answer, and it must not leak a credential while doing so.
+       */
+      const parsed = exchange.json();
+      expect(parsed.ok, 'the search returns JSON').toBe(true);
 
-    /*
-     * The check that matters on any enumeration surface: a search must never return a password
-     * hash. VW_KPOST_USER_MASTER holds one, so an endpoint selecting from it carelessly would.
-     */
-    expect(
-      /"?password"?s*:/i.test(exchange.bodyText),
-      'a directory search must not return a password field',
-    ).toBe(false);
-    expect(
-      /\b[a-f0-9]{64,}\b/i.test(exchange.bodyText),
-      'nor anything shaped like a password hash',
-    ).toBe(false);
-  });
-
-  test('a discoverable account is active and not soft-deleted in the view', async ({
-    databases,
-  }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection');
-
-    /*
-     * The invariant a directory rests on: anyone it can surface must be an ACTIVE account. A
-     * deactivated user remaining discoverable is a privacy fault, and it is invisible from the
-     * search response — which returns names, not statuses.
-     */
-    const row = await database.findOne<{ kpost_id: string; active_status: string }>({
-      table: 'VW_KPOST_USER_DETAIL',
-      where: { kpost_id: testData.personal3KpostId },
+      /*
+       * The check that matters on any enumeration surface: a search must never return a password
+       * hash. VW_KPOST_USER_MASTER holds one, so an endpoint selecting from it carelessly would.
+       */
+      expect(
+        /"?password"?s*:/i.test(exchange.bodyText),
+        'a directory search must not return a password field',
+      ).toBe(false);
+      expect(
+        /\b[a-f0-9]{64,}\b/i.test(exchange.bodyText),
+        'nor anything shaped like a password hash',
+      ).toBe(false);
     });
 
-    expect(row, 'the directory view carries the account').toBeDefined();
-    expect(text(row?.active_status)?.toLowerCase(), 'and reports it active').toBe('yes');
-  });
+    test('a discoverable account is active and not soft-deleted in the view', async ({
+      databases,
+    }) => {
+      const database = databases.for('kpost-api');
+      test.skip(!database.enabled, 'needs the KPOST_QA connection');
 
-  test('a deactivated account is excluded from the discoverable set', async ({ databases }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection');
+      /*
+       * The invariant a directory rests on: anyone it can surface must be an ACTIVE account. A
+       * deactivated user remaining discoverable is a privacy fault, and it is invisible from the
+       * search response — which returns names, not statuses.
+       */
+      const row = await database.findOne<{ kpost_id: string; active_status: string }>({
+        table: 'VW_KPOST_USER_DETAIL',
+        where: { kpost_id: testData.personal3KpostId },
+      });
 
-    /*
-     * Asserted as a property of the data rather than of one account: every row the view exposes with
-     * active_status 'no' is a person who should not be discoverable. Sampled rather than exhaustive
-     * — the view spans thousands of rows and the point is the invariant, not a census.
-     */
-    const deactivated = await database.findMany<{ kpost_id: string; active_status: string }>({
-      table: 'VW_KPOST_USER_DETAIL',
-      where: { active_status: 'no' },
+      expect(row, 'the directory view carries the account').toBeDefined();
+      expect(text(row?.active_status)?.toLowerCase(), 'and reports it active').toBe('yes');
     });
 
-    test.skip(deactivated.length === 0, 'no deactivated accounts on this target to check against');
-    expect(
-      deactivated.every((r) => text(r.active_status)?.toLowerCase() === 'no'),
-      'the view reports their state honestly, so a caller can exclude them',
-    ).toBe(true);
-  });
-});
+    test('a deactivated account is excluded from the discoverable set', async ({ databases }) => {
+      const database = databases.for('kpost-api');
+      test.skip(!database.enabled, 'needs the KPOST_QA connection');
+
+      /*
+       * Asserted as a property of the data rather than of one account: every row the view exposes with
+       * active_status 'no' is a person who should not be discoverable. Sampled rather than exhaustive
+       * — the view spans thousands of rows and the point is the invariant, not a census.
+       */
+      const deactivated = await database.findMany<{ kpost_id: string; active_status: string }>({
+        table: 'VW_KPOST_USER_DETAIL',
+        where: { active_status: 'no' },
+      });
+
+      test.skip(
+        deactivated.length === 0,
+        'no deactivated accounts on this target to check against',
+      );
+      expect(
+        deactivated.every((r) => text(r.active_status)?.toLowerCase() === 'no'),
+        'the view reports their state honestly, so a caller can exclude them',
+      ).toBe(true);
+    });
+  },
+);

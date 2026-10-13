@@ -36,7 +36,7 @@ function extractUuid(text: string): string | undefined {
   return uuid?.[1];
 }
 
-test.describe('KPost AWS · feature flow', () => {
+test.describe('KPost AWS · feature flow', { tag: ['@api', '@platform', '@regression'] }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     process.env.AWS_LIFECYCLE !== 'true',

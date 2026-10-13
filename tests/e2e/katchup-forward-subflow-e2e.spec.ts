@@ -52,119 +52,123 @@ const FORWARD_TARGET_SEARCH_TERM = 'Qatest3';
  * must be a different real contact already in the account's own address book — "Kapildev Thagapillai"
  * (contactID 8056go@kpostindia.com), confirmed present via that same API read.
  */
-test.describe('KPost Katchup · Forward sub-flow completion @ui', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-    'writes real messages; set KATCHUP_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
-    'needs both QA accounts',
-  );
-
-  test('Forward opens the recipient picker, narrows to one real contact, and the forward actually sends @ui', async ({
-    page,
-  }) => {
-    const sourceSubject = `QA UI Forward source ${Date.now()}`;
-    await openComposer(page);
-    const source = await sendMessage(page, sourceSubject, 'QA UI Forward — source message');
-
-    await openBellMenu(page, source);
-    const forwardItem = page.getByRole('menuitem', { name: /Forward\s*$/i });
-    await expect(forwardItem, 'the bell menu offers Forward').toBeVisible({ timeout: 15_000 });
-    await forwardItem.click();
-    await expect(forwardItem, 'Forward was accepted (menu item dismissed)').toBeHidden({
-      timeout: 15_000,
-    });
-
-    // The circular "Forward To" trigger appears once a message is staged for forwarding.
-    const forwardToTrigger = page
-      .locator('[class*="blueBack"], [style*="border-radius: 50%"]')
-      .filter({ has: page.locator('svg, img') })
-      .last();
-    await forwardToTrigger.click({ timeout: 15_000 }).catch(async () => {
-      // Fallback: the trigger may just be any clickable circular icon near the forward footer —
-      // try the most generic candidate the source confirms exists (fDIcon-controlled onClick).
-      await page.locator('div[style*="border-radius"]').last().click({ timeout: 10_000 });
-    });
-
-    // Scope everything to the "Forward To" dialog so row/checkbox lookups never collide with the
-    // Katchup page rendered behind it (same scoping fix used by the Transfer sub-flow test).
-    const recipientDialog = page.getByRole('dialog').filter({ hasText: 'Forward To' });
-    await expect(recipientDialog, 'the Forward To recipient picker opens').toBeVisible({
-      timeout: 15_000,
-    });
-    const searchBox = recipientDialog.getByRole('searchbox');
-    await expect(searchBox, 'the recipient search box is available').toBeVisible({
-      timeout: 10_000,
-    });
-    // This search matches contacts by DISPLAY NAME, not kpostID/email. The Hamza Ali conversation
-    // partner is excluded from this specific picker (see class comment), so the target here is a
-    // different real contact already in the account's own address book.
-    await searchBox.fill(FORWARD_TARGET_SEARCH_TERM);
-    await settleFrames(page);
-
-    const narrowed = await recipientDialog
-      .getByText(FORWARD_TARGET_SEARCH_TERM, { exact: false })
-      .first()
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
+test.describe(
+  'KPost Katchup · Forward sub-flow completion @ui',
+  { tag: ['@ui', '@katchup', '@regression'] },
+  () => {
     test.skip(
-      !narrowed,
-      `no contact matching "${FORWARD_TARGET_SEARCH_TERM}" is in this account's address book right now — nothing to forward to`,
+      process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+      'writes real messages; set KATCHUP_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
+      'needs both QA accounts',
     );
 
-    // With the list narrowed to one contact, the dialog renders exactly two checkboxes: "Select All"
-    // (first, hideSelectAll=false here) and this one contact's own row (last) — grab the row checkbox
-    // directly instead of trying to scope it by surrounding row text.
-    const rowCheckbox = recipientDialog.getByRole('checkbox').last();
-    await expect(rowCheckbox, "the target contact's own row checkbox is available").toBeVisible({
-      timeout: 10_000,
+    test('Forward opens the recipient picker, narrows to one real contact, and the forward actually sends @ui', async ({
+      page,
+    }) => {
+      const sourceSubject = `QA UI Forward source ${Date.now()}`;
+      await openComposer(page);
+      const source = await sendMessage(page, sourceSubject, 'QA UI Forward — source message');
+
+      await openBellMenu(page, source);
+      const forwardItem = page.getByRole('menuitem', { name: /Forward\s*$/i });
+      await expect(forwardItem, 'the bell menu offers Forward').toBeVisible({ timeout: 15_000 });
+      await forwardItem.click();
+      await expect(forwardItem, 'Forward was accepted (menu item dismissed)').toBeHidden({
+        timeout: 15_000,
+      });
+
+      // The circular "Forward To" trigger appears once a message is staged for forwarding.
+      const forwardToTrigger = page
+        .locator('[class*="blueBack"], [style*="border-radius: 50%"]')
+        .filter({ has: page.locator('svg, img') })
+        .last();
+      await forwardToTrigger.click({ timeout: 15_000 }).catch(async () => {
+        // Fallback: the trigger may just be any clickable circular icon near the forward footer —
+        // try the most generic candidate the source confirms exists (fDIcon-controlled onClick).
+        await page.locator('div[style*="border-radius"]').last().click({ timeout: 10_000 });
+      });
+
+      // Scope everything to the "Forward To" dialog so row/checkbox lookups never collide with the
+      // Katchup page rendered behind it (same scoping fix used by the Transfer sub-flow test).
+      const recipientDialog = page.getByRole('dialog').filter({ hasText: 'Forward To' });
+      await expect(recipientDialog, 'the Forward To recipient picker opens').toBeVisible({
+        timeout: 15_000,
+      });
+      const searchBox = recipientDialog.getByRole('searchbox');
+      await expect(searchBox, 'the recipient search box is available').toBeVisible({
+        timeout: 10_000,
+      });
+      // This search matches contacts by DISPLAY NAME, not kpostID/email. The Hamza Ali conversation
+      // partner is excluded from this specific picker (see class comment), so the target here is a
+      // different real contact already in the account's own address book.
+      await searchBox.fill(FORWARD_TARGET_SEARCH_TERM);
+      await settleFrames(page);
+
+      const narrowed = await recipientDialog
+        .getByText(FORWARD_TARGET_SEARCH_TERM, { exact: false })
+        .first()
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false);
+      test.skip(
+        !narrowed,
+        `no contact matching "${FORWARD_TARGET_SEARCH_TERM}" is in this account's address book right now — nothing to forward to`,
+      );
+
+      // With the list narrowed to one contact, the dialog renders exactly two checkboxes: "Select All"
+      // (first, hideSelectAll=false here) and this one contact's own row (last) — grab the row checkbox
+      // directly instead of trying to scope it by surrounding row text.
+      const rowCheckbox = recipientDialog.getByRole('checkbox').last();
+      await expect(rowCheckbox, "the target contact's own row checkbox is available").toBeVisible({
+        timeout: 10_000,
+      });
+      await rowCheckbox.check();
+
+      const doneButton = recipientDialog.getByRole('button', { name: /^Done$/i });
+      await expect(doneButton, 'Done is available once a contact is selected').toBeVisible({
+        timeout: 5_000,
+      });
+      await doneButton.click();
+      await settleFrames(page);
+
+      // Back in the forward view: the final send button (post_button_size, no accessible name — #963).
+      const finalSend = page.locator('.post_button_size').last();
+      await expect(
+        finalSend,
+        'the final Forward send button is enabled once a recipient is picked',
+      ).toBeEnabled({
+        timeout: 10_000,
+      });
+      await finalSend.click();
+
+      // Verify delivery: the sender is also a party to their own 1:1 thread with the forward target, so
+      // the forwarded content should appear there without needing a second browser session. This is a
+      // different conversation than the Hamza Ali one the source message was sent in.
+      await page
+        .locator(EDITOR)
+        .first()
+        .waitFor({ state: 'hidden', timeout: 5_000 })
+        .catch(() => undefined);
+      await openConversation(page, FORWARD_TARGET_CONTACT_ID);
+      await expect(
+        page.getByText('QA UI Forward — source message', { exact: false }).first(),
+        'the forwarded message content appears in the sender-target thread (forward actually sent)',
+      ).toBeVisible({ timeout: 20_000 });
+
+      // Self-clean: delete the forwarded copy from the sender's side of the target conversation, then
+      // the original source message in the Hamza Ali thread (the forward copy in the actual recipient's
+      // own account is left alone deliberately — recalling/deleting someone else's received copy is not
+      // how this app works, same business rule BR-KU-RECALL already covers).
+      const forwardedCopySubject = messageBySubject(page, sourceSubject);
+      if (await forwardedCopySubject.count()) {
+        await deleteSentMessage(page, sourceSubject);
+      }
+      await openConversation(page, testData.victimKpostId);
+      if (await messageBySubject(page, sourceSubject).count()) {
+        await deleteSentMessage(page, sourceSubject);
+      }
     });
-    await rowCheckbox.check();
-
-    const doneButton = recipientDialog.getByRole('button', { name: /^Done$/i });
-    await expect(doneButton, 'Done is available once a contact is selected').toBeVisible({
-      timeout: 5_000,
-    });
-    await doneButton.click();
-    await settleFrames(page);
-
-    // Back in the forward view: the final send button (post_button_size, no accessible name — #963).
-    const finalSend = page.locator('.post_button_size').last();
-    await expect(
-      finalSend,
-      'the final Forward send button is enabled once a recipient is picked',
-    ).toBeEnabled({
-      timeout: 10_000,
-    });
-    await finalSend.click();
-
-    // Verify delivery: the sender is also a party to their own 1:1 thread with the forward target, so
-    // the forwarded content should appear there without needing a second browser session. This is a
-    // different conversation than the Hamza Ali one the source message was sent in.
-    await page
-      .locator(EDITOR)
-      .first()
-      .waitFor({ state: 'hidden', timeout: 5_000 })
-      .catch(() => undefined);
-    await openConversation(page, FORWARD_TARGET_CONTACT_ID);
-    await expect(
-      page.getByText('QA UI Forward — source message', { exact: false }).first(),
-      'the forwarded message content appears in the sender-target thread (forward actually sent)',
-    ).toBeVisible({ timeout: 20_000 });
-
-    // Self-clean: delete the forwarded copy from the sender's side of the target conversation, then
-    // the original source message in the Hamza Ali thread (the forward copy in the actual recipient's
-    // own account is left alone deliberately — recalling/deleting someone else's received copy is not
-    // how this app works, same business rule BR-KU-RECALL already covers).
-    const forwardedCopySubject = messageBySubject(page, sourceSubject);
-    if (await forwardedCopySubject.count()) {
-      await deleteSentMessage(page, sourceSubject);
-    }
-    await openConversation(page, testData.victimKpostId);
-    if (await messageBySubject(page, sourceSubject).count()) {
-      await deleteSentMessage(page, sourceSubject);
-    }
-  });
-});
+  },
+);

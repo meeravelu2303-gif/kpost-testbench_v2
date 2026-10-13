@@ -10,6 +10,6 @@ import { test } from '@fixtures';
  * against the mock, they run in full — including the injection, null-value and type probes that a
  * write endpoint most needs and that must never be aimed at a live conversation.
  */
-test.describe('KPost Katchup · sends', () => {
+test.describe('KPost Katchup · sends', { tag: ['@api', '@katchup', '@regression'] }, () => {
   describeEndpointCases({ tags: ['katchup-send'] });
 });

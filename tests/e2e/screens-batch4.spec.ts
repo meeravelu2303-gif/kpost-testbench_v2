@@ -15,7 +15,7 @@ const BATCH = new Set(['writemail', 'kposter', 'notfound']);
 
 test.describe(
   'KPost deep UI sweep — batch 4 (WriteMail, KPoster, NotFound)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@platform', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

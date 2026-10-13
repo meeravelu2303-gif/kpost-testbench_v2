@@ -17,70 +17,75 @@ import { expect, test } from '@fixtures';
  * live setup needed. The verdict is simply: does the response body for a broad, generic search term
  * contain the Aadhaar/DOB/address fields for records that are not the caller's own?
  */
-test.describe('KPost Security · Contacts globalSearch PII over-exposure @api @kpost-api @security @contacts', () => {
-  test('a broad directory search must not return Aadhaar numbers or other sensitive PII for other users @api @security', async ({
-    endpoints,
-  }) => {
-    const search = await endpoints.sendTo(
-      'contacts-global-search',
-      {
-        body: {
-          search: 'a',
-          languageList: ['english'],
-          userTypeList: ['personal'],
-          countryList: ['india'],
+test.describe(
+  'KPost Security · Contacts globalSearch PII over-exposure @api @kpost-api @security @contacts',
+  { tag: ['@api', '@platform', '@security', '@regression'] },
+  () => {
+    test('a broad directory search must not return Aadhaar numbers or other sensitive PII for other users @api @security', async ({
+      endpoints,
+    }) => {
+      const search = await endpoints.sendTo(
+        'contacts-global-search',
+        {
+          body: {
+            search: 'a',
+            languageList: ['english'],
+            userTypeList: ['personal'],
+            countryList: ['india'],
+          },
         },
-      },
-      { label: 'security:contacts-globalsearch-pii', allowLiveRead: true },
-    );
+        { label: 'security:contacts-globalsearch-pii', allowLiveRead: true },
+      );
 
-    expect(search.status, 'the search succeeds').toBeLessThan(300);
-    const text = search.bodyText;
-    const lower = text.toLowerCase();
+      expect(search.status, 'the search succeeds').toBeLessThan(300);
+      const text = search.bodyText;
+      const lower = text.toLowerCase();
 
-    const sensitiveFields = [
-      'aadhaarnumber',
-      'datedbirth', // defensive alt-spelling guard; harmless if absent
-      'dateofbirth',
-      'presentaddress',
-      'alternatemobileno',
-      'landlinenumber',
-    ];
-    const foundFields = sensitiveFields.filter((f) => lower.includes(`"${f}"`));
+      const sensitiveFields = [
+        'aadhaarnumber',
+        'datedbirth', // defensive alt-spelling guard; harmless if absent
+        'dateofbirth',
+        'presentaddress',
+        'alternatemobileno',
+        'landlinenumber',
+      ];
+      const foundFields = sensitiveFields.filter((f) => lower.includes(`"${f}"`));
 
-    // A found field with a non-null, non-empty value is the real disclosure — not just the key
-    // existing with a null placeholder, which some ORMs include unconditionally.
-    const leakedWithValue = foundFields.filter((f) => {
-      const re = new RegExp(`"${f}"\\s*:\\s*"[^"]+"`, 'i');
-      return re.test(text);
+      // A found field with a non-null, non-empty value is the real disclosure — not just the key
+      // existing with a null placeholder, which some ORMs include unconditionally.
+      const leakedWithValue = foundFields.filter((f) => {
+        const re = new RegExp(`"${f}"\\s*:\\s*"[^"]+"`, 'i');
+        return re.test(text);
+      });
+
+      if (leakedWithValue.length > 0) {
+        // Count occurrences per field (not the values themselves) — useful triage signal without
+        // dumping real PII into test output/reports every run.
+        const counts = leakedWithValue.map((field) => {
+          const re = new RegExp(`"${field}"\\s*:\\s*"[^"]+"`, 'gi');
+          return `${field}=${(text.match(re) ?? []).length}`;
+        });
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'contacts-global-search',
+          ruleId: 'PII-globalsearch-sensitive-field-disclosure',
+          rule:
+            'A directory search must not return sensitive PII (Aadhaar number, date of birth, home ' +
+            'address, alternate phone/landline) for users other than the caller, regardless of the ' +
+            'search term matched.',
+          expected:
+            'the response contains no sensitive PII fields with real values for other users',
+          actual: `fields with real values found in response, with occurrence counts: ${counts.join(', ')}`,
+          request: { body: { search: 'a' } },
+        });
+      }
+
+      expect
+        .soft(
+          leakedWithValue,
+          `PII over-exposure: globalSearch response contains sensitive fields with real values: ` +
+            `${leakedWithValue.join(', ') || '(none)'} — a directory search must never return these`,
+        )
+        .toEqual([]);
     });
-
-    if (leakedWithValue.length > 0) {
-      // Count occurrences per field (not the values themselves) — useful triage signal without
-      // dumping real PII into test output/reports every run.
-      const counts = leakedWithValue.map((field) => {
-        const re = new RegExp(`"${field}"\\s*:\\s*"[^"]+"`, 'gi');
-        return `${field}=${(text.match(re) ?? []).length}`;
-      });
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'contacts-global-search',
-        ruleId: 'PII-globalsearch-sensitive-field-disclosure',
-        rule:
-          'A directory search must not return sensitive PII (Aadhaar number, date of birth, home ' +
-          'address, alternate phone/landline) for users other than the caller, regardless of the ' +
-          'search term matched.',
-        expected: 'the response contains no sensitive PII fields with real values for other users',
-        actual: `fields with real values found in response, with occurrence counts: ${counts.join(', ')}`,
-        request: { body: { search: 'a' } },
-      });
-    }
-
-    expect
-      .soft(
-        leakedWithValue,
-        `PII over-exposure: globalSearch response contains sensitive fields with real values: ` +
-          `${leakedWithValue.join(', ') || '(none)'} — a directory search must never return these`,
-      )
-      .toEqual([]);
-  });
-});
+  },
+);

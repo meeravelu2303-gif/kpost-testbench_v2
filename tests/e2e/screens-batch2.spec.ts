@@ -11,7 +11,7 @@ const BATCH = new Set(['settings', 'kdiary', 'kdoc', 'kcloud']);
 
 test.describe(
   'KPost deep UI sweep — batch 2 (Settings, KDiary, KDoc, KCloud)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@platform', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

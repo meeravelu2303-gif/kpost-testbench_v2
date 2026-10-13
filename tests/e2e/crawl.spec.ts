@@ -18,49 +18,53 @@ import { skipIfSignedOut } from './support/session';
  * Safety: the crawler never clicks a destructive/committing control (send, delete, logout, confirm …)
  * and Escapes after every click — it opens/expands/views, never writes. See `ui-crawler.ts`.
  */
-test.describe('KPost UI systematic crawl — every control, every screen', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost UI systematic crawl — every control, every screen',
+  { tag: ['@ui', '@platform', '@regression'] },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  test.beforeEach(async ({ page }) => {
-    await skipIfSignedOut(page);
-  });
-
-  for (const screen of AUTHENTICATED_SCREENS) {
-    test(`${screen.name} — crawl every control without crashing or freezing @ui`, async ({
-      page,
-    }) => {
-      // Up to 24 real clicks, several of which navigate and trigger a full reload
-      // (`waitUntil: 'domcontentloaded'` against the live production app) rather than a local mock —
-      // the default 60s test timeout is too tight for that real network cost once a screen has enough
-      // candidates to hit the click cap. Confirmed live 2026-09-30: a "timeout" failure here was
-      // mid-crawl (still working through the candidate list, not frozen) — a budget problem, not a
-      // product defect. 150s comfortably covers the worst case while still catching a genuinely
-      // frozen screen (which stalls far longer than any real reload ever would).
-      test.setTimeout(150_000);
-      const stop = watchUiHealth(page);
-
-      await page.goto(screen.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await expect(
-        page.locator(screen.ready.join(', ')).first(),
-        `${screen.name} mounted`,
-      ).toBeVisible({ timeout: 20_000 });
-
-      const crawlFindings = await crawlScreen(page, screen.route);
-      const responsive = await isResponsive(page);
-      const health = stop();
-
-      const problems = [
-        ...healthFailures(health), // crashes + broken assets triggered by any click
-        ...crawlFindings.map((f) => `[${f.check}] ${f.message}`), // hangs + rendered-raw-value
-        ...(responsive ? [] : [`the screen FROZE (main thread unresponsive) after the crawl`]),
-      ];
-      expect(
-        problems,
-        `${screen.name} broke while crawling its controls — ${problems.join(' | ')}`,
-      ).toEqual([]);
+    test.beforeEach(async ({ page }) => {
+      await skipIfSignedOut(page);
     });
-  }
-});
+
+    for (const screen of AUTHENTICATED_SCREENS) {
+      test(`${screen.name} — crawl every control without crashing or freezing @ui`, async ({
+        page,
+      }) => {
+        // Up to 24 real clicks, several of which navigate and trigger a full reload
+        // (`waitUntil: 'domcontentloaded'` against the live production app) rather than a local mock —
+        // the default 60s test timeout is too tight for that real network cost once a screen has enough
+        // candidates to hit the click cap. Confirmed live 2026-09-30: a "timeout" failure here was
+        // mid-crawl (still working through the candidate list, not frozen) — a budget problem, not a
+        // product defect. 150s comfortably covers the worst case while still catching a genuinely
+        // frozen screen (which stalls far longer than any real reload ever would).
+        test.setTimeout(150_000);
+        const stop = watchUiHealth(page);
+
+        await page.goto(screen.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await expect(
+          page.locator(screen.ready.join(', ')).first(),
+          `${screen.name} mounted`,
+        ).toBeVisible({ timeout: 20_000 });
+
+        const crawlFindings = await crawlScreen(page, screen.route);
+        const responsive = await isResponsive(page);
+        const health = stop();
+
+        const problems = [
+          ...healthFailures(health), // crashes + broken assets triggered by any click
+          ...crawlFindings.map((f) => `[${f.check}] ${f.message}`), // hangs + rendered-raw-value
+          ...(responsive ? [] : [`the screen FROZE (main thread unresponsive) after the crawl`]),
+        ];
+        expect(
+          problems,
+          `${screen.name} broke while crawling its controls — ${problems.join(' | ')}`,
+        ).toEqual([]);
+      });
+    }
+  },
+);

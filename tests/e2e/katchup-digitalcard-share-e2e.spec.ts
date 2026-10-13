@@ -46,86 +46,90 @@ import { settleFrames } from './support/settle';
 const SHARE_TARGET_CONTACT_ID = '8056go@kpostindia.com';
 const SHARE_TARGET_SEARCH_TERM = 'Kapildev';
 
-test.describe('KPost Katchup · Digital Card share @ui', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-    'sends a real message; set KATCHUP_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
-    'needs both QA accounts',
-  );
-
-  test("sharing a contact's Digital Card via Katchup actually sends it @ui", async ({ page }) => {
-    // Inside the test body, not at the describe level — see the note in katchup-two-session.spec.ts's
-    // unread-badge test for why that placement matters (it silently skips sibling tests otherwise).
-    test.fixme(
-      true,
-      'blocked by #979 — the session gets force-logged-out from an unrelated background-image 401 within seconds of opening any Katchup conversation, independent of the Share flow itself — see the comment above',
+test.describe(
+  'KPost Katchup · Digital Card share @ui',
+  { tag: ['@ui', '@katchup', '@regression'] },
+  () => {
+    test.skip(
+      process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+      'sends a real message; set KATCHUP_UI_LIFECYCLE=true',
     );
-    await openConversation(page, testData.victimKpostId);
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
+      'needs both QA accounts',
+    );
 
-    // The thread header's avatar is the Digital Card trigger — a shared `ContactBar` renders it as
-    // `<Avatar onClick={imgClick} className="font-Family-Nunito ..." />` (common/ContactBar/
-    // ContactBar.js:378-402), scoped to the header row by its `background-color-katchup` class.
-    const headerAvatar = page
-      .locator('.background-color-katchup')
-      .locator('.font-Family-Nunito')
-      .first();
-    await headerAvatar.click({ timeout: 15_000 });
+    test("sharing a contact's Digital Card via Katchup actually sends it @ui", async ({ page }) => {
+      // Inside the test body, not at the describe level — see the note in katchup-two-session.spec.ts's
+      // unread-badge test for why that placement matters (it silently skips sibling tests otherwise).
+      test.fixme(
+        true,
+        'blocked by #979 — the session gets force-logged-out from an unrelated background-image 401 within seconds of opening any Katchup conversation, independent of the Share flow itself — see the comment above',
+      );
+      await openConversation(page, testData.victimKpostId);
 
-    // Wait for the Digital Card modal to actually finish rendering before touching anything inside it
-    // — "View Profile" (DigitalCard.js's own CTA, always present) is the sync point.
-    await expect(
-      page.getByText('View Profile', { exact: true }).first(),
-      'the Digital Card modal opens',
-    ).toBeVisible({ timeout: 15_000 });
+      // The thread header's avatar is the Digital Card trigger — a shared `ContactBar` renders it as
+      // `<Avatar onClick={imgClick} className="font-Family-Nunito ..." />` (common/ContactBar/
+      // ContactBar.js:378-402), scoped to the header row by its `background-color-katchup` class.
+      const headerAvatar = page
+        .locator('.background-color-katchup')
+        .locator('.font-Family-Nunito')
+        .first();
+      await headerAvatar.click({ timeout: 15_000 });
 
-    const shareButton = page.locator('.dc-secondary-icon').first();
-    await expect(shareButton, 'the Digital Card Share icon is available').toBeVisible({
-      timeout: 15_000,
+      // Wait for the Digital Card modal to actually finish rendering before touching anything inside it
+      // — "View Profile" (DigitalCard.js's own CTA, always present) is the sync point.
+      await expect(
+        page.getByText('View Profile', { exact: true }).first(),
+        'the Digital Card modal opens',
+      ).toBeVisible({ timeout: 15_000 });
+
+      const shareButton = page.locator('.dc-secondary-icon').first();
+      await expect(shareButton, 'the Digital Card Share icon is available').toBeVisible({
+        timeout: 15_000,
+      });
+      await shareButton.scrollIntoViewIfNeeded().catch(() => undefined);
+      await shareButton.click({ timeout: 10_000 });
+
+      const shareDialog = page.getByRole('dialog').filter({ hasText: 'Other Applications' });
+      await expect(shareDialog, 'the share-target screen opens').toBeVisible({ timeout: 15_000 });
+      await shareDialog.getByText('Katchup', { exact: true }).click();
+
+      const recipientDialog = page.getByRole('dialog').filter({ hasText: 'Forward To' });
+      await expect(recipientDialog, 'the Katchup recipient picker opens').toBeVisible({
+        timeout: 15_000,
+      });
+      const searchBox = recipientDialog.getByRole('searchbox');
+      await expect(searchBox, 'the recipient search box is available').toBeVisible({
+        timeout: 10_000,
+      });
+      await searchBox.fill(SHARE_TARGET_SEARCH_TERM);
+      await settleFrames(page);
+
+      await expect(
+        recipientDialog.getByText(SHARE_TARGET_SEARCH_TERM, { exact: false }),
+        `the search narrows the contact list to ${SHARE_TARGET_SEARCH_TERM}`,
+      ).toBeVisible({ timeout: 10_000 });
+
+      // hideSelectAll=true here too — the search-narrowed list renders exactly one checkbox.
+      const rowCheckbox = recipientDialog.getByRole('checkbox');
+      await expect(rowCheckbox, "the target contact's own row checkbox is available").toBeVisible({
+        timeout: 10_000,
+      });
+      await rowCheckbox.check();
+      await recipientDialog.getByRole('button', { name: /^Done$/i }).click();
+
+      await expect(
+        page.getByText('Contact Shared successfully', { exact: false }),
+        'the app confirms the share actually sent',
+      ).toBeVisible({ timeout: 15_000 });
+
+      // Verify delivery: open the target's own thread from the sender's side.
+      await openConversation(page, SHARE_TARGET_CONTACT_ID);
+      await expect(
+        page.getByText('Sharing Kpost Digital Card', { exact: false }).first(),
+        "the shared Digital Card message appears in the target's thread",
+      ).toBeVisible({ timeout: 20_000 });
     });
-    await shareButton.scrollIntoViewIfNeeded().catch(() => undefined);
-    await shareButton.click({ timeout: 10_000 });
-
-    const shareDialog = page.getByRole('dialog').filter({ hasText: 'Other Applications' });
-    await expect(shareDialog, 'the share-target screen opens').toBeVisible({ timeout: 15_000 });
-    await shareDialog.getByText('Katchup', { exact: true }).click();
-
-    const recipientDialog = page.getByRole('dialog').filter({ hasText: 'Forward To' });
-    await expect(recipientDialog, 'the Katchup recipient picker opens').toBeVisible({
-      timeout: 15_000,
-    });
-    const searchBox = recipientDialog.getByRole('searchbox');
-    await expect(searchBox, 'the recipient search box is available').toBeVisible({
-      timeout: 10_000,
-    });
-    await searchBox.fill(SHARE_TARGET_SEARCH_TERM);
-    await settleFrames(page);
-
-    await expect(
-      recipientDialog.getByText(SHARE_TARGET_SEARCH_TERM, { exact: false }),
-      `the search narrows the contact list to ${SHARE_TARGET_SEARCH_TERM}`,
-    ).toBeVisible({ timeout: 10_000 });
-
-    // hideSelectAll=true here too — the search-narrowed list renders exactly one checkbox.
-    const rowCheckbox = recipientDialog.getByRole('checkbox');
-    await expect(rowCheckbox, "the target contact's own row checkbox is available").toBeVisible({
-      timeout: 10_000,
-    });
-    await rowCheckbox.check();
-    await recipientDialog.getByRole('button', { name: /^Done$/i }).click();
-
-    await expect(
-      page.getByText('Contact Shared successfully', { exact: false }),
-      'the app confirms the share actually sent',
-    ).toBeVisible({ timeout: 15_000 });
-
-    // Verify delivery: open the target's own thread from the sender's side.
-    await openConversation(page, SHARE_TARGET_CONTACT_ID);
-    await expect(
-      page.getByText('Sharing Kpost Digital Card', { exact: false }).first(),
-      "the shared Digital Card message appears in the target's thread",
-    ).toBeVisible({ timeout: 20_000 });
-  });
-});
+  },
+);

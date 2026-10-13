@@ -17,7 +17,7 @@ import { expect, test } from '@fixtures';
  *     not overridden here without the same explicit authorization already declined for it.
  */
 
-test.describe('KPost common · recorded gaps', () => {
+test.describe('KPost common · recorded gaps', { tag: ['@api', '@platform', '@regression'] }, () => {
   test('common-save-unsubscriber-details: no live test (404 — route not deployed on this test build)', () => {
     test.skip(
       true,

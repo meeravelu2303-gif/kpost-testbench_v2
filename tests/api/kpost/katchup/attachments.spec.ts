@@ -9,6 +9,6 @@ import { test } from '@fixtures';
  * not have until a lifecycle test creates one — so they are skipped there with the reason, and run
  * in full off-live against the mock.
  */
-test.describe('KPost Katchup · attachments', () => {
+test.describe('KPost Katchup · attachments', { tag: ['@api', '@katchup', '@regression'] }, () => {
   describeEndpointCases({ tags: ['katchup-attachment'] });
 });

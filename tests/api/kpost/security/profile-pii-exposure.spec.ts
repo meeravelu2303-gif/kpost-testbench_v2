@@ -19,62 +19,66 @@ import { expect, test } from '@fixtures';
  * QA account's kpostID) — no new live setup needed. The verdict is simply: does the response for an
  * account OTHER than the caller contain these fields with real, non-empty values.
  */
-test.describe('KPost Security · Profile getUserProfileUsingKpostID PII over-exposure @api @kpost-api @security @profile', () => {
-  test("fetching another account's profile must not return sensitive PII with no privacy control @api @security", async ({
-    endpoints,
-  }) => {
-    const ex = await endpoints.sendTo(
-      'profile-user-profile-by-kpostid',
-      { body: { kpostID: testData.personal3KpostId } },
-      { label: 'security:profile-pii-exposure' },
-    );
+test.describe(
+  'KPost Security · Profile getUserProfileUsingKpostID PII over-exposure @api @kpost-api @security @profile',
+  { tag: ['@api', '@platform', '@security', '@regression'] },
+  () => {
+    test("fetching another account's profile must not return sensitive PII with no privacy control @api @security", async ({
+      endpoints,
+    }) => {
+      const ex = await endpoints.sendTo(
+        'profile-user-profile-by-kpostid',
+        { body: { kpostID: testData.personal3KpostId } },
+        { label: 'security:profile-pii-exposure' },
+      );
 
-    expect(ex.status, 'the lookup succeeds').toBeLessThan(300);
-    const text = ex.bodyText;
-    const lower = text.toLowerCase();
+      expect(ex.status, 'the lookup succeeds').toBeLessThan(300);
+      const text = ex.bodyText;
+      const lower = text.toLowerCase();
 
-    const sensitiveFields = [
-      'aadhaarnumber',
-      'dateofbirth',
-      'presentaddress',
-      'alternatemobileno',
-      'landlinenumber',
-    ];
-    const foundFields = sensitiveFields.filter((f) => lower.includes(`"${f}"`));
+      const sensitiveFields = [
+        'aadhaarnumber',
+        'dateofbirth',
+        'presentaddress',
+        'alternatemobileno',
+        'landlinenumber',
+      ];
+      const foundFields = sensitiveFields.filter((f) => lower.includes(`"${f}"`));
 
-    // A found field with a non-null, non-empty value is the real disclosure — not just the key
-    // existing with a null placeholder, which this ORM includes unconditionally.
-    const leakedWithValue = foundFields.filter((f) => {
-      const re = new RegExp(`"${f}"\\s*:\\s*"[^"]+"`, 'i');
-      return re.test(text);
+      // A found field with a non-null, non-empty value is the real disclosure — not just the key
+      // existing with a null placeholder, which this ORM includes unconditionally.
+      const leakedWithValue = foundFields.filter((f) => {
+        const re = new RegExp(`"${f}"\\s*:\\s*"[^"]+"`, 'i');
+        return re.test(text);
+      });
+
+      if (leakedWithValue.length > 0) {
+        const counts = leakedWithValue.map((field) => {
+          const re = new RegExp(`"${field}"\\s*:\\s*"[^"]+"`, 'gi');
+          return `${field}=${(text.match(re) ?? []).length}`;
+        });
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'profile-user-profile-by-kpostid',
+          ruleId: 'PII-profile-lookup-sensitive-field-disclosure',
+          rule:
+            "Fetching another account's profile must not return sensitive PII (Aadhaar number, date " +
+            'of birth, home address, alternate phone/landline) with no privacy control, regardless of ' +
+            "the target account's own privacy settings.",
+          expected:
+            'the response contains no sensitive PII fields with real values for a non-owner caller',
+          actual: `fields with real values found in response, with occurrence counts: ${counts.join(', ')}`,
+          request: { body: {} },
+        });
+      }
+
+      expect
+        .soft(
+          leakedWithValue,
+          `PII over-exposure: getUserProfileUsingKpostID response contains sensitive fields with real ` +
+            `values: ${leakedWithValue.join(', ') || '(none)'} — viewing another account's profile must ` +
+            `never return these`,
+        )
+        .toEqual([]);
     });
-
-    if (leakedWithValue.length > 0) {
-      const counts = leakedWithValue.map((field) => {
-        const re = new RegExp(`"${field}"\\s*:\\s*"[^"]+"`, 'gi');
-        return `${field}=${(text.match(re) ?? []).length}`;
-      });
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'profile-user-profile-by-kpostid',
-        ruleId: 'PII-profile-lookup-sensitive-field-disclosure',
-        rule:
-          "Fetching another account's profile must not return sensitive PII (Aadhaar number, date " +
-          'of birth, home address, alternate phone/landline) with no privacy control, regardless of ' +
-          "the target account's own privacy settings.",
-        expected:
-          'the response contains no sensitive PII fields with real values for a non-owner caller',
-        actual: `fields with real values found in response, with occurrence counts: ${counts.join(', ')}`,
-        request: { body: {} },
-      });
-    }
-
-    expect
-      .soft(
-        leakedWithValue,
-        `PII over-exposure: getUserProfileUsingKpostID response contains sensitive fields with real ` +
-          `values: ${leakedWithValue.join(', ') || '(none)'} — viewing another account's profile must ` +
-          `never return these`,
-      )
-      .toEqual([]);
-  });
-});
+  },
+);

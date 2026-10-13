@@ -59,72 +59,76 @@ interface CredentialsResponse {
   fromAddPassword?: string;
 }
 
-test.describe('KMail · credential-disclosure IDOR proof (plan item 0b) @api @kmail-api @kmail @security', () => {
-  test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
-  // Confirmed live 2026-10-02: `kmail-credentials` is `sideEffect: 'global'`, which
-  // production-guard.ts refuses unconditionally on TEST_ENV=production — KMAIL_LIFECYCLE cannot
-  // change that. Independently, this session's own safety classifier also refused the one attempt
-  // to run this. Both blockers are real; stays test.skip'd rather than left to fail with
-  // ProductionSafetyError every run. See docs/scope/blocked-endpoints-rationale.md.
-  test.skip(
-    true,
-    'PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND ' +
-      'requires explicit authorization even on a future non-production environment, given it ' +
-      'compares real credential material — see docs/scope/blocked-endpoints-rationale.md',
-  );
-
-  test("baseline: the endpoint accepts A's own kpostID with the shared default password", async ({
-    endpoints,
-  }) => {
-    const ex = await endpoints.sendTo(
-      'kmail-credentials',
-      { body: { kpostID: A.username, password: process.env.QA_PASSWORD ?? '' } },
-      { label: 'cred-disclosure:self', auth: { principal: A }, allowLiveRead: true },
+test.describe(
+  'KMail · credential-disclosure IDOR proof (plan item 0b) @api @kmail-api @kmail @security',
+  { tag: ['@api', '@kmail', '@regression'] },
+  () => {
+    test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
+    // Confirmed live 2026-10-02: `kmail-credentials` is `sideEffect: 'global'`, which
+    // production-guard.ts refuses unconditionally on TEST_ENV=production — KMAIL_LIFECYCLE cannot
+    // change that. Independently, this session's own safety classifier also refused the one attempt
+    // to run this. Both blockers are real; stays test.skip'd rather than left to fail with
+    // ProductionSafetyError every run. See docs/scope/blocked-endpoints-rationale.md.
+    test.skip(
+      true,
+      'PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND ' +
+        'requires explicit authorization even on a future non-production environment, given it ' +
+        'compares real credential material — see docs/scope/blocked-endpoints-rationale.md',
     );
-    test.info().annotations.push({
-      type: 'note',
-      description: `self-lookup status=${ex.status} (establishes whether kmailPassword == the shared QA default for this account at all, before testing cross-account)`,
-    });
-    // Not a pass/fail claim by design — a baseline reading only. A 200 means kmailPassword equals
-    // the shared default for THIS account; anything else means it does not, which the cross-account
-    // test below must then be read in light of. The one assertion here is just "got a response".
-    expect(
-      ex.status,
-      'the endpoint answers (any status) for a well-formed self-lookup',
-    ).toBeLessThan(600);
-  });
 
-  test("IDOR: A's token can query B's kmailPassword by naming B's kpostID, never B's own session", async ({
-    endpoints,
-  }) => {
-    const ex = await endpoints.sendTo(
-      'kmail-credentials',
-      { body: { kpostID: B.username, password: process.env.QA_PASSWORD ?? '' } },
-      { label: 'cred-disclosure:cross-account', auth: { principal: A }, allowLiveRead: true },
-    );
-    const body = ex.status < 300 ? (JSON.parse(ex.bodyText ?? '{}') as CredentialsResponse) : {};
-    const disclosed = Boolean(body.host || body.fromAddress || body.fromAddPassword);
-
-    if (disclosed) {
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'kmail-credentials',
-        ruleId: 'IDOR-kmail-credentials-by-kpostid',
-        rule:
-          "getMailCredentials must only return the AUTHENTICATED CALLER's own mail credentials — " +
-          "it must not disclose another account's credentials just because the caller's token is " +
-          "valid and happens to know (or share) that other account's kmailPassword.",
-        expected: `refused (A's token is not B's session) — status >= 400`,
-        actual: `status=${ex.status}, credentials disclosed for ${B.username} to a request authenticated as ${A.username}`,
-        request: { body: { kpostID: B.username, password: '(shared QA default — redacted)' } },
+    test("baseline: the endpoint accepts A's own kpostID with the shared default password", async ({
+      endpoints,
+    }) => {
+      const ex = await endpoints.sendTo(
+        'kmail-credentials',
+        { body: { kpostID: A.username, password: process.env.QA_PASSWORD ?? '' } },
+        { label: 'cred-disclosure:self', auth: { principal: A }, allowLiveRead: true },
+      );
+      test.info().annotations.push({
+        type: 'note',
+        description: `self-lookup status=${ex.status} (establishes whether kmailPassword == the shared QA default for this account at all, before testing cross-account)`,
       });
-    }
-
-    expect
-      .soft(
+      // Not a pass/fail claim by design — a baseline reading only. A 200 means kmailPassword equals
+      // the shared default for THIS account; anything else means it does not, which the cross-account
+      // test below must then be read in light of. The one assertion here is just "got a response".
+      expect(
         ex.status,
-        "getMailCredentials must refuse a request naming an account other than the caller's own, " +
-          'regardless of whether the supplied password happens to be correct for that account',
-      )
-      .toBeGreaterThanOrEqual(400);
-  });
-});
+        'the endpoint answers (any status) for a well-formed self-lookup',
+      ).toBeLessThan(600);
+    });
+
+    test("IDOR: A's token can query B's kmailPassword by naming B's kpostID, never B's own session", async ({
+      endpoints,
+    }) => {
+      const ex = await endpoints.sendTo(
+        'kmail-credentials',
+        { body: { kpostID: B.username, password: process.env.QA_PASSWORD ?? '' } },
+        { label: 'cred-disclosure:cross-account', auth: { principal: A }, allowLiveRead: true },
+      );
+      const body = ex.status < 300 ? (JSON.parse(ex.bodyText ?? '{}') as CredentialsResponse) : {};
+      const disclosed = Boolean(body.host || body.fromAddress || body.fromAddPassword);
+
+      if (disclosed) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'kmail-credentials',
+          ruleId: 'IDOR-kmail-credentials-by-kpostid',
+          rule:
+            "getMailCredentials must only return the AUTHENTICATED CALLER's own mail credentials — " +
+            "it must not disclose another account's credentials just because the caller's token is " +
+            "valid and happens to know (or share) that other account's kmailPassword.",
+          expected: `refused (A's token is not B's session) — status >= 400`,
+          actual: `status=${ex.status}, credentials disclosed for ${B.username} to a request authenticated as ${A.username}`,
+          request: { body: { kpostID: B.username, password: '(shared QA default — redacted)' } },
+        });
+      }
+
+      expect
+        .soft(
+          ex.status,
+          "getMailCredentials must refuse a request naming an account other than the caller's own, " +
+            'regardless of whether the supplied password happens to be correct for that account',
+        )
+        .toBeGreaterThanOrEqual(400);
+    });
+  },
+);

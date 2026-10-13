@@ -16,111 +16,119 @@ import { settleFrames } from './support/settle';
  * field's own value, exactly like that file's own "the fields hold their values" assertion, never
  * reaching a real write. No lifecycle gate needed as a result.
  */
-test.describe('KPost Kall · contact search box security fuzzing', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost Kall · contact search box security fuzzing',
+  { tag: ['@ui', '@kall', '@regression'] },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  const PAYLOADS: Array<{ name: string; value: string }> = [
-    { name: 'script tag', value: '<script>alert(1)</script>' },
-    { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
-    { name: 'SQL-style OR-true', value: "' OR '1'='1" },
-  ];
+    const PAYLOADS: Array<{ name: string; value: string }> = [
+      { name: 'script tag', value: '<script>alert(1)</script>' },
+      { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
+      { name: 'SQL-style OR-true', value: "' OR '1'='1" },
+    ];
 
-  for (const payload of PAYLOADS) {
-    test(`the Kall contact search box survives a ${payload.name} payload without crashing or executing it @ui`, async ({
-      page,
-    }) => {
-      const stop = watchUiHealth(page);
-      let dialogFired = false;
-      page.on('dialog', (dialog) => {
-        dialogFired = true;
-        void dialog.dismiss();
+    for (const payload of PAYLOADS) {
+      test(`the Kall contact search box survives a ${payload.name} payload without crashing or executing it @ui`, async ({
+        page,
+      }) => {
+        const stop = watchUiHealth(page);
+        let dialogFired = false;
+        page.on('dialog', (dialog) => {
+          dialogFired = true;
+          void dialog.dismiss();
+        });
+
+        await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await page
+          .locator('.loader-overlay')
+          .waitFor({ state: 'hidden', timeout: 30_000 })
+          .catch(() => undefined);
+
+        // Found live 2026-10-01: the real placeholder is just "Search", not "Search Contacts" as
+        // previously assumed (confirmed via screenshot) — a bench selector gap, not a product defect.
+        const search = page.getByPlaceholder(/^search$/i).first();
+        await expect(search, 'the contact search box is present').toBeVisible({ timeout: 20_000 });
+        await search.click();
+        await search.fill(payload.value);
+        await settleFrames(page);
+
+        const health = stop();
+
+        test.info().annotations.push({
+          type: 'observed',
+          description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+        });
+
+        expect(
+          health.pageErrors,
+          `no uncaught JS error while filtering by: ${payload.value}`,
+        ).toEqual([]);
+        expect(
+          dialogFired,
+          `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
+        ).toBe(false);
       });
+    }
+  },
+);
 
-      await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
+test.describe(
+  'KPost Kall · Meeting Title field security fuzzing',
+  { tag: ['@ui', '@kall', '@regression'] },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-      // Found live 2026-10-01: the real placeholder is just "Search", not "Search Contacts" as
-      // previously assumed (confirmed via screenshot) — a bench selector gap, not a product defect.
-      const search = page.getByPlaceholder(/^search$/i).first();
-      await expect(search, 'the contact search box is present').toBeVisible({ timeout: 20_000 });
-      await search.click();
-      await search.fill(payload.value);
-      await settleFrames(page);
+    const PAYLOADS: Array<{ name: string; value: string }> = [
+      { name: 'script tag', value: '<script>alert(1)</script>' },
+      { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
+    ];
 
-      const health = stop();
+    for (const payload of PAYLOADS) {
+      test(`the Meeting Title field survives a ${payload.name} payload without crashing or executing it @ui`, async ({
+        page,
+      }) => {
+        const stop = watchUiHealth(page);
+        let dialogFired = false;
+        page.on('dialog', (dialog) => {
+          dialogFired = true;
+          void dialog.dismiss();
+        });
 
-      test.info().annotations.push({
-        type: 'observed',
-        description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+        await gotoKoolKall(page);
+        const modal = await openCreateKall(page);
+        expect(modal, 'the Create Kool Kall modal opens').not.toBeNull();
+        const titleField = meetingTitleField(modal!);
+        await titleField.fill(payload.value);
+        await expect(titleField, 'the field holds the raw text').toHaveValue(payload.value);
+        // Two frames: any handler an injected payload could have attached has had its chance to run.
+        await page.evaluate(
+          () =>
+            new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+        );
+
+        const health = stop();
+
+        test.info().annotations.push({
+          type: 'observed',
+          description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+        });
+
+        expect(health.pageErrors, `no uncaught JS error rendering: ${payload.value}`).toEqual([]);
+        expect(
+          dialogFired,
+          `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
+        ).toBe(false);
+        await expect(titleField, 'the field holds the raw text, unmodified').toHaveValue(
+          payload.value,
+        );
       });
-
-      expect(
-        health.pageErrors,
-        `no uncaught JS error while filtering by: ${payload.value}`,
-      ).toEqual([]);
-      expect(
-        dialogFired,
-        `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
-      ).toBe(false);
-    });
-  }
-});
-
-test.describe('KPost Kall · Meeting Title field security fuzzing', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
-
-  const PAYLOADS: Array<{ name: string; value: string }> = [
-    { name: 'script tag', value: '<script>alert(1)</script>' },
-    { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
-  ];
-
-  for (const payload of PAYLOADS) {
-    test(`the Meeting Title field survives a ${payload.name} payload without crashing or executing it @ui`, async ({
-      page,
-    }) => {
-      const stop = watchUiHealth(page);
-      let dialogFired = false;
-      page.on('dialog', (dialog) => {
-        dialogFired = true;
-        void dialog.dismiss();
-      });
-
-      await gotoKoolKall(page);
-      const modal = await openCreateKall(page);
-      expect(modal, 'the Create Kool Kall modal opens').not.toBeNull();
-      const titleField = meetingTitleField(modal!);
-      await titleField.fill(payload.value);
-      await expect(titleField, 'the field holds the raw text').toHaveValue(payload.value);
-      // Two frames: any handler an injected payload could have attached has had its chance to run.
-      await page.evaluate(
-        () =>
-          new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
-      );
-
-      const health = stop();
-
-      test.info().annotations.push({
-        type: 'observed',
-        description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
-      });
-
-      expect(health.pageErrors, `no uncaught JS error rendering: ${payload.value}`).toEqual([]);
-      expect(
-        dialogFired,
-        `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
-      ).toBe(false);
-      await expect(titleField, 'the field holds the raw text, unmodified').toHaveValue(
-        payload.value,
-      );
-    });
-  }
-});
+    }
+  },
+);

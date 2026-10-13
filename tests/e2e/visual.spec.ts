@@ -15,30 +15,34 @@ import { skipIfSignedOut } from './support/session';
  * signal (fonts/anti-aliasing differ across environments), not an auto-filed defect. A generous
  * `maxDiffPixelRatio` + disabled animations keep it from flapping on trivial rendering noise.
  */
-test.describe('KPost visual regression — every screen', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.VISUAL_REGRESSION !== 'true',
-    'visual regression is opt-in: run `npm run ui:visual:update` to baseline, then `npm run ui:visual`',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost visual regression — every screen',
+  { tag: ['@ui', '@platform', '@regression'] },
+  () => {
+    test.skip(
+      process.env.VISUAL_REGRESSION !== 'true',
+      'visual regression is opt-in: run `npm run ui:visual:update` to baseline, then `npm run ui:visual`',
+    );
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real account (QA_KPOST_ID)',
+    );
 
-  test.beforeEach(async ({ page }) => {
-    await skipIfSignedOut(page);
-  });
-
-  for (const screen of AUTHENTICATED_SCREENS) {
-    test(`${screen.name} — matches its visual baseline @ui`, async ({ page }) => {
-      await page.goto(screen.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page.waitForTimeout(1500);
-      await expect(page).toHaveScreenshot(`${screen.name}.png`, {
-        fullPage: true,
-        animations: 'disabled',
-        // Tolerate trivial anti-aliasing / dynamic-content noise; a real layout break far exceeds this.
-        maxDiffPixelRatio: 0.08,
-      });
+    test.beforeEach(async ({ page }) => {
+      await skipIfSignedOut(page);
     });
-  }
-});
+
+    for (const screen of AUTHENTICATED_SCREENS) {
+      test(`${screen.name} — matches its visual baseline @ui`, async ({ page }) => {
+        await page.goto(screen.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await page.waitForTimeout(1500);
+        await expect(page).toHaveScreenshot(`${screen.name}.png`, {
+          fullPage: true,
+          animations: 'disabled',
+          // Tolerate trivial anti-aliasing / dynamic-content noise; a real layout break far exceeds this.
+          maxDiffPixelRatio: 0.08,
+        });
+      });
+    }
+  },
+);

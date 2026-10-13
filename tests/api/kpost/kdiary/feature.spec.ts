@@ -69,7 +69,7 @@ async function deleteAllQaEvents(endpoints: EndpointExecutor): Promise<void> {
   }
 }
 
-test.describe('KPost KDiary · feature flow', () => {
+test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@regression'] }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
     process.env.KDIARY_LIFECYCLE !== 'true',

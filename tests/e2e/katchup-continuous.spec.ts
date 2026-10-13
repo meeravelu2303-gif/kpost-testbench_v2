@@ -23,7 +23,7 @@ import { skipIfSignedOut } from './support/session';
  */
 test.describe(
   'KPost Katchup · continuous send (no refresh between messages)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@katchup', '@regression'] },
   () => {
     test.skip(
       process.env.KATCHUP_UI_LIFECYCLE !== 'true',

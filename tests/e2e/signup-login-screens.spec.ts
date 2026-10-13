@@ -42,152 +42,156 @@ async function assertNoFileableIssues(
   expect(problems, `${screen.name} UI issues — ${problems.join(' | ')}`).toEqual([]);
 }
 
-test.describe('KPost signed-out screens — deep UI sweep', { tag: '@ui' }, () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+test.describe(
+  'KPost signed-out screens — deep UI sweep',
+  { tag: ['@ui', '@auth', '@signup', '@regression'] },
+  () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-  test('Signup — account-type picker: controls, health, performance, layout @ui', async ({
-    page,
-    signupPage,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
+    test('Signup — account-type picker: controls, health, performance, layout @ui', async ({
+      page,
+      signupPage,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
 
-    await page.goto(signupPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await signupPage.expectLoaded();
-    const loadMs = Date.now() - started;
+      await page.goto(signupPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await signupPage.expectLoaded();
+      const loadMs = Date.now() - started;
 
-    const screen: ScreenDef = {
-      route: '/signup',
-      name: 'Signup — account type',
-      screen: 'signup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+      const screen: ScreenDef = {
+        route: '/signup',
+        name: 'Signup — account type',
+        screen: 'signup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Signup — Business category picker: controls, health, performance, layout @ui', async ({
-    page,
-    signupPage,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
+    test('Signup — Business category picker: controls, health, performance, layout @ui', async ({
+      page,
+      signupPage,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
 
-    await page.goto(signupPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await signupPage.expectLoaded();
-    await signupPage.chooseAccountType('Business');
-    await page
-      .locator('.category-contentBox-layout')
-      .first()
-      .waitFor({ state: 'visible', timeout: 20_000 });
-    const loadMs = Date.now() - started;
+      await page.goto(signupPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await signupPage.expectLoaded();
+      await signupPage.chooseAccountType('Business');
+      await page
+        .locator('.category-contentBox-layout')
+        .first()
+        .waitFor({ state: 'visible', timeout: 20_000 });
+      const loadMs = Date.now() - started;
 
-    const screen: ScreenDef = {
-      route: '/signup',
-      name: 'Signup — Business category',
-      screen: 'signup',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+      const screen: ScreenDef = {
+        route: '/signup',
+        name: 'Signup — Business category',
+        screen: 'signup',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Login — id entry step: controls, health, performance, layout @ui', async ({
-    page,
-    loginPage,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
+    test('Login — id entry step: controls, health, performance, layout @ui', async ({
+      page,
+      loginPage,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
 
-    await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await loginPage.expectLoaded();
-    const loadMs = Date.now() - started;
+      await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await loginPage.expectLoaded();
+      const loadMs = Date.now() - started;
 
-    const screen: ScreenDef = {
-      route: '/login',
-      name: 'Login — id entry',
-      screen: 'login',
-      ready: [],
-      controls: [
-        { selector: '#username', label: 'KPOST ID / Mobile input' },
-        { selector: 'button:has-text("Submit")', label: 'Submit button' },
-      ],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+      const screen: ScreenDef = {
+        route: '/login',
+        name: 'Login — id entry',
+        screen: 'login',
+        ready: [],
+        controls: [
+          { selector: '#username', label: 'KPOST ID / Mobile input' },
+          { selector: 'button:has-text("Submit")', label: 'Submit button' },
+        ],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Login — password step (known id, no submit): controls, health, performance, layout @ui', async ({
-    page,
-    loginPage,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
+    test('Login — password step (known id, no submit): controls, health, performance, layout @ui', async ({
+      page,
+      loginPage,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
 
-    await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await loginPage.expectLoaded();
-    await loginPage.enterLoginId(testData.kpostId);
-    await loginPage.passwordInput
-      .waitFor({ state: 'visible', timeout: 20_000 })
-      .catch(() => undefined);
-    const loadMs = Date.now() - started;
+      await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await loginPage.expectLoaded();
+      await loginPage.enterLoginId(testData.kpostId);
+      await loginPage.passwordInput
+        .waitFor({ state: 'visible', timeout: 20_000 })
+        .catch(() => undefined);
+      const loadMs = Date.now() - started;
 
-    // A genuinely unknown id never reaches step 2 — skip (not fail) rather than file a false
-    // "missing control" finding for a step this run never got to.
-    test.skip(
-      !(await loginPage.passwordInput.isVisible()),
-      'the fixed probe id was not accepted right now — step 2 was not shown',
-    );
+      // A genuinely unknown id never reaches step 2 — skip (not fail) rather than file a false
+      // "missing control" finding for a step this run never got to.
+      test.skip(
+        !(await loginPage.passwordInput.isVisible()),
+        'the fixed probe id was not accepted right now — step 2 was not shown',
+      );
 
-    const screen: ScreenDef = {
-      route: '/login',
-      name: 'Login — password entry',
-      screen: 'login',
-      ready: [],
-      controls: [
-        { selector: 'input[type="password"]', label: 'Password field' },
-        { selector: 'button:has-text("Login")', label: 'Login button' },
-      ],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+      const screen: ScreenDef = {
+        route: '/login',
+        name: 'Login — password entry',
+        screen: 'login',
+        ready: [],
+        controls: [
+          { selector: 'input[type="password"]', label: 'Password field' },
+          { selector: 'button:has-text("Login")', label: 'Login button' },
+        ],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Login — Forgot Password modal: controls, health, performance, layout @ui', async ({
-    page,
-    loginPage,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
+    test('Login — Forgot Password modal: controls, health, performance, layout @ui', async ({
+      page,
+      loginPage,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
 
-    await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await loginPage.expectLoaded();
-    // The "Forgot Password ?" link only renders on the PASSWORD step, not the initial id-entry
-    // step — a known id must advance the flow first (same precondition as the existing, working
-    // `login-session.spec.ts` test for this same link).
-    await loginPage.enterLoginId(testData.kpostId);
-    await loginPage.passwordInput
-      .waitFor({ state: 'visible', timeout: 20_000 })
-      .catch(() => undefined);
-    test.skip(
-      !(await loginPage.passwordInput.isVisible()),
-      'the fixed probe id was not accepted right now — the password step (and its Forgot Password link) was not shown',
-    );
-    await page
-      .getByText(/Forgot Password/i)
-      .first()
-      .click();
-    await page
-      .getByText(/^Forgot Password$/i)
-      .first()
-      .waitFor({ state: 'visible', timeout: 15_000 });
-    const loadMs = Date.now() - started;
+      await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await loginPage.expectLoaded();
+      // The "Forgot Password ?" link only renders on the PASSWORD step, not the initial id-entry
+      // step — a known id must advance the flow first (same precondition as the existing, working
+      // `login-session.spec.ts` test for this same link).
+      await loginPage.enterLoginId(testData.kpostId);
+      await loginPage.passwordInput
+        .waitFor({ state: 'visible', timeout: 20_000 })
+        .catch(() => undefined);
+      test.skip(
+        !(await loginPage.passwordInput.isVisible()),
+        'the fixed probe id was not accepted right now — the password step (and its Forgot Password link) was not shown',
+      );
+      await page
+        .getByText(/Forgot Password/i)
+        .first()
+        .click();
+      await page
+        .getByText(/^Forgot Password$/i)
+        .first()
+        .waitFor({ state: 'visible', timeout: 15_000 });
+      const loadMs = Date.now() - started;
 
-    const screen: ScreenDef = {
-      route: '/login',
-      name: 'Login — Forgot Password modal',
-      screen: 'login',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
-});
+      const screen: ScreenDef = {
+        route: '/login',
+        name: 'Login — Forgot Password modal',
+        screen: 'login',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
+  },
+);

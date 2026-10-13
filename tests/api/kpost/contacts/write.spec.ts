@@ -8,6 +8,6 @@ import { test } from '@fixtures';
  * throwaway account: blocking or deleting the shared counterparty would break every flow that
  * messages or calls it.
  */
-test.describe('KPost Contacts · writes', () => {
+test.describe('KPost Contacts · writes', { tag: ['@api', '@contacts', '@regression'] }, () => {
   describeEndpointCases({ tags: ['contacts-write'] }, { transform: forWriteSweep });
 });

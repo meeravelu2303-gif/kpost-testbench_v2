@@ -16,7 +16,7 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Settings · Delete Account panel (reason selection only — never confirms)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@settings', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

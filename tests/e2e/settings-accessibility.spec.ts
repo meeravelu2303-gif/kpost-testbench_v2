@@ -21,7 +21,7 @@ import { writeFileSync } from 'node:fs';
  */
 test.describe(
   'KPost Settings · dynamic-state accessibility (axe-core WCAG)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@settings', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

@@ -61,521 +61,533 @@ async function write(
   return exchange.status;
 }
 
-test.describe('KPost Profile · write lifecycle', () => {
-  test.describe.configure({ mode: 'default' });
-  test.skip(
-    process.env.PROFILE_LIFECYCLE !== 'true',
-    'writes real profile data; set PROFILE_LIFECYCLE=true to run',
-  );
-
-  test('update "about" is saved and reads back, then is restored @api @profile', async ({
-    endpoints,
-  }) => {
-    const before = (await fetchProfile(endpoints)).aboutYourself;
-    const marker = `QA about ${Date.now()}`;
-
-    const status = await write(
-      endpoints,
-      'profile-update-about',
-      { aboutYourself: marker },
-      'about',
-    );
-    expect(status, 'update about accepted').toBeLessThan(300);
-
-    // Read-back is best-effort: the profile read can lag the write (eventual consistency), so it is
-    // verified only when the field has surfaced — the 200 above is the write's own confirmation.
-    const after = (await fetchProfile(endpoints)).aboutYourself;
-    if (after !== undefined && after !== null && after !== '') {
-      expect.soft(after, 'the new about reads back').toBe(marker);
-    }
-
-    // Restore.
-    await write(
-      endpoints,
-      'profile-update-about',
-      { aboutYourself: typeof before === 'string' ? before : '' },
-      'about-restore',
-    );
-  });
-
-  test('update designation is saved and reads back, then is restored @api @profile', async ({
-    endpoints,
-  }) => {
-    const before = (await fetchProfile(endpoints)).designation;
-    const marker = `QA Designation ${Date.now() % 100000}`;
-
-    const status = await write(
-      endpoints,
-      'profile-update-designation',
-      { designation: marker },
-      'designation',
-    );
-    expect(status, 'update designation accepted').toBeLessThan(300);
-
-    // Best-effort read-back (see the about test for why).
-    const after = (await fetchProfile(endpoints)).designation;
-    if (after !== undefined && after !== null && after !== '') {
-      expect.soft(after, 'the new designation reads back').toBe(marker);
-    }
-
-    await write(
-      endpoints,
-      'profile-update-designation',
-      { designation: typeof before === 'string' ? before : '' },
-      'designation-restore',
-    );
-  });
-
-  test('basic, contact and privacy updates are accepted and actually persist @api @profile', async ({
-    endpoints,
-  }) => {
-    /*
-     * Live-verified 2026-09-26: previously these three only checked `status < 300` — the same
-     * "response looks fine, nothing confirmed changed" shape that hid a real bug in Kall's
-     * reschedule. Here the writes DO genuinely persist (confirmed field-by-field against
-     * `getUserProfileUsingKpostID`'s `userProfile`), so this is a stronger test, not a new finding.
-     * `gender`/`dateOfBirth` (also sent by `profile-update-basic`) are NOT independently verifiable:
-     * no registered read endpoint exposes them back, so `knownLanguages` (which the response DOES
-     * carry) is the field-level marker for that write instead.
-     */
-    const before = await fetchProfile(endpoints);
-    const marker = `QA-${Date.now()}`;
-
-    const basic = await write(
-      endpoints,
-      'profile-update-basic',
-      {
-        knownLanguages: ['English', 'Tamil'],
-        designation: 'QA Bench',
-        gender: 'Female',
-        otherEmail: testData.kpostId,
-        dateOfBirth: '1995-01-01',
-      },
-      'basic',
-    );
-    expect.soft(basic, 'update basic accepted').toBeLessThan(300);
-
-    const contact = await write(
-      endpoints,
-      'profile-update-contact',
-      {
-        country: 'INDIA',
-        pinCode: testData.pinCode,
-        city: marker,
-        areaName: 'QA',
-        addressLine1: marker,
-      },
-      'contact',
-    );
-    expect.soft(contact, 'update contact accepted').toBeLessThan(300);
-
-    const privacyValue = JSON.stringify({ about: 'false', experience: 'false', marker });
-    const privacy = await write(
-      endpoints,
-      'profile-update-privacy',
-      { privacyDetails: privacyValue },
-      'privacy',
-    );
-    expect.soft(privacy, 'update privacy accepted').toBeLessThan(300);
-
-    const after = await fetchProfile(endpoints);
-    expect
-      .soft(after.knownLanguages, 'the new knownLanguages actually persisted')
-      .toEqual(['English', 'Tamil']);
-    expect.soft(after.city, 'the new city actually persisted').toBe(marker);
-    expect
-      .soft(after.privacyDetails, 'the new privacyDetails actually persisted')
-      .toBe(privacyValue);
-
-    // Restore, best-effort.
-    await write(
-      endpoints,
-      'profile-update-basic',
-      {
-        knownLanguages: Array.isArray(before.knownLanguages) ? before.knownLanguages : ['English'],
-        designation: typeof before.designation === 'string' ? before.designation : '',
-        gender: 'Female',
-        otherEmail: testData.kpostId,
-        dateOfBirth: '1995-01-01',
-      },
-      'basic-restore',
-    );
-    await write(
-      endpoints,
-      'profile-update-contact',
-      {
-        country: 'INDIA',
-        pinCode: testData.pinCode,
-        city: typeof before.city === 'string' ? before.city : '',
-        areaName: typeof before.areaName === 'string' ? before.areaName : '',
-        addressLine1: 'QA',
-      },
-      'contact-restore',
-    );
-    await write(
-      endpoints,
-      'profile-update-privacy',
-      {
-        privacyDetails:
-          typeof before.privacyDetails === 'string'
-            ? before.privacyDetails
-            : JSON.stringify({ about: 'false', experience: 'false' }),
-      },
-      'privacy-restore',
-    );
-  });
-
-  test('an education record can be saved and then deleted @api @profile', async ({ endpoints }) => {
-    /*
-     * A unique marker per run: this account has accumulated several "QA Bench College" leftovers
-     * from before this fix (see below), so a fixed literal can no longer be told apart from those.
-     *
-     * `collegeDetails` on getUserProfileUsingKpostID's response is a JSON-encoded STRING, not an
-     * array — `collegeDetailsAsJson` is the already-parsed array. Reading `collegeDetails` here
-     * (as the test previously did) made `Array.isArray(...)` false, so `mine` was always undefined
-     * and `profile-delete-college` was never actually reached: dead code masquerading as a passing
-     * cleanup step, real 2026-09-24.
-     */
-    const marker = `QA Bench College ${Date.now()}`;
-    const saved = await write(
-      endpoints,
-      'profile-save-college',
-      {
-        collegeDetails: [
-          { collegeID: '', collegeName: marker, degree: 'QA', fromYear: '2010', toYear: '2014' },
-        ],
-      },
-      'save-college',
-    );
-    expect.soft(saved, 'save college accepted').toBeLessThan(300);
-
-    // Read it back to find its id, then delete it (cleanup).
-    const profile = await fetchProfile(endpoints);
-    const colleges = (profile.collegeDetailsAsJson ?? []) as Array<Record<string, unknown>>;
-    const mine = Array.isArray(colleges)
-      ? colleges.find((c) => c.collegeName === marker)
-      : undefined;
-    expect.soft(mine, 'the saved college record appears in the profile read-back').toBeTruthy();
-    const collegeID = mine?.collegeID;
-
-    if (typeof collegeID === 'string' && collegeID) {
-      const deleted = await write(
-        endpoints,
-        'profile-delete-college',
-        { collegeID },
-        'delete-college',
-      );
-      expect.soft(deleted, 'delete college accepted').toBeLessThan(300);
-    }
-  });
-
-  test('school/university records can each be saved and then deleted @api @profile', async ({
-    endpoints,
-  }) => {
-    // Mirrors the college test above for two of the four remaining education-record types, each
-    // with its own field/array names. A unique marker per run distinguishes this run's record from
-    // any leftover of a prior one when searching the read-back for it. experience and other-activity
-    // are deliberately NOT included here — see the two recorded-gap tests below for why.
-    const marker = Date.now();
-    const records: Array<{
-      saveId: string;
-      saveLabel: string;
-      saveBody: Record<string, unknown>;
-      listKeys: string[];
-      nameField: string;
-      nameValue: string;
-      idField: string;
-      deleteId?: string;
-      deleteLabel?: string;
-    }> = [
-      {
-        saveId: 'profile-save-school',
-        saveLabel: 'save-school',
-        saveBody: {
-          schoolDetails: [
-            { schoolID: '', schoolName: `QA Bench School ${marker}`, standard: '10' },
-          ],
-        },
-        // *DetailsAsJson is the already-parsed array; the plain *Details key is a JSON-encoded
-        // STRING (see the college test's comment above) — kept as a documented, deliberately-unused
-        // fallback so a future reader isn't tempted to "simplify" this back to the broken key.
-        listKeys: ['schoolDetailsAsJson', 'schoolDetails'],
-        nameField: 'schoolName',
-        nameValue: `QA Bench School ${marker}`,
-        idField: 'schoolID',
-        deleteId: 'profile-delete-school',
-        deleteLabel: 'delete-school',
-      },
-      {
-        saveId: 'profile-save-university',
-        saveLabel: 'save-university',
-        saveBody: {
-          universityDetails: [
-            {
-              universityID: '',
-              universityName: `QA Bench University ${marker}`,
-              degree: 'Masters',
-            },
-          ],
-        },
-        listKeys: ['universityDetailsAsJson', 'universityDetails'],
-        nameField: 'universityName',
-        nameValue: `QA Bench University ${marker}`,
-        idField: 'universityID',
-        deleteId: 'profile-delete-university',
-        deleteLabel: 'delete-university',
-      },
-    ];
-
-    for (const rec of records) {
-      const saved = await write(endpoints, rec.saveId, rec.saveBody, rec.saveLabel);
-      expect.soft(saved, `${rec.saveLabel} accepted`).toBeLessThan(300);
-
-      const profile = await fetchProfile(endpoints);
-      let list: Array<Record<string, unknown>> = [];
-      for (const key of rec.listKeys) {
-        const candidate = profile[key];
-        if (Array.isArray(candidate)) {
-          list = candidate as Array<Record<string, unknown>>;
-          break;
-        }
-      }
-      const mine = list.find((entry) => entry[rec.nameField] === rec.nameValue);
-      expect.soft(mine, `${rec.saveLabel} appears in the profile read-back`).toBeTruthy();
-
-      const recordId = mine?.[rec.idField];
-      if (typeof recordId === 'string' && recordId && rec.deleteId && rec.deleteLabel) {
-        const deleted = await write(
-          endpoints,
-          rec.deleteId,
-          { [rec.idField]: recordId },
-          rec.deleteLabel,
-        );
-        expect.soft(deleted, `${rec.deleteLabel} accepted`).toBeLessThan(300);
-      }
-    }
-  });
-
-  test('experience and other-activity records can each be saved and then deleted @api @profile', async ({
-    endpoints,
-  }) => {
-    /*
-     * Both were previously recorded gaps:
-     *  - experience: `companyName` matches the qa-identifier-guard's resource-identifier pattern and
-     *    is a hard-required IDENTITY_FIELD, so a schema default could not stand in for it on live.
-     *    `QA_COMPANY_NAME` is now configured (`.env`, "Nebius Solutions"), which resolves that.
-     *  - other-activity: there was no delete endpoint to clean up with — `profile-delete-other-activity`
-     *    was added this session (`defineUndocumentedProfileEndpoint`, confirmed live), closing it.
-     * Mirrors the school/university test above: a unique marker per run, saved → read back → deleted.
-     */
+test.describe(
+  'KPost Profile · write lifecycle',
+  { tag: ['@api', '@profile', '@regression'] },
+  () => {
+    test.describe.configure({ mode: 'default' });
     test.skip(
-      !process.env.QA_COMPANY_NAME,
-      'set QA_COMPANY_NAME to a real company name to unblock this',
+      process.env.PROFILE_LIFECYCLE !== 'true',
+      'writes real profile data; set PROFILE_LIFECYCLE=true to run',
     );
 
-    const marker = Date.now();
-    const records: Array<{
-      saveId: string;
-      saveLabel: string;
-      saveBody: Record<string, unknown>;
-      listKeys: string[];
-      nameField: string;
-      nameValue: string;
-      idField: string;
-      deleteId: string;
-      deleteLabel: string;
-    }> = [
-      {
-        saveId: 'profile-save-experience',
-        saveLabel: 'save-experience',
-        saveBody: {
-          experienceDetails: [
-            {
-              experienceID: '',
-              companyName: testData.companyName,
-              designation: `QA Bench ${marker}`,
-              fromYear: '2020',
-            },
-          ],
-        },
-        listKeys: ['experienceDetailsAsJson', 'experienceDetails'],
-        nameField: 'designation',
-        nameValue: `QA Bench ${marker}`,
-        idField: 'experienceID',
-        deleteId: 'profile-delete-experience',
-        deleteLabel: 'delete-experience',
-      },
-      {
-        saveId: 'profile-save-other-activity',
-        saveLabel: 'save-other-activity',
-        saveBody: {
-          otherActivities: [
-            { activityID: '', title: `QA Bench ${marker}`, achievements: 'QA bench activity' },
-          ],
-        },
-        listKeys: ['otherActivitiesAsJson', 'otherActivities'],
-        nameField: 'title',
-        nameValue: `QA Bench ${marker}`,
-        idField: 'activityID',
-        deleteId: 'profile-delete-other-activity',
-        deleteLabel: 'delete-other-activity',
-      },
-    ];
+    test('update "about" is saved and reads back, then is restored @api @profile', async ({
+      endpoints,
+    }) => {
+      const before = (await fetchProfile(endpoints)).aboutYourself;
+      const marker = `QA about ${Date.now()}`;
 
-    for (const rec of records) {
-      const saved = await write(endpoints, rec.saveId, rec.saveBody, rec.saveLabel);
-      expect.soft(saved, `${rec.saveLabel} accepted`).toBeLessThan(300);
+      const status = await write(
+        endpoints,
+        'profile-update-about',
+        { aboutYourself: marker },
+        'about',
+      );
+      expect(status, 'update about accepted').toBeLessThan(300);
 
-      const profile = await fetchProfile(endpoints);
-      let list: Array<Record<string, unknown>> = [];
-      for (const key of rec.listKeys) {
-        const candidate = profile[key];
-        if (Array.isArray(candidate)) {
-          list = candidate as Array<Record<string, unknown>>;
-          break;
-        }
+      // Read-back is best-effort: the profile read can lag the write (eventual consistency), so it is
+      // verified only when the field has surfaced — the 200 above is the write's own confirmation.
+      const after = (await fetchProfile(endpoints)).aboutYourself;
+      if (after !== undefined && after !== null && after !== '') {
+        expect.soft(after, 'the new about reads back').toBe(marker);
       }
-      const mine = list.find((entry) => entry[rec.nameField] === rec.nameValue);
-      expect.soft(mine, `${rec.saveLabel} appears in the profile read-back`).toBeTruthy();
 
-      const recordId = mine?.[rec.idField];
-      if (typeof recordId === 'string' && recordId) {
+      // Restore.
+      await write(
+        endpoints,
+        'profile-update-about',
+        { aboutYourself: typeof before === 'string' ? before : '' },
+        'about-restore',
+      );
+    });
+
+    test('update designation is saved and reads back, then is restored @api @profile', async ({
+      endpoints,
+    }) => {
+      const before = (await fetchProfile(endpoints)).designation;
+      const marker = `QA Designation ${Date.now() % 100000}`;
+
+      const status = await write(
+        endpoints,
+        'profile-update-designation',
+        { designation: marker },
+        'designation',
+      );
+      expect(status, 'update designation accepted').toBeLessThan(300);
+
+      // Best-effort read-back (see the about test for why).
+      const after = (await fetchProfile(endpoints)).designation;
+      if (after !== undefined && after !== null && after !== '') {
+        expect.soft(after, 'the new designation reads back').toBe(marker);
+      }
+
+      await write(
+        endpoints,
+        'profile-update-designation',
+        { designation: typeof before === 'string' ? before : '' },
+        'designation-restore',
+      );
+    });
+
+    test('basic, contact and privacy updates are accepted and actually persist @api @profile', async ({
+      endpoints,
+    }) => {
+      /*
+       * Live-verified 2026-09-26: previously these three only checked `status < 300` — the same
+       * "response looks fine, nothing confirmed changed" shape that hid a real bug in Kall's
+       * reschedule. Here the writes DO genuinely persist (confirmed field-by-field against
+       * `getUserProfileUsingKpostID`'s `userProfile`), so this is a stronger test, not a new finding.
+       * `gender`/`dateOfBirth` (also sent by `profile-update-basic`) are NOT independently verifiable:
+       * no registered read endpoint exposes them back, so `knownLanguages` (which the response DOES
+       * carry) is the field-level marker for that write instead.
+       */
+      const before = await fetchProfile(endpoints);
+      const marker = `QA-${Date.now()}`;
+
+      const basic = await write(
+        endpoints,
+        'profile-update-basic',
+        {
+          knownLanguages: ['English', 'Tamil'],
+          designation: 'QA Bench',
+          gender: 'Female',
+          otherEmail: testData.kpostId,
+          dateOfBirth: '1995-01-01',
+        },
+        'basic',
+      );
+      expect.soft(basic, 'update basic accepted').toBeLessThan(300);
+
+      const contact = await write(
+        endpoints,
+        'profile-update-contact',
+        {
+          country: 'INDIA',
+          pinCode: testData.pinCode,
+          city: marker,
+          areaName: 'QA',
+          addressLine1: marker,
+        },
+        'contact',
+      );
+      expect.soft(contact, 'update contact accepted').toBeLessThan(300);
+
+      const privacyValue = JSON.stringify({ about: 'false', experience: 'false', marker });
+      const privacy = await write(
+        endpoints,
+        'profile-update-privacy',
+        { privacyDetails: privacyValue },
+        'privacy',
+      );
+      expect.soft(privacy, 'update privacy accepted').toBeLessThan(300);
+
+      const after = await fetchProfile(endpoints);
+      expect
+        .soft(after.knownLanguages, 'the new knownLanguages actually persisted')
+        .toEqual(['English', 'Tamil']);
+      expect.soft(after.city, 'the new city actually persisted').toBe(marker);
+      expect
+        .soft(after.privacyDetails, 'the new privacyDetails actually persisted')
+        .toBe(privacyValue);
+
+      // Restore, best-effort.
+      await write(
+        endpoints,
+        'profile-update-basic',
+        {
+          knownLanguages: Array.isArray(before.knownLanguages)
+            ? before.knownLanguages
+            : ['English'],
+          designation: typeof before.designation === 'string' ? before.designation : '',
+          gender: 'Female',
+          otherEmail: testData.kpostId,
+          dateOfBirth: '1995-01-01',
+        },
+        'basic-restore',
+      );
+      await write(
+        endpoints,
+        'profile-update-contact',
+        {
+          country: 'INDIA',
+          pinCode: testData.pinCode,
+          city: typeof before.city === 'string' ? before.city : '',
+          areaName: typeof before.areaName === 'string' ? before.areaName : '',
+          addressLine1: 'QA',
+        },
+        'contact-restore',
+      );
+      await write(
+        endpoints,
+        'profile-update-privacy',
+        {
+          privacyDetails:
+            typeof before.privacyDetails === 'string'
+              ? before.privacyDetails
+              : JSON.stringify({ about: 'false', experience: 'false' }),
+        },
+        'privacy-restore',
+      );
+    });
+
+    test('an education record can be saved and then deleted @api @profile', async ({
+      endpoints,
+    }) => {
+      /*
+       * A unique marker per run: this account has accumulated several "QA Bench College" leftovers
+       * from before this fix (see below), so a fixed literal can no longer be told apart from those.
+       *
+       * `collegeDetails` on getUserProfileUsingKpostID's response is a JSON-encoded STRING, not an
+       * array — `collegeDetailsAsJson` is the already-parsed array. Reading `collegeDetails` here
+       * (as the test previously did) made `Array.isArray(...)` false, so `mine` was always undefined
+       * and `profile-delete-college` was never actually reached: dead code masquerading as a passing
+       * cleanup step, real 2026-09-24.
+       */
+      const marker = `QA Bench College ${Date.now()}`;
+      const saved = await write(
+        endpoints,
+        'profile-save-college',
+        {
+          collegeDetails: [
+            { collegeID: '', collegeName: marker, degree: 'QA', fromYear: '2010', toYear: '2014' },
+          ],
+        },
+        'save-college',
+      );
+      expect.soft(saved, 'save college accepted').toBeLessThan(300);
+
+      // Read it back to find its id, then delete it (cleanup).
+      const profile = await fetchProfile(endpoints);
+      const colleges = (profile.collegeDetailsAsJson ?? []) as Array<Record<string, unknown>>;
+      const mine = Array.isArray(colleges)
+        ? colleges.find((c) => c.collegeName === marker)
+        : undefined;
+      expect.soft(mine, 'the saved college record appears in the profile read-back').toBeTruthy();
+      const collegeID = mine?.collegeID;
+
+      if (typeof collegeID === 'string' && collegeID) {
         const deleted = await write(
           endpoints,
-          rec.deleteId,
-          { [rec.idField]: recordId },
-          rec.deleteLabel,
+          'profile-delete-college',
+          { collegeID },
+          'delete-college',
         );
-        expect.soft(deleted, `${rec.deleteLabel} accepted`).toBeLessThan(300);
+        expect.soft(deleted, 'delete college accepted').toBeLessThan(300);
       }
-    }
-  });
+    });
 
-  test('convertBase64ToImage accepts a data URI @api @profile', async ({ endpoints }) => {
-    const status = await write(
+    test('school/university records can each be saved and then deleted @api @profile', async ({
       endpoints,
-      'profile-convert-base64',
-      {
-        base64String:
-          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AL+6ZlWAAAAAElFTkSuQmCC',
-        fileName: 'qa-bench.png',
-      },
-      'convert-base64',
-    );
-    expect.soft(status, 'convert base64 accepted').toBeLessThan(400);
-  });
+    }) => {
+      // Mirrors the college test above for two of the four remaining education-record types, each
+      // with its own field/array names. A unique marker per run distinguishes this run's record from
+      // any leftover of a prior one when searching the read-back for it. experience and other-activity
+      // are deliberately NOT included here — see the two recorded-gap tests below for why.
+      const marker = Date.now();
+      const records: Array<{
+        saveId: string;
+        saveLabel: string;
+        saveBody: Record<string, unknown>;
+        listKeys: string[];
+        nameField: string;
+        nameValue: string;
+        idField: string;
+        deleteId?: string;
+        deleteLabel?: string;
+      }> = [
+        {
+          saveId: 'profile-save-school',
+          saveLabel: 'save-school',
+          saveBody: {
+            schoolDetails: [
+              { schoolID: '', schoolName: `QA Bench School ${marker}`, standard: '10' },
+            ],
+          },
+          // *DetailsAsJson is the already-parsed array; the plain *Details key is a JSON-encoded
+          // STRING (see the college test's comment above) — kept as a documented, deliberately-unused
+          // fallback so a future reader isn't tempted to "simplify" this back to the broken key.
+          listKeys: ['schoolDetailsAsJson', 'schoolDetails'],
+          nameField: 'schoolName',
+          nameValue: `QA Bench School ${marker}`,
+          idField: 'schoolID',
+          deleteId: 'profile-delete-school',
+          deleteLabel: 'delete-school',
+        },
+        {
+          saveId: 'profile-save-university',
+          saveLabel: 'save-university',
+          saveBody: {
+            universityDetails: [
+              {
+                universityID: '',
+                universityName: `QA Bench University ${marker}`,
+                degree: 'Masters',
+              },
+            ],
+          },
+          listKeys: ['universityDetailsAsJson', 'universityDetails'],
+          nameField: 'universityName',
+          nameValue: `QA Bench University ${marker}`,
+          idField: 'universityID',
+          deleteId: 'profile-delete-university',
+          deleteLabel: 'delete-university',
+        },
+      ];
 
-  test('every image write (upload / cover / signature / attachments) then remove, on our own profile @api @profile', async ({
-    endpoints,
-  }) => {
-    /*
-     * Live-verified 2026-09-26: previously this whole test only checked `status < 600` for every
-     * write — accepting a 4xx/5xx as "fine" — which is exactly how two real, previously-hidden
-     * defects went unnoticed:
-     *   - `profile-update-image` rejects a PNG with 400 "Invalid File Format" — this endpoint is
-     *     JPEG-only by design (owner-confirmed 2026-10-12), even though the sibling uploads accept the
-     *     same PNG bytes. That product inconsistency is NOT a defect (#626 closed FIXED). Its own
-     *     definition (image.api.ts) uses a JPEG so the lifecycle exercises the real flow; the PNG
-     *     check below now only guards against a 5xx CRASH, which would be the one genuine defect.
-     *   - `profile-upload-attachments` 400d "Required part 'files' is missing" every time — the
-     *     bench was sending the wrong multipart field name (`file` instead of `files`). Fixed in
-     *     image.api.ts; this was a bench bug, not a product defect.
-     * `profile-update-signature` still 500s regardless of format — already tracked as #559
-     * [KP-7D1F6B], CRITICAL; not re-filed here.
-     */
-    // CORRECTED 2026-10-05: `endpoints.sendTo(id, {}, …)` sends `{}` as the LITERAL request body —
-    // it does not fall back to the endpoint definition's own default `request()` factory the way
-    // `endpoints.call()` does (see feedback_sendto_literal_body_bug_class in this engagement's own
-    // notes; this is the same bug class found twice before, in signup and Katchup). `raw()` below
-    // relied on that fallback for the JPEG check, so it was silently sending an EMPTY multipart body
-    // and getting a 400 "Request must be multipart/form-data with the required file parts" — a bench
-    // fixture bug, not a real regression on JPEG uploads. Fixed by building the JPEG body explicitly,
-    // the same way the PNG check just below it already does.
-    const raw = async (id: string, label: string): Promise<number> => {
-      const ex = await endpoints.sendTo(
-        id,
-        {},
-        { label: `profile:${label}`, auth: { principal: A }, allowLiveWrite: true },
+      for (const rec of records) {
+        const saved = await write(endpoints, rec.saveId, rec.saveBody, rec.saveLabel);
+        expect.soft(saved, `${rec.saveLabel} accepted`).toBeLessThan(300);
+
+        const profile = await fetchProfile(endpoints);
+        let list: Array<Record<string, unknown>> = [];
+        for (const key of rec.listKeys) {
+          const candidate = profile[key];
+          if (Array.isArray(candidate)) {
+            list = candidate as Array<Record<string, unknown>>;
+            break;
+          }
+        }
+        const mine = list.find((entry) => entry[rec.nameField] === rec.nameValue);
+        expect.soft(mine, `${rec.saveLabel} appears in the profile read-back`).toBeTruthy();
+
+        const recordId = mine?.[rec.idField];
+        if (typeof recordId === 'string' && recordId && rec.deleteId && rec.deleteLabel) {
+          const deleted = await write(
+            endpoints,
+            rec.deleteId,
+            { [rec.idField]: recordId },
+            rec.deleteLabel,
+          );
+          expect.soft(deleted, `${rec.deleteLabel} accepted`).toBeLessThan(300);
+        }
+      }
+    });
+
+    test('experience and other-activity records can each be saved and then deleted @api @profile', async ({
+      endpoints,
+    }) => {
+      /*
+       * Both were previously recorded gaps:
+       *  - experience: `companyName` matches the qa-identifier-guard's resource-identifier pattern and
+       *    is a hard-required IDENTITY_FIELD, so a schema default could not stand in for it on live.
+       *    `QA_COMPANY_NAME` is now configured (`.env`, "Nebius Solutions"), which resolves that.
+       *  - other-activity: there was no delete endpoint to clean up with — `profile-delete-other-activity`
+       *    was added this session (`defineUndocumentedProfileEndpoint`, confirmed live), closing it.
+       * Mirrors the school/university test above: a unique marker per run, saved → read back → deleted.
+       */
+      test.skip(
+        !process.env.QA_COMPANY_NAME,
+        'set QA_COMPANY_NAME to a real company name to unblock this',
       );
-      return ex.status;
-    };
 
-    // profile-update-image: confirm the JPEG fixture works, AND that a PNG is rejected CLEANLY
-    // (4xx, not a 5xx crash) — the endpoint is JPEG-only by design, so the rejection itself is fine.
-    const jpegUploadEx = await endpoints.sendTo(
-      'profile-update-image',
-      {
-        multipart: {
-          file: {
-            name: 'qa-bench.jpg',
-            mimeType: 'image/jpeg',
-            buffer: Buffer.from(JPEG_1X1, 'base64'),
+      const marker = Date.now();
+      const records: Array<{
+        saveId: string;
+        saveLabel: string;
+        saveBody: Record<string, unknown>;
+        listKeys: string[];
+        nameField: string;
+        nameValue: string;
+        idField: string;
+        deleteId: string;
+        deleteLabel: string;
+      }> = [
+        {
+          saveId: 'profile-save-experience',
+          saveLabel: 'save-experience',
+          saveBody: {
+            experienceDetails: [
+              {
+                experienceID: '',
+                companyName: testData.companyName,
+                designation: `QA Bench ${marker}`,
+                fromYear: '2020',
+              },
+            ],
           },
-          text: JSON.stringify({ kpostID: testData.kpostId }),
+          listKeys: ['experienceDetailsAsJson', 'experienceDetails'],
+          nameField: 'designation',
+          nameValue: `QA Bench ${marker}`,
+          idField: 'experienceID',
+          deleteId: 'profile-delete-experience',
+          deleteLabel: 'delete-experience',
         },
-      },
-      { label: 'profile:upload-profile-image-jpeg', auth: { principal: A }, allowLiveWrite: true },
-    );
-    expect.soft(jpegUploadEx.status, 'updateProfileImage accepts a JPEG').toBeLessThan(300);
-
-    const pngUpload = await endpoints.sendTo(
-      'profile-update-image',
-      {
-        multipart: {
-          file: {
-            name: 'qa-bench.png',
-            mimeType: 'image/png',
-            buffer: Buffer.from(
-              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AL+6ZlWAAAAAElFTkSuQmCC',
-              'base64',
-            ),
+        {
+          saveId: 'profile-save-other-activity',
+          saveLabel: 'save-other-activity',
+          saveBody: {
+            otherActivities: [
+              { activityID: '', title: `QA Bench ${marker}`, achievements: 'QA bench activity' },
+            ],
           },
-          text: JSON.stringify({ kpostID: testData.kpostId }),
+          listKeys: ['otherActivitiesAsJson', 'otherActivities'],
+          nameField: 'title',
+          nameValue: `QA Bench ${marker}`,
+          idField: 'activityID',
+          deleteId: 'profile-delete-other-activity',
+          deleteLabel: 'delete-other-activity',
         },
-      },
-      { label: 'profile:upload-profile-image-png', auth: { principal: A }, allowLiveWrite: true },
-    );
-    // updateProfileImage is JPEG-only BY DESIGN: a PNG is correctly rejected with 400 "File size
-    // should be less than 500 KB or Invalid File Format" (owner-confirmed 2026-10-12; #626 closed
-    // FIXED as not-a-defect). The sibling uploads happen to accept PNG, but this endpoint does not —
-    // that is a product choice, not a bug. The ONLY real defect here would be a 5xx CRASH on a PNG
-    // instead of a clean client-error rejection, so that is what we assert.
-    if (pngUpload.status >= 500) {
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'profile-update-image',
-        ruleId: 'profile-update-image-png-5xx-crash',
-        rule: 'updateProfileImage must reject a PNG with a clean 4xx (it is JPEG-only), never crash with a 5xx.',
-        expected: 'a 4xx rejection (e.g. 400 "Invalid File Format"), never a 5xx',
-        actual: `status=${pngUpload.status}, body=${pngUpload.bodyText}`,
-        request: { multipart: { file: 'qa-bench.png (image/png)' } },
-      });
-    }
-    expect
-      .soft(
-        pngUpload.status,
-        'updateProfileImage rejects a PNG cleanly (JPEG-only: a 4xx, never a 5xx crash)',
-      )
-      .toBeLessThan(500);
+      ];
 
-    for (const [id, label] of [
-      ['profile-upload-cover', 'upload-cover'],
-      ['profile-update-signature', 'upload-signature'],
-      ['profile-upload-attachments', 'upload-attachments'],
-      ['profile-upload-image-s3', 'upload-s3'],
-      ['profile-remove-image', 'remove-image'],
-      ['profile-remove-cover', 'remove-cover'],
-    ] as Array<[string, string]>) {
-      const status = await raw(id, label);
-      expect.soft(status, `${label} returns a status`).toBeLessThan(600);
-    }
+      for (const rec of records) {
+        const saved = await write(endpoints, rec.saveId, rec.saveBody, rec.saveLabel);
+        expect.soft(saved, `${rec.saveLabel} accepted`).toBeLessThan(300);
 
-    // share-user-details — shares our own profile by our own kpostID.
-    const shared = await write(
+        const profile = await fetchProfile(endpoints);
+        let list: Array<Record<string, unknown>> = [];
+        for (const key of rec.listKeys) {
+          const candidate = profile[key];
+          if (Array.isArray(candidate)) {
+            list = candidate as Array<Record<string, unknown>>;
+            break;
+          }
+        }
+        const mine = list.find((entry) => entry[rec.nameField] === rec.nameValue);
+        expect.soft(mine, `${rec.saveLabel} appears in the profile read-back`).toBeTruthy();
+
+        const recordId = mine?.[rec.idField];
+        if (typeof recordId === 'string' && recordId) {
+          const deleted = await write(
+            endpoints,
+            rec.deleteId,
+            { [rec.idField]: recordId },
+            rec.deleteLabel,
+          );
+          expect.soft(deleted, `${rec.deleteLabel} accepted`).toBeLessThan(300);
+        }
+      }
+    });
+
+    test('convertBase64ToImage accepts a data URI @api @profile', async ({ endpoints }) => {
+      const status = await write(
+        endpoints,
+        'profile-convert-base64',
+        {
+          base64String:
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AL+6ZlWAAAAAElFTkSuQmCC',
+          fileName: 'qa-bench.png',
+        },
+        'convert-base64',
+      );
+      expect.soft(status, 'convert base64 accepted').toBeLessThan(400);
+    });
+
+    test('every image write (upload / cover / signature / attachments) then remove, on our own profile @api @profile', async ({
       endpoints,
-      'profile-share-user-details',
-      { kpostID: testData.kpostId },
-      'share',
-    );
-    expect.soft(shared, 'shareUserDetails returns a status').toBeLessThan(600);
-  });
-});
+    }) => {
+      /*
+       * Live-verified 2026-09-26: previously this whole test only checked `status < 600` for every
+       * write — accepting a 4xx/5xx as "fine" — which is exactly how two real, previously-hidden
+       * defects went unnoticed:
+       *   - `profile-update-image` rejects a PNG with 400 "Invalid File Format" — this endpoint is
+       *     JPEG-only by design (owner-confirmed 2026-10-12), even though the sibling uploads accept the
+       *     same PNG bytes. That product inconsistency is NOT a defect (#626 closed FIXED). Its own
+       *     definition (image.api.ts) uses a JPEG so the lifecycle exercises the real flow; the PNG
+       *     check below now only guards against a 5xx CRASH, which would be the one genuine defect.
+       *   - `profile-upload-attachments` 400d "Required part 'files' is missing" every time — the
+       *     bench was sending the wrong multipart field name (`file` instead of `files`). Fixed in
+       *     image.api.ts; this was a bench bug, not a product defect.
+       * `profile-update-signature` still 500s regardless of format — already tracked as #559
+       * [KP-7D1F6B], CRITICAL; not re-filed here.
+       */
+      // CORRECTED 2026-10-05: `endpoints.sendTo(id, {}, …)` sends `{}` as the LITERAL request body —
+      // it does not fall back to the endpoint definition's own default `request()` factory the way
+      // `endpoints.call()` does (see feedback_sendto_literal_body_bug_class in this engagement's own
+      // notes; this is the same bug class found twice before, in signup and Katchup). `raw()` below
+      // relied on that fallback for the JPEG check, so it was silently sending an EMPTY multipart body
+      // and getting a 400 "Request must be multipart/form-data with the required file parts" — a bench
+      // fixture bug, not a real regression on JPEG uploads. Fixed by building the JPEG body explicitly,
+      // the same way the PNG check just below it already does.
+      const raw = async (id: string, label: string): Promise<number> => {
+        const ex = await endpoints.sendTo(
+          id,
+          {},
+          { label: `profile:${label}`, auth: { principal: A }, allowLiveWrite: true },
+        );
+        return ex.status;
+      };
+
+      // profile-update-image: confirm the JPEG fixture works, AND that a PNG is rejected CLEANLY
+      // (4xx, not a 5xx crash) — the endpoint is JPEG-only by design, so the rejection itself is fine.
+      const jpegUploadEx = await endpoints.sendTo(
+        'profile-update-image',
+        {
+          multipart: {
+            file: {
+              name: 'qa-bench.jpg',
+              mimeType: 'image/jpeg',
+              buffer: Buffer.from(JPEG_1X1, 'base64'),
+            },
+            text: JSON.stringify({ kpostID: testData.kpostId }),
+          },
+        },
+        {
+          label: 'profile:upload-profile-image-jpeg',
+          auth: { principal: A },
+          allowLiveWrite: true,
+        },
+      );
+      expect.soft(jpegUploadEx.status, 'updateProfileImage accepts a JPEG').toBeLessThan(300);
+
+      const pngUpload = await endpoints.sendTo(
+        'profile-update-image',
+        {
+          multipart: {
+            file: {
+              name: 'qa-bench.png',
+              mimeType: 'image/png',
+              buffer: Buffer.from(
+                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AL+6ZlWAAAAAElFTkSuQmCC',
+                'base64',
+              ),
+            },
+            text: JSON.stringify({ kpostID: testData.kpostId }),
+          },
+        },
+        { label: 'profile:upload-profile-image-png', auth: { principal: A }, allowLiveWrite: true },
+      );
+      // updateProfileImage is JPEG-only BY DESIGN: a PNG is correctly rejected with 400 "File size
+      // should be less than 500 KB or Invalid File Format" (owner-confirmed 2026-10-12; #626 closed
+      // FIXED as not-a-defect). The sibling uploads happen to accept PNG, but this endpoint does not —
+      // that is a product choice, not a bug. The ONLY real defect here would be a 5xx CRASH on a PNG
+      // instead of a clean client-error rejection, so that is what we assert.
+      if (pngUpload.status >= 500) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'profile-update-image',
+          ruleId: 'profile-update-image-png-5xx-crash',
+          rule: 'updateProfileImage must reject a PNG with a clean 4xx (it is JPEG-only), never crash with a 5xx.',
+          expected: 'a 4xx rejection (e.g. 400 "Invalid File Format"), never a 5xx',
+          actual: `status=${pngUpload.status}, body=${pngUpload.bodyText}`,
+          request: { multipart: { file: 'qa-bench.png (image/png)' } },
+        });
+      }
+      expect
+        .soft(
+          pngUpload.status,
+          'updateProfileImage rejects a PNG cleanly (JPEG-only: a 4xx, never a 5xx crash)',
+        )
+        .toBeLessThan(500);
+
+      for (const [id, label] of [
+        ['profile-upload-cover', 'upload-cover'],
+        ['profile-update-signature', 'upload-signature'],
+        ['profile-upload-attachments', 'upload-attachments'],
+        ['profile-upload-image-s3', 'upload-s3'],
+        ['profile-remove-image', 'remove-image'],
+        ['profile-remove-cover', 'remove-cover'],
+      ] as Array<[string, string]>) {
+        const status = await raw(id, label);
+        expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+      }
+
+      // share-user-details — shares our own profile by our own kpostID.
+      const shared = await write(
+        endpoints,
+        'profile-share-user-details',
+        { kpostID: testData.kpostId },
+        'share',
+      );
+      expect.soft(shared, 'shareUserDetails returns a status').toBeLessThan(600);
+    });
+  },
+);

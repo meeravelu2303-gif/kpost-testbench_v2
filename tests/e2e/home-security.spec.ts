@@ -12,57 +12,61 @@ import { settleFrames, settleNetwork } from './support/settle';
  * appear in the DOM" check produces false positives on any field that legitimately echoes back what
  * was typed).
  */
-test.describe('KPost Home · search box security fuzzing', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost Home · search box security fuzzing',
+  { tag: ['@ui', '@home', '@regression'] },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  const PAYLOADS: Array<{ name: string; value: string }> = [
-    { name: 'script tag', value: '<script>alert(1)</script>' },
-    { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
-    { name: 'SQL-style OR-true', value: "' OR '1'='1" },
-  ];
+    const PAYLOADS: Array<{ name: string; value: string }> = [
+      { name: 'script tag', value: '<script>alert(1)</script>' },
+      { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
+      { name: 'SQL-style OR-true', value: "' OR '1'='1" },
+    ];
 
-  for (const payload of PAYLOADS) {
-    test(`the Recents search box survives a ${payload.name} payload without crashing or executing it @ui`, async ({
-      homePage,
-      page,
-    }) => {
-      const stop = watchUiHealth(page);
-      let dialogFired = false;
-      page.on('dialog', (dialog) => {
-        dialogFired = true;
-        void dialog.dismiss();
+    for (const payload of PAYLOADS) {
+      test(`the Recents search box survives a ${payload.name} payload without crashing or executing it @ui`, async ({
+        homePage,
+        page,
+      }) => {
+        const stop = watchUiHealth(page);
+        let dialogFired = false;
+        page.on('dialog', (dialog) => {
+          dialogFired = true;
+          void dialog.dismiss();
+        });
+
+        await homePage.goto();
+        await homePage.switchToRecentsTab();
+        await homePage.searchRecents(payload.value);
+        await settleFrames(page);
+
+        const health = stop();
+
+        test.info().annotations.push({
+          type: 'observed',
+          description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+        });
+
+        expect(
+          health.pageErrors,
+          `no uncaught JS error while filtering by: ${payload.value}`,
+        ).toEqual([]);
+        expect(
+          dialogFired,
+          `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
+        ).toBe(false);
       });
-
-      await homePage.goto();
-      await homePage.switchToRecentsTab();
-      await homePage.searchRecents(payload.value);
-      await settleFrames(page);
-
-      const health = stop();
-
-      test.info().annotations.push({
-        type: 'observed',
-        description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
-      });
-
-      expect(
-        health.pageErrors,
-        `no uncaught JS error while filtering by: ${payload.value}`,
-      ).toEqual([]);
-      expect(
-        dialogFired,
-        `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
-      ).toBe(false);
-    });
-  }
-});
+    }
+  },
+);
 
 test.describe(
   'KPost Home · Advanced Search "Enter Word" field security fuzzing',
-  { tag: '@ui' },
+  { tag: ['@ui', '@home', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

@@ -26,7 +26,7 @@ import { settleFrames } from './support/settle';
  * only for the crash check (a malformed id must not be what breaks the page) and SQLi proper belongs
  * at the API layer, not here.
  */
-test.describe('KPost login · security fuzzing', { tag: '@ui' }, () => {
+test.describe('KPost login · security fuzzing', { tag: ['@ui', '@auth', '@regression'] }, () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   const PAYLOADS: Array<{ name: string; value: string }> = [

@@ -30,57 +30,61 @@ async function isLoggedOut(page: Page): Promise<boolean> {
     .catch(() => false);
 }
 
-test.describe('KPost Chat · session safety @ui', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
-    'needs a real live account and a 2nd account to open a conversation with',
-  );
-
-  test('clicking a contact avatar in chat does not log the user out @ui', async ({ page }) => {
-    test.setTimeout(90_000);
-
-    await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-
-    // Open the conversation with the 2nd QA account, then its chat thread.
-    const conversation = page.locator(`[id="${testData.victimKpostId}"]`).first();
-    await expect(conversation, 'the 2nd QA account is in the conversation list').toBeVisible({
-      timeout: 20_000,
-    });
-    await conversation.click();
-    await page
-      .locator('.msg-arrow')
-      .first()
-      .click({ timeout: 10_000 })
-      .catch(() => undefined);
-
-    // Sanity: we are still logged in before the interaction under test.
-    expect(
-      await isLoggedOut(page),
-      'precondition: still signed in before clicking the avatar',
-    ).toBe(false);
-
-    // The contact's profile image/avatar in the chat header — the element that logged the user out
-    // during the codegen pass.
-    // `ContactBar` renders the header avatar through react-avatar (`.sb-avatar`, initials or img).
-    const avatar = page.locator('#ChatTop .sb-avatar, #ChatTop img, .chat-header img').first();
-    const found = await avatar.isVisible({ timeout: 8_000 }).catch(() => false);
-    // Skip (do NOT pass) if we cannot find an avatar to click — a green result must mean we actually
-    // clicked one and the session survived, never that there was nothing to click.
+test.describe(
+  'KPost Chat · session safety @ui',
+  { tag: ['@ui', '@katchup', '@regression'] },
+  () => {
     test.skip(
-      !found,
-      'no chat-header avatar rendered right now (header still loading) — nothing to click',
+      !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
+      'needs a real live account and a 2nd account to open a conversation with',
     );
 
-    await avatar.click({ timeout: 10_000 }).catch(() => undefined);
-    await page.waitForLoadState('load', { timeout: 8_000 }).catch(() => undefined);
+    test('clicking a contact avatar in chat does not log the user out @ui', async ({ page }) => {
+      test.setTimeout(90_000);
 
-    expect(
-      await isLoggedOut(page),
-      'clicking a contact avatar in chat must not end the session / log the user out',
-    ).toBe(false);
-  });
-});
+      await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
+
+      // Open the conversation with the 2nd QA account, then its chat thread.
+      const conversation = page.locator(`[id="${testData.victimKpostId}"]`).first();
+      await expect(conversation, 'the 2nd QA account is in the conversation list').toBeVisible({
+        timeout: 20_000,
+      });
+      await conversation.click();
+      await page
+        .locator('.msg-arrow')
+        .first()
+        .click({ timeout: 10_000 })
+        .catch(() => undefined);
+
+      // Sanity: we are still logged in before the interaction under test.
+      expect(
+        await isLoggedOut(page),
+        'precondition: still signed in before clicking the avatar',
+      ).toBe(false);
+
+      // The contact's profile image/avatar in the chat header — the element that logged the user out
+      // during the codegen pass.
+      // `ContactBar` renders the header avatar through react-avatar (`.sb-avatar`, initials or img).
+      const avatar = page.locator('#ChatTop .sb-avatar, #ChatTop img, .chat-header img').first();
+      const found = await avatar.isVisible({ timeout: 8_000 }).catch(() => false);
+      // Skip (do NOT pass) if we cannot find an avatar to click — a green result must mean we actually
+      // clicked one and the session survived, never that there was nothing to click.
+      test.skip(
+        !found,
+        'no chat-header avatar rendered right now (header still loading) — nothing to click',
+      );
+
+      await avatar.click({ timeout: 10_000 }).catch(() => undefined);
+      await page.waitForLoadState('load', { timeout: 8_000 }).catch(() => undefined);
+
+      expect(
+        await isLoggedOut(page),
+        'clicking a contact avatar in chat must not end the session / log the user out',
+      ).toBe(false);
+    });
+  },
+);

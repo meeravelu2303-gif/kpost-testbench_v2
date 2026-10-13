@@ -10,7 +10,7 @@ import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall'
  * the audio/video controls exist, never place the call). Scheduling a Kool Kall is a safe write, gated
  * behind `KALL_UI_LIFECYCLE=true` and self-cleaning.
  */
-test.describe('KPost Kall — read-only', { tag: '@ui' }, () => {
+test.describe('KPost Kall — read-only', { tag: ['@ui', '@kall', '@regression', '@sanity'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',
@@ -34,69 +34,73 @@ test.describe('KPost Kall — read-only', { tag: '@ui' }, () => {
   });
 });
 
-test.describe('KPost Kall · schedule a Kool Kall (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KALL_UI_LIFECYCLE !== 'true',
-    'creates a real scheduled call; set KALL_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account',
-  );
+test.describe(
+  'KPost Kall · schedule a Kool Kall (write)',
+  { tag: ['@ui', '@kall', '@regression'] },
+  () => {
+    test.skip(
+      process.env.KALL_UI_LIFECYCLE !== 'true',
+      'creates a real scheduled call; set KALL_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account',
+    );
 
-  /**
-   * The CreateKallModal is opened by the cursor-pointer `.create_font` "Create" control (the sibling
-   * `.create_button` div is a silent no-op), and its schedule fields are **native HTML inputs**
-   * (`type=date name=birthday`, two `type=time` From/To) — `fill()` with ISO values is reliable, no
-   * custom picker. This drives and verifies the whole schedule form green: modal → Meeting Title →
-   * future Date → From/To times → the participant picker OPENS (Invite Participants reveals the
-   * contacts). Submit stays disabled until a participant is added.
-   *
-   * NEEDS-CODEGEN — the final Submit: the participant is chosen from a **nested-scroll custom contact
-   * picker** (the rows are not a plain button/checkbox and sit in an off-viewport scroll container), so
-   * selecting one and enabling Submit needs one interactive `codegen` pass. The API Kall lifecycle
-   * (`scheduledKall` → `reScheduleKall`, BR-C01, green on live) proves the schedule create/reschedule
-   * itself works — only the participant-picker UI-driving step is pending.
-   */
-  test('the schedule modal opens and accepts the meeting details (title + future date + time) @ui', async ({
-    page,
-  }) => {
-    const title = `QA UI kall ${Date.now()}`;
-    // Kool Kall tab + Create → the Create Kool Kall modal (support/kall.ts, re-tuned 2026-10-11).
-    await gotoKoolKall(page);
-    const opened = await openCreateKall(page);
-    expect(opened, 'the schedule modal opens').not.toBeNull();
-    const modal = opened!;
-    const titleField = meetingTitleField(modal);
-    await expect(titleField, 'the schedule modal opens with a Meeting Title field').toBeVisible({
-      timeout: 15_000,
+    /**
+     * The CreateKallModal is opened by the cursor-pointer `.create_font` "Create" control (the sibling
+     * `.create_button` div is a silent no-op), and its schedule fields are **native HTML inputs**
+     * (`type=date name=birthday`, two `type=time` From/To) — `fill()` with ISO values is reliable, no
+     * custom picker. This drives and verifies the whole schedule form green: modal → Meeting Title →
+     * future Date → From/To times → the participant picker OPENS (Invite Participants reveals the
+     * contacts). Submit stays disabled until a participant is added.
+     *
+     * NEEDS-CODEGEN — the final Submit: the participant is chosen from a **nested-scroll custom contact
+     * picker** (the rows are not a plain button/checkbox and sit in an off-viewport scroll container), so
+     * selecting one and enabling Submit needs one interactive `codegen` pass. The API Kall lifecycle
+     * (`scheduledKall` → `reScheduleKall`, BR-C01, green on live) proves the schedule create/reschedule
+     * itself works — only the participant-picker UI-driving step is pending.
+     */
+    test('the schedule modal opens and accepts the meeting details (title + future date + time) @ui', async ({
+      page,
+    }) => {
+      const title = `QA UI kall ${Date.now()}`;
+      // Kool Kall tab + Create → the Create Kool Kall modal (support/kall.ts, re-tuned 2026-10-11).
+      await gotoKoolKall(page);
+      const opened = await openCreateKall(page);
+      expect(opened, 'the schedule modal opens').not.toBeNull();
+      const modal = opened!;
+      const titleField = meetingTitleField(modal);
+      await expect(titleField, 'the schedule modal opens with a Meeting Title field').toBeVisible({
+        timeout: 15_000,
+      });
+
+      // Native date/time inputs — a future date keeps the schedule valid.
+      await titleField.fill(title);
+      await modal.locator('input[name="birthday"]').first().fill('2026-12-31');
+      const times = modal.locator('input[type="time"]');
+      await times.nth(0).fill('10:00');
+      await times.nth(1).fill('10:30');
+
+      // The fields hold their values (the schedule form is driven correctly).
+      await expect(titleField, 'the Meeting Title accepts text').toHaveValue(title);
+      await expect(modal.locator('input[name="birthday"]').first()).toHaveValue('2026-12-31');
+      await expect(times.nth(0)).toHaveValue('10:00');
+
+      // The participant picker opens (Invite Participants reveals the contact list) — the last step before
+      // Submit; selecting a contact from it is the codegen-pending piece documented above.
+      // The "Invite" action beside the Participant field opens the picker (the field text itself is
+      // a placeholder, not the trigger — screenshot 2026-10-11).
+      await modal
+        .getByText(/^Invite$/)
+        .first()
+        .click();
+      // The picker lists this account's contacts as selectable rows; the names depend on the account
+      // in use, so assert the list (a row avatar or checkbox), not a name.
+      await expect(
+        page.locator('[role="dialog"] .sb-avatar, [role="dialog"] input[type="checkbox"]').first(),
+        'the participant picker lists selectable contacts',
+      ).toBeVisible({ timeout: 15_000 });
     });
-
-    // Native date/time inputs — a future date keeps the schedule valid.
-    await titleField.fill(title);
-    await modal.locator('input[name="birthday"]').first().fill('2026-12-31');
-    const times = modal.locator('input[type="time"]');
-    await times.nth(0).fill('10:00');
-    await times.nth(1).fill('10:30');
-
-    // The fields hold their values (the schedule form is driven correctly).
-    await expect(titleField, 'the Meeting Title accepts text').toHaveValue(title);
-    await expect(modal.locator('input[name="birthday"]').first()).toHaveValue('2026-12-31');
-    await expect(times.nth(0)).toHaveValue('10:00');
-
-    // The participant picker opens (Invite Participants reveals the contact list) — the last step before
-    // Submit; selecting a contact from it is the codegen-pending piece documented above.
-    // The "Invite" action beside the Participant field opens the picker (the field text itself is
-    // a placeholder, not the trigger — screenshot 2026-10-11).
-    await modal
-      .getByText(/^Invite$/)
-      .first()
-      .click();
-    // The picker lists this account's contacts as selectable rows; the names depend on the account
-    // in use, so assert the list (a row avatar or checkbox), not a name.
-    await expect(
-      page.locator('[role="dialog"] .sb-avatar, [role="dialog"] input[type="checkbox"]').first(),
-      'the participant picker lists selectable contacts',
-    ).toBeVisible({ timeout: 15_000 });
-  });
-});
+  },
+);

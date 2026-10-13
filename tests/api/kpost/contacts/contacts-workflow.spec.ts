@@ -32,152 +32,156 @@ import { expect, test } from '@fixtures';
  * `allowLiveWrite` per call — the executor's authorization for a `data` write on live. The
  * QA-identifier guard still refuses any payload naming a record we do not own.
  */
-test.describe('KPost Contacts · relationship workflow @api @kpost-api @contacts @database', () => {
-  test.describe.configure({ mode: 'serial' });
+test.describe(
+  'KPost Contacts · relationship workflow @api @kpost-api @contacts @database',
+  { tag: ['@api', '@contacts', '@regression'] },
+  () => {
+    test.describe.configure({ mode: 'serial' });
 
-  const accounts = requireAll('primary', 'counterparty');
-  test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
+    const accounts = requireAll('primary', 'counterparty');
+    test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
 
-  const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
-  const them = (): string => (accounts.ok ? (accounts.accounts[1]?.kpostId ?? '') : '');
+    const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
+    const them = (): string => (accounts.ok ? (accounts.accounts[1]?.kpostId ?? '') : '');
 
-  /** The counterparty's own row, captured so we can prove our writes never touched it. */
-  let theirRowBefore: { delete_status: number | null; is_blocked: number | null } | undefined;
+    /** The counterparty's own row, captured so we can prove our writes never touched it. */
+    let theirRowBefore: { delete_status: number | null; is_blocked: number | null } | undefined;
 
-  test.afterAll(async ({ endpoints }) => {
-    // Restore: put the contact back, so the suite leaves the address book as it found it.
-    if (!accounts.ok) return;
-    await endpoints
-      .sendTo(
+    test.afterAll(async ({ endpoints }) => {
+      // Restore: put the contact back, so the suite leaves the address book as it found it.
+      if (!accounts.ok) return;
+      await endpoints
+        .sendTo(
+          'contacts-add',
+          { body: contactShape({ contactID: them() }) },
+          { label: 'contacts-workflow:restore', allowLiveWrite: true },
+        )
+        .catch(() => undefined);
+    });
+
+    test('the relationship is stored per direction, and both directions are visible', async ({
+      databases,
+    }) => {
+      const database = databases.for('kpost-api');
+      test.skip(!database.enabled, 'needs the KPOST_QA connection');
+
+      const repo = new KpostRepository(database);
+      const mine = await repo.contact(me(), them());
+      const theirs = await repo.contact(them(), me());
+
+      /*
+       * Not an assertion that both exist — one may legitimately not have added the other. What is
+       * pinned is that the repository addresses them SEPARATELY, because a lookup that collapsed the
+       * two directions would make every assertion below meaningless.
+       */
+      expect(mine ?? theirs, 'at least one direction of the relationship exists').toBeDefined();
+      if (mine) expect(text(mine.kpost_id), 'my row is keyed by me').toBe(me());
+      if (theirs) expect(text(theirs.contact_id), 'their row points back at me').toBe(me());
+
+      theirRowBefore = theirs
+        ? {
+            delete_status: Number(theirs.delete_status ?? 0),
+            is_blocked: Number(theirs.is_blocked ?? 0),
+          }
+        : undefined;
+    });
+
+    test('adding a contact creates or revives my row, and leaves theirs alone', async ({
+      endpoints,
+      databases,
+    }) => {
+      const database = databases.for('kpost-api');
+      test.skip(!database.enabled, 'needs the KPOST_QA connection');
+
+      const exchange = await endpoints.sendTo(
         'contacts-add',
         { body: contactShape({ contactID: them() }) },
-        { label: 'contacts-workflow:restore', allowLiveWrite: true },
-      )
-      .catch(() => undefined);
-  });
+        { label: 'contacts-workflow:add', allowLiveWrite: true },
+      );
 
-  test('the relationship is stored per direction, and both directions are visible', async ({
-    databases,
-  }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection');
-
-    const repo = new KpostRepository(database);
-    const mine = await repo.contact(me(), them());
-    const theirs = await repo.contact(them(), me());
-
-    /*
-     * Not an assertion that both exist — one may legitimately not have added the other. What is
-     * pinned is that the repository addresses them SEPARATELY, because a lookup that collapsed the
-     * two directions would make every assertion below meaningless.
-     */
-    expect(mine ?? theirs, 'at least one direction of the relationship exists').toBeDefined();
-    if (mine) expect(text(mine.kpost_id), 'my row is keyed by me').toBe(me());
-    if (theirs) expect(text(theirs.contact_id), 'their row points back at me').toBe(me());
-
-    theirRowBefore = theirs
-      ? {
-          delete_status: Number(theirs.delete_status ?? 0),
-          is_blocked: Number(theirs.is_blocked ?? 0),
-        }
-      : undefined;
-  });
-
-  test('adding a contact creates or revives my row, and leaves theirs alone', async ({
-    endpoints,
-    databases,
-  }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection');
-
-    const exchange = await endpoints.sendTo(
-      'contacts-add',
-      { body: contactShape({ contactID: them() }) },
-      { label: 'contacts-workflow:add', allowLiveWrite: true },
-    );
-
-    /*
-     * Accepted OR already present — both are valid starting states.
-     *
-     * This suite restores the contact in `afterAll`, so a re-run legitimately finds it there. The
-     * API signals that with {"status":"Already","statusCode":500,"message":"ContactID is already in
-     * your contact list"} — a 500 for a benign, expected condition (409 or 200 would be right, and
-     * it is the same HTTP-200-carrying-500 envelope pattern documented in Bugzilla #494). Failing
-     * the test on it would make the suite pass only on its first ever run.
-     *
-     * What matters is the END STATE of the row, asserted below — not whether this particular call
-     * inserted or found it.
-     */
-    const parsed = exchange.json();
-    const envelope = parsed.ok ? (parsed.value as { statusCode?: number; status?: string }) : {};
-    const alreadyPresent = /already/i.test(
-      `${envelope.status ?? ''} ${exchange.bodyText.slice(0, 120)}`,
-    );
-    expect(
-      (envelope.statusCode ?? exchange.status) < 300 || alreadyPresent,
-      `add neither succeeded nor reported the contact already present (body: ${exchange.bodyText.slice(0, 160)})`,
-    ).toBe(true);
-
-    const repo = new KpostRepository(database);
-    const mine = await repo.contact(me(), them());
-
-    expect(mine, 'my address book now holds a row for them').toBeDefined();
-    // Added means not deleted — the flag is the whole state of "is this contact in my book".
-    const deleteCheck = kpostDb.deleteStatus(mine, false);
-    expect(deleteCheck.status, `${deleteCheck.name}: got ${String(deleteCheck.actual)}`).toBe(
-      'PASSED',
-    );
-
-    // Their side is none of our business, and must be untouched.
-    const theirs = await repo.contact(them(), me());
-    if (theirRowBefore && theirs) {
+      /*
+       * Accepted OR already present — both are valid starting states.
+       *
+       * This suite restores the contact in `afterAll`, so a re-run legitimately finds it there. The
+       * API signals that with {"status":"Already","statusCode":500,"message":"ContactID is already in
+       * your contact list"} — a 500 for a benign, expected condition (409 or 200 would be right, and
+       * it is the same HTTP-200-carrying-500 envelope pattern documented in Bugzilla #494). Failing
+       * the test on it would make the suite pass only on its first ever run.
+       *
+       * What matters is the END STATE of the row, asserted below — not whether this particular call
+       * inserted or found it.
+       */
+      const parsed = exchange.json();
+      const envelope = parsed.ok ? (parsed.value as { statusCode?: number; status?: string }) : {};
+      const alreadyPresent = /already/i.test(
+        `${envelope.status ?? ''} ${exchange.bodyText.slice(0, 120)}`,
+      );
       expect(
-        Number(theirs.delete_status ?? 0),
-        'adding them to MY book must not change THEIR row',
-      ).toBe(theirRowBefore.delete_status);
-    }
-  });
+        (envelope.statusCode ?? exchange.status) < 300 || alreadyPresent,
+        `add neither succeeded nor reported the contact already present (body: ${exchange.bodyText.slice(0, 160)})`,
+      ).toBe(true);
 
-  test('deleting is a soft delete: my flag flips, their row survives', async ({
-    endpoints,
-    databases,
-  }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection');
+      const repo = new KpostRepository(database);
+      const mine = await repo.contact(me(), them());
 
-    const exchange = await endpoints.sendTo(
-      'contacts-delete',
-      { body: { contactID: them() } },
-      { label: 'contacts-workflow:delete', allowLiveWrite: true },
-    );
-    const parsed = exchange.json();
-    const envelope = parsed.ok ? (parsed.value as { statusCode?: number }) : {};
-    expect(
-      envelope.statusCode ?? exchange.status,
-      `delete reported failure (body: ${exchange.bodyText.slice(0, 160)})`,
-    ).toBeLessThan(300);
+      expect(mine, 'my address book now holds a row for them').toBeDefined();
+      // Added means not deleted — the flag is the whole state of "is this contact in my book".
+      const deleteCheck = kpostDb.deleteStatus(mine, false);
+      expect(deleteCheck.status, `${deleteCheck.name}: got ${String(deleteCheck.actual)}`).toBe(
+        'PASSED',
+      );
 
-    const repo = new KpostRepository(database);
-    const mine = await repo.contact(me(), them());
+      // Their side is none of our business, and must be untouched.
+      const theirs = await repo.contact(them(), me());
+      if (theirRowBefore && theirs) {
+        expect(
+          Number(theirs.delete_status ?? 0),
+          'adding them to MY book must not change THEIR row',
+        ).toBe(theirRowBefore.delete_status);
+      }
+    });
 
-    /*
-     * The assertion no response can make, and the one that matters most: the ROW must still exist.
-     * A hard delete here would also destroy the counterparty's view of the relationship, and on the
-     * wire that is indistinguishable from a correct soft delete.
-     */
-    expect(mine, 'a soft delete leaves the row in place').toBeDefined();
-    const deleted = kpostDb.deleteStatus(mine, true);
-    expect(deleted.status, `${deleted.name}: got ${String(deleted.actual)}`).toBe('PASSED');
+    test('deleting is a soft delete: my flag flips, their row survives', async ({
+      endpoints,
+      databases,
+    }) => {
+      const database = databases.for('kpost-api');
+      test.skip(!database.enabled, 'needs the KPOST_QA connection');
 
-    const theirs = await repo.contact(them(), me());
-    if (theirRowBefore && theirs) {
+      const exchange = await endpoints.sendTo(
+        'contacts-delete',
+        { body: { contactID: them() } },
+        { label: 'contacts-workflow:delete', allowLiveWrite: true },
+      );
+      const parsed = exchange.json();
+      const envelope = parsed.ok ? (parsed.value as { statusCode?: number }) : {};
       expect(
-        Number(theirs.delete_status ?? 0),
-        'removing them from MY book must not remove me from THEIRS',
-      ).toBe(theirRowBefore.delete_status);
-    }
-  });
-});
+        envelope.statusCode ?? exchange.status,
+        `delete reported failure (body: ${exchange.bodyText.slice(0, 160)})`,
+      ).toBeLessThan(300);
+
+      const repo = new KpostRepository(database);
+      const mine = await repo.contact(me(), them());
+
+      /*
+       * The assertion no response can make, and the one that matters most: the ROW must still exist.
+       * A hard delete here would also destroy the counterparty's view of the relationship, and on the
+       * wire that is indistinguishable from a correct soft delete.
+       */
+      expect(mine, 'a soft delete leaves the row in place').toBeDefined();
+      const deleted = kpostDb.deleteStatus(mine, true);
+      expect(deleted.status, `${deleted.name}: got ${String(deleted.actual)}`).toBe('PASSED');
+
+      const theirs = await repo.contact(them(), me());
+      if (theirRowBefore && theirs) {
+        expect(
+          Number(theirs.delete_status ?? 0),
+          'removing them from MY book must not remove me from THEIRS',
+        ).toBe(theirRowBefore.delete_status);
+      }
+    });
+  },
+);
 
 /**
  * Blocking — its own describe (not chained to the add/delete lifecycle above) so it's unaffected by
@@ -187,78 +191,82 @@ test.describe('KPost Contacts · relationship workflow @api @kpost-api @contacts
  * row, so the flag — not the response — is the only honest judge (the sibling describe's own
  * docstring already flags this exact gap: "Block reports success and leaves is_blocked = 0").
  */
-test.describe('KPost Contacts · block @api @kpost-api @contacts @database', () => {
-  const accounts = requireAll('primary', 'counterparty');
-  test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
+test.describe(
+  'KPost Contacts · block @api @kpost-api @contacts @database',
+  { tag: ['@api', '@contacts', '@regression'] },
+  () => {
+    const accounts = requireAll('primary', 'counterparty');
+    test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
 
-  const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
-  const them = (): string => (accounts.ok ? (accounts.accounts[1]?.kpostId ?? '') : '');
+    const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
+    const them = (): string => (accounts.ok ? (accounts.accounts[1]?.kpostId ?? '') : '');
 
-  test('blocking sets is_blocked, unblocking clears it, their row survives', async ({
-    endpoints,
-    databases,
-  }) => {
-    const database = databases.for('kpost-api');
-    test.skip(!database.enabled, 'needs the KPOST_QA connection');
+    test('blocking sets is_blocked, unblocking clears it, their row survives', async ({
+      endpoints,
+      databases,
+    }) => {
+      const database = databases.for('kpost-api');
+      test.skip(!database.enabled, 'needs the KPOST_QA connection');
 
-    // Ensure the contact exists first — this describe doesn't depend on the add/delete suite's state.
-    await endpoints
-      .sendTo(
-        'contacts-add',
-        { body: contactShape({ contactID: them() }) },
-        { label: 'contacts-workflow:block-setup-add', allowLiveWrite: true },
-      )
-      .catch(() => undefined);
-
-    const repo = new KpostRepository(database);
-    const theirRowBefore = await repo.contact(them(), me());
-
-    const block = await endpoints.sendTo(
-      'contacts-block',
-      { body: { contactID: them(), isBlocked: true } },
-      { label: 'contacts-workflow:block', allowLiveWrite: true },
-    );
-    const blockEnvelope = block.json();
-    const blockStatus = blockEnvelope.ok
-      ? ((blockEnvelope.value as { statusCode?: number }).statusCode ?? block.status)
-      : block.status;
-    expect
-      .soft(blockStatus, `block reported failure (body: ${block.bodyText.slice(0, 160)})`)
-      .toBeLessThan(300);
-
-    const blocked = await repo.contact(me(), them());
-    const blockedCheck = kpostDb.isBlocked(blocked, true);
-    expect
-      .soft(blockedCheck.status, `${blockedCheck.name}: got ${String(blockedCheck.actual)}`)
-      .toBe('PASSED');
-
-    const theirsAfterBlock = await repo.contact(them(), me());
-    if (theirRowBefore && theirsAfterBlock) {
-      expect
-        .soft(
-          Number(theirsAfterBlock.is_blocked ?? 0),
-          'blocking them in MY book must not block me in THEIRS',
+      // Ensure the contact exists first — this describe doesn't depend on the add/delete suite's state.
+      await endpoints
+        .sendTo(
+          'contacts-add',
+          { body: contactShape({ contactID: them() }) },
+          { label: 'contacts-workflow:block-setup-add', allowLiveWrite: true },
         )
-        .toBe(Number(theirRowBefore.is_blocked ?? 0));
-    }
+        .catch(() => undefined);
 
-    const unblock = await endpoints.sendTo(
-      'contacts-block',
-      { body: { contactID: them(), isBlocked: false } },
-      { label: 'contacts-workflow:unblock', allowLiveWrite: true },
-    );
-    const unblockEnvelope = unblock.json();
-    const unblockStatus = unblockEnvelope.ok
-      ? ((unblockEnvelope.value as { statusCode?: number }).statusCode ?? unblock.status)
-      : unblock.status;
-    expect
-      .soft(unblockStatus, `unblock reported failure (body: ${unblock.bodyText.slice(0, 160)})`)
-      .toBeLessThan(300);
+      const repo = new KpostRepository(database);
+      const theirRowBefore = await repo.contact(them(), me());
 
-    const unblocked = await repo.contact(me(), them());
-    const unblockedCheck = kpostDb.isBlocked(unblocked, false);
-    expect
-      .soft(unblockedCheck.status, `${unblockedCheck.name}: got ${String(unblockedCheck.actual)}`)
-      .toBe('PASSED');
-  });
-});
+      const block = await endpoints.sendTo(
+        'contacts-block',
+        { body: { contactID: them(), isBlocked: true } },
+        { label: 'contacts-workflow:block', allowLiveWrite: true },
+      );
+      const blockEnvelope = block.json();
+      const blockStatus = blockEnvelope.ok
+        ? ((blockEnvelope.value as { statusCode?: number }).statusCode ?? block.status)
+        : block.status;
+      expect
+        .soft(blockStatus, `block reported failure (body: ${block.bodyText.slice(0, 160)})`)
+        .toBeLessThan(300);
+
+      const blocked = await repo.contact(me(), them());
+      const blockedCheck = kpostDb.isBlocked(blocked, true);
+      expect
+        .soft(blockedCheck.status, `${blockedCheck.name}: got ${String(blockedCheck.actual)}`)
+        .toBe('PASSED');
+
+      const theirsAfterBlock = await repo.contact(them(), me());
+      if (theirRowBefore && theirsAfterBlock) {
+        expect
+          .soft(
+            Number(theirsAfterBlock.is_blocked ?? 0),
+            'blocking them in MY book must not block me in THEIRS',
+          )
+          .toBe(Number(theirRowBefore.is_blocked ?? 0));
+      }
+
+      const unblock = await endpoints.sendTo(
+        'contacts-block',
+        { body: { contactID: them(), isBlocked: false } },
+        { label: 'contacts-workflow:unblock', allowLiveWrite: true },
+      );
+      const unblockEnvelope = unblock.json();
+      const unblockStatus = unblockEnvelope.ok
+        ? ((unblockEnvelope.value as { statusCode?: number }).statusCode ?? unblock.status)
+        : unblock.status;
+      expect
+        .soft(unblockStatus, `unblock reported failure (body: ${unblock.bodyText.slice(0, 160)})`)
+        .toBeLessThan(300);
+
+      const unblocked = await repo.contact(me(), them());
+      const unblockedCheck = kpostDb.isBlocked(unblocked, false);
+      expect
+        .soft(unblockedCheck.status, `${unblockedCheck.name}: got ${String(unblockedCheck.actual)}`)
+        .toBe('PASSED');
+    });
+  },
+);

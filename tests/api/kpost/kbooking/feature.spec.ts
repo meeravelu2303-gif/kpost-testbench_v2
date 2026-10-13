@@ -45,108 +45,123 @@ function futureTravelDate(daysAhead: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-test.describe('KPost KBooking · feature flow @api @kbooking', () => {
-  test('search chain: city → destinations → available trips → trip details, each fed the prior real result', async ({
-    endpoints,
-  }) => {
-    const citySuggestion = await endpoints.sendTo(
-      'kbooking-city-suggestion',
-      { pathParams: { query: 'chennai' } },
-      { label: 'kbooking:city-suggestion', auth: { principal: A } },
-    );
-    expect(citySuggestion.status, 'citysuggestion succeeds').toBe(200);
-    const cityBody = JSON.parse(citySuggestion.bodyText ?? '{}') as CitySuggestionResponse;
-    const sourceCityID = cityBody.value?.[0]?.cityID;
-    test.skip(!sourceCityID, 'no city returned for "chennai" right now — cannot chain the search');
+test.describe(
+  'KPost KBooking · feature flow @api @kbooking',
+  { tag: ['@api', '@verticals', '@regression'] },
+  () => {
+    test('search chain: city → destinations → available trips → trip details, each fed the prior real result', async ({
+      endpoints,
+    }) => {
+      const citySuggestion = await endpoints.sendTo(
+        'kbooking-city-suggestion',
+        { pathParams: { query: 'chennai' } },
+        { label: 'kbooking:city-suggestion', auth: { principal: A } },
+      );
+      expect(citySuggestion.status, 'citysuggestion succeeds').toBe(200);
+      const cityBody = JSON.parse(citySuggestion.bodyText ?? '{}') as CitySuggestionResponse;
+      const sourceCityID = cityBody.value?.[0]?.cityID;
+      test.skip(
+        !sourceCityID,
+        'no city returned for "chennai" right now — cannot chain the search',
+      );
 
-    const destinations = await endpoints.sendTo(
-      'kbooking-destinations',
-      { body: { sourceCityID } },
-      { label: 'kbooking:destinations', auth: { principal: A } },
-    );
-    expect(destinations.status, 'destinations succeeds for a real source city').toBe(200);
-    const destBody = JSON.parse(destinations.bodyText ?? '{}') as DestinationsResponse;
-    const destinationCityID = destBody.value?.cities?.[0]?.id;
-    test.skip(
-      destinationCityID === undefined,
-      'no reachable destination returned for this source city right now',
-    );
+      const destinations = await endpoints.sendTo(
+        'kbooking-destinations',
+        { body: { sourceCityID } },
+        { label: 'kbooking:destinations', auth: { principal: A } },
+      );
+      expect(destinations.status, 'destinations succeeds for a real source city').toBe(200);
+      const destBody = JSON.parse(destinations.bodyText ?? '{}') as DestinationsResponse;
+      const destinationCityID = destBody.value?.cities?.[0]?.id;
+      test.skip(
+        destinationCityID === undefined,
+        'no reachable destination returned for this source city right now',
+      );
 
-    const trips = await endpoints.sendTo(
-      'kbooking-available-trips',
-      {
-        body: {
-          sourceCityID,
-          destinationCityID,
-          travelDate: futureTravelDate(14),
-        },
-      },
-      { label: 'kbooking:available-trips', auth: { principal: A } },
-    );
-    expect(trips.status, 'availabletrips succeeds for a real route').toBe(200);
-    const tripsBody = JSON.parse(trips.bodyText ?? '{}') as AvailableTripsResponse;
-    const tripID = Object.keys(tripsBody.value1 ?? {})[0];
-    test.skip(
-      !tripID,
-      'no trips running on this real route 14 days out right now — nothing to chain tripdetails to',
-    );
-
-    const details = await endpoints.sendTo(
-      'kbooking-trip-details',
-      { body: { tripID } },
-      { label: 'kbooking:trip-details-with-real-id', auth: { principal: A }, allowLiveRead: true },
-    );
-    expect(
-      details.status,
-      `tripdetails succeeds when fed a real tripID (${tripID}) from the search just performed`,
-    ).toBe(200);
-  });
-
-  test.describe('blockTicket — WRITTEN, NOT EXECUTED', () => {
-    /*
-     * Unconditionally skipped: blockTicket places a real third-party seat hold via SeatSeller, and
-     * its own endpoint definition note already records that the "Test Credentials" label is NOT
-     * confirmed to mean a true sandbox. Placing a real-world hold on live bus inventory without that
-     * confirmation is exactly the class of action this bench's governance requires explicit owner
-     * authorization for first (the same standard already applied to the Razorpay payment path and
-     * the OTP-bypass flag) — so this is deliberately never gated behind a plain env var a future run
-     * could set by accident.
-     */
-    test.skip(
-      true,
-      'real third-party seat hold, unconfirmed sandbox — needs explicit authorization',
-    );
-
-    test('blockTicket holds seats on a real trip pending payment', async ({ endpoints }) => {
-      const ex = await endpoints.sendTo(
-        'kbooking-block-ticket',
+      const trips = await endpoints.sendTo(
+        'kbooking-available-trips',
         {
-          pathParams: { kpostId: testData.kpostId },
           body: {
-            inventoryItems: [
-              {
-                fare: 450,
-                ladiesSeat: false,
-                passenger: {
-                  address: 'KPOST Software Pvt Ltd',
-                  age: '30',
-                  email: 'qa-bench@kpostindia.com',
-                  gender: 'Male',
-                  idNumber: 'ID123',
-                  idType: 'PAN_CARD',
-                  mobile: '9000000000',
-                  name: 'QA Bench',
-                  primary: 'true',
-                  title: 'Mr',
-                },
-                seatName: 'U1',
-              },
-            ],
+            sourceCityID,
+            destinationCityID,
+            travelDate: futureTravelDate(14),
           },
         },
-        { label: 'kbooking:block-ticket', auth: { principal: A }, allowLiveWrite: true },
+        { label: 'kbooking:available-trips', auth: { principal: A } },
       );
-      expect(ex.status, 'blockTicket succeeds against a real available trip').toBe(200);
+      expect(trips.status, 'availabletrips succeeds for a real route').toBe(200);
+      const tripsBody = JSON.parse(trips.bodyText ?? '{}') as AvailableTripsResponse;
+      const tripID = Object.keys(tripsBody.value1 ?? {})[0];
+      test.skip(
+        !tripID,
+        'no trips running on this real route 14 days out right now — nothing to chain tripdetails to',
+      );
+
+      const details = await endpoints.sendTo(
+        'kbooking-trip-details',
+        { body: { tripID } },
+        {
+          label: 'kbooking:trip-details-with-real-id',
+          auth: { principal: A },
+          allowLiveRead: true,
+        },
+      );
+      expect(
+        details.status,
+        `tripdetails succeeds when fed a real tripID (${tripID}) from the search just performed`,
+      ).toBe(200);
     });
-  });
-});
+
+    test.describe(
+      'blockTicket — WRITTEN, NOT EXECUTED',
+      { tag: ['@api', '@verticals', '@regression'] },
+      () => {
+        /*
+         * Unconditionally skipped: blockTicket places a real third-party seat hold via SeatSeller, and
+         * its own endpoint definition note already records that the "Test Credentials" label is NOT
+         * confirmed to mean a true sandbox. Placing a real-world hold on live bus inventory without that
+         * confirmation is exactly the class of action this bench's governance requires explicit owner
+         * authorization for first (the same standard already applied to the Razorpay payment path and
+         * the OTP-bypass flag) — so this is deliberately never gated behind a plain env var a future run
+         * could set by accident.
+         */
+        test.skip(
+          true,
+          'real third-party seat hold, unconfirmed sandbox — needs explicit authorization',
+        );
+
+        test('blockTicket holds seats on a real trip pending payment', async ({ endpoints }) => {
+          const ex = await endpoints.sendTo(
+            'kbooking-block-ticket',
+            {
+              pathParams: { kpostId: testData.kpostId },
+              body: {
+                inventoryItems: [
+                  {
+                    fare: 450,
+                    ladiesSeat: false,
+                    passenger: {
+                      address: 'KPOST Software Pvt Ltd',
+                      age: '30',
+                      email: 'qa-bench@kpostindia.com',
+                      gender: 'Male',
+                      idNumber: 'ID123',
+                      idType: 'PAN_CARD',
+                      mobile: '9000000000',
+                      name: 'QA Bench',
+                      primary: 'true',
+                      title: 'Mr',
+                    },
+                    seatName: 'U1',
+                  },
+                ],
+              },
+            },
+            { label: 'kbooking:block-ticket', auth: { principal: A }, allowLiveWrite: true },
+          );
+          expect(ex.status, 'blockTicket succeeds against a real available trip').toBe(200);
+        });
+      },
+    );
+  },
+);

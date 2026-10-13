@@ -20,28 +20,32 @@ import { expect, test } from '@fixtures';
  *     `accessCode`) with no safe way to restore it afterward — unlike the forgot-password flow,
  *     which resets to the known `QA_PASSWORD`.
  */
-test.describe('KPost signup-login · permanently-walled endpoints @api @signup-login', () => {
-  test('signup-login-logout-all-devices is refused by the production guard, not merely untested', async ({
-    endpoints,
-  }) => {
-    await expect(
-      endpoints.sendTo(
-        'signup-login-logout-all-devices',
-        {},
-        { label: 'gaps:logout-all-devices', allowLiveWrite: true },
-      ),
-    ).rejects.toThrow(ProductionSafetyError);
-  });
+test.describe(
+  'KPost signup-login · permanently-walled endpoints @api @signup-login',
+  { tag: ['@api', '@auth', '@regression'] },
+  () => {
+    test('signup-login-logout-all-devices is refused by the production guard, not merely untested', async ({
+      endpoints,
+    }) => {
+      await expect(
+        endpoints.sendTo(
+          'signup-login-logout-all-devices',
+          {},
+          { label: 'gaps:logout-all-devices', allowLiveWrite: true },
+        ),
+      ).rejects.toThrow(ProductionSafetyError);
+    });
 
-  test('signup-login-set-access-code is refused by the production guard, not merely untested', async ({
-    endpoints,
-  }) => {
-    await expect(
-      endpoints.sendTo(
-        'signup-login-set-access-code',
-        {},
-        { label: 'gaps:set-access-code', allowLiveWrite: true },
-      ),
-    ).rejects.toThrow(ProductionSafetyError);
-  });
-});
+    test('signup-login-set-access-code is refused by the production guard, not merely untested', async ({
+      endpoints,
+    }) => {
+      await expect(
+        endpoints.sendTo(
+          'signup-login-set-access-code',
+          {},
+          { label: 'gaps:set-access-code', allowLiveWrite: true },
+        ),
+      ).rejects.toThrow(ProductionSafetyError);
+    });
+  },
+);

@@ -16,95 +16,99 @@ import { settleFrames } from './support/settle';
  * does NOT clean up after itself; each payload leaves one real mail in the 2nd QA account's inbox.
  * Gated behind `KMAIL_UI_LIFECYCLE=true`, same as `kmail-compose.spec.ts`.
  */
-test.describe('KPost KMail · compose security fuzzing', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KMAIL_UI_LIFECYCLE !== 'true',
-    'sends a real mail; set KMAIL_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
-    'needs both QA accounts',
-  );
+test.describe(
+  'KPost KMail · compose security fuzzing',
+  { tag: ['@ui', '@kmail', '@regression'] },
+  () => {
+    test.skip(
+      process.env.KMAIL_UI_LIFECYCLE !== 'true',
+      'sends a real mail; set KMAIL_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
+      'needs both QA accounts',
+    );
 
-  const PAYLOADS: Array<{ name: string; value: string }> = [
-    { name: 'script tag', value: '<script>alert(1)</script>' },
-    { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
-    { name: 'SQL-style OR-true', value: "' OR '1'='1" },
-  ];
+    const PAYLOADS: Array<{ name: string; value: string }> = [
+      { name: 'script tag', value: '<script>alert(1)</script>' },
+      { name: 'img onerror breakout', value: '"><img src=x onerror=alert(1)>' },
+      { name: 'SQL-style OR-true', value: "' OR '1'='1" },
+    ];
 
-  for (const payload of PAYLOADS) {
-    test(`a mail carrying a ${payload.name} payload in Subject+body sends and renders inert @ui`, async ({
-      page,
-    }) => {
-      const stop = watchUiHealth(page);
-      let dialogFired = false;
-      page.on('dialog', (dialog) => {
-        dialogFired = true;
-        void dialog.dismiss();
-      });
+    for (const payload of PAYLOADS) {
+      test(`a mail carrying a ${payload.name} payload in Subject+body sends and renders inert @ui`, async ({
+        page,
+      }) => {
+        const stop = watchUiHealth(page);
+        let dialogFired = false;
+        page.on('dialog', (dialog) => {
+          dialogFired = true;
+          void dialog.dismiss();
+        });
 
-      const subject = `QA SEC ${Date.now()} ${payload.value}`;
+        const subject = `QA SEC ${Date.now()} ${payload.value}`;
 
-      await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
+        await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await page
+          .locator('.loader-overlay')
+          .waitFor({ state: 'hidden', timeout: 30_000 })
+          .catch(() => undefined);
 
-      // /writemail intermittently lands on the error boundary ("Something went wrong") — the
-      // screen-crash class the screen sweep reports; here it is a skip with the reason.
-      const crashed = await page
-        .getByText(/Something went wrong/i)
-        .first()
-        .isVisible()
-        .catch(() => false);
-      test.skip(
-        crashed,
-        '/writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a compose-fuzz finding',
-      );
-      const body = page.locator('.ql-editor[contenteditable="true"]').first();
-      await body.click();
-      await page.keyboard.type(`QA UI security fuzz — ${payload.value}`);
-
-      const to = page.locator('.subjectTextboxKmailTO, input[name="to"]').first();
-      await to.click();
-      await to.fill(testData.victimKpostId);
-      await page
-        .getByText(testData.victimKpostId, { exact: false })
-        .last()
-        .click({ timeout: 4_000 })
-        .catch(() => undefined);
-
-      await page.locator('.toInput').first().fill(subject);
-
-      await page
-        .locator('.post_button_size')
-        .filter({ has: page.locator('.icon-KP_3164') })
-        .first()
-        .click()
-        .catch(() => page.locator('.post_button_size').first().click());
-
-      await expect(
-        page
-          .getByText(/sent|success/i)
+        // /writemail intermittently lands on the error boundary ("Something went wrong") — the
+        // screen-crash class the screen sweep reports; here it is a skip with the reason.
+        const crashed = await page
+          .getByText(/Something went wrong/i)
           .first()
-          .or(page.locator('.Toastify__toast--success').first()),
-        'the mail was sent (success toast / compose cleared), rendered as text',
-      ).toBeVisible({ timeout: 20_000 });
-      await settleFrames(page);
+          .isVisible()
+          .catch(() => false);
+        test.skip(
+          crashed,
+          '/writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a compose-fuzz finding',
+        );
+        const body = page.locator('.ql-editor[contenteditable="true"]').first();
+        await body.click();
+        await page.keyboard.type(`QA UI security fuzz — ${payload.value}`);
 
-      const health = stop();
+        const to = page.locator('.subjectTextboxKmailTO, input[name="to"]').first();
+        await to.click();
+        await to.fill(testData.victimKpostId);
+        await page
+          .getByText(testData.victimKpostId, { exact: false })
+          .last()
+          .click({ timeout: 4_000 })
+          .catch(() => undefined);
 
-      test.info().annotations.push({
-        type: 'observed',
-        description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+        await page.locator('.toInput').first().fill(subject);
+
+        await page
+          .locator('.post_button_size')
+          .filter({ has: page.locator('.icon-KP_3164') })
+          .first()
+          .click()
+          .catch(() => page.locator('.post_button_size').first().click());
+
+        await expect(
+          page
+            .getByText(/sent|success/i)
+            .first()
+            .or(page.locator('.Toastify__toast--success').first()),
+          'the mail was sent (success toast / compose cleared), rendered as text',
+        ).toBeVisible({ timeout: 20_000 });
+        await settleFrames(page);
+
+        const health = stop();
+
+        test.info().annotations.push({
+          type: 'observed',
+          description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+        });
+
+        expect(health.pageErrors, `no uncaught JS error sending: ${payload.value}`).toEqual([]);
+        expect(
+          dialogFired,
+          `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
+        ).toBe(false);
       });
-
-      expect(health.pageErrors, `no uncaught JS error sending: ${payload.value}`).toEqual([]);
-      expect(
-        dialogFired,
-        `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
-      ).toBe(false);
-    });
-  }
-});
+    }
+  },
+);

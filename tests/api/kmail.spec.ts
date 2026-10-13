@@ -4,7 +4,7 @@ import { test } from '@fixtures';
 
 // KMail module (separate repo). Defects file to the KMail API product — owner: Jitendra Kumar.
 // Skips until KMAIL_API_BASE_URL is configured.
-test.describe('KMail API', () => {
+test.describe('KMail API', { tag: ['@api', '@platform', '@regression'] }, () => {
   // Gated while KMail refuses every valid KPost token — see src/fixtures/kmail-auth-gate.ts. Without
   // this, the `tests/api/kmail` path filter matched this ungated file alongside the gated directory,
   // and it drove every KMail endpoint into a 401 — flooding the report with downstream noise from one

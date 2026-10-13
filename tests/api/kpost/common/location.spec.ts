@@ -8,6 +8,10 @@ import { test } from '@fixtures';
  * Read-only and public: the safest endpoints to run first, and the clearest signal when the
  * environment itself is broken.
  */
-test.describe('KPost common · reference data', () => {
-  describeEndpointCases({ tags: ['common-reference'] });
-});
+test.describe(
+  'KPost common · reference data',
+  { tag: ['@api', '@platform', '@regression'] },
+  () => {
+    describeEndpointCases({ tags: ['common-reference'] });
+  },
+);

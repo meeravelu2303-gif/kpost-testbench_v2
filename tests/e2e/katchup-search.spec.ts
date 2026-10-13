@@ -10,7 +10,7 @@ import { expect, test } from '@fixtures';
  * Selectors: the Katchup screen's search box is `[placeholder*="Search" i]` (the screen registry's
  * `contact search box` control); a conversation row's element `id` is the counterpart's KPOST ID.
  */
-test.describe('KPost Katchup search', { tag: '@ui' }, () => {
+test.describe('KPost Katchup search', { tag: ['@ui', '@katchup', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
     'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',

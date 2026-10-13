@@ -26,7 +26,7 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Business signup · Medium/Large full registration → login',
-  { tag: '@ui' },
+  { tag: ['@ui', '@auth', '@signup', '@regression'] },
   () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -180,7 +180,7 @@ test.describe(
  */
 test.describe(
   'KPost Business signup · Medium/Large employee-count validation',
-  { tag: '@ui' },
+  { tag: ['@ui', '@auth', '@signup', '@regression'] },
   () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 

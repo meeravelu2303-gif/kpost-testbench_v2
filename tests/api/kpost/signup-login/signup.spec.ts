@@ -12,6 +12,10 @@ import { test } from '@fixtures';
  * `login.spec.ts`'s destructive endpoints — this sweep's real, visible contribution is the other 3:
  * `signup-login-signup-get`, `signup-login-kpost-id-exist`, `signup-login-kpost-id-suggestions`.
  */
-test.describe('KPost Signup · contract validation', () => {
-  describeEndpointCases({ tags: ['signup'] });
-});
+test.describe(
+  'KPost Signup · contract validation',
+  { tag: ['@api', '@auth', '@regression'] },
+  () => {
+    describeEndpointCases({ tags: ['signup'] });
+  },
+);

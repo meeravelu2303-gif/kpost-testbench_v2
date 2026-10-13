@@ -7,6 +7,6 @@ import { test } from '@fixtures';
  * none need a prior runtime id (unlike `tripDetails`, which needs a real `tripID` from a search
  * and is exercised in `feature.spec.ts` instead).
  */
-test.describe('KPost KBooking · reads', () => {
+test.describe('KPost KBooking · reads', { tag: ['@api', '@verticals', '@regression'] }, () => {
   describeEndpointCases({ tags: ['kbooking-read'] });
 });

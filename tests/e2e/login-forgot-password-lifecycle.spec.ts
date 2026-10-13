@@ -25,90 +25,94 @@ import { expect, test } from '@fixtures';
  * `finally` block, so it still runs even if the first cycle's own assertions fail partway — the
  * account is left exactly as it started either way, not stranded on the temp password.
  */
-test.describe('KPost login · forgot-password full reset cycle', { tag: '@ui' }, () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+test.describe(
+  'KPost login · forgot-password full reset cycle',
+  { tag: ['@ui', '@auth', '@regression'] },
+  () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-  test.skip(
-    process.env.LOGIN_UI_LIFECYCLE !== 'true',
-    'logs in and out repeatedly; set LOGIN_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',
-    'requesting the reset OTP only validates on the confirmed OTP test gateway',
-  );
-  test.skip(
-    process.env.ALLOW_DESTRUCTIVE_TESTS !== 'true',
-    'this genuinely rewrites a real account password; set ALLOW_DESTRUCTIVE_TESTS=true',
-  );
-  test.skip(
-    !testData.forgotPasswordKpostId || testData.forgotPasswordKpostId.includes('no.such.user'),
-    'needs a real spare account — set QA_FORGOT_PASSWORD_KPOST_ID (never QA_KPOST_ID)',
-  );
+    test.skip(
+      process.env.LOGIN_UI_LIFECYCLE !== 'true',
+      'logs in and out repeatedly; set LOGIN_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',
+      'requesting the reset OTP only validates on the confirmed OTP test gateway',
+    );
+    test.skip(
+      process.env.ALLOW_DESTRUCTIVE_TESTS !== 'true',
+      'this genuinely rewrites a real account password; set ALLOW_DESTRUCTIVE_TESTS=true',
+    );
+    test.skip(
+      !testData.forgotPasswordKpostId || testData.forgotPasswordKpostId.includes('no.such.user'),
+      'needs a real spare account — set QA_FORGOT_PASSWORD_KPOST_ID (never QA_KPOST_ID)',
+    );
 
-  test("resetting the spare account's password via OTP actually takes effect @ui", async ({
-    loginPage,
-    page,
-  }) => {
-    const spareId = testData.forgotPasswordKpostId;
-    const originalPassword = testData.password;
-    const tempPassword = `TmpReset@${Date.now().toString().slice(-6)}`;
+    test("resetting the spare account's password via OTP actually takes effect @ui", async ({
+      loginPage,
+      page,
+    }) => {
+      const spareId = testData.forgotPasswordKpostId;
+      const originalPassword = testData.password;
+      const tempPassword = `TmpReset@${Date.now().toString().slice(-6)}`;
 
-    async function resetTo(newPassword: string): Promise<void> {
-      await test.step(`Reset ${spareId}'s password`, async () => {
-        await loginPage.goto();
-        await loginPage.requestPasswordResetOtp(spareId);
-        const otpOutcome = await loginPage.enterPasswordResetOtp(testData.bypassOtp);
-        test.skip(otpOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
-        await loginPage.submitNewPassword(newPassword);
-        // On success the modal closes and returns to the id-entry step (`passwordChange`'s own
-        // success branch) — the id input reappearing is the most reliable proof of that, since the
-        // success toast text is not pinned here (see the same rationale in
-        // `login-functional.spec.ts`'s server-message test).
-        await expect(
-          loginPage.loginIdInput,
-          'the modal closes and returns to id-entry after a successful reset',
-        ).toBeVisible({ timeout: 15_000 });
-      });
-    }
+      async function resetTo(newPassword: string): Promise<void> {
+        await test.step(`Reset ${spareId}'s password`, async () => {
+          await loginPage.goto();
+          await loginPage.requestPasswordResetOtp(spareId);
+          const otpOutcome = await loginPage.enterPasswordResetOtp(testData.bypassOtp);
+          test.skip(otpOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
+          await loginPage.submitNewPassword(newPassword);
+          // On success the modal closes and returns to the id-entry step (`passwordChange`'s own
+          // success branch) — the id input reappearing is the most reliable proof of that, since the
+          // success toast text is not pinned here (see the same rationale in
+          // `login-functional.spec.ts`'s server-message test).
+          await expect(
+            loginPage.loginIdInput,
+            'the modal closes and returns to id-entry after a successful reset',
+          ).toBeVisible({ timeout: 15_000 });
+        });
+      }
 
-    async function logout(): Promise<void> {
-      await page.locator('.header-user-pill').first().click();
-      await page
-        .getByText(/^Log ?out$/i)
-        .first()
-        .click()
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: /^Logout$/i })
-        .first()
-        .click();
-      await expect(page, 'logout returns to the login screen').toHaveURL(/\/login/, {
-        timeout: 20_000,
-      });
-    }
+      async function logout(): Promise<void> {
+        await page.locator('.header-user-pill').first().click();
+        await page
+          .getByText(/^Log ?out$/i)
+          .first()
+          .click()
+          .catch(() => undefined);
+        await page
+          .getByRole('button', { name: /^Logout$/i })
+          .first()
+          .click();
+        await expect(page, 'logout returns to the login screen').toHaveURL(/\/login/, {
+          timeout: 20_000,
+        });
+      }
 
-    // Phase 2 (the restore) must run even if phase 1 throws — a partial failure must never strand
-    // the shared spare account on the temp password. `finally` is the one construct that survives a
-    // thrown `expect()` here; a bare sequential `await` would not reach the restore at all.
-    try {
-      // Phase 1: reset to a temporary password and prove it actually works.
-      await resetTo(tempPassword);
-      await loginPage.login(spareId, tempPassword);
-      await expect(
-        page,
-        'the account logs in with the NEW password immediately after the reset',
-      ).toHaveURL(/\/home/, { timeout: 20_000 });
-      await logout();
-    } finally {
-      // Phase 2: reset back to the account's normal password, leaving it exactly as found.
-      await test.step('Restore the original password (always runs)', async () => {
-        await resetTo(originalPassword);
-        await loginPage.login(spareId, originalPassword);
+      // Phase 2 (the restore) must run even if phase 1 throws — a partial failure must never strand
+      // the shared spare account on the temp password. `finally` is the one construct that survives a
+      // thrown `expect()` here; a bare sequential `await` would not reach the restore at all.
+      try {
+        // Phase 1: reset to a temporary password and prove it actually works.
+        await resetTo(tempPassword);
+        await loginPage.login(spareId, tempPassword);
         await expect(
           page,
-          'the account logs back in with its ORIGINAL password after the restore',
+          'the account logs in with the NEW password immediately after the reset',
         ).toHaveURL(/\/home/, { timeout: 20_000 });
-      });
-    }
-  });
-});
+        await logout();
+      } finally {
+        // Phase 2: reset back to the account's normal password, leaving it exactly as found.
+        await test.step('Restore the original password (always runs)', async () => {
+          await resetTo(originalPassword);
+          await loginPage.login(spareId, originalPassword);
+          await expect(
+            page,
+            'the account logs back in with its ORIGINAL password after the restore',
+          ).toHaveURL(/\/home/, { timeout: 20_000 });
+        });
+      }
+    });
+  },
+);

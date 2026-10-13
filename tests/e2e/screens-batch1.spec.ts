@@ -12,7 +12,7 @@ const BATCH = new Set(['home', 'katchup', 'kall', 'kmail', 'profile']);
 
 test.describe(
   'KPost deep UI sweep — batch 1 (Home, Katchup, Kall, KMail, Profile)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@platform', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

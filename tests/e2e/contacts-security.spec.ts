@@ -22,60 +22,64 @@ const PAYLOADS: Array<{ name: string; value: string }> = [
   { name: 'SQL-style OR-true', value: "' OR '1'='1" },
 ];
 
-test.describe('KPost Contacts · search box security fuzzing', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost Contacts · search box security fuzzing',
+  { tag: ['@ui', '@contacts', '@regression'] },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  for (const payload of PAYLOADS) {
-    test(`the contact list search box survives a ${payload.name} payload without crashing or executing it @ui`, async ({
-      page,
-    }) => {
-      const opened = await gotoContacts(page);
-      test.skip(
-        !opened,
-        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
-      );
+    for (const payload of PAYLOADS) {
+      test(`the contact list search box survives a ${payload.name} payload without crashing or executing it @ui`, async ({
+        page,
+      }) => {
+        const opened = await gotoContacts(page);
+        test.skip(
+          !opened,
+          'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+        );
 
-      const stop = watchUiHealth(page);
-      let dialogFired = false;
-      page.on('dialog', (dialog) => {
-        dialogFired = true;
-        void dialog.dismiss();
+        const stop = watchUiHealth(page);
+        let dialogFired = false;
+        page.on('dialog', (dialog) => {
+          dialogFired = true;
+          void dialog.dismiss();
+        });
+
+        const search = contactsSearchBox(page);
+        await search.click();
+        await search.fill(payload.value);
+        // The filter is synchronous on the client; give any injected handler a moment to fire.
+        await expect(search, 'the field holds the raw text').toHaveValue(payload.value);
+        // Two frames: any handler an injected payload could have attached has had its chance to run.
+        await page.evaluate(
+          () =>
+            new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+        );
+
+        const health = stop();
+        test.info().annotations.push({
+          type: 'observed',
+          description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
+        });
+        expect(
+          health.pageErrors,
+          `no uncaught JS error while filtering by: ${payload.value}`,
+        ).toEqual([]);
+        expect(
+          dialogFired,
+          `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
+        ).toBe(false);
       });
-
-      const search = contactsSearchBox(page);
-      await search.click();
-      await search.fill(payload.value);
-      // The filter is synchronous on the client; give any injected handler a moment to fire.
-      await expect(search, 'the field holds the raw text').toHaveValue(payload.value);
-      // Two frames: any handler an injected payload could have attached has had its chance to run.
-      await page.evaluate(
-        () =>
-          new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
-      );
-
-      const health = stop();
-      test.info().annotations.push({
-        type: 'observed',
-        description: `page errors: ${JSON.stringify(health.pageErrors)}; dialog fired: ${dialogFired}`,
-      });
-      expect(
-        health.pageErrors,
-        `no uncaught JS error while filtering by: ${payload.value}`,
-      ).toEqual([]);
-      expect(
-        dialogFired,
-        `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
-      ).toBe(false);
-    });
-  }
-});
+    }
+  },
+);
 
 test.describe(
   'KPost Contacts · Advanced Search mobile-number field security fuzzing',
-  { tag: '@ui' },
+  { tag: ['@ui', '@contacts', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

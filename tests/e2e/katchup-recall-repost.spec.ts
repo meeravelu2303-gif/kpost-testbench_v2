@@ -31,7 +31,7 @@ import {
  */
 test.describe(
   'KPost Katchup · recall, edit & repost, delete (FR-KU-029..031)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@katchup', '@regression'] },
   () => {
     test.describe.configure({ timeout: 150_000 });
     test.skip(

@@ -14,7 +14,7 @@ import { openConversation } from './support/katchup';
  * (`AddContact.js`, `BlockContact.js`) are deeply nested, so they are first-drafts pending one live
  * recording pass (FIRST-RUN NOTE on each).
  */
-test.describe('KPost Contacts — read-only', { tag: '@ui' }, () => {
+test.describe('KPost Contacts — read-only', { tag: ['@ui', '@contacts', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
     'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
@@ -64,50 +64,54 @@ test.describe('KPost Contacts — read-only', { tag: '@ui' }, () => {
   });
 });
 
-test.describe('KPost Contacts — block / unblock (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.CONTACTS_UI_LIFECYCLE !== 'true',
-    'blocks a real contact; set CONTACTS_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
-    'needs both QA accounts',
-  );
+test.describe(
+  'KPost Contacts — block / unblock (write)',
+  { tag: ['@ui', '@contacts', '@regression'] },
+  () => {
+    test.skip(
+      process.env.CONTACTS_UI_LIFECYCLE !== 'true',
+      'blocks a real contact; set CONTACTS_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
+      'needs both QA accounts',
+    );
 
-  /**
-   * NEEDS-CODEGEN: the block/unblock trigger lives in the contact's profile/options inside the Katchup
-   * rail (`BlockContact.js`, `handleBlock` → `BlockContactService {contactID, isBlocked}`). Verified on
-   * live this session that the affordance is NOT a plain text/menu item on the open conversation (a
-   * `.icon-KP_144---More-Vertical` force-click surfaces no Block option) — it is a hover-revealed /
-   * deeply-nested in-rail control whose deployed selector needs one interactive `codegen` pass to
-   * capture. The flow (open the contact → Block → confirm → Unblock, self-restoring) and gating are
-   * correct once the selector lands. The API Contacts block/unblock lifecycle is green, so the operation
-   * itself is proven — only the UI-driving selector is pending. Gated, so it never runs by default.
-   */
-  test('block then unblock the 2nd QA account, leaving it unblocked @ui', async ({ page }) => {
-    await openConversation(page, testData.victimKpostId);
+    /**
+     * NEEDS-CODEGEN: the block/unblock trigger lives in the contact's profile/options inside the Katchup
+     * rail (`BlockContact.js`, `handleBlock` → `BlockContactService {contactID, isBlocked}`). Verified on
+     * live this session that the affordance is NOT a plain text/menu item on the open conversation (a
+     * `.icon-KP_144---More-Vertical` force-click surfaces no Block option) — it is a hover-revealed /
+     * deeply-nested in-rail control whose deployed selector needs one interactive `codegen` pass to
+     * capture. The flow (open the contact → Block → confirm → Unblock, self-restoring) and gating are
+     * correct once the selector lands. The API Contacts block/unblock lifecycle is green, so the operation
+     * itself is proven — only the UI-driving selector is pending. Gated, so it never runs by default.
+     */
+    test('block then unblock the 2nd QA account, leaving it unblocked @ui', async ({ page }) => {
+      await openConversation(page, testData.victimKpostId);
 
-    // Open the contact's profile/options and Block, then Unblock — self-restoring.
-    const block = page.getByRole('menuitem', { name: /^Block$/i }).or(page.getByText(/^Block$/i));
-    await block
-      .first()
-      .click()
-      .catch(() => undefined);
-    // Confirm dialog if present.
-    await page
-      .getByRole('button', { name: /^(Confirm|Yes|Block)$/i })
-      .first()
-      .click()
-      .catch(() => undefined);
+      // Open the contact's profile/options and Block, then Unblock — self-restoring.
+      const block = page.getByRole('menuitem', { name: /^Block$/i }).or(page.getByText(/^Block$/i));
+      await block
+        .first()
+        .click()
+        .catch(() => undefined);
+      // Confirm dialog if present.
+      await page
+        .getByRole('button', { name: /^(Confirm|Yes|Block)$/i })
+        .first()
+        .click()
+        .catch(() => undefined);
 
-    const unblock = page
-      .getByRole('menuitem', { name: /^Unblock$/i })
-      .or(page.getByRole('button', { name: /^Unblock$/i }))
-      .or(page.getByText(/^Unblock$/i));
-    await expect(unblock.first(), 'the contact is now blocked (Unblock is offered)').toBeVisible({
-      timeout: 15_000,
+      const unblock = page
+        .getByRole('menuitem', { name: /^Unblock$/i })
+        .or(page.getByRole('button', { name: /^Unblock$/i }))
+        .or(page.getByText(/^Unblock$/i));
+      await expect(unblock.first(), 'the contact is now blocked (Unblock is offered)').toBeVisible({
+        timeout: 15_000,
+      });
+      // Restore: unblock so the account ends as it started.
+      await unblock.first().click();
     });
-    // Restore: unblock so the account ends as it started.
-    await unblock.first().click();
-  });
-});
+  },
+);

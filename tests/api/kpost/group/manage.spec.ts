@@ -7,7 +7,7 @@ import { test } from '@fixtures';
  * detail read and the V1 legacy remove-member route. HOW is owned by the central validation engine.
  * Requests are aimed at the throwaway account instead of the shared counterparty.
  */
-test.describe('KPost Group · manage', () => {
+test.describe('KPost Group · manage', { tag: ['@api', '@group', '@regression'] }, () => {
   describeEndpointCases(
     { tags: ['group-manage', 'group-read', 'group-image'] },
     { transform: forWriteSweep },

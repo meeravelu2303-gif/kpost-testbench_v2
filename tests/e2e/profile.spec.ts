@@ -10,7 +10,7 @@ import { expect, test } from '@fixtures';
  * job). They confirm the screens render the caller's own profile and the settings workspace in
  * Chromium, Firefox and WebKit.
  */
-test.describe('KPost Profile screens', { tag: '@ui' }, () => {
+test.describe('KPost Profile screens', { tag: ['@ui', '@profile', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

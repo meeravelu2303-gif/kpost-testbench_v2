@@ -91,7 +91,7 @@ async function as(
 
 test.describe(
   'KPost Katchup · Group send + per-recipient read receipts @ui',
-  { tag: '@ui' },
+  { tag: ['@ui', '@katchup', '@regression'] },
   () => {
     test.skip(
       process.env.KATCHUP_UI_LIFECYCLE !== 'true',

@@ -46,54 +46,58 @@ async function assertNoFileableIssues(
   expect(problems, `${screen.name} UI issues — ${problems.join(' | ')}`).toEqual([]);
 }
 
-test.describe('KPost Home — dynamic-state health/performance/layout sweep', { tag: '@ui' }, () => {
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench'),
-    'needs a real live account (QA_KPOST_ID)',
-  );
+test.describe(
+  'KPost Home — dynamic-state health/performance/layout sweep',
+  { tag: ['@ui', '@home', '@regression'] },
+  () => {
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench'),
+      'needs a real live account (QA_KPOST_ID)',
+    );
 
-  test('Home — Contacts tab active: health, performance, layout @ui', async ({
-    page,
-    homePage,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
+    test('Home — Contacts tab active: health, performance, layout @ui', async ({
+      page,
+      homePage,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
 
-    await homePage.goto();
-    await homePage.switchToContactsTab();
-    await settleFrames(page);
-    const loadMs = Date.now() - started;
+      await homePage.goto();
+      await homePage.switchToContactsTab();
+      await settleFrames(page);
+      const loadMs = Date.now() - started;
 
-    const screen: ScreenDef = {
-      route: '/home',
-      name: 'Home — Contacts tab active',
-      screen: 'home',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
+      const screen: ScreenDef = {
+        route: '/home',
+        name: 'Home — Contacts tab active',
+        screen: 'home',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
 
-  test('Home — Advanced Search modal open: health, performance, layout @ui', async ({
-    page,
-    homePage,
-  }) => {
-    const stop = watchUiHealth(page);
-    const started = Date.now();
+    test('Home — Advanced Search modal open: health, performance, layout @ui', async ({
+      page,
+      homePage,
+    }) => {
+      const stop = watchUiHealth(page);
+      const started = Date.now();
 
-    await homePage.goto();
-    await homePage.switchToRecentsTab();
-    await homePage.openAdvancedSearch();
-    await settleFrames(page);
-    const loadMs = Date.now() - started;
+      await homePage.goto();
+      await homePage.switchToRecentsTab();
+      await homePage.openAdvancedSearch();
+      await settleFrames(page);
+      const loadMs = Date.now() - started;
 
-    const screen: ScreenDef = {
-      route: '/home',
-      name: 'Home — Advanced Search modal open',
-      screen: 'home',
-      ready: [],
-      controls: [],
-    };
-    await assertNoFileableIssues(page, screen, stop(), loadMs);
-  });
-});
+      const screen: ScreenDef = {
+        route: '/home',
+        name: 'Home — Advanced Search modal open',
+        screen: 'home',
+        ready: [],
+        controls: [],
+      };
+      await assertNoFileableIssues(page, screen, stop(), loadMs);
+    });
+  },
+);

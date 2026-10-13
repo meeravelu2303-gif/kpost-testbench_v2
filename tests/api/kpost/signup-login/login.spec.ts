@@ -8,10 +8,14 @@ import { test } from '@fixtures';
  * The login endpoint is also what issues every other module's token, so a failure here is the
  * first thing to read in a broken run.
  */
-test.describe('KPost Login · contract validation', () => {
-  /*
-   * `session-ending` is excluded: `userLogout` would log out the token provider's cached session
-   * that every later test reuses. It is tested in login-flow.spec.ts, on a session of its own.
-   */
-  describeEndpointCases({ tags: ['login'], excludeTags: ['session-ending'] });
-});
+test.describe(
+  'KPost Login · contract validation',
+  { tag: ['@api', '@auth', '@regression'] },
+  () => {
+    /*
+     * `session-ending` is excluded: `userLogout` would log out the token provider's cached session
+     * that every later test reuses. It is tested in login-flow.spec.ts, on a session of its own.
+     */
+    describeEndpointCases({ tags: ['login'], excludeTags: ['session-ending'] });
+  },
+);

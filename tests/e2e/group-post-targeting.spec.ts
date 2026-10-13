@@ -24,7 +24,7 @@ const OTHER = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim');
 
 test.describe(
   'KPost Katchup · group message targeting (FR-GMSG Post To All / Selected)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@group', '@regression'] },
   () => {
     test.describe.configure({ timeout: 180_000 });
     test.skip(

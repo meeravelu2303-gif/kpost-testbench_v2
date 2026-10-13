@@ -34,7 +34,7 @@ async function openComposer(page: Page): Promise<void> {
   await page.locator('.msg-arrow').first().click();
 }
 
-test.describe('KPost Katchup compose', { tag: '@ui' }, () => {
+test.describe('KPost Katchup compose', { tag: ['@ui', '@katchup', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
     'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
@@ -68,56 +68,62 @@ test.describe('KPost Katchup compose', { tag: '@ui' }, () => {
  * then **recalls** it, so the accounts end exactly as they started (send = the icon button in
  * `#ChatTop`; recall = the message action menu → "Recall").
  */
-test.describe('KPost Katchup compose · send (write)', { tag: '@ui' }, () => {
-  test.skip(
-    process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-    'sends a real message; set KATCHUP_UI_LIFECYCLE=true',
-  );
-  test.skip(
-    !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
-    'needs both QA accounts',
-  );
+test.describe(
+  'KPost Katchup compose · send (write)',
+  { tag: ['@ui', '@katchup', '@regression'] },
+  () => {
+    test.skip(
+      process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+      'sends a real message; set KATCHUP_UI_LIFECYCLE=true',
+    );
+    test.skip(
+      !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,
+      'needs both QA accounts',
+    );
 
-  test('send a Subject-bearing message to the 2nd QA account, verify it appears, then recall it @ui', async ({
-    page,
-  }) => {
-    // A unique subject so verification and recall target THIS message, not an older one.
-    const subject = `QA UI ${Date.now()}`;
-    const body = 'QA UI test message — self-cleaning';
+    test('send a Subject-bearing message to the 2nd QA account, verify it appears, then recall it @ui', async ({
+      page,
+    }) => {
+      // A unique subject so verification and recall target THIS message, not an older one.
+      const subject = `QA UI ${Date.now()}`;
+      const body = 'QA UI test message — self-cleaning';
 
-    await openComposer(page);
+      await openComposer(page);
 
-    await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
-    await page.locator(EDITOR).first().click();
-    await page.keyboard.type(body);
+      await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
+      await page.locator(EDITOR).first().click();
+      await page.keyboard.type(body);
 
-    // Send.
-    await page.locator('#ChatTop').getByRole('button').filter({ hasText: /^$/ }).first().click();
+      // Send.
+      await page.locator('#ChatTop').getByRole('button').filter({ hasText: /^$/ }).first().click();
 
-    // The sent message appears in the conversation, carrying its Subject (BR-K01, on live).
-    await expect(page.getByText(subject).first(), 'the sent message appears').toBeVisible({
-      timeout: 20_000,
+      // The sent message appears in the conversation, carrying its Subject (BR-K01, on live).
+      await expect(page.getByText(subject).first(), 'the sent message appears').toBeVisible({
+        timeout: 20_000,
+      });
+
+      // Clean up: recall OUR message. Each message is a DOM element whose id is its msgID and which
+      // carries its own action icon — so find the message that has our unique subject AND an action
+      // icon, and recall that one (recall = unsend; the recipient never sees it — FR-K10/BR-K03).
+      const sentMessage = page
+        .locator('[id]')
+        .filter({ hasText: subject })
+        .filter({ has: page.getByTestId('NotificationsNoneIcon') })
+        .last();
+      await sentMessage.hover();
+      await sentMessage.getByTestId('NotificationsNoneIcon').first().click();
+      const recall = page.getByRole('menuitem', { name: /Recall/i });
+      await expect(recall, 'the message action menu offers Recall').toBeVisible({
+        timeout: 15_000,
+      });
+      await recall.click();
+
+      // Recall UNSENDS the message (the recipient never sees it — FR-K10/BR-K03); the sender keeps a
+      // "recalled" marker, so we confirm the action was ACCEPTED (the menu closed), not that the text
+      // vanished from our own view. The recipient-side effect is covered by the API Katchup lifecycle.
+      await expect(recall, 'the recall action was accepted (menu closed)').toHaveCount(0, {
+        timeout: 15_000,
+      });
     });
-
-    // Clean up: recall OUR message. Each message is a DOM element whose id is its msgID and which
-    // carries its own action icon — so find the message that has our unique subject AND an action
-    // icon, and recall that one (recall = unsend; the recipient never sees it — FR-K10/BR-K03).
-    const sentMessage = page
-      .locator('[id]')
-      .filter({ hasText: subject })
-      .filter({ has: page.getByTestId('NotificationsNoneIcon') })
-      .last();
-    await sentMessage.hover();
-    await sentMessage.getByTestId('NotificationsNoneIcon').first().click();
-    const recall = page.getByRole('menuitem', { name: /Recall/i });
-    await expect(recall, 'the message action menu offers Recall').toBeVisible({ timeout: 15_000 });
-    await recall.click();
-
-    // Recall UNSENDS the message (the recipient never sees it — FR-K10/BR-K03); the sender keeps a
-    // "recalled" marker, so we confirm the action was ACCEPTED (the menu closed), not that the text
-    // vanished from our own view. The recipient-side effect is covered by the API Katchup lifecycle.
-    await expect(recall, 'the recall action was accepted (menu closed)').toHaveCount(0, {
-      timeout: 15_000,
-    });
-  });
-});
+  },
+);

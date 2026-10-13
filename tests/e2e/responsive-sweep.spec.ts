@@ -92,31 +92,39 @@ async function sweep(page: Page, screens: readonly ScreenDef[]): Promise<Row[]> 
   return rows;
 }
 
-test.describe('KPost responsive sweep — signed-in screens', { tag: '@ui' }, () => {
-  test.describe.configure({ timeout: 600_000 });
-  const personal = AUTHENTICATED_SCREENS.filter((s) => (s.session ?? 'personal') === 'personal');
-  for (const vp of VIEWPORTS) {
-    // eslint-disable-next-line playwright/expect-expect -- the assertions live in report()
-    test(`every signed-in screen at ${vp.name} width (${vp.width}×${vp.height}) @ui`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      await skipIfSignedOut(page);
-      report(await sweep(page, personal), vp.name, vp.width);
-    });
-  }
-});
+test.describe(
+  'KPost responsive sweep — signed-in screens',
+  { tag: ['@ui', '@platform', '@regression'] },
+  () => {
+    test.describe.configure({ timeout: 600_000 });
+    const personal = AUTHENTICATED_SCREENS.filter((s) => (s.session ?? 'personal') === 'personal');
+    for (const vp of VIEWPORTS) {
+      // eslint-disable-next-line playwright/expect-expect -- the assertions live in report()
+      test(`every signed-in screen at ${vp.name} width (${vp.width}×${vp.height}) @ui`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+        await skipIfSignedOut(page);
+        report(await sweep(page, personal), vp.name, vp.width);
+      });
+    }
+  },
+);
 
-test.describe('KPost responsive sweep — public screens', { tag: '@ui' }, () => {
-  test.describe.configure({ timeout: 300_000 });
-  test.use({ storageState: { cookies: [], origins: [] } });
-  for (const vp of VIEWPORTS) {
-    // eslint-disable-next-line playwright/expect-expect -- the assertions live in report()
-    test(`every public screen at ${vp.name} width (${vp.width}×${vp.height}) @ui`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      report(await sweep(page, PUBLIC_SCREENS), vp.name, vp.width);
-    });
-  }
-});
+test.describe(
+  'KPost responsive sweep — public screens',
+  { tag: ['@ui', '@platform', '@regression'] },
+  () => {
+    test.describe.configure({ timeout: 300_000 });
+    test.use({ storageState: { cookies: [], origins: [] } });
+    for (const vp of VIEWPORTS) {
+      // eslint-disable-next-line playwright/expect-expect -- the assertions live in report()
+      test(`every public screen at ${vp.name} width (${vp.width}×${vp.height}) @ui`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+        report(await sweep(page, PUBLIC_SCREENS), vp.name, vp.width);
+      });
+    }
+  },
+);

@@ -7,7 +7,7 @@ import { test } from '@fixtures';
  * translation. HOW is owned by the central validation engine. The parameterless GETs and
  * contact-scoped reads run on live (our own account); the id-keyed reads skip (`needs-id`).
  */
-test.describe('KPost KMail · reads', () => {
+test.describe('KPost KMail · reads', { tag: ['@api', '@kmail', '@regression'] }, () => {
   // Gated while KMail refuses every valid token — see src/fixtures/kmail-auth-gate.ts.
   test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
 

@@ -8,6 +8,10 @@ import { test } from '@fixtures';
  * Every endpoint here answers a question about somebody else's data without a token, so the
  * security validators (information disclosure, sensitive data, injection) carry the weight.
  */
-test.describe('KPost common · identity lookups', () => {
-  describeEndpointCases({ tags: ['common-identity'] });
-});
+test.describe(
+  'KPost common · identity lookups',
+  { tag: ['@api', '@platform', '@regression'] },
+  () => {
+    describeEndpointCases({ tags: ['common-identity'] });
+  },
+);

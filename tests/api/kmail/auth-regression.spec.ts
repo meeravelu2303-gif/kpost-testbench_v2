@@ -40,65 +40,69 @@ import { expect, test } from '@fixtures';
  * earlier runs of this bench — records these same endpoints as working, so this is a regression on
  * the host rather than a change here.
  */
-test.describe('KMail · authentication regression @api @kmail-api @kmail @database', () => {
-  test('a valid KPost token is accepted by KPost and refused by KMail', async ({
-    validationEngine,
-    endpoints,
-    databases,
-  }) => {
-    /*
-     * SMOKE deliberately: the narrowest validator set that still includes
-     * `authentication.valid-token`. A deeper profile would add the negative probes, and every one of
-     * them would "fail" for the same single reason — which is exactly the noise this spec exists to
-     * avoid producing.
-     */
-    const report = await validationEngine.validate('kmail-saluations', { profile: 'SMOKE' });
+test.describe(
+  'KMail · authentication regression @api @kmail-api @kmail @database',
+  { tag: ['@api', '@kmail', '@regression'] },
+  () => {
+    test('a valid KPost token is accepted by KPost and refused by KMail', async ({
+      validationEngine,
+      endpoints,
+      databases,
+    }) => {
+      /*
+       * SMOKE deliberately: the narrowest validator set that still includes
+       * `authentication.valid-token`. A deeper profile would add the negative probes, and every one of
+       * them would "fail" for the same single reason — which is exactly the noise this spec exists to
+       * avoid producing.
+       */
+      const report = await validationEngine.validate('kmail-saluations', { profile: 'SMOKE' });
 
-    const auth = report.results.find((r) => r.validatorName === 'authentication.valid-token');
-    expect(auth, 'the valid-token check is planned for this endpoint').toBeDefined();
-    /*
-     * It must actually have RUN. A SKIPPED result is not evidence of anything, and an earlier
-     * version of this spec passed on exactly that: `.not.toBe('FAILED')` is satisfied by SKIPPED,
-     * so the test went green while the endpoint was never called. Requiring a real verdict is what
-     * makes the assertion below mean something.
-     */
-    expect(
-      auth?.status,
-      `the valid-token check must run, not skip (reason: ${auth?.message ?? 'none given'})`,
-    ).not.toBe('SKIPPED');
-
-    /*
-     * The control, in the same test so the ticket carries it: the SAME credentials answer 200 on
-     * KPost. Without this a reader cannot tell "KMail is broken" from "our token is stale", and the
-     * developer's first question would be exactly that.
-     */
-    const control = await endpoints.sendTo(
-      'profile-fetch-user-details',
-      {},
-      { label: 'kmail-auth-regression:kpost-control' },
-    );
-    expect(control.status, 'the same credentials are accepted by KPost').toBe(200);
-
-    /*
-     * And the database half: the account is provisioned for KMail. `kmail_password` being present
-     * rules out "this account was never set up for mail", which is the other thing a developer
-     * would reasonably suspect first.
-     */
-    const database = databases.for('kpost-api');
-    if (database.enabled) {
-      const user = await new KpostRepository(database).user(testData.kpostId);
-      expect(user, 'the account exists in TBL_KPOST_USER_MASTER').toBeDefined();
+      const auth = report.results.find((r) => r.validatorName === 'authentication.valid-token');
+      expect(auth, 'the valid-token check is planned for this endpoint').toBeDefined();
+      /*
+       * It must actually have RUN. A SKIPPED result is not evidence of anything, and an earlier
+       * version of this spec passed on exactly that: `.not.toBe('FAILED')` is satisfied by SKIPPED,
+       * so the test went green while the endpoint was never called. Requiring a real verdict is what
+       * makes the assertion below mean something.
+       */
       expect(
-        user?.kmail_password,
-        'and carries a kmail_password, so it IS provisioned for KMail',
-      ).toBeTruthy();
-    }
+        auth?.status,
+        `the valid-token check must run, not skip (reason: ${auth?.message ?? 'none given'})`,
+      ).not.toBe('SKIPPED');
 
-    // The assertion that fails while the defect is live, and passes the moment it is fixed.
-    expect(
-      auth?.status,
-      `KMail refused a token KPost accepts (control: ${control.status}). ` +
-        `${auth?.message ?? ''}`,
-    ).not.toBe('FAILED');
-  });
-});
+      /*
+       * The control, in the same test so the ticket carries it: the SAME credentials answer 200 on
+       * KPost. Without this a reader cannot tell "KMail is broken" from "our token is stale", and the
+       * developer's first question would be exactly that.
+       */
+      const control = await endpoints.sendTo(
+        'profile-fetch-user-details',
+        {},
+        { label: 'kmail-auth-regression:kpost-control' },
+      );
+      expect(control.status, 'the same credentials are accepted by KPost').toBe(200);
+
+      /*
+       * And the database half: the account is provisioned for KMail. `kmail_password` being present
+       * rules out "this account was never set up for mail", which is the other thing a developer
+       * would reasonably suspect first.
+       */
+      const database = databases.for('kpost-api');
+      if (database.enabled) {
+        const user = await new KpostRepository(database).user(testData.kpostId);
+        expect(user, 'the account exists in TBL_KPOST_USER_MASTER').toBeDefined();
+        expect(
+          user?.kmail_password,
+          'and carries a kmail_password, so it IS provisioned for KMail',
+        ).toBeTruthy();
+      }
+
+      // The assertion that fails while the defect is live, and passes the moment it is fixed.
+      expect(
+        auth?.status,
+        `KMail refused a token KPost accepts (control: ${control.status}). ` +
+          `${auth?.message ?? ''}`,
+      ).not.toBe('FAILED');
+    });
+  },
+);

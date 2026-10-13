@@ -27,69 +27,80 @@ interface Found {
   members: string[];
 }
 
-test.describe('maintenance · QA UI group cleanup', { tag: '@maintenance' }, () => {
-  test.skip(process.env.QA_GROUP_CLEANUP !== 'true', 'maintenance only; set QA_GROUP_CLEANUP=true');
+test.describe(
+  'maintenance · QA UI group cleanup',
+  { tag: ['@maintenance', '@api', '@group', '@regression'] },
+  () => {
+    test.skip(
+      process.env.QA_GROUP_CLEANUP !== 'true',
+      'maintenance only; set QA_GROUP_CLEANUP=true',
+    );
 
-  test('remove members, then delete every leftover "QA UI *" group', async ({ endpoints }) => {
-    test.setTimeout(600_000);
-    let remaining = 0;
-    for (const who of OWNERS) {
-      const ex = await endpoints.sendTo(
-        'contacts-my-groups',
-        { body: { lastfetchDate: null } },
-        { label: `cleanup:my-groups:${who.key}`, auth: { principal: who }, allowLiveRead: true },
-      );
-      expect(ex.status, `myGroups answered for ${who.key}`).toBeLessThan(400);
-      const parsed = ex.json();
-      const found: Found[] = [];
-      const walk = (v: unknown): void => {
-        if (Array.isArray(v)) return v.forEach(walk);
-        if (v && typeof v === 'object') {
-          const o = v as Record<string, unknown>;
-          if (typeof o.groupKpostName === 'string' && typeof o.groupKpostID === 'string') {
-            const md = Array.isArray(o.memberDetails)
-              ? (o.memberDetails as Record<string, unknown>[])
-              : [];
-            found.push({
-              groupKpostID: o.groupKpostID,
-              groupID: Number(o.groupID ?? 0),
-              groupKpostName: o.groupKpostName,
-              members: md
-                .filter((m) => m.removedFlag !== true)
-                .map((m) => (typeof m.kpostID === 'string' ? m.kpostID : ''))
-                .filter(Boolean),
-            });
-          }
-          Object.values(o).forEach(walk);
-        }
-      };
-      walk(parsed.ok ? parsed.value : {});
-      const mine = found.filter((g) => /^QA UI /.test(g.groupKpostName));
-      console.log(`[${who.key}] groups: ${found.length}; QA UI leftovers: ${mine.length}`);
-      for (const g of mine) {
-        const others = g.members.filter((id) => id !== who.username);
-        if (others.length) {
-          const rm = await endpoints.sendTo(
-            'group-remove-member',
-            {
-              body: { memberKpostIdList: others, groupID: g.groupID, groupKpostID: g.groupKpostID },
-            },
-            { label: 'cleanup:remove-members', auth: { principal: who }, allowLiveWrite: true },
-          );
-          console.log(`  remove ${others.length} from ${g.groupKpostName} -> ${rm.status}`);
-        }
-        const del = await endpoints.sendTo(
-          'group-delete',
-          { body: { groupID: g.groupID, groupKpostID: g.groupKpostID } },
-          { label: 'cleanup:delete', auth: { principal: who }, allowLiveWrite: true },
+    test('remove members, then delete every leftover "QA UI *" group', async ({ endpoints }) => {
+      test.setTimeout(600_000);
+      let remaining = 0;
+      for (const who of OWNERS) {
+        const ex = await endpoints.sendTo(
+          'contacts-my-groups',
+          { body: { lastfetchDate: null } },
+          { label: `cleanup:my-groups:${who.key}`, auth: { principal: who }, allowLiveRead: true },
         );
-        console.log(`  delete ${g.groupKpostName} -> ${del.status}`);
-        if (del.status >= 300) remaining++;
+        expect(ex.status, `myGroups answered for ${who.key}`).toBeLessThan(400);
+        const parsed = ex.json();
+        const found: Found[] = [];
+        const walk = (v: unknown): void => {
+          if (Array.isArray(v)) return v.forEach(walk);
+          if (v && typeof v === 'object') {
+            const o = v as Record<string, unknown>;
+            if (typeof o.groupKpostName === 'string' && typeof o.groupKpostID === 'string') {
+              const md = Array.isArray(o.memberDetails)
+                ? (o.memberDetails as Record<string, unknown>[])
+                : [];
+              found.push({
+                groupKpostID: o.groupKpostID,
+                groupID: Number(o.groupID ?? 0),
+                groupKpostName: o.groupKpostName,
+                members: md
+                  .filter((m) => m.removedFlag !== true)
+                  .map((m) => (typeof m.kpostID === 'string' ? m.kpostID : ''))
+                  .filter(Boolean),
+              });
+            }
+            Object.values(o).forEach(walk);
+          }
+        };
+        walk(parsed.ok ? parsed.value : {});
+        const mine = found.filter((g) => /^QA UI /.test(g.groupKpostName));
+        console.log(`[${who.key}] groups: ${found.length}; QA UI leftovers: ${mine.length}`);
+        for (const g of mine) {
+          const others = g.members.filter((id) => id !== who.username);
+          if (others.length) {
+            const rm = await endpoints.sendTo(
+              'group-remove-member',
+              {
+                body: {
+                  memberKpostIdList: others,
+                  groupID: g.groupID,
+                  groupKpostID: g.groupKpostID,
+                },
+              },
+              { label: 'cleanup:remove-members', auth: { principal: who }, allowLiveWrite: true },
+            );
+            console.log(`  remove ${others.length} from ${g.groupKpostName} -> ${rm.status}`);
+          }
+          const del = await endpoints.sendTo(
+            'group-delete',
+            { body: { groupID: g.groupID, groupKpostID: g.groupKpostID } },
+            { label: 'cleanup:delete', auth: { principal: who }, allowLiveWrite: true },
+          );
+          console.log(`  delete ${g.groupKpostName} -> ${del.status}`);
+          if (del.status >= 300) remaining++;
+        }
       }
-    }
-    test.info().annotations.push({
-      type: 'observed',
-      description: `QA UI groups still undeletable after this pass: ${remaining}`,
+      test.info().annotations.push({
+        type: 'observed',
+        description: `QA UI groups still undeletable after this pass: ${remaining}`,
+      });
     });
-  });
-});
+  },
+);

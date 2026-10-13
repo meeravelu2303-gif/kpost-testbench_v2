@@ -15,59 +15,63 @@ import { settleFrames } from './support/settle';
  * inline in JSX with no try/catch around the render path, unlike `ProfileWebView.js`'s equivalent
  * call (which IS wrapped). A malformed id could throw before the modal ever renders.
  */
-test.describe('KPost — /koolkall/:id public call-join link', { tag: '@ui' }, () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+test.describe(
+  'KPost — /koolkall/:id public call-join link',
+  { tag: ['@ui', '@kall', '@regression'] },
+  () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-  test('a malformed id does not crash the page before the name-capture modal can render @ui', async ({
-    page,
-  }) => {
-    const stop = watchUiHealth(page);
-    await page.goto('/koolkall/not-a-valid-encrypted-id', {
-      waitUntil: 'domcontentloaded',
-      timeout: 45_000,
-    });
-    await page.waitForLoadState('load');
-    await settleFrames(page);
+    test('a malformed id does not crash the page before the name-capture modal can render @ui', async ({
+      page,
+    }) => {
+      const stop = watchUiHealth(page);
+      await page.goto('/koolkall/not-a-valid-encrypted-id', {
+        waitUntil: 'domcontentloaded',
+        timeout: 45_000,
+      });
+      await page.waitForLoadState('load');
+      await settleFrames(page);
 
-    const health = stop();
-    test.info().annotations.push({
-      type: 'observed',
-      description: `page errors: ${JSON.stringify(health.pageErrors)}`,
-    });
+      const health = stop();
+      test.info().annotations.push({
+        type: 'observed',
+        description: `page errors: ${JSON.stringify(health.pageErrors)}`,
+      });
 
-    // Predicted from source as a risk (inline, unguarded decryptId call): if this fails, the finding
-    // is a real unguarded-decrypt crash on a public URL anyone can hit with a bad/expired link.
-    expect(
-      health.pageErrors,
-      'a malformed :id must not crash the page before the name-capture modal can render — ' +
-        'decryptId is called inline in JSX with no surrounding try/catch, confirmed from source',
-    ).toEqual([]);
-  });
-
-  test('the name-capture modal renders with its Cancel/Submit controls, and Submit is NEVER clicked @ui', async ({
-    page,
-  }) => {
-    await page.goto('/koolkall/not-a-valid-encrypted-id', {
-      waitUntil: 'domcontentloaded',
-      timeout: 45_000,
+      // Predicted from source as a risk (inline, unguarded decryptId call): if this fails, the finding
+      // is a real unguarded-decrypt crash on a public URL anyone can hit with a bad/expired link.
+      expect(
+        health.pageErrors,
+        'a malformed :id must not crash the page before the name-capture modal can render — ' +
+          'decryptId is called inline in JSX with no surrounding try/catch, confirmed from source',
+      ).toEqual([]);
     });
 
-    const nameInput = page.getByPlaceholder('Enter your name').first();
-    const opened = await nameInput.isVisible({ timeout: 10_000 }).catch(() => false);
-    test.skip(
-      !opened,
-      'the name-capture modal was not showing right now (the crash-safety test above covers the failure mode)',
-    );
+    test('the name-capture modal renders with its Cancel/Submit controls, and Submit is NEVER clicked @ui', async ({
+      page,
+    }) => {
+      await page.goto('/koolkall/not-a-valid-encrypted-id', {
+        waitUntil: 'domcontentloaded',
+        timeout: 45_000,
+      });
 
-    await expect(nameInput, 'the name-capture modal renders').toBeVisible();
-    await expect(
-      page.getByRole('button', { name: /^Cancel$/i }),
-      'Cancel is present',
-    ).toBeVisible();
-    // Submit is confirmed to join a REAL live Jitsi room — present but never clicked.
-    await expect(
-      page.getByRole('button', { name: /^Submit$/i }),
-      'Submit is present — NOT clicked, since it joins a real live call',
-    ).toBeVisible();
-  });
-});
+      const nameInput = page.getByPlaceholder('Enter your name').first();
+      const opened = await nameInput.isVisible({ timeout: 10_000 }).catch(() => false);
+      test.skip(
+        !opened,
+        'the name-capture modal was not showing right now (the crash-safety test above covers the failure mode)',
+      );
+
+      await expect(nameInput, 'the name-capture modal renders').toBeVisible();
+      await expect(
+        page.getByRole('button', { name: /^Cancel$/i }),
+        'Cancel is present',
+      ).toBeVisible();
+      // Submit is confirmed to join a REAL live Jitsi room — present but never clicked.
+      await expect(
+        page.getByRole('button', { name: /^Submit$/i }),
+        'Submit is present — NOT clicked, since it joins a real live call',
+      ).toBeVisible();
+    });
+  },
+);

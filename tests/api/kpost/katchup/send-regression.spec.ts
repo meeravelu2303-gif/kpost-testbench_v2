@@ -37,63 +37,71 @@ import { expect, test } from '@fixtures';
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 
-test.describe('KPost Katchup · send regression @api @kpost-api @katchup', () => {
-  test('sendMessage accepts its own documented default payload', async ({ endpoints }) => {
-    const shape = sendShape();
-    const exchange = await endpoints.sendTo(
-      'katchup-send-message',
-      { body: shape },
-      {
-        label: 'katchup-send-regression:default-payload',
-        auth: { principal: A },
-        allowLiveWrite: true,
+test.describe(
+  'KPost Katchup · send regression @api @kpost-api @katchup',
+  { tag: ['@api', '@katchup', '@regression'] },
+  () => {
+    test(
+      'sendMessage accepts its own documented default payload',
+      { tag: ['@bug-594'] },
+      async ({ endpoints }) => {
+        const shape = sendShape();
+        const exchange = await endpoints.sendTo(
+          'katchup-send-message',
+          { body: shape },
+          {
+            label: 'katchup-send-regression:default-payload',
+            auth: { principal: A },
+            allowLiveWrite: true,
+          },
+        );
+
+        if (exchange.status >= 200 && exchange.status < 300) {
+          // Fixed — clean up the message this run just created so confirming the fix doesn't itself
+          // leave litter, then let the assertion below pass normally.
+          const parsed = exchange.json();
+          const value = (parsed.ok ? parsed.value : {}) as { data?: unknown };
+          const row = Array.isArray(value.data)
+            ? (value.data[0] as Record<string, unknown>)
+            : undefined;
+          const msgID = typeof row?.msgID === 'number' ? row.msgID : undefined;
+          if (msgID) {
+            await endpoints
+              .sendTo(
+                'katchup-delete-message',
+                { body: { messageIds: [msgID], groupFlag: false } },
+                {
+                  label: 'katchup-send-regression:cleanup',
+                  auth: { principal: A },
+                  allowLiveWrite: true,
+                },
+              )
+              .catch(() => undefined);
+          }
+        } else {
+          // CONFIRMED regression — file it to the developer, not just a soft assert (see the module
+          // docstring's reproduction table above).
+          endpoints.recordBusinessRuleViolation({
+            endpointId: 'katchup-send-message',
+            ruleId: 'REGRESSION-katchup-send-default-payload',
+            rule:
+              'sendMessage must accept its own documented default request shape (sendShape() with no ' +
+              'overrides) — the same shape every other Katchup feature spec depends on to create the ' +
+              'messages it tests.',
+            expected: '2xx (message accepted, a msgID issued)',
+            actual: `${exchange.status} ${exchange.bodyText.slice(0, 300)}`,
+            request: { body: shape },
+          });
+        }
+
+        // The assertion that fails while the regression is live, and passes the moment it is fixed —
+        // same shape as KMail's auth-regression.spec.ts.
+        expect(
+          exchange.status,
+          `sendMessage rejected its own default payload with ${exchange.status} ` +
+            `(body: ${exchange.bodyText.slice(0, 200)})`,
+        ).toBeLessThan(300);
       },
     );
-
-    if (exchange.status >= 200 && exchange.status < 300) {
-      // Fixed — clean up the message this run just created so confirming the fix doesn't itself
-      // leave litter, then let the assertion below pass normally.
-      const parsed = exchange.json();
-      const value = (parsed.ok ? parsed.value : {}) as { data?: unknown };
-      const row = Array.isArray(value.data)
-        ? (value.data[0] as Record<string, unknown>)
-        : undefined;
-      const msgID = typeof row?.msgID === 'number' ? row.msgID : undefined;
-      if (msgID) {
-        await endpoints
-          .sendTo(
-            'katchup-delete-message',
-            { body: { messageIds: [msgID], groupFlag: false } },
-            {
-              label: 'katchup-send-regression:cleanup',
-              auth: { principal: A },
-              allowLiveWrite: true,
-            },
-          )
-          .catch(() => undefined);
-      }
-    } else {
-      // CONFIRMED regression — file it to the developer, not just a soft assert (see the module
-      // docstring's reproduction table above).
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'katchup-send-message',
-        ruleId: 'REGRESSION-katchup-send-default-payload',
-        rule:
-          'sendMessage must accept its own documented default request shape (sendShape() with no ' +
-          'overrides) — the same shape every other Katchup feature spec depends on to create the ' +
-          'messages it tests.',
-        expected: '2xx (message accepted, a msgID issued)',
-        actual: `${exchange.status} ${exchange.bodyText.slice(0, 300)}`,
-        request: { body: shape },
-      });
-    }
-
-    // The assertion that fails while the regression is live, and passes the moment it is fixed —
-    // same shape as KMail's auth-regression.spec.ts.
-    expect(
-      exchange.status,
-      `sendMessage rejected its own default payload with ${exchange.status} ` +
-        `(body: ${exchange.bodyText.slice(0, 200)})`,
-    ).toBeLessThan(300);
-  });
-});
+  },
+);

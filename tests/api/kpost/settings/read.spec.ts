@@ -5,6 +5,6 @@ import { test } from '@fixtures';
  * WHAT is tested: the Settings reads — personalization and notification settings. HOW is owned by
  * the central validation engine. Both run on live (our own account).
  */
-test.describe('KPost Settings · reads', () => {
+test.describe('KPost Settings · reads', { tag: ['@api', '@settings', '@regression'] }, () => {
   describeEndpointCases({ tags: ['settings-read'] });
 });

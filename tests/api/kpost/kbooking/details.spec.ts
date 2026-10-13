@@ -7,6 +7,6 @@ import { test } from '@fixtures';
  * `kbooking-block-ticket` is deliberately left out: a successful call holds a seat at the booking
  * partner, a real external side effect (see tests/framework/sweep-completeness.spec.ts).
  */
-test.describe('KPost KBooking · details', () => {
+test.describe('KPost KBooking · details', { tag: ['@api', '@verticals', '@regression'] }, () => {
   describeEndpointCases({ ids: ['kbooking-trip-details'] });
 });

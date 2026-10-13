@@ -10,7 +10,7 @@ import { expect, test } from '@fixtures';
  * rings a real device and cannot complete headlessly). These confirm the Kall workspace renders its
  * layout, tabs and contact search for a logged-in user in Chromium, Firefox and WebKit.
  */
-test.describe('KPost Kall screen', { tag: '@ui' }, () => {
+test.describe('KPost Kall screen', { tag: ['@ui', '@kall', '@regression'] }, () => {
   test.skip(
     !testData.kpostId || testData.kpostId.includes('qa.bench'),
     'needs a real live account (QA_KPOST_ID)',

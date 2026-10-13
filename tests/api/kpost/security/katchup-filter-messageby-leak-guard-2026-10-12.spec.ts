@@ -12,45 +12,49 @@ import { expect, test } from '@fixtures';
 
 const A = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal');
 
-test.describe('KPost Security · Katchup filter messageBy leak guard @api @kpost-api @security @katchup', () => {
-  test.skip(!A, 'needs a KPost principal');
+test.describe(
+  'KPost Security · Katchup filter messageBy leak guard @api @kpost-api @security @katchup',
+  { tag: ['@api', '@katchup', '@security', '@regression'] },
+  () => {
+    test.skip(!A, 'needs a KPost principal');
 
-  test('an out-of-enum messageBy is refused (400) and never widens the query to all users (KP-818553)', async ({
-    endpoints,
-  }) => {
-    const request = {
-      selectedContact: testData.victimKpostId,
-      groupFlag: false,
-      messageBy: 'ALLUSERS_INJECT',
-    };
-    const ex = await endpoints.sendTo(
-      'katchup-filter-message',
-      { body: request },
-      { label: 'filter-messageBy-leak-guard', auth: { principal: A! } },
-    );
+    test('an out-of-enum messageBy is refused (400) and never widens the query to all users (KP-818553)', async ({
+      endpoints,
+    }) => {
+      const request = {
+        selectedContact: testData.victimKpostId,
+        groupFlag: false,
+        messageBy: 'ALLUSERS_INJECT',
+      };
+      const ex = await endpoints.sendTo(
+        'katchup-filter-message',
+        { body: request },
+        { label: 'filter-messageBy-leak-guard', auth: { principal: A! } },
+      );
 
-    const body = JSON.parse(ex.bodyText || '{}') as { data?: unknown };
-    const rows = Array.isArray(body.data) ? body.data.length : 0;
+      const body = JSON.parse(ex.bodyText || '{}') as { data?: unknown };
+      const rows = Array.isArray(body.data) ? body.data.length : 0;
 
-    // The leak signature: the invalid value was ACCEPTED (2xx) and returned rows (the dropped
-    // sender/receiver predicate surfacing other users' messages).
-    if (ex.status < 300 && rows > 0) {
-      endpoints.recordBusinessRuleViolation({
-        endpointId: 'katchup-filter-message',
-        ruleId: 'KP-818553-MESSAGEBY-ENUM',
-        rule:
-          'filterKatchUpMessage must reject a messageBy outside {All, sent, received} with a 400; an ' +
-          'unrecognised value must never drop the caller sender/receiver predicate and return other ' +
-          "users' messages.",
-        expected: 'an out-of-enum messageBy is refused with HTTP 400 and returns no rows',
-        actual: `the request was accepted (${ex.status}) and returned ${rows} row(s): ${ex.bodyText.slice(0, 300)}`,
-        request: { body: request },
-      });
-    }
+      // The leak signature: the invalid value was ACCEPTED (2xx) and returned rows (the dropped
+      // sender/receiver predicate surfacing other users' messages).
+      if (ex.status < 300 && rows > 0) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'katchup-filter-message',
+          ruleId: 'KP-818553-MESSAGEBY-ENUM',
+          rule:
+            'filterKatchUpMessage must reject a messageBy outside {All, sent, received} with a 400; an ' +
+            'unrecognised value must never drop the caller sender/receiver predicate and return other ' +
+            "users' messages.",
+          expected: 'an out-of-enum messageBy is refused with HTTP 400 and returns no rows',
+          actual: `the request was accepted (${ex.status}) and returned ${rows} row(s): ${ex.bodyText.slice(0, 300)}`,
+          request: { body: request },
+        });
+      }
 
-    expect(
-      ex.status,
-      'an invalid messageBy must be refused (400), never silently widened to every user',
-    ).toBe(400);
-  });
-});
+      expect(
+        ex.status,
+        'an invalid messageBy must be refused (400), never silently widened to every user',
+      ).toBe(400);
+    });
+  },
+);

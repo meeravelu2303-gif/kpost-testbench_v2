@@ -45,127 +45,133 @@ async function contactPresent(endpoints: EndpointExecutor): Promise<boolean> {
   return (ex.bodyText ?? '').toLowerCase().includes(contactId.toLowerCase());
 }
 
-test.describe('KPost Contacts · feature flow', () => {
-  test.describe.configure({ mode: 'default' });
-  test.skip(
-    process.env.CONTACTS_LIFECYCLE !== 'true',
-    'writes to the address book; set CONTACTS_LIFECYCLE=true',
-  );
+test.describe(
+  'KPost Contacts · feature flow',
+  { tag: ['@api', '@contacts', '@regression'] },
+  () => {
+    test.describe.configure({ mode: 'default' });
+    test.skip(
+      process.env.CONTACTS_LIFECYCLE !== 'true',
+      'writes to the address book; set CONTACTS_LIFECYCLE=true',
+    );
 
-  test('add → verify → reference → delete, restoring the address book @api @contacts', async ({
-    endpoints,
-  }) => {
-    try {
-      const added = await write(
-        endpoints,
-        'contacts-add',
-        { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
-        'add',
-      );
-      expect.soft(added, 'adding a contact is accepted').toBeLessThan(300);
+    test('add → verify → reference → delete, restoring the address book @api @contacts', async ({
+      endpoints,
+    }) => {
+      try {
+        const added = await write(
+          endpoints,
+          'contacts-add',
+          { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
+          'add',
+        );
+        expect.soft(added, 'adding a contact is accepted').toBeLessThan(300);
 
-      // Eventual consistency: assert presence only when it has surfaced.
-      if (await contactPresent(endpoints)) {
-        expect.soft(true, 'the contact appears in myContacts').toBe(true);
+        // Eventual consistency: assert presence only when it has surfaced.
+        if (await contactPresent(endpoints)) {
+          expect.soft(true, 'the contact appears in myContacts').toBe(true);
+        }
+
+        const ref = await write(
+          endpoints,
+          'contacts-add-reference',
+          { contactID: contactId, referenceName: 'QA reference' },
+          'reference',
+        );
+        expect.soft(ref, 'adding a reference is accepted').toBeLessThan(300);
+      } finally {
+        await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
+          () => undefined,
+        );
       }
+    });
 
-      const ref = await write(
-        endpoints,
-        'contacts-add-reference',
-        { contactID: contactId, referenceName: 'QA reference' },
-        'reference',
-      );
-      expect.soft(ref, 'adding a reference is accepted').toBeLessThan(300);
-    } finally {
-      await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
-        () => undefined,
-      );
-    }
-  });
+    test('block → verify → unblock (single and bulk), restoring the state @api @contacts', async ({
+      endpoints,
+    }) => {
+      try {
+        const blocked = await write(
+          endpoints,
+          'contacts-block',
+          { contactID: contactId, isBlocked: true },
+          'block',
+        );
+        expect.soft(blocked, 'blocking a contact is accepted').toBeLessThan(300);
 
-  test('block → verify → unblock (single and bulk), restoring the state @api @contacts', async ({
-    endpoints,
-  }) => {
-    try {
-      const blocked = await write(
-        endpoints,
-        'contacts-block',
-        { contactID: contactId, isBlocked: true },
-        'block',
-      );
-      expect.soft(blocked, 'blocking a contact is accepted').toBeLessThan(300);
+        const bulk = await write(
+          endpoints,
+          'contacts-block-multiple',
+          { contactIDs: [contactId], isBlocked: true },
+          'block-multiple',
+        );
+        expect.soft(bulk, 'bulk block is accepted').toBeLessThan(300);
+      } finally {
+        // Restore: unblock both ways so the contact is left unblocked.
+        await write(
+          endpoints,
+          'contacts-block',
+          { contactID: contactId, isBlocked: false },
+          'unblock',
+        ).catch(() => undefined);
+        await write(
+          endpoints,
+          'contacts-block-multiple',
+          { contactIDs: [contactId], isBlocked: false },
+          'unblock-multiple',
+        ).catch(() => undefined);
+      }
+    });
 
-      const bulk = await write(
-        endpoints,
-        'contacts-block-multiple',
-        { contactIDs: [contactId], isBlocked: true },
-        'block-multiple',
-      );
-      expect.soft(bulk, 'bulk block is accepted').toBeLessThan(300);
-    } finally {
-      // Restore: unblock both ways so the contact is left unblocked.
-      await write(
-        endpoints,
-        'contacts-block',
-        { contactID: contactId, isBlocked: false },
-        'unblock',
-      ).catch(() => undefined);
-      await write(
-        endpoints,
-        'contacts-block-multiple',
-        { contactIDs: [contactId], isBlocked: false },
-        'unblock-multiple',
-      ).catch(() => undefined);
-    }
-  });
-
-  test('add-multiple, import-phone and update-invite, all on our own data @api @contacts', async ({
-    endpoints,
-  }) => {
-    /*
-     * The remaining writes, driven live with ONLY our own account and number so no other user's data
-     * is touched: `importPhoneContacts` imports a single contact — our own number — and
-     * `updateInviteStatus` acts on our own number. Cleaned up by deleting the added contact.
-     */
-    try {
-      const multi = await write(
-        endpoints,
-        'contacts-add-multiple',
-        { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
-        'add-multiple',
-      );
-      expect.soft(multi, 'addMultipleContact returns a status').toBeLessThan(600);
-
-      const imported = await write(
-        endpoints,
-        'contacts-import-phone',
-        {
-          deviceID: 'qa-bench-device',
-          mobileNumber: testData.mobileExists,
-          countryCode: '91',
-          phoneContacts: [{ name: 'QA', mobileNumber: testData.mobileExists }],
-        },
-        'import-phone',
-      );
-      expect.soft(imported, 'importPhoneContacts (own number) returns a status').toBeLessThan(600);
-
+    test('add-multiple, import-phone and update-invite, all on our own data @api @contacts', async ({
+      endpoints,
+    }) => {
       /*
-       * Checked 2026-09-26: no registered contacts read endpoint exposes invite status back (the
-       * module's reads return contact rows/lists, never an invite flag), so this write's field-level
-       * effect is NOT independently verifiable via this API — status is the most this bench can
-       * honestly assert, not worked around by inventing a check against data that isn't exposed.
+       * The remaining writes, driven live with ONLY our own account and number so no other user's data
+       * is touched: `importPhoneContacts` imports a single contact — our own number — and
+       * `updateInviteStatus` acts on our own number. Cleaned up by deleting the added contact.
        */
-      const invite = await write(
-        endpoints,
-        'contacts-update-invite',
-        { mobileNumber: testData.mobileExists },
-        'update-invite',
-      );
-      expect.soft(invite, 'updateInviteStatus (own number) returns a status').toBeLessThan(600);
-    } finally {
-      await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
-        () => undefined,
-      );
-    }
-  });
-});
+      try {
+        const multi = await write(
+          endpoints,
+          'contacts-add-multiple',
+          { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
+          'add-multiple',
+        );
+        expect.soft(multi, 'addMultipleContact returns a status').toBeLessThan(600);
+
+        const imported = await write(
+          endpoints,
+          'contacts-import-phone',
+          {
+            deviceID: 'qa-bench-device',
+            mobileNumber: testData.mobileExists,
+            countryCode: '91',
+            phoneContacts: [{ name: 'QA', mobileNumber: testData.mobileExists }],
+          },
+          'import-phone',
+        );
+        expect
+          .soft(imported, 'importPhoneContacts (own number) returns a status')
+          .toBeLessThan(600);
+
+        /*
+         * Checked 2026-09-26: no registered contacts read endpoint exposes invite status back (the
+         * module's reads return contact rows/lists, never an invite flag), so this write's field-level
+         * effect is NOT independently verifiable via this API — status is the most this bench can
+         * honestly assert, not worked around by inventing a check against data that isn't exposed.
+         */
+        const invite = await write(
+          endpoints,
+          'contacts-update-invite',
+          { mobileNumber: testData.mobileExists },
+          'update-invite',
+        );
+        expect.soft(invite, 'updateInviteStatus (own number) returns a status').toBeLessThan(600);
+      } finally {
+        await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
+          () => undefined,
+        );
+      }
+    });
+  },
+);

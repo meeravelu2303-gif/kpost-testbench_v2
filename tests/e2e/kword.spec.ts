@@ -14,7 +14,7 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost KOS · Kompose (KWord) — create-form validation',
-  { tag: ['@ui', '@kos'] },
+  { tag: ['@ui', '@kos', '@verticals', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),
@@ -67,7 +67,7 @@ test.describe(
 
 test.describe(
   'KPost KOS · Kompose (KWord) — create, save, delete (write)',
-  { tag: ['@ui', '@kos'] },
+  { tag: ['@ui', '@kos', '@verticals', '@regression'] },
   () => {
     test.skip(
       process.env.KOS_UI_LIFECYCLE !== 'true',

@@ -12,7 +12,7 @@ import { settleFrames } from './support/settle';
  * a `BroadcastChannel`/`window.opener` (same-origin popup pattern, not fetchable directly), so this
  * suite never attempts to drive an actual call session.
  */
-test.describe('KPost — /kall-window (no session)', { tag: '@ui' }, () => {
+test.describe('KPost — /kall-window (no session)', { tag: ['@ui', '@kall', '@regression'] }, () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test('with no session, /kall-window shows its own Unauthorized message, not a crash @ui', async ({

@@ -50,7 +50,7 @@ function extractDocId(data: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-test.describe('KPost KOS · feature flow', () => {
+test.describe('KPost KOS · feature flow', { tag: ['@api', '@platform', '@regression'] }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(process.env.KOS_LIFECYCLE !== 'true', 'writes real KWord docs; set KOS_LIFECYCLE=true');
 
@@ -283,56 +283,60 @@ test.describe('KPost KOS · feature flow', () => {
  * in that describe, not just the ones after it — nesting them there would have silently skipped both
  * on a default run.
  */
-test.describe('KPost KOS · read-only business rules @api @kos', () => {
-  test('ai-sessions: the model-bucket envelope is stable regardless of the aiType query value', async ({
-    endpoints,
-  }) => {
-    // Live-verified 2026-09-24: a nonsense aiType returns the SAME four-model envelope as a real
-    // one — the backend does not filter by aiType at all, it always returns every model's bucket.
-    const [withRealType, withNonsenseType] = await Promise.all([
-      run(endpoints, 'kos-ai-sessions', { query: { aiType: 'general' } }, 'sessions-real-type'),
-      run(
-        endpoints,
-        'kos-ai-sessions',
-        { query: { aiType: 'not-a-real-model-xyz' } },
-        'sessions-bad-type',
-      ),
-    ]);
-    expect.soft(withRealType.status, 'ai-sessions succeeds').toBe(200);
-    expect
-      .soft(withNonsenseType.status, 'ai-sessions succeeds even for an unrecognized aiType')
-      .toBe(200);
+test.describe(
+  'KPost KOS · read-only business rules @api @kos',
+  { tag: ['@api', '@platform', '@regression'] },
+  () => {
+    test('ai-sessions: the model-bucket envelope is stable regardless of the aiType query value', async ({
+      endpoints,
+    }) => {
+      // Live-verified 2026-09-24: a nonsense aiType returns the SAME four-model envelope as a real
+      // one — the backend does not filter by aiType at all, it always returns every model's bucket.
+      const [withRealType, withNonsenseType] = await Promise.all([
+        run(endpoints, 'kos-ai-sessions', { query: { aiType: 'general' } }, 'sessions-real-type'),
+        run(
+          endpoints,
+          'kos-ai-sessions',
+          { query: { aiType: 'not-a-real-model-xyz' } },
+          'sessions-bad-type',
+        ),
+      ]);
+      expect.soft(withRealType.status, 'ai-sessions succeeds').toBe(200);
+      expect
+        .soft(withNonsenseType.status, 'ai-sessions succeeds even for an unrecognized aiType')
+        .toBe(200);
 
-    const expectedBuckets = ['gemini', 'perplexity', 'chatgpt', 'mistral'].sort();
-    for (const [label, data] of [
-      ['real aiType', withRealType.data],
-      ['nonsense aiType', withNonsenseType.data],
-    ] as const) {
-      expect(
-        Object.keys(data).sort(),
-        `${label}: the four known model buckets are present`,
-      ).toEqual(expectedBuckets);
-      for (const bucket of expectedBuckets) {
-        expect(Array.isArray(data[bucket]), `${label}: ${bucket} bucket is an array`).toBe(true);
+      const expectedBuckets = ['gemini', 'perplexity', 'chatgpt', 'mistral'].sort();
+      for (const [label, data] of [
+        ['real aiType', withRealType.data],
+        ['nonsense aiType', withNonsenseType.data],
+      ] as const) {
+        expect(
+          Object.keys(data).sort(),
+          `${label}: the four known model buckets are present`,
+        ).toEqual(expectedBuckets);
+        for (const bucket of expectedBuckets) {
+          expect(Array.isArray(data[bucket]), `${label}: ${bucket} bucket is an array`).toBe(true);
+        }
       }
-    }
-    expect(
-      withNonsenseType.data,
-      'aiType has no filtering effect — the envelope is identical for a real vs. a nonsense value',
-    ).toEqual(withRealType.data);
-  });
+      expect(
+        withNonsenseType.data,
+        'aiType has no filtering effect — the envelope is identical for a real vs. a nonsense value',
+      ).toEqual(withRealType.data);
+    });
 
-  test('kos-list-documents: no live business-rule test (recorded gap, not a workaround)', () => {
-    test.skip(
-      true,
-      'testingapi answers 404 "No matching endpoint for this request" for GET /kword/documents/ — ' +
-        "the KWord list route is not deployed on this test build (see the endpoint definition's own " +
-        'note). Not run standalone (a 404 there reads as a false CRITICAL); needs the dev to confirm ' +
-        'whether the route ships on this build before a business-rule test can be written.',
-    );
-    expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
-  });
-});
+    test('kos-list-documents: no live business-rule test (recorded gap, not a workaround)', () => {
+      test.skip(
+        true,
+        'testingapi answers 404 "No matching endpoint for this request" for GET /kword/documents/ — ' +
+          "the KWord list route is not deployed on this test build (see the endpoint definition's own " +
+          'note). Not run standalone (a 404 there reads as a false CRITICAL); needs the dev to confirm ' +
+          'whether the route ships on this build before a business-rule test can be written.',
+      );
+      expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
+    });
+  },
+);
 
 /** A K-AI chat/session response's session id, across the field names a Spring service might use. */
 function extractSessionId(data: Record<string, unknown>): string | undefined {

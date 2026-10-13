@@ -43,7 +43,7 @@ const CONFIG_OK =
 
 test.describe(
   'KPost Katchup · Copy / Confidential / Bulk (multi-account write)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@katchup', '@regression'] },
   () => {
     test.skip(
       process.env.KATCHUP_UI_LIFECYCLE !== 'true',

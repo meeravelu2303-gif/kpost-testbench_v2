@@ -16,7 +16,7 @@ import { expect, test } from '@fixtures';
  * and the Forgot-Password modal (title "Forgot Password", six OTP inputs).
  */
 
-test.describe('KPost login screen · deeper flows', { tag: '@ui' }, () => {
+test.describe('KPost login screen · deeper flows', { tag: ['@ui', '@auth', '@regression'] }, () => {
   // These run from a FRESH (logged-out) session, not the one `setup` saved.
   test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -83,7 +83,7 @@ test.describe('KPost login screen · deeper flows', { tag: '@ui' }, () => {
  * logout ?") → the modal's Logout button → `/login`. Gated behind `LOGIN_UI_LIFECYCLE=true` because it
  * ends the session (self-contained — the saved storageState file is untouched, so other tests re-login).
  */
-test.describe('KPost header · logout', { tag: '@ui' }, () => {
+test.describe('KPost header · logout', { tag: ['@ui', '@auth', '@regression'] }, () => {
   test.skip(
     process.env.LOGIN_UI_LIFECYCLE !== 'true',
     'ends the session; set LOGIN_UI_LIFECYCLE=true',

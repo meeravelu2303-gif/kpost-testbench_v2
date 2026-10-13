@@ -26,7 +26,7 @@ import { expect, test } from '@fixtures';
  */
 test.describe(
   'KPost Settings · Change Password panel (validation only, no real submit)',
-  { tag: '@ui' },
+  { tag: ['@ui', '@settings', '@regression'] },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),
