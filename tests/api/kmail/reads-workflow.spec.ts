@@ -115,8 +115,10 @@ test.describe(
         before.status !== 200,
         'unOpenedMailCountBySenderID is currently 500 for every account',
       );
-      const beforeBody = JSON.parse(before.bodyText || '{}') as { data?: number };
-      const baseline = beforeBody.data ?? 0;
+      // The count is the top-level `UnOpenedMailCount` — what the web app reads (Login.js, Header.js);
+      // this endpoint carries no `data` field, so reading `data` always gave 0 (2026-10-14).
+      const beforeBody = JSON.parse(before.bodyText || '{}') as { UnOpenedMailCount?: number };
+      const baseline = beforeBody.UnOpenedMailCount ?? 0;
 
       const sent = await endpoints.sendTo(
         'kmail-post-mail',
@@ -139,9 +141,9 @@ test.describe(
       try {
         const after = await read(endpoints, 'kmail-unopened-count', B, 'unopened-after');
         expect(after.status, 'unOpenedMailCountBySenderID succeeds').toBe(200);
-        const afterBody = JSON.parse(after.bodyText || '{}') as { data?: number };
+        const afterBody = JSON.parse(after.bodyText || '{}') as { UnOpenedMailCount?: number };
         expect(
-          afterBody.data ?? 0,
+          afterBody.UnOpenedMailCount ?? 0,
           `unopened count for B must increase by 1 after a fresh unread mail (was ${baseline})`,
         ).toBe(baseline + 1);
       } finally {

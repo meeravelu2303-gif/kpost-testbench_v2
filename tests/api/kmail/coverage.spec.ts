@@ -33,7 +33,12 @@ test.describe('KPost KMail · module coverage', () => {
     const publicOnes = kmailApis
       .filter((api) => api.authentication?.required === false)
       .map((api) => api.id);
-    expect(publicOnes, 'KMail is entirely authenticated').toEqual([]);
+    // The one known exception: the KMail backend permitAll()s the attachment-thumbnail download
+    // (see the note on `kmail-download-thumbnail` in read.api.ts) — recorded as a security finding,
+    // not a bench choice. Any OTHER endpoint becoming public still fails this check.
+    expect(publicOnes, 'KMail is authenticated apart from the known public thumbnail').toEqual([
+      'kmail-download-thumbnail',
+    ]);
   });
 
   test('no KMail write is cleared for the live application @framework', () => {

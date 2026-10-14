@@ -28,6 +28,7 @@ const K = AUTH_PROFILES.kpost;
 const principal = (key: string): Principal => K.principals.find((x) => x.key === key)!;
 const A = principal('personal');
 const B = principal('victim');
+const C = principal('personal-3');
 
 interface SentMail {
   kmailID: number | undefined;
@@ -72,13 +73,13 @@ test.describe(
       who: Principal,
       overrides: Record<string, unknown>,
       label: string,
-    ): Promise<{ status: number; mail: SentMail }> {
+    ): Promise<{ status: number; mail: SentMail; body: string }> {
       const ex = await endpoints.sendTo(
         'kmail-post-mail',
         { body: mailShape(overrides) },
         { label, auth: { principal: who }, allowLiveWrite: true },
       );
-      return { status: ex.status, mail: createdMail(ex.bodyText) };
+      return { status: ex.status, mail: createdMail(ex.bodyText), body: ex.bodyText.slice(0, 300) };
     }
 
     async function cleanup(
@@ -123,13 +124,16 @@ test.describe(
               toAddress: A.username,
               kmailSubject: `Re: QA reply-src ${stamp}`,
               kmailType: KMAIL_TYPE.reply,
-              referenceKmailID: original.mail.kmailID,
+              referenceKmailID: [original.mail.kmailID],
+              originalKmailID: original.mail.kmailID,
               kmailContent: 'QA reply body — safe to ignore',
             },
             'kmail:reply',
           );
           replyIds = reply.mail.transactionIDs;
-          expect(reply.status, 'the reply is accepted (not rejected)').toBeLessThan(300);
+          expect(reply.status, `the reply is accepted (not rejected): ${reply.body}`).toBeLessThan(
+            300,
+          );
           expect(
             reply.mail.kmailID,
             'the reply is persisted as its own mail with a kmailID',
@@ -161,7 +165,7 @@ test.describe(
             endpoints,
             B,
             {
-              toAddress: A.username,
+              toAddress: '',
               kmailSubject: `Fwd: QA fwd-src ${stamp}`,
               kmailType: KMAIL_TYPE.forward,
               originalKmailID: original.mail.kmailID,
@@ -171,7 +175,7 @@ test.describe(
             'kmail:forward',
           );
           fwdIds = forward.mail.transactionIDs;
-          expect(forward.status, 'the forward is accepted').toBeLessThan(300);
+          expect(forward.status, `the forward is accepted: ${forward.body}`).toBeLessThan(300);
           expect(
             forward.mail.kmailID,
             'the forwarded mail is persisted with a kmailID',
@@ -199,13 +203,15 @@ test.describe(
             {
               toAddress: B.username,
               kmailSubject: `QA cc ${stamp}`,
-              ccList: [B.username],
+              ccList: [C.username],
               kmailContent: 'QA cc body — safe to ignore',
             },
             'kmail:cc',
           );
           ids = sent.mail.transactionIDs;
-          expect(sent.status, 'a mail carrying a ccList is accepted').toBeLessThan(300);
+          expect(sent.status, `a mail carrying a ccList is accepted: ${sent.body}`).toBeLessThan(
+            300,
+          );
           expect(sent.mail.kmailID, 'the cc mail is persisted with a kmailID').toBeTruthy();
         } finally {
           await cleanup(endpoints, A, ids, 'kmail:cc-cleanup');

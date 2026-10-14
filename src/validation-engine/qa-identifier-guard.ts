@@ -182,6 +182,10 @@ const NOT_A_RESOURCE = new Set(
      */
     'referencekmailid',
     'referencemails',
+    // `originalKmailID` — the forward-specific key for the same runtime-scoped id (the mail being
+    // forwarded, which the test itself just sent; WriteMailBox.js / MailFooter.js send it on every
+    // reply and forward). Without it, forwarding our own mail is refused (2026-10-14).
+    'originalkmailid',
     // KMail content/enum/meta fields that match only via the "mail"/"msg"/"attachment" token — a
     // subject, a body, a send timestamp, a type/priority/flag — not tenant resources.
     'kmailstatusflag',
@@ -190,6 +194,8 @@ const NOT_A_RESOURCE = new Set(
     'kmailcontent',
     'kmailsenddate',
     'kmailtype',
+    // `fetchMailType` (selectedContactMails) — which mail list to fetch (inbox/sent/…), an enum.
+    'fetchmailtype',
     'kmailsendtype',
     'attachmentflag',
     'attachmentcaption',
