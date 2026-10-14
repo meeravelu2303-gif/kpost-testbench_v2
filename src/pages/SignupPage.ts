@@ -321,6 +321,43 @@ export class SignupPage extends BasePage {
   }
 
   /**
+   * Fills the personal-details screen's identity fields (name, gender, DOB) but NOT the postal
+   * pincode, so a test can then type a pincode of its own and assert how the form validates it.
+   * `fillPersonalDetails` cannot be reused for an INVALID pincode because its valid-path area-confirm
+   * step hangs waiting for a "Pincode Details" modal that a too-short pincode never opens.
+   */
+  async fillPersonalIdentityNoPincode(details: {
+    firstName: string;
+    lastName: string;
+    gender: 'Male' | 'Female' | 'Others';
+    dobDay: number;
+    dobMonth: string;
+    dobYear: number;
+  }): Promise<void> {
+    await test.step('Signup: personal identity (no pincode)', async () => {
+      await this.page.getByPlaceholder('Enter the first name').fill(details.firstName);
+      await this.page.getByPlaceholder('Enter the last name').fill(details.lastName);
+      await this.chooseGenderAndVerify(0, details.gender);
+      await this.chooseDateOfBirth(details.dobDay, details.dobMonth, details.dobYear);
+    });
+  }
+
+  /** Types a value into the postal pincode field without waiting for the area-confirm modal. */
+  async typePostalPincode(value: string): Promise<void> {
+    await this.page.getByPlaceholder('Enter postal pincode').fill(value);
+  }
+
+  /** True once the Pincode Details area-confirm modal opens (only a VALID pincode triggers it). */
+  async isPincodeDetailsModalVisible(timeoutMs = 4_000): Promise<boolean> {
+    return this.page
+      .getByText(/^Pincode Details$/i)
+      .first()
+      .waitFor({ state: 'visible', timeout: timeoutMs })
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  /**
    * Drives the `react-datepicker` popup (`DateSelect.js`): `showMonthDropdown` + `showYearDropdown`
    * + `dropdownMode="select"` render real `<select>` elements for month/year rather than arrow
    * pagers — the stable part of this widget's DOM across versions.
@@ -373,6 +410,35 @@ export class SignupPage extends BasePage {
           .waitFor({ state: 'visible', timeout: 15_000 })
           .then((): 'available' => 'available'),
         taken.waitFor({ state: 'visible', timeout: 15_000 }).then((): 'taken' => 'taken'),
+      ]);
+    });
+  }
+
+  /**
+   * Types a Preferred KPOST ID and reports which validation state the screen settles into. Unlike
+   * `choosePreferredKpostId` (available/taken only), this also recognises the length-policy error,
+   * so a test can assert an out-of-range id (e.g. a single character, below the 5-char minimum) is
+   * rejected rather than silently accepted. Clears the field first so each call re-validates fresh.
+   */
+  async kpostIdValidationState(
+    local: string,
+  ): Promise<'available' | 'taken' | 'length-error' | 'none'> {
+    return test.step(`Signup: KPOST ID validation state for "${local}"`, async () => {
+      const field = this.page.getByPlaceholder('Enter Preferred KPOST ID');
+      await field.fill('');
+      await field.fill(local);
+      const available = this.page.getByText(/KpostID is Available/i);
+      const taken = this.page.getByText(/This KpostID is already exists/i);
+      const lengthError = this.page.getByText(/between 5 and 12 characters/i);
+      return Promise.race([
+        available
+          .waitFor({ state: 'visible', timeout: 10_000 })
+          .then((): 'available' => 'available'),
+        taken.waitFor({ state: 'visible', timeout: 10_000 }).then((): 'taken' => 'taken'),
+        lengthError
+          .waitFor({ state: 'visible', timeout: 10_000 })
+          .then((): 'length-error' => 'length-error'),
+        this.page.waitForTimeout(10_000).then((): 'none' => 'none'),
       ]);
     });
   }
