@@ -178,5 +178,103 @@ test.describe(
         await sender.context().close();
       }
     });
+
+    /**
+     * The SIDE-MENU Katchup badge (the total unread number on the Katchup icon, Header.js
+     * `RouetesCount.Katchup` → `.icon-KP_04-Katchup .Header_msg_count`) is a different badge from the
+     * per-sender strip above, with a different refresh path — and the likelier home of the reported
+     * "shows 4 or 5 even after reading":
+     *   - it is fetched once on mount (`useEffect(UnopenedHeaderCount, [])`) and afterwards only changes
+     *     when a socket count event arrives;
+     *   - both socket helpers (socketService.js `deviceMsgCount` / `senderMsgCount`) do
+     *     `socket.off(event)` before `socket.on(event)`, which removes EVERY listener for that event — and
+     *     the Header (re-binding on every render) and the Katchup Unopened strip (UnOpenedMessage.js:222)
+     *     both bind `receive_senderKatchupMessageCountReducer`. Whichever rendered last owns the event;
+     *     the other badge stops refreshing until a reload.
+     * Same flow as above, measured on the side-menu badge, never reloading after the read.
+     */
+    test('reading a conversation also lowers the side-menu Katchup total, with no page reload @ui', async ({
+      page,
+      browser,
+    }) => {
+      const subject = `QA side badge ${Date.now()}`;
+      const victim = testData.victimKpostId;
+      const sender = await openSender(browser);
+      const sideBadge = page.locator('.icon-KP_04-Katchup .Header_msg_count').first();
+      const sideCount = async (): Promise<number> => {
+        if (!(await sideBadge.isVisible().catch(() => false))) return 0; // hidden = no unread
+        const n = parseInt((await sideBadge.innerText().catch(() => '')).replace(/[^\d]/g, ''), 10);
+        return Number.isNaN(n) ? 0 : n;
+      };
+
+      // The server's TOTAL unread (msgsCount) as this page last fetched it, before and after the read.
+      let readAt = Number.POSITIVE_INFINITY;
+      let serverBefore: number | undefined;
+      let serverAfter: number | undefined;
+      let refetchesAfterRead = 0;
+      page.on('response', async (r) => {
+        if (!isUnreadCount(r.url()) || !r.ok()) return;
+        const body = (await r.json().catch(() => ({}))) as { msgsCount?: number };
+        if (Date.now() >= readAt) {
+          refetchesAfterRead++;
+          serverAfter = body.msgsCount ?? 0;
+        } else {
+          serverBefore = body.msgsCount ?? 0;
+        }
+      });
+
+      try {
+        await openConversation(sender, testData.kpostId);
+        await sender.locator('.msg-arrow').first().click();
+        await sendMessage(sender, subject, 'QA side-badge probe — safe to ignore');
+
+        await gotoKatchup(page);
+        await parkPointerAwayFromSideMenu(page);
+        await expect(sideBadge, 'the side-menu Katchup badge shows the unread total').toBeVisible({
+          timeout: 30_000,
+        });
+        await settleFrames(page).catch(() => undefined);
+        const before = await sideCount();
+        expect(before, 'a fresh unread message gives the side-menu badge a number').toBeGreaterThan(
+          0,
+        );
+
+        // Read it in-SPA (the side menu stays on screen), then wait up to 10s — NO reload.
+        readAt = Date.now();
+        await page.locator(`[id="${victim}"], [id^="${victim}-"]`).first().click();
+        await parkPointerAwayFromSideMenu(page);
+        let after = before;
+        const deadline = Date.now() + 10_000;
+        while (Date.now() < deadline) {
+          after = await sideCount();
+          if (after < before) break;
+          await page.waitForTimeout(500);
+        }
+
+        const server =
+          serverAfter === undefined
+            ? `no count re-fetch after the read (server total before=${serverBefore ?? '?'})`
+            : `server total before=${serverBefore ?? '?'}, after=${serverAfter} (${refetchesAfterRead} re-fetches)`;
+        test.info().annotations.push({
+          type: 'observed',
+          description: `side-menu Katchup badge: before read=${before}, after read=${after}; ${server}`,
+        });
+        expect(
+          after,
+          `the side-menu Katchup total must drop after a conversation is read (was ${before}, still ` +
+            `${after}; ${server}) — a total that stays put until reload is the reported stale count`,
+        ).toBeLessThan(before);
+      } finally {
+        await page.goto('/katchup', { waitUntil: 'domcontentloaded' }).catch(() => undefined);
+        await openConversation(sender, testData.kpostId).catch(() => undefined);
+        await sender
+          .locator('.msg-arrow')
+          .first()
+          .click()
+          .catch(() => undefined);
+        await deleteSentMessage(sender, subject).catch(() => undefined);
+        await sender.context().close();
+      }
+    });
   },
 );

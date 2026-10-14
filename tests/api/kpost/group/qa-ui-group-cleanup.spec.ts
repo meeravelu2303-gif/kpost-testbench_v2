@@ -13,12 +13,17 @@ import { expect, test } from '@fixtures';
  *
  *   QA_GROUP_CLEANUP=true QATEST_ONLY=true npx playwright test --project=api tests/api/kpost/group/qa-ui-group-cleanup.spec.ts
  *
- * It only touches groups whose name starts with "QA UI " and only through the two qatest accounts
+ * It only touches groups whose name starts with "QA " and only through the two qatest accounts
  * that create them. Skipped unless `QA_GROUP_CLEANUP=true`.
+ *
+ * 2026-10-14: removeGroupMember still 500s, so when it fails each qatest member leaves on their own
+ * (`group-leave`) before the delete — the path katchup-group-receipts-e2e cleans up with.
  */
 const OWNERS = ['personal', 'personal-3']
   .map((key) => AUTH_PROFILES.kpost.principals.find((p) => p.key === key))
   .filter((p): p is NonNullable<typeof p> => Boolean(p));
+/** Every qatest principal — used to make a member leave a group on their own. */
+const PRINCIPALS = AUTH_PROFILES.kpost.principals;
 
 interface Found {
   groupKpostID: string;
@@ -70,7 +75,9 @@ test.describe(
           }
         };
         walk(parsed.ok ? parsed.value : {});
-        const mine = found.filter((g) => /^QA UI /.test(g.groupKpostName));
+        // "QA UI *" (support/groups.ts) plus the other bench-created names ("QA UI Receipts Group *",
+        // ad-hoc "QA * probe" groups) — all start with "QA ", and only qatest-owned groups are listed.
+        const mine = found.filter((g) => /^QA /.test(g.groupKpostName));
         console.log(`[${who.key}] groups: ${found.length}; QA UI leftovers: ${mine.length}`);
         for (const g of mine) {
           const others = g.members.filter((id) => id !== who.username);
@@ -87,6 +94,24 @@ test.describe(
               { label: 'cleanup:remove-members', auth: { principal: who }, allowLiveWrite: true },
             );
             console.log(`  remove ${others.length} from ${g.groupKpostName} -> ${rm.status}`);
+            if (rm.status >= 300) {
+              // removeGroupMember still 500s (2026-10-14) — fall back to each qatest member leaving
+              // on their own (`group-leave`), the path proven by katchup-group-receipts-e2e.
+              for (const id of others) {
+                const member = PRINCIPALS.find((p) => p.username === id);
+                if (!member) continue;
+                const leave = await endpoints.sendTo(
+                  'group-leave',
+                  { body: { id: '0', groupID: g.groupID, groupKpostID: g.groupKpostID } },
+                  {
+                    label: 'cleanup:self-leave',
+                    auth: { principal: member },
+                    allowLiveWrite: true,
+                  },
+                );
+                console.log(`    ${member.key} leaves -> ${leave.status}`);
+              }
+            }
           }
           const del = await endpoints.sendTo(
             'group-delete',
