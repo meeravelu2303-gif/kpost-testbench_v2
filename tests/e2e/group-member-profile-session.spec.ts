@@ -24,7 +24,7 @@ import { settleNetwork } from './support/settle';
  * `getDigitalCard` with `userType: "UnknownContacts"` for a non-contact and (b) fetches the cover image
  * with the viewer's token from a HARD-CODED dev host (`https://devapi2.kpostindia.com/v2/profile/
  * downloadCoverImage/…`, DigitalCard.js:214) — a host on the interceptor's own API list, which does
- * not accept the test deployment's token. Either 401 → `beginLogout` → `/login`.
+ * not accept the test deployment's token (filed #1345). Either 401 → `beginLogout` → `/login` (#979).
  *
  * The test records every 401, every devapi2 request and any jump to /login so a failure names the
  * exact request. Group fixture from support/groups.ts (created by personal-3 — never as the browser's
@@ -115,10 +115,11 @@ test.describe(
             `devapi2: ${devHost.length ? devHost.join(' ; ') : 'none'} | URL: ${page.url()}`;
           test.info().annotations.push({ type: 'observed', description: observed });
           console.log(`MEMBER-PROFILE ${observed}`);
-          await test.info().attach(`member-${i + 1}-profile`, {
-            body: await page.screenshot({ fullPage: false }),
-            contentType: 'image/png',
-          });
+          const shot = test.info().outputPath(`member-${i + 1}-profile.png`);
+          await page.screenshot({ path: shot });
+          await test
+            .info()
+            .attach(`member-${i + 1}-profile`, { path: shot, contentType: 'image/png' });
 
           expect(
             sentToLogin || /\/login/.test(page.url()),
@@ -154,7 +155,10 @@ test.describe(
             ).toBe(false);
             // The test deployment's own profile page belongs on the test deployment, not the live site.
             expect
-              .soft(openedUrl, 'View Profile stays on the deployment the user is signed in to')
+              .soft(
+                openedUrl,
+                'View Profile stays on the deployment the user is signed in to (#1346)',
+              )
               .not.toMatch(/account\.kpostindia\.com/);
           } else {
             await page.keyboard.press('Escape');

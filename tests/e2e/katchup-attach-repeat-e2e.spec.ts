@@ -165,9 +165,17 @@ test.describe(
           type: 'observed',
           description: `file input after the send: value="${left.value}", files=${left.files}`,
         });
+        console.log(
+          `ATTACH-RESEND file input after the send: value="${left.value}", files=${left.files}`,
+        );
+        // Proof of the state right after the first send: the message is delivered and the composer
+        // shows no attachment, while the hidden picker still holds the sent file.
+        const shot = test.info().outputPath('after-first-send.png');
+        await page.screenshot({ path: shot });
+        await test.info().attach('after-first-send', { path: shot, contentType: 'image/png' });
         expect(
           left,
-          'the file input is reset after a send — if it still holds the last file, picking that same file again does nothing in a real browser',
+          'the file input is reset after a send (#1344) — if it still holds the last file, picking that same file again does nothing in a real browser',
         ).toEqual({ value: '', files: 0 });
 
         await attachAndSend(page, subjects[1]!, file);
