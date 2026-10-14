@@ -60,12 +60,10 @@ test.describe(
     );
 
     test("sharing a contact's Digital Card via Katchup actually sends it @ui", async ({ page }) => {
-      // Inside the test body, not at the describe level — see the note in katchup-two-session.spec.ts's
-      // unread-badge test for why that placement matters (it silently skips sibling tests otherwise).
-      test.fixme(
-        true,
-        'blocked by #979 — the session gets force-logged-out from an unrelated background-image 401 within seconds of opening any Katchup conversation, independent of the Share flow itself — see the comment above',
-      );
+      // RE-ENABLED 2026-10-14: #979 (the background-image-401 → force-logout root cause documented above)
+      // is RESOLVED/FIXED and confirmed on the test deployment (an isolated Katchup run opened
+      // conversations without being force-logged-out). This runs live again; if the force-logout recurs,
+      // re-fixme and reopen #979.
       await openConversation(page, testData.victimKpostId);
 
       // The thread header's avatar is the Digital Card trigger — a shared `ContactBar` renders it as

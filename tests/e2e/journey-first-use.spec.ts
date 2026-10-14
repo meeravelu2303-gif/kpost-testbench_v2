@@ -22,7 +22,10 @@ import { settleFrames } from './support/settle';
  */
 test.describe(
   'KPost UI · end-to-end first-use journey',
-  { tag: [TAGS.ui, TAGS.regression], annotation: [{ type: 'requirement', description: 'RTM-E2E01' }] },
+  {
+    tag: [TAGS.ui, TAGS.platform, TAGS.regression],
+    annotation: [{ type: 'requirement', description: 'RTM-E2E01' }],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench') || !testData.victimKpostId,

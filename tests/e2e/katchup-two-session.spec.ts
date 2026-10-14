@@ -100,6 +100,45 @@ test.describe(
       }
     });
 
+    test(
+      "a message from account 1 appears on account 2's OPEN Katchup with no refresh (realtime) @ui",
+      {
+        annotation: [
+          { type: 'requirement', description: 'multi-user real-time (FRD row 11)' },
+          { type: 'requirement', description: 'FR-K07' },
+        ],
+      },
+      async ({ page, browser }) => {
+        const subject = `QA UI realtime ${Date.now()}`;
+        const receiver = await openReceiver(browser);
+        try {
+          // Account 2 is already sitting on its Katchup list. From here on NOTHING navigates or
+          // reloads account 2 — the whole point of this test (unlike the delivery test above, which
+          // does a fresh gotoKatchup AFTER the send) is to prove a live push to an idle, open page.
+          await gotoKatchup(receiver);
+          await expect(
+            receiver.getByText(subject),
+            'the message is not on account 2 before account 1 sends it (baseline)',
+          ).toHaveCount(0);
+
+          // Account 1 sends while account 2's page stays open and untouched.
+          await openComposer(page);
+          await sendMessage(page, subject, 'QA UI realtime delivery — self-cleaning');
+
+          // With no goto/reload on account 2, the new message must surface on the already-open list
+          // via live push. If it only shows after a manual refresh, this (correctly) fails: the
+          // "B receives without refreshing" requirement (FRD row 11) would not be met.
+          await expect(
+            receiver.getByText(subject).first(),
+            'account 2 sees the new message on its already-open screen, no refresh (realtime push)',
+          ).toBeVisible({ timeout: 30_000 });
+        } finally {
+          await deleteSentMessage(page, subject).catch(() => undefined);
+          await receiver.context().close();
+        }
+      },
+    );
+
     /**
      * Unread badge / message count (FR-K07) — RESOLVED as a confirmed product gap, filed as #978, not
      * an automatable test.

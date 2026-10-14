@@ -132,10 +132,10 @@ test.describe(
       // (a non-"expired" 401 on a real session should either refresh or cleanly force a visible logout —
       // here it does neither, just silently leaves the UI with no data). Not filing a second ticket for
       // what is very likely the same root cause; blocked on #979's fix.
-      test.fixme(
-        true,
-        "blocked by #979-class session fragility — the Contacts tab's own myGroups fetch 401s on this browser session while a fresh token for the same account succeeds, so the group list has no data to show; see the comment above",
-      );
+      // RE-ENABLED 2026-10-14: #979 (the non-"expired" 401 → silent-no-data / force-logout class) is
+      // RESOLVED/FIXED in Bugzilla and confirmed on the test deployment (an isolated Katchup run opened
+      // conversations with no force-logout). This now runs live again; if the myGroups 401 fragility
+      // recurs, re-fixme and reopen #979 rather than filing anew.
       let groupKpostID: string | undefined;
       let groupID: number | undefined;
 
