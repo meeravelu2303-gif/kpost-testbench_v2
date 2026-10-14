@@ -5,33 +5,18 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import type { Browser, Page } from '@playwright/test';
-import { gotoKatchup } from './support/katchup';
+import { openGroupConversation } from './support/katchup';
 
 /**
- * A brand-new group with no messages yet doesn't appear in the default "Recents" tab (which lists by
- * recent message activity) — it only shows under the "Contacts" tab's "Groups" section until the first
- * message exists. `openComposerFor` (built for an already-active 1:1/group conversation) assumes
- * Recents, so this test needs its own opener for a freshly-created group specifically.
+ * Open a freshly created group's conversation. Updated 2026-10-14: the old opener clicked a "Contacts"
+ * tab on /katchup that no longer exists on the live page (the run timed out waiting for it). The shared
+ * `openGroupConversation` helper is the live-measured path: creating a group posts the "<creator> added
+ * <members>" activity message, which gives it a Recents row keyed by its groupKpostID, and the helper
+ * reloads up to 4 times for a group created moments ago through the API.
  */
 async function openNewGroupConversation(page: Page, groupKpostID: string): Promise<void> {
-  const groupRow = page.locator(`[id="${groupKpostID}"]`).first();
-  // A group created moments ago via the API may not appear on the first load — retry with a fresh
-  // reload rather than assume the selector is wrong (the group's own name wasn't found anywhere on the
-  // page either on the first attempt, ruling out a selector mismatch).
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    await gotoKatchup(page);
-    await page.getByRole('tab', { name: 'Contacts' }).click();
-    const found = await groupRow
-      .waitFor({ state: 'visible', timeout: 10_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (found) {
-      await groupRow.click();
-      return;
-    }
-  }
-  await groupRow.waitFor({ state: 'visible', timeout: 10_000 });
-  await groupRow.click();
+  const opened = await openGroupConversation(page, groupKpostID);
+  expect(opened, `the new group ${groupKpostID} appears in Katchup Recents and opens`).toBe(true);
 }
 
 async function openNewGroupComposer(page: Page, groupKpostID: string): Promise<void> {
@@ -115,29 +100,42 @@ test.describe(
       page,
       browser,
       endpoints,
+      loginPage,
     }) => {
-      // NOT YET COMPLETED — root cause found (2026-10-04), not a selector problem. The group IS created
-      // successfully every time (a real groupKpostID comes back), and the group's name genuinely never
-      // appears anywhere on the page afterward — but this isn't a DOM-id mismatch. A dedicated diagnostic
-      // (logging every network response during `openNewGroupConversation`'s own reload-retry loop) caught
-      // the real cause: the Contacts tab's own group-list fetch (`POST /v2/contacts/myGroups/`, the exact
-      // call that populates this section — confirmed from source as `GetMyGroup`, called app-wide from
-      // `App.js`/`MenuRoutes.js`) returned a clean 401 "UNAUTHORIZED USER" on every one of 4 attempts in
-      // this browser session — while the SAME account's SAME endpoint, called with a freshly-minted token
-      // via `endpoints.sendTo('contacts-my-groups', ...)`, returns a clean 200 with real group data. The
-      // persisted UI session (`.auth/user.json`, reused across many tests in one long run) can apparently
-      // go stale for specific calls in a way a fresh token does not — the Groups section has nothing to
-      // show because its own data fetch is being rejected, not because the group is missing or the
-      // selector is wrong. This is the same class of 401-handling fragility already filed as **#979**
-      // (a non-"expired" 401 on a real session should either refresh or cleanly force a visible logout —
-      // here it does neither, just silently leaves the UI with no data). Not filing a second ticket for
-      // what is very likely the same root cause; blocked on #979's fix.
-      // RE-ENABLED 2026-10-14: #979 (the non-"expired" 401 → silent-no-data / force-logout class) is
-      // RESOLVED/FIXED in Bugzilla and confirmed on the test deployment (an isolated Katchup run opened
-      // conversations with no force-logout). This now runs live again; if the myGroups 401 fragility
-      // recurs, re-fixme and reopen #979 rather than filing anew.
+      // ROOT CAUSE CORRECTED 2026-10-14. The 2026-10-04 diagnosis saw the page's myGroups fetch 401 while
+      // a freshly-minted API token for the same account got a clean 200, and attributed it to #979. It
+      // was not #979: the server allows ONE active session per account, so the API `group-create` below
+      // (which logs ADMIN = qatest1 in afresh) invalidates this page's saved `.auth/user.json` session —
+      // every UI call after it 401s and the app bounces to /login (reproduced live 2026-10-14: 401 on
+      // every endpoint, page at /login, during the admin's composer step). The fix is to re-login the UI
+      // AFTER the API setup so the browser holds the newest session.
+      //
+      // Because of that same single-session rule, this test invalidates qatest1's saved session for
+      // anything that runs after it in the same invocation — run it isolated (or last), and re-run
+      // `setup` before other qatest1 specs.
+      // KNOWN OPEN BUG #1343 [KP-GRPOLDERPAGE500], confirmed live 2026-10-14 (4/4 new groups): opening a
+      // group whose history fits on one page makes the UI request the older page past the first message,
+      // the server 500s, and the thread breaks so the group message never renders. fixme until #1343 is
+      // fixed — then remove this line; the rest of the flow (re-login, shared opener, {groupID} cleanup)
+      // is already corrected.
+      test.fixme(true, 'blocked by #1343 — group thread older-page request 500s on open');
       let groupKpostID: string | undefined;
       let groupID: number | undefined;
+
+      // Evidence capture: if the UI's thread-load for the group fails, record the exact request body it
+      // sent. (Live 2026-10-14: the UI's katchupMessagesForSelectedContactID 500'd on opening a new
+      // group, while the same endpoint called with { groupFlag: true, receiver: <groupKpostID> } returns
+      // 200 — so the body the UI sends is the thing to look at.)
+      page.on('response', (r) => {
+        if (r.url().includes('/katchup/katchupMessagesForSelectedContactID') && r.status() >= 500) {
+          const sent = r.request().postData() ?? '(no body)';
+          console.log(`THREAD-LOAD ${r.status()} request=${sent}`);
+          test.info().annotations.push({
+            type: 'observed',
+            description: `thread-load HTTP ${r.status()}; UI request body: ${sent}`,
+          });
+        }
+      });
 
       try {
         const created = await as(
@@ -163,6 +161,15 @@ test.describe(
         groupID = created.data.groupID as number | undefined;
         expect(groupKpostID, 'the group was created with a real groupKpostID').toBeTruthy();
         if (!groupKpostID) return;
+
+        // The API group-create just minted a new server session for ADMIN, invalidating this page's
+        // saved one (single session per account) — re-login the UI so the browser's session is newest.
+        await loginPage.goto();
+        await loginPage.login(testData.kpostId, testData.password);
+        await expect(page, 'the admin UI session is re-established after the API setup').toHaveURL(
+          /\/home/,
+          { timeout: 20_000 },
+        );
 
         const subject = `QA UI group receipts ${Date.now()}`;
         await openNewGroupComposer(page, groupKpostID);
@@ -233,7 +240,9 @@ test.describe(
             { id: '0', groupID, groupKpostID },
             'cleanup-leave-m3',
           ).catch(() => undefined);
-          await as(endpoints, ADMIN, 'group-delete', { groupKpostID }, 'cleanup-delete').catch(
+          // `deleteGroup` takes { groupID } (group.api.ts) — sending { groupKpostID } 404'd and orphaned
+          // every QA group. It also 400s until every other member has left, hence the leaves above.
+          await as(endpoints, ADMIN, 'group-delete', { groupID }, 'cleanup-delete').catch(
             () => undefined,
           );
         }

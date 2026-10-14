@@ -1,7 +1,7 @@
 import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import type { Browser, Locator, Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import {
   deleteSentMessage,
   gotoKatchup,
@@ -48,25 +48,44 @@ test.describe(
       'needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID)',
     );
 
-    /** The live unread badge count attributed to `kpostId` on the Katchup list, or 0 if none shows. */
-    async function badgeCountFor(page: Page, kpostId: string): Promise<number> {
-      // Prefer the badge inside the strip item / row keyed by the sender; fall back to any badge on the
-      // page (there is only our one probe sender in a clean state).
-      const scoped = page
-        .locator(`[id="${kpostId}"], [id^="${kpostId}-"]`)
-        .locator('.Msg-Count-Font, .Msg-Count')
-        .first();
-      const anyBadge = page.locator('.Msg-Count-Font, .Msg-Count').first();
-      const badge: Locator = (await scoped.count()) > 0 ? scoped : anyBadge;
-      if ((await badge.count()) === 0) return 0;
-      const text = (
-        await badge
+    interface UnreadEntry {
+      sender?: string;
+      senderName?: string;
+      count?: number;
+    }
+
+    const isUnreadCount = (url: string): boolean =>
+      url.includes('/katchup/getUnopenedMessagesCount');
+
+    /** The per-sender entry in a getUnopenedMessagesCount response body. */
+    function entryFor(body: unknown, sender: string): UnreadEntry | undefined {
+      const list = (body as { resultList?: UnreadEntry[] } | undefined)?.resultList ?? [];
+      return list.find((e) => (e.sender ?? '').toLowerCase() === sender.toLowerCase());
+    }
+
+    /**
+     * The unread badge on the Unopened-Messages strip item for `senderName` (0 when the item or badge
+     * is gone). Live-confirmed 2026-10-14: a strip item is a ContactCircle with no id — its avatar is a
+     * token-fetched blob: URL (AuthenticatedAvatar), so the only stable per-sender handle is the
+     * `.UserName` text, whose parent holds the `.Msg-Count-Font` badge. The same name can also appear
+     * in Frequently Accessed (which never carries a count), so the highest count among the matches is
+     * the strip's.
+     */
+    async function badgeCount(page: Page, senderName: string): Promise<number> {
+      const names = page.locator('.UserName', { hasText: senderName });
+      const total = await names.count();
+      let best = 0;
+      for (let i = 0; i < total; i++) {
+        const badge = names.nth(i).locator('xpath=..').locator('.Msg-Count-Font');
+        if ((await badge.count()) === 0) continue;
+        const text = await badge
           .first()
           .innerText()
-          .catch(() => '')
-      ).trim();
-      const n = parseInt(text.replace(/[^\d]/g, ''), 10);
-      return Number.isNaN(n) ? 0 : n;
+          .catch(() => '');
+        const n = parseInt(text.replace(/[^\d]/g, ''), 10);
+        if (!Number.isNaN(n)) best = Math.max(best, n);
+      }
+      return best;
     }
 
     async function openSender(browser: Browser): Promise<Page> {
@@ -79,40 +98,72 @@ test.describe(
       browser,
     }) => {
       const subject = `QA badge ${Date.now()}`;
+      const victim = testData.victimKpostId;
       const sender = await openSender(browser);
+
+      // Track what the SERVER tells this page about account 2's unread, so a failure can say plainly
+      // whether the API or the UI is wrong. `postReadServer` only records responses after the read.
+      let senderName: string | undefined;
+      let readAt = Number.POSITIVE_INFINITY;
+      let postReadServer: number | undefined;
+      page.on('response', async (r) => {
+        if (!isUnreadCount(r.url()) || !r.ok()) return;
+        const body: unknown = await r.json().catch(() => undefined);
+        const entry = entryFor(body, victim);
+        if (entry?.senderName) senderName = entry.senderName;
+        if (Date.now() >= readAt) postReadServer = entry?.count ?? 0;
+      });
+
       try {
         // Account 2 sends a fresh message to account 1 (so account 1 has a new unread from account 2).
         await openConversation(sender, testData.kpostId);
         await sender.locator('.msg-arrow').first().click();
         await sendMessage(sender, subject, 'QA badge-refresh probe — safe to ignore');
 
-        // Account 1 opens Katchup: a new unread from account 2 must raise its badge.
+        // Account 1 opens Katchup; the page's own unread-count fetch names account 2 and its count.
+        const firstLoad = page.waitForResponse((r) => isUnreadCount(r.url()) && r.ok(), {
+          timeout: 30_000,
+        });
         await gotoKatchup(page);
+        await firstLoad;
         await parkPointerAwayFromSideMenu(page);
         await settleFrames(page).catch(() => undefined);
-        const before = await badgeCountFor(page, testData.victimKpostId);
+        expect(
+          senderName,
+          "the server's unread list for account 1 includes account 2 (the fresh unread)",
+        ).toBeTruthy();
+        const name = senderName!;
+        const before = await badgeCount(page, name);
         expect(before, "a fresh unread message raises account 2's unread badge").toBeGreaterThan(0);
 
         // Read it: open the conversation (this stays on the Katchup list — the badge is still on screen).
-        await page
-          .locator(`[id="${testData.victimKpostId}"], [id^="${testData.victimKpostId}-"]`)
-          .first()
-          .click();
-        // Let the read register and the client re-fetch the count on its socket event — but NO reload.
-        await page.waitForTimeout(3_000);
-        await settleFrames(page).catch(() => undefined);
+        readAt = Date.now();
+        await page.locator(`[id="${victim}"], [id^="${victim}-"]`).first().click();
 
-        // Correct behaviour: the badge drops (to 0 / below its pre-read value) in place. A badge that
-        // stays at its old number after the message is read is the reported "stuck at 4/5" bug.
-        const after = await badgeCountFor(page, testData.victimKpostId);
+        // Give the read and the client's socket-driven re-fetch up to 10s — but NO reload.
+        let after = before;
+        const deadline = Date.now() + 10_000;
+        while (Date.now() < deadline) {
+          after = await badgeCount(page, name);
+          if (after < before) break;
+          await page.waitForTimeout(500);
+        }
+
+        const server =
+          postReadServer === undefined
+            ? 'no re-fetch of the count was observed after the read'
+            : `the server reported ${postReadServer} after the read`;
         test.info().annotations.push({
           type: 'observed',
-          description: `account 2 unread badge: before read=${before}, after read=${after}`,
+          description: `${name} unread badge: before read=${before}, after read=${after}; ${server}`,
         });
+        // Correct behaviour: the badge drops (to 0 / below its pre-read value) in place. A badge that
+        // stays at its old number after the message is read is the reported "stuck at 4/5" bug — and
+        // when the server already says 0, that pins the fault on the UI, not the API.
         expect(
           after,
-          `the unread badge must drop after the conversation is read (was ${before}, still ${after}) ` +
-            '— a badge that never updates in place is the stale-count bug',
+          `the unread badge must drop after the conversation is read (was ${before}, still ${after}; ` +
+            `${server}) — a badge that never updates in place is the stale-count bug`,
         ).toBeLessThan(before);
       } finally {
         await page.goto('/katchup', { waitUntil: 'domcontentloaded' }).catch(() => undefined);

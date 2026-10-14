@@ -43,8 +43,11 @@ import { settleFrames } from './support/settle';
  * reliably until that session-killing bug is fixed, since the session may already be dead before the
  * Share icon is even reached.
  */
-const SHARE_TARGET_CONTACT_ID = '8056go@kpostindia.com';
-const SHARE_TARGET_SEARCH_TERM = 'Kapildev';
+// Use the same real contact the Forward sub-flow test shares to (qatest3) — confirmed present in this
+// account's address book and passing live; the earlier "Kapildev"/8056go contact is no longer reliably
+// in Recents (2026-10-14: the share picker opened but the contact was not found).
+const SHARE_TARGET_CONTACT_ID = 'qatest3@kpostindia.com';
+const SHARE_TARGET_SEARCH_TERM = 'Qatest3';
 
 test.describe(
   'KPost Katchup · Digital Card share @ui',
@@ -115,7 +118,20 @@ test.describe(
         timeout: 10_000,
       });
       await rowCheckbox.check();
-      await recipientDialog.getByRole('button', { name: /^Done$/i }).click();
+      // The share picker runs MultipleContact in `shareNote` mode (ShareContactTo.js:326-336), whose
+      // footer is a "Shared Note" box + "NN Contacts Selected" + an unlabeled post button
+      // (`.post_button_size` holding the `icon-KP_3164` send glyph — the #963 no-accessible-name
+      // class) wired to `handlePostSubmit` → `finalSubmit` → `sendKatchup`. There is NO "Done" in this
+      // mode (MultipleContact.js:1825-1870) — pressing post is what actually shares the card.
+      const post = page
+        .locator('.shareNote_footerBG .post_button_size')
+        .filter({ has: page.locator('.icon-KP_3164') })
+        .first();
+      await expect(
+        post,
+        'the share-note post button appears once a contact is selected',
+      ).toBeVisible({ timeout: 10_000 });
+      await post.click();
 
       await expect(
         page.getByText('Contact Shared successfully', { exact: false }),
