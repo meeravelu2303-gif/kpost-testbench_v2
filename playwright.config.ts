@@ -85,7 +85,23 @@ export default defineConfig({
       retries: RETRIES,
     },
     browserProject('chromium', devices['Desktop Chrome'], CHROMIUM_MEDIA),
-    browserProject('firefox', devices['Desktop Firefox']),
+    // FIREFOX_SPEECH_ON=true switches on Firefox's (normally hidden) speech recognition so the app's
+    // "Microphone not available" alert() on every search bar (#1360) — which also crashes React in
+    // Firefox (#980) — does not block the rest of a Firefox run. Off by default so #1360 stays visible.
+    browserProject(
+      'firefox',
+      devices['Desktop Firefox'],
+      process.env.FIREFOX_SPEECH_ON === 'true'
+        ? {
+            launchOptions: {
+              firefoxUserPrefs: {
+                'media.webspeech.recognition.enable': true,
+                'media.webspeech.recognition.force_enable': true,
+              },
+            },
+          }
+        : {},
+    ),
     browserProject('webkit', devices['Desktop Safari']),
     // The Admin/HR-Setup UI is a SEPARATE SPA (kpostadmin.kpostindia.com) on its own origin, SSO'd
     // by the session `auth-admin.setup.ts` seeds. Its own baseURL + storageState + testDir keep it
