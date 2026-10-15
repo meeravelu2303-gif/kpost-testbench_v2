@@ -1,7 +1,7 @@
 import { env } from '@config/env';
 import { workbookContract } from '../../contract/workbook-contract';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
-import type { KpostEndpointConfig } from '../kpost/kpost-endpoint';
+import type { KpostEndpointConfig, UndocumentedKpostEndpointConfig } from '../kpost/kpost-endpoint';
 
 /**
  * A **KMail** endpoint. KMail is its own suite (`kmail-api`) on its own host. The schemas come from
@@ -61,5 +61,46 @@ export function defineKmailEndpoint(config: KpostEndpointConfig): EndpointDefini
     // Was never wired through here (no KMail DB validation existed to reference it) — added
     // 2026-10-02 alongside the first one, `kmail-mail-persisted`. Mirrors `defineKpostEndpoint`.
     database: config.database,
+  };
+}
+
+/**
+ * A real KMail endpoint the web app calls that the workbook contract does not document — the KMail
+ * twin of `defineUndocumentedKpostEndpoint` (same audit-trail rule: `evidence` names the frontend
+ * call site). Skips the workbook lookup (which throws for an unknown path); its note starts with
+ * "UNDOCUMENTED IN WORKBOOK" so the coverage check can tell it apart.
+ */
+export function defineUndocumentedKmailEndpoint(
+  config: UndocumentedKpostEndpointConfig,
+): EndpointDefinition {
+  return {
+    id: config.id,
+    method: config.method,
+    path: `${KMAIL_PREFIX}${config.path}`,
+    suite: 'kmail-api',
+    responseContract: 'kmail',
+    summary: config.summary,
+    note: `UNDOCUMENTED IN WORKBOOK — confirmed from frontend source (${config.evidence}). ${config.note ?? ''}`.trim(),
+    // No 'undocumented-contract' tag here: endpoint tags become test tags, and that one is not an
+    // allowed run-level tag (lint:tags). The note prefix below marks it instead.
+    tags: ['kmail-api', 'kmail', ...(config.tags ?? [])],
+    requirements: config.requirements,
+    authentication: config.authentication ?? { required: true },
+    expectedStatus: config.expectedStatus,
+    envelope: config.envelope,
+    contentType: config.contentType,
+    request: config.request,
+    requestSchema: config.requestSchema,
+    responseSchema: config.responseSchema,
+    pathParamsSchema: config.pathParamsSchema,
+    querySchema: config.querySchema,
+    destructive: config.destructive,
+    sideEffect: config.sideEffect,
+    productionSafe: config.productionSafe,
+    validations: config.validations,
+    skipValidators: config.skipValidators,
+    businessRules: config.businessRules,
+    security: config.security,
+    performance: config.performance,
   };
 }

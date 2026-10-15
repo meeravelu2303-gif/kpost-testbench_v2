@@ -214,6 +214,13 @@ test.describe(
           description: `receiver pageErrors (not asserted, see note above): ${JSON.stringify(health.pageErrors)}`,
         });
 
+        // Precondition (2026-10-14): the verdict below only means something if the body actually
+        // rendered. Opened mails currently show an EMPTY body (#1348), so "no script ran" proved
+        // nothing — this test passed without ever rendering the payload. Red until #1348 is fixed.
+        expect(
+          rawHtml.trim().length,
+          'the received mail body actually renders (an empty body cannot prove the payload is inert — #1348)',
+        ).toBeGreaterThan(0);
         expect(dialogFiredReceiver, 'no dialog fired rendering the received mail').toBe(false);
         expect(
           fired,

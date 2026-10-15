@@ -21,7 +21,8 @@ test.describe('KPost KMail · module coverage', () => {
   });
 
   test('every definition matches the generated contract @framework', () => {
-    for (const api of kmailApis) {
+    // Undocumented endpoints have no workbook entry to match by definition (see defineUndocumentedKmailEndpoint).
+    for (const api of kmailApis.filter((a) => !a.note?.startsWith('UNDOCUMENTED IN WORKBOOK'))) {
       const documented = api.contractPath ?? api.path;
       expect(workbookContract('kmail-api', api.method, documented).path, `${api.id} path`).toBe(
         documented,
@@ -33,12 +34,9 @@ test.describe('KPost KMail · module coverage', () => {
     const publicOnes = kmailApis
       .filter((api) => api.authentication?.required === false)
       .map((api) => api.id);
-    // The one known exception: the KMail backend permitAll()s the attachment-thumbnail download
-    // (see the note on `kmail-download-thumbnail` in read.api.ts) — recorded as a security finding,
-    // not a bench choice. Any OTHER endpoint becoming public still fails this check.
-    expect(publicOnes, 'KMail is authenticated apart from the known public thumbnail').toEqual([
-      'kmail-download-thumbnail',
-    ]);
+    // The attachment thumbnail was once permitAll()'d; live-verified 2026-10-14 it now requires a
+    // login too (attachment-idor.spec.ts), so KMail is entirely authenticated.
+    expect(publicOnes, 'KMail is entirely authenticated').toEqual([]);
   });
 
   test('no KMail write is cleared for the live application @framework', () => {

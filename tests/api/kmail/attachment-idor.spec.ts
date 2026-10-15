@@ -1,4 +1,5 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
+import type { AuthMode } from '@engine/endpoint-executor';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { mailShape } from '@api/definitions/kmail/send.api';
 import { expect, test } from '@fixtures';
@@ -52,7 +53,12 @@ test.describe(
     test("an unrelated account can fetch another pair's KMail attachment by UUID alone", async ({
       endpoints,
     }) => {
-      const content = '%PDF-1.4 QA bench attachment — safe to ignore, not a real document.';
+      // A tiny real JPEG — an image, so a thumbnail can exist (a PDF may never get one, which would make a
+      // refused thumbnail meaningless).
+      const content = Buffer.from(
+        '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
+        'base64',
+      );
       let transactionIDs: number[] = [];
 
       try {
@@ -61,15 +67,20 @@ test.describe(
           'aws-generate-presigned',
           {
             body: {
-              extension: 'pdf',
-              fileName: `qa-idor-${Date.now()}.pdf`,
+              extension: 'jpg',
+              fileName: `qa-idor-${Date.now()}.jpg`,
               fileSize: String(content.length),
             },
           },
           { label: 'idor:presign', auth: { principal: A }, allowLiveWrite: true },
         );
         expect(presign.status, 'generate-presigned-url succeeds').toBeLessThan(300);
-        const url = presign.bodyText.trim().replace(/^"|"$/, '');
+        // The endpoint now answers with a JSON envelope ({ presignedURL, status }) — #942 — older builds
+        // returned the bare link; accept both.
+        const raw = presign.bodyText.trim();
+        const url = raw.startsWith('{')
+          ? String((JSON.parse(raw) as { presignedURL?: string }).presignedURL ?? '')
+          : raw.replace(/^"|"$/g, '');
         const uuid = url.match(
           /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
         )?.[1];
@@ -78,7 +89,7 @@ test.describe(
 
         const putRes = await fetch(url, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/pdf' },
+          headers: { 'Content-Type': 'image/jpeg' },
           body: content,
         });
         expect(putRes.status, 'the direct S3 upload succeeds').toBeLessThan(300);
@@ -108,6 +119,28 @@ test.describe(
               .filter((v): v is number => typeof v === 'number')
           : [];
 
+        // --- Controls: the sender and the receiver CAN fetch it with their own login. Without these a
+        // refusal below could just mean the file or its thumbnail does not exist yet.
+        const fetchAs = (id: string, label: string, auth: AuthMode) =>
+          endpoints.sendTo(id, { pathParams: { uuid } }, { label, auth, allowLiveRead: true });
+        const ownerDownload = await fetchAs('kmail-download-attachment', 'idor:owner-download', {
+          principal: A,
+        });
+        const receiverDownload = await fetchAs(
+          'kmail-download-attachment',
+          'idor:receiver-download',
+          { principal: B },
+        );
+        const ownerThumb = await fetchAs('kmail-download-thumbnail', 'idor:owner-thumbnail', {
+          principal: A,
+        });
+        const anonDownload = await fetchAs('kmail-download-attachment', 'idor:anonymous-download', {
+          header: undefined,
+        });
+        const anonStream = await fetchAs('kmail-media-streaming', 'idor:anonymous-stream', {
+          header: undefined,
+        });
+
         // --- C, who never sent or received this mail, fetches the attachment by UUID alone -----
         const download = await endpoints.sendTo(
           'kmail-download-attachment',
@@ -125,6 +158,17 @@ test.describe(
           'kmail-download-thumbnail',
           { pathParams: { uuid } },
           { label: 'idor:anonymous-thumbnail', auth: { header: undefined }, allowLiveRead: true },
+        );
+
+        const observed =
+          `uuid=${uuid} | owner download=${ownerDownload.status} receiver download=${receiverDownload.status} ` +
+          `owner thumbnail=${ownerThumb.status} (${ownerThumb.bodyText.length} bytes) | outsider download=${download.status} ` +
+          `outsider stream=${stream.status} | NO-LOGIN thumbnail=${thumbnail.status} (${thumbnail.bodyText.length} bytes) ` +
+          `no-login download=${anonDownload.status} no-login stream=${anonStream.status}`;
+        test.info().annotations.push({ type: 'observed', description: observed });
+        console.log(`KMAIL-ATT-IDOR ${observed}`);
+        expect(ownerDownload.status, 'control: the sender can download their own attachment').toBe(
+          200,
         );
 
         if (download.status < 300 || stream.status < 300 || thumbnail.status < 300) {
@@ -162,6 +206,15 @@ test.describe(
             thumbnail.status,
             `IDOR 0a: an anonymous caller must not fetch another pair's attachment thumbnail (uuid ${uuid})`,
           )
+          .toBeGreaterThanOrEqual(400);
+        expect
+          .soft(
+            anonDownload.status,
+            `no login: the attachment download must be refused (uuid ${uuid})`,
+          )
+          .toBeGreaterThanOrEqual(400);
+        expect
+          .soft(anonStream.status, `no login: the attachment stream must be refused (uuid ${uuid})`)
           .toBeGreaterThanOrEqual(400);
       } finally {
         if (transactionIDs.length) {

@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { body, pathParams } from '../kpost/kpost-endpoint';
-import { defineKmailEndpoint } from './kmail-endpoint';
+import { defineKmailEndpoint, defineUndocumentedKmailEndpoint } from './kmail-endpoint';
 
 /**
  * KMail **reads** — dashboards, counts, mail lists, subjects, statuses, drafts, settings and
@@ -355,7 +355,10 @@ export const downloadThumbApi = idRead(
   '/readMail/downloadThumbnail/{uuid}',
   'Attachment thumbnail',
   pathParams(() => ({ uuid: '' })),
-  // CONFIRMED from KMail backend source (2026-10-02): `SecurityConfiguration.java` explicitly
+  // LIVE-VERIFIED 2026-10-14 (attachment-idor.spec.ts, bench-owned accounts): the thumbnail now
+  // REQUIRES a login — no token -> 401, an unrelated account's download/stream -> 403, while the
+  // sender gets the real thumbnail (200). The 2026-10-02 source audit below (permitAll) is stale.
+  // Historical: `SecurityConfiguration.java` explicitly
   // `permitAll()`s this exact path — no token is required at all, unlike every other KMail endpoint.
   // Combined with `AWSs3ClientServiceImpl.fileDownloadFromS3` looking attachments up by UUID alone
   // with no sender/receiver ownership check, this means anyone who obtains or guesses a thumbnail
@@ -364,7 +367,6 @@ export const downloadThumbApi = idRead(
   // pending a controlled live proof using only bench-owned accounts.
   'needs a real attachment uuid; genuinely unauthenticated on live (see note above), not a bench gap',
   ['attachment'],
-  { authentication: { required: false } },
 );
 export const mediaStreamApi = idRead(
   'kmail-media-streaming',
@@ -458,7 +460,20 @@ export const mailContentApi = idRead(
   ['content'],
 );
 
+// Settings > Data Storage — the KMail storage used. Real but not in the workbook contract.
+export const kloudUsedDataApi = defineUndocumentedKmailEndpoint({
+  id: 'kmail-kloud-used-data',
+  method: 'GET',
+  path: '/kmailData/getKloudUsedData',
+  summary: 'KMail storage used (Settings > Data Storage)',
+  tags: [...R],
+  productionSafe: true,
+  evidence:
+    'Services/Setting.js:1005-1017 GetKlouDUsedDataList (GET, no body); caller Settings/DataStorage/DataStorage.js:64',
+});
+
 export const kmailReadApis = [
+  kloudUsedDataApi,
   saluationsApi,
   frequentContactApi,
   unopenedCountApi,
