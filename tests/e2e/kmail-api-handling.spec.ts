@@ -49,10 +49,14 @@ test.describe(
       await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => undefined);
       await settleFrames(page).catch(() => undefined);
 
-      expect(
-        called,
-        'the inbox-load endpoint must fire on /kmail (else the stub/flow is wrong)',
-      ).toBe(true);
+      // KMail shows its loading splash first and only then requests the inbox (live 2026-10-15) — wait
+      // for the request instead of checking straight after the page's load event.
+      await expect
+        .poll(() => called, {
+          message: 'the inbox-load endpoint must fire on /kmail (else the stub/flow is wrong)',
+          timeout: 30_000,
+        })
+        .toBe(true);
       const shown = await page
         .locator(errorSignal, { hasText: /error|fail|unable|could not|try again|went wrong/i })
         .first()
@@ -67,7 +71,7 @@ test.describe(
       });
       expect(
         shown,
-        'a failed inbox load must surface an error — otherwise an outage is indistinguishable from an empty inbox',
+        'a failed inbox load must surface an error — otherwise an outage is indistinguishable from an empty inbox (#1352)',
       ).toBe(true);
     });
 
@@ -84,7 +88,12 @@ test.describe(
       await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => undefined);
       await settleFrames(page).catch(() => undefined);
 
-      expect(called, 'the inbox-load endpoint must fire on /kmail').toBe(true);
+      await expect
+        .poll(() => called, {
+          message: 'the inbox-load endpoint must fire on /kmail',
+          timeout: 30_000,
+        })
+        .toBe(true);
       const shown = await page
         .locator(errorSignal, { hasText: /error|fail|unable|could not|try again|went wrong/i })
         .first()
@@ -99,7 +108,7 @@ test.describe(
       });
       expect(
         shown,
-        'a network-level inbox load error must surface feedback, not a silent blank',
+        'a network-level inbox load error must surface feedback, not a silent blank (#1352)',
       ).toBe(true);
     });
   },
