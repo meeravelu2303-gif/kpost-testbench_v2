@@ -85,8 +85,8 @@ do · ⛔ out of scope (OTP-gated signup / mobile-only device features). Guard:
 | --------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------ | ------ | ----------- |
 | **FR-KD-002 org-scope** — directory shows only the viewer's own org users   | `globalSearch`/directory      | users outside the viewer's org are absent         | ⬜     | to-do       |
 | **FR-KD-002 search** — search by name; no match → empty state               | `globalSearch`                | query returns only name-matching entries          | 🟡     | contacts    |
-| **FR-KD-003** — each entry shows name, role/designation, team               | directory entry               | all three fields present                          | ⬜     | to-do       |
-| **FR-KD-005** — opening an entry returns that user's full profile           | `getUserProfileUsingKpostID`  | profile view returns the selected user's details  | ✅     | profile read|
+| **FR-KD-003** — each entry shows name, role/designation, team               | directory entry               | all three fields present                          | ✅ (finding) | UI `kdirectory-launch` — rows compared with the globalSearch reply; **VIOLATED 3/3 (2026-10-15): no name on any row — #1370** |
+| **FR-KD-005** — opening an entry returns that user's full profile           | `getUserProfileUsingKpostID`  | profile view returns the selected user's details  | ✅     | profile read · UI `kdirectory-launch`: the Digital Card shows the entry's name, email and location (2/2 2026-10-15) |
 
 ## Admin / HR-Setup (`admin-api`)
 

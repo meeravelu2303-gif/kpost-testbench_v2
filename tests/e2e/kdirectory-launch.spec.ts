@@ -35,7 +35,18 @@ async function pickReactSelect(page: Page, placeholder: RegExp, option: string):
   await match.click();
 }
 
-async function openFirstProfileCard(page: Page): Promise<Locator> {
+/** One directory entry as the globalSearch API returns it (the fields the screen should show). */
+interface DirEntry {
+  kpostID?: string;
+  firstName?: string;
+  lastName?: string;
+  designation?: string | null;
+  role?: string | null;
+  city?: string | null;
+}
+
+/** Country → Language → Personal → Continue → search; returns the result rows and the API's entries. */
+async function searchDirectory(page: Page): Promise<{ rows: Locator; entries: DirEntry[] }> {
   await page.goto('/kdirectory', { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await page
     .locator('.loader-overlay')
@@ -66,7 +77,7 @@ async function openFirstProfileCard(page: Page): Promise<Locator> {
   await search.fill(SEARCH_TERM);
   const response = await answer.catch(() => undefined);
   const payload = (await response?.json().catch(() => undefined)) as
-    { status?: string; data?: unknown[] } | undefined;
+    { status?: string; data?: DirEntry[] } | undefined;
   const hits = Array.isArray(payload?.data) ? payload.data.length : -1;
   test.info().annotations.push({
     type: 'observed',
@@ -80,6 +91,11 @@ async function openFirstProfileCard(page: Page): Promise<Locator> {
   await expect(rows.first(), 'the directory lists the matching entries').toBeVisible({
     timeout: 20_000,
   });
+  return { rows, entries: payload?.data ?? [] };
+}
+
+async function openFirstProfileCard(page: Page): Promise<Locator> {
+  const { rows } = await searchDirectory(page);
   await rows.first().click();
   const card = page.getByRole('dialog').filter({ has: page.locator('.dc-feature-button') });
   await expect(card, "the entry's profile (Digital Card) opens").toBeVisible({ timeout: 15_000 });
@@ -99,11 +115,7 @@ test.describe(
     test(
       'the profile view offers Write Mail / KMail / Katchup / Kall, and Katchup opens a new message with that contact @ui',
       {
-        annotation: [
-          { type: 'requirement', description: 'FR-KD-006' },
-          { type: 'requirement-partial', description: 'FR-KD-003' },
-          { type: 'requirement-partial', description: 'FR-KD-005' },
-        ],
+        annotation: [{ type: 'requirement', description: 'FR-KD-006' }],
       },
       async ({ page }) => {
         const card = await openFirstProfileCard(page);
@@ -123,6 +135,55 @@ test.describe(
           page.locator('#ChatTop .background-color-katchup').first(),
           'a conversation with the selected contact is open',
         ).toBeVisible({ timeout: 20_000 });
+      },
+    );
+
+    test(
+      'each result row shows the person’s name and location (FR-KD-003) @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KD-003' }] },
+      async ({ page }) => {
+        // FR-KD-003: every directory entry shows the user's name, role/designation and team. The rows
+        // are ContactBars rendering `name={item.fullName}` (KdirectoryModal.js) — compared here with the
+        // name the search API returned for the same entries (firstName + lastName, contract fields).
+        const { rows, entries } = await searchDirectory(page);
+        const rowBars = page.locator('.contactDir_scrollHeight').first();
+        const shown = await rowBars.innerText();
+        test.info().annotations.push({
+          type: 'observed',
+          description: `rows: ${JSON.stringify(shown.split('\n').filter(Boolean).slice(0, 6))}; API: ${JSON.stringify(entries.slice(0, 6).map((e) => `${e.firstName} ${e.lastName}`))}`,
+        });
+        await expect(rows, 'one row per entry the API returned').toHaveCount(entries.length);
+        for (const entry of entries) {
+          const name = `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim();
+          await expect(
+            rowBars,
+            `the row for ${entry.kpostID} shows the person’s name "${name}" (#1370)`,
+          ).toContainText(name);
+          if (entry.city) await expect(rowBars, 'and their location').toContainText(entry.city);
+          const role = entry.designation ?? entry.role;
+          if (role) await expect(rowBars, 'and their role/designation').toContainText(role);
+        }
+      },
+    );
+
+    test(
+      'opening an entry shows that person’s full profile — name, email, location (FR-KD-005) @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KD-005' }] },
+      async ({ page }) => {
+        const { rows, entries } = await searchDirectory(page);
+        const first = entries[0];
+        expect(first?.kpostID, 'the search returned an entry').toBeTruthy();
+        await rows.first().click();
+        const card = page.getByRole('dialog').filter({ has: page.locator('.dc-feature-button') });
+        await expect(card, "the entry's profile (Digital Card) opens").toBeVisible({
+          timeout: 15_000,
+        });
+        const name = `${first?.firstName ?? ''} ${first?.lastName ?? ''}`.trim();
+        await expect(card, `the profile is that person’s: "${name}"`).toContainText(name);
+        await expect(card, 'with their email').toContainText(first?.kpostID ?? '__none__', {
+          ignoreCase: true,
+        });
+        if (first?.city) await expect(card, 'and their location').toContainText(first.city);
       },
     );
 
