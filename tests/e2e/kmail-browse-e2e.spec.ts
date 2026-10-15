@@ -264,10 +264,32 @@ test.describe(
 
       if (unknown > 0) {
         const name = `QA Outside ${Date.now()}`;
-        await page.getByText('Add Contact', { exact: true }).first().click();
+        // The "Add Contact" shown under the Unknown section — the Recents and other panels carry
+        // off-screen copies of the same label, so pick the on-screen one below that heading.
+        const heading = await page
+          .getByText('Unknown Other Domain Contact', { exact: true })
+          .first()
+          .boundingBox();
+        const adds = page.locator('span.text-danger', { hasText: 'Add Contact' });
+        let picked = -1;
+        for (let i = 0; i < (await adds.count()); i++) {
+          const box = await adds.nth(i).boundingBox();
+          if (box && heading && box.x >= 0 && box.y > heading.y) {
+            picked = i;
+            break;
+          }
+        }
+        expect(picked, 'the unknown outside sender offers "Add Contact"').toBeGreaterThanOrEqual(0);
+        await adds.nth(picked).click();
         const form = page.getByRole('dialog').filter({ hasText: 'Add To Contact' });
         await expect(form, 'the Add To Contact form opens').toBeVisible({ timeout: 10_000 });
         await form.getByPlaceholder('Enter the Contact Name').fill(name);
+        await expect(
+          form.getByPlaceholder('Enter the email id'),
+          'the sender’s address is filled in for the user',
+        ).not.toHaveValue('');
+        // Save stays disabled until a Reference is given (AddOtherDomain.js — by design).
+        await form.getByPlaceholder('Add Reference').fill('QA outside reference');
         const added = page.waitForResponse(
           (r) => r.url().includes('/common/addOtherDomainContacts'),
           { timeout: 20_000 },
