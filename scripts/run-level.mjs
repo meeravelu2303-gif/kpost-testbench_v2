@@ -12,13 +12,69 @@
 //     with html+junit+json written under reports/<level>/<suite>/<timestamp>/.
 //   - workers is capped at 2 by the config; this runner defaults it to 1.
 //   - Admin is never selected (its tests carry no @regression/@smoke/@sanity and no module tag).
-//   - Production guard: regression is blocked unless ALLOW_PROD_REGRESSION=true.
+//   - Runs exactly like the module scripts (`kpost`, `kmail`, `ui:chromium`): QA test accounts only
+//     (QATEST_ONLY), every module's write/lifecycle flow switched on, and paused KDoc (@kos) excluded —
+//     so a run level measures the same suite the team runs day to day, on accounts no developer uses.
+//   - Live-host guard: every level refuses to start unless every target host is a TEST deployment.
+//     (.env sets TEST_ENV=production as a safety MODE while pointing at the test hosts, so the guard
+//     checks where the tests actually go, not that label.)
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// Read the same env files the Playwright config reads (process env > .env.<TEST_ENV> > .env), so the
+// guard below sees the hosts the tests will really use.
+dotenv.config({
+  path: [path.join(ROOT, `.env.${process.env.TEST_ENV || 'local'}`), path.join(ROOT, '.env')],
+  quiet: true,
+});
+
+/** The flags the module scripts set (package.json `kpost` + `kmail` + `ui:chromium`). */
+const RUN_FLAGS = {
+  QATEST_ONLY: 'true',
+  CONCURRENCY_PROBES: 'false',
+  TEST_DB_MODE: 'true',
+  OTP_TEST_GATEWAY: 'true',
+  // API lifecycles (kpost + kmail scripts)
+  KATCHUP_LIFECYCLE: 'true',
+  KALL_LIFECYCLE: 'true',
+  PROFILE_LIFECYCLE: 'true',
+  CONTACTS_LIFECYCLE: 'true',
+  GROUP_LIFECYCLE: 'true',
+  SETTINGS_LIFECYCLE: 'true',
+  KDIARY_LIFECYCLE: 'true',
+  AWS_LIFECYCLE: 'true',
+  KMAIL_LIFECYCLE: 'true',
+  // UI lifecycles (ui:chromium script)
+  SIGNUP_UI_LIFECYCLE: 'true',
+  LOGIN_UI_LIFECYCLE: 'true',
+  PROFILE_UI_LIFECYCLE: 'true',
+  KATCHUP_UI_LIFECYCLE: 'true',
+  CONTACTS_UI_LIFECYCLE: 'true',
+  GROUP_UI_LIFECYCLE: 'true',
+  KALL_UI_LIFECYCLE: 'true',
+  KMAIL_UI_LIFECYCLE: 'true',
+  KDIARY_UI_LIFECYCLE: 'true',
+  SETTINGS_UI_LIFECYCLE: 'true',
+  BUSINESS_UI_LIFECYCLE: 'true',
+};
+
+/** Paused modules, never run by any level (KDoc/KOS paused by the owner since 2026-10-07). */
+const PAUSED_TAGS = '@kos';
+
+/** The only hosts a run level may target: the test deployment (and a local server). */
+const TEST_HOSTS = new Set([
+  'test.kpostindia.com',
+  'testingapi.kpostindia.com',
+  'testkmail.kpostindia.com',
+  'localhost',
+  '127.0.0.1',
+]);
+const HOST_VARS = ['BASE_URL', 'API_BASE_URL', 'KPOST_API_BASE_URL', 'KMAIL_API_BASE_URL'];
 
 function arg(name, def) {
   const hit = process.argv.find((a) => a === `--${name}` || a.startsWith(`--${name}=`));
@@ -58,7 +114,23 @@ if (moduleArg && !MODULES.includes(moduleArg)) {
   process.exit(2);
 }
 
-const IS_PROD = String(process.env.TEST_ENV || '').toLowerCase() === 'production';
+// Live-host guard (all levels): refuse to start if any configured target is not a test host.
+const offTest = HOST_VARS.filter((k) => process.env[k]).flatMap((k) => {
+  let host;
+  try {
+    host = new URL(process.env[k]).hostname.toLowerCase();
+  } catch {
+    return [`${k}=<unparseable>`];
+  }
+  return TEST_HOSTS.has(host) ? [] : [`${k} → ${host}`];
+});
+if (offTest.length) {
+  console.error(
+    `\n✗ BLOCKED: run levels only target the TEST deployment (${[...TEST_HOSTS].join(', ')}). ` +
+      `Not a test host: ${offTest.join('; ')}.`,
+  );
+  process.exit(3);
+}
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 
 /** Output dirs produced this invocation, scanned at the end for login-throttling (an ENVIRONMENT
@@ -121,7 +193,8 @@ function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
   fs.mkdirSync(outDir, { recursive: true });
   RUN_DIRS.add(outDir);
   const args = ['playwright', 'test', `--project=${project}`, ...(paths || []), '--grep', grep];
-  if (grepInvert) args.push('--grep-invert', grepInvert);
+  // Paused modules are excluded from every level, whatever the caller's invert.
+  args.push('--grep-invert', grepInvert ? `${grepInvert}|${PAUSED_TAGS}` : PAUSED_TAGS);
   // Reporters: human list + the three machine artifacts. This REPLACES the config's Bugzilla reporter,
   // so no run level can ever file a bug.
   args.push('--reporter=list,html,junit,json');
@@ -130,6 +203,7 @@ function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
   args.push('--pass-with-no-tests');
   const env = {
     ...process.env,
+    ...RUN_FLAGS,
     BUGZILLA_DRY_RUN: 'true',
     WORKERS: process.env.WORKERS ?? '1',
     PLAYWRIGHT_HTML_REPORT: path.join(outDir, 'html'),
@@ -281,12 +355,7 @@ if (level === 'smoke') {
         }) === 0 && ok;
   }
 } else if (level === 'regression') {
-  if (IS_PROD && process.env.ALLOW_PROD_REGRESSION !== 'true') {
-    console.error(
-      '\n✗ BLOCKED: regression against PRODUCTION (TEST_ENV=production). Set ALLOW_PROD_REGRESSION=true to override.',
-    );
-    process.exit(3);
-  }
+  // (The live-host guard at the top already refused any non-test target.)
   console.log('— regression gate: full smoke must pass first —');
   if (!smokeGate()) {
     console.error('\n✗ smoke gate failed — regression not started.');

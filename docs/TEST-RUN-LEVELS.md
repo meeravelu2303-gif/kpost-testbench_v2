@@ -81,9 +81,17 @@ The KPost bench is **one low-capacity shared server**. Enforced in `playwright.c
 - `workers` defaults to **1**, hard-capped at **2** (`WORKERS` can lower but never raise past 2);
 - `retries: 1`; smoke/sanity run **Chromium only** (Firefox/WebKit stay out).
 
-**Production guard:** when `TEST_ENV=production`, smoke and sanity are allowed but **regression is
-blocked** unless `ALLOW_PROD_REGRESSION=true`. `@destructive` tests never run in smoke/sanity, and run
-in regression only when `ALLOW_DESTRUCTIVE_TESTS=true`.
+**Live-host guard:** every level refuses to start unless each target (`BASE_URL`, `API_BASE_URL`,
+`KPOST_API_BASE_URL`, `KMAIL_API_BASE_URL`, read from `.env` like the config does) is a test
+deployment host — `test.kpostindia.com`, `testingapi.kpostindia.com`, `testkmail.kpostindia.com` (or
+localhost). There is no override. (`TEST_ENV=production` in `.env` is the bench's safety _mode_ while
+pointing at the test hosts, so the guard checks the hosts, not that label.) `@destructive` tests never
+run in smoke/sanity, and run in regression only when `ALLOW_DESTRUCTIVE_TESTS=true`.
+
+**Same suite as the module scripts:** every level runs on the QA test accounts only (`QATEST_ONLY=true`),
+with every module's write/lifecycle flow switched on (the flags `kpost`, `kmail` and `ui:chromium` set),
+and always excludes paused modules (`@kos` — KDoc/KOS). Without this, the gated write flows would
+silently skip and the run would use developer-shared accounts.
 
 ## 5. Environment
 

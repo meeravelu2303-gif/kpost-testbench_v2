@@ -6,6 +6,6 @@ import { test } from '@fixtures';
  * doc/session-keyed reads skip (`needs-doc-id`) until the lifecycle creates one. HOW is owned by the
  * central validation engine.
  */
-test.describe('KPost KOS · reads', { tag: ['@api', '@platform', '@regression'] }, () => {
+test.describe('KPost KOS · reads', { tag: ['@api', '@platform', '@regression', '@kos'] }, () => {
   describeEndpointCases({ tags: ['kos-read'] });
 });
