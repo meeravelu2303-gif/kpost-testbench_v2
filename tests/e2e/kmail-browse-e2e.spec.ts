@@ -1,6 +1,7 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { STORAGE_STATE_2 } from '@config/constants';
+import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
@@ -70,6 +71,41 @@ test.describe(
       );
       return Number.isNaN(n) ? 0 : n;
     }
+
+    /**
+     * Remove an outside-domain contact of the signed-in browser account, using that page's own
+     * session token (a fresh API login as the same account would end the browser's session).
+     */
+    async function removeOutsideContact(page: Page, contactEmailID: string): Promise<number> {
+      // The configured base may carry a path; KMail paths hang off its origin + KMAIL_PATH_PREFIX.
+      const origin = new URL(env.KMAIL_API_BASE_URL ?? env.API_BASE_URL ?? '').origin;
+      const url = `${origin}${env.KMAIL_PATH_PREFIX}/common/deleteOtherDomainContact/`;
+      return page.evaluate(
+        async ({ u, email }) => {
+          const r = await fetch(u, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem('accessToken') ?? ''}`,
+            },
+            body: JSON.stringify({ contactEmailID: email }),
+          });
+          return r.status;
+        },
+        { u: url, email: contactEmailID },
+      );
+    }
+
+    // Set while a test-added outside contact still exists; afterEach removes it if a test fails
+    // before its own clean-up, so no run leaves a contact behind.
+    let outsideContactToRemove = '';
+
+    test.afterEach(async ({ page }) => {
+      if (!outsideContactToRemove) return;
+      const email = outsideContactToRemove;
+      outsideContactToRemove = '';
+      await removeOutsideContact(page, email).catch(() => undefined);
+    });
 
     test('search: typing a subject shows that mail, and text that matches nothing shows no mails @ui', async ({
       page,
@@ -233,7 +269,13 @@ test.describe(
       // Domain Contact" (outside senders not yet saved, each with "Add Contact" → AddOtherDomain
       // "Add To Contact" → POST /common/addOtherDomainContacts/). An unknown outside sender only
       // appears when mail arrives from outside KPost, which the bench cannot produce — so the add
-      // step runs only when one is present (qatest1 had none on 2026-10-15).
+      // step runs only when one is present (since 2026-10-15 qatest1 has one: a mail from a QA
+      // Gmail address). The contact this test adds is removed again at the end, so the sender goes
+      // back to "Unknown" and every run repeats the full add. The app offers no Remove ("You can
+      // only Add / Edit the reference for Other Domain Contact"), so the removal calls
+      // /common/deleteOtherDomainContact/ with THIS browser session's own token — never a second
+      // login, which would end the browser's session.
+      let addedEmail = '';
       const section = (title: string) =>
         page.getByText(title, { exact: true }).first().locator('xpath=..');
       const countOf = async (title: string) =>
@@ -288,6 +330,7 @@ test.describe(
           form.getByPlaceholder('Enter the email id'),
           'the sender’s address is filled in for the user',
         ).not.toHaveValue('');
+        const email = await form.getByPlaceholder('Enter the email id').inputValue();
         // Save stays disabled until a Reference is given (AddOtherDomain.js — by design).
         await form.getByPlaceholder('Add Reference').fill('QA outside reference');
         const added = page.waitForResponse(
@@ -297,12 +340,14 @@ test.describe(
         await form.getByRole('button', { name: /^Save$/i }).click();
         const res = await added;
         expect(res.status(), 'the outside contact is saved').toBe(200);
+        addedEmail = email;
+        outsideContactToRemove = email; // safety net: afterEach removes it if a check below fails
         await page.reload({ waitUntil: 'domcontentloaded' });
         await waitLoaded(page);
         await page.getByText('Contacts', { exact: true }).first().click();
         await expect(
           page.getByText(name, { exact: false }).first(),
-          'the added outside contact is listed under Other Domain Contact',
+          'the added outside contact is listed under Other Domain Contact, with the name just typed (a re-add after removal fails here — #1361)',
         ).toBeVisible({ timeout: 20_000 });
         expect(await countOf('Other Domain Contact'), 'the saved count goes up by one').toBe(
           saved + 1,
@@ -326,6 +371,26 @@ test.describe(
       const shot = test.info().outputPath('outside-contact.png');
       await page.screenshot({ path: shot });
       await test.info().attach('outside-contact', { path: shot, contentType: 'image/png' });
+
+      if (addedEmail) {
+        // Clean up: remove the contact again; the sender must go back to "Unknown".
+        outsideContactToRemove = '';
+        expect(
+          await removeOutsideContact(page, addedEmail),
+          'the added outside contact is removed again',
+        ).toBe(200);
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await waitLoaded(page);
+        await page.getByText('Contacts', { exact: true }).first().click();
+        await expect(known).toBeAttached({ timeout: 15_000 });
+        await settleFrames(page, 30);
+        await expect
+          .poll(() => countOf('Unknown Other Domain Contact'), {
+            message: 'the removed sender is back under Unknown Other Domain Contact',
+            timeout: 20_000,
+          })
+          .toBe(unknown);
+      }
     });
   },
 );

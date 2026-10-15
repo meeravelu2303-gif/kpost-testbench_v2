@@ -133,7 +133,7 @@ test.describe(
       p: Page,
       flag: Flag,
       contact: string,
-    ): Promise<{ total: number; forContact: number }> {
+    ): Promise<{ total: number; forContact: number; raw: string }> {
       await openKmail(p);
       await p.getByText('Status of Mails', { exact: true }).first().click();
       const row = p.getByText(LABEL[flag], { exact: false }).filter({ visible: true }).first();
@@ -143,11 +143,14 @@ test.describe(
         timeout: 20_000,
       });
       await row.click();
-      const body = (await (await list).json()) as {
-        data?: { receiver?: string; sender?: string; count: number }[];
-      };
-      const hit = (body.data ?? []).find((x) => (x.receiver ?? x.sender) === contact);
-      return { total, forContact: hit?.count ?? 0 };
+      const raw = await (await list).text();
+      const body = JSON.parse(raw) as { data?: unknown };
+      // An empty list does not come back as [] (seen after Clear All) — treat anything else as empty.
+      const rows = Array.isArray(body.data)
+        ? (body.data as { receiver?: string; sender?: string; count: number }[])
+        : [];
+      const hit = rows.find((x) => (x.receiver ?? x.sender) === contact);
+      return { total, forContact: hit?.count ?? 0, raw: raw.slice(0, 300) };
     }
 
     test('Status of Mails: a sent mail is listed as not opened / no reply, and drops off once opened and replied to @ui', async ({
@@ -399,6 +402,90 @@ test.describe(
         page.getByText(subject, { exact: false }).first(),
         'the search finds the mail',
       ).toBeVisible({ timeout: 30_000 });
+    });
+
+    test('Clear All: empties a Status of Mails list, stays empty after a reload, and deletes no mail @ui', async ({
+      page,
+      endpoints,
+    }) => {
+      // Clear All (StatusType.js → POST /common/clearStatusOfAllKmailsContacts {kmailStatusFlag,
+      // selectMailType:"A"}) only sets a "cleared" flag on the last 30 days' rows
+      // (CommonDaoImpl.clearAllKmail* → SET … = 'C'); it must not touch the mails themselves.
+      // Uses "Reply Not Sent" (mail received, not replied) with a fresh mail from qatest3.
+      const subject = `QA KMail clear all ${Date.now()}`;
+      await seed(endpoints, subject);
+      const before = await status(page, 2, testData.personal3KpostId);
+      expect(before.forContact, 'the new mail is listed under Reply Not Sent').toBeGreaterThan(0);
+
+      const clearBtn = page.locator('.clearBtn').filter({ visible: true }).first();
+      const cleared = page.waitForResponse(
+        (r) => r.url().includes('/common/clearStatusOfAllKmailsContacts'),
+        { timeout: 20_000 },
+      );
+      await clearBtn.click();
+      const res = await cleared;
+      const reqBody = res.request().postData() ?? '';
+      const resText = (await res.text().catch(() => '')).slice(0, 200);
+      test.info().annotations.push({
+        type: 'observed',
+        description: `before: total ${before.total}, qatest3 ${before.forContact} | clear ${reqBody} -> HTTP ${res.status()} ${resText}`,
+      });
+      expect(res.status(), `Clear All is accepted: ${resText}`).toBe(200);
+      await expect(
+        page.getByText('All contacts cleared successfully!', { exact: false }).first(),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.getByText('No Data Found', { exact: true }).filter({ visible: true }).first(),
+        'the list is empty right away',
+      ).toBeVisible({ timeout: 10_000 });
+
+      // Clearing an already-empty list must not report an error.
+      const again = page.waitForResponse(
+        (r) => r.url().includes('/common/clearStatusOfAllKmailsContacts'),
+        { timeout: 20_000 },
+      );
+      await page.locator('.clearBtn').filter({ visible: true }).first().click();
+      const res2 = await again;
+      const res2Text = (await res2.text().catch(() => '')).slice(0, 200);
+      // The app's toast appears right after the reply; give it 5 s to show before judging.
+      const errorShown = await page
+        .getByText('Something Went Wrong', { exact: false })
+        .first()
+        .waitFor({ state: 'visible', timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false);
+      const shot = test.info().outputPath('clear-all-empty.png');
+      await page.screenshot({ path: shot });
+      await test.info().attach('clear-all-empty', { path: shot, contentType: 'image/png' });
+      test.info().annotations.push({
+        type: 'observed',
+        description: `Clear All on an empty list -> HTTP ${res2.status()} ${res2Text}; error toast shown: ${errorShown}`,
+      });
+
+      // The mail itself is untouched: it still opens normally.
+      await openMail(page, subject);
+      // Clear All on an empty list answers 400 "unable to clear Mails" and the app shows "Something
+      // Went Wrong !" — that 400 was reported as #681 and closed INVALID (judged not a defect), so
+      // it is only recorded in the observation above, not asserted.
+
+      // After a reload the list must stay empty — and opening the empty list must not crash the
+      // page (the server sends "data":"No Content" for an empty list — #1362).
+      const after = await status(page, 2, testData.personal3KpostId);
+      const shotEmpty = test.info().outputPath('clear-all-after-reload.png');
+      await page.screenshot({ path: shotEmpty });
+      await test.info().attach('clear-all-after-reload', {
+        path: shotEmpty,
+        contentType: 'image/png',
+      });
+      test.info().annotations.push({
+        type: 'observed',
+        description: `after reload: total ${after.total}, qatest3 ${after.forContact}; list reply ${after.raw}`,
+      });
+      expect(after.total, 'Reply Not Sent stays empty after a reload').toBe(0);
+      await expect(
+        page.getByText('No Data Found', { exact: true }).filter({ visible: true }).first(),
+        'the emptied list opens and shows "No Data Found" — not a crashed page (#1362)',
+      ).toBeVisible({ timeout: 10_000 });
     });
 
     test('opening KMail shows no pop-up alert, whatever the browser’s speech support @ui', async ({
