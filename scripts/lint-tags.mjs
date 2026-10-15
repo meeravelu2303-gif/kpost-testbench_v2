@@ -94,6 +94,7 @@ for (const { file, title, tags, anns } of seen.values()) {
   const annTypes = (anns || []).map((a) => a.type);
   if (
     !annTypes.includes('requirement') &&
+    !annTypes.includes('requirement-partial') &&
     !annTypes.includes('non-functional') &&
     !REQ_ID_RE.test(title)
   )
@@ -155,6 +156,11 @@ if (WANT_REPORT) {
         `(${r.covPass} covered & passing); ${r.partial} partial; orphans ${r.orphanTests} tests / ${r.orphanFiles} files; ` +
         `review links ${r.reviewPending} (${r.reviewMedium} medium / ${r.reviewLow} low).`,
     );
+    if (r.unknownIds)
+      console.warn(
+        `WARN — ${r.unknownIds} requirement annotation(s) name an id with no RTM row (see the ` +
+          `"Unknown links" sheet): ${[...new Set(r.unknownRows.map((u) => u['Annotation id']))].join(', ')}`,
+      );
   } catch (e) {
     console.error('rtm generation skipped:', e.message);
   }

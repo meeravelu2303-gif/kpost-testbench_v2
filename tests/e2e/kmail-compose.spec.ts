@@ -39,27 +39,36 @@ test.describe('KPost KMail compose', { tag: ['@ui', '@kmail', '@regression', '@s
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  test('the compose form renders its To, Subject and body fields @ui', async ({ page }) => {
-    await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
-    await skipIfWriteMailCrashed(page);
+  test(
+    'the compose form renders its To, Subject and body fields @ui',
+    {
+      annotation: [
+        { type: 'requirement', description: 'FR-KM-001' },
+        { type: 'requirement', description: 'FR-KM-002' },
+      ],
+    },
+    async ({ page }) => {
+      await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
+      await skipIfWriteMailCrashed(page);
 
-    await expect(
-      page.locator('input[name="to"], .subjectTextboxKmailTO').first(),
-      'the To field is present',
-    ).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('.toInput').first(), 'the Subject field is present').toBeVisible();
-    await expect(
-      page
-        .getByText(/Type your mail here/i)
-        .or(page.locator('.ql-editor'))
-        .first(),
-      'the mail body editor is present',
-    ).toBeVisible();
-  });
+      await expect(
+        page.locator('input[name="to"], .subjectTextboxKmailTO').first(),
+        'the To field is present',
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator('.toInput').first(), 'the Subject field is present').toBeVisible();
+      await expect(
+        page
+          .getByText(/Type your mail here/i)
+          .or(page.locator('.ql-editor'))
+          .first(),
+        'the mail body editor is present',
+      ).toBeVisible();
+    },
+  );
 });
 
 test.describe(
@@ -77,7 +86,12 @@ test.describe(
 
     test(
       'compose a mail to the 2nd QA account and send it (FR-M01) @ui',
-      { annotation: [{ type: 'requirement', description: 'FR-M01' }] },
+      {
+        annotation: [
+          { type: 'requirement', description: 'FR-KM-018' },
+          { type: 'requirement', description: 'FR-KM-019' },
+        ],
+      },
       async ({ page }) => {
         const subject = `QA UI mail ${Date.now()}`;
 

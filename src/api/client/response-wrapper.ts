@@ -30,6 +30,11 @@ export class ApiResponseWrapper {
      * identify a binary body's real format from its magic number — the bytes `bodyText` cannot keep.
      */
     readonly bodyPrefixHex?: string,
+    /**
+     * SHA-256 (hex) and length of the FULL raw body, taken before the lossy text decode — what a
+     * byte-integrity check compares (`bodyText` mangles any byte that is not valid UTF-8).
+     */
+    readonly bodyDigest?: { sha256: string; bytes: number },
   ) {}
 
   /**

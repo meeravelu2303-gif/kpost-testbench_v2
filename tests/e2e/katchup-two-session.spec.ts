@@ -103,10 +103,7 @@ test.describe(
     test(
       "a message from account 1 appears on account 2's OPEN Katchup with no refresh (realtime) @ui",
       {
-        annotation: [
-          { type: 'requirement', description: 'multi-user real-time (FRD row 11)' },
-          { type: 'requirement', description: 'FR-K07' },
-        ],
+        annotation: [{ type: 'requirement', description: 'RTM-KU-M01' }],
       },
       async ({ page, browser }) => {
         const subject = `QA UI realtime ${Date.now()}`;

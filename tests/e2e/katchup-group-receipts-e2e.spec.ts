@@ -224,21 +224,15 @@ test.describe(
         ).toBe(2);
       } finally {
         if (groupKpostID && groupID) {
-          // Self-leave for each member (the admin-remove endpoint is a known intermittent 500 —
-          // self-leave is the reliable cleanup path established earlier this session), then delete.
+          // The admin removes both members (removeGroupMember's 500 is fixed — #945, re-verified
+          // 2026-10-14), then deletes. The old self-leave sent id '0', which now answers 400 "you are
+          // not a member" (live 2026-10-15), so it silently left the group behind.
           await as(
             endpoints,
-            MEMBER_2,
-            'group-leave',
-            { id: '0', groupID, groupKpostID },
-            'cleanup-leave-m2',
-          ).catch(() => undefined);
-          await as(
-            endpoints,
-            MEMBER_3,
-            'group-leave',
-            { id: '0', groupID, groupKpostID },
-            'cleanup-leave-m3',
+            ADMIN,
+            'group-remove-member',
+            { memberKpostIdList: [MEMBER_2.username, MEMBER_3.username], groupID, groupKpostID },
+            'cleanup-remove-members',
           ).catch(() => undefined);
           // `deleteGroup` takes { groupID } (group.api.ts) — sending { groupKpostID } 404'd and orphaned
           // every QA group. It also 400s until every other member has left, hence the leaves above.

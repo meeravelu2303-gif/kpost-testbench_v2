@@ -1,6 +1,13 @@
 // Requirements Traceability Matrix generator.
 //
-// Driven by Playwright `annotation` entries (type 'requirement' | 'non-functional'), NOT by tags.
+// Driven by Playwright `annotation` entries, NOT by tags:
+//   'requirement'          — the test asserts the requirement's acceptance criterion;
+//   'requirement-partial'  — the test exercises the requirement but asserts only part of it (an entry
+//                            point, a status code, one half of a two-part rule); it links the test but
+//                            the requirement can be at most Partial on this link alone;
+//   'non-functional'       — security / accessibility / resilience / performance (no requirement row).
+// Every requirement / requirement-partial id must exist in the docs or ASSESSED; unknown ids are listed
+// on the "Unknown links" sheet (a typo or a legacy SRS id would otherwise link silently to nothing).
 // Called from `scripts/lint-tags.mjs --report` with the already-listed Playwright JSON, so it adds no
 // extra `--list`. Writes reports/rtm.xlsx. Pure analysis — never runs tests.
 //
@@ -103,7 +110,8 @@ function whereTokens(text) {
   const toks = new Set();
   for (const m of text.matchAll(/`([^`]+)`/g))
     for (const raw of m[1].split(/[\s,]+|\s+\+\s+/)) {
-      const p = raw.trim().replace(/[`().]/g, '');
+      // Strip wrapping punctuation only — an inner dot is part of the name ("katchup-actions.spec.ts").
+      const p = raw.trim().replace(/[`()]/g, '').replace(/\.+$/, '');
       if (!p) continue;
       if (
         /\.spec(\.ts)?$/.test(p) ||
@@ -188,6 +196,9 @@ export async function generateRtm({ report, root }) {
     if (isMetaPath(r.file) || isMetaTags(r.tags) || isAdminPath(r.file) || isAdminTags(r.tags))
       continue;
     const reqAnns = r.anns.filter((a) => a.type === 'requirement').map((a) => a.description);
+    const partialAnns = r.anns
+      .filter((a) => a.type === 'requirement-partial')
+      .map((a) => a.description);
     const nfr = r.anns.some((a) => a.type === 'non-functional');
     const titleIds = r.title.match(ID_RE) || [];
     inScope.push({
@@ -195,7 +206,8 @@ export async function generateRtm({ report, root }) {
       file: r.file,
       title: r.title,
       suite: suiteOf(r.file),
-      reqAnns,
+      reqAnns: [...new Set(reqAnns)],
+      partialAnns: [...new Set(partialAnns)],
       nfr,
       titleIds,
     });
@@ -215,6 +227,13 @@ export async function generateRtm({ report, root }) {
     for (const id of t.reqAnns) addLink(id, t);
     for (const id of t.titleIds) addLink(id, t);
   }
+  // partial links: req id -> tests that exercise it without asserting the whole criterion
+  const partialIndex = new Map();
+  for (const t of inScope)
+    for (const id of t.partialAnns) {
+      if (!partialIndex.has(id)) partialIndex.set(id, new Set());
+      partialIndex.get(id).add(t);
+    }
   const byFile = new Map();
   for (const t of inScope) {
     if (!byFile.has(t.file)) byFile.set(t.file, []);
@@ -238,7 +257,8 @@ export async function generateRtm({ report, root }) {
     fs.readFileSync(path.join(root, 'docs/reference/requirements-frd.md'), 'utf8'),
   );
   for (const { module, cells } of frd) {
-    const [fr, title, status, where] = cells;
+    // Some rows are bolded for emphasis (`**FR-KU-017..024**`) — unwrap before matching the id.
+    const [fr, title, status, where] = cells.map((c) => c.replace(/\*\*/g, '').trim());
     if (!/^(FR|NFR|BR)/.test(fr)) continue;
     reqRows.push({ id: fr, module, summary: title, docStatus: status, where: where || '' });
   }
@@ -299,15 +319,18 @@ export async function generateRtm({ report, root }) {
       for (const tok of assignedFiles)
         for (const f of byFile.keys())
           if (f.includes(tok)) byFile.get(f).forEach((t) => linked.add(t));
+    const fullLinks = linked.size;
+    for (const i of idSet) for (const t of partialIndex.get(i) || []) linked.add(t);
     const bucket = assignedStatus
       ? assignedStatus === 'Out of scope'
         ? 'OOS'
         : assignedStatus
       : docBucket(docStatusRaw);
-    const verified = linked.size > 0;
     let status;
     if (bucket === 'OOS') status = 'Out of scope';
-    else if (verified) status = bucket === 'Covered' ? 'Covered' : 'Partial';
+    else if (fullLinks > 0) status = bucket === 'Covered' ? 'Covered' : 'Partial';
+    else if (linked.size > 0)
+      status = 'Partial'; // only requirement-partial links
     else {
       const files = whereTokens(where).flatMap((tok) =>
         [...byFile.keys()].filter((f) => f.replace(/\.spec\.ts$/, '').includes(tok)),
@@ -370,6 +393,20 @@ export async function generateRtm({ report, root }) {
   // 3) orphans = in-scope tests with NO requirement link AND NO non-functional annotation
   const linkedKeys = new Set();
   for (const set of linkIndex.values()) for (const t of set) linkedKeys.add(t.key);
+  for (const set of partialIndex.values()) for (const t of set) linkedKeys.add(t.key);
+
+  // 3a) annotation ids that match no requirement row (typos, legacy SRS ids, free text)
+  const knownIds = new Set();
+  for (const r of out) for (const i of expandIds(r['Req ID']).concat(r['Req ID'])) knownIds.add(i);
+  const unknownRows = [];
+  for (const t of inScope)
+    for (const [type, ids] of [
+      ['requirement', t.reqAnns],
+      ['requirement-partial', t.partialAnns],
+    ])
+      for (const id of ids)
+        if (!knownIds.has(id) && !expandIds(id).every((i) => knownIds.has(i)))
+          unknownRows.push({ 'Annotation id': id, Type: type, File: t.file, Test: t.title });
   const orphanRows = [];
   for (const t of inScope) {
     if (linkedKeys.has(t.key)) continue;
@@ -457,6 +494,9 @@ export async function generateRtm({ report, root }) {
     {
       A: `Orphans (no requirement & no non-functional annotation): ${orphanRows.length} tests / ${orphanFiles.length} files · Review links pending: ${reviewLinks.length}`,
     },
+    {
+      A: `Annotation ids matching no requirement row: ${unknownRows.length} (see "Unknown links")`,
+    },
     { A: `Last-result source: ${picked || '(no regression report found — all "not run")'}` },
   ];
   XLSX.utils.book_append_sheet(
@@ -468,6 +508,7 @@ export async function generateRtm({ report, root }) {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(out), 'RTM');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reviewLinks), 'Review links');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(orphanRows), 'Orphan tests');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(unknownRows), 'Unknown links');
   fs.mkdirSync(path.join(root, 'reports'), { recursive: true });
   XLSX.writeFile(wb, path.join(root, 'reports/rtm.xlsx'));
 
@@ -483,6 +524,8 @@ export async function generateRtm({ report, root }) {
     reviewPending: reviewLinks.length,
     reviewMedium: reviewLinks.filter((r) => r.Confidence === 'medium').length,
     reviewLow: reviewLinks.filter((r) => r.Confidence === 'low').length,
+    unknownIds: unknownRows.length,
+    unknownRows,
     summaryRows,
     lastResultSource: picked,
   };

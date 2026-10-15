@@ -96,41 +96,53 @@ test.describe(
       'needs a real live account (QA_KPOST_ID)',
     );
 
-    test('the profile view offers Write Mail / KMail / Katchup / Kall, and Katchup opens a new message with that contact @ui', async ({
-      page,
-    }) => {
-      const card = await openFirstProfileCard(page);
-      for (const label of ['Write Mail', 'KMail', 'Katchup', 'Kall']) {
+    test(
+      'the profile view offers Write Mail / KMail / Katchup / Kall, and Katchup opens a new message with that contact @ui',
+      {
+        annotation: [
+          { type: 'requirement', description: 'FR-KD-006' },
+          { type: 'requirement-partial', description: 'FR-KD-003' },
+          { type: 'requirement-partial', description: 'FR-KD-005' },
+        ],
+      },
+      async ({ page }) => {
+        const card = await openFirstProfileCard(page);
+        for (const label of ['Write Mail', 'KMail', 'Katchup', 'Kall']) {
+          await expect(
+            card.getByRole('button', { name: label, exact: true }),
+            `the profile offers ${label}`,
+          ).toBeVisible();
+        }
+        const katchup = card.getByRole('button', { name: 'Katchup', exact: true });
+        await expect(katchup, 'Katchup is enabled for an active entry').toBeEnabled();
+        await katchup.click();
+        await expect(page, 'Katchup opens for that contact').toHaveURL(/\/katchup/, {
+          timeout: 15_000,
+        });
         await expect(
-          card.getByRole('button', { name: label, exact: true }),
-          `the profile offers ${label}`,
-        ).toBeVisible();
-      }
-      const katchup = card.getByRole('button', { name: 'Katchup', exact: true });
-      await expect(katchup, 'Katchup is enabled for an active entry').toBeEnabled();
-      await katchup.click();
-      await expect(page, 'Katchup opens for that contact').toHaveURL(/\/katchup/, {
-        timeout: 15_000,
-      });
-      await expect(
-        page.locator('#ChatTop .background-color-katchup').first(),
-        'a conversation with the selected contact is open',
-      ).toBeVisible({ timeout: 20_000 });
-    });
+          page.locator('#ChatTop .background-color-katchup').first(),
+          'a conversation with the selected contact is open',
+        ).toBeVisible({ timeout: 20_000 });
+      },
+    );
 
-    test('Kall from the profile view opens the call sheet for that contact (no call is placed) @ui', async ({
-      page,
-    }) => {
-      const card = await openFirstProfileCard(page);
-      const kall = card.getByRole('button', { name: 'Kall', exact: true });
-      await expect(kall, 'Kall is enabled for an active entry').toBeEnabled();
-      await kall.click();
-      const sheet = page
-        .getByRole('dialog')
-        .filter({ hasText: /Kall|Call/i })
-        .last();
-      await expect(sheet, 'the Kall sheet opens for the contact').toBeVisible({ timeout: 15_000 });
-      await page.keyboard.press('Escape');
-    });
+    test(
+      'Kall from the profile view opens the call sheet for that contact (no call is placed) @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KD-006' }] },
+      async ({ page }) => {
+        const card = await openFirstProfileCard(page);
+        const kall = card.getByRole('button', { name: 'Kall', exact: true });
+        await expect(kall, 'Kall is enabled for an active entry').toBeEnabled();
+        await kall.click();
+        const sheet = page
+          .getByRole('dialog')
+          .filter({ hasText: /Kall|Call/i })
+          .last();
+        await expect(sheet, 'the Kall sheet opens for the contact').toBeVisible({
+          timeout: 15_000,
+        });
+        await page.keyboard.press('Escape');
+      },
+    );
   },
 );

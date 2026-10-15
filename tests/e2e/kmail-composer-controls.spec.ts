@@ -164,6 +164,62 @@ test.describe(
     );
 
     test(
+      'FR-KM-003/004 — tapping To opens the suggestion list, and typing narrows it as you type @ui',
+      {
+        annotation: [
+          { type: 'requirement', description: 'FR-KM-003' },
+          { type: 'requirement', description: 'FR-KM-004' },
+        ],
+      },
+      async ({ page }) => {
+        // WriteMailPage.js: focusing To calls getAllKnownContactsAndGroups() and opens
+        // `.suggestion-dropdown`; every keystroke re-filters (getSuggestions) on the contact's name,
+        // id, reference name or designation. The contact list loads asynchronously after focus, so
+        // the first narrowing step POLLS for the list rather than reading it once.
+        await openCompose(page);
+        const to = page.getByRole('textbox', { name: 'To' }).first();
+        await to.click();
+        const dropdown = page.locator('.suggestion-dropdown').first();
+        await expect(dropdown, 'tapping To opens the suggestion list').toBeVisible({
+          timeout: 10_000,
+        });
+        await expect(dropdown, 'the list is headed "Suggestions"').toContainText(/Suggestions/i);
+
+        const needle = testData.victimKpostId.split('@')[0]!;
+        const target = new RegExp(needle, 'i');
+        const rows = dropdown.locator('.writeMailSuggestionRow, [class*="ContactBar"]');
+        await to.pressSequentially(needle.slice(0, 3), { delay: 40 });
+        await expect
+          .poll(() => rows.filter({ hasText: target }).count(), {
+            message: `a 3-letter prefix ("${needle.slice(0, 3)}") already suggests ${needle}`,
+            timeout: 20_000,
+          })
+          .toBeGreaterThan(0);
+        const broad = await rows.count();
+
+        await to.pressSequentially(needle.slice(3), { delay: 40 });
+        await expect(
+          rows.filter({ hasText: target }).first(),
+          `the full id still suggests ${needle}`,
+        ).toBeVisible();
+        // The QA account knows several qatest* contacts, so the prefix matches more than one and the
+        // full id must strictly narrow; with a single match there is nothing left to narrow.
+        if (broad > 1)
+          await expect
+            .poll(() => rows.count(), {
+              message: `typing more narrows the list (it had ${broad} rows for the prefix)`,
+              timeout: 10_000,
+            })
+            .toBeLessThan(broad);
+        test.info().annotations.push({
+          type: 'observed',
+          description: `prefix "${needle.slice(0, 3)}" → ${broad} suggestions; "${needle}" → ${await rows.count()}`,
+        });
+        await page.keyboard.press('Escape');
+      },
+    );
+
+    test(
       'FR-KM-022 — an external (non-KPOST) address is accepted as the recipient; a malformed one is not @ui',
       { annotation: [{ type: 'requirement', description: 'FR-KM-022' }] },
       async ({ page }) => {

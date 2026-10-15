@@ -79,87 +79,97 @@ test.describe(
       mobileNumber: testData.mobileAbsent,
     });
 
-    test('an unprovisioned id is reported available', async ({ endpoints }) => {
-      /*
-       * `kpostIDExist` is what the signup screen calls as the user types, and the only
-       * non-destructive way to ask the API about an account that does not exist yet.
-       *
-       * The id comes from the configured absent fixture. That is not a style choice: the
-       * QA-identifier guard refuses any live request naming an identifier the bench does not own, so
-       * an invented id is rejected before it is sent — and an id belonging to a real third party must
-       * never be probed at all.
-       */
-      const exchange = await endpoints.sendTo(
-        'signup-login-kpost-id-exist',
-        { body: availability(testData.kpostIdAbsent) },
-        { label: 'domain-policy:available' },
-      );
-
-      expect(exchange.status, 'the availability check answers').toBe(200);
-      /*
-       * The ENVELOPE, not the transport — KPost reports failure inside a 200 elsewhere, so a
-       * status-only check can read a refusal as a success.
-       */
-      const parsed = exchange.json();
-      const envelope = parsed.ok ? (parsed.value as { statusCode?: number; message?: string }) : {};
-      expect(envelope.statusCode, 'and reports success in the envelope').toBe(200);
-      expect(envelope.message ?? '', 'for an id nobody holds').toMatch(/available/i);
-    });
-
-    test('a provisioned id on either policy domain is reported as taken', async ({ endpoints }) => {
-      /*
-       * The BR-S02 path, asserted on both domains because the collision this separation prevents is
-       * an id matched on its local part with the domain ignored — which would show up as one of these
-       * two answering "available" for a name that is plainly taken.
-       *
-       * These ids are provisioned by construction: they are the bench's own registry accounts. An
-       * earlier version of this test asserted the opposite ("an unprovisioned id must not be reported
-       * as taken") — a premise left behind by the abandoned `qatest_*` provisioning plan, which the
-       * switch to pre-existing `.env` accounts silently invalidated.
-       */
-      const personalAccount = findAccount('primary');
-      const businessAccount = findAccount('company-admin');
-      expect(personalAccount, 'the registry defines a personal account').toBeDefined();
-      expect(businessAccount, 'and a business account').toBeDefined();
-
-      const personal = personalAccount ? (kpostIdOf(personalAccount) ?? '') : '';
-      const business = businessAccount ? (kpostIdOf(businessAccount) ?? '') : '';
-      expect(domainOf(business), 'the business account is on the business domain').toBe(
-        domainFor('BUSINESS_M'),
-      );
-
-      for (const [label, kpostId] of [
-        ['personal', personal],
-        ['business', business],
-      ] as const) {
+    test(
+      'an unprovisioned id is reported available',
+      { annotation: [{ type: 'requirement', description: 'BR-SL-UNIQUE' }] },
+      async ({ endpoints }) => {
+        /*
+         * `kpostIDExist` is what the signup screen calls as the user types, and the only
+         * non-destructive way to ask the API about an account that does not exist yet.
+         *
+         * The id comes from the configured absent fixture. That is not a style choice: the
+         * QA-identifier guard refuses any live request naming an identifier the bench does not own, so
+         * an invented id is rejected before it is sent — and an id belonging to a real third party must
+         * never be probed at all.
+         */
         const exchange = await endpoints.sendTo(
           'signup-login-kpost-id-exist',
-          { body: availability(kpostId) },
-          { label: `domain-policy:taken-${label}` },
+          { body: availability(testData.kpostIdAbsent) },
+          { label: 'domain-policy:available' },
         );
 
+        expect(exchange.status, 'the availability check answers').toBe(200);
         /*
-         * Asserted on the MESSAGE rather than the status, because the status is itself the defect
-         * pinned below: what the product must get right here is that an existing id is recognised as
-         * existing, on both domains.
-         */
-        expect(
-          exchange.bodyText.toLowerCase(),
-          `${label}: a provisioned id must be recognised as taken`,
-        ).toMatch(/already exi/);
-
-        /*
-         * The suggestions are the proof the lookup actually ran rather than erroring out: a genuine
-         * server fault would have no alternatives to offer.
+         * The ENVELOPE, not the transport — KPost reports failure inside a 200 elsewhere, so a
+         * status-only check can read a refusal as a success.
          */
         const parsed = exchange.json();
-        const envelope = parsed.ok ? (parsed.value as { data?: unknown }) : {};
-        expect(
-          Array.isArray(envelope.data) && envelope.data.length > 0,
-          `${label}: the endpoint returns alternative ids, so the check completed`,
-        ).toBe(true);
-      }
-    });
+        const envelope = parsed.ok
+          ? (parsed.value as { statusCode?: number; message?: string })
+          : {};
+        expect(envelope.statusCode, 'and reports success in the envelope').toBe(200);
+        expect(envelope.message ?? '', 'for an id nobody holds').toMatch(/available/i);
+      },
+    );
+
+    test(
+      'a provisioned id on either policy domain is reported as taken',
+      { annotation: [{ type: 'requirement', description: 'BR-SL-UNIQUE' }] },
+      async ({ endpoints }) => {
+        /*
+         * The BR-S02 path, asserted on both domains because the collision this separation prevents is
+         * an id matched on its local part with the domain ignored — which would show up as one of these
+         * two answering "available" for a name that is plainly taken.
+         *
+         * These ids are provisioned by construction: they are the bench's own registry accounts. An
+         * earlier version of this test asserted the opposite ("an unprovisioned id must not be reported
+         * as taken") — a premise left behind by the abandoned `qatest_*` provisioning plan, which the
+         * switch to pre-existing `.env` accounts silently invalidated.
+         */
+        const personalAccount = findAccount('primary');
+        const businessAccount = findAccount('company-admin');
+        expect(personalAccount, 'the registry defines a personal account').toBeDefined();
+        expect(businessAccount, 'and a business account').toBeDefined();
+
+        const personal = personalAccount ? (kpostIdOf(personalAccount) ?? '') : '';
+        const business = businessAccount ? (kpostIdOf(businessAccount) ?? '') : '';
+        expect(domainOf(business), 'the business account is on the business domain').toBe(
+          domainFor('BUSINESS_M'),
+        );
+
+        for (const [label, kpostId] of [
+          ['personal', personal],
+          ['business', business],
+        ] as const) {
+          const exchange = await endpoints.sendTo(
+            'signup-login-kpost-id-exist',
+            { body: availability(kpostId) },
+            { label: `domain-policy:taken-${label}` },
+          );
+
+          /*
+           * Asserted on the MESSAGE rather than the status, because the status is itself the defect
+           * pinned below: what the product must get right here is that an existing id is recognised as
+           * existing, on both domains.
+           */
+          expect(
+            exchange.bodyText.toLowerCase(),
+            `${label}: a provisioned id must be recognised as taken`,
+          ).toMatch(/already exi/);
+
+          /*
+           * The suggestions are the proof the lookup actually ran rather than erroring out: a genuine
+           * server fault would have no alternatives to offer.
+           */
+          const parsed = exchange.json();
+          const envelope = parsed.ok ? (parsed.value as { data?: unknown }) : {};
+          expect(
+            Array.isArray(envelope.data) && envelope.data.length > 0,
+            `${label}: the endpoint returns alternative ids, so the check completed`,
+          ).toBe(true);
+        }
+      },
+    );
 
     test('a taken id is refused with a client error, not a 500', async ({ endpoints }) => {
       /*

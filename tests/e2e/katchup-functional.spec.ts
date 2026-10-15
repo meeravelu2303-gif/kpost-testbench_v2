@@ -75,7 +75,7 @@ test.describe(
 
     test(
       'the composer does not dispatch a message with no Subject (BR-K01) @ui',
-      { annotation: [{ type: 'requirement', description: 'BR-K01' }] },
+      { annotation: [{ type: 'requirement-partial', description: 'BR-KU-SUBJECT' }] },
       async ({ page }) => {
         /*
          * BR-K01 is KPost's defining rule — a Subject on every message. The question is whether the

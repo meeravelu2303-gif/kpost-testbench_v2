@@ -63,7 +63,7 @@ test.describe(
 
     test(
       "reading a conversation clears the sender's unread count (not stuck at a stale number)",
-      { annotation: [{ type: 'requirement', description: 'FR-K07' }] },
+      { annotation: [{ type: 'requirement', description: 'RTM-KU-M03' }] },
       async ({ endpoints }) => {
         const sender = testData.kpostId; // personal is the sender; victim is the reader we measure.
         const subject = `QA count-clears ${Date.now()}`;

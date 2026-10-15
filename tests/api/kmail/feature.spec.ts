@@ -92,7 +92,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
 
   test(
     'compose a New mail → read back → mark important → delete (FR-M01/M07) @api @kmail',
-    { annotation: [{ type: 'requirement', description: 'FR-M01' }] },
+    { annotation: [{ type: 'requirement-partial', description: 'FR-KM-018' }] },
     async ({ endpoints }) => {
       const subject = `QA Mail ${Date.now()}`;
       const sent = await send(
@@ -201,7 +201,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
 
   test(
     'the To: field takes a single recipient; extra people go to Cc (FR-KM-005) @api @kmail',
-    { annotation: [{ type: 'requirement', description: 'FR-KM-005' }] },
+    { annotation: [{ type: 'requirement-partial', description: 'FR-KM-005' }] },
     async ({ endpoints }) => {
       /*
        * FR-KM-005 — Enforce Single Recipient in To:. The mail model carries exactly ONE `toAddress`
@@ -233,8 +233,8 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
     'a high-priority mail carries its priority flag (FR-KM-010 / FR-KM-011) @api @kmail',
     {
       annotation: [
-        { type: 'requirement', description: 'FR-KM-010' },
-        { type: 'requirement', description: 'FR-KM-011' },
+        { type: 'requirement-partial', description: 'FR-KM-010' },
+        { type: 'requirement-partial', description: 'FR-KM-011' },
       ],
     },
     async ({ endpoints }) => {
@@ -424,63 +424,70 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
       .toBeLessThan(600);
   });
 
-  test('saluation: save → appears in the list → is reflected on the digital signature → delete removes it', async ({
-    endpoints,
-  }) => {
-    // A unique marker per run: this account already accumulates real saved saluations, so a fixed
-    // literal like "QA Dr" cannot be told apart from a leftover of a PRIOR run.
-    const marker = `QA Saluation ${Date.now()}`;
-    const saved = await endpoints.sendTo(
-      'kmail-save-saluation',
-      { body: { saluationID: '', saluation: marker } },
-      { label: 'kmail:sal-save', auth: { principal: A }, allowLiveWrite: true },
-    );
-    expect.soft(saved.status, 'save is accepted').toBeLessThan(300);
-
-    const list = await endpoints.sendTo(
-      'kmail-saluations',
-      {},
-      { label: 'kmail:sal-list', auth: { principal: A } },
-    );
-    expect(list.status, 'the saluation list reads back').toBe(200);
-    const listBody = JSON.parse(list.bodyText || '{}') as {
-      data?: Array<{ saluationID: string; saluation: string }>;
-    };
-    const entry = (listBody.data ?? []).find((s) => s.saluation === marker);
-    expect(entry, 'the saved saluation appears in kmail-saluations, with a real id').toBeTruthy();
-
-    if (entry) {
-      const digSig = await endpoints.sendTo(
-        'kmail-digital-signature',
-        {},
-        { label: 'kmail:sal-digsig', auth: { principal: A } },
+  test(
+    'saluation: save → appears in the list → is reflected on the digital signature → delete removes it',
+    {
+      annotation: [
+        { type: 'requirement-partial', description: 'FR-KM-007' },
+        { type: 'requirement-partial', description: 'FR-KM-008' },
+      ],
+    },
+    async ({ endpoints }) => {
+      // A unique marker per run: this account already accumulates real saved saluations, so a fixed
+      // literal like "QA Dr" cannot be told apart from a leftover of a PRIOR run.
+      const marker = `QA Saluation ${Date.now()}`;
+      const saved = await endpoints.sendTo(
+        'kmail-save-saluation',
+        { body: { saluationID: '', saluation: marker } },
+        { label: 'kmail:sal-save', auth: { principal: A }, allowLiveWrite: true },
       );
-      expect(
-        digSig.bodyText,
-        'the same saluation is embedded in getDigitalSignature (not a divergent copy)',
-      ).toContain(marker);
+      expect.soft(saved.status, 'save is accepted').toBeLessThan(300);
 
-      const deleted = await endpoints.sendTo(
-        'kmail-delete-saluation',
-        { body: { saluationID: entry.saluationID } },
-        { label: 'kmail:sal-delete', auth: { principal: A }, allowLiveWrite: true },
-      );
-      expect.soft(deleted.status, 'delete is accepted').toBeLessThan(300);
-
-      const after = await endpoints.sendTo(
+      const list = await endpoints.sendTo(
         'kmail-saluations',
         {},
-        { label: 'kmail:sal-list-after', auth: { principal: A } },
+        { label: 'kmail:sal-list', auth: { principal: A } },
       );
-      const afterBody = JSON.parse(after.bodyText || '{}') as {
-        data?: Array<{ saluationID: string }>;
+      expect(list.status, 'the saluation list reads back').toBe(200);
+      const listBody = JSON.parse(list.bodyText || '{}') as {
+        data?: Array<{ saluationID: string; saluation: string }>;
       };
-      expect(
-        (afterBody.data ?? []).some((s) => s.saluationID === entry.saluationID),
-        'the deleted saluation no longer appears in the list',
-      ).toBe(false);
-    }
-  });
+      const entry = (listBody.data ?? []).find((s) => s.saluation === marker);
+      expect(entry, 'the saved saluation appears in kmail-saluations, with a real id').toBeTruthy();
+
+      if (entry) {
+        const digSig = await endpoints.sendTo(
+          'kmail-digital-signature',
+          {},
+          { label: 'kmail:sal-digsig', auth: { principal: A } },
+        );
+        expect(
+          digSig.bodyText,
+          'the same saluation is embedded in getDigitalSignature (not a divergent copy)',
+        ).toContain(marker);
+
+        const deleted = await endpoints.sendTo(
+          'kmail-delete-saluation',
+          { body: { saluationID: entry.saluationID } },
+          { label: 'kmail:sal-delete', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(deleted.status, 'delete is accepted').toBeLessThan(300);
+
+        const after = await endpoints.sendTo(
+          'kmail-saluations',
+          {},
+          { label: 'kmail:sal-list-after', auth: { principal: A } },
+        );
+        const afterBody = JSON.parse(after.bodyText || '{}') as {
+          data?: Array<{ saluationID: string }>;
+        };
+        expect(
+          (afterBody.data ?? []).some((s) => s.saluationID === entry.saluationID),
+          'the deleted saluation no longer appears in the list',
+        ).toBe(false);
+      }
+    },
+  );
 
   test('instant reply: save → reflected on the digital signature → delete removes it', async ({
     endpoints,

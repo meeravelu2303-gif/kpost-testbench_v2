@@ -16,22 +16,30 @@ test.describe('KPost Kall — read-only', { tag: ['@ui', '@kall', '@regression',
     'needs a real live account (QA_KPOST_ID)',
   );
 
-  test('the Kall screen shows its tabs (Recents / Contacts / Kool Kall) @ui', async ({ page }) => {
-    await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
+  test(
+    'the Kall screen shows its tabs (Recents / Contacts / Kool Kall) @ui',
+    { annotation: [{ type: 'requirement-partial', description: 'FR-KL-007' }] },
+    async ({ page }) => {
+      await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
 
-    await expect(page.locator('.kall-layout-shell').first(), 'the Kall screen renders').toBeVisible(
-      {
+      await expect(
+        page.locator('.kall-layout-shell').first(),
+        'the Kall screen renders',
+      ).toBeVisible({
         timeout: 20_000,
-      },
-    );
-    await expect(page.getByText(/Kool Kall/i).first(), 'the Kool Kall tab is present').toBeVisible({
-      timeout: 20_000,
-    });
-  });
+      });
+      await expect(
+        page.getByText(/Kool Kall/i).first(),
+        'the Kool Kall tab is present',
+      ).toBeVisible({
+        timeout: 20_000,
+      });
+    },
+  );
 });
 
 test.describe(

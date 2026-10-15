@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { expect, type APIRequestContext, type APIResponse } from '@playwright/test';
 import type { z } from 'zod';
 import type { Logger } from '@utils/logger';
@@ -65,6 +66,10 @@ export class ApiClient {
       const buffer = await response.body();
       const bodyText = buffer.toString('utf8');
       const bodyPrefixHex = buffer.subarray(0, 16).toString('hex');
+      const bodyDigest = {
+        sha256: createHash('sha256').update(buffer).digest('hex'),
+        bytes: buffer.length,
+      };
       const durationMs = Math.round(performance.now() - started);
       this.log.debug(`${apiRequest.method} ${apiRequest.url} -> ${response.status()}`, {
         label,
@@ -80,6 +85,7 @@ export class ApiClient {
         undefined,
         label,
         bodyPrefixHex,
+        bodyDigest,
       );
     } catch (error) {
       const message = (error as Error).message;

@@ -43,7 +43,11 @@ test.describe(
         { label: 'presigned:generate', auth: { principal: A }, allowLiveWrite: true },
       );
       expect(presign.status, 'generate-presigned-url succeeds').toBeLessThan(300);
-      const url = presign.bodyText.trim().replace(/^"|"$/, '');
+      // A bare link on older builds; a { presignedURL, status } JSON envelope since #942/#935 — accept both.
+      const raw = presign.bodyText.trim();
+      const url = raw.startsWith('{')
+        ? String((JSON.parse(raw) as { presignedURL?: string }).presignedURL ?? '')
+        : raw.replace(/^"|"$/g, '');
       const uuid = url.match(
         /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
       )?.[1];

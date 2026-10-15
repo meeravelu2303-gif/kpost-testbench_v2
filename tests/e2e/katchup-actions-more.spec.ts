@@ -24,10 +24,12 @@ import {
  * entry assertion here is the validated part; completion is the tuning step. Never runs by default.
  */
 
-const SUBFLOW_ACTIONS: ReadonlyArray<{ id: string; menu: RegExp }> = [
-  { id: 'Note', menu: /Note/i },
-  { id: 'Reminder', menu: /Reminder/i },
-  { id: 'Transfer', menu: /Transfer/i },
+// `req`: the FRD requirement whose ENTRY this proves (a requirement-partial link — the completion is
+// asserted elsewhere, e.g. katchup-note-subflow-e2e for Note, or not yet at all).
+const SUBFLOW_ACTIONS: ReadonlyArray<{ id: string; menu: RegExp; req?: string }> = [
+  { id: 'Note', menu: /Note/i, req: 'FR-KU-032' },
+  { id: 'Reminder', menu: /Reminder/i, req: 'FR-KU-033' },
+  { id: 'Transfer', menu: /Transfer/i, req: 'FR-KU-034' },
   // "Forward" (end-anchored) matches the plain Forward, not "Forward With Thread". Forward-with-thread
   // is covered by the `forward` feature in the catalogue (FR-K15/K16 = forward with/without thread);
   // its bell menu item is a nested-div label with no matchable accessible name, so it is not a
@@ -49,36 +51,43 @@ test.describe(
     );
 
     for (const action of SUBFLOW_ACTIONS) {
-      test(`${action.id} opens from the bell menu (entry wired), then self-cleans @ui`, async ({
-        page,
-      }) => {
-        const subject = `QA UI ${action.id.replace(/\W+/g, '')} ${Date.now()}`;
-        await openComposer(page);
-        const message = await sendMessage(page, subject, `QA UI ${action.id} — self-cleaning`);
+      test(
+        `${action.id} opens from the bell menu (entry wired), then self-cleans @ui`,
+        {
+          annotation: [
+            { type: 'requirement-partial', description: 'FR-KU-025' },
+            ...(action.req ? [{ type: 'requirement-partial', description: action.req }] : []),
+          ],
+        },
+        async ({ page }) => {
+          const subject = `QA UI ${action.id.replace(/\W+/g, '')} ${Date.now()}`;
+          await openComposer(page);
+          const message = await sendMessage(page, subject, `QA UI ${action.id} — self-cleaning`);
 
-        // Open the bell menu and click the action. The menu item must be present (the action exists on
-        // a message we sent) and, once clicked, must be dismissed — the action was accepted and its next
-        // surface (modal / picker / composer) has taken over.
-        await openBellMenu(page, message);
-        const item = page.getByRole('menuitem', { name: action.menu });
-        await expect(item, `the bell menu offers ${action.id}`).toBeVisible({ timeout: 15_000 });
-        await item.click();
-        await expect(item, `${action.id} was accepted (menu item dismissed)`).toBeHidden({
-          timeout: 15_000,
-        });
+          // Open the bell menu and click the action. The menu item must be present (the action exists on
+          // a message we sent) and, once clicked, must be dismissed — the action was accepted and its next
+          // surface (modal / picker / composer) has taken over.
+          await openBellMenu(page, message);
+          const item = page.getByRole('menuitem', { name: action.menu });
+          await expect(item, `the bell menu offers ${action.id}`).toBeVisible({ timeout: 15_000 });
+          await item.click();
+          await expect(item, `${action.id} was accepted (menu item dismissed)`).toBeHidden({
+            timeout: 15_000,
+          });
 
-        // Dismiss whatever surface opened (modal / picker), without submitting, so no extra state is
-        // left. A sub-flow modal (the Transfer/Forward contact picker is a ModalComponent that Escape
-        // does not always close) can overlay the thread and block the bell menu the self-clean needs, so
-        // reopen the conversation fresh — that unmounts any open modal — before deleting.
-        await page.keyboard.press('Escape').catch(() => undefined);
-        await openConversation(page, testData.victimKpostId).catch(() => undefined);
+          // Dismiss whatever surface opened (modal / picker), without submitting, so no extra state is
+          // left. A sub-flow modal (the Transfer/Forward contact picker is a ModalComponent that Escape
+          // does not always close) can overlay the thread and block the bell menu the self-clean needs, so
+          // reopen the conversation fresh — that unmounts any open modal — before deleting.
+          await page.keyboard.press('Escape').catch(() => undefined);
+          await openConversation(page, testData.victimKpostId).catch(() => undefined);
 
-        // Self-clean: delete the source message so the account ends as it started.
-        if (await messageBySubject(page, subject).count()) {
-          await deleteSentMessage(page, subject);
-        }
-      });
+          // Self-clean: delete the source message so the account ends as it started.
+          if (await messageBySubject(page, subject).count()) {
+            await deleteSentMessage(page, subject);
+          }
+        },
+      );
     }
   },
 );

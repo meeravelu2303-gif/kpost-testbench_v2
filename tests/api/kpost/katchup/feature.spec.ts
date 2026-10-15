@@ -103,7 +103,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
 
   test(
     'a message carries its Subject and issues a msgID (BR-K01) @api @katchup',
-    { annotation: [{ type: 'requirement', description: 'BR-K01' }] },
+    { annotation: [{ type: 'requirement', description: 'BR-KU-SUBJECT' }] },
     async ({ endpoints }) => {
       const subject = `QA Feature ${Date.now()}`;
       const sent = await send(endpoints, A, { receiver: B.username, subject });
@@ -217,29 +217,36 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     },
   );
 
-  test('a recalled message is removed from the recipient view (FR-K10 / BR-K03) @api @katchup @security', async ({
-    endpoints,
-  }) => {
-    const marker = `QA recall ${Date.now()}`;
-    const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
-    expect(sent.msgID, 'message created').toBeTruthy();
+  test(
+    'a recalled message is removed from the recipient view (FR-K10 / BR-K03) @api @katchup @security',
+    {
+      annotation: [
+        { type: 'requirement', description: 'BR-KU-RECALL' },
+        { type: 'requirement', description: 'FR-KU-028' },
+      ],
+    },
+    async ({ endpoints }) => {
+      const marker = `QA recall ${Date.now()}`;
+      const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
+      expect(sent.msgID, 'message created').toBeTruthy();
 
-    // Recall it.
-    const recall = await endpoints.sendTo(
-      'katchup-recall-message',
-      { body: { msgID: sent.msgID, groupFlag: false } },
-      { label: 'feature:recall', auth: { principal: A }, allowLiveWrite: true },
-    );
-    expect.soft(recall.status, 'recall is accepted').toBeLessThan(300);
+      // Recall it.
+      const recall = await endpoints.sendTo(
+        'katchup-recall-message',
+        { body: { msgID: sent.msgID, groupFlag: false } },
+        { label: 'feature:recall', auth: { principal: A }, allowLiveWrite: true },
+      );
+      expect.soft(recall.status, 'recall is accepted').toBeLessThan(300);
 
-    // BR-K03: it must be gone from B's view.
-    const view = await conversation(endpoints, B, A.username);
-    expect
-      .soft(view.text, 'a recalled message must not remain in the recipient view (BR-K03)')
-      .not.toContain(marker);
+      // BR-K03: it must be gone from B's view.
+      const view = await conversation(endpoints, B, A.username);
+      expect
+        .soft(view.text, 'a recalled message must not remain in the recipient view (BR-K03)')
+        .not.toContain(marker);
 
-    await cleanup(endpoints, A, sent.msgID);
-  });
+      await cleanup(endpoints, A, sent.msgID);
+    },
+  );
 
   test('group message: send reaches members and read receipts are tracked (FR-K06 / FR-K07) @api @katchup', async ({
     endpoints,
@@ -433,16 +440,20 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     },
   );
 
-  test('a reminder message is accepted (FR-K13) @api @katchup', async ({ endpoints }) => {
-    const sent = await send(endpoints, A, {
-      receiver: B.username,
-      messageType: KATCHUP_MESSAGE_TYPE.reminderMessage,
-      sharedType: KATCHUP_MESSAGE_TYPE.reminderMessage,
-      actualMessage: 'QA reminder',
-    });
-    expect.soft(sent.status, 'reminder accepted').toBeLessThan(300);
-    await cleanup(endpoints, A, sent.msgID);
-  });
+  test(
+    'a reminder message is accepted (FR-K13) @api @katchup',
+    { annotation: [{ type: 'requirement-partial', description: 'FR-KU-033' }] },
+    async ({ endpoints }) => {
+      const sent = await send(endpoints, A, {
+        receiver: B.username,
+        messageType: KATCHUP_MESSAGE_TYPE.reminderMessage,
+        sharedType: KATCHUP_MESSAGE_TYPE.reminderMessage,
+        actualMessage: 'QA reminder',
+      });
+      expect.soft(sent.status, 'reminder accepted').toBeLessThan(300);
+      await cleanup(endpoints, A, sent.msgID);
+    },
+  );
 
   test('forward carries a message to another recipient (FR-K15) @api @katchup', async ({
     endpoints,
@@ -533,76 +544,82 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     },
   );
 
-  test('save and mark-important act on a message (FR-K18) @api @katchup @database', async ({
-    endpoints,
-    databases,
-  }) => {
-    const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to save' });
-    expect(seed.msgID, 'seed created').toBeTruthy();
+  test(
+    'save and mark-important act on a message (FR-K18) @api @katchup @database',
+    { annotation: [{ type: 'requirement-partial', description: 'FR-KU-040' }] },
+    async ({ endpoints, databases }) => {
+      const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to save' });
+      expect(seed.msgID, 'seed created').toBeTruthy();
 
-    const saved = await endpoints.sendTo(
-      'katchup-save-messages',
-      // groupFlag is a STRING here too (see send.api.ts) — a real boolean 400s "Malformed or missing
-      // request body", live-verified 2026-09-25.
-      { body: { groupKpostID: B.username, msgIDs: [seed.msgID], groupFlag: 'false' } },
-      { label: 'feature:save', auth: { principal: A }, allowLiveWrite: true },
-    );
-    expect
-      .soft(saved.status, `save accepted (body: ${saved.bodyText?.slice(0, 200)})`)
-      .toBeLessThan(300);
-
-    const marked = await endpoints.sendTo(
-      'katchup-mark-important',
-      { body: { msgID: seed.msgID, groupFlag: false } },
-      { label: 'feature:mark', auth: { principal: A }, allowLiveWrite: true },
-    );
-    expect.soft(marked.status, 'mark-important accepted').toBeLessThan(300);
-
-    // Same discipline as recall/delete: the response answers success regardless, so the row is the
-    // judge. TBL_KPOST_KATCHUP_MESSAGES had no registered check for this write before.
-    const database = databases.for('kpost-api');
-    if (database.enabled && seed.msgID) {
-      const row = await new KpostRepository(database).katchupMessage(seed.msgID);
-      const marked_ =
-        row?.marked_by_sender === 1 ||
-        row?.marked_by_receiver === 1 ||
-        row?.marked_by_sender === true ||
-        row?.marked_by_receiver === true;
+      const saved = await endpoints.sendTo(
+        'katchup-save-messages',
+        // groupFlag is a STRING here too (see send.api.ts) — a real boolean 400s "Malformed or missing
+        // request body", live-verified 2026-09-25.
+        { body: { groupKpostID: B.username, msgIDs: [seed.msgID], groupFlag: 'false' } },
+        { label: 'feature:save', auth: { principal: A }, allowLiveWrite: true },
+      );
       expect
-        .soft(
-          marked_,
-          `mark-important reported success but neither marked_by_sender nor marked_by_receiver ` +
-            `moved (sender=${String(row?.marked_by_sender)}, receiver=${String(row?.marked_by_receiver)})`,
-        )
-        .toBe(true);
-    }
+        .soft(saved.status, `save accepted (body: ${saved.bodyText?.slice(0, 200)})`)
+        .toBeLessThan(300);
 
-    await cleanup(endpoints, A, seed.msgID);
-  });
+      const marked = await endpoints.sendTo(
+        'katchup-mark-important',
+        { body: { msgID: seed.msgID, groupFlag: false } },
+        { label: 'feature:mark', auth: { principal: A }, allowLiveWrite: true },
+      );
+      expect.soft(marked.status, 'mark-important accepted').toBeLessThan(300);
 
-  test('a recipient can report a received message (FR-K24) @api @katchup', async ({
-    endpoints,
-  }) => {
-    const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to report' });
-    expect(seed.msgID, 'seed created').toBeTruthy();
+      // Same discipline as recall/delete: the response answers success regardless, so the row is the
+      // judge. TBL_KPOST_KATCHUP_MESSAGES had no registered check for this write before.
+      const database = databases.for('kpost-api');
+      if (database.enabled && seed.msgID) {
+        const row = await new KpostRepository(database).katchupMessage(seed.msgID);
+        const marked_ =
+          row?.marked_by_sender === 1 ||
+          row?.marked_by_receiver === 1 ||
+          row?.marked_by_sender === true ||
+          row?.marked_by_receiver === true;
+        expect
+          .soft(
+            marked_,
+            `mark-important reported success but neither marked_by_sender nor marked_by_receiver ` +
+              `moved (sender=${String(row?.marked_by_sender)}, receiver=${String(row?.marked_by_receiver)})`,
+          )
+          .toBe(true);
+      }
 
-    // B (the recipient) reports A's message.
-    const report = await endpoints.sendTo(
-      'katchup-report-abuse',
-      {
-        body: {
-          reportingKpostID: B.username,
-          msgID: seed.msgID,
-          reportID: [1],
-          reason: 'QA bench test report',
+      await cleanup(endpoints, A, seed.msgID);
+    },
+  );
+
+  test(
+    'a recipient can report a received message (FR-K24) @api @katchup',
+    { annotation: [{ type: 'requirement-partial', description: 'FR-KU-047' }] },
+    async ({ endpoints }) => {
+      const seed = await send(endpoints, A, {
+        receiver: B.username,
+        actualMessage: 'QA to report',
+      });
+      expect(seed.msgID, 'seed created').toBeTruthy();
+
+      // B (the recipient) reports A's message.
+      const report = await endpoints.sendTo(
+        'katchup-report-abuse',
+        {
+          body: {
+            reportingKpostID: B.username,
+            msgID: seed.msgID,
+            reportID: [1],
+            reason: 'QA bench test report',
+          },
         },
-      },
-      { label: 'feature:report', auth: { principal: B }, allowLiveWrite: true },
-    );
-    expect.soft(report.status, 'report accepted').toBeLessThan(300);
+        { label: 'feature:report', auth: { principal: B }, allowLiveWrite: true },
+      );
+      expect.soft(report.status, 'report accepted').toBeLessThan(300);
 
-    await cleanup(endpoints, A, seed.msgID);
-  });
+      await cleanup(endpoints, A, seed.msgID);
+    },
+  );
 
   test(
     'a disappearing / secret message is accepted in both modes (FR-KU-017..024) @api @katchup @security',
@@ -754,7 +771,12 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
 
   test(
     "deleting a received message removes it only from the deleter's view (BR-KU-DELETE-OWN) @api @katchup",
-    { annotation: [{ type: 'requirement', description: 'BR-KU-DELETE-OWN' }] },
+    {
+      annotation: [
+        { type: 'requirement', description: 'FR-KU-042' },
+        { type: 'requirement', description: 'BR-KU-DELETE-OWN' },
+      ],
+    },
     async ({ endpoints }) => {
       const marker = `QA delete-own ${Date.now()}`;
       const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });

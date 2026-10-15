@@ -122,54 +122,70 @@ test.describe(
       ).catch(() => undefined);
     }
 
-    test('a BCC recipient receives the mail, but the To recipient cannot see them', async ({
-      endpoints,
-    }) => {
-      const kmailID = await send(endpoints, {
-        kmailSubject: `QA bcc privacy ${Date.now()}`,
-        bccList: [C.username],
-      });
-      const asB = await rowFor(endpoints, B, A.username, kmailID);
-      const asC = await rowFor(endpoints, C, A.username, kmailID);
-      const asA = await rowFor(endpoints, A, B.username, kmailID);
-      try {
-        expect(asB, 'the To recipient receives the mail').toBeTruthy();
-        expect(asC, 'the BCC recipient receives the mail').toBeTruthy();
-        expect(
-          asB?.kmailTransactionList.map((t) => t.receiver),
-          'the To recipient must not see who was BCC-ed',
-        ).not.toContain(C.username);
-        expect(
-          asA?.kmailTransactionList.find((t) => t.receiver === C.username)?.receiverType,
-          'the sender sees the BCC recipient, marked as a confidential copy',
-        ).toBe(KMAIL_RECEIVER_TYPE.receiverTypeConfidential);
-      } finally {
-        await deleteSide(
-          endpoints,
-          A,
-          (asA?.kmailTransactionList ?? []).map((t) => t.transactionID),
-        );
-      }
-    });
+    test(
+      'a BCC recipient receives the mail, but the To recipient cannot see them',
+      {
+        annotation: [
+          { type: 'requirement', description: 'RTM-KMAIL-F06' },
+          { type: 'requirement', description: 'NFR-SEC02' },
+        ],
+      },
+      async ({ endpoints }) => {
+        const kmailID = await send(endpoints, {
+          kmailSubject: `QA bcc privacy ${Date.now()}`,
+          bccList: [C.username],
+        });
+        const asB = await rowFor(endpoints, B, A.username, kmailID);
+        const asC = await rowFor(endpoints, C, A.username, kmailID);
+        const asA = await rowFor(endpoints, A, B.username, kmailID);
+        try {
+          expect(asB, 'the To recipient receives the mail').toBeTruthy();
+          expect(asC, 'the BCC recipient receives the mail').toBeTruthy();
+          expect(
+            asB?.kmailTransactionList.map((t) => t.receiver),
+            'the To recipient must not see who was BCC-ed',
+          ).not.toContain(C.username);
+          expect(
+            asA?.kmailTransactionList.find((t) => t.receiver === C.username)?.receiverType,
+            'the sender sees the BCC recipient, marked as a confidential copy',
+          ).toBe(KMAIL_RECEIVER_TYPE.receiverTypeConfidential);
+        } finally {
+          await deleteSide(
+            endpoints,
+            A,
+            (asA?.kmailTransactionList ?? []).map((t) => t.transactionID),
+          );
+        }
+      },
+    );
 
-    test('the priority the sender chose is what the recipient sees', async ({ endpoints }) => {
-      const kmailID = await send(endpoints, {
-        kmailSubject: `QA priority ${Date.now()}`,
-        priority: KMAIL_PRIORITY.high,
-      });
-      const asB = await rowFor(endpoints, B, A.username, kmailID);
-      try {
-        expect(asB?.priority, 'a high-priority mail arrives as high priority').toBe(
-          KMAIL_PRIORITY.high,
-        );
-      } finally {
-        await deleteSide(
-          endpoints,
-          A,
-          (asB?.kmailTransactionList ?? []).map((t) => t.transactionID),
-        );
-      }
-    });
+    test(
+      'the priority the sender chose is what the recipient sees',
+      {
+        annotation: [
+          { type: 'requirement', description: 'FR-KM-010' },
+          { type: 'requirement', description: 'FR-KM-011' },
+        ],
+      },
+      async ({ endpoints }) => {
+        const kmailID = await send(endpoints, {
+          kmailSubject: `QA priority ${Date.now()}`,
+          priority: KMAIL_PRIORITY.high,
+        });
+        const asB = await rowFor(endpoints, B, A.username, kmailID);
+        try {
+          expect(asB?.priority, 'a high-priority mail arrives as high priority').toBe(
+            KMAIL_PRIORITY.high,
+          );
+        } finally {
+          await deleteSide(
+            endpoints,
+            A,
+            (asB?.kmailTransactionList ?? []).map((t) => t.transactionID),
+          );
+        }
+      },
+    );
 
     test('opening a mail marks it read: it leaves "sent, not opened" and the unread count drops', async ({
       endpoints,
@@ -301,36 +317,42 @@ test.describe(
       });
     }
 
-    test('deleting a mail removes it only from the deleter’s own side', async ({ endpoints }) => {
-      const kmailID = await send(endpoints, { kmailSubject: `QA delete side ${Date.now()}` });
-      const asB = await rowFor(endpoints, B, A.username, kmailID);
-      const bTxn = asB?.kmailTransactionList.find((t) => t.receiver === B.username)?.transactionID;
-      expect(bTxn, 'B received the mail').toBeTruthy();
-      try {
-        const del = await call(
-          endpoints,
-          'kmail-delete',
-          B,
-          { groupFlag: false, transactionIDs: [bTxn] },
-          'semantics:b-deletes',
-        );
-        expect(del.status, `B's delete is accepted: ${del.text.slice(0, 160)}`).toBe(200);
-        // The server flags rather than removes (live-measured): B's own transaction is marked
-        // deleteByReceiver=Y; the KMail screen hides flagged mail.
-        const afterB = await rowFor(endpoints, B, A.username, kmailID);
-        expect(
-          afterB?.kmailTransactionList.find((t) => t.receiver === B.username)?.deleteByReceiver,
-          'B’s copy is marked deleted on B’s side',
-        ).toBe('Y');
-        const asA = await rowFor(endpoints, A, B.username, kmailID);
-        expect(asA, 'the sender still has the mail').toBeTruthy();
-        expect(
-          asA?.kmailTransactionList.find((t) => t.receiver === B.username)?.deleteBySender,
-          'the sender’s copy is not marked deleted',
-        ).toBe('N');
-      } finally {
-        if (bTxn) await deleteSide(endpoints, A, [bTxn]);
-      }
-    });
+    test(
+      'deleting a mail removes it only from the deleter’s own side',
+      { annotation: [{ type: 'requirement-partial', description: 'RTM-KMAIL-F05' }] },
+      async ({ endpoints }) => {
+        const kmailID = await send(endpoints, { kmailSubject: `QA delete side ${Date.now()}` });
+        const asB = await rowFor(endpoints, B, A.username, kmailID);
+        const bTxn = asB?.kmailTransactionList.find(
+          (t) => t.receiver === B.username,
+        )?.transactionID;
+        expect(bTxn, 'B received the mail').toBeTruthy();
+        try {
+          const del = await call(
+            endpoints,
+            'kmail-delete',
+            B,
+            { groupFlag: false, transactionIDs: [bTxn] },
+            'semantics:b-deletes',
+          );
+          expect(del.status, `B's delete is accepted: ${del.text.slice(0, 160)}`).toBe(200);
+          // The server flags rather than removes (live-measured): B's own transaction is marked
+          // deleteByReceiver=Y; the KMail screen hides flagged mail.
+          const afterB = await rowFor(endpoints, B, A.username, kmailID);
+          expect(
+            afterB?.kmailTransactionList.find((t) => t.receiver === B.username)?.deleteByReceiver,
+            'B’s copy is marked deleted on B’s side',
+          ).toBe('Y');
+          const asA = await rowFor(endpoints, A, B.username, kmailID);
+          expect(asA, 'the sender still has the mail').toBeTruthy();
+          expect(
+            asA?.kmailTransactionList.find((t) => t.receiver === B.username)?.deleteBySender,
+            'the sender’s copy is not marked deleted',
+          ).toBe('N');
+        } finally {
+          if (bTxn) await deleteSide(endpoints, A, [bTxn]);
+        }
+      },
+    );
   },
 );

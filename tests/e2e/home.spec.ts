@@ -32,24 +32,27 @@ test.describe('KPost Home screen', { tag: ['@ui', '@home', '@regression'] }, () 
     ).toBeVisible({ timeout: 20_000 });
   });
 
-  test('the dashboard offers its Recents / Contacts tabs and the Home nav @ui', async ({
-    page,
-  }) => {
-    await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .locator('.loader-overlay')
-      .waitFor({ state: 'hidden', timeout: 30_000 })
-      .catch(() => undefined);
+  test(
+    'the dashboard offers its Recents / Contacts tabs and the Home nav @ui',
+    { annotation: [{ type: 'requirement', description: 'FR-SL-032' }] },
+    async ({ page }) => {
+      await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
 
-    // The HomeDashboard tabs (Recents / Contacts) and the Home nav icon — the screen's own controls.
-    await expect(page.locator('.icon-KP_01-Home').first(), 'the Home nav icon renders').toBeVisible(
-      {
+      // The HomeDashboard tabs (Recents / Contacts) and the Home nav icon — the screen's own controls.
+      await expect(
+        page.locator('.icon-KP_01-Home').first(),
+        'the Home nav icon renders',
+      ).toBeVisible({
         timeout: 20_000,
-      },
-    );
-    await expect(
-      page.getByText(/^Recents$/i).first(),
-      'the dashboard Recents tab is present',
-    ).toBeVisible({ timeout: 20_000 });
-  });
+      });
+      await expect(
+        page.getByText(/^Recents$/i).first(),
+        'the dashboard Recents tab is present',
+      ).toBeVisible({ timeout: 20_000 });
+    },
+  );
 });

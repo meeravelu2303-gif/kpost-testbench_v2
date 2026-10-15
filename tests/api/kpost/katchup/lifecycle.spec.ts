@@ -61,7 +61,7 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
     'a message sends, and comes back with a Subject (BR-K01) and a msgID',
     {
       annotation: [
-        { type: 'requirement', description: 'BR-K01' },
+        { type: 'requirement', description: 'BR-KU-SUBJECT' },
         { type: 'requirement', description: 'FR-KU-002' },
       ],
     },

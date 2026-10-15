@@ -84,80 +84,91 @@ test.describe(
       'places/schedules real calls; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5)',
     );
 
-    test('direct call: place → read status (both ways) → transition → end → clear (FR-C05/C08) @api @kall', async ({
-      endpoints,
-    }) => {
-      try {
-        const placed = await endpoints.sendTo(
-          'kall-initiate',
-          { body: initiateShape({ receiver: B.username }) },
-          { label: 'feature:kall:initiate', auth: { principal: A }, allowLiveWrite: true },
-        );
-        expect.soft(placed.status, 'placing a call succeeds').toBeLessThan(300);
-
-        const placedJson = placed.json();
-        const body = (placedJson.ok ? placedJson.value : {}) as Record<string, unknown>;
-        const kallID = extractKallId(body);
-        expect.soft(kallID, 'the placed call issues a kallID').toBeTruthy();
-
-        if (kallID) {
-          // The two kallID-keyed reads, fed the real id the call just created.
-          const byPair = await endpoints.sendTo(
-            'kall-get-status',
-            { body: { sender: A.username, receiver: B.username, kallID } },
-            { label: 'feature:kall:get-status', auth: { principal: A }, allowLiveWrite: true },
+    test(
+      'direct call: place → read status (both ways) → transition → end → clear (FR-C05/C08) @api @kall',
+      { annotation: [{ type: 'requirement-partial', description: 'FR-KL-005' }] },
+      async ({ endpoints }) => {
+        try {
+          const placed = await endpoints.sendTo(
+            'kall-initiate',
+            { body: initiateShape({ receiver: B.username }) },
+            { label: 'feature:kall:initiate', auth: { principal: A }, allowLiveWrite: true },
           );
-          expect.soft(byPair.status, 'getKallStatus reads the call').toBeLessThan(300);
+          expect.soft(placed.status, 'placing a call succeeds').toBeLessThan(300);
 
-          const byId = await endpoints.sendTo(
-            'kall-get-status-by-id',
-            { body: { kpostID: A.username, kallID } },
-            {
-              label: 'feature:kall:get-status-by-id',
-              auth: { principal: A },
-              allowLiveWrite: true,
-            },
-          );
-          expect.soft(byId.status, 'getKallStatusUsingKallID reads the call').toBeLessThan(300);
+          const placedJson = placed.json();
+          const body = (placedJson.ok ? placedJson.value : {}) as Record<string, unknown>;
+          const kallID = extractKallId(body);
+          expect.soft(kallID, 'the placed call issues a kallID').toBeTruthy();
 
-          const cancelled = await endpoints.sendTo(
-            'kall-update-status',
-            { body: { id: kallID, kallStatus: KALL_STATUS.cancelled, kallID } },
-            { label: 'feature:kall:cancel', auth: { principal: A }, allowLiveWrite: true },
-          );
-          expect.soft(cancelled.status, 'updateKallStatus is accepted').toBeLessThan(300);
+          if (kallID) {
+            // The two kallID-keyed reads, fed the real id the call just created.
+            const byPair = await endpoints.sendTo(
+              'kall-get-status',
+              { body: { sender: A.username, receiver: B.username, kallID } },
+              { label: 'feature:kall:get-status', auth: { principal: A }, allowLiveWrite: true },
+            );
+            expect.soft(byPair.status, 'getKallStatus reads the call').toBeLessThan(300);
 
-          const both = await endpoints.sendTo(
-            'kall-update-sender-receiver-status',
-            { body: { sender: A.username, kallStatus: KALL_STATUS.cancelled, kallID } },
-            { label: 'feature:kall:sender-receiver', auth: { principal: A }, allowLiveWrite: true },
-          );
-          expect
-            .soft(both.status, 'updateSenderAndReceiverKallStatus is accepted')
-            .toBeLessThan(300);
+            const byId = await endpoints.sendTo(
+              'kall-get-status-by-id',
+              { body: { kpostID: A.username, kallID } },
+              {
+                label: 'feature:kall:get-status-by-id',
+                auth: { principal: A },
+                allowLiveWrite: true,
+              },
+            );
+            expect.soft(byId.status, 'getKallStatusUsingKallID reads the call').toBeLessThan(300);
 
-          const ended = await endpoints.sendTo(
-            'kall-end-individual',
-            { body: { kallID } },
-            { label: 'feature:kall:end', auth: { principal: A }, allowLiveWrite: true },
-          );
-          expect.soft(ended.status, 'endIndividualKall is accepted').toBeLessThan(300);
+            const cancelled = await endpoints.sendTo(
+              'kall-update-status',
+              { body: { id: kallID, kallStatus: KALL_STATUS.cancelled, kallID } },
+              { label: 'feature:kall:cancel', auth: { principal: A }, allowLiveWrite: true },
+            );
+            expect.soft(cancelled.status, 'updateKallStatus is accepted').toBeLessThan(300);
 
-          const cleared = await endpoints.sendTo(
-            'kall-clear-by-ids',
-            { body: { kallIds: [kallID] } },
-            { label: 'feature:kall:clear-by-ids', auth: { principal: A }, allowLiveWrite: true },
-          );
-          expect.soft(cleared.status, 'clearKallBykallIds is accepted').toBeLessThan(300);
+            const both = await endpoints.sendTo(
+              'kall-update-sender-receiver-status',
+              { body: { sender: A.username, kallStatus: KALL_STATUS.cancelled, kallID } },
+              {
+                label: 'feature:kall:sender-receiver',
+                auth: { principal: A },
+                allowLiveWrite: true,
+              },
+            );
+            expect
+              .soft(both.status, 'updateSenderAndReceiverKallStatus is accepted')
+              .toBeLessThan(300);
+
+            const ended = await endpoints.sendTo(
+              'kall-end-individual',
+              { body: { kallID } },
+              { label: 'feature:kall:end', auth: { principal: A }, allowLiveWrite: true },
+            );
+            expect.soft(ended.status, 'endIndividualKall is accepted').toBeLessThan(300);
+
+            const cleared = await endpoints.sendTo(
+              'kall-clear-by-ids',
+              { body: { kallIds: [kallID] } },
+              { label: 'feature:kall:clear-by-ids', auth: { principal: A }, allowLiveWrite: true },
+            );
+            expect.soft(cleared.status, 'clearKallBykallIds is accepted').toBeLessThan(300);
+          }
+        } finally {
+          await clearHistory(endpoints, [A, B]);
         }
-      } finally {
-        await clearHistory(endpoints, [A, B]);
-      }
-    });
+      },
+    );
 
     test(
       'scheduled call: schedule → modify members → join → reschedule (BR-C01) → end (FR-C01/C03/C04/C07) @api @kall',
-      { annotation: [{ type: 'requirement', description: 'BR-C01' }] },
+      {
+        annotation: [
+          { type: 'requirement', description: 'FR-KL-002' },
+          { type: 'requirement', description: 'BR-C01' },
+        ],
+      },
       async ({ endpoints, databases }) => {
         const database = databases.for('kpost-api');
         try {
@@ -372,7 +383,13 @@ test.describe(
 
     test(
       'BR-C01 · reschedule creates a new call, and moves the ORIGINAL to ReScheduled @api @kall',
-      { annotation: [{ type: 'requirement', description: 'BR-C01' }] },
+      {
+        annotation: [
+          { type: 'requirement', description: 'FR-KL-003' },
+          { type: 'requirement', description: 'FR-KL-004' },
+          { type: 'requirement', description: 'BR-C01' },
+        ],
+      },
       async ({ endpoints, databases }) => {
         /*
          * BR-C01, CORRECTED 2026-09-26 by the owner: creating a new call on reschedule is the intended

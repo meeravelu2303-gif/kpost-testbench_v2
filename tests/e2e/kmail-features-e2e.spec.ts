@@ -160,40 +160,47 @@ test.describe(
       expect(sent.status, `A sends the mail: ${sent.text}`).toBe(200);
     }
 
-    test('Add copies: a CC and a Confidential Copy picked in "Mail With Copies" go out as cc/bcc and the CC receives it @ui', async ({
-      page,
-      endpoints,
-    }) => {
-      const subject = `QA KMail copies ${Date.now()}`;
-      await openCompose(page);
-      await fillTo(page, testData.victimKpostId);
-      await page.keyboard.press('Escape').catch(() => undefined);
-      await page.getByText('Add copies', { exact: false }).first().click();
-      const picker = page.getByRole('dialog').filter({ hasText: 'Mail With Copies' });
-      await expect(picker, 'the Mail With Copies picker opens').toBeVisible({ timeout: 15_000 });
-      const rowFor = (name: string) =>
-        picker
-          .locator('div')
-          .filter({ has: page.getByText(name, { exact: true }) })
-          .filter({ has: page.locator('input[type="radio"]') })
-          .last();
-      await rowFor('Qatest3 Bench').locator('input[type="radio"]').nth(0).check(); // Copy (CC)
-      await rowFor('Qatest4 Bench').locator('input[type="radio"]').nth(1).check(); // Confidential (BCC)
-      await picker.getByRole('button', { name: /^Done$/i }).click();
-      await fillSubjectBody(page, subject, 'QA copies body');
-      const sent = await sendAndCapture(page);
-      test.info().annotations.push({
-        type: 'observed',
-        description: `send ${sent.status} ccList=${JSON.stringify(sent.body.ccList)} bccList=${JSON.stringify(sent.body.bccList)}`,
-      });
-      expect(sent.status, `the mail with copies is sent: ${sent.text}`).toBe(200);
-      expect(sent.body.ccList, 'qatest3 goes as a Copy (cc)').toEqual([C.username]);
-      expect(sent.body.bccList, 'qatest4 goes as a Confidential Copy (bcc)').toEqual([QATEST4]);
-      expect(
-        await inboxHas(endpoints, C, testData.kpostId, subject),
-        'the CC recipient (qatest3) receives the mail',
-      ).toBe(true);
-    });
+    test(
+      'Add copies: a CC and a Confidential Copy picked in "Mail With Copies" go out as cc/bcc and the CC receives it @ui',
+      {
+        annotation: [
+          { type: 'requirement', description: 'FR-KM-006' },
+          { type: 'requirement', description: 'FR-KM-009' },
+          { type: 'requirement', description: 'RTM-KMAIL-F06' },
+        ],
+      },
+      async ({ page, endpoints }) => {
+        const subject = `QA KMail copies ${Date.now()}`;
+        await openCompose(page);
+        await fillTo(page, testData.victimKpostId);
+        await page.keyboard.press('Escape').catch(() => undefined);
+        await page.getByText('Add copies', { exact: false }).first().click();
+        const picker = page.getByRole('dialog').filter({ hasText: 'Mail With Copies' });
+        await expect(picker, 'the Mail With Copies picker opens').toBeVisible({ timeout: 15_000 });
+        const rowFor = (name: string) =>
+          picker
+            .locator('div')
+            .filter({ has: page.getByText(name, { exact: true }) })
+            .filter({ has: page.locator('input[type="radio"]') })
+            .last();
+        await rowFor('Qatest3 Bench').locator('input[type="radio"]').nth(0).check(); // Copy (CC)
+        await rowFor('Qatest4 Bench').locator('input[type="radio"]').nth(1).check(); // Confidential (BCC)
+        await picker.getByRole('button', { name: /^Done$/i }).click();
+        await fillSubjectBody(page, subject, 'QA copies body');
+        const sent = await sendAndCapture(page);
+        test.info().annotations.push({
+          type: 'observed',
+          description: `send ${sent.status} ccList=${JSON.stringify(sent.body.ccList)} bccList=${JSON.stringify(sent.body.bccList)}`,
+        });
+        expect(sent.status, `the mail with copies is sent: ${sent.text}`).toBe(200);
+        expect(sent.body.ccList, 'qatest3 goes as a Copy (cc)').toEqual([C.username]);
+        expect(sent.body.bccList, 'qatest4 goes as a Confidential Copy (bcc)').toEqual([QATEST4]);
+        expect(
+          await inboxHas(endpoints, C, testData.kpostId, subject),
+          'the CC recipient (qatest3) receives the mail',
+        ).toBe(true);
+      },
+    );
 
     test('Group Mail: a mail sent to a group from Write Mail reaches the group’s members @ui', async ({
       page,
@@ -265,33 +272,35 @@ test.describe(
       }
     });
 
-    test('Save Draft: a half-written mail is saved and listed under Status of Mails › Draft Mails @ui', async ({
-      page,
-    }) => {
-      const subject = `QA KMail draft ${Date.now()}`;
-      await openCompose(page);
-      await fillTo(page, testData.victimKpostId);
-      await fillSubjectBody(page, subject, 'QA draft body');
-      const saved = page.waitForResponse((r) => r.url().includes('/draft/draftMail'), {
-        timeout: 20_000,
-      });
-      await page.locator('.icon-KP_95-Write-Mail-Temp').first().click();
-      const res = await saved;
-      expect(res.status(), 'the draft is saved').toBe(200);
-      await expect(
-        page.getByText('Mail Saved to Draft', { exact: false }).first(),
-        'the app confirms the draft was saved',
-      ).toBeVisible({ timeout: 10_000 });
+    test(
+      'Save Draft: a half-written mail is saved and listed under Status of Mails › Draft Mails @ui',
+      { annotation: [{ type: 'requirement', description: 'RTM-KMAIL-F08' }] },
+      async ({ page }) => {
+        const subject = `QA KMail draft ${Date.now()}`;
+        await openCompose(page);
+        await fillTo(page, testData.victimKpostId);
+        await fillSubjectBody(page, subject, 'QA draft body');
+        const saved = page.waitForResponse((r) => r.url().includes('/draft/draftMail'), {
+          timeout: 20_000,
+        });
+        await page.locator('.icon-KP_95-Write-Mail-Temp').first().click();
+        const res = await saved;
+        expect(res.status(), 'the draft is saved').toBe(200);
+        await expect(
+          page.getByText('Mail Saved to Draft', { exact: false }).first(),
+          'the app confirms the draft was saved',
+        ).toBeVisible({ timeout: 10_000 });
 
-      await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await waitLoaded(page);
-      await page.getByText('Status of Mails', { exact: false }).first().click();
-      await page.getByText('Draft Mails', { exact: false }).first().click();
-      await expect(
-        page.getByText(subject, { exact: false }).first(),
-        'the saved draft is listed under Draft Mails',
-      ).toBeVisible({ timeout: 20_000 });
-    });
+        await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await waitLoaded(page);
+        await page.getByText('Status of Mails', { exact: false }).first().click();
+        await page.getByText('Draft Mails', { exact: false }).first().click();
+        await expect(
+          page.getByText(subject, { exact: false }).first(),
+          'the saved draft is listed under Draft Mails',
+        ).toBeVisible({ timeout: 20_000 });
+      },
+    );
 
     for (const action of [
       { name: 'Comment', type: 8 },
@@ -416,134 +425,137 @@ test.describe(
       }
     });
 
-    test('Attachment received: the recipient sees the attached file on the opened mail and can download it @ui', async ({
-      page,
-      endpoints,
-    }) => {
-      // qatest3 uploads (through the API — the browser upload is broken, #1347) and sends to qatest1.
-      const subject = `QA KMail attachment in ${Date.now()}`;
-      const jpeg = Buffer.from(
-        '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
-        'base64',
-      );
-      const fileName = `qa-received-${Date.now()}.jpg`;
-      const presign = await endpoints.sendTo(
-        'aws-generate-presigned',
-        { body: { extension: 'jpg', fileName, fileSize: String(jpeg.length) } },
-        { label: 'features:presign', auth: { principal: C }, allowLiveWrite: true },
-      );
-      const raw = presign.bodyText.trim();
-      const url = raw.startsWith('{')
-        ? String((JSON.parse(raw) as { presignedURL?: string }).presignedURL ?? '')
-        : raw.replace(/^"|"$/g, '');
-      const uuid = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(url)?.[1];
-      expect(uuid, 'the upload link names a file id').toBeTruthy();
-      const put = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'image/jpeg' },
-        body: jpeg,
-      });
-      expect(put.status, 'the file is stored').toBeLessThan(300);
-      const sent = await endpoints.sendTo(
-        'kmail-post-mail',
-        {
-          body: mailShape({
-            toAddress: testData.kpostId,
-            kmailSubject: subject,
-            attachmentFlag: 1,
-            attachmentUuid: [uuid],
-            attachmentCaption: JSON.stringify([{ fileName, caption: '' }]),
-          }),
-        },
-        { label: 'features:send-attachment', auth: { principal: C }, allowLiveWrite: true },
-      );
-      expect(sent.status, 'qatest3 sends the mail with the attachment').toBe(200);
-
-      await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await waitLoaded(page);
-      await page.locator('.Serach_input').first().fill(subject);
-      // What the server returns when the mail is opened — does it list the attachment?
-      const opened = page.waitForResponse(
-        (r) => r.url().includes('/readMail/sentAndInboxMailContent'),
-        { timeout: 30_000 },
-      );
-      await page.getByText(subject, { exact: false }).first().click({ timeout: 30_000 });
-      const content = await opened.catch(() => null);
-      const contentText = content ? await content.text().catch(() => '') : '(no open request)';
-      const listed = contentText.includes(fileName) || contentText.includes(uuid ?? '__none__');
-      test.info().annotations.push({
-        type: 'observed',
-        description: `open reply lists the attachment: ${listed} | ${contentText.slice(0, 300)}`,
-      });
-      console.log(
-        `KMAIL-FEATURES open reply lists the attachment: ${listed} | ${contentText.slice(0, 700)}`,
-      );
-      const senderView = await endpoints.sendTo(
-        'kmail-selected-contact-mails',
-        {
-          body: {
-            selectedContact: testData.kpostId,
-            fetchMailType: 'A',
-            groupFlag: false,
-            lastKmailID: null,
-            firstKmailID: null,
-            count: 10,
+    test(
+      'Attachment received: the recipient sees the attached file on the opened mail and can download it @ui',
+      { annotation: [{ type: 'requirement-partial', description: 'RTM-KMAIL-F02' }] },
+      async ({ page, endpoints }) => {
+        // qatest3 uploads (through the API — the browser upload is broken, #1347) and sends to qatest1.
+        const subject = `QA KMail attachment in ${Date.now()}`;
+        const jpeg = Buffer.from(
+          '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
+          'base64',
+        );
+        const fileName = `qa-received-${Date.now()}.jpg`;
+        const presign = await endpoints.sendTo(
+          'aws-generate-presigned',
+          { body: { extension: 'jpg', fileName, fileSize: String(jpeg.length) } },
+          { label: 'features:presign', auth: { principal: C }, allowLiveWrite: true },
+        );
+        const raw = presign.bodyText.trim();
+        const url = raw.startsWith('{')
+          ? String((JSON.parse(raw) as { presignedURL?: string }).presignedURL ?? '')
+          : raw.replace(/^"|"$/g, '');
+        const uuid = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(
+          url,
+        )?.[1];
+        expect(uuid, 'the upload link names a file id').toBeTruthy();
+        const put = await fetch(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'image/jpeg' },
+          body: jpeg,
+        });
+        expect(put.status, 'the file is stored').toBeLessThan(300);
+        const sent = await endpoints.sendTo(
+          'kmail-post-mail',
+          {
+            body: mailShape({
+              toAddress: testData.kpostId,
+              kmailSubject: subject,
+              attachmentFlag: 1,
+              attachmentUuid: [uuid],
+              attachmentCaption: JSON.stringify([{ fileName, caption: '' }]),
+            }),
           },
-        },
-        { label: 'features:sender-view', auth: { principal: C }, allowLiveRead: true },
-      );
-      const row = (
-        (JSON.parse(senderView.bodyText || '{}') as { data?: Array<Record<string, unknown>> })
-          .data ?? []
-      ).find((m) => m.kmailSubject === subject);
-      console.log(
-        `KMAIL-FEATURES sender row: attachmentFlag=${String(row?.attachmentFlag)} attachmentPath=${JSON.stringify(row?.attachmentPath)}`,
-      );
-      await expect(page.getByText(`Sub : ${subject}`, { exact: false }).first()).toBeVisible({
-        timeout: 20_000,
-      });
-      const shot = test.info().outputPath('received-attachment.png');
-      await page.screenshot({ path: shot });
-      await test.info().attach('received-attachment', { path: shot, contentType: 'image/png' });
-      // The opened mail intermittently renders without its body AND attachments (#1348) — reopen up
-      // to 3 times so the download itself can still be tested; the attempt count is recorded.
-      const chip = page.getByText(fileName.slice(0, 12), { exact: false }).first();
-      let attempts = 1;
-      while (!(await chip.isVisible({ timeout: 10_000 }).catch(() => false)) && attempts < 3) {
-        attempts++;
+          { label: 'features:send-attachment', auth: { principal: C }, allowLiveWrite: true },
+        );
+        expect(sent.status, 'qatest3 sends the mail with the attachment').toBe(200);
+
         await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
         await waitLoaded(page);
         await page.locator('.Serach_input').first().fill(subject);
+        // What the server returns when the mail is opened — does it list the attachment?
+        const opened = page.waitForResponse(
+          (r) => r.url().includes('/readMail/sentAndInboxMailContent'),
+          { timeout: 30_000 },
+        );
         await page.getByText(subject, { exact: false }).first().click({ timeout: 30_000 });
-      }
-      test.info().annotations.push({
-        type: 'observed',
-        description: `attachment check after ${attempts} open(s), shown: ${await chip.isVisible().catch(() => false)} (#1348)`,
-      });
-      console.log(`KMAIL-FEATURES attachment check after ${attempts} open(s)`);
-      await expect(
-        chip,
-        'the attached file is shown on the opened mail (#1348: body and attachments intermittently missing)',
-      ).toBeVisible({
-        timeout: 10_000,
-      });
-      // The attachment box's download icon — for a single file it is `.icon-KP_294_Download
-      // .attachment-download-all` (AttachmentHandler.js) → MailAttachmentDownload → POST
-      // /readMail/downloadODAttachment.
-      const download = page.waitForResponse(
-        (r) => r.url().includes('/readMail/downloadODAttachment'),
-        { timeout: 20_000 },
-      );
-      await page.locator('.attachment-download-all').first().click();
-      const res = await download.catch(() => null);
-      const bytes = res ? (await res.body().catch(() => Buffer.alloc(0))).length : 0;
-      test.info().annotations.push({
-        type: 'observed',
-        description: `download: ${res ? `${res.url()} -> ${res.status()}, ${bytes} bytes` : 'no download request'}`,
-      });
-      expect(res?.status(), 'the download icon downloads the attachment').toBe(200);
-      expect(bytes, 'the downloaded file is not empty').toBeGreaterThan(0);
-    });
+        const content = await opened.catch(() => null);
+        const contentText = content ? await content.text().catch(() => '') : '(no open request)';
+        const listed = contentText.includes(fileName) || contentText.includes(uuid ?? '__none__');
+        test.info().annotations.push({
+          type: 'observed',
+          description: `open reply lists the attachment: ${listed} | ${contentText.slice(0, 300)}`,
+        });
+        console.log(
+          `KMAIL-FEATURES open reply lists the attachment: ${listed} | ${contentText.slice(0, 700)}`,
+        );
+        const senderView = await endpoints.sendTo(
+          'kmail-selected-contact-mails',
+          {
+            body: {
+              selectedContact: testData.kpostId,
+              fetchMailType: 'A',
+              groupFlag: false,
+              lastKmailID: null,
+              firstKmailID: null,
+              count: 10,
+            },
+          },
+          { label: 'features:sender-view', auth: { principal: C }, allowLiveRead: true },
+        );
+        const row = (
+          (JSON.parse(senderView.bodyText || '{}') as { data?: Array<Record<string, unknown>> })
+            .data ?? []
+        ).find((m) => m.kmailSubject === subject);
+        console.log(
+          `KMAIL-FEATURES sender row: attachmentFlag=${String(row?.attachmentFlag)} attachmentPath=${JSON.stringify(row?.attachmentPath)}`,
+        );
+        await expect(page.getByText(`Sub : ${subject}`, { exact: false }).first()).toBeVisible({
+          timeout: 20_000,
+        });
+        const shot = test.info().outputPath('received-attachment.png');
+        await page.screenshot({ path: shot });
+        await test.info().attach('received-attachment', { path: shot, contentType: 'image/png' });
+        // The opened mail intermittently renders without its body AND attachments (#1348) — reopen up
+        // to 3 times so the download itself can still be tested; the attempt count is recorded.
+        const chip = page.getByText(fileName.slice(0, 12), { exact: false }).first();
+        let attempts = 1;
+        while (!(await chip.isVisible({ timeout: 10_000 }).catch(() => false)) && attempts < 3) {
+          attempts++;
+          await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+          await waitLoaded(page);
+          await page.locator('.Serach_input').first().fill(subject);
+          await page.getByText(subject, { exact: false }).first().click({ timeout: 30_000 });
+        }
+        test.info().annotations.push({
+          type: 'observed',
+          description: `attachment check after ${attempts} open(s), shown: ${await chip.isVisible().catch(() => false)} (#1348)`,
+        });
+        console.log(`KMAIL-FEATURES attachment check after ${attempts} open(s)`);
+        await expect(
+          chip,
+          'the attached file is shown on the opened mail (#1348: body and attachments intermittently missing)',
+        ).toBeVisible({
+          timeout: 10_000,
+        });
+        // The attachment box's download icon — for a single file it is `.icon-KP_294_Download
+        // .attachment-download-all` (AttachmentHandler.js) → MailAttachmentDownload → POST
+        // /readMail/downloadODAttachment.
+        const download = page.waitForResponse(
+          (r) => r.url().includes('/readMail/downloadODAttachment'),
+          { timeout: 20_000 },
+        );
+        await page.locator('.attachment-download-all').first().click();
+        const res = await download.catch(() => null);
+        const bytes = res ? (await res.body().catch(() => Buffer.alloc(0))).length : 0;
+        test.info().annotations.push({
+          type: 'observed',
+          description: `download: ${res ? `${res.url()} -> ${res.status()}, ${bytes} bytes` : 'no download request'}`,
+        });
+        expect(res?.status(), 'the download icon downloads the attachment').toBe(200);
+        expect(bytes, 'the downloaded file is not empty').toBeGreaterThan(0);
+      },
+    );
 
     test('an opened mail shows its body whatever its format — plain, or written like Write Mail with the signature block (#1348) @ui', async ({
       page,

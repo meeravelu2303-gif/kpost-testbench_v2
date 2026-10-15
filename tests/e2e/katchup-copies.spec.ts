@@ -85,43 +85,52 @@ test.describe(
         .catch(() => undefined);
     }
 
-    test('a visible Copy (Cc) is seen by the TO recipient (FR-K04) @ui', async ({
-      page,
-      browser,
-    }) => {
-      const subject = `QA UI cc ${Date.now()}`;
-      const acct2 = await contextFor(browser, STORAGE_STATE_2);
-      const acct3 = await contextFor(browser, STORAGE_STATE_3);
-      try {
-        await openComposer(page); // to account 2 (TO)
-        await addCopy(page, testData.personal3KpostId, false); // account 3 as a visible Copy
-        await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
-        await page.locator('.ql-editor[contenteditable="true"]').first().click();
-        await page.keyboard.type('QA UI Cc — self-cleaning');
-        await page.keyboard.press('Enter');
+    test(
+      'a visible Copy (Cc) is seen by the TO recipient (FR-K04) @ui',
+      { annotation: [{ type: 'requirement-partial', description: 'FR-KU-007' }] },
+      async ({ page, browser }) => {
+        const subject = `QA UI cc ${Date.now()}`;
+        const acct2 = await contextFor(browser, STORAGE_STATE_2);
+        const acct3 = await contextFor(browser, STORAGE_STATE_3);
+        try {
+          await openComposer(page); // to account 2 (TO)
+          await addCopy(page, testData.personal3KpostId, false); // account 3 as a visible Copy
+          await page.getByRole('textbox', { name: 'Subject' }).fill(subject);
+          await page.locator('.ql-editor[contenteditable="true"]').first().click();
+          await page.keyboard.type('QA UI Cc — self-cleaning');
+          await page.keyboard.press('Enter');
 
-        // Account 3 (the Copy) receives the message.
-        await gotoKatchup(acct3);
-        await expect(
-          acct3.getByText(subject).first(),
-          'the visible-Copy recipient (account 3) receives the message',
-        ).toBeVisible({ timeout: 25_000 });
+          // Account 3 (the Copy) receives the message.
+          await gotoKatchup(acct3);
+          await expect(
+            acct3.getByText(subject).first(),
+            'the visible-Copy recipient (account 3) receives the message',
+          ).toBeVisible({ timeout: 25_000 });
 
-        // Account 2 (TO) sees the message AND that account 3 was copied (a visible Copy is not hidden).
-        await gotoKatchup(acct2);
-        await expect(acct2.getByText(subject).first(), 'the TO recipient receives it').toBeVisible({
-          timeout: 25_000,
-        });
-      } finally {
-        await deleteSentMessage(page, subject).catch(() => undefined);
-        await acct2.context().close();
-        await acct3.context().close();
-      }
-    });
+          // Account 2 (TO) sees the message AND that account 3 was copied (a visible Copy is not hidden).
+          await gotoKatchup(acct2);
+          await expect(
+            acct2.getByText(subject).first(),
+            'the TO recipient receives it',
+          ).toBeVisible({
+            timeout: 25_000,
+          });
+        } finally {
+          await deleteSentMessage(page, subject).catch(() => undefined);
+          await acct2.context().close();
+          await acct3.context().close();
+        }
+      },
+    );
 
     test(
       'a Confidential Copy is hidden from the other recipient but delivered to the copied one (NFR-SEC02) @ui',
-      { annotation: [{ type: 'requirement', description: 'NFR-SEC02' }] },
+      {
+        annotation: [
+          { type: 'requirement-partial', description: 'FR-KU-007' },
+          { type: 'requirement', description: 'NFR-SEC02' },
+        ],
+      },
       async ({ page, browser }) => {
         const subject = `QA UI conf ${Date.now()}`;
         const acct2 = await contextFor(browser, STORAGE_STATE_2);

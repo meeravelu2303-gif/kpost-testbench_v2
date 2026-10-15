@@ -154,28 +154,30 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
       .toBeLessThan(500);
   });
 
-  test('login failure cannot distinguish a real account from an unknown one @api @signup-login @security', async ({
-    endpoints,
-  }) => {
-    /*
-     * BR: a failure must not reveal whether the id or the password was wrong (account enumeration).
-     * A wrong password on OUR account and any password on an account that does not exist should be
-     * indistinguishable — same status, same message.
-     */
-    const realButWrong = await login(endpoints, testData.kpostId, 'WrongPassword!9f2a');
-    const doesNotExist = await login(endpoints, testData.kpostIdAbsent, 'WrongPassword!9f2a');
+  test(
+    'login failure cannot distinguish a real account from an unknown one @api @signup-login @security',
+    { annotation: [{ type: 'requirement', description: 'BR-SL-ENUM' }] },
+    async ({ endpoints }) => {
+      /*
+       * BR: a failure must not reveal whether the id or the password was wrong (account enumeration).
+       * A wrong password on OUR account and any password on an account that does not exist should be
+       * indistinguishable — same status, same message.
+       */
+      const realButWrong = await login(endpoints, testData.kpostId, 'WrongPassword!9f2a');
+      const doesNotExist = await login(endpoints, testData.kpostIdAbsent, 'WrongPassword!9f2a');
 
-    // Soft: a difference here is a finding (login reveals which accounts exist), not a reason to halt.
-    expect
-      .soft(realButWrong.status, 'same status for a real vs unknown account')
-      .toBe(doesNotExist.status);
-    expect
-      .soft(
-        bodyMessage(realButWrong.body),
-        'same message, so the response cannot confirm an account exists',
-      )
-      .toBe(bodyMessage(doesNotExist.body));
-  });
+      // Soft: a difference here is a finding (login reveals which accounts exist), not a reason to halt.
+      expect
+        .soft(realButWrong.status, 'same status for a real vs unknown account')
+        .toBe(doesNotExist.status);
+      expect
+        .soft(
+          bodyMessage(realButWrong.body),
+          'same message, so the response cannot confirm an account exists',
+        )
+        .toBe(bodyMessage(doesNotExist.body));
+    },
+  );
 
   test('a session can be ended without harming the shared session @api @signup-login @database', async ({
     endpoints,

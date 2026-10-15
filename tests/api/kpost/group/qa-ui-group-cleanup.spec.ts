@@ -30,6 +30,8 @@ interface Found {
   groupID: number;
   groupKpostName: string;
   members: string[];
+  /** kpostID → membership-row id; `group-leave` must name the leaver's own row id. */
+  rowIds: Record<string, number>;
 }
 
 test.describe(
@@ -69,6 +71,11 @@ test.describe(
                   .filter((m) => m.removedFlag !== true)
                   .map((m) => (typeof m.kpostID === 'string' ? m.kpostID : ''))
                   .filter(Boolean),
+                rowIds: Object.fromEntries(
+                  md
+                    .filter((m) => typeof m.kpostID === 'string' && typeof m.id === 'number')
+                    .map((m) => [m.kpostID as string, m.id as number]),
+                ),
               });
             }
             Object.values(o).forEach(walk);
@@ -102,7 +109,15 @@ test.describe(
                 if (!member) continue;
                 const leave = await endpoints.sendTo(
                   'group-leave',
-                  { body: { id: '0', groupID: g.groupID, groupKpostID: g.groupKpostID } },
+                  // The leaver's OWN membership-row id — an id of '0' answers 400 "you are not a
+                  // member" (live 2026-10-15), so this fallback never actually left.
+                  {
+                    body: {
+                      id: String(g.rowIds[id] ?? ''),
+                      groupID: g.groupID,
+                      groupKpostID: g.groupKpostID,
+                    },
+                  },
                   {
                     label: 'cleanup:self-leave',
                     auth: { principal: member },

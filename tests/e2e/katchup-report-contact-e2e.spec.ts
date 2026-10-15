@@ -89,49 +89,56 @@ test.describe(
       await expect(dialog, 'Cancel closes the dialog').toBeHidden({ timeout: 10_000 });
     });
 
-    test('confirming a report actually sends it to the server @ui', async ({ page }) => {
-      test.skip(
-        process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-        'confirms a real report (and may block qatest3); set KATCHUP_UI_LIFECYCLE=true',
-      );
-      // Correct behaviour asserted on purpose: a report the user confirms must reach the server. Today it
-      // does not (#966, open) — this test is the live re-verification of that bug, so it fails until
-      // #966 is fixed.
-      try {
-        await (await openReportTrigger(page)).click();
-        const dialog = reportDialog(page);
-        await expect(dialog, 'the Report Contact dialog opens').toBeVisible({ timeout: 10_000 });
-        await dialog.locator('input[name="Check"]').first().click();
-        await dialog.locator('input[name="mainCheck"]').click();
+    test(
+      'confirming a report actually sends it to the server @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KU-047' }] },
+      async ({ page }) => {
+        test.skip(
+          process.env.KATCHUP_UI_LIFECYCLE !== 'true',
+          'confirms a real report (and may block qatest3); set KATCHUP_UI_LIFECYCLE=true',
+        );
+        // Correct behaviour asserted on purpose: a report the user confirms must reach the server. Today it
+        // does not (#966, open) — this test is the live re-verification of that bug, so it fails until
+        // #966 is fixed.
+        try {
+          await (await openReportTrigger(page)).click();
+          const dialog = reportDialog(page);
+          await expect(dialog, 'the Report Contact dialog opens').toBeVisible({ timeout: 10_000 });
+          await dialog.locator('input[name="Check"]').first().click();
+          await dialog.locator('input[name="mainCheck"]').click();
 
-        // Any non-GET call that names a report/block/abuse action counts as "sent to the server".
-        const reportCall = page
-          .waitForRequest((r) => r.method() !== 'GET' && /report|block|abuse|spam/i.test(r.url()), {
-            timeout: 8_000,
-          })
-          .catch(() => null);
-        await dialog.getByRole('button', { name: /^Confirm$/i }).click();
-        const sent = await reportCall;
+          // Any non-GET call that names a report/block/abuse action counts as "sent to the server".
+          const reportCall = page
+            .waitForRequest(
+              (r) => r.method() !== 'GET' && /report|block|abuse|spam/i.test(r.url()),
+              {
+                timeout: 8_000,
+              },
+            )
+            .catch(() => null);
+          await dialog.getByRole('button', { name: /^Confirm$/i }).click();
+          const sent = await reportCall;
 
-        await expect(dialog, 'Confirm closes the dialog').toBeHidden({ timeout: 10_000 });
-        test.info().annotations.push({
-          type: 'observed',
-          description: sent
-            ? `report request sent: ${sent.method()} ${sent.url()}`
-            : 'no report/block request was sent within 8s of Confirm (#966)',
-        });
-        expect(
-          sent?.url() ?? null,
-          'confirming Report Contact sends a report to the server (#966: today it sends nothing)',
-        ).not.toBeNull();
-      } finally {
-        // Self-restore: if a build ever does block on confirm, reopen the card and unblock qatest3.
-        await openDigitalCard(page).catch(() => undefined);
-        const unblock = page.getByRole('button', { name: 'Unblock Contact', exact: true });
-        if (await unblock.isVisible().catch(() => false)) {
-          await unblock.click().catch(() => undefined);
+          await expect(dialog, 'Confirm closes the dialog').toBeHidden({ timeout: 10_000 });
+          test.info().annotations.push({
+            type: 'observed',
+            description: sent
+              ? `report request sent: ${sent.method()} ${sent.url()}`
+              : 'no report/block request was sent within 8s of Confirm (#966)',
+          });
+          expect(
+            sent?.url() ?? null,
+            'confirming Report Contact sends a report to the server (#966: today it sends nothing)',
+          ).not.toBeNull();
+        } finally {
+          // Self-restore: if a build ever does block on confirm, reopen the card and unblock qatest3.
+          await openDigitalCard(page).catch(() => undefined);
+          const unblock = page.getByRole('button', { name: 'Unblock Contact', exact: true });
+          if (await unblock.isVisible().catch(() => false)) {
+            await unblock.click().catch(() => undefined);
+          }
         }
-      }
-    });
+      },
+    );
   },
 );

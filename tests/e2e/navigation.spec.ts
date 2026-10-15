@@ -11,7 +11,10 @@ import { skipIfSignedOut } from './support/session';
  */
 test.describe(
   'KPost navigation — the nav rail routes correctly',
-  { tag: ['@ui', '@platform', '@regression'] },
+  {
+    annotation: [{ type: 'requirement', description: 'FR-SL-032' }],
+    tag: ['@ui', '@platform', '@regression'],
+  },
   () => {
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),
@@ -23,22 +26,30 @@ test.describe(
     });
 
     for (const link of NAV_LINKS) {
-      test(`clicking ${link.name} in the nav rail opens ${link.route} @ui`, async ({ page }) => {
-        await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-        await expect(
-          page.locator('.icon-KP_01-Home').first(),
-          'the nav rail is present',
-        ).toBeVisible({
-          timeout: 20_000,
-        });
+      // FR-KU-001 "Access Katchup from dashboard" is exactly the Katchup iteration of this loop.
+      const access =
+        link.name === 'Katchup' ? [{ type: 'requirement', description: 'FR-KU-001' }] : [];
 
-        await page.locator(link.icon).first().click();
+      test(
+        `clicking ${link.name} in the nav rail opens ${link.route} @ui`,
+        { annotation: access },
+        async ({ page }) => {
+          await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+          await expect(
+            page.locator('.icon-KP_01-Home').first(),
+            'the nav rail is present',
+          ).toBeVisible({
+            timeout: 20_000,
+          });
 
-        await expect(page, `${link.name} navigates to ${link.route}`).toHaveURL(
-          new RegExp(link.route.replace(/[/-]/g, '\\$&')),
-          { timeout: 15_000 },
-        );
-      });
+          await page.locator(link.icon).first().click();
+
+          await expect(page, `${link.name} navigates to ${link.route}`).toHaveURL(
+            new RegExp(link.route.replace(/[/-]/g, '\\$&')),
+            { timeout: 15_000 },
+          );
+        },
+      );
     }
   },
 );

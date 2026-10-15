@@ -107,26 +107,27 @@ test.describe(
       await removeOutsideContact(page, email).catch(() => undefined);
     });
 
-    test('search: typing a subject shows that mail, and text that matches nothing shows no mails @ui', async ({
-      page,
-      endpoints,
-    }) => {
-      const stamp = Date.now();
-      const subject = `QA KMail search ${stamp}`;
-      await seed(endpoints, subject);
-      await openKmail(page);
-      const search = page.locator('.Serach_input').first();
-      await search.fill(subject);
-      await expect(
-        page.getByText(subject, { exact: false }).first(),
-        'the searched mail is listed',
-      ).toBeVisible({ timeout: 30_000 });
-      await search.fill(`zzqa-nomatch-${stamp}`);
-      await expect(
-        page.getByText(subject, { exact: false }),
-        'text that matches no mail lists none of them',
-      ).toHaveCount(0, { timeout: 15_000 });
-    });
+    test(
+      'search: typing a subject shows that mail, and text that matches nothing shows no mails @ui',
+      { annotation: [{ type: 'requirement-partial', description: 'RTM-KMAIL-F04' }] },
+      async ({ page, endpoints }) => {
+        const stamp = Date.now();
+        const subject = `QA KMail search ${stamp}`;
+        await seed(endpoints, subject);
+        await openKmail(page);
+        const search = page.locator('.Serach_input').first();
+        await search.fill(subject);
+        await expect(
+          page.getByText(subject, { exact: false }).first(),
+          'the searched mail is listed',
+        ).toBeVisible({ timeout: 30_000 });
+        await search.fill(`zzqa-nomatch-${stamp}`);
+        await expect(
+          page.getByText(subject, { exact: false }),
+          'text that matches no mail lists none of them',
+        ).toHaveCount(0, { timeout: 15_000 });
+      },
+    );
 
     test('date filter: picking an earlier day reloads Recents from that day @ui', async ({
       page,

@@ -42,7 +42,7 @@ test.describe('KPost Katchup compose', { tag: ['@ui', '@katchup', '@regression']
 
   test(
     'open a conversation, open the composer, and enter a Subject + message (BR-K01) @ui',
-    { annotation: [{ type: 'requirement', description: 'BR-K01' }] },
+    { annotation: [{ type: 'requirement', description: 'BR-KU-SUBJECT' }] },
     async ({ page }) => {
       await openComposer(page);
 
