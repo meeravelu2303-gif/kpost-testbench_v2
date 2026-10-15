@@ -5,8 +5,9 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';
-import type { Browser, Page } from '@playwright/test';
+import type { Browser, Dialog, Page } from '@playwright/test';
 import { createQaGroup, deleteQaGroup, type QaGroup } from './support/groups';
+import { isKnownAppAlert } from './support/known-dialogs';
 
 /**
  * KMail features through the real screens (live-explored 2026-10-15):
@@ -328,7 +329,7 @@ test.describe(
       });
     }
 
-    test('Delete: B deletes a received mail from the opened mail and it disappears from B’s KMail @ui', async ({
+    test('Delete: B deletes a received mail from the opened mail and it is marked deleted (greyed out) in B’s KMail @ui', async ({
       page,
       browser,
     }) => {
@@ -345,26 +346,71 @@ test.describe(
         );
         // Delete asks with the browser's own confirm box (KmailMessage.js handleDeleteKmail →
         // window.confirm), which Playwright dismisses unless accepted — accept it, as a user would.
+        // Accept only the confirm box — the app's own microphone alerts (#1360) can arrive first.
         let confirmText = '';
-        b.once('dialog', (dialog) => {
+        const onDialog = (dialog: Dialog) => {
+          if (isKnownAppAlert(dialog) || dialog.type() !== 'confirm') {
+            void dialog.dismiss();
+            return;
+          }
           confirmText = dialog.message();
           void dialog.accept();
-        });
+        };
+        b.on('dialog', onDialog);
         await menu.getByText('Delete', { exact: true }).first().click();
         const res = await deleted;
+        b.off('dialog', onDialog);
         expect(confirmText, 'the app asks before deleting').toMatch(/delete/i);
         test.info().annotations.push({
           type: 'observed',
           description: `delete ${res.request().method()} ${res.url()} -> ${res.status()}`,
         });
         expect(res.status(), 'the delete is accepted').toBe(200);
+        // Reopen B's conversation with A after a reload and read what it lists (the Recents search is
+        // not a reliable check here: typed before the list loads it filters nothing — an earlier
+        // version of this test passed on that empty list).
         await b.reload({ waitUntil: 'domcontentloaded' });
         await waitLoaded(b);
-        await b.locator('.Serach_input').first().fill(subject);
+        await expect(b.getByText('Today', { exact: true }).first()).toBeVisible({
+          timeout: 30_000,
+        });
+        const thread = b.waitForResponse((r) => r.url().includes('/common/selectedContactMails'), {
+          timeout: 30_000,
+        });
+        await b
+          .getByText('Qatest1 Bench', { exact: true })
+          .filter({ visible: true })
+          .first()
+          .click();
+        // By design a deleted mail stays in the conversation, greyed out and closed (KmailMessageBox:
+        // isDeletedMail → class "deletedMail", never expands) — the server keeps the row with
+        // deleteByReceiver = "Y".
+        const data = (await (await thread).json()) as {
+          data?: {
+            kmailSubject?: string;
+            kmailTransactionList?: { receiver?: string; deleteByReceiver?: string }[];
+          }[];
+        };
+        const mail = (data.data ?? []).find((m) => m.kmailSubject === subject);
+        const flag = mail?.kmailTransactionList?.find(
+          (t) => t.receiver === testData.victimKpostId,
+        )?.deleteByReceiver;
+        const greyed = b
+          .locator('.deletedMail')
+          .filter({ hasText: subject })
+          .filter({ visible: true });
         await expect(
-          b.getByText(subject, { exact: false }),
-          'the deleted mail is gone from B’s KMail',
-        ).toHaveCount(0, { timeout: 15_000 });
+          greyed,
+          'the deleted mail is shown greyed out in B’s conversation',
+        ).toHaveCount(1, { timeout: 20_000 });
+        const shot = test.info().outputPath('after-delete.png');
+        await b.screenshot({ path: shot });
+        await test.info().attach('after-delete', { path: shot, contentType: 'image/png' });
+        test.info().annotations.push({
+          type: 'observed',
+          description: `after delete: listed=${Boolean(mail)} deleteByReceiver=${String(flag)}`,
+        });
+        expect(flag, 'the server records the mail as deleted by B').toBe('Y');
       } finally {
         await context.close();
       }

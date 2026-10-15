@@ -2,6 +2,7 @@ import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { isKnownAppAlert } from './support/known-dialogs';
 import { settleFrames } from './support/settle';
 
 /**
@@ -77,7 +78,7 @@ test.describe(
       const stopSender = watchUiHealth(page);
       let dialogFiredSender = false;
       page.on('dialog', (dialog) => {
-        dialogFiredSender = true;
+        if (!isKnownAppAlert(dialog)) dialogFiredSender = true;
         void dialog.dismiss();
       });
 
@@ -142,7 +143,7 @@ test.describe(
         const stopReceiver = watchUiHealth(receiver);
         let dialogFiredReceiver = false;
         receiver.on('dialog', (dialog) => {
-          dialogFiredReceiver = true;
+          if (!isKnownAppAlert(dialog)) dialogFiredReceiver = true;
           void dialog.dismiss();
         });
 

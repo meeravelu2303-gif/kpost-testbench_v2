@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { isKnownAppAlert } from './support/known-dialogs';
 import { settleFrames } from './support/settle';
 
 /**
@@ -45,7 +46,7 @@ test.describe(
         const stop = watchUiHealth(page);
         let dialogFired = false;
         page.on('dialog', (dialog) => {
-          dialogFired = true;
+          if (!isKnownAppAlert(dialog)) dialogFired = true;
           void dialog.dismiss();
         });
 
