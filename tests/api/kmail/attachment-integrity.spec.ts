@@ -52,7 +52,7 @@ test.describe(
       const expected = createHash('sha256').update(content).digest('hex');
       const fileName = `qa-integrity-${Date.now()}.pdf`;
       let uuid: string | undefined;
-      let transactionIDs: number[] = [];
+      let kmailID: number | undefined;
       try {
         const presign = await endpoints.sendTo(
           'aws-generate-presigned',
@@ -93,12 +93,7 @@ test.describe(
         const body = (parsed.ok ? parsed.value : {}) as Record<string, unknown>;
         const row = (Array.isArray(body.data) ? body.data[0] : body.data) as
           Record<string, unknown> | undefined;
-        const txns = row?.kmailTransactionList;
-        transactionIDs = Array.isArray(txns)
-          ? (txns as Array<Record<string, unknown>>)
-              .map((t) => t.transactionID)
-              .filter((v): v is number => typeof v === 'number')
-          : [];
+        kmailID = typeof row?.kmailID === 'number' ? row.kmailID : undefined;
 
         for (const [who, as] of [
           ['the sender (control)', A],
@@ -133,14 +128,60 @@ test.describe(
               { label: 'integrity:cleanup-file', auth: { principal: A }, allowLiveWrite: true },
             )
             .catch(() => undefined);
-        if (transactionIDs.length)
-          await endpoints
-            .sendTo(
-              'kmail-delete',
-              { body: { groupFlag: false, transactionIDs } },
-              { label: 'integrity:cleanup-mail', auth: { principal: A }, allowLiveWrite: true },
+        // postMail's reply carries no transaction list, so each side's transaction ids are read from
+        // that side's own conversation view, and each side deletes its own copy.
+        if (kmailID)
+          for (const [as, other] of [
+            [A, B.username],
+            [B, A.username],
+          ] as const) {
+            const view = await endpoints
+              .sendTo(
+                'kmail-selected-contact-mails',
+                {
+                  body: {
+                    selectedContact: other,
+                    fetchMailType: 'A',
+                    groupFlag: false,
+                    lastKmailID: null,
+                    firstKmailID: null,
+                    count: 30,
+                  },
+                },
+                {
+                  label: `integrity:cleanup-view:${as.key}`,
+                  auth: { principal: as },
+                  allowLiveRead: true,
+                },
+              )
+              .catch(() => undefined);
+            const viewJson = view?.json();
+            const mails = ((viewJson?.ok ? (viewJson.value as { data?: unknown }).data : []) ??
+              []) as Array<{
+              kmailID?: number;
+              kmailTransactionList?: Array<{ transactionID?: number }>;
+            }>;
+            const transactionIDs = (
+              mails.find((m) => m.kmailID === kmailID)?.kmailTransactionList ?? []
             )
-            .catch(() => undefined);
+              .map((t) => t.transactionID)
+              .filter((v): v is number => typeof v === 'number');
+            console.log(
+              `INTEGRITY cleanup ${as.key}: deleting ${transactionIDs.length} transaction(s)`,
+            );
+            if (transactionIDs.length)
+              await endpoints
+                .sendTo(
+                  'kmail-delete',
+                  { body: { groupFlag: false, transactionIDs } },
+                  {
+                    label: `integrity:cleanup-mail:${as.key}`,
+                    auth: { principal: as },
+                    allowLiveWrite: true,
+                  },
+                )
+                .catch(() => undefined);
+          }
       }
     });
   },

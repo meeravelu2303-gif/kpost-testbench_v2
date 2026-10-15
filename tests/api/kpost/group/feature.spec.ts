@@ -476,7 +476,7 @@ test.describe(
             .soft(
               admins.length,
               `FR-GM-014: the group must retain at least one admin after the sole admin's exit ` +
-                `attempt (exit answered ${exit.status})`,
+                `attempt (exit answered ${exit.status} — #1366)`,
             )
             .toBeGreaterThan(0);
         } finally {
@@ -561,7 +561,7 @@ test.describe(
           .soft(
             created.status,
             `FR-GC-006: a group with only its creator (no other member) must be rejected ` +
-              `(createUserGroup replied ${created.status})`,
+              `(createUserGroup replied ${created.status} — #1369)`,
           )
           .toBeGreaterThanOrEqual(400);
       },
@@ -645,5 +645,140 @@ test.describe(
         }
       },
     );
+
+    /*
+     * FR-GM-014 as the owner states it (Meera, 2026-10-15): a promoted admin has exactly the creator's
+     * rights, and NO admin may exit — admins remove members; only a member exits. (The FRD's older
+     * wording blocked only the SOLE admin; the web app follows that wording, the server checks nothing.)
+     *
+     * Each case uses its own group with a SECOND admin who stays, so even when the server wrongly lets
+     * the leaver go the group keeps an admin and is cleaned up by that admin — nothing is orphaned.
+     * The sole-admin case (which does orphan a group while the bug exists) stays opt-in above.
+     */
+    for (const [leaverKey, label] of [
+      ['creator', 'the creator, while a promoted co-admin remains'],
+      ['co-admin', 'a promoted co-admin, while the creator remains'],
+    ] as const) {
+      test(
+        `an admin cannot exit the group — ${label} (FR-GM-014) @api @group @security`,
+        { annotation: [{ type: 'requirement', description: 'FR-GM-014' }] },
+        async ({ endpoints }) => {
+          const leaver = leaverKey === 'creator' ? A : C;
+          const stayer = leaverKey === 'creator' ? C : A;
+          const rowsAs = async (who: Principal, gk: string) =>
+            ((await groupDetails(endpoints, who, gk)).memberDetails ?? []) as Array<{
+              id: number;
+              kpostID: string;
+              hasAdminAccess?: string;
+              removedFlag?: boolean;
+            }>;
+          let groupID: number | undefined;
+          let groupKpostID: string | undefined;
+          try {
+            const created = await as(
+              endpoints,
+              A,
+              'group-create',
+              {
+                ...createBody(),
+                memberDetails: [member(C.username), member(A.username, true)],
+              },
+              `create-${leaverKey}-exit`,
+            );
+            groupID = created.data.groupID as number | undefined;
+            groupKpostID = created.data.groupKpostID as string | undefined;
+            expect(groupID && groupKpostID, 'the group is created').toBeTruthy();
+            if (!groupID || !groupKpostID) return;
+
+            // C becomes a co-admin — the same rights as the creator.
+            const cRow = (await rowsAs(A, groupKpostID)).find((m) => m.kpostID === C.username);
+            const promote = await as(
+              endpoints,
+              A,
+              'group-admin-access',
+              { kpostIDs: [C.username], ids: [cRow?.id ?? 0], groupID, hasAdminAccess: 'Y' },
+              'promote-co-admin',
+            );
+            expect(promote.status, 'C is promoted to co-admin').toBeLessThan(300);
+            const admins = (await rowsAs(A, groupKpostID))
+              .filter((m) => m.removedFlag !== true && m.hasAdminAccess === 'Y')
+              .map((m) => m.kpostID);
+            expect(admins.sort(), 'the group has two admins').toEqual(
+              [A.username, C.username].sort(),
+            );
+
+            const ownRow = (await rowsAs(A, groupKpostID)).find(
+              (m) => m.kpostID === leaver.username,
+            );
+            const exit = await as(
+              endpoints,
+              leaver,
+              'group-leave',
+              { id: String(ownRow?.id), groupID, groupKpostID },
+              `${leaverKey}-exit`,
+            );
+            const after = await rowsAs(stayer, groupKpostID);
+            const stillAdmin = after.some(
+              (m) =>
+                m.kpostID === leaver.username && m.removedFlag !== true && m.hasAdminAccess === 'Y',
+            );
+            test.info().annotations.push({
+              type: 'observed',
+              description: `${label}: exit answered ${exit.status} ${JSON.stringify(exit.data).slice(0, 100)}; still an admin afterwards: ${stillAdmin}`,
+            });
+            expect(
+              stillAdmin,
+              `FR-GM-014: an admin cannot exit — ${label} must stay an admin (exit answered ${exit.status} — #1366)`,
+            ).toBe(true);
+          } finally {
+            if (groupID && groupKpostID) {
+              // Clean up as whichever admin is still active (the leaver may be gone).
+              for (const who of [A, C]) {
+                const rows = await rowsAs(who, groupKpostID).catch(() => []);
+                const me = rows.find(
+                  (m) =>
+                    m.kpostID === who.username &&
+                    m.removedFlag !== true &&
+                    m.hasAdminAccess === 'Y',
+                );
+                if (!me) continue;
+                const others = rows
+                  .filter((m) => m.removedFlag !== true && m.kpostID !== who.username)
+                  .map((m) => m.kpostID);
+                if (others.length)
+                  await as(
+                    endpoints,
+                    who,
+                    'group-remove-member',
+                    { memberKpostIdList: others, groupKpostID, groupID },
+                    'cleanup-remove',
+                  ).catch(() => undefined);
+                const deleted = await as(
+                  endpoints,
+                  who,
+                  'group-delete',
+                  { groupID, groupKpostID },
+                  'cleanup-delete',
+                ).catch(() => ({ status: 0, data: {} }));
+                expect
+                  .soft(deleted.status, 'the test group is deleted (nothing left behind)')
+                  .toBe(200);
+                break;
+              }
+              // A group the creator has left still shows in the creator's own group list until the
+              // creator deletes it too (live 2026-10-15: the co-admin's delete answered 200, yet the
+              // group remained listed for qatest1), so the creator always deletes last, best-effort.
+              await as(
+                endpoints,
+                A,
+                'group-delete',
+                { groupID, groupKpostID },
+                'cleanup-creator-delete',
+              ).catch(() => undefined);
+            }
+          }
+        },
+      );
+    }
   },
 );

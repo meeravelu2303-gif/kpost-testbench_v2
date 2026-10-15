@@ -201,7 +201,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
 
   test(
     'the To: field takes a single recipient; extra people go to Cc (FR-KM-005) @api @kmail',
-    { annotation: [{ type: 'requirement-partial', description: 'FR-KM-005' }] },
+    { annotation: [{ type: 'requirement', description: 'FR-KM-005' }] },
     async ({ endpoints }) => {
       /*
        * FR-KM-005 — Enforce Single Recipient in To:. The mail model carries exactly ONE `toAddress`
@@ -226,6 +226,34 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
       expect.soft(sent.status, 'a single-TO + Cc send is accepted').toBeLessThan(300);
       expect.soft(sent.kmailID, 'a kmailID is issued').toBeTruthy();
       await del(endpoints, A, sent.transactionIDs);
+
+      /*
+       * The rule's other half: a SECOND address in To must be refused. Live 2026-10-15 (3/3) a
+       * comma-separated To answers HTTP 200 "SUCCESS" while the reply's own mailDeliveryStatus is
+       * "FAILURE" and nobody receives it — #1365. Asserted as the correct behaviour (red until fixed).
+       * Nothing to clean up: such a send creates no recipient transactions.
+       */
+      const twoTo = await endpoints.sendTo(
+        'kmail-post-mail',
+        {
+          body: mailShape({
+            toAddress: `${B.username},${C.username}`,
+            kmailSubject: `QA two-To ${Date.now()}`,
+          }),
+        },
+        { label: 'kmail:two-to', auth: { principal: A }, allowLiveWrite: true },
+      );
+      const twoToJson = twoTo.json();
+      const twoToRow = row((twoToJson.ok ? twoToJson.value : {}) as Record<string, unknown>);
+      test.info().annotations.push({
+        type: 'observed',
+        description: `two-address To: HTTP ${twoTo.status}, mailDeliveryStatus ${String(twoToRow.mailDeliveryStatus)}`,
+      });
+      expect(
+        twoTo.status,
+        `FR-KM-005: a To with two addresses must be refused, not reported as sent (#1365 — replied ` +
+          `${twoTo.status}, mailDeliveryStatus ${String(twoToRow.mailDeliveryStatus)})`,
+      ).toBeGreaterThanOrEqual(400);
     },
   );
 

@@ -187,6 +187,37 @@ test.describe(
       },
     );
 
+    test(
+      'a mail sent with the default priority arrives as Low — only High carries the high flag',
+      {
+        annotation: [
+          { type: 'requirement', description: 'FR-KM-010' },
+          { type: 'requirement', description: 'FR-KM-011' },
+        ],
+      },
+      async ({ endpoints }) => {
+        // The composer's default when no priority is picked is `selectedPriorityId || 0` = Low
+        // (WriteMailPage.js) — so this sends exactly what an untouched Write Mail sends.
+        const kmailID = await send(endpoints, {
+          kmailSubject: `QA priority default ${Date.now()}`,
+          priority: KMAIL_PRIORITY.low,
+        });
+        const asB = await rowFor(endpoints, B, A.username, kmailID);
+        try {
+          expect(asB?.priority, 'a default-priority mail arrives as Low').toBe(KMAIL_PRIORITY.low);
+          expect(asB?.priority, 'and it does not carry the High flag').not.toBe(
+            KMAIL_PRIORITY.high,
+          );
+        } finally {
+          await deleteSide(
+            endpoints,
+            A,
+            (asB?.kmailTransactionList ?? []).map((t) => t.transactionID),
+          );
+        }
+      },
+    );
+
     test('opening a mail marks it read: it leaves "sent, not opened" and the unread count drops', async ({
       endpoints,
     }) => {

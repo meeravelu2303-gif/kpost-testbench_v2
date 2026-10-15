@@ -507,6 +507,84 @@ test.describe(
     });
 
     test(
+      'a scheduled call keeps the exact title, start and end it was given, and records every invitee (FR-KL-002) @api @kall',
+      { annotation: [{ type: 'requirement', description: 'FR-KL-002' }] },
+      async ({ endpoints, databases }) => {
+        /*
+         * Hard assertions on what the "finding-only" checks above leave soft. The scheduled call's
+         * returned row must carry exactly the subject / start / end that were sent (millisecond times —
+         * live 2026-10-15 they match exactly), its invitee (B) must be recorded, and a member added
+         * later with modifyKallMembers (C) must be recorded too. The participant rows are also read
+         * from TBL_KPOST_KOOL_KALL_DETAILS when the database is enabled. (The master table's DATETIME
+         * columns are stored without a zone, so they are NOT compared — the API values are.)
+         */
+        const database = databases.for('kpost-api');
+        const sent = scheduleShape({
+          subject: `QA schedule fields ${Date.now()}`,
+          kallDetails: [{ receiver: B.username }],
+        });
+        try {
+          const scheduled = await endpoints.sendTo(
+            'kall-scheduled',
+            { body: sent },
+            { label: 'feature:kall:fields-schedule', auth: { principal: A }, allowLiveWrite: true },
+          );
+          expect(scheduled.status, 'scheduling the call succeeds').toBe(200);
+          const parsed = scheduled.json();
+          const body = (parsed.ok ? parsed.value : {}) as Record<string, unknown>;
+          const row = (Array.isArray(body.data) ? body.data[0] : body.data) as
+            Record<string, unknown> | undefined;
+          const kallID = extractKallId(body);
+          expect(kallID, 'the scheduled call issues a kallID').toBeTruthy();
+          expect(row?.subject, 'the call keeps the exact title it was given').toBe(sent.subject);
+          expect(
+            Date.parse(String(row?.scheduledStartTime)),
+            'the call keeps the exact start time it was given',
+          ).toBe(sent.scheduledStartTime);
+          expect(
+            Date.parse(String(row?.scheduledEndTime)),
+            'the call keeps the exact end time it was given',
+          ).toBe(sent.scheduledEndTime);
+          const invitees = (row?.kallDetails ?? []) as Array<{ receiver?: string }>;
+          expect(
+            invitees.map((d) => d.receiver),
+            'the invitee is recorded on the call',
+          ).toContain(B.username);
+          if (!kallID) return;
+
+          const modified = await endpoints.sendTo(
+            'kall-modify-members',
+            { body: { kallID, addingUserIds: [C.username], removingUserIds: [] } },
+            { label: 'feature:kall:fields-add', auth: { principal: A }, allowLiveWrite: true },
+          );
+          expect(modified.status, 'adding a participant is accepted').toBe(200);
+          const mParsed = modified.json();
+          const mBody = (mParsed.ok ? mParsed.value : {}) as Record<string, unknown>;
+          const mRow = (Array.isArray(mBody.data) ? mBody.data[0] : mBody.data) as
+            Record<string, unknown> | undefined;
+          const after = ((mRow?.kallDetails ?? []) as Array<{ receiver?: string }>).map(
+            (d) => d.receiver,
+          );
+          expect(after, 'the original invitee is still recorded').toContain(B.username);
+          expect(after, 'the added participant is recorded as an invitee').toContain(C.username);
+
+          if (database.enabled) {
+            const rows = await database.findMany<{ receiver: string }>({
+              table: 'TBL_KPOST_KOOL_KALL_DETAILS',
+              where: { kall_id: kallID },
+            });
+            expect(
+              rows.map((r) => r.receiver).sort(),
+              'the database holds exactly one participant row for each invitee',
+            ).toEqual([B.username, C.username].sort());
+          }
+        } finally {
+          await clearHistory(endpoints, [A, B, C]);
+        }
+      },
+    );
+
+    test(
       'scheduledKall requires title/date/start/end — missing a required field is blocked (FR-KL-001) @api @kall',
       { annotation: [{ type: 'requirement', description: 'FR-KL-001' }] },
       async ({ endpoints }) => {

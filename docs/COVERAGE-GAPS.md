@@ -1,5 +1,46 @@
 # Coverage gaps — requirements vs the in-scope run-level suite
 
+## Current status — re-measured 2026-10-15 (supersedes the 2026-10-13 analysis below)
+
+Measured by the annotation-driven generator (`npm run lint:tags -- --report` → `reports/rtm.xlsx`), which
+counts a requirement **Covered** only when a test that asserts its acceptance criterion is linked to it.
+
+|                       | 2026-10-13 doc                | Re-measured 2026-10-15, before | 2026-10-15, after                            |
+| --------------------- | ----------------------------- | ------------------------------ | -------------------------------------------- |
+| Requirements in scope | 139                           | 139                            | **142** (3 bolded FRD rows had been dropped) |
+| Verified Covered      | "91 = 65 %" (FRD's own claim) | 48 = 35 %                      | **92 = 65 %**                                |
+| Partial / Not covered | 34 / 14                       | 39 / 52                        | 39 / 11                                      |
+| In-scope tests        | 831                           | 915                            | 922                                          |
+
+Per module (excl. out-of-scope): Content 100 %, Group 86 %, Signup/Login 77 %, Katchup 65 %, KMail 64 %,
+Security 60 %, Kall 47 %, KDirectory 38 %, Journeys 0 % (Partial).
+
+**How links work now.** `annotation: [{ type: 'requirement', description: 'FR-…' }]` = the test asserts the
+criterion; `type: 'requirement-partial'` = it proves only an entry point, a status or one half (caps the
+requirement at Partial). Ids are checked against the requirement rows — an unknown id appears on the
+"Unknown links" sheet and as a lint:tags WARN.
+
+**Closed this round (each verified 2/2 live in isolation):** the already-built P1 specs (journey, real-time
+receive, KMail reply/forward, Kall IDOR, token security, content correctness) linked; KMail composer controls
+(#990 fixed) + To suggestions; Tamil/Hindi/emoji/long body round-trip to the recipient; attachment byte
+integrity (SHA-256, Katchup + KMail); group add/remove/exit arithmetic; Kall exact fields + invitees; KMail
+priority (High + default Low); FR-KM-005 and BR-M01 hard-asserted (red on #1365 / #1359); edited-token expiry
+refusal (RTM-SEC02).
+
+**Still open, buildable:** RTM-SEC02 genuine expired-token refusal (runs once a QA token in the bench history is
+past its exp); FR-KD-004 contact count; FR-SL-025 identified user on the password step; Katchup Copy/Save/Reminder/
+Transfer completions (entry only); FR-KL-005/007 (WebRTC-limited / tab only); RTM-E2E01 first KMail in the journey.
+
+**Blocked — documented, not chased:** connected Kall / WebRTC (RTM-KALL-A01..A04, FR-KL-009); password-reset
+single use (RTM-SEC03 — spare account missing, #821-824, OTP bypass); KMail folders, server-side search,
+restore (RTM-KMAIL-F03/F04/F05 — no endpoint); signup/OTP remainder (FR-SL-016..018, 031).
+
+**Group exit rule — decided by Meera 2026-10-15:** a promoted admin has the creator's rights and no admin may exit; admins remove members, only members exit. Asserted on every run; violated → #1366 (API) / #1367 (UI). **FR-GC-006 decided (Meera 2026-10-15):** a group needs the creator and at least one member; the app enforces it, the API does not → #1369.
+
+---
+
+## 2026-10-13 analysis (superseded — kept for its gap descriptions)
+
 Analysis companion to `reports/rtm.xlsx`. **Analysis only** — no tests were written, executed, or
 committed to produce it. Generated 2026-10-13 against the **831 in-scope run-level tests** (Admin and
 `@framework` excluded; the ~6,700 generated contract-matrix cases collapse to 82 deduped rows).

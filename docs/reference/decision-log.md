@@ -3,7 +3,54 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-11 (latest) — Bench-wide response-schema sweep; "all tests on all 201" is not a real target
+### 2026-10-15 (latest) — RTM re-measured and linked (35% → 65%); coverage gaps closed and verified live
+
+**Owner:** "close the requirements-traceability / coverage gaps; verify everything live, don't just author tests."
+
+**Re-measured first.** The 2026-10-13 COVERAGE-GAPS.md figure (65%) was the FRD's own claim; the generator's
+verified figure on the unchanged tree was **48/139 = 35%**. Three generator faults hid coverage: bolded FRD rows
+(`**FR-KU-017..024**`, FR-GM-014, FR-KM-005) were dropped (now 142 rows); the "Where" parser stripped dots so no
+FRD-named spec ever resolved; and analyst-assigned `RTM-*` statuses predated this week's specs.
+
+**Decision — two link strengths, not one.** `annotation type 'requirement'` = the test asserts the acceptance
+criterion; new `'requirement-partial'` = it proves only an entry point / a status / one half, and caps the
+requirement at Partial. Every link was read before it was added (the 10-13 reviewer had reverted over-graded
+status-only links). Annotation ids are now validated against the requirement rows ("Unknown links" sheet + a
+lint:tags WARN); legacy SRS ids were renamed (BR-K01→BR-KU-SUBJECT, FR-M01→FR-KM-018/019, FR-K07→RTM-KU-M03).
+Final verified coverage **92/142 = 65%** (Content 100%, Group 86%, Signup/Login 77%, Katchup 65%, KMail 64%, Kall 47%).
+
+**Built / strengthened (each 2/2 live in isolation):** KMail composer controls run again (#990 fixed) + To
+suggestions (FR-KM-003/004); recipient-side Tamil/Hindi/emoji/long-body round-trip; byte-integrity (SHA-256)
+attachment specs for Katchup and KMail (new `bodyDigest` on the API response wrapper — `bodyText` is lossy);
+group member arithmetic (FR-GM-010/011/015); Kall exact title/start/end + invitees (FR-KL-002); KMail default/High
+priority; FR-KM-005 two-address To; BR-M01 read receipt (new two-session UI spec); token-expiry tamper checks
+(RTM-SEC02). FR-KL-001 now enforced (fixed via #1314/#1315).
+
+**Filed:** #1364 (KPost API — every Katchup file read takes 10-12 s; previews 32-35 s), #1365 (KMail API — two
+To addresses: 200 "SUCCESS", delivered to nobody). **Commented:** #1364 (UI impact), #1359 (read receipt 3/3 broken,
+open returns the empty #1348 record). **Not filed, for Meera:** FR-GM-014 sole-admin exit leaves a zero-admin group
+(the old check was vacuous — it exited with id '0', which the server rejects; genuine attempt now opt-in
+`GROUP_SOLE_ADMIN_EXIT=true`; group 5214 orphaned) and FR-GC-006 creator-only groups (accepted, and undeletable —
+400 "invalid Parameters" — until a member is added and removed).
+
+**Bench faults fixed:** `group-leave` with `id:'0'` in three specs (cleanup silently failed → a group leaked per
+run; 15 leftovers swept); KMail cleanup keyed on `postMail`'s transaction list, which the reply no longer carries;
+presigned-attachment-workflow did not parse the JSON presign envelope; the content attachment check read the PNG
+placeholder (preview now polled; the thread shows a server-derived 100x100 PNG thumbnail).
+
+**Group exit rule decided (Meera, later the same day):** a promoted admin has exactly the creator's rights and NO
+admin may exit — admins remove members, only a plain member exits (supersedes the FRD's "sole admin" wording, which the
+web app follows). Asserted on every run without orphaning anything (creator-exit and co-admin-exit each on a group that
+keeps a second admin; sole-admin case stays opt-in). Live: every admin exit is accepted → **#1366** (KPost API) and
+**#1367** (KPost UI offers Exit Group to a co-admin); a plain member's exit works but then crashes the whole screen
+(TypeError reading 'group') → **#1368**. New UI spec `group-exit-e2e.spec.ts` (red on #1367/#1368). **FR-GC-006 decided
+(Meera):** a group must be created with the creator and at least one member. The app enforces it (no Create without a
+member, checked 2/2); the API accepts a creator-only group, which then cannot be deleted → **#1369**.
+
+**Left blocked, documented:** connected Kall/WebRTC (RTM-KALL-A01..A04), password-reset reuse (RTM-SEC03 — spare
+account missing, OTP bypass), KMail folders / server search / restore (no endpoint), signup/OTP remainder.
+
+### 2026-10-11 — Bench-wide response-schema sweep; "all tests on all 201" is not a real target
 
 **Owner:** "cover all types of test for all 201 endpoints, don't miss any bug, regenerate the Word doc."
 Analysed the coverage matrix module-by-module and separated genuinely-closeable gaps from by-design

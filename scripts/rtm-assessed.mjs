@@ -8,7 +8,8 @@ export const ASSESSED = [
     summary: 'Connected A→B call: ring → accept → hang-up on both sides',
     status: 'Not covered',
     files: [],
-    notes: 'WebRTC peer never connects on this bench (FR-KL-009): kallStart/End/Duration null.',
+    notes:
+      'BLOCKED (bench limit): no WebRTC peer connects here, so kallStartTime/EndTime/Duration stay null through initiate->end (FR-KL-009). Needs a real two-party media harness.',
   },
   {
     id: 'RTM-KALL-A02',
@@ -190,8 +191,9 @@ export const ASSESSED = [
     module: 'Security',
     summary: 'Session / token expiry enforced',
     status: 'Partial',
-    files: ['login-token-security'],
-    notes: 'JWT expiry + expired-token rejected; server-side idle timeout not driven.',
+    files: ['login-token-security', 'signup-login/session-expiry'],
+    notes:
+      'JWT bounded (24 h) + logout revokes server-side + edited exp (extended / back-dated) refused 401 (session-expiry, 2/2 2026-10-15). Genuinely-expired-token refusal skips until a QA token in the bench history ages past exp. No idle timeout exists server-side (AuthenticationFilter) and none is required.',
   },
   {
     id: 'RTM-SEC03',
@@ -199,7 +201,8 @@ export const ASSESSED = [
     summary: 'Password-reset link cannot be reused',
     status: 'Not covered',
     files: [],
-    notes: 'Blocked: spare forgot-password account broken (#821-824).',
+    notes:
+      'BLOCKED: password-reset single-use needs a working spare account (QA_FORGOT_PASSWORD_KPOST_ID does not exist on the test server — #821-824) and a real SMS OTP (the test gateway accepts a fixed bypass code).',
   },
   {
     id: 'RTM-SEC04',
