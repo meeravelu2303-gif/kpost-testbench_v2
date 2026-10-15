@@ -59,8 +59,9 @@ test.describe(
       await to.click();
       await to.fill(id);
       await page
+        .locator('.suggestion-dropdown')
         .getByText(id, { exact: false })
-        .last()
+        .first()
         .click({ timeout: 4_000 })
         .catch(() => undefined);
       // The To suggestion list stays open after a pick and covers the message editor (live
@@ -69,9 +70,17 @@ test.describe(
     }
 
     async function fillSubjectBody(page: Page, subject: string, body: string): Promise<void> {
-      await page.locator('.toInput').first().fill(subject);
+      const box = page.locator('.toInput').first();
+      // Type it like a user: in Firefox, after the "Mail With Copies" picker, Playwright's fill()
+      // leaves this field empty while real typing works (checked 2026-10-15) — not an app bug.
+      await box.click();
+      await page.keyboard.type(subject);
+      await expect(box, 'the subject is typed').toHaveValue(subject);
       await page.locator('.ql-editor[contenteditable="true"]').first().click();
       await page.keyboard.type(body);
+      await expect(box, 'the subject is still there after typing the mail text').toHaveValue(
+        subject,
+      );
     }
 
     /** Press the compose send button and return the postMail request body + status. */

@@ -95,8 +95,9 @@ test.describe(
       await box.click();
       await box.fill(to);
       await page
+        .locator('.suggestion-dropdown')
         .getByText(to, { exact: false })
-        .last()
+        .first()
         .click({ timeout: 4_000 })
         .catch(() => undefined);
       await page.keyboard.press('Escape').catch(() => undefined);

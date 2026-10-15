@@ -102,8 +102,9 @@ test.describe(
         // Pick the recipient from the suggestion dropdown if one surfaces (the click waits for it; the
         // typed value alone may not register the recipient). Best-effort — some builds accept raw text.
         await page
+          .locator('.suggestion-dropdown')
           .getByText(testData.victimKpostId, { exact: false })
-          .last()
+          .first()
           .click({ timeout: 4_000 })
           .catch(() => undefined);
 

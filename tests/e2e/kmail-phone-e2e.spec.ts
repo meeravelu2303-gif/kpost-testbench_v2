@@ -119,9 +119,9 @@ test.describe(
       await to.click();
       await to.fill(testData.personal3KpostId);
       await page
+        .locator('.suggestion-dropdown')
         .getByText(testData.personal3KpostId, { exact: false })
-        .filter({ visible: true })
-        .last()
+        .first()
         .click({ timeout: 4_000 })
         .catch(() => undefined);
       await page.keyboard.press('Escape').catch(() => undefined);

@@ -96,9 +96,14 @@ test.describe(
       page,
     }) => {
       await openKmail(page);
-      const reload = page.waitForRequest((r) => r.url().includes('/common/getKmailDashboardMsg'), {
-        timeout: 20_000,
-      });
+      // Only the date-driven reload carries "selectedDate"; ordinary list refreshes ({"kmailID":…})
+      // can still be in flight after the page loads (seen in Firefox) and must not be mistaken for it.
+      const reload = page.waitForRequest(
+        (r) =>
+          r.url().includes('/common/getKmailDashboardMsg') &&
+          (r.postData() ?? '').includes('selectedDate'),
+        { timeout: 20_000 },
+      );
       await page.locator('.Date_alignment').first().click();
       const cal = page.locator('.react-calendar').first();
       await expect(cal, 'the calendar opens').toBeVisible({ timeout: 10_000 });
@@ -155,8 +160,9 @@ test.describe(
         await to.click();
         await to.fill(testData.kpostId);
         await sender
+          .locator('.suggestion-dropdown')
           .getByText(testData.kpostId, { exact: false })
-          .last()
+          .first()
           .click({ timeout: 4_000 })
           .catch(() => undefined);
         await sender.keyboard.press('Escape').catch(() => undefined);

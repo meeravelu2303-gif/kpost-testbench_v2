@@ -105,7 +105,11 @@ test.describe(
         await openCompose(page);
         const aiCalls: string[] = [];
         page.on('request', (r) => {
-          if (/ai|prompt|generate|openai|gpt/i.test(new URL(r.url()).pathname))
+          // ComposeAssist's actions all go through TanslateMessage → /translator/translation/; also
+          // catch any whole "ai"/"prompt"/"generate"/"gpt" path segment. (Match segments, not
+          // substrings: "getKmailDashboardMsg" and font file names contain the letters "ai".)
+          const p = new URL(r.url()).pathname;
+          if (/\/translator\/translation|\/(ai|prompt|generate|openai|gpt)(\/|$)/i.test(p))
             aiCalls.push(r.url());
         });
 

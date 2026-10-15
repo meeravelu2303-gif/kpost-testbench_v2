@@ -60,8 +60,9 @@ test.describe(
       await to.click();
       await to.fill(testData.victimKpostId);
       await page
+        .locator('.suggestion-dropdown')
         .getByText(testData.victimKpostId, { exact: false })
-        .last()
+        .first()
         .click({ timeout: 4_000 })
         .catch(() => undefined);
       await page.keyboard.press('Escape').catch(() => undefined);
