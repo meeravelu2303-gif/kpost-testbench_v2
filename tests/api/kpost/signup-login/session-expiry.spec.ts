@@ -10,13 +10,14 @@ import { decodeJwt, jwtSubject } from '@utils/jwt';
  * 2026-10-15): every protected call needs (a) a JWT that verifies against the server's signing key
  * and is not past its `exp` ("Token has expired" → 401), and (b) a still-active device session row
  * for that token (`loginSessionRepository.getDeviceLoginIDs`) — so logout revokes server-side
- * (BR-SL-LOGOUT, login-flow / login-token-security). There is NO idle/inactivity timeout: a token
- * that is simply not used stays valid until its `exp` (24 h, measured — login-token-security). No
- * FRD/BRD requirement asks for one, so that is recorded as a design fact, not tested as a defect.
+ * (BR-SL-LOGOUT, login-flow / login-token-security).
  *
- * So this spec checks the two things a client could try against expiry, read-only, on the caller's
- * own session list (`getActiveSession`, which takes the account from the token):
- *   1. control — the bench's live token for qatest1 is accepted;
+ * Lifetime rule (owner, Meera 2026-10-16): a token is valid for exactly 24 h from issue, whether it is
+ * used or not, and then expires on its own. There is no separate idle timeout, and none is required.
+ *
+ * Checked read-only, on the caller's own session list (`getActiveSession`, which takes the account
+ * from the token):
+ *   1. control — the bench's live token for qatest1 is accepted, and expires exactly 24 h after issue;
  *   2. a genuinely EXPIRED token (the bench's own token history — a QA account's token minted on an
  *      earlier run and now past its exp) is refused;
  *   3. the live token with its `exp` pushed 30 days out (signature unchanged) is refused — a session
@@ -69,8 +70,15 @@ test.describe(
           ([k]) => k.toLowerCase() === 'authorization',
         )?.[1] ?? '';
       const [scheme, token] = authHeader.split(' ') as [string, string];
-      const exp = decodeJwt(token ?? '')?.payload.exp;
+      const claims = decodeJwt(token ?? '')?.payload;
+      const exp = claims?.exp;
       expect(typeof exp, 'the live token carries an exp').toBe('number');
+      // The requirement (owner, 2026-10-16): a token is valid for exactly 24 hours from issue, used or
+      // not — it expires on its own; there is no separate idle timeout.
+      expect(
+        Number(exp) - Number(claims?.iat),
+        'the token expires exactly 24 hours (86 400 s) after it was issued',
+      ).toBe(86_400);
 
       // 3) exp pushed 30 days out, original signature: must be refused (signature no longer matches).
       const extended = await read(
