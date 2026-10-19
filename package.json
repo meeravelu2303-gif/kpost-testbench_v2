@@ -16,6 +16,7 @@
     "test:smoke:api": "node scripts/run-level.mjs --level smoke --suite api",
     "test:smoke:ui": "node scripts/run-level.mjs --level smoke --suite ui",
     "test:sanity": "node scripts/run-level.mjs --level sanity",
+    "test:journeys": "cross-env QATEST_ONLY=true BUGZILLA_DRY_RUN=true TEST_DB_MODE=true OTP_TEST_GATEWAY=true SIGNUP_UI_LIFECYCLE=true KATCHUP_LIFECYCLE=true LOGIN_UI_LIFECYCLE=true PROFILE_UI_LIFECYCLE=true KATCHUP_UI_LIFECYCLE=true CONTACTS_UI_LIFECYCLE=true GROUP_UI_LIFECYCLE=true KALL_UI_LIFECYCLE=true KMAIL_UI_LIFECYCLE=true KDIARY_UI_LIFECYCLE=true SETTINGS_UI_LIFECYCLE=true BUSINESS_UI_LIFECYCLE=true playwright test --project=chromium tests/e2e/journeys --workers=1",
     "test:regression": "node scripts/run-level.mjs --level regression",
     "test:regression:api": "node scripts/run-level.mjs --level regression --suite api",
     "test:regression:ui": "node scripts/run-level.mjs --level regression --suite ui",

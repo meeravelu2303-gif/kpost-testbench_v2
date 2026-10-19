@@ -3,7 +3,38 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-19 (latest) — Full-coverage sanity level; Admin joins sanity; lint:tags sees the real suite
+### 2026-10-19 (latest) — End-to-end user journeys: nine cross-module, two-account journeys
+
+**Owner (Meera):** "cover End-to-end user journeys fully" (audit item 7; RTM Journeys was 0%, one shallow walk).
+
+**Built — `tests/e2e/journeys/` (`npm run test:journeys`, Chromium, every `*_UI_LIFECYCLE` flag on):** J1 first use
+(1a signup → first login → own name on Profile → logout, via the OTP test gateway; 1b Home → Profile → first Katchup
+→ first KMail, with B receiving both — tagged `@sanity` as RTM-E2E01's golden path); J2 conversation (live receive,
+Home recents, answer in thread); J3 mail (read exact body, reply addressed back with reference, A reads the reply
+text, UI delete both sides); J4 meeting (organizer schedules a Kool Kall, both invitees see it); J5 group (organizer
+creates, A posts to all, B sees it); J6 contacts (directory find → add → listed → on the server → removed); J7 session
+(logout → five protected routes redirect → Back stays out → sign back in); J8 self-service (About + theme persist
+across a reload, restored); J9 company admin (licences + members, then the app). The old `journey-first-use.spec.ts`
+moved into J1 (`git mv`).
+
+**Decision — compose only proven steps; name the rest.** Every step comes from a spec green on live (cited in
+`journeys/support/journey.ts`). Steps no spec has proven carry "UNPROVEN STEP" in the step title and the header:
+Home recents (J2), sender-side KMail delete (J3, best-effort clean-up), the Kool Kall meeting row (J4), the group
+"All Members" post (J5), the new contact in the Contacts list (J6). Known open bugs are asserted against, not
+avoided: #1348 (J1b/J3 empty body), #1343 (J5 group thread), #810 (J8 stale theme swatch).
+
+**Decision — the one-session rule shapes every journey.** An API call as A or B signs their browser out, so
+organizers and clean-up run as C (qatest3) through the API (J4, J5). Where an API call as A is unavoidable (J6) or
+the journey logs A out (J7), it ends with `restoreSavedSession`: clear the dead token, sign in through the real
+login screen, re-save `.auth/user.json` — so the rest of the run keeps a live session.
+
+**Not covered, and why:** starting a chat from a brand-new account (needs the unproven directory → chat path);
+removing a contact or deleting a group in the UI (no recorded path); joining a connected Kall (WebRTC, FR-KL-009);
+password reset single-use (RTM-SEC03, spare account broken). **Not run live yet** (no `.env` in this checkout);
+verified with typecheck, ESLint, `playwright --list` (10 journey tests) and `lint:tags`. RTM-E2E01 stays Partial
+until the first live run.
+
+### 2026-10-19 — Full-coverage sanity level; Admin joins sanity; lint:tags sees the real suite
 
 **Owner (Meera):** "focus on the sanity test — it must become a full-coverage sanity test." Decided the same
 day: include Admin; one self-cleaning core write per module; curated sanity budget 15 per module per suite.

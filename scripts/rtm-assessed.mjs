@@ -224,7 +224,7 @@ export const ASSESSED = [
     status: 'Partial',
     files: [],
     notes:
-      'One session walks Home > Profile > first Katchup send > KMail (journey-first-use); signup is an OTP pre-condition; no first mail is sent.',
+      'Built 2026-10-19, pending its first live run: journeys/first-use (1a signup via the OTP test gateway → first login → own name on Profile; 1b Home > Profile > first Katchup + first KMail, both received by B) plus 8 more journeys in tests/e2e/journeys. Stays Partial until verified live.',
   },
   {
     id: 'RTM-CON01',

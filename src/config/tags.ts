@@ -32,6 +32,9 @@ export const TAGS = {
   /** The full stable suite (smoke and sanity are subsets, so they carry this too). */
   regression: '@regression',
 
+  /** An end-to-end user journey across modules and accounts (`tests/e2e/journeys/`). */
+  journey: '@journey',
+
   // --- Layers (where) ---
   ui: '@ui',
   api: '@api',
