@@ -92,7 +92,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
 
   test(
     'compose a New mail → read back → mark important → delete (FR-M01/M07) @api @kmail',
-    { annotation: [{ type: 'requirement-partial', description: 'FR-KM-018' }] },
+    { tag: '@sanity', annotation: [{ type: 'requirement-partial', description: 'FR-KM-018' }] },
     async ({ endpoints }) => {
       const subject = `QA Mail ${Date.now()}`;
       const sent = await send(

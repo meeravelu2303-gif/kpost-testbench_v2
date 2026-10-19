@@ -49,10 +49,18 @@ function stringList(source: string, key: string): string[] | undefined {
   return [...(match[1] ?? '').matchAll(/'([^']+)'/g)].map((m) => m[1] as string);
 }
 
+/**
+ * The full-sanity read sweeps run endpoints at the SMOKE profile (status, envelope, schema, no token)
+ * — none of the input fuzzing, injection or authorization probes this guard is about — and they
+ * select by a computed id list, which the parser below would read as "every endpoint". Counting them
+ * would hide exactly the gap this guard exists to catch.
+ */
+const NOT_A_FULL_SWEEP = /[\\/](sanity[\\/]|sanity-read-sweep\.spec\.ts$)/;
+
 /** Every `describeEndpointCases` / `describeEndpointContracts` filter found in the wrapper files. */
 function sweepFilters(): EndpointFilter[] {
   const filters: EndpointFilter[] = [];
-  for (const file of specFiles(API_TESTS_DIR)) {
+  for (const file of specFiles(API_TESTS_DIR).filter((f) => !NOT_A_FULL_SWEEP.test(f))) {
     const text = fs.readFileSync(file, 'utf8');
     for (const call of text.matchAll(
       /describeEndpoint(?:Cases|Contracts)\(\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g,

@@ -55,36 +55,38 @@ test.describe(
       'writes to the address book; set CONTACTS_LIFECYCLE=true',
     );
 
-    test('add → verify → reference → delete, restoring the address book @api @contacts', async ({
-      endpoints,
-    }) => {
-      try {
-        const added = await write(
-          endpoints,
-          'contacts-add',
-          { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
-          'add',
-        );
-        expect.soft(added, 'adding a contact is accepted').toBeLessThan(300);
+    test(
+      'add → verify → reference → delete, restoring the address book @api @contacts',
+      { tag: '@sanity' },
+      async ({ endpoints }) => {
+        try {
+          const added = await write(
+            endpoints,
+            'contacts-add',
+            { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
+            'add',
+          );
+          expect.soft(added, 'adding a contact is accepted').toBeLessThan(300);
 
-        // Eventual consistency: assert presence only when it has surfaced.
-        if (await contactPresent(endpoints)) {
-          expect.soft(true, 'the contact appears in myContacts').toBe(true);
+          // Eventual consistency: assert presence only when it has surfaced.
+          if (await contactPresent(endpoints)) {
+            expect.soft(true, 'the contact appears in myContacts').toBe(true);
+          }
+
+          const ref = await write(
+            endpoints,
+            'contacts-add-reference',
+            { contactID: contactId, referenceName: 'QA reference' },
+            'reference',
+          );
+          expect.soft(ref, 'adding a reference is accepted').toBeLessThan(300);
+        } finally {
+          await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
+            () => undefined,
+          );
         }
-
-        const ref = await write(
-          endpoints,
-          'contacts-add-reference',
-          { contactID: contactId, referenceName: 'QA reference' },
-          'reference',
-        );
-        expect.soft(ref, 'adding a reference is accepted').toBeLessThan(300);
-      } finally {
-        await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
-          () => undefined,
-        );
-      }
-    });
+      },
+    );
 
     test('block → verify → unblock (single and bulk), restoring the state @api @contacts', async ({
       endpoints,

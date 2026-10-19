@@ -130,6 +130,7 @@ test.describe(
     test(
       'create → add member → admin → rename → image → leave → remove → delete @api @group',
       {
+        tag: '@sanity',
         annotation: [
           { type: 'requirement', description: 'FR-GM-003' },
           { type: 'requirement', description: 'FR-GM-015' },

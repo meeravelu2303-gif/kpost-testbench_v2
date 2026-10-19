@@ -43,30 +43,32 @@ test.describe('KPost AWS · feature flow', { tag: ['@api', '@platform', '@regres
     'S3 attachment lifecycle; set AWS_LIFECYCLE=true',
   );
 
-  test('generate presigned URL → delete, on our own attachment @api @aws', async ({
-    endpoints,
-  }) => {
-    const generated = await run(
-      endpoints,
-      'aws-generate-presigned',
-      { body: { extension: 'pdf', fileName: 'qa-bench.pdf', fileSize: '940' } },
-      'generate',
-    );
-    expect.soft(generated.status, 'generate-presigned is accepted').toBeLessThan(300);
-    const uuid = extractUuid(generated.text);
-    expect.soft(uuid, 'the generator mints a uuid').toBeTruthy();
-
-    if (uuid) {
-      // delete the presigned key we just reserved (the S3 object, if any). `checkAttachmentS3` runs
-      // on live separately (read spec) with its empty default — a real-uuid check would need a
-      // write-authorized call the guard reserves for destructive endpoints.
-      const deleted = await run(
+  test(
+    'generate presigned URL → delete, on our own attachment @api @aws',
+    { tag: '@sanity' },
+    async ({ endpoints }) => {
+      const generated = await run(
         endpoints,
-        'aws-delete-attachment',
-        { pathParams: { uuid } },
-        'delete',
+        'aws-generate-presigned',
+        { body: { extension: 'pdf', fileName: 'qa-bench.pdf', fileSize: '940' } },
+        'generate',
       );
-      expect.soft(deleted.status, 'deleteAttachmentFromS3 returns a status').toBeLessThan(600);
-    }
-  });
+      expect.soft(generated.status, 'generate-presigned is accepted').toBeLessThan(300);
+      const uuid = extractUuid(generated.text);
+      expect.soft(uuid, 'the generator mints a uuid').toBeTruthy();
+
+      if (uuid) {
+        // delete the presigned key we just reserved (the S3 object, if any). `checkAttachmentS3` runs
+        // on live separately (read spec) with its empty default — a real-uuid check would need a
+        // write-authorized call the guard reserves for destructive endpoints.
+        const deleted = await run(
+          endpoints,
+          'aws-delete-attachment',
+          { pathParams: { uuid } },
+          'delete',
+        );
+        expect.soft(deleted.status, 'deleteAttachmentFromS3 returns a status').toBeLessThan(600);
+      }
+    },
+  );
 });

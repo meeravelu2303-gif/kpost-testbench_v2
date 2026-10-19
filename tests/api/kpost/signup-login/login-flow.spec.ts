@@ -83,7 +83,7 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
 
   test(
     'the happy path issues a token whose subject is our account @api @signup-login',
-    { annotation: [{ type: 'requirement', description: 'FR-SL-026' }] },
+    { tag: '@sanity', annotation: [{ type: 'requirement', description: 'FR-SL-026' }] },
     async ({ endpoints }) => {
       const { status, body } = await login(endpoints, testData.kpostId, testData.password);
 

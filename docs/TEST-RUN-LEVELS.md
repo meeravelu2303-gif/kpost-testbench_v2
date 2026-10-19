@@ -4,19 +4,43 @@ The bench runs at three **levels**, selected by **tags**. One runner (`scripts/r
 drives them, lints the tags first, and never files bugs.
 
 > **Scope.** In-scope modules: **Auth (Signup & Login), Katchup, Kall, KMail**, plus the wider
-> in-scope set for regression/sanity (Profile, Settings, Contacts, Home, Group, verticals). **Admin is
-> out of scope** and is never selected by any level.
+> in-scope set for regression/sanity (Profile, Settings, Contacts, Home, Group, User Management,
+> verticals, platform). **Admin (Admin API + Admin UI) joins SANITY only** (since 2026-10-19, matching
+> CLAUDE.md); smoke and regression never select it — its full runs stay on the `admin:*` commands.
 
 ## 1. What each level is
 
-| Level          | Question it answers                                     | Shape                                                                                                                         | When                                                                           |
-| -------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **smoke**      | "Is the build even alive?"                              | Broad + shallow — 1–3 critical checks per in-scope core module, per suite. Read-only.                                         | First. If smoke fails, nothing else runs. API smoke ≤ 2 min, UI smoke ≤ 5 min. |
-| **sanity**     | "Did this one fix/area work, without obvious breakage?" | A curated set of core functional tests, **one module or one bug at a time**. Broader than smoke, far smaller than regression. | After a fix or change.                                                         |
-| **regression** | "Did we break anything that used to work?"              | The full stable suite.                                                                                                        | Before a release — and only after smoke passes.                                |
+| Level          | Question it answers                                 | Shape                                                                                                                                               | When                                                                           |
+| -------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **smoke**      | "Is the build even alive?"                          | Broad + shallow — 1–3 critical checks per in-scope core module, per suite. Read-only.                                                               | First. If smoke fails, nothing else runs. API smoke ≤ 2 min, UI smoke ≤ 5 min. |
+| **sanity**     | "Does every area still work after this deploy/fix?" | **Full sanity** (default): every module's reads + one core write flow + every screen, API and UI, plus Admin. Narrow it with `--module` or `--bug`. | After a deploy, or after a fix (narrowed).                                     |
+| **regression** | "Did we break anything that used to work?"          | The full stable suite.                                                                                                                              | Before a release — and only after smoke passes.                                |
 
 Smoke ⊆ sanity ⊆ regression: every stable test carries `@regression`; smoke and sanity tests carry it
-too, because they are subsets of it.
+too, because they are subsets of it. Two deliberate exceptions: **sweep** tests (`@sanity-sweep`) are a
+cheap SMOKE-profile projection of what regression already runs in depth, so they carry `@sanity` without
+`@regression`; and **Admin** tests carry `@sanity` + `@admin` only.
+
+## 2b. What full sanity covers
+
+`npm run test:sanity` (no arguments) runs four stages, Chromium only, dry-run, and keeps going after a
+failing stage so one run names every broken area:
+
+| Stage         | What runs                                                                                                                                                                                                                                                                                                                                               | Where it comes from                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **KPost API** | Every live-safe read endpoint of every module at the SMOKE profile (status, envelope, schema, content type, refusal without a token); one core write flow per module (send/recall, compose, place a call, add a contact, create a group, edit profile, toggle settings, diary write, booking search, presigned upload, dashboard, login); the API smoke | `tests/api/sanity/read-sweep.spec.ts` (derived from `productionSafe`), `@sanity` on each module's `feature.spec.ts` |
+| **KPost UI**  | Every screen in the registry loads cleanly in its own session (personal, business, public); each module's curated `@sanity` UI tests; the UI smoke (incl. Katchup + KMail send)                                                                                                                                                                         | `tests/e2e/sanity-screens.spec.ts` (derived from `src/ui/screens.ts`), `@sanity` on the module specs                |
+| **Admin API** | Every live-safe Admin / HR-Setup read at the SMOKE profile                                                                                                                                                                                                                                                                                              | `tests/api/admin/sanity-read-sweep.spec.ts`                                                                         |
+| **Admin UI**  | The login front door; every Admin screen mounts with its shell, no crash, no 5xx                                                                                                                                                                                                                                                                        | `tests/e2e-admin/admin-sanity.spec.ts`, `admin-login.spec.ts`                                                       |
+
+Selection is derived wherever it can be: a new live-safe endpoint or a new screen joins sanity with no
+spec change; a paused one (KDoc/KOS) leaves it. KMail API sanity follows the KMail auth gate (skips with
+the tracked reason until `KMAIL_AUTH_FIXED=true`). Group has no live-safe read, so its API sanity is its
+curated feature flow.
+
+**Coverage is enforced, not hoped for.** `lint:tags` fails if any module has in-scope tests in a suite
+but no `@sanity` test there, or if the Admin API or Admin UI has none — so a module cannot quietly drop
+out of sanity.
 
 ## 2. Tag taxonomy
 
@@ -35,11 +59,20 @@ Import them as `TAGS.katchup`; never hand-type a tag, and never put tags in test
 
 Rules enforced by `npm run lint:tags`:
 
-1. every in-scope test has `@regression` **or** `@quarantine`;
+1. every in-scope test has `@regression`, `@quarantine` **or** `@sanity-sweep` (with `@sanity`);
 2. every in-scope test has at least one module tag;
-3. every tag is defined in `tags.ts` (or is a valid `@bug-<number>`);
+3. every hand-written tag is defined in `tags.ts` (or is a valid `@bug-<number>`); an engine-generated
+   test's extra endpoint area tags (`@katchup-read`, `@company`, …) belong to its endpoint definition;
 4. **smoke budget:** at most **3** `@smoke` tests per module per suite (override `--budget=N`);
-5. no Admin test is ever selected/tagged into a run level.
+5. **sanity budget:** at most **15** curated `@sanity` tests per module per suite (`--sanity-budget=N`;
+   `@sanity-sweep` tests are exempt);
+6. **sanity coverage:** every module with in-scope tests in a suite has a `@sanity` test there, and the
+   Admin API and Admin UI each have one (see §2b);
+7. an Admin test may carry `@sanity` (with `@admin`) and no other run level.
+
+Lint counts every generated engine test (one per endpoint × check, ~16,900 in-scope tests), keyed by the
+real spec file and describe path. Before 2026-10-19 it keyed by `file + title`, and every generated test
+reports the engine's helper file, so the whole engine sweep collapsed to ~50 checked entries.
 
 Example:
 
@@ -61,7 +94,10 @@ npm run test:smoke                 # API smoke, then UI smoke (stops at first fa
 npm run test:smoke:api             # API smoke only
 npm run test:smoke:ui              # UI smoke only
 
-npm run test:sanity -- --module katchup   # auth smoke precondition, then @sanity + @katchup
+npm run test:sanity                        # FULL sanity: auth smoke, then KPost API, KPost UI, Admin API, Admin UI
+npm run test:sanity -- --suite api         # full sanity, API stages only (KPost + Admin)
+npm run test:sanity -- --module katchup    # auth smoke precondition, then @sanity + @katchup
+npm run test:sanity -- --module admin      # auth smoke precondition, then the two Admin stages
 npm run test:sanity -- --bug 1267          # auth smoke precondition, then @bug-1267
 
 npm run test:regression            # full smoke gate, then the full @regression suite
@@ -82,9 +118,10 @@ The KPost bench is **one low-capacity shared server**. Enforced in `playwright.c
 - `retries: 1`; smoke/sanity run **Chromium only** (Firefox/WebKit stay out).
 
 **Live-host guard:** every level refuses to start unless each target (`BASE_URL`, `API_BASE_URL`,
-`KPOST_API_BASE_URL`, `KMAIL_API_BASE_URL`, read from `.env` like the config does) is a test
-deployment host — `test.kpostindia.com`, `testingapi.kpostindia.com`, `testkmail.kpostindia.com` (or
-localhost). There is no override. (`TEST_ENV=production` in `.env` is the bench's safety _mode_ while
+`KPOST_API_BASE_URL`, `KMAIL_API_BASE_URL`, `ADMIN_API_BASE_URL`, `ADMIN_UI_BASE_URL`, read from `.env`
+like the config does) is a test deployment host — `test.kpostindia.com`, `testingapi.kpostindia.com`,
+`testkmail.kpostindia.com`, the Admin test box `192.168.0.38`, `kpostadmin.kpostindia.com` (or
+localhost). `adminmodule.kpostindia.com` (the live Admin) is refused. There is no override. (`TEST_ENV=production` in `.env` is the bench's safety _mode_ while
 pointing at the test hosts, so the guard checks the hosts, not that label.) `@destructive` tests never
 run in smoke/sanity, and run in regression only when `ALLOW_DESTRUCTIVE_TESTS=true`.
 

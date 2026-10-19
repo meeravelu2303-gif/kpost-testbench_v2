@@ -27,36 +27,40 @@ test.describe(
   'KPost Dashboard · feature flow @api @dashboard',
   { tag: ['@api', '@home', '@regression'] },
   () => {
-    test('homeDashboardMsgs: the recent-activity window is internally consistent', async ({
-      endpoints,
-    }) => {
-      const ex = await endpoints.sendTo(
-        'dashboard-home-msgs',
-        { body: { serverTime: null, lastMsgID: null } },
-        { label: 'dashboard:home', auth: { principal: A } },
-      );
-      expect(ex.status, 'homeDashboardMsgs succeeds for an authenticated read').toBe(200);
-      const body = JSON.parse(ex.bodyText ?? '{}') as DashboardWindow;
-
-      // The panel's own ordering invariant: firstMsgID marks the newest message in the batch,
-      // lastMsgID the oldest, so a batch is never reported first < last.
-      if (body.firstMsgID !== undefined && body.lastMsgID !== undefined) {
-        expect(
-          body.firstMsgID,
-          'firstMsgID (newest) is not less than lastMsgID (oldest) in the same batch',
-        ).toBeGreaterThanOrEqual(body.lastMsgID);
-      }
-
-      if (body.katchup?.length) {
-        const ids = body.katchup.map((m) => m.msgID);
-        expect(ids[0], "the first katchup entry is the batch's firstMsgID").toBe(body.firstMsgID);
-        expect(ids[ids.length - 1], "the last katchup entry is the batch's lastMsgID").toBe(
-          body.lastMsgID,
+    test(
+      'homeDashboardMsgs: the recent-activity window is internally consistent',
+      { tag: '@sanity' },
+      async ({ endpoints }) => {
+        const ex = await endpoints.sendTo(
+          'dashboard-home-msgs',
+          { body: { serverTime: null, lastMsgID: null } },
+          { label: 'dashboard:home', auth: { principal: A } },
         );
-        const sorted = [...ids].sort((a, b) => b - a);
-        expect(ids, 'katchup entries are ordered newest-first (descending msgID)').toEqual(sorted);
-      }
-    });
+        expect(ex.status, 'homeDashboardMsgs succeeds for an authenticated read').toBe(200);
+        const body = JSON.parse(ex.bodyText ?? '{}') as DashboardWindow;
+
+        // The panel's own ordering invariant: firstMsgID marks the newest message in the batch,
+        // lastMsgID the oldest, so a batch is never reported first < last.
+        if (body.firstMsgID !== undefined && body.lastMsgID !== undefined) {
+          expect(
+            body.firstMsgID,
+            'firstMsgID (newest) is not less than lastMsgID (oldest) in the same batch',
+          ).toBeGreaterThanOrEqual(body.lastMsgID);
+        }
+
+        if (body.katchup?.length) {
+          const ids = body.katchup.map((m) => m.msgID);
+          expect(ids[0], "the first katchup entry is the batch's firstMsgID").toBe(body.firstMsgID);
+          expect(ids[ids.length - 1], "the last katchup entry is the batch's lastMsgID").toBe(
+            body.lastMsgID,
+          );
+          const sorted = [...ids].sort((a, b) => b - a);
+          expect(ids, 'katchup entries are ordered newest-first (descending msgID)').toEqual(
+            sorted,
+          );
+        }
+      },
+    );
 
     test('katchupDashboardMsg reports the SAME recent-activity window as homeDashboardMsgs, not a drifted copy', async ({
       endpoints,

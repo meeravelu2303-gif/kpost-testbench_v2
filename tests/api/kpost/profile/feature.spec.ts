@@ -71,35 +71,37 @@ test.describe(
       'writes real profile data; set PROFILE_LIFECYCLE=true to run',
     );
 
-    test('update "about" is saved and reads back, then is restored @api @profile', async ({
-      endpoints,
-    }) => {
-      const before = (await fetchProfile(endpoints)).aboutYourself;
-      const marker = `QA about ${Date.now()}`;
+    test(
+      'update "about" is saved and reads back, then is restored @api @profile',
+      { tag: '@sanity' },
+      async ({ endpoints }) => {
+        const before = (await fetchProfile(endpoints)).aboutYourself;
+        const marker = `QA about ${Date.now()}`;
 
-      const status = await write(
-        endpoints,
-        'profile-update-about',
-        { aboutYourself: marker },
-        'about',
-      );
-      expect(status, 'update about accepted').toBeLessThan(300);
+        const status = await write(
+          endpoints,
+          'profile-update-about',
+          { aboutYourself: marker },
+          'about',
+        );
+        expect(status, 'update about accepted').toBeLessThan(300);
 
-      // Read-back is best-effort: the profile read can lag the write (eventual consistency), so it is
-      // verified only when the field has surfaced — the 200 above is the write's own confirmation.
-      const after = (await fetchProfile(endpoints)).aboutYourself;
-      if (after !== undefined && after !== null && after !== '') {
-        expect.soft(after, 'the new about reads back').toBe(marker);
-      }
+        // Read-back is best-effort: the profile read can lag the write (eventual consistency), so it is
+        // verified only when the field has surfaced — the 200 above is the write's own confirmation.
+        const after = (await fetchProfile(endpoints)).aboutYourself;
+        if (after !== undefined && after !== null && after !== '') {
+          expect.soft(after, 'the new about reads back').toBe(marker);
+        }
 
-      // Restore.
-      await write(
-        endpoints,
-        'profile-update-about',
-        { aboutYourself: typeof before === 'string' ? before : '' },
-        'about-restore',
-      );
-    });
+        // Restore.
+        await write(
+          endpoints,
+          'profile-update-about',
+          { aboutYourself: typeof before === 'string' ? before : '' },
+          'about-restore',
+        );
+      },
+    );
 
     test('update designation is saved and reads back, then is restored @api @profile', async ({
       endpoints,

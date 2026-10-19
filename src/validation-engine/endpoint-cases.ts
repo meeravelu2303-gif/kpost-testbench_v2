@@ -46,7 +46,11 @@ export interface EndpointCaseOptions {
   transform?: (definition: EndpointDefinition) => EndpointDefinition;
 }
 
-/** One engine run per endpoint id, shared by that endpoint's cases. */
+/**
+ * One engine run per endpoint and profile, shared by that endpoint's cases. Keyed by profile too:
+ * the sanity sweep runs an endpoint at SMOKE while a regression wrapper runs it at FULL, and a
+ * shared SMOKE report would leave every FULL-only case "not executed".
+ */
 const runs = new Map<string, Promise<ValidationReport | ProductionSafetyError>>();
 
 interface PlannedCase {
@@ -130,7 +134,8 @@ export function describeEndpointCases(
             const note = describeTestData();
             if (note) test.info().annotations.push({ type: 'test-data', description: note });
 
-            let run = runs.get(endpoint.id);
+            const runKey = `${endpoint.id}|${options.profile ?? env.VALIDATION_PROFILE}`;
+            let run = runs.get(runKey);
             if (!run) {
               run = validationEngine
                 .validate(endpoint.definition, options)
@@ -138,7 +143,7 @@ export function describeEndpointCases(
                   if (error instanceof ProductionSafetyError) return error;
                   throw error instanceof Error ? error : new Error(String(error));
                 });
-              runs.set(endpoint.id, run);
+              runs.set(runKey, run);
             }
 
             const report = await run;

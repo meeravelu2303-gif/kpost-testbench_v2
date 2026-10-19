@@ -16,21 +16,23 @@ test.describe('Admin/HR-Setup Login screen', { tag: '@admin-ui' }, () => {
   test.use({ storageState: { cookies: [], origins: [] } });
   test.skip(!env.ADMIN_UI_BASE_URL, 'needs a configured admin host');
 
-  test('loads with the KPOST ID / mobile field and an enabled Submit once typed @ui', async ({
-    page,
-  }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    const field = page.getByPlaceholder('Enter KPOST ID / Mobile number');
-    await expect(field, 'the login-id field is visible').toBeVisible({ timeout: 20_000 });
+  test(
+    'loads with the KPOST ID / mobile field and an enabled Submit once typed @ui',
+    { tag: ['@sanity', '@admin'] },
+    async ({ page }) => {
+      await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      const field = page.getByPlaceholder('Enter KPOST ID / Mobile number');
+      await expect(field, 'the login-id field is visible').toBeVisible({ timeout: 20_000 });
 
-    const submit = page.getByRole('button', { name: /^Submit$/i });
-    await expect(submit, 'Submit starts disabled with no input').toBeDisabled();
+      const submit = page.getByRole('button', { name: /^Submit$/i });
+      await expect(submit, 'Submit starts disabled with no input').toBeDisabled();
 
-    await field.fill('qa-bench-nonexistent-id@kpost.in');
-    await expect(submit, 'Submit becomes enabled once something is typed').toBeEnabled({
-      timeout: 10_000,
-    });
-  });
+      await field.fill('qa-bench-nonexistent-id@kpost.in');
+      await expect(submit, 'Submit becomes enabled once something is typed').toBeEnabled({
+        timeout: 10_000,
+      });
+    },
+  );
 
   test('a non-existent KPOST ID shows an error toast, not a crash @ui', async ({ page }) => {
     const stop = watchUiHealth(page);

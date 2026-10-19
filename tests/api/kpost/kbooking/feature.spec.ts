@@ -49,68 +49,70 @@ test.describe(
   'KPost KBooking · feature flow @api @kbooking',
   { tag: ['@api', '@verticals', '@regression'] },
   () => {
-    test('search chain: city → destinations → available trips → trip details, each fed the prior real result', async ({
-      endpoints,
-    }) => {
-      const citySuggestion = await endpoints.sendTo(
-        'kbooking-city-suggestion',
-        { pathParams: { query: 'chennai' } },
-        { label: 'kbooking:city-suggestion', auth: { principal: A } },
-      );
-      expect(citySuggestion.status, 'citysuggestion succeeds').toBe(200);
-      const cityBody = JSON.parse(citySuggestion.bodyText ?? '{}') as CitySuggestionResponse;
-      const sourceCityID = cityBody.value?.[0]?.cityID;
-      test.skip(
-        !sourceCityID,
-        'no city returned for "chennai" right now — cannot chain the search',
-      );
+    test(
+      'search chain: city → destinations → available trips → trip details, each fed the prior real result',
+      { tag: '@sanity' },
+      async ({ endpoints }) => {
+        const citySuggestion = await endpoints.sendTo(
+          'kbooking-city-suggestion',
+          { pathParams: { query: 'chennai' } },
+          { label: 'kbooking:city-suggestion', auth: { principal: A } },
+        );
+        expect(citySuggestion.status, 'citysuggestion succeeds').toBe(200);
+        const cityBody = JSON.parse(citySuggestion.bodyText ?? '{}') as CitySuggestionResponse;
+        const sourceCityID = cityBody.value?.[0]?.cityID;
+        test.skip(
+          !sourceCityID,
+          'no city returned for "chennai" right now — cannot chain the search',
+        );
 
-      const destinations = await endpoints.sendTo(
-        'kbooking-destinations',
-        { body: { sourceCityID } },
-        { label: 'kbooking:destinations', auth: { principal: A } },
-      );
-      expect(destinations.status, 'destinations succeeds for a real source city').toBe(200);
-      const destBody = JSON.parse(destinations.bodyText ?? '{}') as DestinationsResponse;
-      const destinationCityID = destBody.value?.cities?.[0]?.id;
-      test.skip(
-        destinationCityID === undefined,
-        'no reachable destination returned for this source city right now',
-      );
+        const destinations = await endpoints.sendTo(
+          'kbooking-destinations',
+          { body: { sourceCityID } },
+          { label: 'kbooking:destinations', auth: { principal: A } },
+        );
+        expect(destinations.status, 'destinations succeeds for a real source city').toBe(200);
+        const destBody = JSON.parse(destinations.bodyText ?? '{}') as DestinationsResponse;
+        const destinationCityID = destBody.value?.cities?.[0]?.id;
+        test.skip(
+          destinationCityID === undefined,
+          'no reachable destination returned for this source city right now',
+        );
 
-      const trips = await endpoints.sendTo(
-        'kbooking-available-trips',
-        {
-          body: {
-            sourceCityID,
-            destinationCityID,
-            travelDate: futureTravelDate(14),
+        const trips = await endpoints.sendTo(
+          'kbooking-available-trips',
+          {
+            body: {
+              sourceCityID,
+              destinationCityID,
+              travelDate: futureTravelDate(14),
+            },
           },
-        },
-        { label: 'kbooking:available-trips', auth: { principal: A } },
-      );
-      expect(trips.status, 'availabletrips succeeds for a real route').toBe(200);
-      const tripsBody = JSON.parse(trips.bodyText ?? '{}') as AvailableTripsResponse;
-      const tripID = Object.keys(tripsBody.value1 ?? {})[0];
-      test.skip(
-        !tripID,
-        'no trips running on this real route 14 days out right now — nothing to chain tripdetails to',
-      );
+          { label: 'kbooking:available-trips', auth: { principal: A } },
+        );
+        expect(trips.status, 'availabletrips succeeds for a real route').toBe(200);
+        const tripsBody = JSON.parse(trips.bodyText ?? '{}') as AvailableTripsResponse;
+        const tripID = Object.keys(tripsBody.value1 ?? {})[0];
+        test.skip(
+          !tripID,
+          'no trips running on this real route 14 days out right now — nothing to chain tripdetails to',
+        );
 
-      const details = await endpoints.sendTo(
-        'kbooking-trip-details',
-        { body: { tripID } },
-        {
-          label: 'kbooking:trip-details-with-real-id',
-          auth: { principal: A },
-          allowLiveRead: true,
-        },
-      );
-      expect(
-        details.status,
-        `tripdetails succeeds when fed a real tripID (${tripID}) from the search just performed`,
-      ).toBe(200);
-    });
+        const details = await endpoints.sendTo(
+          'kbooking-trip-details',
+          { body: { tripID } },
+          {
+            label: 'kbooking:trip-details-with-real-id',
+            auth: { principal: A },
+            allowLiveRead: true,
+          },
+        );
+        expect(
+          details.status,
+          `tripdetails succeeds when fed a real tripID (${tripID}) from the search just performed`,
+        ).toBe(200);
+      },
+    );
 
     test.describe(
       'blockTicket — WRITTEN, NOT EXECUTED',

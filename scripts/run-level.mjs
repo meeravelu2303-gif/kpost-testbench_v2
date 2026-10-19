@@ -2,7 +2,9 @@
 // bash). See docs/TEST-RUN-LEVELS.md.
 //
 //   node scripts/run-level.mjs --level smoke
+//   node scripts/run-level.mjs --level sanity                  (FULL sanity: every module + Admin)
 //   node scripts/run-level.mjs --level sanity --module katchup
+//   node scripts/run-level.mjs --level sanity --module admin
 //   node scripts/run-level.mjs --level sanity --bug 1267
 //   node scripts/run-level.mjs --level regression
 //
@@ -11,7 +13,8 @@
 //   - NO run level files bugs: BUGZILLA_DRY_RUN=true is forced and the Bugzilla reporter is replaced
 //     with html+junit+json written under reports/<level>/<suite>/<timestamp>/.
 //   - workers is capped at 2 by the config; this runner defaults it to 1.
-//   - Admin is never selected (its tests carry no @regression/@smoke/@sanity and no module tag).
+//   - Admin joins SANITY only (`@admin` + `@sanity`), in its own stages; smoke/regression never
+//     select it.
 //   - Runs exactly like the module scripts (`kpost`, `kmail`, `ui:chromium`): QA test accounts only
 //     (QATEST_ONLY), every module's write/lifecycle flow switched on, and paused KDoc (@kos) excluded —
 //     so a run level measures the same suite the team runs day to day, on accounts no developer uses.
@@ -61,6 +64,8 @@ const RUN_FLAGS = {
   KDIARY_UI_LIFECYCLE: 'true',
   SETTINGS_UI_LIFECYCLE: 'true',
   BUSINESS_UI_LIFECYCLE: 'true',
+  // Admin UI session (auth-admin.setup.ts seeds it); read-only screens in sanity.
+  ADMIN_UI_LIFECYCLE: 'true',
 };
 
 /** Paused modules, never run by any level (KDoc/KOS paused by the owner since 2026-10-07). */
@@ -71,10 +76,21 @@ const TEST_HOSTS = new Set([
   'test.kpostindia.com',
   'testingapi.kpostindia.com',
   'testkmail.kpostindia.com',
+  // Admin test deployment (CLAUDE.md §1): the API test box and the Admin UI. The live counterpart
+  // (adminmodule.kpostindia.com) is deliberately absent, so pointing at it is refused.
+  '192.168.0.38',
+  'kpostadmin.kpostindia.com',
   'localhost',
   '127.0.0.1',
 ]);
-const HOST_VARS = ['BASE_URL', 'API_BASE_URL', 'KPOST_API_BASE_URL', 'KMAIL_API_BASE_URL'];
+const HOST_VARS = [
+  'BASE_URL',
+  'API_BASE_URL',
+  'KPOST_API_BASE_URL',
+  'KMAIL_API_BASE_URL',
+  'ADMIN_API_BASE_URL',
+  'ADMIN_UI_BASE_URL',
+];
 
 function arg(name, def) {
   const hit = process.argv.find((a) => a === `--${name}` || a.startsWith(`--${name}=`));
@@ -104,6 +120,8 @@ const MODULES = [
   'user-management',
   'verticals',
   'platform',
+  // Sanity only: the Admin API + Admin UI stages.
+  'admin',
 ];
 if (!LEVELS.includes(level)) {
   console.error(`--level must be one of ${LEVELS.join('|')}`);
@@ -290,10 +308,7 @@ if (!lintGate()) {
 if (level === 'smoke') {
   ok = smokeGate();
 } else if (level === 'sanity') {
-  if (!moduleArg && !bugArg) {
-    console.error('sanity requires --module <name> or --bug <BugzillaID>.');
-    process.exit(2);
-  }
+  // No --module and no --bug = FULL sanity: every module's @sanity set on both suites, then Admin.
   // Precondition: auth smoke must pass first.
   console.log('— sanity precondition: auth smoke —');
   const pre =
@@ -334,25 +349,52 @@ if (level === 'smoke') {
         grepInvert: SMOKE_INVERT,
       }) === 0 && ok;
   } else {
-    const grep = and('@sanity', `@${moduleArg}`);
-    if (suiteArg === 'all' || suiteArg === 'api')
-      ok =
-        runPlaywright({
-          label: `SANITY · ${moduleArg} (API)`,
-          suite: 'api',
-          project: 'api',
-          grep,
-          grepInvert: SMOKE_INVERT,
-        }) === 0 && ok;
-    if (suiteArg === 'all' || suiteArg === 'ui')
-      ok =
-        runPlaywright({
-          label: `SANITY · ${moduleArg} (UI)`,
-          suite: 'ui',
-          project: 'chromium',
-          grep,
-          grepInvert: SMOKE_INVERT,
-        }) === 0 && ok;
+    // Every stage runs even when an earlier one failed: sanity's job is to say WHICH areas broke.
+    const full = !moduleArg;
+    const scope = full ? 'all modules' : moduleArg;
+    if (moduleArg !== 'admin') {
+      const grep = full ? '@sanity' : and('@sanity', `@${moduleArg}`);
+      // Admin tests share the `api` project; they run in their own stage below.
+      const grepInvert = `${SMOKE_INVERT}|@admin`;
+      if (suiteArg === 'all' || suiteArg === 'api')
+        ok =
+          runPlaywright({
+            label: `SANITY · ${scope} (API)`,
+            suite: 'api',
+            project: 'api',
+            grep,
+            grepInvert,
+          }) === 0 && ok;
+      if (suiteArg === 'all' || suiteArg === 'ui')
+        ok =
+          runPlaywright({
+            label: `SANITY · ${scope} (UI)`,
+            suite: 'ui',
+            project: 'chromium',
+            grep,
+            grepInvert,
+          }) === 0 && ok;
+    }
+    if (full || moduleArg === 'admin') {
+      if (suiteArg === 'all' || suiteArg === 'api')
+        ok =
+          runPlaywright({
+            label: 'SANITY · Admin (API)',
+            suite: 'admin-api',
+            project: 'api',
+            grep: and('@sanity', '@admin'),
+            grepInvert: SMOKE_INVERT,
+          }) === 0 && ok;
+      if (suiteArg === 'all' || suiteArg === 'ui')
+        ok =
+          runPlaywright({
+            label: 'SANITY · Admin (UI)',
+            suite: 'admin-ui',
+            project: 'admin-ui',
+            grep: and('@sanity', '@admin'),
+            grepInvert: SMOKE_INVERT,
+          }) === 0 && ok;
+    }
   }
 } else if (level === 'regression') {
   // (The live-host guard at the top already refused any non-test target.)

@@ -3,7 +3,47 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-15 (latest) — RTM re-measured and linked (35% → 65%); coverage gaps closed and verified live
+### 2026-10-19 (latest) — Full-coverage sanity level; Admin joins sanity; lint:tags sees the real suite
+
+**Owner (Meera):** "focus on the sanity test — it must become a full-coverage sanity test." Decided the same
+day: include Admin; one self-cleaning core write per module; curated sanity budget 15 per module per suite.
+
+**Decision — sanity is full by default.** `npm run test:sanity` with no arguments now runs every module on both
+suites plus Admin (four stages: KPost API, KPost UI, Admin API, Admin UI; all stages run even after a failure,
+dry-run, Chromium). `--module`/`--bug` still narrow it. Reads and screens are **derived**, not listed: the API
+sweep takes every `productionSafe`, non-OTP endpoint per module at the SMOKE profile, and the screen check takes
+every route in `src/ui/screens.ts` / `admin-screens.ts`, so new endpoints and screens join automatically. Core
+writes are existing independent, self-cleaning feature tests tagged `@sanity` (one or two per module). Map:
+`docs/TEST-RUN-LEVELS.md` §2b.
+
+**Decision — Admin joins SANITY only.** Resolves the conflict between TEST-RUN-LEVELS.md ("Admin never selected")
+and CLAUDE.md (Admin in scope). Admin tests may carry `@sanity` + `@admin`, never `@smoke`/`@regression` (those
+run the KPost accounts and flags). Admin reads only; Admin writes stay on `admin:full` (role-posting reaches real
+KSMACC accounts). The run-level host guard now covers `ADMIN_API_BASE_URL`/`ADMIN_UI_BASE_URL` and refuses the
+live `adminmodule.kpostindia.com`.
+
+**Decision — coverage is a lint rule.** `lint:tags` fails when a module has in-scope tests in a suite but no
+`@sanity` test there, or when Admin API/UI has none. Generated sweep tests carry `@sanity-sweep`: exempt from
+the budget and accepted instead of `@regression` (regression already runs those endpoints at FULL).
+
+**Incident — lint:tags was checking ~50 of ~16,900 tests.** It de-duplicated by `file + title`, and every
+engine-generated test reports `src/validation-engine/endpoint-cases.ts` as its file with a per-validator title,
+so the whole engine sweep collapsed to one entry per validator. Now keyed by the real spec file + describe path.
+The hidden debt it exposed was only the endpoint area tags the engine copies onto generated tests (the 33
+pre-existing "unknown tag" failures were this); those belong to the endpoint definitions, so the unknown-tag rule
+now applies to hand-written tags only.
+
+**Fixed alongside:** the engine's per-endpoint run cache (`endpoint-cases.ts`) is keyed by profile as well, so a
+SMOKE sanity run and a FULL regression run of one endpoint in one worker no longer share a report (the FULL-only
+cases would have been "not executed"). `sweep-completeness.spec.ts` ignores the sanity sweeps: they run no fuzz,
+injection or authz probes, and their computed id list read as "every endpoint", which would have disabled the
+guard.
+
+**Not verified live:** this checkout has no `.env`; selection was verified with `playwright --list` per stage
+(KPost API 2,465 / KPost UI 73 / Admin API 198 / Admin UI 14 incl. setup) and `lint:tags` (Node 24). First live
+run pending.
+
+### 2026-10-15 — RTM re-measured and linked (35% → 65%); coverage gaps closed and verified live
 
 **Owner:** "close the requirements-traceability / coverage gaps; verify everything live, don't just author tests."
 

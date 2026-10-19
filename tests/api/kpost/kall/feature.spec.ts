@@ -86,7 +86,7 @@ test.describe(
 
     test(
       'direct call: place → read status (both ways) → transition → end → clear (FR-C05/C08) @api @kall',
-      { annotation: [{ type: 'requirement-partial', description: 'FR-KL-005' }] },
+      { tag: '@sanity', annotation: [{ type: 'requirement-partial', description: 'FR-KL-005' }] },
       async ({ endpoints }) => {
         try {
           const placed = await endpoints.sendTo(
@@ -508,7 +508,7 @@ test.describe(
 
     test(
       'a scheduled call keeps the exact title, start and end it was given, and records every invitee (FR-KL-002) @api @kall',
-      { annotation: [{ type: 'requirement', description: 'FR-KL-002' }] },
+      { tag: '@sanity', annotation: [{ type: 'requirement', description: 'FR-KL-002' }] },
       async ({ endpoints, databases }) => {
         /*
          * Hard assertions on what the "finding-only" checks above leave soft. The scheduled call's

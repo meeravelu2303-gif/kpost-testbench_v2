@@ -103,7 +103,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
 
   test(
     'a message carries its Subject and issues a msgID (BR-K01) @api @katchup',
-    { annotation: [{ type: 'requirement', description: 'BR-KU-SUBJECT' }] },
+    { tag: '@sanity', annotation: [{ type: 'requirement', description: 'BR-KU-SUBJECT' }] },
     async ({ endpoints }) => {
       const subject = `QA Feature ${Date.now()}`;
       const sent = await send(endpoints, A, { receiver: B.username, subject });
@@ -220,6 +220,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
   test(
     'a recalled message is removed from the recipient view (FR-K10 / BR-K03) @api @katchup @security',
     {
+      tag: '@sanity',
       annotation: [
         { type: 'requirement', description: 'BR-KU-RECALL' },
         { type: 'requirement', description: 'FR-KU-028' },
