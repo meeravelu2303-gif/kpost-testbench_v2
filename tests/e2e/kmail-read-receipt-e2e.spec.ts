@@ -161,7 +161,9 @@ test.describe(
         ).data?.kmailID;
         test.info().annotations.push({
           type: 'observed',
-          description: `B's open returned kmailID ${String(openedRecord)} for mail ${kmailID}`,
+          description:
+            `B's open returned kmailID ${String(openedRecord)} for mail ${kmailID}; the screen sent ` +
+            `${String(openResponse.request().postData()).slice(0, 300)}`,
         });
 
         // After: A sees B's read status and an exact open time inside the send → now window.

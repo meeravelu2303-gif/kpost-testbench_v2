@@ -96,10 +96,10 @@ export const ASSESSED = [
     id: 'RTM-KMAIL-F04',
     module: 'KMail',
     summary: 'Mail search',
-    status: 'Partial',
-    files: [],
+    status: 'Covered',
+    files: ['kmail-browse-e2e'],
     notes:
-      'The Recents box filters conversations by subject (UI); no server-side mail-search endpoint exists.',
+      'Search is client-side only (no server mail-search endpoint): the Recents box filters by subject; the UI test seeds a mail, finds it by subject and shows nothing for a non-matching text.',
   },
   {
     id: 'RTM-KMAIL-F05',

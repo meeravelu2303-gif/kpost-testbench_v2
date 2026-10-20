@@ -109,7 +109,7 @@ test.describe(
 
     test(
       'search: typing a subject shows that mail, and text that matches nothing shows no mails @ui',
-      { annotation: [{ type: 'requirement-partial', description: 'RTM-KMAIL-F04' }] },
+      { annotation: [{ type: 'requirement', description: 'RTM-KMAIL-F04' }] },
       async ({ page, endpoints }) => {
         const stamp = Date.now();
         const subject = `QA KMail search ${stamp}`;

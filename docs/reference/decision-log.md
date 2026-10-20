@@ -3,7 +3,42 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-20 (latest) — Coverage to 100%: batch 3, Katchup (Katchup 68% → 98%; overall 113 → 125/146 = 86%)
+### 2026-10-20 (latest) — Coverage to 100%: batch 4, KMail (KMail 64% → 71%; overall 125 → 127/146 = 87%)
+
+**Verified live:** FR-KM-005 is fixed (#1365): a two-address To is now refused, green 2/2, and the business rule is ✅.
+**#1359 reopened** (read receipt): the screen's own open request (`sentAndInboxMailContent` with
+`kmailType:"Received"`) answers 200 with an EMPTY record (kmailID 0, no content), and the mail stays unread for the
+sender. That held 4/4 times: 2 API replays of the exact web body, 2 UI runs. A dated note was added to #1348, because
+the empty body is server-side for now. `kmail-read-receipt-e2e` now records the request the screen sent.
+
+**RTM-KMAIL-F04 → Covered:** KMail search is client-side only, with no server search endpoint. The Recents-box UI test
+is the whole feature.
+
+**FR-KM-007..008 (salutation), new UI test in `kmail-composer-controls.spec.ts`:** the box defaults to "Hi", the
+list offers Hi / Hello / Dear and the Sir / Madam / Respect forms, and a pick updates the greeting row. Green 2/2.
+The web list has 18 defaults ("Respected Sir", "Dear Madam" …), not the FRD's six, so Sir / Madam / Respect are matched
+as part of an option. A separate test covers the FR-KM-008 alternative flow (edit the auto-filled name). It is red 2/2:
+the box's onChange is commented out. Filed **#13213** (KPost UI, Ayyappan).
+
+**Filed:** **#13211** (KMail API, Jitendra): `saveOrUpdateCustomizedSaluations` stores a salutation with a null or
+missing name and answers "Saved Successfully" (3/3). **#13212** (KPost UI, Ayyappan): with such an entry in the list,
+clearing the salutation box crashes Write Mail ("Something went wrong", `null.toLowerCase` in the sort). Reproduced
+2/2 alone with before/after screenshots; the test row was removed each time.
+
+**Bench leakage found and cleaned:** qatest1 had 38 leftover custom salutations from earlier validator runs: 7
+nameless, plus "12345", SQL-injection and script strings, and "QA Dr" copies. The nameless ones are what crashed the
+compose page. All were deleted via `deleteCustomizedSaluation`; 0 remain. The request validators that write to
+`kmail-save-saluation` do not clean up after themselves, so the next full run will leave more. That needs a clean-up
+hook. qatest1's profile designation also reads `javascript:alert(1)` from an injection probe; it is left as is.
+**Session note:** an API login as qatest1 signs out a browser already signed in as qatest1. A UI test that needs to
+write as the browser's own user must call through the page (its `accessToken`), not through `endpoints`.
+
+**Still Partial in KMail (owner decisions):** FR-KM-014 (upload red on #1347), FR-KM-017 (running AI Assist is
+metered, and the test UI posts it to the LIVE host `devapi2.kpostindia.com`), FR-KM-022 (delivery to an outside
+inbox would send real mail off-platform), BR-M01 (#1359), F02 (no attachment size limit exists anywhere), F03/F05 (no
+folders, trash or restore in the web KMail).
+
+### 2026-10-20 — Coverage to 100%: batch 3, Katchup (Katchup 68% → 98%; overall 113 → 125/146 = 86%)
 
 Mapped from source first (bubble theme + KatchupServiceImpl): **Save** keeps the selected message and hides every
 other message of that conversation for the saver only (no "saved" flag, no folder); **Reminder** is a type-3 message

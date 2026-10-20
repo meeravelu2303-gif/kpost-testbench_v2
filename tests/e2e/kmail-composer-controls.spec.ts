@@ -244,5 +244,106 @@ test.describe(
         );
       },
     );
+
+    /**
+     * Compose to the second QA account and return its greeting row. WriteMailPage.js (2026-10-20): the
+     * salutation box is an `Input[placeholder="Select Salutation"]` whose value is `searchTerm` (set to
+     * "Hi" when a recipient is chosen); focusing it opens `.custom-dropdown-menu` with the account's
+     * saluation list (kmail-saluations); a pick calls handleSelect → the box shows it and the menu
+     * closes. The name box beside it is `.himessagetextbox`, auto-filled from the recipient.
+     */
+    async function greetingRow(page: Page) {
+      await openCompose(page);
+      const to = page.getByRole('textbox', { name: 'To' }).first();
+      await to.click();
+      await to.fill(testData.victimKpostId);
+      await page
+        .locator('.suggestion-dropdown')
+        .getByText(testData.victimKpostId, { exact: false })
+        .first()
+        .click({ timeout: 8_000 })
+        .catch(() => to.blur());
+      const salutation = page.getByPlaceholder('Select Salutation').first();
+      const name = page.locator('.himessagetextbox').first();
+      await expect(salutation, 'the greeting row shows the salutation box').toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(name, 'the recipient name is filled in next to it').not.toHaveValue('', {
+        timeout: 10_000,
+      });
+      // The To suggestion panel can stay open over the greeting row; Escape in To closes it
+      // (handleKeyDown → setShowContactList(false)).
+      await to.press('Escape');
+      await page
+        .locator('.suggestion-dropdown')
+        .first()
+        .waitFor({ state: 'hidden', timeout: 5_000 })
+        .catch(() => undefined);
+      return { salutation, name, autoName: await name.inputValue() };
+    }
+
+    test(
+      'FR-KM-007..008 — the salutation list defaults to Hi and a pick updates the greeting row @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KM-007..008' }] },
+      async ({ page }) => {
+        test.skip(!testData.victimKpostId, 'needs a second QA account as the recipient');
+        const { salutation, name, autoName } = await greetingRow(page);
+        await expect(salutation, 'it defaults to "Hi" (FR-KM-007)').toHaveValue('Hi');
+
+        await salutation.click();
+        const menu = page.locator('.custom-dropdown-menu').first();
+        await expect(menu, 'tapping it opens the salutation list').toBeVisible({ timeout: 10_000 });
+        // Clear the search text first: the list is filtered by what the box holds ("Hi").
+        await salutation.fill('');
+        const items = menu.locator('.custom-dropdown-item');
+        await expect
+          .poll(() => items.count(), { message: 'the full list shows', timeout: 10_000 })
+          .toBeGreaterThan(1);
+        const options = (await items.allInnerTexts()).map((t) => t.trim());
+        test
+          .info()
+          .annotations.push({ type: 'observed', description: `list: ${options.join(' | ')}` });
+        // The FRD figure lists Hi, Hello, Dear, Sir, Madam, Respect; the web list (18 defaults,
+        // kmail-saluations) carries Sir / Madam / Respect only inside longer forms ("Respected Sir",
+        // "Dear Madam"), so those three are matched as part of an option.
+        for (const s of ['Hi', 'Hello', 'Dear'])
+          expect(options, `the list offers "${s}" (FR-KM-007)`).toContain(s);
+        for (const s of ['Sir', 'Madam', 'Respect'])
+          expect(options, `the list offers a "${s}" form (FR-KM-007)`).toContainEqual(
+            expect.stringContaining(s),
+          );
+
+        await menu
+          .locator('.custom-dropdown-item', { hasText: /^Hello$/ })
+          .first()
+          .click();
+        await expect(salutation, 'the pick replaces the salutation (FR-KM-008)').toHaveValue(
+          'Hello',
+        );
+        await expect(menu, 'and the list closes').toBeHidden();
+        await expect(name, 'the name stays beside it').toHaveValue(autoName);
+      },
+    );
+
+    test(
+      'FR-KM-008 — the auto-filled recipient name in the greeting row can be edited by hand @ui',
+      { annotation: [{ type: 'requirement-partial', description: 'FR-KM-008' }] },
+      async ({ page }) => {
+        // FRD alternative flow. The box has no onChange (commented out in WriteMailPage.js), so typing
+        // is discarded — red on #13213 (KPost UI, 2026-10-20).
+        test.skip(!testData.victimKpostId, 'needs a second QA account as the recipient');
+        const { name, autoName } = await greetingRow(page);
+        await name.click();
+        await page.keyboard.press('End');
+        await page.keyboard.type(' QA');
+        test.info().annotations.push({
+          type: 'observed',
+          description: `name before "${autoName}", after typing " QA": "${await name.inputValue()}"`,
+        });
+        await expect(name, 'the recipient name can be edited by hand (FR-KM-008)').toHaveValue(
+          `${autoName} QA`,
+        );
+      },
+    );
   },
 );
