@@ -1,4 +1,9 @@
-import { BUGZILLA_LIMITS, BUGZILLA_PRIORITY, BUGZILLA_SEVERITY } from '@config/bugzilla.config';
+import {
+  BUGZILLA_LIMITS,
+  BUGZILLA_PRIORITY,
+  BUGZILLA_SEVERITY,
+  browserForProject,
+} from '@config/bugzilla.config';
 import { normalizeForFingerprint } from './bug-fingerprint';
 import type { BugCandidate } from './bug-candidate';
 import { developerGuidance } from './guidance';
@@ -65,7 +70,15 @@ export function sameFault(a: string, b: string): boolean {
 
 export function buildWhiteboard(candidate: BugCandidate): string {
   const tags = [`[cat:${candidate.category}]`];
-  if (candidate.browsers?.length) tags.push(`[browser:${candidate.browsers.join(',')}]`);
+  if (candidate.browsers?.length) {
+    // Real browser names only (the tracker's list); a project like `admin-ui` is written as the
+    // browser it runs, and mapped back at re-verification (`projectForBrowser`).
+    const browsers = [...new Set(candidate.browsers.map(browserForProject))].sort();
+    tags.push(`[browser:${browsers.join(',')}]`);
+  }
+  // Marks who filed it; the tracker's Source filter and its "UI/API Automation" badge read this
+  // tag. The bench's own findings are automation; a bug a person writes by hand is manual.
+  tags.push(`[source:${candidate.filedBy ?? 'automation'}]`);
   return tags.join('');
 }
 

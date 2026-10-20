@@ -45,9 +45,18 @@ const closedList = Array.isArray(resolved)
   : resolved.closed || resolved.resolved || resolved.willClose || [];
 
 const H = (s) => `\n${s}\n${'-'.repeat(s.length)}`;
+
+function modeLabel() {
+  const dryRun = [filing.dryRun, resolved.dryRun].find((v) => typeof v === 'boolean');
+  if (dryRun === true) return 'DRY RUN (preview — nothing filed yet)';
+  if (dryRun === false) return 'LIVE (filed)';
+  return 'UNKNOWN (the report does not say — treat as not filed)';
+}
 console.log(`FILING PLAN — ${meta.testRunId || '(run id?)'}  ·  ${meta.generatedAt || ''}`);
 console.log(
-  `Mode: ${filing.dryRun ? 'DRY RUN (preview — nothing filed yet)' : 'LIVE (filed)'}  ·  Environment: ${meta.environment || '?'}`,
+  // `filing` is null when nothing reached the filer (no valid defects), so the mode must also come
+  // from the status pass — otherwise a dry run with nothing to file was labelled "LIVE (filed)".
+  `Mode: ${modeLabel()}  ·  Environment: ${meta.environment || '?'}`,
 );
 
 console.log(H(`WILL CREATE — brand-new bugs (${willCreate.length})`));

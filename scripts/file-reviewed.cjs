@@ -49,6 +49,21 @@ const candidates = (r.bugs && r.bugs.candidates) || [];
 const SEVERITY = { CRITICAL: 'critical', HIGH: 'major', MEDIUM: 'minor', LOW: 'trivial' };
 const PRIORITY = { CRITICAL: 'Highest', HIGH: 'High', MEDIUM: 'Normal', LOW: 'Low' };
 
+/**
+ * The whiteboard exactly as src/bug-tracker/bug-builder.ts buildWhiteboard writes it, because the
+ * BUGZILLA-UI tracker reads all three tags: [cat:] (category), [browser:] (real browser names only —
+ * the admin-ui project runs chromium) and [source:automation] (these are the bench's own findings).
+ */
+function whiteboardFor(cand) {
+  const tags = [`[cat:${(cand && cand.category) || 'Functional'}]`];
+  const browsers = [
+    ...new Set(((cand && cand.browsers) || []).map((b) => (b === 'admin-ui' ? 'chromium' : b))),
+  ].sort();
+  if (browsers.length) tags.push(`[browser:${browsers.join(',')}]`);
+  tags.push('[source:automation]');
+  return tags.join('');
+}
+
 async function bz(method, p, body) {
   const sep = p.includes('?') ? '&' : '?';
   const res = await fetch(`${BZ}${p}${sep}api_key=${encodeURIComponent(KEY)}`, {
@@ -105,13 +120,13 @@ async function main() {
       product: entry.product,
       component: entry.component,
       summary: entry.summary,
-      version: 'unspecified',
+      version: (cand && cand.version) || 'unspecified',
       description: `${entry.description}\n\nFiled after manual review (held as needs-review: ${entry.reason || 'see report'}).`,
       severity: SEVERITY[entry.severity] || 'major',
       priority: PRIORITY[entry.severity] || 'High',
       op_sys: 'All',
       platform: 'All',
-      status_whiteboard: `[cat:${(cand && cand.category) || 'Functional'}]`,
+      status_whiteboard: whiteboardFor(cand),
       assigned_to: entry.assignee || undefined,
     };
     if (!LIVE) {

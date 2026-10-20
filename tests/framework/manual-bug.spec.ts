@@ -119,6 +119,8 @@ function loadCandidate(): BugCandidate {
     suiteId: 'kpost-api',
     title: String(raw.id),
     category: 'Functional',
+    // A person wrote this bug, so the tracker shows it as a manual test, not bench automation.
+    filedBy: 'manual',
     version: 'unspecified',
     assignee: 'jagan@kpost.in',
     ownerName: 'Jaganathan Murthy',

@@ -169,7 +169,10 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/reference
 - **Plain English, every product.** What's broken + a bottom line a non-QA reader follows. API bugs keep the
   `bug-builder.ts` template (Classification / curl / evidence); UI bugs use the one UI template
   (Classification / Module / Summary / Steps / Expected / Actual), never a curl.
-- **`status_whiteboard` must be `[cat:X][browser:Y]`** or the bug shows as Unclassified.
+- **`status_whiteboard` must be `[cat:X][browser:Y][source:Z]`** — the BUGZILLA-UI tracker reads all three
+  (`buildWhiteboard`). `X` ∈ Functional/Security/Performance/Compatibility/Accessibility (anything else is
+  Unclassified and drops out of every filter); `Y` = real browsers, UI only (`admin-ui` is written `chromium`);
+  `Z` = `automation` for the bench's findings, `manual` for a bug a person writes (`npm run bug:file`).
 - **One root cause = one bug**, naming its blast radius (count + affected tests/endpoints/screens). A shared
   background component failing on every screen is one systemic ticket (`uiSystemicFingerprint`).
 - **API status-code drift vs a stale frontend** is its own bug class: file both halves.

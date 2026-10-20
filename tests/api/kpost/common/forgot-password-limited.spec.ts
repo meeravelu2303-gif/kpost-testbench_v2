@@ -54,7 +54,9 @@ test.describe(
         const exchange = await endpoints.sendTo(
           c.id,
           { body: c.body },
-          { label: `limited:forgot-password:${c.label}` },
+          // Every case names nobody real (an absent id/number, or none), so nothing can be texted —
+          // the declaration the production guard demands before any API call reaches these senders.
+          { label: `limited:forgot-password:${c.label}`, noSmsRecipient: true },
         );
         expect(exchange.status, `${c.id} with ${c.label}`).toBeLessThan(500);
       });

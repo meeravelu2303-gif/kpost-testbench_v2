@@ -230,23 +230,31 @@ test.describe(
         process.env.KALL_LIFECYCLE !== 'true',
         'schedules a real repeating call; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5)',
       );
-      const startDate = new Date().toISOString().slice(0, 10);
-      const endDate = new Date(Date.now() + 6 * 86_400_000).toISOString().slice(0, 10);
+      /*
+       * A ONE-DAY series: it ends on the day it starts (the meeting's own day — scheduleShape starts it
+       * an hour out). A series that ends later is copied every night by RepeatKallMaterializerJob until
+       * its end date, and nothing the test can call stops that: clearKallHistory only marks the parent
+       * deleted, which the job ignores. Those copies leave both accounts "On Another Call" (#1679) —
+       * 18 of them did, after a 6-day series here (2026-10-11..13).
+       */
+      const startDate = new Date(Date.now() + 3_600_000).toISOString().slice(0, 10);
+      const endDate = startDate;
+      // scheduledRepeatKall answers only "Repeat Kool Kall Created" — no kallID (KallControllerV3) —
+      // so the series is found by the unique kallSession it was created with. #1681: the list reads the
+      // old TBL_KPOST_REPEAT_KOOL_KALL table, so a series created today is not found (fails 2/2).
+      const body = scheduleShape({
+        repeatType: 1,
+        repeatedDate: JSON.stringify({ start_date: startDate, end_date: endDate }),
+        kallDetails: [{ receiver: contactId }],
+      });
       try {
         const repeat = await endpoints.sendTo(
           'kall-scheduled-repeat',
-          {
-            body: scheduleShape({
-              repeatType: 1,
-              repeatedDate: JSON.stringify({ start_date: startDate, end_date: endDate }),
-              kallDetails: [{ receiver: contactId }],
-            }),
-          },
+          { body },
           { label: 'kall-reads:schedule-repeat', auth: { principal: A }, allowLiveWrite: true },
         );
         expect(repeat.status, 'scheduledRepeatKall is accepted').toBeLessThan(300);
         const kallID = extractKallId(repeat.bodyText);
-        expect(kallID, 'the repeating call issues a kallID').toBeTruthy();
 
         const fetched = await endpoints.sendTo(
           'kall-fetch-scheduled-repeat',
@@ -255,11 +263,21 @@ test.describe(
         );
         expect(fetched.status, 'fetchScheduledRepeatKall succeeds').toBe(200);
         const fetchedRows =
-          (JSON.parse(fetched.bodyText || '{}') as { data?: Array<{ kallID?: number }> }).data ??
-          [];
+          (
+            JSON.parse(fetched.bodyText || '{}') as {
+              data?: Array<{ kallID?: number; kallSession?: string }>;
+            }
+          ).data ?? [];
+        test.info().annotations.push({
+          type: 'observed',
+          description: `create → ${repeat.bodyText.slice(0, 200)}; fetch(${startDate}) → ${fetchedRows.length} row(s): ${JSON.stringify(fetchedRows.slice(0, 2)).slice(0, 600)}`,
+        });
         expect(
-          fetchedRows.some((r) => r.kallID === kallID),
-          'the repeating call just created appears in fetchScheduledRepeatKall from its start date',
+          fetchedRows.some(
+            (r) =>
+              r.kallSession === body.kallSession || (kallID !== undefined && r.kallID === kallID),
+          ),
+          'the repeating call just created appears in fetchScheduledRepeatKall from its start date (#1681)',
         ).toBe(true);
       } finally {
         await endpoints

@@ -47,6 +47,11 @@ export interface SendOptions {
    * feature spec sets this per call, never the engine; the QA-identifier guard still applies.
    */
   allowLiveRead?: boolean;
+  /**
+   * The request names an account or mobile number that does not exist, so an SMS sender has nobody
+   * to text (see SafetyFlags). Required for any API call to the forgot-password senders.
+   */
+  noSmsRecipient?: boolean;
 }
 
 const MAX_ERROR_BODY_CHARS = 300;
@@ -130,6 +135,7 @@ export class EndpointExecutor {
       allowDestructive: env.ALLOW_DESTRUCTIVE_TESTS,
       allowLiveWrite: options.allowLiveWrite,
       allowLiveRead: options.allowLiveRead,
+      noSmsRecipient: options.noSmsRecipient,
       // Deep write-fuzz on a disposable test DB (both required); opens only `data` writes.
       writeFuzz: env.WRITE_FUZZ,
       testDbMode: env.TEST_DB_MODE,

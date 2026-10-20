@@ -57,47 +57,49 @@ test.describe(
       ).not.toHaveClass(/--is-disabled/, { timeout: 10_000 });
     });
 
-    test('searching buses lists trips (or renders no rows) without crashing, and never reaches Show seats @ui', async ({
-      page,
-    }) => {
-      await page.goto('/kbooking', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
+    test(
+      'searching buses lists trips (or renders no rows) without crashing, and never reaches Show seats @ui',
+      { tag: '@sanity' },
+      async ({ page }) => {
+        await page.goto('/kbooking', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await page
+          .locator('.loader-overlay')
+          .waitFor({ state: 'hidden', timeout: 30_000 })
+          .catch(() => undefined);
 
-      await pickReactSelect(page.locator('.react-select__control').first(), 'Delhi');
-      await pickReactSelect(page.locator('.react-select__control').nth(1), 'Jaipur');
+        await pickReactSelect(page.locator('.react-select__control').first(), 'Delhi');
+        await pickReactSelect(page.locator('.react-select__control').nth(1), 'Jaipur');
 
-      // The search is a backend round-trip: wait for its answer (any POST the click triggers), then
-      // for the screen to settle into a result list or an empty state.
-      const answered = page
-        .waitForResponse((r) => r.request().method() === 'POST', { timeout: 20_000 })
-        .catch(() => undefined);
-      await page
-        .getByRole('button', { name: /Search Buses/i })
-        .first()
-        .click();
-      await answered;
-      // Settle into a visible outcome — trips ("Show seats") or an empty/no-service message; whichever
-      // the route produces. Best-effort: a route with neither is still a non-crash.
-      await page
-        .getByText(/Show seats|No (buses|trips|service)|not available|no results/i)
-        .first()
-        .waitFor({ state: 'visible', timeout: 15_000 })
-        .catch(() => undefined);
+        // The search is a backend round-trip: wait for its answer (any POST the click triggers), then
+        // for the screen to settle into a result list or an empty state.
+        const answered = page
+          .waitForResponse((r) => r.request().method() === 'POST', { timeout: 20_000 })
+          .catch(() => undefined);
+        await page
+          .getByRole('button', { name: /Search Buses/i })
+          .first()
+          .click();
+        await answered;
+        // Settle into a visible outcome — trips ("Show seats") or an empty/no-service message; whichever
+        // the route produces. Best-effort: a route with neither is still a non-crash.
+        await page
+          .getByText(/Show seats|No (buses|trips|service)|not available|no results/i)
+          .first()
+          .waitFor({ state: 'visible', timeout: 15_000 })
+          .catch(() => undefined);
 
-      // Soft, deliberately: whether a real route has trips is out of this test's control. What matters
-      // is the screen doesn't crash and, if trips exist, the safety boundary control ("Show seats") is
-      // visible but never clicked.
-      const showSeatsLinks = page.getByText(/Show seats/i);
-      const tripCount = await showSeatsLinks.count();
-      test.info().annotations.push({
-        type: 'observed',
-        description: `${tripCount} trip(s) listed for this route/date — "Show seats" never clicked`,
-      });
-      await expect(page.locator('body')).toBeVisible();
-    });
+        // Soft, deliberately: whether a real route has trips is out of this test's control. What matters
+        // is the screen doesn't crash and, if trips exist, the safety boundary control ("Show seats") is
+        // visible but never clicked.
+        const showSeatsLinks = page.getByText(/Show seats/i);
+        const tripCount = await showSeatsLinks.count();
+        test.info().annotations.push({
+          type: 'observed',
+          description: `${tripCount} trip(s) listed for this route/date — "Show seats" never clicked`,
+        });
+        await expect(page.locator('body')).toBeVisible();
+      },
+    );
 
     test('"My Trips" loads the read-only ticket list with its Upcoming/Completed/Cancelled tabs @ui', async ({
       page,

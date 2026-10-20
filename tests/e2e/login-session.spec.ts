@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { answerForgotPasswordSmsLocally } from './support/no-real-sms';
 
 /**
  * Login & session — the deeper screen behaviours beyond the two-step credential flow
@@ -7,8 +8,8 @@ import { expect, test } from '@fixtures';
  *
  * Split by the session they need:
  *  - **logged out** (`storageState` cleared): the Forgot-Password modal, the Sign-Up link, and the
- *    session-expiry redirect — all read-only and safe (the Forgot-Password OTP is NOT requested, so no
- *    real SMS is sent; the test asserts the modal opens and stops).
+ *    session-expiry redirect — all read-only and safe (the link's SMS request is answered in the
+ *    browser, so no real SMS is sent; the test asserts the modal opens and stops).
  *  - **authenticated** (the shared `setup` session): logout.
  *
  * Selectors are from `src/components/auth/Login.js`: heading "Sign in to your account", the id field
@@ -47,12 +48,15 @@ test.describe('KPost login screen · deeper flows', { tag: ['@ui', '@auth', '@re
       timeout: 20_000,
     });
 
+    // Clicking the link ALONE sends a real SMS (Login.js handleForgetPassword); answer it in the
+    // browser instead — the one forgot-password SMS per run belongs to the lifecycle spec.
+    await answerForgotPasswordSmsLocally(page);
     await page
       .getByText(/Forgot Password/i)
       .first()
       .click();
 
-    // The reset modal opens with its title. We STOP here — submitting would send a real OTP SMS.
+    // The reset modal opens with its title. We STOP here (the full reset is the lifecycle spec).
     await expect(
       page.getByText(/^Forgot Password$/i).first(),
       'the Forgot Password modal opens',

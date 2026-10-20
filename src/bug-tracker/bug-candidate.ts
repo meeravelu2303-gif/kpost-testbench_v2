@@ -1,5 +1,10 @@
 import type { RequestSpec } from '@api/client/request-builder';
-import { categoryFor, type BugCategory, type BugzillaConfig } from '@config/bugzilla.config';
+import {
+  categoryFor,
+  type BugCategory,
+  type BugSource,
+  type BugzillaConfig,
+} from '@config/bugzilla.config';
 import { componentFor, suiteFor, type SuiteId } from '@config/ownership.config';
 import type { Severity, ValidationReport, ValidationResult } from '@engine/validation-result';
 import { maskSensitive, maskString } from '@utils/masking';
@@ -164,6 +169,11 @@ export interface BugCandidate {
   correlationId?: string;
   /** Browser projects that observed a UI failure. */
   browsers?: string[];
+  /**
+   * Who files it, for the `[source:]` whiteboard tag. Unset = `automation` (the bench's own finding);
+   * `manual` only for a bug a person writes by hand (`tests/framework/manual-bug.spec.ts`).
+   */
+  filedBy?: BugSource;
   occurrences: number;
   environment: string;
   baseURL: string;
@@ -1012,7 +1022,9 @@ export function accessibilityCandidatesFromScreens(
         `ticket rather than one per screen. See ${rule.helpUrl} for the rule's full explanation and how ` +
         `to fix it.`,
       severity: A11Y_SEVERITY[rule.impact],
-      category: 'Functional',
+      // The tracker has its own Accessibility category (chart bucket + filter); filing these as
+      // Functional hid every WCAG ticket among the functional ones.
+      category: 'Accessibility',
       classification: `accessibility.${ruleId}`,
       product: suite.bugzilla.product,
       component,

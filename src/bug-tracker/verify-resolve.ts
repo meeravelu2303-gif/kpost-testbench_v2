@@ -1,3 +1,4 @@
+import { projectForBrowser } from '@config/bugzilla.config';
 import type { BugSummary } from './bugzilla-client';
 import type { ValidationReport } from '../validation-engine/validation-result';
 
@@ -209,13 +210,17 @@ export function buildUiRunIndex(records: readonly UiTestOutcome[]): UiRunIndex {
   return idx;
 }
 
-/** The browsers a UI bug was filed for, from its whiteboard `[browser:chromium,firefox]` tag. */
+/**
+ * The test projects that re-check a UI bug, from its whiteboard `[browser:chromium,firefox]` tag.
+ * The tag holds real browser names (the tracker's list), so a KPost Admin UI bug's `chromium` is the
+ * `admin-ui` project that filed it (`projectForBrowser`); an older `[browser:admin-ui]` still matches.
+ */
 function bugBrowsers(bug: BugSummary): string[] {
   const m = (bug.whiteboard ?? '').match(/\[browser:([^\]]+)\]/i);
   return m?.[1]
     ? m[1]
         .split(',')
-        .map((b) => b.trim().toLowerCase())
+        .map((b) => projectForBrowser(bug.product, b.trim().toLowerCase()))
         .filter(Boolean)
     : [];
 }

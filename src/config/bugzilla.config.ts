@@ -16,8 +16,43 @@ import { env } from './env';
  *   Tracker UI renders a structured report instead of a raw dump.
  */
 
-/** Defect type axis, written as `[cat:Xxx]`. Bugzilla has no native field for it. */
-export type BugCategory = 'Functional' | 'Security' | 'Performance' | 'Compatibility';
+/**
+ * Defect type axis, written as `[cat:Xxx]`. Bugzilla has no native field for it. The values are the
+ * BUGZILLA-UI tracker's own list (`backend/src/lib/classification.ts` CATEGORIES, minus its
+ * `Unclassified` fallback): a value outside it shows as Unclassified there AND drops out of every
+ * category filter, including Unclassified's.
+ */
+export type BugCategory =
+  'Functional' | 'Security' | 'Performance' | 'Compatibility' | 'Accessibility';
+
+/**
+ * Who filed the bug, written as `[source:automation|manual]`. The tracker's Source filter, its
+ * "UI/API Automation" vs "Manual UI/API test" badge and the export's Test Type read only this tag in
+ * lists (`sourceOf`, BUGZILLA-UI classification.ts). The bench's own findings are `automation`; a bug
+ * a person writes by hand through the bench (`npm run bug:file`) is `manual`, like one filed in the UI.
+ */
+export type BugSource = 'automation' | 'manual';
+
+/**
+ * Playwright project names that are not browser names, and the browser each one really runs. The
+ * tracker's `[browser:]` list is `chromium | firefox | webkit | mobile-chrome`; anything else shows as
+ * an unknown browser. Re-verification maps it back (`projectForBrowser`), because it matches the tag
+ * against the project that ran the test.
+ */
+const PROJECT_BROWSER: Readonly<Record<string, string>> = { 'admin-ui': 'chromium' };
+/** The product whose UI bugs are re-checked by a non-browser-named project. */
+const PRODUCT_PROJECT: Readonly<Record<string, string>> = { 'KPost Admin UI': 'admin-ui' };
+
+/** The `[browser:]` value for a Playwright project. */
+export function browserForProject(project: string): string {
+  return PROJECT_BROWSER[project] ?? project;
+}
+
+/** The Playwright project that re-checks a `[browser:]` value on a given product. */
+export function projectForBrowser(product: string | undefined, browser: string): string {
+  const project = product ? PRODUCT_PROJECT[product] : undefined;
+  return project && PROJECT_BROWSER[project] === browser ? project : browser;
+}
 
 /** Our severity bands onto Bugzilla's. `blocker` and `enhancement` are deliberately unused. */
 export const BUGZILLA_SEVERITY: Record<Severity, string> = {

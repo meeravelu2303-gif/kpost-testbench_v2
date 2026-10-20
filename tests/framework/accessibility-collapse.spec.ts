@@ -112,7 +112,8 @@ test.describe('accessibility rule collapse — one WCAG rule is one ticket @fram
     const [candidate] = accessibilityCandidatesFromScreens(screens, config);
     expect(candidate?.source).toBe('ui');
     expect(candidate?.suiteId).toBe('kpost-ui');
-    expect(candidate?.category).toBe('Functional');
+    // The BUGZILLA-UI tracker has its own Accessibility category (2026-10-20).
+    expect(candidate?.category).toBe('Accessibility');
   });
 
   test("a rule found on 2 screens carries BOTH screens' proof — the actual page, not just JSON", () => {

@@ -179,90 +179,91 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
     },
   );
 
-  test('a session can be ended without harming the shared session @api @signup-login @database', async ({
-    endpoints,
-    databases,
-  }) => {
-    /*
-     * Open a NEW session on a device id of our own, then log exactly that one out. The token the
-     * rest of the run shares is on KPOST_DEVICE_IDENTITY, so it is untouched — which the final
-     * assertion confirms by logging in again on the shared device.
-     */
-    const ownDevice = `qa-bench-flow-${randomUUID()}`;
-    const opened = await login(
-      endpoints,
-      testData.kpostId,
-      testData.password,
-      'PERSONAL',
-      ownDevice,
-    );
-    expect(opened.status, 'the throwaway session opens').toBe(200);
+  test(
+    'a session can be ended without harming the shared session @api @signup-login @database',
+    { tag: '@sanity' },
+    async ({ endpoints, databases }) => {
+      /*
+       * Open a NEW session on a device id of our own, then log exactly that one out. The token the
+       * rest of the run shares is on KPOST_DEVICE_IDENTITY, so it is untouched — which the final
+       * assertion confirms by logging in again on the shared device.
+       */
+      const ownDevice = `qa-bench-flow-${randomUUID()}`;
+      const opened = await login(
+        endpoints,
+        testData.kpostId,
+        testData.password,
+        'PERSONAL',
+        ownDevice,
+      );
+      expect(opened.status, 'the throwaway session opens').toBe(200);
 
-    const database = databases.for('kpost-api');
-    if (database.enabled) {
-      const row = await database.findOne<{ device_identity_primary: string }>({
-        table: 'TBL_KPOST_LOGIN_SESSION',
-        where: { kpost_id: testData.kpostId, device_identity_primary: ownDevice },
-      });
-      expect(row, 'the fresh login wrote a row to TBL_KPOST_LOGIN_SESSION').toBeDefined();
-    }
+      const database = databases.for('kpost-api');
+      if (database.enabled) {
+        const row = await database.findOne<{ device_identity_primary: string }>({
+          table: 'TBL_KPOST_LOGIN_SESSION',
+          where: { kpost_id: testData.kpostId, device_identity_primary: ownDevice },
+        });
+        expect(row, 'the fresh login wrote a row to TBL_KPOST_LOGIN_SESSION').toBeDefined();
+      }
 
-    const logout = await endpoints.sendTo(
-      'signup-login-user-logout',
-      {
-        body: {
-          deviceType: 'Web',
-          deviceIdentity_primary: ownDevice,
-          logouttime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      const logout = await endpoints.sendTo(
+        'signup-login-user-logout',
+        {
+          body: {
+            deviceType: 'Web',
+            deviceIdentity_primary: ownDevice,
+            logouttime: new Date().toISOString().replace('T', ' ').slice(0, 19),
+          },
         },
-      },
-      {
-        label: 'login-flow:logout-own',
-        // Authenticate as the session we just opened, by its own token.
-        auth: { header: `Bearer ${String(opened.body.accessToken)}` },
-      },
-    );
-    expect(logout.status, 'logout of our own session succeeds').toBeLessThan(400);
+        {
+          label: 'login-flow:logout-own',
+          // Authenticate as the session we just opened, by its own token.
+          auth: { header: `Bearer ${String(opened.body.accessToken)}` },
+        },
+      );
+      expect(logout.status, 'logout of our own session succeeds').toBeLessThan(400);
 
-    // The endpoint answers success whatever it did to the row — same discipline as every other
-    // "reports success regardless" check in this bench — so the row itself is the judge.
-    if (database.enabled) {
-      const afterLogout = await database.findOne<{ device_identity_primary: string }>({
-        table: 'TBL_KPOST_LOGIN_SESSION',
-        where: { kpost_id: testData.kpostId, device_identity_primary: ownDevice },
-      });
-      expect(
-        afterLogout,
-        'logout actually removed the session row, not just answered success',
-      ).toBeUndefined();
-    }
+      // The endpoint answers success whatever it did to the row — same discipline as every other
+      // "reports success regardless" check in this bench — so the row itself is the judge.
+      if (database.enabled) {
+        const afterLogout = await database.findOne<{ device_identity_primary: string }>({
+          table: 'TBL_KPOST_LOGIN_SESSION',
+          where: { kpost_id: testData.kpostId, device_identity_primary: ownDevice },
+        });
+        expect(
+          afterLogout,
+          'logout actually removed the session row, not just answered success',
+        ).toBeUndefined();
+      }
 
-    /*
-     * BR-SL-LOGOUT (SRS-S05): "logout invalidates the session token" — the row being gone is not the
-     * same claim as the TOKEN no longer authenticating. A JWT is self-contained; unless the server
-     * actively checks the session store on every authenticated call, a logged-out token could still
-     * verify cryptographically and keep working. This is the actual business rule, not a proxy for
-     * it — tries the now-logged-out token against a real authenticated endpoint.
-     */
-    const reuseAttempt = await endpoints.sendTo(
-      'signup-login-active-session',
-      {},
-      {
-        label: 'login-flow:logout-token-reuse',
-        auth: { header: `Bearer ${String(opened.body.accessToken)}` },
-      },
-    );
-    expect
-      .soft(
-        reuseAttempt.status,
-        `BR-SL-LOGOUT: a logged-out token must not still authenticate (getActiveSession replied ${reuseAttempt.status})`,
-      )
-      .toBe(401);
+      /*
+       * BR-SL-LOGOUT (SRS-S05): "logout invalidates the session token" — the row being gone is not the
+       * same claim as the TOKEN no longer authenticating. A JWT is self-contained; unless the server
+       * actively checks the session store on every authenticated call, a logged-out token could still
+       * verify cryptographically and keep working. This is the actual business rule, not a proxy for
+       * it — tries the now-logged-out token against a real authenticated endpoint.
+       */
+      const reuseAttempt = await endpoints.sendTo(
+        'signup-login-active-session',
+        {},
+        {
+          label: 'login-flow:logout-token-reuse',
+          auth: { header: `Bearer ${String(opened.body.accessToken)}` },
+        },
+      );
+      expect
+        .soft(
+          reuseAttempt.status,
+          `BR-SL-LOGOUT: a logged-out token must not still authenticate (getActiveSession replied ${reuseAttempt.status})`,
+        )
+        .toBe(401);
 
-    // The shared session (a different device) is unaffected.
-    const shared = await login(endpoints, testData.kpostId, testData.password);
-    expect(shared.status, 'the shared session still logs in').toBe(200);
-  });
+      // The shared session (a different device) is unaffected.
+      const shared = await login(endpoints, testData.kpostId, testData.password);
+      expect(shared.status, 'the shared session still logs in').toBe(200);
+    },
+  );
 
   test(
     'mobile and the full domain-qualified ID log in; the bare KPost ID is correctly rejected (BR-SL-3IDS) @api @signup-login',

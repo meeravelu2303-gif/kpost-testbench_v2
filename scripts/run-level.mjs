@@ -66,6 +66,9 @@ const RUN_FLAGS = {
   BUSINESS_UI_LIFECYCLE: 'true',
   // Admin UI session (auth-admin.setup.ts seeds it); read-only screens in sanity.
   ADMIN_UI_LIFECYCLE: 'true',
+  // The forgot-password lifecycle sends ONE real SMS to the spare account per run (owner,
+  // 2026-10-20). Its retries are off and every other dialog test answers the SMS request in-browser.
+  FORGOT_PASSWORD_SMS: 'true',
 };
 
 /** Paused modules, never run by any level (KDoc/KOS paused by the owner since 2026-10-07). */

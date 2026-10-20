@@ -25,6 +25,13 @@ export interface SafetyFlags {
    */
   allowLiveRead?: boolean;
   /**
+   * The caller declares this request names an account or mobile number that does NOT exist, so an
+   * SMS-sending endpoint has nobody to text. The only thing that lets an API call reach the
+   * forgot-password senders, whose SMS is real even on the test gateway. Set per call, never by the
+   * engine.
+   */
+  noSmsRecipient?: boolean;
+  /**
    * Deep write-fuzzing on a disposable TEST DB. When both this and `testDbMode` are set, the engine
    * may run its fuzzers on a `data`-side-effect WRITE endpoint (which persists junk — hence test-DB
    * only). It never unlocks `external`/`global`/OTP writes, and the QA-identifier guard stays armed.
@@ -154,6 +161,23 @@ export function destructiveBlockReason(
     !otpTestAuthorized
   ) {
     return `${endpoint.label}: sends a real OTP/SMS/e-mail — BLOCKED (SMS kill-switch); it may run only against a confirmed test gateway (OTP_TEST_GATEWAY+TEST_DB_MODE)`;
+  }
+  /*
+   * ## Forgot-password texts are REAL even on the test gateway
+   *
+   * `forgotPassword` never consults the `otpBypass` setting (UserProfileServiceImpl): it sends a
+   * random OTP — or the KPOST ID — through the live SMS provider on every host. Owner rule
+   * (2026-10-20): ONE such SMS per run, sent only by the browser forgot-password lifecycle
+   * (`login-forgot-password-lifecycle.spec.ts`). So no API call may reach these two endpoints
+   * unless the caller declares it names an account or number that does not exist, which cannot
+   * text anyone (`forgot-password-limited.spec.ts`).
+   */
+  if (
+    /forgotpassword/i.test(endpoint.label) &&
+    endpoint.otpDependent === 'sends' &&
+    !flags.noSmsRecipient
+  ) {
+    return `${endpoint.label}: texts a real phone even on the test gateway (forgotPassword ignores the OTP bypass) — BLOCKED; the one forgot-password SMS per run belongs to the browser lifecycle test`;
   }
   /*
    * ## On the live application, default deny

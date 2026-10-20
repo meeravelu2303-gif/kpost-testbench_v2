@@ -39,129 +39,131 @@ test.describe(
         .waitFor({ state: 'hidden', timeout: 30_000 })
         .catch(() => undefined);
 
-    test('a one-time schedule can be created from the Diary panel and then deleted @ui', async ({
-      page,
-    }) => {
-      const title = `QA KDiary ${Date.now()}`;
+    test(
+      'a one-time schedule can be created from the Diary panel and then deleted @ui',
+      { tag: '@sanity' },
+      async ({ page }) => {
+        const title = `QA KDiary ${Date.now()}`;
 
-      // Accept the native "Delete this task?" confirm when it fires (cleanup step).
-      page.on('dialog', (d) => void d.accept().catch(() => undefined));
+        // Accept the native "Delete this task?" confirm when it fires (cleanup step).
+        page.on('dialog', (d) => void d.accept().catch(() => undefined));
 
-      await page.goto('/kdiary', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await waitLoaded(page);
-      await expect(
-        page.getByText('Diary', { exact: true }).first(),
-        'the Diary panel renders',
-      ).toBeVisible({ timeout: 20_000 });
-
-      let created = false;
-      try {
-        // --- Open the Add modal and fill the schedule ---------------------------------------
-        await page
-          .getByRole('button', { name: /\+ ?Add/ })
-          .first()
-          .click();
+        await page.goto('/kdiary', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await waitLoaded(page);
         await expect(
-          page.getByText('KDiary', { exact: true }).first(),
-          'the KDiary add modal opens',
-        ).toBeVisible({ timeout: 10_000 });
-        await page.getByPlaceholder('Enter Title').fill(title);
-        await page.getByPlaceholder('Enter Description').fill('QA bench diary schedule');
-        const times = page.locator('input[type="time"]:visible');
-        await times.nth(0).fill('09:00');
-        await times.nth(1).fill('10:00');
-        await pickReactSelect(
-          page
-            .locator('.react-select__control')
-            .filter({ hasText: /Priority/ })
-            .first(),
-          'High Priority',
-          { page },
-        );
+          page.getByText('Diary', { exact: true }).first(),
+          'the Diary panel renders',
+        ).toBeVisible({ timeout: 20_000 });
 
-        // --- Save: the server must accept it ------------------------------------------------
-        const createResp = page
-          .waitForResponse((r) => r.url().includes('/dairySchedule/createEvent'), {
+        let created = false;
+        try {
+          // --- Open the Add modal and fill the schedule ---------------------------------------
+          await page
+            .getByRole('button', { name: /\+ ?Add/ })
+            .first()
+            .click();
+          await expect(
+            page.getByText('KDiary', { exact: true }).first(),
+            'the KDiary add modal opens',
+          ).toBeVisible({ timeout: 10_000 });
+          await page.getByPlaceholder('Enter Title').fill(title);
+          await page.getByPlaceholder('Enter Description').fill('QA bench diary schedule');
+          const times = page.locator('input[type="time"]:visible');
+          await times.nth(0).fill('09:00');
+          await times.nth(1).fill('10:00');
+          await pickReactSelect(
+            page
+              .locator('.react-select__control')
+              .filter({ hasText: /Priority/ })
+              .first(),
+            'High Priority',
+            { page },
+          );
+
+          // --- Save: the server must accept it ------------------------------------------------
+          const createResp = page
+            .waitForResponse((r) => r.url().includes('/dairySchedule/createEvent'), {
+              timeout: 20_000,
+            })
+            .catch(() => null);
+          const save = page.getByRole('button', { name: /^Save$/ });
+          await expect(save, 'Save enables once every required field is set').toBeEnabled({
+            timeout: 10_000,
+          });
+          await save.click();
+          const cr = await createResp;
+          test.info().annotations.push({
+            type: 'observed',
+            description: `create: ${cr ? `HTTP ${cr.status()}` : 'no CreateDiarySchedule request seen'}`,
+          });
+          expect(cr, 'a CreateDiarySchedule request is sent').not.toBeNull();
+          expect(cr!.status(), 'the schedule is accepted by the server').toBeLessThan(300);
+
+          // --- It lands in the day's schedule list --------------------------------------------
+          const taskRow = page.getByText(title, { exact: false }).first();
+          await expect(taskRow, 'the new schedule appears in the Diary list').toBeVisible({
             timeout: 20_000,
-          })
-          .catch(() => null);
-        const save = page.getByRole('button', { name: /^Save$/ });
-        await expect(save, 'Save enables once every required field is set').toBeEnabled({
-          timeout: 10_000,
-        });
-        await save.click();
-        const cr = await createResp;
-        test.info().annotations.push({
-          type: 'observed',
-          description: `create: ${cr ? `HTTP ${cr.status()}` : 'no CreateDiarySchedule request seen'}`,
-        });
-        expect(cr, 'a CreateDiarySchedule request is sent').not.toBeNull();
-        expect(cr!.status(), 'the schedule is accepted by the server').toBeLessThan(300);
+          });
+          created = true;
+          const shot = test.info().outputPath('kdiary-created.png');
+          await page.screenshot({ path: shot });
+          await test.info().attach('kdiary-created', { path: shot, contentType: 'image/png' });
 
-        // --- It lands in the day's schedule list --------------------------------------------
-        const taskRow = page.getByText(title, { exact: false }).first();
-        await expect(taskRow, 'the new schedule appears in the Diary list').toBeVisible({
-          timeout: 20_000,
-        });
-        created = true;
-        const shot = test.info().outputPath('kdiary-created.png');
-        await page.screenshot({ path: shot });
-        await test.info().attach('kdiary-created', { path: shot, contentType: 'image/png' });
-
-        // --- Delete it: each card's right-side status button (aria-label "Update remarks for <title>")
-        //     opens the "KDiary Remarks" modal with a "Delete Task" button (handleDeleteTask →
-        //     window.confirm "Delete this task?" → DeleteDiaryScheduleEvent).
-        await page
-          .getByRole('button', { name: `Update remarks for ${title}` })
-          .first()
-          .click();
-        await expect(
-          page.getByText('KDiary Remarks', { exact: false }).first(),
-          'the remarks modal opens',
-        ).toBeVisible({ timeout: 10_000 });
-        const delResp = page
-          .waitForResponse((r) => r.url().includes('/dairySchedule/deleteEvent'), {
-            timeout: 15_000,
-          })
-          .catch(() => null);
-        const delBtn = page.getByRole('button', { name: /Delete Task/i }).first();
-        await expect(delBtn, 'the task offers a Delete Task button').toBeVisible({
-          timeout: 10_000,
-        });
-        await delBtn.click();
-        const dr = await delResp;
-        test.info().annotations.push({
-          type: 'observed',
-          description: `delete: ${dr ? `HTTP ${dr.status()}` : 'no delete request seen'}`,
-        });
-        expect(dr, 'a delete request is sent').not.toBeNull();
-        expect(dr!.status(), 'the delete is accepted').toBeLessThan(300);
-        await expect(
-          page.getByText(title, { exact: false }),
-          'the deleted schedule is gone from the Diary list',
-        ).toHaveCount(0, { timeout: 15_000 });
-        created = false;
-      } finally {
-        // Safety net: if an assertion failed after the schedule was created, remove it via the UI.
-        if (created) {
-          const cleanup = page
+          // --- Delete it: each card's right-side status button (aria-label "Update remarks for <title>")
+          //     opens the "KDiary Remarks" modal with a "Delete Task" button (handleDeleteTask →
+          //     window.confirm "Delete this task?" → DeleteDiaryScheduleEvent).
+          await page
+            .getByRole('button', { name: `Update remarks for ${title}` })
+            .first()
+            .click();
+          await expect(
+            page.getByText('KDiary Remarks', { exact: false }).first(),
+            'the remarks modal opens',
+          ).toBeVisible({ timeout: 10_000 });
+          const delResp = page
             .waitForResponse((r) => r.url().includes('/dairySchedule/deleteEvent'), {
               timeout: 15_000,
             })
             .catch(() => null);
-          await page
-            .getByRole('button', { name: `Update remarks for ${title}` })
-            .first()
-            .click()
-            .catch(() => undefined);
-          await page
-            .getByRole('button', { name: /Delete Task/i })
-            .first()
-            .click()
-            .catch(() => undefined);
-          await cleanup;
+          const delBtn = page.getByRole('button', { name: /Delete Task/i }).first();
+          await expect(delBtn, 'the task offers a Delete Task button').toBeVisible({
+            timeout: 10_000,
+          });
+          await delBtn.click();
+          const dr = await delResp;
+          test.info().annotations.push({
+            type: 'observed',
+            description: `delete: ${dr ? `HTTP ${dr.status()}` : 'no delete request seen'}`,
+          });
+          expect(dr, 'a delete request is sent').not.toBeNull();
+          expect(dr!.status(), 'the delete is accepted').toBeLessThan(300);
+          await expect(
+            page.getByText(title, { exact: false }),
+            'the deleted schedule is gone from the Diary list',
+          ).toHaveCount(0, { timeout: 15_000 });
+          created = false;
+        } finally {
+          // Safety net: if an assertion failed after the schedule was created, remove it via the UI.
+          if (created) {
+            const cleanup = page
+              .waitForResponse((r) => r.url().includes('/dairySchedule/deleteEvent'), {
+                timeout: 15_000,
+              })
+              .catch(() => null);
+            await page
+              .getByRole('button', { name: `Update remarks for ${title}` })
+              .first()
+              .click()
+              .catch(() => undefined);
+            await page
+              .getByRole('button', { name: /Delete Task/i })
+              .first()
+              .click()
+              .catch(() => undefined);
+            await cleanup;
+          }
         }
-      }
-    });
+      },
+    );
   },
 );

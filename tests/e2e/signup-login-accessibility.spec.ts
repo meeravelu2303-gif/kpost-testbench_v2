@@ -11,6 +11,7 @@ import {
 } from '@ui/accessibility-evidence';
 import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
+import { answerForgotPasswordSmsLocally } from './support/no-real-sms';
 import { writeFileSync } from 'node:fs';
 import { settleFrames } from './support/settle';
 
@@ -184,6 +185,8 @@ test.describe(
         !(await loginPage.passwordInput.isVisible()),
         'the fixed probe id was not accepted right now — the password step (and its Forgot Password link) was not shown',
       );
+      // Clicking the link ALONE sends a real SMS; answer it in the browser (support/no-real-sms.ts).
+      await answerForgotPasswordSmsLocally(page);
       await page
         .getByText(/Forgot Password/i)
         .first()

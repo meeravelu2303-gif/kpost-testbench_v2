@@ -1,34 +1,35 @@
 import { testData } from '@config/test-data.config';
+import { isSqlClient } from '@database/database-client';
 import { expect, test } from '@fixtures';
 
 /**
- * The FULL forgot-password reset — request OTP → verify → set a new password → log in with it —
- * the one piece of Login's functional coverage the earlier "modal opens safely" test
- * (`login-session.spec.ts`) deliberately stopped short of, specifically to avoid a real OTP send on
- * every run. Confirmed from source (2026-09-30) that assumption doesn't actually hold — clicking
- * "Forgot Password ?" ALONE already dispatches a real OTP (`handleForgetPassword` →
- * `ForgetPasswordSentOTP`) — so both that test and this one need the same OTP_TEST_GATEWAY gate;
- * only this one goes on to actually change a real password, hence the extra `ALLOW_DESTRUCTIVE_TESTS`
- * gate matching `test-data.config.ts`'s own documented hazard for `forgotPasswordKpostId`.
+ * The FULL forgot-password reset — request OTP → verify → set the password → log in with it — with
+ * exactly ONE real SMS per run (owner, 2026-10-20).
  *
- * ## Never the shared account
+ * ## Why the SMS is real, and how it is kept to one
  *
- * This NEVER runs against `testData.kpostId` — that is the account every other UI suite logs in
- * with, and a password reset would lock every one of them out. It runs only against the dedicated
- * `QA_FORGOT_PASSWORD_KPOST_ID` spare account (documented in `.env` as account #6, "spare").
+ * `forgotPassword` never applies the test gateway's OTP bypass (UserProfileServiceImpl): clicking
+ * "Forgot Password ?" texts a random 6-digit code to the account's registered mobile. So:
+ * - the link is clicked ONCE, and "Resend OTP" is never touched;
+ * - retries are OFF for this file — a failed attempt is never repeated in the same run;
+ * - the code is read from the test database (TBL_KPOST_OTP_VALIDATION, the row the request just
+ *   wrote), so nobody has to read the phone;
+ * - every other test that opens the dialog answers the request in the browser instead
+ *   (`support/no-real-sms.ts`), and the production guard blocks any API call to these senders.
  *
- * ## Idempotent by construction
+ * ## Never strands the account
  *
- * The test performs the FULL reset cycle twice: once to a temporary password (proving the reset
- * actually works — logs in with the temp password to confirm), then a second time back to
- * `testData.password` (the account's normal, documented password). The restore runs inside a
- * `finally` block, so it still runs even if the first cycle's own assertions fail partway — the
- * account is left exactly as it started either way, not stranded on the temp password.
+ * It runs only on the dedicated spare account (`QA_FORGOT_PASSWORD_KPOST_ID`, qatest6), and it resets
+ * the password TO THE SAME VALUE the account already has: the server accepts that (no same-password
+ * rule), so there is nothing to restore and no second SMS is ever needed. The reset is still proven
+ * to have been written: bcrypt salts every save, so the stored hash must change — and the account
+ * must sign in with the password afterwards.
  */
 test.describe(
   'KPost login · forgot-password full reset cycle',
   { tag: ['@ui', '@auth', '@regression'] },
   () => {
+    test.describe.configure({ retries: 0, timeout: 180_000 });
     test.use({ storageState: { cookies: [], origins: [] } });
 
     test.skip(
@@ -36,83 +37,90 @@ test.describe(
       'logs in and out repeatedly; set LOGIN_UI_LIFECYCLE=true',
     );
     test.skip(
-      process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',
-      'requesting the reset OTP only validates on the confirmed OTP test gateway',
-    );
-    test.skip(
-      process.env.ALLOW_DESTRUCTIVE_TESTS !== 'true',
-      'this genuinely rewrites a real account password; set ALLOW_DESTRUCTIVE_TESTS=true',
+      process.env.FORGOT_PASSWORD_SMS !== 'true',
+      'sends ONE real SMS to the spare account; set FORGOT_PASSWORD_SMS=true (the run levels do)',
     );
     test.skip(
       !testData.forgotPasswordKpostId || testData.forgotPasswordKpostId.includes('no.such.user'),
       'needs a real spare account — set QA_FORGOT_PASSWORD_KPOST_ID (never QA_KPOST_ID)',
     );
 
-    test("resetting the spare account's password via OTP actually takes effect @ui", async ({
-      loginPage,
-      page,
-    }) => {
-      const spareId = testData.forgotPasswordKpostId;
-      const originalPassword = testData.password;
-      const tempPassword = `TmpReset@${Date.now().toString().slice(-6)}`;
+    test(
+      "resetting the spare account's password via OTP actually takes effect @ui",
+      { tag: '@sanity' },
+      async ({ loginPage, page, databases }) => {
+        const db = databases.for('kpost-api');
+        if (!isSqlClient(db)) {
+          test.skip(true, 'needs the KPOST_QA database (DB_ENABLED) to read the OTP that was sent');
+          return;
+        }
+        const spareId = testData.forgotPasswordKpostId.toLowerCase();
+        const password = testData.password;
 
-      async function resetTo(newPassword: string): Promise<void> {
-        await test.step(`Reset ${spareId}'s password`, async () => {
+        const [user] = await db.query<{ mobile_number: string; password: string }>(
+          'SELECT mobile_number, password FROM TBL_KPOST_USER_MASTER WHERE kpost_id = ?',
+          [spareId],
+        );
+        expect(user, `${spareId} exists`).toBeTruthy();
+        const mobile = String(user?.mobile_number);
+        const hashBefore = String(user?.password);
+        const [last] = await db.query<{ id: string }>(
+          'SELECT COALESCE(MAX(id), 0) AS id FROM TBL_KPOST_OTP_VALIDATION WHERE mobile_number = ?',
+          [mobile],
+        );
+        const lastIdBefore = Number(last?.id ?? 0);
+
+        await test.step('request the reset code — the ONE real SMS of this run', async () => {
           await loginPage.goto();
           await loginPage.requestPasswordResetOtp(spareId);
-          const otpOutcome = await loginPage.enterPasswordResetOtp(testData.bypassOtp);
-          test.skip(otpOutcome === 'invalid', 'the OTP bypass code was rejected this run — re-run');
-          await loginPage.submitNewPassword(newPassword);
-          // On success the modal closes and returns to the id-entry step (`passwordChange`'s own
-          // success branch) — the id input reappearing is the most reliable proof of that, since the
-          // success toast text is not pinned here (see the same rationale in
-          // `login-functional.spec.ts`'s server-message test).
+        });
+
+        const otp = await test.step('read the code the server just stored', async () => {
+          let code = '';
+          await expect
+            .poll(
+              async () => {
+                const [row] = await db.query<{ otp: string }>(
+                  `SELECT otp FROM TBL_KPOST_OTP_VALIDATION
+                    WHERE mobile_number = ? AND type = 'forgot Password' AND id > ?
+                    ORDER BY id DESC LIMIT 1`,
+                  [mobile, lastIdBefore],
+                );
+                code = row ? String(row.otp) : '';
+                return code.length;
+              },
+              { message: 'the reset request stored a 6-digit code', timeout: 30_000 },
+            )
+            .toBe(6);
+          return code;
+        });
+
+        await test.step('enter the code and set the password', async () => {
+          expect(await loginPage.enterPasswordResetOtp(otp), 'the texted code is accepted').toBe(
+            'verified',
+          );
+          await loginPage.submitNewPassword(password);
           await expect(
             loginPage.loginIdInput,
             'the modal closes and returns to id-entry after a successful reset',
           ).toBeVisible({ timeout: 15_000 });
         });
-      }
 
-      async function logout(): Promise<void> {
-        await page.locator('.header-user-pill').first().click();
-        await page
-          .getByText(/^Log ?out$/i)
-          .first()
-          .click()
-          .catch(() => undefined);
-        await page
-          .getByRole('button', { name: /^Logout$/i })
-          .first()
-          .click();
-        await expect(page, 'logout returns to the login screen').toHaveURL(/\/login/, {
-          timeout: 20_000,
+        await test.step('the reset was written, and the account signs in with it', async () => {
+          const [after] = await db.query<{ password: string }>(
+            'SELECT password FROM TBL_KPOST_USER_MASTER WHERE kpost_id = ?',
+            [spareId],
+          );
+          expect(
+            String(after?.password) !== hashBefore,
+            'the stored password hash changed — the server saved the reset (bcrypt re-salts every save)',
+          ).toBe(true);
+          await loginPage.login(spareId, password);
+          await expect(page, 'the account signs in with the reset password').toHaveURL(/\/home/, {
+            timeout: 20_000,
+          });
         });
-      }
-
-      // Phase 2 (the restore) must run even if phase 1 throws — a partial failure must never strand
-      // the shared spare account on the temp password. `finally` is the one construct that survives a
-      // thrown `expect()` here; a bare sequential `await` would not reach the restore at all.
-      try {
-        // Phase 1: reset to a temporary password and prove it actually works.
-        await resetTo(tempPassword);
-        await loginPage.login(spareId, tempPassword);
-        await expect(
-          page,
-          'the account logs in with the NEW password immediately after the reset',
-        ).toHaveURL(/\/home/, { timeout: 20_000 });
-        await logout();
-      } finally {
-        // Phase 2: reset back to the account's normal password, leaving it exactly as found.
-        await test.step('Restore the original password (always runs)', async () => {
-          await resetTo(originalPassword);
-          await loginPage.login(spareId, originalPassword);
-          await expect(
-            page,
-            'the account logs back in with its ORIGINAL password after the restore',
-          ).toHaveURL(/\/home/, { timeout: 20_000 });
-        });
-      }
-    });
+      },
+    );
   },
 );

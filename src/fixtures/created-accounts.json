@@ -470,6 +470,62 @@
       "source": "kpost:deep (write-fuzz run)",
       "note": "caught by before/after DB diff, not a known hand-written signup path",
       "createdAt": "2026-10-12T08:23:24.021Z"
+    },
+    {
+      "kpostId": "luffer@kpostindia.com",
+      "mobileNumber": "8870361213",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-20T10:53:08.691Z"
+    },
+    {
+      "kpostId": "qasf027460@kpostindia.com",
+      "mobileNumber": "7710027460",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-20T10:53:08.692Z"
+    },
+    {
+      "kpostId": "qasf041490@kpostindia.com",
+      "mobileNumber": "7761041490",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-20T10:53:08.693Z"
+    },
+    {
+      "kpostId": "qasf054926@kpostindia.com",
+      "mobileNumber": "7710054926",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-20T10:53:08.693Z"
+    },
+    {
+      "kpostId": "qasf379130@kpostindia.com",
+      "mobileNumber": "7785379130",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-20T10:53:08.694Z"
+    },
+    {
+      "kpostId": "qasf405945@kpostindia.com",
+      "mobileNumber": "7710405945",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-20T10:53:08.694Z"
+    },
+    {
+      "kpostId": "qasf406012@kpostindia.com",
+      "mobileNumber": "7785406012",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-20T10:53:08.695Z"
+    },
+    {
+      "kpostId": "qasf433060@kpostindia.com",
+      "mobileNumber": "7710433060",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-20T10:53:08.696Z"
     }
   ]
 }

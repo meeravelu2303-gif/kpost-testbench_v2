@@ -115,9 +115,9 @@ Every rejection is printed and written to `reports/REPORT.json`. A gate nobody c
 
 ## 5. How duplicates are prevented
 
-Each defect gets a **stable identity** — `KPV2-XXXXXX`, a hash of the endpoint, the check and the _normalised_ failure message. Normalising is what makes dedupe work: correlation IDs, generated e-mails, UUIDs, ports and durations change every run and would otherwise mint a new id each night ([`bug-fingerprint.ts`](../../src/bug-tracker/bug-fingerprint.ts)).
+Each defect gets a **stable identity** — `KP-XXXXXX` (`BUGZILLA_TAG_PREFIX`, 6 hex digits), a hash of the endpoint, the check and the _normalised_ failure message. Normalising is what makes dedupe work: correlation IDs, generated e-mails, UUIDs, ports and durations change every run and would otherwise mint a new id each night ([`bug-fingerprint.ts`](../../src/bug-tracker/bug-fingerprint.ts)).
 
-The id is carried as `[KPV2-XXXXXX]` in the summary, and every run searches for it — in summaries and on whiteboards — before deciding:
+The id is carried as `[KP-XXXXXX]` in the summary, and every run searches for it — in summaries and on whiteboards — before deciding:
 
 | Found                                                 | Action                          | Why                                                           |
 | ----------------------------------------------------- | ------------------------------- | ------------------------------------------------------------- |
@@ -132,11 +132,14 @@ The same fault on several browsers or tests is merged into one ticket that recor
 
 ## 6. What a ticket looks like
 
-- **Summary:** `[KPV2-A1B2C3] POST /users: expected 400/422, got 500` — trimmed to 255 characters with the tag intact.
+- **Summary:** `[KP-A1B2C3] POST /users: expected 400/422, got 500` — trimmed to 255 characters with the tag intact.
 - **Assignee:** the module's developer (see §1).
-- **Whiteboard:** `[cat:Security]`, plus `[browser:chromium,webkit]` for UI defects — the format the BUGZILLA-UI backend parses.
-- **Description:** line-anchored (`Classification:`, `Category:`, `Representative endpoint:`, `Module:`, `Expected:`, `Actual:`, `Repro:`, `Owner:`, `Environment:`, `Run date:`) so the Bug Tracker UI renders a structured report. Includes the **correlation ID** for tracing the request in application logs.
-- **Attachment:** `KPV2-XXXXXX-evidence.txt` with unabridged expected/actual and every sub-check.
+- **Whiteboard:** `[cat:X][browser:Y][source:Z]` — the format the BUGZILLA-UI backend parses (`classification.ts`):
+  - `[cat:]` one of `Functional`, `Security`, `Performance`, `Compatibility`, `Accessibility`. Any other value shows as Unclassified **and** drops out of every category filter.
+  - `[browser:]` UI defects only, real browser names comma-joined without spaces (`chromium,webkit`). The `admin-ui` project is written `chromium` and mapped back to that project at re-verification.
+  - `[source:]` `automation` for everything the bench files (engine, `bug:file-reviewed`, `file-approved`), `manual` for a bug a person writes with `npm run bug:file`. The tracker's Source filter, its "UI/API Automation" badge and the export's Test Type read only this tag in lists.
+- **Description:** line-anchored (`Classification:`, `Category:`, `Representative endpoint:` / `Endpoint:`, `Module:`, `Severity:`, `Preconditions:`, `Expected:`, `Actual:`, `Steps to reproduce:`, `curl:`, `Owner:`, `Environment:`, `Run date:`, `Filed by:`), each at column 0 with one space after the colon — the BUGZILLA-UI `DescriptionReport` and export parse these exact spellings so the Bug Tracker UI renders a structured report. Includes the **correlation ID** for tracing the request in application logs.
+- **Attachment:** `KP-XXXXXX-evidence.txt` with unabridged expected/actual and every sub-check.
 - Secrets and personal data are masked before anything is written.
 
 | Our severity | Bugzilla severity | Priority |
@@ -145,8 +148,9 @@ The same fault on several browsers or tests is merged into one ticket that recor
 | HIGH         | `major`           | High     |
 | MEDIUM       | `minor`           | Normal   |
 | LOW          | `trivial`         | Low      |
+| INFO         | `trivial`         | Lowest   |
 
-`blocker` and `enhancement` are never used. Category comes from the validator: authentication, authorization and security checks are `Security`, performance checks `Performance`, everything else `Functional`.
+`blocker` and `enhancement` are never used. Category comes from the validator: authentication, authorization and security checks are `Security`, performance checks `Performance`, accessibility (axe) findings `Accessibility`, everything else `Functional`. The tracker shows `minor`+`Normal` as Minor and `trivial` as Trivial, and its severity filter also pins the paired priority — so never edit one of the pair alone.
 
 ## 7. Commands — the review-checkpoint workflow
 

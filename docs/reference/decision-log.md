@@ -3,7 +3,141 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-19 (latest) — End-to-end user journeys: nine cross-module, two-account journeys
+### 2026-10-20 (latest) — Post-run filing checked for duplicates and invalid bugs
+
+**Owner (Meera):** "make sure we have proper bug filing setup after test run without duplicate and invalid."
+
+**Evidence, not reading:** (1) Live Bugzilla: of 159 open bench bugs, 0 share a fault text; the 2 endpoints with two
+open bugs are different checks. (2) History: before 2026-10-10 developers closed 220 bench bugs INVALID and 74
+DUPLICATE; of the 82 filed since 2026-10-10, 0 have been judged not-a-defect. (3) All filing self-tests pass.
+(4) A real dry run of one endpoint with an open bug (#536) through the Bugzilla reporter: the reproduced faults
+produced no new ticket (status pass: "confirmed failing" on the open bug), and #92 would be auto-closed because its
+own check passed cleanly. Only engine validation reports and 14 observational UI specs can ever file; plain test
+failures (journeys, feature flows, the voice call) never do, so hand-filed bugs such as #1679–#1681 cannot be
+auto-duplicated.
+
+**Fixed:** `report:filing` labelled a dry run "LIVE (filed)" whenever nothing reached the filer (`filing` null) —
+at the very review step. It now also reads the status pass's `dryRun`, and says UNKNOWN rather than LIVE when the
+report is silent. The accessibility self-test now expects `[cat:Accessibility]`.
+
+**Held for the owner:** #131, #163, #536 are open "bad input was ACCEPTED (2xx)" bugs — a class the bench stopped
+filing after #534 (`isLenientAcceptanceFalsePositive`) — yet every run re-confirms them as broken. Close them as
+INVALID with that reason, or keep them as deliberate exceptions. Unrelated framework failures seen on the way (not
+changed): coverage-ledger (new KMail `getKloudUsedData` has no contract), env-template (`QA_NEG_*` not in
+`.env.example`), kmail-flags (roles share an account under `QATEST_ONLY`), live-safety (pre-existing).
+
+### 2026-10-20 — Filing aligned with the upgraded BUGZILLA-UI tracker
+
+**Owner (Meera):** "I have developed and upgraded the Bugzilla UI … understand the application completely, then make
+sure we have the correct bug filing flow." Both sides were mapped from source (BUGZILLA-UI working tree incl. today's
+uncommitted Source axis; the bench's reporter/filer/client/builder/scripts) and compared.
+
+**What the tracker reads** (`backend/src/lib/classification.ts`): `[cat:X]` (letters only; Functional, Performance,
+Security, Compatibility, Accessibility — anything else is Unclassified and matches no filter), `[browser:a,b]`
+(chromium, firefox, webkit, mobile-chrome), `[source:automation|manual]` (lists, Source filter, the "UI/API
+Automation" badge and export Test Type read only this tag); severity+priority as a pair (its severity filter pins
+the priority); the description's column-0 anchors; comments are collapsed in the export only when they start with
+"Re-checked by the automated test bench" / "Reproduced by kpost-testbench" / "Reopening: this defect…".
+
+**Already aligned:** severity/priority pairs, description anchors, comment openings, and `[source:automation]` on
+engine creates (Meera's change). Every live bug already carries a `[source:]` tag (backfilled), incl. #1679–#1681.
+
+**Fixed in the bench:** (1) `npm run bug:file` (`manual-bug.spec.ts`) now writes `[source:manual]` — a person's bug —
+instead of automation; new `BugCandidate.filedBy`. (2) `file-approved.cjs` / `file-reviewed.cjs` wrote only
+`[cat:X]`; they now write the same `[cat][browser][source:automation]` as `buildWhiteboard`, take the candidate's
+version (KMail API is `5.0`, not `unspecified`) and date their notes from the clock (was a hard-coded 2026-10-12).
+(3) Accessibility (axe) findings are filed `[cat:Accessibility]`, not Functional. (4) The `admin-ui` project is
+written `[browser:chromium]` (a real browser for the tracker) and mapped back to `admin-ui` by re-verification for
+KPost Admin UI bugs (`browserForProject` / `projectForBrowser`). Self-tests added; 75/75 bug-tracker + verify-resolve
+framework tests green. CLAUDE.md §6 and `docs/guides/bug-filing.md` (KP- prefix, whiteboard, anchors, INFO row) updated.
+
+**Live data, fixed with the owner's OK (whiteboard only, no comments):** 16 bench bugs had no `[cat:]` and showed as
+Unclassified — #495–#502, #930–#936 (Functional; #930/#932 Security; #933 Performance) and #875, whose whiteboard was
+the malformed `KP-OTPSENDDATE[source:automation]` (now `[cat:Functional][source:automation] [KP-OTPSENDDATE]`).
+12 lower-case tags (#1331–#1342) were capitalised. Existing `[source:]` values were kept. Audit after: 1,333 bench
+bugs, 0 without a category, 0 unknown category, 0 without a source, 0 unknown browser. Left as is: 18 adopted bugs
+whose `[KP-…]` adoption tag sits before `[source:]` — the tracker parses them correctly and re-ordering would only
+email developers. Previous values: scratchpad `whiteboards-before.json`.
+
+### 2026-10-20 — Signup and forgot-password in sanity; one forgot-password SMS per run
+
+**Owner (Meera):** "only one account create when the sanity test run then delete that from db … sanitykpost1,
+sanitykpost2 … use mock otp … the forgot password send real sms so just test one time for every run, don't send
+more than one time."
+
+**Signup — `tests/e2e/sanity-signup.spec.ts` (`@sanity`, green 2/2 live).** One account per run:
+`sanitykpost<N>@kpostindia.com`, mobile `90000008NN`, N the lowest free number (read from `TBL_KPOST_USER_MASTER`), so
+it is normally always sanitykpost1. Mock OTP 123456 (the signup OTP honours `otpBypass`; no SMS). Steps are JOURNEY
+1a's; it then signs in and checks the profile name. Retries are OFF (a retry would create a second account).
+**Removal is a direct DB delete** (`tests/e2e/support/sanity-account.ts`) because the app's Delete Account always sends
+a real SMS (`sendAccountDeactivationOtp` ignores the bypass) and only deactivates — `findById` keeps the id taken
+for ever. The footprint was found live (9 FKs into the user table + 132 id-like text columns): LOGIN_SESSION,
+USER_PROFILE, USERS_KMAIL_SETTINGS, USER_PHONECONTACT_DETAILS, 2 welcome KATCHUP_MESSAGES (no child rows),
+OTP_VALIDATION, then USER_MASTER (8 rows). The audit log is left alone. Needs `DB_ALLOW_WRITES=true` (set in `.env`).
+
+**Forgot password — `login-forgot-password-lifecycle.spec.ts` rewritten (`@sanity`, green live, 1 SMS).**
+`forgotPassword` never applies the bypass: clicking "Forgot Password ?" alone texts a real code. Now: the link is
+clicked once, Resend never, retries OFF, the code is read from `TBL_KPOST_OTP_VALIDATION`, and the password is reset
+TO THE SAME VALUE on qatest6 (no same-password rule) — nothing to restore, so never a second SMS. Proof the reset was
+written: the bcrypt hash changes, and the account signs in. Gated on the new `FORGOT_PASSWORD_SMS=true`, which
+`run-level.mjs` sets (product commands do not → it skips there, 0 SMS). Verified: qatest6's forgot rows 6 → 7.
+
+**The leak this closes.** qatest1 had 26 forgot-password SMS on record: three UI specs click the link to look at
+the dialog (login-session, signup-login-screens, signup-login-accessibility) and their comments wrongly said no OTP
+was sent. They now answer that request in the browser (`tests/e2e/support/no-real-sms.ts`) — verified live: dialog
+opens, 0 new OTP rows. The production guard now blocks every API call to the two forgot-password senders even on
+the OTP test gateway, unless the caller sets `noSmsRecipient` (only `forgot-password-limited.spec.ts`, whose cases
+name nobody real); self-test in `tests/framework/live-safety.spec.ts`.
+
+Seen on the way, not changed: `live-safety` "injection and cross-tenant validators are excluded on live" fails
+(production-validators.ts untouched since 2026-09-22); `forgot-password-limited` "a kpostID of the wrong type" is
+refused by the QA-identifier guard (it sends `12345` as a KPOST ID).
+
+### 2026-10-20 — Sanity: every module's core action, not just its screen
+
+**Owner (Meera):** "cover complete sanity in our test bench first". A read of the sanity set found areas whose
+only sanity was a screen load or a read sweep. Six existing tests now carry `@sanity` (tag only,
+no logic change): logout of our own session, API (`login-flow.spec.ts`) and UI (`journeys/session.spec.ts`,
+log out → protected screens refuse → sign back in); signup's short-mobile check, which stops before any OTP
+(`signup-validation.spec.ts`); KDiary create → delete (`kdiary-e2e.spec.ts`); KBooking bus search, never
+reaching Show seats (`kbooking.spec.ts`); KDirectory profile → Katchup (`kdirectory-launch.spec.ts`).
+`lint:tags` passes, every module stays within the budget of 15. Not yet run live: the next `npm run test:sanity`
+is their first run under the sanity level (the session journey, new on 2026-10-19, has no live run yet at all).
+
+**Kall meeting journey** (`journeys/meeting.spec.ts`): its two UNPROVEN steps (each invitee sees the meeting on
+Kool Kall) passed live 2/2 on 2026-10-20 (Chromium, qatest1/2/3, meeting ended in `finally`), so it now carries
+`@sanity` and the UNPROVEN markers are gone.
+
+**Connected Kall call — JOURNEY 10, `journeys/voice-call.spec.ts` (new, NOT yet in sanity).** "No media harness"
+was wrong: Kall media is Agora, and Chromium already runs with fake mic/camera (`CHROMIUM_MEDIA`). The journey is
+built from source (A: `/kall` › Contacts › B › Kall Info › **Connected Devices** voice icon — SIM/landline dial
+the phone and a web client ignores them; B: global `InComingKall` card → Accept; connected = both `.kall-status-text`
+timers ticking past 00:00; A ends via `.kall-btn--end`). It records both sockets in an `observed` annotation.
+Live 2026-10-20: A rings ("Calling..."), but B never receives `receiveKallInitiate` — on a restored or a fresh
+session — 2/2 on each of 7 runs; the socket server sends nothing back to A either, while B's Recents logs each call
+as missed. Filed **#1680** (KPost UI / Kall, Ayyappan) with both screenshots and the socket capture, on the owner's
+instruction. It joins `@sanity` once it passes 2/2.
+
+**Bench leak + app defect found on the way.** The first runs showed "On Another Call...": qatest2 had 18 open
+rows. Repeat-scheduling tests (2026-10-11..13) left series whose nightly copies (`RepeatKallMaterializerJob`) kept
+being generated after the bench's `clearKallHistory` had deleted the parent; each copy sets the invitee to
+`receiverKallStatus` 0 and the organiser to 0 (`KallServiceImplV3.java:1048/1054`, vs 6 on a normal schedule), and
+the busy check counts 0/1/5 — so every invitee of a repeating meeting shows "On Another Call" to anyone who calls
+them. Cleaned with the app's own `endKoolKall` (as qatest1 for the 18 copies, as qatest2 with each row id); DB
+re-checked: 0 busy rows for both. Filed **#1679** (KPost API / Kall, Jaganathan), plus a comment there: the nightly
+job ignores `delete_by_sender`, so a deleted series keeps producing copies until its end date.
+
+**The leaking test, fixed.** `kall/kall-reads-workflow.spec.ts` "scheduling a repeating call…" created a daily series
+ending 6 days out; no API stops a series, and `clearKallHistory` only marks the parent deleted. It now creates a
+ONE-DAY series (end date = the meeting's own day), which the server stores as `series_active` 0 straight away —
+verified in the DB on the runs of 2026-10-20 — so no nightly copy can follow. It also finds the series by its unique
+`kallSession`, because `scheduledRepeatKall` never returns a kallID. Running it live exposed **#1681** (KPost API,
+Jaganathan): `fetchScheduledRepeatKall` reads the old `TBL_KPOST_REPEAT_KOOL_KALL` table (nothing written since
+June), so a series created today never appears — the test fails there 2/2, correctly.
+
+Signup end to end and forgot-password wait on the owner's answers (account per run, mobile range, real SMS on qatest6).
+
+### 2026-10-19 — End-to-end user journeys: nine cross-module, two-account journeys
 
 **Owner (Meera):** "cover End-to-end user journeys fully" (audit item 7; RTM Journeys was 0%, one shallow walk).
 

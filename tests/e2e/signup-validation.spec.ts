@@ -46,24 +46,25 @@ test.describe(
       'the mobile OTP bypass code only validates on the confirmed OTP test gateway',
     );
 
-    test('a mobile number shorter than 10 digits is rejected before any OTP is sent @ui', async ({
-      signupPage,
-      page,
-    }) => {
-      await signupPage.goto();
-      await signupPage.chooseAccountType('Personal');
-      await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
+    test(
+      'a mobile number shorter than 10 digits is rejected before any OTP is sent @ui',
+      { tag: '@sanity' },
+      async ({ signupPage, page }) => {
+        await signupPage.goto();
+        await signupPage.chooseAccountType('Personal');
+        await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
 
-      // Mobile() masks input to \d{0,10} as it's typed; sendOTP() then checks the LENGTH before ever
-      // calling the network — the client-side check this test is actually pinning.
-      await signupPage.attemptVerifyWithInvalidMobile('12345');
+        // Mobile() masks input to \d{0,10} as it's typed; sendOTP() then checks the LENGTH before ever
+        // calling the network — the client-side check this test is actually pinning.
+        await signupPage.attemptVerifyWithInvalidMobile('12345');
 
-      // The OTP modal must never have appeared — a short number must be rejected, not silently sent.
-      await expect(
-        page.getByText(/^Enter your OTP$/i),
-        'no OTP modal opens for an invalid-length mobile number',
-      ).toBeHidden();
-    });
+        // The OTP modal must never have appeared — a short number must be rejected, not silently sent.
+        await expect(
+          page.getByText(/^Enter your OTP$/i),
+          'no OTP modal opens for an invalid-length mobile number',
+        ).toBeHidden();
+      },
+    );
 
     test('empty First Name and Last Name keep Continue disabled after a verified mobile @ui', async ({
       signupPage,

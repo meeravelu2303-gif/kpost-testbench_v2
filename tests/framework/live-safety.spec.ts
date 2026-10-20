@@ -658,4 +658,40 @@ test.describe('live-application safety @framework', () => {
       'no writeFuzz → a data write stays blocked on live',
     ).toBeTruthy();
   });
+
+  test('the forgot-password senders stay blocked even on the OTP test gateway (real SMS, one per run)', () => {
+    const gateway = {
+      isProduction: true,
+      allowDestructive: true,
+      otpTestGateway: true,
+      testDbMode: true,
+    };
+    for (const label of [
+      'POST /v2/common/forgotPasswordOTPOrSentKpostIDSms',
+      'POST /v2/profile/forgotPasswordOrKpostID/',
+    ]) {
+      const sender: GuardedEndpoint = {
+        label,
+        destructive: true,
+        sideEffect: 'external',
+        otpDependent: 'sends',
+      };
+      expect(
+        destructiveBlockReason(sender, gateway),
+        `${label}: the test gateway does not make this SMS fake`,
+      ).toMatch(/real phone even on the test gateway/);
+      expect(
+        destructiveBlockReason(sender, { ...gateway, noSmsRecipient: true }),
+        `${label}: a request naming nobody real may run`,
+      ).toBeUndefined();
+    }
+    // A normal OTP sender (signup) keeps the gateway unlock — its SMS is the 123456 bypass.
+    const signupOtp: GuardedEndpoint = {
+      label: 'POST /v2/signupLogin/sendOtp/',
+      destructive: true,
+      sideEffect: 'external',
+      otpDependent: 'sends',
+    };
+    expect(destructiveBlockReason(signupOtp, gateway), 'signup OTP still opens').toBeUndefined();
+  });
 });

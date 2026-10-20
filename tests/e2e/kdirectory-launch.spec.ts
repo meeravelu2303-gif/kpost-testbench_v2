@@ -115,6 +115,7 @@ test.describe(
     test(
       'the profile view offers Write Mail / KMail / Katchup / Kall, and Katchup opens a new message with that contact @ui',
       {
+        tag: '@sanity',
         annotation: [{ type: 'requirement', description: 'FR-KD-006' }],
       },
       async ({ page }) => {

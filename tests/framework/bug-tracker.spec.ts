@@ -24,7 +24,11 @@ import {
   candidateRejection,
 } from '../../src/bug-tracker/validity-gate';
 import type { FilingOutcome } from '../../src/bug-tracker/bugzilla-filer';
-import { readBugzillaConfig, type BugzillaConfig } from '../../src/config/bugzilla.config';
+import {
+  projectForBrowser,
+  readBugzillaConfig,
+  type BugzillaConfig,
+} from '../../src/config/bugzilla.config';
 import { componentFor, suiteFor } from '../../src/config/ownership.config';
 import { buildBugReportConsole, buildBugReportMarkdown } from '../../src/reporting/bug-report';
 import { createLogger } from '../../src/utils/logger';
@@ -280,7 +284,21 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     );
 
     const ui = candidate({ source: 'ui', category: 'Security', browsers: ['chromium', 'webkit'] });
-    expect(buildWhiteboard(ui)).toBe('[cat:Security][browser:chromium,webkit]');
+    expect(buildWhiteboard(ui)).toBe('[cat:Security][browser:chromium,webkit][source:automation]');
+    // The tracker's browser list holds real browsers: the admin-ui project runs chromium, and
+    // re-verification maps it back to that project for KPost Admin UI bugs only.
+    expect(buildWhiteboard(candidate({ source: 'ui', browsers: ['admin-ui'] }))).toBe(
+      '[cat:Functional][browser:chromium][source:automation]',
+    );
+    expect(projectForBrowser('KPost Admin UI', 'chromium')).toBe('admin-ui');
+    expect(projectForBrowser('KPost UI', 'chromium')).toBe('chromium');
+    // A bug a person writes by hand shows as a manual test in the tracker, not as automation.
+    expect(buildWhiteboard(candidate({ filedBy: 'manual' }))).toBe(
+      '[cat:Functional][source:manual]',
+    );
+    expect(buildWhiteboard(candidate({ category: 'Accessibility' }))).toBe(
+      '[cat:Accessibility][source:automation]',
+    );
 
     const description = buildDescription(candidate({ correlationId: 'tb-9' }));
     for (const anchor of [
