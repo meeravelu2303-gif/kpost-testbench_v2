@@ -3,7 +3,71 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-20 (latest) — Post-run filing checked for duplicates and invalid bugs
+### 2026-10-20 (latest) — Coverage to 100%: batch 3, Katchup (Katchup 68% → 98%; overall 113 → 125/146 = 86%)
+
+Mapped from source first (bubble theme + KatchupServiceImpl): **Save** keeps the selected message and hides every
+other message of that conversation for the saver only (no "saved" flag, no folder); **Reminder** is a type-3 message
+that references the original (no date/time, nothing scheduled); **"More"** is dead code (both menus always list
+everything); **Translate** is a per-message icon calling the KMail translator; **disappearing** messages are filtered
+from the thread fetch (never deleted); a **hidden** bulk forward is anonymised server-side.
+
+**Green 2/2:** `katchup/rules.spec.ts` — disappear after read, disappear on schedule, flag immutable after send (so
+**#976 is genuinely fixed**), Reminder points at the original, Save clears the rest for the saver only;
+`katchup/offline-delivery.spec.ts` (RTM-KU-M05); Copy now checks the clipboard text (Chromium);
+`katchup-menus-transfer-translate.spec.ts` — both action menus complete, Transfer to Gmail (new tab carries the
+subject) and to KMail (compose prefilled); the receipts test is now linked (it was matched to the wrong test); the two
+edit tests send the reference the server needs since 2026-10-12 (`temporaryMsgID` is ignored → 404) and now pass —
+BR-KU-EDIT-SUBJ is ✅ (server guard added 2026-10-12).
+
+**Filed:** **#13208** (KPost API) a Hide Source bulk forward (type 16) answers SUCCESS and is never delivered — the
+anonymous replica's sender `hidden@kpostindia.com` is not a user and `messages.sender` has a FK (4/4 lost, Reveal 2/2
+delivered). **#13209** (KMail API, Jitendra) + **#13210** (KPost UI, Ayyappan): Translate is broken everywhere in the
+web app — the translator now requires `langFrom` (the answer to the bench's own #266) and the three web callers never
+send it; a dated note added to #266.
+
+**Bench fixes:** the QA-identifier guard now exempts `forwardMessageIDList` (our own run-time msgIDs, like `msgids`;
+the recipient list stays checked). Journey 1a now uses a throwaway `sanitykpostN` account removed afterwards (no
+permanent account), with retries off; the clean-up also removes `TBL_KPOST_LOGIN_HISTORY` rows (a logout writes one,
+FK to the user). The first journey runs left sanitykpost1–4 behind before that; all removed by hand, DB re-checked.
+
+### 2026-10-20 — Coverage to 100%: batch 2, Security + Signup (106/142 → 113/146 = 77%)
+
+**Reset-code reuse (RTM-SEC03), new step in `login-forgot-password-lifecycle.spec.ts`** (still exactly one SMS per run):
+after the reset it replays the same code. `validateOTP` refuses it (correct), but `forgotPasswordUpdate` with NO code
+sets the password again — 3/3 live, until the code's 10-minute expiry (refused after it). Filed **#13207** (KPost API /
+Authentication V2, Security, Jaganathan): `forgotPasswordUpdateNew` never consumes the validated code. Replays set the
+SAME password, so qatest6 was never changed.
+
+**Genuinely expired token (RTM-SEC02):** it could never run — `.auth/token-history.json` kept only the newest 20 and one
+busy day (today: 20 tokens, all minted the same day) pushed every aged token out. `pruneTokenHistory` now also keeps,
+per account, the token that expires first and the newest already-expired one (self-test `token-history.spec.ts`). The
+check runs from 2026-10-21; SEC02 stays Partial until it has.
+
+**Signup (FR-SL-001..022, 031) — the "owner's standing exclusion" is lifted, so the rows are in scope and covered.**
+`sanity-signup.spec.ts` now also asserts: a taken id (qatest1) is refused; KPOST suggestions exist and none belongs to
+an account (DB); picking one fills the field; and the saved row matches what was entered — name, gender, date of birth,
+pincode and the address auto-filled from it. Green 2/2. Its cleanup now also catches the two welcome messages, which
+arrive seconds after signup (one run removed 0, the next 2). FR-SL-031: Personal signup has no profession field (only
+business signup offers a designation list); a person's profession is the Profile designation (profile lifecycle,
+green 2/2) — flagged to the owner in case the FRD means at signup. Signup/Login 85% → 100%, Security 60% → 80%.
+
+### 2026-10-20 — Coverage to 100%: batch 1, Kall call outcomes (70% → 75%)
+
+**Owner (Meera):** "fill all the gaps — 100% coverage for the three test levels." Worked in batches, each verified
+live 2/2; this is batch 1.
+
+**Finding that reopened Kall:** the "WebRTC limit" notes were wrong for the server side. A call's outcome is set by
+`updateKallStatus` with B's ROW id (`initiateKall → data.kallDetails[0].id`), not the kallID the old feature test
+sent: accept (1) stamps `kallStartTime` on both rows, `endIndividualKall` stamps `kallEndTime` and `kallDuration`,
+and `kallInfo` returns them to both people. New `tests/api/kpost/kall/call-states.spec.ts` (answered `@sanity`,
+declined, missed, Kool Kall join), green 2/2 for answered + join. Declined and missed are red 2/2 on **#13206**
+(filed, KPost API, Jaganathan): the decline / generic paths match the row on `receiver` from the request body, which
+the web never sends (only accept was moved to the token, #1001) → 404 "Kall not found", the call stays ringing and
+the callee stays "On Another Call". `journeys/voice-call.spec.ts` gained mute/unmute and now links RTM-KALL-A01 (full
+flow, red on #1680) and RTM-KALL-A04 (partial: no camera on a voice call). FR-KL-009 business rule and the
+RTM-KALL-A01..A06 assessments updated with the evidence. RTM: 99 → 106 of 142.
+
+### 2026-10-20 — Post-run filing checked for duplicates and invalid bugs
 
 **Owner (Meera):** "make sure we have proper bug filing setup after test run without duplicate and invalid."
 

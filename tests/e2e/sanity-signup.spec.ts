@@ -49,9 +49,12 @@ test.describe(
       {
         tag: '@sanity',
         annotation: [
-          { type: 'requirement', description: 'FR-SL-007' },
-          { type: 'requirement', description: 'FR-SL-016' },
-          { type: 'requirement', description: 'FR-SL-021' },
+          // The whole Personal signup, end to end, each step asserted (screens + the saved row).
+          { type: 'requirement', description: 'FR-SL-001..005' },
+          { type: 'requirement', description: 'FR-SL-006..008' },
+          { type: 'requirement', description: 'FR-SL-009..015' },
+          { type: 'requirement', description: 'FR-SL-016..018' },
+          { type: 'requirement', description: 'FR-SL-019..022' },
         ],
       },
       async ({ signupPage, page, databases }) => {
@@ -91,6 +94,29 @@ test.describe(
               area: 'Chennai',
             });
             await signupPage.continueToKpostId();
+            // FR-SL-018: an id someone already has is refused.
+            expect(
+              await signupPage.kpostIdValidationState('qatest1'),
+              'a taken KPOST ID (qatest1) is refused',
+            ).toBe('taken');
+            // FR-SL-017: KPOST suggests ids, and they are genuinely free.
+            const { suggestions, picked } = await signupPage.pickKpostIdSuggestion();
+            expect(suggestions.length, 'KPOST offers at least one suggestion').toBeGreaterThan(0);
+            const takenSuggestions = await db.query<{ kpost_id: string }>(
+              `SELECT kpost_id FROM TBL_KPOST_USER_MASTER WHERE kpost_id IN (${suggestions
+                .map(() => '?')
+                .join(',')})`,
+              suggestions.map((s) => (s.includes('@') ? s : `${s}@${domain}`).toLowerCase()),
+            );
+            expect(
+              takenSuggestions.map((r) => r.kpost_id),
+              'no suggested id belongs to an existing account',
+            ).toEqual([]);
+            await expect(
+              page.getByPlaceholder('Enter Preferred KPOST ID'),
+              'picking a suggestion fills the KPOST ID field',
+            ).toHaveValue(picked);
+            // Then this run's own id (so the clean-up knows exactly what to remove).
             expect(
               await signupPage.choosePreferredKpostId(me.local),
               `${me.local} is offered as available`,
@@ -103,12 +129,40 @@ test.describe(
           });
 
           await test.step('the new account exists, active, with the mobile it signed up with', async () => {
-            const [row] = await db.query<{ mobile_number: string; active_status: string }>(
-              'SELECT mobile_number, active_status FROM TBL_KPOST_USER_MASTER WHERE kpost_id = ?',
+            const [row] = await db.query<{
+              mobile_number: string;
+              first_name: string;
+              last_name: string;
+              gender: string;
+              date_of_birth: string;
+              pin_code: string;
+              city: string;
+              state: string;
+            }>(
+              `SELECT u.mobile_number, u.first_name, u.last_name, u.gender, u.date_of_birth,
+                      p.pin_code, p.city, p.state
+                 FROM TBL_KPOST_USER_MASTER u LEFT JOIN TBL_KPOST_USER_PROFILE p ON p.kpost_id = u.kpost_id
+                WHERE u.kpost_id = ?`,
               [me.kpostId],
             );
             expect(row, `${me.kpostId} is in the user table`).toBeTruthy();
-            expect(String(row?.mobile_number)).toBe(me.mobile);
+            test.info().annotations.push({
+              type: 'observed',
+              description: `saved: ${JSON.stringify({ ...row, mobile_number: undefined })}`,
+            });
+            // FR-SL-006..015: what was entered on the screens is what was saved.
+            expect(String(row?.mobile_number), 'the verified mobile').toBe(me.mobile);
+            expect(row?.first_name, 'the first name').toBe('Sanity');
+            expect(row?.last_name, 'the last name').toBe('Bench');
+            expect(String(row?.gender), 'the gender').toMatch(/^f/i);
+            // A DATE column comes back as a Date at local midnight; compare the calendar day.
+            const dob = new Date(String(row?.date_of_birth));
+            expect(
+              [dob.getFullYear(), dob.getMonth() + 1, dob.getDate()],
+              'the date of birth',
+            ).toEqual([1995, 6, 15]);
+            expect(String(row?.pin_code), 'the postal pincode').toBe(testData.pinCode);
+            expect(row?.city || row?.state, 'the address filled in from the pincode').toBeTruthy();
           });
 
           await test.step('first sign-in lands on Home and the profile shows the name', async () => {

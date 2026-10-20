@@ -82,6 +82,30 @@ async function conversation(
   return { status: exchange.status, text: exchange.bodyText };
 }
 
+/**
+ * How an Edit points at the message it edits. Since 2026-10-12 the server finds the original only via
+ * `referenceMessage` (a JSON object with `msgID` — what the web client sends) or `referenceMessageIDList`;
+ * `temporaryMsgID` is ignored and the edit 404s. The bench uses the id list: the QA-identifier guard
+ * cannot vouch for ids inside a JSON string, but does for a list of our own msgIDs.
+ */
+function editOf(original: number): Record<string, unknown> {
+  return { referenceMessageIDList: [original] };
+}
+
+/** The original msgID an edit row points at, from either reference field. */
+function editTarget(row: {
+  referenceMessage?: string | null;
+  referenceMessageIDList?: number[] | null;
+}) {
+  const listed = row.referenceMessageIDList?.[0];
+  if (typeof listed === 'number') return listed;
+  try {
+    return (JSON.parse(row.referenceMessage ?? '{}') as { msgID?: number }).msgID;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Best-effort cleanup — delete a message we created. Never throws. */
 async function cleanup(endpoints: EndpointExecutor, as: Principal, msgID?: number): Promise<void> {
   if (!msgID) return;
@@ -161,7 +185,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       sharedType: KATCHUP_MESSAGE_TYPE.editMessage,
       subject: 'QA edit',
       actualMessage: 'QA edited body',
-      temporaryMsgID: seed.msgID,
+      ...editOf(seed.msgID!),
     });
     expect.soft(edited.status, 'edit is accepted').toBeLessThan(300);
 
@@ -188,7 +212,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
         sharedType: KATCHUP_MESSAGE_TYPE.editMessage,
         subject: attemptedSubject,
         actualMessage: 'QA subj-lock edited body',
-        temporaryMsgID: seed.msgID,
+        ...editOf(seed.msgID!),
       });
       expect.soft(edited.status, 'edit is accepted').toBeLessThan(300);
 
@@ -200,6 +224,28 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       // server itself has no equivalent guard: calling editMessage with a different `subject` silently
       // accepts and persists it. Recorded as a confirmed (defense-in-depth) rule violation, not a hard
       // failure — the real product is not reachable through this path today.
+      // The rule itself: the Subject is NOT changed by an edit…
+      expect
+        .soft(view.text, 'the edited message keeps its original Subject')
+        .not.toContain(attemptedSubject);
+      // …and the edit is marked as one: it is stored as an Edit (messageType editMessage) that points
+      // at the original — what the client renders as the "Edited" marker.
+      const editRow = (
+        JSON.parse(view.text || '{}') as {
+          data?: Array<{
+            msgID?: number;
+            messageType?: number;
+            referenceMessage?: string | null;
+            referenceMessageIDList?: number[] | null;
+          }>;
+        }
+      ).data?.find((m) => m.msgID === edited.msgID);
+      expect
+        .soft(editRow?.messageType, 'the edit is stored as an Edit')
+        .toBe(KATCHUP_MESSAGE_TYPE.editMessage);
+      expect
+        .soft(editRow ? editTarget(editRow) : undefined, 'pointing at the original message')
+        .toBe(seed.msgID);
       if (view.text.includes(attemptedSubject)) {
         endpoints.recordBusinessRuleViolation({
           endpointId: 'katchup-send-message',
@@ -249,149 +295,153 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     },
   );
 
-  test('group message: send reaches members and read receipts are tracked (FR-K06 / FR-K07) @api @katchup', async ({
-    endpoints,
-  }) => {
-    // Create a group A(admin) + B, C, D.
-    const members = [B, C, D].map((p) => ({
-      createdBy: A.username,
-      hasAdminAccess: 'N',
-      kpostID: p.username,
-      name: 'QA Bench',
-      memberDesignation: '',
-      privacyStatus: 'Y',
-      remarks: 'created',
-    }));
-    members.push({
-      createdBy: A.username,
-      hasAdminAccess: 'Y',
-      kpostID: A.username,
-      name: 'QA Bench',
-      memberDesignation: '',
-      privacyStatus: 'Y',
-      remarks: 'created',
-    });
-    const created = await endpoints.sendTo(
-      'group-create',
-      {
-        body: {
-          activeStatus: 'Y',
-          createdBy: A.username,
-          groupPicturePath: null,
-          groupCreateAccess: true,
-          groupKpostName: `QA Feature Group ${Date.now()}`,
-          isPrivateGroup: 'N',
-          memberDetails: members,
-        },
-      },
-      { label: 'feature:group-create', auth: { principal: A }, allowLiveWrite: true },
-    );
-    const gBody = created.json();
-    const gData = (gBody.ok ? (gBody.value as Record<string, unknown>).data : undefined) as
-      Record<string, unknown> | undefined;
-    const groupKpostID = gData?.groupKpostID as string | undefined;
-    const groupID = gData?.groupID as number | undefined;
-    expect(created.status, 'group is created').toBeLessThan(300);
-    expect(groupKpostID, 'a groupKpostID is returned').toBeTruthy();
-
-    let msgID: number | undefined;
-    try {
-      // Group send from A.
-      const sent = await send(endpoints, A, {
-        receiver: groupKpostID,
-        status: KATCHUP_STATUS.group,
-        // A STRING, per the groupFlag convention (see send.api.ts) — a real boolean 400s here too.
-        groupFlag: 'true',
-        groupmemberList: [B.username, C.username, D.username],
-        actualMessage: 'QA group hello',
+  test(
+    'group message: send reaches members and read receipts are tracked (FR-K06 / FR-K07) @api @katchup',
+    { annotation: [{ type: 'requirement', description: 'BR-KU-RECEIPTS' }] },
+    async ({ endpoints }) => {
+      // Create a group A(admin) + B, C, D.
+      const members = [B, C, D].map((p) => ({
+        createdBy: A.username,
+        hasAdminAccess: 'N',
+        kpostID: p.username,
+        name: 'QA Bench',
+        memberDesignation: '',
+        privacyStatus: 'Y',
+        remarks: 'created',
+      }));
+      members.push({
+        createdBy: A.username,
+        hasAdminAccess: 'Y',
+        kpostID: A.username,
+        name: 'QA Bench',
+        memberDesignation: '',
+        privacyStatus: 'Y',
+        remarks: 'created',
       });
-      expect.soft(sent.status, 'group send is accepted').toBeLessThan(300);
-      msgID = sent.msgID;
+      const created = await endpoints.sendTo(
+        'group-create',
+        {
+          body: {
+            activeStatus: 'Y',
+            createdBy: A.username,
+            groupPicturePath: null,
+            groupCreateAccess: true,
+            groupKpostName: `QA Feature Group ${Date.now()}`,
+            isPrivateGroup: 'N',
+            memberDetails: members,
+          },
+        },
+        { label: 'feature:group-create', auth: { principal: A }, allowLiveWrite: true },
+      );
+      const gBody = created.json();
+      const gData = (gBody.ok ? (gBody.value as Record<string, unknown>).data : undefined) as
+        Record<string, unknown> | undefined;
+      const groupKpostID = gData?.groupKpostID as string | undefined;
+      const groupID = gData?.groupID as number | undefined;
+      expect(created.status, 'group is created').toBeLessThan(300);
+      expect(groupKpostID, 'a groupKpostID is returned').toBeTruthy();
 
-      // FR-K07: per-recipient read receipts.
-      if (msgID) {
-        const receiptsBefore = await endpoints.sendTo(
-          'katchup-read-status-group',
-          { body: { msgID } },
-          { label: 'feature:read-receipts-before', auth: { principal: A }, allowLiveRead: true },
-        );
-        expect.soft(receiptsBefore.status, 'read-receipt status reads back').toBe(200);
-        const beforeParsed = receiptsBefore.json();
-        const beforeList = (
-          beforeParsed.ok ? ((beforeParsed.value as Record<string, unknown>).data as unknown[]) : []
-        ) as Array<{ receiver?: string; readStatus?: string }>;
-        const bBefore = beforeList.find(
-          (r) => r.receiver?.toLowerCase() === B.username.toLowerCase(),
-        );
-        expect
-          .soft(
-            bBefore?.readStatus,
-            'BR-KU-RECEIPTS: B has not read it yet, before opening the thread',
-          )
-          .not.toBe('Y');
+      let msgID: number | undefined;
+      try {
+        // Group send from A.
+        const sent = await send(endpoints, A, {
+          receiver: groupKpostID,
+          status: KATCHUP_STATUS.group,
+          // A STRING, per the groupFlag convention (see send.api.ts) — a real boolean 400s here too.
+          groupFlag: 'true',
+          groupmemberList: [B.username, C.username, D.username],
+          actualMessage: 'QA group hello',
+        });
+        expect.soft(sent.status, 'group send is accepted').toBeLessThan(300);
+        msgID = sent.msgID;
 
-        // B opens the group conversation — this is what marks a group message read FOR B specifically
-        // (confirmed from source: `katchupMessagesForSelectedContactID`'s groupFlag branch calls
-        // `groupReadStatusRepository.updateReadStatus` scoped to the calling receiver).
-        await conversation(endpoints, B, groupKpostID!, true);
+        // FR-K07: per-recipient read receipts.
+        if (msgID) {
+          const receiptsBefore = await endpoints.sendTo(
+            'katchup-read-status-group',
+            { body: { msgID } },
+            { label: 'feature:read-receipts-before', auth: { principal: A }, allowLiveRead: true },
+          );
+          expect.soft(receiptsBefore.status, 'read-receipt status reads back').toBe(200);
+          const beforeParsed = receiptsBefore.json();
+          const beforeList = (
+            beforeParsed.ok
+              ? ((beforeParsed.value as Record<string, unknown>).data as unknown[])
+              : []
+          ) as Array<{ receiver?: string; readStatus?: string }>;
+          const bBefore = beforeList.find(
+            (r) => r.receiver?.toLowerCase() === B.username.toLowerCase(),
+          );
+          expect
+            .soft(
+              bBefore?.readStatus,
+              'BR-KU-RECEIPTS: B has not read it yet, before opening the thread',
+            )
+            .not.toBe('Y');
 
-        const receiptsAfter = await endpoints.sendTo(
-          'katchup-read-status-group',
-          { body: { msgID } },
-          { label: 'feature:read-receipts-after', auth: { principal: A }, allowLiveRead: true },
-        );
-        const afterParsed = receiptsAfter.json();
-        const afterList = (
-          afterParsed.ok ? ((afterParsed.value as Record<string, unknown>).data as unknown[]) : []
-        ) as Array<{ receiver?: string; readStatus?: string }>;
-        const bAfter = afterList.find(
-          (r) => r.receiver?.toLowerCase() === B.username.toLowerCase(),
-        );
-        const cAfter = afterList.find(
-          (r) => r.receiver?.toLowerCase() === C.username.toLowerCase(),
-        );
-        const dAfter = afterList.find(
-          (r) => r.receiver?.toLowerCase() === D.username.toLowerCase(),
-        );
-        expect
-          .soft(
-            bAfter?.readStatus,
-            'BR-KU-RECEIPTS: B shows read AFTER opening the thread, independently',
-          )
-          .toBe('Y');
-        expect
-          .soft(cAfter?.readStatus, 'BR-KU-RECEIPTS: C (never opened it) must NOT show read')
-          .not.toBe('Y');
-        expect
-          .soft(dAfter?.readStatus, 'BR-KU-RECEIPTS: D (never opened it) must NOT show read')
-          .not.toBe('Y');
-      }
-    } finally {
-      // Cleanup: remove members, then delete the group (verified order on live).
-      if (groupID && groupKpostID) {
-        await endpoints
-          .sendTo(
-            'group-remove-member',
-            {
-              body: {
-                memberKpostIdList: [B.username, C.username, D.username],
-                groupID,
-                groupKpostID,
+          // B opens the group conversation — this is what marks a group message read FOR B specifically
+          // (confirmed from source: `katchupMessagesForSelectedContactID`'s groupFlag branch calls
+          // `groupReadStatusRepository.updateReadStatus` scoped to the calling receiver).
+          await conversation(endpoints, B, groupKpostID!, true);
+
+          const receiptsAfter = await endpoints.sendTo(
+            'katchup-read-status-group',
+            { body: { msgID } },
+            { label: 'feature:read-receipts-after', auth: { principal: A }, allowLiveRead: true },
+          );
+          const afterParsed = receiptsAfter.json();
+          const afterList = (
+            afterParsed.ok ? ((afterParsed.value as Record<string, unknown>).data as unknown[]) : []
+          ) as Array<{ receiver?: string; readStatus?: string }>;
+          const bAfter = afterList.find(
+            (r) => r.receiver?.toLowerCase() === B.username.toLowerCase(),
+          );
+          const cAfter = afterList.find(
+            (r) => r.receiver?.toLowerCase() === C.username.toLowerCase(),
+          );
+          const dAfter = afterList.find(
+            (r) => r.receiver?.toLowerCase() === D.username.toLowerCase(),
+          );
+          expect
+            .soft(
+              bAfter?.readStatus,
+              'BR-KU-RECEIPTS: B shows read AFTER opening the thread, independently',
+            )
+            .toBe('Y');
+          expect
+            .soft(cAfter?.readStatus, 'BR-KU-RECEIPTS: C (never opened it) must NOT show read')
+            .not.toBe('Y');
+          expect
+            .soft(dAfter?.readStatus, 'BR-KU-RECEIPTS: D (never opened it) must NOT show read')
+            .not.toBe('Y');
+        }
+      } finally {
+        // Cleanup: remove members, then delete the group (verified order on live).
+        if (groupID && groupKpostID) {
+          await endpoints
+            .sendTo(
+              'group-remove-member',
+              {
+                body: {
+                  memberKpostIdList: [B.username, C.username, D.username],
+                  groupID,
+                  groupKpostID,
+                },
               },
-            },
-            { label: 'feature:group-remove', auth: { principal: A }, allowLiveWrite: true },
-          )
-          .catch(() => undefined);
-        await endpoints
-          .sendTo(
-            'group-delete',
-            { body: { groupID } },
-            { label: 'feature:group-delete', auth: { principal: A }, allowLiveWrite: true },
-          )
-          .catch(() => undefined);
+              { label: 'feature:group-remove', auth: { principal: A }, allowLiveWrite: true },
+            )
+            .catch(() => undefined);
+          await endpoints
+            .sendTo(
+              'group-delete',
+              { body: { groupID } },
+              { label: 'feature:group-delete', auth: { principal: A }, allowLiveWrite: true },
+            )
+            .catch(() => undefined);
+        }
       }
-    }
-  });
+    },
+  );
 
   test(
     'a Confidential Copy is hidden from the other recipients (FR-K05 / NFR-SEC02) @api @katchup @security',

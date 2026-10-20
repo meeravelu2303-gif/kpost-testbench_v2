@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { suiteFor } from '@config/ownership.config';
 import { isSqlClient } from '@database/database-client';
 import { expect, test } from '@fixtures';
 
@@ -47,8 +48,11 @@ test.describe(
 
     test(
       "resetting the spare account's password via OTP actually takes effect @ui",
-      { tag: '@sanity' },
-      async ({ loginPage, page, databases }) => {
+      {
+        tag: '@sanity',
+        annotation: [{ type: 'requirement', description: 'RTM-SEC03' }],
+      },
+      async ({ loginPage, page, databases, request }) => {
         const db = databases.for('kpost-api');
         if (!isSqlClient(db)) {
           test.skip(true, 'needs the KPOST_QA database (DB_ENABLED) to read the OTP that was sent');
@@ -57,8 +61,12 @@ test.describe(
         const spareId = testData.forgotPasswordKpostId.toLowerCase();
         const password = testData.password;
 
-        const [user] = await db.query<{ mobile_number: string; password: string }>(
-          'SELECT mobile_number, password FROM TBL_KPOST_USER_MASTER WHERE kpost_id = ?',
+        const [user] = await db.query<{
+          mobile_number: string;
+          password: string;
+          country_id: string;
+        }>(
+          'SELECT mobile_number, password, country_id FROM TBL_KPOST_USER_MASTER WHERE kpost_id = ?',
           [spareId],
         );
         expect(user, `${spareId} exists`).toBeTruthy();
@@ -119,6 +127,40 @@ test.describe(
           await expect(page, 'the account signs in with the reset password').toHaveURL(/\/home/, {
             timeout: 20_000,
           });
+        });
+
+        await test.step('the used code cannot be used again (RTM-SEC03)', async () => {
+          // Replays of what the reset just did, with the SAME code — no new SMS. Sent straight to the
+          // API (the engine blocks this endpoint): the update re-sets the SAME password, so even if
+          // the server wrongly accepts it, the account is left exactly as it is.
+          const api = suiteFor('kpost-api').baseUrl;
+          const replayed = await request.post(`${api}/v2/common/validateOTP/`, {
+            data: {
+              otp,
+              countryID: Number(user?.country_id),
+              mobileNumber: mobile,
+              sendDate: Date.now(),
+            },
+          });
+          const replayBody = (await replayed.json().catch(() => ({}))) as { status?: string };
+          const again = await request.post(`${api}/v2/common/forgotPasswordUpdate/`, {
+            data: { kpostID: spareId, forgotPassword: password },
+          });
+          const againBody = (await again.json().catch(() => ({}))) as { status?: string };
+          test.info().annotations.push({
+            type: 'observed',
+            description:
+              `replay → validateOTP HTTP ${replayed.status()} ${replayBody.status}; ` +
+              `forgotPasswordUpdate HTTP ${again.status()} ${againBody.status}`,
+          });
+          expect(
+            replayed.ok() && /success/i.test(String(replayBody.status)),
+            `validating the used code again is refused (got HTTP ${replayed.status()} ${replayBody.status})`,
+          ).toBe(false);
+          expect(
+            again.ok() && /success/i.test(String(againBody.status)),
+            `setting the password again without a new code is refused — #13207 (got HTTP ${again.status()} ${againBody.status})`,
+          ).toBe(false);
         });
       },
     );

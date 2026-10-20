@@ -1,10 +1,11 @@
 import type { Page } from '@playwright/test';
 import { STORAGE_STATE_2, TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
-import { recordCreatedAccount } from '@fixtures/created-accounts';
+import { isSqlClient } from '@database/database-client';
 import { domainFor } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
+import { deleteSanityAccount, nextSanityIdentity } from '../support/sanity-account';
 import {
   deleteSentMessage,
   openComposerFor,
@@ -71,82 +72,78 @@ test.describe(
     test.describe.configure({ timeout: 240_000 });
 
     test.describe('1a · becoming a user', () => {
+      // No retries: a retry would sign up a SECOND throwaway account (owner: one per run).
+      test.describe.configure({ retries: 0 });
       test.use({ storageState: { cookies: [], origins: [] } });
       requireFlags('SIGNUP_UI_LIFECYCLE', 'OTP_TEST_GATEWAY', 'TEST_DB_MODE');
 
-      test('a person signs up, signs in for the first time and sees their own name', async ({
-        signupPage,
-        page,
-      }) => {
-        const mobile = testData.signupUiMobile;
-        const domain = domainFor('PERSONAL');
-        const kpostId = `${testData.signupUiKpostIdLocal}@${domain}`;
+      test(
+        'a person signs up, signs in for the first time and sees their own name',
+        { annotation: [{ type: 'requirement', description: 'RTM-E2E01' }] },
+        async ({ signupPage, page, databases }) => {
+          // One throwaway identity per run (sanitykpost<N>, removed afterwards) — the owner's rule
+          // for accounts the bench creates (2026-10-20), shared with sanity-signup.spec.ts.
+          const db = databases.for('kpost-api');
+          if (!isSqlClient(db)) {
+            test.skip(true, 'needs the KPOST_QA database to pick the identity and remove it');
+            return;
+          }
+          const domain = domainFor('PERSONAL');
+          const me = await nextSanityIdentity(db, domain);
+          try {
+            await test.step(`sign up ${me.kpostId} on the real screens`, async () => {
+              await signupPage.goto();
+              await signupPage.chooseAccountType('Personal');
+              await signupPage.selectCountryLanguageDomain('India', 'English', domain);
+              expect(await signupPage.requestMobileOtp(me.mobile), 'the mobile is free').toBe(
+                'sent',
+              );
+              expect(
+                await signupPage.enterMobileOtp(testData.bypassOtp),
+                'the test-gateway code is accepted',
+              ).toBe('verified');
+              await signupPage.fillPersonalDetails({
+                firstName: 'QA',
+                lastName: 'Bench',
+                gender: 'Female',
+                dobDay: 15,
+                dobMonth: 'June',
+                dobYear: 1995,
+                pincode: testData.pinCode,
+                area: 'Chennai',
+              });
+              await signupPage.continueToKpostId();
+              expect(await signupPage.choosePreferredKpostId(me.local), 'the id is free').toBe(
+                'available',
+              );
+              await signupPage.setPasswordAndSubmit(SIGNUP_PASSWORD);
+              await signupPage.confirmSuccessAndGoToLogin();
+              await expect(page, 'signup ends on the login screen').toHaveURL(/\/login/, {
+                timeout: 20_000,
+              });
+            });
 
-        await test.step('sign up on the real screens', async () => {
-          await signupPage.goto();
-          await signupPage.chooseAccountType('Personal');
-          await signupPage.selectCountryLanguageDomain('India', 'English', domain);
-          const otp = await signupPage.requestMobileOtp(mobile);
-          // Already registered: by an earlier run of this journey (its password is SIGNUP_PASSWORD,
-          // so the first-login step below still proves the account works) — or by something else,
-          // which the sign-in step reports as a skip with the reason.
-          if (otp === 'already-exists') return;
-          test.skip(
-            (await signupPage.enterMobileOtp(testData.bypassOtp)) === 'invalid',
-            'the OTP box rejected the test-gateway code — infra noise (#721), re-run when the host is quiet',
-          );
-          await signupPage.fillPersonalDetails({
-            firstName: 'QA',
-            lastName: 'Bench',
-            gender: 'Female',
-            dobDay: 15,
-            dobMonth: 'June',
-            dobYear: 1995,
-            pincode: testData.pinCode,
-            area: 'Chennai',
-          });
-          await signupPage.continueToKpostId();
-          test.skip(
-            (await signupPage.choosePreferredKpostId(testData.signupUiKpostIdLocal)) === 'taken',
-            `${kpostId} is taken under another mobile — set a fresh QA_SIGNUP_UI_KPOST_ID_LOCAL`,
-          );
-          await signupPage.setPasswordAndSubmit(SIGNUP_PASSWORD);
-          await signupPage.confirmSuccessAndGoToLogin();
-          await expect(page, 'signup ends on the login screen').toHaveURL(/\/login/, {
-            timeout: 20_000,
-          });
-          recordCreatedAccount({
-            kpostId,
-            mobileNumber: mobile,
-            source: 'journeys/first-use.spec.ts (UI)',
-            note: 'JOURNEY 1a — personal signup through the real screens',
-          });
-        });
+            await test.step('first sign-in lands on Home', async () => {
+              await signInFromUi(page, me.kpostId, SIGNUP_PASSWORD);
+              await arriveAt(page, '/home', /\/home/, 'Home');
+            });
 
-        await test.step('first sign-in lands on Home', async () => {
-          const signedIn = await signInFromUi(page, kpostId, SIGNUP_PASSWORD)
-            .then(() => true)
-            .catch(() => false);
-          test.skip(
-            !signedIn,
-            `${kpostId} exists but does not accept this journey's password (registered by something ` +
-              'else) — set a fresh QA_SIGNUP_UI_MOBILE / QA_SIGNUP_UI_KPOST_ID_LOCAL',
-          );
-          await arriveAt(page, '/home', /\/home/, 'Home');
-        });
+            await test.step('the profile shows the name given at signup', async () => {
+              await arriveAt(page, '/userprofile', /\/userprofile/, 'Profile');
+              await expect(
+                page.locator('.name_font_profile').first(),
+                'the new user sees the name they signed up with',
+              ).toContainText(/QA\s+Bench/i, { timeout: 20_000 });
+            });
 
-        await test.step('the profile shows the name given at signup', async () => {
-          await arriveAt(page, '/userprofile', /\/userprofile/, 'Profile');
-          await expect(
-            page.locator('.name_font_profile').first(),
-            'the new user sees the name they signed up with',
-          ).toContainText(/QA\s+Bench/i, { timeout: 20_000 });
-        });
-
-        await test.step('log out', async () => {
-          await logoutFromUi(page);
-        });
-      });
+            await test.step('log out', async () => {
+              await logoutFromUi(page);
+            });
+          } finally {
+            await deleteSanityAccount(db, me);
+          }
+        },
+      );
     });
 
     test.describe('1b · first day', () => {

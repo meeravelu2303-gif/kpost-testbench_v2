@@ -183,14 +183,16 @@ test.describe(
 
     test(
       'Copy copies a sent message to the clipboard (send → Copy → accepted), then deletes @ui',
-      { annotation: [{ type: 'requirement-partial', description: 'FR-KU-039' }] },
-      async ({ page }) => {
+      { annotation: [{ type: 'requirement', description: 'FR-KU-039' }] },
+      async ({ page, browserName }) => {
         const subject = `QA UI copy ${Date.now()}`;
+        const body = `QA UI copy — self-cleaning ${Date.now()}`;
         await openComposer(page);
-        const message = await sendMessage(page, subject, 'QA UI copy — self-cleaning');
+        const message = await sendMessage(page, subject, body);
 
-        // Bell menu → Copy (`handleCopyToClipboard`). Reading the clipboard is permission-gated and flaky
-        // across engines, so we assert the action was ACCEPTED (menu closed), not the clipboard contents.
+        if (browserName === 'chromium')
+          await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        // Bell menu → Copy (`handleCopyToClipboard`).
         await openBellMenu(page, message);
         const copy = page.getByRole('menuitem', { name: /Copy/i });
         await expect(copy, 'the sender action menu offers Copy').toBeVisible({ timeout: 15_000 });
@@ -198,6 +200,16 @@ test.describe(
         await expect(copy, 'the Copy action was accepted (menu closed)').toHaveCount(0, {
           timeout: 15_000,
         });
+        // The clipboard holds the message. Only Chromium lets a page read it (with the permission
+        // granted); on the other engines the accepted action above is all that can be checked.
+        if (browserName === 'chromium') {
+          await expect
+            .poll(() => page.evaluate(() => navigator.clipboard.readText()), {
+              message: 'the copied text is the message',
+              timeout: 10_000,
+            })
+            .toContain(body);
+        }
 
         await deleteSentMessage(page, subject);
       },

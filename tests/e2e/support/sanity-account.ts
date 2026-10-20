@@ -40,6 +40,8 @@ export const SIGNUP_FOOTPRINT: ReadonlyArray<{
   by: 'id' | 'mobile';
 }> = [
   { table: 'TBL_KPOST_LOGIN_SESSION', column: 'kpost_id', by: 'id' },
+  // Written by a LOGOUT (journey 1a signs out); FK to the user row, so it goes first.
+  { table: 'TBL_KPOST_LOGIN_HISTORY', column: 'kpost_id', by: 'id' },
   { table: 'TBL_KPOST_USER_PROFILE', column: 'kpost_id', by: 'id' },
   { table: 'TBL_KPOST_USERS_KMAIL_SETTINGS', column: 'kpost_id', by: 'id' },
   { table: 'TBL_KPOST_USER_PHONECONTACT_DETAILS', column: 'kpost_id', by: 'id' },
@@ -88,6 +90,20 @@ export async function deleteSanityAccount(
     );
     await db.query(`DELETE FROM ${table} WHERE ${column} = ?`, [value]);
     removed[table] = (removed[table] ?? 0) + Number(before?.n ?? 0);
+  }
+  // The two welcome messages are sent a few seconds AFTER signup (seen live: 0 removed on one run, 2
+  // on the next). Watch briefly for late ones so each run leaves nothing behind on its own.
+  for (let i = 0; i < 5; i++) {
+    await new Promise((r) => setTimeout(r, 2_000));
+    const [late] = await db.query<{ n: string }>(
+      'SELECT COUNT(*) AS n FROM TBL_KPOST_KATCHUP_MESSAGES WHERE receiver = ?',
+      [who.kpostId],
+    );
+    if (Number(late?.n ?? 0) > 0) {
+      await db.query('DELETE FROM TBL_KPOST_KATCHUP_MESSAGES WHERE receiver = ?', [who.kpostId]);
+      removed.TBL_KPOST_KATCHUP_MESSAGES =
+        (removed.TBL_KPOST_KATCHUP_MESSAGES ?? 0) + Number(late?.n);
+    }
   }
   const left = await db.query(`SELECT kpost_id FROM ${USER_TABLE} WHERE kpost_id = ?`, [
     who.kpostId,

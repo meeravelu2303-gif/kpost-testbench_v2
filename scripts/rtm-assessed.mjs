@@ -6,50 +6,55 @@ export const ASSESSED = [
     id: 'RTM-KALL-A01',
     module: 'Kall',
     summary: 'Connected A→B call: ring → accept → hang-up on both sides',
-    status: 'Not covered',
-    files: [],
+    status: 'Covered',
+    files: ['journeys/voice-call', 'kall/call-states'],
     notes:
-      'BLOCKED (bench limit): no WebRTC peer connects here, so kallStartTime/EndTime/Duration stay null through initiate->end (FR-KL-009). Needs a real two-party media harness.',
+      'Full flow asserted by journeys/voice-call (ring -> Accept -> both timers tick -> mute -> hang-up) — red live on #1680 (the callee is never rung). The server half (accept stamps the start on both rows, end stamps end + duration) is kall/call-states, green 2/2 2026-10-20.',
   },
   {
     id: 'RTM-KALL-A02',
     module: 'Kall',
     summary: 'Reject an incoming call',
-    status: 'Not covered',
-    files: [],
-    notes: 'No incoming-call reject flow (WebRTC limit).',
+    status: 'Covered',
+    files: ['kall/call-states'],
+    notes:
+      "kall/call-states sends the web Reject body ({id, kallStatus:4, kallID, reason:''}) and asserts the log shows declined and never started — red 2/2 on #13206 (404 Kall not found; the call stays ringing).",
   },
   {
     id: 'RTM-KALL-A03',
     module: 'Kall',
     summary: 'Missed call recorded in the log',
-    status: 'Not covered',
-    files: [],
-    notes: 'No missed-call assertion.',
+    status: 'Covered',
+    files: ['kall/call-states'],
+    notes:
+      'kall/call-states sends the 30-s no-answer body (kallStatus 3) and asserts both logs show it missed — red 2/2 on #13206.',
   },
   {
     id: 'RTM-KALL-A04',
     module: 'Kall',
     summary: 'Mute / camera toggle during a call',
-    status: 'Not covered',
-    files: [],
-    notes: 'No media-control assertion.',
+    status: 'Partial',
+    files: ['journeys/voice-call'],
+    notes:
+      'Mic mute/unmute asserted in journeys/voice-call (red on #1680). The camera toggle exists only on a video call — not driven yet.',
   },
   {
     id: 'RTM-KALL-A05',
     module: 'Kall',
     summary: 'Call history / log entry with participant+timestamp fields',
-    status: 'Partial',
-    files: ['kall/kall-reads-workflow', 'kall/read'],
-    notes: 'Reads covered; timestamps null (FR-KL-009).',
+    status: 'Covered',
+    files: ['kall/call-states', 'kall/kall-reads-workflow', 'kall/read'],
+    notes:
+      'kall/call-states: an answered call shows in BOTH logs with start, end (after start) and a non-zero hh:mm:ss duration — green 2/2 2026-10-20. (The old null-timestamps note came from calls that were never accepted.)',
   },
   {
     id: 'RTM-KALL-A06',
     module: 'Kall',
     summary: 'Kool Kall join flow',
-    status: 'Partial',
-    files: ['kall-features', 'kall/kall-reads-workflow'],
-    notes: 'Tab + scheduling surfacing only.',
+    status: 'Covered',
+    files: ['kall/call-states', 'kall-features'],
+    notes:
+      'kall/call-states: host and guest joinScheduleKall -> both recorded as joined with their join times, guest connected — green 2/2 2026-10-20.',
   },
   {
     id: 'RTM-KALL-SEC01',
@@ -166,17 +171,19 @@ export const ASSESSED = [
     id: 'RTM-KU-M05',
     module: 'Katchup',
     summary: 'Offline user receives message on next login',
-    status: 'Not covered',
-    files: [],
-    notes: 'resilience covers offline-recover UI, not delivery-on-login.',
+    status: 'Covered',
+    files: ['katchup/offline-delivery'],
+    notes:
+      'katchup/offline-delivery: B signs out of its own device, A writes, B signs in again on that device and finds the message in the thread; the DB row is unread (read_time empty) until then — green 2/2 2026-10-20.',
   },
   {
     id: 'RTM-KU-M06',
     module: 'Katchup',
     summary: 'Message translation (if live)',
-    status: 'Partial',
-    files: ['i18n-switch', 'kmail/reads-workflow'],
-    notes: 'Locale switch + KMail translator API; Katchup message translate not asserted.',
+    status: 'Covered',
+    files: ['katchup-menus-transfer-translate', 'i18n-switch'],
+    notes:
+      "Katchup message translate (the per-message Translate icon → language → '<from> ▶ <to>' + translated text) asserted in katchup-menus-transfer-translate — red 4/4: the KMail translator now requires langFrom and the web app never sends it (#13209 KMail API, #13210 KPost UI; also breaks compose-assist and voice-message translate).",
   },
   {
     id: 'RTM-SEC01',
@@ -193,16 +200,16 @@ export const ASSESSED = [
     status: 'Partial',
     files: ['login-token-security', 'signup-login/session-expiry'],
     notes:
-      'JWT bounded (24 h) + logout revokes server-side + edited exp (extended / back-dated) refused 401 (session-expiry, 2/2 2026-10-15). Genuinely-expired-token refusal skips until a QA token in the bench history ages past exp. No idle timeout exists server-side (AuthenticationFilter) and none is required.',
+      "JWT bounded (24 h) + logout revokes server-side + edited exp (extended / back-dated) refused 401 (session-expiry, 2/2). The genuinely-expired-token refusal could never run: the token history kept only the newest 20 and a busy day pushed every aged token out. Fixed 2026-10-20 (each account keeps its first-to-expire token, tests/framework/token-history.spec.ts); the check runs once today's oldest qatest token expires (2026-10-21).",
   },
   {
     id: 'RTM-SEC03',
     module: 'Security',
     summary: 'Password-reset link cannot be reused',
-    status: 'Not covered',
-    files: [],
+    status: 'Covered',
+    files: ['login-forgot-password-lifecycle'],
     notes:
-      'BLOCKED: password-reset single-use needs a working spare account (QA_FORGOT_PASSWORD_KPOST_ID does not exist on the test server — #821-824) and a real SMS OTP (the test gateway accepts a fixed bypass code).',
+      "login-forgot-password-lifecycle (one real SMS per run, qatest6): after a successful reset it replays the same code — validateOTP is refused (400 Invalid OTP), but forgotPasswordUpdate with no code succeeds until the code's 10-minute expiry (3/3 live 2026-10-20, refused after expiry) — red on #13207.",
   },
   {
     id: 'RTM-SEC04',
@@ -222,9 +229,9 @@ export const ASSESSED = [
     module: 'Journeys',
     summary: 'Full journey: signup → first login → profile → first message/mail/call',
     status: 'Partial',
-    files: [],
+    files: ['journeys/first-use'],
     notes:
-      'Built 2026-10-19, pending its first live run: journeys/first-use (1a signup via the OTP test gateway → first login → own name on Profile; 1b Home > Profile > first Katchup + first KMail, both received by B) plus 8 more journeys in tests/e2e/journeys. Stays Partial until verified live.',
+      "First live runs 2026-10-20. 1a (signup with a throwaway sanitykpostN account → first login → own name on Profile → logout, account removed from the DB after) green 2/2. 1b (Home → Profile → first Katchup → first KMail, B receives both) green 1/2: the other run failed at 'B reads exactly what was written' — #1348, the KMail opened-body bug, is intermittent. Partial while that finding stands (owner's counting decision pending).",
   },
   {
     id: 'RTM-CON01',

@@ -154,6 +154,10 @@ const NOT_A_RESOURCE = new Set(
      */
     'messageid',
     'messageids',
+    // forwardKatchupMultipleMsgs' list of the messages being forwarded (ForwardFooter.js
+    // sendMultiForward) — the same runtime-scoped msgIDs; the RECIPIENT lists beside it
+    // (forwardReceiverList) stay checked. Found 2026-10-20 (the hidden-source forward test).
+    'forwardmessageidlist',
     'temporarymsgid',
     'oldmsgid',
     'sourcemsgid',

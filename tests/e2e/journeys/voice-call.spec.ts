@@ -12,7 +12,8 @@ import {
 } from './support/journey';
 
 /**
- * JOURNEY 10 · A VOICE CALL — A rings B from the Kall screen, B answers, both are connected, A hangs up.
+ * JOURNEY 10 · A VOICE CALL — A rings B from the Kall screen, B answers, both are connected, A mutes and
+ * unmutes, A hangs up.
  *
  * Built from source (KPOST_REACTJS_2023_V1, read 2026-10-20), every call component mounted globally by
  * `containers/Header.js`, so B is reachable on any signed-in page:
@@ -65,7 +66,12 @@ test.describe(
   'JOURNEY 10 · a voice call',
   {
     tag: [TAGS.ui, TAGS.journey, TAGS.kall, TAGS.regression],
-    annotation: [{ type: 'requirement', description: 'FR-KL-005' }],
+    annotation: [
+      { type: 'requirement', description: 'FR-KL-005' },
+      { type: 'requirement', description: 'RTM-KALL-A01' },
+      // Voice calls have a mic toggle only; the camera toggle is the video call's (not driven here).
+      { type: 'requirement-partial', description: 'RTM-KALL-A04' },
+    ],
   },
   () => {
     test.describe.configure({ timeout: 180_000 });
@@ -213,6 +219,18 @@ test.describe(
             ).toBeVisible();
           }
           connected = true;
+        });
+
+        await test.step('A mutes and unmutes the microphone during the call', async () => {
+          // GlobalKallSender.toggleMic: the button switches icon-KP_53-Mic-on ⇄ icon-KP_52-Mic-Off and
+          // gains `kall-btn--muted` while muted.
+          const mic = panel(page).locator('.kall-btn--mic');
+          await mic.click();
+          await expect(mic, 'muted: the button shows Mic-Off').toHaveClass(/kall-btn--muted/);
+          await expect(mic, 'and the muted icon').toHaveClass(/icon-KP_52-Mic-Off/);
+          await mic.click();
+          await expect(mic, 'unmuted again').not.toHaveClass(/kall-btn--muted/);
+          await expect(mic, 'with the Mic-on icon').toHaveClass(/icon-KP_53-Mic-on/);
         });
 
         await test.step('A hangs up and the call ends on both sides', async () => {

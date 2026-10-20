@@ -103,33 +103,36 @@ test.describe(
       },
     );
 
-    test('update designation is saved and reads back, then is restored @api @profile', async ({
-      endpoints,
-    }) => {
-      const before = (await fetchProfile(endpoints)).designation;
-      const marker = `QA Designation ${Date.now() % 100000}`;
+    test(
+      'update designation is saved and reads back, then is restored @api @profile',
+      // A person's profession is their Profile designation (Personal signup has no profession field).
+      { annotation: [{ type: 'requirement', description: 'FR-SL-031' }] },
+      async ({ endpoints }) => {
+        const before = (await fetchProfile(endpoints)).designation;
+        const marker = `QA Designation ${Date.now() % 100000}`;
 
-      const status = await write(
-        endpoints,
-        'profile-update-designation',
-        { designation: marker },
-        'designation',
-      );
-      expect(status, 'update designation accepted').toBeLessThan(300);
+        const status = await write(
+          endpoints,
+          'profile-update-designation',
+          { designation: marker },
+          'designation',
+        );
+        expect(status, 'update designation accepted').toBeLessThan(300);
 
-      // Best-effort read-back (see the about test for why).
-      const after = (await fetchProfile(endpoints)).designation;
-      if (after !== undefined && after !== null && after !== '') {
-        expect.soft(after, 'the new designation reads back').toBe(marker);
-      }
+        // Best-effort read-back (see the about test for why).
+        const after = (await fetchProfile(endpoints)).designation;
+        if (after !== undefined && after !== null && after !== '') {
+          expect.soft(after, 'the new designation reads back').toBe(marker);
+        }
 
-      await write(
-        endpoints,
-        'profile-update-designation',
-        { designation: typeof before === 'string' ? before : '' },
-        'designation-restore',
-      );
-    });
+        await write(
+          endpoints,
+          'profile-update-designation',
+          { designation: typeof before === 'string' ? before : '' },
+          'designation-restore',
+        );
+      },
+    );
 
     test('basic, contact and privacy updates are accepted and actually persist @api @profile', async ({
       endpoints,

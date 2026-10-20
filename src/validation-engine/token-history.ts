@@ -31,7 +31,7 @@ import { ROOT_DIR } from '@config/constants';
  * alongside the other credential state.
  */
 
-interface StoredToken {
+export interface StoredToken {
   token: string;
   /** Unix seconds, from the JWT `exp` claim. */
   exp: number;
@@ -87,11 +87,46 @@ export function recordToken(token: string): void {
   const exp = expOf(token);
   if (!exp) return;
   const now = Math.floor(Date.now() / 1000);
-  const kept = read().filter((e) => e.token !== token && now - e.recordedAt < MAX_AGE_SECONDS);
-  kept.push({ token, exp, recordedAt: now });
-  // Newest first, capped.
-  kept.sort((a, b) => b.recordedAt - a.recordedAt);
-  write(kept.slice(0, MAX_ENTRIES));
+  const others = read().filter((e) => e.token !== token);
+  write(pruneTokenHistory([...others, { token, exp, recordedAt: now }], now));
+}
+
+/**
+ * Which stored tokens to keep. The newest MAX_ENTRIES alone is not enough: one busy day mints more
+ * than 20 tokens, which pushed every older one out before it could expire, so the expired-token
+ * check skipped for ever on a busy bench (2026-10-20: 20 entries, all minted the same day). So, on
+ * top of the newest MAX_ENTRIES, each account always keeps the token that matures FIRST (its oldest
+ * live one) and its newest ALREADY-expired one. Nothing older than MAX_AGE_SECONDS is kept.
+ */
+export function pruneTokenHistory(entries: readonly StoredToken[], now: number): StoredToken[] {
+  const fresh = entries.filter((e) => now - e.recordedAt < MAX_AGE_SECONDS);
+  const newest = [...fresh].sort((a, b) => b.recordedAt - a.recordedAt).slice(0, MAX_ENTRIES);
+  const keep = new Set(newest);
+  const bySubject = new Map<string, StoredToken[]>();
+  for (const e of fresh) {
+    const key = subjectOf(e.token) ?? '?';
+    bySubject.set(key, [...(bySubject.get(key) ?? []), e]);
+  }
+  for (const list of bySubject.values()) {
+    const live = list.filter((e) => e.exp >= now).sort((a, b) => a.exp - b.exp);
+    const expired = list.filter((e) => e.exp < now).sort((a, b) => b.exp - a.exp);
+    if (live[0]) keep.add(live[0]);
+    if (expired[0]) keep.add(expired[0]);
+  }
+  return [...keep].sort((a, b) => b.recordedAt - a.recordedAt);
+}
+
+function subjectOf(token: string): string | undefined {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return undefined;
+    const claims = JSON.parse(
+      Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString(),
+    ) as { sub?: string };
+    return typeof claims.sub === 'string' ? claims.sub.toLowerCase() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**

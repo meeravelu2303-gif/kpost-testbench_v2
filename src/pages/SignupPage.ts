@@ -443,6 +443,25 @@ export class SignupPage extends BasePage {
     });
   }
 
+  /**
+   * "Get Suggestion from KPOST" → the "Suggestion from KPOST" window (PersonalSignup.js: one
+   * `.Borber-Bottom.font-weight-bolder.Cursor_pointer` row per `ListName`). Returns the suggested ids
+   * and picks the first, which fills the Preferred KPOST ID field and closes the window.
+   */
+  async pickKpostIdSuggestion(): Promise<{ suggestions: string[]; picked: string }> {
+    return test.step('Signup: get KPOST ID suggestions and pick one', async () => {
+      await this.page.getByText(/^Get Suggestion from KPOST$/i).click();
+      const dialog = this.page.getByRole('dialog').filter({ hasText: /Suggestion from KPOST/i });
+      const rows = dialog.locator('.Borber-Bottom.font-weight-bolder.Cursor_pointer');
+      await rows.first().waitFor({ state: 'visible', timeout: 15_000 });
+      const suggestions = (await rows.allInnerTexts()).map((s) => s.trim()).filter(Boolean);
+      const picked = suggestions[0] ?? '';
+      await rows.first().click();
+      await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
+      return { suggestions, picked };
+    });
+  }
+
   /** Password + Confirm Password (note: the live placeholder has a trailing space) + agree + Submit. */
   async setPasswordAndSubmit(password: string): Promise<void> {
     await test.step('Signup: password + agree + submit', async () => {
