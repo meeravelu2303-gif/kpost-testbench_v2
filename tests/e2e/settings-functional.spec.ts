@@ -71,51 +71,74 @@ test.describe(
       'needs a real live account (QA_KPOST_ID)',
     );
 
-    test('toggling a notification preference persists to the settings row @ui', async ({
-      page,
-      settingsPage,
-      databases,
-    }) => {
-      const database = databases.for('kpost-api');
-      test.skip(!database.enabled, 'needs the KPOST_QA connection to judge by the row');
+    test(
+      'toggling a notification preference persists to the settings row @ui',
+      {
+        annotation: [
+          {
+            type: 'cross-layer',
+            description:
+              'Settings: toggle a notification → generalSetting save → TBL_KPOST_GENERAL_SETTINGS',
+          },
+        ],
+      },
+      async ({ page, settingsPage, databases }) => {
+        const database = databases.for('kpost-api');
+        test.skip(!database.enabled, 'needs the KPOST_QA connection to judge by the row');
 
-      const read = (): Promise<SettingsRow | undefined> =>
-        database.findOne<SettingsRow>({
-          table: 'TBL_KPOST_GENERAL_SETTINGS',
-          where: { kpost_id: testData.kpostId },
+        const read = (): Promise<SettingsRow | undefined> =>
+          database.findOne<SettingsRow>({
+            table: 'TBL_KPOST_GENERAL_SETTINGS',
+            where: { kpost_id: testData.kpostId },
+          });
+
+        const before = await read();
+        expect(before, 'the account has a settings row').toBeDefined();
+
+        const opened = await openNotificationSettings(page, settingsPage);
+        test.skip(
+          !opened,
+          'the Notification settings panel was not showing right now (session or load condition; path verified live 2026-10-11)',
+        );
+
+        // Flip the first notification toggle (whichever state it is in).
+        const toggle = page.locator('.icon-KP_289_Toggle-On, .icon-KP_285_Toggle-Off').first();
+        // The save the toggle makes: any POST to the API (not a static asset) right after the click.
+        const saveAnswer = page
+          .waitForResponse((r) => r.request().method() === 'POST' && /\/v2\//.test(r.url()), {
+            timeout: 8_000,
+          })
+          .catch(() => null);
+        await toggle.click();
+
+        /*
+         * Give the save its round-trip, then read the row. The assertion is on the DATABASE: a toggle
+         * that changed nothing in the notification columns means the preference did not persist — the
+         * #495 behaviour, now proven (or ruled out) from the UI.
+         */
+        const saved = await saveAnswer;
+        test.info().annotations.push({
+          type: 'observed',
+          description: `save: ${saved ? `${new URL(saved.url()).pathname} → HTTP ${saved.status()}; sent ${String(saved.request().postData()).slice(0, 200)}` : 'no API call after the toggle'}`,
         });
+        // Notification.js keeps every toggle in local state and calls no service — #986.
+        expect(saved, 'the toggle sends a settings save (none is sent: #986)').not.toBeNull();
+        expect(saved!.status(), 'the server accepts the save').toBeLessThan(300);
+        const after = await read();
 
-      const before = await read();
-      expect(before, 'the account has a settings row').toBeDefined();
+        expect(
+          snapshot(after),
+          'a toggled notification preference must change the stored settings row (UI → DB); if it does ' +
+            'not, the preference silently reverts — the same fault as Bugzilla #495, from the UI side',
+        ).not.toBe(snapshot(before));
 
-      const opened = await openNotificationSettings(page, settingsPage);
-      test.skip(
-        !opened,
-        'the Notification settings panel was not showing right now (session or load condition; path verified live 2026-10-11)',
-      );
-
-      // Flip the first notification toggle (whichever state it is in).
-      const toggle = page.locator('.icon-KP_289_Toggle-On, .icon-KP_285_Toggle-Off').first();
-      await toggle.click();
-
-      /*
-       * Give the save its round-trip, then read the row. The assertion is on the DATABASE: a toggle
-       * that changed nothing in the notification columns means the preference did not persist — the
-       * #495 behaviour, now proven (or ruled out) from the UI.
-       */
-      await page.waitForResponse('**/generalSetting/**', { timeout: 8_000 }).catch(() => undefined);
-      const after = await read();
-
-      expect(
-        snapshot(after),
-        'a toggled notification preference must change the stored settings row (UI → DB); if it does ' +
-          'not, the preference silently reverts — the same fault as Bugzilla #495, from the UI side',
-      ).not.toBe(snapshot(before));
-
-      // Restore: flip it back so the account's preferences end as they started.
-      await toggle.click().catch(() => undefined);
-      await page.waitForResponse('**/generalSetting/**', { timeout: 8_000 }).catch(() => undefined);
-    });
+        // Restore: flip it back so the account's preferences end as they started.
+        await toggle.click().catch(() => undefined);
+        await page
+          .waitForResponse('**/generalSetting/**', { timeout: 8_000 })
+          .catch(() => undefined);
+      },
+    );
 
     test('adding an Instant Reply shows it in the list (state reflects the write) @ui', async ({
       page,

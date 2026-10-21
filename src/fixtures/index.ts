@@ -71,7 +71,11 @@ export const test = base.extend<TestFixtures>({
   },
 
   endpoints: async ({ apiClients, log }, use, testInfo) => {
-    const executor = new EndpointExecutor(apiClients, apiRegistry, log);
+    // In a browser project, API calls share the browser's saved session (no API login that would sign
+    // the screens out — one session per account).
+    const executor = new EndpointExecutor(apiClients, apiRegistry, log, {
+      shareBrowserSessions: ['chromium', 'firefox', 'webkit'].includes(testInfo.project.name),
+    });
     await use(executor);
     // After the flow runs, file (a) any server error a gated write hit and (b) any CONFIRMED
     // business-rule violation it detected — otherwise a lifecycle-only bug reaches no developer.

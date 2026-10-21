@@ -1,5 +1,7 @@
 import { testData } from '@config/test-data.config';
+import { text } from '@database/kpost-assertions';
 import { expect, test } from '@fixtures';
+import { requireKpostDb, rowSummary, rowWhen } from './support/cross-layer';
 
 /**
  * Profile **edit** through the UI — the About section, the cleanest self-restoring profile write and
@@ -30,62 +32,101 @@ test.describe(
       'needs a real live account (QA_KPOST_ID)',
     );
 
-    test('edit the About text, verify it saved, then restore the original @ui', async ({
-      page,
-    }) => {
-      const marker = `QA UI about ${Date.now()}`;
+    test(
+      'edit the About text, verify it saved, then restore the original @ui',
+      {
+        annotation: [
+          {
+            type: 'cross-layer',
+            description:
+              'Profile: About edit → profile save request → TBL_KPOST_USER_PROFILE.about_yourself',
+          },
+        ],
+      },
+      async ({ page, databases }) => {
+        const db = requireKpostDb(databases);
+        const marker = `QA UI about ${Date.now()}`;
 
-      await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      await page
-        .locator('.loader-overlay')
-        .waitFor({ state: 'hidden', timeout: 30_000 })
-        .catch(() => undefined);
+        await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await page
+          .locator('.loader-overlay')
+          .waitFor({ state: 'hidden', timeout: 30_000 })
+          .catch(() => undefined);
 
-      const about = page.locator('#About');
-      await expect(about, 'the About section renders').toBeVisible({ timeout: 20_000 });
+        const about = page.locator('#About');
+        await expect(about, 'the About section renders').toBeVisible({ timeout: 20_000 });
 
-      // Read the current About text so we can restore it (a genuine value read, not an assertion).
-      const original = ((await about.locator('.nuntio-font').first().textContent()) ?? '').trim();
+        // Read the current About text so we can restore it (a genuine value read, not an assertion).
+        const original = ((await about.locator('.nuntio-font').first().textContent()) ?? '').trim();
 
-      // Open the editor. The About section's pencil is a hover-revealed font-icon; the visible
-      // "Edit Profile" control is the reliable entry — click whichever surfaces the editor.
-      await about.hover().catch(() => undefined);
-      await about
-        .locator('.icon-KP_236_Edit')
-        .first()
-        .click({ force: true, timeout: 5_000 })
-        .catch(() =>
-          page
-            .getByText(/^Edit Profile$/i)
-            .first()
-            .click(),
-        );
-
-      const editor = page.getByPlaceholder(/Write about yourself/i).first();
-      await expect(editor, 'the About editor opens').toBeVisible({ timeout: 15_000 });
-
-      // Replace the text and save.
-      await editor.fill(marker);
-      await page.getByRole('button', { name: /^Update$/i }).click();
-
-      // The new About surfaces on the profile (best-effort — the read-back can lag eventual consistency).
-      await expect(page.getByText(marker).first(), 'the edited About text is shown').toBeVisible({
-        timeout: 20_000,
-      });
-
-      // Restore the original About so the account ends as it started. Re-entering the editor is
-      // best-effort (the hover-revealed pencil is flaky on re-render) — the EDIT above is the assertion;
-      // this cleanup must not fail the test if the re-entry misses (the account is our own QA account).
-      try {
+        // Open the editor. The About section's pencil is a hover-revealed font-icon; the visible
+        // "Edit Profile" control is the reliable entry — click whichever surfaces the editor.
         await about.hover().catch(() => undefined);
-        await about.locator('.icon-KP_236_Edit').first().click({ force: true, timeout: 5_000 });
-        const restoreEditor = page.getByPlaceholder(/Write about yourself/i).first();
-        await restoreEditor.waitFor({ state: 'visible', timeout: 8_000 });
-        await restoreEditor.fill(original);
+        await about
+          .locator('.icon-KP_236_Edit')
+          .first()
+          .click({ force: true, timeout: 5_000 })
+          .catch(() =>
+            page
+              .getByText(/^Edit Profile$/i)
+              .first()
+              .click(),
+          );
+
+        const editor = page.getByPlaceholder(/Write about yourself/i).first();
+        await expect(editor, 'the About editor opens').toBeVisible({ timeout: 15_000 });
+
+        // Replace the text and save.
+        await editor.fill(marker);
+        // Layer 2: the request the screen sends to save it, and the server's answer.
+        const saved = page.waitForResponse(
+          (r) => r.request().method() === 'POST' && r.url().includes('/profile/'),
+          { timeout: 20_000 },
+        );
         await page.getByRole('button', { name: /^Update$/i }).click();
-      } catch {
-        // Re-entry missed — the QA account keeps the test marker in About (harmless, own account).
-      }
-    });
+        const saveResponse = await saved;
+        test.info().annotations.push({
+          type: 'observed',
+          description: `save: ${saveResponse.url().split('/').slice(-2).join('/')} → HTTP ${saveResponse.status()}; sent ${String(saveResponse.request().postData()).slice(0, 200)}`,
+        });
+        expect(saveResponse.status(), 'the profile save is accepted').toBeLessThan(300);
+        expect(
+          saveResponse.request().postData() ?? '',
+          'the save carries the new About text',
+        ).toContain(marker);
+
+        // The new About surfaces on the profile (best-effort — the read-back can lag eventual consistency).
+        await expect(page.getByText(marker).first(), 'the edited About text is shown').toBeVisible({
+          timeout: 20_000,
+        });
+
+        // Layer 3: the row holds exactly what was typed.
+        const row = await rowWhen<{ about_yourself: unknown }>(
+          db,
+          'SELECT about_yourself FROM TBL_KPOST_USER_PROFILE WHERE kpost_id = ?',
+          [testData.kpostId],
+          (r) => text(r?.about_yourself) === marker,
+          'TBL_KPOST_USER_PROFILE.about_yourself holds the edited About text',
+        );
+        test.info().annotations.push({
+          type: 'observed',
+          description: `row: ${rowSummary(row, ['about_yourself'])}`,
+        });
+
+        // Restore the original About so the account ends as it started. Re-entering the editor is
+        // best-effort (the hover-revealed pencil is flaky on re-render) — the EDIT above is the assertion;
+        // this cleanup must not fail the test if the re-entry misses (the account is our own QA account).
+        try {
+          await about.hover().catch(() => undefined);
+          await about.locator('.icon-KP_236_Edit').first().click({ force: true, timeout: 5_000 });
+          const restoreEditor = page.getByPlaceholder(/Write about yourself/i).first();
+          await restoreEditor.waitFor({ state: 'visible', timeout: 8_000 });
+          await restoreEditor.fill(original);
+          await page.getByRole('button', { name: /^Update$/i }).click();
+        } catch {
+          // Re-entry missed — the QA account keeps the test marker in About (harmless, own account).
+        }
+      },
+    );
   },
 );

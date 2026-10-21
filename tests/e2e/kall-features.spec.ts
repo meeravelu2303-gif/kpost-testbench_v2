@@ -40,6 +40,63 @@ test.describe('KPost Kall — read-only', { tag: ['@ui', '@kall', '@regression',
       });
     },
   );
+
+  test(
+    'the Contacts screen shows the contact count, and each breakdown adds up to its total @ui',
+    { annotation: [{ type: 'requirement', description: 'FR-KL-007' }] },
+    async ({ page }) => {
+      // KallContact.js (2026-10-20): the Contacts tab shows a chip "My Contacts • N"
+      // (`.contact-background-style` / `.contact-chip-count`, N = the contact list's length). Opening it
+      // lists each group as a `.contact-dropdown-main` row with its count, followed by its kinds
+      // (`.contact-dropdown-sub`: Personal / Business / Institution / Government) with theirs. A kind
+      // count is the number of that group's contacts of that kind, so the kinds must add up to the group.
+      await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page
+        .locator('.loader-overlay')
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined);
+      await page
+        .locator('.kall-layout-shell')
+        .getByText(/^Contacts$/)
+        .first()
+        .click();
+      const chip = page.locator('.contact-background-style').first();
+      await expect(chip, 'the Contacts screen names the list').toContainText(/My Contacts/i, {
+        timeout: 20_000,
+      });
+      const total = Number(
+        (await chip.locator('.contact-chip-count').innerText()).replace(/[^\d]/g, ''),
+      );
+      expect(total, 'and shows how many contacts there are').toBeGreaterThan(0);
+
+      await chip.click();
+      const rows = page.locator('.contact-dropdown-row');
+      await expect(rows.first(), 'the contact groups open').toBeVisible({ timeout: 10_000 });
+      const groups: Array<{ name: string; count: number; kinds: Array<[string, number]> }> = [];
+      for (const row of await rows.all()) {
+        const name = (await row.locator('.contact-dropdown-label').innerText()).trim();
+        const count = Number(
+          (await row.locator('.contact-dropdown-count').innerText()).replace(/[^\d]/g, ''),
+        );
+        const isMain = /contact-dropdown-main/.test((await row.getAttribute('class')) ?? '');
+        if (isMain) groups.push({ name, count, kinds: [] });
+        else if (!/Mobile Contacts/i.test(name)) groups.at(-1)?.kinds.push([name, count]);
+      }
+      test.info().annotations.push({
+        type: 'observed',
+        description: `chip ${total}; ${groups.map((g) => `${g.name} ${g.count} = ${g.kinds.map(([k, n]) => `${k} ${n}`).join(' + ')}`).join(' | ')}`,
+      });
+      const mine = groups.find((g) => /^My Contacts$/i.test(g.name));
+      expect(mine?.count, '"My Contacts" in the list matches the count on the chip').toBe(total);
+      for (const g of groups.filter((x) => x.kinds.length))
+        expect
+          .soft(
+            g.kinds.reduce((sum, [, n]) => sum + n, 0),
+            `${g.name}: Personal + Business + Institution + Government add up to its ${g.count}`,
+          )
+          .toBe(g.count);
+    },
+  );
 });
 
 test.describe(

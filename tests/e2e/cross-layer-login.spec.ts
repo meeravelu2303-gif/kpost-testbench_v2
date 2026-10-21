@@ -44,84 +44,99 @@ test.describe(
       'needs a real live account (QA_KPOST_ID)',
     );
 
-    test('signing in through the UI creates a revocable session row in MySQL @ui', async ({
-      loginPage,
-      page,
-      databases,
-    }) => {
-      const database = databases.for('kpost-api');
-      test.skip(
-        !database.enabled,
-        'needs the KPOST_QA connection (DB_HOST/DB_NAME) for the database half',
-      );
-      test.skip(!testData.password, 'needs QA_PASSWORD to drive a real login');
+    test(
+      'signing in through the UI creates a revocable session row in MySQL @ui',
+      {
+        annotation: [
+          {
+            type: 'cross-layer',
+            description: 'Login: sign in on screen → userLogin → TBL_KPOST_LOGIN_SESSION',
+          },
+        ],
+      },
+      async ({ loginPage, page, databases }) => {
+        const database = databases.for('kpost-api');
+        test.skip(
+          !database.enabled,
+          'needs the KPOST_QA connection (DB_HOST/DB_NAME) for the database half',
+        );
+        test.skip(!testData.password, 'needs QA_PASSWORD to drive a real login');
 
-      const repo = new KpostRepository(database);
+        const repo = new KpostRepository(database);
 
-      // --- Layer 3, before: what the database already knows ---------------------------------------
-      const before = await repo.sessions(testData.kpostId);
+        // --- Layer 3, before: what the database already knows ---------------------------------------
+        const before = await repo.sessions(testData.kpostId);
 
-      // --- Layer 1: the user's actual journey -----------------------------------------------------
-      await loginPage.goto();
-      await loginPage.login(testData.kpostId, testData.password);
+        // --- Layer 1: the user's actual journey -----------------------------------------------------
+        await loginPage.goto();
+        // Layer 2: the login request the screen sends, and its answer.
+        const loginAnswer = page.waitForResponse(
+          (r) => r.url().includes('/signupLogin/userLogin'),
+          {
+            timeout: 30_000,
+          },
+        );
+        await loginPage.login(testData.kpostId, testData.password);
+        expect((await loginAnswer).status(), 'the server accepts the login').toBeLessThan(300);
 
-      /*
-       * Landing on an authenticated route is the UI's claim that the login worked. Asserted first so
-       * that a failure here is reported as a login/UI problem rather than as a missing database row —
-       * which is a different ticket for a different developer.
-       */
-      await expect(page, 'a successful login leaves the login screen').not.toHaveURL(/\/login/, {
-        timeout: 30_000,
-      });
+        /*
+         * Landing on an authenticated route is the UI's claim that the login worked. Asserted first so
+         * that a failure here is reported as a login/UI problem rather than as a missing database row —
+         * which is a different ticket for a different developer.
+         */
+        await expect(page, 'a successful login leaves the login screen').not.toHaveURL(/\/login/, {
+          timeout: 30_000,
+        });
 
-      // --- Layer 2: the client now holds a token --------------------------------------------------
-      const token = await page.evaluate(() => window.localStorage.getItem('accessToken'));
-      expect(token, 'the app stored an access token for the signed-in user').toBeTruthy();
+        // --- Layer 2: the client now holds a token --------------------------------------------------
+        const token = await page.evaluate(() => window.localStorage.getItem('accessToken'));
+        expect(token, 'the app stored an access token for the signed-in user').toBeTruthy();
 
-      /*
-       * This is a real login for the SAME account every other spec's shared `storageState: STORAGE_STATE`
-       * depends on. If the backend revokes the previous session on a fresh login (plausible — this very
-       * test exists to prove a session row is created and therefore revocable), the OLD token baked into
-       * the shared file at suite start goes dead the instant this test runs, and every later spec in a
-       * long sequential run (workers=1) starts 401-ing simultaneously across unrelated screens — looking
-       * like a mass regression when it is really this test's own side effect. Re-saving the fresh,
-       * just-issued session back to the same shared path heals it for everything that runs afterward.
-       */
-      await page.context().storageState({ path: STORAGE_STATE });
+        /*
+         * This is a real login for the SAME account every other spec's shared `storageState: STORAGE_STATE`
+         * depends on. If the backend revokes the previous session on a fresh login (plausible — this very
+         * test exists to prove a session row is created and therefore revocable), the OLD token baked into
+         * the shared file at suite start goes dead the instant this test runs, and every later spec in a
+         * long sequential run (workers=1) starts 401-ing simultaneously across unrelated screens — looking
+         * like a mass regression when it is really this test's own side effect. Re-saving the fresh,
+         * just-issued session back to the same shared path heals it for everything that runs afterward.
+         */
+        await page.context().storageState({ path: STORAGE_STATE });
 
-      // --- Layer 3, after: the server can actually revoke that session -----------------------------
-      /*
-       * Polled rather than read once: the session row is written by the login request, which the SPA
-       * fires as it navigates, so a single immediate read races the server's own commit and would
-       * report a missing row that appears milliseconds later. `expect.poll` waits for the state
-       * instead of asserting a snapshot.
-       */
-      await expect
-        .poll(async () => (await repo.sessions(testData.kpostId)).length, {
-          message:
-            'a token was issued and the UI is signed in, but TBL_KPOST_LOGIN_SESSION holds no row ' +
-            'for this account — the server cannot revoke a session it has no record of',
-          timeout: 20_000,
-        })
-        .toBeGreaterThan(0);
+        // --- Layer 3, after: the server can actually revoke that session -----------------------------
+        /*
+         * Polled rather than read once: the session row is written by the login request, which the SPA
+         * fires as it navigates, so a single immediate read races the server's own commit and would
+         * report a missing row that appears milliseconds later. `expect.poll` waits for the state
+         * instead of asserting a snapshot.
+         */
+        await expect
+          .poll(async () => (await repo.sessions(testData.kpostId)).length, {
+            message:
+              'a token was issued and the UI is signed in, but TBL_KPOST_LOGIN_SESSION holds no row ' +
+              'for this account — the server cannot revoke a session it has no record of',
+            timeout: 20_000,
+          })
+          .toBeGreaterThan(0);
 
-      const after = await repo.sessions(testData.kpostId);
+        const after = await repo.sessions(testData.kpostId);
 
-      // Every row must belong to the account that signed in: a session attributed to somebody else
-      // is a far more serious fault than a missing one.
-      expect(
-        after.every((session) => text(session.kpost_id) === testData.kpostId),
-        'every session row returned for this account belongs to it',
-      ).toBe(true);
-      expect(
-        after.every((session) => Boolean(session.session_id) && Boolean(session.login_time)),
-        'each session carries the id and timestamp a revocation would need',
-      ).toBe(true);
+        // Every row must belong to the account that signed in: a session attributed to somebody else
+        // is a far more serious fault than a missing one.
+        expect(
+          after.every((session) => text(session.kpost_id) === testData.kpostId),
+          'every session row returned for this account belongs to it',
+        ).toBe(true);
+        expect(
+          after.every((session) => Boolean(session.session_id) && Boolean(session.login_time)),
+          'each session carries the id and timestamp a revocation would need',
+        ).toBe(true);
 
-      test.info().annotations.push({
-        type: 'cross-layer',
-        description: `sessions before ${before.length} → after ${after.length} for ${testData.kpostId}`,
-      });
-    });
+        test.info().annotations.push({
+          type: 'cross-layer',
+          description: `sessions before ${before.length} → after ${after.length} for ${testData.kpostId}`,
+        });
+      },
+    );
   },
 );

@@ -85,7 +85,7 @@ do · ⛔ out of scope (OTP-gated signup / mobile-only device features). Guard:
 | --------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------ | ------ | ----------- |
 | **FR-KD-002 org-scope** — directory shows only the viewer's own org users   | `globalSearch`/directory      | users outside the viewer's org are absent         | ⬜     | to-do       |
 | **FR-KD-002 search** — search by name; no match → empty state               | `globalSearch`                | query returns only name-matching entries          | 🟡     | contacts    |
-| **FR-KD-003** — each entry shows name, role/designation, team               | directory entry               | all three fields present                          | ✅ (finding) | UI `kdirectory-launch` — rows compared with the globalSearch reply; **VIOLATED 3/3 (2026-10-15): no name on any row — #1370** |
+| **FR-KD-003** — each entry shows name, role/designation, team               | directory entry               | all three fields present                          | 🟡     | UI `kdirectory-launch` — rows compared with the globalSearch reply. Names were missing on 2026-10-15 (#1370); **fixed, verified 2/2 on 2026-10-20 and #1370 closed**. Role/designation and team: the search reply carries neither for the QA accounts, so they cannot be checked yet |
 | **FR-KD-005** — opening an entry returns that user's full profile           | `getUserProfileUsingKpostID`  | profile view returns the selected user's details  | ✅     | profile read · UI `kdirectory-launch`: the Digital Card shows the entry's name, email and location (2/2 2026-10-15) |
 
 ## Admin / HR-Setup (`admin-api`)
@@ -93,7 +93,7 @@ do · ⛔ out of scope (OTP-gated signup / mobile-only device features). Guard:
 | Rule                                                                        | Applies to                 | Verify                                             | Status | Spec           |
 | --------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------- | ------ | -------------- |
 | **BR-ADM-TIER-ORDER** — the org build is ordered (tier→variable→location…)  | admin write lifecycle      | each step's id feeds the next; read-back confirms | ✅     | `admin/feature`|
-| **BR-ADM-500-VALIDATION** — a missing required field → 400, not a 500 NPE   | `employeeDetails/save`     | missing `employmentObj` → 4xx (currently 500)     | ✅ (finding) | `admin/feature`|
+| **BR-ADM-500-VALIDATION** — a missing required field → 400, not a 500 NPE   | `employeeDetails/save`     | missing `employmentObj` → 4xx (currently 500)     | ✅ (finding) | `admin/feature` — dedicated test added 2026-10-20 ("an employee saved without its employment details is refused with a 4xx"); not yet run: the Admin test server (192.168.0.38:9595) was unreachable that evening |
 
 ---
 

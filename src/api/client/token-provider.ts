@@ -21,6 +21,11 @@ export class TokenProvider {
     private readonly login: LoginFn,
     /** Separates caches of different API base URLs. */
     private readonly scope: string,
+    /**
+     * A live token the caller already holds for this principal (a browser project's saved session —
+     * `browser-session-token.ts`). Tried first and never cached, so a re-saved session is picked up.
+     */
+    private readonly existingSession?: (principal: Principal) => string | undefined,
   ) {}
 
   /**
@@ -31,6 +36,8 @@ export class TokenProvider {
    * rejected as invalid - a failure that looks like an API defect but is the bench's fault.
    */
   async tokenFor(principal: Principal, profile: AuthProfile): Promise<string> {
+    const existing = this.existingSession?.(principal);
+    if (existing) return existing;
     const key = `${this.scope}|${profile.id}|${principal.key}`;
     const cached = await cache.get(key)?.catch(() => undefined);
     if (cached && cached.expiresAt - REFRESH_MARGIN_MS > Date.now()) return cached.token;

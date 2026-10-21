@@ -106,443 +106,501 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
     'needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID)',
   );
 
-  test('workplace + HR + employee: create → read-back → self-clean @api @admin-api', async ({
-    endpoints,
-  }) => {
-    let wpAttrId: string | undefined;
-    let wpVarId: string | undefined;
-    let locId: string | undefined;
-    let hrAttrId: string | undefined;
-    let hrVarId: string | undefined;
-    let empId: string | undefined;
+  test(
+    'workplace + HR + employee: create → read-back → self-clean @api @admin-api',
+    {
+      annotation: [{ type: 'requirement', description: 'BR-ADM-TIER-ORDER' }],
+    },
+    async ({ endpoints }) => {
+      let wpAttrId: string | undefined;
+      let wpVarId: string | undefined;
+      let locId: string | undefined;
+      let hrAttrId: string | undefined;
+      let hrVarId: string | undefined;
+      let empId: string | undefined;
 
-    try {
-      // ---- Work Place Setup: tier attribute → variable ---------------------------------------
-      const wpAttr = await call(
-        endpoints,
-        'admin-workplace-tier-attribute-save',
-        [{ attributeName: name('WP Tier') }],
-        'wp-attr-save',
-      );
-      wpAttrId = createdId(wpAttr);
-      expect.soft(statusOf(wpAttr), 'workplace tier attribute saved').toMatch(/success/i);
-      expect.soft(wpAttrId, 'workplace tier attribute returns an id').toBeTruthy();
-
-      // Read back the company's tier attributes and confirm the one just created is really in there
-      // — not just "the save answered success", but that it is actually visible on a fresh read.
-      const wpAttrList = await call(
-        endpoints,
-        'admin-workplace-tier-attribute-by-company',
-        {},
-        'wp-attr-by-company',
-      );
-      expect.soft(statusOf(wpAttrList), 'workplace tier attributes read back').toMatch(/success/i);
-      const wpAttrRows = envelope(wpAttrList).value;
-      expect
-        .soft(
-          Array.isArray(wpAttrRows) &&
-            wpAttrRows.some((r) => isPlainObject(r) && r.id === wpAttrId),
-          'the newly created workplace tier attribute appears in the company list',
-        )
-        .toBe(true);
-
-      if (wpAttrId) {
-        const wpVar = await call(
+      try {
+        // ---- Work Place Setup: tier attribute → variable ---------------------------------------
+        const wpAttr = await call(
           endpoints,
-          'admin-workplace-tier-variable-save',
-          [
-            {
-              variableName: name('WP Var'),
-              attributeId: wpAttrId,
-              parentVariableId: 0,
-              parentAttributeId: 0,
-              reportingJson: '[]',
-            },
-          ],
-          'wp-var-save',
+          'admin-workplace-tier-attribute-save',
+          [{ attributeName: name('WP Tier') }],
+          'wp-attr-save',
         );
-        wpVarId = createdId(wpVar);
-        expect.soft(statusOf(wpVar), 'workplace tier variable saved').toMatch(/success/i);
-        expect.soft(wpVarId, 'workplace tier variable returns an id').toBeTruthy();
-      }
+        wpAttrId = createdId(wpAttr);
+        expect.soft(statusOf(wpAttr), 'workplace tier attribute saved').toMatch(/success/i);
+        expect.soft(wpAttrId, 'workplace tier attribute returns an id').toBeTruthy();
 
-      // Read back the workplace variables + the reporting hierarchy (id-keyed).
-      const wpVarList = await call(
-        endpoints,
-        'admin-workplace-tier-variable-list',
-        { parentVariableId: 0 },
-        'wp-var-list',
-      );
-      expect.soft(statusOf(wpVarList), 'workplace variables read back').toMatch(/success/i);
-      if (wpVarId) {
-        const wpReport = await call(
-          endpoints,
-          'admin-workplace-tier-variable-reporting-hierarchy',
-          { id: wpVarId },
-          'wp-var-reporting',
-        );
-        expect.soft(statusOf(wpReport), 'workplace reporting hierarchy read').toMatch(/success/i);
-      }
-
-      // Exercise the workplace tier attribute + variable UPDATE writes.
-      if (wpAttrId) {
-        const wpAttrEdited = name('WP Tier edited');
-        const wpAttrUpd = await call(
-          endpoints,
-          'admin-workplace-tier-attribute-update',
-          { id: wpAttrId, attributeName: wpAttrEdited },
-          'wp-attr-update',
-        );
-        expect.soft(statusOf(wpAttrUpd), 'workplace tier attribute updated').toMatch(/success/i);
-
-        // Live-verified 2026-09-26: previously only the envelope status was checked here (the sibling
-        // SAVE calls in this file already cross-check a fresh read; the UPDATE calls never did) — the
-        // exact "response looks fine, nothing confirmed changed" shape found in Kall's reschedule.
-        const wpAttrRecheck = await call(
+        // Read back the company's tier attributes and confirm the one just created is really in there
+        // — not just "the save answered success", but that it is actually visible on a fresh read.
+        const wpAttrList = await call(
           endpoints,
           'admin-workplace-tier-attribute-by-company',
           {},
-          'wp-attr-recheck',
+          'wp-attr-by-company',
         );
-        const wpAttrRecheckRows = envelope(wpAttrRecheck).value;
+        expect
+          .soft(statusOf(wpAttrList), 'workplace tier attributes read back')
+          .toMatch(/success/i);
+        const wpAttrRows = envelope(wpAttrList).value;
         expect
           .soft(
-            Array.isArray(wpAttrRecheckRows) &&
-              wpAttrRecheckRows.some(
-                (r) => isPlainObject(r) && r.id === wpAttrId && r.attributeName === wpAttrEdited,
-              ),
-            'the updated workplace tier attribute name actually persisted',
+            Array.isArray(wpAttrRows) &&
+              wpAttrRows.some((r) => isPlainObject(r) && r.id === wpAttrId),
+            'the newly created workplace tier attribute appears in the company list',
           )
           .toBe(true);
-      }
-      if (wpVarId) {
-        const wpVarUpd = await call(
-          endpoints,
-          'admin-workplace-tier-variable-update',
-          {
-            id: wpVarId,
-            attributeId: wpAttrId,
-            variableName: name('WP Var edited'),
-          },
-          'wp-var-update',
-        );
-        expect.soft(statusOf(wpVarUpd), 'workplace tier variable updated').toMatch(/success/i);
-      }
 
-      // ---- Work Place Location Setup ---------------------------------------------------------
-      if (wpAttrId && wpVarId) {
-        const loc = await call(
-          endpoints,
-          'admin-workplace-location-save',
-          [
-            {
-              attributeId: wpAttrId,
-              variableId: wpVarId,
-              locationName: name('Location'),
-              reportingWorkplaceLocation: '[{"variableId":"0","workplaceLocationId":"0"}]',
-              reportingWorkplaceLocationId: '0',
-              pincode: testData.pinCode,
-              countryName: 'India',
-              countryId: 1,
-            },
-          ],
-          'loc-save',
-        );
-        locId = createdId(loc);
-        expect.soft(statusOf(loc), 'workplace location saved').toMatch(/success/i);
-        expect.soft(locId, 'workplace location returns an id').toBeTruthy();
-
-        // The location reads, now with real ids.
-        const locAll = await call(endpoints, 'admin-workplace-location-all', {}, 'loc-all');
-        expect.soft(statusOf(locAll), 'all locations read').toMatch(/success/i);
-        const locGet = await call(
-          endpoints,
-          'admin-workplace-location-get',
-          { attributeId: wpAttrId, variableId: wpVarId },
-          'loc-get',
-        );
-        expect.soft(statusOf(locGet), 'locations by tier read').toMatch(/success/i);
-        if (locId) {
-          const locById = await call(
+        if (wpAttrId) {
+          const wpVar = await call(
             endpoints,
-            'admin-workplace-location-by-id',
-            { id: locId },
-            'loc-by-id',
+            'admin-workplace-tier-variable-save',
+            [
+              {
+                variableName: name('WP Var'),
+                attributeId: wpAttrId,
+                parentVariableId: 0,
+                parentAttributeId: 0,
+                reportingJson: '[]',
+              },
+            ],
+            'wp-var-save',
           );
-          expect.soft(statusOf(locById), 'location by id read').toMatch(/success/i);
+          wpVarId = createdId(wpVar);
+          expect.soft(statusOf(wpVar), 'workplace tier variable saved').toMatch(/success/i);
+          expect.soft(wpVarId, 'workplace tier variable returns an id').toBeTruthy();
+        }
 
-          // Exercise the location UPDATE write.
-          const locEdited = name('Location edited');
-          const locUpd = await call(
+        // Read back the workplace variables + the reporting hierarchy (id-keyed).
+        const wpVarList = await call(
+          endpoints,
+          'admin-workplace-tier-variable-list',
+          { parentVariableId: 0 },
+          'wp-var-list',
+        );
+        expect.soft(statusOf(wpVarList), 'workplace variables read back').toMatch(/success/i);
+        if (wpVarId) {
+          const wpReport = await call(
             endpoints,
-            'admin-workplace-location-update',
-            { id: locId, locationName: locEdited },
-            'loc-update',
+            'admin-workplace-tier-variable-reporting-hierarchy',
+            { id: wpVarId },
+            'wp-var-reporting',
           );
-          expect.soft(statusOf(locUpd), 'workplace location updated').toMatch(/success/i);
+          expect.soft(statusOf(wpReport), 'workplace reporting hierarchy read').toMatch(/success/i);
+        }
 
-          // Live-verified 2026-09-26: re-read the SAME location by id (the exact endpoint already
-          // used above) and confirm the new name actually landed, not just that the write said so.
-          const locRecheck = await call(
+        // Exercise the workplace tier attribute + variable UPDATE writes.
+        if (wpAttrId) {
+          const wpAttrEdited = name('WP Tier edited');
+          const wpAttrUpd = await call(
             endpoints,
-            'admin-workplace-location-by-id',
-            { id: locId },
-            'loc-recheck',
+            'admin-workplace-tier-attribute-update',
+            { id: wpAttrId, attributeName: wpAttrEdited },
+            'wp-attr-update',
           );
-          const locRecheckValue = envelope(locRecheck).value;
+          expect.soft(statusOf(wpAttrUpd), 'workplace tier attribute updated').toMatch(/success/i);
+
+          // Live-verified 2026-09-26: previously only the envelope status was checked here (the sibling
+          // SAVE calls in this file already cross-check a fresh read; the UPDATE calls never did) — the
+          // exact "response looks fine, nothing confirmed changed" shape found in Kall's reschedule.
+          const wpAttrRecheck = await call(
+            endpoints,
+            'admin-workplace-tier-attribute-by-company',
+            {},
+            'wp-attr-recheck',
+          );
+          const wpAttrRecheckRows = envelope(wpAttrRecheck).value;
           expect
             .soft(
-              isPlainObject(locRecheckValue) && locRecheckValue.locationName === locEdited,
-              'the updated location name actually persisted',
+              Array.isArray(wpAttrRecheckRows) &&
+                wpAttrRecheckRows.some(
+                  (r) => isPlainObject(r) && r.id === wpAttrId && r.attributeName === wpAttrEdited,
+                ),
+              'the updated workplace tier attribute name actually persisted',
             )
             .toBe(true);
         }
-      }
-
-      /*
-       * Fixed 2026-09-26, found while adding new coverage to this file (unrelated to it): this call
-       * always threw before reaching the HR/employee/role-posting sections below, so none of those
-       * had ever actually run to completion in this suite's history. Two bugs, both now fixed:
-       *   1. `admin-workplace-hierarchy` is `destructive: false`, not `productionSafe` — it needs
-       *      `allowLiveRead`, not `allowLiveWrite` (the `call()` helper's blanket flag, fine for the
-       *      other `productionSafe` reads in this file, doesn't unlock this one).
-       *   2. Its own definition documents "400 without a real parentAttributeId" — the call sent only
-       *      `{ companyId }`, never the real one this test already minted (`wpAttrId`/`wpVarId`).
-       * Fixing those two unblocked everything below (HR/employee/role-posting never used to run at
-       * all), but the endpoint's own contract is still Unknown/Requires Clarification: a real Mongo
-       * ObjectId in `parentAttributeId`/`parentVariableId` gets 400 "Request parameter is invalid" —
-       * a DIFFERENT error than the "…is required" it gives with none at all, so some value is
-       * expected but a real id isn't accepted either. No confirmed payload produces 200 yet. Left
-       * soft (not hard) so this genuine, still-open finding doesn't block the sections after it.
-       */
-      const hierarchy = await endpoints.sendTo(
-        'admin-workplace-hierarchy',
-        { body: { parentAttributeId: wpAttrId ?? '0', parentVariableId: wpVarId ?? '0' } },
-        { label: 'feature:admin:hierarchy', auth: { principal: businessM! }, allowLiveRead: true },
-      );
-      expect
-        .soft(
-          statusOf(hierarchy),
-          'workplace hierarchy read (Unknown/Requires Clarification — see comment above)',
-        )
-        .toMatch(/success/i);
-
-      // ---- HR Breakdown Setup: tier attribute → variable -------------------------------------
-      const hrAttr = await call(
-        endpoints,
-        'admin-hr-tier-attribute-save',
-        [{ attributeName: name('HR Tier') }],
-        'hr-attr-save',
-      );
-      hrAttrId = createdId(hrAttr);
-      expect.soft(statusOf(hrAttr), 'HR tier attribute saved').toMatch(/success/i);
-      expect.soft(hrAttrId, 'HR tier attribute returns an id').toBeTruthy();
-
-      // Same real cross-check as the workplace side: the created attribute must actually show up on
-      // a fresh company-scoped read, not just be claimed by the save response.
-      const hrAttrList = await call(
-        endpoints,
-        'admin-hr-tier-attribute-by-company',
-        {},
-        'hr-attr-by-company',
-      );
-      expect.soft(statusOf(hrAttrList), 'HR tier attributes read back').toMatch(/success/i);
-      const hrAttrRows = envelope(hrAttrList).value;
-      expect
-        .soft(
-          Array.isArray(hrAttrRows) &&
-            hrAttrRows.some((r) => isPlainObject(r) && r.id === hrAttrId),
-          'the newly created HR tier attribute appears in the company list',
-        )
-        .toBe(true);
-
-      if (hrAttrId) {
-        const hrVar = await call(
-          endpoints,
-          'admin-hr-tier-variable-save',
-          [
+        if (wpVarId) {
+          const wpVarUpd = await call(
+            endpoints,
+            'admin-workplace-tier-variable-update',
             {
-              variableName: name('HR Var'),
-              attributeId: hrAttrId,
-              parentVariableId: 0,
-              parentAttributeId: 0,
-              reportingJson: '[]',
+              id: wpVarId,
+              attributeId: wpAttrId,
+              variableName: name('WP Var edited'),
             },
-          ],
-          'hr-var-save',
-        );
-        hrVarId = createdId(hrVar);
-        expect.soft(statusOf(hrVar), 'HR tier variable saved').toMatch(/success/i);
-        expect.soft(hrVarId, 'HR tier variable returns an id').toBeTruthy();
-      }
+            'wp-var-update',
+          );
+          expect.soft(statusOf(wpVarUpd), 'workplace tier variable updated').toMatch(/success/i);
+        }
 
-      const hrVarList = await call(
-        endpoints,
-        'admin-hr-tier-variable-list',
-        { parentVariableId: 0 },
-        'hr-var-list',
-      );
-      expect.soft(statusOf(hrVarList), 'HR variables read back').toMatch(/success/i);
-      if (hrVarId) {
-        const hrReport = await call(
+        // ---- Work Place Location Setup ---------------------------------------------------------
+        if (wpAttrId && wpVarId) {
+          const loc = await call(
+            endpoints,
+            'admin-workplace-location-save',
+            [
+              {
+                attributeId: wpAttrId,
+                variableId: wpVarId,
+                locationName: name('Location'),
+                reportingWorkplaceLocation: '[{"variableId":"0","workplaceLocationId":"0"}]',
+                reportingWorkplaceLocationId: '0',
+                pincode: testData.pinCode,
+                countryName: 'India',
+                countryId: 1,
+              },
+            ],
+            'loc-save',
+          );
+          locId = createdId(loc);
+          expect.soft(statusOf(loc), 'workplace location saved').toMatch(/success/i);
+          expect.soft(locId, 'workplace location returns an id').toBeTruthy();
+
+          // The location reads, now with real ids.
+          const locAll = await call(endpoints, 'admin-workplace-location-all', {}, 'loc-all');
+          expect.soft(statusOf(locAll), 'all locations read').toMatch(/success/i);
+          const locGet = await call(
+            endpoints,
+            'admin-workplace-location-get',
+            { attributeId: wpAttrId, variableId: wpVarId },
+            'loc-get',
+          );
+          expect.soft(statusOf(locGet), 'locations by tier read').toMatch(/success/i);
+          if (locId) {
+            const locById = await call(
+              endpoints,
+              'admin-workplace-location-by-id',
+              { id: locId },
+              'loc-by-id',
+            );
+            expect.soft(statusOf(locById), 'location by id read').toMatch(/success/i);
+
+            // Exercise the location UPDATE write.
+            const locEdited = name('Location edited');
+            const locUpd = await call(
+              endpoints,
+              'admin-workplace-location-update',
+              { id: locId, locationName: locEdited },
+              'loc-update',
+            );
+            expect.soft(statusOf(locUpd), 'workplace location updated').toMatch(/success/i);
+
+            // Live-verified 2026-09-26: re-read the SAME location by id (the exact endpoint already
+            // used above) and confirm the new name actually landed, not just that the write said so.
+            const locRecheck = await call(
+              endpoints,
+              'admin-workplace-location-by-id',
+              { id: locId },
+              'loc-recheck',
+            );
+            const locRecheckValue = envelope(locRecheck).value;
+            expect
+              .soft(
+                isPlainObject(locRecheckValue) && locRecheckValue.locationName === locEdited,
+                'the updated location name actually persisted',
+              )
+              .toBe(true);
+          }
+        }
+
+        /*
+         * Fixed 2026-09-26, found while adding new coverage to this file (unrelated to it): this call
+         * always threw before reaching the HR/employee/role-posting sections below, so none of those
+         * had ever actually run to completion in this suite's history. Two bugs, both now fixed:
+         *   1. `admin-workplace-hierarchy` is `destructive: false`, not `productionSafe` — it needs
+         *      `allowLiveRead`, not `allowLiveWrite` (the `call()` helper's blanket flag, fine for the
+         *      other `productionSafe` reads in this file, doesn't unlock this one).
+         *   2. Its own definition documents "400 without a real parentAttributeId" — the call sent only
+         *      `{ companyId }`, never the real one this test already minted (`wpAttrId`/`wpVarId`).
+         * Fixing those two unblocked everything below (HR/employee/role-posting never used to run at
+         * all), but the endpoint's own contract is still Unknown/Requires Clarification: a real Mongo
+         * ObjectId in `parentAttributeId`/`parentVariableId` gets 400 "Request parameter is invalid" —
+         * a DIFFERENT error than the "…is required" it gives with none at all, so some value is
+         * expected but a real id isn't accepted either. No confirmed payload produces 200 yet. Left
+         * soft (not hard) so this genuine, still-open finding doesn't block the sections after it.
+         */
+        const hierarchy = await endpoints.sendTo(
+          'admin-workplace-hierarchy',
+          { body: { parentAttributeId: wpAttrId ?? '0', parentVariableId: wpVarId ?? '0' } },
+          {
+            label: 'feature:admin:hierarchy',
+            auth: { principal: businessM! },
+            allowLiveRead: true,
+          },
+        );
+        expect
+          .soft(
+            statusOf(hierarchy),
+            'workplace hierarchy read (Unknown/Requires Clarification — see comment above)',
+          )
+          .toMatch(/success/i);
+
+        // ---- HR Breakdown Setup: tier attribute → variable -------------------------------------
+        const hrAttr = await call(
           endpoints,
-          'admin-hr-tier-variable-reporting-hierarchy',
-          { id: hrVarId },
-          'hr-var-reporting',
+          'admin-hr-tier-attribute-save',
+          [{ attributeName: name('HR Tier') }],
+          'hr-attr-save',
         );
-        expect.soft(statusOf(hrReport), 'HR reporting hierarchy read').toMatch(/success/i);
-      }
+        hrAttrId = createdId(hrAttr);
+        expect.soft(statusOf(hrAttr), 'HR tier attribute saved').toMatch(/success/i);
+        expect.soft(hrAttrId, 'HR tier attribute returns an id').toBeTruthy();
 
-      // Exercise the HR tier attribute + variable UPDATE writes.
-      if (hrAttrId) {
-        const hrAttrEdited = name('HR Tier edited');
-        const hrAttrUpd = await call(
-          endpoints,
-          'admin-hr-tier-attribute-update',
-          { id: hrAttrId, attributeName: hrAttrEdited },
-          'hr-attr-update',
-        );
-        expect.soft(statusOf(hrAttrUpd), 'HR tier attribute updated').toMatch(/success/i);
-
-        // Same field-level check as the workplace tier attribute update above.
-        const hrAttrRecheck = await call(
+        // Same real cross-check as the workplace side: the created attribute must actually show up on
+        // a fresh company-scoped read, not just be claimed by the save response.
+        const hrAttrList = await call(
           endpoints,
           'admin-hr-tier-attribute-by-company',
           {},
-          'hr-attr-recheck',
+          'hr-attr-by-company',
         );
-        const hrAttrRecheckRows = envelope(hrAttrRecheck).value;
+        expect.soft(statusOf(hrAttrList), 'HR tier attributes read back').toMatch(/success/i);
+        const hrAttrRows = envelope(hrAttrList).value;
         expect
           .soft(
-            Array.isArray(hrAttrRecheckRows) &&
-              hrAttrRecheckRows.some(
-                (r) => isPlainObject(r) && r.id === hrAttrId && r.attributeName === hrAttrEdited,
-              ),
-            'the updated HR tier attribute name actually persisted',
+            Array.isArray(hrAttrRows) &&
+              hrAttrRows.some((r) => isPlainObject(r) && r.id === hrAttrId),
+            'the newly created HR tier attribute appears in the company list',
           )
           .toBe(true);
-      }
-      if (hrVarId) {
-        const hrVarUpd = await call(
-          endpoints,
-          'admin-hr-tier-variable-update',
-          {
-            id: hrVarId,
-            attributeId: hrAttrId,
-            variableName: name('HR Var edited'),
-          },
-          'hr-var-update',
-        );
-        expect.soft(statusOf(hrVarUpd), 'HR tier variable updated').toMatch(/success/i);
-      }
 
-      // ---- Employee Data (side-effect-free Mongo record) -------------------------------------
-      const emp = await call(
+        if (hrAttrId) {
+          const hrVar = await call(
+            endpoints,
+            'admin-hr-tier-variable-save',
+            [
+              {
+                variableName: name('HR Var'),
+                attributeId: hrAttrId,
+                parentVariableId: 0,
+                parentAttributeId: 0,
+                reportingJson: '[]',
+              },
+            ],
+            'hr-var-save',
+          );
+          hrVarId = createdId(hrVar);
+          expect.soft(statusOf(hrVar), 'HR tier variable saved').toMatch(/success/i);
+          expect.soft(hrVarId, 'HR tier variable returns an id').toBeTruthy();
+        }
+
+        const hrVarList = await call(
+          endpoints,
+          'admin-hr-tier-variable-list',
+          { parentVariableId: 0 },
+          'hr-var-list',
+        );
+        expect.soft(statusOf(hrVarList), 'HR variables read back').toMatch(/success/i);
+        if (hrVarId) {
+          const hrReport = await call(
+            endpoints,
+            'admin-hr-tier-variable-reporting-hierarchy',
+            { id: hrVarId },
+            'hr-var-reporting',
+          );
+          expect.soft(statusOf(hrReport), 'HR reporting hierarchy read').toMatch(/success/i);
+        }
+
+        // Exercise the HR tier attribute + variable UPDATE writes.
+        if (hrAttrId) {
+          const hrAttrEdited = name('HR Tier edited');
+          const hrAttrUpd = await call(
+            endpoints,
+            'admin-hr-tier-attribute-update',
+            { id: hrAttrId, attributeName: hrAttrEdited },
+            'hr-attr-update',
+          );
+          expect.soft(statusOf(hrAttrUpd), 'HR tier attribute updated').toMatch(/success/i);
+
+          // Same field-level check as the workplace tier attribute update above.
+          const hrAttrRecheck = await call(
+            endpoints,
+            'admin-hr-tier-attribute-by-company',
+            {},
+            'hr-attr-recheck',
+          );
+          const hrAttrRecheckRows = envelope(hrAttrRecheck).value;
+          expect
+            .soft(
+              Array.isArray(hrAttrRecheckRows) &&
+                hrAttrRecheckRows.some(
+                  (r) => isPlainObject(r) && r.id === hrAttrId && r.attributeName === hrAttrEdited,
+                ),
+              'the updated HR tier attribute name actually persisted',
+            )
+            .toBe(true);
+        }
+        if (hrVarId) {
+          const hrVarUpd = await call(
+            endpoints,
+            'admin-hr-tier-variable-update',
+            {
+              id: hrVarId,
+              attributeId: hrAttrId,
+              variableName: name('HR Var edited'),
+            },
+            'hr-var-update',
+          );
+          expect.soft(statusOf(hrVarUpd), 'HR tier variable updated').toMatch(/success/i);
+        }
+
+        // ---- Employee Data (side-effect-free Mongo record) -------------------------------------
+        const emp = await call(
+          endpoints,
+          'admin-employee-save',
+          {
+            personalInformationObj: {
+              firstName: 'QA',
+              lastName: `Employee ${stamp}`,
+              disability: false,
+            },
+            // FINDING: without `employmentObj` the backend NPEs (HTTP 500,
+            // "getEmploymentObj() is null") instead of a 400 — a missing required field returned as a
+            // server error. Sent so the lifecycle proceeds; the 500-on-missing-field is worth a ticket.
+            employmentObj: {},
+          },
+          'employee-save',
+        );
+        empId = createdId(emp);
+        expect.soft(statusOf(emp), 'employee saved').toMatch(/success/i);
+        expect.soft(empId, 'employee returns an id').toBeTruthy();
+
+        const empList = await call(endpoints, 'admin-employee-details', {}, 'employee-list');
+        expect.soft(statusOf(empList), 'employees read back').toMatch(/success/i);
+        const empByCompany = await call(
+          endpoints,
+          'admin-role-posting-employees',
+          {},
+          'role-employees',
+        );
+        expect.soft(statusOf(empByCompany), 'role-posting employees read').toMatch(/success/i);
+
+        // The plain company-wide role-posting list: a data-quality check (every row genuinely belongs
+        // to this company), cross-checked against the single-employee read below once empId exists.
+        const rolePostingsByCompany = await call(
+          endpoints,
+          'admin-role-posting-by-company',
+          {},
+          'role-posting-by-company',
+        );
+        expect
+          .soft(statusOf(rolePostingsByCompany), 'role postings by company read')
+          .toMatch(/success/i);
+        const rolePostingRows = envelope(rolePostingsByCompany).value;
+        expect
+          .soft(
+            Array.isArray(rolePostingRows) &&
+              rolePostingRows.every((r) => isPlainObject(r) && r.companyId === cid()),
+            'every role posting returned genuinely belongs to this company',
+          )
+          .toBe(true);
+
+        if (empId) {
+          const empLastNameEdited = `Employee ${stamp} edited`;
+          const empUpdate = await call(
+            endpoints,
+            'admin-employee-update',
+            {
+              id: empId,
+              personalInformationObj: { firstName: 'QA', lastName: empLastNameEdited },
+              employmentObj: {},
+            },
+            'employee-update',
+          );
+          expect.soft(statusOf(empUpdate), 'employee updated').toMatch(/success/i);
+
+          // Live-verified 2026-09-26: re-read the company's employee list (the exact endpoint already
+          // used above) and confirm the new name actually landed for THIS employee, not just that the
+          // write said so.
+          const empRecheck = await call(
+            endpoints,
+            'admin-employee-details',
+            {},
+            'employee-recheck',
+          );
+          const empRecheckRows = envelope(empRecheck).value;
+          expect
+            .soft(
+              Array.isArray(empRecheckRows) &&
+                empRecheckRows.some(
+                  (r) =>
+                    isPlainObject(r) &&
+                    r.id === empId &&
+                    isPlainObject(r.personalInformationObj) &&
+                    r.personalInformationObj.lastName === empLastNameEdited,
+                ),
+              'the updated employee last name actually persisted',
+            )
+            .toBe(true);
+
+          const roleByEmp = await call(
+            endpoints,
+            'admin-role-posting-by-company-and-employee',
+            { employeeId: empId },
+            'role-by-employee',
+          );
+          expect.soft(statusOf(roleByEmp), 'role posting by employee read').toMatch(/success/i);
+        }
+      } finally {
+        // Teardown in reverse dependency order (best-effort; deletes are hard, no cascade).
+        const cleanup: Array<[string, string | undefined]> = [
+          ['admin-employee-delete', empId],
+          ['admin-workplace-location-delete', locId],
+          ['admin-hr-tier-variable-delete', hrVarId],
+          ['admin-hr-tier-attribute-delete', hrAttrId],
+          ['admin-workplace-tier-variable-delete', wpVarId],
+          ['admin-workplace-tier-attribute-delete', wpAttrId],
+        ];
+        for (const [id, recordId] of cleanup) {
+          if (recordId) {
+            await call(endpoints, id, { id: recordId }, `cleanup:${id}`).catch(() => undefined);
+          }
+        }
+      }
+    },
+  );
+
+  test(
+    'an employee saved without its employment details is refused with a 4xx, not a 500 @api @admin-api',
+    { annotation: [{ type: 'requirement', description: 'BR-ADM-500-VALIDATION' }] },
+    async ({ endpoints }) => {
+      // The lifecycle above has to send `employmentObj: {}` because, without it, the backend NPEs
+      // ("getEmploymentObj() is null"). A missing required part is a client error: the answer must be
+      // a 4xx (or a FAILURE envelope under 500), never a server crash. Any record created is deleted.
+      const resp = await call(
         endpoints,
         'admin-employee-save',
         {
           personalInformationObj: {
             firstName: 'QA',
-            lastName: `Employee ${stamp}`,
+            lastName: `NoEmployment ${stamp}`,
             disability: false,
           },
-          // FINDING: without `employmentObj` the backend NPEs (HTTP 500,
-          // "getEmploymentObj() is null") instead of a 400 — a missing required field returned as a
-          // server error. Sent so the lifecycle proceeds; the 500-on-missing-field is worth a ticket.
-          employmentObj: {},
         },
-        'employee-save',
+        'employee-save-no-employment',
       );
-      empId = createdId(emp);
-      expect.soft(statusOf(emp), 'employee saved').toMatch(/success/i);
-      expect.soft(empId, 'employee returns an id').toBeTruthy();
-
-      const empList = await call(endpoints, 'admin-employee-details', {}, 'employee-list');
-      expect.soft(statusOf(empList), 'employees read back').toMatch(/success/i);
-      const empByCompany = await call(
-        endpoints,
-        'admin-role-posting-employees',
-        {},
-        'role-employees',
-      );
-      expect.soft(statusOf(empByCompany), 'role-posting employees read').toMatch(/success/i);
-
-      // The plain company-wide role-posting list: a data-quality check (every row genuinely belongs
-      // to this company), cross-checked against the single-employee read below once empId exists.
-      const rolePostingsByCompany = await call(
-        endpoints,
-        'admin-role-posting-by-company',
-        {},
-        'role-posting-by-company',
-      );
-      expect
-        .soft(statusOf(rolePostingsByCompany), 'role postings by company read')
-        .toMatch(/success/i);
-      const rolePostingRows = envelope(rolePostingsByCompany).value;
-      expect
-        .soft(
-          Array.isArray(rolePostingRows) &&
-            rolePostingRows.every((r) => isPlainObject(r) && r.companyId === cid()),
-          'every role posting returned genuinely belongs to this company',
-        )
-        .toBe(true);
-
-      if (empId) {
-        const empLastNameEdited = `Employee ${stamp} edited`;
-        const empUpdate = await call(
-          endpoints,
-          'admin-employee-update',
-          {
-            id: empId,
-            personalInformationObj: { firstName: 'QA', lastName: empLastNameEdited },
-            employmentObj: {},
-          },
-          'employee-update',
-        );
-        expect.soft(statusOf(empUpdate), 'employee updated').toMatch(/success/i);
-
-        // Live-verified 2026-09-26: re-read the company's employee list (the exact endpoint already
-        // used above) and confirm the new name actually landed for THIS employee, not just that the
-        // write said so.
-        const empRecheck = await call(endpoints, 'admin-employee-details', {}, 'employee-recheck');
-        const empRecheckRows = envelope(empRecheck).value;
-        expect
-          .soft(
-            Array.isArray(empRecheckRows) &&
-              empRecheckRows.some(
-                (r) =>
-                  isPlainObject(r) &&
-                  r.id === empId &&
-                  isPlainObject(r.personalInformationObj) &&
-                  r.personalInformationObj.lastName === empLastNameEdited,
-              ),
-            'the updated employee last name actually persisted',
-          )
-          .toBe(true);
-
-        const roleByEmp = await call(
-          endpoints,
-          'admin-role-posting-by-company-and-employee',
-          { employeeId: empId },
-          'role-by-employee',
-        );
-        expect.soft(statusOf(roleByEmp), 'role posting by employee read').toMatch(/success/i);
+      const createdEmp = createdId(resp);
+      try {
+        test.info().annotations.push({
+          type: 'observed',
+          description: `HTTP ${resp.status} ${resp.bodyText.slice(0, 200)}`,
+        });
+        expect(createdEmp, 'no employee is created without employment details').toBeFalsy();
+        expect(
+          resp.status,
+          'a missing employmentObj is a client error (4xx), not a server crash (500)',
+        ).toBeLessThan(500);
+        expect(resp.status, 'and it is refused').toBeGreaterThanOrEqual(400);
+      } finally {
+        if (createdEmp)
+          await call(
+            endpoints,
+            'admin-employee-delete',
+            { id: createdEmp },
+            'cleanup:no-employment',
+          ).catch(() => undefined);
       }
-    } finally {
-      // Teardown in reverse dependency order (best-effort; deletes are hard, no cascade).
-      const cleanup: Array<[string, string | undefined]> = [
-        ['admin-employee-delete', empId],
-        ['admin-workplace-location-delete', locId],
-        ['admin-hr-tier-variable-delete', hrVarId],
-        ['admin-hr-tier-attribute-delete', hrAttrId],
-        ['admin-workplace-tier-variable-delete', wpVarId],
-        ['admin-workplace-tier-attribute-delete', wpAttrId],
-      ];
-      for (const [id, recordId] of cleanup) {
-        if (recordId) {
-          await call(endpoints, id, { id: recordId }, `cleanup:${id}`).catch(() => undefined);
-        }
-      }
-    }
-  });
+    },
+  );
 });

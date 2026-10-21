@@ -1,6 +1,6 @@
-import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { postAsPage, requireKpostDb, rowSummary, rowWhen } from './support/cross-layer';
 import {
   contactsSearchBox,
   gotoContacts,
@@ -31,8 +31,6 @@ import {
  * `CONTACTS_UI_LIFECYCLE`, captures the exact contactID the UI dispatched, and deletes only that in a
  * `finally`, so it removes precisely what it created and nothing else.
  */
-
-const PERSONAL = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 
 test.describe(
   'KPost Contacts · UI functional behaviour @ui',
@@ -168,86 +166,140 @@ test.describe(
       expect(status, 'the search is not a server error').toBeLessThan(500);
     });
 
-    test('a contact added in the UI appears in My Contacts (UI → API → DB) @ui', async ({
-      page,
-      endpoints,
-    }) => {
-      test.skip(
-        process.env.CONTACTS_UI_LIFECYCLE !== 'true',
-        'adds a real contact; set CONTACTS_UI_LIFECYCLE=true',
-      );
-      const opened = await gotoContacts(page);
-      test.skip(
-        !opened,
-        'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
-      );
-
-      // Capture the exact contactID the UI dispatches, so cleanup removes only what we add.
-      let addedId: string | undefined;
-      await page.route('**/contacts/addContact**', async (route) => {
-        try {
-          const d = route.request().postDataJSON() as { contactID?: string; contactId?: string };
-          addedId = d?.contactID ?? d?.contactId ?? addedId;
-        } catch {
-          /* keep going — the assertion below covers a missing dispatch */
-        }
-        await route.continue();
-      });
-
-      try {
-        const search = await openPeopleSearch(page);
-        expect(search, 'the people-search step renders').not.toBeNull();
-        await search!.click();
-        await search!.fill(testData.mobileExists);
-
-        const firstResult = page.getByRole('checkbox').first();
-        const hasResult = await firstResult.isVisible({ timeout: 15_000 }).catch(() => false);
+    test(
+      'a contact added in the UI appears in My Contacts (UI → API → DB) @ui',
+      {
+        annotation: [
+          {
+            type: 'cross-layer',
+            description: 'Contacts: add on screen → addContact → TBL_KPOST_USER_CONTACTS',
+          },
+        ],
+      },
+      async ({ page, databases }) => {
+        const db = requireKpostDb(databases);
+        type ContactRow = { contact_id: unknown; delete_status: unknown; first_name: unknown };
+        const contactRow = (ok: (r: ContactRow | undefined) => boolean, message: string) =>
+          rowWhen<ContactRow>(
+            db,
+            'SELECT contact_id, delete_status, first_name FROM TBL_KPOST_USER_CONTACTS WHERE kpost_id = ? AND contact_id = ? ORDER BY id DESC',
+            [testData.kpostId, addedId],
+            ok,
+            message,
+          );
         test.skip(
-          !hasResult,
-          'the directory returned no result for the QA mobile — cannot drive add (live condition)',
+          process.env.CONTACTS_UI_LIFECYCLE !== 'true',
+          'adds a real contact; set CONTACTS_UI_LIFECYCLE=true',
         );
-        await firstResult.check();
-        await page.getByRole('button', { name: 'Add To Contact' }).first().click();
-        await page
-          .getByRole('button', { name: 'Add', exact: true })
-          .first()
-          .click({ timeout: 8_000 })
-          .catch(() => undefined);
-        await page
-          .waitForRequest('**/contacts/addContact**', { timeout: 15_000 })
-          .catch(() => undefined);
-        expect(addedId, 'the UI dispatched addContact with a contactID').toBeTruthy();
+        const opened = await gotoContacts(page);
+        test.skip(
+          !opened,
+          'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
+        );
 
-        // Cross-layer: the contact the UI added must be present in myContacts.
-        await expect
-          .poll(
-            async () => {
-              const ex = await endpoints
-                .sendTo(
-                  'contacts-my-contacts',
-                  { body: { lastfetchDate: null } },
-                  { label: 'contacts:verify', auth: { principal: PERSONAL } },
-                )
-                .catch(() => ({ bodyText: '' }));
-              return (ex.bodyText ?? '').toLowerCase().includes(String(addedId).toLowerCase());
-            },
-            {
-              timeout: 15_000,
-              message: 'a contact added in the UI must appear in My Contacts (UI → API → DB)',
-            },
-          )
-          .toBe(true);
-      } finally {
-        if (addedId) {
-          await endpoints
-            .sendTo(
-              'contacts-delete',
-              { body: { contactID: addedId } },
-              { label: 'contacts:cleanup', auth: { principal: PERSONAL }, allowLiveWrite: true },
-            )
+        // Capture the exact contactID the UI dispatches, so cleanup removes only what we add.
+        let addedId: string | undefined;
+        await page.route('**/contacts/addContact**', async (route) => {
+          try {
+            const d = route.request().postDataJSON() as { contactID?: string; contactId?: string };
+            addedId = d?.contactID ?? d?.contactId ?? addedId;
+          } catch {
+            /* keep going — the assertion below covers a missing dispatch */
+          }
+          await route.continue();
+        });
+
+        try {
+          const search = await openPeopleSearch(page);
+          expect(search, 'the people-search step renders').not.toBeNull();
+          await search!.click();
+          // A QA account that is NOT already a live contact of this account (read from the contacts
+          // table), so the add makes a real new row — found by name in the directory search.
+          const live = await db.query<{ contact_id: unknown }>(
+            "SELECT contact_id FROM TBL_KPOST_USER_CONTACTS WHERE kpost_id = ? AND (delete_status IS NULL OR delete_status NOT IN ('1', 'Y', 'y'))",
+            [testData.kpostId],
+          );
+          const taken = new Set(live.map((r) => String(r.contact_id).toLowerCase()));
+          const spare = [3, 4, 5, 6].find((i) => !taken.has(`qatest${i}@kpostindia.com`));
+          test.skip(
+            spare === undefined,
+            'every spare QA account is already a contact — nothing new to add',
+          );
+          await search!.fill('Qatest');
+
+          // Each result is a checkbox inside its person's row: pair every checkbox with the text of the
+          // nearest ancestor that has any, and pick the spare account's.
+          const boxes = page.getByRole('checkbox');
+          await boxes
+            .first()
+            .waitFor({ state: 'visible', timeout: 15_000 })
             .catch(() => undefined);
+          const labels = await boxes.evaluateAll((els) =>
+            els.map((el) => {
+              let node: HTMLElement | null = el.parentElement;
+              while (node && (node.innerText ?? '').trim().length < 3) node = node.parentElement;
+              return (node?.innerText ?? '').replace(/\s+/g, ' ').trim();
+            }),
+          );
+          test.info().annotations.push({
+            type: 'observed',
+            description: `search results: ${JSON.stringify(labels.slice(0, 8))}`,
+          });
+          const at = labels.findIndex((l) => new RegExp(`Qatest${spare}\\b`, 'i').test(l));
+          const firstResult = boxes.nth(Math.max(at, 0));
+          const hasResult = at >= 0 && (await firstResult.isVisible().catch(() => false));
+          test.skip(
+            !hasResult,
+            `the directory search did not list Qatest${spare} Bench — cannot drive add (live condition)`,
+          );
+          await firstResult.check();
+          await page.getByRole('button', { name: 'Add To Contact' }).first().click();
+          await page
+            .getByRole('button', { name: 'Add', exact: true })
+            .first()
+            .click({ timeout: 8_000 })
+            .catch(() => undefined);
+          const addResponse = await page
+            .waitForResponse('**/contacts/addContact**', { timeout: 15_000 })
+            .catch(() => null);
+          expect(addedId, 'the UI dispatched addContact with a contactID').toBeTruthy();
+          expect(addResponse?.status() ?? 0, 'the server accepts the add').toBeLessThan(300);
+
+          // Layer 3: the contact row exists for this account and is live (not deleted).
+          const stored = await contactRow(
+            (r) =>
+              r !== undefined &&
+              !['1', 'y', 'yes', 'true'].includes(String(r.delete_status).toLowerCase()),
+            `TBL_KPOST_USER_CONTACTS holds a live row for contact ${String(addedId)}`,
+          );
+          test.info().annotations.push({
+            type: 'observed',
+            description: `addContact → HTTP ${addResponse?.status()}; row: ${rowSummary(stored, ['contact_id', 'first_name', 'delete_status'])}`,
+          });
+
+          // Cross-layer: the contact the UI added must be present in myContacts (read with the page's
+          // own session — an API login as the same account would sign this browser out).
+          await expect
+            .poll(
+              async () => {
+                const ex = await postAsPage(page, '/v2/contacts/myContacts/', {
+                  lastfetchDate: null,
+                }).catch(() => ({ text: '' }));
+                return ex.text.toLowerCase().includes(String(addedId).toLowerCase());
+              },
+              {
+                timeout: 15_000,
+                message: 'a contact added in the UI must appear in My Contacts (UI → API → DB)',
+              },
+            )
+            .toBe(true);
+        } finally {
+          if (addedId)
+            await postAsPage(page, '/v2/contacts/deleteContact/', { contactID: addedId }).catch(
+              () => undefined,
+            );
         }
-      }
-    });
+      },
+    );
   },
 );

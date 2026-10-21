@@ -3,6 +3,7 @@ import type { HttpMethod } from '@api/client/request-builder';
 import { RequestBuilder, type RequestSpec } from '@api/client/request-builder';
 import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import { TokenProvider } from '@api/client/token-provider';
+import { browserSessionToken } from '@api/client/browser-session-token';
 import type { ApiRegistry } from '@api/registry/api-registry';
 import type { RequestFactoryHelpers } from '@api/registry/endpoint-definition';
 import { authProfileFor, principalForRole, type AuthProfile } from '@config/auth-profile';
@@ -103,10 +104,16 @@ export class EndpointExecutor {
     private readonly clients: ApiClientPool,
     private readonly apiRegistry: ApiRegistry,
     private readonly log: Logger,
+    /**
+     * Browser projects: reuse the saved browser session's token instead of logging in — an API login
+     * would sign that account's browsers out (one session per account). See `browser-session-token.ts`.
+     */
+    options: { shareBrowserSessions?: boolean } = {},
   ) {
     this.tokens = new TokenProvider(
       (principal, profile) => this.login(principal, profile),
       env.API_BASE_URL,
+      options.shareBrowserSessions ? (p) => browserSessionToken(p.username) : undefined,
     );
   }
 

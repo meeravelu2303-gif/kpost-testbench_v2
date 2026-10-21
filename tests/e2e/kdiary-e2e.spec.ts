@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
+import { requireKpostDb, rowSummary, rowWhen } from './support/cross-layer';
 import { pickReactSelect } from './support/react-select';
 
 /**
@@ -41,9 +42,33 @@ test.describe(
 
     test(
       'a one-time schedule can be created from the Diary panel and then deleted @ui',
-      { tag: '@sanity' },
-      async ({ page }) => {
+      {
+        tag: '@sanity',
+        annotation: [
+          {
+            type: 'cross-layer',
+            description:
+              'KDiary: create + delete on screen → createEvent / deleteEvent → TBL_KPOST_KDIARY_SCHEDULE',
+          },
+        ],
+      },
+      async ({ page, databases }) => {
+        const db = requireKpostDb(databases);
         const title = `QA KDiary ${Date.now()}`;
+        type ScheduleRow = {
+          event_id: unknown;
+          title: unknown;
+          created_by: unknown;
+          delete_by_sender: unknown;
+        };
+        const scheduleRow = (ok: (r: ScheduleRow | undefined) => boolean, message: string) =>
+          rowWhen<ScheduleRow>(
+            db,
+            'SELECT event_id, title, created_by, delete_by_sender FROM TBL_KPOST_KDIARY_SCHEDULE WHERE title = ? ORDER BY event_id DESC',
+            [title],
+            ok,
+            message,
+          );
 
         // Accept the native "Delete this task?" confirm when it fires (cleanup step).
         page.on('dialog', (d) => void d.accept().catch(() => undefined));
@@ -99,6 +124,20 @@ test.describe(
           expect(cr, 'a CreateDiarySchedule request is sent').not.toBeNull();
           expect(cr!.status(), 'the schedule is accepted by the server').toBeLessThan(300);
 
+          // Layer 3: the schedule row exists, owned by the signed-in account.
+          const stored = await scheduleRow(
+            (r) => r !== undefined,
+            'TBL_KPOST_KDIARY_SCHEDULE holds the new schedule (by its title)',
+          );
+          test.info().annotations.push({
+            type: 'observed',
+            description: `row after create: ${rowSummary(stored, ['event_id', 'title', 'created_by', 'delete_by_sender'])}`,
+          });
+          expect(
+            String(stored?.created_by),
+            'the schedule belongs to the account that made it',
+          ).toBe(testData.kpostId);
+
           // --- It lands in the day's schedule list --------------------------------------------
           const taskRow = page.getByText(title, { exact: false }).first();
           await expect(taskRow, 'the new schedule appears in the Diary list').toBeVisible({
@@ -142,6 +181,18 @@ test.describe(
             'the deleted schedule is gone from the Diary list',
           ).toHaveCount(0, { timeout: 15_000 });
           created = false;
+
+          // Layer 3: the delete reached the row — removed, or flagged as deleted by its owner.
+          const gone = await scheduleRow(
+            (r) =>
+              r === undefined ||
+              ['1', 'y', 'yes', 'true'].includes(String(r.delete_by_sender).toLowerCase()),
+            'after Delete Task the schedule row is removed or flagged delete_by_sender',
+          );
+          test.info().annotations.push({
+            type: 'observed',
+            description: `row after delete: ${rowSummary(gone, ['event_id', 'delete_by_sender'])}`,
+          });
         } finally {
           // Safety net: if an assertion failed after the schedule was created, remove it via the UI.
           if (created) {

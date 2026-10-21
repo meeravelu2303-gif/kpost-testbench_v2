@@ -50,7 +50,14 @@ test.describe(
       "resetting the spare account's password via OTP actually takes effect @ui",
       {
         tag: '@sanity',
-        annotation: [{ type: 'requirement', description: 'RTM-SEC03' }],
+        annotation: [
+          { type: 'requirement', description: 'RTM-SEC03' },
+          {
+            type: 'cross-layer',
+            description:
+              'Forgot password: reset on screen → validateOTP / forgotPasswordUpdate → TBL_KPOST_USER_MASTER password hash + TBL_KPOST_OTP_VALIDATION',
+          },
+        ],
       },
       async ({ loginPage, page, databases, request }) => {
         const db = databases.for('kpost-api');

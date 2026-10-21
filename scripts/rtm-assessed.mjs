@@ -229,9 +229,9 @@ export const ASSESSED = [
     module: 'Journeys',
     summary: 'Full journey: signup → first login → profile → first message/mail/call',
     status: 'Partial',
-    files: ['journeys/first-use'],
+    files: ['journeys/first-use', 'journeys/voice-call'],
     notes:
-      "First live runs 2026-10-20. 1a (signup with a throwaway sanitykpostN account → first login → own name on Profile → logout, account removed from the DB after) green 2/2. 1b (Home → Profile → first Katchup → first KMail, B receives both) green 1/2: the other run failed at 'B reads exactly what was written' — #1348, the KMail opened-body bug, is intermittent. Partial while that finding stands (owner's counting decision pending).",
+      "Three legs, all built and run live 2026-10-20. 1a sign up (throwaway sanitykpostN, removed after) -> first login -> own name on Profile -> logout: green 2/2. 1b Home -> Profile -> first Katchup (B receives it: green) -> first KMail: red 2/2 at 'B reads it', because opening a received mail returns an empty record (#1359, reopened today; #1348). First call = journey 10 (voice-call): red on #1680 (B never rings). Partial until #1359 and #1680 are fixed (or the owner's counting rule says a working test failing on a filed bug counts).",
   },
   {
     id: 'RTM-CON01',

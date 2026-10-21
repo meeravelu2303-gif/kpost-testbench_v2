@@ -219,6 +219,7 @@ export async function generateRtm({ report, root }) {
 
   // index: concrete req id -> linked in-scope tests
   const linkIndex = new Map();
+  const inScopeAdminPartials = [];
   const addLink = (id, t) => {
     if (!linkIndex.has(id)) linkIndex.set(id, new Set());
     linkIndex.get(id).add(t);
@@ -227,8 +228,35 @@ export async function generateRtm({ report, root }) {
     for (const id of t.reqAnns) addLink(id, t);
     for (const id of t.titleIds) addLink(id, t);
   }
+  // The Admin(ref) rows (BR-ADM-*) can only ever be proven by the Admin suite, which is otherwise out
+  // of this KPost scope: link Admin tests to those rows alone (they stay out of orphans/scope counts).
+  for (const r of seen.values()) {
+    if (!(isAdminPath(r.file) || isAdminTags(r.tags)) || isMetaPath(r.file)) continue;
+    const ids = (kind) =>
+      r.anns
+        .filter((a) => a.type === kind && /^BR-ADM-/.test(a.description))
+        .map((a) => a.description);
+    const t = {
+      key: `${r.file}::${r.title}`,
+      file: r.file,
+      title: r.title,
+      suite: 'api',
+      reqAnns: [],
+      partialAnns: [],
+      nfr: false,
+      titleIds: [],
+    };
+    for (const id of new Set(ids('requirement'))) addLink(id, t);
+    for (const id of new Set(ids('requirement-partial'))) t.partialAnns.push(id);
+    if (t.partialAnns.length) inScopeAdminPartials.push(t);
+  }
   // partial links: req id -> tests that exercise it without asserting the whole criterion
   const partialIndex = new Map();
+  for (const t of inScopeAdminPartials)
+    for (const id of t.partialAnns) {
+      if (!partialIndex.has(id)) partialIndex.set(id, new Set());
+      partialIndex.get(id).add(t);
+    }
   for (const t of inScope)
     for (const id of t.partialAnns) {
       if (!partialIndex.has(id)) partialIndex.set(id, new Set());

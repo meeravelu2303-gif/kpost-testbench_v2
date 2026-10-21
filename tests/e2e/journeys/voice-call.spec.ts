@@ -69,6 +69,8 @@ test.describe(
     annotation: [
       { type: 'requirement', description: 'FR-KL-005' },
       { type: 'requirement', description: 'RTM-KALL-A01' },
+      // The "first call" leg of the first-use journey (journeys/first-use.spec.ts covers the rest).
+      { type: 'requirement', description: 'RTM-E2E01' },
       // Voice calls have a mic toggle only; the camera toggle is the video call's (not driven here).
       { type: 'requirement-partial', description: 'RTM-KALL-A04' },
     ],

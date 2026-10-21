@@ -49,6 +49,11 @@ test.describe(
       {
         tag: '@sanity',
         annotation: [
+          {
+            type: 'cross-layer',
+            description:
+              'Signup: sign up on screen → signupLogin/signup → TBL_KPOST_USER_MASTER + TBL_KPOST_USER_PROFILE',
+          },
           // The whole Personal signup, end to end, each step asserted (screens + the saved row).
           { type: 'requirement', description: 'FR-SL-001..005' },
           { type: 'requirement', description: 'FR-SL-006..008' },
@@ -121,7 +126,17 @@ test.describe(
               await signupPage.choosePreferredKpostId(me.local),
               `${me.local} is offered as available`,
             ).toBe('available');
+            // Layer 2: the signup request the screen sends, and its answer.
+            const signupAnswer = page.waitForResponse(
+              (r) => r.url().includes('/signupLogin/signup'),
+              {
+                timeout: 30_000,
+              },
+            );
             await signupPage.setPasswordAndSubmit(PASSWORD);
+            expect((await signupAnswer).status(), 'the server accepts the signup').toBeLessThan(
+              300,
+            );
             await signupPage.confirmSuccessAndGoToLogin();
             await expect(page, 'signup ends on the login screen').toHaveURL(/\/login/, {
               timeout: 20_000,

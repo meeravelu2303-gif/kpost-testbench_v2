@@ -3,7 +3,80 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-20 (latest) — Coverage to 100%: batch 4, KMail (KMail 64% → 71%; overall 125 → 127/146 = 87%)
+### 2026-10-21 (latest) — A full Chrome UI run collapsed on a bench fault: API logins signed the browsers out
+
+The first full `ui:chromium` dry run (2026-10-20 23:06 → 04:34) reported 334 of 573 failed. Nearly all were "the
+screen did not load": 111 click timeouts, 48 "Katchup list search box renders", "screen mounts" and so on. The
+collapse starts right after `group-exit-e2e`, which creates its group **through the API as qatest1**. KPost keeps one
+session per account, so that API login revoked the saved qatest1 browser session (`.auth/user.json`) that every later
+spec shares. The validity gate held nearly all of it back (the plan was 1 create, 1 reopen, 2 closes), but none of
+that run was trusted or filed. The report is kept in the scratchpad.
+
+**Fix (bench-wide, not per spec):** in a browser project the `endpoints` fixture now reuses the saved browser
+session's token for the same account (`src/api/client/browser-session-token.ts`, read fresh on every call) instead of
+logging in. API and screens share one session, and logging in remains the fallback. The pure API project is
+unchanged. Self-test: `tests/framework/token-provider-session.spec.ts`. Proof: `group-exit-e2e` followed by
+`home-functional` now gives Home 5/5 (before the fix every Home test failed there). The UI dry run was re-run after a
+cool-down.
+
+### 2026-10-20 — Cross-layer (UI → API → DB): one test per module, 11 of 11
+
+Defined cross-layer coverage as one test per module that does the main user action on the real screen, captures
+the request it sent and the answer, and checks the MySQL row (`docs/reference/cross-layer-matrix.md`, each test
+tagged with a `cross-layer` annotation). Before: login, signup, forgot password and settings had UI + DB (login and
+signup did not capture the API). **Added:** the API answer to those four; a DB half for Profile (About →
+`about_yourself`), Contacts (`USER_CONTACTS` live row; it now searches "Qatest" and picks a QA account that is not
+already a contact) and KDiary (row created, removed on delete). **New** `tests/e2e/cross-layer-flows.spec.ts`:
+Katchup send + delete (per-participant soft delete), KMail send + both deletes (subject encrypted at rest), and
+Group create and Kool Kall schedule driven **on screen for the first time** (both member pickers are a searchbox +
+row checkboxes + Done). The stored Kool Kall start equals the time the screen sent, once the zone-less DATETIME is read
+as UTC (`storedUtcMs`).
+
+10 of 11 pass 2/2. Settings fails 2/2 on the open **#986**: Notification.js keeps every toggle in local state and
+calls no service.
+
+**Found and fixed in the bench:** clean-ups that called `endpoints` as qatest1 inside a UI test signed qatest1's
+browser out, and every later test in the run failed on a blank screen (4 failures, 1 skip in the first combined
+run). All read-backs and clean-ups now use `postAsPage`, which goes through the page's own session.
+
+### 2026-10-20 — End-to-end journeys: RTM-E2E01 completed as three legs (still Partial, on bugs)
+
+RTM-E2E01 asks for signup → first login → profile → first message / mail / call. The "first call" leg had no linked
+test. Journey 10 (`voice-call.spec.ts`: A rings B, B answers, both connected, mute, hang up) is now linked to
+RTM-E2E01, instead of copying a call into 1b, so the sanity golden path does not go red on #1680. The three legs, live
+today: **1a** sign up → first login → profile → logout, green 2/2; **1b** first Katchup (B receives it) green, first
+KMail red 2/2 at "B reads it". B finds and opens the mail, but the body never shows: the open request returns an empty
+record (#1359, reopened today). **Journey 10** is red on #1680. RTM-E2E01 stays Partial until those two are fixed.
+
+Checked while cleaning up: today's test mails between qatest1 and qatest2 still appear in both lists after delete. The
+rows carry `deleteBySender: Y` / `deleteByReceiver: Y`, which is KMail's design (deleted mails stay listed, greyed
+out). Nothing was left behind and nothing was filed.
+
+### 2026-10-20 — Coverage to 100%: batch 5, the remaining modules
+
+**FR-KL-007 → Covered:** a new UI test in `kall-features.spec.ts` checks that the Kall Contacts tab shows
+"My Contacts • N", that the opened list repeats N, and that every group's Personal / Business / Institution / Government
+counts add up to that group's total. Green 2/2 (live: My Contacts 2 = 2+0+0+0, Unknown 3 = 3+0+0+0). The source also has a
+hard-coded "152 / 0 / 0 / 0" list (`DropdownList1`). It is not what renders on this path, so nothing was filed.
+
+**#1370 closed (FIXED, verified 2/2):** KDirectory result rows show names again. FR-KD-003 stays Partial because the
+search reply carries no role/designation or team for the QA accounts, so those cannot be checked.
+
+**Re-checked, still broken:** FR-GC-006 (#1369, a creator-only group is created) and FR-GM-014 (#1366, admins can
+exit).
+
+**Admin(ref) rows:** they could never count, because the RTM drops every Admin test from the KPost scope. `rtm-lib.mjs` now links
+Admin tests to the `BR-ADM-*` rows only; scope and orphan counts are unchanged. `admin/feature.spec.ts`: the lifecycle
+test is linked to BR-ADM-TIER-ORDER, and a new test asserts that an employee saved without `employmentObj` is
+refused with a 4xx, not the known 500 (BR-ADM-500-VALIDATION). It has not run yet: the Admin test server
+192.168.0.38:9595 did not answer ping or TCP that evening, so every call timed out. That says nothing about the Admin
+code.
+
+**Left as they are, with reasons:** FR-KD-004 (no total count exists on the KDirectory screen; owner decision);
+RTM-KALL-A04 camera toggle (a video call would fail on #1680 like the voice call, so it waits for that fix); RTM-SEC02
+(the real expired-token check runs from 2026-10-21); RTM-E2E01 (1b is intermittent on #1348/#1359).
+
+### 2026-10-20 — Coverage to 100%: batch 4, KMail (KMail 64% → 71%; overall 125 → 127/146 = 87%)
 
 **Verified live:** FR-KM-005 is fixed (#1365): a two-address To is now refused, green 2/2, and the business rule is ✅.
 **#1359 reopened** (read receipt): the screen's own open request (`sentAndInboxMailContent` with

@@ -34,7 +34,9 @@ import {
  *
  * Two tests, not one, because a brand-new account has no conversations yet: starting a chat from it
  * needs the directory → add-contact route, which no spec has proven on live. 1b therefore runs the
- * first-day half on the seeded QA account, and the two halves together cover RTM-E2E01.
+ * first-day half on the seeded QA account. The FIRST CALL is JOURNEY 10 (`voice-call.spec.ts`: A rings
+ * B, B answers, both connected, hang up), kept separate so the golden path here is not red on the
+ * calling bug #1680. 1a + 1b + journey 10 together cover RTM-E2E01.
  */
 
 /** The authenticated app shell (side menu) — present on every signed-in screen. */
@@ -195,7 +197,7 @@ test.describe(
               await openMail(b.page, mailSubject);
               await expect(
                 b.page.getByText(mailBody, { exact: false }).first(),
-                'B reads exactly what was written (#1348 if empty)',
+                'B reads exactly what was written (empty: the server returns no record on open, #1359 / #1348)',
               ).toBeVisible({ timeout: 20_000 });
             });
 
