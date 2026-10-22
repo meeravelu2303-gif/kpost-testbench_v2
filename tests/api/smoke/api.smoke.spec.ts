@@ -16,7 +16,7 @@ for (const mod of API_SMOKE) {
     { tag: [TAGS.api, mod.tag, TAGS.smoke, TAGS.sanity, TAGS.regression] },
     () => {
       const gated = mod.gate?.();
-      test.skip(gated !== undefined, gated ?? '');
+      test.skip(gated !== undefined, `not configured for this run: ${gated ?? ''}`);
 
       for (const read of mod.reads) {
         test(`${read.proves} [${read.endpoint}]`, async ({ endpoints }) => {

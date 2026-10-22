@@ -111,7 +111,7 @@ test.describe(
 
     test.skip(
       process.env.SESSION_INVALIDATION_CHECK !== 'true',
-      'logs the shared account out (invalidates the saved session); set SESSION_INVALIDATION_CHECK=true and run in isolation',
+      'logs the shared account out and invalidates the saved session; set SESSION_INVALIDATION_CHECK=true and run in isolation',
     );
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

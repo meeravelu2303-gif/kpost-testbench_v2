@@ -73,30 +73,36 @@ test.describe(
         );
         expect(destinations.status, 'destinations succeeds for a real source city').toBe(200);
         const destBody = JSON.parse(destinations.bodyText ?? '{}') as DestinationsResponse;
-        const destinationCityID = destBody.value?.cities?.[0]?.id;
+        const destinationIDs = (destBody.value?.cities ?? [])
+          .map((c) => c.id)
+          .filter((id) => id !== undefined);
         test.skip(
-          destinationCityID === undefined,
+          destinationIDs.length === 0,
           'no reachable destination returned for this source city right now',
         );
 
-        const trips = await endpoints.sendTo(
-          'kbooking-available-trips',
-          {
-            body: {
-              sourceCityID,
-              destinationCityID,
-              travelDate: futureTravelDate(14),
-            },
-          },
-          { label: 'kbooking:available-trips', auth: { principal: A } },
-        );
-        expect(trips.status, 'availabletrips succeeds for a real route').toBe(200);
-        const tripsBody = JSON.parse(trips.bodyText ?? '{}') as AvailableTripsResponse;
-        const tripID = Object.keys(tripsBody.value1 ?? {})[0];
+        // The partner's test inventory has few routes: the first listed destinations had no buses on
+        // every run (2026-10-22), so tripdetails never ran. Try the route the endpoint definition uses
+        // (city 104, which has trips) first, then the listed destinations in order — at most six tries.
+        let tripsBody: AvailableTripsResponse = {};
+        let tripID: string | undefined;
+        const candidates = [...new Set([104, ...destinationIDs])].slice(0, 6);
+        for (const destinationCityID of candidates) {
+          const trips = await endpoints.sendTo(
+            'kbooking-available-trips',
+            { body: { sourceCityID, destinationCityID, travelDate: futureTravelDate(14) } },
+            { label: 'kbooking:available-trips', auth: { principal: A } },
+          );
+          expect(trips.status, 'availabletrips succeeds for a real route').toBe(200);
+          tripsBody = JSON.parse(trips.bodyText ?? '{}') as AvailableTripsResponse;
+          tripID = Object.keys(tripsBody.value1 ?? {})[0];
+          if (tripID) break;
+        }
         test.skip(
           !tripID,
-          'no trips running on this real route 14 days out right now — nothing to chain tripdetails to',
+          'no trips running on the first six real routes 14 days out right now — nothing to chain tripdetails to',
         );
+        if (!tripID) return;
 
         const details = await endpoints.sendTo(
           'kbooking-trip-details',
@@ -110,6 +116,42 @@ test.describe(
         expect(
           details.status,
           `tripdetails succeeds when fed a real tripID (${tripID}) from the search just performed`,
+        ).toBe(200);
+
+        // The v2 trip details take the same trip as an "inventoryId" (the value1 key — the numeric
+        // `id` inside the trip loses precision in JSON). Not called by the web app; workbook-documented.
+        const detailsV2 = await endpoints.sendTo(
+          'kbooking-trip-details-v2',
+          { body: { inventoryId: tripID } },
+          {
+            label: 'kbooking:trip-details-v2-with-real-id',
+            auth: { principal: A },
+            allowLiveRead: true,
+          },
+        );
+        expect(detailsV2.status, `tripdetailsV2 succeeds for the real trip ${tripID}`).toBe(200);
+
+        // One boarding point of that trip: boardingTimes[].bpId (shape measured live 2026-10-22).
+        const trip = (tripsBody.value1 ?? {})[tripID] as {
+          boardingTimes?: Array<{ bpId?: number }>;
+        };
+        const bpId = trip?.boardingTimes?.[0]?.bpId;
+        test.skip(
+          bpId === undefined,
+          'the trip lists no boarding point right now — nothing to look up',
+        );
+        const boarding = await endpoints.sendTo(
+          'kbooking-boarding-point',
+          { body: { boardingID: String(bpId), tripID } },
+          {
+            label: 'kbooking:boarding-point-with-real-id',
+            auth: { principal: A },
+            allowLiveRead: true,
+          },
+        );
+        expect(
+          boarding.status,
+          `boardingPoint succeeds for boarding point ${bpId} of trip ${tripID}`,
         ).toBe(200);
       },
     );

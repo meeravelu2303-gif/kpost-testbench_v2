@@ -2,8 +2,8 @@
 
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`.
 
-**42 of 358** registered endpoints are **not driven against the live app**.
-The rest ARE tested on live: **123** on the default run + **193** via the
+**44 of 363** registered endpoints are **not driven against the live app**.
+The rest ARE tested on live: **123** on the default run + **196** via the
 gated self-cleaning lifecycle flows (`npm run kpost:file`). This file lists ONLY the not-tested.
 
 They are not silent gaps — each is refused for a permanent constraint or a deliberate safety
@@ -14,13 +14,13 @@ choice, and every one is still contract-validated OFF live.
 | Category | Count |
 | -------- | ----: |
 | OTP — no bypass on live (permanent) | 17 |
-| Shared / global write (by choice) | 15 |
+| Shared / global write (by choice) | 16 |
 | Real SMS / email to a real recipient | 4 |
+| Public record write (enquiry / unsubscribe) | 2 |
 | Needs setup we lack (business login 403, company logo 500) | 2 |
 | Route not deployed on this test build (confirmed 404) | 2 |
-| Public record write (enquiry / unsubscribe) | 1 |
 | Written, execution blocked pending explicit owner authorization | 1 |
-| **Total not tested on live** | **42** |
+| **Total not tested on live** | **44** |
 
 ---
 
@@ -89,27 +89,29 @@ choice, and every one is still contract-validated OFF live.
 | `POST` | `/rolePosting/suspendOrTerminateEmployee` | sends a real SMS or email to a real recipient |
 | `POST` | `/rolePosting/update` | sends a real SMS or email to a real recipient |
 
+### KMail (2)
+
+| Method | Path | Why not tested on live |
+| ------ | ---- | ---------------------- |
+| `POST` | `/testkmail/v2/common/saveUnsubscriberDetails` | persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle |
+| `POST` | `/testkmail/v2/sentMail/getMailCredentials/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+
+### other (2)
+
+| Method | Path | Why not tested on live |
+| ------ | ---- | ---------------------- |
+| `POST` | `/redbus/blockTicket/{kpostId}` | no env flag actually gates this (KBOOKING_LIFECYCLE is referenced only in comments) — unconditionally test.skip'd pending explicit owner authorization, not driven by any lifecycle flow |
+| `GET` | `/redbus/updatecitylist` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+
 ### Katchup (1)
 
 | Method | Path | Why not tested on live |
 | ------ | ---- | ---------------------- |
 | `GET` | `/v2/katchup/getKatchupMessagesSubject/{id}` | route not deployed on this test build (confirmed 404 — needs the dev to confirm deployment, not a business-account gap) |
 
-### KMail (1)
-
-| Method | Path | Why not tested on live |
-| ------ | ---- | ---------------------- |
-| `POST` | `/testkmail/v2/sentMail/getMailCredentials/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
-
 ### KOS (1)
 
 | Method | Path | Why not tested on live |
 | ------ | ---- | ---------------------- |
 | `GET` | `/kword/documents/` | route not deployed on this test build (confirmed 404 — needs the dev to confirm deployment, not a business-account gap) |
-
-### other (1)
-
-| Method | Path | Why not tested on live |
-| ------ | ---- | ---------------------- |
-| `POST` | `/redbus/blockTicket/{kpostId}` | no env flag actually gates this (KBOOKING_LIFECYCLE is referenced only in comments) — unconditionally test.skip'd pending explicit owner authorization, not driven by any lifecycle flow |
 

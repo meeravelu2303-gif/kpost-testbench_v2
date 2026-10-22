@@ -85,7 +85,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `admin-workplace-tier-variable-save`
 - `admin-workplace-tier-variable-update`
 
-## KMail API (71 endpoints)
+## KMail API (72 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
@@ -96,6 +96,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 | Contacts & Sync | 4 |
 | Sent Mail - Compose & Send | 4 |
 | Translation | 1 |
+| kmail-application | 1 |
 
 ### KMail API — endpoint → component
 
@@ -191,17 +192,21 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `kmail-translation`
 
-## KPost API (249 endpoints)
+**kmail-application**
+
+- `kmail-save-unsubscriber`
+
+## KPost API (253 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
 | User Profile V2 | 45 |
-| Katchup Messaging V2 | 35 |
+| Katchup Messaging V2 | 36 |
+| kpost-webservice-application | 21 |
 | Kall (Voice/Video) V2 - current | 20 |
 | Common Reference Data & Utilities V2 | 19 |
 | Company Administration | 19 |
 | Authentication V2 | 18 |
-| kpost-webservice-application | 18 |
 | KWord Documents | 18 |
 | Contacts Directory V2 | 16 |
 | Kdiary - Schedules, Events & Reports | 14 |
@@ -395,6 +400,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `katchup-download-thumbnail`
 - `katchup-filter-message`
 - `katchup-forward-backtrack`
+- `katchup-forward-message`
 - `katchup-forward-message-new`
 - `katchup-forward-multiple`
 - `katchup-frequent-contacts`
@@ -498,9 +504,12 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `katchup-reference-messages-details`
 - `kbooking-available-trips`
 - `kbooking-block-ticket`
+- `kbooking-boarding-point`
 - `kbooking-city-suggestion`
 - `kbooking-destinations`
 - `kbooking-trip-details`
+- `kbooking-trip-details-v2`
+- `kbooking-update-city-list`
 - `kos-change-document-access`
 - `kos-documents-type`
 - `kos-update-job-id`
@@ -526,5 +535,9 @@ each target exists in the live product, so tickets can never route to a non-exis
 - kpost-api · kbooking-destinations (kpost-api,kbooking,redbus,kbooking-read)
 - kpost-api · kbooking-available-trips (kpost-api,kbooking,redbus,kbooking-read)
 - kpost-api · kbooking-trip-details (kpost-api,kbooking,redbus,needs-id)
+- kpost-api · kbooking-boarding-point (kpost-api,kbooking,redbus,needs-id)
+- kpost-api · kbooking-trip-details-v2 (kpost-api,kbooking,redbus,needs-id)
+- kpost-api · kbooking-update-city-list (kpost-api,kbooking,redbus,privileged-write)
 - kpost-api · kbooking-block-ticket (kpost-api,kbooking,redbus,needs-id,critical)
+- kmail-api · kmail-save-unsubscriber (kmail-api,kmail,public-write)
 

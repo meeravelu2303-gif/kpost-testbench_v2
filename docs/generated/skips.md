@@ -11,10 +11,10 @@ The plan: `docs/reference/production-readiness-plan.md`, Phase 1.
 | ----- | ----: | ---------: |
 | Retune | 0 | 0 |
 | Blocked by a defect | 41 | 24 |
-| Provision | 312 | 221 |
-| Owner decision | 196 | 140 |
-| Live condition | 111 | 49 |
-| No reason string | 3 | 3 |
+| Provision | 313 | 223 |
+| Owner decision | 197 | 141 |
+| Live condition | 112 | 49 |
+| No reason string | 0 | 0 |
 | Unclassified | 0 | 0 |
 | **Total** | **663** | **265** |
 
@@ -68,7 +68,7 @@ _None._
 | 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a composer-control finding | `tests/e2e/kmail/kmail-composer-controls.spec.ts:48` |
 | 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a compose-fuzz finding | `tests/e2e/kmail/kmail-security.spec.ts:68` |
 
-## Provision — an account, connection, host or secret this machine lacks (312)
+## Provision — an account, connection, host or secret this machine lacks (313)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -95,6 +95,7 @@ _None._
 | 2 | needs the personal and personal-3 principals | `tests/api/kpost/security/kdiary-object-authorization.spec.ts:62`, `tests/api/kpost/security/profile-record-object-authorization.spec.ts:57` |
 | 2 | needs QA_PASSWORD | `tests/api/kpost/signup-login/security-session.spec.ts:99`, `tests/api/kpost/signup-login/security-session.spec.ts:158` |
 | 2 | no KPost principal configured | `tests/api/kpost/signup-login/security-session.spec.ts:114`, `tests/api/kpost/signup-login/security-session.spec.ts:161` |
+| 2 | not configured for this run: … | `tests/api/smoke/admin.smoke.spec.ts:17`, `tests/api/smoke/api.smoke.spec.ts:19` |
 | 2 | qa.bench needs a real live account | `tests/e2e/kall/kall-features.spec.ts:114`, `tests/e2e/profile/profile-actions.spec.ts:67` |
 | 2 | qa.bench needs a live QA account | `tests/e2e/kmail/kmail-api-handling.spec.ts:22`, `tests/e2e/platform/app-hardcoded-host.spec.ts:26` |
 | 2 | needs a second QA account as the recipient | `tests/e2e/kmail/kmail-composer-controls.spec.ts:289`, `tests/e2e/kmail/kmail-composer-controls.spec.ts:334` |
@@ -150,7 +151,6 @@ _None._
 | 1 | qa.bench needs a live, logged-in QA account | `tests/e2e/platform/performance-single-user.spec.ts:47` |
 | 1 | needs a real live account (QA_VICTIM_KPOST_ID) | `tests/e2e/profile/profile-webview.spec.ts:59` |
 | 1 | the Company Registration edit form was not showing right now (needs the BUSINESS_S session; path unverified since 2026-10-11) | `tests/e2e/settings/settings-business-company-details.spec.ts:71` |
-| 1 | no safe path to step 2 without a known current password for a spare account | `tests/e2e/settings/settings-change-password.spec.ts:91` |
 | 1 | qa.p5 needs the spare QA account (QA_PERSONAL_5_KPOST_ID) | `tests/e2e/smoke/auth.smoke.spec.ts:18` |
 | 1 | needs the group-creator QA account (personal-3) | `tests/e2e/smoke/group.smoke.spec.ts:18` |
 | 1 | "Add From Application" tab not reachable with this account\'s role value | `tests/e2e-admin/admin-dead-screens.spec.ts:52` |
@@ -162,7 +162,7 @@ _None._
 | 1 | needs BUGZILLA_URL and BUGZILLA_API_KEY | `tests/framework/ownership.spec.ts:274` |
 | 1 | no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first | `tests/framework/_diff-accounts.local.spec.ts:12` |
 
-## Owner decision — gated flows, pauses and safety choices (196)
+## Owner decision — gated flows, pauses and safety choices (197)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -221,7 +221,7 @@ _None._
 | 1 | sends real messages between the QA accounts; set KATCHUP_LIFECYCLE=true | `tests/api/kpost/katchup/rules.spec.ts:102` |
 | 1 | sends a real message to get an id to test with; set KATCHUP_LIFECYCLE=true | `tests/api/kpost/katchup/shared-reference-workflow.spec.ts:35` |
 | 1 | sends a real message between our two accounts; set KATCHUP_LIFECYCLE=true (owner sign-off) | `tests/api/kpost/katchup/unread-count-clears-on-read.spec.ts:52` |
-| 1 | real third-party seat hold, unconfirmed sandbox — needs explicit authorization | `tests/api/kpost/kbooking/feature.spec.ts:130` |
+| 1 | real third-party seat hold, unconfirmed sandbox — needs explicit authorization | `tests/api/kpost/kbooking/feature.spec.ts:172` |
 | 1 | writes real diary events; set KDIARY_LIFECYCLE=true | `tests/api/kpost/kdiary/feature.spec.ts:74` |
 | 1 | creates a real diary event and report; set KDIARY_LIFECYCLE=true | `tests/api/kpost/kdiary/kdiary-reads-workflow.spec.ts:102` |
 | 1 | writes real KWord docs; set KOS_LIFECYCLE=true | `tests/api/kpost/kos/feature.spec.ts:55` |
@@ -250,6 +250,7 @@ _None._
 | 1 | logs in and out repeatedly; set LOGIN_UI_LIFECYCLE=true | `tests/e2e/auth/login-forgot-password-lifecycle.spec.ts:36` |
 | 1 | sends ONE real SMS to the spare account; set FORGOT_PASSWORD_SMS=true (the run levels do) | `tests/e2e/auth/login-forgot-password-lifecycle.spec.ts:40` |
 | 1 | ends the session; set LOGIN_UI_LIFECYCLE=true | `tests/e2e/auth/login-session.spec.ts:91` |
+| 1 | logs the shared account out and invalidates the saved session; set SESSION_INVALIDATION_CHECK=true and run in isolation | `tests/e2e/auth/login-token-security.spec.ts:112` |
 | 1 | creates (and removes) a real account; set SIGNUP_UI_LIFECYCLE=true | `tests/e2e/auth/sanity-signup.spec.ts:34` |
 | 1 | the signup OTP is mocked only on the confirmed test gateway (OTP_TEST_GATEWAY + TEST_DB_MODE) | `tests/e2e/auth/sanity-signup.spec.ts:38` |
 | 1 | the account is removed from KPOST_QA afterwards; set DB_ALLOW_WRITES=true | `tests/e2e/auth/sanity-signup.spec.ts:42` |
@@ -291,7 +292,7 @@ _None._
 | 1 | creates and deletes a real document; set KOS_UI_LIFECYCLE=true | `tests/e2e/verticals/kword.spec.ts:72` |
 | 1 | manual probe — set CLEANUP_PLAN=true to list orphaned QA records on the primary account, CLEANUP_EXECUTE=true to delete them | `tests/framework/_cleanup-orphaned-records.local.spec.ts:16` |
 
-## Live condition — the application had nothing to test this run (111)
+## Live condition — the application had nothing to test this run (112)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -316,8 +317,9 @@ _None._
 | 1 | no letterhead is available on this account to set | `tests/api/kmail/signature-letterhead-workflow.spec.ts:209` |
 | 1 | no real marker available on this account right now (empty recent-activity window) | `tests/api/kpost/dashboard/feature.spec.ts:117` |
 | 1 | no city returned for "chennai" right now — cannot chain the search | `tests/api/kpost/kbooking/feature.spec.ts:64` |
-| 1 | no reachable destination returned for this source city right now | `tests/api/kpost/kbooking/feature.spec.ts:77` |
-| 1 | no trips running on this real route 14 days out right now — nothing to chain tripdetails to | `tests/api/kpost/kbooking/feature.spec.ts:96` |
+| 1 | no reachable destination returned for this source city right now | `tests/api/kpost/kbooking/feature.spec.ts:79` |
+| 1 | no trips running on the first six real routes 14 days out right now — nothing to chain tripdetails to | `tests/api/kpost/kbooking/feature.spec.ts:101` |
+| 1 | the trip lists no boarding point right now — nothing to look up | `tests/api/kpost/kbooking/feature.spec.ts:139` |
 | 1 | no deactivated accounts on this target to check against | `tests/api/kpost/profile/directory-lookup.spec.ts:227` |
 | 1 | image upload failed (replied …) | `tests/api/kpost/security/katchup-idor-regression-2026-10-03.spec.ts:361` |
 | 1 | could not read back a real …; nothing to attack | `tests/api/kpost/security/profile-record-object-authorization.spec.ts:105` |
@@ -359,12 +361,9 @@ _None._
 | 1 | "Postal Code Library" nav link was not available right now (admin role gating) | `tests/e2e-admin/admin-dead-screens.spec.ts:137` |
 | 1 | no employee was available to pick on the … tab | `tests/e2e-admin/admin-employee-management-pii.spec.ts:54` |
 
-## No reason string — classified from the condition only; Phase 1 gives each one a reason (3)
+## No reason string — classified from the condition only; Phase 1 gives each one a reason (0)
 
-| Sites | Reason | Where |
-| ----: | ------ | ----- |
-| 2 | (no reason string) gated !== undefined, gated ?? '' | `tests/api/smoke/admin.smoke.spec.ts:17`, `tests/api/smoke/api.smoke.spec.ts:19` |
-| 1 | (no reason string) process.env.SESSION_INVALIDATION_CHECK !== 'true', 'logs the shared account out  | `tests/e2e/auth/login-token-security.spec.ts:112` |
+_None._
 
 ## Unclassified — must be 0 (the build fails otherwise) (0)
 

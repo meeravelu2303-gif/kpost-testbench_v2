@@ -156,6 +156,38 @@ export const forwardMessageNewApi = defineKatchupEndpoint({
   note: 'needs a source message to forward',
 });
 
+export const forwardMessageApi = defineKatchupEndpoint({
+  id: 'katchup-forward-message',
+  requirements: ['FR-KU-035'],
+  method: 'POST',
+  path: '/v2/katchup/forwardKatchupMessage/',
+  summary: 'Forward a message (older path)',
+  tags: [...MANAGE_TAGS, 'forward', 'needs-message-id'],
+  destructive: true,
+  sideEffect: 'data',
+  // The workbook's own example shape. The web app imports `SendForwardMessage` (this route) in all three
+  // forward footers but never calls it (2026-10-22): it forwards through forwardKatchupMessageNew.
+  request: body(() => ({
+    receiver: '',
+    messageType: KATCHUP_MESSAGE_TYPE.forwardMessageReveal,
+    subject: 'QA Bench',
+    actualMessage: 'QA bench forward (older path).',
+    groupFlag: 'false',
+    forwardReceiverList: [testData.victimKpostId],
+    groupForwardList: null,
+    groupmemberList: [],
+    // The rest of the workbook example: no attachment, a fresh send, no reference or shared message.
+    attachmentCaption: '[]',
+    status: '0',
+    sessionID: 'qa-bench',
+    referenceMessage: null,
+    sharedMessageDetails: null,
+    sharedType: 0,
+    temporaryMsgID: 0,
+  })),
+  note: 'needs a source message to forward; the web app never calls this older route (dead import)',
+});
+
 export const forwardMultipleApi = defineKatchupEndpoint({
   id: 'katchup-forward-multiple',
   requirements: ['FR-KU-037'],
@@ -189,6 +221,7 @@ export const katchupManageApis = [
   saveMessagesApi,
   reportAbuseApi,
   forwardMessageNewApi,
+  forwardMessageApi,
   forwardMultipleApi,
   forwardBacktrackApi,
 ];

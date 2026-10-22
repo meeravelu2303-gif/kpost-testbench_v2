@@ -57,6 +57,7 @@ export default defineConfig(
             'expectSmokeRead',
             'expectModuleScreensLoad',
             'expectAdminScreenLoads',
+            'callJourney',
           ],
         },
       ],

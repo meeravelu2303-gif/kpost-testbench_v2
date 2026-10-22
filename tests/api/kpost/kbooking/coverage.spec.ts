@@ -8,18 +8,12 @@ import { expect, test } from '@fixtures';
 test.describe('KPost KBooking · module coverage', () => {
   test('every documented, frontend-active redbus endpoint has a definition @framework', () => {
     /*
-     * `uncoveredKBookingPaths()` already excludes nothing by assumption — `boardingPoint`,
-     * `tripdetailsV2` and `updatecitylist` are workbook-documented but have NO wrapper function and
-     * NO caller anywhere in the frontend (confirmed by an exhaustive source trace, recorded in
-     * docs/scope/unused-endpoints.md), so they are expected to still show up here. This test asserts the full
-     * documented-but-unimplemented list stays exactly what was proven, not a silently growing gap.
+     * `boardingPoint`, `tripdetailsV2` and `updatecitylist` have no caller in the web app
+     * (docs/scope/unused-endpoints.md), but they are part of the published API, so since 2026-10-22
+     * (regression coverage to 100%) every documented redbus path has a definition: the two reads run
+     * live in the feature chain, the city-list refresh is a shared write checked off live only.
      */
-    expect(
-      uncoveredKBookingPaths().sort(),
-      'documented but not implemented by the frontend',
-    ).toEqual(
-      ['/redbus/boardingPoint/', '/redbus/tripdetailsV2/', '/redbus/updatecitylist'].sort(),
-    );
+    expect(uncoveredKBookingPaths(), 'every documented redbus path has a definition').toEqual([]);
   });
 
   test('every definition matches the generated contract @framework', () => {

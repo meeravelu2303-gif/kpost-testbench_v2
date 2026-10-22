@@ -43,10 +43,21 @@ interface DirEntry {
   designation?: string | null;
   role?: string | null;
   city?: string | null;
+  companyName?: string | null;
 }
 
-/** Country → Language → Personal → Continue → search; returns the result rows and the API's entries. */
-async function searchDirectory(page: Page): Promise<{ rows: Locator; entries: DirEntry[] }> {
+/**
+ * Country → Language → vertical → Continue → search; returns the result rows and the API's entries.
+ * Defaults to the Personal vertical and the QA accounts' name. The Business vertical is how entries with
+ * a designation and company are reached (the personal QA accounts carry neither).
+ */
+async function searchDirectory(
+  page: Page,
+  {
+    vertical = 'Personal',
+    term = SEARCH_TERM,
+  }: { vertical?: 'Personal' | 'Business'; term?: string } = {},
+): Promise<{ rows: Locator; entries: DirEntry[] }> {
   await page.goto('/kdirectory', { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await page
     .locator('.loader-overlay')
@@ -58,7 +69,7 @@ async function searchDirectory(page: Page): Promise<{ rows: Locator; entries: Di
   await pickReactSelect(page, /Choose Language/i, 'English');
   await page
     .locator('.dirCategory-box, .selectedCategory-box')
-    .filter({ hasText: /^Personal$/ })
+    .filter({ hasText: new RegExp(`^${vertical}$`) })
     .first()
     .click();
   const cont = page.getByRole('button', { name: /^Continue$/i });
@@ -74,18 +85,18 @@ async function searchDirectory(page: Page): Promise<{ rows: Locator; entries: Di
   const answer = page.waitForResponse((r) => r.url().includes('/contacts/globalSearch/'), {
     timeout: 30_000,
   });
-  await search.fill(SEARCH_TERM);
+  await search.fill(term);
   const response = await answer.catch(() => undefined);
   const payload = (await response?.json().catch(() => undefined)) as
     { status?: string; data?: DirEntry[] } | undefined;
   const hits = Array.isArray(payload?.data) ? payload.data.length : -1;
   test.info().annotations.push({
     type: 'observed',
-    description: `globalSearch "${SEARCH_TERM}" → HTTP ${response?.status() ?? 'none'}, ${hits} entries`,
+    description: `globalSearch "${term}" (${vertical}) → HTTP ${response?.status() ?? 'none'}, ${hits} entries`,
   });
   test.skip(
     hits === 0,
-    `the directory search returned no entry for "${SEARCH_TERM}" (Personal / India / English) — set KDIRECTORY_SEARCH_TERM to a listed name`,
+    `the directory search returned no entry for "${term}" (${vertical} / India / English) right now — set KDIRECTORY_SEARCH_TERM to a listed name`,
   );
   const rows = page.locator('.contactDir_scrollHeight .sb-avatar');
   await expect(rows.first(), 'the directory lists the matching entries').toBeVisible({
@@ -164,6 +175,74 @@ test.describe(
           const role = entry.designation ?? entry.role;
           if (role) await expect(rowBars, 'and their role/designation').toContainText(role);
         }
+      },
+    );
+
+    test(
+      'each business result row shows the person’s name, role/designation and team (company) (FR-KD-003) @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KD-003' }] },
+      async ({ page }) => {
+        // FR-KD-003 in full: name, role/designation and team. Personal QA accounts carry no designation or
+        // company, so this searches the Business vertical for the QA test company's own members ("Nebius
+        // Solutions", company 242): each entry the API returns has a designation and a companyName.
+        const { rows, entries } = await searchDirectory(page, {
+          vertical: 'Business',
+          term: 'Nebius',
+        });
+        const rowBars = page.locator('.contactDir_scrollHeight').first();
+        test.info().annotations.push({
+          type: 'observed',
+          description: `rows: ${JSON.stringify((await rowBars.innerText()).split('\n').filter(Boolean).slice(0, 8))}`,
+        });
+        await expect(rows, 'one row per entry the API returned').toHaveCount(entries.length);
+        for (const entry of entries) {
+          const name = `${entry.firstName ?? ''} ${entry.lastName ?? ''}`.trim();
+          await expect(
+            rowBars,
+            `the row for ${entry.kpostID} shows the name "${name}"`,
+          ).toContainText(name);
+          const role = entry.designation ?? entry.role;
+          if (role)
+            await expect(rowBars, `and the role/designation "${role}" (#13220)`).toContainText(
+              role,
+            );
+          if (entry.companyName)
+            await expect(rowBars, `and the team/company "${entry.companyName}"`).toContainText(
+              entry.companyName,
+            );
+        }
+        expect(
+          entries.some((e) => (e.designation ?? e.role) && e.companyName),
+          'the search reached entries that carry a role and a company (otherwise nothing was proven)',
+        ).toBe(true);
+      },
+    );
+
+    test(
+      'the directory screen shows the total contact count for the search (FR-KD-004) @ui',
+      { annotation: [{ type: 'requirement', description: 'FR-KD-004' }] },
+      async ({ page }) => {
+        // FR-KD-004 (KDirectory FRD): "The system shall display the total contact count on the directory
+        // screen." The count must be the number of entries the search returned, stated as a count
+        // ("6 contacts", "Results: 6", "Total 6") — not just six rows on screen.
+        const { rows, entries } = await searchDirectory(page);
+        // The captured reply can be an earlier, empty search (the box debounces); the rows are what the
+        // user sees counted.
+        const n = entries.length || (await rows.count());
+        const screen = page.locator('.secondPhase, .contactDir_scrollHeight').first().locator('..');
+        const shown = await screen.innerText();
+        test.info().annotations.push({
+          type: 'observed',
+          description: `API entries: ${n}; screen text: ${JSON.stringify(shown.split('\n').filter(Boolean).slice(0, 12))}`,
+        });
+        const count = new RegExp(
+          `\\b${n}\\s*(contacts?|results?|entries|members?|found)\\b|\\b(total|contacts?|results?|count)\\b\\W{0,3}${n}\\b`,
+          'i',
+        );
+        await expect(
+          page.locator('body'),
+          `the screen states the total count (${n}) of the directory search (#13221)`,
+        ).toContainText(count, { timeout: 10_000 });
       },
     );
 

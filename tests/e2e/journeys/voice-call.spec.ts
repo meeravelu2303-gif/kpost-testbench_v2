@@ -2,7 +2,7 @@ import { STORAGE_STATE_2, TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
-import type { Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import {
   C,
   requireAccounts,
@@ -12,8 +12,8 @@ import {
 } from './support/journey';
 
 /**
- * JOURNEY 10 · A VOICE CALL — A rings B from the Kall screen, B answers, both are connected, A mutes and
- * unmutes, A hangs up.
+ * JOURNEY 10 · A VOICE CALL (and its VIDEO twin) — A rings B from the Kall screen, B answers, both are
+ * connected, A mutes and unmutes (voice) or turns the camera off and on (video), A hangs up.
  *
  * Built from source (KPOST_REACTJS_2023_V1, read 2026-10-20), every call component mounted globally by
  * `containers/Header.js`, so B is reachable on any signed-in page:
@@ -28,6 +28,12 @@ import {
  *   mm:ss timer that only ticks once that side has JOINED (`isJoined`), so a timer moving past 00:00
  *   on both pages is the proof the call connected — media included, from Chromium's fake microphone
  *   (`playwright.config.ts` CHROMIUM_MEDIA).
+ * - Video (the same row's `icon-KP_159-facecall`, `handleClick("video", false)`): B's card says
+ *   "Incoming video call"; once accepted A's panel becomes `.kall-video-wrap` with a
+ *   `.kall-video-duration-badge` timer and the overlay controls mic · **camera** (`.kall-btn--cam`,
+ *   `toggleVideoTrack` → `localVideoTrack.setEnabled`, gains `kall-btn--cam-off` while off) · end. The
+ *   camera button exists only on an ACCEPTED video call and is a no-op until the local track is
+ *   published — so RTM-KALL-A04's camera half cannot be driven without a connected call.
  * - A's `.kall-btn--end` → `POST /kall/endIndividualKall` → socket `kallClose`; both panels unmount.
  *
  * Needs A and B in each other's contacts (B's panel reads A from its contact map). B's display name
@@ -43,8 +49,9 @@ import {
  */
 
 /** How the caller's and the callee's call panel are told apart (GlobalKallSender / GlobalReceiveKall). */
-const panel = (page: Page) => page.locator('.kall-panel').first();
-const timer = (page: Page) => panel(page).locator('.kall-status-text');
+const panel = (page: Page) => page.locator('.kall-panel, .kall-video-wrap').first();
+const timer = (page: Page) =>
+  panel(page).locator('.kall-status-text, .kall-video-duration-badge').first();
 const MM_SS = /^\d{2}:\d{2}$/;
 
 /** The display name the app shows for an account (fetchUserDetails first + last name). */
@@ -69,10 +76,6 @@ test.describe(
     annotation: [
       { type: 'requirement', description: 'FR-KL-005' },
       { type: 'requirement', description: 'RTM-KALL-A01' },
-      // The "first call" leg of the first-use journey (journeys/first-use.spec.ts covers the rest).
-      { type: 'requirement', description: 'RTM-E2E01' },
-      // Voice calls have a mic toggle only; the camera toggle is the video call's (not driven here).
-      { type: 'requirement-partial', description: 'RTM-KALL-A04' },
     ],
   },
   () => {
@@ -80,17 +83,18 @@ test.describe(
     requireAccounts('A', 'B', 'C');
     requireFlags('KALL_UI_LIFECYCLE');
 
-    test('A calls B from Kall, B accepts, both are connected, A hangs up', async ({
-      page,
-      browser,
-      endpoints,
-    }) => {
+    /** One direct call A → B, voice or video; the in-call toggle step is the kind's own. */
+    async function callJourney(
+      { page, browser, endpoints }: { page: Page; browser: Browser; endpoints: EndpointExecutor },
+      kind: 'audio' | 'video',
+    ): Promise<void> {
+      const video = kind === 'video';
       const bName = await displayName(endpoints, testData.victimKpostId);
       expect(bName, "B's display name is known (control)").not.toBe('');
 
       const bContext = await browser.newContext({
         storageState: STORAGE_STATE_2,
-        permissions: ['microphone'],
+        permissions: video ? ['microphone', 'camera'] : ['microphone'],
       });
       const b = await bContext.newPage();
       // The incoming-call card reads the caller's name aloud; keep that out of the run.
@@ -168,7 +172,7 @@ test.describe(
           await page.getByRole('tab', { name: 'Contacts' }).click();
         });
 
-        await test.step('A places a voice call to B (Connected Devices)', async () => {
+        await test.step(`A places a ${video ? 'video' : 'voice'} call to B (Connected Devices)`, async () => {
           const row = page
             .locator('.contactBar_Dropdown')
             .filter({ has: page.locator('.Bar-Name', { hasText: bName }) })
@@ -187,7 +191,7 @@ test.describe(
           await info
             .locator('div.justify-content-between', { hasText: 'Connected Devices' })
             .last()
-            .locator('.icon-KP_240-Kall01')
+            .locator(video ? '.icon-KP_159-facecall' : '.icon-KP_240-Kall01')
             .click();
           const response = await initiated;
           expect(response.status(), 'initiateKall is accepted').toBeLessThan(300);
@@ -198,8 +202,13 @@ test.describe(
 
         await test.step('B is told who is calling, and accepts', async () => {
           const card = b.getByText('is calling you...').first();
-          await expect(card, 'B gets the incoming-call card').toBeVisible({ timeout: 20_000 });
-          await expect(b.getByText('Incoming call').first(), 'as a voice call').toBeVisible();
+          await expect(card, 'B gets the incoming-call card (#1680)').toBeVisible({
+            timeout: 20_000,
+          });
+          await expect(
+            b.getByText(video ? 'Incoming video call' : 'Incoming call', { exact: true }).first(),
+            video ? 'as a video call' : 'as a voice call',
+          ).toBeVisible();
           await b.getByRole('button', { name: /Accept/ }).click();
         });
 
@@ -222,6 +231,18 @@ test.describe(
           }
           connected = true;
         });
+
+        if (video)
+          await test.step('A turns the camera off and on again during the call', async () => {
+            // GlobalKallSender.toggleVideoTrack: the button swaps IoVideocam ⇄ IoVideocamOff and gains
+            // `kall-btn--cam-off` while the camera is off.
+            const cam = panel(page).locator('.kall-btn--cam');
+            await expect(cam, 'A has a camera control on the video call').toBeVisible();
+            await cam.click();
+            await expect(cam, 'camera off: the button shows it').toHaveClass(/kall-btn--cam-off/);
+            await cam.click();
+            await expect(cam, 'camera on again').not.toHaveClass(/kall-btn--cam-off/);
+          });
 
         await test.step('A mutes and unmutes the microphone during the call', async () => {
           // GlobalKallSender.toggleMic: the button switches icon-KP_53-Mic-on ⇄ icon-KP_52-Mic-Off and
@@ -277,6 +298,25 @@ test.describe(
           await reject.click({ timeout: 5_000 }).catch(() => undefined);
         await bContext.close();
       }
-    });
+    }
+
+    test(
+      'A calls B from Kall, B accepts, both are connected, A hangs up',
+      {
+        annotation: [
+          // The "first call" leg of the first-use journey (journeys/first-use.spec.ts covers the rest).
+          { type: 'requirement', description: 'RTM-E2E01' },
+          // The mic half of RTM-KALL-A04; the camera half is the video test below.
+          { type: 'requirement-partial', description: 'RTM-KALL-A04' },
+        ],
+      },
+      async ({ page, browser, endpoints }) => callJourney({ page, browser, endpoints }, 'audio'),
+    );
+
+    test(
+      'A video-calls B from Kall, B accepts, both are connected, A turns the camera off and on, A hangs up',
+      { annotation: [{ type: 'requirement', description: 'RTM-KALL-A04' }] },
+      async ({ page, browser, endpoints }) => callJourney({ page, browser, endpoints }, 'video'),
+    );
   },
 );

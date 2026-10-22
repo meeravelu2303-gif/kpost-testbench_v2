@@ -33,10 +33,10 @@ export const ASSESSED = [
     id: 'RTM-KALL-A04',
     module: 'Kall',
     summary: 'Mute / camera toggle during a call',
-    status: 'Partial',
+    status: 'Covered',
     files: ['journeys/voice-call'],
     notes:
-      'Mic mute/unmute asserted in journeys/voice-call (red on #1680). The camera toggle exists only on a video call — not driven yet.',
+      'journeys/voice-call: mic mute/unmute on a voice call, camera off/on (.kall-btn--cam) on a video call — both red 2/2 on #1680 (the callee never rings; 2026-10-22 video run commented on #1680). Covered, bug linked.',
   },
   {
     id: 'RTM-KALL-A05',
@@ -79,18 +79,18 @@ export const ASSESSED = [
     module: 'KMail',
     summary: 'Attachments: upload, download, size limit',
     status: 'Partial',
-    files: ['kmail-attach-send-e2e'],
+    files: ['kmail-attach-send-e2e', 'kpost/aws/business-rules'],
     notes:
-      'Receive + download through the UI covered; UI upload red on #1347; size limit not driven; byte integrity is RTM-CON04.',
+      'Receive + download through the UI covered; UI upload red on #1347; byte integrity is RTM-CON04. Size limit: kpost/aws/business-rules asks for an upload URL for a 50 GB attachment — red 3/3 on 2026-10-22 (HTTP 200 + a signed S3 URL; the compose screen checks no size either). The FRD names no number, so the bug is held for Meera’s decision — Partial until it is filed (owner counting rule).',
   },
   {
     id: 'RTM-KMAIL-F03',
     module: 'KMail',
     summary: 'Folders: Sent / Trash / Spam',
-    status: 'Not covered',
+    status: 'Out of scope',
     files: [],
     notes:
-      'Blocked: the web KMail has no Sent/Trash/Spam folders and no folder endpoint (Status of Mails lists only).',
+      'Out of scope (owner 2026-10-22): the web KMail has no Sent/Trash/Spam folders and no folder endpoint in this product version (Status of Mails lists only). Re-add if the feature is built.',
   },
   {
     id: 'RTM-KMAIL-F04',
@@ -105,9 +105,10 @@ export const ASSESSED = [
     id: 'RTM-KMAIL-F05',
     module: 'KMail',
     summary: 'Delete + restore a mail',
-    status: 'Partial',
+    status: 'Covered',
     files: ['kmail/feature'],
-    notes: 'Per-side delete covered (API + UI greyed-out); no restore / trash endpoint exists.',
+    notes:
+      'Per-side delete covered (API + UI greyed-out). Restore is not built in this product version (no restore / trash endpoint): out of scope (owner 2026-10-22).',
   },
   {
     id: 'RTM-KMAIL-F06',
@@ -228,10 +229,10 @@ export const ASSESSED = [
     id: 'RTM-E2E01',
     module: 'Journeys',
     summary: 'Full journey: signup → first login → profile → first message/mail/call',
-    status: 'Partial',
+    status: 'Covered',
     files: ['journeys/first-use', 'journeys/voice-call'],
     notes:
-      "Three legs, all built and run live 2026-10-20. 1a sign up (throwaway sanitykpostN, removed after) -> first login -> own name on Profile -> logout: green 2/2. 1b Home -> Profile -> first Katchup (B receives it: green) -> first KMail: red 2/2 at 'B reads it', because opening a received mail returns an empty record (#1359, reopened today; #1348). First call = journey 10 (voice-call): red on #1680 (B never rings). Partial until #1359 and #1680 are fixed (or the owner's counting rule says a working test failing on a filed bug counts).",
+      "Covered under the owner rule 2026-10-22 (a correct test failing only on an open, filed bug counts as covered). Three legs built and run live 2026-10-20: 1a sign up -> first login -> own name on Profile -> logout green 2/2; 1b first Katchup green, first KMail red at 'B reads it' (#1348; #1359 marked fixed 2026-10-22, re-check pending); first call = journey 10, red on #1680 (B never rings).",
   },
   {
     id: 'RTM-CON01',

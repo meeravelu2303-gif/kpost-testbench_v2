@@ -9,7 +9,7 @@ cannot drift from what is actually tested.
 | | Count |
 | - | ----: |
 | Documented (workbook, usable) | 446 |
-| **Registered & tested** | **352** |
+| **Registered & tested** | **357** |
 | — of those, run on live | 122 |
 | In "built" modules | 431 |
 
@@ -18,15 +18,15 @@ cannot drift from what is actually tested.
 | `admin` | 125 | 51 | 13 | built | Admin/HR-Setup module (admin-api, BUSINESS_M). Contract is the live service OpenAPI (112 ops, npm run contract:admin). Scope = the 38 endpoints the PRODUCT actually uses (from the frontend AdminSetup.js/HumanResources.js) — all covered; the other ~74 contract ops are not wired into the product. The core-app /admin/* routes (BUSINESS_S user management) also bucket here |
 | `kmail` | 80 | 79 | 30 | built | KMail — test host testkmail (/testkmail/v2). 27 reads all-types on kmail; 28 data writes fuzzed on kmail:deep; 14 needs-id reads via KMAIL_LIFECYCLE (attachment downloads need a real S3 upload — off-live); getKloudUsedData not in the usable contract |
 | `profile` | 45 | 45 | 12 | built | profile — full API + write lifecycle + screens |
-| `katchup` | 36 | 35 | 9 | built | messaging — full API + write lifecycle + screen |
-| `common` | 32 | 31 | 21 | built | reference data, identity, company, OTP (OTP writes gated) |
+| `katchup` | 36 | 36 | 9 | built | messaging — full API + write lifecycle + screen |
+| `common` | 32 | 32 | 21 | built | reference data, identity, company, OTP (OTP writes gated) |
 | `kall` | 20 | 20 | 6 | built | calling — full API + write lifecycle + screen |
 | `contacts` | 16 | 16 | 8 | built | address book — reads live, writes gated lifecycle |
 | `dairyschedule` | 14 | 14 | 4 | built | KDiary — schedules/events/reports; reads live, writes gated |
 | `kword` | 14 | 14 | 0 | built | KOS/KWord — document CRUD; reads live, writes gated (API-only) |
 | `signuplogin` | 12 | 12 | 8 | built | login & session; signup out of scope (OTP-gated) |
 | `group` | 11 | 11 | 0 | built | group membership (FR-K06) |
-| `redbus` | 8 | 5 | 3 | built | KBooking bus search (city/destinations/trips/tripdetails) live-tested; blockTicket WRITTEN but unconditionally skipped pending owner authorization (unconfirmed sandbox, no env flag gates it). Reclassified Category-A 2026-10-02 — frontend-active, confirmed no rzp_test_ payment sandbox exists. bookticket/cancelticket/getTicket/checkBookedTicket are real+active but undocumented in the workbook contract — blocked on the workbook owner, see kbooking.api.ts header |
+| `redbus` | 8 | 8 | 3 | built | KBooking bus search (city/destinations/trips/tripdetails) live-tested; blockTicket WRITTEN but unconditionally skipped pending owner authorization (unconfirmed sandbox, no env flag gates it). Reclassified Category-A 2026-10-02 — frontend-active, confirmed no rzp_test_ payment sandbox exists. bookticket/cancelticket/getTicket/checkBookedTicket are real+active but undocumented in the workbook contract — blocked on the workbook owner, see kbooking.api.ts header |
 | `generalsetting` | 7 | 7 | 2 | built | Settings — theme/font/notifications; reads live, writes gated |
 | `ai` | 4 | 4 | 1 | built | KOS K-AI — sessions read live; generation metered/external |
 | `aws` | 4 | 4 | 3 | built | S3 presigned URLs + attachment check/delete; generators run live |
@@ -120,20 +120,6 @@ cannot drift from what is actually tested.
 **`kmail`** (1) — built
 
 - `/kmail5/v2/kmailData/getKloudUsedData`
-
-**`katchup`** (1) — built
-
-- `/v2/katchup/forwardKatchupMessage/`
-
-**`common`** (1) — built
-
-- `/v2/common/saveUnsubscriberDetails`
-
-**`redbus`** (3) — built
-
-- `/redbus/boardingPoint/`
-- `/redbus/tripdetailsV2/`
-- `/redbus/updatecitylist`
 
 **`other`** (1) — backlog
 

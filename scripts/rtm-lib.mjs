@@ -14,7 +14,9 @@
 // Coverage definitions (applied consistently):
 //   Covered     — a requirement has >=1 in-scope test linked to it (requirement annotation OR the FR id
 //                 in the test title OR, for analyst-assigned RTM-* rows, a cited in-scope spec) AND the
-//                 source doc marks it covered.
+//                 source doc marks it covered. Owner rule 2026-10-22: a correct test that fails ONLY on an
+//                 open, filed bug counts as covered; its doc row says "covered (bug #N)", and the failure
+//                 still shows in "Last result" / "Covered & passing", so coverage and pass rate stay apart.
 //   Partial     — linked but the doc marks it partial/finding, OR the doc claims covered but only a
 //                 file-level (not assertion) link resolves.
 //   Not covered — nothing links it.

@@ -21,6 +21,8 @@ import { expect, test } from '@fixtures';
 
 /** Endpoints a sweep deliberately does not reach, each with the reason. Keep it short and honest. */
 const SWEEP_EXEMPT: Readonly<Record<string, string>> = {
+  'kbooking-update-city-list':
+    'refreshes the shared RedBus city list for every user (sideEffect global); never run on live, contract-checked only',
   'common-validate-otp': 'consumes a one-time code; covered by the OTP lifecycle flow',
   'common-validate-mail-otp': 'consumes a one-time code; covered by the OTP lifecycle flow',
   'signup-login-user-logout':

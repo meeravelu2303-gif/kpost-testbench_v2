@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { body } from '../kpost/kpost-endpoint';
-import { defineKmailEndpoint } from './kmail-endpoint';
+import { defineKmailEndpoint, defineUndocumentedKmailEndpoint } from './kmail-endpoint';
 
 /**
  * KMail **manage** — delete, mark-important, clear status, convert-to-PDF, external-domain contacts,
@@ -140,6 +140,37 @@ export const mailCredentialsApi = defineKmailEndpoint({
   note: 'sensitive: returns credentials; not driven on live',
 });
 
+/*
+ * The e-mail-footer unsubscribe. The KPost workbook documents it under /v2/common (a KPost path the KPost
+ * host does not serve: #725, closed WORKSFORME), but it is KMail's (CommonMailController
+ * `@PostMapping("/saveUnsubscriberDetails")`, public in SecurityConfiguration, body = KmailUnsubscriber).
+ * Defined here at its real home and mapped to the documented row via `contractPath`. A public write
+ * with no delete/undo path, so it is never written on live: contract-validated off live, like the
+ * enquiry capture (CLAUDE.md §5 rule 8).
+ */
+export const saveUnsubscriberApi = {
+  ...defineUndocumentedKmailEndpoint({
+    id: 'kmail-save-unsubscriber',
+    method: 'POST',
+    path: '/common/saveUnsubscriberDetails',
+    summary: 'Record an e-mail unsubscribe (public footer link)',
+    evidence:
+      'not called by the web app; KMail backend CommonMailController /saveUnsubscriberDetails, public per SecurityConfiguration',
+    tags: ['public-write'],
+    authentication: { required: false },
+    destructive: true,
+    sideEffect: 'data',
+    note: 'public write with no delete path; never written on live',
+    request: body(() => ({
+      sender: testData.kpostId,
+      receiver: testData.victimKpostId,
+      reason: 'QA bench — safe to ignore',
+      createdBy: testData.kpostId,
+    })),
+  }),
+  contractPath: '/v2/common/saveUnsubscriberDetails',
+};
+
 export const kmailManageApis = [
   deleteKmailApi,
   setImportantApi,
@@ -151,4 +182,5 @@ export const kmailManageApis = [
   editOtherDomainContactApi,
   downloadOdAttachmentApi,
   mailCredentialsApi,
+  saveUnsubscriberApi,
 ];

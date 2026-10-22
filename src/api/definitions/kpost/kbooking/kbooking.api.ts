@@ -117,6 +117,51 @@ export const tripDetailsApi = defineKBookingEndpoint({
   request: body(() => ({ tripID: '5000035149644122223' })),
 });
 
+/*
+ * The three workbook-documented RedBus routes the web app does not call (KBook.js has no caller for
+ * them, 2026-10-22). They are part of the published KPost API, so they are covered: the two reads run
+ * live in the KBooking feature chain with real ids; the city-list refresh is a shared write, so it is
+ * contract-validated off live only.
+ */
+export const boardingPointApi = defineKBookingEndpoint({
+  id: 'kbooking-boarding-point',
+  method: 'POST',
+  path: '/redbus/boardingPoint/',
+  summary: 'Details of one boarding point on a trip',
+  tags: ['needs-id'],
+  destructive: false,
+  // Needs a real tripID AND one of that trip's boardingTimes[].bpId from a prior availabletrips search.
+  productionSafe: false,
+  note: 'needs a real tripID and boarding-point id from a prior availabletrips search; not called by the web app',
+  request: body(() => ({ boardingID: '22081702', tripID: '1000002349716549672' })),
+});
+
+export const tripDetailsV2Api = defineKBookingEndpoint({
+  id: 'kbooking-trip-details-v2',
+  method: 'POST',
+  path: '/redbus/tripdetailsV2/',
+  summary: 'Seat layout and fare details for one trip (v2, by inventory id)',
+  tags: ['needs-id'],
+  destructive: false,
+  // The inventory id is the trip's id as availabletrips keys it (value1's object key). The numeric
+  // `id` field inside the trip loses precision in JSON, so the key is used.
+  productionSafe: false,
+  note: 'needs a real inventory (trip) id from a prior availabletrips search; not called by the web app',
+  request: body(() => ({ inventoryId: '5000035149752978191' })),
+});
+
+export const updateCityListApi = defineKBookingEndpoint({
+  id: 'kbooking-update-city-list',
+  method: 'GET',
+  path: '/redbus/updatecitylist',
+  summary: 'Refresh the shared RedBus city list from the partner',
+  tags: ['privileged-write'],
+  // Rewrites the reference data every user's city picker reads — a shared write, never run on live.
+  destructive: true,
+  sideEffect: 'global',
+  note: 'refreshes shared reference data for every user; not called by the web app',
+});
+
 export const blockTicketApi = defineKBookingEndpoint({
   id: 'kbooking-block-ticket',
   method: 'POST',
@@ -170,5 +215,8 @@ export const kbookingApis: EndpointDefinition[] = [
   destinationsApi,
   availableTripsApi,
   tripDetailsApi,
+  boardingPointApi,
+  tripDetailsV2Api,
+  updateCityListApi,
   blockTicketApi,
 ];

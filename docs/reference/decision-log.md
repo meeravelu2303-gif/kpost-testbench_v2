@@ -3,7 +3,84 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-22 (latest) — tests/e2e by module: 175 flat specs → 13 module folders
+### 2026-10-22 (latest) — the four single-test checks: RTM 97% → 99% (144/145), #13220 and #13221 filed
+
+Each check ran on its own (Chromium, or the api project for the size check), retries off, live test deployment.
+
+1. **FR-KD-003 (entry details):** new Business-vertical test in `verticals/kdirectory-launch.spec.ts`
+   (search "Nebius", QA company 242). Red 3/3: each row shows the company name twice and never the
+   designation, although the search reply carries it. Cause, from source: `KdirectoryModal.js` passes
+   `displayDesignation = item.companyName` and `ContactBar` prints `displayDesignation || designation` on both
+   lines. **Filed #13220** (KPost UI › KDirectory, Ayyappan). Covered, bug linked.
+2. **FR-KD-004 (total count):** new test; after a search the screen must state the number found. Red 2/2
+   (5 rows, no count anywhere). **Filed #13221** (Ayyappan), as the owner decided. Covered, bug linked.
+3. **RTM-KALL-A04 (camera toggle):** `journeys/voice-call.spec.ts` now runs one shared call flow twice:
+   voice (mic toggle; title unchanged, because #1680 is re-checked by that title) and video (camera off/on via
+   `.kall-btn--cam`). The camera button exists only on an accepted video call, so the video test is red 2/2 on #1680:
+   the callee never rings for video either. A dated comment on #1680 records that. Covered, bug linked.
+4. **RTM-KMAIL-F02 (attachment size limit):** the compose screen checks no size and uploads straight to S3,
+   so the only enforcement point is `POST /v2/aws/generate-presigned-url`. New test in
+   `kpost/aws/business-rules.spec.ts` asks for an upload URL for a 50 GB file. Red 3/3: HTTP 200 and a signed
+   URL. **Not filed:** the FRDs say only "bounded by platform-wide limits", with no number, so the bug is held
+   for Meera's decision. The row stays **Partial** until it is filed (counting rule).
+
+Bench fix: a scratch edit script kept duplicating `kdirectory-launch.spec.ts`'s header because
+`String.replace` was given a replacement STRING containing template text, so its `$` sequences were read as
+replacement patterns. Pass a replacer function for literal replacement.
+
+### 2026-10-22 — RTM decisions applied: 88% → 97% (140/145), coverage and pass rate kept apart
+
+Owner decisions:
+
+1. **Counting rule:** a correct test that fails ONLY on an open, filed bug counts as covered. The doc row says
+   "covered (bug #N)" and the failure stays in "Last result" / "Covered & passing" (documented in
+   `rtm-lib.mjs`). It applies to FR-KM-007..008 (#13213), FR-KM-014 (#1347), BR-KU-FORWARD-HIDE (#13208),
+   FR-GC-006 (#1369), FR-GM-014 (#1366), BR-M01 (#1359, marked fixed by the developer today, re-check
+   pending), BR-ADM-500 (blocked by #13215) and RTM-E2E01 (#1348/#1680).
+2. **Not built in this version:** KMail Sent/Trash/Spam folders (RTM-KMAIL-F03 → Out of scope) and mail
+   restore. RTM-KMAIL-F05 is Covered for the delete half; restore is out of scope.
+3. **AI Assist and external recipients (FR-KM-017, FR-KM-022):** Covered as tested. A paid AI generation and
+   real off-platform mail are deliberately not driven.
+4. **KDirectory total count (FR-KD-004):** to be filed as a product bug with a test (needs a live run).
+
+The 5 rows left are exactly the ones that need short live checks: FR-KD-003 (×2, entry details), FR-KD-004,
+RTM-KALL-A04 (camera toggle), RTM-KMAIL-F02 (attachment size limit).
+
+### 2026-10-22 — Regression coverage, batch 1: every documented in-scope endpoint defined; hidden gaps closed
+
+**Endpoints.** The ledger had 5 in-scope documented paths with no definition. None is called by the web app, but
+they are published API, so all are now defined, each the right way for its risk:
+
+- `kbooking-boarding-point` and `kbooking-trip-details-v2`: reads that run live in the KBooking chain with real
+  ids (trip id = the `value1` key, because the numeric `id` loses precision; boarding id =
+  `boardingTimes[0].bpId`). They are in the `details.spec.ts` sweep too, which skips them on live because they
+  need a real id, like `kbooking-trip-details`.
+- `kbooking-update-city-list`: a global write (it refreshes every user's city list). In `SWEEP_EXEMPT` with that
+  reason; never run on live.
+- `katchup-forward-message` (older route): the web app imports `SendForwardMessage` in all three forward footers
+  but never calls it. Defined with the full workbook body (the payload audit requires every documented field).
+- `kmail-save-unsubscriber`: the KPost workbook lists it under `/v2/common`, but it is KMail's (#725
+  WORKSFORME). Defined at `testkmail` (public, KmailUnsubscriber body) with `contractPath` → the documented row.
+  It is a public write with no undo, so it is never written on live.
+  `docs/scope/unused-endpoints.md` and the KBooking coverage self-test now say the three redbus routes are covered.
+  Ledger: katchup 36/36, common 32/32, redbus 8/8; registered and tested 352 → 357.
+
+**A hidden gap the work exposed.** The KBooking chain always took the FIRST reachable destination, which has no
+buses, so it skipped before `tripdetails` on every run: trip details had never actually run there. It now tries
+the route the definition uses (city 104, which has trips) and then up to five listed destinations. Live 2/2:
+tripdetails, tripdetailsV2 and boardingPoint all answer 200.
+
+**Change password.** The step-2 test always ended skipped ("no known current password"), but the bench knows
+qatest1's password and the Old Password check is client-side. The test now reaches step 2 and asserts the length
+rule, the complexity rule, Confirm locked until valid, the mismatch message, and Submit enabled only on a match.
+It never clicks Submit, and `/profile/changePassword` is blocked at the network as a belt-and-braces guard.
+Live 2/2.
+
+**Parked-test sweep.** Of the 16 hand-parked or bug-cited skips, the only ones still parked behind an open bug
+are #1348 and #1343. The rest are runtime guards, or out of scope (KOS/concurrency, #499). Three skips without a
+readable reason were reworded (the smoke gates, and login-token-security, whose `(` cut the ledger's parse).
+
+### 2026-10-22 — tests/e2e by module: 175 flat specs → 13 module folders
 
 `tests/e2e` held 175 specs in one flat folder while `tests/api` was already by product and module. **Decision
 (owner):** each spec moves to `tests/e2e/<module>/`, named after its module tag (the taxonomy smoke, sanity, the

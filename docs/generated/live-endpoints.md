@@ -10,8 +10,8 @@ A clear per-reason list of what stays blocked is in `docs/generated/blocked-endp
 | | Count |
 | - | ----: |
 | **Runs on live** | **123** |
-| Blocked | 235 |
-| Total registered | 358 |
+| Blocked | 240 |
+| Total registered | 363 |
 
 ---
 
@@ -149,7 +149,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 235
+## Blocked on live — 240
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -249,6 +249,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `GET` | `/v2/katchup/downloadAttachment/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/katchup/downloadFromS3/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/katchup/downloadThumbnail/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/katchup/forwardKatchupMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/forwardKatchupMessageNew` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/forwardKatchupMultipleMsgs` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/forwardMessageBacktrackByMsgID` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -292,6 +293,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/testkmail/v2/common/kmailGroupReadStatus/` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/testkmail/v2/common/replyNotRequiredByReceiver/` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/testkmail/v2/common/replyNotRequiredBySender/` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/testkmail/v2/common/saveUnsubscriberDetails` | KMail | OFF-LIVE by choice: persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle |
 | `POST` | `/testkmail/v2/common/setKmailAsImportant/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/testkmail/v2/draft/deleteDraftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/testkmail/v2/draft/draftMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -335,7 +337,10 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/signupLogin/signup/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/redbus/blockTicket/{kpostId}` | other | OFF-LIVE (WRITTEN, execution blocked): no env flag actually gates this (KBOOKING_LIFECYCLE is referenced only in comments) — unconditionally test.skip'd pending explicit owner authorization, not driven by any lifecycle flow |
+| `POST` | `/redbus/boardingPoint/` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/redbus/tripdetails/` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/redbus/tripdetailsV2/` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/redbus/updatecitylist` | other | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/dashboard/homeDashboardNewMsgs` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/profile/changePassword` | Profile | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/profile/convertBase64ToImage` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |

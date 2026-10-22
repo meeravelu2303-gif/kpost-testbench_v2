@@ -68,30 +68,72 @@ test.describe(
       ).toBe(false);
     });
 
-    // eslint-disable-next-line playwright/expect-expect -- deliberately ends in test.skip(true, reason): no assertion can run without a known current password, and a skip with a reason is the honest outcome.
     test('the New Password field enforces its complexity rule and Confirm must match, without ever submitting @ui', async ({
+      page,
       settingsPage,
     }) => {
+      // The bench knows qatest1's current password (QA_PASSWORD). The Old Password step compares it in
+      // the browser (Changepassword.js `oldPasswordevent`, against the Redux-held password) — no request.
+      // Belt and braces: the change-password call is BLOCKED at the network, so even a stray Submit
+      // cannot change the shared account's password. Submit is never clicked.
+      let changeAttempts = 0;
+      await page.route('**/profile/changePassword**', (route) => {
+        changeAttempts += 1;
+        return route.abort();
+      });
+
       await settingsPage.goto();
       await settingsPage.openPanel('General Settings', 'Change Password');
+      await page
+        .getByPlaceholder(/Enter Your Old Password/i)
+        .first()
+        .fill(testData.password);
+      await page
+        .getByRole('button', { name: /^Continue$/i })
+        .first()
+        .click();
 
-      // We cannot know the account's real current password, so we can't legitimately reach step 2
-      // through the normal flow without risking a lockout on a wrong guess being rate-limited. This
-      // test therefore stays scoped to what's independently confirmable: the Old Password rejection
-      // path (previous test) and the documented regex/matching rules as STATIC facts about the source,
-      // recorded here as an explicit note rather than driven live without a safe way to reach step 2.
-      test.info().annotations.push({
-        type: 'observed',
-        description:
-          "Step 2 (New/Confirm Password) requires knowing the account's real current password to " +
-          'reach via the UI, which this bench does not have for QA_KPOST_ID by design — the regex ' +
-          '(lower+upper+digit+special, min 6, no spaces) and match-checking are confirmed from source ' +
-          'only, not driven live here. Revisit once a dedicated spare account exists.',
+      const newPassword = page.getByPlaceholder(/Enter Your New Password/i).first();
+      await expect(newPassword, 'the correct Old Password opens step 2').toBeVisible({
+        timeout: 10_000,
       });
-      test.skip(
-        true,
-        'no safe path to step 2 without a known current password for a spare account',
-      );
+      const confirm = page.getByPlaceholder(/Enter Your Confirm Password/i).first();
+      const submit = page.getByRole('button', { name: /^Submit$/i }).last();
+
+      await newPassword.fill('Ab1!x');
+      await expect(
+        page.getByText('Password must be at least 6 characters long.').first(),
+        'under 6 characters',
+      ).toBeVisible();
+
+      await newPassword.fill('abcdefg1');
+      await expect(
+        page.getByText(/must contain at least one uppercase letter/i).first(),
+        'no uppercase and no special character → the complexity rule is shown',
+      ).toBeVisible();
+      await expect(
+        confirm,
+        'Confirm stays locked while the new password is invalid',
+      ).toBeDisabled();
+
+      await newPassword.fill('QaBench!9x');
+      await expect(page.getByText(/must contain at least one uppercase letter/i)).toHaveCount(0);
+      await expect(confirm, 'a valid new password unlocks Confirm').toBeEnabled();
+
+      await confirm.fill('QaBench!9y');
+      await expect(
+        page.getByText('Password and Confirm Password do not match').first(),
+        'a different Confirm is flagged',
+      ).toBeVisible();
+
+      await confirm.fill('QaBench!9x');
+      await expect(page.getByText('Password and Confirm Password do not match')).toHaveCount(0);
+      await expect(
+        submit,
+        'matching passwords enable Submit (deliberately not clicked)',
+      ).toBeEnabled();
+
+      expect(changeAttempts, 'nothing tried to change the password').toBe(0);
     });
   },
 );

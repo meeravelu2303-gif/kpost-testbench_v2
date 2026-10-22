@@ -62,6 +62,44 @@ test.describe(
       ).not.toBe(extractUuid(katchupUrl));
     });
 
+    test(
+      'a KMail attachment far beyond any platform limit (50 GB) is refused an upload URL',
+      { annotation: [{ type: 'requirement', description: 'RTM-KMAIL-F02' }] },
+      async ({ endpoints }) => {
+        // KMail FRD v1.8 (and Katchup FRD v1.9): "Maximum file attachment size per upload is bounded by
+        // platform-wide limits". The compose screen (WriteMailPage.handleSelectedFile) checks no size and
+        // uploads straight to S3 with the URL this endpoint mints from the declared fileSize, so this is
+        // the only place a limit can be enforced. The FRD names no number; 50 GB is beyond any plausible
+        // one. Nothing is uploaded — a presigned URL creates no S3 object on its own.
+        const meta = (fileSize: string) => ({
+          body: { extension: 'pdf', fileName: 'qa-bench.pdf', fileSize },
+        });
+        const small = await endpoints.sendTo('aws-generate-presigned', meta('940'), {
+          label: 'aws:size-control',
+          auth: { principal: A },
+        });
+        expect(small.status, 'control: a 940-byte attachment gets an upload URL').toBe(200);
+
+        const huge = await endpoints.sendTo(
+          'aws-generate-presigned',
+          meta(String(50 * 1024 ** 3)),
+          {
+            label: 'aws:size-50gb',
+            auth: { principal: A },
+          },
+        );
+        const text = huge.bodyText ?? '';
+        test.info().annotations.push({
+          type: 'observed',
+          description: `50 GB → HTTP ${huge.status}: ${text.replace(/X-Amz-[^&"]+/g, 'X-Amz-…').slice(0, 200)}`,
+        });
+        expect(
+          huge.status === 200 && /presignedURL|https:\/\//i.test(text),
+          'a 50 GB attachment is refused, not given an upload URL',
+        ).toBe(false);
+      },
+    );
+
     test('check-attachment: a never-presigned uuid is absent from data, not reported with a status code', async ({
       endpoints,
     }) => {
