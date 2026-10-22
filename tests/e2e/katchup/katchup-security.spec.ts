@@ -1,8 +1,8 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { EDITOR, openBellMenu, openComposerFor, submitComposer } from './support/katchup';
-import { settleFrames } from './support/settle';
+import { EDITOR, openBellMenu, openComposerFor, submitComposer } from '../support/katchup';
+import { settleFrames } from '../support/settle';
 
 /**
  * Security-fuzzing angle for the Katchup **composer** — Subject and message body — the highest-value

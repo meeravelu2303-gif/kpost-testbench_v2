@@ -1,6 +1,6 @@
 import { PUBLIC_SCREENS } from '@ui/screens';
 import { test } from '@fixtures';
-import { runScreenSweep } from './support/screen-sweep';
+import { runScreenSweep } from '../support/screen-sweep';
 
 /**
  * Deep UI sweep of the PUBLIC screens — login, signup, the child-safety policy, the Kall window in

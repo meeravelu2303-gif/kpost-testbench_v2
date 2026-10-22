@@ -6,7 +6,7 @@ import {
   openBellMenu,
   openComposer,
   sendMessage,
-} from './support/katchup';
+} from '../support/katchup';
 
 /**
  * Katchup **sender message actions** — the post-send control set that is KPost's reason to exist

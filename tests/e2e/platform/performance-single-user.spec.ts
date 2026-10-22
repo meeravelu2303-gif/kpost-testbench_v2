@@ -1,7 +1,7 @@
 import { TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * PERFORMANCE — single user (FRD row 25): a page-load-time sanity budget for the core screens, one

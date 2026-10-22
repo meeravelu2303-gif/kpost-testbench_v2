@@ -61,7 +61,8 @@ test.describe(
           removeEventListener(): void {}
         }
         (window as unknown as Record<string, unknown>).SpeechRecognition = FakeSpeechRecognition;
-        (window as unknown as Record<string, unknown>).webkitSpeechRecognition = FakeSpeechRecognition;
+        (window as unknown as Record<string, unknown>).webkitSpeechRecognition =
+          FakeSpeechRecognition;
       });
 
       await homePage.goto();
@@ -86,13 +87,18 @@ test.describe(
       expect(alive, 'the page is still alive after repeated voice-command clicks').toBe(true);
 
       // Reported symptom: an error toast after a few clicks. Correct behaviour: none.
-      const errorToast = page.locator('.Toastify__toast--error, [role="alert"].error, .toast-error');
+      const errorToast = page.locator(
+        '.Toastify__toast--error, [role="alert"].error, .toast-error',
+      );
       const toastText = await errorToast
         .first()
         .textContent({ timeout: 2_000 })
         .catch(() => null);
       expect(
-        await errorToast.first().isVisible().catch(() => false),
+        await errorToast
+          .first()
+          .isVisible()
+          .catch(() => false),
         `repeated voice-command clicks must not raise an error toast (saw: "${(toastText || '').trim()}")`,
       ).toBe(false);
       expect(

@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * Home dashboard — API response-handling. Does the Recents list surface a failing/empty backend

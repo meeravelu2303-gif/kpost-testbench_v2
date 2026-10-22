@@ -111,7 +111,7 @@ cross-tenant target with a qualified key (`kpostID`/`companyID`/…), never a ba
 
 ## 6. The screen
 
-`/kall` → `<Kall />` (`MenuRoutes.js`). `tests/e2e/kall.spec.ts` checks the workspace shell
+`/kall` → `<Kall />` (`MenuRoutes.js`). `tests/e2e/kall/kall.spec.ts` checks the workspace shell
 (`.kall-layout-shell`), the call tabs (`.tabs-wrapper`) and the contact search ("Search Contacts")
 render for a logged-in user, across Chromium / Firefox / WebKit. Placing/scheduling a real call from
 the UI is not automated (it rings a device); that behaviour is the API lifecycle's job.

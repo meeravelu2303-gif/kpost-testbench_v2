@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import type { Page } from '@playwright/test';
 import { expect, test } from '@fixtures';
-import { pickReactSelect, reactSelectByPlaceholder } from './support/react-select';
+import { pickReactSelect, reactSelectByPlaceholder } from '../support/react-select';
 
 /**
  * Settings · KNews Settings panel (`Knewssettings.js`) — an 11-field cascading form (Country ->

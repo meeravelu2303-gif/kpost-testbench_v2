@@ -9,7 +9,7 @@ import {
   openAdvancedSearch,
   openCreateGroup,
   openPeopleSearch,
-} from './support/contacts';
+} from '../support/contacts';
 
 /**
  * The health/performance/layout counterpart to `contacts-accessibility.spec.ts`'s 3 dynamic states —

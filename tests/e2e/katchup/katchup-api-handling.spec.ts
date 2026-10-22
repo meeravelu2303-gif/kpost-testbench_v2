@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { openConversation } from './support/katchup';
-import { settleFrames } from './support/settle';
+import { openConversation } from '../support/katchup';
+import { settleFrames } from '../support/settle';
 
 /**
  * Katchup thread — realistic API-response handling and the stored-XSS sink on OPEN.

@@ -252,7 +252,10 @@ function renderExpectedActual(result: ValidationResult): { expected: string; act
 
 /** Words from a spec path and test title, used to find the UI screen's component. */
 export function screenTokens(file: string, title: string): string[] {
-  return `${file} ${title}`
+  // The file NAME and the title, never its folders: the e2e module folders (2026-10-22) must not move a
+  // bug to another component (e.g. `profile/profile-settings-breakage.spec.ts` is a Settings screen).
+  const name = file.split(/[\\/]/).pop() ?? file;
+  return `${name} ${title}`
     .toLowerCase()
     .split(/[^a-z0-9-]+/)
     .filter(Boolean);

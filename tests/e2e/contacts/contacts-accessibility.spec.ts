@@ -10,8 +10,8 @@ import {
   openAdvancedSearch,
   openCreateGroup,
   openPeopleSearch,
-} from './support/contacts';
-import { settleAnimations } from './support/usermanagement';
+} from '../support/contacts';
+import { settleAnimations } from '../support/usermanagement';
 
 /**
  * Deep WCAG scan (axe-core) for Contacts' own DYNAMIC states — the Add-contact wizard's people-search

@@ -7,7 +7,7 @@ import {
   openBellMenu,
   openComposer,
   sendMessage,
-} from './support/katchup';
+} from '../support/katchup';
 
 /**
  * Completes the "Note" sub-flow entry assertion already in katchup-actions-more.spec.ts, which

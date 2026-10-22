@@ -1,8 +1,8 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { createQaGroup, deleteQaGroup, GROUP_CREATOR, type QaGroup } from './support/groups';
-import { EDITOR, openGroupConversation } from './support/katchup';
+import { createQaGroup, deleteQaGroup, GROUP_CREATOR, type QaGroup } from '../support/groups';
+import { EDITOR, openGroupConversation } from '../support/katchup';
 
 /**
  * Group messaging — **Post To: All Members / Selected Members** (FR-GMSG, the Katchup FRD §8 rows the

@@ -6,8 +6,8 @@ import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
 import type { Page, TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
-import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall';
-import { settleAnimations } from './support/usermanagement';
+import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall';
+import { settleAnimations } from '../support/usermanagement';
 
 /**
  * Deep WCAG scan (axe-core) for Kall's own DYNAMIC states — the Kool Kall tab active, and the

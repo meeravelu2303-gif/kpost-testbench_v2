@@ -6,8 +6,8 @@ import {
   openBellMenu,
   openComposerFor,
   openConversation,
-} from './support/katchup';
-import { settleFrames } from './support/settle';
+} from '../support/katchup';
+import { settleFrames } from '../support/settle';
 
 /**
  * Katchup feature integrity — do the per-message features actually work / are they wired correctly?

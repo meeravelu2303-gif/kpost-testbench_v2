@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { NAV_LINKS } from '@ui/screens';
 import { expect, test } from '@fixtures';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * Navigation flow — the first UI **interaction** test (a real user action, not a scripted `goto`):

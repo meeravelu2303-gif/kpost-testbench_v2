@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * Functional coverage for what is UNIQUELY Home's own: the Recents/Contacts tab switcher and the

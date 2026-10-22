@@ -8,7 +8,7 @@ import {
   messageBySubject,
   openComposerFor,
   sendMessage,
-} from './support/katchup';
+} from '../support/katchup';
 
 /**
  * Katchup **content correctness** (FRD row 13) from the send path: a message body must round-trip

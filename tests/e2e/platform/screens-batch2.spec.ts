@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { AUTHENTICATED_SCREENS } from '@ui/screens';
 import { test } from '@fixtures';
-import { runScreenSweep } from './support/screen-sweep';
+import { runScreenSweep } from '../support/screen-sweep';
 
 /**
  * Deep UI sweep, batch 2 of 3 (Settings, KDiary, KDoc, KCloud) — see `screen-sweep.ts` for why this

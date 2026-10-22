@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { pickReactSelect } from './support/react-select';
+import { pickReactSelect } from '../support/react-select';
 
 /**
  * K-Booking (`/kbooking`) — a REAL redbus.in bus-ticket booking integration

@@ -3,7 +3,7 @@ import type { ScreenDef } from '@ui/screens';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * **Responsive sweep** — every registered screen at phone and tablet widths (the cross-cutting test

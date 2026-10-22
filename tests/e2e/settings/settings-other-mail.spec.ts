@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { pickReactSelect, reactSelectByPlaceholder } from './support/react-select';
+import { pickReactSelect, reactSelectByPlaceholder } from '../support/react-select';
 
 /**
  * Settings · Add Other Mail Accounts panel (`Othermail.js`) — confirmed from source: no

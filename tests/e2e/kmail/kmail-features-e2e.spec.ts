@@ -6,8 +6,8 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';
 import type { Browser, Dialog, Page } from '@playwright/test';
-import { createQaGroup, deleteQaGroup, type QaGroup } from './support/groups';
-import { isKnownAppAlert } from './support/known-dialogs';
+import { createQaGroup, deleteQaGroup, type QaGroup } from '../support/groups';
+import { isKnownAppAlert } from '../support/known-dialogs';
 
 /**
  * KMail features through the real screens (live-explored 2026-10-15):

@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
-import { EDITOR, messageBySubject, openComposer } from './support/katchup';
+import { EDITOR, messageBySubject, openComposer } from '../support/katchup';
 
 /**
  * Katchup attachments sent ONE AFTER ANOTHER without a page reload.

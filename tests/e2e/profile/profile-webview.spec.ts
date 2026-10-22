@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { settleFrames, settleNetwork } from './support/settle';
+import { settleFrames, settleNetwork } from '../support/settle';
 
 /**
  * `/profile-webview/:id` (`ProfileWebView.js`) — a PUBLIC, read-only shareable profile card, no auth

@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { EDITOR, deleteSentMessage, openComposer } from './support/katchup';
+import { EDITOR, deleteSentMessage, openComposer } from '../support/katchup';
 
 /**
  * Coverage gap identified 2026-10-03 (katchup-ground-truth-coverage report, §6 "UI Functional" row):

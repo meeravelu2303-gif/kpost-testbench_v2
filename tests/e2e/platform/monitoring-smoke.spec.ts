@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * MONITORING SMOKE (FRD row 5, "Production monitoring") — a shallow, **read-only** health check meant

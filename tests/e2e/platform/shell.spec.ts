@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * The shared **Header shell** that wraps every authenticated screen (`containers/Header.js`), across

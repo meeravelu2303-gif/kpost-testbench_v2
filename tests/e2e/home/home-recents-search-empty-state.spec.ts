@@ -34,7 +34,9 @@ test.describe(
 
       // If the load genuinely errored (not just empty), that is a different case (home-api-handling).
       test.skip(
-        await errorBanner(page).isVisible().catch(() => false),
+        await errorBanner(page)
+          .isVisible()
+          .catch(() => false),
         'Recents shows a load-error state, not an empty state — out of scope for this test',
       );
 

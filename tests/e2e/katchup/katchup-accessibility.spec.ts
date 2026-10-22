@@ -6,7 +6,7 @@ import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
 import type { Page, TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
-import { gotoKatchup, openConversation } from './support/katchup';
+import { gotoKatchup, openConversation } from '../support/katchup';
 
 /**
  * Deep WCAG scan (axe-core) for Katchup's own DYNAMIC states — the conversation list, an open

@@ -1,5 +1,5 @@
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * `/kposter` — the STANDALONE, logged-out shell (`MenuRoutes.js` line 404: `{!user.user &&

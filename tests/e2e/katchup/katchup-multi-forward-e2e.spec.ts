@@ -1,8 +1,8 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Locator, Page } from '@playwright/test';
-import { messageBySubject, openComposer, openConversation, sendMessage } from './support/katchup';
-import { settleFrames } from './support/settle';
+import { messageBySubject, openComposer, openConversation, sendMessage } from '../support/katchup';
+import { settleFrames } from '../support/settle';
 
 /** Same real forward target as the single-forward sub-flow test (katchup-forward-subflow-e2e) —
  * Forward excludes the open thread's counterpart, so the target must be a different contact. */

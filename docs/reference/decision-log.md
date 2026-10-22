@@ -3,7 +3,31 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-22 (latest) — Sanity: slow is a warning, a hang is a failure; the framework suite is green again
+### 2026-10-22 (latest) — tests/e2e by module: 175 flat specs → 13 module folders
+
+`tests/e2e` held 175 specs in one flat folder while `tests/api` was already by product and module. **Decision
+(owner):** each spec moves to `tests/e2e/<module>/`, named after its module tag (the taxonomy smoke, sanity, the
+RTM and Bugzilla routing already use): auth 22, home 9, katchup 33, kall 7, kmail 17, contacts 6, group 7,
+profile 10, settings 20, user-management 3, verticals 16, platform 23 (app-wide sweeps: a11y, crawl, visual,
+screens-batch*, sanity-screens), cross-layer 2. `journeys/`, `smoke/`, `support/` are unchanged; `scripts/` stays
+flat (21 files). The moves used `git mv` and kept file names, so the filing allow-list (`basename`) and UI
+re-verification (by test title) are unaffected. The relative imports in 107 files went one level deeper; the
+visual-baseline snapshots moved with their spec. Path references were updated in code, npm scripts and the current
+docs; the decision log, archive and audits keep their historical paths.
+
+**One code change to keep Bugzilla routing identical.** `screenTokens` (component routing) now reads the file
+NAME and title, never folders. Otherwise a new folder word could move a bug, e.g. a Settings screen in
+`profile/profile-settings-breakage.spec.ts`. Two self-tests followed: `katchup-ui-coverage` finds specs by name
+in any folder, and `ownership` uses a screen-named file. **Verified identical before/after:** 12,039 listed tests
+(0 title differences), `component-routing.md` (0 differences), RTM 129/146 (156 rows, 0 differences), framework
+319/319, tags, tsc, eslint, prettier.
+
+Follow-up (owner: "why no sanity folder?"): the generated UI sanity sweeps got their own folders, mirroring
+`tests/api/sanity/` and the `smoke/` folders: `tests/e2e/sanity/sanity-screens.spec.ts` (was `platform/`) and
+`tests/e2e-admin/sanity/admin-sanity.spec.ts`. Curated `@sanity` tests stay in their module folders, because
+sanity selects by tag. Re-verified: 12,039 listed (0 differences), routing identical, framework 319/319.
+
+### 2026-10-22 — Sanity: slow is a warning, a hang is a failure; the framework suite is green again
 
 **Speed in sanity (owner decision).** In the SMOKE profile (sanity's read sweeps), a `performance.response-time`
 over budget is reported as a `warning` annotation with its timing, not a failure (`endpoint-cases.ts`). Speed on the

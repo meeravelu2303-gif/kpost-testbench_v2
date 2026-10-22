@@ -6,8 +6,8 @@ import {
   openBellMenu,
   openComposerFor,
   openConversation,
-} from './support/katchup';
-import { settleFrames } from './support/settle';
+} from '../support/katchup';
+import { settleFrames } from '../support/settle';
 
 /**
  * Katchup write-action **failure feedback**. The frontend ground-truth read (bubble/KatchupMessage.js,

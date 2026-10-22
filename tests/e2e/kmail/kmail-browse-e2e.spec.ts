@@ -7,7 +7,7 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';
 import type { Page } from '@playwright/test';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * Finding and counting mail in KMail (live-explored 2026-10-15):

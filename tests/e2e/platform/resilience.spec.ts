@@ -1,6 +1,6 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * **Resilience** — the cross-cutting test type the production plan listed as absent: how the

@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * App-wide HARD-CODED HOST guard. On the TEST build, `ServiceURL.js` resolves every API/media base to

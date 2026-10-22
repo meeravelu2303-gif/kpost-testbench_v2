@@ -11,7 +11,7 @@ import {
 import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
 import { writeFileSync } from 'node:fs';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * Deep WCAG accessibility angle — axe-core runs the full ruleset (colour contrast, ARIA validity,

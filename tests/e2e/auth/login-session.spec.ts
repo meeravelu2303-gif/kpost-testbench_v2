@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { answerForgotPasswordSmsLocally } from './support/no-real-sms';
+import { answerForgotPasswordSmsLocally } from '../support/no-real-sms';
 
 /**
  * Login & session — the deeper screen behaviours beyond the two-step credential flow

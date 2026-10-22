@@ -1,8 +1,8 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall';
-import { settleFrames } from './support/settle';
+import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall';
+import { settleFrames } from '../support/settle';
 
 /**
  * Security-fuzzing angle for Kall's two free-text fields — the main screen's contact search box

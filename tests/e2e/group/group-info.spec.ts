@@ -10,8 +10,8 @@ import {
   GROUP_CREATOR,
   groupMember,
   type QaGroup,
-} from './support/groups';
-import { openGroupConversation } from './support/katchup';
+} from '../support/groups';
+import { openGroupConversation } from '../support/katchup';
 
 /**
  * Katchup **Group Info** — the FRD rows that were UI GAPs (`requirements-frd.md`, Group Management):

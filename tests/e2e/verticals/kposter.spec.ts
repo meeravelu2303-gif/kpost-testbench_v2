@@ -1,7 +1,7 @@
 import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * KPoster (`/kposter`, embedded in the authenticated app per `MenuRoutes.js` line 435) — a

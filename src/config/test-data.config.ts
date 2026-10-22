@@ -110,12 +110,12 @@ const schema = z.object({
   businessSignupUniqueName: z.string().min(2).default('qabenchapibiz'),
 
   /**
-   * A SEPARATE reserved identity for the UI-driven signup (`tests/e2e/signup-login-lifecycle.spec.ts`).
+   * A SEPARATE reserved identity for the UI-driven signup (`tests/e2e/auth/signup-login-lifecycle.spec.ts`).
    *
    * `signupKpostId`'s default domain (`@kpost.in`) is the legacy domain the API layer already
    * reserved; the live signup SCREEN only ever offers the current PERSONAL domain policy
    * (`@kpostindia.com` — see `domainPolicy.PERSONAL` in `test-accounts.json`, and
-   * `tests/e2e/signup-domain.spec.ts`, which asserts exactly that). A UI signup can never produce
+   * `tests/e2e/auth/signup-domain.spec.ts`, which asserts exactly that). A UI signup can never produce
    * `signupKpostId`'s exact string, so it needs its own slot — a LOCAL PART ONLY, because the test
    * selects whatever domain the dropdown actually offers rather than assuming one. Kept apart from
    * `signupMobile` too, so a UI run and an API run never race for the same "is it taken?" answer.

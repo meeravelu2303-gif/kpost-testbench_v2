@@ -3,7 +3,7 @@ import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall';
+import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall';
 
 /**
  * The health/performance/layout counterpart to `kall-accessibility.spec.ts`'s 2 dynamic states — the

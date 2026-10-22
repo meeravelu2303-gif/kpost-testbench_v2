@@ -34,7 +34,7 @@ import { expect, test } from '@fixtures';
  * side-effect write this bench's own production-safety guard blocks unconditionally (by design —
  * `productionSafe` is checked before `ALLOW_DESTRUCTIVE_TESTS`, which can never unlock a `global`
  * write here), so that path is not how this gets tested. Instead, see
- * `tests/e2e/usermanagement.spec.ts` ("adding a member with a mobile already used in THIS company is
+ * `tests/e2e/user-management/usermanagement.spec.ts` ("adding a member with a mobile already used in THIS company is
  * rejected"): the REAL admin UI, through a normal authenticated session (`STORAGE_STATE_BUSINESS`,
  * no bypass of any kind), confirms the rejection — `POST /v2/common/mobileNoExistInsideCompany/`
  * correctly reports the collision and the form stays blocked before ever reaching ADD, so that test

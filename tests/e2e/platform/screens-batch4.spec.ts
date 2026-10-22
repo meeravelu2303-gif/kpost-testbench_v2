@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { AUTHENTICATED_SCREENS } from '@ui/screens';
 import { test } from '@fixtures';
-import { runScreenSweep } from './support/screen-sweep';
+import { runScreenSweep } from '../support/screen-sweep';
 
 /**
  * Deep UI sweep, batch 4 (WriteMail, KPoster, NotFound) — the PERSONAL-session screens added on

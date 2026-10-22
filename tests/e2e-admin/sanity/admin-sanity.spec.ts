@@ -1,7 +1,7 @@
 import { TAGS } from '@config/constants';
 import { ADMIN_SCREENS } from '@ui/admin-screens';
 import { test } from '@fixtures';
-import { expectAdminScreenLoads, requireAdminUiSession } from './support/admin-screen';
+import { expectAdminScreenLoads, requireAdminUiSession } from '../support/admin-screen';
 
 /**
  * FULL SANITY · Admin UI — every Admin / HR-Setup screen (`src/ui/admin-screens.ts`) mounts in the

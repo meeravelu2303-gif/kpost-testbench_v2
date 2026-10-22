@@ -11,9 +11,9 @@ import {
 } from '@ui/accessibility-evidence';
 import type { AxeScreenResult } from '@ui/accessibility-evidence';
 import { expect, test } from '@fixtures';
-import { answerForgotPasswordSmsLocally } from './support/no-real-sms';
+import { answerForgotPasswordSmsLocally } from '../support/no-real-sms';
 import { writeFileSync } from 'node:fs';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * Deep WCAG accessibility angle (axe-core, full ruleset) for the SIGNED-OUT screens — the same tool

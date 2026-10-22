@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * Settings · Digital Card Settings panel (`DigitalCardSettings.js`) — 7 real, optimistic toggles

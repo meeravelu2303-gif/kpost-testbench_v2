@@ -5,7 +5,7 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import type { Browser, Locator, Page } from '@playwright/test';
-import { openGroupConversation } from './support/katchup';
+import { openGroupConversation } from '../support/katchup';
 
 /**
  * Group exit through the screen, by role (owner rule, Meera 2026-10-15): a promoted admin has the

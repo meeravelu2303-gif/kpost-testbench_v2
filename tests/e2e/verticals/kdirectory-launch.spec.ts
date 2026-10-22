@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Locator, Page } from '@playwright/test';
-import { parkPointerAwayFromSideMenu } from './support/katchup';
+import { parkPointerAwayFromSideMenu } from '../support/katchup';
 
 /**
  * KDirectory — **initiate Katchup / Kall from a directory entry's profile** (FR-KD-006, KDirectory

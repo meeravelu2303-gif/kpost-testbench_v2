@@ -8,8 +8,8 @@ import {
   openConversation,
   parkPointerAwayFromSideMenu,
   sendMessage,
-} from './support/katchup';
-import { settleFrames } from './support/settle';
+} from '../support/katchup';
+import { settleFrames } from '../support/settle';
 
 /**
  * Unread BADGE refreshes after a conversation is read (the UI half of FR-K07).

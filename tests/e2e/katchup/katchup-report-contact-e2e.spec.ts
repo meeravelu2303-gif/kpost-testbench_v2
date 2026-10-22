@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Locator, Page } from '@playwright/test';
-import { openConversation } from './support/katchup';
+import { openConversation } from '../support/katchup';
 
 /**
  * Report Contact (Katchup → a contact's Digital Card → Report) — the last uncovered Katchup report

@@ -1,6 +1,6 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * `/child-safety-standards-policy` — a PUBLIC route (explicitly excluded from the auth-redirect check

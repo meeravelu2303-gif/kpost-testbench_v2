@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { text } from '@database/kpost-assertions';
 import { expect, test } from '@fixtures';
-import { requireKpostDb, rowSummary, rowWhen } from './support/cross-layer';
+import { requireKpostDb, rowSummary, rowWhen } from '../support/cross-layer';
 
 /**
  * Profile **edit** through the UI — the About section, the cleanest self-restoring profile write and

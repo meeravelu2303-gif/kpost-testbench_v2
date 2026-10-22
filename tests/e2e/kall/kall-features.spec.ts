@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall';
+import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall';
 
 /**
  * **Kall** feature flows (FR-C01..C09, BR-C01), from `components/Kall/` (see `docs/ui/ui-build-plan.md`).

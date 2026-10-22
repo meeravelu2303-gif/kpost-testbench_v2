@@ -1,8 +1,8 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { isKnownAppAlert } from './support/known-dialogs';
-import { settleFrames } from './support/settle';
+import { isKnownAppAlert } from '../support/known-dialogs';
+import { settleFrames } from '../support/settle';
 
 /**
  * Security-fuzzing angle for KMail's **compose** Subject + body — a mail actually delivered to a

@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { pickReactSelect, reactSelectByPlaceholder } from './support/react-select';
+import { pickReactSelect, reactSelectByPlaceholder } from '../support/react-select';
 
 /**
  * Settings · Security & Privacy panel (`Securityprivacies.js`) — confirmed from source: NO

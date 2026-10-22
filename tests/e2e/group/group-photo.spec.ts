@@ -1,7 +1,7 @@
 import { JPEG_1X1 } from '@api/definitions/kpost/profile/image.api';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { gotoKatchup, parkPointerAwayFromSideMenu } from './support/katchup';
+import { gotoKatchup, parkPointerAwayFromSideMenu } from '../support/katchup';
 
 /**
  * Group creation — **group photo select and crop** (FR-GC-004, FR-GC-005; Group FRD §6 "Group Photo

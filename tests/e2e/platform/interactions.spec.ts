@@ -5,7 +5,7 @@ import { AUTHENTICATED_SCREENS } from '@ui/screens';
 import { failedUserActions, healthFailures, isResponsive, watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * INTERACTION sweep — the counterpart to the read-only screen sweep (`screens.spec.ts`).

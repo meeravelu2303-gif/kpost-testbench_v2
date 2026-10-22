@@ -1,13 +1,13 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { postAsPage, requireKpostDb, rowSummary, rowWhen } from './support/cross-layer';
+import { postAsPage, requireKpostDb, rowSummary, rowWhen } from '../support/cross-layer';
 import {
   contactsSearchBox,
   gotoContacts,
   openAdvancedSearch,
   openCreateGroup,
   openPeopleSearch,
-} from './support/contacts';
+} from '../support/contacts';
 
 /**
  * Contacts **functional** UI testing — the client's own behaviour, and whether an action in the UI

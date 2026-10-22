@@ -78,7 +78,7 @@ export const TEST_ACCOUNTS: readonly TestAccount[] = parsed.data.accounts;
  * The e-mail domain KPost routes a user type to.
  *
  * The product decides this, not the user: the signup screen binds the domain from the selected
- * account type rather than accepting one (`tests/e2e/signup-domain.spec.ts`).
+ * account type rather than accepting one (`tests/e2e/auth/signup-domain.spec.ts`).
  */
 export function domainFor(userType: KpostUserType): string {
   return policy[userType];

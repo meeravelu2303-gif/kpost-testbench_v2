@@ -7,7 +7,7 @@ import {
   openComposer,
   openConversation,
   sendMessage,
-} from './support/katchup';
+} from '../support/katchup';
 
 /**
  * Katchup sender **sub-flow** actions — the bell-menu items that open a further surface (a modal, a

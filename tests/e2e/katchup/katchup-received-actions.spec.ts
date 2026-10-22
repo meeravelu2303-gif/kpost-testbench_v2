@@ -9,7 +9,7 @@ import {
   openReceivedConversation,
   openReplyMenu,
   receivedMessageBySubject,
-} from './support/katchup';
+} from '../support/katchup';
 
 /**
  * Katchup **received-message actions** (FR-KU-048..057, Katchup FRD §7 "Recipient" rows): the

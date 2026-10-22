@@ -8,7 +8,7 @@ import {
   openComposer,
   sendMessage,
   submitComposer,
-} from './support/katchup';
+} from '../support/katchup';
 
 /**
  * Katchup **recall → edit & repost → recall again → delete** (FR-KU-029, FR-KU-030, FR-KU-031 —

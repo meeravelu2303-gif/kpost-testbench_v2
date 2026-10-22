@@ -1,7 +1,7 @@
 import { AUTHENTICATED_SCREENS, NAV_LINKS } from '@ui/screens';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * **Keyboard navigation — depth.** `keyboard-nav.spec.ts` already proves Tab reaches SOME control on

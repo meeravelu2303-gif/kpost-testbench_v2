@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { openConversation } from './support/katchup';
+import { openConversation } from '../support/katchup';
 
 /**
  * **Contacts** — the address book the messaging/calling modules act on. It has no standalone route; the

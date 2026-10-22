@@ -108,7 +108,8 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
 
     const ui = candidateFromUiFailure(
       {
-        file: 'tests/e2e/writemail/compose.spec.ts',
+        // Routing reads the file NAME and title, not the module folder (screenTokens, 2026-10-22).
+        file: 'tests/e2e/kmail/writemail.spec.ts',
         title: 'sends a mail',
         message: 'expected button to be enabled',
         fullMessage: 'expected button to be enabled',

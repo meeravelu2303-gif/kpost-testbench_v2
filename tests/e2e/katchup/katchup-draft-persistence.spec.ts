@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { EDITOR, gotoKatchup, parkPointerAwayFromSideMenu } from './support/katchup';
-import { settleFrames } from './support/settle';
+import { EDITOR, gotoKatchup, parkPointerAwayFromSideMenu } from '../support/katchup';
+import { settleFrames } from '../support/settle';
 
 /**
  * Katchup DRAFT persistence (coverage gap — no draft test existed at any tier).

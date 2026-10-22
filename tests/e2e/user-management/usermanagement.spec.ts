@@ -7,7 +7,7 @@ import {
   openAddChannelsChooser,
   openAddMemberForm,
   openUserManagement,
-} from './support/usermanagement';
+} from '../support/usermanagement';
 
 /**
  * **Company-admin UI** — the BUSINESS_S in-app **User Management** screen (`/usermanagement`), which a

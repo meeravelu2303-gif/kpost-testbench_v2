@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { gotoContacts, openCreateGroup } from './support/contacts';
+import { gotoContacts, openCreateGroup } from '../support/contacts';
 
 /**
  * Security-fuzzing angle for Group's **Group Name** field. Deliberately never reaches Create: unlike

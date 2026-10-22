@@ -3,7 +3,7 @@ import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { gotoKatchup, openConversation } from './support/katchup';
+import { gotoKatchup, openConversation } from '../support/katchup';
 
 /**
  * The health/performance/layout counterpart to `katchup-accessibility.spec.ts`'s 3 dynamic states —

@@ -20,13 +20,20 @@ import { expect, test } from '@fixtures';
 test.describe('Katchup UI coverage @framework', () => {
   test('every Katchup feature is classified, specced or blocked-with-reason, and every FR is covered', () => {
     const e2eDir = path.join(ROOT_DIR, 'tests', 'e2e');
+    // Specs live in module folders (tests/e2e/<module>/, 2026-10-22); a feature names its spec by file name.
+    const specNames = new Set(
+      fs
+        .readdirSync(e2eDir, { recursive: true, encoding: 'utf8' })
+        .map((rel) => path.basename(rel))
+        .filter((name) => name.endsWith('.spec.ts')),
+    );
 
     const missingReason: string[] = [];
     const missingSpec: string[] = [];
     for (const f of KATCHUP_FEATURES) {
       if (f.status === 'built') {
         if (!f.spec) missingSpec.push(`${f.id}: built but names no spec`);
-        else if (!fs.existsSync(path.join(e2eDir, f.spec))) {
+        else if (!specNames.has(path.basename(f.spec))) {
           missingSpec.push(`${f.id}: spec ${f.spec} not found`);
         }
       } else if (!f.reason) {

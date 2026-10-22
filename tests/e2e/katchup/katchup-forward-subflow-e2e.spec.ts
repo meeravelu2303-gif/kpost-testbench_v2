@@ -8,8 +8,8 @@ import {
   openComposer,
   openConversation,
   sendMessage,
-} from './support/katchup';
-import { settleFrames } from './support/settle';
+} from '../support/katchup';
+import { settleFrames } from '../support/settle';
 
 /** A real contact in the primary QA account's own address book, distinct from `victimKpostId` —
  * needed because Forward excludes the currently-open thread's counterpart from its own recipient

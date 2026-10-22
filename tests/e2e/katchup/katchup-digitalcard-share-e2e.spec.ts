@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { openConversation } from './support/katchup';
-import { settleFrames } from './support/settle';
+import { openConversation } from '../support/katchup';
+import { settleFrames } from '../support/settle';
 
 /**
  * Completes the "Share digital card" compose-time feature (FR-K17), a documented coverage gap

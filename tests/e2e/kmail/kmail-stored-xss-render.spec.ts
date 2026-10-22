@@ -2,8 +2,8 @@ import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { isKnownAppAlert } from './support/known-dialogs';
-import { settleFrames } from './support/settle';
+import { isKnownAppAlert } from '../support/known-dialogs';
+import { settleFrames } from '../support/settle';
 
 /**
  * Stored-XSS verification for KMail's thread-view mail-bubble renderer.

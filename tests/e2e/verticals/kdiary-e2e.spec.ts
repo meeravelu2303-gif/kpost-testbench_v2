@@ -1,8 +1,8 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
-import { requireKpostDb, rowSummary, rowWhen } from './support/cross-layer';
-import { pickReactSelect } from './support/react-select';
+import { requireKpostDb, rowSummary, rowWhen } from '../support/cross-layer';
+import { pickReactSelect } from '../support/react-select';
 
 /**
  * **KDiary through the screens** — the module had NO working UI coverage: the old `kdiary.spec.ts` is

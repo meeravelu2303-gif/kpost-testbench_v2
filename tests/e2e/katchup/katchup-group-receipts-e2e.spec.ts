@@ -5,7 +5,7 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import type { Browser, Page } from '@playwright/test';
-import { openGroupConversation } from './support/katchup';
+import { openGroupConversation } from '../support/katchup';
 
 /**
  * Open a freshly created group's conversation. Updated 2026-10-14: the old opener clicked a "Contacts"

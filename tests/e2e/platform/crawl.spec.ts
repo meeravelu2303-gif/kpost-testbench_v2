@@ -3,7 +3,7 @@ import { AUTHENTICATED_SCREENS } from '@ui/screens';
 import { crawlScreen } from '@ui/ui-crawler';
 import { healthFailures, isResponsive, watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * Systematic crawl — the "every angle, better than a manual tester" sweep.

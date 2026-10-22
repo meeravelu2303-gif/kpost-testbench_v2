@@ -6,9 +6,9 @@ import {
   openBellMenu,
   openComposer,
   sendMessage,
-} from './support/katchup';
-import { settleFrames } from './support/settle';
-import { openConversation } from './support/katchup';
+} from '../support/katchup';
+import { settleFrames } from '../support/settle';
+import { openConversation } from '../support/katchup';
 
 /**
  * Completes the "Transfer" sub-flow — a documented coverage gap (no existing spec touches Transfer at

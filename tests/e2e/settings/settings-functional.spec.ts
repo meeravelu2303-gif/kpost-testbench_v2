@@ -3,7 +3,7 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 import type { SettingsPage } from '@pages/SettingsPage';
 import type { Page } from '@playwright/test';
-import { pickReactSelect, reactSelectByPlaceholder } from './support/react-select';
+import { pickReactSelect, reactSelectByPlaceholder } from '../support/react-select';
 
 /**
  * Settings **functional** UI testing — when a preference is toggled on screen, does it actually reach

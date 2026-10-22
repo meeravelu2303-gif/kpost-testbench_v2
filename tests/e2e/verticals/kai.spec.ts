@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * KOS · K-AI (`KAI.js`) — a real, backend-integrated AI chat (`Services/KOS.js`:

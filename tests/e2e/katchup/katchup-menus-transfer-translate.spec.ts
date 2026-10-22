@@ -10,7 +10,7 @@ import {
   openReceivedConversation,
   openReplyMenu,
   sendMessage,
-} from './support/katchup';
+} from '../support/katchup';
 
 /**
  * Katchup · the per-message action menus, Transfer and Translate — each asserted by its RESULT.

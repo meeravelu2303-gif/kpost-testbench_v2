@@ -2,12 +2,12 @@ import { testData } from '@config/test-data.config';
 import { isSqlClient } from '@database/database-client';
 import { domainFor } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
-import { signInFromUi } from './journeys/support/journey';
+import { signInFromUi } from '../journeys/support/journey';
 import {
   deleteSanityAccount,
   nextSanityIdentity,
   type SanityIdentity,
-} from './support/sanity-account';
+} from '../support/sanity-account';
 
 /**
  * SANITY · signup — one brand-new person signs up on the real screens, signs in, and sees their own

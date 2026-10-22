@@ -1,6 +1,6 @@
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * **Internationalisation** — the cross-cutting test type the production plan listed as absent.

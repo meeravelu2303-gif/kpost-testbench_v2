@@ -6,7 +6,7 @@ import {
   gotoContacts,
   openAdvancedSearch,
   openPeopleSearch,
-} from './support/contacts';
+} from '../support/contacts';
 
 /**
  * Security-fuzzing angle for Contacts' two free-text query fields — the contact-list search box

@@ -10,7 +10,7 @@ import {
   openAddChannelsChooser,
   openAddMemberForm,
   settleAnimations,
-} from './support/usermanagement';
+} from '../support/usermanagement';
 
 /**
  * Deep WCAG scan (axe-core) for User Management's own DYNAMIC states — the "Add Communication

@@ -1,6 +1,6 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * `/kall-window` (`KallWindow.js`) — listed as a public/no-redirect route in `MenuRoutes.js`, but

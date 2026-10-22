@@ -18,7 +18,7 @@ import { expect, test } from '@fixtures';
  *
  * KPost routes personal accounts to `@kpostindia.com` and business accounts to `@kpost.in`. The
  * rule is applied **in the signup UI**, which offers exactly one domain once an account type is
- * chosen (proved by `tests/e2e/signup-domain.spec.ts`). Nothing below that re-checks it: the API
+ * chosen (proved by `tests/e2e/auth/signup-domain.spec.ts`). Nothing below that re-checks it: the API
  * takes whatever `kpostID` it is handed.
  *
  * So the honest statement of coverage is: the UI is the enforcement point, and these tests verify

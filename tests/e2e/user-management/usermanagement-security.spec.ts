@@ -2,7 +2,7 @@ import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { openAddMemberForm, typeIntoDesignation } from './support/usermanagement';
+import { openAddMemberForm, typeIntoDesignation } from '../support/usermanagement';
 
 /**
  * Security-fuzzing angle for User Management's **Designation** field — an async-search `react-select`

@@ -3,7 +3,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import type { Browser, Page } from '@playwright/test';
-import { deleteSentMessage, gotoKatchup, openComposer, openConversation } from './support/katchup';
+import { deleteSentMessage, gotoKatchup, openComposer, openConversation } from '../support/katchup';
 
 /**
  * Katchup **Copy (Cc) · Confidential Copy (NFR-SEC02) · Bulk** — the multi-recipient features, tested

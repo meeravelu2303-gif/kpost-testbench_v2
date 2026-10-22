@@ -4,8 +4,8 @@
 import { testData } from '@config/test-data.config';
 import { failedUserActions, healthFailures, isResponsive, watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { deleteSentMessage, gotoKatchup, openConversation, sendMessage } from './support/katchup';
-import { skipIfSignedOut } from './support/session';
+import { deleteSentMessage, gotoKatchup, openConversation, sendMessage } from '../support/katchup';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * Continuous messaging — the owner's reported defect: after sending one message you cannot send

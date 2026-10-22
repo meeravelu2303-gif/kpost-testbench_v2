@@ -2,7 +2,7 @@ import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { BUSINESS_SCREENS } from '@ui/screens';
 import { test } from '@fixtures';
-import { runScreenSweep } from './support/screen-sweep';
+import { runScreenSweep } from '../support/screen-sweep';
 
 /**
  * Deep UI sweep of the BUSINESS_S-session screens (User Management today). Runs in the company-admin

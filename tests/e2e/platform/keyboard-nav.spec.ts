@@ -3,7 +3,7 @@ import { testData } from '@config/test-data.config';
 import { AUTHENTICATED_SCREENS } from '@ui/screens';
 import { healthFailures, isResponsive, watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * Keyboard-operability angle — can a keyboard-only user reach the app's controls, and does driving

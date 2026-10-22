@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
-import { EDITOR, openComposer } from './support/katchup';
+import { EDITOR, openComposer } from '../support/katchup';
 
 /**
  * Katchup composer controls — the three FRD rows that were UI-only GAPs (`requirements-frd.md`):

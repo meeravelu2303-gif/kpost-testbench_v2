@@ -484,7 +484,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     const failures = ['chromium', 'firefox', 'webkit'].map((browser) =>
       candidateFromUiFailure(
         {
-          file: 'tests/e2e/home.spec.ts',
+          file: 'tests/e2e/home/home.spec.ts',
           title: 'loads with the hero heading',
           message: 'expected heading to be visible',
           fullMessage: 'expected heading to be visible',
@@ -508,7 +508,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
   test('a UI failure that lost its login session is rejected (environmental, not a screen bug)', () => {
     const lost = candidateFromUiFailure(
       {
-        file: 'tests/e2e/profile-settings-breakage.spec.ts',
+        file: 'tests/e2e/profile/profile-settings-breakage.spec.ts',
         title: 'the Profile screen and all its sections load without a crash or broken asset',
         message: 'Error: Profile mounted\nexpect(locator).toBeVisible() failed',
         fullMessage: 'Error: Profile mounted\nexpect(locator).toBeVisible() failed',
@@ -530,7 +530,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
   test('a UI bug names the API calls that failed during the screen failure (contract drift)', () => {
     const ui = candidateFromUiFailure(
       {
-        file: 'tests/e2e/contacts.spec.ts',
+        file: 'tests/e2e/contacts/contacts.spec.ts',
         title: 'the Katchup contact rail lists contacts and is searchable',
         message: 'Error: a known contact is listed\nexpect(locator).toBeVisible() failed',
         fullMessage: 'Error: a known contact is listed',
@@ -601,7 +601,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
   test('a UI ticket is application-level: no internal repo path or test command', () => {
     const ui = candidateFromUiFailure(
       {
-        file: 'tests/e2e/kmail.spec.ts',
+        file: 'tests/e2e/kmail/kmail.spec.ts',
         title: 'the KMail screen loads for a signed-in user',
         message: 'expected the compose button to be visible',
         fullMessage: 'expected the compose button to be visible',

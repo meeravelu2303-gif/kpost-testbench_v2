@@ -8,7 +8,7 @@ import {
 } from '@ui/screens';
 import { healthFailures, watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { skipIfSignedOut } from './support/session';
+import { skipIfSignedOut } from '../support/session';
 
 /**
  * FULL SANITY · every screen loads — each route in the screen registry (`src/ui/screens.ts`), in the

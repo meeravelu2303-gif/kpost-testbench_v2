@@ -3,7 +3,7 @@ import type { ScreenDef } from '@ui/screens';
 import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { answerForgotPasswordSmsLocally } from './support/no-real-sms';
+import { answerForgotPasswordSmsLocally } from '../support/no-real-sms';
 
 /**
  * Deep UI sweep for the SIGNED-OUT screens — the same health/performance/layout/basic-a11y

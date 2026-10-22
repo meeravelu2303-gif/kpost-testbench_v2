@@ -1,6 +1,6 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { settleFrames } from './support/settle';
+import { settleFrames } from '../support/settle';
 
 /**
  * `/koolkall/:id` (`GlobalKoolKall.js`) — a PUBLIC call-join link, no auth required. Confirmed from

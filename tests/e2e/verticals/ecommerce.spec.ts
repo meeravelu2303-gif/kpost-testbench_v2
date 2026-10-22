@@ -1,7 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
-import { settleFrames, settleNetwork } from './support/settle';
+import { settleFrames, settleNetwork } from '../support/settle';
 import type { Page } from '@playwright/test';
 
 /**

@@ -12,7 +12,7 @@ import {
   receivedMessageBySubject,
   sendMessage,
   submitComposer,
-} from './support/katchup';
+} from '../support/katchup';
 
 /**
  * Katchup **two-session** flows — the features that only exist between a sender and a receiver:

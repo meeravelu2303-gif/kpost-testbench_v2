@@ -3,28 +3,28 @@ import { testData } from '@config/test-data.config';
 import { text } from '@database/kpost-assertions';
 import { expect, test } from '@fixtures';
 import type { Locator } from '@playwright/test';
-import { gotoContacts, openCreateGroup } from './support/contacts';
+import { gotoContacts, openCreateGroup } from '../support/contacts';
 import {
   postAsPage,
   requireKpostDb,
   rowSummary,
   rowWhen,
   storedUtcMs,
-} from './support/cross-layer';
-import { gotoKoolKall, meetingTitleField, openCreateKall } from './support/kall';
+} from '../support/cross-layer';
+import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall';
 import {
   deleteSentMessage,
   messageBySubject,
   openComposerFor,
   sendMessage,
-} from './support/katchup';
+} from '../support/katchup';
 import {
   deleteOpenMail,
   deleteOpenSentMail,
   openMail,
   openSession,
   sendMailFromUi,
-} from './journeys/support/journey';
+} from '../journeys/support/journey';
 
 /**
  * CROSS-LAYER FLOWS (UI → API → DB) for the two messaging modules whose screen actions had no database

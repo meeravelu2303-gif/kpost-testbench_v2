@@ -59,7 +59,9 @@ test.describe(
       await loginPage.loginButton.click();
 
       // The login is now in flight. Try to append to the password; a locked form must ignore it.
-      await loginPage.passwordInput.pressSequentially('XYZ', { timeout: 4_000 }).catch(() => undefined);
+      await loginPage.passwordInput
+        .pressSequentially('XYZ', { timeout: 4_000 })
+        .catch(() => undefined);
 
       const valueDuringSubmit = await loginPage.passwordInput.inputValue().catch(() => '');
       // Release the held response regardless of the assertion outcome so the route never dangles.
