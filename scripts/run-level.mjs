@@ -13,8 +13,8 @@
 //   - NO run level files bugs: BUGZILLA_DRY_RUN=true is forced and the Bugzilla reporter is replaced
 //     with html+junit+json written under reports/<level>/<suite>/<timestamp>/.
 //   - workers is capped at 2 by the config; this runner defaults it to 1.
-//   - Admin joins SANITY only (`@admin` + `@sanity`), in its own stages; smoke/regression never
-//     select it.
+//   - Admin joins SANITY and SMOKE (`@admin` + the level tag), always in its own stages; the KPost
+//     smoke gate and regression never select it, so an unreachable Admin box blocks neither.
 //   - Runs exactly like the module scripts (`kpost`, `kmail`, `ui:chromium`): QA test accounts only
 //     (QATEST_ONLY), every module's write/lifecycle flow switched on, and paused KDoc (@kos) excluded —
 //     so a run level measures the same suite the team runs day to day, on accounts no developer uses.
@@ -66,6 +66,11 @@ const RUN_FLAGS = {
   BUSINESS_UI_LIFECYCLE: 'true',
   // Admin UI session (auth-admin.setup.ts seeds it); read-only screens in sanity.
   ADMIN_UI_LIFECYCLE: 'true',
+  // Admin API core write flow in sanity: the self-cleaning org-setup lifecycle (tier → variable →
+  // location, HR tier, employee; all deleted). Role posting stays off: it provisions real accounts.
+  ADMIN_LIFECYCLE: 'true',
+  // KMail's token refusal is fixed on the test deployment; without this every KMail check skips.
+  KMAIL_AUTH_FIXED: 'true',
   // The forgot-password lifecycle sends ONE real SMS to the spare account per run (owner,
   // 2026-10-20). Its retries are off and every other dialog test answers the SMS request in-browser.
   FORGOT_PASSWORD_SMS: 'true',
@@ -82,6 +87,8 @@ const TEST_HOSTS = new Set([
   // Admin test deployment (CLAUDE.md §1): the API test box and the Admin UI. The live counterpart
   // (adminmodule.kpostindia.com) is deliberately absent, so pointing at it is refused.
   '192.168.0.38',
+  // The Admin UI test build on the internal network (owner, 2026-10-22).
+  '192.168.1.170',
   'kpostadmin.kpostindia.com',
   'localhost',
   '127.0.0.1',
@@ -271,8 +278,33 @@ const regressionInvert = () =>
     ? '@quarantine|@framework'
     : '@quarantine|@destructive|@framework';
 
+/** The KPost hosts every level needs. */
+const KPOST_HOST_VARS = ['BASE_URL', 'KPOST_API_BASE_URL', 'KMAIL_API_BASE_URL'];
+/** The Admin hosts, checked only for the Admin smoke stages (a down Admin box never stops KPost). */
+const ADMIN_HOST_VARS = ['ADMIN_API_BASE_URL', 'ADMIN_UI_BASE_URL'];
+
+/**
+ * Is the test deployment reachable at all? Any HTTP answer counts (even a 404); only a network error
+ * or a timeout does not. Without this, an outage reads as "smoke failed" and looks like a broken build
+ * (2026-10-21: an internet outage failed 57 UI tests with net::ERR_CONNECTION_TIMED_OUT).
+ */
+async function environmentReachable(hostVars) {
+  const down = [];
+  for (const key of hostVars) {
+    const url = process.env[key];
+    if (!url) continue;
+    try {
+      await fetch(url, { method: 'GET', signal: AbortSignal.timeout(20_000) });
+    } catch (error) {
+      down.push(`${key} (${new URL(url).host}): ${error.cause?.code ?? error.name}`);
+    }
+  }
+  return down;
+}
+
 // Smoke is selected PURELY by the @smoke tag (no file scoping): @smoke is reserved for the curated
-// run-level smoke specs, so grepping it yields exactly those.
+// run-level smoke specs (tests/api/smoke/, tests/e2e/smoke/, tests/e2e-admin/smoke/), so grepping it
+// yields exactly those. The KPost gate leaves Admin out (`@admin`); Admin has its own stages below.
 function smokeGate() {
   // API smoke, then UI smoke; stop at the first failing suite.
   if (suiteArg === 'all' || suiteArg === 'api') {
@@ -282,7 +314,7 @@ function smokeGate() {
         suite: 'api',
         project: 'api',
         grep: '@smoke',
-        grepInvert: SMOKE_INVERT,
+        grepInvert: `${SMOKE_INVERT}|@admin`,
       }) !== 0
     )
       return false;
@@ -302,14 +334,64 @@ function smokeGate() {
   return true;
 }
 
+/**
+ * The Admin smoke stages (`npm run test:smoke` only; the regression gate never runs them). Both stages
+ * run even when one fails, and a down Admin box is reported as ENVIRONMENT DOWN, not as a failure.
+ * Returns 'pass' | 'fail' | 'down'.
+ */
+async function adminSmoke() {
+  const down = await environmentReachable(ADMIN_HOST_VARS);
+  if (down.length) {
+    console.error(
+      `\n⚠ ENVIRONMENT DOWN (Admin) — the Admin test deployment did not answer, so the Admin smoke did not run:\n  ${down.join('\n  ')}`,
+    );
+    return 'down';
+  }
+  let passed = true;
+  if (suiteArg === 'all' || suiteArg === 'api')
+    passed =
+      runPlaywright({
+        label: 'SMOKE · Admin API',
+        suite: 'admin-api',
+        project: 'api',
+        grep: and('@smoke', '@admin'),
+        grepInvert: SMOKE_INVERT,
+      }) === 0 && passed;
+  if (suiteArg === 'all' || suiteArg === 'ui')
+    passed =
+      runPlaywright({
+        label: 'SMOKE · Admin UI',
+        suite: 'admin-ui',
+        project: 'admin-ui',
+        grep: and('@smoke', '@admin'),
+        grepInvert: SMOKE_INVERT,
+      }) === 0 && passed;
+  return passed ? 'pass' : 'fail';
+}
+
 let ok = true;
 if (!lintGate()) {
   console.error('\n✗ lint:tags failed — fix tags before running any level.');
   process.exit(1);
 }
 
+// Exit code 4 = ENVIRONMENT DOWN: nothing was tested, so it is neither a pass nor a product failure.
+const unreachable = await environmentReachable(KPOST_HOST_VARS);
+if (unreachable.length) {
+  console.error(
+    `\n⚠ ENVIRONMENT DOWN — the test deployment did not answer, so no test was run:\n  ${unreachable.join('\n  ')}\n` +
+      '  This is an environment condition (network, server or DNS), NOT a product defect. Re-run when it answers.',
+  );
+  process.exit(4);
+}
+
+let adminDown = false;
 if (level === 'smoke') {
+  // KPost first (the gate), then Admin in its own stages whatever KPost's result: two products, two verdicts.
   ok = smokeGate();
+  const admin = await adminSmoke();
+  adminDown = admin === 'down';
+  ok = ok && admin !== 'fail';
 } else if (level === 'sanity') {
   // No --module and no --bug = FULL sanity: every module's @sanity set on both suites, then Admin.
   // Precondition: auth smoke must pass first.
@@ -433,4 +515,5 @@ if (throttled && !ok)
   console.error(
     '  (note: some/all failures above may be the login-throttling environment condition)',
   );
-process.exit(ok ? 0 : 1);
+// A passing KPost smoke with an unreachable Admin box is not a pass: exit 4 (ENVIRONMENT DOWN).
+process.exit(!ok ? 1 : adminDown ? 4 : 0);

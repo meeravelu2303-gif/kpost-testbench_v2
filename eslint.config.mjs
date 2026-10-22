@@ -53,6 +53,10 @@ export default defineConfig(
             'assertNoFileableIssues',
             'runUiChecks',
             'scanCurrentPage',
+            // The smoke helpers (tests/api/smoke/, tests/e2e/smoke/).
+            'expectSmokeRead',
+            'expectModuleScreensLoad',
+            'expectAdminScreenLoads',
           ],
         },
       ],
@@ -77,6 +81,9 @@ export default defineConfig(
         URL: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
+        // Node ≥ 18 web globals (the run-level environment check).
+        fetch: 'readonly',
+        AbortSignal: 'readonly',
       },
     },
   },

@@ -102,7 +102,7 @@ test.describe(
         const afterSave = listOf(await ownProfile(endpoints), [...c.listKeys]);
         const mine = afterSave.find((e) => e[c.nameField] === nameValue);
         const recordId = typeof mine?.[c.idField] === 'string' ? (mine[c.idField] as string) : '';
-        test.skip(!recordId, `could not read back a real ${c.idField}; cannot run the attack`);
+        test.skip(!recordId, `could not read back a real ${c.idField}; nothing to attack`);
 
         let stillPresent = true;
         try {

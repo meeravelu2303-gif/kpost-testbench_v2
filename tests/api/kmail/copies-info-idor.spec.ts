@@ -46,7 +46,10 @@ test.describe(
       process.env.KMAIL_LIFECYCLE !== 'true',
       'sends a real mail; set KMAIL_LIFECYCLE=true',
     );
-    test.skip(!A || !B || !CC || !C, 'needs four distinct QA principals');
+    test.skip(
+      !A || !B || !CC || !C,
+      'needs four distinct QA principals configured (QA_* accounts)',
+    );
 
     test('an outsider cannot read the To/CC recipient list of a mail they are not part of', async ({
       endpoints,

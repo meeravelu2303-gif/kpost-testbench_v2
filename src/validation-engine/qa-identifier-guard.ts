@@ -93,6 +93,10 @@ const NOT_A_RESOURCE = new Set(
      */
     'messagetype',
     'actualmessage',
+    // A notification SETTING name ("Message Preview": "On"/"Off", GeneralSettingServiceImpl), the
+    // caller's own on/off switch, never another account. Matches only because it contains "message";
+    // without it the guard refused the Settings notification flow (full sanity, 2026-10-22).
+    'message preview',
     // The filter enum (`All`/`sent`/`received`) filterKatchUpMessage takes — a closed set of filter
     // modes, not a record identifier. Matches the pattern only because the key contains "message".
     'messageby',

@@ -216,3 +216,85 @@ export function knownFalsePositiveReason(candidate: BugCandidate): string | unde
   }
   return undefined;
 }
+
+/**
+ * Sanity-side judgments: an engine check that FAILS exactly the way a person already ruled "not a
+ * defect" in Bugzilla (INVALID / WONTFIX) is reported as SKIPPED with that ruling, not as a failure, so
+ * a sanity run is not red forever on findings nobody will fix. Separate from `KNOWN_FALSE_POSITIVES`
+ * (which only stops filing) on purpose: each entry here is backed by a closed Bugzilla ticket, and the
+ * match is strict — EVERY failing sub-check must be a judged field (and carry the judged value, where the
+ * ruling depended on it). Any other failing field, or the same field with a different value, still fails.
+ *
+ * Not here on purpose: a ruling that the CHECK itself was wrong is fixed in the validator instead
+ * (#210/#665 `emailId` → common.id, #630 empty optional URL → common.url), and rulings about the
+ * environment rather than the behaviour (e.g. #480, "the endpoint
+ * is unavailable on the test env") — a route that never answers stays a sanity failure.
+ */
+export interface JudgedCheck {
+  /** The Bugzilla ticket whose resolution is the ruling. */
+  bugzilla: number;
+  /** Substring of the endpoint path (definition path, e.g. '/common/getInstantReply/'). */
+  endpoint: string;
+  /** Exact validator name (e.g. 'common.id'). */
+  validator: string;
+  /** Each failing sub-check's name must end with one of these (e.g. 'personalData.emailId'). */
+  fields?: readonly string[];
+  /** When set, each failing sub-check's actual value must match it. */
+  actualPattern?: RegExp;
+  /**
+   * For a check that fails as a whole (no field-level sub-checks, e.g. `response.structure`): the
+   * failure message must contain this exact text — the symptom the ruling was about.
+   */
+  messageContains?: string;
+  reason: string;
+}
+
+export const JUDGED_CHECKS: readonly JudgedCheck[] = [
+  {
+    bugzilla: 943,
+    endpoint: '/common/msStatus/',
+    validator: 'response.structure',
+    messageContains: '"SUCCESS" is not valid JSON',
+    reason:
+      'WONTFIX (#936, #943): the service-status probe answers the bare word SUCCESS by design, not a JSON envelope',
+  },
+  {
+    bugzilla: 830,
+    endpoint: '/common/getInstantReply/',
+    validator: 'common.id',
+    fields: ['.id'],
+    actualPattern: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    reason:
+      'WONTFIX (2026-10-10): built-in instant replies use numeric ids and user-customised ones use UUIDs, by design — a UUID id here is not a defect',
+  },
+];
+
+/**
+ * The Bugzilla ruling that covers this failed check, or undefined when it is not (fully) judged.
+ * `failed` must be every FAILED sub-check of the result, not the truncated message list.
+ */
+export function judgedCheckReason(
+  path: string,
+  validator: string,
+  failed: readonly { name: string; actual?: unknown }[],
+  message = '',
+): string | undefined {
+  for (const j of JUDGED_CHECKS) {
+    if (j.validator !== validator || !path.includes(j.endpoint)) continue;
+    const covered = j.messageContains
+      ? message.includes(j.messageContains)
+      : failed.length > 0 &&
+        failed.every(
+          (check) =>
+            (j.fields ?? []).some((field) => check.name.endsWith(field)) &&
+            (!j.actualPattern ||
+              j.actualPattern.test(
+                typeof check.actual === 'string'
+                  ? check.actual
+                  : (JSON.stringify(check.actual) ?? ''),
+              )),
+        );
+    if (covered) return `judged not a defect in Bugzilla #${j.bugzilla} — ${j.reason}`;
+  }
+  return undefined;
+}

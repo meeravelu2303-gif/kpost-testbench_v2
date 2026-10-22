@@ -275,6 +275,9 @@ test.describe('coverage ledger @framework', () => {
       .all()
 
       .filter((d: EndpointDefinition) => !(d.tags ?? []).includes('undocumented-contract'))
+      // The KMail twin (`defineUndocumentedKmailEndpoint`) marks the same exception with its note
+      // prefix instead of the tag (endpoint tags become test tags), as its own doc comment says.
+      .filter((d: EndpointDefinition) => !(d.note ?? '').startsWith('UNDOCUMENTED IN WORKBOOK'))
       .map((d: EndpointDefinition) => d.contractPath ?? d.path)
       .filter((p: string) => !documentedPaths.has(p) && !p.includes('{'));
     expect(phantom, 'registered endpoints whose documented path is in no contract').toEqual([]);

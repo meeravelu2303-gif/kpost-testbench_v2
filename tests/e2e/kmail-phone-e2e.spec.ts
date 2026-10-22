@@ -25,7 +25,10 @@ test.describe(
       process.env.KMAIL_UI_LIFECYCLE !== 'true',
       'sends real mails; set KMAIL_UI_LIFECYCLE=true',
     );
-    test.skip(!testData.kpostId || !testData.personal3KpostId, 'needs qatest1 and qatest3');
+    test.skip(
+      !testData.kpostId || !testData.personal3KpostId,
+      'needs both QA accounts, qatest1 and qatest3',
+    );
     test.use({ viewport: PHONE });
 
     const waitLoaded = (page: Page) =>

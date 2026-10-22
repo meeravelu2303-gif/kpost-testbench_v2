@@ -43,11 +43,31 @@ export async function openConversation(page: Page, kpostId: string): Promise<voi
   });
   await search.fill(kpostId);
   const hit = page.locator(`[id="${kpostId}"], [id^="${kpostId}-"]`).first();
+  if (await hit.isVisible({ timeout: 10_000 }).catch(() => false)) {
+    await hit.click();
+    return;
+  }
+  // Live 2026-10-22: the Recents search no longer matches a KPOST ID (it did on 2026-10-11; it now
+  // searches message text). Open the chat the way a person does instead: Contacts tab → search →
+  // click the contact, whose row is its avatar image named after it ("qatest2 bench").
+  await page.getByRole('tab', { name: 'Contacts' }).click();
+  const local = kpostId.split('@')[0] ?? kpostId;
+  await page.getByRole('searchbox', { name: 'Search' }).last().fill(local);
+  const contact = page.getByRole('img', { name: new RegExp(`^${local} `, 'i') }).first();
+  await expect(contact, setupStep(`${kpostId} is listed in My Contacts`)).toBeVisible({
+    timeout: 20_000,
+  });
+  // The contact's name opens the chat (the avatar itself does not). Exact text, visible only: the
+  // same name also sits inside longer, hidden Recents message previews.
+  await page
+    .getByText(new RegExp(`^${local} bench$`, 'i'))
+    .filter({ visible: true })
+    .first()
+    .click();
   await expect(
-    hit,
-    setupStep(`the conversation with ${kpostId} is found through the list search`),
+    page.locator('.msg-arrow').first(),
+    setupStep(`the conversation with ${kpostId} opens from Contacts`),
   ).toBeVisible({ timeout: 20_000 });
-  await hit.click();
 }
 
 /** Open the conversation with `kpostId` and open its composer (the `.msg-arrow`). */

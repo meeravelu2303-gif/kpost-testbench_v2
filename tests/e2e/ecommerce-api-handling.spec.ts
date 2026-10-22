@@ -17,9 +17,9 @@ test.describe(
       'needs a real live account (QA_KPOST_ID)',
     );
 
-    // KNOWN OPEN BUG #1342 [KP-ECOMSILENTFAIL], confirmed live 2026-10-14: a failed merchant-list load
-    // renders a silent-empty grid with no error state. fixme (doesn't fail the suite); remove when fixed.
-    test.fixme('a failing merchant-list load shows an error, not a silent-empty grid @ui', async ({
+    // #1342 [KP-ECOMSILENTFAIL] (a failed load rendered a silent-empty grid) was verified FIXED live on
+    // 2026-10-21 ("Unable to load merchants. Please try again." with a Retry link), so this runs again.
+    test('a failing merchant-list load shows an error, not a silent-empty grid @ui', async ({
       page,
     }) => {
       // Force the merchant fetch to return a FAILURE envelope (HTTP 200 carrying a failure, KPost's
@@ -38,7 +38,9 @@ test.describe(
 
       const cards = await page.locator('.ECommerce_Card').count();
       const errorShown = await page
-        .getByText(/unable to|something went wrong|failed to load|please try again|couldn.t load|error/i)
+        .getByText(
+          /unable to|something went wrong|failed to load|please try again|couldn.t load|error/i,
+        )
         .first()
         .isVisible()
         .catch(() => false);

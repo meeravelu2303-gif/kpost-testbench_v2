@@ -3,7 +3,161 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-21 (latest) — A failed setup step is never a bug; Group Info no longer expects Exit Group for an admin
+### 2026-10-22 (latest) — Sanity: slow is a warning, a hang is a failure; the framework suite is green again
+
+**Speed in sanity (owner decision).** In the SMOKE profile (sanity's read sweeps), a `performance.response-time`
+over budget is reported as a `warning` annotation with its timing, not a failure (`endpoint-cases.ts`). Speed on the
+shared test server is environmental and was never filed (validity gate), so it only kept sanity red with no owner.
+`performance.timeout` (no answer at all) still fails, and regression/FULL keep the strict budget. Live 2/2: Home feed
+5.7–8.1 s and global search 1.8–2.3 s pass with warnings; Katchup filter (#480, no answer) still fails.
+
+**Framework suite 316 → 319 passed, 0 failed** (the three failures that were already there):
+
+- `coverage-ledger.spec.ts`: it now also honours the KMail undocumented-endpoint marker (the note prefix "UNDOCUMENTED
+  IN WORKBOOK", which `defineUndocumentedKmailEndpoint` uses instead of the tag, as its own comment says).
+  `getKloudUsedData` is real: the web app calls it (`Setting.js:1009`).
+- `.env.example`: added `QA_NEG_KPOST_ID` / `QA_NEG_PASSWORD` (empty, with a comment).
+- `skip-ledger.spec.ts`: 14 skip messages reworded so each says honestly what kind of skip it is (provision,
+  live condition, defect, by design). Two went further. **The e-commerce merchant-list error test was
+  un-parked** (`test.fixme` → `test`): #1342 was verified fixed on 2026-10-21, and it passes live 2/2. The KMail
+  "API open returns an empty record" park now names #1348, because the browser showed the same empty record
+  today.
+
+### 2026-10-22 — Sanity honours Bugzilla's "not a defect" rulings
+
+A sanity run would stay red forever on findings a person already closed INVALID/WONTFIX: nobody will fix them,
+and `KNOWN_FALSE_POSITIVES` only stops filing, not the test. The 49 failing engine checks of the first full
+sanity were matched to their tickets. Only 5 rulings were "not a defect" (#480, #830, #210, #665, #630); the rest
+are FIXED-but-back or have no ticket, and stay red for the developers. **Decisions:**
+
+- A ruling that **the check itself was wrong** is fixed in the validator, which also corrects filing.
+  `common.id` exempts `emailId` (an e-mail address; #210, #665), and `common.url` treats `""` as an unset
+  optional URL (#630; the same rule as `common.id`'s "" = no reference).
+- A ruling that is **a product decision on one endpoint** goes in `JUDGED_CHECKS`
+  (`src/bug-tracker/known-false-positives.ts`): #830, instant replies mixing numeric ids with UUIDs, WONTFIX.
+  `endpoint-cases.ts` reports such a check as SKIPPED with the ruling and the ticket number (annotation
+  `judged-not-a-defect`), never as passed. The match is strict: EVERY failing sub-check must be a judged field
+  with the judged value (a UUID). One other failing field or value, and it fails as before.
+- **Not honoured:** #480 (INVALID, "the endpoint is unavailable on the test env"). That is a ruling about
+  the environment, not the behaviour; Katchup's message filter and search still never answer, a month on.
+
+Also honoured: #936/#943 WONTFIX (the msStatus probe answers a bare SUCCESS, by design). `JUDGED_CHECKS` gained
+`messageContains` for a whole-check ruling, matching only the exact symptom ('"SUCCESS" is not valid JSON').
+
+**Reopened as REOPENED on the owner's "if those bugs are valid reopen with valid status"** (each replayed live 2/2):
+#577 (KMail `Server: nginx/1.18.0 (Ubuntu)` on every answer; Jitendra), #480 (Katchup filter/search: no answer
+within 30 s; the web app does not call them, but they are published API endpoints; Jaganathan), #551 (cover
+download with no login → 500, while the owner gets 204; Jaganathan). **Not filed:** `isPrivateGroup` "Y"/"N" (already
+open as #934/#941), KMail `getKloudUsedData` envelope (the endpoint is in no contract, so a bench contract gap).
+
+Proven live 2/2: instant-reply `common.id` skipped as #830; msStatus `response.structure` skipped as #943; digital- and mail-signature `common.id`/`common.url`
+pass. Self-tests: `tests/framework/validators/judged-checks.spec.ts`. Separately, the full framework suite has
+3 failures that were already there: `getKloudUsedData` in no contract, `QA_NEG_*` missing from `.env.example`,
+and 14 skip reasons the ledger cannot classify.
+
+### 2026-10-22 — A reopened bug is REOPENED, not CONFIRMED
+
+Owner: when a bug is reopened, its status must be REOPENED. The Bugzilla instance defines it
+(`BUGZILLA-UI/ops/bugzilla/setup-reopened-status.pl`): RESOLVED/VERIFIED → REOPENED needs a comment, and
+REOPENED → CONFIRMED/IN_PROGRESS/RESOLVED. The BUGZILLA-UI dashboards count it on its own card ("Fixes that didn't
+hold"); a reopen to CONFIRMED hides it there. **Changed:** `BugzillaClient.reopen()` (the automated pipeline) sets
+REOPENED and falls back to CONFIRMED only when an instance refuses the status; `scripts/file-approved.cjs` sets
+REOPENED and no longer reopens a bug that is already open (it printed "would comment, not reopen" and then
+reopened anyway). Self-tests in `tests/framework/bug-tracker.spec.ts`. Safe because the bench decides
+"open" from Bugzilla's `is_open` / `resolution=---`, never a status list, so a REOPENED bug is still deduped and
+still gets its dated status note. **Corrected on the owner's "yes":** #835, #836, #837 and #1022 had been reopened as
+CONFIRMED. The workflow has no CONFIRMED → REOPENED move, so each went CONFIRMED → RESOLVED FIXED (its previous
+state) → REOPENED, with a "status correction, not a new fix" comment at each step. All four are now REOPENED.
+
+### 2026-10-22 — Full sanity: first real run, Admin write flow added, User Management API stays read-only
+
+Owner: "cover 100 percentage of sanity". Findings first: every sanity report on disk was a per-module
+run from 2026-10-12 (0–12 tests each). The current full sanity (the read sweep, every screen, the Admin stages;
+about 3,150 tests) had never run end to end, and the KMail half was silently skipped until `KMAIL_AUTH_FIXED`
+joined the runner's flags today. **Added:** the Admin API's core write flow. The self-cleaning org-setup
+lifecycle in `tests/api/admin/feature.spec.ts` (tier → variable → location, HR tier, employee; all deleted;
+no external side effect) now carries `@sanity @admin`, and the runner sets `ADMIN_LIFECYCLE`. Role posting
+stays out: it provisions real KSMACC accounts. **Not added, by safety design:** a User Management API write.
+All 8 are `global` writes, which the always-armed production guard refuses, and that guard is not weakened for
+coverage. Its sanity is the reads plus the screens. Then `npm run test:sanity` was run by hand in full
+(dry run).
+
+**First full run (14:03–14:59): it ran end to end.** KPost API 1,298 passed, 51 failed, 1,134 skipped; KPost UI 83/5/2;
+Admin API 43/26/135; Admin UI 11/0. The skips are almost all "not applicable" (one generated check per endpoint ×
+validator, skipped where it does not apply: not paginated, no date fields, …). The rest are about 24 checks whose
+endpoint timed out, plus the Admin ones behind #13215. Failures, each re-run on its own:
+
+- **Bench faults, fixed.** (1) The Settings notification flow was refused by the QA-identifier guard because the
+  setting name `"Message Preview"` contains "message". It is exempted in `NOT_A_RESOURCE` with a reason. (2) The
+  Kall Contacts count was read before it filled in (the snapshot showed "• 1"); it now polls. Each passes 2/2.
+- **Real, held for the owner.** (a) After logout, opening KMail or Kall crashes to "Something went wrong" instead
+  of the login screen (4/4 in the journey order; a fresh visitor and a slow sequence redirect correctly). No
+  duplicate. (b) The notification saves (Katchup, KMail, Kall) answer 400 "Invalid request" to exactly the keys the
+  backend reads. Per the source comment KPA-836, the swallowed exception was re-labelled 500 → 400, so #835–#837
+  ("500 on notification save", RESOLVED FIXED) are back: reopen candidates.
+- **Known, open:** #13215 (all Admin API failures), #1348, #986, #13207. **Transient:** the kall-dashboard envelope
+  (passes 2/2 alone). **Standing validator findings** (KMail Server-header version disclosure, response-time
+  budgets, id/url/boolean format checks) map to existing tickets, some FIXED and back, some INVALID/WONTFIX. The
+  product filing pipeline decides those (reopen or suppress), not this review.
+- **Filed / reopened on the owner's "yes" (2026-10-22), each replayed live first:** **#13216** (KPost UI › Auth,
+  Ayyappan, major). After logout, KMail and Kall crash ("TypeError: Cannot read properties of null (reading
+  'kpostID')"); 5/5 in the journey order, with screenshots. **#835, #836, #837** reopened (KPost API › General
+  Settings, Jaganathan): the notification saves still answer 400 "Invalid request" to a valid body, 2/2 each, with
+  request ids.
+- Bench fix: `restoreSavedSession` (journey.ts) now tolerates the app's own redirect to /login racing its
+  `goto('/login')`. That race aborted a sign-back-in on 2026-10-22 and left `.auth/user.json` dead (restored by
+  re-running `auth.setup.ts`).
+- The `live-safety.spec.ts` self-test fails only under `run3.ps1`'s `TEST_DB_MODE=true` (which unlocks injection by
+  design); it passes 26/26 in the framework's normal mode.
+
+### 2026-10-22 — Admin joins smoke, in its own stages
+
+The owner pointed `.env` at reachable Admin hosts (API: the Admin test box `192.168.0.38:9595`; UI: a new
+internal build `192.168.1.170:3000`, title "Admin Module", added to the runner's test-host allowlist) and
+asked for Admin smoke coverage. **Decision:** Admin may now carry `@smoke` (always with `@admin`;
+`ADMIN_RUN_LEVELS` in `scripts/test-scope.mjs`). `npm run test:smoke` runs the KPost gate (API → UI), then
+`SMOKE · Admin API` and `SMOKE · Admin UI` whatever KPost's result. An unreachable Admin box is ENVIRONMENT DOWN
+(exit 4) and never blocks the KPost smoke or the regression gate. Smoke: `tests/api/smoke/admin.smoke.spec.ts`
+(one read per Admin area plus no-login → 401) and `tests/e2e-admin/smoke/admin.smoke.spec.ts` (login screen;
+every Admin screen in the SSO'd session). The screen check moved to `tests/e2e-admin/support/admin-screen.ts`,
+shared with Admin sanity. **Live state that day:** the Admin UI loads. The Admin API refuses a request with no
+login in 0.17 s, but every logged-in request waits 30 s and then answers 401 (it cannot verify the KPost token),
+so the Admin API smoke is red for that reason. **Filed as #13215** (KPost Admin › Users, Onboarding & Authentication,
+Jaganathan, critical). It was replayed live at filing with two controls: the same token gets 200 from the KPost API in
+85 ms, and no token gets 401 in 17 ms. It reproduced 4/4, and the duplicate check found nothing. Filed through
+`npm run bug:file` with `MANUAL_BUG=<finding.json>` (Playwright rejects the `--bug=` form). The classification is
+deliberately not `authentication.*`, whose stock "400/403 instead of 401" text would have mis-described this bug.
+#1348 got a dated comment with the 2026-10-22 smoke evidence and the recipient's screenshot.
+
+### 2026-10-22 — Smoke rebuilt: every in-scope module, both layers, checks that can fail
+
+**Before:** 11 checks in two files (`tests/api/smoke.spec.ts`, `tests/e2e/smoke.spec.ts`). They covered 4 of 12
+modules, the API checks asserted only HTTP 200 (KPost often answers 200 with `"status":"FAILURE"`), the
+KMail send swallowed its own errors and never checked delivery, and the last run was 2026-10-13.
+
+**Now:** `tests/api/smoke/` (a data table of 1–3 reads per module, judged on HTTP 200, a SUCCESS envelope,
+the fields the screen needs, the signed-in account's own data, and a hang guard, plus "no login → 401") and
+`tests/e2e/smoke/` (every registry screen per module in its session; real sign-in/out on the spare qatest5;
+Katchup and KMail delivered to the second user's own browser, KMail read and deleted on both sides; Kool Kall
+form; contact search; a group appearing in Katchup; Home/Profile showing the signed-in user; side navigation).
+All 12 module tags on both layers, within the 3-per-module budget. `run-level.mjs` now sets `KMAIL_AUTH_FIXED`
+(KMail smoke would otherwise skip) and checks the hosts answer first: exit code 4 = ENVIRONMENT DOWN, not a
+failure. The KMail body check asserts correct behaviour, so it is red while #1348 is open. Admin stays out of
+smoke (sanity only, unchanged). Not done here: running smoke automatically after a deploy, and alerting.
+
+**Found while building it.** (1) The Katchup Recents search no longer matches a KPOST ID: it searches message
+text (it matched the ID on 2026-10-11). So `openConversation` (shared by every Katchup spec) stopped at its setup
+step whenever the contact was not already on screen. That was the "conversation not found" failure of 2026-10-21
+night, which had no outage behind it. It now falls back to how a person opens a chat: Contacts tab → search →
+click the contact's name. Whether ID search should still work is an owner question, not a filed bug. (2) A
+text match on a contact's name is not proof that the contact is listed: the same name sits in hidden Recents
+message previews. The Contacts smoke now asserts the My Contacts row (the avatar image named after the
+contact). (3) #1348 is real and intermittent. Across 11 KMail smoke attempts on 2026-10-22, 2 showed the text.
+In the others, either the server's open answer was an empty record (`kmailID 0`), or the server sent the text
+but qatest2's opened mail showed only the header. The smoke records the open answer and attaches the
+recipient's screen, so each failure explains itself.
+
+### 2026-10-21 — A failed setup step is never a bug; Group Info no longer expects Exit Group for an admin
 
 **The filing gap.** The full Chrome dry run (run-7e6bfb6d, 14:26–18:37) was hit by an internet outage (15:13–16:18)
 and later by intermittent drops to the login page. Four Katchup tests stopped at "find the conversation through the list

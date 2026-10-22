@@ -31,7 +31,10 @@ test.describe(
       process.env.KMAIL_UI_LIFECYCLE !== 'true',
       'sends real mails; set KMAIL_UI_LIFECYCLE=true',
     );
-    test.skip(!testData.kpostId || !testData.personal3KpostId, 'needs qatest1 and qatest3');
+    test.skip(
+      !testData.kpostId || !testData.personal3KpostId,
+      'needs both QA accounts, qatest1 and qatest3',
+    );
 
     const waitLoaded = (page: Page) =>
       page
@@ -355,7 +358,10 @@ test.describe(
         );
       }
 
-      test.skip(saved === 0 && unknown === 0, 'qatest1 has no outside-domain contacts to open');
+      test.skip(
+        saved === 0 && unknown === 0,
+        'qatest1 has no outside-domain contacts on this account to open',
+      );
       // The first saved outside contact: its picture opens "Edit Reference" (the only edit allowed for
       // outside contacts — closed without saving); its name opens its KMail conversation.
       const avatar = known.locator('xpath=following::div[contains(@class,"sb-avatar")][1]');

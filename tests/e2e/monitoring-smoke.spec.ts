@@ -74,7 +74,7 @@ test.describe(
     test.describe('the core authenticated screens load', () => {
       test.skip(
         !testData.kpostId || testData.kpostId.includes('qa.bench'),
-        'the authenticated checks need a live, logged-in QA account',
+        'the authenticated checks need a real live account (QA_KPOST_ID)',
       );
 
       async function screenLoads(page: Page, route: string, urlRe: RegExp): Promise<void> {

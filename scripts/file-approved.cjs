@@ -12,7 +12,7 @@
  *
  * Safety: dry by default. Every CREATE is preceded by a live duplicate check on the `[KP-]` tag (all
  * statuses) — if any ticket already carries the tag, nothing is created. A `reopened` entry updates
- * its `existingId` (status back to CONFIRMED, resolution cleared) and adds a comment with the evidence;
+ * its `existingId` (status REOPENED, resolution cleared) and adds a comment with the evidence;
  * it refuses if that id is not actually resolved.
  */
 require('D:/TEST-BENCH-AUTOMATIONS/kpost-testbench_v2/node_modules/dotenv').config({
@@ -118,7 +118,9 @@ async function main() {
         (b.status || '').toUpperCase() !== 'VERIFIED' &&
         (b.status || '').toUpperCase() !== 'CLOSED'
       ) {
-        console.log(`  #${existingId} is ${b.status} (already open) — would comment, not reopen.`);
+        // Already open: nothing to reopen (Bugzilla allows REOPENED only from RESOLVED/VERIFIED).
+        console.log(`  #${existingId} is ${b.status} (already open) — not reopened.\n`);
+        continue;
       }
       if (!LIVE) {
         console.log(
@@ -126,12 +128,13 @@ async function main() {
         );
         continue;
       }
+      // REOPENED (not CONFIRMED): the tracker counts fixes that did not hold under that status.
       const upd = await bz('PUT', `/bug/${existingId}`, {
         ids: [existingId],
-        status: 'CONFIRMED',
+        status: 'REOPENED',
         resolution: '',
         comment: {
-          body: `Reopened after live re-verification on testingapi (${new Date().toISOString().slice(0, 10)}): the finding reproduces.\n\n${entry.description}`,
+          body: `Reopened after live re-verification on the test deployment (${new Date().toISOString().slice(0, 10)}): the finding reproduces.\n\n${entry.description}`,
         },
       });
       if (upd.bugs || upd.error === false || upd.id) {

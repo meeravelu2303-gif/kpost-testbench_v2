@@ -7,6 +7,7 @@ import { describeTestData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { formatReport } from '@reporting/report-formatter';
 import { validationRegistry } from '@validators/index';
+import { judgedCheckReason } from '../bug-tracker/known-false-positives';
 import { ProductionSafetyError } from './production-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
 import type { ValidationReport, ValidationResult } from './validation-result';
@@ -167,6 +168,38 @@ export function describeEndpointCases(
             }
             if (result.status === 'SKIPPED') {
               test.skip(true, result.message);
+              return;
+            }
+            // A failure a person already ruled "not a defect" in Bugzilla (every failing sub-check
+            // covered) is reported as skipped with that ruling, never silently passed.
+            const judged =
+              result.status === 'FAILED'
+                ? judgedCheckReason(
+                    endpoint.path,
+                    planned.name,
+                    (result.details ?? []).filter((d) => d.status === 'FAILED'),
+                    result.message,
+                  )
+                : undefined;
+            if (judged) {
+              test.info().annotations.push({ type: 'judged-not-a-defect', description: judged });
+              test.skip(true, judged);
+              return;
+            }
+
+            // Sanity's read sweep (the SMOKE profile): a response over its time budget is a WARNING,
+            // shown with its timing, not a failure. Speed on the shared test server is environmental
+            // and never filed (validity gate). A request that never answers still fails
+            // (`performance.timeout`), and regression keeps the strict budget. Owner, 2026-10-22.
+            if (
+              result.status === 'FAILED' &&
+              planned.name === 'performance.response-time' &&
+              (options.profile ?? env.VALIDATION_PROFILE) === 'SMOKE'
+            ) {
+              test.info().annotations.push({
+                type: 'warning',
+                description: `slow (not failed in sanity): ${result.message}`,
+              });
               return;
             }
 

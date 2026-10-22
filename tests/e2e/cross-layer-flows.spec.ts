@@ -2,7 +2,7 @@ import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { text } from '@database/kpost-assertions';
 import { expect, test } from '@fixtures';
-import type { Locator, Page } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import { gotoContacts, openCreateGroup } from './support/contacts';
 import {
   postAsPage,
@@ -18,7 +18,13 @@ import {
   openComposerFor,
   sendMessage,
 } from './support/katchup';
-import { deleteOpenMail, openMail, openSession, sendMailFromUi } from './journeys/support/journey';
+import {
+  deleteOpenMail,
+  deleteOpenSentMail,
+  openMail,
+  openSession,
+  sendMailFromUi,
+} from './journeys/support/journey';
 
 /**
  * CROSS-LAYER FLOWS (UI → API → DB) for the two messaging modules whose screen actions had no database
@@ -33,25 +39,6 @@ import { deleteOpenMail, openMail, openSession, sendMailFromUi } from './journey
  */
 const FLAGGED = (v: unknown): boolean =>
   ['1', 'y', 'yes', 'true'].includes(String(text(v) ?? v).toLowerCase());
-
-/**
- * Delete the opened mail from the SENDER's side: the sender's mail carries the bell menu
- * (KmailMessageBox.js `bellIconContent`, which lists Delete), the recipient's the reply arrow
- * (journey.ts `deleteOpenMail`). Delete asks with the browser's own confirm box.
- */
-async function deleteOpenSentMail(page: Page): Promise<boolean> {
-  page.once('dialog', (d) => void d.accept().catch(() => undefined));
-  await page.getByTestId('NotificationsNoneIcon').first().click();
-  const menu = page.locator('[role="menu"]');
-  const more = menu.getByText('More', { exact: true }).first();
-  if (await more.isVisible({ timeout: 2_000 }).catch(() => false)) await more.click();
-  const deleted = page.waitForResponse(
-    (r) => /delete/i.test(r.url()) && r.request().method() === 'POST',
-    { timeout: 20_000 },
-  );
-  await menu.getByText('Delete', { exact: true }).first().click();
-  return (await deleted).status() === 200;
-}
 
 test.describe(
   'KPost cross-layer · Katchup and KMail (UI → API → DB)',

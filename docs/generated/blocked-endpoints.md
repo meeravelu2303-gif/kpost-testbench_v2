@@ -2,8 +2,8 @@
 
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`.
 
-**42 of 357** registered endpoints are **not driven against the live app**.
-The rest ARE tested on live: **122** on the default run + **193** via the
+**42 of 358** registered endpoints are **not driven against the live app**.
+The rest ARE tested on live: **123** on the default run + **193** via the
 gated self-cleaning lifecycle flows (`npm run kpost:file`). This file lists ONLY the not-tested.
 
 They are not silent gaps — each is refused for a permanent constraint or a deliberate safety

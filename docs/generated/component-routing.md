@@ -85,13 +85,13 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `admin-workplace-tier-variable-save`
 - `admin-workplace-tier-variable-update`
 
-## KMail API (70 endpoints)
+## KMail API (71 endpoints)
 
 | Component | Endpoints |
 | --------- | --------: |
 | KMail Settings - Signature & Letterhead | 21 |
 | Mailbox, Folders & Follow-up | 20 |
-| Read Mail & Attachments | 13 |
+| Read Mail & Attachments | 14 |
 | Draft Mail | 7 |
 | Contacts & Sync | 4 |
 | Sent Mail - Compose & Send | 4 |
@@ -171,6 +171,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `kmail-download-od-attachment`
 - `kmail-download-thumbnail`
 - `kmail-group-read-status`
+- `kmail-kloud-used-data`
 - `kmail-mail-content`
 - `kmail-media-streaming`
 - `kmail-other-domain-mails`

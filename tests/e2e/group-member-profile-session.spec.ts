@@ -79,7 +79,7 @@ test.describe(
           members: [OTHER!.username],
         });
         const opened = await openGroupConversation(page, group.groupKpostID);
-        test.skip(!opened, 'the new group was not listed in Katchup (four reloads)');
+        test.skip(!opened, 'the new group is absent from Katchup right now (four reloads)');
 
         await page.locator('#ChatTop .background-color-katchup .line_height').first().click();
         const panel = page.locator('#ChatTop .comm_back').first();

@@ -222,7 +222,10 @@ test.describe(
         timeout: 10_000,
       });
       const selected = Number(/:\s*(\d+)/.exec((await counter.textContent()) ?? '')?.[1] ?? 0);
-      test.skip(selected <= 5, `Select All only picked ${selected} messages here — need 6+`);
+      test.skip(
+        selected <= 5,
+        `Select All only picked ${selected} messages here — need 6+, nothing to test right now`,
+      );
       await expect(counter, 'the counter flags the selection as over the limit').toHaveClass(
         /forward-selection-count--over-limit/,
       );

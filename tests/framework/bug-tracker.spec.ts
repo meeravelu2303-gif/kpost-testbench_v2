@@ -827,7 +827,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
   });
 
   test('a defect that comes back after a fix reopens the original ticket', async () => {
-    stubBugzilla([
+    const calls = stubBugzilla([
       {
         id: 9,
         summary: '[KPV2-ABC123] POST /users: expected 400/422, got 500',
@@ -839,6 +839,41 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
 
     expect(reopened.counts.reopened).toBe(1);
     expect(reopened.counts.created).toBe(0);
+    // REOPENED, not CONFIRMED: the tracker counts "fixes that didn't hold" under that status.
+    const update = calls.find((c) => c.method === 'PUT' && /\/bug\/9\?/.test(c.url));
+    expect(update?.body, 'the original ticket is set to REOPENED, with a comment').toMatchObject({
+      status: 'REOPENED',
+      resolution: '',
+      comment: { body: expect.any(String) as unknown },
+    });
+  });
+
+  test('an instance without the REOPENED status reopens as CONFIRMED instead', async () => {
+    const client = new BugzillaClient(config, createLogger('test'));
+    const statuses: string[] = [];
+    globalThis.fetch = ((_url: string, init?: { body?: string }) => {
+      const status = (JSON.parse(init?.body ?? '{}') as { status?: string }).status ?? '';
+      statuses.push(status);
+      const refused = status === 'REOPENED';
+      return Promise.resolve({
+        ok: !refused,
+        status: refused ? 400 : 200,
+        text: () =>
+          Promise.resolve(
+            JSON.stringify(
+              refused
+                ? { error: true, message: 'There is no status named REOPENED' }
+                : { bugs: [] },
+            ),
+          ),
+      } as unknown as Response);
+    }) as unknown as typeof fetch;
+
+    expect(await client.reopen(9, 'still broken')).toEqual({ ok: true });
+    expect(statuses, 'REOPENED first, then the CONFIRMED fallback').toEqual([
+      'REOPENED',
+      'CONFIRMED',
+    ]);
   });
 
   test('a flow-triggered server error never reopens a FIXED ticket: it waits for a live replay', async () => {

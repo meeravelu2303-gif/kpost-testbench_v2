@@ -109,6 +109,9 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
   test(
     'workplace + HR + employee: create → read-back → self-clean @api @admin-api',
     {
+      // The Admin API's core write flow in full sanity (2026-10-22): pure inserts, no external side
+      // effect, every record deleted in `finally`. Role posting (real KSMACC accounts) stays out.
+      tag: ['@sanity', '@admin'],
       annotation: [{ type: 'requirement', description: 'BR-ADM-TIER-ORDER' }],
     },
     async ({ endpoints }) => {

@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/generated/blocked-endp
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **122** |
+| **Runs on live** | **123** |
 | Blocked | 235 |
-| Total registered | 357 |
+| Total registered | 358 |
 
 ---
 
-## Runs on live — 122
+## Runs on live — 123
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -106,6 +106,7 @@ reviewer can check against the comment beside it.
 | `GET` | `/testkmail/v2/draft/getAllDraftMails/` | KMail |
 | `GET` | `/testkmail/v2/draft/getDraftMailsContacts/` | KMail |
 | `POST` | `/testkmail/v2/draft/getDraftMailsForSelectedContact/` | KMail |
+| `GET` | `/testkmail/v2/kmailData/getKloudUsedData` | KMail |
 | `GET` | `/testkmail/v2/sentMail/loadOtherDomainMails/` | KMail |
 | `POST` | `/testkmail/v2/translator/translation/` | KMail |
 | `GET` | `/ai/sessions` | KOS |

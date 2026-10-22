@@ -64,10 +64,14 @@ test.describe('KPost Kall — read-only', { tag: ['@ui', '@kall', '@regression',
       await expect(chip, 'the Contacts screen names the list').toContainText(/My Contacts/i, {
         timeout: 20_000,
       });
-      const total = Number(
-        (await chip.locator('.contact-chip-count').innerText()).replace(/[^\d]/g, ''),
-      );
-      expect(total, 'and shows how many contacts there are').toBeGreaterThan(0);
+      // The count fills in after the contact list loads ("•" first, "• 1" a moment later; full sanity
+      // 2026-10-22 read it too early as 0), so wait for the number rather than reading it once.
+      const countNow = async (): Promise<number> =>
+        Number((await chip.locator('.contact-chip-count').innerText()).replace(/[^\d]/g, ''));
+      await expect
+        .poll(countNow, { message: 'and shows how many contacts there are', timeout: 20_000 })
+        .toBeGreaterThan(0);
+      const total = await countNow();
 
       await chip.click();
       const rows = page.locator('.contact-dropdown-row');

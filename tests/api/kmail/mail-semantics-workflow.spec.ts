@@ -223,11 +223,12 @@ test.describe(
     }) => {
       // OPEN QUESTION (2026-10-14): from the bench's API client this open call returns an empty record
       // (kmailID 0) even after 30 s of retries, while the KMail screen's identical request returns the
-      // full mail (kmail-two-session-e2e.spec.ts records it). Not a confirmed product bug — the read
+      // full mail (kmail-two-session-e2e.spec.ts records it). 2026-10-22: the browser gets the same empty record
+      // intermittently too (the KMail smoke recorded it), which is #1348 — the read
       // status itself works in the browser (opened mails switch to the read colour). Parked, not faked.
       test.fixme(
         true,
-        'API open call returns an empty record from the bench client; browser call works — under investigation',
+        'API open call returns an empty record (kmailID 0) — the intermittent empty-record fault #1348, seen in the browser too on 2026-10-22; parked until it is fixed',
       );
       const subject = `QA read status ${Date.now()}`;
       const kmailID = await send(endpoints, {

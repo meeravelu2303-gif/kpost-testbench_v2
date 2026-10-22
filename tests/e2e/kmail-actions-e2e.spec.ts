@@ -160,7 +160,7 @@ test.describe(
     }) => {
       test.skip(
         browserName !== 'chromium',
-        'reading the clipboard needs a permission Playwright grants only in Chromium',
+        'reading the clipboard needs a permission Playwright grants only in Chromium (Chromium-only by design)',
       );
       const subject = `QA KMail copy ${Date.now()}`;
       const body = await sendPlain(page, subject);

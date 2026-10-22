@@ -24,7 +24,7 @@ export const msStatusApi = defineKpostEndpoint({
   /*
    * The cheapest possible reachability check, and the only common endpoint whose documented response
    * is just `{ status }`. The run-level "is the API up?" smoke check lives in the curated smoke spec
-   * (tests/api/smoke.spec.ts); `@smoke` is reserved for run levels, so it is NOT an endpoint tag here.
+   * (tests/api/smoke/smoke-checks.ts); `@smoke` is reserved for run levels, so it is NOT an endpoint tag here.
    * (Live this returns plaintext `SUCCESS` instead of the documented `{ status }` JSON — an API
    * contract drift the engine surfaces for the normal review workflow; not suppressed, not filed here.)
    */

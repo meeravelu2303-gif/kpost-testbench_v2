@@ -526,6 +526,27 @@
       "source": "kpost:deep (write-fuzz run)",
       "note": "caught by before/after DB diff, not a known hand-written signup path",
       "createdAt": "2026-10-20T10:53:08.696Z"
+    },
+    {
+      "kpostId": "qasf422655@kpostindia.com",
+      "mobileNumber": "7787422655",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-22T10:44:45.902Z"
+    },
+    {
+      "kpostId": "qasf449437@kpostindia.com",
+      "mobileNumber": "7787449437",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-22T10:44:45.903Z"
+    },
+    {
+      "kpostId": "qasf926623@kpostindia.com",
+      "mobileNumber": "7764926623",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-22T10:44:45.903Z"
     }
   ]
 }

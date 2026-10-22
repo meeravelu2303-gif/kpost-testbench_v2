@@ -142,14 +142,27 @@ export class BugzillaClient {
     return result.ok ? { ok: true } : { error: describeFailure(result) };
   }
 
-  /** Reopens a resolved bug and records why, rather than filing a second ticket for one fault. */
+  /**
+   * Reopens a resolved bug and records why, rather than filing a second ticket for one fault.
+   *
+   * The status is REOPENED, not CONFIRMED: the BUGZILLA-UI tracker counts REOPENED on its own
+   * ("Fixes that didn't hold", `ops/bugzilla/setup-reopened-status.pl`), and moving a fixed bug back
+   * to CONFIRMED hides that it came back. Bugzilla requires a comment on the move; we always send one.
+   * An instance without the REOPENED status refuses it, and then CONFIRMED is the fallback.
+   */
   async reopen(bugId: number, comment: string): Promise<{ ok: true } | { error: string }> {
-    const result = await this.call('PUT', `/bug/${bugId}`, {
-      status: 'CONFIRMED',
-      resolution: '',
-      comment: { body: comment },
-    });
-    return result.ok ? { ok: true } : { error: describeFailure(result) };
+    const reopen = (status: string) =>
+      this.call('PUT', `/bug/${bugId}`, { status, resolution: '', comment: { body: comment } });
+    const result = await reopen('REOPENED');
+    if (result.ok) return { ok: true };
+    const fallback = await reopen('CONFIRMED');
+    if (fallback.ok) {
+      this.log.warn(
+        `bug ${bugId}: REOPENED was refused (${describeFailure(result)}); reopened as CONFIRMED`,
+      );
+      return { ok: true };
+    }
+    return { error: describeFailure(result) };
   }
 
   /** Marks a bug RESOLVED/FIXED, recording why (the run that verified the fix). */

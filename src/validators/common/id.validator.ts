@@ -7,8 +7,10 @@ import { createFieldConventionValidator } from './field-convention';
  *   - `companyId` (a company number, e.g. "242"), `countryId` (a reference number, e.g. 1),
  *   - `employeeId` (a human-readable code, e.g. "EMP3411ES").
  * Measured from the live admin responses; see the 2026-09-19 decision-log entry.
+ *   - `emailId` (an e-mail address, e.g. KMail signatures' `personalData.emailId`; its format is the
+ *     `common.email` check's job). Bugzilla #210 / #665, closed INVALID 2026-09-28 for exactly this.
  */
-const NOT_PLATFORM_ID = /^(companyId|countryId|employeeId|ksmaccCompanyID)$/i;
+const NOT_PLATFORM_ID = /^(companyId|countryId|employeeId|ksmaccCompanyID|emailId)$/i;
 
 /** A `*Id` value that means "no reference", not a malformed id — never a defect. */
 function isAbsentId(value: unknown): boolean {

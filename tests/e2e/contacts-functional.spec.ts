@@ -223,7 +223,7 @@ test.describe(
           const spare = [3, 4, 5, 6].find((i) => !taken.has(`qatest${i}@kpostindia.com`));
           test.skip(
             spare === undefined,
-            'every spare QA account is already a contact — nothing new to add',
+            'every spare QA account is already a contact right now — nothing new to add',
           );
           await search!.fill('Qatest');
 
@@ -250,7 +250,7 @@ test.describe(
           const hasResult = at >= 0 && (await firstResult.isVisible().catch(() => false));
           test.skip(
             !hasResult,
-            `the directory search did not list Qatest${spare} Bench — cannot drive add (live condition)`,
+            `the directory search returned no Qatest${spare} Bench right now — cannot drive add`,
           );
           await firstResult.check();
           await page.getByRole('button', { name: 'Add To Contact' }).first().click();

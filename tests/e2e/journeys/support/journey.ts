@@ -179,6 +179,25 @@ export async function deleteOpenMail(page: Page): Promise<boolean> {
   }
 }
 
+/**
+ * Delete the opened mail from the SENDER's side: the sender's mail carries the bell menu
+ * (KmailMessageBox.js `bellIconContent`, which lists Delete), the recipient's the reply arrow
+ * (`deleteOpenMail`). Delete asks with the browser's own confirm box (`cross-layer-flows.spec.ts`).
+ */
+export async function deleteOpenSentMail(page: Page): Promise<boolean> {
+  page.once('dialog', (d) => void d.accept().catch(() => undefined));
+  await page.getByTestId('NotificationsNoneIcon').first().click();
+  const menu = page.locator('[role="menu"]');
+  const more = menu.getByText('More', { exact: true }).first();
+  if (await more.isVisible({ timeout: 2_000 }).catch(() => false)) await more.click();
+  const deleted = page.waitForResponse(
+    (r) => /delete/i.test(r.url()) && r.request().method() === 'POST',
+    { timeout: 20_000 },
+  );
+  await menu.getByText('Delete', { exact: true }).first().click();
+  return (await deleted).status() === 200;
+}
+
 // ----------------------------------------------------------------------------------------- Session
 
 /** Log out through the header pill and its confirm modal (`login-session.spec.ts`, green on live). */
@@ -226,7 +245,15 @@ export async function restoreSavedSession(
 ): Promise<void> {
   // The browser still holds the dead token; drop it so the app shows its login form, not a redirect.
   await page.context().clearCookies();
-  await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+  // The app may be redirecting to /login itself at this moment, which aborts our own goto with
+  // "interrupted by another navigation to …/login" (2026-10-22: that left .auth/user.json dead).
+  // Landing on /login either way is the goal, so only that specific race is tolerated.
+  await page
+    .goto('/login', { waitUntil: 'domcontentloaded', timeout: 45_000 })
+    .catch(async (error: Error) => {
+      if (!/interrupted by another navigation to .*\/login/.test(error.message)) throw error;
+      await page.waitForURL(/\/login/, { timeout: 20_000 });
+    });
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();

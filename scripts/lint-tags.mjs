@@ -8,7 +8,8 @@
 //   - carries a tag not defined in src/config/constants.ts (TAGS) and not @bug-<number>;
 //   - pushes @smoke over budget (default 3 per module per suite, override --budget=N);
 //   - pushes curated @sanity over budget (default 15 per module per suite; @sanity-sweep is exempt);
-// or when an Admin test carries @smoke/@regression (Admin may join SANITY only, with @admin);
+// or when an Admin test carries @regression, or @smoke/@sanity without @admin (Admin joins SANITY and
+// SMOKE only, in its own runner stages);
 // or when full sanity has a hole: a module with in-scope tests in a suite but no @sanity test there,
 // or no Admin API / Admin UI sanity test.
 //
@@ -105,12 +106,14 @@ let inScope = 0;
 for (const { file, title, tags, anns, generated } of seen.values()) {
   if (isMetaPath(file) || isMetaTags(tags)) continue;
   if (isAdminPath(file) || isAdminTags(tags)) {
-    // Admin runs through its own product commands. It may join SANITY (with @admin) and no other
-    // run level: smoke/regression run the KPost accounts and flags, not the Admin ones.
+    // Admin runs through its own product commands and its own run-level stages. It may join SANITY
+    // and SMOKE (with @admin); regression runs the KPost accounts and flags, not the Admin ones.
     const where = `${path.basename(file)} › ${title}`;
     const leaked = RUN_LEVELS.filter((t) => tags.includes(t) && !ADMIN_RUN_LEVELS.includes(t));
     if (leaked.length)
       errors.push(`ADMIN test leaked into a run level (${leaked.join(',')}): ${where}`);
+    if (tags.includes('@smoke') && !tags.includes('@admin'))
+      errors.push(`ADMIN @smoke test without @admin: ${where}`);
     if (tags.includes('@sanity')) {
       if (!tags.includes('@admin')) errors.push(`ADMIN @sanity test without @admin: ${where}`);
       adminSanity[/(^|\/)e2e-admin\//.test(String(file).replace(/\\/g, '/')) ? 'ui' : 'api'] += 1;

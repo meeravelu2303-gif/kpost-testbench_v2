@@ -6,8 +6,9 @@
  * This module is intentionally PURE (no Node built-ins, no `__dirname`) so the plain-Node run-level
  * runner and `lint:tags` can import it directly under Node's native TypeScript loader.
  *
- * Admin has NO module tag on purpose — Admin tests stay out of smoke and regression (they run through
- * the `admin:*` product commands). Since 2026-10-19 they may join SANITY only, through `TAGS.admin`.
+ * Admin has NO module tag on purpose — Admin tests stay out of regression (they run through the
+ * `admin:*` product commands). Through `TAGS.admin` they join SANITY (since 2026-10-19) and SMOKE
+ * (since 2026-10-22), each in the runner's own Admin stages.
  */
 export const TAGS = {
   // --- Run levels (how deep / when) ---
@@ -25,7 +26,8 @@ export const TAGS = {
    */
   sanitySweep: '@sanity-sweep',
   /**
-   * Selects Admin / HR-Setup tests (Admin API, Admin UI) into the SANITY level. Never a module tag of
+   * Selects Admin / HR-Setup tests (Admin API, Admin UI) into the SANITY and (since 2026-10-22) SMOKE
+   * levels, each in its own runner stage. Never a module tag of
    * an in-scope test, and never allowed alongside `@smoke` or `@regression` (lint:tags enforces it).
    */
   admin: '@admin',
