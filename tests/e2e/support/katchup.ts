@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect } from '@playwright/test';
+import { setupStep } from '@ui/setup-step';
 import type { Locator, Page } from '@playwright/test';
 
 /**
@@ -37,12 +38,14 @@ export async function openConversation(page: Page, kpostId: string): Promise<voi
   // (e.g. the QA UI groups, 2026-10-11) push this one out, find it through the list's own search box
   // (`RecentMessage.js` → search categories; result rows are keyed `<kpostId>-<msgID|time>`).
   const search = page.getByPlaceholder('Search').first();
-  await expect(search, 'the Katchup list search box renders').toBeVisible({ timeout: 10_000 });
+  await expect(search, setupStep('the Katchup list search box renders')).toBeVisible({
+    timeout: 10_000,
+  });
   await search.fill(kpostId);
   const hit = page.locator(`[id="${kpostId}"], [id^="${kpostId}-"]`).first();
   await expect(
     hit,
-    `the conversation with ${kpostId} is found through the list search`,
+    setupStep(`the conversation with ${kpostId} is found through the list search`),
   ).toBeVisible({ timeout: 20_000 });
   await hit.click();
 }

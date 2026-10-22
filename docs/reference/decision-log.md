@@ -3,7 +3,37 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-21 (latest) — A full Chrome UI run collapsed on a bench fault: API logins signed the browsers out
+### 2026-10-21 (latest) — A failed setup step is never a bug; Group Info no longer expects Exit Group for an admin
+
+**The filing gap.** The full Chrome dry run (run-7e6bfb6d, 14:26–18:37) was hit by an internet outage (15:13–16:18)
+and later by intermittent drops to the login page. Four Katchup tests stopped at "find the conversation through the list
+search", never reaching their own check, yet the plan listed them as WILL CREATE. Three were duplicates of open
+#1327, #1328 and #1330, and the "send rejected" one had no evidence at all. The error text was new, so the fingerprints
+were new and dedupe missed them. **Decision:** an assertion that only reaches a starting state is marked
+`setupStep(...)` (`src/ui/setup-step.ts`, the `[setup step]` marker). The validity gate rejects any candidate carrying
+the marker, and the status pass treats it like a transient (an open bug is "not re-checked", never "still broken").
+This is an explicit marker, not a guess from wording, so a real failure at the test's own assertion still files.
+First use: the two navigation steps in `tests/e2e/support/katchup.ts` `openConversation`. Self-test in
+`tests/framework/bug-tracker.spec.ts`.
+
+**Group Info.** FR-GM-007 still expected "Exit Group" in an admin's menu. The developer removed it on purpose
+(admins cannot exit, owner rule 2026-10-15; #1367 verified fixed 2026-10-21). The test now asserts the admin is
+**not** offered it.
+
+**Filed from that run:** #1022 (colour contrast, 8 screens) reopened, and #13212 (Write Mail `toLowerCase` error)
+commented, each verified 2/2 alone with screenshots. The four Katchup items were not filed. The outage- and
+login-drop-hit specs are being re-run so that the open bugs get a real re-check.
+
+### 2026-10-21 — RTM-SEC02 Covered: a genuinely expired token is refused (Security 100%)
+
+The last open Security item needed a real token that had passed its `exp`, which no test can mint. The token history
+keeps each QA account's first-to-expire token (fixed 2026-10-20), and by 18:38 IST four qatest tokens (qatest1–4) were
+past their expiry. `tests/api/kpost/signup-login/session-expiry.spec.ts` (api project) ran twice on its own. Both
+times the expired qatest4 token (exp 2026-10-21T12:37:27Z) got HTTP 401 `"Token has expired"`, while the live token
+still worked. The check ran, it was not skipped. **Decision:** RTM-SEC02 is set to Covered (`scripts/rtm-assessed.mjs`).
+Nothing to file.
+
+### 2026-10-21 — A full Chrome UI run collapsed on a bench fault: API logins signed the browsers out
 
 The first full `ui:chromium` dry run (2026-10-20 23:06 → 04:34) reported 334 of 573 failed. Nearly all were "the
 screen did not load": 111 click timeouts, 48 "Katchup list search box renders", "screen mounts" and so on. The

@@ -16,6 +16,7 @@ import {
 } from '../../src/bug-tracker/bug-candidate';
 import { apiFingerprint, normalizeForFingerprint } from '../../src/bug-tracker/bug-fingerprint';
 import { deriveFailureSignals } from '../../src/ui/failure-diagnostics';
+import { setupStep } from '../../src/ui/setup-step';
 import { BugzillaClient } from '../../src/bug-tracker/bugzilla-client';
 import { BugzillaFiler, partialFixKey } from '../../src/bug-tracker/bugzilla-filer';
 import {
@@ -216,6 +217,23 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
         'Kall — crawl @ui: Error: Kall broke while crawling its controls — JS error: Minified React error #327',
     });
     expect(candidateRejection(crash)).toBeUndefined();
+  });
+
+  test('a UI test that stopped at a marked setup step is never filed (run-7e6bfb6d)', () => {
+    const actual = `Error: ${setupStep('the conversation with q***@kpostindia.com is found through the list search')}`;
+    const stopped = candidate({
+      source: 'ui',
+      actual,
+      title: `a delete that the server REJECTS (FAILURE envelope) must tell the user @ui: ${actual}`,
+    });
+    expect(candidateRejection(stopped)).toContain('setup step failed');
+    // The same check failing at its own assertion still files.
+    const real = candidate({
+      source: 'ui',
+      actual: 'Error: a delete the server rejects must surface an error',
+      title: 'a delete that the server REJECTS (FAILURE envelope) must tell the user @ui',
+    });
+    expect(candidateRejection(real)).toBeUndefined();
   });
 
   test('the candidate gate drops noise but keeps real defects', () => {

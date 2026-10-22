@@ -288,12 +288,12 @@ export default class BugzillaReporter implements Reporter {
             )
             .map((e) => e.bugId as number),
         );
-        // A candidate the gate rejected as a timeout / bench fault / throttle is not a reproduction:
-        // it must not mark a bug "confirmed still broken".
+        // A candidate the gate rejected as a timeout / bench fault / throttle / failed setup step is
+        // not a reproduction: it must not mark a bug "confirmed still broken".
         const transient = new Set(
           gate.rejected
             .filter(({ reason }) =>
-              /transient|infrastructure or bench fault|throttled/i.test(reason),
+              /transient|infrastructure or bench fault|throttled|setup step failed/i.test(reason),
             )
             .map(({ candidate }) => candidate.id),
         );

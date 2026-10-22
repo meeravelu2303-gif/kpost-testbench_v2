@@ -1,4 +1,5 @@
 import { meetsSeverityFloor } from '@config/bugzilla.config';
+import { SETUP_STEP_MARKER } from '@ui/setup-step';
 import type { BugCandidate } from './bug-candidate';
 import { knownFalsePositiveReason } from './known-false-positives';
 
@@ -141,6 +142,12 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
     ENVIRONMENTAL_UI_OR_API_FAILURE.test(transient)
   ) {
     return 'a gateway 5xx (502/503/504) or a no-response/timeout is a transient upstream failure (the app did not respond), not a product defect';
+  }
+
+  // The test failed at a step marked as setup (src/ui/setup-step.ts), so it never reached the check
+  // its title names. Read off the record, not guessed: only an explicitly marked assertion matches.
+  if (`${candidate.actual} ${candidate.title}`.includes(SETUP_STEP_MARKER)) {
+    return 'a setup step failed (the test stopped before its own check), so this is not evidence of the defect it names';
   }
 
   const evidence = `${candidate.actual}`;

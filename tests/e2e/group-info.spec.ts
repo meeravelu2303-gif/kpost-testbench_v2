@@ -19,14 +19,15 @@ import { openGroupConversation } from './support/katchup';
  *   FR-GM-001..002  open Group Info from the thread header; an admin sees the admin view
  *   FR-GM-004..006  per-member quick actions (KMail / Katchup / Kall) on another member's row
  *   FR-GM-007       the Group Management three-dot menu (Edit · Add Members · Remove Members ·
- *                   Add Admin · Remove Admin · Exit Group)
+ *                   Add Admin · Remove Admin; no Exit Group for an admin, #1367)
  *   FR-GM-016       the activity feed: an admin action posts a system message into the thread
  *
  * Read from source (`bubble/KatchupMessage/KatchupMessage.js`, 2026-10-10):
  *   - the thread header `ContactBar` (`.background-color-katchup`) `onClick` → `setGroupInfo(true)`;
  *   - the panel renders `#ChatTop .comm_back` titled "Katchup Group Info", a `ContactBar` with
  *     "N Members", the three-dot `.icon-KP_144---More-Vertical` whose menu is `.back_three_color`
- *     (admin-only items guarded by `isGroupAdmin`, "Exit Group" for everyone), a search bar and the
+ *     (admin-only items guarded by `isGroupAdmin`; "Exit Group" only for a plain member since the
+ *     #1367 fix, live 2026-10-21), a search bar and the
  *     member list in `.group_info_height`; every row that is not the viewer carries
  *     `.icon-KP_02-Write-Letter`, `.icon-KP_03-KMail`, `.icon-KP_04-Katchup`, `.icon-KP_05-Kall`
  *     (`NavToComponentGroup`); the creator's row is labelled "Admin" (`.superadmin_font`), other
@@ -191,13 +192,17 @@ test.describe(
             'Remove Members',
             'Add Admin',
             'Remove Admin',
-            'Exit Group',
           ]) {
             await expect(
               menu.getByText(item, { exact: true }),
               `menu offers "${item}"`,
             ).toBeVisible();
           }
+          // Admins cannot exit (owner rule 2026-10-15; fixed with #1367, verified 2026-10-21).
+          await expect(
+            menu.getByText('Exit Group', { exact: true }),
+            'an admin is not offered "Exit Group"',
+          ).toHaveCount(0);
           await panel.locator('.icon-KP_144---More-Vertical').first().click();
           await expect(menu, 'the sheet closes on a second click').toBeHidden();
         } finally {

@@ -197,10 +197,10 @@ export const ASSESSED = [
     id: 'RTM-SEC02',
     module: 'Security',
     summary: 'Session / token expiry enforced',
-    status: 'Partial',
+    status: 'Covered',
     files: ['login-token-security', 'signup-login/session-expiry'],
     notes:
-      "JWT bounded (24 h) + logout revokes server-side + edited exp (extended / back-dated) refused 401 (session-expiry, 2/2). The genuinely-expired-token refusal could never run: the token history kept only the newest 20 and a busy day pushed every aged token out. Fixed 2026-10-20 (each account keeps its first-to-expire token, tests/framework/token-history.spec.ts); the check runs once today's oldest qatest token expires (2026-10-21).",
+      'JWT bounded (24 h) + logout revokes server-side + edited exp (extended / back-dated) refused 401 (session-expiry, 2/2). Genuinely expired token verified 2026-10-21: a real qatest4 token past its exp (2026-10-21T12:37:27Z) was refused HTTP 401 "Token has expired" on two separate runs, while the live token still worked.',
   },
   {
     id: 'RTM-SEC03',

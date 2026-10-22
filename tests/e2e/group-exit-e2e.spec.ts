@@ -13,8 +13,8 @@ import { openGroupConversation } from './support/katchup';
  *
  *   - a plain member sees only "Exit Group", confirms, leaves — and the app must stay usable
  *     (live 2026-10-15: the exit works but the screen crashes, TypeError reading 'group' — #1368);
- *   - a promoted co-admin must NOT be offered "Exit Group" (live: it is, and the exit goes through —
- *     #1367; server side #1366).
+ *   - a promoted co-admin must NOT be offered "Exit Group" (offered until the #1367 fix, verified
+ *     2026-10-21; server side #1366).
  *
  * qatest1 creates the group through the API; qatest2 (STORAGE_STATE_2) drives the screen. Every group
  * is removed in `finally` by qatest1, who stays its admin throughout.
