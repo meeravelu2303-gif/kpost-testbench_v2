@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { databaseConfig } from '@config/database.config';
 import { SUITE_IDS, type SuiteId } from '@config/ownership.config';
 import { isReadOnlyStatement } from '@database/database-client';
@@ -151,5 +152,26 @@ test.describe('read-only statement classification @framework', () => {
     for (const sql of reads) {
       expect(isReadOnlyStatement(sql), `${sql} is a legitimate read`).toBe(true);
     }
+  });
+
+  test('the Admin MongoDB reader has no write path', () => {
+    // src/database/admin-mongo.ts is the only code that touches the Admin backend's MongoDB. It must
+    // stay find/findOne-only: no driver call that writes, and no accessor that hands out the
+    // collection or client for someone else to write with.
+    const source = readFileSync('src/database/admin-mongo.ts', 'utf8');
+    for (const write of [
+      /\.insert(One|Many)?\(/,
+      /\.update(One|Many)?\(/,
+      /\.(delete|remove)(One|Many)?\(/,
+      /\.replaceOne\(/,
+      /\.findOneAnd(Update|Replace|Delete)\(/,
+      /\.bulkWrite\(/,
+      /\.(drop|dropDatabase|createIndex|command|aggregate)\(/,
+    ]) {
+      expect(source, `the reader never calls ${write.source}`).not.toMatch(write);
+    }
+    expect(source, 'the reader never exports the client or a collection').not.toMatch(
+      /export (const|let|function) \w*(client|collection)/i,
+    );
   });
 });

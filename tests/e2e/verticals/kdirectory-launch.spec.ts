@@ -1,6 +1,8 @@
 import { testData } from '@config/test-data.config';
+import { text } from '@database/kpost-assertions';
 import { expect, test } from '@fixtures';
 import type { Locator, Page } from '@playwright/test';
+import { requireKpostDb, rowSummary } from '../support/cross-layer';
 import { parkPointerAwayFromSideMenu } from '../support/katchup';
 
 /**
@@ -57,7 +59,7 @@ async function searchDirectory(
     vertical = 'Personal',
     term = SEARCH_TERM,
   }: { vertical?: 'Personal' | 'Business'; term?: string } = {},
-): Promise<{ rows: Locator; entries: DirEntry[] }> {
+): Promise<{ rows: Locator; entries: DirEntry[]; status?: number }> {
   await page.goto('/kdirectory', { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await page
     .locator('.loader-overlay')
@@ -82,9 +84,13 @@ async function searchDirectory(
   await expect(search, 'the directory search renders').toBeVisible({ timeout: 15_000 });
   // `handleContactSearch` debounces 1 s, then POSTs /contacts/globalSearch/ — wait for that answer so
   // "no rows" can be told apart from "rows not rendered".
-  const answer = page.waitForResponse((r) => r.url().includes('/contacts/globalSearch/'), {
-    timeout: 30_000,
-  });
+  // The box searches as you type: wait for the answer to THIS term, not an earlier partial one.
+  const answer = page.waitForResponse(
+    (r) =>
+      r.url().includes('/contacts/globalSearch/') &&
+      (r.request().postData() ?? '').toLowerCase().includes(`"${term.toLowerCase()}"`),
+    { timeout: 30_000 },
+  );
   await search.fill(term);
   const response = await answer.catch(() => undefined);
   const payload = (await response?.json().catch(() => undefined)) as
@@ -102,7 +108,7 @@ async function searchDirectory(
   await expect(rows.first(), 'the directory lists the matching entries').toBeVisible({
     timeout: 20_000,
   });
-  return { rows, entries: payload?.data ?? [] };
+  return { rows, entries: payload?.data ?? [], status: response?.status() };
 }
 
 async function openFirstProfileCard(page: Page): Promise<Locator> {
@@ -215,6 +221,96 @@ test.describe(
           entries.some((e) => (e.designation ?? e.role) && e.companyName),
           'the search reached entries that carry a role and a company (otherwise nothing was proven)',
         ).toBe(true);
+      },
+    );
+
+    test(
+      'a business directory search shows on screen exactly what the API returned, and the API returns what the database holds @ui',
+      {
+        annotation: [
+          {
+            type: 'cross-layer',
+            description:
+              'KDirectory: Business search on screen → contacts/globalSearch → TBL_KPOST_USER_MASTER + TBL_KPOST_USER_PROFILE',
+          },
+        ],
+      },
+      async ({ page, databases }) => {
+        // Read-only at every layer: a search on the real screen, the reply it got, and the account rows
+        // behind each entry (ContactsDirectoryDaoImpl.globalSearch reads VW_KPOST_USER_DETAIL, a view over
+        // these two tables). The designation the screen leaves out (#13220) is judged in the FR-KD-003
+        // test above; here the screen half checks name and company, so a failure points at one layer.
+        const db = requireKpostDb(databases);
+        const { rows, entries, status } = await searchDirectory(page, {
+          vertical: 'Business',
+          term: 'Nebius',
+        });
+        expect(status, 'API: globalSearch answers 200').toBe(200);
+        expect(entries.length, 'API: the search returned entries to compare').toBeGreaterThan(0);
+
+        await test.step('UI: one row per entry, each showing its name and company', async () => {
+          await expect(rows, 'one row per entry the API returned').toHaveCount(entries.length);
+          const rowBars = page.locator('.contactDir_scrollHeight').first();
+          for (const e of entries) {
+            const name = `${e.firstName ?? ''} ${e.lastName ?? ''}`.trim();
+            await expect(rowBars, `the row for ${e.kpostID} shows "${name}"`).toContainText(name);
+            if (e.companyName)
+              await expect(rowBars, `and the company "${e.companyName}"`).toContainText(
+                e.companyName,
+              );
+          }
+        });
+
+        await test.step('DB: every entry matches its account and profile rows', async () => {
+          type AccountRow = {
+            kpost_id: unknown;
+            first_name: unknown;
+            last_name: unknown;
+            designation: unknown;
+            company_name: unknown;
+          };
+          const ids = entries.map((e) => e.kpostID ?? '');
+          const found = await db.query<AccountRow>(
+            `SELECT m.kpost_id, m.first_name, m.last_name, p.designation, p.company_name
+               FROM TBL_KPOST_USER_MASTER m
+               LEFT JOIN TBL_KPOST_USER_PROFILE p ON p.kpost_id = m.kpost_id
+              WHERE m.kpost_id IN (${ids.map(() => '?').join(', ')})`,
+            ids,
+          );
+          const byId = new Map(found.map((r) => [String(text(r.kpost_id)).toLowerCase(), r]));
+          test.info().annotations.push({
+            type: 'observed',
+            description: `rows: ${found
+              .slice(0, 3)
+              .map((r) =>
+                rowSummary(r, [
+                  'kpost_id',
+                  'first_name',
+                  'last_name',
+                  'designation',
+                  'company_name',
+                ]),
+              )
+              .join(' | ')}`,
+          });
+          const same = (v: unknown): string => String(text(v) ?? '').trim();
+          for (const e of entries) {
+            const row = byId.get(String(e.kpostID).toLowerCase());
+            expect(row, `${e.kpostID} has an account row`).toBeDefined();
+            expect
+              .soft(same(row?.first_name), `${e.kpostID}: first name as stored`)
+              .toBe(same(e.firstName));
+            expect
+              .soft(same(row?.last_name), `${e.kpostID}: last name as stored`)
+              .toBe(same(e.lastName));
+            expect
+              .soft(same(row?.designation), `${e.kpostID}: designation as stored`)
+              .toBe(same(e.designation));
+            expect
+              .soft(same(row?.company_name), `${e.kpostID}: company as stored`)
+              .toBe(same(e.companyName));
+          }
+        });
       },
     );
 

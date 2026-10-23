@@ -3,7 +3,67 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-22 (latest) — the four single-test checks: RTM 97% → 99% (144/145), #13220 and #13221 filed
+### 2026-10-22 (latest) — Admin API and UI: everything that can be covered safely is now written
+
+Meera asked for complete Admin API + UI coverage. Written, not run (owner instruction); first runs need
+#13215 fixed. Researched from the Admin front end (ADMIN_HR_MODULES_25) and backend (Admin_Module) source.
+
+**API: 34 of 38.**
+
+- `role-posting-suspended-list` covered (`reads-workflow.spec.ts`: suspend, terminate and a missing-value
+  control). The September probes misread it: the backend accepts any non-empty `requestType`, and its 400
+  "requestType is Empty or Invalid" is the answer to an EMPTY list (RolePostingSetUpController:348). The UI
+  sends 'suspend' / 'terminate'. The test expects 200 + a list; if the empty-list 400 reproduces, it is a
+  product bug.
+- `role-posting-suspend-terminate` definition corrected: requestType is matched exactly against
+  'suspend' | 'terminate' | 'revoked'. The PDF's "SUSPENDED" never matches (NPE → 500).
+- **Role posting save / update / delete / suspend-terminate: blocked by the product**
+  (`role-posting-blocked.spec.ts`). Every outbound call in RolePostingSetUpServiceImpl goes to HARD-CODED
+  live hosts: `devapi2.kpostindia.com` and `login.ksmacc.in` / `apigateway.ksmacc.in`. One save on the test
+  Admin box would create a real, unremovable account on the live platforms. Already refused in code (the
+  `external` side effect hits the guard's kill-switch; the engine excludes `role-posting-mutation`). Unblock:
+  make those hosts configurable and point the test box at test hosts (raise with Jaganathan).
+
+**UI: every screen now has work done on it, not just load checks.** `tests/e2e-admin` reorganised by menu area:
+`auth/`, `screens/` (load/health/a11y/dead screens), `admin-setup/` (Work Place Setup tier + variable,
+Work Place Location Setup), `human-resources/` (HR Breakdown tier + variable, Employee Data, PAN privacy),
+`cross-layer/`, plus `smoke/`, `sanity/`, `support/`. Each new test creates a QA record on screen, edits it,
+deletes it, checks every request/answer, and cleans up through the API with the page's own token if a step
+fails. Role posting, Assign and Employee Management actions stay out (same live-host block).
+
+**Host guard on every Admin write test** (`support/admin-workflow.ts`): the front-end source hard-codes
+`AdminURL = https://adminmodule.kpostindia.com` (LIVE) and `LoginURL = devapi2`. The test build may differ, so
+each test first proves the screen's Admin calls go to `ADMIN_API_BASE_URL` and skips otherwise, and aborts any
+non-GET to a live host.
+
+**Cross-layer: Admin added** (`cross-layer/admin-cross-layer.spec.ts`). The Admin backend stores its records in
+MongoDB, not MySQL. New read-only reader `src/database/admin-mongo.ts` (find/findOne on `table_admin_*` only;
+`mongodb` 6.21.0 pinned, dev dependency; config `ADMIN_MONGO_URI` / `ADMIN_MONGO_DB`). A self-test in
+`admin-db-safety.spec.ts` fails if a write path is ever added. 13 of 13 in-scope modules now have a
+cross-layer test (KBooking not applicable).
+
+### 2026-10-22 — Cross-layer: KDirectory added, KBooking not applicable, Admin needs a MongoDB decision
+
+Meera asked for 100% cross-layer (UI → API → DB) coverage. No tests were run (owner instruction); the new test
+is written for tomorrow's manual run.
+
+- **KDirectory: new test** in `verticals/kdirectory-launch.spec.ts`, read-only. A Business search for "Nebius" on
+  screen; the captured `globalSearch` reply; then for every entry the `TBL_KPOST_USER_MASTER` +
+  `TBL_KPOST_USER_PROFILE` rows (the backend's `VW_KPOST_USER_DETAIL` view reads these) must hold the same
+  name, designation and company. The screen half checks name and company only; the missing designation is
+  judged by the FR-KD-003 test (#13220), so a failure points at one layer.
+- **Search capture fix:** `searchDirectory` now waits for the reply to the exact term typed. Before, it could catch
+  an earlier partial search as the box debounces, which is how the FR-KD-004 test once read 0 entries with
+  5 rows on screen.
+- **KBooking: not applicable.** Search, trip details and boarding points are passed through from RedBus and
+  not stored. The only database writes are `blockTicket` (holds a real seat; payment flow) and the global
+  city-list refresh. Both are off-limits on the shared server, so there is no safe row to check.
+- **Admin / HR-Setup: not built.** The Admin backend stores its records in **MongoDB**
+  (`admin_enterprise`, e.g. `table_admin_tier_attribute`), not MySQL. The bench has no MongoDB client, and
+  `ADMIN_DB_*` (MySQL) is empty. Building it needs a new dependency plus a read-only connection to the Admin
+  database: owner decision. Admin API logins are also blocked by #13215.
+
+### 2026-10-22 — the four single-test checks: RTM 97% → 99% (144/145), #13220 and #13221 filed
 
 Each check ran on its own (Chromium, or the api project for the size check), retries off, live test deployment.
 

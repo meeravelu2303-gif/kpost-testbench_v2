@@ -1,0 +1,175 @@
+import { testData } from '@config/test-data.config';
+import type { Page } from '@playwright/test';
+import { expect, test } from '@fixtures';
+import { requireAdminUiSession } from '../support/admin-screen';
+import {
+  adminApiAsPage,
+  confirmDelete,
+  expectNoLiveWrites,
+  guardAdminHosts,
+  nextAdminCall,
+  openAdd,
+  openAdminScreen,
+  openList,
+  pickByPlaceholder,
+  requireAdminUiWrites,
+  requireTestAdminApi,
+  rowAction,
+  savedId,
+  tableRow,
+} from '../support/admin-workflow';
+
+/**
+ * Admin UI · **Employee Data** (/employee-data), done on screen: a QA employee is entered through the
+ * six-step "Add Employee Data" form, found in the list, edited and deleted. Read from
+ * `HumanResources/MediumLarge/EmployeeData/{EmployeeData,ManualEntry}.js` (2026-10-22). The record is a
+ * MongoDB row only: no login, invite, mail or SMS (EmployeeDetailsServiceImpl; the "Send user id"
+ * modal is unreachable). The person is obviously fake (example.com mail, test PAN/Aadhaar patterns).
+ * Host-guarded like every Admin write test.
+ */
+const ok = (r: { status: number; body: { status?: string } }): boolean =>
+  r.status === 200 && r.body.status === 'SUCCESS';
+
+const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
+
+async function next(page: Page): Promise<void> {
+  await page.locator('button.nextbutton').first().click();
+}
+
+async function employeeLifecycle(page: Page): Promise<void> {
+  const guard = await guardAdminHosts(page);
+  await openAdminScreen(page, '/employee-data', /Employee Data/);
+  await openList(page);
+  await expect
+    .poll(() => guard.adminHosts.size, { message: 'the screen loaded its data', timeout: 20_000 })
+    .toBeGreaterThan(0);
+  requireTestAdminApi(guard);
+
+  const stamp = Date.now() % 1_000_000;
+  const first = `Qaemp${stamp}`;
+  const last = 'Bench';
+  const edited = 'Benchedit';
+  let id: string | undefined;
+  let deleted = false;
+  try {
+    await test.step('enter a new employee through the six steps and submit', async () => {
+      await openAdd(page);
+      await page.getByText('Add Employee Data', { exact: true }).first().click();
+
+      // Step 1 — personal information (error texts: ManualEntry.js:264-284).
+      await page.locator('#firstName').fill(first);
+      await page.locator('#lastName').fill(last);
+      await page.locator('#dob').fill('1990-01-15');
+      await pickByPlaceholder(page, 'Select Gender', 'Male');
+      await pickByPlaceholder(page, 'Select Marital Status');
+      await page.locator('#mobile').fill(`6${String(stamp).padStart(9, '0')}`);
+      await page.locator('#emailaddress').fill(`qa.employee.${stamp}@example.com`);
+      await pickByPlaceholder(page, 'Select Nationality', 'India');
+      await page.locator('input[name="showDropdown"][value="no"]').check();
+      await next(page);
+
+      // Step 2 — employment.
+      await pickByPlaceholder(page, 'Select Employment Status');
+      await page.locator('#dateOfJoining').fill(isoDate(new Date()));
+      await next(page);
+
+      // Step 3 — address (residential; mailing copied).
+      await pickByPlaceholder(page, 'Select Country', 'India');
+      await page.getByPlaceholder('Enter Zip Code').first().fill(testData.pinCode);
+      await pickByPlaceholder(page, 'Select Area');
+      await page.getByPlaceholder('Enter Address Line 1').first().fill('QA bench street');
+      await page.getByPlaceholder('Enter Address Line 2').first().fill('QA bench area');
+      await page.getByText('Click if Same as Residential Address').first().click();
+      await next(page);
+
+      // Step 4 — education.
+      await pickByPlaceholder(page, 'Select qualification');
+      const institute = page.getByPlaceholder('Enter Institute Name').first();
+      if (await institute.isVisible().catch(() => false)) await institute.fill('QA Institute');
+      else {
+        const creatable = page
+          .locator('[class*="placeholder"]', { hasText: 'Enter Institute Name' })
+          .locator('xpath=following::input[1]');
+        await creatable.fill('QA Institute');
+        await creatable.press('Enter');
+      }
+      await page.getByPlaceholder('Enter your Percentage').first().fill('75');
+      await page.locator('#yearofgraduation-0').fill('2012-05-31');
+      await next(page);
+
+      // Step 5 — work experience: "No" lets the step pass (ManualEntry.js:3050).
+      await pickByPlaceholder(page, 'Select Work Experience', 'No');
+      await next(page);
+
+      // Step 6 — additional, then Submit → the "Confimation" modal → Submit.
+      await pickByPlaceholder(page, 'Select Citizenship');
+      await page.getByPlaceholder('Enter PAN Number').fill('ABCPE1234F');
+      await page.getByPlaceholder('Enter Aadhar Card Number').fill('234123412346');
+      await page.locator('button.addbutton').filter({ hasText: 'Submit' }).first().click();
+      const modal = page.locator('.modal').filter({ hasText: 'Are you sure you want to submit' });
+      const saved = await nextAdminCall(page, '/employeeDetails/save', () =>
+        modal.locator('button.savebutton').click(),
+      );
+      expect(
+        ok(saved),
+        `/employeeDetails/save answers 200 SUCCESS: ${JSON.stringify(saved.body).slice(0, 200)}`,
+      ).toBe(true);
+      id = savedId(saved.body.value);
+      await expect(
+        page.locator('.Toastify__toast').first(),
+        'the screen confirms the save',
+      ).toContainText(/fully Save/i, { timeout: 10_000 });
+    });
+
+    await test.step('the employee is listed, and an edit of the last name is saved', async () => {
+      await openList(page);
+      await rowAction(page, await tableRow(page, first), 'Edit');
+      await expect(page.locator('#firstName'), 'the form reopens with the employee').toHaveValue(
+        first,
+        { timeout: 15_000 },
+      );
+      await page.locator('#lastName').fill(edited);
+      // Edit mode has no validation; step to the end, where "Update" replaces Submit.
+      const update = page.getByRole('button', { name: 'Update' }).first();
+      for (let i = 0; i < 6 && !(await update.isVisible().catch(() => false)); i++)
+        await next(page);
+      const updated = await nextAdminCall(page, '/employeeDetails/update', () => update.click());
+      expect(ok(updated), '/employeeDetails/update answers 200 SUCCESS').toBe(true);
+      await openList(page);
+      await expect(await tableRow(page, first), 'the list shows the new last name').toContainText(
+        edited,
+      );
+    });
+
+    await test.step('delete it', async () => {
+      await rowAction(page, await tableRow(page, first), 'Delete');
+      const removed = await nextAdminCall(page, '/employeeDetails/delete', () =>
+        confirmDelete(page),
+      );
+      expect(ok(removed), '/employeeDetails/delete answers 200 SUCCESS').toBe(true);
+      deleted = true;
+      await expect(
+        page.locator('.Toastify__toast').filter({ hasText: /Employee Deleted/i }),
+      ).toBeVisible({ timeout: 10_000 });
+    });
+
+    expectNoLiveWrites(guard);
+  } finally {
+    if (id && !deleted)
+      await adminApiAsPage(page, '/employeeDetails/delete', { id }).catch(() => undefined);
+  }
+}
+
+test.describe(
+  'Admin UI · Employee Data — create, edit, delete on screen',
+  { tag: '@admin-ui' },
+  () => {
+    test.describe.configure({ timeout: 240_000 });
+    requireAdminUiSession();
+    requireAdminUiWrites();
+
+    test('an employee is entered, edited and deleted on screen @ui', async ({ page }) => {
+      await employeeLifecycle(page);
+    });
+  },
+);

@@ -146,13 +146,18 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
         },
         config,
       );
-    expect(adminUi('tests/e2e-admin/admin-screens.spec.ts', 'Dashboard renders')).toMatchObject({
+    expect(
+      adminUi('tests/e2e-admin/screens/admin-screens.spec.ts', 'Dashboard renders'),
+    ).toMatchObject({
       product: 'KPost Admin UI',
       component: 'General',
       assignee: 'ayyappan@kpostindia.com',
     });
     expect(
-      adminUi('tests/e2e-admin/admin-employee-management-pii.spec.ts', 'Employee list masks PAN'),
+      adminUi(
+        'tests/e2e-admin/human-resources/admin-employee-management-pii.spec.ts',
+        'Employee list masks PAN',
+      ),
     ).toMatchObject({ product: 'KPost Admin UI', component: 'User Management' });
   });
 

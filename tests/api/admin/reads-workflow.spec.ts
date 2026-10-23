@@ -41,4 +41,49 @@ test.describe('Admin module · plain-read business rules @api @admin-api', () =>
       true,
     );
   });
+
+  for (const requestType of ['suspend', 'terminate'] as const) {
+    test(`getSuspendOrTerminateEmployee lists the ${requestType}ed members — an empty list is a list, not an error`, async ({
+      endpoints,
+    }) => {
+      // The Admin UI's own call (EmployeeManagement/Suspend.js:302, Terminate.js:205). The backend
+      // validates only that requestType is present (RolePostingSetUpController:330); a valid request
+      // whose list is empty is answered 400 "requestType is Empty or Invalid" (:348), which tells the
+      // screen its own valid input was wrong. Expected: 200 SUCCESS with the (possibly empty) list.
+      const ex = await endpoints.sendTo(
+        'admin-role-posting-suspended-list',
+        { body: { requestType } },
+        {
+          label: `admin:${requestType}-list`,
+          auth: { principal: businessM! },
+          allowLiveRead: true,
+        },
+      );
+      const env = JSON.parse(ex.bodyText || '{}') as {
+        status?: string;
+        value?: unknown;
+        error?: unknown;
+      };
+      test.info().annotations.push({
+        type: 'observed',
+        description: `HTTP ${ex.status}: ${(ex.bodyText ?? '').slice(0, 200)}`,
+      });
+      expect(ex.status, 'a valid request is answered 200').toBe(200);
+      expect(env.status, 'with a SUCCESS envelope').toBe('SUCCESS');
+      expect(Array.isArray(env.value), 'and the list (empty when nobody is listed)').toBe(true);
+    });
+  }
+
+  test('getSuspendOrTerminateEmployee without a requestType is refused as a bad request', async ({
+    endpoints,
+  }) => {
+    // Control for the test above: the one genuine input error the controller checks.
+    const ex = await endpoints.sendTo(
+      'admin-role-posting-suspended-list',
+      { body: {} },
+      { label: 'admin:suspend-list-no-type', auth: { principal: businessM! }, allowLiveRead: true },
+    );
+    expect(ex.status, 'a missing requestType is a 400').toBe(400);
+    expect(ex.bodyText ?? '', 'naming the missing field').toMatch(/requestType/i);
+  });
 });

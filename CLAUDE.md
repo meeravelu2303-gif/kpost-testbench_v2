@@ -81,7 +81,8 @@ src/ui/                 screens registry (PAUSED_SCREENS), failure-diagnostics
 tests/api/<product>/    per-module specs: *.spec.ts wrappers + feature.spec.ts lifecycle flows; tests/api/kpost/security/*
 tests/e2e/<module>/     UI specs, one folder per module tag: auth home katchup kall kmail contacts group profile
                         settings user-management verticals platform cross-layer (+ journeys/ smoke/ sanity/ support/)
-tests/e2e-admin/, tests/framework/   Admin UI specs, bench self-tests
+tests/e2e-admin/<area>/ Admin UI specs by menu area: auth screens admin-setup human-resources cross-layer
+                        (+ smoke/ sanity/ support/) · tests/framework/   bench self-tests
 contracts/, openapi/    GENERATED from the Excel workbook. Never hand-edit
 docs/                   guides/ (how to run) · reference/ (what the bench is + the decision log) · modules/ · ui/ · scope/
                         · generated/ (written by `framework`; never hand-edit) · audits/ · api-specs/ (the owner's

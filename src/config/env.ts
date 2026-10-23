@@ -132,6 +132,14 @@ const EnvSchema = z.object({
   ADMIN_DB_SSL_CA: z.string().optional(),
   /** Certificate verification for the LIVE Admin database. Turning this off is a worse idea here. */
   ADMIN_DB_SSL_REJECT_UNAUTHORIZED: z.stringbool().default(true),
+  /**
+   * The Admin backend's real store is MongoDB (`Admin_Module` application.properties), not the MySQL
+   * connection above. Read-only reader: `src/database/admin-mongo.ts` exposes find/findOne only.
+   * Unset, the Admin cross-layer checks report SKIPPED with the reason. The URI may carry
+   * credentials: it is never logged.
+   */
+  ADMIN_MONGO_URI: z.string().optional(),
+  ADMIN_MONGO_DB: z.string().default('admin_enterprise'),
 
   // ---- Bugzilla bug filing (see src/config/bugzilla.config.ts)
   /** REST root, e.g. http://192.168.0.50/rest. Unset disables filing entirely. */

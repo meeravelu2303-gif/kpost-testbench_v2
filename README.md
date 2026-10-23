@@ -72,6 +72,7 @@ KPost is one product built from separately maintained modules. Each suite target
     ├── framework/                # Self-tests proving the framework's guarantees (+ `_*.local` manual probes)
     ├── e2e/                      # KPost UI specs
     ├── e2e-admin/                # Admin/HR-Setup UI specs (a separate SPA)
+    │                             #   auth/ screens/ admin-setup/ human-resources/ cross-layer/ smoke/ sanity/ support/
     └── setup/                    # UI auth setup
 ```
 

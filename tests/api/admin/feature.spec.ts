@@ -28,11 +28,9 @@ import { expect, test } from '@fixtures';
  *    creates then deletes every record (teardown in reverse dependency order — deletes are hard, no
  *    cascade). It also drives the id-keyed reads (`getLocation`, `getLocationById`, the reporting
  *    hierarchies, `getRolePostingByCompanyIdAndEmployeeId`) with the real ObjectIds it minted.
- *  - **`ADMIN_ROLE_POSTING_LIVE=true`** (above the first) — role posting. `rolePosting/save` and the
- *    assign (`rolePosting/update`) **provision a real KPost + KSMACC account via external services**
- *    (`RolePostingSetUpServiceImpl.sendKPostUserRequest` → login.ksmacc.in), which **cannot be cleanly
- *    torn down**. So, exactly like KOS's metered AI, it is held behind a SECOND explicit flag and is
- *    owner-authorized; a normal run never provisions an account.
+ *  - **Role posting** (`rolePosting/save`, `/update`, `/delete`, `/suspendOrTerminateEmployee`) is never
+ *    sent: it provisions real accounts on the LIVE KPost and KSMACC platforms (hard-coded hosts in
+ *    `RolePostingSetUpServiceImpl`). Recorded in `role-posting-blocked.spec.ts`.
  *
  * Every write carries `allowLiveWrite: true` (the authorized-write control), runs as the BUSINESS_M
  * admin, and uses `expect.soft` so one run reports every finding.
@@ -45,19 +43,13 @@ import { expect, test } from '@fixtures';
  * belongs to this company. `admin-country-address-by-pincode` is a dependency-free reference lookup,
  * moved to `reads-workflow.spec.ts` instead, ungated.
  *
- * **`admin-role-posting-suspended-list`** (`getSuspendOrTerminateEmployee`) remains genuinely
- * blocked: its `requestType` filter value is Unknown/Requires Clarification. Every value tried live
- * 2026-09-26 — `SUSPEND`, `TERMINATE`, `SUSPEND_TERMINATE`, `ACTIVE`, `INACTIVE`, `ALL`, `Suspended`,
- * `suspended`, `SUSPENDED_TERMINATED`, `BOTH`, plus numeric/boolean/null variants and alternate field
- * names (`status`, `type`, `requestStatus`, `employeeStatus`) — 400s identically to the originally
- * documented `"SUSPENDED"`. No frontend source for this build was available to confirm the real
- * enum. See `needs-id-workflow.spec.ts`.
+ * **`admin-role-posting-suspended-list`** is covered in `reads-workflow.spec.ts` (2026-10-22). The
+ * 2026-09 probes misread it: the backend accepts any non-empty `requestType`, and its 400
+ * "requestType is Empty or Invalid" is the answer to an EMPTY list, not to a bad value. The UI sends
+ * 'suspend' / 'terminate'.
  *
- * **`ADMIN_ROLE_POSTING_LIVE` is a documented but UNWIRED gate**: no code anywhere in this repo
- * actually checks `process.env.ADMIN_ROLE_POSTING_LIVE`, so `admin-role-posting-save`/`-update`/
- * `-delete`/`-suspend-terminate` have never been run, even with the flag set. Wiring it up would make
- * this flow able to run for the first time — not done without explicit owner sign-off first, since
- * it provisions a real, non-reversible external KSMACC account per run. See `needs-id-workflow.spec.ts`.
+ * **Role posting writes are blocked by the product, not by a flag:** see `role-posting-blocked.spec.ts`.
+ * The test Admin backend calls the live devapi2.kpostindia.com and ksmacc hosts, hard-coded.
  */
 
 const K = AUTH_PROFILES.kpost;

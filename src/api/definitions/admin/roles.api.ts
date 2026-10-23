@@ -44,16 +44,15 @@ export const adminRolesApis: EndpointDefinition[] = [
     method: 'POST',
     path: '/rolePosting/getSuspendOrTerminateEmployee',
     summary: 'List suspended / terminated employees',
-    tags: ['role-posting', 'needs-id'],
-    // Verified on the test host (2026-09-19): even with the PDF's `{ companyId, requestType:
-    // "SUSPENDED" }` the backend answers 400 `"requestType is Empty or Invalid"` — so "SUSPENDED"
-    // is NOT the accepted enum value (nor was the earlier 'suspend'). The correct value is unknown
-    // (likely "SUSPEND"/"TERMINATE" or a code — confirm with the dev). Until confirmed this is NOT
-    // productionSafe: a standalone call 400s and reads as a false CRITICAL. Driven by the lifecycle,
-    // which knows the real value, or re-enable once the dev confirms the enum.
-    request: body(() => ({ requestType: 'SUSPENDED' })),
+    tags: ['role-posting'],
+    // The value the Admin UI sends (EmployeeManagement/Suspend.js:302 'suspend', Terminate.js:205
+    // 'terminate'); the backend accepts any non-empty requestType (RolePostingSetUpController:330).
+    // Its 400 "requestType is Empty or Invalid" is NOT an input error: it is what the controller
+    // answers when the list is EMPTY (:348). The 2026-09 probes read that as a bad enum — every value
+    // tried was valid, the QA company simply had nobody suspended. An empty list should be 200 + [].
+    request: body(() => ({ requestType: 'suspend' })),
     destructive: false,
-    note: 'requestType enum "SUSPENDED" rejected (400 "requestType is Empty or Invalid") — confirm the real value with the dev',
+    productionSafe: true,
   }),
   defineAdminEndpoint({
     id: 'admin-role-posting-by-company-and-employee',
@@ -124,12 +123,17 @@ export const adminRolesApis: EndpointDefinition[] = [
     // Same external-call class as save/update/delete — see the note there.
     tags: ['role-posting', 'role-posting-mutation'],
     // DANGEROUS: only ever an expendable member the lifecycle created — never a seeded member.
-    // Authoritative payload (owner's PDF, 2026-09-19): { employeeId, companyId, requestType, reason }.
-    // The field is `requestType` (not `status`), value UPPERCASE "SUSPENDED".
+    // The Admin UI's body (EmployeeManagement/Suspend.js:273, Terminate.js:176, Revoke.js:168):
+    // requestType is matched EXACTLY against 'suspend' | 'terminate' | 'revoked'
+    // (RolePostingSetUpServiceImpl:901-918; any other value NPEs into a 500). The PDF's "SUSPENDED"
+    // never matches. Never sent: suspend/revoke call devapi2 holdOrRelease, terminate calls
+    // apigateway.ksmacc.in + devapi2 terminateUser — live hosts, hard-coded.
     request: body(() => ({
-      employeeId: 1,
-      requestType: 'SUSPENDED',
+      rolePostingId: '000000000000000000000000',
+      employeeId: '000000000000000000000000',
+      requestType: 'suspend',
       reason: 'QA lifecycle',
+      remarks: 'QA lifecycle',
     })),
     destructive: true,
     sideEffect: 'external',
