@@ -40,6 +40,7 @@ async function send(
   id: string,
   body: unknown,
   label: string,
+  minted: readonly (string | number)[] = [],
 ): Promise<{ status: number; env: Envelope; text: string }> {
   const ex = await endpoints.sendTo(
     id,
@@ -48,6 +49,8 @@ async function send(
       label: `role-posting:${label}`,
       auth: { principal: businessM! },
       allowLiveWrite: true,
+      // Ids THIS test's save just minted (the posting's kpostID / KSMACC ids) — trusted for this call only.
+      ownedIdentifiers: minted,
       // The save/assign/terminate steps call KPost and KSMACC before answering.
       timeoutMs: 60_000,
     },
@@ -60,6 +63,13 @@ async function send(
     env = {};
   }
   return { status: ex.status, env, text };
+}
+
+/** The identifiers the server minted for OUR posting (from our own save/list response), never literals. */
+function mintedBy(posting: Record<string, unknown>): Array<string | number> {
+  return ['kpostID', 'ksmaccID', 'ksmaccCompanyID']
+    .map((k) => posting[k])
+    .filter((v): v is string | number => typeof v === 'string' || typeof v === 'number');
 }
 
 const ok = (r: { status: number; env: Envelope }): boolean =>
@@ -290,12 +300,16 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
           type: 'observed',
           description: `save → HTTP ${saved.status}: ${saved.text.slice(0, 300)}`,
         });
-        expect(ok(saved), 'role posting saved (200 SUCCESS) — #13235').toBe(true);
         const first = (Array.isArray(saved.env.value) ? saved.env.value[0] : undefined) as
           { savedEntities?: Array<Record<string, unknown>>; statusMessage?: string } | undefined;
-        expect(first?.statusMessage, 'a new posting, not "Already exists"').toBeUndefined();
+        // Record the id FIRST, so cleanup always deletes the posting even if a check below fails.
         posting = first?.savedEntities?.[0] ?? {};
         postingId = typeof posting.id === 'string' ? posting.id : undefined;
+        expect(ok(saved), 'role posting saved (200 SUCCESS) — #13235').toBe(true);
+        // A new posting answers statusMessage "saved" (live 2026-10-23); a duplicate says "Already exists …".
+        expect(first?.statusMessage ?? '', 'a new posting, not "Already exists"').not.toMatch(
+          /already exists/i,
+        );
         expect(postingId, 'the saved posting has an id').toBeTruthy();
         expect(String(posting.companyId), 'stored for the QA company').toBe('242');
         expect(posting.kpostID, 'a KPost id was generated for the posting').toBeTruthy();
@@ -316,24 +330,26 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         const assign = await send(
           endpoints,
           'admin-role-posting-update',
+          // Exactly the Assign Role Posting screen's body (AssignRolePosting.js:322-331): the posting row
+          // spread in, plus the employee — no rolePostingId (the screen's line is commented out). Live
+          // 2026-10-23 this gets 400 "rolePostingId is required", and adding it gets 400 "Request
+          // parameter is invalid" (the entity has no such field) — #13237.
           {
+            companyId: '242',
             ...posting,
-            rolePostingId: postingId,
             employeeId: empId,
             userType: 'BUSINESS_M',
             companyName,
             requestType: 'reallocate',
-            isKpostIDRequired: false,
-            isPromoted: false,
-            isTransfered: false,
           },
           'assign',
+          mintedBy(posting),
         );
         test.info().annotations.push({
           type: 'observed',
           description: `assign → HTTP ${assign.status}: ${assign.text.slice(0, 300)}`,
         });
-        expect(ok(assign), 'the employee is assigned (200 SUCCESS)').toBe(true);
+        expect(ok(assign), 'the employee is assigned (200 SUCCESS) — #13237').toBe(true);
         assigned = true;
         expect(field(assign.env.value, 'employeeId'), 'the posting now names the employee').toBe(
           empId,
@@ -367,6 +383,7 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
             ...extra,
           },
           requestType,
+          mintedBy(posting),
         );
 
       await test.step('suspend the employee; they appear in the suspended list', async () => {
@@ -443,6 +460,7 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
             duration: JSON.stringify({ dateOfTermination: today(), name: 'QA cleanup' }),
           },
           'cleanup-terminate',
+          mintedBy(posting),
         ).catch(() => undefined);
       if (postingId)
         await send(

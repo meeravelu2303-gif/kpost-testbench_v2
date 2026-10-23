@@ -418,6 +418,37 @@ test.describe('live-application safety @framework', () => {
     expect(foreign.map((offence) => offence.path)).toEqual(['body.companyId']);
   });
 
+  test('per-call minted identifiers: only the exact values, only for that call', () => {
+    /*
+     * `SendOptions.ownedIdentifiers` (owner-approved 2026-10-23, Admin role posting): a lifecycle may pass
+     * the exact values its own write just minted — e.g. the kpostID the server generated for a posting.
+     * Values, never key names: a stranger's kpostID in the same payload is still refused, and the same
+     * payload without the per-call list is refused as before.
+     */
+    const payload = {
+      body: { kpostID: 'qarote171.ns@kpost.in', ksmaccCompanyID: 1083, employeeId: 'x' },
+    };
+    expect(
+      foreignIdentifiers(payload).map((o) => o.path),
+      'without the per-call list, both minted values are refused',
+    ).toEqual(['body.kpostID', 'body.ksmaccCompanyID']);
+    expect(
+      foreignIdentifiers(payload, ['qarote171.ns@kpost.in', 1083]),
+      'with them, the exact minted values pass',
+    ).toEqual([]);
+    expect(
+      foreignIdentifiers({ body: { ...payload.body, kpostID: 'limson@kpostindia.com' } }, [
+        'qarote171.ns@kpost.in',
+        1083,
+      ]).map((o) => o.path),
+      'a different kpostID in the same key is still refused',
+    ).toEqual(['body.kpostID']);
+    expect(
+      foreignIdentifiers({ body: { companyId: 4 } }).map((o) => o.path),
+      'the list does not leak into the next call',
+    ).toEqual(['body.companyId']);
+  });
+
   test('bulk id arrays of tenant identifiers are checked element by element', () => {
     /*
      * A list of another user's kpostIDs — the shape `removeGroupMember` / `modifyKallMembers` take —

@@ -424,8 +424,17 @@ export interface GuardedRequest {
  *
  * Separated from the throwing wrapper so a test can assert on the findings without catching.
  */
-export function foreignIdentifiers(request: GuardedRequest): Offence[] {
+export function foreignIdentifiers(
+  request: GuardedRequest,
+  minted: readonly (string | number)[] = [],
+): Offence[] {
   const owned = qaOwnedValues();
+  // Exact values this ONE request's own flow just created (see `SendOptions.ownedIdentifiers`); never
+  // a key-wide exemption, never shared with another call.
+  for (const value of minted) {
+    const v = String(value).trim().toLowerCase();
+    if (v) owned.add(v);
+  }
   const found: Offence[] = [];
   walk(request.body, 'body', owned, found);
   walk(request.query, 'query', owned, found);
@@ -444,10 +453,11 @@ export function assertQaOwnedIdentifiers(
   request: GuardedRequest,
   label: string,
   isProduction: boolean,
+  minted: readonly (string | number)[] = [],
 ): void {
   if (!isProduction) return;
 
-  const foreign = foreignIdentifiers(request);
+  const foreign = foreignIdentifiers(request, minted);
   if (!foreign.length) return;
 
   const detail = foreign

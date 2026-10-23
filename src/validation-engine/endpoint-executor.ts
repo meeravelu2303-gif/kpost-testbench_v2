@@ -53,6 +53,14 @@ export interface SendOptions {
    * to text (see SafetyFlags). Required for any API call to the forgot-password senders.
    */
   noSmsRecipient?: boolean;
+  /**
+   * Exact identifier VALUES this call's own flow just minted (e.g. the kpostID the server generated
+   * for a role posting the same test saved a moment earlier), so the QA-identifier guard accepts
+   * them for THIS request only. Values, never key names: every other identifier in the payload is
+   * still checked. Only an owner-approved lifecycle spec sets it, from its own write's response —
+   * never the engine, never a literal (owner-approved 2026-10-23, Admin role posting).
+   */
+  ownedIdentifiers?: readonly (string | number)[];
 }
 
 const MAX_ERROR_BODY_CHARS = 300;
@@ -161,6 +169,7 @@ export class EndpointExecutor {
       { body: spec.body, query: spec.query, pathParams: spec.pathParams },
       options.label ?? endpoint.label,
       env.IS_PRODUCTION,
+      options.ownedIdentifiers,
     );
 
     const request = RequestBuilder.for(options.method ?? endpoint.method, endpoint.path)

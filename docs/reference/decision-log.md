@@ -3,6 +3,41 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
+### 2026-10-23 (latest) — Role posting: save fixed (#13235 verified), assign broken (#13237 filed); guard gets per-call minted ids
+
+- **#13235 verified fixed:** `/rolePosting/save` → 200 SUCCESS (statusMessage "saved"), in a verification run plus a full
+  run; dated comment added. The lifecycle's save check expected no statusMessage, which was a bench fault, now
+  fixed. The posting id is now recorded **before** any check, so cleanup always deletes it. The one posting the
+  interrupted run left (6adb5fa3…) was deleted by id (200).
+- **QA-identifier guard, owner-approved option 1:** `SendOptions.ownedIdentifiers` lists exact identifier
+  VALUES that this call's own flow just minted (here the posting's server-generated kpostID / ksmaccID /
+  ksmaccCompanyID, taken from our own save response). The guard trusts them for that one request only.
+  - It never exempts a key name, and every other identifier is still checked.
+  - Self-test in `live-safety.spec.ts`: without the list the values are refused; only the exact values pass; a
+    stranger's kpostID in the same key is still refused; nothing carries over to the next call. 27/27 pass.
+- **#13237 filed** (critical, Jaganathan): assigning an employee is impossible.
+  - `/rolePosting/update` requires rolePostingId, but RolePostingEntity has no such field, so convertValue throws
+    → 400 "Request parameter is invalid". Without it → 400 "rolePostingId is required". The screen sends none.
+  - Replayed 2/2 with three variants (screen body, + rolePostingId, minimal).
+  - Filed in the exact tracker template with curl, checked through the tracker's own `parse()`.
+  - The lifecycle now sends the screen's exact assign body and is red on #13237. Suspend, revoke, terminate
+    and delete remain blocked behind it.
+- 17 more leftover fuzz locations deleted (all 200).
+
+### 2026-10-23 (latest) — Full Admin API run (with role posting): #642 and #654 verified fixed, #13235 still open
+
+Full Admin dry run, run-8394620b (`tests/api/admin`, product flags + `ADMIN_ROLE_POSTING_LIVE=true`): 127 passed, 10 failed,
+134 skipped. The plan had 0 to file. The one held item (role-posting save → 500, KP-D431DC) is #13235, so it was
+not refiled.
+
+- **#642 → RESOLVED FIXED**: replayed alone 2/2, `[{}]` now gets 400 "locationName is required".
+- **#654 → RESOLVED FIXED**: the script-tag and SQL location-name checks pass 2/2 (full run plus isolated fuzz run).
+- **#13235**: reproduced 3/3; dated comment added.
+- The remaining failures are known non-defects: "missing field accepted" (#641/#637 INVALID), the empty
+  suspended list (#320), `isExperienced` text (known false positive), and the company-scoped list reads that
+  correctly answer 200 to an empty body.
+- 25 leftover fuzz locations from today's runs were deleted (all 200).
+
 ### 2026-10-23 (latest) — Role posting enabled for the QA company; #13234 WONTFIX; #13235 filed (save → 500)
 
 - **Owner decisions (in order):**
