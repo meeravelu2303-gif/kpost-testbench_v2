@@ -1,3 +1,4 @@
+import { env } from '@config/env';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import { body } from '../kpost/kpost-endpoint';
 import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
@@ -14,6 +15,16 @@ import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
  *   rolePosting/suspendOrTerminateEmployee   suspend/terminate a member (DANGEROUS — expendable only)
  *   rolePosting/getSuspendOrTerminateEmployee list suspended/terminated members (read)
  */
+
+/*
+ * Role-posting writes are refused on every run (`external`) unless the owner-authorized lifecycle flag is set
+ * (2026-10-23: KPost calls go to testingapi; KSMACC has no test server and the live one is accepted for the QA
+ * testing companies, #13234 WONTFIX). With ADMIN_ROLE_POSTING_LIVE=true they are QA-company test-data writes
+ * for `role-posting-lifecycle.spec.ts` only; the `role-posting-mutation` tag keeps them out of every fuzzer.
+ */
+const ROLE_POSTING_SIDE_EFFECT = env.ADMIN_ROLE_POSTING_LIVE
+  ? ('data' as const)
+  : ('external' as const);
 
 export const adminRolesApis: EndpointDefinition[] = [
   // ---- reads ---------------------------------------------------------------------------------
@@ -90,7 +101,7 @@ export const adminRolesApis: EndpointDefinition[] = [
       },
     ]),
     destructive: true,
-    sideEffect: 'external',
+    sideEffect: ROLE_POSTING_SIDE_EFFECT,
   }),
   defineAdminEndpoint({
     id: 'admin-role-posting-update',
@@ -102,7 +113,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     tags: ['role-posting', 'role-posting-mutation'],
     request: body(() => ({ id: 1, employeeId: 1, rolePostingId: 1 })),
     destructive: true,
-    sideEffect: 'external',
+    sideEffect: ROLE_POSTING_SIDE_EFFECT,
   }),
   defineAdminEndpoint({
     id: 'admin-role-posting-delete',
@@ -113,7 +124,7 @@ export const adminRolesApis: EndpointDefinition[] = [
     tags: ['role-posting', 'role-posting-mutation'],
     request: body(() => ({ id: 1 })),
     destructive: true,
-    sideEffect: 'external',
+    sideEffect: ROLE_POSTING_SIDE_EFFECT,
   }),
   defineAdminEndpoint({
     id: 'admin-role-posting-suspend-terminate',
@@ -136,6 +147,6 @@ export const adminRolesApis: EndpointDefinition[] = [
       remarks: 'QA lifecycle',
     })),
     destructive: true,
-    sideEffect: 'external',
+    sideEffect: ROLE_POSTING_SIDE_EFFECT,
   }),
 ];

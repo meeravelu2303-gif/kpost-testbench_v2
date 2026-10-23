@@ -87,6 +87,8 @@ const TEST_HOSTS = new Set([
   // Admin test deployment (CLAUDE.md §1): the API test box and the Admin UI. The live counterpart
   // (adminmodule.kpostindia.com) is deliberately absent, so pointing at it is refused.
   '192.168.0.38',
+  // The Admin API test box's new address (owner, 2026-10-23).
+  '192.168.10.38',
   // The Admin UI test build on the internal network (owner, 2026-10-22).
   '192.168.1.170',
   'kpostadmin.kpostindia.com',

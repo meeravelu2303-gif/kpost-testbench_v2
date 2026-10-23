@@ -217,6 +217,13 @@ const EnvSchema = z.object({
    * confined to accounts we own. Intended for a DISPOSABLE business company. Off by default.
    */
   ADMIN_LIFECYCLE: z.stringbool().default(false),
+  /**
+   * Admin ROLE POSTING lifecycle (save → assign → suspend → revoke → terminate → delete). Owner-authorized
+   * 2026-10-23 for the QA testing companies only: KPost calls go to testingapi (Admin_Module d7abadf) and
+   * KSMACC has no test server, so the live one is accepted (#13234 WONTFIX). Off by default; only the
+   * dedicated lifecycle spec sends these endpoints (the engine never fuzzes `role-posting-mutation`).
+   */
+  ADMIN_ROLE_POSTING_LIVE: z.stringbool().default(false),
 
   HEADLESS: z.stringbool().default(true),
   WORKERS: z.coerce.number().int().positive().optional(),

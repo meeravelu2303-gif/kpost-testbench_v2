@@ -202,6 +202,14 @@ const schema = z.object({
    */
   otpMobile: z.string().min(6).default('9000000002'),
   otpEmail: z.string().email().default('qa.bench+otp@kpost.in'),
+  /**
+   * The Admin role-posting test EMPLOYEE (role-posting-lifecycle.spec.ts): the mobile and email the employee
+   * record carries, which the assign step pushes to KPost (testingapi) and KSMACC. Throwaway values the team
+   * owns or that reach nobody (the assign SMS template does not send, owner 2026-10-23). Trusted by the
+   * QA-identifier guard ONLY when set explicitly in .env (IDENTITY_FIELDS) — defaults are never trusted.
+   */
+  roleEmployeeMobile: z.string().min(6).default('9000099901'),
+  roleEmployeeEmail: z.string().email().default('qa.role.employee@example.com'),
   /** An OTP that is certainly wrong, for the rejection path. */
   invalidOtp: z.string().min(4).default('000000'),
   /**
@@ -285,6 +293,8 @@ const SOURCES = {
   pinCode: 'QA_PINCODE',
   otpMobile: 'QA_OTP_MOBILE',
   otpEmail: 'QA_OTP_EMAIL',
+  roleEmployeeMobile: 'QA_ROLE_EMPLOYEE_MOBILE',
+  roleEmployeeEmail: 'QA_ROLE_EMPLOYEE_EMAIL',
   invalidOtp: 'QA_INVALID_OTP',
   bypassOtp: 'QA_BYPASS_OTP',
   forgotPasswordKpostId: 'QA_FORGOT_PASSWORD_KPOST_ID',
@@ -343,6 +353,8 @@ const IDENTITY_FIELDS = [
   'mobileExists',
   'otpMobile',
   'otpEmail',
+  'roleEmployeeMobile',
+  'roleEmployeeEmail',
   'companyId',
   'companyName',
   'companyNameAbsent',

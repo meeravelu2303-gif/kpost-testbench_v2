@@ -43,13 +43,13 @@ test.describe('Admin module · plain-read business rules @api @admin-api', () =>
   });
 
   for (const requestType of ['suspend', 'terminate'] as const) {
-    test(`getSuspendOrTerminateEmployee lists the ${requestType}ed members — an empty list is a list, not an error`, async ({
+    test(`getSuspendOrTerminateEmployee answers the ${requestType} list (#320: an empty list may be a 400)`, async ({
       endpoints,
     }) => {
-      // The Admin UI's own call (EmployeeManagement/Suspend.js:302, Terminate.js:205). The backend
-      // validates only that requestType is present (RolePostingSetUpController:330); a valid request
-      // whose list is empty is answered 400 "requestType is Empty or Invalid" (:348), which tells the
-      // screen its own valid input was wrong. Expected: 200 SUCCESS with the (possibly empty) list.
+      // The Admin UI's own call (EmployeeManagement/Suspend.js:302, Terminate.js:205). A list with members
+      // is 200 SUCCESS + the array. An EMPTY list is answered 400 "requestType is Empty or Invalid"
+      // (RolePostingSetUpController:348); #320 (adopting this finding's tag, KP-63C403) was closed INVALID
+      // by the team, so that answer is accepted as "nobody listed" and never re-filed. Anything else fails.
       const ex = await endpoints.sendTo(
         'admin-role-posting-suspended-list',
         { body: { requestType } },
@@ -68,22 +68,31 @@ test.describe('Admin module · plain-read business rules @api @admin-api', () =>
         type: 'observed',
         description: `HTTP ${ex.status}: ${(ex.bodyText ?? '').slice(0, 200)}`,
       });
-      expect(ex.status, 'a valid request is answered 200').toBe(200);
+      if (ex.status === 400) {
+        expect(env.error, 'the empty-list answer accepted under #320').toBe(
+          'requestType is Empty or Invalid',
+        );
+        return;
+      }
+      expect(ex.status, 'a list with members is answered 200').toBe(200);
       expect(env.status, 'with a SUCCESS envelope').toBe('SUCCESS');
-      expect(Array.isArray(env.value), 'and the list (empty when nobody is listed)').toBe(true);
+      expect(Array.isArray(env.value), 'and the list').toBe(true);
     });
   }
 
-  test('getSuspendOrTerminateEmployee without a requestType is refused as a bad request', async ({
+  test('getSuspendOrTerminateEmployee without a body is refused as a bad request', async ({
     endpoints,
   }) => {
-    // Control for the test above: the one genuine input error the controller checks.
+    // Control: an empty body is the one genuine input error; the server checks the body before the field
+    // (live 2026-10-23: 400 "Request body is empty or invalid").
     const ex = await endpoints.sendTo(
       'admin-role-posting-suspended-list',
       { body: {} },
       { label: 'admin:suspend-list-no-type', auth: { principal: businessM! }, allowLiveRead: true },
     );
-    expect(ex.status, 'a missing requestType is a 400').toBe(400);
-    expect(ex.bodyText ?? '', 'naming the missing field').toMatch(/requestType/i);
+    expect(ex.status, 'an empty body is a 400').toBe(400);
+    expect(ex.bodyText ?? '', 'saying what is wrong with the request').toMatch(
+      /requestType|body is empty or invalid/i,
+    );
   });
 });

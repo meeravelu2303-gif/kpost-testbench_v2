@@ -3,7 +3,64 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-22 (latest) — Admin API and UI: everything that can be covered safely is now written
+### 2026-10-23 (latest) — Role posting enabled for the QA company; #13234 WONTFIX; #13235 filed (save → 500)
+
+- **Owner decisions (in order):**
+  1. KPost calls now go to testingapi (Admin_Module d7abadf).
+  2. The assign SMS template does not send.
+  3. **KSMACC has no test server, so the live one is accepted** for the QA testing companies only.
+
+  **#13234** (live KSMACC from the test box, filed from the source) is therefore **RESOLVED WONTFIX** with that
+  decision recorded.
+
+- **Bench:**
+  - Role-posting writes are refused (`external`) unless `ADMIN_ROLE_POSTING_LIVE=true`, which makes them
+    QA-company test-data writes (`roles.api.ts`, `env.ts`). The `role-posting-mutation` tag still keeps them
+    out of every fuzzer.
+  - A first attempt at this change was refused by a permission check. It was made after the owner's explicit
+    go-ahead.
+- **New `role-posting-lifecycle.spec.ts`** (replaces `role-posting-blocked.spec.ts`). It runs save → assign →
+  suspend → revoke → terminate → delete on fresh org records, then deletes everything in reverse order.
+  - Payloads are the screens' own.
+  - The company name is read live, never invented ("Nebius Solutions").
+  - It refuses to run for any company but 242.
+- **QA-identifier guard:** the employee's made-up mobile and email were refused, which is correct. They are now
+  a reserved identity, `QA_ROLE_EMPLOYEE_MOBILE` / `QA_ROLE_EMPLOYEE_EMAIL` (IDENTITY_FIELDS: trusted only when
+  set in `.env`, like every QA identity). The guard itself is unchanged.
+- **#13235 filed** (critical, Jaganathan): `POST /rolePosting/save` → 500 "KPOST user creation failed".
+  - The Admin server's call to testingapi `/admin/addingUserByAdmin/` answers 500.
+  - Reproduced 2/2 in fresh runs; no duplicate in Role Postings, admin-module-application, Users/Onboarding
+    or KPost API.
+  - Everything after the save is blocked until it is fixed.
+- Earlier the same day: `isExperienced` (string, by design) was added to KNOWN_FALSE_POSITIVES. A second dry run
+  left 17 fuzz locations, which were deleted.
+
+### 2026-10-23 — KPost Admin re-test at its new address: #654 and #642 reopened, #13215 verified
+
+Owner: "test this product only" — the Admin API moved to `http://192.168.10.38:9595` (now in `run-level.mjs`
+TEST_HOSTS and CLAUDE.md). Dry run `product:kpost-admin` (run-ab440f10): 124 passed, 13 failed, 134 skipped;
+1,132 checks → 5 defects → plan: 0 new, 1 reopen, 1 held, 3 judged-skip. Every item replayed alone before filing.
+
+- **#654 REOPENED** (KP-DAB2AA): `/location/save` stores `<script>…</script>` (and SQL text) in locationName unchanged.
+  Write-fuzz run alone 2/2; the same check passes on every other Admin save. Filed via `file-approved.cjs`, plus a
+  plain-English note.
+- **#642 REOPENED** (KP-79E6CE, held for review): `/location/save` with `[{}]` → 500 "Cannot invoke
+  String.split … designation is null", replayed alone 2/2. Reopened by hand (file-approved skips held items).
+- **#13215 verified fixed**: the four calls from the report answer 200 with data in 1–5 s. **This Bugzilla has no
+  VERIFIED status**: a verified fix stays RESOLVED FIXED with a dated comment.
+- **Judged-skip, left closed:** KP-71FF93 (#641) and KP-9D4721 (#637), "missing attributeId accepted"
+  (INVALID). KP-63C403 (empty suspended list → 400) is adopted by **#320 INVALID**, so it is now in `JUDGED_CHECKS`.
+  `reads-workflow.spec.ts` accepts that answer, and its control accepts the real "Request body is empty or
+  invalid" message.
+- **Not product defects** (no candidates): the company-scoped list reads answer 200 to an empty body because the
+  company comes from the token. The generic empty-body/invalid-payload checks expect 400 there.
+- **Bench fault found:** the write-fuzz battery's "best-effort cleanup" leaves accepted fuzz locations behind.
+  162 QA locations had piled up in company 242; today's 33 were deleted (all 200). The 129 older ones
+  (29 Sep – 9 Oct) await the owner.
+- **Not re-tested:** the hand-filed security bugs the developer marked fixed today (#1043–#1046, #1048–#1050).
+  They are to be decided with the owner one at a time.
+
+### 2026-10-22 — Admin API and UI: everything that can be covered safely is now written
 
 Meera asked for complete Admin API + UI coverage. Written, not run (owner instruction); first runs need
 #13215 fixed. Researched from the Admin front end (ADMIN_HR_MODULES_25) and backend (Admin_Module) source.

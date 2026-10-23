@@ -46,6 +46,15 @@ export interface KnownFalsePositive {
  * reflecting it) — confirm them before relying on the suppression.
  */
 export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
+  {
+    endpoint: '/employeeDetails/getEmployeeDetails',
+    validator: 'common.boolean',
+    field: 'isExperienced',
+    reason:
+      'workExpObj.isExperienced is TEXT by design: the entity declares it a String (Admin_Module EmployeeDetailsEntity.java:117) and the Admin screen sends the dropdown label "Yes"/"No" (ManualEntry.js:1263). The generic is*-is-boolean check does not apply.',
+    judgedBy: 'QA triage (run-ab440f10, source-confirmed)',
+    date: '2026-10-23',
+  },
   /*
    * The two date judgments below are CLASS matches (endpoint + field + the judged value), not
    * fingerprints: the finding's count ("21/625" → "42/1295") changes every run, which mints a new
@@ -266,6 +275,14 @@ export const JUDGED_CHECKS: readonly JudgedCheck[] = [
     actualPattern: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     reason:
       'WONTFIX (2026-10-10): built-in instant replies use numeric ids and user-customised ones use UUIDs, by design — a UUID id here is not a defect',
+  },
+  {
+    bugzilla: 320,
+    endpoint: '/rolePosting/getSuspendOrTerminateEmployee',
+    validator: 'response.status-code',
+    messageContains: 'expected 200, got 400',
+    reason:
+      'INVALID (#320, adopting KP-63C403): an EMPTY suspended/terminated list is answered 400 "requestType is Empty or Invalid" — accepted by the team as "nobody listed"',
   },
 ];
 

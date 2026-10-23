@@ -1,8 +1,9 @@
-import { createHash } from 'node:crypto';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
+import { FILES, uniqueName } from '@fixtures/files';
 import { expect, test } from '@fixtures';
+import { deleteUploaded, uploadFile } from '../../support/attachments';
 
 /**
  * Katchup **attachment byte integrity** (RTM-CON04): the file the RECIPIENT downloads must be the
@@ -27,16 +28,6 @@ const principal = (key: string): Principal => {
 const A = principal('personal'); // sender
 const B = principal('victim'); // recipient (sendShape's default receiver)
 
-/** A PDF-typed payload carrying every byte value, so a lossy decode anywhere changes the digest. */
-function binaryPayload(): Buffer {
-  const every = Buffer.from(Array.from({ length: 256 }, (_, i) => i));
-  return Buffer.concat([
-    Buffer.from('%PDF-1.4\n%QA integrity\n', 'latin1'),
-    ...Array.from({ length: 8 }, () => every),
-    Buffer.from('\n%%EOF\n', 'latin1'),
-  ]);
-}
-
 test.describe(
   'KPost Katchup · attachment byte integrity',
   {
@@ -44,6 +35,8 @@ test.describe(
     annotation: [{ type: 'requirement', description: 'RTM-CON04' }],
   },
   () => {
+    // Each file read takes ~12 s on the test server (#1364); several in a row outlast the 60 s default.
+    test.describe.configure({ timeout: 180_000 });
     test.skip(
       process.env.KATCHUP_LIFECYCLE !== 'true' || process.env.AWS_LIFECYCLE !== 'true',
       'uploads a real file to S3 and sends a real message; set KATCHUP_LIFECYCLE=true and AWS_LIFECYCLE=true',
@@ -52,33 +45,17 @@ test.describe(
     test('the recipient downloads exactly the bytes the sender uploaded (length + SHA-256)', async ({
       endpoints,
     }) => {
-      const content = binaryPayload();
-      const expected = createHash('sha256').update(content).digest('hex');
-      const fileName = `qa-integrity-${Date.now()}.pdf`;
       let uuid: string | undefined;
       let msgID: number | undefined;
       try {
-        const presign = await endpoints.sendTo(
-          'aws-katchup-presigned',
-          { body: { extension: 'pdf', fileName, fileSize: String(content.length) } },
-          { label: 'integrity:presign', auth: { principal: A }, allowLiveWrite: true },
-        );
-        expect(presign.status, 'generate-presigned-url succeeds').toBeLessThan(300);
-        // Bare link on older builds, a { presignedURL } JSON envelope since #942 — accept both.
-        const raw = presign.bodyText.trim();
-        const url = raw.startsWith('{')
-          ? String((JSON.parse(raw) as { presignedURL?: string }).presignedURL ?? '')
-          : raw.replace(/^"|"$/g, '');
-        uuid = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(url)?.[1];
-        expect(uuid, 'the presigned URL names a uuid').toBeTruthy();
-        if (!uuid) return;
-
-        const put = await fetch(url, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/pdf' },
-          body: new Uint8Array(content),
+        const up = await uploadFile(endpoints, A, FILES.integrity, {
+          route: 'katchup',
+          name: uniqueName(FILES.integrity, 'integrity'),
+          label: 'integrity:presign',
         });
-        expect(put.status, 'the direct S3 upload succeeds').toBeLessThan(300);
+        uuid = up.uuid;
+        const content = up.bytes;
+        const expected = up.sha256;
 
         const sent = await endpoints.sendTo(
           'katchup-send-message',
@@ -123,14 +100,7 @@ test.describe(
               { label: 'integrity:cleanup-message', auth: { principal: A }, allowLiveWrite: true },
             )
             .catch(() => undefined);
-        if (uuid)
-          await endpoints
-            .sendTo(
-              'aws-delete-attachment',
-              { pathParams: { uuid } },
-              { label: 'integrity:cleanup-file', auth: { principal: A }, allowLiveWrite: true },
-            )
-            .catch(() => undefined);
+        await deleteUploaded(endpoints, A, uuid, 'integrity:cleanup-file');
       }
     });
   },
