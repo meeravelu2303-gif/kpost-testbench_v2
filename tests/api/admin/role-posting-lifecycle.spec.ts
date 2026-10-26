@@ -7,6 +7,8 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import type { ValidationEngine } from '@engine/validation-engine';
 import { formatReport } from '@reporting/report-formatter';
 import { expect, test } from '@fixtures';
+import { employeePayload, locationPayload } from './support/screen-payloads';
+import { ADMIN_RESPONSE_SCHEMAS } from '@api/definitions/admin/response-schemas';
 
 /**
  * Admin **role posting, end to end** on the QA testing company (BUSINESS_M, company 242): build the org
@@ -53,6 +55,7 @@ async function send(
       label: `role-posting:${label}`,
       auth: { principal: businessM! },
       allowLiveWrite: true,
+      allowLiveRead: true,
       // Ids THIS test's save just minted (the posting's kpostID / KSMACC ids) — trusted for this call only.
       ownedIdentifiers: minted,
       // The save/assign/terminate steps call KPost and KSMACC before answering.
@@ -214,18 +217,7 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         const loc = await send(
           endpoints,
           'admin-workplace-location-save',
-          [
-            {
-              attributeId: wpAttrId,
-              variableId: wpVarId,
-              locationName: name('Location'),
-              reportingWorkplaceLocation: '[{"variableId":"0","workplaceLocationId":"0"}]',
-              reportingWorkplaceLocationId: '0',
-              pincode: testData.pinCode,
-              countryName: 'India',
-              countryId: 1,
-            },
-          ],
+          [locationPayload(wpAttrId!, wpVarId!, name('Location'))],
           'location',
         );
         locId = savedId(loc.env.value);
@@ -257,24 +249,10 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         const emp = await send(
           endpoints,
           'admin-employee-save',
-          {
-            personalInformationObj: {
-              firstName: 'QA',
-              lastName: `Role${String(stamp).slice(-6)}`,
-              dob: '1990-01-15',
-              gender: 'Male',
-              mobile: testData.roleEmployeeMobile,
-              emailAddress: testData.roleEmployeeEmail,
-              disability: false,
-            },
-            residentialObj: {
-              residentialCountry: 'India',
-              residentialState: 'Tamil Nadu',
-              residentialCity: 'Chennai',
-              residentialZipCode: testData.pinCode,
-            },
-            employmentObj: {},
-          },
+          // The screen's full record. Until 2026-10-26 this employee had no additional information on
+          // purpose (#13242's crash case); the server now requires it, so that case cannot be created any
+          // more — #13242 was verified fixed the same day.
+          employeePayload(`Role${String(stamp).slice(-6)}`),
           'employee',
         );
         empId = savedId(emp.env.value);
@@ -439,6 +417,17 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
           { requestType: 'suspend' },
           'suspended-list',
         );
+        // The only point where this list is certainly non-empty (empty answers 400, #320), so its response
+        // schema is checked here rather than by the engine.
+        const shape = ADMIN_RESPONSE_SCHEMAS['admin-role-posting-suspended-list']!.safeParse(
+          JSON.parse(list.text || '{}'),
+        );
+        expect
+          .soft(
+            shape.success,
+            `the suspended list matches its response schema: ${shape.error?.message ?? ''}`,
+          )
+          .toBe(true);
         expect(list.text, 'the suspended list names the posting — #13242').toContain(
           String(postingId),
         );
@@ -600,18 +589,7 @@ test.describe('Admin · role posting field rules on the QA testing company @api 
       );
       const locId = await create(
         'admin-workplace-location-save',
-        [
-          {
-            attributeId: wpAttrId,
-            variableId: wpVarId,
-            locationName: name('RF Location'),
-            reportingWorkplaceLocation: '[{"variableId":"0","workplaceLocationId":"0"}]',
-            reportingWorkplaceLocationId: '0',
-            pincode: testData.pinCode,
-            countryName: 'India',
-            countryId: 1,
-          },
-        ],
+        [locationPayload(wpAttrId, wpVarId, name('RF Location'))],
         'location',
       );
       const hrAttrId = await create(
@@ -733,15 +711,13 @@ test.describe('Admin · role posting field rules on the QA testing company @api 
         delete body[field];
         const r = await send(endpoints, 'admin-role-posting-save', [body], `save-without-${field}`);
         // The exact exchange, so a filed bug's curl carries the real data.
-        test
-          .info()
-          .annotations.push(
-            { type: `request save-without-${field}`, description: JSON.stringify([body]) },
-            {
-              type: `save-without-${field}`,
-              description: `HTTP ${r.status} ${r.text.slice(0, 400)}`,
-            },
-          );
+        test.info().annotations.push(
+          { type: `request save-without-${field}`, description: JSON.stringify([body]) },
+          {
+            type: `save-without-${field}`,
+            description: `HTTP ${r.status} ${r.text.slice(0, 400)}`,
+          },
+        );
         // A refusal may come as 400, or as 200 with nothing saved; what must not happen is a new posting.
         const created = await ours(c.hrVarId, String(c.body.displayName));
         created.forEach((id) => postings.add(id));

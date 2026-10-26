@@ -6,6 +6,7 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { apiRegistry } from '@api/definitions/index';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
+import { employeePayload } from './support/screen-payloads';
 
 /**
  * Response times of all 38 Admin endpoints, measured from repeated SEQUENTIAL calls (never parallel: this is
@@ -137,24 +138,8 @@ const location = (attributeId: string, variableId: string, label: string): Json 
   countryId: 1,
   countryName: 'India',
 });
-const employee = (label: string): Json => ({
-  personalInformationObj: {
-    firstName: 'QA',
-    lastName: `Lat ${label} ${stamp}`,
-    dob: '1990-01-15',
-    gender: 'Male',
-    mobile: testData.roleEmployeeMobile,
-    emailAddress: testData.roleEmployeeEmail,
-    disability: false,
-  },
-  residentialObj: {
-    residentialCountry: 'India',
-    residentialState: 'Tamil Nadu',
-    residentialCity: 'Chennai',
-    residentialZipCode: testData.pinCode,
-  },
-  employmentObj: {},
-});
+// The Employee Data screen's full record (the server enforces its required fields since 2026-10-26).
+const employee = (label: string): Json => employeePayload(`Lat ${label} ${stamp}`);
 
 test.describe('Admin · response times of all 38 endpoints @api @admin-api @performance', () => {
   test.describe.configure({ timeout: 600_000 });
@@ -271,13 +256,7 @@ test.describe('Admin · response times of all 38 endpoints @api @admin-api @perf
           'admin-employee-update',
           'admin-employee-delete',
           employee(`C${i}`),
-          {
-            personalInformationObj: {
-              firstName: 'QA',
-              lastName: `Lat C${i} edited ${stamp}`,
-              disability: false,
-            },
-          },
+          employee(`C${i} edited`),
           false,
         );
       }

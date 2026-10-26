@@ -3,7 +3,46 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-26 (latest) — Latency of all 38 Admin endpoints measured (sequential, not load)
+### 2026-10-26 (latest) — Response schemas on all 38 Admin endpoints; input hardening; #13257/#13258 filed
+
+Owner: "cover response schemas, XSS on updates, oversized payloads".
+
+- **Response schemas** (`src/api/definitions/admin/response-schemas.ts`), from the backend classes at 829331d:
+  types only (fields optional + nullable; envelope and record `id` required; unknown keys allowed), each
+  route's `value` shaped as its controller returns it. Wired in `defineAdminEndpoint` (`config.responseSchema
+  ?? ADMIN_RESPONSE_SCHEMAS[id]`). **All 38 pass live.** The HR reporting hierarchy returns ONE record (its
+  workplace twin a list) — my schema was wrong, corrected. The suspended list (empty → 400, #320) is
+  schema-checked inside the role-posting lifecycle, where it is non-empty.
+- **New `tests/api/admin/input-hardening.spec.ts`** (6 record types; role postings excluded: their text goes
+  to KPost/live KSMACC): markup on every free-text field on UPDATE, and an oversized value (100 KB; 1 MB got
+  no answer at all) on save and update.
+  **#13257** (Security): employee update stores `<script>`/`<img onerror>` in first name, residential address
+  line 1 and institute name (only last name is checked, #651); 4/4 runs; tier/variable/location updates refuse.
+  **#13258** (Security): no length limit — 100 KB names stored on all 12 save/update endpoints; variable and
+  location calls answer after > 60 s, and the records keep landing minutes later (1 MB: up to ~20 min).
+- The oversized part is opt-in (`ADMIN_OVERSIZE=true`) while #13258 is open: its delayed writes outlive the
+  test's clean-up. All delayed leftovers from these runs were removed (backed up); DB clean.
+
+### 2026-10-26 — Karan's fixes verified; Admin moved to 192.168.11.11; #13255 reopened
+
+Owner: "Karan fixed those open bugs … test full admin api, reopen if broken, file new bugs". Backend 829331d.
+
+- **Verified fixed** (2 clean full runs, dated notes; stay RESOLVED FIXED): #13245, #13246, #13249, #13251,
+  #13252, #13253, #13254. **#13255 REOPENED** (latency: assign p95 2.1–2.6 s, terminate 1.7–2.1 s, save up to
+  2.7 s vs 1.5 s). No new product bugs.
+- The fixes made the server require complete records, which broke the bench's own minimal setup payloads:
+  all Admin specs now share `tests/api/admin/support/screen-payloads.ts` (the screens' full payloads). The
+  write fuzz's batteries take an explicit `required` list (optional keys are never expected refused).
+- SQL-looking text stored verbatim is no longer a fuzz failure (it is data on MongoDB; #13251 allows it) —
+  otherwise a filing run would have reopened #827. Markup (XSS) stays strict.
+- 5 id-keyed Admin reads were defaulting to destructive (POST) and are now `destructive: false`; the read
+  fuzz this exposes (null/numeric id → 200) is recorded in known-false-positives.ts per developer rulings
+  #331/#337/#355, and the endpoint matrix honours those entries.
+- The Admin server went down at 10.10.50.7 mid-run (run stopped, void); owner gave the correct address
+  `192.168.11.11:9595` (same data). `ADMIN_MONGO_URI` and CLAUDE.md updated; verdicts re-confirmed there in
+  2 more full runs; one leftover QA employee from the stopped run removed (backed up).
+
+### 2026-10-26 — Latency of all 38 Admin endpoints measured (sequential, not load)
 
 Owner: "check the latency issues also". New `tests/api/admin/latency.spec.ts`: 10 sequential samples per read,
 5 save → update → delete cycles per record type, 3 live role-posting cycles; p50/p95/max per endpoint vs the

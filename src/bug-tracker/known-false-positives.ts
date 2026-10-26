@@ -46,6 +46,25 @@ export interface KnownFalsePositive {
  * reflecting it) — confirm them before relying on the suppression.
  */
 export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
+  /*
+   * Input fuzz on Admin READS keyed by an id (2026-10-26: these reads were correctly marked non-destructive,
+   * so the engine now fuzzes their input). A null or numeric id answers 200 with an empty result. The same
+   * class on sibling reads was closed INVALID by the developers: #331 (getAllLocation), #337
+   * (getAdminTierVariable), #355 (getHrSetUpTierVariable). Reads only; a write that accepts bad input is
+   * still filed.
+   */
+  ...(
+    ['/location/getLocation', '/rolePosting/getRolePostingByCompanyIdAndEmployeeId'] as const
+  ).flatMap((endpoint) =>
+    (['request.null-value', 'request.data-type'] as const).map((validator): KnownFalsePositive => ({
+      endpoint,
+      validator,
+      reason:
+        'A read answering 200 (empty result) to a null or wrongly-typed id is not a defect: judged INVALID by the developers for the same class on sibling reads (#331, #337, #355).',
+      judgedBy: 'QA triage, following developer rulings #331/#337/#355',
+      date: '2026-10-26',
+    })),
+  ),
   {
     endpoint: '/employeeDetails/getEmployeeDetails',
     validator: 'common.boolean',

@@ -18,6 +18,7 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
+import { employeePayload, locationPayload, variablePayload } from './support/screen-payloads';
 
 const K = AUTH_PROFILES.kpost;
 const businessM: Principal | undefined = K.principals.find((p) => p.key === 'business-m');
@@ -30,6 +31,30 @@ const name = (label: string): string => `QA FUZZ ${label} ${stamp}`;
  * locations and HR variables per run).
  */
 const acceptedByFuzz: Array<[deleteEndpointId: string, recordId: string]> = [];
+
+/*
+ * What the screens require (the same rules as field-rules-sweep.spec.ts). The batteries remove or null ONLY
+ * these keys from a full screen payload, so an optional field is never expected to be refused.
+ */
+const VARIABLE_REQUIRED_ON_UPDATE = ['id', 'attributeId', 'variableName', 'parentVariableId'];
+const LOCATION_REQUIRED = [
+  'attributeId',
+  'variableId',
+  'locationName',
+  'countryName',
+  'pincode',
+  'state',
+  'city',
+  'area',
+];
+const EMPLOYEE_REQUIRED_SECTIONS = [
+  'personalInformationObj',
+  'residentialObj',
+  'employmentObj',
+  'educationObj',
+  'workExpObj',
+  'additionalObj',
+];
 
 function envelope(resp: { bodyText: string }): Record<string, unknown> {
   try {
@@ -70,10 +95,15 @@ async function assertRejectsMalformed(
   validBody: Record<string, unknown>,
   wrap: (body: Record<string, unknown>) => unknown,
   label: string,
+  /**
+   * The keys the screen requires (default: every key of `validBody`). With a full screen payload as the
+   * valid body, an optional key (e.g. a location's addressLine2) must not be removed and expected refused.
+   */
+  required: readonly string[] = Object.keys(validBody),
 ): Promise<void> {
   type Case = { variant: string; body?: unknown; raw?: string };
   const cases: Case[] = [{ variant: 'empty body', body: wrap({}) }];
-  for (const key of Object.keys(validBody)) {
+  for (const key of required) {
     const withoutKey = { ...validBody };
     delete withoutKey[key];
     cases.push({ variant: `missing ${key}`, body: wrap(withoutKey) });
@@ -157,8 +187,16 @@ async function assertPayloadNotStoredVerbatim(
       },
     );
     const rows: unknown = envelope(read).value;
+    /*
+     * SQL-looking text is plain DATA on this MongoDB backend: stored exactly as typed it executes nothing.
+     * Since #13251 (2026-10-26) the server deliberately accepts words like "select" or "drop" in names, so
+     * only markup (XSS) must never come back verbatim. (#827 once asked to reject SQL text; that fix produced
+     * the over-blocking filter #13251 removed.)
+     */
     const stored =
-      Array.isArray(rows) && rows.some((r) => isPlainObject(r) && rowMatches(r, payload));
+      kind === 'XSS' &&
+      Array.isArray(rows) &&
+      rows.some((r) => isPlainObject(r) && rowMatches(r, payload));
     if (stored) {
       endpoints.recordBusinessRuleViolation({
         endpointId: saveId,
@@ -254,18 +292,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
           ? await call(
               endpoints,
               'admin-workplace-location-save',
-              [
-                {
-                  attributeId: wpAttrId,
-                  variableId: wpVarId,
-                  locationName: name('Location'),
-                  reportingWorkplaceLocation: '[{"variableId":"0","workplaceLocationId":"0"}]',
-                  reportingWorkplaceLocationId: '0',
-                  pincode: testData.pinCode,
-                  countryName: 'India',
-                  countryId: 1,
-                },
-              ],
+              [locationPayload(wpAttrId, wpVarId, name('Location'))],
               'setup:loc-save',
             )
           : undefined;
@@ -300,10 +327,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
       const emp = await call(
         endpoints,
         'admin-employee-save',
-        {
-          personalInformationObj: { firstName: 'QA', lastName: `Fuzz ${stamp}`, disability: false },
-          employmentObj: {},
-        },
+        employeePayload(`Fuzz ${stamp}`),
         'setup:employee-save',
       );
       empId = createdId(emp);
@@ -376,9 +400,10 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-workplace-tier-variable-update',
-          { id: wpVarId, attributeId: wpAttrId, variableName: name('WP Var Fuzz edited') },
+          { ...variablePayload(wpAttrId!, name('WP Var Fuzz edited')), id: wpVarId },
           (b) => b,
           'wp-var-update',
+          VARIABLE_REQUIRED_ON_UPDATE,
         );
       }
 
@@ -386,28 +411,17 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-workplace-location-save',
-          {
-            attributeId: wpAttrId,
-            variableId: wpVarId,
-            locationName: name('Location Fuzz'),
-            pincode: testData.pinCode,
-            countryId: 1,
-          },
+          locationPayload(wpAttrId, wpVarId, name('Location Fuzz')),
           (b) => [b],
           'loc-save',
+          LOCATION_REQUIRED,
         );
         await assertPayloadNotStoredVerbatim(
           endpoints,
           'admin-workplace-location-save',
           'locationName',
           (payload) => [
-            {
-              attributeId: wpAttrId,
-              variableId: wpVarId,
-              locationName: payload,
-              pincode: testData.pinCode,
-              countryId: 1,
-            },
+            { ...locationPayload(wpAttrId!, wpVarId!, name('Location')), locationName: payload },
           ],
           'admin-workplace-location-all',
           {},
@@ -419,9 +433,10 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-workplace-location-update',
-          { id: locId, locationName: name('Location Fuzz edited') },
+          { ...locationPayload(wpAttrId!, wpVarId!, name('Location Fuzz edited')), id: locId },
           (b) => b,
           'loc-update',
+          ['id', ...LOCATION_REQUIRED],
         );
       }
 
@@ -477,9 +492,10 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-hr-tier-variable-update',
-          { id: hrVarId, attributeId: hrAttrId, variableName: name('HR Var Fuzz edited') },
+          { ...variablePayload(hrAttrId!, name('HR Var Fuzz edited')), id: hrVarId },
           (b) => b,
           'hr-var-update',
+          VARIABLE_REQUIRED_ON_UPDATE,
         );
       }
 
@@ -490,17 +506,21 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
       await assertRejectsMalformed(
         endpoints,
         'admin-employee-save',
-        { personalInformationObj: { firstName: 'QA', lastName: `Fuzz ${stamp}` } },
+        employeePayload(`Fuzz ${stamp}`),
         (b) => b,
         'employee-save',
+        EMPLOYEE_REQUIRED_SECTIONS,
       );
       await assertPayloadNotStoredVerbatim(
         endpoints,
         'admin-employee-save',
         'personalInformationObj.lastName',
         (payload) => ({
-          personalInformationObj: { firstName: 'QA', lastName: payload },
-          employmentObj: {},
+          ...employeePayload(`Fuzz ${stamp}`),
+          personalInformationObj: {
+            ...(employeePayload(`Fuzz ${stamp}`).personalInformationObj as Record<string, unknown>),
+            lastName: payload,
+          },
         }),
         'admin-employee-details',
         {},
@@ -513,12 +533,10 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         await assertRejectsMalformed(
           endpoints,
           'admin-employee-update',
-          {
-            id: empId,
-            personalInformationObj: { firstName: 'QA', lastName: `Fuzz ${stamp} edited` },
-          },
+          { ...employeePayload(`Fuzz ${stamp} edited`), id: empId },
           (b) => b,
           'employee-update',
+          ['id', ...EMPLOYEE_REQUIRED_SECTIONS],
         );
       }
     } finally {

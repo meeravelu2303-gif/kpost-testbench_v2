@@ -8,6 +8,7 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
+import { employeePayload, locationPayload, variablePayload } from './support/screen-payloads';
 
 /**
  * Admin module **feature flow** — the organisation-build sequence a BUSINESS_M admin runs in the
@@ -84,7 +85,12 @@ function call(
   return endpoints.sendTo(
     id,
     { body },
-    { label: `feature:admin:${label}`, auth: { principal: businessM! }, allowLiveWrite: true },
+    {
+      label: `feature:admin:${label}`,
+      auth: { principal: businessM! },
+      allowLiveWrite: true,
+      allowLiveRead: true,
+    },
   );
 }
 
@@ -219,11 +225,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           const wpVarUpd = await call(
             endpoints,
             'admin-workplace-tier-variable-update',
-            {
-              id: wpVarId,
-              attributeId: wpAttrId,
-              variableName: name('WP Var edited'),
-            },
+            { ...variablePayload(wpAttrId!, name('WP Var edited')), id: wpVarId },
             'wp-var-update',
           );
           expect.soft(statusOf(wpVarUpd), 'workplace tier variable updated').toMatch(/success/i);
@@ -234,18 +236,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           const loc = await call(
             endpoints,
             'admin-workplace-location-save',
-            [
-              {
-                attributeId: wpAttrId,
-                variableId: wpVarId,
-                locationName: name('Location'),
-                reportingWorkplaceLocation: '[{"variableId":"0","workplaceLocationId":"0"}]',
-                reportingWorkplaceLocationId: '0',
-                pincode: testData.pinCode,
-                countryName: 'India',
-                countryId: 1,
-              },
-            ],
+            [locationPayload(wpAttrId, wpVarId, name('Location'))],
             'loc-save',
           );
           locId = createdId(loc);
@@ -276,7 +267,8 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
             const locUpd = await call(
               endpoints,
               'admin-workplace-location-update',
-              { id: locId, locationName: locEdited },
+              // The screen sends the whole record on update; the server requires it (2026-10-26).
+              { ...locationPayload(wpAttrId, wpVarId, locEdited), id: locId },
               'loc-update',
             );
             expect.soft(statusOf(locUpd), 'workplace location updated').toMatch(/success/i);
@@ -430,11 +422,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           const hrVarUpd = await call(
             endpoints,
             'admin-hr-tier-variable-update',
-            {
-              id: hrVarId,
-              attributeId: hrAttrId,
-              variableName: name('HR Var edited'),
-            },
+            { ...variablePayload(hrAttrId!, name('HR Var edited')), id: hrVarId },
             'hr-var-update',
           );
           expect.soft(statusOf(hrVarUpd), 'HR tier variable updated').toMatch(/success/i);
@@ -444,17 +432,8 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         const emp = await call(
           endpoints,
           'admin-employee-save',
-          {
-            personalInformationObj: {
-              firstName: 'QA',
-              lastName: `Employee ${stamp}`,
-              disability: false,
-            },
-            // FINDING: without `employmentObj` the backend NPEs (HTTP 500,
-            // "getEmploymentObj() is null") instead of a 400 — a missing required field returned as a
-            // server error. Sent so the lifecycle proceeds; the 500-on-missing-field is worth a ticket.
-            employmentObj: {},
-          },
+          // The Employee Data screen's full record: the server enforces its required fields (2026-10-26).
+          employeePayload(`Employee ${stamp}`),
           'employee-save',
         );
         empId = createdId(emp);
@@ -496,11 +475,8 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           const empUpdate = await call(
             endpoints,
             'admin-employee-update',
-            {
-              id: empId,
-              personalInformationObj: { firstName: 'QA', lastName: empLastNameEdited },
-              employmentObj: {},
-            },
+            // The screen sends the whole record on update; the server requires it (2026-10-26).
+            { ...employeePayload(empLastNameEdited), id: empId },
             'employee-update',
           );
           expect.soft(statusOf(empUpdate), 'employee updated').toMatch(/success/i);

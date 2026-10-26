@@ -321,7 +321,6 @@ const TYPES: RecordType[] = [
       'educationObj.0.instituteName',
     ],
     readBack: (send, id) => listRow(send, 'admin-employee-details', {}, id),
-    updateDrops: ['additionalObj.aadharcard'],
   },
 ];
 

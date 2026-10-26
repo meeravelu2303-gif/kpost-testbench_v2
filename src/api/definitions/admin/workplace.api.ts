@@ -135,6 +135,8 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     tags: ['workplace-tier-variable'],
     // Keyed by a runtime variable id a write creates — not driven on live standalone.
     request: body(() => ({ id: 1 })),
+    // A read (POSTs default to destructive): lets an id-keyed read-back run with allowLiveRead.
+    destructive: false,
   }),
 
   // ---- Work Place Location Setup -------------------------------------------------------------
@@ -157,6 +159,8 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     tags: ['workplace-location'],
     // Keyed by a runtime attributeId/variableId a write creates — not driven on live standalone.
     request: body(() => ({ attributeId: 1, variableId: 1 })),
+    // A read (POSTs default to destructive): lets an id-keyed read-back run with allowLiveRead.
+    destructive: false,
   }),
   defineAdminEndpoint({
     id: 'admin-workplace-location-by-id',
@@ -165,6 +169,8 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     summary: 'Get one workplace location by id',
     tags: ['workplace-location'],
     request: body(() => ({ id: 1 })),
+    // A read (POSTs default to destructive): lets an id-keyed read-back run with allowLiveRead.
+    destructive: false,
   }),
   defineAdminEndpoint({
     id: 'admin-workplace-location-save',

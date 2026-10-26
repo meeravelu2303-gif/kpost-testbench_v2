@@ -8,6 +8,8 @@ import type { ValidationEngine } from '@engine/validation-engine';
 import { formatReport } from '@reporting/report-formatter';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
+import { employeePayload } from './support/screen-payloads';
+import { KNOWN_FALSE_POSITIVES } from '../../../src/bug-tracker/known-false-positives';
 
 /**
  * The centralized engine on the Admin endpoints it cannot reach by itself (coverage audit 2026-10-26: only
@@ -93,7 +95,22 @@ async function engineOn(
     request: body(() => payload),
   };
   const report = await validationEngine.validate(definition);
-  expect.soft(report.gate.blocking, formatReport(report)).toEqual([]);
+  // A result a reviewer has judged not a defect (known-false-positives.ts, by endpoint + check) does not
+  // fail the matrix either; everything else does.
+  const judged = (validator: string): boolean =>
+    KNOWN_FALSE_POSITIVES.some(
+      (k) =>
+        !k.fingerprint &&
+        k.validator === validator &&
+        k.endpoint !== undefined &&
+        definition.path.includes(k.endpoint),
+    );
+  expect
+    .soft(
+      report.gate.blocking.filter((v) => !judged(v)),
+      formatReport(report),
+    )
+    .toEqual([]);
   return report.primary?.body;
 }
 
@@ -128,14 +145,8 @@ const locationBody = (attributeId: string, variableId: string, label = 'Location
   countryId: 1,
   countryName: 'India',
 });
-const employeeBody = (label: string): Json => ({
-  personalInformationObj: {
-    firstName: 'QA',
-    lastName: `Matrix ${label} ${stamp}`,
-    disability: false,
-  },
-  employmentObj: {},
-});
+// The Employee Data screen's full record (the server enforces its required fields since 2026-10-26).
+const employeeBody = (label: string): Json => employeePayload(`Matrix ${label} ${stamp}`);
 
 interface Case {
   endpointId: string;
@@ -316,14 +327,7 @@ const CASES: Case[] = [
     endpointId: 'admin-employee-update',
     request: async (r) => {
       const id = await r.create('admin-employee-save', employeeBody('Edit'));
-      return {
-        id,
-        personalInformationObj: {
-          firstName: 'QA',
-          lastName: `Matrix Edited ${stamp}`,
-          disability: false,
-        },
-      };
+      return { ...employeeBody('Edited'), id };
     },
   },
   {

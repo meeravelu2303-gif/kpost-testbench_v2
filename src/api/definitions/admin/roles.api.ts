@@ -73,6 +73,8 @@ export const adminRolesApis: EndpointDefinition[] = [
     tags: ['role-posting'],
     // Keyed by a runtime employeeId a write creates — not driven on live standalone.
     request: body(() => ({ employeeId: 1 })),
+    // A read (POSTs default to destructive): lets an id-keyed read-back run with allowLiveRead.
+    destructive: false,
   }),
 
   // ---- writes (gated) ------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { locationPayload, tierPayload, variablePayload } from './support/screen-payloads';
 
 const K = AUTH_PROFILES.kpost;
 const businessM = K.principals.find((p) => p.key === 'business-m');
@@ -33,24 +34,60 @@ test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @secu
     endpoints,
   }) => {
     const marker = `QA Loc XTENANT ${Date.now()}`;
+    // A location needs its workplace level (enforced since 2026-10-26): company 242 creates both first.
+    const owned = { auth: { principal: businessM! }, allowLiveWrite: true };
+    const idOf = (text: string | undefined): string | undefined =>
+      (JSON.parse(text || '{}') as { value?: Array<{ id?: string }> }).value?.[0]?.id;
+    const tierId = idOf(
+      (
+        await endpoints.sendTo(
+          'admin-workplace-tier-attribute-save',
+          { body: [tierPayload(`${marker} Tier`)] },
+          { label: 'admin:xtenant-tier-create', ...owned },
+        )
+      ).bodyText,
+    );
+    const varId = tierId
+      ? idOf(
+          (
+            await endpoints.sendTo(
+              'admin-workplace-tier-variable-save',
+              { body: [variablePayload(tierId, `${marker} Var`)] },
+              { label: 'admin:xtenant-var-create', ...owned },
+            )
+          ).bodyText,
+        )
+      : undefined;
+    const dropParents = async (): Promise<void> => {
+      if (varId)
+        await endpoints
+          .sendTo(
+            'admin-workplace-tier-variable-delete',
+            { body: { id: varId } },
+            { label: 'admin:xtenant-var-cleanup', ...owned },
+          )
+          .catch(() => undefined);
+      if (tierId)
+        await endpoints
+          .sendTo(
+            'admin-workplace-tier-attribute-delete',
+            { body: { id: tierId } },
+            { label: 'admin:xtenant-tier-cleanup', ...owned },
+          )
+          .catch(() => undefined);
+    };
     const created = await endpoints.sendTo(
       'admin-workplace-location-save',
-      {
-        body: [
-          {
-            companyId: String(testData.businessMCompanyId),
-            locationName: marker,
-            addressLine1: 'QA address',
-            pincode: testData.pinCode,
-            country: 'India',
-          },
-        ],
-      },
+      { body: [locationPayload(tierId ?? '', varId ?? '', marker)] },
       { label: 'admin:xtenant-loc-create', auth: { principal: businessM! }, allowLiveWrite: true },
     );
     const createdParsed = JSON.parse(created.bodyText || '{}') as { value?: Array<{ id: string }> };
     const mine = (createdParsed.value ?? [])[0];
-    test.skip(!mine, 'could not get the created location id from the save response');
+    if (!mine) await dropParents();
+    test.skip(
+      !mine,
+      `could not create the probe location (HTTP ${created.status} ${(created.bodyText ?? '').slice(0, 120)})`,
+    );
     if (!mine) return;
 
     try {
@@ -109,6 +146,7 @@ test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @secu
         },
       );
       expect.soft(del.status, 'the probe location is deleted again').toBe(200);
+      await dropParents();
     }
   });
 });

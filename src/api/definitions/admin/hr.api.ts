@@ -89,6 +89,8 @@ export const adminHrApis: EndpointDefinition[] = [
     tags: ['hr-tier-variable'],
     // Keyed by a runtime variable id a write creates — not driven on live standalone.
     request: body(() => ({ id: 1 })),
+    // A read (POSTs default to destructive): lets an id-keyed read-back run with allowLiveRead.
+    destructive: false,
   }),
   defineAdminEndpoint({
     id: 'admin-hr-tier-variable-save',

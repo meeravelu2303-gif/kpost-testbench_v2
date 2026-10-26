@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { workbookContract } from '../../contract/workbook-contract';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import type { KpostEndpointConfig } from '../kpost/kpost-endpoint';
+import { ADMIN_RESPONSE_SCHEMAS } from './response-schemas';
 
 /**
  * The payload of a company-scoped admin READ: nothing — the company comes from the token's
@@ -88,7 +89,9 @@ export function defineAdminEndpoint(config: KpostEndpointConfig): EndpointDefini
     requestSchema:
       config.requestSchema ??
       (withoutCompanyId(contract.requestSchema) as EndpointDefinition['requestSchema']),
-    responseSchema: contract.responseSchema,
+    // The backend classes' shapes (response-schemas.ts); the workbook documents no Admin responses.
+    responseSchema:
+      config.responseSchema ?? ADMIN_RESPONSE_SCHEMAS[config.id] ?? contract.responseSchema,
     destructive: config.destructive,
     sideEffect: config.sideEffect,
     productionSafe: config.productionSafe,
