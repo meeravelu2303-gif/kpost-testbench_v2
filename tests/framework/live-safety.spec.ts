@@ -412,6 +412,30 @@ test.describe('live-application safety @framework', () => {
   /*
    * ## Control 3 — the QA-identifier guard
    */
+  test('a postal mailing address and an empty value are not identifiers; e-mails still are', () => {
+    // 2026-10-26: the Admin employee body. `mailing*` is a place; an empty value names nothing.
+    const body = {
+      personalInformationObj: { alternativeMobileNo: '', alternativeEmailAddress: '' },
+      mailingObj: { mailingCountry: 'India', mailingZipCode: '600001', mailingCity: 'Chennai' },
+    };
+    expect(foreignIdentifiers({ body }), 'postal fields and empty values pass').toEqual([]);
+    expect(
+      foreignIdentifiers({
+        body: {
+          ...body,
+          personalInformationObj: {
+            alternativeEmailAddress: 'someone@example.com',
+            mobile: '9876543210',
+          },
+        },
+      }).map((o) => o.path),
+      'a real e-mail or mobile is still refused',
+    ).toEqual([
+      'body.personalInformationObj.alternativeEmailAddress',
+      'body.personalInformationObj.mobile',
+    ]);
+  });
+
   test('a request naming a company we do not own is rejected', () => {
     // The exact payload the live application uses, with the owner's company id.
     const foreign = foreignIdentifiers({ body: { companyId: 4 } });

@@ -3,6 +3,7 @@ import { ApiClient } from '@api/client/api-client';
 import { ApiClientPool } from '@api/client/api-client-pool';
 import { apiRegistry } from '@api/definitions/index';
 import { env } from '@config/env';
+import { isLiveHost, testCounterpart } from '@config/live-hosts';
 import { DatabasePool } from '@database/database-pool';
 import { databaseValidationRegistry } from '@database/validations/index';
 import { EndpointExecutor } from '@engine/endpoint-executor';
@@ -132,6 +133,31 @@ export const test = base.extend<TestFixtures>({
    * for `page`, so they are untouched.
    */
   page: async ({ page }, use, testInfo) => {
+    // No browser request may reach a live host, whatever the front-end build was compiled with. A call
+    // to the live KPost API goes to its test counterpart instead (owner, 2026-10-26: "test with
+    // testingapi instead of devapi2"); any other live host is aborted.
+    await page.context().route(
+      (url) => isLiveHost(url.hostname),
+      async (route) => {
+        const req = route.request();
+        const url = new URL(req.url());
+        const testApi = testCounterpart(url.hostname);
+        if (testApi) {
+          const target = `${testApi.origin}${url.pathname}${url.search}`;
+          testInfo.annotations.push({
+            type: 'redirected to test API',
+            description: `${req.method()} ${url.origin}${url.pathname} → ${testApi.origin}`,
+          });
+          await route.continue({ url: target });
+          return;
+        }
+        testInfo.annotations.push({
+          type: 'blocked live request',
+          description: `${req.method()} ${url.origin}${url.pathname}`,
+        });
+        await route.abort('blockedbyclient');
+      },
+    );
     const recording = await startRecording(page);
     await use(page);
     await writeDiagnosisIfFailed(page, recording, testInfo).catch(() => undefined);

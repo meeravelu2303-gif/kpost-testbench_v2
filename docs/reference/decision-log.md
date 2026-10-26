@@ -3,7 +3,117 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-24 (latest) — Full Admin run + re-tests: #13239/#13240/#13241 verified fixed; #13242 filed
+### 2026-10-26 (latest) — Latency of all 38 Admin endpoints measured (sequential, not load)
+
+Owner: "check the latency issues also". New `tests/api/admin/latency.spec.ts`: 10 sequential samples per read,
+5 save → update → delete cycles per record type, 3 live role-posting cycles; p50/p95/max per endpoint vs the
+bench budget (POST 1500 ms, GET 800 ms); runs in the product command.
+
+- 34 endpoints: p95 under 130 ms (pincode lookup 731 ms on its first, cold call; ~120 ms after).
+- Role posting, 2 runs + 4 engine samples: save p50 ~1.14 s, p95 1.6–2.3 s, peaks 2.8–3.7 s; assign ~1.2–1.35 s;
+  suspend/terminate p50 90 ms with 1.3–2.0 s spikes. All wait synchronously on the KPost + live KSMACC calls.
+- Owner then said: "file the performance bugs to Karan … test against the budget". The latency spec now times
+  suspend / revoke / terminate separately (`LATENCY_ROLE_CYCLES=5` for more samples) and keeps each endpoint's
+  slowest request for the curl. Over the 1.5 s POST budget: save (4 of 5 runs, p95 up to 2.3 s, singles to
+  3.7 s) and terminate (3 of 3 runs, p95 1.74–1.86 s); suspend/revoke < 0.1 s; assign ~1.3–1.4 s (over in 1 of
+  5 runs only, mentioned, not filed). **#13255** filed (Performance, Karan): one root cause — both wait for the
+  KPost/KSMACC account calls. (#317's INVALID was a different endpoint, a read, on the old server.)
+
+### 2026-10-26 — Role posting fully covered on live KSMACC: 38/38 endpoints; #13254 filed; #13242 verified
+
+Owner: "the ksmacc live is okay … we only test with qa companies … cover everything in role postings".
+
+- The 4 role-posting writes (save, assign, suspend/terminate, delete) now run through the engine inside the
+  lifecycle, on the posting the test owns (`engineSend` in role-posting-lifecycle.spec.ts). `validate()` gained
+  `ownedIdentifiers` (per call, exact values) so the minted kpostID/KSMACC ids pass the QA-identifier guard for
+  that call only. **Engine coverage 38/38.** All checks pass except response time on save (2.8-3.7 s in 4
+  runs vs the 1.5 s bench default): it creates KPost + KSMACC accounts before answering; not filed (default,
+  not an SLA) — owner to decide a budget.
+- New "role posting field rules" test: save must not create a posting without a field the screen always sends;
+  assign and suspend/terminate must refuse missing fields. **#13254** filed (3/3): save creates a posting and
+  its accounts without lastHrVariableId, workplaceJson, displayName, ksmaccDisplayName or requestType.
+- **#13242** verified fixed in 3 lifecycle runs (employee without additional information, suspended list 200);
+  was already RESOLVED FIXED; dated note added.
+- Product commands (`admin:full`, `admin:deep` and their `:file`) now set `ADMIN_ROLE_POSTING_LIVE=true`.
+  DB after all runs: 0 QA records, company 242 keeps its 5 original postings.
+
+### 2026-10-26 (later) — Admin coverage audit: 38 endpoints × every test kind; one-pass sweep; #13251–#13253
+
+Owner: "make sure the 38 admin endpoints cover all tests properly with all kinds of test", "find all bugs in one
+pass, stop only on a blocker", "write the summary simply and shortly".
+
+- **Audit (from a real run's validation reports):** only 12/38 endpoints got the engine (auth, contract, headers,
+  response time): every write and every id-keyed read was blocked on this host and defined with placeholder ids.
+- **New `tests/api/admin/endpoint-matrix.spec.ts`:** 22 of those endpoints now get the full engine on a record
+  the test creates (definition cloned `productionSafe` for that call only; QA-identifier guard, write-fuzzer block
+  and `external` block stay armed); all pass. Engine coverage 34/38; the 4 role-posting writes stay with the gated
+  lifecycle (they create KPost/KSMACC accounts).
+- **New `tests/api/admin/field-rules-sweep.spec.ts`:** 6 record types × the screens' own rules, both directions
+  (required missing refused; optional blank accepted on save AND update; read-back; ordinary words), all soft.
+  93 failed checks, identical in 3 runs, grouped into 6 root causes: **#13251** keyword filter refuses "Union",
+  "Select", "--" (likely from the #827 fix); **#13252** employee save/update accept any of 25 required fields
+  missing; **#13253** Aadhaar required on screen, dropped on save, and any update carrying it refused; plus
+  dated comments widening **#13245** (location country/state/city/area), **#13246** (variable updates without a
+  parent) and **#13249** (more blank optional fields).
+- **Flows continue past failures:** `stage()` in admin-workflow.ts (blocker vs recorded); employee UI test now
+  also asserts the edit keeps institute name and mailing country (#13250). Rule added to CLAUDE.md §7.
+- **Short summaries:** #13247/#13249/#13250 revised; rule added to CLAUDE.md §6. #13249's employee curl also
+  re-posted with the apostrophe in "Master's" shell-escaped (it broke the pasted curl).
+- Still not covered, by decision: authorization (owner/devs to run), rate-limit/timeout (load, excluded),
+  role-posting writes (gated).
+
+### 2026-10-26 — New Admin hosts; fuzz clean-up fixed; #13245/#13246 filed
+
+Owner: "cover everything … api and ui … file the valid bugs". Admin API moved to `http://10.10.50.7:9595` (MongoDB on
+the same IP, `ADMIN_MONGO_URI` set, owner allowed writes for clean-up); Admin UI is `http://192.168.10.22:3001`.
+192.168.10.4 is offline. Baseline dry run (run-c52843fd): 127 passed, 9 failed, 135 skipped.
+
+- **Correction of the 2026-10-24 triage:** the missing-field fuzz failures were NOT covered by INVALID #641/#637.
+  #641 was closed for the `companyId` case (token-scoped, correctly INVALID) and #637 for variable-name types
+  ("business requirement"). The missing attributeId / variableId / pincode / countryId (location) and
+  attributeId / parentVariableId (HR variable) cases were never judged. Source: both controllers check only the
+  name; the screen requires pincode/state/city/area (WorkPlaceLocationSetup.js:1232); the workplace twin
+  /adminTierVariable/save rejects the same request (400 "parentVariableId is required").
+- **Filed** (2/2 alone, real-data curls, tracker-parser checked, duplicate-checked, Karan):
+  **#13245** location save accepts no pincode / no level; **#13246** HR variable save accepts no tier / no parent
+  (such variables cannot be listed, 400 on a null parent, and block deleting their tier). Regression spec:
+  `tests/api/admin/save-required-fields.spec.ts` (`ADMIN_LIFECYCLE=true`, self-cleaning).
+- **Bench clean-up gap fixed:** `write-fuzz-workflow.spec.ts` never deleted a record a malformed save got ACCEPTED,
+  so every run left ~12 half-empty records behind. It now deletes each accepted record first and fails if a delete
+  does not succeed. `security-cross-tenant-reads.spec.ts` also never deleted its probe location; it now does, and
+  gained the owner control (company 242 reads its own location first).
+- **Leftovers removed:** new `tests/api/admin/qa-leftovers-cleanup.spec.ts` (`ADMIN_QA_CLEANUP=list|delete`, only
+  names matching `QA … <13-digit stamp>`) deleted 298 via the API; the 163 the API cannot reach (parentless
+  variables + the 21 tiers they held) were backed up to the session scratchpad and deleted in MongoDB after a
+  check that no non-bench record referenced them. Company 242: 0 bench records, its 5 original postings intact.
+- The 7 company-scoped reads answering 200 to an empty body / an array stay judged non-defects (no input is read;
+  the company comes from the token).
+- **Admin UI vs live hosts:** the test UI build had `LoginURL`/`EndPointURL` = devapi2 (live), and the login,
+  screen and smoke specs had no guard, so the first UI run sent `GET /common/countries` and the login specs'
+  probe IDs (incl. the XSS/SQLi strings) to devapi2. No password was sent (setup logs in on testingapi).
+  Owner: "we don't use devapi2, test with testingapi". Now the shared `page` fixture sends every browser call
+  for devapi2 to `KPOST_API_BASE_URL` (testingapi) and aborts the other live hosts, in every project, noted
+  as an annotation (`src/config/live-hosts.ts`). Devs switched ServiceURL.js; **#13247** (Ayyappan) covers
+  what remains: Callback.js still fetches the profile from devapi2 with the user's token, and
+  interceptFetch.js's refresh list has neither test server. Re-checked after 2fbe935: still open.
+- **Admin UI CRUD failures were bench faults, fixed** in `tests/e2e-admin/support/admin-workflow.ts`: the eye
+  icon TOGGLES the list (a 2nd click hid it); a tabbed screen keeps the other tab's icons hidden and first,
+  and the Variable tab has only the eye (so "icon #2" did not exist); "a table is visible" matched the
+  wrong element (now `.smart-table-wrapper`). Employee Data step 6 has its own required Nationality.
+  Company 242 also had 32 nameless tiers + junk values from old fuzz runs, which broke the location
+  screen's tier dropdowns; a both-field-format sweep deleted 96 provably-bench records (+1 fuzz employee in
+  1075), backed up, nothing outside the set referencing them.
+- **QA-identifier guard:** `mailing*` postal-address keys exempted by exact name, and an empty value is no
+  longer an identifier (it names nothing); e-mail/mobile keys still checked (self-test in live-safety.spec.ts).
+- **Filed from the UI run** (each 2/2+, duplicate-checked, tracker-parser checked): **#13249** (Karan) revised
+  to the systemic root cause: `rejectEmptySubmittedValues` on update refuses any blank optional field the save
+  accepted (location: addressLine2; employee: landline), so such records can never be edited on screen.
+  **#13250** (Ayyappan): the Employee Data edit form reloads institute name as text but sends `.label`
+  (→ ""), drops the mailing country (looked up in the nationality list), sends landline as null.
+- **Open question for the owner:** the employee screen makes Aadhaar mandatory, but the backend entity has no
+  Aadhaar field and silently discards it. Possibly a deliberate privacy choice; not filed.
+
+### 2026-10-24 — Full Admin run + re-tests: #13239/#13240/#13241 verified fixed; #13242 filed
 
 Owner: "test everything … reopen what is still broken, file new bugs". Full Admin dry run (run-c87521ca: 127 passed,
 10 failed, 134 skipped; plan: 0 new, 0 reopen, 1 held), then logged replays ×2 with a MongoDB read after every

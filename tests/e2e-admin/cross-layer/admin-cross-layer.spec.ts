@@ -19,6 +19,7 @@ import {
   requireTestAdminApi,
   rowAction,
   savedId,
+  stage,
   tableRow,
 } from '../support/admin-workflow';
 
@@ -74,22 +75,26 @@ test.describe(
             .toBeGreaterThan(0);
           requireTestAdminApi(guard);
 
-          await test.step('UI + API: the tier is saved from the drawer', async () => {
-            await openAdd(page);
-            await drawer(page).getByPlaceholder('Enter Name of the Tier').fill(name);
-            const sent = page.waitForRequest((r) => r.url().includes('/adminTierAttribute/save'));
-            const saved = await nextAdminCall(page, '/adminTierAttribute/save', () =>
-              drawer(page).locator('button.savebutton').click(),
-            );
-            const body = (await sent).postDataJSON() as Array<{ attributeName?: string }>;
-            expect(body?.[0]?.attributeName, 'the screen sent the typed name').toBe(name);
-            expect(saved.status, 'the API answers 200').toBe(200);
-            expect(saved.body.status, 'with SUCCESS').toBe('SUCCESS');
-            id = savedId(saved.body.value);
-            expect(id, 'and the new id').toMatch(/^[0-9a-f]{24}$/);
-          });
+          await stage(
+            'UI + API: the tier is saved from the drawer',
+            async () => {
+              await openAdd(page);
+              await drawer(page).getByPlaceholder('Enter Name of the Tier').fill(name);
+              const sent = page.waitForRequest((r) => r.url().includes('/adminTierAttribute/save'));
+              const saved = await nextAdminCall(page, '/adminTierAttribute/save', () =>
+                drawer(page).locator('button.savebutton').click(),
+              );
+              const body = (await sent).postDataJSON() as Array<{ attributeName?: string }>;
+              expect(body?.[0]?.attributeName, 'the screen sent the typed name').toBe(name);
+              expect(saved.status, 'the API answers 200').toBe(200);
+              expect(saved.body.status, 'with SUCCESS').toBe('SUCCESS');
+              id = savedId(saved.body.value);
+              expect(id, 'and the new id').toMatch(/^[0-9a-f]{24}$/);
+            },
+            { blocker: true },
+          );
 
-          await test.step('DB: the document holds the name, for the signed-in company', async () => {
+          await stage('DB: the document holds the name, for the signed-in company', async () => {
             let doc: TierDoc | null = null;
             await expect
               .poll(
@@ -113,7 +118,7 @@ test.describe(
             ).toBe(String(testData.businessMCompanyId));
           });
 
-          await test.step('UI → DB: a delete on screen removes the document', async () => {
+          await stage('UI → DB: a delete on screen removes the document', async () => {
             await openList(page);
             await rowAction(page, await tableRow(page, name), 'Delete');
             const removed = await nextAdminCall(page, '/adminTierAttribute/delete', () =>

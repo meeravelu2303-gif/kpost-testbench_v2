@@ -17,6 +17,7 @@ import {
   requireTestAdminApi,
   rowAction,
   savedId,
+  stage,
   tableRow,
 } from '../support/admin-workflow';
 
@@ -63,62 +64,81 @@ async function locationLifecycle(page: Page): Promise<void> {
 
   const name = qaName('location');
   const renamed = `${name} edited`;
+  let current = name; // what the record is called now (stays `name` if the rename failed)
   let id: string | undefined;
   let deleted = false;
   try {
-    await test.step('add a location under the existing workplace tiers', async () => {
-      await openAdd(page);
-      await expect(page.getByText('Add Workplace Location').first()).toBeVisible({
-        timeout: 15_000,
-      });
-      const tiers = await pickWorkplaceTiers(page);
-      test.skip(
-        tiers === 0,
-        'the QA company has no workplace tier values to place a location under',
-      );
-      await page.getByPlaceholder('Enter Name of the WorkPlace Location').fill(name);
-      await pickDropdown(page, 'Country', 'India');
-      await page.getByPlaceholder('Enter Pincode').fill(testData.pinCode);
-      await expect(
-        page.getByPlaceholder('Enter State'),
-        'the pincode lookup fills the state',
-      ).not.toHaveValue('', { timeout: 20_000 });
-      await pickDropdown(page, 'Area');
-      await page.getByPlaceholder('Address 1').fill('QA bench street');
-      const saved = await nextAdminCall(page, '/location/save', () =>
-        page.locator('button.savebutton').first().click(),
-      );
-      expect(
-        ok(saved),
-        `/location/save answers 200 SUCCESS: ${JSON.stringify(saved.body).slice(0, 200)}`,
-      ).toBe(true);
-      id = savedId(saved.body.value);
+    await stage(
+      'add a location under the existing workplace tiers',
+      async () => {
+        await openAdd(page);
+        await expect(page.getByText('Add Workplace Location').first()).toBeVisible({
+          timeout: 15_000,
+        });
+        const tiers = await pickWorkplaceTiers(page);
+        test.skip(
+          tiers === 0,
+          'the QA company has no workplace tier values to place a location under',
+        );
+        await page.getByPlaceholder('Enter Name of the WorkPlace Location').fill(name);
+        await pickDropdown(page, 'Country', 'India');
+        await page.getByPlaceholder('Enter Pincode').fill(testData.pinCode);
+        await expect(
+          page.getByPlaceholder('Enter State'),
+          'the pincode lookup fills the state',
+        ).not.toHaveValue('', { timeout: 20_000 });
+        await pickDropdown(page, 'Area');
+        await page.getByPlaceholder('Address 1').fill('QA bench street');
+        const saved = await nextAdminCall(page, '/location/save', () =>
+          page.locator('button.savebutton').first().click(),
+        );
+        expect(
+          ok(saved),
+          `/location/save answers 200 SUCCESS: ${JSON.stringify(saved.body).slice(0, 200)}`,
+        ).toBe(true);
+        id = savedId(saved.body.value);
+        expect(id, 'the save returns the new location id').toBeTruthy();
+      },
+      { blocker: true },
+    );
+
+    await stage('the screen confirms the save and lists the location', async () => {
       await expect(
         page.locator('.Toastify__toast').filter({ hasText: 'Locations created successfully' }),
         'the screen confirms the save',
       ).toBeVisible({ timeout: 10_000 });
+      await openList(page);
       await tableRow(page, name);
     });
 
-    await test.step('rename it', async () => {
-      await rowAction(page, await tableRow(page, name), 'Edit');
+    await stage('rename it', async () => {
+      await openList(page);
+      await rowAction(page, await tableRow(page, current), 'Edit');
       const input = page.getByPlaceholder('Enter Name of the WorkPlace Location');
-      await expect(input, 'the form reopens with the location').toHaveValue(name, {
+      await expect(input, 'the form reopens with the location').toHaveValue(current, {
         timeout: 15_000,
       });
       await input.fill(renamed);
       const updated = await nextAdminCall(page, '/location/update', () =>
         page.getByRole('button', { name: 'Update' }).first().click(),
       );
-      expect(ok(updated), '/location/update answers 200 SUCCESS').toBe(true);
+      expect(
+        ok(updated),
+        `/location/update answers 200 SUCCESS: ${JSON.stringify(updated.body).slice(0, 200)}`,
+      ).toBe(true);
+      current = renamed;
       await expect(
         page.locator('.Toastify__toast').filter({ hasText: 'Updated Successfully' }),
       ).toBeVisible({ timeout: 10_000 });
     });
 
-    await test.step('delete it', async () => {
-      if (!(await page.locator('tr').filter({ hasText: renamed }).count())) await openList(page);
-      await rowAction(page, await tableRow(page, renamed), 'Delete');
+    await stage('delete it', async () => {
+      // A failed edit can leave the form open: reload the screen so the list is reachable.
+      if (!(await page.locator('tr').filter({ hasText: current }).count())) {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await openList(page);
+      }
+      await rowAction(page, await tableRow(page, current), 'Delete');
       const removed = await nextAdminCall(page, '/location/delete', () => confirmDelete(page));
       expect(ok(removed), '/location/delete answers 200 SUCCESS').toBe(true);
       deleted = true;

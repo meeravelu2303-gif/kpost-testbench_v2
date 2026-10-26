@@ -108,6 +108,8 @@ export class EndpointExecutor {
     });
   }
 
+  private readonly ownedIdentifiers: readonly (string | number)[];
+
   constructor(
     private readonly clients: ApiClientPool,
     private readonly apiRegistry: ApiRegistry,
@@ -116,8 +118,17 @@ export class EndpointExecutor {
      * Browser projects: reuse the saved browser session's token instead of logging in — an API login
      * would sign that account's browsers out (one session per account). See `browser-session-token.ts`.
      */
-    options: { shareBrowserSessions?: boolean } = {},
+    options: {
+      shareBrowserSessions?: boolean;
+      /**
+       * Values THIS executor's own flow just minted (e.g. the kpostID the server generated for a role posting
+       * the test saved), trusted by the QA-identifier guard on every request it sends — the engine's primary
+       * request and its probes alike. Exact values, never key names; one executor per validate() call.
+       */
+      ownedIdentifiers?: readonly (string | number)[];
+    } = {},
   ) {
+    this.ownedIdentifiers = options.ownedIdentifiers ?? [];
     this.tokens = new TokenProvider(
       (principal, profile) => this.login(principal, profile),
       env.API_BASE_URL,
@@ -169,7 +180,7 @@ export class EndpointExecutor {
       { body: spec.body, query: spec.query, pathParams: spec.pathParams },
       options.label ?? endpoint.label,
       env.IS_PRODUCTION,
-      options.ownedIdentifiers,
+      [...this.ownedIdentifiers, ...(options.ownedIdentifiers ?? [])],
     );
 
     const request = RequestBuilder.for(options.method ?? endpoint.method, endpoint.path)

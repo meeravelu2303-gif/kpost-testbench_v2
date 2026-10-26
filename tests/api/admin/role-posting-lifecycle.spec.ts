@@ -1,7 +1,11 @@
+import { apiRegistry } from '@api/definitions/index';
+import { body } from '@api/definitions/kpost/kpost-endpoint';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { isProvided, testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import type { ValidationEngine } from '@engine/validation-engine';
+import { formatReport } from '@reporting/report-formatter';
 import { expect, test } from '@fixtures';
 
 /**
@@ -65,6 +69,32 @@ async function send(
   return { status: ex.status, env, text };
 }
 
+/**
+ * The centralized engine on a role-posting WRITE, acting on the posting this test owns (coverage 2026-10-26,
+ * owner-approved live KSMACC for the QA companies). The definition is cloned `productionSafe` for this call
+ * only; the minted ids are trusted for this call only. The engine's primary request performs the step, and
+ * its probes (bad/missing/expired tokens) are refused before any account is touched. Same shape as `send`;
+ * the report keeps only 2 KB of the answer, so a long answer may not parse — callers read back instead.
+ */
+async function engineSend(
+  validationEngine: ValidationEngine,
+  id: string,
+  payload: Record<string, unknown> | Array<Record<string, unknown>>,
+  minted: readonly (string | number)[] = [],
+): Promise<{ status: number; env: Envelope; text: string }> {
+  const definition = { ...apiRegistry.get(id), productionSafe: true, request: body(() => payload) };
+  const report = await validationEngine.validate(definition, { ownedIdentifiers: minted });
+  expect.soft(report.gate.blocking, formatReport(report)).toEqual([]);
+  const text = report.primary?.body ?? '';
+  let env: Envelope;
+  try {
+    env = JSON.parse(text) as Envelope;
+  } catch {
+    env = {};
+  }
+  return { status: report.primary?.status ?? 0, env, text };
+}
+
 /** The identifiers the server minted for OUR posting (from our own save/list response), never literals. */
 function mintedBy(posting: Record<string, unknown>): Array<string | number> {
   return ['kpostID', 'ksmaccID', 'ksmaccCompanyID']
@@ -107,6 +137,7 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
 
   test('save → assign → suspend → revoke → terminate → delete a role posting', async ({
     endpoints,
+    validationEngine,
   }) => {
     expect(String(testData.businessMCompanyId), 'only ever the QA testing company (242)').toBe(
       '242',
@@ -250,67 +281,63 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         expect(ok(emp) && empId, `employee saved: ${emp.text.slice(0, 200)}`).toBeTruthy();
       });
 
-      await test.step('save a role posting (location × HR role)', async () => {
-        const saved = await send(
-          endpoints,
-          'admin-role-posting-save',
-          [
-            {
-              companyName,
-              userType: 'BUSINESS_M',
-              countryId: 1,
-              countryCode: 91,
-              lastworkplaceTierId: wpAttrId,
-              lastWorkplaceVariableId: wpVarId,
-              workplaceJson: JSON.stringify([
-                {
-                  attributeId: wpAttrId,
-                  variableId: wpVarId,
-                  label: name('WP Var'),
-                  code: '',
-                  abbreviation: '',
-                },
-              ]),
-              workplaceLocationId: [locId],
-              lastHrTierId: hrAttrId,
-              lastHrVariableId: hrVarId,
-              hrJson: JSON.stringify([
-                {
-                  parentAttributeId: hrAttrId,
-                  variableId: hrVarId,
-                  parentVariableName: designation,
-                  code: '',
-                  abbreviation: '',
-                },
-              ]),
-              reportingWorkplaceJson: JSON.stringify([
-                { workplaceLocationId: '', variableName: ['-'], locationName: '-' },
-              ]),
-              reportingHrJson: JSON.stringify([
-                { variableId: '', variableName: '-', attributeId: hrAttrId },
-              ]),
-              requestType: 'allocate',
-              displayName: `QA ${designation}`.toUpperCase(),
-              ksmaccDisplayName: designation.toUpperCase(),
-            },
-          ],
-          'save',
-        );
+      await test.step('save a role posting (location × HR role) — engine-checked', async () => {
+        const saved = await engineSend(validationEngine, 'admin-role-posting-save', [
+          {
+            companyName,
+            userType: 'BUSINESS_M',
+            countryId: 1,
+            countryCode: 91,
+            lastworkplaceTierId: wpAttrId,
+            lastWorkplaceVariableId: wpVarId,
+            workplaceJson: JSON.stringify([
+              {
+                attributeId: wpAttrId,
+                variableId: wpVarId,
+                label: name('WP Var'),
+                code: '',
+                abbreviation: '',
+              },
+            ]),
+            workplaceLocationId: [locId],
+            lastHrTierId: hrAttrId,
+            lastHrVariableId: hrVarId,
+            hrJson: JSON.stringify([
+              {
+                parentAttributeId: hrAttrId,
+                variableId: hrVarId,
+                parentVariableName: designation,
+                code: '',
+                abbreviation: '',
+              },
+            ]),
+            reportingWorkplaceJson: JSON.stringify([
+              { workplaceLocationId: '', variableName: ['-'], locationName: '-' },
+            ]),
+            reportingHrJson: JSON.stringify([
+              { variableId: '', variableName: '-', attributeId: hrAttrId },
+            ]),
+            requestType: 'allocate',
+            displayName: `QA ${designation}`.toUpperCase(),
+            ksmaccDisplayName: designation.toUpperCase(),
+          },
+        ]);
         test.info().annotations.push({
           type: 'observed',
           description: `save → HTTP ${saved.status}: ${saved.text.slice(0, 300)}`,
         });
-        const first = (Array.isArray(saved.env.value) ? saved.env.value[0] : undefined) as
-          { savedEntities?: Array<Record<string, unknown>>; statusMessage?: string } | undefined;
-        // Record the id FIRST, so cleanup always deletes the posting even if a check below fails.
-        posting = first?.savedEntities?.[0] ?? {};
+        // The answer is longer than the report keeps, so find OUR posting in the company list by the HR
+        // variable this test created (unique to it). Record the id FIRST, so cleanup always runs.
+        const list = await send(endpoints, 'admin-role-posting-by-company', {}, 'list-after-save');
+        const rows = (Array.isArray(list.env.value) ? list.env.value : []) as Array<
+          Record<string, unknown>
+        >;
+        posting = rows.find((r) => r.lastHrVariableId === hrVarId) ?? {};
         postingId = typeof posting.id === 'string' ? posting.id : undefined;
-        expect(ok(saved), 'role posting saved (200 SUCCESS) — #13235').toBe(true);
-        // A new posting answers statusMessage "saved" (live 2026-10-23); a duplicate says "Already exists …".
-        expect(first?.statusMessage ?? '', 'a new posting, not "Already exists"').not.toMatch(
-          /already exists/i,
-        );
-        expect(postingId, 'the saved posting has an id').toBeTruthy();
+        expect(saved.status, 'role posting saved (200) — #13235').toBe(200);
+        // A duplicate answers 200 "Already exists …" and saves nothing.
+        expect(saved.text, 'a new posting, not "Already exists"').not.toMatch(/already exists/i);
+        expect(postingId, 'the saved posting is listed with an id').toBeTruthy();
         expect(String(posting.companyId), 'stored for the QA company').toBe('242');
         expect(posting.kpostID, 'a KPost id was generated for the posting').toBeTruthy();
         expect(posting.employeeId ?? null, 'nobody assigned yet').toBeNull();
@@ -326,9 +353,9 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         posting = { ...posting, ...(mine ?? {}) };
       });
 
-      await test.step('assign the QA employee (reallocate)', async () => {
-        const assign = await send(
-          endpoints,
+      await test.step('assign the QA employee (reallocate) — engine-checked', async () => {
+        const assign = await engineSend(
+          validationEngine,
           'admin-role-posting-update',
           // Exactly the Assign Role Posting screen's body (AssignRolePosting.js:322-331): the posting row
           // spread in, plus the employee — no rolePostingId (the screen's line is commented out). Live
@@ -342,20 +369,16 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
             companyName,
             requestType: 'reallocate',
           },
-          'assign',
           mintedBy(posting),
         );
         test.info().annotations.push({
           type: 'observed',
           description: `assign → HTTP ${assign.status}: ${assign.text.slice(0, 300)}`,
         });
-        expect(ok(assign), 'the employee is assigned (200 SUCCESS) — #13237').toBe(true);
+        expect(assign.status, 'the employee is assigned (200) — #13237').toBe(200);
         assigned = true;
-        expect(field(assign.env.value, 'employeeId'), 'the posting now names the employee').toBe(
-          empId,
-        );
-        expect(field(assign.env.value, 'activeStatus'), 'and is active').toBe('true');
 
+        // The answer is longer than the report keeps: confirm through the employee's own read-back.
         const mineByEmp = await send(
           endpoints,
           'admin-role-posting-by-company-and-employee',
@@ -363,33 +386,48 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
           'by-employee',
         );
         expect(ok(mineByEmp), "the employee's posting reads back").toBe(true);
+        expect(mineByEmp.text, 'the read-back names our posting').toContain(String(postingId));
+        expect(field(mineByEmp.env.value, 'employeeId'), 'and the employee').toBe(empId);
+        expect(field(mineByEmp.env.value, 'activeStatus'), 'and it is active').toBe('true');
       });
 
       const action = (
         requestType: 'suspend' | 'revoked' | 'terminate',
         extra: Record<string, unknown>,
-      ) =>
-        send(
-          endpoints,
-          'admin-role-posting-suspend-terminate',
-          {
-            rolePostingId: postingId,
-            employeeId: empId,
-            requestType,
-            reason: 'QA lifecycle',
-            remarks: `QA lifecycle ${requestType}`,
-            kpostID: posting.kpostID,
-            ksmaccID: posting.ksmaccID,
-            ...extra,
-          },
+        viaEngine = false,
+      ) => {
+        const payload = {
+          rolePostingId: postingId,
+          employeeId: empId,
           requestType,
-          mintedBy(posting),
-        );
+          reason: 'QA lifecycle',
+          remarks: `QA lifecycle ${requestType}`,
+          kpostID: posting.kpostID,
+          ksmaccID: posting.ksmaccID,
+          ...extra,
+        };
+        return viaEngine
+          ? engineSend(
+              validationEngine,
+              'admin-role-posting-suspend-terminate',
+              payload,
+              mintedBy(posting),
+            )
+          : send(
+              endpoints,
+              'admin-role-posting-suspend-terminate',
+              payload,
+              requestType,
+              mintedBy(posting),
+            );
+      };
 
-      await test.step('suspend the employee; they appear in the suspended list', async () => {
-        const suspended = await action('suspend', {
-          duration: JSON.stringify({ suspensionFrom: today(), suspensionTo: today() }),
-        });
+      await test.step('suspend the employee — engine-checked; they appear in the suspended list', async () => {
+        const suspended = await action(
+          'suspend',
+          { duration: JSON.stringify({ suspensionFrom: today(), suspensionTo: today() }) },
+          true,
+        );
         test.info().annotations.push({
           type: 'observed',
           description: `suspend → HTTP ${suspended.status}: ${suspended.text.slice(0, 200)}`,
@@ -437,13 +475,10 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         expect(row?.employeeId ?? null, 'nobody is assigned after terminate').toBeNull();
       });
 
-      await test.step('delete the posting', async () => {
-        const removed = await send(
-          endpoints,
-          'admin-role-posting-delete',
-          { id: postingId },
-          'delete',
-        );
+      await test.step('delete the posting — engine-checked', async () => {
+        const removed = await engineSend(validationEngine, 'admin-role-posting-delete', {
+          id: postingId,
+        });
         expect(ok(removed), 'the unassigned posting is deleted (200 SUCCESS)').toBe(true);
         postingId = undefined;
       });
@@ -495,6 +530,280 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
           ['admin-workplace-tier-attribute-delete', wpAttrId],
         ] as const)
           if (rec) await send(endpoints, id, { id: rec }, `cleanup-${id}`).catch(() => undefined);
+    }
+  });
+});
+
+/**
+ * Role posting field rules (owner 2026-10-26: cover everything in role postings, live KSMACC is fine for the
+ * QA companies). The Role Posting Setup screen builds every field from its dropdowns and enables "Add To
+ * List" only when all tiers are chosen (RolePostingSetup.js:549-660, 929), so each field it sends is
+ * required: save, assign and suspend/terminate must refuse a request without one. Each save case uses a
+ * fresh HR variable so "Already exists" cannot hide the answer; a posting the server wrongly accepts is found
+ * and deleted. Every case runs (soft checks).
+ */
+test.describe('Admin · role posting field rules on the QA testing company @api @admin-api', () => {
+  test.describe.configure({ timeout: 300_000 });
+  test.skip(
+    process.env.ADMIN_LIFECYCLE !== 'true' || process.env.ADMIN_ROLE_POSTING_LIVE !== 'true',
+    'creates real KPost (testingapi) + KSMACC accounts for the QA company; set ADMIN_LIFECYCLE=true and ADMIN_ROLE_POSTING_LIVE=true',
+  );
+  test.skip(
+    !businessM || testData.businessMKpostId.includes('qa.business.m'),
+    'needs the BUSINESS_M account of the QA testing company (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID)',
+  );
+
+  test('save, assign and suspend/terminate refuse a request missing a field the screen always sends', async ({
+    endpoints,
+  }) => {
+    expect(String(testData.businessMCompanyId), 'only ever the QA testing company (242)').toBe(
+      '242',
+    );
+    const made: Array<[string, string]> = []; // [delete endpoint, id], removed in reverse
+    const postings = new Set<string>();
+    const create = async (saveId: string, payload: unknown, label: string): Promise<string> => {
+      const r = await send(endpoints, saveId, payload, label);
+      const id = savedId(r.env.value);
+      expect(id, `setup: ${label} (HTTP ${r.status} ${r.text.slice(0, 120)})`).toBeTruthy();
+      made.push([saveId.replace(/-save$/, '-delete'), id!]);
+      return id!;
+    };
+    /** Postings in the company list that this test created (by our HR variable or display name). */
+    const ours = async (hrVarId: string, displayName: string): Promise<string[]> => {
+      const list = await send(endpoints, 'admin-role-posting-by-company', {}, 'list');
+      const rows = (Array.isArray(list.env.value) ? list.env.value : []) as Array<
+        Record<string, unknown>
+      >;
+      return rows
+        .filter((r) => r.lastHrVariableId === hrVarId || r.displayName === displayName)
+        .map((r) => String(r.id));
+    };
+
+    try {
+      const wpAttrId = await create(
+        'admin-workplace-tier-attribute-save',
+        [{ attributeName: name('RF WP Tier') }],
+        'wp-attr',
+      );
+      const wpVarId = await create(
+        'admin-workplace-tier-variable-save',
+        [
+          {
+            variableName: name('RF WP Var'),
+            attributeId: wpAttrId,
+            parentVariableId: 0,
+            parentAttributeId: 0,
+            reportingJson: '[]',
+          },
+        ],
+        'wp-var',
+      );
+      const locId = await create(
+        'admin-workplace-location-save',
+        [
+          {
+            attributeId: wpAttrId,
+            variableId: wpVarId,
+            locationName: name('RF Location'),
+            reportingWorkplaceLocation: '[{"variableId":"0","workplaceLocationId":"0"}]',
+            reportingWorkplaceLocationId: '0',
+            pincode: testData.pinCode,
+            countryName: 'India',
+            countryId: 1,
+          },
+        ],
+        'location',
+      );
+      const hrAttrId = await create(
+        'admin-hr-tier-attribute-save',
+        [{ attributeName: name('RF HR Tier') }],
+        'hr-attr',
+      );
+      const company = await send(endpoints, 'admin-role-posting-by-company', {}, 'company-name');
+      let companyName =
+        (
+          (Array.isArray(company.env.value) ? company.env.value : []) as Array<
+            Record<string, unknown>
+          >
+        )
+          .map((r) => r.companyName)
+          .find((c): c is string => typeof c === 'string' && c.length > 0) ?? '';
+      if (!companyName) {
+        // Same fallback as the lifecycle above: the admin's own KPost profile.
+        const me = await endpoints.sendTo(
+          'signup-login-fetch-user-details',
+          { body: { kpostID: testData.businessMKpostId, countryID: testData.countryId } },
+          {
+            label: 'role-fields:company-name-profile',
+            auth: { principal: businessM! },
+            allowLiveRead: true,
+          },
+        );
+        companyName = /"companyName"\s*:\s*"([^"]+)"/.exec(me.bodyText ?? '')?.[1] ?? '';
+      }
+      test.skip(!companyName, 'the QA company name could not be read; not invented');
+
+      /** The screen's save row for a fresh HR variable. */
+      const row = async (
+        label: string,
+      ): Promise<{ body: Record<string, unknown>; hrVarId: string }> => {
+        const designation = name(`RF ${label}`);
+        const hrVarId = await create(
+          'admin-hr-tier-variable-save',
+          [
+            {
+              variableName: designation,
+              attributeId: hrAttrId,
+              parentVariableId: 0,
+              parentAttributeId: 0,
+              reportingJson: '[]',
+            },
+          ],
+          `hr-var-${label}`,
+        );
+        return {
+          hrVarId,
+          body: {
+            companyName,
+            userType: 'BUSINESS_M',
+            countryId: 1,
+            countryCode: 91,
+            lastworkplaceTierId: wpAttrId,
+            lastWorkplaceVariableId: wpVarId,
+            workplaceJson: JSON.stringify([
+              {
+                attributeId: wpAttrId,
+                variableId: wpVarId,
+                label: name('RF WP Var'),
+                code: '',
+                abbreviation: '',
+              },
+            ]),
+            workplaceLocationId: [locId],
+            lastHrTierId: hrAttrId,
+            lastHrVariableId: hrVarId,
+            hrJson: JSON.stringify([
+              {
+                parentAttributeId: hrAttrId,
+                variableId: hrVarId,
+                parentVariableName: designation,
+                code: '',
+                abbreviation: '',
+              },
+            ]),
+            reportingWorkplaceJson: JSON.stringify([
+              { workplaceLocationId: '', variableName: ['-'], locationName: '-' },
+            ]),
+            reportingHrJson: JSON.stringify([
+              { variableId: '', variableName: '-', attributeId: hrAttrId },
+            ]),
+            requestType: 'allocate',
+            displayName: `QA ${designation}`.toUpperCase(),
+            ksmaccDisplayName: designation.toUpperCase(),
+          },
+        };
+      };
+
+      // Control: the screen's full row saves (a posting with KPost/KSMACC accounts).
+      const control = await row('control');
+      const saved = await send(
+        endpoints,
+        'admin-role-posting-save',
+        [control.body],
+        'save-control',
+      );
+      expect(saved.status, "BLOCKER: the screen's full row saves").toBe(200);
+      const [controlId] = await ours(control.hrVarId, String(control.body.displayName));
+      expect(controlId, 'the control posting is listed').toBeTruthy();
+      postings.add(controlId!);
+
+      for (const field of [
+        'workplaceLocationId',
+        'lastHrVariableId',
+        'hrJson',
+        'workplaceJson',
+        'displayName',
+        'ksmaccDisplayName',
+        'companyName',
+        'userType',
+        'requestType',
+      ]) {
+        const c = await row(field);
+        const body = { ...c.body };
+        delete body[field];
+        const r = await send(endpoints, 'admin-role-posting-save', [body], `save-without-${field}`);
+        // The exact exchange, so a filed bug's curl carries the real data.
+        test
+          .info()
+          .annotations.push(
+            { type: `request save-without-${field}`, description: JSON.stringify([body]) },
+            {
+              type: `save-without-${field}`,
+              description: `HTTP ${r.status} ${r.text.slice(0, 400)}`,
+            },
+          );
+        // A refusal may come as 400, or as 200 with nothing saved; what must not happen is a new posting.
+        const created = await ours(c.hrVarId, String(c.body.displayName));
+        created.forEach((id) => postings.add(id));
+        expect
+          .soft(created, `save without ${field} creates no posting (HTTP ${r.status})`)
+          .toHaveLength(0);
+      }
+
+      // Assign and suspend/terminate on the (unassigned) control posting, each missing one field.
+      const assignBase = {
+        id: controlId,
+        rolePostingId: controlId,
+        employeeId: 'x',
+        requestType: 'reallocate',
+      };
+      for (const field of ['id', 'employeeId']) {
+        const body: Record<string, unknown> = { ...assignBase };
+        delete body[field];
+        const r = await send(
+          endpoints,
+          'admin-role-posting-update',
+          body,
+          `assign-without-${field}`,
+        );
+        expect.soft(r.status, `assign without ${field} is refused`).toBe(400);
+      }
+      const actionBase = {
+        rolePostingId: controlId,
+        employeeId: 'x',
+        requestType: 'suspend',
+        reason: 'QA field rules',
+        duration: JSON.stringify({ suspensionFrom: today(), suspensionTo: today() }),
+      };
+      for (const field of ['rolePostingId', 'employeeId', 'requestType']) {
+        const body: Record<string, unknown> = { ...actionBase };
+        delete body[field];
+        const r = await send(
+          endpoints,
+          'admin-role-posting-suspend-terminate',
+          body,
+          `action-without-${field}`,
+        );
+        expect.soft(r.status, `suspend/terminate without ${field} is refused`).toBe(400);
+      }
+    } finally {
+      const left: string[] = [];
+      for (const id of postings) {
+        const d = await send(
+          endpoints,
+          'admin-role-posting-delete',
+          { id },
+          'cleanup-posting',
+        ).catch(() => undefined);
+        if (!d || !ok(d)) left.push(`posting ${id}`);
+      }
+      for (const [deleteId, id] of made.reverse()) {
+        const d = await send(endpoints, deleteId, { id }, `cleanup-${deleteId}`).catch(
+          () => undefined,
+        );
+        if (!d || !ok(d)) left.push(`${deleteId} ${id}`);
+      }
+      expect.soft(left, 'every record this test made is deleted again').toEqual([]);
     }
   });
 });

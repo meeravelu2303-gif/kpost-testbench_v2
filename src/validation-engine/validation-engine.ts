@@ -51,6 +51,8 @@ export interface ValidationEngineDeps {
 
 export interface ValidateOptions {
   profile?: ValidationProfile;
+  /** Values this call's own flow minted, trusted by the QA-identifier guard for this call only. */
+  ownedIdentifiers?: readonly (string | number)[];
 }
 
 /**
@@ -95,7 +97,9 @@ export class ValidationEngine {
     const startedAt = new Date();
     const started = performance.now();
 
-    const executor = new EndpointExecutor(this.deps.clients, this.deps.apiRegistry, this.deps.log);
+    const executor = new EndpointExecutor(this.deps.clients, this.deps.apiRegistry, this.deps.log, {
+      ownedIdentifiers: options.ownedIdentifiers,
+    });
     const request = await executor.buildRequest(resolved);
     const primary = await executor.send(resolved, request, { label: 'primary' });
     const log = this.deps.log.child({

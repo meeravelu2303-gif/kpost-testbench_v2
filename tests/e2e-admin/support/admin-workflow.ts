@@ -1,6 +1,7 @@
 import { env } from '@config/env';
 import type { Locator, Page } from '@playwright/test';
 import { expect, test } from '@fixtures';
+import { isLiveHost } from '@config/live-hosts';
 
 /**
  * Admin UI **functional** helpers: work done on the real Admin/HR-Setup screens (create, edit, delete), with
@@ -15,14 +16,6 @@ import { expect, test } from '@fixtures';
  * go to `ADMIN_API_BASE_URL` (the test Admin box), and skips with the hosts it saw otherwise. As a second
  * net, any non-GET request the page sends to a live host is aborted and reported.
  */
-
-/** Live hosts the bench must never write to (CLAUDE.md §1). */
-const LIVE_HOSTS = [
-  'adminmodule.kpostindia.com',
-  'devapi2.kpostindia.com',
-  'account.kpostindia.com',
-  'kmail5.kpostindia.com',
-];
 
 /** Admin API paths the screens call (Services/AdminSetup.js, HumanResources.js). */
 const ADMIN_API_PATH =
@@ -53,7 +46,7 @@ export async function guardAdminHosts(page: Page): Promise<AdminHostGuard> {
     const req = route.request();
     const url = new URL(req.url());
     if (ADMIN_API_PATH.test(url.pathname)) guard.adminHosts.add(url.host);
-    if (req.method() !== 'GET' && LIVE_HOSTS.includes(url.hostname)) {
+    if (req.method() !== 'GET' && isLiveHost(url.hostname)) {
       guard.blockedLiveWrites.push(`${req.method()} ${url.origin}${url.pathname}`);
       await route.abort('blockedbyclient');
       return;
@@ -78,6 +71,30 @@ export function requireTestAdminApi(guard: AdminHostGuard): void {
     hosts.length === 0 || hosts.some((h) => h !== testHost),
     `the Admin UI build calls ${hosts.join(', ') || 'no Admin API yet'}, not the test Admin API (${testHost}) — no record is written through it`,
   );
+}
+
+/**
+ * One step of a flow that must NOT hide the steps after it (owner 2026-10-26: "test everything, stop only
+ * on a blocker"). A failure is recorded (the test still fails, listing every failed stage) and the flow
+ * carries on. `blocker: true` is for a step the rest cannot run without — the record was never created —
+ * and stops the test as before. Returns whether the stage passed.
+ */
+export async function stage(
+  name: string,
+  body: () => Promise<void>,
+  options: { blocker?: boolean } = {},
+): Promise<boolean> {
+  try {
+    await test.step(name, body);
+
+    return true;
+  } catch (error) {
+    // A blocker, or a `test.skip()` inside the stage (it throws to stop the test), ends the test.
+    if (options.blocker || test.info().expectedStatus === 'skipped') throw error;
+    const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
+    expect.soft(message, `stage "${name}" failed (the flow continued): ${message}`).toBe('');
+    return false;
+  }
 }
 
 /** The guard must have caught nothing: a page write to a live host is itself a finding. */
@@ -165,10 +182,34 @@ export async function openTab(page: Page, name: string): Promise<void> {
     .click();
 }
 
-/** IConControl: the first icon is Add, the second the list (eye). Plain divs with no text. */
-const icon = (page: Page, i: 0 | 1): Locator => page.locator('.boderIcon, .borderIconCol').nth(i);
-export const openAdd = (page: Page): Promise<void> => icon(page, 0).click();
-export const openList = (page: Page): Promise<void> => icon(page, 1).click();
+/**
+ * IConControl (src/Common/IConControl.js): plain divs with no text, Add first and the eye (list) always
+ * last; a screen passes only the icons it has (the Variable tab has just the eye). Visible ones only: a
+ * tabbed screen keeps the other tab's icons in the DOM, hidden, and first.
+ */
+const icons = (page: Page): Locator => page.locator('.boderIcon:visible, .borderIconCol:visible');
+export const openAdd = (page: Page): Promise<void> => icons(page).first().click();
+/**
+ * Shows the list. The eye TOGGLES it (`viewClick` in WPSetupTier.js etc.), so a second click hid the list
+ * the flows had just opened: click only while no table is showing. (The icon's active class is no guide:
+ * Employee Data styles its eye by the user's role, `eyeIcon={role === 1}`.)
+ */
+export async function openList(page: Page): Promise<void> {
+  // KSmartTable's own wrapper (src/Common/KSmartTable.js), not any table: forms have their own.
+  const list = page.locator('.smart-table-wrapper:visible').first();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (await list.isVisible().catch(() => false)) return;
+    await icons(page).last().click();
+    if (
+      await list
+        .waitFor({ state: 'visible', timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false)
+    )
+      return;
+  }
+  await expect(list, 'the list opens').toBeVisible({ timeout: 10_000 });
+}
 
 /** The open KDrawer. */
 export const drawer = (page: Page): Locator => page.locator('.custom-drawer.open');

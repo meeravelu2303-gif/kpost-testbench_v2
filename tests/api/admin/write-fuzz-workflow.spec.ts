@@ -24,6 +24,13 @@ const businessM: Principal | undefined = K.principals.find((p) => p.key === 'bus
 const stamp = Date.now();
 const name = (label: string): string => `QA FUZZ ${label} ${stamp}`;
 
+/**
+ * Records a malformed `*-save` got ACCEPTED (the finding itself) — deleted before the parents in teardown.
+ * Without this, every accepted variant stayed in the QA company (found 2026-10-26: ~24 half-empty
+ * locations and HR variables per run).
+ */
+const acceptedByFuzz: Array<[deleteEndpointId: string, recordId: string]> = [];
+
 function envelope(resp: { bodyText: string }): Record<string, unknown> {
   try {
     const parsed: unknown = JSON.parse(resp.bodyText || '{}');
@@ -86,6 +93,8 @@ async function assertRejectsMalformed(
       },
     );
     if (resp.status < 400) {
+      const accepted = id.endsWith('-save') ? createdId(resp) : undefined;
+      if (accepted) acceptedByFuzz.push([id.replace(/-save$/, '-delete'), accepted]);
       endpoints.recordBusinessRuleViolation({
         endpointId: id,
         ruleId: `ADMIN-WRITE-FUZZ-${id}`,
@@ -515,6 +524,22 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
     } finally {
       // Teardown in reverse dependency order (best-effort; deletes are hard, no cascade) — exactly
       // feature.spec.ts's pattern, so this file leaves nothing behind beyond what it created.
+      // Fuzz-accepted records first: they may reference the setup parents below.
+      const leftovers: string[] = [];
+      for (const [deleteId, recordId] of acceptedByFuzz.splice(0)) {
+        const del = await call(
+          endpoints,
+          deleteId,
+          { id: recordId },
+          `cleanup:accepted:${deleteId}`,
+        )
+          .then((r) => r.status)
+          .catch(() => 0);
+        if (del !== 200) leftovers.push(`${deleteId} ${recordId} (HTTP ${del})`);
+      }
+      expect
+        .soft(leftovers, 'every record a malformed save got accepted is deleted again')
+        .toEqual([]);
       const cleanup: Array<[string, string | undefined]> = [
         ['admin-employee-delete', empId],
         ['admin-workplace-location-delete', locId],

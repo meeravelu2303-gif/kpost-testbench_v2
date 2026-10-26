@@ -33,13 +33,13 @@ test.describe('Admin module · plain-read business rules @api @admin-api', () =>
       value?: { areaName?: string[]; State?: string; Country?: string; District?: string };
     };
     // A real, known pincode must resolve to a real place, not an empty/placeholder envelope.
-    expect(body.value?.Country, 'the country matches what was asked for').toBe('India');
-    expect(body.value?.State, 'a real state is resolved').toBeTruthy();
-    expect(body.value?.District, 'a real district is resolved').toBeTruthy();
+    expect.soft(body.value?.Country, 'the country matches what was asked for').toBe('India');
+    expect.soft(body.value?.State, 'a real state is resolved').toBeTruthy();
+    expect.soft(body.value?.District, 'a real district is resolved').toBeTruthy();
     const areaNames = body.value?.areaName ?? [];
-    expect(areaNames.length > 0, 'at least one real area name is resolved for this pincode').toBe(
-      true,
-    );
+    expect
+      .soft(areaNames.length > 0, 'at least one real area name is resolved for this pincode')
+      .toBe(true);
   });
 
   for (const requestType of ['suspend', 'terminate'] as const) {
@@ -75,8 +75,8 @@ test.describe('Admin module · plain-read business rules @api @admin-api', () =>
         return;
       }
       expect(ex.status, 'a list with members is answered 200').toBe(200);
-      expect(env.status, 'with a SUCCESS envelope').toBe('SUCCESS');
-      expect(Array.isArray(env.value), 'and the list').toBe(true);
+      expect.soft(env.status, 'with a SUCCESS envelope').toBe('SUCCESS');
+      expect.soft(Array.isArray(env.value), 'and the list').toBe(true);
     });
   }
 
@@ -91,8 +91,8 @@ test.describe('Admin module · plain-read business rules @api @admin-api', () =>
       { label: 'admin:suspend-list-no-type', auth: { principal: businessM! }, allowLiveRead: true },
     );
     expect(ex.status, 'an empty body is a 400').toBe(400);
-    expect(ex.bodyText ?? '', 'saying what is wrong with the request').toMatch(
-      /requestType|body is empty or invalid/i,
-    );
+    expect
+      .soft(ex.bodyText ?? '', 'saying what is wrong with the request')
+      .toMatch(/requestType|body is empty or invalid/i);
   });
 });

@@ -16,10 +16,10 @@ defects in it and files them to Bugzilla, routed to the developer who owns the m
 | Bugzilla product | Suite       | Owner                                    | Host (from `.env`)                                                      |
 | ---------------- | ----------- | ---------------------------------------- | ----------------------------------------------------------------------- |
 | KPost API        | `kpost-api` | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (testingapi.kpostindia.com)                        |
-| KPost Admin      | `admin-api` | Karan S (karans@kpost.in)                | `ADMIN_API_BASE_URL` (http://192.168.10.4:9595)                         |
+| KPost Admin      | `admin-api` | Karan S (karans@kpost.in)                | `ADMIN_API_BASE_URL` (http://10.10.50.7:9595, MongoDB same IP)         |
 | KMail API        | `kmail-api` | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
 | KPost UI         | `kpost-ui`  | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                        |
-| KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (kpostadmin.kpostindia.com), `tests/e2e-admin`      |
+| KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/e2e-admin`      |
 
 **The target is the TEST deployment only** — `test.kpostindia.com`, `testingapi`, `testkmail`, the Admin
 test box. Never `account.kpostindia.com`, `devapi2`, `kmail5` or `adminmodule.kpostindia.com`; those
@@ -50,6 +50,10 @@ six per-module FRDs in `D:\Kpost Documents`; map in `docs/reference/requirements
   so business UI specs, the admin-api suite and the role/cross-tenant authorization validators run under
   the product commands. The business accounts are shared with developers: a lost session there is noise,
   not a defect.
+- **Role posting runs live, QA companies only** (owner, 2026-10-26: "the ksmacc live is okay … cover everything
+  in role postings"). Its writes create a KPost (testingapi) and a KSMACC (live; no test server) account per
+  posting, so the product commands set `ADMIN_ROLE_POSTING_LIVE=true` and every flow terminates and deletes
+  what it made. Never on a non-QA company.
 - **Admin API scope = the owner's PDF list** (38 definitions, `scripts/apply-admin-pdf-payloads.cjs`). Admin payloads never send `companyId`; the
   backend takes it from the token (security specs send a FOREIGN one on purpose).
 
@@ -171,7 +175,8 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/reference
   manual filing (`scripts/bugzilla-duplicate-check.cjs`), against the right component and platform-wide components (General/Home) too.
 - **Plain English, every product.** What's broken + a bottom line a non-QA reader follows. API bugs keep the
   `bug-builder.ts` template (Classification / curl / evidence); UI bugs use the one UI template
-  (Classification / Module / Summary / Steps / Expected / Actual), never a curl.
+  (Classification / Module / Summary / Steps / Expected / Actual), never a curl. **The Summary is short:** 2-4 plain
+  sentences on what is broken and what it breaks; details belong in Steps / Actual / curl (owner, 2026-10-26).
 - **`status_whiteboard` must be `[cat:X][browser:Y][source:Z]`** — the BUGZILLA-UI tracker reads all three
   (`buildWhiteboard`). `X` ∈ Functional/Security/Performance/Compatibility/Accessibility (anything else is
   Unclassified and drops out of every filter); `Y` = real browsers, UI only (`admin-ui` is written `chromium`);
@@ -202,6 +207,11 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/reference
 - **Test a matcher against real Bugzilla data**, not hand-written fixtures. Browser-filter counts use
   substring match on the whiteboard (`[browser:chromium,firefox]` counts for both).
 - **A check that couldn't run says SKIPPED with a reason**, never PASSED. A collapsed run is loud, never clean.
+- **Find every bug in one pass; stop only on a blocker** (owner, 2026-10-26). A failed step must not hide the
+  steps after it: flows use `stage()` (`tests/e2e-admin/support/admin-workflow.ts`) or `expect.soft`, and only
+  a step the rest cannot run without (the record was never created) is `{ blocker: true }`. Test both
+  directions: bad input refused AND the screen's valid input (blank optional fields included) accepted, on save
+  and update. Read a controller's save/update/delete rules together before testing it.
 
 ## 8. Contracts and conventions
 

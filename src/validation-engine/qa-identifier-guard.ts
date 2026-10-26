@@ -281,6 +281,19 @@ const NOT_A_RESOURCE = new Set(
     // membership rows). Same surgical exemption as `id` — qualified keys (`kpostIDs`, `contactIDs`)
     // stay checked.
     'ids',
+    /*
+     * The Admin employee's POSTAL mailing address (`mailingObj`, Employee Data step 3): country, ZIP,
+     * state, city, area and address lines. They match only because the key contains "mail"; the values
+     * are a place, not a mailbox or a record. E-mail keys (`emailAddress`, `alternativeEmailAddress`)
+     * are not listed and stay checked. (2026-10-26)
+     */
+    'mailingcountry',
+    'mailingzipcode',
+    'mailingstate',
+    'mailingcity',
+    'mailingarea',
+    'mailingaddressline1',
+    'mailingaddressline2',
   ].map((key) => key.toLowerCase()),
 );
 
@@ -382,6 +395,12 @@ interface Offence {
   value: unknown;
 }
 
+/** A value names somebody else's record unless it is ours — or empty, which names nothing at all. */
+const notOurs = (value: string | number, owned: Set<string>): boolean => {
+  const v = String(value).trim().toLowerCase();
+  return v !== '' && !owned.has(v);
+};
+
 function walk(node: unknown, trail: string, owned: Set<string>, found: Offence[]): void {
   if (Array.isArray(node)) {
     node.forEach((item, index) => walk(item, `${trail}[${index}]`, owned, found));
@@ -393,12 +412,12 @@ function walk(node: unknown, trail: string, owned: Set<string>, found: Offence[]
       const isIdentifier = IDENTIFIER_KEY.test(key) && !NOT_A_RESOURCE.has(key.toLowerCase());
 
       if (isIdentifier && (typeof value === 'string' || typeof value === 'number')) {
-        if (!owned.has(String(value).trim().toLowerCase())) found.push({ path: here, value });
+        if (notOurs(value, owned)) found.push({ path: here, value });
       } else if (isIdentifier && Array.isArray(value)) {
         // `{"kallIds":[2,3]}` and `{"memberKpostIdList":[…]}` — each element is a target.
         value.forEach((item, index) => {
           if (typeof item === 'string' || typeof item === 'number') {
-            if (!owned.has(String(item).trim().toLowerCase())) {
+            if (notOurs(item, owned)) {
               found.push({ path: `${here}[${index}]`, value: item });
             }
           } else {
