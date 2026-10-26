@@ -12,6 +12,7 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 | [`bug-filing.md`](guides/bug-filing.md)                     | How a failure becomes a Bugzilla ticket: ownership, validity gates, dedupe, the ticket format.          |
 | [`validation-framework.md`](guides/validation-framework.md) | The engine: define an endpoint once, every applicable validator runs. How to add an endpoint/validator. |
 | [`api-contracts.md`](guides/api-contracts.md)               | The Excel workbook → contracts → OpenAPI pipeline, and what to do after a new dump.                     |
+| [`run-levels.md`](guides/run-levels.md)                     | Smoke, sanity and regression: how tags select them and how `scripts/run-level.mjs` runs them.           |
 
 ## `reference/` — what the bench is and what it tests against
 
@@ -22,6 +23,15 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 | [`requirements-frd.md`](reference/requirements-frd.md)                   | The FR → test map against the six per-module FRDs: covered, gap, out of scope.                               |
 | [`decision-log.md`](reference/decision-log.md)                           | Every decision and incident, newest first. **Add an entry at the top after changing a flow.**                |
 | [`production-readiness-plan.md`](reference/production-readiness-plan.md) | Where the bench stands (measured), what production grade means here, and the phased plan with exit criteria. |
+| [`coverage-gaps.md`](reference/coverage-gaps.md)                         | Requirements against the in-scope run-level suite: what is covered and what is still a gap.                  |
+| `kpost-test-bench-overview.docx`                                         | A Word overview of the bench for readers outside the team.                                                   |
+
+## `proposals/` — suggested changes, not applied
+
+| Document                                             | What it is                                                                         |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [`frd-updates.md`](proposals/frd-updates.md)         | New FRD requirements for features the tests exercise but the per-module FRD lacks. |
+| [`soft-assertions.md`](proposals/soft-assertions.md) | Group-module soft assertions proposed to become hard ones (FR-GM-010 … 014).       |
 
 ## `modules/` — per-module analyses the API specs were built from
 
@@ -43,10 +53,12 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 
 ## `scope/` — why an endpoint is not tested (hand-written, evidence-based)
 
-| Document                                                                 | What it is                                                                        |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| [`blocked-endpoints-rationale.md`](scope/blocked-endpoints-rationale.md) | Every endpoint that genuinely cannot run today, with its reason and unblock path. |
-| [`unused-endpoints.md`](scope/unused-endpoints.md)                       | Endpoints proven to have no caller in the front end.                              |
+| Document                                                                               | What it is                                                                        |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [`blocked-endpoints-rationale.md`](scope/blocked-endpoints-rationale.md)               | Every endpoint that genuinely cannot run today, with its reason and unblock path. |
+| [`unused-endpoints.md`](scope/unused-endpoints.md)                                     | Endpoints proven to have no caller in the front end.                              |
+| [`frontend-endpoint-usage-2026-10-11.md`](scope/frontend-endpoint-usage-2026-10-11.md) | Which endpoints the React app actually calls, traced from source.                 |
+| [`kpost-api-coverage-gaps-2026-10-11.md`](scope/kpost-api-coverage-gaps-2026-10-11.md) | KPost API coverage by test type, per endpoint.                                    |
 
 The OTP-dependent list is generated: [`contracts/otp-dependent-endpoints.md`](../contracts/otp-dependent-endpoints.md).
 
@@ -69,6 +81,7 @@ The OTP-dependent list is generated: [`contracts/otp-dependent-endpoints.md`](..
 | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | [`api-coverage-depth.md`](audits/api-coverage-depth.md)                           | For each registered endpoint, what it gets beyond the generic sweep; the live re-checks. |
 | [`katchup-ground-truth-2026-10-03.md`](audits/katchup-ground-truth-2026-10-03.md) | Katchup read from backend and frontend source, cross-referenced with the bench.          |
+| [`test-suite-audit-2026-10-19.md`](audits/test-suite-audit-2026-10-19.md)         | The whole bench's inventory, gaps and production-grade plan as of 19 Oct.                |
 
 ## `api-specs/` — the product owner's source files
 

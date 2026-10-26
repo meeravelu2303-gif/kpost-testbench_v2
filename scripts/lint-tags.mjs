@@ -231,13 +231,13 @@ for (const [k, n] of Object.entries(sanityCount)) {
 for (const [k, n] of Object.entries(suiteModuleCount)) {
   if (!sanityAny[k])
     errors.push(
-      `sanity coverage gap: ${k.replace('|', ' / ')} has ${n} in-scope test(s) but no @sanity test (docs/TEST-RUN-LEVELS.md §2b)`,
+      `sanity coverage gap: ${k.replace('|', ' / ')} has ${n} in-scope test(s) but no @sanity test (docs/guides/run-levels.md §2b)`,
     );
 }
 for (const [suite, n] of Object.entries(adminSanity)) {
   if (!n)
     errors.push(
-      `sanity coverage gap: Admin ${suite.toUpperCase()} has no @sanity test (docs/TEST-RUN-LEVELS.md §2b)`,
+      `sanity coverage gap: Admin ${suite.toUpperCase()} has no @sanity test (docs/guides/run-levels.md §2b)`,
     );
 }
 

@@ -1,5 +1,5 @@
 // Run-level runner: the one entry point for smoke / sanity / regression. Cross-platform (Node, no
-// bash). See docs/TEST-RUN-LEVELS.md.
+// bash). See docs/guides/run-levels.md.
 //
 //   node scripts/run-level.mjs --level smoke
 //   node scripts/run-level.mjs --level sanity                  (FULL sanity: every module + Admin)

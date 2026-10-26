@@ -95,7 +95,7 @@ runs without an environment.
 
 ## Running tests
 
-**Run levels (smoke / sanity / regression) — [`docs/TEST-RUN-LEVELS.md`](docs/TEST-RUN-LEVELS.md).**
+**Run levels (smoke / sanity / regression) — [`docs/guides/run-levels.md`](docs/guides/run-levels.md).**
 Tag-driven, server-safe, and never file bugs: `npm run test:smoke`, `npm run test:sanity -- --module <m>`,
 `npm run test:regression`. Tag governance: `npm run lint:tags`.
 

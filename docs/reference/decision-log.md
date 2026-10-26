@@ -1022,9 +1022,9 @@ dry-run, Chromium). `--module`/`--bug` still narrow it. Reads and screens are **
 sweep takes every `productionSafe`, non-OTP endpoint per module at the SMOKE profile, and the screen check takes
 every route in `src/ui/screens.ts` / `admin-screens.ts`, so new endpoints and screens join automatically. Core
 writes are existing independent, self-cleaning feature tests tagged `@sanity` (one or two per module). Map:
-`docs/TEST-RUN-LEVELS.md` §2b.
+`docs/guides/run-levels.md` §2b.
 
-**Decision — Admin joins SANITY only.** Resolves the conflict between TEST-RUN-LEVELS.md ("Admin never selected")
+**Decision — Admin joins SANITY only.** Resolves the conflict between run-levels.md ("Admin never selected")
 and CLAUDE.md (Admin in scope). Admin tests may carry `@sanity` + `@admin`, never `@smoke`/`@regression` (those
 run the KPost accounts and flags). Admin reads only; Admin writes stay on `admin:full` (role-posting reaches real
 KSMACC accounts). The run-level host guard now covers `ADMIN_API_BASE_URL`/`ADMIN_UI_BASE_URL` and refuses the
@@ -1055,7 +1055,7 @@ run pending.
 
 **Owner:** "close the requirements-traceability / coverage gaps; verify everything live, don't just author tests."
 
-**Re-measured first.** The 2026-10-13 COVERAGE-GAPS.md figure (65%) was the FRD's own claim; the generator's
+**Re-measured first.** The 2026-10-13 coverage-gaps.md figure (65%) was the FRD's own claim; the generator's
 verified figure on the unchanged tree was **48/139 = 35%**. Three generator faults hid coverage: bolded FRD rows
 (`**FR-KU-017..024**`, FR-GM-014, FR-KM-005) were dropped (now 142 rows); the "Where" parser stripped dots so no
 FRD-named spec ever resolved; and analyst-assigned `RTM-*` statuses predated this week's specs.

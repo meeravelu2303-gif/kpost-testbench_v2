@@ -1,7 +1,7 @@
 /**
  * The single source of truth for every tag string in the bench. Import from here (or via its
  * re-export from `./constants`) so a typo is impossible — `lint:tags` rejects any tag on a test that
- * is not a value in `TAGS` (plus the dynamic `@bug-<id>` form). See `docs/TEST-RUN-LEVELS.md`.
+ * is not a value in `TAGS` (plus the dynamic `@bug-<id>` form). See `docs/guides/run-levels.md`.
  *
  * This module is intentionally PURE (no Node built-ins, no `__dirname`) so the plain-Node run-level
  * runner and `lint:tags` can import it directly under Node's native TypeScript loader.

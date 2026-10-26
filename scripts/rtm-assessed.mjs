@@ -1,4 +1,4 @@
-// Analyst-assigned requirements for the areas the per-module FRD is silent on (see docs/COVERAGE-GAPS.md).
+// Analyst-assigned requirements for the areas the per-module FRD is silent on (see docs/reference/coverage-gaps.md).
 // Consumed by scripts/rtm-lib.mjs. `files` are in-scope spec path fragments that cover the requirement
 // (used to resolve a verified link); empty `files` => Not covered / blocked.
 export const ASSESSED = [

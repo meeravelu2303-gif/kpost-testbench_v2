@@ -461,7 +461,7 @@ export async function generateRtm({ report, root }) {
       'Candidate test file': base(f),
       Confidence: 'low',
       Evidence: `${byFile.get(f).length} in-scope test(s), not FR-linked`,
-      Suggested: 'annotate requirement, or add FRD requirement (see FRD-UPDATE-PROPOSALS.md)',
+      Suggested: 'annotate requirement, or add FRD requirement (see docs/proposals/frd-updates.md)',
     });
 
   // 4) summaries
