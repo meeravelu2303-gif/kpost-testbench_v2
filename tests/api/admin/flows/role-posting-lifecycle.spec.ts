@@ -7,7 +7,7 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import type { ValidationEngine } from '@engine/validation-engine';
 import { formatReport } from '@reporting/report-formatter';
 import { expect, test } from '@fixtures';
-import { employeePayload, locationPayload } from './support/screen-payloads';
+import { employeePayload, locationPayload } from '../support/screen-payloads';
 import { ADMIN_RESPONSE_SCHEMAS } from '@api/definitions/admin/response-schemas';
 
 /**

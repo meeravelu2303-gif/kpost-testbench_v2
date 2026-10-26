@@ -6,7 +6,7 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { apiRegistry } from '@api/definitions/index';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
-import { employeePayload } from './support/screen-payloads';
+import { employeePayload } from '../support/screen-payloads';
 
 /**
  * Response times of all 38 Admin endpoints, measured from repeated SEQUENTIAL calls (never parallel: this is

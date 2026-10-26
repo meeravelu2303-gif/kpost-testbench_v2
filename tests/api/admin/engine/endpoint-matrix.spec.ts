@@ -8,8 +8,8 @@ import type { ValidationEngine } from '@engine/validation-engine';
 import { formatReport } from '@reporting/report-formatter';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
-import { employeePayload } from './support/screen-payloads';
-import { KNOWN_FALSE_POSITIVES } from '../../../src/bug-tracker/known-false-positives';
+import { employeePayload } from '../support/screen-payloads';
+import { KNOWN_FALSE_POSITIVES } from '../../../../src/bug-tracker/known-false-positives';
 
 /**
  * The centralized engine on the Admin endpoints it cannot reach by itself (coverage audit 2026-10-26: only

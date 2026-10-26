@@ -8,7 +8,7 @@ import {
   locationPayload,
   tierPayload,
   variablePayload,
-} from './support/screen-payloads';
+} from '../support/screen-payloads';
 
 /**
  * Input hardening on every Admin record the screens edit (owner 2026-10-26):

@@ -8,7 +8,7 @@ import {
   locationPayload,
   tierPayload,
   variablePayload,
-} from './support/screen-payloads';
+} from '../support/screen-payloads';
 
 /**
  * ONE-TIME SETUP (owner 2026-10-26): a permanent, ordinary (non-admin) employee of QA company 242 with a real

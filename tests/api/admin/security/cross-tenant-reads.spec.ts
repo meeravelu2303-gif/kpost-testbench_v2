@@ -1,7 +1,7 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { locationPayload, tierPayload, variablePayload } from './support/screen-payloads';
+import { locationPayload, tierPayload, variablePayload } from '../support/screen-payloads';
 
 const K = AUTH_PROFILES.kpost;
 const businessM = K.principals.find((p) => p.key === 'business-m');

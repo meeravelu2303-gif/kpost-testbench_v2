@@ -79,9 +79,9 @@ _None._
 | 9 | qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/e2e/contacts/contacts.spec.ts:18`, `tests/e2e/katchup/katchup-actions-more.spec.ts:48`, `tests/e2e/katchup/katchup-actions.spec.ts:46`, `tests/e2e/katchup/katchup-compose.spec.ts:38` +5 more |
 | 8 | needs the KPOST_QA connection to judge by the row | `tests/api/kmail/mutation-idor.spec.ts:47`, `tests/api/kpost/security/kall-object-authorization.spec.ts:43`, `tests/api/kpost/security/kall-object-authorization.spec.ts:148`, `tests/api/kpost/security/kall-object-authorization.spec.ts:288` +4 more |
 | 7 | qa.business needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID) | `tests/e2e/platform/screens-business.spec.ts:25`, `tests/e2e/settings/settings-business-bank-details.spec.ts:26`, `tests/e2e/settings/settings-business-company-details.spec.ts:40`, `tests/e2e/user-management/usermanagement-accessibility.spec.ts:42` +3 more |
-| 6 | qa.business.m needs the BUSINESS_M account of the QA testing company (QA_BUSINESS_M_KPOST_ID) | `tests/api/admin/endpoint-matrix.spec.ts:352`, `tests/api/admin/field-rules-sweep.spec.ts:336`, `tests/api/admin/input-hardening.spec.ts:177`, `tests/api/admin/latency.spec.ts:150` +2 more |
+| 6 | qa.business.m needs the BUSINESS_M account of the QA testing company (QA_BUSINESS_M_KPOST_ID) | `tests/api/admin/engine/endpoint-matrix.spec.ts:352`, `tests/api/admin/maintenance/qa-leftovers-cleanup.spec.ts:46`, `tests/api/admin/performance/latency.spec.ts:150`, `tests/api/admin/validation/field-rules-sweep.spec.ts:336` +2 more |
 | 6 | qa.bench qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/api/kmail/reply-forward-workflow.spec.ts:63`, `tests/api/kpost/katchup/unread-count-clears-on-read.spec.ts:56`, `tests/e2e/katchup/katchup-received-actions.spec.ts:100`, `tests/e2e/katchup/katchup-two-session.spec.ts:58` +2 more |
-| 5 | qa.business.m needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID) | `tests/api/admin/feature.spec.ts:102`, `tests/api/admin/reads-workflow.spec.ts:18`, `tests/api/admin/security-cross-tenant-reads.spec.ts:28`, `tests/api/admin/security-probes.spec.ts:52` +1 more |
+| 5 | qa.business.m needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID) | `tests/api/admin/flows/feature.spec.ts:102`, `tests/api/admin/flows/reads-workflow.spec.ts:18`, `tests/api/admin/security/cross-tenant-reads.spec.ts:28`, `tests/api/admin/security/probes.spec.ts:52` +1 more |
 | 5 | needs two distinct KPost principals | `tests/api/kpost/security/kall-legacy-writes-regression-2026-10-07.spec.ts:22`, `tests/api/kpost/security/kall-object-authorization.spec.ts:558`, `tests/api/kpost/security/katchup-legacy-recall-regression-2026-10-07.spec.ts:23`, `tests/api/kpost/security/katchup-object-authorization.spec.ts:42` +1 more |
 | 4 | qa.bench needs a real account (QA_KPOST_ID) | `tests/e2e/platform/accessibility-axe.spec.ts:35`, `tests/e2e/platform/keyboard-nav.spec.ts:25`, `tests/e2e/platform/network-resilience.spec.ts:25`, `tests/e2e/platform/visual.spec.ts:29` |
 | 3 | needs the KPOST_QA connection to assert persistence | `tests/api/kmail/workflow-db.spec.ts:71`, `tests/api/kpost/katchup/workflow-db.spec.ts:75`, `tests/api/kpost/katchup/workflow-db.spec.ts:164` |
@@ -90,7 +90,7 @@ _None._
 | 3 | qa.bench qa.p3 needs the primary, 2nd and personal-3 QA accounts | `tests/e2e/group/group-info.spec.ts:88`, `tests/e2e/group/group-member-profile-session.spec.ts:46`, `tests/e2e/group/group-post-targeting.spec.ts:34` |
 | 3 | needs both QA accounts, qatest1 and qatest3 | `tests/e2e/kmail/kmail-browse-e2e.spec.ts:34`, `tests/e2e/kmail/kmail-phone-e2e.spec.ts:28`, `tests/e2e/kmail/kmail-status-e2e.spec.ts:44` |
 | 3 | needs the second QA account (QA_VICTIM_KPOST_ID) | `tests/e2e/smoke/contacts.smoke.spec.ts:16`, `tests/e2e/smoke/katchup.smoke.spec.ts:24`, `tests/e2e/smoke/kmail.smoke.spec.ts:22` |
-| 2 | qa.business.m needs the BUSINESS_M account of the QA testing company (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID) | `tests/api/admin/role-posting-lifecycle.spec.ts:136`, `tests/api/admin/role-posting-lifecycle.spec.ts:540` |
+| 2 | qa.business.m needs the BUSINESS_M account of the QA testing company (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID) | `tests/api/admin/flows/role-posting-lifecycle.spec.ts:136`, `tests/api/admin/flows/role-posting-lifecycle.spec.ts:540` |
 | 2 | needs the BUSINESS_S admin principal | `tests/api/kpost/security/admin-bank-company-cross-company.spec.ts:28`, `tests/api/kpost/security/admin-usermanagement-cross-company.spec.ts:29` |
 | 2 | needs a real QA_BUSINESS_M_COMPANY_ID distinct from the attacker's own company | `tests/api/kpost/security/admin-bank-company-cross-company.spec.ts:30`, `tests/api/kpost/security/admin-usermanagement-cross-company.spec.ts:31` |
 | 2 | needs the personal and personal-3 principals | `tests/api/kpost/security/kdiary-object-authorization.spec.ts:62`, `tests/api/kpost/security/profile-record-object-authorization.spec.ts:57` |
@@ -100,12 +100,12 @@ _None._
 | 2 | qa.bench needs a real live account | `tests/e2e/kall/kall-features.spec.ts:114`, `tests/e2e/profile/profile-actions.spec.ts:67` |
 | 2 | qa.bench needs a live QA account | `tests/e2e/kmail/kmail-api-handling.spec.ts:22`, `tests/e2e/platform/app-hardcoded-host.spec.ts:26` |
 | 2 | needs a second QA account as the recipient | `tests/e2e/kmail/kmail-composer-controls.spec.ts:289`, `tests/e2e/kmail/kmail-composer-controls.spec.ts:334` |
-| 1 | roleEmployeeMobile roleEmployeeEmail needs ADMIN_ROLE_POSTING_LIVE=true and the reserved QA employee identity (QA_ROLE_EMPLOYEE_MOBILE/EMAIL) | `tests/api/admin/latency.spec.ts:273` |
-| 1 | list delete maintenance only: set ADMIN_QA_CLEANUP=list (read-only) or ADMIN_QA_CLEANUP=delete | `tests/api/admin/qa-leftovers-cleanup.spec.ts:42` |
-| 1 | roleEmployeeMobile roleEmployeeEmail needs the reserved QA test-employee identity in .env (QA_ROLE_EMPLOYEE_MOBILE + QA_ROLE_EMPLOYEE_EMAIL) | `tests/api/admin/role-posting-lifecycle.spec.ts:132` |
-| 1 | needs ADMIN_API_BASE_URL (the Admin test box) | `tests/api/admin/sanity-read-sweep.spec.ts:19` |
-| 1 | needs both BUSINESS_M and BUSINESS_S principals | `tests/api/admin/security-cross-tenant-reads.spec.ts:27` |
-| 1 | qa.business.m roleEmployeeMobile roleEmployeeEmail needs the QA company admin (QA_BUSINESS_M_*) and the QA employee identity (QA_ROLE_EMPLOYEE_*) | `tests/api/admin/setup-staff-employee.spec.ts:37` |
+| 1 | needs ADMIN_API_BASE_URL (the Admin test box) | `tests/api/admin/engine/sanity-read-sweep.spec.ts:19` |
+| 1 | roleEmployeeMobile roleEmployeeEmail needs the reserved QA test-employee identity in .env (QA_ROLE_EMPLOYEE_MOBILE + QA_ROLE_EMPLOYEE_EMAIL) | `tests/api/admin/flows/role-posting-lifecycle.spec.ts:132` |
+| 1 | list delete maintenance only: set ADMIN_QA_CLEANUP=list (read-only) or ADMIN_QA_CLEANUP=delete | `tests/api/admin/maintenance/qa-leftovers-cleanup.spec.ts:42` |
+| 1 | qa.business.m roleEmployeeMobile roleEmployeeEmail needs the QA company admin (QA_BUSINESS_M_*) and the QA employee identity (QA_ROLE_EMPLOYEE_*) | `tests/api/admin/maintenance/setup-staff-employee.spec.ts:37` |
+| 1 | roleEmployeeMobile roleEmployeeEmail needs ADMIN_ROLE_POSTING_LIVE=true and the reserved QA employee identity (QA_ROLE_EMPLOYEE_MOBILE/EMAIL) | `tests/api/admin/performance/latency.spec.ts:273` |
+| 1 | needs both BUSINESS_M and BUSINESS_S principals | `tests/api/admin/security/cross-tenant-reads.spec.ts:27` |
 | 1 | needs four distinct QA principals configured (QA_* accounts) | `tests/api/kmail/copies-info-idor.spec.ts:49` |
 | 1 | needs three QA accounts | `tests/api/kmail/mail-semantics-workflow.spec.ts:52` |
 | 1 | needs provisioned qatest_* accounts | `tests/api/kmail/workflow-db.spec.ts:69` |
@@ -175,7 +175,7 @@ _None._
 | 12 | the mobile OTP bypass code only validates on the confirmed OTP test gateway | `tests/e2e/auth/signup-business-medium-large.spec.ts:37`, `tests/e2e/auth/signup-business-medium-large.spec.ts:191`, `tests/e2e/auth/signup-business.spec.ts:349`, `tests/e2e/auth/signup-kpostid-length-validation.spec.ts:30` +8 more |
 | 9 | writes real messages; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup/katchup-actions-more.spec.ts:44`, `tests/e2e/katchup/katchup-actions.spec.ts:42`, `tests/e2e/katchup/katchup-copies.spec.ts:49`, `tests/e2e/katchup/katchup-forward-subflow-e2e.spec.ts:59` +5 more |
 | 7 | (no reason string) process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON | `tests/api/kpost/concurrency/scenarios.spec.ts:74`, `tests/api/kpost/concurrency/scenarios.spec.ts:121`, `tests/api/kpost/concurrency/scenarios.spec.ts:239`, `tests/api/kpost/concurrency/scenarios.spec.ts:298` +3 more |
-| 5 | writes to the QA company; set ADMIN_LIFECYCLE=true | `tests/api/admin/endpoint-matrix.spec.ts:348`, `tests/api/admin/field-rules-sweep.spec.ts:332`, `tests/api/admin/input-hardening.spec.ts:173`, `tests/api/admin/latency.spec.ts:146` +1 more |
+| 5 | writes to the QA company; set ADMIN_LIFECYCLE=true | `tests/api/admin/engine/endpoint-matrix.spec.ts:348`, `tests/api/admin/performance/latency.spec.ts:146`, `tests/api/admin/validation/field-rules-sweep.spec.ts:332`, `tests/api/admin/validation/input-hardening.spec.ts:173` +1 more |
 | 5 | (no reason string) process.env.SIGNUP_UI_LIFECYCLE !== 'true', 'drives the real signup screen (a mo | `tests/e2e/auth/signup-business-medium-large.spec.ts:187`, `tests/e2e/auth/signup-kpostid-length-validation.spec.ts:26`, `tests/e2e/auth/signup-login-api-handling.spec.ts:32`, `tests/e2e/auth/signup-pincode-validation.spec.ts:28` +1 more |
 | 5 | sends real mails; set KMAIL_UI_LIFECYCLE=true | `tests/e2e/kmail/kmail-actions-e2e.spec.ts:26`, `tests/e2e/kmail/kmail-browse-e2e.spec.ts:30`, `tests/e2e/kmail/kmail-features-e2e.spec.ts:34`, `tests/e2e/kmail/kmail-phone-e2e.spec.ts:24` +1 more |
 | 5 | sends a real mail; set KMAIL_UI_LIFECYCLE=true | `tests/e2e/kmail/kmail-compose.spec.ts:78`, `tests/e2e/kmail/kmail-read-receipt-e2e.spec.ts:94`, `tests/e2e/kmail/kmail-security.spec.ts:27`, `tests/e2e/kmail/kmail-stored-xss-render.spec.ts:51` +1 more |
@@ -190,8 +190,8 @@ _None._
 | 3 | creates and deletes a real group; set GROUP_UI_LIFECYCLE=true | `tests/e2e/group/group-info.spec.ts:84`, `tests/e2e/group/group-member-profile-session.spec.ts:42`, `tests/e2e/group/group-post-targeting.spec.ts:30` |
 | 3 | sends a real message; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup/katchup-compose.spec.ts:77`, `tests/e2e/katchup/katchup-digitalcard-share-e2e.spec.ts:56`, `tests/e2e/katchup/katchup-secret-message-e2e.spec.ts:18` |
 | 3 | edits a profile field; set PROFILE_UI_LIFECYCLE=true | `tests/e2e/profile/profile-edit.spec.ts:26`, `tests/e2e/profile/profile-functional.spec.ts:79`, `tests/e2e/profile/profile-security.spec.ts:26` |
-| 2 | writes real org structure; set ADMIN_LIFECYCLE=true | `tests/api/admin/feature.spec.ts:98`, `tests/api/admin/write-fuzz-workflow.spec.ts:239` |
-| 2 | creates real KPost (testingapi) + KSMACC accounts for the QA company; set ADMIN_LIFECYCLE=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/api/admin/role-posting-lifecycle.spec.ts:128`, `tests/api/admin/role-posting-lifecycle.spec.ts:536` |
+| 2 | writes real org structure; set ADMIN_LIFECYCLE=true | `tests/api/admin/flows/feature.spec.ts:98`, `tests/api/admin/validation/write-fuzz-workflow.spec.ts:239` |
+| 2 | creates real KPost (testingapi) + KSMACC accounts for the QA company; set ADMIN_LIFECYCLE=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/api/admin/flows/role-posting-lifecycle.spec.ts:128`, `tests/api/admin/flows/role-posting-lifecycle.spec.ts:536` |
 | 2 | writes a real message; set KATCHUP_LIFECYCLE=true to run (owner sign-off, flow doc Q4) | `tests/api/kpost/katchup/lifecycle.spec.ts:24`, `tests/api/kpost/katchup/workflow-db.spec.ts:44` |
 | 2 | creates a real diary event; set KDIARY_LIFECYCLE=true | `tests/api/kpost/kdiary/kdiary-reads-workflow.spec.ts:32`, `tests/api/kpost/security/kdiary-object-authorization.spec.ts:58` |
 | 2 | creates a real, permanent company; set SIGNUP_UI_LIFECYCLE=true | `tests/e2e/auth/signup-business-medium-large.spec.ts:33`, `tests/e2e/auth/signup-business.spec.ts:345` |
@@ -200,7 +200,7 @@ _None._
 | 2 | creates a real group; set GROUP_UI_LIFECYCLE=true | `tests/e2e/cross-layer/cross-layer-flows.spec.ts:275`, `tests/e2e/group/group.spec.ts:22` |
 | 2 | creates a real scheduled call; set KALL_UI_LIFECYCLE=true | `tests/e2e/cross-layer/cross-layer-flows.spec.ts:412`, `tests/e2e/kall/kall-features.spec.ts:110` |
 | 2 | only meaningful when TEST_ENV=production | `tests/framework/live-safety.spec.ts:573`, `tests/framework/live-safety.spec.ts:606` |
-| 1 | one-time setup: set ADMIN_CREATE_STAFF=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/api/admin/setup-staff-employee.spec.ts:33` |
+| 1 | one-time setup: set ADMIN_CREATE_STAFF=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/api/admin/maintenance/setup-staff-employee.spec.ts:33` |
 | 1 | PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND requires explicit authorization even on a future non-production environment, given it compares real credential material — see docs/scope/blocked-endpoints-rationale.md | `tests/api/kmail/credential-disclosure.spec.ts:75` |
 | 1 | sends real mail; set KMAIL_LIFECYCLE=true | `tests/api/kmail/feature.spec.ts:91` |
 | 1 | sends real KMail between our accounts; set KMAIL_LIFECYCLE=true | `tests/api/kmail/mail-semantics-workflow.spec.ts:48` |
@@ -310,7 +310,7 @@ _None._
 | 3 | invalid the OTP bypass code was rejected this run — likely transient; re-run | `tests/e2e/auth/signup-business-medium-large.spec.ts:87`, `tests/e2e/auth/signup-business.spec.ts:378`, `tests/e2e/auth/signup-mobile-lifecycle.spec.ts:61` |
 | 3 | already-exists the randomly generated mobile number happened to already be registered — vanishingly rare; re-run | `tests/e2e/auth/signup-validation.spec.ts:78`, `tests/e2e/auth/signup-validation.spec.ts:166`, `tests/e2e/auth/signup-validation.spec.ts:211` |
 | 3 | invalid the OTP box rejected the bypass code this run — see enterMobileOtp's own doc comment; re-run | `tests/e2e/auth/signup-validation.spec.ts:83`, `tests/e2e/auth/signup-validation.spec.ts:171`, `tests/e2e/auth/signup-validation.spec.ts:216` |
-| 2 | the QA company name could not be read right now; not invented | `tests/api/admin/latency.spec.ts:299`, `tests/api/admin/role-posting-lifecycle.spec.ts:622` |
+| 2 | the QA company name could not be read right now; not invented | `tests/api/admin/flows/role-posting-lifecycle.spec.ts:622`, `tests/api/admin/performance/latency.spec.ts:299` |
 | 2 | needs the mail sent by the first step | `tests/api/kmail/workflow-db.spec.ts:130`, `tests/api/kmail/workflow-db.spec.ts:162` |
 | 2 | needs the sent message from the first step | `tests/api/kpost/katchup/workflow-db.spec.ts:118`, `tests/api/kpost/katchup/workflow-db.spec.ts:210` |
 | 2 | already-exists the randomly generated mobile number happened to already be registered — re-run | `tests/e2e/auth/signup-kpostid-length-validation.spec.ts:44`, `tests/e2e/auth/signup-pincode-validation.spec.ts:48` |
@@ -321,8 +321,8 @@ _None._
 | 2 | the new group was not listed in Katchup right now (four reloads) | `tests/e2e/group/group-info.spec.ts:238`, `tests/e2e/group/group-post-targeting.spec.ts:56` |
 | 2 | the Basic Information editor was not showing right now (session or load condition; path verified live 2026-10-11) | `tests/e2e/profile/profile-functional.spec.ts:100`, `tests/e2e/profile/profile-functional.spec.ts:223` |
 | 2 | the Instant Reply editor was not showing right now (session or load condition; path verified live 2026-10-11) | `tests/e2e/settings/settings-functional.spec.ts:169`, `tests/e2e/settings/settings-security.spec.ts:67` |
-| 1 | the QA company's name could not be read right now — not invented; set up a role posting or company name first | `tests/api/admin/role-posting-lifecycle.spec.ts:187` |
-| 1 | the probe location was not created (HTTP … …) | `tests/api/admin/security-cross-tenant-reads.spec.ts:87` |
+| 1 | the QA company's name could not be read right now — not invented; set up a role posting or company name first | `tests/api/admin/flows/role-posting-lifecycle.spec.ts:187` |
+| 1 | the probe location was not created (HTTP … …) | `tests/api/admin/security/cross-tenant-reads.spec.ts:87` |
 | 1 | no transaction row was created to attack | `tests/api/kmail/mutation-idor.spec.ts:77` |
 | 1 | no letterhead is available on this account to set | `tests/api/kmail/signature-letterhead-workflow.spec.ts:209` |
 | 1 | no real marker available on this account right now (empty recent-activity window) | `tests/api/kpost/dashboard/feature.spec.ts:117` |

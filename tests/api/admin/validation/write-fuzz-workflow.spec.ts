@@ -18,7 +18,7 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
-import { employeePayload, locationPayload, variablePayload } from './support/screen-payloads';
+import { employeePayload, locationPayload, variablePayload } from '../support/screen-payloads';
 
 const K = AUTH_PROFILES.kpost;
 const businessM: Principal | undefined = K.principals.find((p) => p.key === 'business-m');

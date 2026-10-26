@@ -81,7 +81,7 @@ throwaway test DBs only (`kpost:full` / `kmail:full` / `admin:full` already incl
 | `npm run kmail:deep` | `npm run kmail:deep:file` |
 | `npm run admin:deep` | `npm run admin:deep:file` |
 
-`npm run admin:local-fuzz` — write-fuzz the legacy `tests/api/admin.spec.ts` against a local/test Admin only.
+`npm run admin:local-fuzz` — write-fuzz the Admin contract suite (`tests/api/admin/contract.spec.ts`) against a local/test Admin only.
 
 **Reset/reseed the test DB after a deep run** and after a full `npm run ui`.
 

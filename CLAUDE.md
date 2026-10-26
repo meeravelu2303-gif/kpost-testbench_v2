@@ -82,7 +82,8 @@ src/database/           MySQL / disabled adapters, per-suite pool, repositories,
 src/bug-tracker/        Bugzilla client · fingerprint · candidate · validity gate · filer · verify-resolve · bug-builder
 src/reporting/          bugzilla-reporter (the filing pipeline) · run-summary · bug-report
 src/ui/                 screens registry (PAUSED_SCREENS), failure-diagnostics
-tests/api/<product>/    per-module specs: *.spec.ts wrappers + feature.spec.ts lifecycle flows; tests/api/kpost/security/*
+tests/api/<product>/    contract.spec.ts (the engine over every endpoint) + specs; kpost/ by module (+ security/);
+                        admin/ by test kind: engine/ flows/ validation/ security/ performance/ maintenance/ support/
 tests/e2e/<module>/     UI specs, one folder per module tag: auth home katchup kall kmail contacts group profile
                         settings user-management verticals platform cross-layer (+ journeys/ smoke/ sanity/ support/)
 tests/e2e-admin/<area>/ Admin UI specs by menu area: auth screens admin-setup human-resources cross-layer

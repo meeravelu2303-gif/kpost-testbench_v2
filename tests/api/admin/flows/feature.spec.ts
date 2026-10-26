@@ -8,7 +8,7 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
-import { employeePayload, locationPayload, variablePayload } from './support/screen-payloads';
+import { employeePayload, locationPayload, variablePayload } from '../support/screen-payloads';
 
 /**
  * Admin module **feature flow** — the organisation-build sequence a BUSINESS_M admin runs in the
