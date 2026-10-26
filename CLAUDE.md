@@ -74,7 +74,7 @@ service outside the registry. A cascade is expected, so one infrastructure failu
 
 ```
 src/config/             env (zod, all flags + defaults), api, auth profiles, database, thresholds, ownership
-src/api/                client (pool, request builder, token provider) · registry · schemas · definitions/<product>/<module>/*.api.ts
+src/api/                client (pool, request builder, token provider) · registry · schema (validation) · contract (workbook, type codes) · definitions/<product>/<module>/*.api.ts
 src/validation-engine/  engine · policy (profiles) · endpoint-cases.ts (one test per endpoint×validator) · flow-finding · production guard
 src/validators/         centralized validators (auth, authz, request, response, security, performance, concurrency, common)
 src/business-rules/     business-rule registry (KPost's rules are asserted in the module feature specs)
