@@ -54,7 +54,7 @@ export const apiRegistry = new ApiRegistry().register(
   // KPost KBooking - RedBus bus search/booking (non-payment surface). Added 2026-10-02 scope
   // rebuild — confirmed frontend-active via KBook.js, previously untested entirely.
   ...kbookingApis,
-  // Admin module — Jaganathan Murthy. Loaded from its own spec when ADMIN_API_BASE_URL is set.
+  // Admin module — Karan S. Loaded from its own spec when ADMIN_API_BASE_URL is set.
   ...adminApis,
   // KMail module — Jitendra Kumar. Loaded from its own spec when KMAIL_API_BASE_URL is set.
   ...kmailApis,

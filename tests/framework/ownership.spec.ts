@@ -62,7 +62,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
     expect(SUITES['kpost-api'].bugzilla.product).toBe('KPost API');
     expect(SUITES['kpost-api'].owner.email).toBe('jagan@kpost.in');
     expect(SUITES['admin-api'].bugzilla.product).toBe('KPost Admin');
-    expect(SUITES['admin-api'].owner.email).toBe('jagan@kpost.in');
+    expect(SUITES['admin-api'].owner.email).toBe('karans@kpost.in');
     expect(SUITES['kmail-api'].bugzilla.product).toBe('KMail API');
     expect(SUITES['kmail-api'].owner.email).toBe('jitendra@kpost.in');
     expect(SUITES['kpost-ui'].bugzilla.product).toBe('KPost UI');
@@ -92,7 +92,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
     expect(admin).toMatchObject({
       product: 'KPost Admin',
       component: 'Departments',
-      assignee: 'jagan@kpost.in',
+      assignee: 'karans@kpost.in',
     });
 
     const core = candidatesFromReport(

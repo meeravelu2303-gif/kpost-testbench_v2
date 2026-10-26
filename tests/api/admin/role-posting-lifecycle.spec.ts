@@ -394,14 +394,16 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
           type: 'observed',
           description: `suspend → HTTP ${suspended.status}: ${suspended.text.slice(0, 200)}`,
         });
-        expect(ok(suspended), 'suspended (200 SUCCESS)').toBe(true);
+        expect(ok(suspended), 'suspended (200 SUCCESS) — #13239').toBe(true);
         const list = await send(
           endpoints,
           'admin-role-posting-suspended-list',
           { requestType: 'suspend' },
           'suspended-list',
         );
-        expect(list.text, 'the suspended list names the posting').toContain(String(postingId));
+        expect(list.text, 'the suspended list names the posting — #13242').toContain(
+          String(postingId),
+        );
       });
 
       await test.step('revoke the suspension (rejoin today)', async () => {
@@ -462,22 +464,37 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
           'cleanup-terminate',
           mintedBy(posting),
         ).catch(() => undefined);
-      if (postingId)
-        await send(
+      let postingGone = !postingId;
+      if (postingId) {
+        const removed = await send(
           endpoints,
           'admin-role-posting-delete',
           { id: postingId },
           'cleanup-posting',
         ).catch(() => undefined);
-      for (const [id, rec] of [
-        ['admin-employee-delete', empId],
-        ['admin-workplace-location-delete', locId],
-        ['admin-hr-tier-variable-delete', hrVarId],
-        ['admin-hr-tier-attribute-delete', hrAttrId],
-        ['admin-workplace-tier-variable-delete', wpVarId],
-        ['admin-workplace-tier-attribute-delete', wpAttrId],
-      ] as const)
-        if (rec) await send(endpoints, id, { id: rec }, `cleanup-${id}`).catch(() => undefined);
+        postingGone = Boolean(removed && ok(removed));
+      }
+      /*
+       * Only remove what the posting points at once the posting itself is gone. Deleting the tiers,
+       * variables, location or employee under a posting that is still there (e.g. terminate failed, so it
+       * stays assigned) leaves an orphan the server can no longer read ("No value present", 2026-10-24).
+       */
+      if (!postingGone) {
+        test.info().annotations.push({
+          type: 'cleanup-blocked',
+          description: `posting ${postingId} could not be removed; kept its records for a manual clean-up: ${JSON.stringify({ empId, locId, hrVarId, hrAttrId, wpVarId, wpAttrId })}`,
+        });
+      }
+      if (postingGone)
+        for (const [id, rec] of [
+          ['admin-employee-delete', empId],
+          ['admin-workplace-location-delete', locId],
+          ['admin-hr-tier-variable-delete', hrVarId],
+          ['admin-hr-tier-attribute-delete', hrAttrId],
+          ['admin-workplace-tier-variable-delete', wpVarId],
+          ['admin-workplace-tier-attribute-delete', wpAttrId],
+        ] as const)
+          if (rec) await send(endpoints, id, { id: rec }, `cleanup-${id}`).catch(() => undefined);
     }
   });
 });

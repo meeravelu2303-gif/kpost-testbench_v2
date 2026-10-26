@@ -12,7 +12,7 @@ import { env } from './env';
  * | Suite       | Module                    | Bugzilla product | Owner              |
  * | ----------- | ------------------------- | ---------------- | ------------------ |
  * | kpost-api   | KPost core API            | KPost API        | Jaganathan Murthy  |
- * | admin-api   | Admin module (own repo)   | KPost Admin      | Jaganathan Murthy  |
+ * | admin-api   | Admin module (own repo)   | KPost Admin      | Karan S            |
  * | kmail-api   | KMail module (own repo)   | KMail API        | Jitendra Kumar     |
  * | kpost-ui    | KPost React front end     | KPost UI         | Ayyappan Ashok     |
  * | admin-ui    | Admin/HR-Setup SPA        | KPost Admin UI   | Ayyappan Ashok     |
@@ -234,7 +234,8 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
     label: 'KPost Admin module API',
     kind: 'api',
     repository: 'admin-module (separate repo)',
-    owner: { name: 'Jaganathan Murthy', email: 'jagan@kpost.in' },
+    // Owner changed 2026-10-24 (owner directive): Admin module defects go to Karan S.
+    owner: { name: 'Karan S', email: 'karans@kpost.in' },
     bugzilla: {
       product: 'KPost Admin',
       version: 'unspecified',

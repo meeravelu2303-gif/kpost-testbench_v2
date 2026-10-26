@@ -3,7 +3,92 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-23 (latest) — Role posting: save fixed (#13235 verified), assign broken (#13237 filed); guard gets per-call minted ids
+### 2026-10-24 (latest) — Full Admin run + re-tests: #13239/#13240/#13241 verified fixed; #13242 filed
+
+Owner: "test everything … reopen what is still broken, file new bugs". Full Admin dry run (run-c87521ca: 127 passed,
+10 failed, 134 skipped; plan: 0 new, 0 reopen, 1 held), then logged replays ×2 with a MongoDB read after every
+role-posting step.
+
+- **Verified, no reopen needed** (dated notes added; all stay RESOLVED FIXED):
+  - **#13239**: kpost_id kept after assign; suspend, revoke and terminate all 200, DB-confirmed (2/2).
+  - **#13240**: in-use HR and workplace variable deletes now refused 400 "record is already mapped" (2/2).
+  - **#13241**: can no longer be triggered through the app (its precondition is now refused); the list answers 200.
+- **#13242 filed** (major, Karan): getSuspendOrTerminateEmployee ("suspend") answers 500, an NPE on
+  additionalInformation.getPanCard(), when a suspended employee was saved without additionalObj (save accepts
+  that, 200). Seen 3/3. Duplicate-checked; real-data 12-step curl; checked with the tracker parser. The
+  lifecycle's suspended-list check cites it.
+- The other 9 failures are the known non-defects (missing-field fuzz INVALID #641/#637, #320, isExperienced, and
+  the company-scoped list reads answering 200 to an empty body).
+- **Clean-up:** write-fuzz left 30 records (tiers, variables, HR records, locations), all deleted via the API,
+  children first; the 4 HR variables the top-level list misses were found by a DB read. The DB check shows 0 QA
+  records from today, 0 QA employees and the original 5 postings.
+
+### 2026-10-24 — Role posting tested end to end with DB checks: #13237 verified; #13239–#13241 filed
+
+Owner: "access the database but test everything properly … file valid bugs". Full flow on 192.168.10.4, company 242,
+every payload logged and the MongoDB posting document read after each step (`ADMIN_MONGO_URI`, read-only reader).
+
+- **#13237 → RESOLVED FIXED**: assign (update, reallocate, screen body) answers 200 and the DB shows employee_id set
+  and active_status true. Verified 2/2 on clean postings.
+- **#13239 filed** (critical, Karan): assign erases the posting's kpostID. The save response has it and the
+  assign request sends it, but the assign response, the read-back and the DB document lack kpost_id (873 other
+  postings have it). Suspend and terminate then send no kpostID to KPost holdOrRelease/terminateUser, so they
+  answer a bare 400 and change nothing (DB-confirmed). Seen 2/2.
+- **#13240 filed** (major, Karan): an HR variable or workplace variable used by a role posting can be deleted
+  (200); the location delete correctly refuses. Seen 3/3.
+- **#13241 filed** (major, Karan): one posting with a deleted reference makes getRolePostingByCompanyId answer 500
+  "No value present" for the whole company. Seen 3/3, and once by accident.
+- All three were filed from captured logs: real-data curls, tracker template checked with the tracker's own
+  parse(), duplicate-checked across Role Postings, both variable components and admin-module-application.
+  #13240/#13241 are cross-linked.
+- Clean-up: each stuck assigned posting was backed up then removed from the DB (owner-approved), and its records
+  were deleted via the API. The DB shows no leftovers: 0 QA employees and 5 company postings, the original count.
+  The lifecycle's cleanup now keeps parent records whenever the posting cannot be removed.
+
+### 2026-10-24 — One-off Admin DB clean-up (owner-approved exception to rule 9); role-posting cleanup fixed
+
+- **What happened:** in a full role-posting run, assign worked (200, so #13237 looks fixed), but suspend and
+  terminate returned a bare 400. The posting stayed assigned, so it could not be deleted, and the old cleanup
+  then deleted the workplace/HR tiers and variables it points at. That orphan made company 242's whole
+  role-posting list answer 500 "No value present" (seen by the next run). Shared with developers.
+- **Bench fix:** `role-posting-lifecycle.spec.ts` now deletes the posting's parent records only once the
+  posting itself is gone; otherwise it keeps them and records a "cleanup-blocked" annotation.
+- **Owner-approved one-off DB delete** ("yes go ahead"), MongoDB `192.168.10.4:27017/admin_enterprise`, by a
+  standalone script; the bench code, its read-only Mongo reader and rule 9 are unchanged:
+  - removed `table_admin_role_posting` 6adc611eab11393c49ef33a3, `table_admin_employee_details` 6adc611bab11393c49ef33a1,
+    and `table_admin_location` 6adc611aab11393c49ef339b and 6adb5f9fa0bddb7dccdcc60e;
+  - each filtered by `_id` + company 242 (`company_id` on postings, `companyId` elsewhere), all backed up first.
+    The first attempt aborted on that field-name difference before deleting anything.
+  - Afterwards: role-posting list, employees and locations all 200.
+  - Not removable from this DB: the KPost account qarote177.ns@kpost.in and KSMACC qarote177.ns@ksmacc.in.
+- **Pending owner go-ahead:** two findings not filed yet. (1) Deleting a workplace/HR variable or tier that a
+  role posting still uses is allowed (200; the location delete correctly refuses). (2) One bad posting makes
+  the whole company list 500. Also suspend/terminate's bare 400 is still to be confirmed on a clean posting.
+
+### 2026-10-24 — KPost Admin owner changed to Karan S
+
+- Owner directive: KPost Admin defects go to **Karan S (karans@kpost.in)**; KPost API stays with Jaganathan.
+- **Bench:** `ownership.config.ts` (admin-api owner, the single source of truth) and its header table,
+  `ownership.spec.ts` (owner + routing assertions), the Admin comments in `definitions/index.ts` and
+  `admin.api.ts`, and the CLAUDE.md product table.
+- **Bugzilla:** all 25 KPost Admin component default assignees changed jagan → karans. The REST API has no
+  component update in this Bugzilla, so it went through the SubComponent extension
+  (`POST /subcomponent/component/update {id, default_assignee}`), the route the BUGZILLA-UI admin screen uses.
+  The live drift check ("our owners still match the component defaults") passes again.
+- Open KPost Admin bugs: only #13237, already assigned to Karan. Closed bugs were left as they are.
+- Also today: #13215 verified fixed on http://192.168.10.4:9595 (5 signed-in calls 200 in 39–273 ms). The
+  #13237 / #13235 / #13234 curls were revised with real data captured live (owner: never placeholders).
+
+### 2026-10-24 — Admin API moved to 192.168.10.4:9595: logins refused again, #13215 REOPENED
+
+- The owner moved the Admin API to `http://192.168.10.4:9595`; it is now in `run-level.mjs` TEST_HOSTS and CLAUDE.md.
+  192.168.10.38 stopped answering (no ping).
+- Every signed-in call on the new address waits about 30 s and then answers 401. The same token gets 200 in
+  72 ms on the KPost API (control); with no token the Admin server refuses in 26 ms. This is #13215's exact
+  pattern, so **#13215 is REOPENED** with that evidence and a curl. Nothing was created (every write got 401).
+- The #13237 payload capture (exact request bodies, token masked) is blocked by this; re-run it once logins work.
+
+### 2026-10-23 — Role posting: save fixed (#13235 verified), assign broken (#13237 filed); guard gets per-call minted ids
 
 - **#13235 verified fixed:** `/rolePosting/save` → 200 SUCCESS (statusMessage "saved"), in a verification run plus a full
   run; dated comment added. The lifecycle's save check expected no statusMessage, which was a bench fault, now

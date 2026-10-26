@@ -89,6 +89,8 @@ const TEST_HOSTS = new Set([
   '192.168.0.38',
   // The Admin API test box's new address (owner, 2026-10-23).
   '192.168.10.38',
+  // The Admin API test box's address from 2026-10-24 (owner).
+  '192.168.10.4',
   // The Admin UI test build on the internal network (owner, 2026-10-22).
   '192.168.1.170',
   'kpostadmin.kpostindia.com',
