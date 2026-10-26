@@ -363,7 +363,7 @@ export const downloadThumbApi = idRead(
   // Combined with `AWSs3ClientServiceImpl.fileDownloadFromS3` looking attachments up by UUID alone
   // with no sender/receiver ownership check, this means anyone who obtains or guesses a thumbnail
   // UUID can fetch it, authenticated or not, regardless of whether they ever sent/received that mail.
-  // Tracked as a security finding in docs/archive/test-bench-plan-2026-10-02.md (§16 P0, item 0a) — not filed yet,
+  // Tracked as a security finding in the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) (§16 P0, item 0a) — not filed yet,
   // pending a controlled live proof using only bench-owned accounts.
   'needs a real attachment uuid; genuinely unauthenticated on live (see note above), not a bench gap',
   ['attachment'],

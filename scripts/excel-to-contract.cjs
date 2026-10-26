@@ -248,7 +248,7 @@ const TABS = [
   },
   // The Admin module is NOT converted from Excel: the live service publishes its own accurate OpenAPI
   // (112 ops) at /v3/api-docs, which `scripts/fetch-admin-contract.cjs` (npm run contract:admin) turns
-  // into openapi/admin-api.openapi.json. The `Admin_module.xlsx` was a simplified/inaccurate subset.
+  // into openapi/admin-api.openapi.json. The old Admin_module.xlsx (removed 2026-10-26) was a simplified/inaccurate subset.
 ];
 
 const PRODUCTS = {

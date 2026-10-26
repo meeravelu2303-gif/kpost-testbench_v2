@@ -243,7 +243,7 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       componentByTag: ADMIN_COMPONENT_BY_TAG,
     },
     baseUrl: env.ADMIN_API_BASE_URL ?? env.API_BASE_URL,
-    // Contract generated from `docs/api-specs/Admin_module.xlsx` → `openapi/admin-api.openapi.json` by
+    // Contract generated from the live Admin api-docs (`npm run contract:admin`; the old Admin_module.xlsx was removed 2026-10-26) → `openapi/admin-api.openapi.json` by
     // `scripts/excel-to-contract.cjs`; definitions live in `src/api/definitions/admin/`.
     specFile: undefined,
   },

@@ -4,7 +4,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Admin module security probes — proofs for plan items 0c and 0d (docs/archive/test-bench-plan-2026-10-02.md
+ * Admin module security probes — proofs for plan items 0c and 0d (the 2026-10-02 test-bench plan (removed 2026-10-26; in git history)
  * §16 P0), both READ-ONLY and both against the bench's already-configured `ADMIN_API_BASE_URL`
  * (confirmed on-prem/local test box, never the live `adminmodule.kpostindia.com` host — see the
  * plan's §3/§5 notes on this). Nothing here writes to the Admin database, which the bench's own

@@ -43,10 +43,9 @@ KPost is one product built from separately maintained modules. Each suite target
 │   ├── modules/                  # Per-module analyses: Katchup, Kall, KMail (+ schema), Admin
 │   ├── ui/                       # Front-end maps the e2e specs are built from
 │   ├── scope/                    # Why an endpoint is blocked or unused (hand-written, evidence-based)
+│   ├── proposals/                # Suggested FRD changes, not applied
 │   ├── generated/                # Ledgers written by `npm run framework` — never hand-edit
-│   ├── audits/                   # Dated, point-in-time audits
-│   ├── api-specs/                # The product owner's API workbooks and PDF — the source of every contract
-│   └── archive/                  # Superseded plans, kept only because other comments cite them
+│   └── api-specs/                # The KPost API workbook and the Admin PDF — the source of every contract
 ├── src/
 │   ├── config/                   # env, api, auth, database and threshold configuration
 │   ├── api/
@@ -153,9 +152,8 @@ Read these in order:
 what they say: `guides/` is how to operate the bench, `reference/` is what it is and tests against,
 `modules/` and `ui/` are the analyses the specs were built from, `scope/` is the evidence behind every
 blocked or unused endpoint, `generated/` is written by `npm run framework` and never hand-edited,
-`audits/` holds dated snapshots, `api-specs/` holds the product owner's workbooks (the KPost workbook
-`scripts/excel-to-contract.cjs` converts, and the Admin workbook and PDF), and `archive/` keeps
-superseded plans only because other comments cite them.
+and `api-specs/` holds the product owner's sources (the KPost workbook `scripts/excel-to-contract.cjs`
+converts, and the Admin PDF). Finished plans and dated audits are deleted, not archived: git keeps them.
 
 Keep `CLAUDE.md` short (under ~200 lines, since it is loaded into every Claude session): rules and the map go
 there, history goes in the decision log.

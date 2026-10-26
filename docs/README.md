@@ -28,10 +28,9 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 
 ## `proposals/` — suggested changes, not applied
 
-| Document                                             | What it is                                                                         |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [`frd-updates.md`](proposals/frd-updates.md)         | New FRD requirements for features the tests exercise but the per-module FRD lacks. |
-| [`soft-assertions.md`](proposals/soft-assertions.md) | Group-module soft assertions proposed to become hard ones (FR-GM-010 … 014).       |
+| Document                                     | What it is                                                                         |
+| -------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [`frd-updates.md`](proposals/frd-updates.md) | New FRD requirements for features the tests exercise but the per-module FRD lacks. |
 
 ## `modules/` — per-module analyses the API specs were built from
 
@@ -53,12 +52,10 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 
 ## `scope/` — why an endpoint is not tested (hand-written, evidence-based)
 
-| Document                                                                               | What it is                                                                        |
-| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| [`blocked-endpoints-rationale.md`](scope/blocked-endpoints-rationale.md)               | Every endpoint that genuinely cannot run today, with its reason and unblock path. |
-| [`unused-endpoints.md`](scope/unused-endpoints.md)                                     | Endpoints proven to have no caller in the front end.                              |
-| [`frontend-endpoint-usage-2026-10-11.md`](scope/frontend-endpoint-usage-2026-10-11.md) | Which endpoints the React app actually calls, traced from source.                 |
-| [`kpost-api-coverage-gaps-2026-10-11.md`](scope/kpost-api-coverage-gaps-2026-10-11.md) | KPost API coverage by test type, per endpoint.                                    |
+| Document                                                                 | What it is                                                                        |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| [`blocked-endpoints-rationale.md`](scope/blocked-endpoints-rationale.md) | Every endpoint that genuinely cannot run today, with its reason and unblock path. |
+| [`unused-endpoints.md`](scope/unused-endpoints.md)                       | Endpoints proven to have no caller in the front end.                              |
 
 The OTP-dependent list is generated: [`contracts/otp-dependent-endpoints.md`](../contracts/otp-dependent-endpoints.md).
 
@@ -75,29 +72,12 @@ The OTP-dependent list is generated: [`contracts/otp-dependent-endpoints.md`](..
 | [`katchup-ui-coverage.md`](generated/katchup-ui-coverage.md) | `katchup-ui-coverage.spec.ts` | Every Katchup feature against its UI spec.                   |
 | [`skips.md`](generated/skips.md)                             | `skip-ledger.spec.ts`         | Every skip reason in the suite, in one of four classes.      |
 
-## `audits/` — dated, point-in-time
-
-| Document                                                                          | What it is                                                                               |
-| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [`api-coverage-depth.md`](audits/api-coverage-depth.md)                           | For each registered endpoint, what it gets beyond the generic sweep; the live re-checks. |
-| [`katchup-ground-truth-2026-10-03.md`](audits/katchup-ground-truth-2026-10-03.md) | Katchup read from backend and frontend source, cross-referenced with the bench.          |
-| [`test-suite-audit-2026-10-19.md`](audits/test-suite-audit-2026-10-19.md)         | The whole bench's inventory, gaps and production-grade plan as of 19 Oct.                |
-
 ## `api-specs/` — the product owner's source files
 
 | File                              | What it is                                                                       |
 | --------------------------------- | -------------------------------------------------------------------------------- |
 | `KPOST API (N).xlsx`              | The KPost/KMail API workbook. `npm run contract:excel` converts the highest `N`. |
 | `Admin_module - API Services.pdf` | The Admin module's authoritative payloads (`npm run contract:admin:pdf`).        |
-| `Admin_module.xlsx`               | The Admin module's endpoint list (a simplified subset; the PDF wins).            |
-
-## `archive/` — superseded, kept because other comments cite them
-
-| Document                                                                       | Superseded by                                         |
-| ------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| [`test-bench-plan-2026-10-02.md`](archive/test-bench-plan-2026-10-02.md)       | `CLAUDE.md` and the decision log.                     |
-| [`frontend-test-plan-2026-09-30.md`](archive/frontend-test-plan-2026-09-30.md) | `ui/ui-build-plan.md` and `generated/ui-coverage.md`. |
-| [`ui-write-flows-2026-09-28.md`](archive/ui-write-flows-2026-09-28.md)         | `ui/ui-build-plan.md` and `generated/ui-coverage.md`. |
 
 ## Conventions
 
@@ -105,6 +85,6 @@ The OTP-dependent list is generated: [`contracts/otp-dependent-endpoints.md`](..
   their date so a reader knows what "now" meant when it was written.
 - A document is either hand-written or generated, never both. Generated files say so in their first
   lines and are regenerated by `npm run framework` (ledgers) or the `contract:*` commands.
-- One document per purpose. When a plan is finished, it moves to `archive/` with a banner naming
-  what replaced it, rather than being kept alongside its successor.
+- One document per purpose. When a plan or a dated audit is finished, it is deleted (git keeps the
+  history) and anything that cited it says so, rather than being kept alongside its successor.
 - History goes in the decision log, not in the reference documents.

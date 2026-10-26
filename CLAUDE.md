@@ -90,8 +90,8 @@ tests/e2e-admin/<area>/ Admin UI specs by menu area: auth screens admin-setup hu
                         (+ smoke/ sanity/ support/) · tests/framework/   bench self-tests
 contracts/, openapi/    GENERATED from the Excel workbook. Never hand-edit
 docs/                   guides/ (how to run) · reference/ (what the bench is + the decision log) · proposals/ · modules/ · ui/ · scope/
-                        · generated/ (written by `framework`; never hand-edit) · audits/ · api-specs/ (the owner's
-                        workbooks and PDF) · archive/. Index: docs/README.md
+                        · generated/ (written by `framework`; never hand-edit) · api-specs/ (the KPost workbook
+                        and the Admin PDF). Index: docs/README.md
 ```
 
 **The central idea:** a validation exists once. An endpoint definition states only what is specific to it;

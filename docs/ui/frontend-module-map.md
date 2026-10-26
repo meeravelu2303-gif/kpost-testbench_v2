@@ -143,5 +143,5 @@ work, not an exhaustive one. It does **not** yet enumerate: every button/action 
 client-side validation rule, every role/permission branch, or a full component-by-component icon
 catalogue. That level of detail is better produced **incrementally, per module**, as each module's
 test suite is built — reading 120 Katchup files up front, most of which won't be exercised for months,
-is not a good use of time. The phased plan in `docs/archive/frontend-test-plan-2026-09-30.md` reflects that: each module's
+is not a good use of time. The phased plan in the 2026-09-30 frontend test plan (removed 2026-10-26; in git history) reflects that: each module's
 "analyze" step happens immediately before that module's "implement" step, not all up front.

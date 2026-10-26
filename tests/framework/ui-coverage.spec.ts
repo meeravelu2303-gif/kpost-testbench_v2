@@ -145,7 +145,7 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
 /**
  * The deep write flows still to build (need the gated-write approval + live tuning). Selectors are
  * mined in `docs/ui/ui-build-plan.md` (the original flow plan is archived as
- * `docs/archive/ui-write-flows-2026-09-28.md`); each has a green API lifecycle.
+ * the 2026-09-28 UI write-flows plan (removed 2026-10-26; in git history)); each has a green API lifecycle.
  */
 const PLANNED_FLOWS = [
   'Katchup group send + per-recipient read receipts (needs 3 QA accounts + recording — confidential-copy and attachments are now built, see Interaction flows above)',

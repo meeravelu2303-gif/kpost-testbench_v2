@@ -4,7 +4,7 @@ Per the 2026-10-02 scope-rebuild directive: an endpoint is only listed here when
 caller was **proven** (exhaustive grep across `KPOST_REACTJS_2023_V1/src/` outside the defining
 file, or an explicit "legacy"/dead-code marker in the source itself) — never because the test
 bench simply doesn't have a test for it yet. This file is a byproduct of the frontend-call-tracing
-agent dispatched from `docs/archive/test-bench-plan-2026-10-02.md` (archived) §24, cross-referencing every exported
+agent dispatched from the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) (archived) §24, cross-referencing every exported
 function in every `src/Services/*.js` file against every other file in the frontend repo.
 
 This is a **first pass**, covering what that trace found. It does not yet include backend
@@ -28,7 +28,7 @@ the backend side, not the frontend side, and are out of scope for this file unti
 
 ## Entire module confirmed out of scope for backend coverage (not "unused endpoints", but related)
 
-- **KNews** — confirmed to never call the KPost backend at all (no `EndPointURL`/`KmailEndPointURL` import anywhere in `KNews.js`); 100% third-party RSS aggregation via `rss2json.com` and two CORS proxies. Already correctly marked `NOT_APPLICABLE` in `docs/archive/test-bench-plan-2026-10-02.md` (archived)'s module inventory — this trace confirms it with full evidence rather than inference.
+- **KNews** — confirmed to never call the KPost backend at all (no `EndPointURL`/`KmailEndPointURL` import anywhere in `KNews.js`); 100% third-party RSS aggregation via `rss2json.com` and two CORS proxies. Already correctly marked `NOT_APPLICABLE` in the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) (archived)'s module inventory — this trace confirms it with full evidence rather than inference.
 
 ## Dead/stale imports found (not endpoints, but worth fixing)
 

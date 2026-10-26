@@ -7,7 +7,7 @@
  *
  * ## Why this and not the Excel
  *
- * `Admin_module.xlsx` documents ~35 endpoints with simplified shapes (integer `companyId`, no arrays,
+^ * The old Admin_module.xlsx (removed 2026-10-26) documented ~35 endpoints with simplified shapes (integer `companyId`, no arrays,
  * a couple of wrong methods). The Admin service is Spring Boot + springdoc and publishes its OWN
  * OpenAPI — generated from the controllers' rich Swagger annotations — at
  * `https://adminmodule.kpostindia.com/v3/api-docs`: 112 operations, 38 schemas, accurate methods and

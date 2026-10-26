@@ -133,7 +133,7 @@ export const removeGroupMemberV1LegacyApi = defineUndocumentedGroupEndpoint({
     'GroupServiceImpl.deleteUserFromGroup -> GroupServiceDaoImpl.deleteUserFromGroup:102-109, a raw ' +
     '"DELETE FROM TBL_KPOST_USERGROUP_MEMBERDETAILS WHERE group_id=:groupId AND kpost_id IN (:kpostID)" ' +
     'with no ownership/membership check on the caller.',
-  note: 'needs a real group id; source-confirmed BOLA, see docs/audits/katchup-ground-truth-2026-10-03.md priority finding #4',
+  note: 'needs a real group id; source-confirmed BOLA, see the 2026-10-03 Katchup ground-truth audit (removed 2026-10-26; in git history) priority finding #4',
 });
 
 export const leaveGroupApi = defineGroupEndpoint({

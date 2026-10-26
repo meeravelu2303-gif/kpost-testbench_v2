@@ -121,7 +121,7 @@ test.describe('validator unit · response.schema', { tag: '@framework' }, () => 
   /*
    * What the validator CANNOT catch, by construction. These are characterisation tests: they pin
    * today's behaviour so a change to it is a decision, not an accident. See
-   * docs/audits/test-suite-audit-2026-10-19.md, finding 3.
+   * the 2026-10-19 test-suite audit (removed 2026-10-26; in git history), finding 3.
    */
   test.describe('blind spots of open contracts (pinned behaviour)', () => {
     test('an open contract accepts an undocumented field', async () => {

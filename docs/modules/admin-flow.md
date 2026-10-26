@@ -2,7 +2,7 @@
 
 The authoritative map of the KPost **Admin module** (organisation / workplace / HR setup), the way
 `docs/modules/katchup-flow.md` / `docs/modules/kall-flow.md` / `docs/modules/kmail-flow.md` are for their modules. Source: the owner's
-walkthrough (2026-09-15) + the live signup/user-management screens + `docs/api-specs/Admin_module.xlsx` (converted to
+walkthrough (2026-09-15) + the live signup/user-management screens + the live Admin api-docs (`npm run contract:admin`; the old Admin_module.xlsx was removed 2026-10-26) (converted to
 `openapi/admin-api.openapi.json`).
 
 > Secrets rule: KPost IDs are listed here as identifiers (like the QA accounts in `src/fixtures/test-accounts.json`);
@@ -133,7 +133,7 @@ admin`. That Bearer token authenticates every `admin-api` call. Discovered compa
 
 ## 7. Test plan
 
-1. **Convert (done):** `admin-api` OpenAPI/contract generated from `docs/api-specs/Admin_module.xlsx`.
+1. **Convert (done):** `admin-api` OpenAPI/contract generated from the live Admin api-docs (`npm run contract:admin`; the old Admin_module.xlsx was removed 2026-10-26).
 2. **Register:** `admin-api` endpoint definitions + suite (`defineAdminEndpoint`), host
    `adminmodule.kpostindia.com`, auth per §6.1. Reads = `productionSafe`; writes = gated lifecycle.
 3. **Live reads:** the `get*` endpoints on the BUSINESS_M/S companies (contract validators).

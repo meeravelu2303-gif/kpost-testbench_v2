@@ -80,7 +80,7 @@ test.describe('live-application safety @framework', () => {
     /*
      * The read-side counterpart to allowLiveWrite, added so a dependency-driven flow (create a doc,
      * then read it back) can exercise a "needs-id" read that has no productionSafe flag — previously
-     * impossible under any flag combination (see docs/audits/api-coverage-depth.md's "systemic ceiling").
+     * impossible under any flag combination (see the API coverage-depth audit (removed 2026-10-26; in git history)'s "systemic ceiling").
      */
     const needsIdRead: GuardedEndpoint = {
       label: 'GET /v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID}',
