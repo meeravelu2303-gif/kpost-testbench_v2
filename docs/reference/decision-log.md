@@ -3,7 +3,27 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-26 (latest) — Response schemas on all 38 Admin endpoints; input hardening; #13257/#13258 filed
+### 2026-10-26 (latest) — Repository clean-up: unused files removed, docs and Admin API tests reorganised
+
+Owner: "production grade folder structure … remove unused and duplicate files". Audit first (import graph from
+every entry point, script references, content hashes): 680 of 688 code files reachable, no duplicates.
+
+- Removed: `src/database/db-assertions.ts`, `repositories/company|user.repository.ts` (no importer, no use of any
+  export), and a committed Word lock file (`~$*` now ignored).
+- Docs: loose top-level files moved to `guides/`, `reference/` and a new `proposals/`; `docs/README.md` lists every
+  document. `src/api/schemas/kpost-types.ts` → `src/api/contract/`.
+- Admin API tests grouped by kind (`engine/ flows/ validation/ security/ performance/ maintenance/ support/`) and the
+  root contract suites moved into their product folders. Safe for Bugzilla: API fingerprints are
+  endpoint + check, never the file path.
+- **UI spec paths deliberately NOT moved:** UI fingerprints are `ui|<file>|<title>|…` (bug-fingerprint.ts) and
+  `tests/e2e-admin` routes bugs to the Admin UI product — a move would refile every open UI bug.
+- Verified at each step: typecheck, lint, tag lint, 331 self-tests, and the Playwright list (12,234 tests by project
+  and title) identical before and after. Fixed on the way: `.env.example` lacked `ADMIN_ROLE_POSTING_LIVE`; seven
+  skip reasons the skip ledger could not classify. Local only: `reports/` pruned 730 MB → 402 MB.
+- Noted: `created-accounts.json` recorded 96 KPost accounts created on testingapi by today's role-posting runs
+  (each posting creates one; deleting the posting does not remove it).
+
+### 2026-10-26 — Response schemas on all 38 Admin endpoints; input hardening; #13257/#13258 filed
 
 Owner: "cover response schemas, XSS on updates, oversized payloads".
 
