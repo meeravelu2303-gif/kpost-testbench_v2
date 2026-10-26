@@ -1,4 +1,4 @@
-import { KMAIL_TYPE } from '@api/schemas/kpost-types';
+import { KMAIL_TYPE } from '@api/contract/kpost-types';
 import { body } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint } from './kmail-endpoint';
 import { mailShape } from './send.api';

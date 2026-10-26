@@ -1,7 +1,7 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
-import { KMAIL_TYPE } from '@api/schemas/kpost-types';
+import { KMAIL_TYPE } from '@api/contract/kpost-types';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';

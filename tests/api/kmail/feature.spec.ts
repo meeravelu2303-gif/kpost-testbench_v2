@@ -4,7 +4,7 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import type { Principal } from '@config/auth.config';
-import { KMAIL_PRIORITY, KMAIL_TYPE } from '@api/schemas/kpost-types';
+import { KMAIL_PRIORITY, KMAIL_TYPE } from '@api/contract/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';

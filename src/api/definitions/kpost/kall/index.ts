@@ -17,7 +17,7 @@ import { kallScheduleApis } from './schedule.api';
  *   legacy.api.ts    dead-from-frontend V1 writes (no /v2 prefix), still live  (security regression)
  *
  * The status / type / mode / repeat-type codes and the flows are analysed in `docs/modules/kall-flow.md`;
- * the codes come from `@api/schemas/kpost-types`.
+ * the codes come from `@api/contract/kpost-types`.
  *
  * **Scope on live today:** the log reads run on our own account; every write is gated behind
  * `KALL_LIFECYCLE=true` (a call rings a real device / notifies participants), and the two

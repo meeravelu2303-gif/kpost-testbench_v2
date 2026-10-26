@@ -1,4 +1,4 @@
-import { KALL_MODE, KALL_REPEAT_TYPE } from '@api/schemas/kpost-types';
+import { KALL_MODE, KALL_REPEAT_TYPE } from '@api/contract/kpost-types';
 import { testData } from '@config/test-data.config';
 import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';

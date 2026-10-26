@@ -1,5 +1,5 @@
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
-import { KATCHUP_MESSAGE_TYPE } from '@api/schemas/kpost-types';
+import { KATCHUP_MESSAGE_TYPE } from '@api/contract/kpost-types';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';

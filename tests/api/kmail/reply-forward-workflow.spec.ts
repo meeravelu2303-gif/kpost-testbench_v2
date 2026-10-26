@@ -5,7 +5,7 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { mailShape } from '@api/definitions/kmail/send.api';
-import { KMAIL_TYPE } from '@api/schemas/kpost-types';
+import { KMAIL_TYPE } from '@api/contract/kpost-types';
 
 /**
  * KMail REPLY / REPLY-ALL / FORWARD + CC/BCC (RTM-KMAIL-F01, RTM-KMAIL-F06) — a documented "Not

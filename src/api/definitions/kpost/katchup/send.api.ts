@@ -1,4 +1,4 @@
-import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/schemas/kpost-types';
+import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/contract/kpost-types';
 import { testData } from '@config/test-data.config';
 import type { RequestSpec } from '@api/client/request-builder';
 import { typesOnlySchema } from '@api/schema/sample-schema';

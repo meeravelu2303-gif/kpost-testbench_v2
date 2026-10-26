@@ -1,7 +1,7 @@
 # Katchup — message types, share types, and the application flow
 
 The analysis the Katchup tests are built on. Source of truth for the **codes** is the workbook Types
-tab (`contracts/kpost-types.json`, exposed by `src/api/schemas/kpost-types.ts`); source of truth for
+tab (`contracts/kpost-types.json`, exposed by `src/api/contract/kpost-types.ts`); source of truth for
 the **flow and payloads** is the live web client (`KPOST_REACTJS_2023_V1`), read directly rather than
 guessed. FRD ids are FR-K01..K25 and BR-K01..K03.
 

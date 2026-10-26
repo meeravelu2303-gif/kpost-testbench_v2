@@ -1,6 +1,6 @@
 import { kallApis, uncoveredKallPaths } from '@api/definitions/kpost/kall/index';
 import { workbookContract } from '@api/contract/workbook-contract';
-import { KALL_MODE, KALL_REPEAT_TYPE, KALL_STATUS, KALL_TYPE } from '@api/schemas/kpost-types';
+import { KALL_MODE, KALL_REPEAT_TYPE, KALL_STATUS, KALL_TYPE } from '@api/contract/kpost-types';
 import { plannedCases } from '@engine/endpoint-cases';
 import { resolveEndpoint } from '@engine/validation-policy';
 import { foreignIdentifiers } from '@engine/qa-identifier-guard';

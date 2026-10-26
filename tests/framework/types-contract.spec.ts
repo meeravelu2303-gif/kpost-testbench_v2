@@ -10,7 +10,7 @@ import {
   codesOf,
   labelFor,
   numericCodesOf,
-} from '@api/schemas/kpost-types';
+} from '@api/contract/kpost-types';
 import { expect, test } from '@fixtures';
 
 /**

@@ -5,7 +5,7 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { mailShape } from '@api/definitions/kmail/send.api';
-import { KMAIL_PRIORITY, KMAIL_RECEIVER_TYPE } from '@api/schemas/kpost-types';
+import { KMAIL_PRIORITY, KMAIL_RECEIVER_TYPE } from '@api/contract/kpost-types';
 
 /**
  * KMail mail behaviour, three accounts (A = personal sends, B = victim receives, C = personal-3):

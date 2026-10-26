@@ -6,7 +6,7 @@ analysis the owner asked for before the module was built — the codes, the two 
 
 Source of truth for the payloads: `D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1\src\Services\Kall.js`
 (the service layer) and the component modals. Codes: the workbook's Types tab, exposed as
-`KALL_STATUS` / `KALL_TYPE` / `KALL_MODE` / `KALL_REPEAT_TYPE` in `@api/schemas/kpost-types`.
+`KALL_STATUS` / `KALL_TYPE` / `KALL_MODE` / `KALL_REPEAT_TYPE` in `@api/contract/kpost-types`.
 
 ## 1. The codes (owner-supplied; already in the workbook, verified to match)
 

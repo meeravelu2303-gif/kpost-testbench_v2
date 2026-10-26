@@ -3,7 +3,7 @@
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
-import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/schemas/kpost-types';
+import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/contract/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { KpostRepository } from '@database/repositories/kpost.repository';
 import { expect, test } from '@fixtures';

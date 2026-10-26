@@ -1,4 +1,4 @@
-import { KALL_MODE, KALL_STATUS, KALL_TYPE } from '@api/schemas/kpost-types';
+import { KALL_MODE, KALL_STATUS, KALL_TYPE } from '@api/contract/kpost-types';
 import { testData } from '@config/test-data.config';
 import { body } from '../kpost-endpoint';
 import { defineKallEndpoint } from './kall-endpoint';

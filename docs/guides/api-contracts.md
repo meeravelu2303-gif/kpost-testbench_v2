@@ -224,11 +224,11 @@ separately as `mentionsOnly`, never as gaps.
 `kmailReceiverType`, `kmailPriority`, `kdiaryRemarks`, `module` (0–17) and `userType`.
 
 These numbers are part of the contract — a payload sends `kmailType: 11` and means "share". So they
-are **not** retyped into test data. [`src/api/schemas/kpost-types.ts`](../../src/api/schemas/kpost-types.ts)
+are **not** retyped into test data. [`src/api/contract/kpost-types.ts`](../../src/api/contract/kpost-types.ts)
 is the typed way to read the generated file:
 
 ```ts
-import { KMAIL_TYPE, KMAIL_RECEIVER_TYPE, labelFor, codeFor } from '@api/schemas/kpost-types';
+import { KMAIL_TYPE, KMAIL_RECEIVER_TYPE, labelFor, codeFor } from '@api/contract/kpost-types';
 
 KMAIL_TYPE.share; // 11
 KMAIL_RECEIVER_TYPE.receiverTypeTo; // 1

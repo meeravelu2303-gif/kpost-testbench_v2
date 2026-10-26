@@ -7,7 +7,7 @@ BR-M01. This is the analysis before the build — the codes, the application flo
 Source of truth: the `kmail-api` contract (`contracts/kmail-api.contract.json`, 71 endpoints) + the
 KMail-prefixed rows in the KPost contract, and the live web client (`components/Kmail/*`,
 `Services/Kmail.js`). Codes: the workbook Types tab, exposed as `KMAIL_TYPE` / `KMAIL_RECEIVER_TYPE`
-/ `KMAIL_PRIORITY` in `@api/schemas/kpost-types`.
+/ `KMAIL_PRIORITY` in `@api/contract/kpost-types`.
 
 ## 1. The codes (owner-supplied; already in the workbook, verified to match)
 

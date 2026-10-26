@@ -1,4 +1,4 @@
-import { KATCHUP_MESSAGE_TYPE } from '@api/schemas/kpost-types';
+import { KATCHUP_MESSAGE_TYPE } from '@api/contract/kpost-types';
 import { testData } from '@config/test-data.config';
 import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';

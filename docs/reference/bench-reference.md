@@ -461,7 +461,7 @@ and anything still ambiguous (`methodDoubts`); all three reach the OpenAPI as `x
 **Nothing currently needs a method decision.**
 
 Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
-`src/api/schemas/kpost-types.ts`, pinned by `tests/framework/types-contract.spec.ts`.
+`src/api/contract/kpost-types.ts`, pinned by `tests/framework/types-contract.spec.ts`.
 
 ## 9. Plan
 

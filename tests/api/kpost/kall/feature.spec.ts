@@ -3,7 +3,7 @@
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
-import { KALL_STATUS } from '@api/schemas/kpost-types';
+import { KALL_STATUS } from '@api/contract/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { initiateShape } from '@api/definitions/kpost/kall/direct.api';

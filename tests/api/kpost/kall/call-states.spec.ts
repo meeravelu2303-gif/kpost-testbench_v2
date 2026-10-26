@@ -1,7 +1,7 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { initiateShape } from '@api/definitions/kpost/kall/direct.api';
 import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
-import { KALL_STATUS } from '@api/schemas/kpost-types';
+import { KALL_STATUS } from '@api/contract/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 

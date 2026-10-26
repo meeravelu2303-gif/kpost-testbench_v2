@@ -1,4 +1,4 @@
-import { KMAIL_PRIORITY, KMAIL_TYPE } from '@api/schemas/kpost-types';
+import { KMAIL_PRIORITY, KMAIL_TYPE } from '@api/contract/kpost-types';
 import { testData } from '@config/test-data.config';
 import { body } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint } from './kmail-endpoint';

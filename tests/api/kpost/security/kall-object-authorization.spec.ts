@@ -2,7 +2,7 @@
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
-import { KALL_STATUS } from '@api/schemas/kpost-types';
+import { KALL_STATUS } from '@api/contract/kpost-types';
 import { initiateShape } from '@api/definitions/kpost/kall/direct.api';
 import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
 import { expect, test } from '@fixtures';
