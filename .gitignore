@@ -30,3 +30,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+
+# Office lock files (an open .docx/.xlsx creates one next to it)
+~$*

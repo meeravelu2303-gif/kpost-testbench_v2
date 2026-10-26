@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/generated/blocked-endp
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **123** |
-| Blocked | 240 |
+| **Runs on live** | **124** |
+| Blocked | 239 |
 | Total registered | 363 |
 
 ---
 
-## Runs on live — 123
+## Runs on live — 124
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -32,6 +32,7 @@ reviewer can check against the comment beside it.
 | `POST` | `/location/getAllLocation` | Admin |
 | `POST` | `/rolePosting/getEmployeeByCompanyId` | Admin |
 | `POST` | `/rolePosting/getRolePostingByCompanyId` | Admin |
+| `POST` | `/rolePosting/getSuspendOrTerminateEmployee` | Admin |
 | `POST` | `/v2/aws/checkAttachmentS3/` | AWS |
 | `POST` | `/v2/aws/generate-presigned-url` | AWS |
 | `GET` | `/v2/common/countries` | common |
@@ -149,7 +150,7 @@ reviewer can check against the comment beside it.
 
 ---
 
-## Blocked on live — 240
+## Blocked on live — 239
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -179,7 +180,6 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/location/update` | Admin | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/rolePosting/delete` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/rolePosting/getRolePostingByCompanyIdAndEmployeeId` | Admin | COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints |
-| `POST` | `/rolePosting/getSuspendOrTerminateEmployee` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/rolePosting/save` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/rolePosting/suspendOrTerminateEmployee` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/rolePosting/update` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |

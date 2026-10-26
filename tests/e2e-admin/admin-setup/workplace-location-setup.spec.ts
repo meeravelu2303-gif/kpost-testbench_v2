@@ -78,7 +78,7 @@ async function locationLifecycle(page: Page): Promise<void> {
         const tiers = await pickWorkplaceTiers(page);
         test.skip(
           tiers === 0,
-          'the QA company has no workplace tier values to place a location under',
+          'the QA company has no workplace tier values on this account to place a location under',
         );
         await page.getByPlaceholder('Enter Name of the WorkPlace Location').fill(name);
         await pickDropdown(page, 'Country', 'India');

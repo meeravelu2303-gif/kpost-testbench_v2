@@ -296,7 +296,7 @@ test.describe('Admin · response times of all 38 endpoints @api @admin-api @perf
         { label: 'latency:company-name', auth: { principal: businessM! }, allowLiveRead: true },
       );
       const companyName = /"companyName"\s*:\s*"([^"]+)"/.exec(me.bodyText ?? '')?.[1] ?? '';
-      test.skip(!companyName, 'the QA company name could not be read; not invented');
+      test.skip(!companyName, 'the QA company name could not be read right now; not invented');
 
       const wpAttr = await make('admin-workplace-tier-attribute-save', tier('RP WP Tier'));
       const wpVar = await make('admin-workplace-tier-variable-save', [

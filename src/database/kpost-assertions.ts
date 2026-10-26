@@ -3,14 +3,10 @@ import type { CheckDetail } from '@engine/validation-result';
 import type { JsonObject } from '@utils/json';
 
 /**
- * Assertions shaped to the **real KPOST_QA schema**, as opposed to `db-assertions.ts`, which is
- * written against the mock server's idealised one.
- *
- * Keeping the two apart is deliberate. The mock's tables use `id`, `createdAt`, `updatedAt` and a
- * `deletedAt` tombstone; KPost uses none of those. Rewriting the mock assertions in place would
- * have broken the framework's own self-tests — which are the only thing those assertions are
- * attached to — while proving nothing about the product. So the real schema gets its own vocabulary
- * here, and each difference below is a fact read off `information_schema`, not a guess:
+ * Assertions shaped to the **real KPOST_QA schema**. (The mock-schema `db-assertions.ts` it once sat
+ * beside was unused and removed on 2026-10-26.) KPost has no `id` / `createdAt` / `updatedAt` /
+ * `deletedAt` convention, so the real schema gets its own vocabulary here, and each difference below
+ * is a fact read off `information_schema`, not a guess:
  *
  *  - **Primary keys are natural, not synthetic.** A user is keyed by `kpost_id` (a varchar e-mail
  *    address), not an integer `id`.

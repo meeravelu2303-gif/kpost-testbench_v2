@@ -26,7 +26,11 @@ export const variablePayload = (attributeId: string, variableName: string): Json
  * A workplace location (WorkPlaceLocationSetup.js:98-120, required :1228-1236): the level, name, country,
  * 6-digit pincode with its state/city/area, and both address lines.
  */
-export const locationPayload = (attributeId: string, variableId: string, locationName: string): Json => ({
+export const locationPayload = (
+  attributeId: string,
+  variableId: string,
+  locationName: string,
+): Json => ({
   attributeId,
   variableId,
   workPlaceLocation: JSON.stringify([{ attributeId, variableId, variableName: locationName }]),

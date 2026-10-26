@@ -186,7 +186,7 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         });
         test.skip(
           !companyName,
-          "the QA company's name could not be read — not invented; set up a role posting or company name first",
+          "the QA company's name could not be read right now — not invented; set up a role posting or company name first",
         );
       });
 
@@ -619,7 +619,7 @@ test.describe('Admin · role posting field rules on the QA testing company @api 
         );
         companyName = /"companyName"\s*:\s*"([^"]+)"/.exec(me.bodyText ?? '')?.[1] ?? '';
       }
-      test.skip(!companyName, 'the QA company name could not be read; not invented');
+      test.skip(!companyName, 'the QA company name could not be read right now; not invented');
 
       /** The screen's save row for a fresh HR variable. */
       const row = async (

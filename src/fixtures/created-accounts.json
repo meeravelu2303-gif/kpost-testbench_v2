@@ -547,6 +547,678 @@
       "source": "kpost:deep (write-fuzz run)",
       "note": "caught by before/after DB diff, not a known hand-written signup path",
       "createdAt": "2026-10-22T10:44:45.903Z"
+    },
+    {
+      "kpostId": "qarfco17.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.363Z"
+    },
+    {
+      "kpostId": "qarfco171.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.364Z"
+    },
+    {
+      "kpostId": "qarfco172.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.364Z"
+    },
+    {
+      "kpostId": "qarfco173.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.365Z"
+    },
+    {
+      "kpostId": "qarfco174.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.365Z"
+    },
+    {
+      "kpostId": "qarfco175.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.366Z"
+    },
+    {
+      "kpostId": "qarfco176.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.367Z"
+    },
+    {
+      "kpostId": "qarfco177.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.367Z"
+    },
+    {
+      "kpostId": "qarfco178.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.368Z"
+    },
+    {
+      "kpostId": "qarfco179.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.368Z"
+    },
+    {
+      "kpostId": "qarfdi17.ns@kpost.in",
+      "mobileNumber": "9000000009",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.369Z"
+    },
+    {
+      "kpostId": "qarfdi171.ns@kpost.in",
+      "mobileNumber": "9000000009",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.369Z"
+    },
+    {
+      "kpostId": "qarfdi172.ns@kpost.in",
+      "mobileNumber": "9000000009",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.370Z"
+    },
+    {
+      "kpostId": "qarfks17.ns@kpost.in",
+      "mobileNumber": "9000000010",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.370Z"
+    },
+    {
+      "kpostId": "qarfks171.ns@kpost.in",
+      "mobileNumber": "9000000010",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.371Z"
+    },
+    {
+      "kpostId": "qarfks172.ns@kpost.in",
+      "mobileNumber": "9000000010",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.371Z"
+    },
+    {
+      "kpostId": "qarfla17.ns@kpost.in",
+      "mobileNumber": "9000000007",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.372Z"
+    },
+    {
+      "kpostId": "qarfla171.ns@kpost.in",
+      "mobileNumber": "9000000007",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.372Z"
+    },
+    {
+      "kpostId": "qarfla172.ns@kpost.in",
+      "mobileNumber": "9000000007",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.372Z"
+    },
+    {
+      "kpostId": "qarfre17.ns@kpost.in",
+      "mobileNumber": "9000000011",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.373Z"
+    },
+    {
+      "kpostId": "qarfre171.ns@kpost.in",
+      "mobileNumber": "9000000011",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.373Z"
+    },
+    {
+      "kpostId": "qarfre172.ns@kpost.in",
+      "mobileNumber": "9000000011",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.374Z"
+    },
+    {
+      "kpostId": "qarfwo17.ns@kpost.in",
+      "mobileNumber": "9000000008",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.374Z"
+    },
+    {
+      "kpostId": "qarfwo171.ns@kpost.in",
+      "mobileNumber": "9000000008",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.375Z"
+    },
+    {
+      "kpostId": "qarfwo172.ns@kpost.in",
+      "mobileNumber": "9000000008",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.375Z"
+    },
+    {
+      "kpostId": "qarote17.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.376Z"
+    },
+    {
+      "kpostId": "qarote171.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.376Z"
+    },
+    {
+      "kpostId": "qarote1710.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.377Z"
+    },
+    {
+      "kpostId": "qarote1711.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.377Z"
+    },
+    {
+      "kpostId": "qarote1712.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.378Z"
+    },
+    {
+      "kpostId": "qarote1713.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.378Z"
+    },
+    {
+      "kpostId": "qarote1714.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.379Z"
+    },
+    {
+      "kpostId": "qarote1715.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.379Z"
+    },
+    {
+      "kpostId": "qarote1716.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.380Z"
+    },
+    {
+      "kpostId": "qarote1717.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.380Z"
+    },
+    {
+      "kpostId": "qarote1718.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.381Z"
+    },
+    {
+      "kpostId": "qarote1719.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.381Z"
+    },
+    {
+      "kpostId": "qarote172.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.381Z"
+    },
+    {
+      "kpostId": "qarote1720.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.382Z"
+    },
+    {
+      "kpostId": "qarote1721.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.382Z"
+    },
+    {
+      "kpostId": "qarote1722.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.383Z"
+    },
+    {
+      "kpostId": "qarote1723.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.383Z"
+    },
+    {
+      "kpostId": "qarote1724.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.384Z"
+    },
+    {
+      "kpostId": "qarote1725.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.384Z"
+    },
+    {
+      "kpostId": "qarote1726.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.385Z"
+    },
+    {
+      "kpostId": "qarote1727.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.385Z"
+    },
+    {
+      "kpostId": "qarote1728.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.386Z"
+    },
+    {
+      "kpostId": "qarote1729.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.386Z"
+    },
+    {
+      "kpostId": "qarote173.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.387Z"
+    },
+    {
+      "kpostId": "qarote1730.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.387Z"
+    },
+    {
+      "kpostId": "qarote174.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.388Z"
+    },
+    {
+      "kpostId": "qarote175.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.388Z"
+    },
+    {
+      "kpostId": "qarote176.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.389Z"
+    },
+    {
+      "kpostId": "qarote177.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.389Z"
+    },
+    {
+      "kpostId": "qarote178.ns@kpost.in",
+      "mobileNumber": "9000000007",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.390Z"
+    },
+    {
+      "kpostId": "qarote179.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.390Z"
+    },
+    {
+      "kpostId": "qastroaf.ns@kpost.in",
+      "mobileNumber": "9000000006",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.391Z"
+    },
+    {
+      "kpostId": "qlrr01aa.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.391Z"
+    },
+    {
+      "kpostId": "qlrr01aa1.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.392Z"
+    },
+    {
+      "kpostId": "qlrr01aa10.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.392Z"
+    },
+    {
+      "kpostId": "qlrr01aa2.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.393Z"
+    },
+    {
+      "kpostId": "qlrr01aa3.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.393Z"
+    },
+    {
+      "kpostId": "qlrr01aa4.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.394Z"
+    },
+    {
+      "kpostId": "qlrr01aa5.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.394Z"
+    },
+    {
+      "kpostId": "qlrr01aa6.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.395Z"
+    },
+    {
+      "kpostId": "qlrr01aa7.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.396Z"
+    },
+    {
+      "kpostId": "qlrr01aa8.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.396Z"
+    },
+    {
+      "kpostId": "qlrr01aa9.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.396Z"
+    },
+    {
+      "kpostId": "qlrr11aa.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.397Z"
+    },
+    {
+      "kpostId": "qlrr11aa1.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.398Z"
+    },
+    {
+      "kpostId": "qlrr11aa10.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.398Z"
+    },
+    {
+      "kpostId": "qlrr11aa2.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.399Z"
+    },
+    {
+      "kpostId": "qlrr11aa3.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.399Z"
+    },
+    {
+      "kpostId": "qlrr11aa4.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.400Z"
+    },
+    {
+      "kpostId": "qlrr11aa5.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.400Z"
+    },
+    {
+      "kpostId": "qlrr11aa6.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.401Z"
+    },
+    {
+      "kpostId": "qlrr11aa7.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.401Z"
+    },
+    {
+      "kpostId": "qlrr11aa8.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.401Z"
+    },
+    {
+      "kpostId": "qlrr11aa9.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.402Z"
+    },
+    {
+      "kpostId": "qlrr21aa.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.403Z"
+    },
+    {
+      "kpostId": "qlrr21aa1.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.403Z"
+    },
+    {
+      "kpostId": "qlrr21aa10.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.404Z"
+    },
+    {
+      "kpostId": "qlrr21aa2.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.404Z"
+    },
+    {
+      "kpostId": "qlrr21aa3.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.405Z"
+    },
+    {
+      "kpostId": "qlrr21aa4.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.405Z"
+    },
+    {
+      "kpostId": "qlrr21aa5.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.406Z"
+    },
+    {
+      "kpostId": "qlrr21aa6.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.406Z"
+    },
+    {
+      "kpostId": "qlrr21aa7.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.407Z"
+    },
+    {
+      "kpostId": "qlrr21aa8.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.408Z"
+    },
+    {
+      "kpostId": "qlrr21aa9.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.408Z"
+    },
+    {
+      "kpostId": "qlrr31aa.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.409Z"
+    },
+    {
+      "kpostId": "qlrr31aa1.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.409Z"
+    },
+    {
+      "kpostId": "qlrr31aa2.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.410Z"
+    },
+    {
+      "kpostId": "qlrr41aa.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.411Z"
+    },
+    {
+      "kpostId": "qlrr41aa1.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.411Z"
+    },
+    {
+      "kpostId": "qlrr41aa2.ns@kpost.in",
+      "mobileNumber": "9999999999",
+      "source": "kpost:deep (write-fuzz run)",
+      "note": "caught by before/after DB diff, not a known hand-written signup path",
+      "createdAt": "2026-10-26T12:09:53.412Z"
     }
   ]
 }

@@ -86,7 +86,7 @@ test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @secu
     if (!mine) await dropParents();
     test.skip(
       !mine,
-      `could not create the probe location (HTTP ${created.status} ${(created.bodyText ?? '').slice(0, 120)})`,
+      `the probe location was not created (HTTP ${created.status} ${(created.bodyText ?? '').slice(0, 120)})`,
     );
     if (!mine) return;
 

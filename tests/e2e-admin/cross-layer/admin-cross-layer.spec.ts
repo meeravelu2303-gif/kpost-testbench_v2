@@ -58,7 +58,10 @@ test.describe(
       },
       async ({ page }) => {
         const mongo = await openAdminMongoReader();
-        test.skip(!mongo, 'needs ADMIN_MONGO_URI (read-only) to judge the Admin document');
+        test.skip(
+          !mongo,
+          'ADMIN_MONGO_URI is not configured (read-only) — needed to judge the Admin document',
+        );
         const guard = await guardAdminHosts(page);
         const name = qaName('xlayer tier');
         let id: string | undefined;
