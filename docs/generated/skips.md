@@ -11,15 +11,15 @@ be in, one it should not stay in (no reason string), and one that fails the buil
 | Retune | 0 | 0 |
 | Blocked by a defect | 40 | 23 |
 | Provision | 327 | 233 |
-| Owner decision | 204 | 147 |
+| Owner decision | 205 | 148 |
 | Live condition | 117 | 53 |
 | No reason string | 0 | 0 |
 | Unclassified | 0 | 0 |
-| **Total** | **688** | **275** |
+| **Total** | **689** | **276** |
 
 ## The last run, by the engine’s own skip classes
 
-Run `run-4a380d12-4bfc-4ea1-a787-93810b1f5541` at 2026-10-27T05:24:29.756Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
+Run `run-e52e65a0-1e5f-4afd-ab99-675b6a05e557` at 2026-10-27T07:38:25.460Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
 
 | Engine skip class | Checks | Meaning |
 | ----------------- | -----: | ------- |
@@ -167,7 +167,7 @@ _None._
 | 1 | qa.p5 needs the spare QA account (QA_PERSONAL_5_KPOST_ID) | `tests/kpost-ui/smoke/auth.smoke.spec.ts:18` |
 | 1 | needs the group-creator QA account (personal-3) | `tests/kpost-ui/smoke/group.smoke.spec.ts:18` |
 
-## Owner decision — gated flows, pauses and safety choices (204)
+## Owner decision — gated flows, pauses and safety choices (205)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -200,6 +200,7 @@ _None._
 | 2 | creates a real group; set GROUP_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:268`, `tests/kpost-ui/group/group.spec.ts:12` |
 | 2 | creates a real scheduled call; set KALL_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:404`, `tests/kpost-ui/kall/kall-features.spec.ts:102` |
 | 1 | one-time setup: set ADMIN_CREATE_STAFF=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/admin-api/maintenance/setup-staff-employee.spec.ts:27` |
+| 1 | opt-in: this writes to Bugzilla — run `npm run bug:apply` after a product preview | `tests/framework/apply-filing-plan.spec.ts:19` |
 | 1 | manual probe — set CLEANUP_PLAN=true to list orphaned QA records on the primary account, CLEANUP_EXECUTE=true to delete them | `tests/framework/_cleanup-orphaned-records.local.spec.ts:14` |
 | 1 | PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND requires explicit authorization even on a future non-production environment, given it compares real credential material — see docs/generated/blocked-endpoints.md | `tests/kmail-api/credential-disclosure.spec.ts:28` |
 | 1 | sends real mail; set KMAIL_LIFECYCLE=true | `tests/kmail-api/feature.spec.ts:84` |

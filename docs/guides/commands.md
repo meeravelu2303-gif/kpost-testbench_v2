@@ -1,14 +1,24 @@
 # Commands
 
 Run from the repo root in PowerShell. Every product has its own commands, so a product can be checked
-right after its own deploy without re-testing the others. Each product has two main commands:
+right after its own deploy without re-testing the others.
 
-- **Preview:** runs every test and writes `reports/REPORT.md`. Files nothing.
-- **File:** the same run, then files the valid new bugs to Bugzilla, reopens fixed bugs that came back,
-  closes the bugs it verified fixed, and adds a dated note to every other open bug of that product.
+**The routine: run the tests once, then file.**
 
-Run the preview, read the plan with `npm run report:filing`, then run the file command. Never start a
-run while another one is in progress.
+```powershell
+npm run product:kpost-api      # 1. run every test (files nothing; saves what it found)
+npm run report:filing          # 2. read the plan: create / reopen / comment / close / needs review
+npm run bug:apply              # 3. file that plan to Bugzilla, without running the tests again
+```
+
+`bug:apply` uses the same filing step as a `:file` run, with the same strict gates: the validity gate,
+a live duplicate search in Bugzilla for every finding, never refiling a bug closed INVALID / WONTFIX /
+DUPLICATE, reopening a fixed bug that came back, and holding uncertain findings for review. It
+refuses a plan that is more than 24 hours old, came from a run that failed the run gate, or was
+already applied once. Status comments carry the date the tests ran.
+
+The `:file` commands below are the one-step alternative: they run the tests and file in the same run.
+Never start a run while another one is in progress.
 
 ## KPost API
 
@@ -124,6 +134,7 @@ npm run framework            # the bench's self-tests (safety guards, filing gat
 
 ```powershell
 npm run report:filing        # the filing plan in plain English: create / reopen / comment / close / needs review
+npm run bug:apply            # file the last preview's plan (once, within 24 h)
 npm run bug:file-reviewed    # file the NEEDS YOUR REVIEW items you approved
 npm run report               # open the Playwright HTML report
 ```

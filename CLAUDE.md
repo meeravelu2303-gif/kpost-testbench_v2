@@ -128,8 +128,11 @@ the OTP/SMS kill-switch, and `sideEffect: 'global'`/`external` blocks.
 a **NEEDS YOUR REVIEW** list (held back until you approve), and a **SUPPRESSED** list (human-judged
 non-defects). If a WILL CREATE item is not a real bug, record it in `src/bug-tracker/known-false-positives.ts`
 (fingerprint + reason + judgedBy + date) rather than filing-and-resolving-INVALID — it is then suppressed
-every run, auditably. When the plan looks right, run the `:file` command. (The dry preview now shows the
-SAME reopen/comment/close decisions the live run will make — it no longer mislabels a reopen as would-file.)
+every run, auditably. When the plan looks right, run **`npm run bug:apply`**: it files that preview's
+plan without re-running the tests (`reports/filing-input.json`, saved by every product preview), through
+the same `runFiling` step as `:file` (`src/reporting/filing-run.ts`): validity gate, live dedupe, reopen/
+comment/close. It refuses a plan older than 24 h, from a run that failed the run gate, or already applied.
+The `:file` command remains the one-step alternative (run and file together).
 
 Also: `product:kpost-api:verify` (status pass only: closes verified fixes, dates every open bug, files
 nothing), `product:kpost-ui:chromium:file` / `:firefox:file` / `:webkit:file` (one browser per run),

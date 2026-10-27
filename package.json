@@ -44,6 +44,7 @@
     "product:all": "node scripts/run-products.mjs",
     "product:all:file": "node scripts/run-products.mjs --file",
     "report:filing": "node scripts/filing-plan.cjs",
+    "bug:apply": "cross-env BUGZILLA_DRY_RUN=false BUGZILLA_AUTO_RESOLVE=true APPLY_FILING_PLAN=true playwright test --project=framework tests/framework/apply-filing-plan.spec.ts --reporter=list --workers=1",
     "bug:file-reviewed": "node scripts/file-reviewed.cjs",
     "bug:file-approved": "node scripts/file-approved.cjs",
     "bug:dupe-check": "node scripts/bugzilla-duplicate-check.cjs",

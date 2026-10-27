@@ -3,7 +3,30 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — Smoke, sanity and regression per product, with dependency gates
+### 2026-10-27 (latest) — `bug:apply`: run the tests once, then file
+
+Owner: "run one time, then a command that files and updates Bugzilla; never file duplicates or invalid bugs".
+A product needed two 2-hour runs (preview, then `:file`), because filing needed the live run's in-memory
+results.
+
+- **One filing step, two callers.** The filing logic (validity gate, run gate, dedupe-and-file, status
+  pass, proof attachments, the report) moved unchanged from `bugzilla-reporter.ts` to
+  `src/reporting/filing-run.ts` (`runFiling`, `writeRunReport`). The reporter builds a `FilingInput` at
+  the end of a run and calls it; a preview also saves that input to `reports/filing-input.json`
+  (credentials masked, kpostIDs kept). `npm run bug:apply` (`tests/framework/apply-filing-plan.spec.ts`,
+  opt-in like `bug:file`) loads it and calls the same `runFiling` live.
+- **Strict at apply time:** the duplicate search runs live in Bugzilla for every finding (nothing is
+  trusted from the preview); the plan must be a preview, have passed the run gate, be under 24 h old and
+  not already applied (it is marked applied either way, so a second apply cannot comment twice). Status
+  comments carry the date the tests ran, not the apply time. Pinned by `filing-plan-gate.spec.ts`.
+- **Archive fix:** the previous report was archived under the NEW run's product name. REPORT.json now
+  records its own `product`, and the archive names each report from it.
+- Verified: `check`; `framework` 348; a real KPost API smoke preview (23 read-only tests, dry run)
+  wrote the report and a valid, masked plan. `bug:apply` itself was not run (it writes to Bugzilla).
+  That smoke run also failed one check: `kall-today-kool` returned `data` as something other than an
+  array. Smoke never files; it needs a look on its own.
+
+### 2026-10-27 — Smoke, sanity and regression per product, with dependency gates
 
 Owner: "the five products have separate URLs and deploy at different times, so each needs its own
 smoke/sanity/regression command; KMail is a KPost feature on its own URL; the KPost UI integrates the KPost

@@ -1,5 +1,5 @@
 import type { BugSummary } from '../../src/bug-tracker/bugzilla-client';
-import { plainStatusComment } from '../../src/reporting/bugzilla-reporter';
+import { plainStatusComment } from '../../src/reporting/filing-run';
 import { expect, test } from '@fixtures';
 
 /**
