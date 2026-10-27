@@ -101,7 +101,7 @@ export interface KpostEndpointConfig {
    * `productionSafe` in src/api/registry/endpoint-definition.ts for what the flag asserts.
    */
   productionSafe?: boolean;
-  /** Needs a real OTP, so it is skipped on live. Reconciled against `npm run contract:otp`. */
+  /** Needs a real OTP, so it is skipped on live. Reconciled against the contracts by `live-safety.spec.ts`. */
   otpDependent?: EndpointDefinition['otpDependent'];
   validations?: Partial<ValidationToggles>;
   skipValidators?: readonly string[];

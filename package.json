@@ -55,8 +55,6 @@
     "contract:admin": "node scripts/fetch-admin-contract.cjs && node scripts/apply-admin-pdf-payloads.cjs",
     "contract:admin:pdf": "node scripts/apply-admin-pdf-payloads.cjs",
     "contract:coverage": "node scripts/contract-coverage.cjs",
-    "contract:gaps": "node scripts/excel-gap-report.cjs",
-    "contract:otp": "node scripts/otp-dependency-report.cjs",
     "bugzilla:dupe-check": "node scripts/bugzilla-duplicate-check.cjs",
     "kmail:deep": "cross-env CONCURRENCY_PROBES=false QATEST_ONLY=true BUGZILLA_DRY_RUN=true TEST_DB_MODE=true WRITE_FUZZ=true ALLOW_DESTRUCTIVE_TESTS=true KMAIL_LIFECYCLE=true playwright test --project=api tests/api/kmail --workers=1",
     "kmail:deep:file": "cross-env CONCURRENCY_PROBES=false QATEST_ONLY=true BUGZILLA_DRY_RUN=false BUGZILLA_AUTO_RESOLVE=true TEST_DB_MODE=true WRITE_FUZZ=true ALLOW_DESTRUCTIVE_TESTS=true KMAIL_LIFECYCLE=true playwright test --project=api tests/api/kmail --workers=1",

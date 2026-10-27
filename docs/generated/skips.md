@@ -20,7 +20,7 @@ The plan: `docs/reference/production-readiness-plan.md`, Phase 1.
 
 ## The last run, by the engine’s own skip classes
 
-Run `run-04aad007-f8e3-4a9b-a265-2c1d77e89897` at 2026-10-26T06:40:23.723Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
+Run `run-aae4ce8f-efcf-49c7-9485-06abce800650` at 2026-10-27T05:18:26.412Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
 
 | Engine skip class | Checks | Meaning |
 | ----------------- | -----: | ------- |

@@ -68,8 +68,7 @@ npm run framework   # the self-tests: safety controls, coverage ledgers, routing
 
 `framework` needs no host and files nothing. It also regenerates every file in `docs/generated/`;
 commit those with the run. If the owner delivered a new workbook, regenerate the contracts first
-(drop it into `docs/api-specs/`, then `contract:excel` → `contract:coverage` → `contract:gaps` →
-`contract:otp`, see [`api-contracts.md`](api-contracts.md)). Do not go on while any of this is red.
+(drop it into `docs/api-specs/`, then `contract:excel` → `contract:coverage`, see [`api-contracts.md`](api-contracts.md)). Do not go on while any of this is red.
 
 ---
 

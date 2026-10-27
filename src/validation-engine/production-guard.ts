@@ -253,7 +253,7 @@ export function destructiveBlockReason(
    * opposite reason — it *would* succeed, and deliver a real message.
    */
   if (isLive && endpoint.otpDependent && !otpTestAuthorized) {
-    return `${endpoint.label} ${OTP_REASONS[endpoint.otpDependent]} (npm run contract:otp)`;
+    return `${endpoint.label} ${OTP_REASONS[endpoint.otpDependent]}`;
   }
 
   if (!endpoint.destructive) return undefined;

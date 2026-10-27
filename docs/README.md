@@ -24,6 +24,7 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 | [`decision-log.md`](reference/decision-log.md)                           | Every decision and incident, newest first. **Add an entry at the top after changing a flow.**                |
 | [`production-readiness-plan.md`](reference/production-readiness-plan.md) | Where the bench stands (measured), what production grade means here, and the phased plan with exit criteria. |
 | [`coverage-gaps.md`](reference/coverage-gaps.md)                         | Requirements against the in-scope run-level suite: what is covered and what is still a gap.                  |
+| [`cross-layer-matrix.md`](reference/cross-layer-matrix.md)               | Which cross-layer flow (UI write → API/DB read) proves which module.                                         |
 | `kpost-test-bench-overview.docx`                                         | A Word overview of the bench for readers outside the team.                                                   |
 
 ## `proposals/` — suggested changes, not applied
@@ -57,22 +58,18 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 | [`blocked-endpoints-rationale.md`](scope/blocked-endpoints-rationale.md) | Every endpoint that genuinely cannot run today, with its reason and unblock path. |
 | [`unused-endpoints.md`](scope/unused-endpoints.md)                       | Endpoints proven to have no caller in the front end.                              |
 
-The OTP-dependent list and the workbook gap list are generated too (rows at the end of the `generated/` table).
+## `generated/` — written by `npm run framework`, never hand-edited
 
-## `generated/` — written by `npm run framework` or a `contract:*` command, never hand-edited
-
-| Document                                                             | Written by                    | What it reconciles                                           |
-| -------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------ |
-| [`coverage.md`](generated/coverage.md)                               | `coverage-ledger.spec.ts`     | Every documented endpoint and screen against the registry.   |
-| [`live-endpoints.md`](generated/live-endpoints.md)                   | `live-coverage.spec.ts`       | What runs on the live application and what is blocked.       |
-| [`blocked-endpoints.md`](generated/blocked-endpoints.md)             | `live-coverage.spec.ts`       | The blocked set, grouped by reason.                          |
-| [`component-routing.md`](generated/component-routing.md)             | `component-routing.spec.ts`   | Every endpoint → its Bugzilla component.                     |
-| [`payload-audit.md`](generated/payload-audit.md)                     | `payload-audit.spec.ts`       | Every documented example field is actually sent.             |
-| [`ui-coverage.md`](generated/ui-coverage.md)                         | `ui-coverage.spec.ts`         | Every screen, the check catalogue and the interaction flows. |
-| [`katchup-ui-coverage.md`](generated/katchup-ui-coverage.md)         | `katchup-ui-coverage.spec.ts` | Every Katchup feature against its UI spec.                   |
-| [`skips.md`](generated/skips.md)                                     | `skip-ledger.spec.ts`         | Every skip reason in the suite, in one of four classes.      |
-| [`excel-gaps.md`](generated/excel-gaps.md) (+ `.csv`)                | `npm run contract:gaps`       | Workbook rows still missing data, each with its cell.        |
-| [`otp-dependent-endpoints.md`](generated/otp-dependent-endpoints.md) | `npm run contract:otp`        | Every endpoint that sends, consumes or requires an OTP.      |
+| Document                                                     | Written by                    | What it reconciles                                           |
+| ------------------------------------------------------------ | ----------------------------- | ------------------------------------------------------------ |
+| [`coverage.md`](generated/coverage.md)                       | `coverage-ledger.spec.ts`     | Every documented endpoint and screen against the registry.   |
+| [`live-endpoints.md`](generated/live-endpoints.md)           | `live-coverage.spec.ts`       | What runs on the live application and what is blocked.       |
+| [`blocked-endpoints.md`](generated/blocked-endpoints.md)     | `live-coverage.spec.ts`       | The blocked set, grouped by reason.                          |
+| [`component-routing.md`](generated/component-routing.md)     | `component-routing.spec.ts`   | Every endpoint → its Bugzilla component.                     |
+| [`payload-audit.md`](generated/payload-audit.md)             | `payload-audit.spec.ts`       | Every documented example field is actually sent.             |
+| [`ui-coverage.md`](generated/ui-coverage.md)                 | `ui-coverage.spec.ts`         | Every screen, the check catalogue and the interaction flows. |
+| [`katchup-ui-coverage.md`](generated/katchup-ui-coverage.md) | `katchup-ui-coverage.spec.ts` | Every Katchup feature against its UI spec.                   |
+| [`skips.md`](generated/skips.md)                             | `skip-ledger.spec.ts`         | Every skip reason in the suite, in one of four classes.      |
 
 ## `api-specs/` — the product owner's source files
 

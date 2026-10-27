@@ -223,9 +223,8 @@ export interface EndpointDefinition {
    *   `consumes`  its payload carries an `otp` field we cannot fill
    *   `requires`  needs an OTP validated in an earlier step, though its own payload shows none
    *
-   * The authoritative list is generated: `npm run contract:otp` writes
-   * `docs/generated/otp-dependent-endpoints.md`, and a framework test reconciles these flags against
-   * it, so an endpoint cannot quietly lose its flag when a workbook dump changes.
+   * `tests/framework/live-safety.spec.ts` derives the OTP endpoints from `contracts/` and fails on
+   * any that lacks this flag, so an endpoint cannot quietly lose it when a workbook dump changes.
    */
   otpDependent?: 'sends' | 'consumes' | 'requires';
 }

@@ -19,10 +19,10 @@ export const errorFormatValidator = defineValidator({
     /*
      * The workbook documents no error response for KPost - no 400/401/404/409 sample anywhere.
      * Asserting an invented shape would manufacture defects; claiming a pass would be a lie. The
-     * gap is reported in docs/generated/excel-gaps.md instead.
+     * gap is the workbook's to fill.
      */
     if (!endpoint.contract.error)
-      return `${endpoint.contract.id} documents no error envelope (see docs/generated/excel-gaps.md)`;
+      return `${endpoint.contract.id} documents no error envelope in the workbook`;
     return true;
   },
   check: (context) => {

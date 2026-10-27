@@ -3,7 +3,17 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — Workbook reports moved to `docs/generated/`; openapi verified against the Excel
+### 2026-10-27 (latest) — The Excel-gap and OTP reports removed; the OTP check reads the contracts
+
+Owner: the gap and OTP lists were temporary references, not needed. Removed `excel-gaps.csv/.md`,
+`otp-dependent-endpoints.md`, their scripts (`excel-gap-report.cjs`, `otp-dependency-report.cjs`) and the
+`contract:gaps`/`contract:otp` commands. The one thing they guarded is kept: `live-safety.spec.ts` now derives the
+OTP endpoints from `contracts/*.contract.json` itself (path names an OTP send, payload has an `otp` key, or one of
+the 8 listed "requires a prior OTP" paths) and fails on any definition without `otpDependent`. Checked against the
+old report before deleting it: the same 16 endpoints. After a new workbook: `contract:excel` → `contract:coverage`
+→ `framework`.
+
+### 2026-10-27 — Workbook reports moved to `docs/generated/`; openapi verified against the Excel
 
 Owner asked whether the openapi files match the Excel, and why `contracts/` is needed. A fresh `contract:excel` on
 `KPOST API (6).xlsx` reproduced `openapi/kpost-api` (266 operations) and `kmail-api` (71) byte for byte. Every

@@ -217,7 +217,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/reference
 ## 8. Contracts and conventions
 
 - **The Excel workbook wins** (`docs/api-specs/KPOST API (N).xlsx`; the highest N is used).
-  `npm run contract:excel` → `contract:coverage` → `contract:gaps`. Never hand-edit `contracts/` or `openapi/`.
+  `npm run contract:excel` → `contract:coverage`. Never hand-edit `contracts/` or `openapi/`.
 - **Only POST and GET exist.** Documented payload = POST, none = GET; every derived method records its source.
 - **Never invent a contract or a payload value.** Send what the real frontend sends; `payload-audit.spec.ts`
   enforces it. Admin save endpoints take a JSON array; update takes an object.

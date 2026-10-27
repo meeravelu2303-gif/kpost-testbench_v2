@@ -1,8 +1,8 @@
 # API contracts — the Excel workbook is the source of truth
 
-The KPost API **Excel workbook** is the authoritative contract for this bench. The swagger/OpenAPI
-files that used to live here were removed: they disagreed with the workbook, and testing against a
-wrong contract produces tickets that blame the API for the document.
+The KPost API **Excel workbook** is the authoritative contract for this bench. The hand-kept
+swagger files that once lived here disagreed with it and were removed; `openapi/` is now built from
+the workbook, so the two cannot drift.
 
 Everything in `contracts/` and `openapi/` is **generated**. Nothing in them is hand-edited.
 
@@ -11,13 +11,12 @@ Everything in `contracts/` and `openapi/` is **generated**. Nothing in them is h
 ```bash
 npm run contract:excel      # convert the newest "KPOST API (N).xlsx" in docs/api-specs/
 npm run contract:coverage   # prove every workbook endpoint reached the contracts (gate)
-npm run contract:gaps       # list what the workbook is still missing, for filling in
-npm run contract:otp        # list the OTP-dependent endpoints (blocked on live)
 
 npm run contract:excel -- "C:/path/KPOST API (7).xlsx"   # or a specific workbook
 ```
 
-Run them in that order after every new dump (a new dump goes into `docs/api-specs/` next to the old
+Run them in that order after every new dump, then `npm run framework` (it fails if a new OTP
+endpoint lacks its `otpDependent` flag) (a new dump goes into `docs/api-specs/` next to the old
 one; the highest `(N)` wins), and commit the results: the diff shows exactly which endpoint or field
 changed — the review a binary spreadsheet cannot give you.
 
@@ -28,24 +27,18 @@ docs/api-specs/KPOST API (N).xlsx   the owner's workbook — the only input
         │
 scripts/excel-to-contract.cjs   the converter
 scripts/contract-coverage.cjs   the independent coverage audit
-scripts/excel-gap-report.cjs    the "what to fill in" report
-scripts/otp-dependency-report.cjs  the OTP-dependency report
         │
+        ├── openapi/kpost-api.openapi.json         ONLY the usable KPost rows — what the tests read
+        ├── openapi/kmail-api.openapi.json         ONLY the usable KMail rows — what the tests read
+        ├── contracts/kpost-types.json             the Types tab (13 enum groups), imported by the tests
         ├── contracts/kpost-api.contract.json      every KPost row, usable or not, with reasons
         ├── contracts/kmail-api.contract.json      every KMail row, same shape
-        ├── contracts/kpost-types.json             the Types tab (13 enum groups)
-        ├── docs/generated/excel-gaps.csv     one row per gap, opens in Excel
-        ├── docs/generated/excel-gaps.md      the same, summarised
-        ├── docs/generated/otp-dependent-endpoints.md  every endpoint that sends, consumes or requires an OTP
-        ├── openapi/kpost-api.openapi.json         ONLY the usable KPost rows
-        ├── openapi/kmail-api.openapi.json         ONLY the usable KMail rows
         │
-        ├── contracts/_conversion-report.json   intermediate: every excluded row and why; the audits read it
+        ├── contracts/_conversion-report.json   intermediate: every excluded row and why; the audit reads it
         └── contracts/_coverage.json            intermediate: audit result, anything in the workbook we missed
 ```
 
-The two `_*.json` intermediates are gitignored — `contract:excel` recreates them, and `contract:gaps`
-refuses to run without the conversion report rather than silently dropping the cell references.
+The two `_*.json` intermediates are gitignored; `contract:excel` and `contract:coverage` recreate them.
 (The Admin contract is separate: `npm run contract:admin` fetches the live service's OpenAPI and
 applies the owner's PDF payloads from `docs/api-specs/`; see `docs/modules/admin-flow.md`.)
 
@@ -178,10 +171,6 @@ declares the headers it expects (`expect` in `TABS`), and a header that no longe
 run with `layout changed on tab "<name>" — refusing to convert`, naming the column that moved. The
 alternative — reading the wrong cells and producing a plausible-looking contract — is far worse than
 a failed run.
-
-`docs/generated/excel-gaps.csv` carries a **FillCell** column naming the exact destination cell for every
-row that needs a method decision (`KatchupAPI!Q7`), taken from the same conversion report, so the
-list and the converter can never disagree about where the method belongs.
 
 ## Coverage — proving nothing was dropped
 

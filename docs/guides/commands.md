@@ -121,20 +121,20 @@ contain tokens and passwords. **Never commit them, and never write run logs into
 
 ## 7. Development utilities
 
-| Command                                                        | What it does                                                                                                 |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `npm run check`                                                | typecheck + lint + format — must be clean before anything is "done".                                         |
-| `npm run lint:fix` / `format` / `format:check`                 | fix lint, apply / check Prettier.                                                                            |
-| `npm run lint:debt`                                            | the full warning list the gate does not print (fixed-time waits, forced clicks, hook order) — the burn-down. |
-| `npm run framework`                                            | the bench's own self-tests, dry-run (safety, coverage, routing, payload guards).                             |
-| `npm run test:framework`                                       | the same project without the dry-run flag.                                                                   |
-| `npm run test` / `test:headed`                                 | plain Playwright run, every project, no flags / with a visible browser. Prefer a named command above.        |
-| `npm run codegen`                                              | record UI selectors.                                                                                         |
-| `npm run install:browsers`                                     | install the Playwright browsers (one-time).                                                                  |
-| `npm run accounts:provision`                                   | create the `qatestN` accounts: no flag = status; `--send` then `--finish --from-db` (see the script header). |
-| `npm run contract:excel`                                       | regenerate the KPost/KMail contracts from the workbook.                                                      |
-| `npm run contract:admin` / `contract:admin:pdf`                | regenerate the Admin contract / apply the owner's PDF payloads.                                              |
-| `npm run contract:coverage` / `contract:gaps` / `contract:otp` | audit contract coverage / gaps / OTP-gated endpoints.                                                        |
+| Command                                         | What it does                                                                                                 |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `npm run check`                                 | typecheck + lint + format — must be clean before anything is "done".                                         |
+| `npm run lint:fix` / `format` / `format:check`  | fix lint, apply / check Prettier.                                                                            |
+| `npm run lint:debt`                             | the full warning list the gate does not print (fixed-time waits, forced clicks, hook order) — the burn-down. |
+| `npm run framework`                             | the bench's own self-tests, dry-run (safety, coverage, routing, payload guards).                             |
+| `npm run test:framework`                        | the same project without the dry-run flag.                                                                   |
+| `npm run test` / `test:headed`                  | plain Playwright run, every project, no flags / with a visible browser. Prefer a named command above.        |
+| `npm run codegen`                               | record UI selectors.                                                                                         |
+| `npm run install:browsers`                      | install the Playwright browsers (one-time).                                                                  |
+| `npm run accounts:provision`                    | create the `qatestN` accounts: no flag = status; `--send` then `--finish --from-db` (see the script header). |
+| `npm run contract:excel`                        | regenerate the KPost/KMail contracts from the workbook.                                                      |
+| `npm run contract:admin` / `contract:admin:pdf` | regenerate the Admin contract / apply the owner's PDF payloads.                                              |
+| `npm run contract:coverage`                     | audit that every workbook endpoint reached the contracts.                                                    |
 
 ## 8. Safety — true on every command, cannot be switched off
 

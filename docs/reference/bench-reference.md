@@ -151,7 +151,7 @@ endpoint. Details: `docs/guides/validation-framework.md`.
 and the QA-identifier guard (no request may name a record we do not own). All three are default-deny
 and none can be switched off by configuration, including by `ALLOW_DESTRUCTIVE_TESTS`. See §8 and
 `tests/framework/live-safety.spec.ts`. **16 endpoints are OTP-gated and cannot run on live at all**
-(`npm run contract:otp`).
+(derived from `contracts/` and reconciled by `live-safety.spec.ts`).
 
 **Concurrency layer.** Four probes cover the faults that need two requests inside the handler at
 once — `concurrency.read-consistency`, `burst-resilience`, `duplicate-write`, `session-isolation`
@@ -487,8 +487,8 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 ### Blocked on the repo owner
 
 Methods are settled — **nothing needs a method decision**. 337 endpoints are usable. What remains
-is genuinely missing data, all of it in `docs/generated/excel-gaps.csv`, one row per item, with
-**FillCell** naming the cell:
+is genuinely missing data in the workbook (each excluded or incomplete row is listed with its
+reason in `contracts/*.contract.json`):
 
 1. **185 endpoints have no sample response, or no payload where the Method column says POST (P2).**
    The largest remaining gap, and what response assertions need.
@@ -499,11 +499,10 @@ is genuinely missing data, all of it in `docs/generated/excel-gaps.csv`, one row
    row documenting two endpoints with a single payload (`KatchupAPI!Q3`).
 4. **Credentials per environment** (`AUTH_PRINCIPALS`, `TEST_COMPANY_ID`) — without them every real
    endpoint answers 401 and the bench would report a credential problem as an API defect.
-5. **Status codes and a public/token flag** in the workbook (not per-row in the gap CSV; see
-   `docs/generated/excel-gaps.md`, section "not per-row").
+5. **Status codes and a public/token flag** in the workbook (no column for either today).
 
 After any new dump: `npm run contract:excel` (no path needed — it takes the newest workbook in the
-repo) → `npm run contract:coverage` → `npm run contract:gaps`.
+repo) → `npm run contract:coverage`.
 
 ### The module-by-module to-do (owner's order, 2026-09-13)
 

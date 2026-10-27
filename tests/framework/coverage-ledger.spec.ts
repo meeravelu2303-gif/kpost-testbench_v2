@@ -248,7 +248,7 @@ test.describe('coverage ledger @framework', () => {
       '',
       '## What "complete" is blocked on',
       '',
-      '- **OTP-gated endpoints never run on live** (no bypass — a security property). `npm run contract:otp`.',
+      '- **OTP-gated endpoints never run on live** (no bypass — a security property). `tests/framework/live-safety.spec.ts` keeps the flags in step with the contracts.',
       '- **`needs-business` modules** (admin, business-tier login) need a business company with members.',
       '- **`external`/`out-of-scope`** modules (KNews RSS, RedBus/ECommerce/MetaDee, KDOC) await an owner',
       '  scope decision or are excluded per the BRD.',
