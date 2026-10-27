@@ -6,12 +6,12 @@ import {
 } from '@config/bugzilla.config';
 import { normalizeForFingerprint } from './bug-fingerprint';
 import type { BugCandidate } from './bug-candidate';
-import { developerGuidance } from './guidance';
+import { developerGuidance, firstSentence } from './guidance';
 
 /**
  * Turns a candidate into the ticket shape this Bugzilla expects. The description is line-anchored
- * (`Classification:`, `Expected:`, `Actual:`, `curl:` …) because the BUGZILLA-UI tracker parses
- * those labels.
+ * (`Classification:`, `Summary:`, `Expected:`, `Actual:`, `curl:` …) because the BUGZILLA-UI
+ * tracker parses those labels.
  */
 
 export interface BugFields {
@@ -32,10 +32,13 @@ export interface BugFields {
   assigned_to?: string;
 }
 
-function clamp(value: string, label: string): string {
-  if (value.length <= BUGZILLA_LIMITS.snippet) return value;
-  return `${value.slice(0, BUGZILLA_LIMITS.snippet)}\n… [${label} truncated — ${value.length} characters total; the full text is in the attached evidence file]`;
+function clamp(value: string, label: string, max: number = BUGZILLA_LIMITS.snippet): string {
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}\n… [${label} cut short (${value.length} characters); the full text is in the attached evidence file]`;
 }
+
+/** Expected / Actual / a reply body stay readable in the ticket; the attachment has all of it. */
+const BLOCK_MAX = 2_000;
 
 /** `[KP-A1B2C3] title`, trimmed to Bugzilla's 255-character summary column, tag intact. */
 export function buildSummary(candidate: BugCandidate): string {
@@ -97,108 +100,142 @@ function wrap(text: string, width = 78): string[] {
   return out;
 }
 
-/** A one-line "state of the system before this failed" summary. */
-function buildPreconditions(candidate: BugCandidate): string {
-  if (candidate.source === 'ui') {
-    const where = candidate.browsers?.length ? `in ${candidate.browsers.join('/')}, ` : '';
-    return `Signed in with a valid test account, ${where}on the ${candidate.component} screen.`;
+const BROWSER_NAME: Record<string, string> = {
+  chromium: 'Chromium',
+  firefox: 'Firefox',
+  webkit: 'WebKit (Safari)',
+};
+
+/** The Summary block: the candidate's own plain sentences, then how often it failed. */
+function summaryText(candidate: BugCandidate): string {
+  let summary = candidate.summary ?? candidate.narrative;
+  const counted = !candidate.systemic && !candidate.classification.startsWith('accessibility.');
+  if (candidate.reproduction) {
+    const { attempts, failures } = candidate.reproduction;
+    summary +=
+      failures === attempts
+        ? ` It failed ${failures} of ${attempts} tries, so it is not a one-off.`
+        : ` It failed ${failures} of ${attempts} tries: it comes and goes.`;
+  } else if (counted && candidate.occurrences > 1) {
+    summary += ` Seen ${candidate.occurrences} times in this run.`;
   }
-  return 'A valid, authenticated test account calling the endpoint below with a live session token.';
+  return summary;
+}
+
+/** Numbered steps a developer can follow in the product itself, never a bench command. */
+function buildSteps(candidate: BugCandidate): string {
+  if (candidate.repro) return clamp(candidate.repro, 'steps');
+  if (candidate.source === 'api') {
+    return [
+      '1. Log in with a test account and put its token in $KPOST_TOKEN.',
+      candidate.curl
+        ? '2. Run the curl below.'
+        : `2. Call ${candidate.endpoint ?? 'the endpoint'} the way Expected describes.`,
+      '3. Compare the reply with Expected.',
+    ].join('\n');
+  }
+  const browsers = [...new Set((candidate.browsers ?? []).map(browserForProject))]
+    .map((b) => BROWSER_NAME[b] ?? b)
+    .join(' or ');
+  const steps = [
+    `1. Sign in to ${candidate.baseURL} with a test account${browsers ? ` in ${browsers}` : ''}.`,
+  ];
+  if (candidate.classification.startsWith('accessibility.')) {
+    steps.push(
+      '2. Open each screen listed under Actual.',
+      '3. Run an accessibility checker (for example axe DevTools) and look for the rule in the Summary.',
+    );
+  } else if (candidate.systemic) {
+    steps.push('2. Open any screen (Home, Katchup, Kall, KMail …) and wait for it to load.');
+  } else {
+    steps.push(
+      `2. Open the ${candidate.component} screen.`,
+      '3. Do what Expected describes, and compare the result with Actual.',
+    );
+  }
+  if (candidate.proof?.length)
+    steps.push('The screenshot and video from the test run are attached.');
+  return steps.join('\n');
 }
 
 /**
- * The ticket body. Labels and their order match every existing [KP-*] ticket, so all read alike.
- * Plain text only: this Bugzilla 5.2 ignores Markdown.
+ * The ticket body, short and in plain English: header lines, Summary, Steps, Expected, Actual,
+ * How to fix, curl, then who/where/when. Every label is one the BUGZILLA-UI tracker parses
+ * (`backend/src/lib/defectReport.ts`, `DescriptionReport.tsx`); text without a label is dropped
+ * there. Plain text only: this Bugzilla 5.2 ignores Markdown.
  */
 export function buildDescription(candidate: BugCandidate): string {
-  const endpointLabel = candidate.source === 'api' ? 'Representative endpoint:' : 'Endpoint:';
+  // `Representative endpoint:` is how verify-resolve finds a platform-wide ticket's scope.
+  const endpointLabel = candidate.systemic ? 'Representative endpoint:' : 'Endpoint:';
   const lines = [
     `Classification: ${candidate.classification}`,
     `Category: ${candidate.category}`,
-    `${endpointLabel} ${candidate.endpoint ?? '(not applicable)'}`,
+    ...(candidate.endpoint ? [`${endpointLabel} ${candidate.endpoint}`] : []),
     `Module: ${candidate.component}`,
     `Severity: ${BUGZILLA_SEVERITY[candidate.severity]} / Priority: ${BUGZILLA_PRIORITY[candidate.severity]}`,
     '',
-    `Preconditions: ${buildPreconditions(candidate)}`,
+    'Summary:',
+    ...wrap(summaryText(candidate)),
     '',
-    ...wrap(candidate.narrative),
+    'Steps to reproduce:',
+    buildSteps(candidate),
+    '',
+    'Expected:',
+    clamp(candidate.expected, 'expected', BLOCK_MAX),
+    '',
+    'Actual:',
+    clamp(candidate.actual, 'actual', BLOCK_MAX),
   ];
 
-  // What it means, why it matters and how to fix it.
-  const guidance = developerGuidance(candidate.classification);
-  if (guidance) {
-    lines.push('', ...wrap(`What this means: ${guidance.meaning}`));
-    lines.push('', ...wrap(`Why it matters: ${guidance.why}`));
-    lines.push('', ...wrap(`How to fix: ${guidance.fix}`));
+  // Unlabelled lines join the block above them in the tracker, so these read as part of Actual.
+  if (candidate.failedApiCalls?.length) {
+    lines.push(
+      '',
+      'API calls that failed while the screen loaded:',
+      ...candidate.failedApiCalls.map((call) => `  - ${call}`),
+    );
   }
-
-  if (candidate.occurrences > 1) {
-    lines.push('', `Observed ${candidate.occurrences} times in this run.`);
-  }
-
   if (candidate.affectedEndpoints && candidate.affectedEndpoints.length > 1) {
-    // A platform-wide fault lists every endpoint it was seen on.
     lines.push(
       '',
       `Affects ${candidate.affectedEndpoints.length} endpoints — one shared fix resolves all of them:`,
       ...candidate.affectedEndpoints.map((endpoint) => `  - ${endpoint}`),
     );
   }
-
-  if (candidate.browsers?.length) {
-    lines.push('', `Browsers affected: ${candidate.browsers.join(', ')}.`);
+  // Only for findings asserted on MySQL state, so the reader can check the data.
+  if (candidate.verificationSql) {
+    lines.push('', 'Check in the database:', clamp(candidate.verificationSql, 'sql'));
   }
 
-  if (candidate.correlationId) {
-    lines.push(
-      '',
-      `Correlation ID (search the application logs for it): ${candidate.correlationId}`,
-    );
-  }
-
-  lines.push(
-    '',
-    'Expected:',
-    clamp(candidate.expected, 'expected'),
-    '',
-    'Actual:',
-    clamp(candidate.actual, 'response'),
-  );
-
-  if (candidate.responseBody) {
+  // The reply body, unless Actual already quotes it.
+  const body = candidate.responseBody?.trim();
+  if (body && !candidate.actual.includes(body.slice(0, 60))) {
     lines.push(
       '',
       `Response body (HTTP ${candidate.responseStatus ?? '?'}):`,
-      clamp(candidate.responseBody, 'response body'),
+      clamp(body, 'response body', BLOCK_MAX),
     );
   }
 
-  if (candidate.repro) lines.push('', 'Steps to reproduce:', clamp(candidate.repro, 'repro'));
+  const guidance = developerGuidance(candidate.classification);
+  if (guidance) lines.push('', 'How to fix:', ...wrap(firstSentence(guidance.fix)));
 
-  // The curl goes last; tokens are a $KPOST_TOKEN placeholder (see curl.ts).
+  // Tokens are a $KPOST_TOKEN placeholder (see curl.ts).
   if (candidate.curl) lines.push('', 'curl:', clamp(candidate.curl, 'curl'));
 
-  // Only for findings asserted on MySQL state, so the reader can check the data.
-  if (candidate.verificationSql) {
-    lines.push('', 'Database verification SQL:', clamp(candidate.verificationSql, 'sql'));
-  }
-
+  const at = Number.isNaN(Date.parse(candidate.observedAt))
+    ? candidate.observedAt
+    : `${new Date(candidate.observedAt).toISOString().replace('T', ' ').slice(0, 16)} UTC`;
   lines.push(
     '',
-    `Owner: ${candidate.ownerName} <${candidate.assignee}> — maintainer of the ${candidate.product} module`,
-    `Environment: ${candidate.environment} (${candidate.baseURL})`,
-  );
-
-  // Whether the defect failed every time or intermittently.
-  if (candidate.reproduction) {
-    const { attempts, failures } = candidate.reproduction;
-    const verdict = failures === attempts ? 'confirmed, not flake' : 'INTERMITTENT';
-    lines.push(`Reproduction: ${failures}/${attempts} passes failed — ${verdict}`);
-  }
-
-  lines.push(
-    `Run date: ${candidate.observedAt}`,
-    `Filed by: kpost-testbench_v2, build ${candidate.build}, run ${candidate.testRunId}`,
+    `Owner: ${candidate.ownerName} <${candidate.assignee}>`,
+    `Environment: ${candidate.baseURL}`,
+    `Run date: ${at}`,
+    ...(candidate.correlationId ? [`Correlation ID: ${candidate.correlationId}`] : []),
+    // The tracker's Source reads "Filed by: manual…" as a person's bug, anything else as automation.
+    candidate.filedBy === 'manual'
+      ? `Filed by: manual test, written with the KPost test bench (run ${candidate.testRunId})`
+      : `Filed by: kpost-testbench_v2 automated test, run ${candidate.testRunId}`,
   );
 
   const description = lines.join('\n');
@@ -242,6 +279,9 @@ export function buildEvidenceAttachment(candidate: BugCandidate): string {
     '',
     'Actual:',
     candidate.actual,
+    '',
+    candidate.responseBody ? `Response body (HTTP ${candidate.responseStatus ?? '?'}):` : '',
+    candidate.responseBody ?? '',
     '',
     'Evidence:',
     JSON.stringify(candidate.evidence, null, 2),

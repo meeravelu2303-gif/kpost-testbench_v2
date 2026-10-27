@@ -321,22 +321,25 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     for (const anchor of [
       'Classification:',
       'Category:',
-      'Representative endpoint:',
+      'Endpoint:',
       'Module:',
+      'Summary:',
+      'Steps to reproduce:',
       'Expected:',
       'Actual:',
       'Environment:',
       'Run date:',
+      'Filed by:',
     ]) {
       expect(description, `the UI parses on the "${anchor}" anchor`).toContain(anchor);
     }
     expect(description).toContain('tb-9');
   });
 
-  test('the ticket teaches the developer: what it means, why it matters, how to fix', () => {
+  test('the ticket tells the developer how to fix it', () => {
+    // What it means and why it matters are the Summary (bug-text.spec.ts); the fix is its own block.
     const headers = buildDescription(candidate({ classification: 'security.security-headers' }));
-    expect(headers, 'explains the defect').toContain('What this means:');
-    expect(headers, 'and how to fix it').toContain('How to fix:');
+    expect(headers, 'says how to fix it').toContain('How to fix:');
     expect(headers, 'with a concrete fix').toContain('Content-Security-Policy');
 
     const auth = buildDescription(candidate({ classification: 'authentication.missing-token' }));
@@ -345,13 +348,12 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     // The common.* data-shape validators also carry developer guidance.
     for (const validator of ['common.api-error', 'common.id', 'common.date', 'common.boolean']) {
       const desc = buildDescription(candidate({ classification: validator }));
-      expect(desc, `${validator} explains itself`).toContain('What this means:');
       expect(desc, `${validator} says how to fix it`).toContain('How to fix:');
     }
 
     // A validator with no specific guidance simply omits the section — no filler.
     const none = buildDescription(candidate({ classification: 'response.schema' }));
-    expect(none).not.toContain('What this means:');
+    expect(none).not.toContain('How to fix:');
   });
 
   test('a platform-wide fault on many endpoints is one consolidated ticket listing them', () => {

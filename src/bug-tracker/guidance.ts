@@ -98,10 +98,16 @@ const AUTH: Guidance = {
 
 const INPUT: Guidance = {
   meaning:
-    'The endpoint accepted an invalid input (a null, a wrong type, an out-of-range or malformed value) instead of rejecting it.',
+    // Neutral on purpose: most input probes file only on a crash, malformed-json/media-type also on a 2xx.
+    'The endpoint did not refuse an invalid input (a null, a wrong type, an out-of-range or malformed value) with a clear 400 (Actual shows what it did instead).',
   why: 'Accepting bad input lets malformed data into the system, which can corrupt records or cause errors further downstream where they are harder to trace.',
   fix: 'Validate the field and return HTTP 400 with a field error when the input is invalid, rather than processing it.',
 };
+
+/** The first sentence of a guidance text ("e.g." and "i.e." do not end one), to keep a Summary short. */
+export function firstSentence(value: string): string {
+  return value.split(/(?<!\b(?:e\.g|i\.e)\.)(?<=[.!?])\s+(?=[A-Z])/)[0]!.trim();
+}
 
 /** The guidance for a validator, or undefined when there is no specific advice to add. */
 export function developerGuidance(classification: string): Guidance | undefined {

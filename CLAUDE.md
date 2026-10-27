@@ -192,10 +192,12 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
   newer than the local source copy.
 - **Reopen the same bug id, never refile.** Duplicate-check before any
   manual filing (`scripts/bugzilla-duplicate-check.cjs`), against the right component and platform-wide components (General/Home) too.
-- **Plain English, every product.** What's broken + a bottom line a non-QA reader follows. API bugs keep the
-  `bug-builder.ts` template (Classification / curl / evidence); UI bugs use the one UI template
-  (Classification / Module / Summary / Steps / Expected / Actual), never a curl. **The Summary is short:** 2-4 plain
-  sentences on what is broken and what it breaks; details belong in Steps / Actual / curl (owner, 2026-10-26).
+- **Plain English, every product, one layout** (`buildDescription` in `bug-builder.ts`): Classification /
+  Category / Endpoint / Module / Severity, then **Summary** / **Steps to reproduce** / **Expected** / **Actual** /
+  How to fix / curl (API only) / Owner / Environment / Run date / Filed by. **The Summary is short:** 2-4 plain
+  sentences on what is broken and what it breaks (`BugCandidate.summary`); details belong in Steps / Actual /
+  curl (owner, 2026-10-26). Only labels the BUGZILLA-UI tracker parses; it drops unlabelled text. The
+  gates read `narrative`/`actual`, never the Summary.
 - **`status_whiteboard` must be `[cat:X][browser:Y][source:Z]`** — the BUGZILLA-UI tracker reads all three
   (`buildWhiteboard`). `X` ∈ Functional/Security/Performance/Compatibility/Accessibility (anything else is
   Unclassified and drops out of every filter); `Y` = real browsers, UI only (`admin-ui` is written `chromium`);

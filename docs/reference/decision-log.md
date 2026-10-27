@@ -3,7 +3,32 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — RE-CHECK BY HAND: open bugs no run can close are listed
+### 2026-10-27 (latest) — Bug text: short, plain, one layout
+
+Owner: "the bug filing with very simple English, understandable, short, not a big description; it must look
+a perfect clear bug". The old automatic bugs opened with engine words ("The centralized validation engine
+ran … under the FULL profile"), a `Preconditions:` line and three guidance paragraphs, and had no
+`Summary:` block, so the tracker showed the header leftovers as the bug's story.
+
+- **One layout** (`buildDescription`): Summary, Steps to reproduce, Expected, Actual, How to fix, curl,
+  Owner/Environment/Run date/Filed by, all labels the tracker parses. The Summary is 2-4 sentences: a
+  business rule in its own words ("This rule is broken: …"), else the check's plain meaning plus the first
+  "why" sentence, then the try count ("It failed 3 of 3 tries, so it is not a one-off.").
+- **UI bugs** say the screen and the test's expectation in words (the test title, tags removed), give
+  sign in → open screen → do it steps with the browser named, and list failed API calls under Actual.
+- **Kept out:** "production (" in Environment (the host is the test server), the owner's job title, the
+  reply printed twice, internal names. Expected/Actual/reply are cut at 2,000 characters (full text in the
+  attachment, which now also carries the reply body).
+- **Gates unchanged on purpose:** the Summary is a new display-only `BugCandidate.summary`. `narrative`
+  and `actual` (read by the validity gate and known-false-positives) are as before. Titles are
+  unchanged too: verify-resolve matches bugs by them. A hand-filed bug's `Filed by:` now starts
+  "manual test", which the tracker's Source reads as Manual.
+- `INPUT` guidance no longer says "accepted": most input probes file only on a crash.
+- Verified: `check`; `framework` 361 (new `bug-text.spec.ts`); both BUGZILLA-UI parsers
+  (`defectReport.ts`, `DescriptionReport.tsx`) run on the new API and UI samples read every block,
+  including the 400/500 status columns. Already-filed bugs are not rewritten.
+
+### 2026-10-27 — RE-CHECK BY HAND: open bugs no run can close are listed
 
 Owner asked why some bugs count as hand-filed and where that shows. A read-only audit of all 1,365 bugs
 in the 5 products: every bug's reporter is `meera` (the bench files with that API key), so only the

@@ -9,6 +9,7 @@ import { componentFor, suiteFor, type SuiteId } from '@config/ownership.config';
 import type { Severity, ValidationReport, ValidationResult } from '@engine/validation-result';
 import { maskSensitive, maskString } from '@utils/masking';
 import { buildCurl } from './curl';
+import { developerGuidance, firstSentence } from './guidance';
 import {
   apiFingerprint,
   normalizeForFingerprint,
@@ -107,8 +108,13 @@ export interface BugCandidate {
   /** Owning module. */
   suiteId: SuiteId;
   title: string;
-  /** Prose that explains the finding, above the Expected/Actual blocks. */
+  /** Prose that explains the finding. The validity gate and known-false-positives read it. */
   narrative: string;
+  /**
+   * The ticket's `Summary:` block: 2-4 plain sentences on what is broken and why it matters
+   * (owner, 2026-10-26). Display only, so the gates never change; unset = `narrative`.
+   */
+  summary?: string;
   severity: Severity;
   category: BugCategory;
   /** What kind of check found it: the validator name, or `UI Test Failure`. */
@@ -135,6 +141,8 @@ export interface BugCandidate {
   correlationId?: string;
   /** Browser projects that observed a UI failure. */
   browsers?: string[];
+  /** API calls that failed while a UI screen loaded ("METHOD /path → STATUS"), shown after Actual. */
+  failedApiCalls?: readonly string[];
   /** `[source:]` whiteboard tag: unset = `automation`; `manual` for a hand-written bug. */
   filedBy?: BugSource;
   occurrences: number;
@@ -157,6 +165,29 @@ export interface BugCandidate {
    * Why a brand-new candidate is held for human review instead of auto-filed (create path only).
    */
   reviewHold?: string;
+}
+
+/** Ends a sentence with a full stop unless it already has one. */
+function sentence(value: string): string {
+  const t = value.replace(/\s+/g, ' ').trim();
+  return /[.!?]$/.test(t) ? t : `${t}.`;
+}
+
+/** A test title as plain text: tags (`@ui`) removed, first letter capitalised. */
+export function plainTitle(title: string): string {
+  const t = title.replace(/\s*@[\w-]+/g, '').trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** The Summary of an API bug: what is broken, then why it matters. */
+function apiSummary(result: ValidationResult): string {
+  // A flow-confirmed business rule says the rule itself, in the words it was documented in.
+  const rule = /^\S+ violated — (.+)$/s.exec(result.message)?.[1];
+  if (rule) return `This rule is broken: ${sentence(maskString(rule))}`;
+  const guidance = developerGuidance(result.validatorName);
+  // Only the first "why" sentence, so the Summary stays 2-4 sentences.
+  if (guidance) return `${sentence(guidance.meaning)} ${sentence(firstSentence(guidance.why))}`;
+  return `The "${result.validatorName}" check failed: ${sentence(maskString(result.message).slice(0, 300))}`;
 }
 
 /** The path out of an endpoint label like "POST /v2/common/validateOTP/". */
@@ -294,6 +325,11 @@ function fromValidationResult(
         `Category ${result.category}, severity ${result.severity}. ` +
         `Every request of this run carries a correlation ID, so the exchange can be traced in the ` +
         `application logs (see below).`,
+    summary: systemic
+      ? `${sentence(developerGuidance(result.validatorName)?.meaning ?? systemicHead)} It happens on ` +
+        `every endpoint listed under Actual, so it comes from one shared place (the API gateway or ` +
+        `the login filter): one fix there fixes all of them.`
+      : apiSummary(result),
     severity: result.severity,
     category: categoryFor(result.category),
     classification: result.validatorName,
@@ -511,6 +547,7 @@ export function candidateFromUiFailure(
       }
     : humanizeUiFailure(input.message);
   // Failing API calls during load usually mean the API contract changed and the UI did not.
+  const apiCalls = input.endedOnAuthScreen ? [] : [...(input.failedApiCalls ?? [])];
   const apiCauseNarrative =
     !input.endedOnAuthScreen && input.failedApiCalls && input.failedApiCalls.length
       ? `\n\nLikely API cause (contract drift — the UI did not handle these responses): while this ` +
@@ -542,6 +579,16 @@ export function candidateFromUiFailure(
       : `A front-end (UI) defect on the ${suite.label} at ${input.baseURL}, seen in ${input.browser}. ` +
         `To reproduce: sign in with a test account and open the ${component} screen, then exercise ` +
         `"${input.title}". Expected vs Actual are below.${apiCauseNarrative}`,
+    summary: humanized.systemic
+      ? undefined
+      : `On the ${component} screen, this check failed: "${plainTitle(input.title)}".` +
+        (humanized.classification === 'UI Test Failure'
+          ? ''
+          : ` ${sentence(humanized.classification)}`) +
+        (apiCalls.length
+          ? ` ${apiCalls.length} API call(s) failed while the screen loaded (listed under Actual), ` +
+            `so the cause may be in the API.`
+          : ''),
     severity: 'HIGH',
     category: 'Functional',
     classification: humanized.classification,
@@ -550,8 +597,12 @@ export function candidateFromUiFailure(
     version: suite.bugzilla.version,
     assignee: suite.owner.email,
     ownerName: suite.owner.name,
-    expected: 'The screen renders and behaves as expected.',
+    // A UI test's title states the behaviour it expects.
+    expected: humanized.systemic
+      ? 'Every screen loads and works without errors.'
+      : sentence(plainTitle(input.title)),
     actual: maskString(humanized.actual),
+    ...(apiCalls.length ? { failedApiCalls: apiCalls } : {}),
     browsers: [input.browser],
     occurrences: 1,
     environment: input.environment,
@@ -719,6 +770,11 @@ function foldEnvelopePair(group: readonly BugCandidate[]): BugCandidate[] {
     narrative:
       `${format.narrative}\n\nThe same error response also fails the standard error-envelope check ` +
       `(response.structure). It is the same root cause and is consolidated here rather than filed separately.`,
+    ...(format.summary
+      ? {
+          summary: `${format.summary} The same reply also fails the response-shape check; that is part of this bug.`,
+        }
+      : {}),
     evidence: { ...format.evidence, envelopeConsolidated: true },
   };
   return [folded, ...group.filter((c) => c !== format && !structure.includes(c))];
@@ -779,6 +835,13 @@ export function consolidateCascades(candidates: readonly BugCandidate[]): BugCan
           `${anchor.narrative}\n\nThis endpoint ${cause}, so ${folded.length} dependent check(s) ` +
           `also failed as a consequence of the same root cause and are consolidated here rather than ` +
           `filed separately: ${names.join(', ')}.`,
+        ...(anchor.summary
+          ? {
+              summary:
+                `${anchor.summary} Because it ${cause}, ${folded.length} other check(s) on it ` +
+                `failed too; they are part of this bug.`,
+            }
+          : {}),
         evidence: { ...anchor.evidence, cascadeConsolidated: names, endpoint },
       });
     } else {
@@ -889,6 +952,11 @@ export function accessibilityCandidatesFromScreens(
         `across those screens — so one fix should resolve it everywhere it appears, filed as a single ` +
         `ticket rather than one per screen. See ${rule.helpUrl} for the rule's full explanation and how ` +
         `to fix it.`,
+      summary:
+        `The accessibility rule "${rule.help}" fails on ${screenNames.length} ` +
+        `screen${screenNames.length > 1 ? 's' : ''} (listed under Actual). People who use a screen ` +
+        `reader or only a keyboard cannot use those parts of the app. It most likely comes from one ` +
+        `shared component, so one fix should clear it everywhere (rule details: ${rule.helpUrl}).`,
       severity: A11Y_SEVERITY[rule.impact],
       // The tracker filters on its own Accessibility category.
       category: 'Accessibility',

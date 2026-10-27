@@ -138,7 +138,29 @@ The same fault on several browsers or tests is merged into one ticket that recor
   - `[cat:]` one of `Functional`, `Security`, `Performance`, `Compatibility`, `Accessibility`. Any other value shows as Unclassified **and** drops out of every category filter.
   - `[browser:]` UI defects only, real browser names comma-joined without spaces (`chromium,webkit`). The `admin-ui` project is written `chromium` and mapped back to that project at re-verification.
   - `[source:]` `automation` for everything the bench files (engine, `bug:file-reviewed`, `file-approved`), `manual` for a bug a person writes with `npm run bug:file`. The tracker's Source filter, its "UI/API Automation" badge and the export's Test Type read only this tag in lists.
-- **Description:** line-anchored (`Classification:`, `Category:`, `Representative endpoint:` / `Endpoint:`, `Module:`, `Severity:`, `Preconditions:`, `Expected:`, `Actual:`, `Steps to reproduce:`, `curl:`, `Owner:`, `Environment:`, `Run date:`, `Filed by:`), each at column 0 with one space after the colon — the BUGZILLA-UI `DescriptionReport` and export parse these exact spellings so the Bug Tracker UI renders a structured report. Includes the **correlation ID** for tracing the request in application logs.
+- **Description:** short, plain English, one layout for API and UI bugs (since 2026-10-27). Each label is at column 0, because the BUGZILLA-UI `DescriptionReport` and export parse these exact spellings and drop unlabelled text:
+
+  ```
+  Classification: response.status-code
+  Category: Functional
+  Endpoint: POST /v2/profile/updateProfileImage/      (Representative endpoint: on a platform-wide bug; none on a UI bug)
+  Module: User Profile V2
+  Severity: major / Priority: High
+
+  Summary:            2-4 plain sentences: what is broken, why it matters, how often it failed
+  Steps to reproduce: numbered steps in the product (API: log in → run the curl → compare)
+  Expected:
+  Actual:             (+ the API calls that failed while a UI screen loaded / the endpoints a platform-wide bug hits)
+  Response body (HTTP 500):   only when Actual does not already quote it
+  How to fix:         one sentence, when the check has guidance
+  curl:               API only; the token is $KPOST_TOKEN
+  Owner: / Environment: <host> / Run date: <UTC> / Correlation ID: / Filed by:
+  ```
+
+  Long blocks are cut at 2,000 characters; the attached evidence file has everything. The Summary is
+  `BugCandidate.summary`, display only: the validity gate and known-false-positives keep reading
+  `narrative` and `actual`, so the new wording cannot change what gets filed.
+
 - **Attachment:** `KP-XXXXXX-evidence.txt` with unabridged expected/actual and every sub-check.
 - Secrets and personal data are masked before anything is written.
 
