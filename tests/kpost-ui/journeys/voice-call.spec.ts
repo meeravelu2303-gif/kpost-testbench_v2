@@ -10,6 +10,7 @@ import {
   restoreSavedSession,
   waitLoaded,
 } from './support/journey';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * Journey 10: A voice- or video-calls B from Kall (Connected Devices), B accepts, A toggles mic or
@@ -64,7 +65,7 @@ test.describe(
       expect(bName, "B's display name is known (control)").not.toBe('');
 
       const bContext = await browser.newContext({
-        storageState: STORAGE_STATE_2,
+        storageState: signedIn(STORAGE_STATE_2),
         permissions: video ? ['microphone', 'camera'] : ['microphone'],
       });
       const b = await bContext.newPage();

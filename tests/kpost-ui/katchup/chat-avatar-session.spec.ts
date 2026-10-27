@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Katchup chat header: clicking the contact's avatar must not log the user out. Read-only; each test
@@ -57,7 +58,7 @@ test.describe(
       const avatar = page.locator('#ChatTop .sb-avatar, #ChatTop img, .chat-header img').first();
       const found = await avatar.isVisible({ timeout: 8_000 }).catch(() => false);
       // Skip rather than pass when there is nothing to click.
-      test.skip(
+      retryOrSkip(
         !found,
         'no chat-header avatar rendered right now (header still loading) — nothing to click',
       );

@@ -102,14 +102,21 @@ function scan(): SkipSite[] {
   for (const file of walk(path.join(ROOT_DIR, 'tests'))) {
     const text = fs.readFileSync(file, 'utf8');
     const rel = path.relative(ROOT_DIR, file).replace(/\\/g, '/');
-    for (const m of text.matchAll(/test\.(?:skip|fixme)\(([\s\S]*?)\);/g)) {
+    // `retryOrSkip` (tests/support/live-condition.ts) skips on its last attempt; `needs`
+    // (tests/support/flow-state.ts) skips when an earlier step did not produce its input.
+    for (const m of text.matchAll(/\b(test\.(?:skip|fixme)|retryOrSkip|needs)\(([\s\S]*?)\);/g)) {
       // A mention inside a comment (`// ... test.skip(true, reason) ...`) is not a skip site.
       const lineStart = text.lastIndexOf('\n', m.index ?? 0) + 1;
       const prefix = text.slice(lineStart, m.index).trimStart();
       if (prefix.startsWith('//') || prefix.startsWith('*') || prefix.startsWith('/*')) continue;
-      const args = m[1] ?? '';
+      const args = m[2] ?? '';
       const { reason, dynamic, hasLiteral } = reasonOf(args);
       const line = text.slice(0, m.index).split('\n').length;
+      if (m[1] === 'needs') {
+        // Blocked by an earlier step of the same flow: the one acceptable reason a check waits.
+        sites.push({ file: rel, line, reason: `BLOCKED: needs ${reason}`, dynamic, cls: 'defect' });
+        continue;
+      }
       sites.push({ file: rel, line, reason, dynamic, cls: classify(reason, args, hasLiteral) });
     }
   }

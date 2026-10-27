@@ -1,6 +1,7 @@
 import { domainFor } from '@fixtures/test-accounts';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Personal signup: a pincode shorter than India's 6 digits must not open the area modal or enable
@@ -34,7 +35,7 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
 
       const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-      test.skip(
+      retryOrSkip(
         otpOutcome === 'already-exists',
         'the randomly generated mobile number happened to already be registered — re-run',
       );

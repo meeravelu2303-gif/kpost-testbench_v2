@@ -3,7 +3,36 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — KMail grouped by test kind; every product has smoke, sanity and regression
+### 2026-10-27 (latest) — Only a real blocker may stop a test
+
+Owner: "sometimes unrelated tests also did not run and find the bugs … when we have the blocker bug, until
+that one bug is fixed, only then is it acceptable that other tests wait". Evidence: Bugzilla showed bugs on
+later runs that earlier runs could have found; the 11 Oct full run had 1,286 checks blocked by defects
+(legitimate) but also tests stopped for reasons that were not bugs. Three such causes fixed:
+
+- **Serial files** (11): Playwright's `mode: 'serial'` skips every later test once one fails, related or not
+  (a failed Katchup "read back" skipped recall, delete AND the unrelated empty-subject check). All are now
+  `mode: 'default'` (still in order, still one worker). A value one test hands the next (msgID, kmailId, the
+  original profile/font/theme to restore) goes through `flowState()` on disk for the run, because Playwright
+  starts a fresh worker after a failure; a test whose input is missing calls `needs()` and skips as
+  `BLOCKED: needs …`.
+- **Setup logins**: a failed login (e.g. the shared BUSINESS_S account) failed the `setup` project, and
+  Playwright then skipped every test of every UI project. `saveLogin` now retries, then records the failure
+  next to the session file, saves an empty session and passes; `loginGate` (auto fixture, for
+  `test.use({ storageState })`) and `signedIn()` (for second/third-account contexts) skip only the tests
+  that use that login, as BLOCKED with the reason. The UI smoke skips only the business screens.
+- **Live conditions** (76 sites: a random mobile/id collided, OTP refused this run, a panel or list not loaded
+  yet, a session bounce): a skip is never retried, so these waited for the next run. `retryOrSkip()` retries
+  the test first and skips only on the last attempt; a retry that passes is "flaky", never filed. Data-absent
+  skips (no merchants, no trips, admin role gating) stay plain skips: a retry cannot change them.
+- The skip ledger now counts `needs()` (Blocked) and `retryOrSkip()` (Live condition) sites.
+- Not changed: checks blocked by a real defect, and the contract/config gaps the engine reports as
+  "recoverable" (no schema documented, no second-tenant scenario): they are the same every run.
+- Verified: `check`, `lint:tags`, `framework` 371 incl. `run-continuity.spec.ts`, which runs a real Playwright
+  project twice: after a failed step 2, steps 3 and 4 still pass and step 5 is BLOCKED; a failed setup login
+  skips only the test that uses it. Every project still lists (api 10,057, chromium 603, admin-ui 50).
+
+### 2026-10-27 — KMail grouped by test kind; every product has smoke, sanity and regression
 
 Owner: "perfect folder structure … smoke, sanity and regression should run separately for each of the five
 products".

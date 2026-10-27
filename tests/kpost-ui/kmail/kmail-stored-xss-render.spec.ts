@@ -4,6 +4,7 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 import { isKnownAppAlert } from '../support/known-dialogs';
 import { settleFrames } from '../support/settle';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * KMail stored XSS: account A mails an onerror payload to account B, whose thread view renders the
@@ -99,7 +100,7 @@ test.describe(
       );
 
       // Account B (receiver): a second browser context from STORAGE_STATE_2.
-      const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const context = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
       const receiver = await context.newPage();
       try {
         const stopReceiver = watchUiHealth(receiver);

@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import { testData } from '@config/test-data.config';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Business (Small) signup: the category picker, Company Details validation, and one full registration.
@@ -128,9 +129,12 @@ test.describe(
       await signup.selectCountryLanguageDomain('India', 'English', 'kpost.in');
 
       const otpOutcome = await signup.requestMobileOtp(freshMobile());
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       const otpEntryOutcome = await signup.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );
@@ -242,7 +246,7 @@ test.describe(
       });
       await signupPage.continueToBusinessFinalStep();
       const idOutcome = await signupPage.businessKpostIdAvailability();
-      test.skip(idOutcome === 'taken', 'the generated id collided — re-run');
+      retryOrSkip(idOutcome === 'taken', 'the generated id collided — re-run');
 
       await page.getByPlaceholder('Enter Password').fill('QaBench@2026');
       await page.getByPlaceholder(/Enter Confirm Password/).fill('QaBench@2026');
@@ -318,7 +322,7 @@ test.describe(
       );
 
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — likely transient; re-run',
       );

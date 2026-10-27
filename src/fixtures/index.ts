@@ -19,9 +19,12 @@ import { startRecording, writeDiagnosisIfFailed } from '@ui/failure-diagnostics'
 import { businessRuleRegistry } from '@rules/index';
 import { newCorrelationId } from '@utils/correlation';
 import { createLogger, type Logger } from '@utils/logger';
+import { loginBlockedReason } from './login-gate';
 import { validationRegistry } from '@validators/index';
 
 interface TestFixtures {
+  /** Skips (BLOCKED) a test whose saved session is from a login that failed this run. */
+  loginGate: void;
   log: Logger;
   /** Ad-hoc client for the default module's base URL. */
   api: ApiClient;
@@ -43,6 +46,17 @@ interface TestFixtures {
 
 /** Import `test` and `expect` from `@fixtures` in every spec — never from `@playwright/test`. */
 export const test = base.extend<TestFixtures>({
+  // Only a real blocker may stop a test: a failed login stops just the tests that use its session.
+  loginGate: [
+    async ({ storageState }, use, testInfo) => {
+      const reason =
+        typeof storageState === 'string' ? loginBlockedReason(storageState) : undefined;
+      testInfo.skip(reason !== undefined, `BLOCKED: ${reason}`);
+      await use();
+    },
+    { auto: true },
+  ],
+
   // eslint-disable-next-line no-empty-pattern
   log: async ({}, use, testInfo) => {
     await use(

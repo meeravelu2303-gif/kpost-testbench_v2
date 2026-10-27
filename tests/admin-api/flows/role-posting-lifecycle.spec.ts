@@ -9,6 +9,7 @@ import { formatReport } from '@reporting/report-formatter';
 import { expect, test } from '@fixtures';
 import { employeePayload, locationPayload } from '../support/screen-payloads';
 import { ADMIN_RESPONSE_SCHEMAS } from '@api/definitions/admin/response-schemas';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Role posting end to end on QA company 242: build the org structure, save a posting, assign a QA
@@ -594,7 +595,7 @@ test.describe('Admin · role posting field rules on the QA testing company @api 
         );
         companyName = /"companyName"\s*:\s*"([^"]+)"/.exec(me.bodyText ?? '')?.[1] ?? '';
       }
-      test.skip(!companyName, 'the QA company name could not be read right now; not invented');
+      retryOrSkip(!companyName, 'the QA company name could not be read right now; not invented');
 
       /** The screen's save row for a fresh HR variable. */
       const row = async (

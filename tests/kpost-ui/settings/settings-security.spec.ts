@@ -2,6 +2,7 @@ import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Settings Instant Reply security fuzzing (the reply is sent to correspondents), judged by a dialog
@@ -52,7 +53,7 @@ test.describe(
 
         const field = page.getByRole('textbox', { name: 'Enter your Instant Reply' });
         const opened = await field.isVisible({ timeout: 10_000 }).catch(() => false);
-        test.skip(
+        retryOrSkip(
           !opened,
           'the Instant Reply editor was not showing right now (session or load condition; path verified live 2026-10-11)',
         );

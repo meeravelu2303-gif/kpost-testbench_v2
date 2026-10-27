@@ -2,6 +2,7 @@ import { testData } from '@config/test-data.config';
 import { KpostRepository } from '@database/repositories/kpost.repository';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Profile Creation editors (Settings > Profile Creation > section): input validation and saved state,
@@ -63,7 +64,7 @@ test.describe(
       const before = repo ? await repo.user(testData.kpostId) : undefined;
 
       const opened = await openBasicInformation(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Basic Information editor was not showing right now (session or load condition; path verified live 2026-10-11)',
       );
@@ -133,7 +134,7 @@ test.describe(
 
       const pincode = page.getByPlaceholder('Enter Pincode').first();
       const opened = await pincode.isVisible({ timeout: 15_000 }).catch(() => false);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contact Information editor was not showing right now (session or load condition; path verified live 2026-10-11)',
       );
@@ -172,7 +173,7 @@ test.describe(
       const before = repo ? await repo.user(testData.kpostId) : undefined;
 
       const opened = await openBasicInformation(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Basic Information editor was not showing right now (session or load condition; path verified live 2026-10-11)',
       );
@@ -227,7 +228,7 @@ test.describe(
 
       const schoolName = page.getByPlaceholder('Enter School Name').first();
       const opened = await schoolName.isVisible({ timeout: 15_000 }).catch(() => false);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Education/School form was not showing right now (session or load condition; path verified live 2026-10-11)',
       );
@@ -253,7 +254,7 @@ test.describe(
 
       const company = page.getByPlaceholder('Enter Company Name').first();
       const opened = await company.isVisible({ timeout: 15_000 }).catch(() => false);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Experience form was not showing right now (session or load condition; path verified live 2026-10-11)',
       );
@@ -278,7 +279,7 @@ test.describe(
 
       const aboutField = page.getByPlaceholder('Write about yourself...').first();
       const opened = await aboutField.isVisible({ timeout: 15_000 }).catch(() => false);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the About editor was not showing right now (session or load condition; path verified live 2026-10-11)',
       );

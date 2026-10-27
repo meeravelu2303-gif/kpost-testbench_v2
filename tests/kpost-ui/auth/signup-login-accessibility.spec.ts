@@ -14,6 +14,7 @@ import { expect, test } from '@fixtures';
 import { answerForgotPasswordSmsLocally } from '../support/no-real-sms';
 import { writeFileSync } from 'node:fs';
 import { settleFrames } from '../support/settle';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * axe-core WCAG scans of the signed-out Signup and Login screens, with the same evidence attachments
@@ -153,7 +154,7 @@ test.describe(
       await loginPage.passwordInput
         .waitFor({ state: 'visible', timeout: 20_000 })
         .catch(() => undefined);
-      test.skip(
+      retryOrSkip(
         !(await loginPage.passwordInput.isVisible()),
         'the fixed probe id was not accepted right now — step 2 was not shown',
       );
@@ -172,7 +173,7 @@ test.describe(
       await loginPage.passwordInput
         .waitFor({ state: 'visible', timeout: 20_000 })
         .catch(() => undefined);
-      test.skip(
+      retryOrSkip(
         !(await loginPage.passwordInput.isVisible()),
         'the fixed probe id was not accepted right now — the password step (and its Forgot Password link) was not shown',
       );
@@ -213,9 +214,12 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
 
       const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );
@@ -243,9 +247,12 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', 'kpost.in');
 
       const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );

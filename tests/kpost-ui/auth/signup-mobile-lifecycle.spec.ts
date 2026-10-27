@@ -2,6 +2,7 @@ import { domainFor } from '@fixtures/test-accounts';
 import { testData } from '@config/test-data.config';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Personal signup through to login at a 480×900 mobile viewport. Uses its own reserved identity so it
@@ -48,7 +49,7 @@ test.describe(
       );
 
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — likely transient; re-run',
       );

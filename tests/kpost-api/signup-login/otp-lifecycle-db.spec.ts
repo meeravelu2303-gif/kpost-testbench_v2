@@ -12,7 +12,8 @@ test.describe(
   'KPost OTP · lifecycle with MySQL assertions @database',
   { tag: ['@api', '@auth', '@regression'] },
   () => {
-    test.describe.configure({ mode: 'serial' });
+    // In order (each test makes its own data); a failed test never skips the next.
+    test.describe.configure({ mode: 'default' });
 
     test.skip(
       process.env.OTP_TEST_GATEWAY !== 'true' || process.env.TEST_DB_MODE !== 'true',

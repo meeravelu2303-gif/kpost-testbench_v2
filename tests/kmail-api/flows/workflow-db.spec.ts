@@ -6,6 +6,7 @@ import type { KmailTransactionRecord } from '@database/repositories/kmail.reposi
 import { text } from '@database/kpost-assertions';
 import { requireAll } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
+import { flowState, needs } from '../../support/flow-state';
 
 /**
  * KMail send → star → delete, asserted in MySQL. State lives on one transaction row per recipient,
@@ -19,15 +20,15 @@ test.describe(
     // Gated while KMail refuses every valid token — see src/fixtures/kmail-auth-gate.ts.
     test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
 
-    test.describe.configure({ mode: 'serial' });
+    // In order, but a failed step never skips the others; only a missing mail blocks star/delete.
+    test.describe.configure({ mode: 'default' });
     test.skip(
       process.env.KMAIL_LIFECYCLE !== 'true',
       'sends real mail on a LIVE mail server; set KMAIL_LIFECYCLE=true to run',
     );
 
     const subject = `QA Bench KMail ${Date.now()}`;
-    let kmailId: number | undefined;
-    let transactionId: number | undefined;
+    const flow = flowState<{ kmailId: number; transactionId: number }>('kmail-workflow-db');
 
     /** Both parties, or the reason the flow cannot run. Resolved once, used by every step. */
     const parties = requireAll('primary', 'counterparty');
@@ -57,7 +58,8 @@ test.describe(
       const created = Array.isArray(data) ? (data[0] as Record<string, unknown>) : data;
       const id = (created as Record<string, unknown> | undefined)?.kmailID;
       expect(id, 'the response carries the created kmailID').toBeDefined();
-      kmailId = Number(id);
+      const kmailId = Number(id);
+      flow.set('kmailId', kmailId);
 
       const repo = new KmailRepository(database);
       const mail = await repo.mail(kmailId);
@@ -82,7 +84,7 @@ test.describe(
           `${check.name}: expected ${String(check.expected)}, got ${String(check.actual)}`,
         ).toBe('PASSED');
       }
-      transactionId = Number(row?.id);
+      flow.set('transactionId', Number(row?.id));
 
       // A mail nobody has touched: not read, not starred, not deleted for either side.
       expect(kmailFlag(row?.read_status), 'a new mail is unread').toBe('clear');
@@ -96,7 +98,9 @@ test.describe(
     });
 
     test('star: setKmailAsImportant flips a marked_by_* flag', async ({ endpoints, databases }) => {
-      test.skip(!parties.ok || kmailId === undefined, 'needs the mail sent by the first step');
+      test.skip(!parties.ok, 'needs provisioned qatest_* accounts');
+      const kmailId = flow.get('kmailId');
+      needs(kmailId, 'the mail from "send"');
       const database = databases.for('kmail-api');
       test.skip(!database.enabled, 'needs the KPOST_QA connection');
 
@@ -124,10 +128,10 @@ test.describe(
       endpoints,
       databases,
     }) => {
-      test.skip(
-        !parties.ok || kmailId === undefined || transactionId === undefined,
-        'needs the mail sent by the first step',
-      );
+      test.skip(!parties.ok, 'needs provisioned qatest_* accounts');
+      const kmailId = flow.get('kmailId');
+      const transactionId = flow.get('transactionId');
+      needs(transactionId, 'the mail and its transaction row from "send"');
       const database = databases.for('kmail-api');
       test.skip(!database.enabled, 'needs the KPOST_QA connection');
 

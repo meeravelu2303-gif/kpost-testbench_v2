@@ -25,6 +25,7 @@ import {
   openSession,
   sendMailFromUi,
 } from '../journeys/support/journey';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * UI -> API -> DB for Katchup, KMail, Group and Kool Kall: what is sent on screen must be stored
@@ -273,7 +274,7 @@ test.describe(
         const name = `QA cross-layer group ${Date.now()}`;
         // Layer 1: Contacts › Create group › name › Add Members (pick B) › Done › Create.
         const opened = await gotoContacts(page);
-        test.skip(
+        retryOrSkip(
           !opened,
           'the Contacts panel was not showing right now (session or load condition)',
         );

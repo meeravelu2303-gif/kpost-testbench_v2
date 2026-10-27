@@ -7,6 +7,7 @@ import { apiRegistry } from '@api/definitions/index';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
 import { employeePayload } from '../support/screen-payloads';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Response times of all 38 Admin endpoints from repeated sequential calls (per-request latency, not
@@ -294,7 +295,7 @@ test.describe('Admin · response times of all 38 endpoints @api @admin-api @perf
         { label: 'latency:company-name', auth: { principal: businessM! }, allowLiveRead: true },
       );
       const companyName = /"companyName"\s*:\s*"([^"]+)"/.exec(me.bodyText ?? '')?.[1] ?? '';
-      test.skip(!companyName, 'the QA company name could not be read right now; not invented');
+      retryOrSkip(!companyName, 'the QA company name could not be read right now; not invented');
 
       const wpAttr = await make('admin-workplace-tier-attribute-save', tier('RP WP Tier'));
       const wpVar = await make('admin-workplace-tier-variable-save', [

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Skips an observational UI spec when the saved session was lost (the app bounced to `/login`), so a
@@ -22,7 +22,7 @@ export async function skipIfSignedOut(page: Page): Promise<void> {
 
   const signedOut = /\/login/i.test(page.url()) || (await loginForm.isVisible().catch(() => false));
   if (signedOut) {
-    test.skip(
+    retryOrSkip(
       true,
       'session bounced to /login (invalid/expired/racey) — re-run `setup` and retry; not a UI defect',
     );

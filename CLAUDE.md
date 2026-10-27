@@ -249,6 +249,15 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
   a step the rest cannot run without (the record was never created) is `{ blocker: true }`. Test both
   directions: bad input refused AND the screen's valid input (blank optional fields included) accepted, on save
   and update. Read a controller's save/update/delete rules together before testing it.
+  **Across tests too** (owner, 2026-10-27: "only a blocker bug may stop a test"):
+  - never `mode: 'serial'` (one failure skips every later test); ordered files use `mode: 'default'`, and a
+    value one test hands the next goes through `flowState()` + `needs()` (`tests/support/flow-state.ts`), so
+    only a test whose input is missing skips, as `BLOCKED: needs …`;
+  - a setup login that fails is recorded (`saveLogin`, `src/fixtures/login-gate.ts`) instead of failing the
+    `setup` project: only the tests that use that session skip as BLOCKED (`loginGate` / `signedIn()`);
+  - a live condition (a random value collided, a list not refreshed, OTP refused) is `retryOrSkip()`
+    (`tests/support/live-condition.ts`): retried in the same run, skipped only on the last attempt.
+    Proven by `tests/framework/run-continuity.spec.ts`, which runs a real Playwright project.
 
 ## 8. Contracts and conventions
 

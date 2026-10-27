@@ -5,6 +5,7 @@ import { text } from '@database/kpost-assertions';
 import { KpostRepository } from '@database/repositories/kpost.repository';
 import type { KatchupMessageRecord } from '@database/repositories/kpost.repository';
 import { expect, test } from '@fixtures';
+import { flowState, needs } from '../../support/flow-state';
 
 /**
  * The Katchup message lifecycle (send, read, delete, recall) checked in MySQL after every step, so a
@@ -15,7 +16,8 @@ test.describe(
   'KPost Katchup · lifecycle with MySQL assertions @api @kpost-api @katchup @database',
   { tag: ['@api', '@katchup', '@regression'] },
   () => {
-    test.describe.configure({ mode: 'serial' });
+    // In order, but a failed step never skips the others; only a missing msgID blocks read/recall.
+    test.describe.configure({ mode: 'default' });
     test.skip(
       process.env.KATCHUP_LIFECYCLE !== 'true',
       'writes a real message; set KATCHUP_LIFECYCLE=true to run (owner sign-off, flow doc Q4)',
@@ -23,7 +25,7 @@ test.describe(
 
     const subject = `QA Bench DB ${Date.now()}`;
     const message = 'QA bench cross-layer lifecycle — safe to ignore.';
-    let msgId: number | undefined;
+    const flow = flowState<{ msgId: number }>('katchup-workflow-db');
 
     /** The row, or undefined. Keyed on `msg_id`, so this is a primary-key lookup. */
     async function row(
@@ -34,6 +36,7 @@ test.describe(
     }
 
     test.afterAll(() => {
+      const msgId = flow.get('msgId');
       if (msgId !== undefined && !env.CI) {
         test.info().annotations.push({
           type: 'note',
@@ -62,7 +65,8 @@ test.describe(
       const data = parsed.ok ? (parsed.value as { data?: unknown }).data : undefined;
       const created = Array.isArray(data) ? (data[0] as Record<string, unknown>) : undefined;
       expect(created?.msgID, 'a numeric msgID was issued').toEqual(expect.any(Number));
-      msgId = created?.msgID as number;
+      const msgId = created?.msgID as number;
+      flow.set('msgId', msgId);
 
       const stored = await row(new KpostRepository(database), msgId);
 
@@ -85,10 +89,9 @@ test.describe(
       databases,
     }) => {
       const database = databases.for('kpost-api');
-      test.skip(
-        !database.enabled || msgId === undefined,
-        'needs the sent message from the first step',
-      );
+      test.skip(!database.enabled, 'needs the KPOST_QA connection to assert persistence');
+      const msgId = flow.get('msgId');
+      needs(msgId, 'the message from "send"');
 
       const stored = await row(new KpostRepository(database), msgId);
       expect(stored, 'the row still exists before the read').toBeDefined();
@@ -113,8 +116,7 @@ test.describe(
       );
     });
 
-    // Delete runs BEFORE recall, on its own seed message: `serial` skips later tests once one
-    // fails, so a recall failure must not stop this check.
+    // Delete uses its own seed message, so it runs whatever happened to the message above.
     test('delete: the message is soft-deleted, not removed from the table', async ({
       endpoints,
       databases,
@@ -161,10 +163,9 @@ test.describe(
       databases,
     }) => {
       const database = databases.for('kpost-api');
-      test.skip(
-        !database.enabled || msgId === undefined,
-        'needs the sent message from the first step',
-      );
+      test.skip(!database.enabled, 'needs the KPOST_QA connection to assert persistence');
+      const msgId = flow.get('msgId');
+      needs(msgId, 'the message from "send"');
 
       const before = await row(new KpostRepository(database), msgId);
       const originalMessageType = Number(before?.message_type ?? 0);

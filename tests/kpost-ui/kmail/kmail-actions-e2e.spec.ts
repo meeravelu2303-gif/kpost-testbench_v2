@@ -2,6 +2,7 @@ import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Browser, BrowserContext, Page } from '@playwright/test';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * KMail mail-menu actions: recipient Instant Reply, Transfer › Katchup, Copy, Print; sender Edit, Note,
@@ -89,7 +90,7 @@ test.describe(
       // Playwright can grant clipboard access only in Chromium (Firefox/WebKit reject the permission).
       const chromium = browser.browserType().name() === 'chromium';
       const ctx = await browser.newContext({
-        storageState: STORAGE_STATE_2,
+        storageState: signedIn(STORAGE_STATE_2),
         ...(chromium ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}),
       });
       const b = await ctx.newPage();

@@ -1,6 +1,7 @@
 import { STORAGE_STATE_BUSINESS, TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { loginBlockedReason } from '@fixtures/login-gate';
 import type { Browser, Page } from '@playwright/test';
 import {
   AUTHENTICATED_SCREENS,
@@ -95,6 +96,15 @@ export async function expectModuleScreensLoad(
     if (index > 0) await page.waitForTimeout(PACE_MS);
 
     await test.step(`${screen.name} (${screen.route})`, async () => {
+      // One screen per step: a failed business login blocks only the business screens.
+      const blocked =
+        screen.session === 'business' ? loginBlockedReason(STORAGE_STATE_BUSINESS) : undefined;
+      if (blocked) {
+        test
+          .info()
+          .annotations.push({ type: 'blocked', description: `${screen.name}: ${blocked}` });
+        return;
+      }
       if (screen.session === 'public' || screen.session === 'business') {
         const context = await browser.newContext({
           storageState:

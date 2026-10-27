@@ -1,6 +1,7 @@
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * The public `/koolkall/:id` join link: the pre-join modal, and a malformed id must not crash the page
@@ -47,7 +48,7 @@ test.describe(
 
       const nameInput = page.getByPlaceholder('Enter your name').first();
       const opened = await nameInput.isVisible({ timeout: 10_000 }).catch(() => false);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the name-capture modal was not showing right now (the crash-safety test above covers the failure mode)',
       );

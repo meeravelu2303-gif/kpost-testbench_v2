@@ -2,6 +2,7 @@ import { KpostRepository } from '@database/repositories/kpost.repository';
 import { text } from '@database/kpost-assertions';
 import { requireAll } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
+import { flowState } from '../../support/flow-state';
 
 /**
  * Profile read → write → persist → re-read, asserted in the API and the database (the endpoints
@@ -11,14 +12,16 @@ test.describe(
   'KPost Profile · update workflow @api @kpost-api @profile @database',
   { tag: ['@api', '@profile', '@regression'] },
   () => {
-    test.describe.configure({ mode: 'serial' });
+    // In order, but a failed step never skips the others.
+    test.describe.configure({ mode: 'default' });
 
     const accounts = requireAll('primary');
     test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
 
     /** A value unique to this run, so a stale row cannot pass the comparison by coincidence. */
     const aboutText = `QA bench about ${Date.now()}`;
-    let originalAbout: string | undefined;
+    // On disk, so a restore after a failed step still puts back the real original value.
+    const flow = flowState<{ originalAbout: string }>('profile-workflow');
     let restored = false;
 
     test.afterAll(async ({ endpoints }) => {
@@ -27,7 +30,7 @@ test.describe(
       try {
         await endpoints.sendTo(
           'profile-update-about',
-          { body: { aboutYourself: originalAbout ?? '' } },
+          { body: { aboutYourself: flow.get('originalAbout') ?? '' } },
           { label: 'profile-workflow:restore', allowLiveWrite: true },
         );
         restored = true;
@@ -54,7 +57,9 @@ test.describe(
 
       expect(profile, `TBL_KPOST_USER_PROFILE holds a row for ${me?.kpostId}`).toBeDefined();
       // Captured so the write can be undone; `null` is a legitimate starting state.
-      originalAbout = text(profile?.about_yourself);
+      const originalAbout = text(profile?.about_yourself);
+      if (originalAbout !== undefined && flow.get('originalAbout') === undefined)
+        flow.set('originalAbout', originalAbout);
     });
 
     test('an update is accepted, persisted, and advances modified_date', async ({

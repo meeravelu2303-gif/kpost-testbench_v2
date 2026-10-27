@@ -6,6 +6,7 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import type { Browser, Page } from '@playwright/test';
 import { openGroupConversation } from '../support/katchup';
+import { signedIn } from '@fixtures/login-gate';
 
 /** Open a freshly created group's conversation (its Recents row may take a few reloads to appear). */
 async function openNewGroupConversation(page: Page, groupKpostID: string): Promise<void> {
@@ -72,7 +73,7 @@ test.describe(
     );
 
     async function openMember(browser: Browser, storageState: string) {
-      const context = await browser.newContext({ storageState });
+      const context = await browser.newContext({ storageState: signedIn(storageState) });
       return { context, page: await context.newPage() };
     }
 

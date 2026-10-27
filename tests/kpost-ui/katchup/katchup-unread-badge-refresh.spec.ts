@@ -10,6 +10,7 @@ import {
   sendMessage,
 } from '../support/katchup';
 import { settleFrames } from '../support/settle';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * Katchup unread badges (per-sender strip and side-menu total) drop in place after a conversation is
@@ -70,7 +71,7 @@ test.describe(
     }
 
     async function openSender(browser: Browser): Promise<Page> {
-      const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const context = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
       return context.newPage();
     }
 

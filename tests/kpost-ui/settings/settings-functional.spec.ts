@@ -4,6 +4,7 @@ import { expect, test } from '@fixtures';
 import type { SettingsPage } from '@pages/SettingsPage';
 import type { Page } from '@playwright/test';
 import { pickReactSelect, reactSelectByPlaceholder } from '../support/react-select';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Settings: a toggled notification preference must reach TBL_KPOST_GENERAL_SETTINGS (UI → API → DB),
@@ -68,7 +69,7 @@ test.describe(
         expect(before, 'the account has a settings row').toBeDefined();
 
         const opened = await openNotificationSettings(page, settingsPage);
-        test.skip(
+        retryOrSkip(
           !opened,
           'the Notification settings panel was not showing right now (session or load condition; path verified live 2026-10-11)',
         );
@@ -123,7 +124,7 @@ test.describe(
 
       const field = page.getByRole('textbox', { name: 'Enter your Instant Reply' });
       const opened = await field.isVisible({ timeout: 10_000 }).catch(() => false);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Instant Reply editor was not showing right now (session or load condition; path verified live 2026-10-11)',
       );

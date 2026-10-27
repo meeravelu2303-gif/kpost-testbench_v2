@@ -6,6 +6,8 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import type { Browser, Locator, Page } from '@playwright/test';
 import { openGroupConversation } from '../support/katchup';
+import { signedIn } from '@fixtures/login-gate';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Group exit by role: a plain member can exit and the app stays usable (known defect #1368: the
@@ -65,7 +67,7 @@ async function rows(endpoints: EndpointExecutor, groupKpostID: string): Promise<
 /** Opens Group Info › ⋮ as the 2nd account and returns the options sheet. */
 async function openOptions(page: Page, groupKpostID: string): Promise<Locator> {
   const opened = await openGroupConversation(page, groupKpostID);
-  test.skip(!opened, 'the new group was not listed in Katchup right now — a list condition');
+  retryOrSkip(!opened, 'the new group was not listed in Katchup right now — a list condition');
   await page.locator('#ChatTop .background-color-katchup .line_height').first().click();
   const panel = page.locator('#ChatTop .comm_back').first();
   await expect(panel.getByText(/Katchup Group Info/i), 'Group Info opens').toBeVisible({
@@ -113,7 +115,7 @@ test.describe(
       const groupID = created.data.groupID as number;
       const groupKpostID = created.data.groupKpostID as string;
       expect(groupID && groupKpostID, 'qatest1 creates the group').toBeTruthy();
-      const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const context = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
       try {
         await body(await context.newPage(), { groupID, groupKpostID });
       } finally {

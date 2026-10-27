@@ -1,6 +1,7 @@
 import { domainFor } from '@fixtures/test-accounts';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Personal signup client-side validation: mobile format, required fields, the 18+ age floor, the
@@ -54,7 +55,7 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
 
       const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-      test.skip(
+      retryOrSkip(
         otpOutcome === 'already-exists',
         'the randomly generated mobile number happened to already be registered — vanishingly rare; re-run',
       );
@@ -98,9 +99,12 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
 
       const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );
@@ -132,7 +136,7 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
 
       const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-      test.skip(
+      retryOrSkip(
         otpOutcome === 'already-exists',
         'the randomly generated mobile number happened to already be registered — vanishingly rare; re-run',
       );
@@ -174,7 +178,7 @@ test.describe(
 
       const mobile = freshMobile();
       const otpOutcome = await signupPage.requestMobileOtp(mobile);
-      test.skip(
+      retryOrSkip(
         otpOutcome === 'already-exists',
         'the randomly generated mobile number happened to already be registered — vanishingly rare; re-run',
       );
@@ -197,7 +201,7 @@ test.describe(
 
       // "qaval" + 6 digits = 11 chars, inside the 5-12 char KPOST ID limit.
       const kpostIdOutcome = await signupPage.choosePreferredKpostId(`qaval${mobile.slice(-6)}`);
-      test.skip(
+      retryOrSkip(
         kpostIdOutcome === 'taken',
         'the generated local part happened to collide — re-run',
       );
@@ -249,9 +253,12 @@ test.describe(
 
       const mobile = freshMobile();
       const otpOutcome = await signupPage.requestMobileOtp(mobile);
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );

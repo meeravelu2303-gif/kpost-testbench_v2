@@ -4,6 +4,7 @@ import { STORAGE_STATE_2 } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * KMail two people in the browser: A sends in the UI, B finds the mail, opens it and reads the exact body;
@@ -77,7 +78,7 @@ test.describe(
         const body = `QA two-person KMail body ${stamp}`;
         await sendFromUi(page, subject, body);
 
-        const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+        const context = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
         const receiver = await context.newPage();
         try {
           await receiver.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
@@ -167,7 +168,7 @@ test.describe(
         const replyText = `QA reply from B ${stamp}`;
         await sendFromUi(page, subject, `QA mail to reply to ${stamp}`);
 
-        const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+        const context = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
         const receiver = await context.newPage();
         try {
           await receiver.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
@@ -249,7 +250,7 @@ test.describe(
         await sendFromUi(page, subject, `QA mail to forward ${stamp}`);
         const third = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-3')!;
 
-        const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+        const context = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
         const receiver = await context.newPage();
         try {
           await receiver.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });

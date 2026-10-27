@@ -27,7 +27,8 @@ test.describe(
   'KPost Katchup · unread count clears when a conversation is read (FR-K07)',
   { tag: ['@api', '@katchup', '@regression'] },
   () => {
-    test.describe.configure({ mode: 'serial' });
+    // In order (each test makes its own data); a failed test never skips the next.
+    test.describe.configure({ mode: 'default' });
     test.skip(
       process.env.KATCHUP_LIFECYCLE !== 'true',
       'sends a real message between our two accounts; set KATCHUP_LIFECYCLE=true (owner sign-off)',

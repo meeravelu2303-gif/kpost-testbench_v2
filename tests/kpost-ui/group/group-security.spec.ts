@@ -2,6 +2,7 @@ import { testData } from '@config/test-data.config';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 import { gotoContacts, openCreateGroup } from '../support/contacts';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Fuzzes the Create Group "Group Name" field and reads it back; never clicks Create, which would
@@ -38,7 +39,7 @@ test.describe(
 
         // The create-group icon lives in the Contacts tab.
         const tabOpened = await gotoContacts(page);
-        test.skip(
+        retryOrSkip(
           !tabOpened,
           'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
         );

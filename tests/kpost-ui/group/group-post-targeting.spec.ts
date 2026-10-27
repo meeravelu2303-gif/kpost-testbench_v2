@@ -3,6 +3,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { createQaGroup, deleteQaGroup, GROUP_CREATOR, type QaGroup } from '../support/groups';
 import { EDITOR, openGroupConversation } from '../support/katchup';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Group Post To targeting (FR-GMSG, `WriteMessage.js`): the first Post click in a multi-member group
@@ -43,7 +44,7 @@ test.describe(
           members: [OTHER!.username],
         });
         const opened = await openGroupConversation(page, group.groupKpostID);
-        test.skip(!opened, 'the new group was not listed in Katchup right now (four reloads)');
+        retryOrSkip(!opened, 'the new group was not listed in Katchup right now (four reloads)');
 
         await page.locator('.msg-arrow').first().click();
         const composer = page.locator('.writeMsg_mainDiv').first();

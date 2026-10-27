@@ -12,6 +12,7 @@ import {
   openPeopleSearch,
 } from '../support/contacts';
 import { settleAnimations } from '../support/usermanagement';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * axe-core WCAG scan of Contacts' dialog states (people search, Advanced Search, Create-Group), which
@@ -104,7 +105,7 @@ test.describe(
       page,
     }, testInfo) => {
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );
@@ -118,7 +119,7 @@ test.describe(
       page,
     }, testInfo) => {
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );
@@ -134,7 +135,7 @@ test.describe(
       page,
     }, testInfo) => {
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );

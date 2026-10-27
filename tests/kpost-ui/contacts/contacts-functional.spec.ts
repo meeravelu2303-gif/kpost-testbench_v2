@@ -8,6 +8,7 @@ import {
   openCreateGroup,
   openPeopleSearch,
 } from '../support/contacts';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Contacts screen: search, the Add-contact wizard, empty-input guards, advanced search, and a
@@ -33,7 +34,7 @@ test.describe(
       },
       async ({ page }) => {
         const opened = await gotoContacts(page);
-        test.skip(
+        retryOrSkip(
           !opened,
           'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
         );
@@ -61,7 +62,7 @@ test.describe(
       page,
     }) => {
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );
@@ -74,7 +75,7 @@ test.describe(
       page,
     }) => {
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );
@@ -97,7 +98,7 @@ test.describe(
 
     test('the Create-Group dialog does not create a group with no name @ui', async ({ page }) => {
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );
@@ -120,7 +121,7 @@ test.describe(
 
     test('advanced search opens and a mobile-number search responds @ui', async ({ page }) => {
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );
@@ -174,7 +175,7 @@ test.describe(
           'adds a real contact; set CONTACTS_UI_LIFECYCLE=true',
         );
         const opened = await gotoContacts(page);
-        test.skip(
+        retryOrSkip(
           !opened,
           'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
         );

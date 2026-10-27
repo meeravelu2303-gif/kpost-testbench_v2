@@ -3,6 +3,7 @@ import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { FILES, uniqueName } from '@fixtures/files';
 import { expect, test } from '@fixtures';
 import { deleteUploaded, uploadFile } from '../../support/attachments';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Katchup attachment IDOR: can an outsider fetch another pair's attachment by its S3 uuid alone?
@@ -130,7 +131,7 @@ test.describe(
             type: 'not-rechecked',
             description: `no answer from ${unanswered.join(', ')} — those routes were not judged`,
           });
-        test.skip(
+        retryOrSkip(
           unanswered.length === results.length,
           'no route answered the outsider right now (timeouts) — the IDOR question was not checked this run',
         );

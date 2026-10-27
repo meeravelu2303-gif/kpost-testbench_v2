@@ -5,6 +5,7 @@ import { testData } from '@config/test-data.config';
 import { LoginPage } from '@pages/LoginPage';
 import { expect, test } from '@fixtures';
 import { isKnownAppAlert } from '../../support/known-dialogs';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * Shared steps for the user journeys. A = qatest1 (default page), B = qatest2 (second context),
@@ -44,7 +45,7 @@ export async function openSession(
   browser: Browser,
   storageState: string,
 ): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext({ storageState });
+  const context = await browser.newContext({ storageState: signedIn(storageState) });
   return { context, page: await context.newPage() };
 }
 

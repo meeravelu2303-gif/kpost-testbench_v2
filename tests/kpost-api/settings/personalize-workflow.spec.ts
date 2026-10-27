@@ -1,5 +1,6 @@
 import { requireAll } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
+import { flowState } from '../../support/flow-state';
 
 /**
  * Personalization (font + theme): change, persist, read back, checked against
@@ -9,18 +10,22 @@ test.describe(
   'KPost Settings · personalize (font/theme) @api @kpost-api @settings @database',
   { tag: ['@api', '@settings', '@regression'] },
   () => {
-    test.describe.configure({ mode: 'serial' });
+    // In order, but a failed step never skips the others.
+    test.describe.configure({ mode: 'default' });
 
     const accounts = requireAll('primary');
     test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
 
     const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
 
-    /** The row as we found it, so the account is left exactly as it started. */
-    let original: { font?: unknown; theme?: unknown } | undefined;
+    /** The row as we found it (on disk, so a restore after a failed step still has it). */
+    const flow = flowState<{ original: { font?: unknown; theme?: unknown } }>(
+      'personalize-workflow',
+    );
 
     test.afterAll(async ({ endpoints }) => {
       // Restore both font and theme to the captured values: the QA account is shared.
+      const original = flow.get('original');
       if (!accounts.ok || !original) return;
       const font = original.font as { 'Font Size'?: string; 'Font Style'?: string } | undefined;
       const theme = original.theme as
@@ -77,7 +82,8 @@ test.describe(
         where: { kpost_id: me() },
       });
       expect(row, 'the settings row exists').toBeDefined();
-      original = { font: row?.font, theme: row?.theme };
+      // Captured once per run: a later worker must not take an already-changed row as the original.
+      if (!flow.get('original')) flow.set('original', { font: row?.font, theme: row?.theme });
     });
 
     test('changing the font persists to the settings row, and getPersonalize reflects it', async ({
@@ -106,7 +112,7 @@ test.describe(
       expect(
         JSON.stringify(afterWrite?.font ?? null),
         'the stored font changed when the write was applied',
-      ).not.toBe(JSON.stringify(original?.font ?? null));
+      ).not.toBe(JSON.stringify(flow.get('original')?.font ?? null));
 
       const readBack = await endpoints.sendTo(
         'settings-get-personalize',
@@ -161,7 +167,7 @@ test.describe(
       expect(
         JSON.stringify(afterWrite?.theme ?? null),
         'the stored theme changed when the write was applied',
-      ).not.toBe(JSON.stringify(original?.theme ?? null));
+      ).not.toBe(JSON.stringify(flow.get('original')?.theme ?? null));
 
       const readBack = await endpoints.sendTo(
         'settings-get-personalize',

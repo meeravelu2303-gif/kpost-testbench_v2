@@ -4,6 +4,7 @@ import { expect, test } from '@fixtures';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import type { Browser, Page } from '@playwright/test';
 import { deleteSentMessage, gotoKatchup, openComposer, openConversation } from '../support/katchup';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * Katchup Copy, Confidential Copy (NFR-SEC02) and Bulk across three QA accounts (1 sends, 2 is TO,
@@ -32,7 +33,7 @@ test.describe(
     );
 
     async function contextFor(browser: Browser, storageState: string): Promise<Page> {
-      const context = await browser.newContext({ storageState });
+      const context = await browser.newContext({ storageState: signedIn(storageState) });
       return context.newPage();
     }
 

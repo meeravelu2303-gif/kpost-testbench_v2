@@ -5,6 +5,7 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { expect, test } from '@fixtures';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * KMail read receipt (FR-KM-020): A sends via the API, B opens it in the browser (the API open returns
@@ -114,7 +115,7 @@ test.describe(
       expect(kmailID, 'the mail has a kmailID').toBeTruthy();
       if (!kmailID) return;
 
-      const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const context = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
       try {
         // Before B opens it: no receipt anywhere on A's side.
         const before = await mailRow(endpoints, A, B.username, kmailID);

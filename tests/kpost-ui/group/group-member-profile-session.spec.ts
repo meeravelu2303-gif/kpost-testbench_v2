@@ -5,6 +5,7 @@ import { expect, test } from '@fixtures';
 import { createQaGroup, deleteQaGroup, GROUP_CREATOR, type QaGroup } from '../support/groups';
 import { openGroupConversation } from '../support/katchup';
 import { settleNetwork } from '../support/settle';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Group Info > a member's avatar > Digital Card must not log the user out. Any 401 forces a logout
@@ -60,7 +61,7 @@ test.describe(
           members: [OTHER!.username],
         });
         const opened = await openGroupConversation(page, group.groupKpostID);
-        test.skip(!opened, 'the new group is absent from Katchup right now (four reloads)');
+        retryOrSkip(!opened, 'the new group is absent from Katchup right now (four reloads)');
 
         await page.locator('#ChatTop .background-color-katchup .line_height').first().click();
         const panel = page.locator('#ChatTop .comm_back').first();

@@ -3,6 +3,7 @@ import { STORAGE_STATE_ADMIN } from '@config/constants';
 import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { test as setup } from '@fixtures';
+import { saveLogin } from './session-reuse';
 
 /**
  * Seeds the Admin UI session. The app has no login screen: it is SSO'd by a BUSINESS_M KPost token
@@ -21,42 +22,48 @@ setup('authenticate admin UI (BUSINESS_M SSO)', async ({ page, endpoints, log })
     !testData.businessMKpostId.includes('qa.business'),
   );
 
-  if (wanted && configured && adminUrl && businessM) {
-    // 1. A real BUSINESS_M token (the admin module authenticates the same KPost token).
-    const token = await endpoints.tokens.tokenFor(businessM, AUTH_PROFILES.kpost);
+  await saveLogin(
+    page,
+    STORAGE_STATE_ADMIN,
+    'The Admin UI sign-on (BUSINESS_M)',
+    async () => {
+      if (!wanted || !configured || !adminUrl || !businessM) {
+        log.info('admin UI suite not requested or not configured; saving anonymous admin state');
+        return;
+      }
+      // 1. A real BUSINESS_M token (the admin module authenticates the same KPost token).
+      const token = await endpoints.tokens.tokenFor(businessM, AUTH_PROFILES.kpost);
 
-    // 2. The profile the admin Callback.js seeds AuthUser + companyID from.
-    let authUser: Record<string, unknown> = {};
-    let companyID: string = String(testData.businessMCompanyId);
-    const profileUrl = `${env.KPOST_API_BASE_URL ?? env.API_BASE_URL}/v2/profile/getUserProfile/`;
-    const res = await page.request.get(profileUrl, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok()) {
-      const data = (await res.json()) as { data?: Record<string, unknown> };
-      authUser = data.data ?? {};
-      const raw = authUser.companyID;
-      companyID =
-        typeof raw === 'string' || typeof raw === 'number'
-          ? String(raw)
-          : String(testData.businessMCompanyId);
-    }
+      // 2. The profile the admin Callback.js seeds AuthUser + companyID from.
+      let authUser: Record<string, unknown> = {};
+      let companyID: string = String(testData.businessMCompanyId);
+      const profileUrl = `${env.KPOST_API_BASE_URL ?? env.API_BASE_URL}/v2/profile/getUserProfile/`;
+      const res = await page.request.get(profileUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok()) {
+        const data = (await res.json()) as { data?: Record<string, unknown> };
+        authUser = data.data ?? {};
+        const raw = authUser.companyID;
+        companyID =
+          typeof raw === 'string' || typeof raw === 'number'
+            ? String(raw)
+            : String(testData.businessMCompanyId);
+      }
 
-    // 3. Plant the SSO keys on the admin origin exactly as Callback.js does, then 4. save.
-    await page.goto(adminUrl, { waitUntil: 'domcontentloaded' });
-    await page.evaluate(
-      ({ token, authUser, companyID }) => {
-        localStorage.setItem('accessToken', token);
-        localStorage.setItem('AuthUser', JSON.stringify(authUser));
-        localStorage.setItem('companyID', companyID);
-        localStorage.setItem('coreui-free-react-admin-template-theme', 'light');
-      },
-      { token, authUser, companyID },
-    );
-    log.info(`Seeded admin UI SSO for ${testData.businessMKpostId} (company ${companyID})`);
-  } else {
-    log.info('admin UI suite not requested or not configured; saving anonymous admin state');
-  }
-
-  await page.context().storageState({ path: STORAGE_STATE_ADMIN });
+      // 3. Plant the SSO keys on the admin origin exactly as Callback.js does, then 4. save.
+      await page.goto(adminUrl, { waitUntil: 'domcontentloaded' });
+      await page.evaluate(
+        ({ token, authUser, companyID }) => {
+          localStorage.setItem('accessToken', token);
+          localStorage.setItem('AuthUser', JSON.stringify(authUser));
+          localStorage.setItem('companyID', companyID);
+          localStorage.setItem('coreui-free-react-admin-template-theme', 'light');
+        },
+        { token, authUser, companyID },
+      );
+      log.info(`Seeded admin UI SSO for ${testData.businessMKpostId} (company ${companyID})`);
+    },
+    log,
+  );
 });

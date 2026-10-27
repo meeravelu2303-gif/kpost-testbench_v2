@@ -11,6 +11,7 @@ import {
   openReplyMenu,
   sendMessage,
 } from '../support/katchup';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * Katchup per-message action menus (sender bell / recipient reply arrow), Transfer to KMail or an
@@ -89,7 +90,7 @@ test.describe(
             );
           await page.keyboard.press('Escape');
 
-          const b = await browser.newContext({ storageState: STORAGE_STATE_2 });
+          const b = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
           try {
             const bPage = await b.newPage();
             await openReceivedConversation(bPage, subject);

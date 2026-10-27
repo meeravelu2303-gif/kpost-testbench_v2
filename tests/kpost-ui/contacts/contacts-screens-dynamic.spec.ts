@@ -10,6 +10,7 @@ import {
   openCreateGroup,
   openPeopleSearch,
 } from '../support/contacts';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * runUiChecks (health, performance, layout) on Contacts' people search, Advanced Search and
@@ -53,7 +54,7 @@ test.describe(
       const stop = watchUiHealth(page);
       const started = Date.now();
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );
@@ -75,7 +76,7 @@ test.describe(
       const stop = watchUiHealth(page);
       const started = Date.now();
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );
@@ -99,7 +100,7 @@ test.describe(
       const stop = watchUiHealth(page);
       const started = Date.now();
       const opened = await gotoContacts(page);
-      test.skip(
+      retryOrSkip(
         !opened,
         'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
       );

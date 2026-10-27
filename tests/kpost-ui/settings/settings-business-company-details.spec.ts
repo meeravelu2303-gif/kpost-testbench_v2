@@ -1,6 +1,7 @@
 import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Settings › Small Business Settings › Company Details (BUSINESS_S admin): edit PAN/GST, confirm the
@@ -46,7 +47,7 @@ test.describe(
         .click()
         .then(() => panField.isVisible({ timeout: 5_000 }))
         .catch(() => false);
-      test.skip(
+      retryOrSkip(
         !editOpened,
         'the Company Registration edit form was not showing right now (needs the BUSINESS_S session; path unverified since 2026-10-11)',
       );

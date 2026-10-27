@@ -1,6 +1,7 @@
 import { domainFor } from '@fixtures/test-accounts';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Personal signup: a single-character KPOST ID (below the 5-12 limit) must be rejected on every retry.
@@ -34,7 +35,7 @@ test.describe(
 
       const mobile = freshMobile();
       const otpOutcome = await signupPage.requestMobileOtp(mobile);
-      test.skip(
+      retryOrSkip(
         otpOutcome === 'already-exists',
         'the randomly generated mobile number happened to already be registered — re-run',
       );

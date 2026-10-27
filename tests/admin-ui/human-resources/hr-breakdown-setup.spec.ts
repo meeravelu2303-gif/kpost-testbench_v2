@@ -24,7 +24,8 @@ test.describe(
   'Admin UI · HR Breakdown Setup — create, edit, delete on screen',
   { tag: '@admin-ui' },
   () => {
-    test.describe.configure({ timeout: 180_000, mode: 'serial' });
+    // In order (each test makes its own data); a failed test never skips the next.
+    test.describe.configure({ timeout: 180_000, mode: 'default' });
     requireAdminUiSession();
     requireAdminUiWrites();
 

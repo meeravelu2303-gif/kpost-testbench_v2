@@ -1,6 +1,7 @@
 import { domainFor } from '@fixtures/test-accounts';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Signup must surface a failing KPOST ID check and registration submit (incl. HTTP 200 carrying a
@@ -38,9 +39,12 @@ test.describe(
 
       const mobile = freshMobile();
       const otpOutcome = await signupPage.requestMobileOtp(mobile);
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );
@@ -115,9 +119,12 @@ test.describe(
 
       const mobile = freshMobile();
       const otpOutcome = await signupPage.requestMobileOtp(mobile);
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );
@@ -134,7 +141,7 @@ test.describe(
       });
       await signupPage.continueToKpostId();
       const kpostIdOutcome = await signupPage.choosePreferredKpostId(`qasf${mobile.slice(-6)}`);
-      test.skip(
+      retryOrSkip(
         kpostIdOutcome === 'taken',
         'the generated local part happened to collide — re-run',
       );

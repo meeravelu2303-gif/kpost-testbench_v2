@@ -8,6 +8,7 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import type { Browser, Dialog, Page } from '@playwright/test';
 import { createQaGroup, deleteQaGroup, type QaGroup } from '../support/groups';
 import { isKnownAppAlert } from '../support/known-dialogs';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * KMail features on the real screens: copies (CC/BCC), group mail, save draft, Comment / Clarify /
@@ -128,7 +129,7 @@ test.describe(
 
     /** As B, open the mail with `subject` and open its reply-arrow menu. */
     async function openAsBWithMenu(browser: Browser, subject: string) {
-      const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const context = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
       const b = await context.newPage();
       await b.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
       await waitLoaded(b);

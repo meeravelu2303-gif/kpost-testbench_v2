@@ -12,6 +12,7 @@ import {
   type QaGroup,
 } from '../support/groups';
 import { openGroupConversation } from '../support/katchup';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Katchup Group Info panel (FR-GM-001/002, 004-007, 016): admin view, member quick actions, the
@@ -37,7 +38,7 @@ function createGroup(
 /** Open the group thread, then the Group Info panel; skips (not fails) if the list never shows it. */
 async function openGroupInfo(page: Page, group: QaGroup): Promise<Locator> {
   const opened = await openGroupConversation(page, group.groupKpostID);
-  test.skip(
+  retryOrSkip(
     !opened,
     'the new group was not listed in Katchup right now (four reloads) — a list or session condition, not a Group Info defect',
   );
@@ -210,7 +211,7 @@ test.describe(
           expect(added.status, 'the add-member call is accepted').toBeLessThan(300);
 
           const opened = await openGroupConversation(page, group.groupKpostID);
-          test.skip(!opened, 'the new group was not listed in Katchup right now (four reloads)');
+          retryOrSkip(!opened, 'the new group was not listed in Katchup right now (four reloads)');
 
           // Creation already posts one "added" line; the add-member call must post a second.
           const thread = page.locator('#ChatTop, .chat-container');

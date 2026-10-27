@@ -3,6 +3,7 @@ import { env } from '@config/env';
 import { testData } from '@config/test-data.config';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Personal signup through the real screens (mobile OTP bypass, details, KPOST ID, password), then login.
@@ -83,7 +84,7 @@ test.describe(
       // The only way past the skip above: the OTP modal genuinely opened for a genuinely free number.
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
       // An "invalid" here has only ever been rate-limit noise from concurrent traffic, so skip.
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP box just rejected the bypass code — likely test-infra noise (rate-limiting from ' +
           'concurrent heavy traffic on this host, see #721/INVALID), not a real defect; re-run once ' +

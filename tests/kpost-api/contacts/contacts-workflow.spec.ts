@@ -3,6 +3,7 @@ import { kpostDb, text } from '@database/kpost-assertions';
 import { KpostRepository } from '@database/repositories/kpost.repository';
 import { requireAll } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
+import { flowState } from '../../support/flow-state';
 
 /**
  * Contacts: add → delete, asserted against the TBL_KPOST_USER_CONTACTS row (these endpoints answer
@@ -13,7 +14,8 @@ test.describe(
   'KPost Contacts · relationship workflow @api @kpost-api @contacts @database',
   { tag: ['@api', '@contacts', '@regression'] },
   () => {
-    test.describe.configure({ mode: 'serial' });
+    // In order, but a failed step never skips the others.
+    test.describe.configure({ mode: 'default' });
 
     const accounts = requireAll('primary', 'counterparty');
     test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
@@ -22,7 +24,9 @@ test.describe(
     const them = (): string => (accounts.ok ? (accounts.accounts[1]?.kpostId ?? '') : '');
 
     /** The counterparty's own row, captured so we can prove our writes never touched it. */
-    let theirRowBefore: { delete_status: number | null; is_blocked: number | null } | undefined;
+    const flow = flowState<{
+      theirRowBefore: { delete_status: number | null; is_blocked: number | null };
+    }>('contacts-workflow');
 
     test.afterAll(async ({ endpoints }) => {
       // Restore: put the contact back, so the suite leaves the address book as it found it.
@@ -51,12 +55,11 @@ test.describe(
       if (mine) expect(text(mine.kpost_id), 'my row is keyed by me').toBe(me());
       if (theirs) expect(text(theirs.contact_id), 'their row points back at me').toBe(me());
 
-      theirRowBefore = theirs
-        ? {
-            delete_status: Number(theirs.delete_status ?? 0),
-            is_blocked: Number(theirs.is_blocked ?? 0),
-          }
-        : undefined;
+      if (theirs)
+        flow.set('theirRowBefore', {
+          delete_status: Number(theirs.delete_status ?? 0),
+          is_blocked: Number(theirs.is_blocked ?? 0),
+        });
     });
 
     test('adding a contact creates or revives my row, and leaves theirs alone', async ({
@@ -96,6 +99,7 @@ test.describe(
 
       // Their side is none of our business, and must be untouched.
       const theirs = await repo.contact(them(), me());
+      const theirRowBefore = flow.get('theirRowBefore');
       if (theirRowBefore && theirs) {
         expect(
           Number(theirs.delete_status ?? 0),
@@ -132,6 +136,7 @@ test.describe(
       expect(deleted.status, `${deleted.name}: got ${String(deleted.actual)}`).toBe('PASSED');
 
       const theirs = await repo.contact(them(), me());
+      const theirRowBefore = flow.get('theirRowBefore');
       if (theirRowBefore && theirs) {
         expect(
           Number(theirs.delete_status ?? 0),

@@ -3,21 +3,24 @@ import { env } from '@config/env';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
+import { flowState, needs } from '../../support/flow-state';
 
 /**
  * The 1:1 message lifecycle: send → read back → recall → delete, between our own two accounts.
  * Gated behind `KATCHUP_LIFECYCLE=true` because it writes a real message (cleaned up by recall + delete).
  */
 test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@regression'] }, () => {
-  test.describe.configure({ mode: 'serial' });
+  // In order, but a failed step never skips the others; only a missing msgID blocks recall/delete.
+  test.describe.configure({ mode: 'default' });
   test.skip(
     process.env.KATCHUP_LIFECYCLE !== 'true',
     'writes a real message; set KATCHUP_LIFECYCLE=true to run (owner sign-off, flow doc Q4)',
   );
 
-  let msgID: number | undefined;
+  const flow = flowState<{ msgID: number }>('katchup-lifecycle');
 
   test.afterAll(() => {
+    const msgID = flow.get('msgID');
     if (msgID && !env.CI) {
       // A visible reminder in local runs that a real message was created (and cleaned up).
       test.info().annotations.push({ type: 'note', description: `lifecycle used msgID ${msgID}` });
@@ -67,7 +70,7 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
       expect(created, 'the response carries the created message').toBeTruthy();
       expect(created?.subject, 'every message carries its Subject (BR-K01)').toBe(subject);
       expect(typeof created?.msgID, 'a numeric msgID was issued').toBe('number');
-      msgID = created?.msgID as number;
+      flow.set('msgID', created?.msgID as number);
     },
   );
 
@@ -93,7 +96,8 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
   );
 
   test('recall removes it from the recipient view (FR-K10 / BR-K03)', async ({ endpoints }) => {
-    expect(msgID, 'the send test must have produced a msgID').toBeTruthy();
+    const msgID = flow.get('msgID');
+    needs(msgID, 'the msgID from "a message sends"');
     const exchange = await endpoints.sendTo(
       'katchup-recall-message',
       { body: { msgID, groupFlag: false } },
@@ -103,7 +107,8 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
   });
 
   test('delete removes it entirely (FR-K20)', async ({ endpoints }) => {
-    expect(msgID, 'the send test must have produced a msgID').toBeTruthy();
+    const msgID = flow.get('msgID');
+    needs(msgID, 'the msgID from "a message sends"');
     const exchange = await endpoints.sendTo(
       'katchup-delete-message',
       { body: { messageIds: [msgID], groupFlag: false } },
@@ -112,7 +117,7 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
     expect(exchange.status, 'delete succeeds — the message is cleaned up').toBeLessThan(300);
   });
 
-  // Independent of the msgID chain (own message), and last so a failure cannot block the chain.
+  // Independent of the msgID chain: it sends its own message.
   test('an empty subject is accepted as-is (FR-K02, amended 2026-09-25)', async ({ endpoints }) => {
     // Subject is optional: an empty one must be accepted and stored as sent, not defaulted.
     const { status, body } = await send(endpoints, { subject: '' });

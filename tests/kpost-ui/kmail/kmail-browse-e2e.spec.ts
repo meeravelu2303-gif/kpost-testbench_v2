@@ -8,6 +8,7 @@ import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';
 import type { Page } from '@playwright/test';
 import { settleFrames } from '../support/settle';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * KMail finding and counting: Recents search, the calendar date reload, the unread badge and outside
@@ -183,7 +184,7 @@ test.describe(
       const before = await badgeCount(page);
       const subject = `QA KMail badge ${Date.now()}`;
       // Sent by qatest2 from the browser, so the sender screen's live-update signal is part of the test.
-      const ctx = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const ctx = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
       const sender = await ctx.newPage();
       try {
         await sender.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });

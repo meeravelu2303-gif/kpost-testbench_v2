@@ -10,7 +10,8 @@ test.describe(
   'KPost Settings · notification preferences @api @kpost-api @settings @database',
   { tag: ['@api', '@settings', '@regression'] },
   () => {
-    test.describe.configure({ mode: 'serial' });
+    // In order (each test makes its own data); a failed test never skips the next.
+    test.describe.configure({ mode: 'default' });
 
     const accounts = requireAll('primary');
     test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);

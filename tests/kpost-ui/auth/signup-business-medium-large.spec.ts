@@ -1,6 +1,7 @@
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Business Medium/Large signup (MLRegister.js) through to login. Mints a real, permanent company, so
@@ -66,7 +67,7 @@ test.describe(
         );
 
         const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-        test.skip(
+        retryOrSkip(
           otpEntryOutcome === 'invalid',
           'the OTP bypass code was rejected this run — likely transient; re-run',
         );
@@ -168,9 +169,12 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', 'kpost.in');
 
       const otpOutcome = await signupPage.requestMobileOtp(mobileNumber);
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );
@@ -202,18 +206,18 @@ test.describe(
           businessUniqueName: `qec${uniqueSuffix}`,
           licenses: '1',
         });
-      test.skip(
+      retryOrSkip(
         companyNameOutcome === 'taken',
         'the generated company name happened to collide — re-run',
       );
-      test.skip(
+      retryOrSkip(
         uniqueNameOutcome === 'taken',
         'the generated unique name happened to collide — re-run',
       );
 
       await signupPage.continueToBusinessFinalStep();
       const idOutcome = await signupPage.businessKpostIdAvailability();
-      test.skip(idOutcome === 'taken', 'the generated KPOST ID happened to collide — re-run');
+      retryOrSkip(idOutcome === 'taken', 'the generated KPOST ID happened to collide — re-run');
 
       await signupPage.setPasswordAndSubmit('QaBench@2026');
 

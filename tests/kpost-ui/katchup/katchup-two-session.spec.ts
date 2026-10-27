@@ -13,6 +13,7 @@ import {
   sendMessage,
   submitComposer,
 } from '../support/katchup';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * Katchup between two accounts: delivery, realtime push and the recipient Reply/Comment/Clarify menu.
@@ -50,7 +51,7 @@ test.describe(
 
     /** Open account 2's session in its own context. */
     async function openReceiver(browser: Browser): Promise<Page> {
-      const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const context = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
       return context.newPage();
     }
 

@@ -4,6 +4,7 @@ import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 import { answerForgotPasswordSmsLocally } from '../support/no-real-sms';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Health/performance/layout/basic-a11y sweep of each signed-out Signup and Login state. watchUiHealth
@@ -129,7 +130,7 @@ test.describe(
       const loadMs = Date.now() - started;
 
       // Skip, not fail, if step 2 was never reached, so no false "missing control" is filed.
-      test.skip(
+      retryOrSkip(
         !(await loginPage.passwordInput.isVisible()),
         'the fixed probe id was not accepted right now — step 2 was not shown',
       );
@@ -161,7 +162,7 @@ test.describe(
       await loginPage.passwordInput
         .waitFor({ state: 'visible', timeout: 20_000 })
         .catch(() => undefined);
-      test.skip(
+      retryOrSkip(
         !(await loginPage.passwordInput.isVisible()),
         'the fixed probe id was not accepted right now — the password step (and its Forgot Password link) was not shown',
       );

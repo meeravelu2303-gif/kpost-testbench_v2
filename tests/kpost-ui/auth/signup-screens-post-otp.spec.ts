@@ -4,6 +4,7 @@ import type { ScreenDef } from '@ui/screens';
 import { runUiChecks } from '@ui/ui-checks';
 import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * Health/performance/layout checks for the two post-OTP signup screens. Kept apart from
@@ -63,11 +64,14 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
 
       const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       // Start the clock right before OTP entry, so the budget judges only the post-OTP render.
       const started = Date.now();
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );
@@ -95,9 +99,12 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', 'kpost.in');
 
       const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
-      test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide — re-run',
+      );
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
-      test.skip(
+      retryOrSkip(
         otpEntryOutcome === 'invalid',
         'the OTP bypass code was rejected this run — re-run',
       );

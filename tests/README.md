@@ -12,7 +12,7 @@ Each Bugzilla product has its own folder, and each product folder has its own `s
 | `admin-ui/`  | KPost Admin UI   | One folder per Admin menu area (`admin-setup/`, `human-resources/`, `screens/`, …).                                                                                   |
 | `setup/`     | —                | Logs each QA account in once and saves the session to `.auth/` for the UI tests.                                                                                      |
 | `framework/` | —                | The bench's own self-tests: safety guards, coverage ledgers, validators. `framework/bug-tracker/` holds every bug-filing self-test. `npm run framework`.              |
-| `support/`   | —                | Helpers shared by more than one product (the API smoke checks, attachment helpers). No tests.                                                                         |
+| `support/`   | —                | Helpers shared by products: API smoke checks, attachments, `flow-state` / `live-condition` (only a blocker stops a test).                                             |
 
 A `support/` folder inside a product holds helpers for that product's specs only.
 

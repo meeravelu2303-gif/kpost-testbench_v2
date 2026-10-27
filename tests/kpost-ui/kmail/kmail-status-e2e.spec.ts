@@ -6,6 +6,7 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';
 import type { Page } from '@playwright/test';
+import { signedIn } from '@fixtures/login-gate';
 
 /**
  * KMail Status of Mails (counts per flag, Clear All), starring, priority and voice search. Voice
@@ -150,7 +151,7 @@ test.describe(
       );
       const A = testData.kpostId;
       const B = testData.victimKpostId;
-      const ctx = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const ctx = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
       const b = await ctx.newPage();
       const steps: string[] = [];
       try {
@@ -321,7 +322,7 @@ test.describe(
       });
       expect(req.priority, 'High is sent as priority 2').toBe(2);
 
-      const ctx = await browser.newContext({ storageState: STORAGE_STATE_2 });
+      const ctx = await browser.newContext({ storageState: signedIn(STORAGE_STATE_2) });
       const b = await ctx.newPage();
       try {
         await openMail(b, subject);

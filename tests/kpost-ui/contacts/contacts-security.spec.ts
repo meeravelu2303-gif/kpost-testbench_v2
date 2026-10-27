@@ -7,6 +7,7 @@ import {
   openAdvancedSearch,
   openPeopleSearch,
 } from '../support/contacts';
+import { retryOrSkip } from '../../support/live-condition';
 
 /**
  * XSS fuzzing of the contact search box and the Advanced Search mobile field, detected with a
@@ -36,7 +37,7 @@ test.describe(
         page,
       }) => {
         const opened = await gotoContacts(page);
-        test.skip(
+        retryOrSkip(
           !opened,
           'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
         );
@@ -94,7 +95,7 @@ test.describe(
         page,
       }) => {
         const opened = await gotoContacts(page);
-        test.skip(
+        retryOrSkip(
           !opened,
           'the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts',
         );
