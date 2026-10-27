@@ -64,6 +64,8 @@ const PAUSED_TAGS = '@kos';
 const TEST_HOSTS = new Set([
   'test.kpostindia.com',
   'testingapi.kpostindia.com',
+  // The KPost API QA backend on the office network (KPOST_V5.0, branch kpostV5_Qa, port 8989).
+  '192.168.0.100',
   'testkmail.kpostindia.com',
   // Admin test API (+ MongoDB) and Admin UI. The live Admin host is deliberately absent.
   '192.168.11.11',
@@ -104,9 +106,37 @@ const PRODUCTS = {
   'kpost-api': {
     name: 'KPost API',
     project: 'api',
-    paths: ['tests/kpost-api/'],
+    // Every folder but concurrency/ (excluded by the owner) and kos/ (paused).
+    paths: [
+      'tests/kpost-api/admin',
+      'tests/kpost-api/aws',
+      'tests/kpost-api/common',
+      'tests/kpost-api/contacts',
+      'tests/kpost-api/dashboard',
+      'tests/kpost-api/group',
+      'tests/kpost-api/kall',
+      'tests/kpost-api/katchup',
+      'tests/kpost-api/kbooking',
+      'tests/kpost-api/kdiary',
+      'tests/kpost-api/profile',
+      'tests/kpost-api/sanity',
+      'tests/kpost-api/security',
+      'tests/kpost-api/settings',
+      'tests/kpost-api/signup-login',
+      'tests/kpost-api/smoke',
+    ],
     hosts: ['KPOST_API_BASE_URL'],
     needs: [],
+    // Regression = the full product run (`product:kpost-api`), chosen by folder: the @regression tag
+    // missed the core /admin/* tests (tagged @admin) and untagged specs. The flags add every
+    // endpoint's write checks (tagged @destructive), the write fuzz and the security profile; without
+    // them regression left out the engine checks of ~100 write endpoints and every FULL validator.
+    regressionPaths: 'paths',
+    regressionEnv: {
+      ALLOW_DESTRUCTIVE_TESTS: 'true',
+      VALIDATION_PROFILE: 'FULL',
+      WRITE_FUZZ: 'true',
+    },
   },
   'kmail-api': {
     name: 'KMail API',
@@ -278,7 +308,7 @@ function pruneRunDirs(suiteDir) {
 }
 
 /** Build and run one Playwright invocation; returns the exit code. */
-function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
+function runPlaywright({ label, suite, project, grep, grepInvert, paths, extraEnv = {} }) {
   const outDir = path.join(ROOT, 'reports', level, suite, stamp);
   fs.mkdirSync(outDir, { recursive: true });
   RUN_DIRS.add(outDir);
@@ -295,6 +325,7 @@ function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
   const env = {
     ...process.env,
     ...RUN_FLAGS,
+    ...extraEnv,
     BUGZILLA_DRY_RUN: 'true',
     WORKERS: process.env.WORKERS ?? '1',
     PLAYWRIGHT_HTML_REPORT: path.join(outDir, 'html'),
@@ -334,8 +365,8 @@ const and = (...tags) => tags.map((t) => `(?=.*${t})`).join('');
 // Smoke/sanity never run @destructive, @quarantine or @framework (bench self-tests); regression
 // allows @destructive only with ALLOW_DESTRUCTIVE_TESTS.
 const SMOKE_INVERT = '@quarantine|@destructive|@framework';
-const regressionInvert = () =>
-  process.env.ALLOW_DESTRUCTIVE_TESTS === 'true'
+const regressionInvert = (extraEnv = {}) =>
+  (extraEnv.ALLOW_DESTRUCTIVE_TESTS ?? process.env.ALLOW_DESTRUCTIVE_TESTS) === 'true'
     ? '@quarantine|@framework'
     : '@quarantine|@destructive|@framework';
 
@@ -432,12 +463,20 @@ async function runProduct(productId) {
     const scope = bugArg ? `bug #${bugArg}` : (moduleArg ?? 'all modules');
     code = runStage(`SANITY · ${product.name} · ${scope}`, productId, tags, SMOKE_INVERT);
   } else if (product.regressionPaths) {
+    const extraEnv = product.regressionEnv ?? {};
     code = runPlaywright({
       label: `REGRESSION · ${product.name}`,
       suite: productId,
       project: product.project,
-      paths: product.regressionPaths,
-      grepInvert: regressionInvert(),
+      // 'paths' = the product's own folders, without the tag filter; their sanity sweep is a
+      // SMOKE-profile copy of checks regression already runs in depth. (Admin lists its folders
+      // and keeps its sweep.)
+      paths: product.regressionPaths === 'paths' ? product.paths : product.regressionPaths,
+      grepInvert:
+        product.regressionPaths === 'paths'
+          ? `${regressionInvert(extraEnv)}|@sanity-sweep`
+          : regressionInvert(extraEnv),
+      extraEnv,
     });
   } else {
     code = runStage(`REGRESSION · ${product.name}`, productId, ['@regression'], regressionInvert());

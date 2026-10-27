@@ -16,14 +16,15 @@ defects in it and files them to Bugzilla, routed to the developer who owns the m
 
 | Bugzilla product | Suite       | Owner                                    | Host (from `.env`)                                                      |
 | ---------------- | ----------- | ---------------------------------------- | ----------------------------------------------------------------------- |
-| KPost API        | `kpost-api` | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (testingapi.kpostindia.com)                        |
+| KPost API        | `kpost-api` | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (http://192.168.0.100:8989, the QA backend)        |
 | KPost Admin      | `admin-api` | Karan S (karans@kpost.in)                | `ADMIN_API_BASE_URL` (http://192.168.11.11:9595, MongoDB same IP)       |
 | KMail API        | `kmail-api` | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
 | KPost UI         | `kpost-ui`  | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                        |
 | KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/admin-ui`       |
 
 **The target is the TEST deployment only** — `test.kpostindia.com`, `testingapi`, `testkmail`, the Admin
-test box. Never `account.kpostindia.com`, `devapi2`, `kmail5` or `adminmodule.kpostindia.com`; those
+test box, and (since 2026-10-27, the owner's choice for every KPost API run) the KPost API QA backend
+`192.168.0.100:8989` (`KPOST_V5.0`, branch `kpostV5_Qa`). Never `account.kpostindia.com`, `devapi2`, `kmail5` or `adminmodule.kpostindia.com`; those
 names appear in docs only as "the live counterpart". `TEST_ENV=production` names the safety mode, not a host.
 
 Owners are declared once in `src/config/ownership.config.ts`; a framework test fails on drift.

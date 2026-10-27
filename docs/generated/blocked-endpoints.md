@@ -38,7 +38,7 @@ choice, and every one is still contract-validated OFF live.
 | `POST` | `/admin/terminateUser/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/updateBankAccountDetails` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/updateCompanyDetails` | writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/v2/admin/updateRole` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/updateRole` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `GET` | `/v2/common/downloadCompanyLogo/{companyID}` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/common/updateCompanyLogo` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 

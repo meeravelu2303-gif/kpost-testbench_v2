@@ -224,7 +224,8 @@ export const adminUserManagementApis: EndpointDefinition[] = [
   defineKpostEndpoint({
     id: 'admin-update-role',
     method: 'POST',
-    path: '/v2/admin/updateRole',
+    path: '/admin/updateRole',
+    contractPath: '/v2/admin/updateRole',
     summary: "Update a member's role (shared state)",
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,

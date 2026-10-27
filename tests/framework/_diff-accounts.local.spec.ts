@@ -13,6 +13,12 @@ const SNAPSHOT_PATH = path.join(
 
 test.describe('probe: diff accounts against the pre-run snapshot and log anything new', () => {
   test('diff and record', async ({ databases }) => {
+    // Manual only: inside `framework` it ran against a days-old snapshot and logged 330 accounts
+    // (developers' included) as bench-created on 2026-10-27.
+    test.skip(
+      process.env.ACCOUNT_DIFF !== 'true',
+      'manual probe — set ACCOUNT_DIFF=true right after a deep write-fuzz run',
+    );
     const database = databases.for('kpost-api');
     test.skip(!database.enabled, 'needs the KPOST_QA connection');
     test.skip(

@@ -3,7 +3,35 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — Mobile app testing: Patrol, open-source tools only
+### 2026-10-27 (latest) — KPost API on the QA backend; regression = the full product run
+
+Owner: "I have changed KPOST_API_BASE_URL=http://192.168.0.100:8989/ … after we will test that url only …
+make sure we have complete smoke, sanity and regression for the KPost API". The server is the
+`KPOST_V5.0` backend (`server.port=8989`, branch `kpostV5_Qa`), reached directly (no gateway); it sends
+its own security headers, including HSTS.
+
+- **Host guard:** `run-level.mjs` accepts `192.168.0.100` (the only allowlist; product commands have none).
+- **Regression was not complete.** `test:regression:kpost-api` ran 5,138 tests over 109 endpoints, while
+  `product:kpost-api` runs ≈11,200 over 211, because the `@regression` tag selection had no
+  `ALLOW_DESTRUCTIVE_TESTS` (the engine checks of ~100 write endpoints are `@destructive`), no
+  `VALIDATION_PROFILE=FULL` (security validators) and missed the core `/admin/*` tests (tagged `@admin`)
+  and an untagged spec. KPost API regression is now chosen by folder like Admin's, with the product
+  run's flags and without the `@sanity-sweep` copy: verified by `--list` to contain every product-run test
+  (bench self-tests aside) plus the 23 smoke checks. The KPost API folders now name every folder but
+  `concurrency/` and `kos/`, so the excluded concurrency suite is no longer even listed.
+- Smoke (23 checks, 12 modules) and sanity (1,868 tests, one flow per module + the read sweep) unchanged.
+- **Backend vs bench:** 410 backend endpoints. 213 of 249 current endpoints are tested; 29 current ones
+  are not, plus 98 old V1 duplicates still deployed, KNews, KBooking writes and payments. Listed in
+  `docs/proposals/kpost-api-backend-gaps.md`; each needs a real payload (and some an owner decision).
+- `admin-update-role` called `/v2/admin/updateRole`, which the backend does not serve; it is `/admin/updateRole`.
+- **Incident:** `npm run framework` also ran the manual account probes (`_snapshot-accounts`, `_diff-accounts`):
+  the diff compared the user table with an old snapshot and wrote 330 accounts, developers' included, into
+  `created-accounts.json` as bench-created. Reverted (nothing deletes from that log), and both probes now
+  skip unless `ACCOUNT_DIFF=true`, like the cleanup probe.
+- Other products are unchanged: the KPost UI (`test.kpostindia.com`) still calls testingapi, and KMail/Admin
+  accept the KPost login only if they trust the QA backend's tokens — check before running them on it.
+
+### 2026-10-27 — Mobile app testing: Patrol, open-source tools only
 
 Owner: "which testing tool is better for that mobile application … I need full open source not paid one …
 it must support all tests properly and with production-grade coverage". The KPost mobile app is Flutter

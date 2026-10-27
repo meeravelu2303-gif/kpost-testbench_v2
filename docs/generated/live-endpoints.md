@@ -3,7 +3,7 @@
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`
 (`npm run framework`). Edit the endpoint definitions, not this file.
 
-Target: the test environment (`testingapi.kpostindia.com`, from `KPOST_API_BASE_URL`). Scope: PERSONAL accounts plus the
+Target: the test environment (`192.168.0.100:8989`, from `KPOST_API_BASE_URL`). Scope: PERSONAL accounts plus the
 BUSINESS_S/M/L company accounts (company reads + user-management now run on live).
 A clear per-reason list of what stays blocked is in `docs/generated/blocked-endpoints.md`.
 
@@ -201,7 +201,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/admin/terminateUser/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/updateBankAccountDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/updateCompanyDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/v2/admin/updateRole` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/updateRole` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `GET` | `/v2/common/downloadCompanyLogo/{companyID}` | common · company | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/common/updateCompanyLogo` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/testkmail/v2/common/postBoxContacts/` | Contacts | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |

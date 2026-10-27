@@ -185,6 +185,14 @@ Admin tests carry `@smoke`/`@sanity`, never `@regression`, so Admin's regression
 without `maintenance/` (one-time setup), and `test:regression:kpost-admin-ui` runs every Admin UI test. Role
 posting stays off in every level (it creates real accounts); `product:kpost-admin` turns it on.
 
+**KPost API regression is the full product run** (since 2026-10-27): chosen by folder too (every
+`tests/kpost-api/` folder except `concurrency/` and `kos/`), with `ALLOW_DESTRUCTIVE_TESTS`,
+`VALIDATION_PROFILE=FULL` and `WRITE_FUZZ` set as `product:kpost-api` sets them, and without the
+`@sanity-sweep` copy. It runs every test `product:kpost-api` runs, plus the 23 smoke checks (≈11,200).
+Before, the `@regression` tag skipped the engine checks of ~100 write endpoints (`@destructive`), every
+FULL-profile security validator, and the core `/admin/*` tests (tagged `@admin`), so only 109 of the
+211 endpoints the product run covers were in regression.
+
 Every level **lints tags first** and runs with `BUGZILLA_DRY_RUN=true` — **no run level files bugs**.
 Real filing stays in the reviewed workflow (`npm run report:filing`, `bug:file-reviewed`,
 `file-approved.cjs`). The runner prints where each dry-run report was written.
@@ -202,10 +210,11 @@ The KPost bench is **one low-capacity shared server**. Enforced in `playwright.c
 **Live-host guard:** every level refuses to start unless each target (`BASE_URL`, `API_BASE_URL`,
 `KPOST_API_BASE_URL`, `KMAIL_API_BASE_URL`, `ADMIN_API_BASE_URL`, `ADMIN_UI_BASE_URL`, read from `.env`
 like the config does) is a test deployment host — `test.kpostindia.com`, `testingapi.kpostindia.com`,
-`testkmail.kpostindia.com`, the Admin API test box `192.168.11.11`, the Admin UI test build `192.168.10.22`, `kpostadmin.kpostindia.com` (or
+the KPost API QA backend `192.168.0.100` (port 8989), `testkmail.kpostindia.com`, the Admin API test box `192.168.11.11`, the Admin UI test build `192.168.10.22`, `kpostadmin.kpostindia.com` (or
 localhost). `adminmodule.kpostindia.com` (the live Admin) is refused. There is no override. (`TEST_ENV=production` in `.env` is the bench's safety _mode_ while
 pointing at the test hosts, so the guard checks the hosts, not that label.) `@destructive` tests never
-run in smoke/sanity, and run in regression only when `ALLOW_DESTRUCTIVE_TESTS=true`.
+run in smoke/sanity, and run in regression only when `ALLOW_DESTRUCTIVE_TESTS=true` (the KPost API
+regression sets it, as its product run does).
 
 **Same suite as the module scripts:** every level runs on the QA test accounts only (`QATEST_ONLY=true`),
 with every module's write/lifecycle flow switched on (the flags `product:kpost-api`, `product:kmail-api` and `product:kpost-ui:chromium` set),

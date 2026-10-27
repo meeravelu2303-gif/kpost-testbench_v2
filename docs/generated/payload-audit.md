@@ -32,7 +32,7 @@ spec (`*_LIFECYCLE`), not by the static factory audited here.
 | `POST /admin/resetPassword/` (`admin-reset-password`) | companyID, userType |
 | `POST /v2/common/validateMailOTP/` (`common-validate-mail-otp`) | sendDate |
 | `POST /admin/holdOrRelease/` (`admin-hold-or-release`) | activeStatus |
-| `POST /v2/admin/updateRole` (`admin-update-role`) | role |
+| `POST /admin/updateRole` (`admin-update-role`) | role |
 | `POST /v2/katchup/getMessagesByReferenceMessageList` (`katchup-messages-by-reference`) | messageType |
 | `POST /v2/katchup/sendBulkKatchupMsg` (`katchup-send-bulk`) | mapDetails |
 | `POST /v2/katchup/recallMessage/` (`katchup-recall-message`) | status |
