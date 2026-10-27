@@ -107,7 +107,7 @@ live-safe read, so its API sanity is its curated feature flow.
 **How sanity reads a result.** A response slower than its time budget is a **warning** (shown with its
 timing), not a failure; a request that never answers still **fails**. A check that fails exactly the way a
 person already ruled "not a defect" in Bugzilla (INVALID/WONTFIX) is **skipped with that ruling and the ticket
-number** (`JUDGED_CHECKS` in `src/bug-tracker/known-false-positives.ts`), never passed. Every other failure
+number** (`JUDGED_CHECKS` in `src/bug-tracker/gates/known-false-positives.ts`), never passed. Every other failure
 counts. Regression keeps the strict time budgets.
 
 **Deliberately without an API write in sanity: User Management (business).** All 8 of its writes (add

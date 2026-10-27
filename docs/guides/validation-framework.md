@@ -533,7 +533,7 @@ On failure, each result also carries `expected`, `actual`, per-case `details` an
 FAILED  SECURITY  security.jwt  HIGH  7ms  1/1 JWT checks failed: unsigned alg=none token rejected (expected [401], got 200)
 ```
 
-Every run writes exactly two files: `reports/REPORT.md` (human) and `reports/REPORT.json` (structured), both by the single reporter (`src/reporting/bugzilla-reporter.ts`). `REPORT.md` has two parts — Part 1 execution health (API pass/fail/skip/warn by module & category, top failing checks, worst endpoints, UI results) and Part 2 the bug report (distinct valid defects, filed-by-developer, what was not filed and why). `REPORT.json` carries the run summary, the CI quality gate (environment, build, test run ID, per-endpoint counts, gate status, blocking endpoints) and the `bugs` object (candidates, filing outcome, resolve summary). It is used for the CI job summary and the quality gate.
+Every run writes exactly two files: `reports/REPORT.md` (human) and `reports/REPORT.json` (structured), both by the single reporter (`src/bug-tracker/filing/bugzilla-reporter.ts`). `REPORT.md` has two parts — Part 1 execution health (API pass/fail/skip/warn by module & category, top failing checks, worst endpoints, UI results) and Part 2 the bug report (distinct valid defects, filed-by-developer, what was not filed and why). `REPORT.json` carries the run summary, the CI quality gate (environment, build, test run ID, per-endpoint counts, gate status, blocking endpoints) and the `bugs` object (candidates, filing outcome, resolve summary). It is used for the CI job summary and the quality gate.
 
 ## 17. Adding a completely new API
 

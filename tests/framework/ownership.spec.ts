@@ -11,7 +11,10 @@ import {
 } from '@config/ownership.config';
 import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
-import { candidateFromUiFailure, candidatesFromReport } from '../../src/bug-tracker/bug-candidate';
+import {
+  candidateFromUiFailure,
+  candidatesFromReport,
+} from '../../src/bug-tracker/findings/bug-candidate';
 import type { ValidationReport } from '../../src/validation-engine/validation-result';
 
 /**

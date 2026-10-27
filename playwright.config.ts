@@ -2,7 +2,7 @@ import { defineConfig, devices, type Project } from '@playwright/test';
 import { STORAGE_STATE, STORAGE_STATE_ADMIN, TAGS, TIMEOUTS } from './src/config/constants';
 import { env } from './src/config/env';
 
-const BUGZILLA_REPORTER = './src/reporting/bugzilla-reporter.ts';
+const BUGZILLA_REPORTER = './src/bug-tracker/filing/bugzilla-reporter.ts';
 
 /** Workers default to 1 and are hard-capped at 2 here, so no invocation overloads the shared server. */
 const WORKERS_CAP = 2;

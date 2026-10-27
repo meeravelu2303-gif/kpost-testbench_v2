@@ -1,4 +1,4 @@
-import { judgedCheckReason } from '../../../src/bug-tracker/known-false-positives';
+import { judgedCheckReason } from '../../../src/bug-tracker/gates/known-false-positives';
 import { expect, test } from '@fixtures';
 import { idValidator } from '@validators/common/id.validator';
 import { urlValidator } from '@validators/common/url.validator';

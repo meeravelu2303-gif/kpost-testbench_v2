@@ -80,8 +80,11 @@ src/validation-engine/  engine · policy (profiles) · endpoint-cases.ts (one te
 src/validators/         centralized validators (auth, authz, request, response, security, performance, concurrency, common)
 src/business-rules/     business-rule registry (KPost's rules are asserted in the module feature specs)
 src/database/           MySQL / disabled adapters, per-suite pool, repositories, named DB validations
-src/bug-tracker/        Bugzilla client · fingerprint · candidate · validity gate · filer · verify-resolve · bug-builder
-src/reporting/          bugzilla-reporter (the filing pipeline) · run-summary · bug-report
+src/bug-tracker/        failed test → Bugzilla bug, one folder per step: findings/ (candidate, fingerprint) · gates/
+                        (validity gate, known false positives) · ticket/ (bug text) · bugzilla/ (client, filer) ·
+                        status/ (verify-resolve) · filing/ (bugzilla-reporter, filing-run, bug-report)
+                        · its commands in scripts/bug-tracker/, its self-tests in tests/framework/bug-tracker/
+src/reporting/          run-summary · report archive · report formatting
 src/ui/                 screens registry (PAUSED_SCREENS), failure-diagnostics
 tests/ — one folder per Bugzilla product, each with its own smoke/ and sanity/:
   kpost-api/            KPost API: one folder per module (+ security/); feature.spec.ts = the module's lifecycle flow
@@ -127,11 +130,11 @@ the OTP/SMS kill-switch, and `sideEffect: 'global'`/`external` blocks.
 `npm run report:filing` to read the plan in plain English — WILL CREATE / REOPEN / COMMENT / CLOSE,
 **RE-CHECK BY HAND** (open bugs no run can close: hand-filed/readable tag, speed, no single check;
 KDoc excluded), a **NEEDS YOUR REVIEW** list (held back until you approve), and a **SUPPRESSED** list
-(human-judged non-defects). If a WILL CREATE item is not a real bug, record it in `src/bug-tracker/known-false-positives.ts`
+(human-judged non-defects). If a WILL CREATE item is not a real bug, record it in `src/bug-tracker/gates/known-false-positives.ts`
 (fingerprint + reason + judgedBy + date) rather than filing-and-resolving-INVALID — it is then suppressed
 every run, auditably. When the plan looks right, run **`npm run bug:apply`**: it files that preview's
 plan without re-running the tests (`reports/filing-input.json`, saved by every product preview), through
-the same `runFiling` step as `:file` (`src/reporting/filing-run.ts`): validity gate, live dedupe, reopen/
+the same `runFiling` step as `:file` (`src/bug-tracker/filing/filing-run.ts`): validity gate, live dedupe, reopen/
 comment/close. It refuses a plan older than 24 h, from a run that failed the run gate, from a one-off run (not a
 `product:*` command), or already applied.
 The `:file` command remains the one-step alternative (run and file together).
@@ -149,7 +152,7 @@ in order). Each checks its own hosts, then its dependencies (KMail and Admin: th
 the KPost API + KMail API smoke; Admin UI: the KPost login + Admin API smoke), then its smoke, then the
 level. Exit 0 pass · 1 fail · 4 environment down · 5 blocked by a dependency. Never files bugs.
 
-What one `*:file` run does, in order (`src/reporting/bugzilla-reporter.ts`):
+What one `*:file` run does, in order (`src/bug-tracker/filing/bugzilla-reporter.ts`):
 
 ```
 tests run ─► candidates built (API reports, UI failures, a11y) ─► merge + collapseCountVariants + consolidateCascades
@@ -191,7 +194,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
   "fixed" claim, a bench verdict and a source review all lose to a live replay. The live Admin server is
   newer than the local source copy.
 - **Reopen the same bug id, never refile.** Duplicate-check before any
-  manual filing (`scripts/bugzilla-duplicate-check.cjs`), against the right component and platform-wide components (General/Home) too.
+  manual filing (`scripts/bug-tracker/duplicate-check.cjs`), against the right component and platform-wide components (General/Home) too.
 - **Plain English, every product, one layout** (`buildDescription` in `bug-builder.ts`): Classification /
   Category / Endpoint / Module / Severity, then **Summary** / **Steps to reproduce** / **Expected** / **Actual** /
   How to fix / curl (API only) / Owner / Environment / Run date / Filed by. **The Summary is short:** 2-4 plain

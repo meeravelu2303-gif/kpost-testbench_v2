@@ -68,7 +68,7 @@ Filer .............. live Bugzilla search per candidate, then:
 reports/REPORT.json + console summary
 ```
 
-Implementation: [`src/bug-tracker/`](../../src/bug-tracker), reporter in [`src/reporting/bugzilla-reporter.ts`](../../src/reporting/bugzilla-reporter.ts). Nothing in this path can fail a run or change its exit code.
+Implementation: [`src/bug-tracker/`](../../src/bug-tracker), reporter in [`src/bug-tracker/filing/bugzilla-reporter.ts`](../../src/bug-tracker/filing/bugzilla-reporter.ts). Nothing in this path can fail a run or change its exit code.
 
 ## 3. Configuration
 
@@ -91,7 +91,7 @@ The key is a secret: keep it in `.env` (git-ignored) or a CI secret. It is never
 
 ### The run gate — is this run trustworthy?
 
-A bench that cannot run must be loud, never clean. If every spec fails to import, the run finds zero defects, which looks exactly like a healthy API. [`assessRunValidity`](../../src/bug-tracker/validity-gate.ts) files nothing when:
+A bench that cannot run must be loud, never clean. If every spec fails to import, the run finds zero defects, which looks exactly like a healthy API. [`assessRunValidity`](../../src/bug-tracker/gates/validity-gate.ts) files nothing when:
 
 - errors occurred outside any test (specs failed to load, setup faulted),
 - the run was interrupted or timed out,
@@ -100,7 +100,7 @@ A bench that cannot run must be loud, never clean. If every spec fails to import
 
 ### The candidate gate — does the evidence support the claim?
 
-[`candidateRejection`](../../src/bug-tracker/validity-gate.ts) drops a finding when:
+[`candidateRejection`](../../src/bug-tracker/gates/validity-gate.ts) drops a finding when:
 
 - its severity is below `BUGZILLA_MIN_SEVERITY`,
 - the evidence is an **infrastructure or bench fault** (`ECONNREFUSED`, timeouts, a closed browser, a framework error, a missing principal, the production guard),
@@ -115,7 +115,7 @@ Every rejection is printed and written to `reports/REPORT.json`. A gate nobody c
 
 ## 5. How duplicates are prevented
 
-Each defect gets a **stable identity** — `KP-XXXXXX` (`BUGZILLA_TAG_PREFIX`, 6 hex digits), a hash of the endpoint, the check and the _normalised_ failure message. Normalising is what makes dedupe work: correlation IDs, generated e-mails, UUIDs, ports and durations change every run and would otherwise mint a new id each night ([`bug-fingerprint.ts`](../../src/bug-tracker/bug-fingerprint.ts)).
+Each defect gets a **stable identity** — `KP-XXXXXX` (`BUGZILLA_TAG_PREFIX`, 6 hex digits), a hash of the endpoint, the check and the _normalised_ failure message. Normalising is what makes dedupe work: correlation IDs, generated e-mails, UUIDs, ports and durations change every run and would otherwise mint a new id each night ([`bug-fingerprint.ts`](../../src/bug-tracker/findings/bug-fingerprint.ts)).
 
 The id is carried as `[KP-XXXXXX]` in the summary, and every run searches for it — in summaries and on whiteboards — before deciding:
 
@@ -204,7 +204,7 @@ not listed either: a later run closes it. The same list is in REPORT.md under "R
 
 The checkpoint (step 2) exists because some false positives are SEMANTIC — only a human knows
 "12345 is our seeded value" or "that field is inert metadata". When a WILL CREATE item is not a real
-bug, record it in `src/bug-tracker/known-false-positives.ts` (fingerprint + reason + judgedBy + date);
+bug, record it in `src/bug-tracker/gates/known-false-positives.ts` (fingerprint + reason + judgedBy + date);
 it is then suppressed on every run, visibly, instead of littering Bugzilla with INVALID tickets.
 
 Findings the engine is not confident enough to auto-file (intermittent repros, one-off flow 500s,

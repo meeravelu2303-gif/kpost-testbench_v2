@@ -19,15 +19,15 @@ be in, one it should not stay in (no reason string), and one that fails the buil
 
 ## The last run, by the engine’s own skip classes
 
-Run `run-e52e65a0-1e5f-4afd-ab99-675b6a05e557` at 2026-10-27T07:38:25.460Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
+Run `run-52582ccf-abca-4d2e-b183-affe24922f3b` at 2026-10-27T08:05:58.073Z: 22 checks, 7 applicable ran (85.7% passed), 15 skipped:
 
 | Engine skip class | Checks | Meaning |
 | ----------------- | -----: | ------- |
-| notApplicable | 0 | the validator does not apply to that endpoint (by design) |
+| notApplicable | 14 | the validator does not apply to that endpoint (by design) |
 | recoverable | 0 | needs a fixture, an id or a second principal — a gap to close |
 | blockedByDefect | 0 | an open defect stops the check from being meaningful |
 | deliberate | 0 | an owner pause or a safety choice |
-| environmental | 0 | host or transport trouble this run |
+| environmental | 1 | host or transport trouble this run |
 
 ## Retune — a selector that no longer matches, or a defect; Phase 1 drives this to 0 (0)
 
@@ -109,9 +109,9 @@ _None._
 | 1 | ADMIN_MONGO_URI is not configured (read-only) — needed to judge the Admin document | `tests/admin-ui/cross-layer/admin-cross-layer.spec.ts:58` |
 | 1 | "Add From Application" tab not reachable with this account\'s role value | `tests/admin-ui/screens/admin-dead-screens.spec.ts:46` |
 | 1 | an Admin connection has been configured | `tests/framework/admin-db-safety.spec.ts:69` |
+| 1 | no finding supplied — pass --bug=<file.json> (see the usage block above) | `tests/framework/bug-tracker/manual-bug.spec.ts:125` |
 | 1 | no local .env on this machine (fresh checkout / CI) | `tests/framework/env-template.spec.ts:62` |
 | 1 | needs at least two configured accounts | `tests/framework/kmail-flags.spec.ts:128` |
-| 1 | no finding supplied — pass --bug=<file.json> (see the usage block above) | `tests/framework/manual-bug.spec.ts:121` |
 | 1 | needs BUGZILLA_URL and BUGZILLA_API_KEY | `tests/framework/ownership.spec.ts:276` |
 | 1 | no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first | `tests/framework/_diff-accounts.local.spec.ts:18` |
 | 1 | needs four distinct QA principals configured (QA_* accounts) | `tests/kmail-api/copies-info-idor.spec.ts:28` |
@@ -200,7 +200,7 @@ _None._
 | 2 | creates a real group; set GROUP_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:268`, `tests/kpost-ui/group/group.spec.ts:12` |
 | 2 | creates a real scheduled call; set KALL_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:404`, `tests/kpost-ui/kall/kall-features.spec.ts:102` |
 | 1 | one-time setup: set ADMIN_CREATE_STAFF=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/admin-api/maintenance/setup-staff-employee.spec.ts:27` |
-| 1 | opt-in: this writes to Bugzilla — run `npm run bug:apply` after a product preview | `tests/framework/apply-filing-plan.spec.ts:19` |
+| 1 | opt-in: this writes to Bugzilla — run `npm run bug:apply` after a product preview | `tests/framework/bug-tracker/apply-filing-plan.spec.ts:19` |
 | 1 | manual probe — set CLEANUP_PLAN=true to list orphaned QA records on the primary account, CLEANUP_EXECUTE=true to delete them | `tests/framework/_cleanup-orphaned-records.local.spec.ts:14` |
 | 1 | PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND requires explicit authorization even on a future non-production environment, given it compares real credential material — see docs/generated/blocked-endpoints.md | `tests/kmail-api/credential-disclosure.spec.ts:28` |
 | 1 | sends real mail; set KMAIL_LIFECYCLE=true | `tests/kmail-api/feature.spec.ts:84` |

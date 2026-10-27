@@ -1,4 +1,4 @@
-import { ENVIRONMENTAL_UI_OR_API_FAILURE } from '../../../src/bug-tracker/validity-gate';
+import { ENVIRONMENTAL_UI_OR_API_FAILURE } from '../../../src/bug-tracker/gates/validity-gate';
 import { expect, test } from '@fixtures';
 import { statusCodeValidator } from '@validators/response/status-code.validator';
 import { RESPONSES } from './support/fixtures';

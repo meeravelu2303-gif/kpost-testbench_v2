@@ -7,7 +7,7 @@ import { describeTestData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { formatReport } from '@reporting/report-formatter';
 import { validationRegistry } from '@validators/index';
-import { judgedCheckReason } from '../bug-tracker/known-false-positives';
+import { judgedCheckReason } from '../bug-tracker/gates/known-false-positives';
 import { ProductionSafetyError } from './production-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
 import type { ValidationReport, ValidationResult } from './validation-result';

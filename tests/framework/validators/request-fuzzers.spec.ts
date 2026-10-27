@@ -1,4 +1,4 @@
-import { ENVIRONMENTAL_UI_OR_API_FAILURE } from '../../../src/bug-tracker/validity-gate';
+import { ENVIRONMENTAL_UI_OR_API_FAILURE } from '../../../src/bug-tracker/gates/validity-gate';
 import { expect, test } from '@fixtures';
 import { dataTypeValidator } from '@validators/request/data-type.validator';
 import { emptyValueValidator } from '@validators/request/empty-value.validator';

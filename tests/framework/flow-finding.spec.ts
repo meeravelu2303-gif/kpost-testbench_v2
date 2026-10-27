@@ -7,8 +7,11 @@ import {
   type BusinessRuleFinding,
   type FlowFinding,
 } from '@engine/flow-finding';
-import { candidatesFromReport, mergeCandidates } from '../../src/bug-tracker/bug-candidate';
-import { applyValidityGate } from '../../src/bug-tracker/validity-gate';
+import {
+  candidatesFromReport,
+  mergeCandidates,
+} from '../../src/bug-tracker/findings/bug-candidate';
+import { applyValidityGate } from '../../src/bug-tracker/gates/validity-gate';
 import { readBugzillaConfig } from '../../src/config/bugzilla.config';
 import { expect, test } from '@fixtures';
 

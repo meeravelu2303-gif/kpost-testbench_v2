@@ -3,7 +3,27 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — Bug text: short, plain, one layout
+### 2026-10-27 (latest) — Bug-tracker files in one folder per layer
+
+Owner: "create a bug tracker folder, move the related bug tracker files under it, neat, don't mix anywhere";
+chose "one bug-tracker folder per layer" over one top-level folder (which would break the src/scripts/tests
+pattern, the path aliases and the Playwright projects).
+
+- `src/bug-tracker/` by step: `findings/` (candidate, fingerprint) → `gates/` (validity gate, known false
+  positives, gatekeeper) → `ticket/` (bug text, guidance, curl) → `bugzilla/` (client, filer) → `status/`
+  (verify-resolve) → `filing/` (bugzilla-reporter, filing-run, bug-report, moved out of `src/reporting/`,
+  which now holds only the run report). Its own README maps each step.
+- `scripts/bug-tracker/`: filing-plan, file-reviewed, file-approved, duplicate-check (was
+  `bugzilla-duplicate-check.cjs`). Their `.env`/`node_modules` paths gained one `..`.
+- `tests/framework/bug-tracker/`: the 15 bug-filing self-tests. `flow-finding` (engine), `ownership`
+  (config), `run-summary` and `report-archive` (reporting) stay where they are.
+- npm command names are unchanged. Imports were rewritten by resolving each one against the old tree.
+  No UI spec moved, so no bug tag changed.
+- Verified: `check`; `framework` 361 passed / 3 skipped, the same as before the move; `report:filing`,
+  `bug:dupe-check` (a live read-only search), `bug:file-reviewed`, `bug:file-approved` and `bug:preview`
+  run from their new paths; every link in `bug-filing.md` resolves.
+
+### 2026-10-27 — Bug text: short, plain, one layout
 
 Owner: "the bug filing with very simple English, understandable, short, not a big description; it must look
 a perfect clear bug". The old automatic bugs opened with engine words ("The centralized validation engine

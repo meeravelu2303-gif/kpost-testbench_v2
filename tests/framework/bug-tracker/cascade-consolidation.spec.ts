@@ -1,0 +1,185 @@
+import {
+  consolidateCascades,
+  mergeCandidates,
+  type BugCandidate,
+} from '../../../src/bug-tracker/findings/bug-candidate';
+import { candidateRejection } from '../../../src/bug-tracker/gates/validity-gate';
+import { expect, test } from '@fixtures';
+
+/**
+ * A broken endpoint's cascade collapses to ONE anchor ticket; a healthy endpoint's findings are
+ * untouched; a lone timeout check is never filed.
+ */
+
+function cand(over: Partial<BugCandidate>): BugCandidate {
+  return {
+    id: over.id ?? 'KP-000001',
+    source: 'api',
+    suiteId: 'kpost-api',
+    title: over.title ?? 'x',
+    narrative: 'n',
+    severity: 'HIGH',
+    category: 'Functional',
+    classification: over.classification ?? 'response.status-code',
+    product: 'KPost API',
+    component: 'C',
+    version: 'unspecified',
+    assignee: 'a@b.c',
+    ownerName: 'o',
+    endpoint: over.endpoint ?? 'POST /x',
+    expected: 'e',
+    actual: over.actual ?? 'a',
+    occurrences: 1,
+    environment: 'production',
+    baseURL: 'http://h',
+    build: 'local',
+    testRunId: 'r',
+    observedAt: '2026-09-18T00:00:00Z',
+    evidence: {},
+    ...over,
+  };
+}
+
+test.describe('cascade consolidation', () => {
+  test('a 5xx endpoint collapses its response-reading checks into one anchor @framework', () => {
+    const out = consolidateCascades([
+      cand({ id: 'A1', classification: 'response.status-code', responseStatus: 500 }),
+      cand({ id: 'A2', classification: 'response.structure', responseStatus: 500 }),
+      cand({ id: 'A3', classification: 'response.schema', responseStatus: 500 }),
+      cand({ id: 'A4', classification: 'common.api-error', responseStatus: 500 }),
+      cand({ id: 'A5', classification: 'response.error-format', responseStatus: 500 }),
+    ]);
+    expect(out, 'six symptom tickets become one').toHaveLength(1);
+    expect(out[0]?.classification).toBe('response.status-code');
+    expect(out[0]?.narrative).toContain('consolidated here');
+  });
+
+  test('a 5xx endpoint KEEPS an input probe that is NOT a crash @framework', () => {
+    const out = consolidateCascades([
+      cand({ id: 'B1', classification: 'response.status-code', responseStatus: 500 }),
+      cand({ id: 'B2', classification: 'response.structure', responseStatus: 500 }),
+      // A probe the server ACCEPTED (200) is its own finding: it says nothing about the crash.
+      cand({
+        id: 'B3',
+        classification: 'request.null-value',
+        responseStatus: 200,
+        actual: 'null value (expected [400,422], got 200)',
+      }),
+    ]);
+    // status-code (anchor) + request.null-value (independent probe) survive; structure folds in.
+    expect(out.map((c) => c.classification).sort()).toEqual([
+      'request.null-value',
+      'response.status-code',
+    ]);
+  });
+
+  test('when the VALID request crashes, probe 500s are the same root cause @framework', () => {
+    const out = consolidateCascades([
+      cand({ id: 'S1', classification: 'response.status-code', responseStatus: 500 }),
+      cand({ id: 'S2', classification: 'request.null-value', responseStatus: 500 }),
+      cand({ id: 'S3', classification: 'request.data-type', responseStatus: 500 }),
+      cand({ id: 'S4', classification: 'request.empty-body', responseStatus: 500 }),
+      cand({ id: 'S5', classification: 'security.injection', responseStatus: 500 }),
+      cand({ id: 'S6', classification: 'security.xss', responseStatus: 500 }),
+    ]);
+    expect(out, 'six tickets for one crash become one').toHaveLength(1);
+    expect(out[0]?.classification).toBe('response.status-code');
+    expect(out[0]?.narrative).toContain('request.null-value');
+  });
+
+  test('a probe that crashes while the VALID request succeeds stays its own ticket @framework', () => {
+    const out = consolidateCascades([
+      // No status-code finding: the valid request returned 200, only the bad-gender probes crash.
+      cand({
+        id: 'G1',
+        classification: 'common.api-error',
+        responseStatus: 200,
+        actual: 'security.injection:body.gender: SQL tautology (server error 500)',
+      }),
+      cand({
+        id: 'G2',
+        classification: 'security.injection',
+        responseStatus: 200,
+        actual: 'body.gender: SQL tautology (expected any status < 500, got 500)',
+      }),
+    ]);
+    expect(out.map((c) => c.classification).sort()).toEqual([
+      'common.api-error',
+      'security.injection',
+    ]);
+  });
+
+  test('one malformed error body is one ticket, not an error-format plus a structure ticket @framework', () => {
+    const out = consolidateCascades([
+      cand({
+        id: 'E1',
+        classification: 'response.error-format',
+        responseStatus: 400,
+        title: 'primary (message: Invalid input: expected string, received undefined)',
+      }),
+      cand({
+        id: 'E2',
+        classification: 'response.structure',
+        responseStatus: 400,
+        title: 'not a valid error envelope: message: Invalid input: expected string',
+      }),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0]?.classification).toBe('response.error-format');
+    expect(out[0]?.narrative).toContain('consolidated here');
+  });
+
+  test('a FAILURE body behind HTTP 200 (success-envelope) stays its own ticket @framework', () => {
+    const out = consolidateCascades([
+      cand({ id: 'F1', classification: 'response.error-format', responseStatus: 400 }),
+      cand({
+        id: 'F2',
+        classification: 'response.structure',
+        responseStatus: 200,
+        title: 'not a valid success envelope: status: status must be SUCCESS',
+      }),
+    ]);
+    expect(out.map((c) => c.classification).sort()).toEqual([
+      'response.error-format',
+      'response.structure',
+    ]);
+  });
+
+  test('a timeout takes the whole endpoint down to one ticket @framework', () => {
+    const out = consolidateCascades([
+      cand({
+        id: 'C1',
+        classification: 'response.status-code',
+        actual: 'Timeout 10000ms exceeded',
+      }),
+      cand({ id: 'C2', classification: 'request.null-value', actual: 'Timeout 10000ms exceeded' }),
+      cand({ id: 'C3', classification: 'response.schema', actual: 'Timeout 10000ms exceeded' }),
+    ]);
+    expect(out, 'a hung endpoint is one problem, not three').toHaveLength(1);
+  });
+
+  test('a healthy endpoint is left untouched @framework', () => {
+    const input = [
+      cand({ id: 'D1', classification: 'request.null-value', responseStatus: 200 }),
+      cand({ id: 'D2', classification: 'request.unsupported-media-type', responseStatus: 200 }),
+    ];
+    expect(consolidateCascades(input)).toHaveLength(2);
+  });
+
+  test('systemic candidates are never consolidated @framework', () => {
+    const input = [cand({ id: 'E1', systemic: true, endpoint: undefined, responseStatus: 500 })];
+    expect(consolidateCascades(input)).toHaveLength(1);
+  });
+
+  test('a standalone response-time finding is rejected by the validity gate @framework', () => {
+    expect(candidateRejection(cand({ classification: 'performance.response-time' }))).toContain(
+      'environmental',
+    );
+    expect(candidateRejection(cand({ classification: 'response.status-code' }))).toBeUndefined();
+  });
+
+  test('consolidation composes with merge (no crash on merged input) @framework', () => {
+    const merged = mergeCandidates([cand({ id: 'F1', responseStatus: 200 })]);
+    expect(consolidateCascades(merged)).toHaveLength(1);
+  });
+});
