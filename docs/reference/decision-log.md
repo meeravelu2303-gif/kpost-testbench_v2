@@ -28,6 +28,10 @@ its own security headers, including HSTS.
   the diff compared the user table with an old snapshot and wrote 330 accounts, developers' included, into
   `created-accounts.json` as bench-created. Reverted (nothing deletes from that log), and both probes now
   skip unless `ACCOUNT_DIFF=true`, like the cleanup probe.
+- **Incident:** `playwright test --list` still ran the Bugzilla reporter's `onEnd`, so each listing wrote an
+  empty `REPORT.*` and `filing-input.json` (product `run`, zero tests, refused by `bug:apply`) and archived
+  the previous report; ten listings pushed every real run out of `reports/history/`. The reporter now
+  returns at once under `--list`.
 - Other products are unchanged: the KPost UI (`test.kpostindia.com`) still calls testingapi, and KMail/Admin
   accept the KPost login only if they trust the QA backend's tokens — check before running them on it.
 

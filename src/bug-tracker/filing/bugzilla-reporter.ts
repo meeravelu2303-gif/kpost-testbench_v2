@@ -104,6 +104,9 @@ export default class BugzillaReporter implements Reporter {
   }
 
   async onEnd(result: FullResult): Promise<void> {
+    // `--list` runs nothing: writing would replace the last run's report and filing plan, and
+    // archive real runs out of reports/history/ (ten listings on 2026-10-27 pushed them all out).
+    if (process.argv.includes('--list')) return;
     try {
       await this.publish(result);
     } catch (error) {
