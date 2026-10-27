@@ -1,6 +1,7 @@
 # Commands
 
-Run from the repo root in PowerShell. Every product has two commands:
+Run from the repo root in PowerShell. Every product has its own commands, so a product can be checked
+right after its own deploy without re-testing the others. Each product has two main commands:
 
 - **Preview:** runs every test and writes `reports/REPORT.md`. Files nothing.
 - **File:** the same run, then files the valid new bugs to Bugzilla, reopens fixed bugs that came back,
@@ -17,6 +18,14 @@ npm run product:kpost-api:file
 npm run product:kpost-api:verify      # re-check open bugs only: closes fixed ones, files nothing new
 ```
 
+Quick checks after a deploy (file nothing; checks the KPost API only):
+
+```powershell
+npm run test:smoke:kpost-api
+npm run test:sanity:kpost-api      # add -- --module <name> or -- --bug <id> to narrow it
+npm run test:regression:kpost-api
+```
+
 ## KMail API
 
 ```powershell
@@ -24,11 +33,27 @@ npm run product:kmail-api
 npm run product:kmail-api:file
 ```
 
+Quick checks after a deploy (file nothing; checks the KPost login first, since KMail uses its token):
+
+```powershell
+npm run test:smoke:kmail-api
+npm run test:sanity:kmail-api      # add -- --module <name> or -- --bug <id> to narrow it
+npm run test:regression:kmail-api
+```
+
 ## KPost Admin API
 
 ```powershell
 npm run product:kpost-admin
 npm run product:kpost-admin:file
+```
+
+Quick checks after a deploy (file nothing; checks the KPost login first; Admin has no regression set, so regression is its smoke):
+
+```powershell
+npm run test:smoke:kpost-admin
+npm run test:sanity:kpost-admin      # add -- --module <name> or -- --bug <id> to narrow it
+npm run test:regression:kpost-admin
 ```
 
 ## KPost UI
@@ -53,11 +78,27 @@ npm run product:kpost-ui:perf             # page load times, one user
 npm run product:kpost-ui:session-check    # a logged-out session is really ended
 ```
 
+Quick checks after a deploy (file nothing; checks the KPost API and KMail API smoke first, since the UI is built on both):
+
+```powershell
+npm run test:smoke:kpost-ui
+npm run test:sanity:kpost-ui      # add -- --module <name> or -- --bug <id> to narrow it
+npm run test:regression:kpost-ui
+```
+
 ## KPost Admin UI
 
 ```powershell
 npm run product:kpost-admin-ui
 npm run product:kpost-admin-ui:file
+```
+
+Quick checks after a deploy (file nothing; checks the KPost login and the Admin API smoke first):
+
+```powershell
+npm run test:smoke:kpost-admin-ui
+npm run test:sanity:kpost-admin-ui      # add -- --module <name> or -- --bug <id> to narrow it
+npm run test:regression:kpost-admin-ui
 ```
 
 ## All products
@@ -98,12 +139,12 @@ npm run bug:file
 npm run bug:file-approved -- <KP-id>   # file one finding from the last preview, by its id (add --live)
 ```
 
-## Quick health checks (file nothing)
+## Quick checks for every product at once (file nothing)
 
 ```powershell
-npm run test:smoke           # also test:smoke:api, test:smoke:ui
+npm run test:smoke           # every product in order, one verdict each
 npm run test:sanity
-npm run test:regression      # also test:regression:api, test:regression:ui
+npm run test:regression
 ```
 
 ## After a new API workbook or Admin deploy

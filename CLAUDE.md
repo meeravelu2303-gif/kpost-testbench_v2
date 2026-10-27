@@ -138,6 +138,12 @@ nothing), `product:kpost-ui:chromium:file` / `:firefox:file` / `:webkit:file` (o
 `reports/history/` (last 10 kept); a `framework`-only run never touches it. `cross-env` works only via
 `npm run`; in a shell, set env vars natively.
 
+Run levels are per product too (products deploy separately): `test:smoke:<p>`, `test:sanity:<p>`,
+`test:regression:<p>` for `kpost-api | kmail-api | kpost-admin | kpost-ui | kpost-admin-ui` (no `<p>` = all,
+in order). Each checks its own hosts, then its dependencies (KMail and Admin: the KPost login; KPost UI:
+the KPost API + KMail API smoke; Admin UI: the KPost login + Admin API smoke), then its smoke, then the
+level. Exit 0 pass · 1 fail · 4 environment down · 5 blocked by a dependency. Never files bugs.
+
 What one `*:file` run does, in order (`src/reporting/bugzilla-reporter.ts`):
 
 ```

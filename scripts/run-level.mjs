@@ -1,12 +1,10 @@
-// Run-level runner for smoke / sanity / regression (docs/guides/run-levels.md). Lints tags first,
-// never files bugs (dry run, reports under reports/<level>/), and refuses any non-test host.
+// Run-level runner for smoke / sanity / regression, one product at a time (docs/guides/run-levels.md).
+// Lints tags first, never files bugs (reports under reports/<level>/<product>/), refuses non-test hosts.
 //
-//   node scripts/run-level.mjs --level smoke
-//   node scripts/run-level.mjs --level sanity                  (FULL sanity: every module + Admin)
-//   node scripts/run-level.mjs --level sanity --module katchup
-//   node scripts/run-level.mjs --level sanity --module admin
-//   node scripts/run-level.mjs --level sanity --bug 1267
-//   node scripts/run-level.mjs --level regression
+//   node scripts/run-level.mjs --level smoke --product kmail-api
+//   node scripts/run-level.mjs --level sanity --product kpost-ui --module katchup
+//   node scripts/run-level.mjs --level sanity --product kpost-api --bug 1267
+//   node scripts/run-level.mjs --level regression                (no --product: every product, in order)
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -93,9 +91,64 @@ function arg(name, def) {
 }
 
 const level = String(arg('level', '')).toLowerCase();
-const suiteArg = String(arg('suite', 'all')).toLowerCase();
+const productArg = arg('product') ? String(arg('product')).toLowerCase() : undefined;
 const moduleArg = arg('module') ? String(arg('module')).toLowerCase() : undefined;
 const bugArg = arg('bug') ? String(arg('bug')).replace(/^@?bug-?/i, '') : undefined;
+
+/**
+ * The five Bugzilla products, in dependency order. `needs` is what must work before the product can be
+ * judged: KMail and Admin accept the KPost login token, the KPost UI is one app over the KPost and KMail
+ * APIs, and the Admin UI signs in with the KPost token and reads the Admin API.
+ */
+const PRODUCTS = {
+  'kpost-api': {
+    name: 'KPost API',
+    project: 'api',
+    paths: ['tests/kpost-api/'],
+    hosts: ['KPOST_API_BASE_URL'],
+    needs: [],
+  },
+  'kmail-api': {
+    name: 'KMail API',
+    project: 'api',
+    paths: ['tests/kmail-api/'],
+    hosts: ['KMAIL_API_BASE_URL', 'KPOST_API_BASE_URL'],
+    needs: ['kpost-login'],
+  },
+  'kpost-admin': {
+    name: 'KPost Admin API',
+    project: 'api',
+    paths: ['tests/admin-api/'],
+    hosts: ['ADMIN_API_BASE_URL', 'KPOST_API_BASE_URL'],
+    needs: ['kpost-login'],
+    noRegression: 'product:kpost-admin',
+  },
+  'kpost-ui': {
+    name: 'KPost UI',
+    project: 'chromium',
+    paths: [],
+    hosts: ['BASE_URL', 'KPOST_API_BASE_URL', 'KMAIL_API_BASE_URL'],
+    needs: ['kpost-api', 'kmail-api'],
+  },
+  'kpost-admin-ui': {
+    name: 'KPost Admin UI',
+    project: 'admin-ui',
+    paths: [],
+    hosts: ['ADMIN_UI_BASE_URL', 'ADMIN_API_BASE_URL', 'KPOST_API_BASE_URL'],
+    needs: ['kpost-login', 'kpost-admin'],
+    noRegression: 'product:kpost-admin-ui',
+  },
+};
+/** Dependency checks: a product's smoke, or just the KPost login smoke. */
+const CHECKS = {
+  'kpost-login': { name: 'KPost login', product: 'kpost-api', tags: ['@smoke', '@auth'] },
+  ...Object.fromEntries(
+    Object.keys(PRODUCTS).map((id) => [
+      id,
+      { name: PRODUCTS[id].name, product: id, tags: ['@smoke'] },
+    ]),
+  ),
+};
 
 const LEVELS = ['smoke', 'sanity', 'regression'];
 const MODULES = [
@@ -111,15 +164,21 @@ const MODULES = [
   'user-management',
   'verticals',
   'platform',
-  // Sanity only: the Admin API + Admin UI stages.
-  'admin',
 ];
 if (!LEVELS.includes(level)) {
   console.error(`--level must be one of ${LEVELS.join('|')}`);
   process.exit(2);
 }
+if (productArg && !PRODUCTS[productArg]) {
+  console.error(`--product must be one of ${Object.keys(PRODUCTS).join('|')}`);
+  process.exit(2);
+}
 if (moduleArg && !MODULES.includes(moduleArg)) {
   console.error(`--module must be one of ${MODULES.join('|')}`);
+  process.exit(2);
+}
+if ((moduleArg || bugArg) && !productArg) {
+  console.error('--module and --bug need a --product');
   process.exit(2);
 }
 
@@ -267,14 +326,9 @@ const regressionInvert = () =>
     ? '@quarantine|@framework'
     : '@quarantine|@destructive|@framework';
 
-/** The KPost hosts every level needs. */
-const KPOST_HOST_VARS = ['BASE_URL', 'KPOST_API_BASE_URL', 'KMAIL_API_BASE_URL'];
-/** The Admin hosts, checked only for the Admin smoke stages (a down Admin box never stops KPost). */
-const ADMIN_HOST_VARS = ['ADMIN_API_BASE_URL', 'ADMIN_UI_BASE_URL'];
-
 /**
  * Lists the hosts that do not answer. Any HTTP answer counts (even a 404); only a network error or
- * timeout does, so an outage is reported as ENVIRONMENT DOWN instead of a failed smoke.
+ * timeout does, so an outage is reported as ENVIRONMENT DOWN instead of a failed check.
  */
 async function environmentReachable(hostVars) {
   const down = [];
@@ -290,215 +344,112 @@ async function environmentReachable(hostVars) {
   return down;
 }
 
-// Smoke is selected by the @smoke tag alone (reserved for the curated smoke specs). The KPost gate
-// leaves Admin out; Admin has its own stages below.
-function smokeGate() {
-  // API smoke, then UI smoke; stop at the first failing suite.
-  if (suiteArg === 'all' || suiteArg === 'api') {
-    if (
-      runPlaywright({
-        label: 'SMOKE · API',
-        suite: 'api',
-        project: 'api',
-        grep: '@smoke',
-        grepInvert: `${SMOKE_INVERT}|@admin`,
-      }) !== 0
-    )
-      return false;
-  }
-  if (suiteArg === 'all' || suiteArg === 'ui') {
-    if (
-      runPlaywright({
-        label: 'SMOKE · UI',
-        suite: 'ui',
-        project: 'chromium',
-        grep: '@smoke',
-        grepInvert: SMOKE_INVERT,
-      }) !== 0
-    )
-      return false;
-  }
-  return true;
+/** One stage of one product: its project and folder, plus the level's tags. */
+function runStage(label, productId, tags, invert, { onlyIf = true } = {}) {
+  if (!onlyIf) return 0;
+  const product = PRODUCTS[productId];
+  return runPlaywright({
+    label,
+    suite: productId,
+    project: product.project,
+    paths: product.paths,
+    grep: tags.length > 1 ? and(...tags) : tags[0],
+    grepInvert: invert,
+  });
 }
+
+/** Dependency results within this invocation, so `product:all`-style runs check each one once. */
+const checked = new Map();
+function dependencyPasses(checkId) {
+  // The login check is part of the KPost API smoke: a passed smoke already proves it.
+  if (checkId === 'kpost-login' && checked.get('kpost-api') === true) return true;
+  if (!checked.has(checkId)) {
+    const check = CHECKS[checkId];
+    const code = runStage(`CHECK · ${check.name} works`, check.product, check.tags, SMOKE_INVERT);
+    checked.set(checkId, code === 0);
+  }
+  return checked.get(checkId);
+}
+
+const VERDICT = { pass: 0, fail: 1, down: 4, blocked: 5 };
 
 /**
- * The Admin smoke stages (never part of the regression gate). Both run even when one fails.
- * Returns 'pass' | 'fail' | 'down'.
+ * One product through one level:
+ *   1. its own hosts answer (else ENVIRONMENT DOWN — nothing was tested);
+ *   2. what it depends on works (else BLOCKED, naming the broken dependency — not this product's fault);
+ *   3. smoke: its smoke. sanity / regression: its smoke first, then the level.
  */
-async function adminSmoke() {
-  const down = await environmentReachable(ADMIN_HOST_VARS);
+async function runProduct(productId) {
+  const product = PRODUCTS[productId];
+  console.log(`\n═══ ${level.toUpperCase()} · ${product.name} ═══`);
+  const down = await environmentReachable(product.hosts);
   if (down.length) {
     console.error(
-      `\n⚠ ENVIRONMENT DOWN (Admin) — the Admin test deployment did not answer, so the Admin smoke did not run:\n  ${down.join('\n  ')}`,
+      `⚠ ENVIRONMENT DOWN — ${product.name} was not tested; these hosts did not answer:\n  ${down.join('\n  ')}`,
     );
-    return 'down';
+    return { productId, verdict: 'down', reason: down.join('; ') };
   }
-  let passed = true;
-  if (suiteArg === 'all' || suiteArg === 'api')
-    passed =
-      runPlaywright({
-        label: 'SMOKE · Admin API',
-        suite: 'admin-api',
-        project: 'api',
-        grep: and('@smoke', '@admin'),
-        grepInvert: SMOKE_INVERT,
-      }) === 0 && passed;
-  if (suiteArg === 'all' || suiteArg === 'ui')
-    passed =
-      runPlaywright({
-        label: 'SMOKE · Admin UI',
-        suite: 'admin-ui',
-        project: 'admin-ui',
-        grep: and('@smoke', '@admin'),
-        grepInvert: SMOKE_INVERT,
-      }) === 0 && passed;
-  return passed ? 'pass' : 'fail';
+  for (const need of product.needs) {
+    // A product's own smoke is not its dependency; the login check is part of the KPost API smoke.
+    if (need === 'kpost-login' && productId === 'kpost-api') continue;
+    if (!dependencyPasses(need)) {
+      const reason = `${CHECKS[need].name} is not working, so ${product.name} cannot be judged`;
+      console.error(`⚠ BLOCKED — ${reason}.`);
+      return { productId, verdict: 'blocked', reason };
+    }
+  }
+  const smoke = checked.has(productId)
+    ? checked.get(productId)
+      ? 0
+      : 1
+    : runStage(`SMOKE · ${product.name}`, productId, ['@smoke'], SMOKE_INVERT);
+  checked.set(productId, smoke === 0);
+  if (level === 'smoke') return { productId, verdict: smoke === 0 ? 'pass' : 'fail' };
+  if (smoke !== 0) {
+    console.error(`✗ ${product.name} smoke failed — ${level} not started.`);
+    return { productId, verdict: 'fail', reason: 'smoke failed' };
+  }
+  let code;
+  if (level === 'sanity') {
+    const tags = bugArg
+      ? [`@bug-${bugArg}`]
+      : moduleArg
+        ? ['@sanity', `@${moduleArg}`]
+        : ['@sanity'];
+    const scope = bugArg ? `bug #${bugArg}` : (moduleArg ?? 'all modules');
+    code = runStage(`SANITY · ${product.name} · ${scope}`, productId, tags, SMOKE_INVERT);
+  } else if (product.noRegression) {
+    // Admin tests carry @smoke/@sanity, never @regression: their full check is the product run.
+    console.log(
+      `  ${product.name} has no @regression tests by design; its full check is \`npm run ${product.noRegression}\`.`,
+    );
+    return {
+      productId,
+      verdict: 'pass',
+      reason: `smoke only; full check: npm run ${product.noRegression}`,
+    };
+  } else {
+    code = runStage(`REGRESSION · ${product.name}`, productId, ['@regression'], regressionInvert());
+  }
+  return { productId, verdict: code === 0 ? 'pass' : 'fail' };
 }
 
-let ok = true;
 if (!lintGate()) {
   console.error('\n✗ lint:tags failed — fix tags before running any level.');
   process.exit(1);
 }
 
-// Exit code 4 = ENVIRONMENT DOWN: nothing was tested, so it is neither a pass nor a product failure.
-const unreachable = await environmentReachable(KPOST_HOST_VARS);
-if (unreachable.length) {
-  console.error(
-    `\n⚠ ENVIRONMENT DOWN — the test deployment did not answer, so no test was run:\n  ${unreachable.join('\n  ')}\n` +
-      '  This is an environment condition (network, server or DNS), NOT a product defect. Re-run when it answers.',
-  );
-  process.exit(4);
-}
-
-let adminDown = false;
-if (level === 'smoke') {
-  // KPost first (the gate), then Admin in its own stages whatever KPost's result: two products, two verdicts.
-  ok = smokeGate();
-  const admin = await adminSmoke();
-  adminDown = admin === 'down';
-  ok = ok && admin !== 'fail';
-} else if (level === 'sanity') {
-  // No --module and no --bug = FULL sanity: every module's @sanity set on both suites, then Admin.
-  // Precondition: auth smoke must pass first.
-  console.log('— sanity precondition: auth smoke —');
-  const pre =
-    runPlaywright({
-      label: 'SMOKE · auth (API)',
-      suite: 'api',
-      project: 'api',
-      grep: and('@smoke', '@auth'),
-      grepInvert: SMOKE_INVERT,
-    }) === 0 &&
-    runPlaywright({
-      label: 'SMOKE · auth (UI)',
-      suite: 'ui',
-      project: 'chromium',
-      grep: and('@smoke', '@auth'),
-      grepInvert: SMOKE_INVERT,
-    }) === 0;
-  if (!pre) {
-    console.error('\n✗ auth smoke precondition failed — stopping.');
-    process.exit(1);
-  }
-  if (bugArg) {
-    ok =
-      runPlaywright({
-        label: `SANITY · bug #${bugArg}`,
-        suite: suiteArg === 'all' ? 'api' : suiteArg,
-        project: 'api',
-        grep: `@bug-${bugArg}`,
-        grepInvert: SMOKE_INVERT,
-      }) === 0;
-    // a bug fix may be UI; also sweep chromium.
-    ok =
-      runPlaywright({
-        label: `SANITY · bug #${bugArg} (UI)`,
-        suite: 'ui',
-        project: 'chromium',
-        grep: `@bug-${bugArg}`,
-        grepInvert: SMOKE_INVERT,
-      }) === 0 && ok;
-  } else {
-    // Every stage runs even when an earlier one failed: sanity's job is to say WHICH areas broke.
-    const full = !moduleArg;
-    const scope = full ? 'all modules' : moduleArg;
-    if (moduleArg !== 'admin') {
-      const grep = full ? '@sanity' : and('@sanity', `@${moduleArg}`);
-      // Admin tests share the `api` project; they run in their own stage below.
-      const grepInvert = `${SMOKE_INVERT}|@admin`;
-      if (suiteArg === 'all' || suiteArg === 'api')
-        ok =
-          runPlaywright({
-            label: `SANITY · ${scope} (API)`,
-            suite: 'api',
-            project: 'api',
-            grep,
-            grepInvert,
-          }) === 0 && ok;
-      if (suiteArg === 'all' || suiteArg === 'ui')
-        ok =
-          runPlaywright({
-            label: `SANITY · ${scope} (UI)`,
-            suite: 'ui',
-            project: 'chromium',
-            grep,
-            grepInvert,
-          }) === 0 && ok;
-    }
-    if (full || moduleArg === 'admin') {
-      if (suiteArg === 'all' || suiteArg === 'api')
-        ok =
-          runPlaywright({
-            label: 'SANITY · Admin (API)',
-            suite: 'admin-api',
-            project: 'api',
-            grep: and('@sanity', '@admin'),
-            grepInvert: SMOKE_INVERT,
-          }) === 0 && ok;
-      if (suiteArg === 'all' || suiteArg === 'ui')
-        ok =
-          runPlaywright({
-            label: 'SANITY · Admin (UI)',
-            suite: 'admin-ui',
-            project: 'admin-ui',
-            grep: and('@sanity', '@admin'),
-            grepInvert: SMOKE_INVERT,
-          }) === 0 && ok;
-    }
-  }
-} else if (level === 'regression') {
-  console.log('— regression gate: full smoke must pass first —');
-  if (!smokeGate()) {
-    console.error('\n✗ smoke gate failed — regression not started.');
-    process.exit(1);
-  }
-  const inv = regressionInvert();
-  if (suiteArg === 'all' || suiteArg === 'api')
-    ok =
-      runPlaywright({
-        label: 'REGRESSION · API',
-        suite: 'api',
-        project: 'api',
-        grep: '@regression',
-        grepInvert: inv,
-      }) === 0 && ok;
-  if (suiteArg === 'all' || suiteArg === 'ui')
-    ok =
-      runPlaywright({
-        label: 'REGRESSION · UI',
-        suite: 'ui',
-        project: 'chromium',
-        grep: '@regression',
-        grepInvert: inv,
-      }) === 0 && ok;
-}
+const results = [];
+for (const id of productArg ? [productArg] : Object.keys(PRODUCTS))
+  results.push(await runProduct(id));
 
 const throttled = reportThrottle();
-console.log(`\n${ok ? '✓' : '✗'} ${level} finished — reports under reports/${level}/`);
-if (throttled && !ok)
-  console.error(
-    '  (note: some/all failures above may be the login-throttling environment condition)',
-  );
-// A passing KPost smoke with an unreachable Admin box is not a pass: exit 4 (ENVIRONMENT DOWN).
-process.exit(!ok ? 1 : adminDown ? 4 : 0);
+console.log(`\n═══ ${level} — one verdict per product (reports under reports/${level}/) ═══`);
+const WORDS = { pass: 'PASSED ', fail: 'FAILED ', down: 'ENV DOWN', blocked: 'BLOCKED ' };
+for (const r of results)
+  console.log(`  ${WORDS[r.verdict]}  ${PRODUCTS[r.productId].name.padEnd(16)} ${r.reason ?? ''}`);
+if (throttled && results.some((r) => r.verdict === 'fail'))
+  console.error('  (note: some failures above may be the login-throttling environment condition)');
+// Worst verdict wins: a failure beats an outage or a block, which beat a pass.
+const worst = ['fail', 'blocked', 'down', 'pass'].find((v) => results.some((r) => r.verdict === v));
+process.exit(VERDICT[worst]);

@@ -24,12 +24,27 @@ cheap SMOKE-profile projection of what regression already runs in depth, so they
 
 ## 2a. What smoke covers
 
-`npm run test:smoke` checks first that the test deployment answers at all (exit code **4 = ENVIRONMENT
-DOWN**, nothing run, not a product failure), then runs the API smoke and, if it passed, the UI smoke.
-Every in-scope KPost module is covered on both layers, within the budget of 3 smoke tests per module
-per suite (`lint:tags` enforces it). Then the **Admin smoke** runs in its own two stages (Admin API, Admin UI),
-whatever the KPost result, so the two products get two verdicts. An unreachable Admin box is reported as
-ENVIRONMENT DOWN (Admin) and never blocks the KPost smoke or the regression gate.
+Each level runs **one product at a time**, because each product has its own host and is deployed on its
+own schedule. A product's level runs in this order and stops at the first step that cannot pass:
+
+1. **Its hosts answer** (exit code **4 = ENVIRONMENT DOWN**: nothing was tested, not a product failure).
+2. **What it depends on works** (exit code **5 = BLOCKED**, naming the broken dependency, so a KMail outage
+   is not reported as a pile of KPost UI failures):
+
+   | Product         | Hosts it needs                  | Must pass first                    |
+   | --------------- | ------------------------------- | ---------------------------------- |
+   | KPost API       | KPost API                       | —                                  |
+   | KMail API       | KMail API, KPost API            | KPost login (KMail uses its token) |
+   | KPost Admin API | Admin API, KPost API            | KPost login (Admin uses its token) |
+   | KPost UI        | front end, KPost API, KMail API | KPost API smoke + KMail API smoke  |
+   | KPost Admin UI  | Admin UI, Admin API, KPost API  | KPost login + Admin API smoke      |
+
+3. **Its own smoke.** For sanity and regression, smoke must pass before the level starts.
+4. **The level** (`@smoke`, `@sanity` or `@regression` within that product's folder or browser project).
+
+Without a product (`npm run test:smoke`), all five run in that order, each dependency is checked once,
+and the summary gives one verdict per product. Every in-scope KPost module is covered on both layers,
+within the budget of 3 smoke tests per module per suite (`lint:tags` enforces it).
 
 ```
 tests/support/smoke/
@@ -74,8 +89,8 @@ is open.
 
 ## 2b. What full sanity covers
 
-`npm run test:sanity` (no arguments) runs four stages, Chromium only, dry-run, and keeps going after a
-failing stage so one run names every broken area:
+`npm run test:sanity` (no product) runs every product in turn, Chromium only, dry-run, and keeps going after
+a failing product so one run names every broken area. What each product's sanity holds:
 
 | Stage         | What runs                                                                                                                                                                                                                                                                                                                                               | Where it comes from                                                                                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -154,25 +169,25 @@ test.describe('KPost Katchup · recall', { tag: [TAGS.ui, TAGS.katchup, TAGS.reg
 ## 3. How to run
 
 ```bash
-npm run test:smoke                 # API smoke, then UI smoke (stops at first failing suite)
-npm run test:smoke:api             # API smoke only
-npm run test:smoke:ui              # UI smoke only
+npm run test:smoke:kpost-api          # one product (also kmail-api, kpost-admin, kpost-ui, kpost-admin-ui)
+npm run test:sanity:kpost-ui
+npm run test:regression:kmail-api
 
-npm run test:sanity                        # FULL sanity: auth smoke, then KPost API, KPost UI, Admin API, Admin UI
-npm run test:sanity -- --suite api         # full sanity, API stages only (KPost + Admin)
-npm run test:sanity -- --module katchup    # auth smoke precondition, then @sanity + @katchup
-npm run test:sanity -- --module admin      # auth smoke precondition, then the two Admin stages
-npm run test:sanity -- --bug 1267          # auth smoke precondition, then @bug-1267
+npm run test:sanity:kpost-ui -- --module katchup    # one module of a product: @sanity + @katchup
+npm run test:sanity:kpost-api -- --bug 1267         # one bug's tests: @bug-1267
 
-npm run test:regression            # full smoke gate, then the full @regression suite
-npm run test:regression:ui         # regression, UI suite only
+npm run test:smoke                    # every product in order, one verdict each (same for sanity, regression)
 ```
+
+Admin tests carry `@smoke`/`@sanity`, never `@regression`: `test:regression:kpost-admin` and
+`:kpost-admin-ui` run the smoke and point to the full check, `product:kpost-admin` / `product:kpost-admin-ui`.
 
 Every level **lints tags first** and runs with `BUGZILLA_DRY_RUN=true` — **no run level files bugs**.
 Real filing stays in the reviewed workflow (`npm run report:filing`, `bug:file-reviewed`,
 `file-approved.cjs`). The runner prints where each dry-run report was written.
 
-Flags: `--level smoke|sanity|regression`, `--suite api|ui|all`, `--module <name>`, `--bug <BugzillaID>`.
+Flags: `--level smoke|sanity|regression`, `--product <id>`, `--module <name>`, `--bug <BugzillaID>`
+(`--module` and `--bug` need a product). Exit codes: 0 passed · 1 failed · 4 environment down · 5 blocked.
 
 ## 4. Server safety & the production guard
 

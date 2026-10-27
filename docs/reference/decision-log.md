@@ -3,7 +3,32 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — tests/ reorganised: one folder per Bugzilla product
+### 2026-10-27 (latest) — Smoke, sanity and regression per product, with dependency gates
+
+Owner: "the five products have separate URLs and deploy at different times, so each needs its own
+smoke/sanity/regression command; KMail is a KPost feature on its own URL; the KPost UI integrates the KPost
+and KMail APIs as one app — align the flow".
+
+- **Before:** each level ran shared stages selected by Playwright project + tag: KPost API and KMail API
+  always ran together (one verdict), the host check always needed the KPost hosts, and regression had no
+  Admin UI stage.
+- **Now:** `test:<level>:<product>` for the five products (and `test:<level>` = all, in order).
+  `scripts/run-level.mjs` runs one product: its own hosts (exit 4 = environment down) → its dependencies
+  (exit 5 = blocked, naming which) → its smoke → the level, within its folder/project. Dependencies follow
+  how the apps connect: KMail API and Admin API need the KPost login (they accept its token); the KPost UI
+  needs the KPost API and KMail API smoke (it is built on both); the Admin UI needs the KPost login and the
+  Admin API smoke. In an all-products run each dependency is checked once. `--suite` and `--module admin`
+  are gone (the product replaces them); `--module`/`--bug` now narrow within a product.
+- **Same tests, split:** listing every old stage against the new product stages: smoke 52 = 52, sanity
+  2,816 = 2,816, regression 7,421 = 7,421, nothing missing or added. Engine-generated cases report the
+  shared helper as their location, so products are selected by spec folder (Playwright's path filter),
+  not by test location.
+- **Admin has no regression set** (its tests carry `@smoke`/`@sanity`, never `@regression`, by design), so
+  `test:regression:kpost-admin`/`:kpost-admin-ui` run the smoke and point to `product:kpost-admin(-ui)`.
+- Verified offline: argument errors, and `test:smoke:kpost-admin` reporting ENVIRONMENT DOWN (exit 4,
+  nothing run) while 192.168.11.11 is unreachable. `check` and `framework` (339) pass.
+
+### 2026-10-27 — tests/ reorganised: one folder per Bugzilla product
 
 Owner: "five products in one bench; every product's tests in a clear structure, not mixed".
 
