@@ -3,12 +3,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * Settings · Data Storage panel (`DataStorage.js`) — one real, non-destructive GET
- * (`GetKlouDUsedDataList` -> `GET /kmailData/getKloudUsedData`, fired only when the "KPOST Cloud
- * Storage" radio is selected) plus a mostly-decorative "buy more storage" UI whose purchase buttons
- * are confirmed from source to be dead: the top-level "Buy" button and every plan's "Buy Monthly"
- * link have no `onClick` at all; only "Buy Yearly" opens a modal, and that modal's only action is
- * "Cancel" — there is no real purchase path to protect against, it simply doesn't exist yet.
+ * Settings › Data Storage: the KPOST Cloud Storage usage GET, and the purchase buttons, which have no
+ * handlers (only "Buy Yearly" opens a modal whose only action is Cancel).
  */
 test.describe(
   'KPost Settings · Data Storage panel',
@@ -78,11 +74,8 @@ test.describe(
       await settingsPage.goto();
       await settingsPage.openPanel('General Settings', 'Data Storage');
 
-      // Reach the plans view. Until 2026-10-11 any non-KPOSTCLOUD radio surfaced the plan rows; now
-      // neither the radios nor the panel's "Buy" button (confirmed handler-less by the test above)
-      // opens them — the plans are only reachable on /kcloud (kcloud.spec.ts covers that modal). When
-      // the rows never appear here, this is recorded, not failed: the panel's own purchase path being
-      // dead is the finding of the "Buy" test above, not a second one.
+      // The plan rows are now reachable only on /kcloud (kcloud.spec.ts); when they never appear here
+      // it is recorded, not failed, since the dead "Buy" button is the test above's finding.
       await page.getByRole('button', { name: /^Buy$/i }).first().click();
       const rows = await page
         .getByText(/Buy Yearly/i)

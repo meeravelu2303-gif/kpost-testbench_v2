@@ -3,11 +3,8 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 
 /**
- * KCloud (`/kcloud`) — confirmed from source: the left rail reuses Katchup's own shared
- * `Recent`/`Contact` components (already covered by `katchup*.spec.ts`/`contacts*.spec.ts`, not
- * re-tested here), so `KCloudStorage.js` is this module's entire unique surface. It has NO backend at
- * all (pure `useState`, no `Services`/`fetch`/`axios` import) — every "buy more storage" control is
- * either a dead button (no `onClick`) or a local-only modal round trip. Safe to fully drive.
+ * KCloud (/kcloud) storage screen. It has no backend: every control is either handler-less or a
+ * local-only modal round trip, so it is safe to drive fully.
  */
 test.describe('KPost KCloud — storage panel', { tag: ['@ui', '@verticals', '@regression'] }, () => {
   test.skip(
@@ -41,9 +38,7 @@ test.describe('KPost KCloud — storage panel', { tag: ['@ui', '@verticals', '@r
       'the app-data breakdown view renders',
     ).toBeVisible({ timeout: 10_000 });
 
-    // Listen only from here: the screen's own data loads (POSTs on mount and on the Documents
-    // switch) must not be mistaken for the buttons doing something. A WRITE to the API after the
-    // clicks is the only thing that would mean a handler exists; background polls are excluded.
+    // Listen only from here so the screen's own loads don't count; background polls are excluded.
     const fired: string[] = [];
     page.on('request', (req) => {
       const url = req.url();
@@ -58,7 +53,7 @@ test.describe('KPost KCloud — storage panel', { tag: ['@ui', '@verticals', '@r
       .getByText(/Clear By Date/i)
       .first()
       .click();
-    // Both buttons are confirmed handler-less; give a request one second to appear, no longer.
+    // Both buttons are handler-less; give a request one second to appear, no longer.
     await page
       .waitForRequest((r) => r.method() !== 'GET' && !/health|katchupDashboardMsg/.test(r.url()), {
         timeout: 1_000,
@@ -84,8 +79,7 @@ test.describe('KPost KCloud — storage panel', { tag: ['@ui', '@verticals', '@r
     let requestFired = false;
     page.on('request', (req) => {
       const url = req.url();
-      // Only a WRITE to the API would be this button (or the local-only "buy" flow) doing something;
-      // background GETs must not count as "the button fired".
+      // Only a write counts as the button firing; background GETs do not.
       if (
         req.method() === 'GET' ||
         url.includes('/health') ||
@@ -96,7 +90,7 @@ test.describe('KPost KCloud — storage panel', { tag: ['@ui', '@verticals', '@r
       requestFired = true;
     });
 
-    // "Buy Monthly" is confirmed dead (no onClick) — clicking it must do nothing.
+    // "Buy Monthly" has no onClick: clicking it must do nothing.
     await page
       .getByText(/Buy Monthly/i)
       .first()
@@ -118,7 +112,7 @@ test.describe('KPost KCloud — storage panel', { tag: ['@ui', '@verticals', '@r
       timeout: 10_000,
     });
 
-    // Confirmed local-only "purchase" round trip — no real payment gateway, no network call.
+    // A local-only "purchase": no payment gateway, no network call.
     await page.getByAltText('wallet').first().click();
     await expect(
       page.getByText(/Payment SuccessFul/i).first(),

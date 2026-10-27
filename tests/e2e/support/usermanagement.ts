@@ -2,22 +2,8 @@ import { expect } from '@fixtures';
 import type { Locator, Page } from '@playwright/test';
 
 /**
- * Shared navigation for the BUSINESS_S company-admin **User Management** screen (`/usermanagement`)
- * and its "Add Manually" member form. Three specs (`usermanagement*.spec.ts`) used to carry their
- * own copy of this flow, each padded with fixed sleeps and a forced click on the zero-width
- * `react-select__input`; all three now share this one, which waits on what the screen actually does.
- *
- * Re-tuned live on the test deployment, 2026-10-10. What the form looks like today:
- *
- *  - Designation is an async-search react-select. Its `<input>` is 4px wide (why the old specs had
- *    to force-click it); the surrounding `.react-select__control` is the real 500px-wide target.
- *  - Choosing a Designation auto-fills two read-only fields (a display name and a unique name
- *    derived from company + designation) and enables Mobile No.
- *  - Mobile No's placeholder is now "Enter 10-digit Mobile No (country code optional)"; the old
- *    "Enter Mobile No with Country Code" selector matched nothing, which is why the collision test
- *    had been skipping with "the Mobile No field did not enable".
- *
- * Every helper stops short of ADD: completing the form provisions a real member account.
+ * Navigation for the BUSINESS_S User Management screen (`/usermanagement`) and its "Add Manually"
+ * member form. Every helper stops short of ADD: completing the form provisions a real member account.
  */
 
 /** Tolerates both wordings seen on the field, but never matches "Enter Second Mobile No". */
@@ -33,16 +19,12 @@ export async function openUserManagement(page: Page): Promise<void> {
     page.getByText(/Business User Management/i).first(),
     'the User Management workspace renders',
   ).toBeVisible({ timeout: 20_000 });
-  // The licence summary is rendered from the company data the screen fetches after mount. Until it
-  // is there, the "Add New N Channels" button is still being re-rendered with its count, and a click
-  // on it can be lost (seen live 2026-10-10: the chooser never opened, passed on retry).
+  // Until the licence summary loads, the "Add New N Channels" button re-renders and a click can be lost.
   await expect(
     page.getByText(/Total Licenses|Free Licenses|Channels/i).first(),
     'the licence / channel summary has loaded',
   ).toBeVisible({ timeout: 20_000 });
-  // Seen live 2026-10-10 (1 of 4 openings): the screen rendered, then the app itself navigated to
-  // /home, and the next click landed on the Home screen. Pinning the route here makes that bounce
-  // report as what it is, not as "the chooser did not open".
+  // The app can bounce to /home after rendering; pin the route so that reports as itself.
   await expect(page, 'still on the User Management route').toHaveURL(/\/usermanagement/);
 }
 
@@ -101,16 +83,11 @@ export async function chooseDesignation(page: Page, modal: Locator, name: string
   ).toHaveText(name);
 }
 
-/**
- * Waits for the CSS transitions/animations running inside `root` (Bootstrap's modal fade, for one)
- * to finish — the honest replacement for "sleep a second so the modal has stopped moving" before an
- * axe scan or a screenshot.
- */
+/** Waits for CSS animations inside `root` (e.g. the modal fade) to finish, instead of a fixed sleep. */
 export async function settleAnimations(root: Locator): Promise<void> {
   await root
     .evaluate((el) => {
-      // Only finite animations can finish; a looping spinner would make this wait forever
-      // (found live 2026-10-10 when this was pointed at <body>). Capped as a second guard.
+      // Only finite animations can finish (a looping spinner never would); capped as a second guard.
       const finite = el
         .getAnimations({ subtree: true })
         .filter((a) => a.effect?.getTiming().iterations !== Infinity);

@@ -3,17 +3,9 @@ import { env } from '@config/env';
 import type { Browser } from '@playwright/test';
 
 /**
- * Opt-in session reuse across runs, to avoid re-logging-in every invocation — the main cause of login
- * throttling on the shared test environment (one run = several setup logins; repeated runs multiply them).
- *
- * Enabled only when `REUSE_SESSION=true`. It does NOT trust the file's age alone: a still-fresh
- * `storageState` can already be dead (the SPA enforces a single session / short token TTL, so a later
- * login elsewhere silently invalidates it). So it VALIDATES the stored session live — loads it into a
- * throwaway context, opens `/home`, and only reuses it if the authenticated shell renders (not the login
- * form). If the stored session is missing, past its TTL, or invalid, it returns false and the setup
- * re-logs-in — i.e. "re-login only when the session has expired".
- *
- * Default (flag unset) = current behaviour: always re-login. So this never affects a normal baseline run.
+ * Opt-in (REUSE_SESSION=true) reuse of a stored session, to avoid login throttling. A fresh file can
+ * already be dead (one session per account), so it opens /home and reuses the state only if the
+ * signed-in shell renders; otherwise it returns false and the setup logs in again.
  */
 export async function reuseValidSession(
   browser: Browser,

@@ -5,33 +5,9 @@ import { runSimultaneously } from '@utils/concurrency';
 import { bodyOf, describeResponses, identityOf, inconclusiveIfSerialized } from './support';
 
 /**
- * Two different accounts calling the same endpoint at the same instant must each get their own
- * data, and neither session may disturb the other.
- *
- * ## What it proves that `read-consistency` does not
- *
- * `concurrency.read-consistency` fires one caller's request many times and checks the answers
- * agree. That catches a shared buffer, but it cannot catch the fault that matters most here,
- * because every request carries the same token: if the handler leaks identity between sessions,
- * all the responses still look alike and the probe passes.
- *
- * This one sends **two different principals** together and asserts the opposite — that the
- * responses are correctly *different*, each matching its own caller. It is the multi-device,
- * multi-user question: a token cached at class level, an authentication filter storing the
- * principal in a static, a connection pooled with the wrong session attached.
- *
- * ## Why it can report SKIPPED, and why that is not a weakness
- *
- * It needs two configured principals for the endpoint's role. With one, there is no second session
- * and the probe reports SKIPPED with that reason. Reporting PASSED there would be a lie: the bench
- * would claim session isolation was verified on an environment where it was never exercised, and
- * that claim is exactly the kind a security review relies on.
- *
- * It also needs `concurrency.identityPaths`, because "each caller got their own data" is only
- * checkable against a field that states whose data it is. Without it the probe would be comparing
- * two bodies that differ for a dozen innocent reasons.
- *
- * Reads only — two accounts writing at once is a different experiment, and a destructive one.
+ * Two different accounts calling at once must each get their own data (catches identity leaking
+ * between sessions, which same-token probes cannot see). SKIPPED without two principals or
+ * `identityPaths`. Reads only.
  */
 export const sessionIsolationValidator = defineValidator({
   name: 'concurrency.session-isolation',
@@ -66,11 +42,7 @@ export const sessionIsolationValidator = defineValidator({
     const pair = candidates.slice(0, 2);
     const spec = await context.nextRequest();
 
-    /*
-     * Both requests carry the SAME payload and differ only in who is calling. That is the point:
-     * any difference in the two responses must come from the caller's identity, so a shared one is
-     * unambiguous evidence of a leak rather than a consequence of different inputs.
-     */
+    // Same payload, different callers: a shared identity in the responses can only be a leak.
     const burst = await runSimultaneously(pair.length, (index) => {
       const principal = pair[index];
       if (!principal) throw new Error(`no principal at index ${index}`);
@@ -112,11 +84,7 @@ export const sessionIsolationValidator = defineValidator({
           : 'one session was rejected while the other succeeded — a concurrent login appears to displace an existing session',
       },
       {
-        /*
-         * The core assertion. Two different accounts must not come back carrying one identity: that
-         * is one caller reading the other's record, and it is a data-leak defect rather than a
-         * consistency wobble — hence this validator's CRITICAL severity.
-         */
+        // Two accounts carrying one identity means one read the other's record (a CRITICAL leak).
         name: 'each session received its own identity',
         status: distinct.size === identities.length ? 'PASSED' : 'FAILED',
         expected: `${identities.length} distinct identities at ${identityPaths?.join(', ')}`,

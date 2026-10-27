@@ -6,20 +6,9 @@ import { KmailRepository } from '@database/repositories/kmail.repository';
 import { expect, test } from '@fixtures';
 
 /**
- * KMail mutation IDOR — can an outsider star or delete a mail they neither sent nor received?
- *
- * `setKmailAsImportant`/`kmailDelete` take a bare `kmailID`/`transactionID` and nothing else that
- * ties it to the caller — the same object-handle shape proven exploitable for KMail's attachment
- * routes (`attachment-idor.spec.ts`, bug #944) and for Group's `removeGroupMember` (#507). Before
- * this, KMail's mutation endpoints had zero IDOR coverage of any kind (see the 2026-10-03
- * ground-truth re-audit): the only real finding was the attachment-by-UUID one, on a different class
- * of endpoint (reads keyed by a file UUID, not these writes keyed by a transaction/mail id).
- *
- * ## The database is the judge
- *
- * Both endpoints answer SUCCESS regardless, so the verdict is the row: after the outsider's
- * attempt, the LEGITIMATE pair's `marked_by_*`/`deleted_by_*` flags in `TBL_KPOST_KMAIL_TRANSACTION`
- * must be unchanged — same discipline as `workflow-db.spec.ts`'s own lifecycle assertions.
+ * KMail mutation IDOR: can an outsider star or delete a mail they neither sent nor received, by
+ * kmailID or transactionID? Both answer SUCCESS regardless, so the verdict is the DB row: its
+ * marked_by_* / deleted_by_* flags must be unchanged.
  */
 const K = AUTH_PROFILES.kpost;
 const A = K.principals.find((p) => p.key === 'personal')!; // sender

@@ -2,14 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * **Profile** actions beyond the About edit (`profile-edit.spec.ts`, green): the three-dot menu
- * (Change Cover/Profile Picture · Share · Logout), the Share modal, and the section add flows
- * (Experience / Education). Selectors from `components/UserProfile/UserProfile.js` (see
- * `docs/ui/ui-screens.md`): three-dot `.icon-KP_144---More-Vertical.more_back`; sections `#Experience`
- * / `#Education` with add `.icon-KP_45-Add` and edit `.icon-KP_236_Edit`; profile-pic input `#ImgInput`.
- *
- * The menu-open and Share-modal checks are read-only (nothing is sent). The section add is gated behind
- * `PROFILE_UI_LIFECYCLE=true` and self-cleaning (delete the record it adds).
+ * /userprofile actions: the three-dot menu, the Share modal (read-only) and the Experience add modal
+ * (gated behind PROFILE_UI_LIFECYCLE).
  */
 test.describe(
   'KPost Profile — actions (read-only)',
@@ -69,12 +63,7 @@ test.describe(
       'needs a real live account',
     );
 
-    /**
-     * NEEDS-CODEGEN: the profile is a tabbed UI and the add/edit affordances are hover-revealed font-icons
-     * whose deployed selector differs from the source (`.icon-KP_45-Add` clicks time out even after
-     * selecting the Experience tab + hovering). The exact clickable element needs one interactive
-     * `codegen` pass to capture — the flow, gating and self-clean here are correct once the selector lands.
-     */
+    // Fragile selector: the hover-revealed .icon-KP_45-Add may differ on the deployed build.
     test('open the Experience add modal from the section @ui', async ({ page }) => {
       await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
       await page
@@ -82,7 +71,7 @@ test.describe(
         .waitFor({ state: 'hidden', timeout: 30_000 })
         .catch(() => undefined);
 
-      // The profile is a tabbed interface — select the Experience TAB so its section becomes visible.
+      // Select the Experience tab so its section becomes visible.
       await page
         .getByRole('tab', { name: /Experience/i })
         .first()
@@ -94,9 +83,7 @@ test.describe(
       await section.hover();
       await section.locator('.icon-KP_45-Add').first().click({ force: true });
 
-      // The add modal opens (a ModalComponent) — the reliable entry assertion.
-      // `.first()` on each side independently still lets `.or()` match 2 elements - wrap `.first()`
-      // around the combined OR instead.
+      // .first() wraps the combined .or(), or it can still match two elements.
       await expect(
         page.getByRole('dialog').or(page.locator('.modal-content')).first(),
         'the Experience add modal opens',

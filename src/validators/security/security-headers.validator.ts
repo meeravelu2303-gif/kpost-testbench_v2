@@ -11,8 +11,7 @@ export const securityHeadersValidator = defineValidator({
     'Security headers (nosniff, frame options, CSP, referrer policy, no-store, HSTS) are set',
   toggle: 'security',
   check: ({ primary }) => {
-    // No HTTP response means no headers to read. Judging that as "all headers missing" reopened a
-    // fixed bug (#1260) after a single dropped connection, while the live server sent every header.
+    // No HTTP response means no headers to judge, not "all headers missing".
     if (primary.transportError)
       return outcome.skipped('no HTTP response was received — headers cannot be judged');
     const required: [string, RegExp][] = Object.entries(apiConfig.securityHeaders);

@@ -3,13 +3,8 @@ import { expect, test } from '@fixtures';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * **Resilience** — the cross-cutting test type the production plan listed as absent: how the
- * front end behaves when the network or a backend call fails. The /writemail crash of 2026-10-10
- * (a 400 and a 500 from two KMail calls took the whole compose screen to the error boundary) is
- * exactly this class, found by accident; these tests look for it on purpose.
- *
- * The expectation in each case is the ordinary one: the shell still renders, no uncaught error, no
- * "Something went wrong" boundary, and the app recovers when the network does. Nothing is written.
+ * Resilience: when the network or a backend call fails, the shell still renders with no uncaught error
+ * or error boundary, and the app recovers when the network does. Nothing is written.
  */
 const BOUNDARY = /Something went wrong/i;
 

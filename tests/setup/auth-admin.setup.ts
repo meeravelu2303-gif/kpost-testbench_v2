@@ -5,18 +5,9 @@ import { testData } from '@config/test-data.config';
 import { test as setup } from '@fixtures';
 
 /**
- * Seeds the **Admin / HR-Setup UI** session (`kpostadmin.kpostindia.com`, a CoreUI SPA) for the
- * `admin-ui` project. That app has **no login screen of its own** — it is SSO'd by the same KPost
- * token, planted in this origin's `localStorage`, exactly as the app's own `Callback.js` does:
- *
- *   1. mint a BUSINESS_M token via the API (the admin module is business-tier only),
- *   2. GET `/v2/profile/getUserProfile/` — the app seeds `AuthUser` + `companyID` from `data.data`,
- *   3. write `accessToken`, `AuthUser`, `companyID` (+ the CoreUI light-theme key) on the admin origin,
- *   4. save the state.
- *
- * Only does the real seed when an admin-UI spec will run (`ADMIN_UI_LIFECYCLE=true`) AND BUSINESS_M
- * and the admin host are configured; otherwise it saves an anonymous state and the admin-UI specs
- * self-skip — so a normal run never touches the admin host.
+ * Seeds the Admin UI session. The app has no login screen: it is SSO'd by a BUSINESS_M KPost token
+ * planted in its localStorage, as its own Callback.js does. Without ADMIN_UI_LIFECYCLE=true and a
+ * configured host it saves an anonymous state and the Admin UI specs skip.
  */
 // eslint-disable-next-line playwright/expect-expect -- a setup step that saves a storage state; it has nothing to assert and self-skips when the Admin UI is not configured.
 setup('authenticate admin UI (BUSINESS_M SSO)', async ({ page, endpoints, log }) => {

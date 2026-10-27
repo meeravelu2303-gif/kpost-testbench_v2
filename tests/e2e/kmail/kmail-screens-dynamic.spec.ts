@@ -4,12 +4,7 @@ import { watchUiHealth } from '@ui/ui-health';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
-/**
- * The health/performance/layout counterpart to `kmail-accessibility.spec.ts`'s one dynamic state —
- * the compose form at `/writemail`, a DIFFERENT route from `/kmail` (which the generic sweep already
- * covers by default). Same `runUiChecks`/`watchUiHealth` machinery as every other dynamic-state file
- * this session.
- */
+/** Health, performance and layout checks for the KMail compose form (/writemail). */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 
 test.describe(

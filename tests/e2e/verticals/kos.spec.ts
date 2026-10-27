@@ -2,14 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * KOS (`/kdoc`) — the top-level tool picker (`KOS.js` + `ToolList/ToolList.js`). Confirmed from
- * source: 8 tools total, 4 genuinely built (K-AI, Kompose [=KWord], KPresenter, KAD Document) and 4
- * legitimate "coming soon" placeholders (K Spread Sheet, KNote, KBrochure, KWeb) — NOT stub bugs, an
- * intentionally unbuilt roadmap, confirmed by their own `comingSoon: true` flag in `KOS_TOOLS.js`.
- *
- * KPresenter is a special case: clicking its tool card does NOT mount the inline component —
- * `handleToolSelect` reads the account's token/kpostID and `window.open()`s an EXTERNAL presenter app
- * URL instead, or shows an error toast if the token is missing.
+ * KOS (/kdoc) tool picker: 4 built tools and 4 intentional "coming soon" placeholders. KPresenter
+ * opens an external app in a new window instead of mounting inline.
  */
 test.describe(
   'KPost KOS — tool picker',

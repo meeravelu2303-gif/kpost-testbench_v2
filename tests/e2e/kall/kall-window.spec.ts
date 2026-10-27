@@ -3,14 +3,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * `/kall-window` (`KallWindow.js`) — listed as a public/no-redirect route in `MenuRoutes.js`, but
- * confirmed from source to be AUTH-GATED AT THE COMPONENT LEVEL: it checks
- * `localStorage.accessToken`/the JWT `exp` claim itself and renders its own "Unauthorized" screen
- * rather than relying on the router-level redirect (so it can show that message in-page instead of
- * being bounced to `/login`). With no session, a stranger hitting this URL directly only ever reaches
- * the harmless Unauthorized state — no live-call functionality is exposed. Real call data comes from
- * a `BroadcastChannel`/`window.opener` (same-origin popup pattern, not fetchable directly), so this
- * suite never attempts to drive an actual call session.
+ * `/kall-window` checks the token itself and, with no session, shows its own "Unauthorized" screen
+ * instead of redirecting. Call data arrives via the opener window, so no call is driven here.
  */
 test.describe('KPost — /kall-window (no session)', { tag: ['@ui', '@kall', '@regression'] }, () => {
   test.use({ storageState: { cookies: [], origins: [] } });

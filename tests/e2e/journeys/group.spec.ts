@@ -6,19 +6,8 @@ import { createQaGroup, deleteQaGroup, type QaGroup } from '../support/groups';
 import { openSession, requireAccounts, requireFlags } from './support/journey';
 
 /**
- * JOURNEY 5 · A GROUP — a team talks in a Katchup group.
- *
- * C (the organizer, through the API — the proven `createQaGroup`) creates a group with A and B → A
- * finds the group in Katchup, opens it and posts to all members → B, in their own browser, opens the
- * group and sees A's post → C removes the members and deletes the group.
- *
- * Known open bug this journey runs into, by design (it asserts the correct behaviour): **#1343** —
- * opening a group thread fires an older-page request that answers 500, and the posted message may
- * never render. Until it is fixed this journey is expected to fail at "A posts".
- *
- * UNPROVEN STEP (first live run): in a group with several members the first Post click opens an
- * "All Members / Selected Members" choice (`group-post-targeting.spec.ts`); no spec has completed a
- * post through "All Members" yet.
+ * Journey 5: C creates a group with A and B via the API; A posts to all members; B sees the post; C
+ * cleans up. Known defect #1343: opening a group thread answers 500 and the post may never render.
  */
 test.describe(
   'JOURNEY 5 · a group',

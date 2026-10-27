@@ -2,18 +2,8 @@ import { expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 /**
- * react-select, driven the way a user drives it — without forced clicks or fixed waits.
- *
- * Why this exists (2026-10-11): a dozen specs clicked the PLACEHOLDER TEXT with `force: true` and
- * then slept 250–1000 ms before typing, because react-select's input container sits over the
- * placeholder and intercepts the pointer ("intercepts pointer events"). The reliable handle is the
- * control's own `<input>`: filling it opens the menu and filters it, and the option can then be
- * clicked normally. Every step is an actionability/visibility wait, never a timer.
- *
- *   - `reactSelectByPlaceholder(page, /Select Country/i)` → the `.react-select__control` showing
- *     that placeholder (or current value);
- *   - `pickReactSelect(control, 'India')` → type into its input, click the matching
- *     `.react-select__option`, and confirm the menu closed.
+ * react-select, driven without forced clicks or fixed waits: the input container covers the
+ * placeholder, so type into the control's own `<input>`, then click the matching option.
  */
 export function reactSelectByPlaceholder(page: Page, placeholder: RegExp | string): Locator {
   return page.locator('.react-select__control').filter({ hasText: placeholder }).first();

@@ -3,10 +3,8 @@ import { body } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint } from './kmail-endpoint';
 
 /**
- * KMail **settings** writes — signature (personal/company/graphics/style/social/template/full),
- * instant reply, customized saluations, letterhead, and the mail-count days limit. All change the
- * caller's own KMail preferences; **none is `productionSafe`** (gated `KMAIL_LIFECYCLE`,
- * self-restoring where a create/delete pair exists).
+ * KMail settings writes (signature, instant reply, saluations, letterhead, count limit). None is
+ * `productionSafe`.
  */
 const S = ['kmail-settings', 'settings'] as const;
 
@@ -68,12 +66,8 @@ export const deleteLetterHeadApi = w(
   { id: '' },
   'needs a real letterhead id',
 );
-/*
- * The COMPLETE documented payloads (KMAILAPI tab / openapi/kmail-api.openapi.json), reused by the
- * "full" signature below. Missing fields here previously caused false bugs — the API validated the
- * absent `emailId`/`mobileNumber` (etc.) and answered an error. Values are QA-safe and allowlisted:
- * `mobileNumber` uses our QA mobile, `emailId` our QA e-mail — never a real person's contact.
- */
+// The complete documented payloads (the API rejects missing fields), with our own QA mobile and
+// e-mail.
 const SIG_PERSONAL = {
   firstName: 'QA',
   lastName: 'Tester',

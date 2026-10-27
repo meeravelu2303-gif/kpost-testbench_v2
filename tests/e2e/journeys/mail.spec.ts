@@ -12,18 +12,8 @@ import {
 } from './support/journey';
 
 /**
- * JOURNEY 3 · A MAIL EXCHANGE — A and B correspond through KMail, in two real browsers.
- *
- * A composes a mail to B → B finds it in KMail, opens it and reads exactly what A wrote → B replies →
- * the reply is addressed back to A and points at the original → A opens the thread and reads B's
- * actual reply text → both delete the mail from their own side, in the UI.
- *
- * Known open bugs this journey runs into, by design (it asserts the correct behaviour):
- * #1348 — the opened mail can come back with an empty body; #1359 — opening is not always marked read.
- *
- * UNPROVEN STEP (first live run): deleting from the SENDER's side. The UI delete (ReplyIcon → More →
- * Delete) is proven for the receiver's copy (`kmail-features-e2e.spec.ts`); A's copy uses the same
- * menu but has not been recorded. Clean-up is best-effort and never fails the journey.
+ * Journey 3: A mails B, B reads and replies, A reads the reply, both delete in the UI (best-effort).
+ * Known defects #1348 (opened mail can have an empty body) and #1359 (opening not always marked read).
  */
 test.describe(
   'JOURNEY 3 · a mail exchange',

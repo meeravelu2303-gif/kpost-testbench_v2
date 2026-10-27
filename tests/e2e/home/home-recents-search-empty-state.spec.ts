@@ -2,14 +2,8 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '@fixtures';
 
 /**
- * Home — Recents / Recent Search empty state (reported manually 2026-10-13): "when there is no data
- * available, the 'No Data Found' message is not displayed" — the user sees a blank panel with no
- * explanation. Two ways the panel ends up empty, both must show a clear empty state:
- *   (a) an EMPTY load — the account simply has no recent messages, or
- *   (b) a client-side FILTER that matches nothing.
- *
- * Correct behaviour in both: a visible "No Data Found" (or equivalent) message, never a silent blank.
- * This is a frontend/UI bug (Recent.js / RecentMessage.js never calls setNodata(true) on empty).
+ * Home Recents must show a "No Data Found" message, never a blank panel, both for an empty load and
+ * for a search filter that matches nothing.
  */
 test.describe(
   'KPost Home · Recents shows an empty state, never a silent blank',
@@ -21,7 +15,6 @@ test.describe(
     const errorBanner = (page: Page) =>
       page.getByText(/unable to|something went wrong|failed to load|please try again/i).first();
 
-    // Re-verifying #1338 [KP-HOMENODATASTATE] post-deploy 2026-10-13: run live (un-fixme).
     test('an empty Recents list shows a "No Data" message, not a silent blank @ui', async ({
       homePage,
       page,

@@ -4,48 +4,9 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Admin **throwaway-member lifecycle** — closes the real testability gap behind 4 of
- * `docs/generated/blocked-endpoints.md`'s "Admin company-admin writes": `addingUserByAdmin`,
- * `createOrRemoveBackupAdmin`, `resetPassword`, `terminateUser`.
- *
- * ## Why these were blocked, and why that premise was wrong
- *
- * The module's own header comment said "there is no expendable member to safely act on" — but that
- * assumed a FIXED, pre-existing member had to be used (`businessMUser1KpostId`, a named fixture other
- * tests may rely on; `terminateUser` is explicitly PERMANENT). The fix is not finding an expendable
- * member — it's MINTING one with `addingUserByAdmin` itself, then `terminateUser`-ing it at the end,
- * exactly the self-cleaning lifecycle pattern used everywhere else in this bench.
- *
- * ## Payload shapes — measured from the real frontend, not guessed
- *
- * `addingUserByAdmin`'s full payload and the `kpostID` domain-derivation rule were read directly from
- * `UserManagement.js:319-349` and `:155-161`:
- *
- *     kpostID = `${localPart}.${domain}`
- *     domain  = admin.contactID.includes('@') ? admin.contactID.replace(/^[^.]*\./, '') : null
- *
- * i.e. strip the admin's own kpostID up to and including its first `.`. The remaining required
- * fields (`companyName`, `countryID`, `countryCode`, `country`, `state`) are the ADMIN's own
- * profile/company values (`Authuser.userProfile.*` in the frontend) — fetched live here from
- * `profile-user-profile-by-kpostid` (confirmed live 2026-10-02 to return `countryID`/`countryCode`
- * top-level and `userProfile.{country,state}`), not hardcoded, so this keeps working if the admin
- * account's own details ever change.
- *
- * ## Why this is safe to run — and why it still cannot run here
- *
- * Every write here targets ONLY the throwaway member this test creates in its own first step —
- * never `businessMUser1` or any other pre-existing fixture. `terminateUser` in `finally` removes it
- * permanently, same as the product intends for a real offboarded employee.
- *
- * **Confirmed live 2026-10-02: `ADMIN_MEMBER_LIFECYCLE=true` does NOT unblock this.** Every endpoint
- * here is `sideEffect: 'global'`, and `src/validation-engine/production-guard.ts` refuses ANY
- * `global` write on `TEST_ENV=production` unconditionally — no env var, including
- * `ALLOW_DESTRUCTIVE_TESTS`, grants anything on production, by deliberate design (see its own
- * comment: this is exactly the class of write "that must never run unattended" on a shared
- * production environment). This test is written and ready, but it will throw
- * `ProductionSafetyError` on this environment every time, by design, not by accident. It would run
- * if this suite ever pointed at a genuine non-production/staging environment — see
- * `docs/generated/blocked-endpoints.md`.
+ * Admin throwaway-member lifecycle: mint a member with addingUserByAdmin, toggle backup-admin, reset its
+ * password, terminate it in `finally`. Payload and kpostID domain rule follow UserManagement.js.
+ * Skipped: these are sideEffect 'global', which production-guard.ts refuses on TEST_ENV=production.
  */
 
 const ADMIN: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'business-m')!;
@@ -69,11 +30,6 @@ function throwawayMobile(): string {
 }
 
 test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
-  // Confirmed live 2026-10-02: every endpoint below is `sideEffect: 'global'`, which
-  // production-guard.ts refuses unconditionally on TEST_ENV=production, by deliberate design — no
-  // env var (ADMIN_MEMBER_LIFECYCLE included) can change that on THIS environment. This stays
-  // test.skip'd rather than left to fail with ProductionSafetyError every run; it will run as soon
-  // as this suite points at a genuine non-production/staging environment.
   test.skip(
     true,
     'PERMANENT on this environment: addingUserByAdmin/createOrRemoveBackupAdmin/resetPassword/' +

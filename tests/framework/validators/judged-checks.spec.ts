@@ -5,9 +5,8 @@ import { urlValidator } from '@validators/common/url.validator';
 import { fakeContext, fixtureEndpoint, verdict } from './support/validator-harness';
 
 /**
- * Findings a person ruled "not a defect" in Bugzilla (2026-10-22 sanity clean-up). Where the ruling was
- * "the check is wrong", the validator is fixed (#210/#665 emailId, #630 empty URL); where it was a product
- * decision on one endpoint (#830), the sanity check is skipped with the ruling — strictly.
+ * Findings a person ruled "not a defect": a wrong check is fixed in the validator; a product decision
+ * on one endpoint skips that exact sanity check, strictly.
  */
 test.describe('judged findings · validators and sanity', { tag: '@framework' }, () => {
   const respond = (body: unknown) =>

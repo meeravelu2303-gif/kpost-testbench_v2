@@ -3,14 +3,7 @@ import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import { body, pathParams } from '../kpost/kpost-endpoint';
 import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
-/**
- * Admin module — **Employee Data** (step 5: create the employee record) and the pincode→address
- * reference helper. See `docs/modules/admin-flow.md` §4.
- *
- *   employeeDetails/getEmployeeDetails    the company's employees (read, GET)
- *   employeeDetails/save|update|delete    the employee master record (gated writes)
- *   country/getAddressUsingPincodeAndCountry  reference lookup used by the employee address form
- */
+/** Admin Employee Data (read plus gated writes) and the pincode→address lookup. */
 
 export const adminEmployeeApis: EndpointDefinition[] = [
   defineAdminEndpoint({

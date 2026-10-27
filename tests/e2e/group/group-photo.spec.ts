@@ -4,18 +4,8 @@ import { expect, test } from '@fixtures';
 import { gotoKatchup, parkPointerAwayFromSideMenu } from '../support/katchup';
 
 /**
- * Group creation — **group photo select and crop** (FR-GC-004, FR-GC-005; Group FRD §6 "Group Photo
- * Selection — Photo Picker Sheet" / "Group Photo Editor").
- *
- * Read from source (`bubble/ContactList/ContactList.js`, `common/ImageCropper/ImageCropper.js`,
- * 2026-10-11): the Katchup list's Contacts tab has a "Create New Group" icon
- * (`.icon-KP_112-Group-Add` → `createGrp.modal`); the modal shows the photo placeholder
- * (`img.grpImg_Circle`, default icon) over a hidden `input#ImgInput[type=file][accept="image/*"]`
- * (`handleCreateGrpImg` → `readFile` → `setCropper(true)`); the "Image Cropper" modal (react-easy-crop,
- * `aspect={1}`, Cancel / Done) returns a cropped JPEG `File` via `getCroppedPic` → `createGrp.grpImg`,
- * which the placeholder then shows through `URL.createObjectURL` (a `blob:` src).
- *
- * The group is never created: the modal is closed after the photo is set, so nothing is written.
+ * Create New Group photo pick and crop (FR-GC-004/005): the hidden file input opens the Image
+ * Cropper, and Done sets the placeholder to a `blob:` image. The group is never created.
  */
 test.describe(
   'KPost Katchup · create group photo select + crop (FR-GC-004/005)',

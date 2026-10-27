@@ -3,21 +3,9 @@ import type { Principal } from '@config/auth.config';
 import { expect, test } from '@fixtures';
 
 /**
- * AWS **business-rule checks** for the two presign generators and the attachment-status check.
- * Not gated: minting a presigned URL creates no S3 object until something actually uploads to it,
- * and checking status is a pure read — both `productionSafe: true`, safe on every default run.
- *
- * `aws-generate-presigned` and `aws-katchup-presigned` are otherwise easy to mistake for the same
- * thing under two names: live-verified 2026-09-24, they mint keys under DIFFERENT S3 folders
- * (`.../Kmail/...` vs `.../Katchup/...`) — the module-scoping is the actual business rule, not just
- * "returns a URL".
- *
- * `aws-check-attachment`'s response shape looks at first glance like broken/leftover debug output
- * (`{"0": "...", "1": "...", "2": "...", "3": "...", "data": [...]}`) — the numeric keys are in fact
- * a status-code LEGEND the endpoint echoes on every call, and `data` is the real per-uuid result: an
- * array of `{uuid: statusCode}` entries. Live-verified: a uuid that was never presigned is simply
- * ABSENT from `data` (not an explicit "not found" code), while a uuid that was just presigned but not
- * yet uploaded to appears with code "1" ("folder created but file not uploaded").
+ * AWS business rules for the two presign generators (Kmail vs Katchup S3 folders) and check-attachment.
+ * Not gated: a presigned URL creates no S3 object. check-attachment's numeric keys are a status legend;
+ * `data` holds `{uuid: statusCode}` entries, and a never-presigned uuid is simply absent.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -66,11 +54,8 @@ test.describe(
       'a KMail attachment far beyond any platform limit (50 GB) is refused an upload URL',
       { annotation: [{ type: 'requirement', description: 'RTM-KMAIL-F02' }] },
       async ({ endpoints }) => {
-        // KMail FRD v1.8 (and Katchup FRD v1.9): "Maximum file attachment size per upload is bounded by
-        // platform-wide limits". The compose screen (WriteMailPage.handleSelectedFile) checks no size and
-        // uploads straight to S3 with the URL this endpoint mints from the declared fileSize, so this is
-        // the only place a limit can be enforced. The FRD names no number; 50 GB is beyond any plausible
-        // one. Nothing is uploaded — a presigned URL creates no S3 object on its own.
+        // The FRD bounds attachment size by platform limits, and the compose screen checks none, so the
+        // presign is the only place to enforce it. 50 GB is beyond any plausible limit; nothing is uploaded.
         const meta = (fileSize: string) => ({
           body: { extension: 'pdf', fileName: 'qa-bench.pdf', fileSize },
         });

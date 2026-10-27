@@ -3,28 +3,12 @@ import { text } from './kpost-assertions';
 import type { KmailMasterRecord, KmailTransactionRecord } from './repositories/kmail.repository';
 
 /**
- * Assertions for KMail's `'Y'` / `'N'` state columns.
- *
- * These exist separately from `kpostDb` because KMail encodes the same *ideas* differently from the
- * rest of the schema, and using the wrong reader is silently wrong rather than loudly wrong:
- *
- *  - Katchup's `deleted_by_sender` is a **tinyint** `0`/`1`. KMail's is a **char** `'Y'`/`'N'`.
- *  - `Number('N')` is `NaN`, so a numeric comparison never matches.
- *  - `Boolean('N')` is **`true`** — a non-empty string is truthy — so the obvious truthiness check
- *    reports every mail as deleted, starred and read at once, and every assertion built on it
- *    passes for the wrong reason.
- *
- * See `docs/modules/kmail-schema.md` for the full mapping and the sampled value distributions.
+ * Assertions for KMail's `'Y'`/`'N'` char state columns (Katchup uses tinyint 0/1). `Boolean('N')`
+ * is true, so a truthiness check would pass for the wrong reason. See
+ * `docs/modules/kmail-schema.md`.
  */
 
-/**
- * A KMail state column as a tri-state.
- *
- * `unknown` is not defensiveness: 107 rows on KPOST_QA hold a NUL byte (`'\u0000'`) in these
- * columns, which is neither set nor clear. Folding it into either would make a data-quality
- * artefact look like product behaviour — and it is the difference between "this mail was never
- * marked" and "we could not tell".
- */
+/** A KMail state column as a tri-state; `unknown` is a row holding a NUL byte. */
 export function kmailFlag(value: unknown): 'set' | 'clear' | 'unknown' {
   const raw = text(value);
   if (raw === undefined) return 'unknown';
@@ -65,14 +49,7 @@ export const kmailDb = {
     );
   },
 
-  /**
-   * The mail's subject is stored, and stored **encrypted**.
-   *
-   * Two checks in one because they are two halves of the same fact: something was persisted, and it
-   * is not the plaintext. Asserting equality with what was sent would fail on a healthy API — the
-   * column holds ciphertext the bench has no key for — so the meaningful assertion is the inverse,
-   * and it is a genuine security check rather than a workaround.
-   */
+  /** The subject is stored and is not the plaintext (it is ciphertext the bench cannot read). */
   subjectEncrypted(mail: KmailMasterRecord | undefined, plaintext: string): CheckDetail[] {
     const stored = text(mail?.kmail_subject);
     return [

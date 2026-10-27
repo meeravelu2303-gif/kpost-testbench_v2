@@ -4,11 +4,8 @@ import { body } from '../kpost-endpoint';
 import { defineKdiaryEndpoint } from './kdiary-endpoint';
 
 /**
- * KDiary **writes** — create / update / delete a schedule-event, add participants, set remarks, and
- * save / edit a report. Each modifies the caller's own diary and **none is `productionSafe`**; they
- * run through the gated feature flow (`KDIARY_LIFECYCLE=true`) with `allowLiveWrite`, self-cleaning
- * (create → … → delete). The `createEvent` shape is the live client's (`Diary.js`); the other bodies
- * are documented nowhere and are taken from it / inferred, each noted.
+ * KDiary writes on the caller's own diary (events, participants, remarks, reports). None is
+ * `productionSafe`; the self-cleaning KDIARY_LIFECYCLE flow drives them. Bodies follow `Diary.js`.
  */
 const WRITE_TAGS = ['kdiary-write'] as const;
 
@@ -99,10 +96,7 @@ export const addParticipantsApi = defineKdiaryEndpoint({
   summary: 'Add participants to a diary schedule',
   tags: [...WRITE_TAGS, 'participants'],
   destructive: true,
-  // Live client (Diary.js AddDiaryScheduleParticipants): the field is `eventID` (SINGULAR), not the
-  // `eventIds` array of updateScheduleRemarks — the earlier array shape is what produced the 400 on
-  // this endpoint. Verified against the frontend, 2026-09-18. `participants` is a list the app maps
-  // from selected contacts; a QA kpostID exercises the path.
+  // `eventID` is singular here (Diary.js), unlike updateScheduleRemarks' `eventIds` array.
   request: body(() => ({ eventID: 0, participants: [testData.victimKpostId] })),
   requestSchema: typesOnlySchema({ eventID: 0, participants: [testData.victimKpostId] }),
   note: 'live-client payload {eventID, participants}; needs a real eventID from createEvent',
@@ -114,10 +108,7 @@ export const updateRemarksApi = defineKdiaryEndpoint({
   path: '/dairySchedule/updateScheduleRemarks',
   summary: 'Set the remarks/status on a diary schedule',
   tags: [...WRITE_TAGS, 'remarks'],
-  /*
-   * The live client's shape (Diary.js): `{eventIds: [id], remarks, remarksDescription}` — `eventIds`
-   * is a plural ARRAY. `remarks` is a kdiaryRemarks code (1 = Completed).
-   */
+  // `eventIds` is an array; `remarks` is a kdiaryRemarks code (1 = Completed).
   destructive: true,
   request: body(() => ({ eventIds: [0], remarks: 1, remarksDescription: 'Completed by QA' })),
   requestSchema: typesOnlySchema({
@@ -134,12 +125,7 @@ export const saveReportApi = defineKdiaryEndpoint({
   summary: 'Save a diary report',
   tags: [...WRITE_TAGS, 'report'],
   destructive: true,
-  /*
-   * The workbook documents no body, and the field was originally guessed as `report` — live-verified
-   * 2026-09-24: the server accepts that silently (200) but the saved row's `taskReport` column stays
-   * null, confirmed against `getTodayReport` immediately after. The real field is `taskReport`,
-   * matching the exact key every read response already returns it under.
-   */
+  // The field is `taskReport`, the key the reads return; the server silently ignores `report`.
   request: body(() => ({ eventID: 0, taskReport: 'QA bench report' })),
   requestSchema: typesOnlySchema({ eventID: 0, taskReport: 'QA bench report' }),
   note: 'field is `taskReport`, not `report` (live-verified 2026-09-24 — see saveReportApi comment)',
@@ -152,14 +138,7 @@ export const editReportApi = defineKdiaryEndpoint({
   summary: "Edit today's diary report",
   tags: [...WRITE_TAGS, 'report', 'needs-id'],
   destructive: true,
-  /*
-   * Live-verified 2026-09-24: `eventID` is the wrong key entirely — the server answers 400 "Report id
-   * is required". It needs the REPORT's own `id` (the one `saveReport`/`getTodayReport` return, e.g.
-   * `{"data":{"id":10,"taskReport":…}}`), not the event's id, plus `taskReport` (not `report`) for
-   * the text — confirmed both by a 200 that echoed the new text back and by `getTodayReport`
-   * reflecting it afterward. `0` is never a real report id, so this needs a real one from a prior
-   * `saveReport` in the same lifecycle.
-   */
+  // Needs the report's own `id` from a prior saveReport (not the event id) plus `taskReport`.
   request: body(() => ({ id: 0, taskReport: 'QA bench report edited' })),
   requestSchema: typesOnlySchema({ id: 0, taskReport: 'QA bench report edited' }),
   note: 'needs the REPORT id (not eventID) from saveReport/getTodayReport; field is `taskReport`',

@@ -3,18 +3,8 @@ import { expect, test } from '@fixtures';
 import { answerForgotPasswordSmsLocally } from '../support/no-real-sms';
 
 /**
- * Login & session — the deeper screen behaviours beyond the two-step credential flow
- * (`login.spec.ts` covers empty/unknown/valid id + wrong password in one navigation).
- *
- * Split by the session they need:
- *  - **logged out** (`storageState` cleared): the Forgot-Password modal, the Sign-Up link, and the
- *    session-expiry redirect — all read-only and safe (the link's SMS request is answered in the
- *    browser, so no real SMS is sent; the test asserts the modal opens and stops).
- *  - **authenticated** (the shared `setup` session): logout.
- *
- * Selectors are from `src/components/auth/Login.js`: heading "Sign in to your account", the id field
- * `#username` (placeholder "Enter KPOST ID / Mobile number"), "Submit", "Forgot Password ?", "Sign Up",
- * and the Forgot-Password modal (title "Forgot Password", six OTP inputs).
+ * Login screen extras: session-expiry redirect, Forgot Password modal (SMS answered in the browser),
+ * the Sign Up link, and header logout (gated on LOGIN_UI_LIFECYCLE).
  */
 
 test.describe('KPost login screen · deeper flows', { tag: ['@ui', '@auth', '@regression'] }, () => {
@@ -79,13 +69,8 @@ test.describe('KPost login screen · deeper flows', { tag: ['@ui', '@auth', '@re
 });
 
 /**
- * Logout — from the authenticated (shared) session. It ends only THIS browser context's session (the
- * saved `storageState` file is untouched, so other tests still log in), and it is the last thing this
- * test does. The header logout triggers a native `window.confirm`, which we auto-accept.
- *
- * Tuned GREEN on live: the user chip → Logout menu → in-page confirm modal ("Are you sure you want to
- * logout ?") → the modal's Logout button → `/login`. Gated behind `LOGIN_UI_LIFECYCLE=true` because it
- * ends the session (self-contained — the saved storageState file is untouched, so other tests re-login).
+ * Logout from the shared session. Gated on LOGIN_UI_LIFECYCLE because it ends the session; the saved
+ * storageState file is untouched.
  */
 test.describe('KPost header · logout', { tag: ['@ui', '@auth', '@regression'] }, () => {
   test.skip(
@@ -104,8 +89,7 @@ test.describe('KPost header · logout', { tag: ['@ui', '@auth', '@regression'] }
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    // The header user chip opens a menu with a Logout option, which opens an in-page confirm modal
-    // ("Are you sure you want to logout ?") with a Logout button — confirmed from the live DOM.
+    // User chip → Logout menu item → in-page confirm modal with a Logout button.
     await page.locator('.header-user-pill').first().click();
     await page
       .getByText(/^Log ?out$/i)

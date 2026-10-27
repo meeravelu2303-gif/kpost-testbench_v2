@@ -5,32 +5,9 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import { expect, test } from '@fixtures';
 
 /**
- * KMail attachment IDOR — proof for plan item 0a (the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) §16 P0).
- *
- * ## What this proves
- *
- * The KMail backend source audit (2026-10-02) found `AWSs3ClientServiceImpl.fileDownloadFromS3`
- * looks up an attachment purely by its S3 UUID, with no check that the caller sent or received the
- * mail that attachment belongs to — and `downloadThumbnail` additionally requires no authentication
- * at all (`SecurityConfiguration.permitAll()`). This test proves (or refutes) that finding live,
- * using only bench-owned accounts: A sends a real mail with a real uploaded attachment to B; C — an
- * account that is neither the sender nor the receiver, and has no relationship to this mail at all —
- * then tries to fetch the attachment's download, thumbnail and media-stream by UUID alone.
- *
- * ## Why this is safe to run
- *
- * The uploaded file is a harmless bench-generated PDF, uploaded by our own account (A), referenced
- * only in a mail between two of our own accounts (A→B). C is also one of our own accounts. No real
- * customer data or account is touched. The mail is deleted in `finally`; the S3 object itself is not
- * deleted (this module's attachment-delete path is keyed by uuid via `aws-delete-attachment`, run
- * separately, to keep this test focused on the IDOR question).
- *
- * ## Why the verdict is the HTTP status, not a side channel
- *
- * There is no DB table recording "who is allowed to fetch this uuid" to check against — the whole
- * point of the finding is that no such check exists in the application layer. So the only available
- * verdict is what the endpoint itself answers to an unrelated, authenticated account (and, for the
- * thumbnail, to NO account at all).
+ * KMail attachment IDOR: A mails B a real uploaded image; C (unrelated) and an anonymous caller try
+ * to download, stream and thumbnail it by UUID alone. All accounts are ours; the mail is deleted
+ * (the S3 object is not).
  */
 const K = AUTH_PROFILES.kpost;
 const A = K.principals.find((p) => p.key === 'personal')!; // sender/owner
@@ -53,8 +30,7 @@ test.describe(
     test("an unrelated account can fetch another pair's KMail attachment by UUID alone", async ({
       endpoints,
     }) => {
-      // A tiny real JPEG — an image, so a thumbnail can exist (a PDF may never get one, which would make a
-      // refused thumbnail meaningless).
+      // A tiny real JPEG, so a thumbnail can exist.
       const content = Buffer.from(
         '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
         'base64',
@@ -75,8 +51,7 @@ test.describe(
           { label: 'idor:presign', auth: { principal: A }, allowLiveWrite: true },
         );
         expect(presign.status, 'generate-presigned-url succeeds').toBeLessThan(300);
-        // The endpoint now answers with a JSON envelope ({ presignedURL, status }) — #942 — older builds
-        // returned the bare link; accept both.
+        // The answer is a JSON envelope or a bare link; accept both.
         const raw = presign.bodyText.trim();
         const url = raw.startsWith('{')
           ? String((JSON.parse(raw) as { presignedURL?: string }).presignedURL ?? '')
@@ -152,8 +127,7 @@ test.describe(
           { pathParams: { uuid } },
           { label: 'idor:attacker-stream', auth: { principal: C }, allowLiveRead: true },
         );
-        // The thumbnail route is genuinely unauthenticated per source — proved here with NO principal
-        // at all, not even an unrelated one, matching the real-world worst case exactly.
+        // The thumbnail route needs no login per source, so it is tried with no principal at all.
         const thumbnail = await endpoints.sendTo(
           'kmail-download-thumbnail',
           { pathParams: { uuid } },

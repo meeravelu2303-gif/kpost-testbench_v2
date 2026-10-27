@@ -11,11 +11,7 @@ import type {
 } from '../../src/validation-engine/validation-result';
 import { expect, test } from '@fixtures';
 
-/**
- * The at-a-glance run report must count what the run produced, and keep API (check-level) and UI
- * (test-level) numbers separate. These pin the aggregation so a future change cannot silently
- * miscount or conflate the two surfaces.
- */
+/** The run report counts what the run produced, keeping API (check-level) and UI (test-level) apart. */
 
 function report(over: Partial<ValidationReport>): ValidationReport {
   const results = over.results ?? [];

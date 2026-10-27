@@ -6,16 +6,9 @@ import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
 
 /**
- * Server-side required fields on the two saves that lack them (found 2026-10-26, reproduced 2/2 alone).
- *
- *  - POST /location/save checks only locationName. The Workplace Location screen refuses a row without a
- *    6-digit pincode, state, city and area (WorkPlaceLocationSetup.js:1232) and always sends the selected
- *    level (attributeId + variableId).
- *  - POST /hrSetUpTierVariable/save checks only variableName. Its twin /adminTierVariable/save rejects a
- *    missing attributeId or parentVariableId ("... is required"); a parentless HR variable cannot be listed
- *    (the list answers 400 to a null parent) yet blocks deleting its tier ("record is already mapped").
- *
- * Each case logs the exact request and response (annotations) and deletes what it created. QA company only.
+ * Server-side required fields the screens enforce: location save without pincode or tier, HR variable
+ * save without attributeId or parentVariableId; and that a record saved with a blank optional field
+ * can still be edited. QA company only; each case logs its exchange and deletes what it created.
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',
@@ -176,12 +169,7 @@ test.describe('Admin · saves enforce the fields their screens require @api @adm
     }
   });
 
-  /*
-   * Found by the Admin UI run 2026-10-26: the Workplace Location screen leaves "Address Line 2" optional
-   * (its check is commented out, WorkPlaceLocationSetup.js:1234) and /location/save accepts it empty, but
-   * /location/update then refuses the screen's own edit with 400 "addressLine2 is required". Payloads are
-   * the screen's (save :98-120, update :1095-1110), without companyId (taken from the token).
-   */
+  // Address line 2 is optional on screen and on save, so the update must accept it blank too.
   test('a location saved without address line 2 can be edited', async ({ endpoints }) => {
     expect(String(testData.businessMCompanyId), 'only ever the QA testing company (242)').toBe(
       '242',
@@ -253,12 +241,8 @@ test.describe('Admin · saves enforce the fields their screens require @api @adm
     }
   });
 
-  /*
-   * Same root cause on Employee Data (Admin UI run 2026-10-26): the screen saves an employee with the
-   * optional landline empty (accepted), then its own edit — which reloads landline as null and Aadhaar
-   * as "" (the backend stores no Aadhaar) — is refused: 400 "landline is required". Bodies are the
-   * screen's own, captured from the UI run; only the identity is the reserved QA employee's.
-   */
+  // Same for Employee Data: saved with the optional landline empty, the screen's edit (landline
+  // reloaded as null) must be accepted. Bodies are the screen's own.
   test("an employee saved on screen can be edited with the screen's own update", async ({
     endpoints,
   }) => {
@@ -339,7 +323,7 @@ test.describe('Admin · saves enforce the fields their screens require @api @adm
       id = saved.id;
       expect(saved.status === 200 && id, "the screen's save is accepted").toBeTruthy();
 
-      // The screen's edit body: last name changed; landline null, institute "" and Aadhaar "" as reloaded.
+      // The screen's edit body: last name changed, landline reloaded as null.
       const updated = await send(
         endpoints,
         'admin-employee-update',

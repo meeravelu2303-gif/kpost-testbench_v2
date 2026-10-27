@@ -47,13 +47,7 @@ export interface ValidationContext {
   readonly helpers: RequestFactoryHelpers;
   principal(role: Role, options?: { foreignTenantOf?: string }): Principal | undefined;
   /**
-   * Every configured principal for a role, in declaration order.
-   *
-   * `principal()` returns the first match, which is all a single-caller probe needs. Proving that
-   * two sessions stay isolated needs two real accounts in flight at once, and the count matters to
-   * the verdict: with one principal configured the probe must report SKIPPED, never PASSED — "no
-   * second caller was available" and "two callers did not interfere" are different facts, and
-   * reporting the first as the second is how a bench claims coverage it does not have.
+   * Every configured principal for a role; a two-session probe with only one must report SKIPPED.
    */
   principals(role: Role): readonly Principal[];
   tokenFor(principal: Principal): Promise<string>;

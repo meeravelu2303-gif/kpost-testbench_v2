@@ -4,20 +4,9 @@ import type { Page, Request, Response } from '@playwright/test';
 import { settleFrames } from '../support/settle';
 
 /**
- * KMail · attach a file in the compose screen and send it (the real browser path).
- *
- * Why: no UI test attached a file in KMail. The API-level attachment spec builds its own upload, so a
- * broken upload in the web app itself would go unnoticed.
- *
- * Source (WriteMailPage.js, Services/Kmail.js — the live KMail compose):
- *   - picking a file (`#fileInput` → handleSelectedFile) asks `POST /v2/aws/generate-presigned-url`
- *     for an upload link, then PUTs the file to that link (axios.put(signedUrl, file));
- *   - `GeneratePreSignedURL` returns the raw response TEXT and uses it as the link. Live 2026-10-14
- *     that endpoint answers with a JSON wrapper (`{"presignedURL":"https://…","status":"SUCCESS",…}`)
- *     instead of a bare link, and unlike Katchup (normalizeSignedUrl) KMail never unwraps it — so the
- *     upload could be sent to an invalid address. This test records the upload-link response and the
- *     real upload request, then asserts the correct behaviour: the file is uploaded to an https
- *     storage address, the attachment window's Done enables, and the sent mail carries the file.
+ * KMail: attach a file in the compose screen and send it. The presigned-URL endpoint returns a JSON
+ * wrapper KMail never unwraps, so the test asserts the upload goes to an https storage address,
+ * Done enables, and the sent mail carries the file.
  */
 const JPEG = Buffer.from(
   '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',

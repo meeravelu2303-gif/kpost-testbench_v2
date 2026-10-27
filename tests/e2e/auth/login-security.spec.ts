@@ -3,28 +3,9 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * Security-fuzzing angle for the Login screen's id field — the counterpart to
- * `signup-validation.spec.ts`'s XSS check on Signup's name fields (#817), which never touched Login.
- * The id field is a lookup-only input (`fetchUserDetails`, a read, no account mutation), so every
- * payload here is safe to submit directly: worst case is a "doesn't exist" toast.
- *
- * ## What this checks, and what it deliberately does NOT
- *
- * An earlier version of this file asserted the raw payload must never appear anywhere in
- * `document.body.innerHTML`. That was the wrong test and produced 3 false positives: a controlled
- * React `<input>` legitimately serializes its own typed value into its `value="…"` attribute — live-
- * confirmed here (`value="' OR '1'='1"`), a plain text field showing what was typed, not a
- * vulnerability. A lone `'` inside a `value="…"` (double-quoted) attribute cannot break out of it
- * either way.
- *
- * The correct signal for "did this payload actually execute as code" is whether it fired its own
- * `alert(1)` — caught here via a `dialog` listener, not string-matching. `<script>` tags inserted via
- * `innerHTML`/`dangerouslySetInnerHTML` never execute in a browser (a deliberate, universal browser
- * behaviour) — the `img onerror` payload is the one that WOULD still fire if some downstream toast or
- * message ever rendered this id unsafely, so it is the payload that actually proves the negative.
- * The SQL-style/template-literal payloads have no client-side execution vector at all; they are kept
- * only for the crash check (a malformed id must not be what breaks the page) and SQLi proper belongs
- * at the API layer, not here.
+ * Injection payloads in the login id field (a read-only lookup) must not crash the page or execute.
+ * Execution is detected by a dialog listener, not by string-matching the DOM: an input legitimately
+ * echoes its typed value.
  */
 test.describe(
   'KPost login · security fuzzing',
@@ -62,8 +43,7 @@ test.describe(
         await loginPage.loginIdInput.press('Escape');
         await loginPage.loginIdInput.press('Enter');
 
-        // Let the lookup (fetchUserDetails, or the client-side reject if it never leaves the browser)
-        // settle either way it resolves, without asserting which — that outcome is not the point here.
+        // Let the lookup settle, whichever way it resolves.
         await page
           .getByText(/doesn't exist|invalid/i)
           .first()

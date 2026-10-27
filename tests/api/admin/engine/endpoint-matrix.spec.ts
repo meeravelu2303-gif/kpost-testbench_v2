@@ -12,16 +12,10 @@ import { employeePayload } from '../support/screen-payloads';
 import { KNOWN_FALSE_POSITIVES } from '../../../../src/bug-tracker/known-false-positives';
 
 /**
- * The centralized engine on the Admin endpoints it cannot reach by itself (coverage audit 2026-10-26: only
- * 12 of 38 got the engine's checks). Every write and every read keyed by a record id is blocked on this
- * host (no `productionSafe`) and defined with a placeholder body, so authentication, response format,
- * security headers and response time were never checked on them.
- *
- * Each test creates the record(s) it needs in the QA testing company, runs the engine on the real endpoint
- * with the screen's payload naming THOSE records, and deletes everything again. The definition is cloned
- * as `productionSafe` for that one call only; everything else stays armed: the QA-identifier guard checks
- * every id, the engine's request fuzzers stay blocked on writes, and `external` endpoints (role posting
- * writes — KPost/KSMACC accounts) stay blocked and are covered by role-posting-lifecycle.spec.ts.
+ * Runs the engine on the Admin writes and id-keyed reads it cannot reach alone (not productionSafe,
+ * placeholder bodies). Each test creates its records in the QA company, runs the engine with the
+ * screen's payload naming them, then deletes everything. Only that one call is cloned productionSafe;
+ * every other guard stays armed.
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',
@@ -95,8 +89,7 @@ async function engineOn(
     request: body(() => payload),
   };
   const report = await validationEngine.validate(definition);
-  // A result a reviewer has judged not a defect (known-false-positives.ts, by endpoint + check) does not
-  // fail the matrix either; everything else does.
+  // A result judged not a defect (known-false-positives.ts, by endpoint + check) does not fail the matrix.
   const judged = (validator: string): boolean =>
     KNOWN_FALSE_POSITIVES.some(
       (k) =>
@@ -145,7 +138,7 @@ const locationBody = (attributeId: string, variableId: string, label = 'Location
   countryId: 1,
   countryName: 'India',
 });
-// The Employee Data screen's full record (the server enforces its required fields since 2026-10-26).
+// The Employee Data screen's full record (the server enforces its required fields).
 const employeeBody = (label: string): Json => employeePayload(`Matrix ${label} ${stamp}`);
 
 interface Case {

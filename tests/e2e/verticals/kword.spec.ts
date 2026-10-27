@@ -2,15 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * KOS · Kompose (KWord) — the real document editor behind KOS's "Kompose" tool card. `KWord.js` is a
- * genuine, backend-integrated feature (`POST /v2/kword/create`, `/update`, `/saveContent`,
- * `/delete`, ...), not a stub. Flow: home (New Document / My Documents) -> create form -> editor
- * (SunEditor, `.sun-editor-editable`) -> Save -> My Documents library.
- *
- * The create-form validation (empty title blocked client-side) is safe and always runs. The full
- * create -> save -> delete round trip is a REAL write (a genuine document persists until deleted), so
- * it's gated behind `KOS_UI_LIFECYCLE=true` and self-cleaning: it deletes the document it created via
- * the app's own soft-delete-then-permanent-delete flow before finishing.
+ * KOS Kompose (KWord) editor: create-form validation, and a create → save → delete round trip gated
+ * behind KOS_UI_LIFECYCLE (real write, self-cleaning).
  */
 test.describe(
   'KPost KOS · Kompose (KWord) — create-form validation',
@@ -144,8 +137,7 @@ test.describe(
         timeout: 15_000,
       });
 
-      // Soft-delete-with-undo pattern, confirmed from source — trigger delete, then let the toast's
-      // window pass without undoing, then confirm the second (permanent) step if the app requires one.
+      // Soft delete with undo: let the toast pass, then confirm the permanent step if asked.
       await page
         .getByText(title)
         .first()

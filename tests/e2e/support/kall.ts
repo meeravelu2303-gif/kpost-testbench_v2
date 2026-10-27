@@ -3,16 +3,8 @@ import type { Locator, Page } from '@playwright/test';
 import { parkPointerAwayFromSideMenu } from './katchup';
 
 /**
- * Shared Kall steps, read from the front-end source (2026-10-11):
- *   - `/kall` is a react-bootstrap `Tabs` page (`Kall/components/KallPage/KallPage.js`): the
- *     scheduled-call tab is the TAB "Kool Kall" (role=tab, not a button);
- *   - the Kool Kall panel's "Create" control is `.create_font` (`KoolContainer.js`,
- *     `setCreateKallModal(true)`) and opens `CreateKallModal` — a `ModalComponent` titled
- *     "Create Kool Kall" whose first field is `input[placeholder="Enter Meeting Title"]`.
- *
- * Until 2026-10-11 the Kall specs clicked `getByRole('button', { name: /Kool Kall/ })` (there is no
- * such button) and then force-clicked Create under the side menu, so the modal never opened and
- * every site skipped as "did not open on this build".
+ * Shared Kall steps: "Kool Kall" is a tab (not a button), and its `.create_font` control opens the
+ * "Create Kool Kall" modal.
  */
 export async function gotoKoolKall(page: Page): Promise<void> {
   await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });

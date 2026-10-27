@@ -5,30 +5,9 @@ import { expect, test } from '@fixtures';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 
 /**
- * Unread-count **clears when a message is read** (FR-K07) — the one piece of the badge-count contract
- * the plain-read coverage (`reads-workflow.spec.ts`, which only checks the count is internally
- * consistent) never exercises: that OPENING a conversation actually drops the sender's unread count
- * back down.
- *
- * Why this exists: a QA complaint that the Katchup unread count "shows 4 or 5 even after the message
- * is read". `reads-workflow` already confirms the count endpoint is consistent (msgsCount == the sum
- * of per-sender counts), so this isolates the other half — whether reading a message is reflected in
- * the count at all, or whether it stays stuck at a stale number.
- *
- * Mechanism (confirmed from the live frontend source, KPOST_REACTJS_2023_V1): the Katchup thread view
- * has NO explicit mark-read call — opening a conversation (`katchupMessagesForSelectedContactID`) is
- * what marks its messages read server-side, and the badge is a plain re-fetch of
- * `getUnopenedMessagesCount`. So the read trigger here is the conversation open, exactly as the client
- * does it.
- *
- * Flow (qatest1 = `personal` sends; qatest2 = `victim` reads):
- *   1. baseline: victim's unread count FROM personal (c0)
- *   2. personal sends one message to victim
- *   3. victim's count FROM personal must be c0 + 1
- *   4. victim OPENS the conversation with personal (the read)
- *   5. victim's count FROM personal must return to c0 — NOT stay at c0 + 1
- * Self-cleans (personal recalls + deletes the probe message) in a finally. Gated KATCHUP_LIFECYCLE
- * like every other spec that writes a real message.
+ * FR-K07: opening a conversation clears the sender's unread count (the client has no mark-read call;
+ * opening the thread is the read). Gated behind `KATCHUP_LIFECYCLE=true`: it sends a real message,
+ * recalled and deleted in `finally`.
  */
 const PERSONAL: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 const VICTIM: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim')!;
@@ -126,10 +105,7 @@ test.describe(
             type: 'observed',
             description: `unread from ${sender}: baseline=${c0}, after send=${c1}, after read=${c2}`,
           });
-          // Opening a conversation marks its messages read, so the sender's unread count must DROP
-          // from its post-send value (observed live: a fully-opened conversation clears to 0). A count
-          // that never drops after the message is read is the reported "stuck at 4/5" bug — this
-          // asserts the server-side clear actually happens.
+          // The count must DROP below its post-send value once the conversation is opened.
           expect(
             c2,
             `reading the conversation must drop the unread count below its post-send value ` +

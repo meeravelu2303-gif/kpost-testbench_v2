@@ -1,6 +1,3 @@
-// An orchestrated multi-step call lifecycle (initiate → status → members → end → clean up), not
-// simple assertions; the conditionals guard optional steps and best-effort cleanup of real live data.
-
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { KALL_STATUS } from '@api/contract/kpost-types';
@@ -10,26 +7,9 @@ import { initiateShape } from '@api/definitions/kpost/kall/direct.api';
 import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
 
 /**
- * Kall **feature flow** — the FRD's calling behaviours, end to end, on a real KPost host, each
- * self-cleaning.
- *
- * Every test WRITES a real call (placing one rings a device; scheduling one notifies participants
- * and adds a calendar entry), so it runs only with `KALL_LIFECYCLE=true` and each write carries
- * `allowLiveWrite: true` — the same authorized-write control Katchup and Profile use. It never fires
- * on a default run. Findings use `expect.soft` so one run reports every defect.
- *
- * A call cannot connect headlessly (no WebRTC peer), so these assert the API contract of the flow —
- * a call is placed and issues an id, its status transitions, members change, it ends, and the log
- * clears — not that audio flows. Together the three tests exercise **every** Kall write and the two
- * `kallID`-keyed status reads (fed the real id the flow creates):
- *
- *   direct-call    initiate → getKallStatus → getKallStatusUsingKallID → updateKallStatus →
- *                  updateSenderAndReceiverKallStatus → endIndividualKall → clearKallBykallIds
- *                  (FR-C05/C06/C08)
- *   scheduled-call scheduledKall → getKallStatusUsingKallID → modifyKallMembers → joinScheduleKall →
- *                  reScheduleKall (BR-C01: Scheduled → Rescheduled) → endKoolKall
- *                  (FR-C01/C03/C04/C07/C08)
- *   repeat         scheduledRepeatKall (FR-C02)
+ * Kall feature flow: place, schedule, join, reschedule and end real calls, each test self-cleaning.
+ * Gated behind `KALL_LIFECYCLE=true` because every test writes a real call (rings a device, notifies
+ * participants). No WebRTC peer, so this asserts the API contract of the flow, not audio.
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -57,11 +37,7 @@ function extractKallId(body: Record<string, unknown>): number | undefined {
   return undefined;
 }
 
-/**
- * Clear a principal's entire call history. `clearKallHistory` is a GET (no body, so no id to guard)
- * that wipes the caller's own log — the safety net that removes anything a failed step left behind.
- * Called for every party in a `finally`, so no run can leave an orphan call on the accounts.
- */
+/** Wipe each principal's own call log; run in `finally` so a failed step leaves no orphan call. */
 async function clearHistory(endpoints: EndpointExecutor, who: Principal[]): Promise<void> {
   for (const as of who) {
     await endpoints
@@ -204,20 +180,8 @@ test.describe(
             );
             expect.soft(modified.status, 'modifyKallMembers is accepted').toBeLessThan(300);
 
-            /*
-             * FR-C04: the invitee joins.
-             *
-             * `id` is the **participant** row — `TBL_KPOST_KOOL_KALL_DETAILS.id` for this receiver on
-             * this call — NOT the kallID. The bench sent `id: kallID` and read the resulting
-             * 500 "Failed to Join KatchupKall" as a product defect; it was ours. Measured directly:
-             *
-             *   { id: <kallID>,        kallID }  -> 500
-             *   { id: <detail row id>, kallID }  -> 200
-             *
-             * So the id is resolved from the database, the same way the Group flow resolves a
-             * membership id. A placeholder or a guessed id here produces a server error that looks
-             * exactly like a broken endpoint, which is how this one stayed misdiagnosed.
-             */
+            // FR-C04: the invitee joins. `id` is the participant row (TBL_KPOST_KOOL_KALL_DETAILS.id),
+            // not the kallID; sending the kallID returns a misleading 500, so it is read from the DB.
             const detail = database.enabled
               ? await database.findOne<{ id: number }>({
                   table: 'TBL_KPOST_KOOL_KALL_DETAILS',
@@ -233,9 +197,7 @@ test.describe(
             );
             expect.soft(joined.status, 'joinScheduleKall is accepted').toBeLessThan(300);
 
-            // The join must be RECORDED, not just accepted — join_status on the participant row is
-            // what a "who turned up" report reads, and an accepted join that stores nothing is invisible
-            // from the response.
+            // The join must be stored (join_status on the participant row), not just accepted.
             if (detail?.id) {
               const afterJoin = await database.findOne<{ join_status: number }>({
                 table: 'TBL_KPOST_KOOL_KALL_DETAILS',
@@ -246,17 +208,8 @@ test.describe(
                 .not.toBe(0);
             }
 
-            /*
-             * BR-C01, CORRECTED 2026-09-26 by the owner: rescheduling a call is REQUIRED to create a new
-             * call (a new kallID) — this is the intended design, not a defect. The original entry is
-             * superseded, not overwritten. Live-verified against the database (not just the response):
-             * the ORIGINAL row's senderKallStatus moves 6 (Scheduled) -> 7 (ReScheduled), correctly
-             * marking it superseded, while the NEW row starts fresh at 6 (Scheduled) — exactly what a
-             * "new call" should do. The bench had this backwards for a while: #501 (new kallID),
-             * #620 (new row not linked back) and #621 (status not moved) were all filed against a wrong
-             * reading of the requirement — the status transition IS correct, just on the original row,
-             * not the response's row (the earlier check read the wrong one). All three closed INVALID.
-             */
+            // BR-C01: reschedule creates a NEW call (new kallID, status 6) and moves the ORIGINAL row to
+            // 7 (ReScheduled). The transition is checked on the original row, not the response's row.
             const rescheduled = await endpoints.sendTo(
               'kall-reschedule',
               { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
@@ -300,17 +253,7 @@ test.describe(
                 .toBe(7);
             }
 
-            /*
-             * `kallID` ALONE. Sending `id` alongside it makes the endpoint answer
-             * 500 {"urlPath":"endKoolKall","status":"error"} — measured:
-             *
-             *   { id: <kallID>, kallID }  -> 500
-             *   { kallID }                -> 200, sender_kall_status moves to 8 (closed)
-             *
-             * The second "helpful" field was the whole defect. This was the third of three Kall
-             * endpoints previously written down as a server-side cluster; two of the three were the
-             * bench's own payloads.
-             */
+            // Send `kallID` alone: adding `id` makes endKoolKall answer 500.
             const ended = await endpoints.sendTo(
               'kall-end-kool',
               { body: { kallID } },
@@ -336,24 +279,8 @@ test.describe(
     );
 
     test('a repeating scheduled call is created (FR-C02) @api @kall', async ({ endpoints }) => {
-      /*
-       * Bugzilla #500 was closed RESOLVED/FIXED (2026-09-22) — but that only fixed the SEVERITY, not
-       * the feature. Live-verified again 2026-09-26: every repeat interval still fails identically
-       * ("Invalid Request", tried with both past and future date ranges — the date isn't the cause),
-       * just with a 400 now instead of the original 500. A repeating call still cannot be created at
-       * all. Since this is a 4xx, the engine's automatic write-flow filing does not pick it up by
-       * design (it only auto-files 5xx) — filed explicitly here so this regression doesn't go
-       * silently untracked just because its status code improved.
-       *
-       * CORRECTED 2026-09-26: originally filed as #622 [KP-1F469E] via ruleId
-       * `REGRESSION-kall-repeat-still-broken` — but that finding's `request` evidence was only
-       * `{"repeatType": 1}` (what this test happened to override), not the full body actually sent.
-       * The ticket's "Reproduce" curl box is generated once, from the bug's original description, and
-       * Bugzilla has no API to edit a description/comment after posting — so the wrong curl could not
-       * be corrected in place. #622 closed WONTFIX; re-filed under a new ruleId
-       * (`REGRESSION-kall-repeat-still-broken-v2`) so the fresh ticket's own "Reproduce" box carries
-       * the complete, correct request from the moment it's created.
-       */
+      // A 4xx is not auto-filed by the write-flow pipeline (5xx only), so a rejected repeat interval
+      // is recorded explicitly as a business-rule violation.
       try {
         const repeatBody = scheduleShape({
           repeatType: 1,
@@ -391,15 +318,7 @@ test.describe(
         ],
       },
       async ({ endpoints, databases }) => {
-        /*
-         * BR-C01, CORRECTED 2026-09-26 by the owner: creating a new call on reschedule is the intended
-         * requirement, not a defect. #501, #620 and #621 were all filed against a wrong reading of the
-         * rule and are closed INVALID. The real rule, live-verified against the database: rescheduling
-         * issues a genuinely NEW kallID, that new call starts fresh at senderKallStatus 6 (Scheduled),
-         * and the ORIGINAL call's row moves to senderKallStatus 7 (ReScheduled) — marking it superseded.
-         * This test was previously checking the RESPONSE's row (the new call) for the 6->7 transition,
-         * which is why it looked broken: the transition is real, it just happens on the ORIGINAL row.
-         */
+        // BR-C01: new kallID at status 6 (Scheduled); the ORIGINAL row moves to 7 (ReScheduled).
         const database = databases.for('kpost-api');
 
         const scheduled = await endpoints.sendTo(
@@ -462,14 +381,7 @@ test.describe(
     test('reScheduleKall: an incomplete payload crashes (500) instead of a clean validation error @api @kall', async ({
       endpoints,
     }) => {
-      /*
-       * Live-verified 2026-09-26, while investigating BR-C01 above: `reScheduleKall` fed only
-       * `{ kallID }`, or `{ kallID, subject }`, answers `500 "Unable to reschedule kool kall"` both
-       * times — a missing required field should be a 400, not a server error. Auto-filed by the
-       * engine's own write-flow pipeline (it auto-files any 5xx on an authorized live write) as
-       * **#619** [KP-FFF743], CRITICAL, KPost API — recorded here too, as a permanent regression test,
-       * rather than left to only ever be caught by chance during an unrelated investigation.
-       */
+      // Known defect #619: reScheduleKall with only `{ kallID }` answers 500 instead of a 400.
       const scheduled = await endpoints.sendTo(
         'kall-scheduled',
         { body: scheduleShape({ kallDetails: [{ receiver: B.username }] }) },
@@ -510,14 +422,9 @@ test.describe(
       'a scheduled call keeps the exact title, start and end it was given, and records every invitee (FR-KL-002) @api @kall',
       { tag: '@sanity', annotation: [{ type: 'requirement', description: 'FR-KL-002' }] },
       async ({ endpoints, databases }) => {
-        /*
-         * Hard assertions on what the "finding-only" checks above leave soft. The scheduled call's
-         * returned row must carry exactly the subject / start / end that were sent (millisecond times —
-         * live 2026-10-15 they match exactly), its invitee (B) must be recorded, and a member added
-         * later with modifyKallMembers (C) must be recorded too. The participant rows are also read
-         * from TBL_KPOST_KOOL_KALL_DETAILS when the database is enabled. (The master table's DATETIME
-         * columns are stored without a zone, so they are NOT compared — the API values are.)
-         */
+        // Hard checks: the returned row keeps the exact subject/start/end sent, and every invitee
+        // (B, then C via modifyKallMembers) is recorded. DB DATETIMEs have no zone, so only API times
+        // are compared.
         const database = databases.for('kpost-api');
         const sent = scheduleShape({
           subject: `QA schedule fields ${Date.now()}`,
@@ -588,13 +495,7 @@ test.describe(
       'scheduledKall requires title/date/start/end — missing a required field is blocked (FR-KL-001) @api @kall',
       { annotation: [{ type: 'requirement', description: 'FR-KL-001' }] },
       async ({ endpoints }) => {
-        /*
-         * FR-KL-001 (docs/reference/business-rules.md, ⬜ to-do as of 2026-10-02): a scheduled Kall requires subject
-         * (title), a date and start/end time; a request missing one of these must be rejected, not
-         * accepted as if the field were optional. Each case omits exactly one required field from an
-         * otherwise-valid scheduleShape() body. `expect.soft` so one run reports every field, not just
-         * the first failure — and any field that unexpectedly succeeds still gets cleaned up below.
-         */
+        // Each case omits exactly one required field from an otherwise-valid body.
         const requiredFieldCases: Array<[string, Record<string, unknown>]> = [
           ['subject', { subject: undefined }],
           ['scheduledStartTime', { scheduledStartTime: undefined }],
@@ -611,8 +512,7 @@ test.describe(
               allowLiveWrite: true,
             },
           );
-          // If the product unexpectedly accepts the incomplete payload, clean up the real call it created
-          // rather than leaving it on the account — the assertion below still reports it as a finding.
+          // An accepted incomplete payload created a real call: clean it up (still reported below).
           if (attempt.status < 300) {
             await clearHistory(endpoints, [A, B]).catch(() => undefined);
           }
@@ -631,21 +531,8 @@ test.describe(
       'a placed call appears in the dashboard log with its participants (FR-KL-008) @api @kall',
       { annotation: [{ type: 'requirement', description: 'FR-KL-008' }] },
       async ({ endpoints }) => {
-        /*
-         * FR-KL-008 (docs/reference/business-rules.md, ⬜ to-do as of 2026-10-02): "the call log records participants,
-         * role/team, duration". Response shape measured live 2026-10-02 (kall-dashboard, `kall[]` array,
-         * each entry carrying `kallID`/`sender`/`senderName` and a `kallDetails[]` array of
-         * `receiver`/`receiverName`) before writing this assertion — not guessed.
-         *
-         * The PARTICIPANT half is fully testable here and is what this test asserts. The DURATION half
-         * (and FR-KL-009's exact start/end timestamps) is NOT independently testable by this bench: a
-         * plain initiate→end flow with no real WebRTC peer measured `kallStartTime`/`kallEndTime`/
-         * `kallDuration` as `null` even after `endIndividualKall`, consistent with this file's own
-         * documented constraint ("a call cannot connect headlessly — no WebRTC peer"). Asserting those
-         * fields would either be vacuously true (null is 'fine' because nothing ever connects) or require
-         * infrastructure this bench does not have. Recorded as a genuine, named limitation rather than a
-         * test that looks green for the wrong reason.
-         */
+        // Only participants are asserted: duration and start/end times stay null without a real
+        // WebRTC peer, so they cannot be checked headlessly.
         let kallID: number | undefined;
         try {
           const placed = await endpoints.sendTo(

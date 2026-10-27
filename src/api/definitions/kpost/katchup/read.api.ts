@@ -4,12 +4,8 @@ import { body, pathParams, defineUndocumentedKpostEndpoint } from '../kpost-endp
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
- * Katchup **reads** — fetch without writing a message.
- *
- * Counts and subjects need only our own account; conversation reads use `QA_VICTIM_KPOST_ID` (our
- * second account), so no stranger's id is ever sent — these run on live. Id-keyed share/reference
- * reads need a real message id we lack on live, so they stay registered and blocked until a
- * lifecycle test creates one (`docs/modules/katchup-flow.md` §5).
+ * Katchup reads. Conversation reads use our second account, so they run on live; reads keyed by a
+ * message id stay blocked on live until a lifecycle test supplies one.
  */
 const READ_TAGS = ['katchup-read'] as const;
 
@@ -39,20 +35,13 @@ export const messagesSubjectApi = defineKatchupEndpoint({
   requirements: ['FR-KU-003'],
   method: 'GET',
   path: '/v2/katchup/getKatchupMessagesSubject/{id}',
-  // The workbook documents the bare path with no id; the real live client always appends one (see
-  // below). contractPath keeps the workbook-contract check honest about what's actually documented.
+  // The workbook documents the bare path; the live client always appends an id.
   contractPath: '/v2/katchup/getKatchupMessagesSubject',
   summary: 'Subject suggestions for a conversation with a given contact or group',
   tags: [...READ_TAGS, 'subject', 'needs-id'],
   destructive: false,
-  /*
-   * Found 2026-10-03: the previously-recorded 404 was this bench calling the wrong shape, not an
-   * undeployed route. The live client (`Katchup.js:1703` `GetSubjectSuggestion(id)`, called from all
-   * three `WriteMessage.js` variants) ALWAYS appends a path-param id —
-   * `selectedContact.group ? selectedContact.groupKpostID : selectedContact.contactID` — this
-   * definition previously sent no id at all. `testData.victimKpostId` is the individual-contact
-   * shape; a group id would need a real groupKpostID this account belongs to.
-   */
+  // The id is the contact id, or the groupKpostID for a group (Katchup.js:1703); this sends the
+  // contact shape.
   request: pathParams(() => ({ id: testData.victimKpostId })),
   pathParamsSchema: pathParamSchema('id'),
   note: 'needs a real contact or group id — see the live-client evidence above',
@@ -76,10 +65,7 @@ export const conversationApi = defineKatchupEndpoint({
   path: '/v2/katchup/katchupMessagesForSelectedContactID/',
   summary: 'The message history with one contact',
   tags: [...READ_TAGS, 'conversation'],
-  /*
-   * The receiver is our own second account, so this reads a conversation we are a party to. `null`
-   * first/last message ids mean "the latest page", exactly as the client sends on first open.
-   */
+  // A conversation with our second account; `null` message ids mean "the latest page".
   productionSafe: true,
   request: body(() => ({
     groupFlag: false,
@@ -99,7 +85,7 @@ export const messageCountApi = defineKatchupEndpoint({
   tags: [...READ_TAGS, 'conversation'],
   productionSafe: true,
   request: body(() => ({ receiver: testData.victimKpostId, groupFlag: 'false' })),
-  // Types-only, from a CAPTURED live body (2026-10-11): { messageCount, urlPath, status, statusCode }.
+  // Types-only, from a captured live body.
   responseSchema: typesOnlySchema({
     messageCount: 0,
     urlPath: '',
@@ -141,17 +127,7 @@ export const filterMessageApi = defineKatchupEndpoint({
   path: '/v2/katchup/filterKatchUpMessage/',
   summary: 'Filter the caller messages (attachments, important, …)',
   tags: [...READ_TAGS, 'search'],
-  /*
-   * The API rejects an empty body with 400 "Malformed or missing request body" — it needs a filter
-   * context. Sends the same {selectedContact, groupFlag} shape the conversation reads use (our own
-   * second account), so it filters our own messages and owns nothing.
-   *
-   * Live-verified 2026-09-26: `messageBy` is ALSO required (400 "messageBy must be one of: All,
-   * sent, received" without it) — missing from this default the whole time this endpoint has been
-   * marked `productionSafe`, so its own baseline call has always 400'd. `messageBy` matches the QA-
-   * identifier guard's pattern purely because the key contains "message" — exempted in
-   * `qa-identifier-guard.ts`'s `NOT_A_RESOURCE` (it is a closed filter enum, not a record id).
-   */
+  // Needs a filter context and `messageBy` (an enum the QA guard exempts via `NOT_A_RESOURCE`).
   productionSafe: true,
   request: body(() => ({
     selectedContact: testData.victimKpostId,
@@ -177,16 +153,11 @@ export const allReportMsgApi = defineKatchupEndpoint({
   productionSafe: true,
 });
 
-/*
- * Reads keyed by a real `msgID`/`sharedMessageId` we own. Blocked on live until a lifecycle test
- * creates one — a fabricated id would 404 or name a stranger's message. Tagged `needs-message-id`.
- */
+// Reads keyed by a real message id we own; blocked on live until a lifecycle test creates one.
 export const readStatusGroupApi = defineKatchupEndpoint({
   id: 'katchup-read-status-group',
   requirements: ['FR-K07'],
-  // A POST read: destructive defaults true for POST, which would grep-drop it on live — the one
-  // sibling in this file missing this line (found 2026-10-03), silently invisible to the generic
-  // sweep on a flag-less production run alongside the genuine writes.
+  // A POST read: destructive defaults true for POST, which would grep-drop it on live.
   destructive: false,
   method: 'POST',
   path: '/v2/katchup/getReadStatusGroupMessage/',
@@ -205,12 +176,7 @@ export const sharedMessageInfoApi = defineKatchupEndpoint({
   // A POST read: destructive defaults true for POST, which would grep-drop it on live.
   destructive: false,
   request: body(() => ({ sharedMessageId: 0 })),
-  /*
-   * `sharedMessageId` is NOT minted by a separate "share" action — live-verified 2026-09-25, every
-   * ordinary sendMessage response already carries one (`sharedMessageId`, equal to
-   * `messageTimeAsLong`). Fed a real one from a plain send: 500 "An error occurred while processing
-   * the request" — a genuine crash, not a needs-id gap. See `shared-reference-workflow.spec.ts`.
-   */
+  // Every sendMessage response carries a `sharedMessageId`; see shared-reference-workflow.spec.ts.
   note: 'needs a real sharedMessageId (every sent message has one — see the endpoint comment); 500s when given a real one',
 });
 
@@ -222,8 +188,7 @@ export const bulkMessageInfoApi = defineKatchupEndpoint({
   tags: [...READ_TAGS, 'share', 'needs-message-id'],
   destructive: false,
   request: body(() => ({ sharedMessageId: 0 })),
-  // Same sharedMessageId as above — live-verified 2026-09-25: fed a real one, this one works (200,
-  // real recipient/read-time data). See `shared-reference-workflow.spec.ts`.
+  // Same sharedMessageId as above; see shared-reference-workflow.spec.ts.
   note: 'needs a real sharedMessageId (every sent message has one); confirmed working live 2026-09-25',
 });
 
@@ -236,8 +201,7 @@ export const sharedMessageDetailsApi = defineKatchupEndpoint({
   destructive: false,
   request: pathParams(() => ({ msgID: 0 })),
   pathParamsSchema: pathParamSchema('msgID'),
-  // Live-verified 2026-09-25: fed a real msgID from a plain send, this 500s ("FAILURE", no message).
-  // See `shared-reference-workflow.spec.ts`.
+  // Takes a msgID from a plain send; see shared-reference-workflow.spec.ts.
   note: 'needs a real msgID; 500s when given a real one',
 });
 
@@ -249,8 +213,8 @@ export const referenceDetailsApi = defineKatchupEndpoint({
   tags: [...READ_TAGS, 'thread', 'needs-message-id'],
   destructive: false,
   request: body(() => ({ referenceMessageIDList: [], sourceMsgID: 0 })),
-  // Live-verified 2026-09-25: fed {referenceMessageIDList: [msgID], sourceMsgID: msgID} from a plain
-  // send (no reply/forward needed) — 200, real data. See `shared-reference-workflow.spec.ts`.
+  // A plain send's msgID works here (no reply or forward needed); see
+  // shared-reference-workflow.spec.ts.
   note: 'needs real reference message ids; confirmed working live 2026-09-25 fed a plain sent msgID',
 });
 
@@ -281,12 +245,8 @@ export const messagesByReferenceApi = defineKatchupEndpoint({
   tags: [...READ_TAGS, 'thread', 'needs-message-id'],
   destructive: false,
   request: body(() => ({ referenceMessageList: '[]' })),
-  /*
-   * Live-verified 2026-09-25: fed a real msgID (as `referenceMessageIDList: [msgID]`, since a plain
-   * sent message has no `referenceMessageList` of its own to test with), this answers a clean 404
-   * "No messages found for the given Data" — reachable and well-formed, not a crash, but not yet
-   * confirmed to return a positive result for a message that was genuinely referenced by another.
-   */
+  // Fed a plain send's msgID as `referenceMessageIDList`; a positive result needs a genuinely
+  // referenced message.
   note: 'needs a real reference message list; a plain sent msgID gets a clean 404, not yet confirmed positive',
 });
 

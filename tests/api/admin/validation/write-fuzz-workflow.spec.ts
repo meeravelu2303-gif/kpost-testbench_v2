@@ -1,16 +1,5 @@
-// Adversarial (malformed-input) coverage for the admin write endpoints the generic engine sweep can
-// never reach on live production (see `production-guard.ts`: on the live application every write is
-// blocked unless `productionSafe` or explicitly authorized — the engine's own fuzzers stay locked out
-// on purpose). This file supplies that missing layer by hand: real `allowLiveWrite: true` calls,
-// written and reviewed like `feature.spec.ts`'s, scoped to our own QA_BUSINESS_M_COMPANY_ID only.
-//
-// 2026-09-26: an earlier attempt tested a locally-run checkout of the Admin_Module backend instead
-// (so the generic fuzzer could run unrestricted). Retired — the local checkout may be stale relative
-// to what is actually deployed, and it also doesn't enforce authentication at all, so most of what it
-// found (missing-token accepted, etc.) turned out to be local-environment artifacts, not real
-// findings. Local source is still consulted as reference documentation (e.g. it is how the
-// role-posting external-call risk below was found), but every assertion here runs against the real,
-// live host, using data this test creates itself and cleans up.
+// Malformed-input and XSS/injection coverage for the Admin write endpoints, which the engine's own
+// fuzzers cannot reach on live. Hand-driven writes on our own QA company only; everything is deleted.
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
@@ -25,17 +14,11 @@ const businessM: Principal | undefined = K.principals.find((p) => p.key === 'bus
 const stamp = Date.now();
 const name = (label: string): string => `QA FUZZ ${label} ${stamp}`;
 
-/**
- * Records a malformed `*-save` got ACCEPTED (the finding itself) — deleted before the parents in teardown.
- * Without this, every accepted variant stayed in the QA company (found 2026-10-26: ~24 half-empty
- * locations and HR variables per run).
- */
+/** Records a malformed `*-save` got accepted (the finding itself); deleted before the parents in teardown. */
 const acceptedByFuzz: Array<[deleteEndpointId: string, recordId: string]> = [];
 
-/*
- * What the screens require (the same rules as field-rules-sweep.spec.ts). The batteries remove or null ONLY
- * these keys from a full screen payload, so an optional field is never expected to be refused.
- */
+// The keys the screens require (same rules as field-rules-sweep.spec.ts). Only these are removed or
+// nulled, so an optional field is never expected to be refused.
 const VARIABLE_REQUIRED_ON_UPDATE = ['id', 'attributeId', 'variableName', 'parentVariableId'];
 const LOCATION_REQUIRED = [
   'attributeId',
@@ -84,10 +67,8 @@ function call(
 }
 
 /**
- * The standard negative-input battery the generic engine would run (required-fields, null-value,
- * data-type, empty-body, malformed-json) — driven by hand, on live, scoped to our own company.
- * `validBody` is the object whose top-level keys get mutated one at a time; `wrap` places it in the
- * shape the endpoint actually expects (a plain object, or an array-of-one for the `*-save` routes).
+ * Negative-input battery: empty body, each required key missing or null, malformed JSON.
+ * `wrap` puts the body in the shape the endpoint expects (an array of one for `*-save` routes).
  */
 async function assertRejectsMalformed(
   endpoints: EndpointExecutor,
@@ -95,10 +76,7 @@ async function assertRejectsMalformed(
   validBody: Record<string, unknown>,
   wrap: (body: Record<string, unknown>) => unknown,
   label: string,
-  /**
-   * The keys the screen requires (default: every key of `validBody`). With a full screen payload as the
-   * valid body, an optional key (e.g. a location's addressLine2) must not be removed and expected refused.
-   */
+  /** The keys the screen requires (default: every key of `validBody`). */
   required: readonly string[] = Object.keys(validBody),
 ): Promise<void> {
   type Case = { variant: string; body?: unknown; raw?: string };
@@ -141,13 +119,8 @@ async function assertRejectsMalformed(
 }
 
 /**
- * Real XSS/SQL-injection payloads in the endpoint's own free-text field (never the identifier
- * fields — a NoSQL-operator injection there, e.g. `{"companyId":{"$ne":null}}`, could affect another
- * company's rows, which is exactly the cross-tenant risk this file avoids). Mirrors the generic
- * engine's `security.xss`/`security.injection` intent by hand, scoped to data only we created.
- * Records a violation if the raw payload comes back byte-for-byte in a read straight after — stored,
- * unescaped, and reflected — regardless of what the response's own Content-Type/nosniff header says,
- * because a different downstream consumer of this same data may not be as careful.
+ * XSS/SQL payloads in a free-text field only (never an id field, where an operator injection could
+ * touch another company's rows). A violation if the raw markup is read back verbatim.
  */
 const XSS_PAYLOAD = '<script>alert(document.cookie)</script>';
 const SQLI_PAYLOAD = "'; DROP TABLE table_admin_tier_attribute; --";
@@ -187,12 +160,8 @@ async function assertPayloadNotStoredVerbatim(
       },
     );
     const rows: unknown = envelope(read).value;
-    /*
-     * SQL-looking text is plain DATA on this MongoDB backend: stored exactly as typed it executes nothing.
-     * Since #13251 (2026-10-26) the server deliberately accepts words like "select" or "drop" in names, so
-     * only markup (XSS) must never come back verbatim. (#827 once asked to reject SQL text; that fix produced
-     * the over-blocking filter #13251 removed.)
-     */
+    // SQL-looking text is plain data on this MongoDB backend and is accepted by design (#13251), so
+    // only markup (XSS) must never come back verbatim.
     const stored =
       kind === 'XSS' &&
       Array.isArray(rows) &&
@@ -248,8 +217,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
   test('workplace tier attribute/variable/location, HR tier attribute/variable, employee: malformed writes are all rejected @api @admin-api', async ({
     endpoints,
   }, testInfo) => {
-    // This test drives ~130 sequential real HTTP calls against production (setup + the adversarial
-    // battery across 9 write endpoints + teardown) — well past the default 60s test timeout.
+    // ~130 sequential calls: well past the default test timeout.
     testInfo.setTimeout(600_000);
     let wpAttrId: string | undefined;
     let wpVarId: string | undefined;
@@ -259,8 +227,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
     let empId: string | undefined;
 
     try {
-      // ---- Mint one real record per family, exactly like feature.spec.ts, so update/delete fuzzing
-      // ---- has a real id from a record WE created — never a guess, never someone else's data.
+      // ---- Mint one record per family so update fuzzing has a real id we own.
       const wpAttr = await call(
         endpoints,
         'admin-workplace-tier-attribute-save',
@@ -339,14 +306,8 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         )
         .toBe(true);
 
-      // ---- The adversarial battery, per family: save (no id needed) + update/delete (real id) ----
-      //
-      // `companyId` is deliberately excluded from every `assertRejectsMalformed` validBody below
-      // (it stays in `assertPayloadNotStoredVerbatim` calls, which test a different thing). Confirmed
-      // from source: every one of these controllers calls `companyIdFromToken(request)` and never
-      // reads the body's own companyId at all — so "missing/null body.companyId" was never a real
-      // required-field case, and including it here produced 10 false bugs (#632-650) this
-      // engagement. See feedback_companyid_token_vs_payload_nuance.
+      // ---- The battery, per family: save, then update with the real id.
+      // No companyId in any body: the backend takes it from the token.
 
       await assertRejectsMalformed(
         endpoints,
@@ -499,10 +460,7 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         );
       }
 
-      // `employmentObj` deliberately excluded from this battery: feature.spec.ts already found (and
-      // documented) that omitting it entirely 500s with an NPE rather than a clean 400 — a known,
-      // real finding, not something to rediscover here. Fuzzing is restricted to the fields that
-      // don't already have a confirmed crash, so this file's own findings stay clean.
+      // A missing employmentObj (a known 500, tested in feature.spec.ts) is part of this battery too.
       await assertRejectsMalformed(
         endpoints,
         'admin-employee-save',
@@ -540,9 +498,8 @@ test.describe('Admin write-endpoint adversarial fuzz (BUSINESS_M, live, own comp
         );
       }
     } finally {
-      // Teardown in reverse dependency order (best-effort; deletes are hard, no cascade) — exactly
-      // feature.spec.ts's pattern, so this file leaves nothing behind beyond what it created.
-      // Fuzz-accepted records first: they may reference the setup parents below.
+      // Teardown in reverse dependency order (no cascade). Fuzz-accepted records first: they may
+      // reference the setup parents below.
       const leftovers: string[] = [];
       for (const [deleteId, recordId] of acceptedByFuzz.splice(0)) {
         const del = await call(

@@ -2,11 +2,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * **Settings** section navigation (read-only) — `components/Settings/Settingdetails.js`. The nav has
- * collapsible groups (Profile Creation · Digital Card · General Settings · KMail Settings · KNews
- * Settings · My Account, + Business for business accounts), each expanding to `t("…")` sub-items.
- * This asserts the groups and key items render and expand — the writes (theme, About, notifications)
- * are covered by their own gated specs. Selectors from `docs/ui/ui-screens.md`.
+ * Settings nav groups render and expand (read-only); the writes are covered by their own gated specs.
  */
 test.describe(
   'KPost Settings — section navigation',

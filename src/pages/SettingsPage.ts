@@ -3,17 +3,8 @@ import { test } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 /**
- * The Settings screen's nav accordion (`Settingdetails.js`) — confirmed from source: clicking a
- * top-level group (e.g. "General Settings") toggles it open and explicitly closes every sibling
- * group (each handler sets every other group's boolean state to `false`), so only one group can be
- * expanded at a time. A panel nested under a group is only clickable/visible once its parent group
- * is expanded.
- *
- * Two panels are NOT reached via this nav at all:
- *  - `SettingProfile` (cover/avatar) is always rendered above the nav tree (`showProfile` defaults
- *    `true` in `Setting.js`) — visible immediately on `/settings`, no click needed.
- *  - "Digital Card Settings" and "KNews Settings" are top-level, single-click items with no expand
- *    step (no nested children in this file).
+ * The Settings nav accordion (`Settingdetails.js`): one group open at a time, and nested panels are
+ * reachable only once their group is expanded. The profile panel is always shown above the nav.
  */
 export class SettingsPage extends BasePage {
   readonly path = '/settings';

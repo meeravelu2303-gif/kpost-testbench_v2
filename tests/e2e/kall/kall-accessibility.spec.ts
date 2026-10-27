@@ -10,17 +10,8 @@ import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall
 import { settleAnimations } from '../support/usermanagement';
 
 /**
- * Deep WCAG scan (axe-core) for Kall's own DYNAMIC states — the Kool Kall tab active, and the
- * CreateKallModal (schedule form) open. `accessibility-axe.spec.ts`'s per-screen sweep only ever
- * scans `/kall` in its DEFAULT state (`src/ui/screens.ts`), so neither state was ever scanned — the
- * same genuine-gap reasoning as Home's, Katchup's, Profile's, Settings' and Contacts' own
- * dynamic-state files.
- *
- * Navigation reuses `kall-features.spec.ts`'s own proven selectors for reaching each state; it never
- * completes Submit (blocked on a codegen-pending participant-picker step, same as that file).
- *
- * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new screens
- * need their own clean run(s) before earning a place in the auto-filing allow-list.
+ * axe-core WCAG scans of Kall's dynamic states: the Kool Kall tab and the open schedule modal (never
+ * submitted). The default /kall state is covered by accessibility-axe.spec.ts.
  */
 test.describe(
   'KPost Kall · dynamic-state accessibility (axe-core WCAG)',

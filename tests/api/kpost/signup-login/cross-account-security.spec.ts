@@ -5,13 +5,8 @@ import type { Principal } from '@config/auth.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Signup-login **cross-account security** — the two real attack-surface questions
- * `session-lifecycle.spec.ts` doesn't ask: does `fetchUserDetails` over-expose PII for an account
- * that isn't the caller, and can a caller end a session that belongs to someone else by naming
- * their device id? Every other signup-login endpoint takes its target from the auth token, not a
- * payload (`getActiveSession`/`getLoginHistory`, already proven caller-scoped in
- * `session-lifecycle.spec.ts`), so these two are the only genuine foreign-id-shaped surface in the
- * module.
+ * The two signup-login endpoints that take a foreign id: fetchUserDetails must not leak PII for
+ * another account, and userLogout must not end another account's session by device id.
  */
 const A = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 const VICTIM: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim')!;
@@ -35,8 +30,7 @@ test.describe(
       const body = JSON.parse(ex.bodyText || '{}') as { data?: Record<string, unknown> };
       const data = body.data ?? {};
 
-      // The login screen's step 1 needs a name card and the account's userType — nothing more. Any of
-      // these appearing would be a real PII leak to an unauthenticated-adjacent, pre-login caller.
+      // The login screen only needs a name card and userType; any of these would be a PII leak.
       for (const sensitiveField of [
         'password',
         'email',
@@ -52,9 +46,7 @@ test.describe(
           `fetchUserDetails must not expose "${sensitiveField}" for an account that is not the caller`,
         ).toBeUndefined();
       }
-      // What it SHOULD return: confirmed from a live read, 2026-10-03 — firstName, lastName,
-      // companyName, userType, designation, kpostID, countryID. kpostID is expected to echo the id we
-      // asked for; the test's real job is proving nothing beyond that safe set comes along with it.
+      // Safe set: firstName, lastName, companyName, userType, designation, kpostID, countryID.
       expect(
         (data.kpostID as string | undefined)?.toLowerCase(),
         'the resolved record is the account we asked about',
@@ -64,14 +56,8 @@ test.describe(
     test('userLogout cannot end a session belonging to a different account', async ({
       endpoints,
     }) => {
-      /*
-       * Opens a REAL session for VICTIM on its own device (never the shared cached token any other
-       * test reuses — same reasoning as `session-lifecycle.spec.ts`'s `freshLogin`). Then, authorized
-       * as A, calls userLogout naming VICTIM's device id in the body. If the server scopes the logout
-       * by the TOKEN alone (ignoring the body), this is a no-op on A's own session — the correct,
-       * walled-off behavior. If it scopes by the body's device id instead, VICTIM's real session gets
-       * silently ended by an account that has no relationship to it.
-       */
+      // VICTIM opens a session on its own device; A then calls userLogout naming that device id.
+      // Logout must be scoped by the token, so VICTIM's session survives.
       const victimDevice = randomUUID();
       const victimLoginBase = AUTH_PROFILES.kpost.loginRequest(VICTIM);
       const victimLogin = await endpoints.sendTo(

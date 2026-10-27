@@ -6,18 +6,8 @@ import { expect, test } from '@fixtures';
 import { answerForgotPasswordSmsLocally } from '../support/no-real-sms';
 
 /**
- * Deep UI sweep for the SIGNED-OUT screens — the same health/performance/layout/basic-a11y
- * catalogue `screens.spec.ts` runs on every authenticated screen (`@ui/ui-checks`), applied here to
- * Signup and Login instead. Those two were never covered by that sweep because it requires a live
- * session (`skipIfSignedOut`) and Signup/Login are reached BEFORE one exists.
- *
- * Each scenario is a distinct STATE of the signed-out flow, not just a route — the account-type
- * picker and the Business category picker are both `/signup`, reached by clicking through rather
- * than a second `goto`. `watchUiHealth` starts before the first navigation so a crash triggered by
- * the click-through itself (not just the initial load) is still caught.
- *
- * `screen: 'login' | 'signup'` routes filed findings to the existing "Auth" component
- * (`UI_COMPONENT_BY_SCREEN`) — no new Bugzilla wiring needed.
+ * Health/performance/layout/basic-a11y sweep of each signed-out Signup and Login state. watchUiHealth
+ * starts before the first navigation so a crash during the click-through is caught too.
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 
@@ -138,8 +128,7 @@ test.describe(
         .catch(() => undefined);
       const loadMs = Date.now() - started;
 
-      // A genuinely unknown id never reaches step 2 — skip (not fail) rather than file a false
-      // "missing control" finding for a step this run never got to.
+      // Skip, not fail, if step 2 was never reached, so no false "missing control" is filed.
       test.skip(
         !(await loginPage.passwordInput.isVisible()),
         'the fixed probe id was not accepted right now — step 2 was not shown',
@@ -167,9 +156,7 @@ test.describe(
 
       await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
       await loginPage.expectLoaded();
-      // The "Forgot Password ?" link only renders on the PASSWORD step, not the initial id-entry
-      // step — a known id must advance the flow first (same precondition as the existing, working
-      // `login-session.spec.ts` test for this same link).
+      // The "Forgot Password ?" link only renders on the password step.
       await loginPage.enterLoginId(testData.kpostId);
       await loginPage.passwordInput
         .waitFor({ state: 'visible', timeout: 20_000 })

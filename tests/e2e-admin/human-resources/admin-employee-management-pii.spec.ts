@@ -3,22 +3,9 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Employee Management's 5 live sub-tabs (Promote/Transfer/Suspend/Revoke/Terminate — History is a
- * confirmed dead stub, see `admin-employee-management-dead-screens.spec.ts`) each render an
- * identical "employee card" panel once an employee is picked, and every one of them shows the
- * employee's PAN card number as plain, unmasked text (confirmed from source 2026-10-05: `Suspend.js`
- * ~line 423, `<div>{selectedEmployee.panCard}</div>`, repeated with the same shape in
- * Promote/Transfer/Revoke/Terminate).
- *
- * Gated behind `ADMIN_UI_LIFECYCLE=true`, same gate as `admin-screens.spec.ts` — a normal run never
- * touches the admin host.
- *
- * Confirmed live 2026-10-05: BUSINESS_M (the bench's test company) currently has ZERO role
- * postings, so every one of these tabs' employee picker shows "No options" and every test below
- * self-skips via `selectFirstEmployee()` returning false — not a selector problem (role=combobox /
- * role=option were confirmed working against the real dropdown). Filed source-only as bug #1051
- * until a bench-owned company has a real role posting to pick from; this file will produce live,
- * screenshotted proof automatically the moment one exists.
+ * Employee Management's Promote/Transfer/Suspend/Revoke/Terminate tabs must not show the picked
+ * employee's PAN number in plain text (#1051). Each test skips when no employee is available to
+ * pick. Needs ADMIN_UI_LIFECYCLE=true.
  */
 test.describe(
   'Admin/HR-Setup Employee Management — PAN card exposure',

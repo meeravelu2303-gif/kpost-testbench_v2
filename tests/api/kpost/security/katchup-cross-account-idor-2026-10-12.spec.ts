@@ -1,10 +1,5 @@
-// Cross-account IDOR regression guards for Katchup (V2). The V2 controllers override sender/identity
-// from the JWT and scope delete/read to the caller (verified live 2026-10-12), so these attacks are
-// EXPECTED to be refused. They are pinned here as regression guards: if a future backend change ever
-// re-trusts a body-supplied identity (the way the legacy V1 recall path does — see
-// katchup-legacy-recall-regression), these tests fail and surface the hole.
-//
-// Sends a real message, so KATCHUP_LIFECYCLE=true + three distinct KPost principals are required.
+// Cross-account IDOR regression guards for Katchup V2, which takes identity from the JWT, so these
+// attacks must be refused. Sends a real message: needs KATCHUP_LIFECYCLE=true and three principals.
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';

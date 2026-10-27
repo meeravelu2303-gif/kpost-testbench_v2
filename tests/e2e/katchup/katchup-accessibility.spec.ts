@@ -9,16 +9,8 @@ import { writeFileSync } from 'node:fs';
 import { gotoKatchup, openConversation } from '../support/katchup';
 
 /**
- * Deep WCAG scan (axe-core) for Katchup's own DYNAMIC states — the conversation list, an open
- * conversation thread, and the composer with the Subject field focused. `accessibility-axe.spec.ts`'s
- * per-screen sweep never drives into a conversation or opens the composer, so these three states were
- * never scanned at all — the same genuine-gap reasoning as Home's own dynamic-state file.
- *
- * Navigation reuses the shared, validated `support/katchup` helpers rather than re-deriving the
- * loader-overlay-wait / conversation-row steps here.
- *
- * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new screens
- * need their own clean run(s) before earning a place in the auto-filing allow-list.
+ * axe-core WCAG scan of Katchup's dynamic states (conversation list, open thread, composer), which
+ * the per-screen sweep never reaches. Kept out of that sweep's auto-filing allow-list until proven.
  */
 
 test.describe(

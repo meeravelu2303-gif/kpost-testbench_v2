@@ -5,16 +5,9 @@ import { openUserManagement } from '../support/usermanagement';
 import { requireFlags, waitLoaded } from './support/journey';
 
 /**
- * JOURNEY 9 · RUNNING A COMPANY ACCOUNT — a company administrator checks on their team.
- *
- * The BUSINESS_S company admin lands on Home → opens User Management → sees the licence summary and
- * the company's members (at least one member's mobile number listed) → moves on to Katchup, still
- * signed in as the company admin → returns Home.
- *
- * Read-only on purpose: adding a member provisions a real account on external services, so every
- * existing helper stops before ADD (`support/usermanagement.ts`), and so does this journey.
- * Known live condition: User Management sometimes bounces to /home on open (1 in 4, 2026-10-10);
- * `openUserManagement` fails loudly on it rather than passing.
+ * Journey 9: the BUSINESS_S admin opens User Management (licences, members), then Katchup, then Home.
+ * Read-only: adding a member provisions real external accounts. User Management sometimes bounces to
+ * /home; openUserManagement fails loudly on it.
  */
 test.describe(
   'JOURNEY 9 · running a company account',

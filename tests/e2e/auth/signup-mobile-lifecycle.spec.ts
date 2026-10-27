@@ -4,18 +4,8 @@ import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
 
 /**
- * The mobile-viewport counterpart to `signup-login-lifecycle.spec.ts` — that spec only ever ran at
- * desktop width. `signup-business.spec.ts`'s own mobile describe block confirmed Personal signup
- * REACHES its registration form correctly below the 992px breakpoint, but stopped there; this drives
- * the SAME real signup all the way through to a logged-in account, at 480×900, to close that gap.
- *
- * Business (Small/Medium/Large) is deliberately NOT covered here — #825 (CRITICAL, confirmed) already
- * establishes Business is completely broken below 992px (tapping any category resets to the account-
- * type picker), so there is no form to complete on that path yet.
- *
- * Uses its own THIRD reserved identity (`signupMobileViewportUiKpostIdLocal`/
- * `signupMobileViewportUiMobile`), separate from both the desktop UI lifecycle's and the API layer's,
- * for the same "never race for the same is-it-taken answer" reason those are separate from each other.
+ * Personal signup through to login at a 480×900 mobile viewport. Uses its own reserved identity so it
+ * never races the desktop or API signup for the same "is it taken?" answer.
  */
 const SIGNUP_PASSWORD = 'QaBench@2026';
 

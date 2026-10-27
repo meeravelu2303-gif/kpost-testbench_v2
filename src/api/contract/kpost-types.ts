@@ -1,14 +1,8 @@
 import typesContract from '../../../contracts/kpost-types.json';
 
 /**
- * The KPost type codes, straight from the workbook's Types tab.
- *
- * These numbers are part of the API contract: a payload sends `kmailType: 11` and means "share",
- * `receiverType: 1` and means "TO". Hard-coding them in test data is how they drift — so the
- * generated contract is the only copy, and this module is the typed way to read it.
- *
- * Regenerate with `npm run contract:excel`; tests/framework/types-contract.spec.ts fails if a
- * group disappears or a pinned value changes, so a workbook edit cannot silently alter meaning.
+ * The KPost type codes from the workbook's Types tab (e.g. `kmailType: 11` = share), read from the
+ * generated contract. Regenerate with `npm run contract:excel`.
  */
 
 const SECTIONS = typesContract.sections;

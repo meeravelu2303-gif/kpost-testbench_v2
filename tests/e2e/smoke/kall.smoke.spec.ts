@@ -7,8 +7,7 @@ import { requirePersonalAccount } from './smoke-ui';
  * UI SMOKE · Kall — the scheduling entry point works: the Kool Kall tab opens and its "Create Kool
  * Kall" form is ready to fill. Read-only (the form is closed without submitting).
  *
- * A real call between two browsers is not in smoke: a call only rings while #1680 is open on the
- * test deployment, and the voice-call journey (`journeys/voice-call.spec.ts`) owns that flow.
+ * A real two-browser call is left to `journeys/voice-call.spec.ts` (known defect #1680 blocks it).
  */
 test.describe(
   'SMOKE · UI · Kall',

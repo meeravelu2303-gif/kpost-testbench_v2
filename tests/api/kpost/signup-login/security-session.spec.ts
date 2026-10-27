@@ -7,32 +7,9 @@ import { runSimultaneously } from '@utils/concurrency';
 import { expect, test } from '@fixtures';
 
 /**
- * Sessions, concurrency and rate limiting — the behaviours that only appear under simultaneous load.
- *
- * ## Why `TBL_KPOST_LOGIN_SESSION` is the subject
- *
- * A session row is what makes a token *revocable*. Everything below reduces to one question the API
- * cannot answer about itself: does the server's record of who is signed in match what it has handed
- * out? Three ways that goes wrong, each invisible from a response:
- *
- *  - Tokens issued with **no row** — "log out from all devices" then silently does nothing.
- *  - Rows that **accumulate without limit** — a device cap that is documented but not enforced.
- *  - Rows belonging to **another account** — the session table is the one place a cross-account
- *    mix-up would be visible before it becomes a data breach.
- *
- * ## What this deliberately does NOT assert
- *
- * A specific device limit. The bench has no documented threshold for KPost, and inventing one
- * ("expect exactly 3") would produce a test that fails on a correct product or passes on a broken
- * one. What it asserts instead is the *invariant* — every row belongs to the account that signed
- * in, and each carries what a revocation needs — plus the observed count, reported for a human.
- * Where a real limit is confirmed, the count assertion tightens in one line.
- *
- * ## Safety
- *
- * Logins only: no writes, no destructive calls. The one genuine risk on a shared QA account is
- * **lockout**, so the wrong-password probe sends exactly ONE bad attempt and is followed by a good
- * login — the precaution the bench already documents for live accounts.
+ * Login sessions under simultaneous logins, checked on `TBL_KPOST_LOGIN_SESSION`: every row belongs
+ * to the account and is revocable. No device limit is documented, so the count is only reported.
+ * Logins only, always with the correct password.
  */
 test.describe(
   'KPost Security · sessions and concurrency @api @kpost-api @signup-login @database',
@@ -52,11 +29,7 @@ test.describe(
 
       const sessions = await new KpostRepository(database).sessions(me());
 
-      /*
-       * The invariant, not a count. A row attributed to somebody else is the single most serious
-       * fault this table can show, and unlike a device-limit question it needs no documented
-       * threshold to judge.
-       */
+      // The invariant, not a count: a row attributed to someone else is the serious fault.
       expect(
         sessions.every((s) => text(s.kpost_id) === me()),
         `every row returned for ${me()} must belong to it`,
@@ -79,21 +52,8 @@ test.describe(
       endpoints,
       databases,
     }) => {
-      /*
-       * Bugzilla #496 is open here: ~60% of simultaneous logins answer 500, though the same login
-       * succeeds every time sequentially.
-       *
-       * Deliberately NOT pinned with `test.fail()`. That inverts the verdict and so demands the
-       * defect fire on every run — but this one is a race, and a race that happens not to trigger
-       * would be reported as "expected to fail but passed", turning the whole bench red on a coin
-       * toss. (Observed exactly that: the same spec reported failed in a long run and passed three
-       * times in isolation, with no change in between.)
-       *
-       * What is asserted instead is the part that must hold whether or not the race fires — no
-       * session is ever attributed to another account, and no two sessions share an id. The 5xx rate
-       * is measured and reported rather than asserted, and the companion test below is what flags
-       * the day the race stops happening.
-       */
+      // Asserts what must hold whether or not the #496 login race fires (no foreign rows, distinct
+      // ids). The 5xx rate is only reported; the next test asserts it.
       const database = databases.for('kpost-api');
       test.skip(!database.enabled, 'needs the KPOST_QA connection');
       test.skip(!testData.password, 'needs QA_PASSWORD');
@@ -101,14 +61,8 @@ test.describe(
       const repo = new KpostRepository(database);
       const before = await repo.sessions(me());
 
-      /*
-       * Three logins released from the same tick — the multi-device case. Dispatched together rather
-       * than in sequence because the fault being looked for is a race: two logins writing the same
-       * session row, or one overwriting the other's, which a sequential loop cannot reproduce.
-       *
-       * Each carries its own `sessionID`; the bench learned the hard way that a fixed one makes the
-       * server invalidate previously issued tokens (see the note on DEVICE in auth-profile.ts).
-       */
+      // Three logins from one tick (the multi-device case), each with its own `sessionID`: a fixed
+      // one makes the server invalidate earlier tokens.
       const profile = AUTH_PROFILES.kpost;
       const principal = profile.principals[0];
       test.skip(!principal, 'no KPost principal configured');
@@ -124,12 +78,6 @@ test.describe(
 
       const statuses = burst.outcomes.flatMap((o) => (o.value === undefined ? [] : [o.value]));
       expect(statuses, 'all three logins completed').toHaveLength(3);
-      /*
-       * Every login is answered — that is the floor, and it holds even while #496 is open, because
-       * the defect is a 500 response rather than a hang or a dropped connection. A request that never
-       * comes back is a different and worse fault, so it is asserted here rather than folded into the
-       * rate below.
-       */
 
       const after = await repo.sessions(me());
 
@@ -160,20 +108,8 @@ test.describe(
       const principal = profile.principals[0];
       test.skip(!principal, 'no KPost principal configured');
 
-      /*
-       * Login is the one endpoint worth probing this way: it is unauthenticated, it is the front door,
-       * and it is where a missing rate limit is exploitable. Kept to five per pass — enough to show
-       * whether a limit exists at all, small enough not to lock the account or degrade a shared
-       * environment.
-       *
-       * Every request uses the CORRECT password. A burst of wrong passwords is how a test bench locks
-       * its own account and stops every other module.
-       *
-       * THREE passes, not one, because #496 is probabilistic. A single burst that happens to come
-       * back clean proves nothing, and pinning the test to a single outcome makes the bench flap. The
-       * bench already uses a 3-pass gate before filing a defect; the same standard is applied to
-       * deciding a defect has stopped reproducing.
-       */
+      // Three passes of five simultaneous logins, correct password only (wrong ones lock the
+      // account). Three passes because the #496 race is probabilistic.
       const statuses: number[] = [];
       for (let pass = 0; pass < 3; pass += 1) {
         const burst = await runSimultaneously(5, async (index) => {
@@ -190,17 +126,9 @@ test.describe(
       const serverErrors = statuses.filter((s) => s >= 500);
       const throttled = statuses.filter((s) => s === 429);
 
-      /*
-       * Every request must be ANSWERED. A 500 is the known defect; a request that never returns is a
-       * different fault, and one this assertion would catch.
-       */
       expect(statuses, 'all 15 logins were answered').toHaveLength(15);
 
-      /*
-       * Re-verified live 2026-10-03: 15/15 simultaneous logins succeeded across 3 passes, zero 5xx,
-       * reproduced on a second full run of this module the same day. Bugzilla #496 (RESOLVED/FIXED)
-       * confirmed. The assertion now holds the fix: any 5xx here is a regression, not an open defect.
-       */
+      // Regression guard for #496: any 5xx here means the login race came back.
       expect(
         serverErrors,
         `Bugzilla #496 regressed: ${serverErrors.length}/15 simultaneous logins answered 5xx across ` +

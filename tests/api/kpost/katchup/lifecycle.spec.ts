@@ -5,19 +5,8 @@ import { expect, test } from '@fixtures';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 
 /**
- * The 1:1 message **lifecycle** — send → read back → recall → delete, between our own two accounts.
- *
- * This is the only place a real Katchup message is created, and it cleans up after itself (recall +
- * delete), so nothing is left in a real inbox. It also mints the `msgID` the id-keyed endpoints need
- * — proving the send contract end to end rather than asserting each endpoint in isolation.
- *
- * ## Why it is gated behind an explicit opt-in
- *
- * It writes to a real conversation. Until the owner signs off on sending between our own accounts on
- * the live application (`docs/modules/katchup-flow.md` §6 Q4), this must not run there by accident — so it
- * needs `KATCHUP_LIFECYCLE=true`, and it self-skips otherwise. Off-live (mock) it also needs the
- * flag, because the mock has no Katchup handlers; it exists to run against a real KPost host once a
- * human has said yes.
+ * The 1:1 message lifecycle: send → read back → recall → delete, between our own two accounts.
+ * Gated behind `KATCHUP_LIFECYCLE=true` because it writes a real message (cleaned up by recall + delete).
  */
 test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@regression'] }, () => {
   test.describe.configure({ mode: 'serial' });
@@ -35,7 +24,7 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
     }
   });
 
-  /** First created row from a send response, or undefined. Module-scope: data-shaping, not test flow. */
+  /** First created row from a send response, or undefined. */
   function firstCreated(body: Record<string, unknown>): Record<string, unknown> | undefined {
     const data = body.data;
     return Array.isArray(data) ? (data[0] as Record<string, unknown>) : undefined;
@@ -123,21 +112,9 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
     expect(exchange.status, 'delete succeeds — the message is cleaned up').toBeLessThan(300);
   });
 
-  /*
-   * Independent of the msgID chain above (sends and cleans its own message) — kept last in this
-   * `serial` describe so a failure here (a known, confirmed finding — see below) can never block the
-   * main send → conversation → recall → delete chain from running.
-   */
+  // Independent of the msgID chain (own message), and last so a failure cannot block the chain.
   test('an empty subject is accepted as-is (FR-K02, amended 2026-09-25)', async ({ endpoints }) => {
-    /*
-     * FR-K02/BR-K01 amended 2026-09-25: Subject is no longer mandatory. The owner's updated
-     * requirement is that a message with no Subject must be accepted, not rejected and not silently
-     * defaulted. (Previously the opposite was asserted here as BR-K01-empty-subject-stored-blank,
-     * filed as #615 [KP-9DD851] — closed as invalid once the requirement changed; the observed
-     * behaviour, storing `subject: ""` verbatim with a 200, was correct all along.) The web client
-     * still defaults an empty composer field to "General" before sending — a UI convenience, not an
-     * API contract — so this sends `subject: ""` directly to prove the API's own acceptance.
-     */
+    // Subject is optional: an empty one must be accepted and stored as sent, not defaulted.
     const { status, body } = await send(endpoints, { subject: '' });
     const created = firstCreated(body);
 

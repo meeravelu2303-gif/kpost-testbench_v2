@@ -58,9 +58,7 @@ test.describe('KPost AWS · feature flow', { tag: ['@api', '@platform', '@regres
       expect.soft(uuid, 'the generator mints a uuid').toBeTruthy();
 
       if (uuid) {
-        // delete the presigned key we just reserved (the S3 object, if any). `checkAttachmentS3` runs
-        // on live separately (read spec) with its empty default — a real-uuid check would need a
-        // write-authorized call the guard reserves for destructive endpoints.
+        // Delete the presigned key we just reserved (and the S3 object, if any).
         const deleted = await run(
           endpoints,
           'aws-delete-attachment',

@@ -4,46 +4,13 @@ import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
 
 /**
- * Profile **functional** UI testing — does the profile editor validate input and reflect state, and
- * does what the screen accepts match what the database stores?
- *
- * ## Where the editors actually live (corrected 2026-10-04)
- *
- * None of these editors are a drawer on `/userprofile` itself — that was a stale assumption from an
- * earlier `codegen` pass, confirmed live to be wrong (the `.profilecreation` trigger it referenced no
- * longer exists anywhere on the page, so every `open*` helper was silently no-op'ing and every test in
- * this file was hitting its own `test.skip(!opened, ...)` guard). The real path, confirmed live: go to
- * `/settings`, click the "Profile Creation" accordion header to expand it, then click the specific
- * section name (`About` / `Basic Information` / `Contact Information` / `Education` / `Experience` /
- * `Other Activities`) — each one then renders its own full-page form, not a modal. Basic Information
- * holds "Enter Email ID"; About holds "Write about yourself...". Each editor saves with an "Update"
- * button. Note: some field placeholders (e.g. "Enter Email ID") currently render TWICE on the page —
- * use `.first()` on the final field locator, not a bare unscoped match, or Playwright's strict mode
- * will flag it as ambiguous.
- *
- * ## What this covers that profile-edit / profile-actions do not
- *
- *  - **Email format validation** — the flagship. An address with no `@` must be rejected. The recorded
- *    flow entered `abimukundinvalidgmail.com`, then corrected it — so the question is whether the
- *    editor blocks the malformed one or saves it.
- *  - **State after a valid edit** — the About text the screen shows, and the row the DB holds, must
- *    match after Update.
- *
- * ## The database is the final judge
- *
- * The editor can answer "saved" and store nothing, or accept a malformed value the API layer would
- * reject — both invisible from the screen. So the email test asserts the ROW in TBL_KPOST_USER_MASTER,
- * not just the toast.
- *
- * ## Safety
- *
- * Gated behind `PROFILE_UI_LIFECYCLE` (it edits a profile field) and **self-restoring**: it reads the
- * current value first and puts it back, so the account ends exactly as it started. The invalid-email
- * case is designed to change nothing when validation works.
+ * Profile Creation editors (Settings > Profile Creation > section): input validation and saved state,
+ * judged by the DB row. Gated behind PROFILE_UI_LIFECYCLE; self-restoring. Some placeholders render
+ * twice, so field locators use .first().
  */
 const UPDATE = { role: 'button' as const, name: 'Update' };
 
-/** Opens a Profile Creation sub-section from Settings — the one real path, see the file doc above. */
+/** Opens a Profile Creation sub-section from Settings; each renders a full-page form. */
 async function openProfileCreationSection(
   page: Page,
   section:
@@ -92,8 +59,7 @@ test.describe(
       const database = databases.for('kpost-api');
       const repo = database.enabled ? new KpostRepository(database) : undefined;
 
-      // The email the account really has now, from the row — the ground truth to compare against and
-      // restore to. (Not what the UI shows, which is what we are testing.)
+      // The stored email from the row: the value to compare against and restore.
       const before = repo ? await repo.user(testData.kpostId) : undefined;
 
       const opened = await openBasicInformation(page);
@@ -104,8 +70,7 @@ test.describe(
 
       const emailField = page.getByPlaceholder('Enter Email ID').first();
 
-      // Watch what the editor sends: an update dispatched with a malformed email means no client
-      // validation. Combined with the DB check below, this pins the layer at fault.
+      // An update dispatched with a malformed email means no client-side validation.
       const updates: string[] = [];
       await page.route('**/profile/**', async (route) => {
         if (route.request().method() === 'POST') updates.push(route.request().postData() ?? '');
@@ -119,17 +84,12 @@ test.describe(
 
       await emailField.click();
       await emailField.fill('abimukundinvalidgmail.com'); // no @ — cannot be a valid address
-      // Wait for the update round-trip (or a short window if the client blocks it locally), so the DB
-      // read below sees the settled state rather than racing the request.
+      // Wait for the update round-trip so the DB read sees the settled state.
       await Promise.all([
         page.waitForResponse('**/profile/**', { timeout: 6_000 }).catch(() => undefined),
         page.getByRole(UPDATE.role, { name: UPDATE.name }).click(),
       ]);
 
-      /*
-       * The authoritative check: whatever the screen said, the account's stored email must NOT have
-       * become the malformed value. If it did, the editor accepted an invalid email end to end.
-       */
       if (repo) {
         const after = await repo.user(testData.kpostId);
         expect(
@@ -160,11 +120,7 @@ test.describe(
       page,
       databases,
     }) => {
-      /*
-       * A pincode is 6 digits in India. The editor should reject a short or non-numeric one rather
-       * than store garbage. Judged by the row: `pin_code` in TBL_KPOST_USER_PROFILE must not become the
-       * malformed value. Self-restoring.
-       */
+      // An Indian pincode is 6 digits; judged by pin_code in TBL_KPOST_USER_PROFILE.
       const database = databases.for('kpost-api');
       const repo = database.enabled ? new KpostRepository(database) : undefined;
       const pinOf = (u: unknown): string => {
@@ -206,11 +162,7 @@ test.describe(
       page,
       databases,
     }) => {
-      /*
-       * A mobile number is digits only. The editor should reject letters rather than store them.
-       * Judged by the row: mobile_number in TBL_KPOST_USER_MASTER must not become the malformed value.
-       * Self-restoring.
-       */
+      // Judged by mobile_number in TBL_KPOST_USER_MASTER.
       const database = databases.for('kpost-api');
       const repo = database.enabled ? new KpostRepository(database) : undefined;
       const mobileOf = (u: unknown): string => {
@@ -230,9 +182,7 @@ test.describe(
         timeout: 8_000,
       });
 
-      // Confirmed live 2026-10-04 and again 2026-10-11: this field is `readonly` in the Basic
-      // Information form — changing a verified mobile number goes through its own OTP flow elsewhere,
-      // by design — so the "non-numeric mobile" edit cannot be driven here.
+      // The field is readonly by design: a verified number changes through its own OTP flow.
       const readOnly = await mobile.evaluate((el) => (el as HTMLInputElement).readOnly);
       test.skip(
         readOnly,
@@ -262,11 +212,7 @@ test.describe(
     test('the Education (School) form requires a school name before it saves @ui', async ({
       page,
     }) => {
-      /*
-       * A create form must not save an empty entry. Validation-only by design: it clicks Save with the
-       * required School Name blank and asserts nothing is dispatched — so it leaves NO data on the
-       * account (unlike a create-and-verify, which would pollute the profile).
-       */
+      // Validation only: Save with School Name blank must dispatch nothing, so no data is created.
       const saves: string[] = [];
       await page.route('**/profile/**', async (route) => {
         if (route.request().method() === 'POST') saves.push(route.request().url());
@@ -344,8 +290,7 @@ test.describe(
       await aboutField.fill(marker);
       await page.getByRole(UPDATE.role, { name: UPDATE.name }).click();
 
-      // The screen must show the value it just accepted — a save that reports success but shows the old
-      // text is a stale-state defect.
+      // A save that reports success but shows the old text is a stale-state defect.
       await expect(
         page.getByText(marker).first(),
         'FR: the saved About text is reflected on screen',

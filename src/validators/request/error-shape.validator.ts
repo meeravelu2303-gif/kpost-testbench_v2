@@ -5,27 +5,8 @@ import { defineValidator } from '@engine/validator';
 import { outcome } from '@engine/validation-result';
 
 /**
- * The error shapes every endpoint must handle, probed centrally.
- *
- * The schema-driven validators already cover *payload* faults — a null, a wrong type, a value out
- * of range. These three cover the faults that have nothing to do with the payload and that every
- * HTTP endpoint is expected to answer correctly:
- *
- *   wrong verb        -> 405 Method Not Allowed
- *   wrong media type  -> 415 Unsupported Media Type
- *   no body at all    -> 400 Bad Request
- *
- * They are worth having centrally because they are exactly the cases hand-written test suites skip:
- * nobody writes "send DELETE to the login endpoint" 70 times, and yet a 200 or a 500 there is a
- * real defect. Written once here, they apply to every endpoint the bench knows about.
- *
- * ## What "correct" means, and why a range is accepted
- *
- * A 405 is the correct answer to a wrong verb, but a gateway that routes by path may legitimately
- * answer 404, and a service that requires auth before routing may answer 401. All three are
- * defensible; **200 and 5xx are not**. So each probe accepts the defensible set and fails on a
- * success or a server fault - the same principle the rest of the bench uses: assert what must be
- * true, not what we would prefer.
+ * Non-payload error shapes every endpoint must handle: wrong verb (405), wrong media type (415), no
+ * body (400). Each accepts the defensible set (e.g. 404/401 too) and fails only on a 200 or 5xx.
  */
 
 /** GET is the only verb that is safe to send at an endpoint that did not ask for it. */
@@ -42,9 +23,7 @@ export const methodNotAllowedValidator = defineValidator({
   appliesTo: ({ endpoint }) =>
     endpoint.method === SAFE_WRONG_METHOD
       ? /*
-         * For a GET endpoint the only wrong verbs are mutating ones, and sending POST/PUT/DELETE at
-         * a live API to see what happens is how a test suite deletes production data. Skipped with
-         * the reason rather than risked.
+         * For a GET endpoint every wrong verb mutates, so the probe is skipped rather than risked.
          */
         'no safe wrong-verb probe exists for a GET endpoint (the alternatives all mutate)'
       : true,
@@ -76,11 +55,7 @@ export const unsupportedMediaTypeValidator = defineValidator({
         ? `endpoint does not accept JSON (${endpoint.contentType})`
         : true,
   check: async (context) => {
-    /*
-     * The same valid payload, declared as text/plain. An API that parses it anyway is accepting
-     * input it never agreed to accept - the door through which a malformed body reaches a parser
-     * that was not written to expect it.
-     */
+    // The valid payload declared as text/plain; parsing it anyway accepts input never agreed to.
     const cases: ProbeCase[] = [
       {
         name: 'valid JSON body sent as text/plain',
@@ -108,11 +83,7 @@ export const emptyBodyValidator = defineValidator({
   },
   check: async (context) => {
     if (!context.endpoint.requestSchema) return outcome.skipped('no request schema');
-    /*
-     * Two shapes of "nothing": no body, and an empty object. They reach different code paths - a
-     * missing body often fails in the framework, `{}` in the handler - and an endpoint that accepts
-     * either is an endpoint acting on a request that said nothing.
-     */
+    // No body and `{}` reach different code paths (framework vs handler).
     const cases: ProbeCase[] = [
       {
         name: 'no request body',

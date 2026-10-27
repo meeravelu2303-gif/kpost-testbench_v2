@@ -1,17 +1,10 @@
 #!/usr/bin/env node
 /**
- * Proves that every endpoint in the workbook reached our contracts.
+ * Proves every endpoint in the workbook reached the contracts. Re-parses the .xlsx independently of
+ * the converter and scans every cell for a URL; writes contracts/_coverage.json and exits non-zero
+ * on a miss.
  *
  *   npm run contract:coverage [-- "<workbook.xlsx>"]
- *
- * This deliberately re-parses the .xlsx **independently of the converter** and scans EVERY cell of
- * every endpoint tab for a URL — not just the columns the converter is configured to read. An
- * audit that reuses the converter's own column map would only ever agree with itself; this one can
- * catch a row whose URL sits in an unexpected column (KatchupAPI R66 has junk in K and the real
- * URL in A), which would otherwise be dropped silently.
- *
- * Writes contracts/_coverage.json and exits non-zero when anything in the workbook is missing from
- * the contracts, so it can act as a gate.
  */
 'use strict';
 
@@ -22,11 +15,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const CONTRACTS = path.join(ROOT, 'contracts');
-/*
- * By default this audits the very workbook the contracts were built from, read out of the
- * conversion report. Auditing a different file would compare two unrelated things and report
- * either phantom misses or a false all-clear.
- */
+// By default, audit the same workbook the contracts were built from (named in the conversion report).
 const reportFile = path.join(CONTRACTS, '_conversion-report.json');
 const report = fs.existsSync(reportFile) ? JSON.parse(fs.readFileSync(reportFile, 'utf8')) : {};
 const SOURCE = process.argv[2] || process.env.KPOST_WORKBOOK || report.sourcePath;
@@ -174,11 +163,7 @@ for (const file of ['kpost-api.contract.json', 'kmail-api.contract.json']) {
   for (const record of JSON.parse(fs.readFileSync(full, 'utf8')).endpoints) {
     const key = `${record.product}${normalise(record.path)}`;
     contractPaths.set(key, [...(contractPaths.get(key) ?? []), `${record.tab}:R${record.row}`]);
-    /*
-     * "endKall url changed to endKoolKall" documents ONE endpoint that moved. The old URL is
-     * deliberately not a contract entry, so record why - otherwise this audit either fails on a
-     * correct decision or, worse, waves it through under the wrong explanation.
-     */
+    // "X url changed to Y" is one endpoint that moved; the old URL is deliberately not a contract.
     if (record.replacedUrl) {
       replacedPaths.set(
         `${record.product}${normalise(record.replacedUrl)}`,
@@ -189,9 +174,8 @@ for (const file of ['kpost-api.contract.json', 'kmail-api.contract.json']) {
 }
 
 /**
- * A URL in a notes column is a MENTION, not an endpoint of that row: the Katchup tab's column A
- * quotes old v1 names and review comments, and KMAILAPI R1 holds the tab's base URL. Only a row
- * whose own endpoint column is empty or junk can hide a real endpoint, so only those are failures.
+ * Each tab's endpoint column. A URL elsewhere in a row that has its own endpoint is a mention;
+ * only a row whose endpoint column is empty or junk can hide a real endpoint.
  */
 const ENDPOINT_COLUMN = {
   KatchupAPI: 'K',
@@ -211,8 +195,7 @@ const mentions = [];
 for (const entry of workbookEndpoints) {
   const key = `${entry.product}${entry.path}`;
   if (contractPaths.has(key)) continue;
-  // A path ending in a version segment is a base URL (KMAILAPI R1 = "/kmail5/v2"), not an
-  // endpoint. Genuine two-segment KMail paths like /common/getSaluations are unaffected.
+  // A path ending in a version segment ("/kmail5/v2") is a base URL, not an endpoint.
   if (/\/v\d+$/.test(entry.path)) {
     mentions.push({ ...entry, note: 'base URL, not an endpoint' });
     continue;
@@ -228,8 +211,7 @@ for (const entry of workbookEndpoints) {
   const endpointColumn = ENDPOINT_COLUMN[entry.tab];
   const own = (rowCells(entry.tab, entry.row)[endpointColumn] ?? '').trim();
   const rowHasItsOwnEndpoint = /^https?:\/\//.test(own) || /^\/?[a-zA-Z][\w-]*\//.test(own);
-  // Say which it is: a note-column quote and a second URL sitting in the endpoint column itself
-  // are different situations, and calling both "notes" hid a real drop once already.
+  // A notes-column quote and a second URL in the endpoint column are reported separately.
   if (rowHasItsOwnEndpoint) {
     mentions.push({
       ...entry,

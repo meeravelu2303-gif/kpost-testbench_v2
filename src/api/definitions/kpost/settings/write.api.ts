@@ -3,12 +3,8 @@ import { body } from '../kpost-endpoint';
 import { defineSettingsEndpoint } from './settings-endpoint';
 
 /**
- * Settings **writes** — change font, theme, and the three notification toggles. Each changes only
- * the **caller's own** preferences (no other user, no shared state), so they are the safest writes
- * in the bench — but they still persist a change to our account, so none is `productionSafe`; they
- * run through the gated feature flow (`SETTINGS_LIFECYCLE=true`) with `allowLiveWrite`, self-restoring.
- * Payloads: font/theme from the workbook + live client; the notification toggles document no body,
- * so a minimal `{enable: 1}` is sent and the empty-body/null probes carry the rest.
+ * Settings writes (font, theme, notification toggles) on the caller's own preferences. None is
+ * `productionSafe`; the self-restoring SETTINGS_LIFECYCLE flow drives them.
  */
 const WRITE_TAGS = ['settings-write'] as const;
 
@@ -43,11 +39,7 @@ export const changeThemeApi = defineSettingsEndpoint({
   })),
 });
 
-/**
- * The real toggle body, taken from GeneralSettingServiceImpl: the four keys the server reads, of which
- * "Do Not Disturb" is required (the service answers FAILURE without it). The workbook documents no
- * body, and the earlier guess `{ enable: 1 }` was never accepted by any build.
- */
+/** The notification toggle body from GeneralSettingServiceImpl; "Do Not Disturb" is required. */
 export const notificationToggleBody = (doNotDisturb: 'On' | 'Off' = 'Off') => ({
   'Message Preview': 'On',
   Sound: 'On',

@@ -3,14 +3,8 @@ import { env } from '@config/env';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 
 /**
- * API SMOKE — the checks, as data. One row per module, 1–3 reads each (the `lint:tags` smoke budget),
- * chosen as the read that proves the module's service is up and serving the signed-in user's data.
- * The spec (`api.smoke.spec.ts`) turns every row into one test; the helper (`smoke-read.ts`) owns how
- * a read is judged. To add a check, add a row here.
- *
- * Every read is `productionSafe` (it reads only our own QA data) and was probed live on 2026-10-22.
- * A row says what the answer must CONTAIN, not only that it was HTTP 200: KPost often answers 200
- * with `"status":"FAILURE"` in the body, which a status-only smoke would pass.
+ * API smoke checks as data: 1–3 productionSafe reads per module, each one test (api.smoke.spec.ts).
+ * A row says what the answer must contain, since KPost often answers 200 with "status":"FAILURE".
  */
 
 /** The JSON type a field must have. */
@@ -41,10 +35,7 @@ export interface SmokeModule {
   reads: readonly SmokeRead[];
 }
 
-/**
- * A "the service hung" ceiling, not a performance target: performance is measured by the FULL profile,
- * and a response-time finding is never filed (validity gate). 10 s is far above every probe (max 3.5 s).
- */
+/** A "the service hung" ceiling, not a performance target (that is the FULL profile's job). */
 export const SMOKE_MAX_MS = 10_000;
 
 export const API_SMOKE: readonly SmokeModule[] = [
@@ -115,8 +106,7 @@ export const API_SMOKE: readonly SmokeModule[] = [
   {
     name: 'KMail',
     tag: TAGS.kmail,
-    // Same gate as every KMail spec: while the KMail host refuses valid tokens, every read would only
-    // re-report that one root cause (src/fixtures/kmail-auth-gate.ts).
+    // Same gate as every KMail spec, so a refused token is not re-reported per read.
     gate: kmailAuthGate,
     reads: [
       {
@@ -204,7 +194,7 @@ export const API_SMOKE: readonly SmokeModule[] = [
         endpoint: 'dashboard-home-msgs',
         proves: 'the Home dashboard feed is served',
         fields: { kall: 'array', kmail: 'array' },
-        // The heaviest read (3.5 s on 2026-10-22): it aggregates every module's latest items.
+        // The heaviest read: it aggregates every module's latest items.
         maxMs: 20_000,
       },
     ],
@@ -249,10 +239,8 @@ export const API_SMOKE: readonly SmokeModule[] = [
 ];
 
 /**
- * ADMIN API SMOKE (Admin / HR-Setup on the Admin test box, as the BUSINESS_M company admin): one read
- * per Admin area. Runs in the runner's own Admin stage, never inside the KPost smoke. The rows assert the
- * envelope only: on 2026-10-22, the day they were added, the box refused every logged-in request (401
- * after 30 s), so no answer body could be probed. Add `fields` once it answers again.
+ * Admin API smoke: one read per Admin area as the BUSINESS_M admin, run in the Admin stage only.
+ * The rows check the envelope only; no `fields` have been probed yet.
  */
 export const ADMIN_API_SMOKE: readonly SmokeModule[] = [
   {

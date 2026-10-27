@@ -6,16 +6,8 @@ import type { Page } from '@playwright/test';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * **Responsive sweep** — every registered screen at phone and tablet widths (the cross-cutting test
- * type the production plan listed as absent, Phase 4).
- *
- * What a screen must do at a small width: mount (its `ready` selectors appear), never make the PAGE
- * scroll sideways (`document.documentElement.scrollWidth` must not exceed the viewport — a sideways
- * scroll on a phone is the classic broken-layout symptom), and raise no uncaught error.
- *
- * One test per viewport, looping the screens, so a shared root cause (the header that overflows at
- * 1280px, decision log 2026-10-09) produces ONE failure listing every affected screen rather than a
- * flood of identical tickets. Screens are paced 4 s apart (the 2026-10-07 rate-limiter lesson).
+ * Responsive sweep: every screen at phone and tablet widths must mount, not scroll the page sideways,
+ * and raise no uncaught error. One test per viewport, so a shared cause is one failure listing every screen.
  */
 const VIEWPORTS = [
   { name: 'phone', width: 390, height: 844 },
@@ -31,10 +23,8 @@ async function measure(page: Page, screen: ScreenDef): Promise<Row> {
     .locator('.loader-overlay')
     .waitFor({ state: 'hidden', timeout: 30_000 })
     .catch(() => undefined);
-  // The registry's `ready` selectors describe the desktop shell (side-menu icons, header), which a
-  // phone layout legitimately hides. "Mounted" at a small width therefore means: the route was kept
-  // (no bounce to /login), the error boundary is not showing, and the screen rendered real content —
-  // with the desktop `ready` selectors as the quick path when they are present.
+  // A phone layout hides the desktop `ready` selectors, so "mounted" here means: route kept, no error
+  // boundary, real content rendered (desktop selectors are just the quick path).
   const readyVisible = await page
     .locator(screen.ready.join(', '))
     .first()

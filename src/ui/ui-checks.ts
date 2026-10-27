@@ -5,20 +5,8 @@ import type { UiHealthReport } from './ui-health';
 import { noteDiagnostic } from './failure-diagnostics';
 
 /**
- * The centralized UI check catalogue — the front-end analogue of the API validators. Each check is
- * written ONCE and runs on EVERY screen the deep suite drives, so a screen only declares what it is
- * (route + controls, in `screens.ts`) and inherits every check automatically. Adding a check here
- * makes it apply to all screens, exactly like adding an API validator.
- *
- * Categories, mirroring the API engine's dimensions but for a rendered page:
- *   health         — uncaught JS exceptions and broken front-end assets (from the health monitor)
- *   performance     — the screen renders within a time budget
- *   layout          — no horizontal overflow at the SUPPORTED desktop widths (KPost is desktop-only)
- *   accessibility   — images have alt text, form fields have labels, the page declares lang + title
- *
- * A finding is one problem on one screen. Findings are collected (never thrown) so one run surfaces
- * every issue, and the spec turns them into soft assertions — the same "a case per check" shape the
- * API side uses.
+ * The UI check catalogue, the front-end analogue of the API validators: each check runs on every
+ * screen in `screens.ts`. Findings are collected, never thrown, so one run surfaces every issue.
  */
 
 export interface UiFinding {
@@ -74,8 +62,7 @@ export const healthCheck: UiCheck = {
 export const performanceCheck: UiCheck = {
   name: 'ui.performance',
   run: ({ loadMs }) => {
-    // A live SPA over the public internet; a screen slower than this to become interactive is a real
-    // UX problem, but the budget is generous enough not to fire on a normal heavy live load.
+    // Generous enough not to fire on a normal heavy live load.
     const BUDGET_MS = 10_000;
     if (loadMs > BUDGET_MS) {
       return [
@@ -91,19 +78,9 @@ export const performanceCheck: UiCheck = {
 };
 
 /**
- * The layout must not overflow horizontally at the widths the app SUPPORTS. KPost is a desktop app
- * (its nav rail and side columns are `d-none d-xl-*` — hidden below ~1200px), so it is not designed
- * for phone widths and testing those would just report a size it never targets. So this checks the
- * supported desktop widths only; overflow there is a real broken-layout bug.
- */
-/**
- * WHERE the horizontal overflow comes from, in the two shapes it takes:
- *  1. an element whose CONTENT is wider than its own box (scrollWidth > clientWidth, overflow visible) —
- *     the deepest such element is where the CSS fix belongs, so it is listed with its children's widths
- *     and shrink settings (on 2026-10-09 this was the shared page header `.header_back`: 3px too wide
- *     on every screen, invisible to a "which box crosses the edge" search);
- *  2. elements whose own box reaches past the viewport's right edge (outermost ones).
- * Written as a plain string so no build tool can rewrite the in-page code.
+ * Finds where horizontal overflow comes from: the deepest element whose content is wider than its
+ * box (where the CSS fix belongs), and elements reaching past the right edge. A plain string so no
+ * build tool rewrites it.
  */
 export const OVERFLOW_PROBE = `(() => {
   const vw = document.documentElement.clientWidth;
@@ -196,6 +173,7 @@ async function overflowCulprits(page: Page): Promise<string> {
   return lines.join('\n');
 }
 
+/** No horizontal overflow at the supported desktop widths (KPost is desktop-only). */
 export const responsiveCheck: UiCheck = {
   name: 'ui.layout',
   run: async ({ page }) => {
@@ -208,17 +186,14 @@ export const responsiveCheck: UiCheck = {
           const doc = document.documentElement;
           return { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth };
         });
-        // 1px for sub-pixel rounding only. clientWidth already excludes the scrollbar; the old 16px slack hid
-        // a real 3px overflow (the shared header, 2026-10-09) — and would have auto-closed those bugs as fixed.
+        // 1px for sub-pixel rounding only; clientWidth already excludes the scrollbar.
         if (overflow.scrollWidth > overflow.clientWidth + 1) {
           findings.push({
             check: 'ui.layout',
             severity: 'MEDIUM',
             message: `Horizontal overflow at ${width}px (a supported desktop width): content is ${overflow.scrollWidth}px wide, the viewport ${overflow.clientWidth}px — the user must scroll sideways.`,
           });
-          // What the UI developers asked for (2026-10-08): WHICH element sticks out, its measured size
-          // and the CSS that sizes it. Goes into the failure diagnosis — the message above is the bug's
-          // fingerprint and must not change.
+          // Which element sticks out, for the diagnosis (the message above is the fingerprint).
           noteDiagnostic(
             page,
             `Elements wider than the screen at ${width}px`,
@@ -281,9 +256,7 @@ export const accessibilityCheck: UiCheck = {
       });
     }
     if (a11y.fieldsMissingLabel > 0) {
-      // LOW, so it informs without filing: on a React SPA a field without a formal <label> is often
-      // a framework-internal input (e.g. a react-select) that is still usable, so this is too fuzzy
-      // to file as a bug. Reported as context; raise BUGZILLA_MIN_SEVERITY to file it.
+      // LOW (context, not filed): an unlabelled field is often a usable framework-internal input.
       findings.push({
         check: 'ui.accessibility',
         severity: 'LOW',
@@ -291,8 +264,7 @@ export const accessibilityCheck: UiCheck = {
       });
     }
     if (a11y.imagesMissingAlt > 0) {
-      // Pervasive and lower-impact — reported at LOW (below the default filing floor) so it informs
-      // without flooding the queue; raise BUGZILLA_MIN_SEVERITY to file it.
+      // LOW (below the filing floor): pervasive and lower-impact.
       findings.push({
         check: 'ui.accessibility',
         severity: 'LOW',
@@ -304,11 +276,8 @@ export const accessibilityCheck: UiCheck = {
 };
 
 /**
- * **Rendered error text** — the highest-signal UI bug there is: a screen that literally shows
- * `undefined`, `null`, `NaN`, `[object Object]` or `Invalid Date` because a value failed to format.
- * To keep false positives at zero (the API side's calibration bar), it flags only text nodes whose
- * ENTIRE trimmed content is one of those tokens (a field rendered as the raw value), not the token
- * appearing inside a larger sentence.
+ * Rendered error text: a visible text node that is entirely `undefined`, `null`, `NaN`, `[object
+ * Object]` or `Invalid Date` (never the token inside a sentence, to keep false positives at zero).
  */
 export const contentErrorCheck: UiCheck = {
   name: 'ui.content',
@@ -341,10 +310,7 @@ export const contentErrorCheck: UiCheck = {
   },
 };
 
-/**
- * **Broken images** — an `<img>` with a real `src` that failed to load (`complete` but
- * `naturalWidth === 0`). A missing avatar / icon / attachment thumbnail is a visible defect.
- */
+/** Broken images: an `<img>` with a real `src` that loaded with `naturalWidth === 0`. */
 export const imageCheck: UiCheck = {
   name: 'ui.images',
   run: async ({ page }) => {
@@ -369,10 +335,7 @@ export const imageCheck: UiCheck = {
   },
 };
 
-/**
- * **Mixed content** — on an HTTPS page, a resource requested over plain HTTP. Browsers block or warn,
- * so the asset is often missing, and it is a security downgrade. Zero false positives on an https app.
- */
+/** Mixed content: a plain-HTTP resource on an HTTPS page. */
 export const mixedContentCheck: UiCheck = {
   name: 'ui.security',
   run: async ({ page }) => {
@@ -396,11 +359,7 @@ export const mixedContentCheck: UiCheck = {
   },
 };
 
-/**
- * **App console errors** — errors the page logged to the console (React warnings, PropType failures,
- * unhandled rejections the app swallowed). Reported at LOW (context, below the filing floor) because
- * the class is noisier than a hard crash; raise `BUGZILLA_MIN_SEVERITY` to file it.
- */
+/** Console errors the page logged; LOW (below the filing floor) because the class is noisy. */
 export const consoleCheck: UiCheck = {
   name: 'ui.console',
   run: ({ health }) => {
@@ -416,11 +375,7 @@ export const consoleCheck: UiCheck = {
   },
 };
 
-/**
- * **Duplicate DOM ids** — two elements sharing an `id` breaks `label[for]`, `getElementById` and
- * anchor navigation. LOW (context) because a React app can legitimately repeat an id across a portal;
- * it informs without flooding the queue.
- */
+/** Duplicate DOM ids; LOW because a React portal can legitimately repeat one. */
 export const domCheck: UiCheck = {
   name: 'ui.dom',
   run: async ({ page }) => {

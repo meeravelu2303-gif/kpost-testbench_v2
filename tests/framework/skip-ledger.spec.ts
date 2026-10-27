@@ -5,36 +5,14 @@ import { ROOT_DIR } from '@config/constants';
 import { expect, test } from '@fixtures';
 
 /**
- * THE skip ledger — every `test.skip(...)` / `test.fixme(...)` reason in the suite, classified.
- *
- * ## Why
- *
- * A skip looks like a pass in a summary line. Found 2026-10-10: a User Management test had skipped on
- * every run for weeks because a placeholder changed, and seven business-tier UI specs can never run
- * under the product command. Nobody could see either from the report. This ledger makes every skip
- * reason visible, puts it in one of four classes, and **fails the build on a reason it cannot
- * classify**, so a new skip has to say honestly which kind it is.
- *
- * ## The classes
- *
- *  - `provision`      needs an account, a database connection, a host or a secret the machine lacks
- *  - `owner-decision` gated behind a `*_LIFECYCLE` flag, a pause, or a safety choice the owner made
- *  - `live-condition` the application genuinely had nothing to test this run (no data, a collision)
- *  - `retune`         "did not open on this build — needs a re-tune": a selector that no longer matches
- *                     OR a real defect — today the report cannot tell. Phase 1 drives this class to 0;
- *                     after that it becomes a failure, not a skip.
- *
- * Generated to `docs/generated/skips.md`, never hand-kept.
+ * The skip ledger (`docs/generated/skips.md`): every `test.skip`/`test.fixme` reason in the suite,
+ * classified. A skip looks like a pass, so a reason it cannot classify fails the build.
  */
 
 type SkipClass =
   'retune' | 'defect' | 'owner-decision' | 'provision' | 'live-condition' | 'no-reason';
 
-/**
- * Order matters: the first matching class wins. Each pattern is tried against the reason text first
- * and, when that does not settle it, against the whole `test.skip(...)` argument list (so a
- * `test.skip(process.env.KALL_LIFECYCLE !== 'true')` with no reason string still classifies).
- */
+/** First match wins; tried on the reason text, then on the whole argument list (the condition). */
 const CLASSIFIERS: Array<{ cls: SkipClass; pattern: RegExp }> = [
   {
     cls: 'retune',
@@ -84,11 +62,7 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/**
- * The reason text of a `test.skip(...)`: every string literal in the argument list, joined (reasons
- * are often concatenated across lines), minus the literals that belong to the condition. A skip with
- * no literal at all is reported as such — the caller classifies it from the condition instead.
- */
+/** A skip's reason: its string literals joined, minus the literals of the condition. */
 function reasonOf(args: string): { reason: string; dynamic: boolean; hasLiteral: boolean } {
   const literals = [
     ...args.matchAll(/'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g),

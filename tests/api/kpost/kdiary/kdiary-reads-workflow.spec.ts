@@ -4,14 +4,8 @@ import { scheduleShape } from '@api/definitions/kpost/kdiary/write.api';
 import { expect, test } from '@fixtures';
 
 /**
- * KDiary **read business rules** — the 3 reads `feature.spec.ts`'s write lifecycle never chains a
- * result into: `getTodaySchedules`, `getTodayReport`, `getEventSelectedDate`. All `productionSafe:
- * true`; the two chain tests create a real event, so they run only with `KDIARY_LIFECYCLE=true`,
- * self-cleaning.
- *
- * `getEventDate` is covered separately — see `tests/api/kpost/security/kdiary-object-authorization.spec.ts`
- * (its real payload and a confirmed cross-tenant IDOR, filed as #1017; `kdiary-gaps.spec.ts` has the
- * resolution history).
+ * KDiary read rules for getTodaySchedules, getTodayReport and getEventSelectedDate. The chain tests
+ * create a real event, so they need KDIARY_LIFECYCLE=true and clean up after themselves.
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 
@@ -120,11 +114,7 @@ test.describe(
         eventID = createdBody.data?.eventID;
         expect(eventID, 'createEvent issues an eventID').toBeTruthy();
 
-        /*
-         * saveReport is date-scoped, not event-scoped — "Report already exists for today" on a re-run
-         * the same day is a valid, expected outcome (a report for today already exists either way), not
-         * a failure of this chain.
-         */
+        // saveReport is one per day: "Report already exists for today" on a re-run is fine.
         const saved = await endpoints.sendTo(
           'kdiary-save-report',
           { body: { eventID, taskReport: 'QA bench reads-workflow report' } },

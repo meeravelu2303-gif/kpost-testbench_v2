@@ -3,49 +3,15 @@ import { allRegisteredKpostIds } from '@fixtures/test-accounts';
 import { ProductionSafetyError } from './production-guard';
 
 /**
- * Refuses any request to the live application that names a resource we do not own.
- *
- * ## The hole this closes
- *
- * Restricting a live run to "our own QA accounts" sounds sufficient and is not, because several
- * KPost endpoints take the record they act on **from the request payload rather than from the
- * token**. That is measured, not assumed: `POST /admin/removeCompanyLogo` accepts
- * `{"companyId": 4}` and our tokens carry no `companyID` claim at all, so the endpoint has no way
- * to scope itself to the caller. The same shape appears across the API:
- *
- *     admin/resetPassword          {"kpostID":"priya@rkveg.kpost.in","companyID":1,…}
- *     v2/group/removeGroupMember   {"memberKpostIdList":["jitendra9@kpostindia.com"],"groupID":1141}
- *     v2/contacts/deleteContact    {"contactID":"prakas168@kpostindia.com"}
- *
- * Logging in as a QA account constrains none of those. Only inspecting the outgoing payload does.
- * The **tenant** identifiers above (a kpostID, a company, a contact) are what the guard checks; the
- * **runtime-scoped** ids a payload also carries — a `msgID` we sent, a `groupID` we made, a `kallID`
- * we placed — are exempt below, because they are created at runtime (so cannot be pre-allowlisted)
- * and no `productionSafe` endpoint accepts one. See `NOT_A_RESOURCE`.
- *
- * The immediate danger is the negative probes: `request.data-type` and `request.boundary-value`
- * mutate every field, id fields included, so a fuzzer turns `companyID: 1001605` into `0`, `-1` or
- * `1001604` — a real customer. On dev that is the point. On live it is damage nobody would notice,
- * because one deleted record surfaces weeks later as a support ticket that never gets traced back.
- *
- * ## How it decides
- *
- * Broad detection, explicit exemption. Any key that *looks* like a resource identifier is checked
- * against the QA allowlist, and keys that are legitimately not user-owned resources are listed by
- * name in `NOT_A_RESOURCE` below. That way a new id field added to a payload is guarded by default
- * and the burden falls on whoever exempts it — the reverse arrangement silently admits every field
- * nobody thought about.
- *
- * Off production this is inert: fuzzing ids is exactly what the bench is for.
+ * Refuses any live request that names a resource we do not own. Several endpoints take the target
+ * record from the payload, not the token, so a fuzzed id (`companyID: 1001604`) could hit a real
+ * customer. Any key that looks like an identifier is checked unless exempted in `NOT_A_RESOURCE`,
+ * so new id fields are guarded by default. Inert off production.
  */
 
 /**
- * Keys that match the identifier pattern but do not name a record belonging to a user.
- *
- * Every entry is a claim that mutating this value cannot affect another tenant. Reference data
- * (`countryID`), values we generate ourselves (`sessionID`, `deviceID`) and protocol fields
- * (`statusCode`) qualify. **A resource id never belongs here** — if an endpoint acts on it, it
- * belongs in the allowlist instead, with a QA-owned value.
+ * Keys that match the identifier pattern but cannot affect another tenant (reference data,
+ * bench-generated values, content, runtime-scoped ids). A tenant resource id never belongs here.
  */
 const NOT_A_RESOURCE = new Set(
   [
@@ -60,19 +26,8 @@ const NOT_A_RESOURCE = new Set(
     'productid',
     'moduleid',
     'module',
-    /*
-     * An account TIER (PERSONAL, BUSINESS_S/M/L), not an account. It matches the pattern only
-     * because it contains "user" — and treating it as an identifier refused every login on live,
-     * since `loginRO.userType: "PERSONAL"` is not a QA-owned value. Found before the first run.
-     */
+    // An account tier (PERSONAL, BUSINESS_*), not an account; plural is the directory filter.
     'usertype',
-    /*
-     * The same tier enum in its plural FILTER form, as the directory search sends it
-     * (`userTypeList: ['personal']`). A separate entry because the guard matches whole keys, so
-     * exempting `usertype` does not cover `usertypelist` — and the value is still a closed set of
-     * tiers, never an account. Found by the contacts coverage invariant, which is there precisely
-     * to catch an exemption that stops one key short of the payloads actually sent.
-     */
     'usertypelist',
     // Values this bench generates for itself.
     'sessionid',
@@ -85,32 +40,14 @@ const NOT_A_RESOURCE = new Set(
     // Protocol and envelope fields, never a resource.
     'statuscode',
     'id_token',
-    /*
-     * Message CONTENT, TYPE codes and TIMESTAMPS — not a tenant resource. They match the pattern
-     * only because a key contains "message"/"member"/"mail"; their values are body text, an enum
-     * code or an epoch, and none addresses another account. Without these the guard refused every
-     * Katchup send (found on the first feature run).
-     */
+    // Message content, enum codes, settings, search text and timestamps: never another account.
     'messagetype',
     'actualmessage',
-    // A notification SETTING name ("Message Preview": "On"/"Off", GeneralSettingServiceImpl), the
-    // caller's own on/off switch, never another account. Matches only because it contains "message";
-    // without it the guard refused the Settings notification flow (full sanity, 2026-10-22).
     'message preview',
-    // The filter enum (`All`/`sent`/`received`) filterKatchUpMessage takes — a closed set of filter
-    // modes, not a record identifier. Matches the pattern only because the key contains "message".
     'messageby',
-    // The full-text search query a caller types (searchKatchUpMessage/searchKatchUpMessageSubject)
-    // — content typed for a query, exactly like actualMessage above, never a record identifier.
     'searchmessage',
     'messagetime',
     'servertime',
-    /*
-     * The Disappearing/Secret-Message auto-delete deadline (an epoch ms, one hour out) — a timestamp,
-     * same class as messagetime/servertime above. Matches the pattern only because it contains
-     * "message". Found live 2026-09-25: refused every scheduled-secret-message send in
-     * feature.spec.ts, since a future Date.now()-derived ms is never a QA-owned value.
-     */
     'secretmessageexpiretime',
     'sharedtype',
     'selectedmembers',
@@ -120,17 +57,10 @@ const NOT_A_RESOURCE = new Set(
     'referencemessageidlist',
     'sharedmessagedetails',
     'groupkpostname',
-    // The group's DISPLAY name in editGroupName — free text a user types, not a resource id. Same
-    // class as groupkpostname; without it the identifier guard blocks a rename with a non-QA name.
+    // Display names and counts a user types, not resource ids.
     'groupname',
-    // A KMail other-domain contact's DISPLAY name (addOtherDomainContact/editOtherDomainContacts
-    // Details) — free text a user types, not a resource id. Same class as groupname; without it the
-    // guard refused any edit that actually changed the name, so the bench could only ever "edit" a
-    // contact back to its own address as a no-op. Found live 2026-09-26.
     'contactname',
     'memberdesignation',
-    // A capacity/quantity number (e.g. an enquiry's requested seat count), not a member id — matches
-    // the pattern only because the key contains "member".
     'maximummemberscount',
     'reportid',
     // Group metadata flags/paths — contain "group" but are booleans/paths, not a group id.
@@ -140,27 +70,14 @@ const NOT_A_RESOURCE = new Set(
     'groupflag',
     'groupforwardlist',
     /*
-     * MESSAGE- and GROUP-scoped ids (a message we sent, a group we made) — not TENANT-scoped like a
-     * kpostID/companyID. They are created at runtime so cannot be pre-allowlisted, and no
-     * productionSafe endpoint accepts one (the id-keyed reads are all blocked on live). The
-     * cross-tenant identifiers that matter — kpostID, mobile, email, company, contact, and the
-     * kpostID lists — are still checked.
+     * Runtime-scoped message ids (a message we sent): cannot be pre-allowlisted, and no
+     * productionSafe endpoint accepts one. Tenant identifiers (kpostID, mobile, email, company,
+     * contact) stay checked.
      */
     'msgid',
     'msgids',
-    /*
-     * `deleteKatchUpMessage`'s own field spelling (Katchup.js `DeleteMessage`) — the live client uses
-     * `messageIds` (an ARRAY), not `msgIds`, for this one endpoint. Same runtime-scoped msgID as
-     * above, just a different plural. Missing this exemption meant every `katchup-delete-message`
-     * cleanup call across this suite silently threw (caught by a `.catch(() => undefined)` at each
-     * call site, so the failure was never visible) instead of actually deleting the message —
-     * confirmed live 2026-09-25 while investigating a `katchup-recall-message` finding.
-     */
     'messageid',
     'messageids',
-    // forwardKatchupMultipleMsgs' list of the messages being forwarded (ForwardFooter.js
-    // sendMultiForward) — the same runtime-scoped msgIDs; the RECIPIENT lists beside it
-    // (forwardReceiverList) stay checked. Found 2026-10-20 (the hidden-source forward test).
     'forwardmessageidlist',
     'temporarymsgid',
     'oldmsgid',
@@ -168,12 +85,7 @@ const NOT_A_RESOURCE = new Set(
     'firstmsgid',
     'lastmsgid',
     'sharedmessageid',
-    /*
-     * KMail runtime ids — a mail we sent, its transaction rows, a draft, a saluation/template we
-     * created. Runtime-scoped like a msgID, cannot be pre-allowlisted, and no productionSafe endpoint
-     * accepts a real one (id-keyed KMail reads are blocked `needs-id`). The tenant identifiers in a
-     * mail payload — the `selectedContact`/`toAddress`/recipient kpostIDs — stay checked.
-     */
+    // KMail runtime ids (a mail, draft, template we created); recipient kpostIDs stay checked.
     'kmailid',
     'kmailids',
     'kmailnumber',
@@ -182,111 +94,57 @@ const NOT_A_RESOURCE = new Set(
     'draftkmailid',
     'saluationid',
     'templateid',
-    /*
-     * `referenceKmailID` (a reply/forward pointing at a mail we sent) and `referenceMails` (the array
-     * form `kmail-reference-content` reads by) — the same runtime-scoped KMail id as `kmailID` above,
-     * just under the reply-specific key names. Without this, replying to our own mail to mint a real
-     * id to test with is refused, the one gap `kmail-reference-content` was blocked on.
-     */
+    // The same runtime KMail id under reply/forward key names.
     'referencekmailid',
     'referencemails',
-    // `originalKmailID` — the forward-specific key for the same runtime-scoped id (the mail being
-    // forwarded, which the test itself just sent; WriteMailBox.js / MailFooter.js send it on every
-    // reply and forward). Without it, forwarding our own mail is refused (2026-10-14).
     'originalkmailid',
-    // KMail content/enum/meta fields that match only via the "mail"/"msg"/"attachment" token — a
-    // subject, a body, a send timestamp, a type/priority/flag — not tenant resources.
+    // KMail content, enum and timestamp fields, not tenant resources.
     'kmailstatusflag',
     'msgtotranslate',
     'kmailsubject',
     'kmailcontent',
     'kmailsenddate',
     'kmailtype',
-    // `fetchMailType` (selectedContactMails) — which mail list to fetch (inbox/sent/…), an enum.
     'fetchmailtype',
     'kmailsendtype',
     'attachmentflag',
     'attachmentcaption',
     'groupid',
-    // The auto-minted id of a group we created (`qab###@kpostindia.com`) — group-scoped and created
-    // at runtime like `groupid`, so it cannot be pre-allowlisted; no productionSafe endpoint accepts
-    // one (every group op is gated). The tenant ids in a group payload — the member kpostIDs — stay
-    // checked.
+    // A group we created (runtime-scoped, every group op is gated); member kpostIDs stay checked.
     'groupkpostid',
-    /*
-     * KALL enum codes, the bench-generated session string, and the call timestamps. They match the
-     * pattern only because the key contains "kall"; their values are an enum (`kallMode: 0`,
-     * `kallStatus: 6`, `kallType: 1`), a session string we mint, or an epoch — none addresses another
-     * account. Without these the guard refuses every Kall read on live (the same class as the Katchup
-     * content fields above).
-     */
+    // Kall enum codes, our session string and call timestamps.
     'kallsession',
     'kallmode',
     'kallstatus',
     'kalltype',
     'kallstarttime',
     'kallendtime',
-    /*
-     * A kall is a runtime-created, kall-scoped resource (a call we placed or scheduled), not a
-     * TENANT resource like a kpostID/company. Its id cannot be pre-allowlisted, and no productionSafe
-     * endpoint accepts one — every kallID-keyed read (`getKallStatus`, `getKallStatusUsingKallID`) is
-     * blocked on live (`needs-kall-id`), and every write that acts on a kallID is gated. The
-     * cross-tenant identifiers a kall payload also carries — the participant kpostIDs in
-     * `addingUserIds`/`removingUserIds`/`kallDetails[].receiver` — are still checked.
-     */
+    // A kall we placed (kallID reads are blocked on live); participant kpostIDs stay checked.
     'kallid',
     'kallids',
-    /*
-     * The id of a KWord document we created (a UUID). Doc-scoped and created at runtime like a
-     * groupID/msgID, so it cannot be pre-allowlisted; no productionSafe endpoint accepts one (every
-     * KWord op is gated). The tenant kpostIDs in a doc's share/join payload stay checked.
-     */
+    // A KWord document we created (runtime-scoped, every KWord op is gated).
     'docid',
-    /*
-     * An S3 attachment uuid we generated (`generate-presigned-url` mints it) — runtime-scoped like a
-     * msgID/docId, cannot be pre-allowlisted, and no productionSafe endpoint accepts one (every
-     * attachment op is gated / needs-attachment). `attachmentsuuid` is Katchup's array form;
-     * `attachmentuuid` is KMail's `postMail` field name for the same runtime-generated uuid (found
-     * 2026-10-02 writing the attachment-IDOR proof — same class, different key spelling).
-     */
+    // An S3 attachment uuid we generated (attachment ops are gated); Katchup and KMail spellings.
     'uuid',
     'attachmentsuuid',
     'attachmentuuid',
-    // KWord document CONTENT/TYPE fields — a title, a subject line, a document-type name — not
-    // resources. They match only because the key contains "doc"/"document".
+    // KWord document title/type fields.
     'doctitle',
     'titleofdocument',
     'documenttype',
-    /*
-     * Appearance/preference values on the theme write (`changeTheme`). They match the pattern only
-     * because the key contains "katchup"/"kpost"; their values are a style name (`bubble`), a colour
-     * theme (`sunset`) or a layout (`purple`) — a cosmetic setting on the caller's own account, not a
-     * tenant resource. Without these the guard refuses the theme write.
-     */
+    // Cosmetic theme settings on the caller's own account (`changeTheme`).
     'katchupchatstyle',
     'katchupchattheme',
     'katchupchatbackgroundthemewallpaper',
     'kpostlayouttheme',
     /*
-     * A **bare** `id` — the row id of the resource, echoed back in a write body (`updateKallStatus`,
-     * `joinScheduleKall`, `endKoolKall` all send `{id: <the kall we created>, kallID: <same>}`). It
-     * is the same runtime-scoped kall id as `kallID`, just under the primary-key name. Exempting the
-     * EXACT key `id` is surgical: this API names every cross-tenant target with a QUALIFIED key
-     * (`kpostID`, `companyID`, `contactID`, `groupID`, `kallID`, `msgID`), never a bare `id`, and no
-     * `productionSafe` endpoint sends one (asserted below and by the kall coverage self-test). A
-     * qualified `…id` key such as `companyid`/`kpostid` is unaffected — only exact `id` matches here.
+     * A bare `id`/`ids`: a runtime row id echoed in a write body. Safe only as the exact key,
+     * because this API names every cross-tenant target with a qualified key (`kpostID`,
+     * `companyID`, …), which stays checked.
      */
     'id',
-    // The plural of a bare `id`: a runtime row-id array (`addOrRemoveAdminAccess` sends `ids:[…]` of
-    // membership rows). Same surgical exemption as `id` — qualified keys (`kpostIDs`, `contactIDs`)
-    // stay checked.
     'ids',
-    /*
-     * The Admin employee's POSTAL mailing address (`mailingObj`, Employee Data step 3): country, ZIP,
-     * state, city, area and address lines. They match only because the key contains "mail"; the values
-     * are a place, not a mailbox or a record. E-mail keys (`emailAddress`, `alternativeEmailAddress`)
-     * are not listed and stay checked. (2026-10-26)
-     */
+    // The Admin employee's postal address fields; e-mail keys stay checked.
     'mailingcountry',
     'mailingzipcode',
     'mailingstate',
@@ -302,89 +160,38 @@ const IDENTIFIER_KEY =
   /(^|[^a-z])(id|ids)$|kpost|mobile|email|company|contact|group|member|msg|message|kall|katchup|mail|doc|presentation|attachment|uuid|account|user/i;
 
 /**
- * Every QA-owned identifier, lower-cased and stringified for comparison.
- *
- * Built from values **explicitly set in `.env`** — never from a schema default. Those defaults are
- * the mock server's seed, and `companyId` defaults to `1`, which is a real company on the live
- * application: allowlisting it would turn this guard into the thing that authorises the damage.
- *
- * The consequence is deliberate and useful. While no business account exists on live, the business
- * identifiers are unset, so nothing company-shaped is in the allowlist and every request naming a
- * company is refused. A PERSONAL-only scope enforces itself.
+ * Every QA-owned identifier, lower-cased. Built only from values explicitly set in `.env`, never
+ * schema defaults: the default `companyId` of `1` is a real live company.
  */
 function qaOwnedValues(): Set<string> {
   const owned = [
     ...providedIdentityValues(),
-    /*
-     * The "absent" fixtures are the exception: they are required to match NOTHING, so they cannot
-     * name anybody's record, and the enumeration probes need them. Their defaults are safe for the
-     * same reason — an id that exists nowhere belongs to no one.
-     */
+    // "Absent" fixtures match nothing, so they name nobody's record.
     testData.kpostIdAbsent,
     testData.mobileAbsent,
     testData.companyNameAbsent,
-    /*
-     * The reserved REGISTRATION identity (OTP_TEST_GATEWAY, disposable test DB). A signup creates a
-     * brand-new account — it names no existing user — and these values are ours to use, so they are
-     * allowlisted like the absent fixtures. Off the test env the OTP flows are blocked upstream anyway.
-     */
+    // The reserved Personal and Business registration identities: a signup names no existing user.
     testData.signupKpostId,
     testData.signupMobile,
-    /*
-     * The reserved BUSINESS registration identity (`signup-login-admin-registration`) — same reason
-     * as the PERSONAL one above, plus the company/unique name the registration mints alongside it.
-     */
     testData.businessSignupKpostId,
     testData.businessSignupMobile,
     testData.businessSignupCompanyName,
     testData.businessSignupUniqueName,
     /*
-     * The reserved OTP DESTINATIONS — the mail and mobile half of the same registration identity.
-     *
-     * Allowlisted for the reason above rather than by exempting the `otherEmail` / `email` keys:
-     * an email address IS a resource identifier, it addresses a mailbox, and this environment's
-     * mail server is LIVE. Exempting the key would let the negative probes mutate it and mail a
-     * one-time code to whatever address a fuzzer invented. Allowlisting the specific configured
-     * values keeps the guard's teeth and lets only the bench's own throwaway destinations through.
-     *
-     * Their defaults are deliberate throwaways (see the note on `otpEmail` in test-data.config.ts)
-     * and name no user record. Point QA_OTP_EMAIL / QA_OTP_MOBILE at a mailbox and number the team
-     * actually controls before running the OTP suites anywhere that delivers.
+     * The reserved OTP destinations. Allowlisted by value, never by exempting the email key: the
+     * mail server is live, and a fuzzed address would receive a real one-time code.
      */
     testData.otpEmail,
     testData.otpMobile,
-    // `0` = the "no specific company" sentinel some public lookups require (e.g. mobileNoExist's
-    // companyID for a personal check). It names no real company, so it is safe to allowlist.
+    // `0` is the "no specific company" sentinel some public lookups require.
     '0',
-    /*
-     * Every account in the central registry (`src/fixtures/test-accounts.json`).
-     *
-     * These are bench-owned by construction: the `qatest_` prefix exists precisely so an account of
-     * ours is identifiable, and `policyViolation()` refuses to record an id without it. Without
-     * this line the guard would block the suites that use them — the registry would name accounts
-     * the bench then refused to send requests for, which is the opposite of the point.
-     *
-     * Included whether or not they are provisioned: an unprovisioned id names no existing record,
-     * so it is safe for the same reason the "absent" fixtures above are, and the availability check
-     * the signup screen drives has to be able to ask about an id before it exists.
-     */
+    // Every account in the central registry: bench-owned by construction (provisioned or not).
     ...allRegisteredKpostIds(),
-    /*
-     * The BARE (no-domain) form of every `.env`-provided identity value. Splitting an already-owned
-     * `name@domain` on `@` cannot produce a foreign identifier — it is the same account, just written
-     * without its domain. Still allowlisted even though BR-SL-3IDS turned out to be a misreading of
-     * the FRD (bug #949, closed INVALID 2026-10-03): login via the bare form is CORRECTLY rejected,
-     * since the local part is not unique across domains — but the bench still needs to send that exact
-     * bare value to assert the rejection, and it names nothing the full form didn't already.
-     */
+    // The bare (no-domain) form of each owned identity, to assert bare-name login is rejected.
     ...providedIdentityValues()
       .filter((value) => value.includes('@'))
       .map((value) => value.split('@')[0] ?? value),
-    /*
-     * The PRIMARY account's real mobile number — confirmed live against `TBL_KPOST_USER_MASTER`
-     * (2026-10-02), NOT `QA_MOBILE_EXISTS` (checked and found to belong to a different account
-     * entirely). Needed for the same BR-SL-3IDS rule: login by mobile must resolve to this account.
-     */
+    // The primary account's real mobile number (not QA_MOBILE_EXISTS), for login-by-mobile checks.
     '8122016145',
   ];
   return new Set(owned.map((value) => String(value).trim().toLowerCase()).filter(Boolean));
@@ -438,18 +245,13 @@ export interface GuardedRequest {
   pathParams?: Record<string, unknown>;
 }
 
-/**
- * Identifiers in this request that are not ours, or an empty list when every one is.
- *
- * Separated from the throwing wrapper so a test can assert on the findings without catching.
- */
+/** Identifiers in this request that are not ours (empty when every one is). */
 export function foreignIdentifiers(
   request: GuardedRequest,
   minted: readonly (string | number)[] = [],
 ): Offence[] {
   const owned = qaOwnedValues();
-  // Exact values this ONE request's own flow just created (see `SendOptions.ownedIdentifiers`); never
-  // a key-wide exemption, never shared with another call.
+  // Exact values this request's own flow just created; never a key-wide exemption.
   for (const value of minted) {
     const v = String(value).trim().toLowerCase();
     if (v) owned.add(v);
@@ -462,11 +264,8 @@ export function foreignIdentifiers(
 }
 
 /**
- * Throws when a live request names a record we do not own. Call before the request is sent.
- *
- * Deliberately a hard failure rather than a skip: reaching this point means a validator tried to
- * fuzz an identifier against the live application, and that is a bug in the run's configuration,
- * not a property of the endpoint. It must stop the run and be read by a human.
+ * Throws when a live request names a record we do not own. A hard failure, not a skip: it means the
+ * run is misconfigured and a human must read it.
  */
 export function assertQaOwnedIdentifiers(
   request: GuardedRequest,

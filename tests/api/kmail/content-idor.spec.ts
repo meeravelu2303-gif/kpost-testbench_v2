@@ -4,40 +4,9 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import { expect, test } from '@fixtures';
 
 /**
- * KMail mail-CONTENT IDOR — can an outsider read the full body of a mail they neither sent nor
- * received, just by knowing/guessing its kmailID?
- *
- * ## What this proves
- *
- * The 2026-10-04 KMail backend ground-truth audit found `POST /v2/readMail/sentAndInboxMailContent/`
- * (`ReadKmailController.java:112-151`) sets the caller's identity from the JWT, but the actual content
- * lookup — `ReadKmailServiceImpl.java:372` (`readSentMailContent`) and `:634` (`readInboxMailContent`)
- * — is a bare `kmailContentRepository.findByKmailID(kmailID)` with NO check that the resolved mail's
- * sender or receiver matches the caller. The sender/receiver matching loop that does exist in that
- * service (`:355-362`/`:607-619`) only decides which transaction row to use for a legacy IMAP-store
- * fallback search; it never gates whether the content itself is returned. `downloadAttachment`
- * (`ReadKmailController.java:153-186`) shares the exact same vulnerable service calls.
- *
- * This is the read-side analogue of the already-fixed `setKmailAsImportant`/`kmailDelete` BOLA
- * (`mutation-idor.spec.ts`) — but worse: a confidentiality breach of the full message body, not a
- * star/delete toggle, and (per that same audit) it had ZERO IDOR coverage before this test.
- *
- * ## Why the verdict is the response BODY, not the HTTP status
- *
- * Like the mutation endpoints, this one is expected to answer 200 regardless of the caller's
- * relationship to the mail (there is no ownership check to produce a 403/404) — so the only honest
- * verdict is whether the outsider's response actually contains the real, secret mail content.
- *
- * ## Confirmed real, but intermittent (~40-50% of live attempts)
- *
- * Live reproduction (2026-10-04) confirms the leak with the real `mailContent` and both parties'
- * identities returned to the attacker (`urlPath: "readSentMailContent"` in the response) — but it does
- * NOT reproduce on every attempt, with or without the settle delay below. The source hints at why: the
- * sender/receiver matching loop in `readSentMailContent` exists for a "legacy IMAP-store fallback
- * search" alongside the unguarded `kmailContentRepository.findByKmailID` lookup — plausibly two
- * different storage paths can answer the same request, one safe and one not, and which one responds
- * may depend on backend-internal timing/caching this test cannot control. Soft-fails rather than
- * hard-fails for exactly this reason: a single clean run must not be read as "fixed."
+ * KMail mail-content IDOR: can an outsider read the body of a mail they neither sent nor received,
+ * by kmailID alone? The verdict is the response body (it answers 200 either way). The leak is
+ * intermittent, so the check is soft: one clean run does not mean fixed.
  */
 const K = AUTH_PROFILES.kpost;
 const A = K.principals.find((p) => p.key === 'personal')!; // sender
@@ -97,10 +66,8 @@ test.describe(
           `kmail-post-mail did not return a kmailID (${sent.status})`,
         );
 
-        // A short settle before the attack: the mail's content appears to be written to its store
-        // (likely MongoDB, per source) asynchronously after the send API itself returns 200 — reading
-        // too immediately after send intermittently finds nothing yet, which would read as a false
-        // negative here, not as the endpoint being safe.
+        // Content is stored asynchronously after the send returns; reading at once can find nothing
+        // and look safe.
         await new Promise((resolve) => setTimeout(resolve, 5_000));
 
         // --- Attack: C, who never sent or received this mail, reads it by kmailID alone ----------

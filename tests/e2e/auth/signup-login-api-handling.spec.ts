@@ -3,18 +3,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Does the Signup/Login UI actually surface a failing API response, or does it silently swallow it?
- * KPost's API wraps failures in an envelope anti-pattern — many calls answer HTTP 200 with a
- * `statusCode`/`status` field inside the body carrying the real outcome (confirmed in
- * `login-functional.spec.ts`'s stubbed-401-as-200 test) — so a UI that only checks the transport
- * status code, not the body, silently treats a failure as a success. This file targets the two
- * signup-critical calls not already covered by an existing filed bug (#821 forgot-password update,
- * #822 resend OTP, #823 OTP verify, #824 login network failure): the KPOST ID availability check and
- * the final registration submit — stubbed, so a failure here never risks a real account or company.
- *
- * Each test stubs the ONE call under test; every other call (OTP send/verify) goes through for real
- * via the confirmed-safe `OTP_TEST_GATEWAY` bypass, same gating as the rest of the Personal signup
- * suite.
+ * Signup must surface a failing KPOST ID check and registration submit (incl. HTTP 200 carrying a
+ * failure). Only the call under test is stubbed; OTP calls go through the test gateway.
  */
 function freshMobile(): string {
   return `77${Date.now().toString().slice(-8)}`;
@@ -67,8 +57,7 @@ test.describe(
       });
       await signupPage.continueToKpostId();
 
-      // KPost's envelope anti-pattern: HTTP 200 carrying a failure — the exact shape a real gateway
-      // timeout or server error takes on this backend (see login-functional.spec.ts's precedent).
+      // KPost's envelope: HTTP 200 carrying a failure.
       await page.route('**/kpostIdExist/**', async (route) => {
         await route.fulfill({
           status: 200,
@@ -105,8 +94,7 @@ test.describe(
         description: `outcome when the check fails: ${outcome}`,
       });
 
-      // The two genuine failure modes: falsely reporting "available" (the user proceeds, then the real
-      // signup fails later with no warning) and total silence (the user has no idea why nothing happens).
+      // Failure modes: falsely reporting "available", or total silence.
       expect(
         outcome,
         'a failed availability check must not be silently swallowed or misreported as "available"',
@@ -151,8 +139,7 @@ test.describe(
         'the generated local part happened to collide — re-run',
       );
 
-      // Stub ONLY the final submit — every prior call (OTP, id check) already happened for real, so
-      // this is the exact point a real backend failure would land, with no side effect either way.
+      // Stub only the final submit; every earlier call was real.
       await page.route('**/signupLogin/signup/**', async (route) => {
         if (route.request().method() !== 'POST') return route.continue();
         await route.fulfill({

@@ -27,14 +27,8 @@ import {
 } from '../journeys/support/journey';
 
 /**
- * CROSS-LAYER FLOWS (UI → API → DB) for the two messaging modules whose screen actions had no database
- * check: a person sends from the real screen, the request the screen sent and the server's answer are
- * captured, and the MySQL row must hold exactly what was sent — then the person deletes it on screen
- * and the row must record that delete (per participant: the counterparty's copy survives).
- *
- * Every other module's cross-layer check lives in its own feature spec, tagged with a `cross-layer`
- * annotation; the full matrix is `docs/reference/cross-layer-matrix.md`.
- *
+ * UI -> API -> DB for Katchup, KMail, Group and Kool Kall: what is sent on screen must be stored
+ * exactly, and an on-screen delete recorded per participant. Gated; writes real data and cleans up.
  * No `endpoints` call is made as A or B: an API login for the same account signs its browser out.
  */
 const FLAGGED = (v: unknown): boolean =>
@@ -215,8 +209,7 @@ test.describe(
             type: 'observed',
             description: `row after send: ${rowSummary(stored, ['kmail_id', 'kmail_subject', 'sender', 'receiver', 'delivery_status', 'deleted_by_sender', 'deleted_by_receiver'])}`,
           });
-          // kmail_subject is encrypted at rest (kmail.repository.ts; the bench holds no key): stored, and
-          // NOT the plaintext. That the right subject comes back is proven on screen — B finds it by it.
+          // kmail_subject is encrypted at rest (no key here); B finding the mail by subject proves it.
           expect(text(stored?.kmail_subject) ?? '', 'the Subject is stored').not.toBe('');
           expect(text(stored?.kmail_subject), 'and encrypted at rest, not as plaintext').not.toBe(
             subject,
@@ -383,8 +376,7 @@ test.describe(
             'as a plain member (no admin access)',
           ).toBe(false);
         } finally {
-          // Clean-up as the creator: members out first (delete is refused while any remain), then delete.
-          // Through the page's own session: an API login as A would sign this browser out.
+          // Members out first (delete is refused while any remain), via the page's own session.
           if (group.groupID && group.groupKpostID) {
             const ids = { groupID: group.groupID, groupKpostID: group.groupKpostID };
             await postAsPage(page, '/v2/group/removeGroupMember/', {
@@ -519,7 +511,7 @@ test.describe(
             'the participant chosen on screen is invited',
           ).toBe(true);
         } finally {
-          // `kallID` alone: sending `id` too makes endKoolKall answer 500 (journeys/meeting.spec.ts).
+          // `kallID` alone: sending `id` too makes endKoolKall answer 500.
           if (kallId)
             await postAsPage(page, '/v2/kall/endKoolKall', { kallID: kallId }).catch(
               () => undefined,

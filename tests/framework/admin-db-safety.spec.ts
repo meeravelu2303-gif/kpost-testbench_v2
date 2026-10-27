@@ -5,17 +5,8 @@ import { isReadOnlyStatement } from '@database/database-client';
 import { expect, test } from '@fixtures';
 
 /**
- * The Admin database is a LIVE PRODUCTION system. This file is the proof that the bench cannot
- * write to it.
- *
- * KPost and KMail run against KPOST_QA, a disposable test database where writes are useful and
- * `DB_ALLOW_WRITES=true` is the intended setting. Admin does not. The whole risk therefore sits in
- * one question — can the flag that unlocks writes on KPOST_QA also unlock them on Admin? — and the
- * answer has to be no under every combination of environment variables, not just the ones in the
- * current `.env`.
- *
- * These run with no database and no network: they assert the *policy*, so they cannot be skipped
- * for want of a connection, and they fail the moment somebody adds Admin to a writable path.
+ * Proves the bench cannot write to the live Admin database under any env combination, while the
+ * KPost/KMail test DB stays writable. Policy only: no database or network needed.
  */
 test.describe('Admin database is never writable @framework', () => {
   test('admin-api is on the write-ban list', () => {
@@ -26,10 +17,7 @@ test.describe('Admin database is never writable @framework', () => {
   });
 
   test('the KPost and KMail suites are NOT banned — the ban is targeted, not blanket', () => {
-    /*
-     * Stated explicitly because a ban that accidentally covered everything would make every test
-     * below pass while quietly disabling the test-database writes the bench actually needs.
-     */
+    // A blanket ban would pass every test below while disabling the test-DB writes the bench needs.
     for (const suite of ['kpost-api', 'kmail-api'] as SuiteId[]) {
       expect(
         databaseConfig.isWriteBanned(suite),
@@ -39,11 +27,7 @@ test.describe('Admin database is never writable @framework', () => {
   });
 
   test('DB_ALLOW_WRITES cannot unlock writes on the Admin database', () => {
-    /*
-     * The single most important assertion in this file. `DB_ALLOW_WRITES=true` is the project's
-     * current, intended setting for KPOST_QA — so this proves that the flag which is ON right now
-     * still leaves Admin read-only.
-     */
+    // DB_ALLOW_WRITES=true is the intended KPOST_QA setting; Admin must stay read-only anyway.
     const admin = databaseConfig.forSuite('admin-api');
 
     expect(admin.allowWrites, 'Admin stays read-only whatever DB_ALLOW_WRITES says').toBe(false);
@@ -51,10 +35,7 @@ test.describe('Admin database is never writable @framework', () => {
   });
 
   test('every suite that allows writes is one of the test-database suites', () => {
-    /*
-     * Written over the whole suite list rather than over `admin-api` alone: a suite added later
-     * lands here automatically, which is the case the targeted tests above would miss.
-     */
+    // Over the whole suite list, so a suite added later is covered automatically.
     const writable = SUITE_IDS.filter((suite) => databaseConfig.forSuite(suite).allowWrites);
     const bannedButWritable = writable.filter((suite) => databaseConfig.isWriteBanned(suite));
 
@@ -65,11 +46,7 @@ test.describe('Admin database is never writable @framework', () => {
   });
 
   test('the Admin connection is configured separately from the KPost one', () => {
-    /*
-     * Sharing variables would mean the KPOST_QA credentials silently serving Admin — the bench
-     * would report on the wrong database entirely, and its findings would be about test data while
-     * claiming to be about production.
-     */
+    // Shared variables would let the KPOST_QA credentials silently serve Admin.
     const admin = databaseConfig.forSuite('admin-api');
     const kpost = databaseConfig.forSuite('kpost-api');
 
@@ -94,21 +71,13 @@ test.describe('Admin database is never writable @framework', () => {
     const admin = databaseConfig.forSuite('admin-api');
 
     expect(admin.kind, 'no connection means no client').toBe('none');
-    /*
-     * The important half: "we could not check Admin's database" must never be recorded as "Admin's
-     * database is correct". The engine turns a disabled client into SKIPPED with the reason
-     * attached — see ValidationEngine.databaseValidators.
-     */
+    // The engine reports a disabled client as SKIPPED with a reason, never as passed.
     expect(admin.allowWrites, 'and still not writable').toBe(false);
   });
 });
 
 test.describe('read-only statement classification @framework', () => {
-  /*
-   * The runtime half of the ban. The policy above decides *whether* a target may write; this
-   * decides *what counts as* a write, and a gap here would let a write through on a target whose
-   * policy correctly says no.
-   */
+  // The runtime half of the ban: what counts as a write.
   test('statements that modify data are never classified as reads', () => {
     const writes = [
       'INSERT INTO users VALUES (1)',
@@ -124,11 +93,7 @@ test.describe('read-only statement classification @framework', () => {
       'SET GLOBAL read_only = 0',
       'CALL do_something()',
       'LOAD DATA INFILE "/tmp/x" INTO TABLE users',
-      /*
-       * MySQL 8 permits a CTE in front of an UPDATE or DELETE, so a `WITH` prefix proves nothing.
-       * This is the case the PostgreSQL version of the gate got wrong, and it would have been a
-       * write reaching the live Admin database.
-       */
+      // MySQL 8 allows a CTE in front of UPDATE/DELETE, so a `WITH` prefix proves nothing.
       'WITH doomed AS (SELECT id FROM users) DELETE FROM users WHERE id IN (SELECT id FROM doomed)',
       'WITH c AS (SELECT 1) UPDATE users SET name = "x"',
     ];
@@ -155,9 +120,7 @@ test.describe('read-only statement classification @framework', () => {
   });
 
   test('the Admin MongoDB reader has no write path', () => {
-    // src/database/admin-mongo.ts is the only code that touches the Admin backend's MongoDB. It must
-    // stay find/findOne-only: no driver call that writes, and no accessor that hands out the
-    // collection or client for someone else to write with.
+    // The only code touching the Admin MongoDB: find/findOne only, never hands out the client.
     const source = readFileSync('src/database/admin-mongo.ts', 'utf8');
     for (const write of [
       /\.insert(One|Many)?\(/,

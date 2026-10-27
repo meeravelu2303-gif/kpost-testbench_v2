@@ -9,62 +9,28 @@ import { ROOT_DIR } from '@config/constants';
 import { expect, test } from '@fixtures';
 
 /**
- * Payload completeness audit — the answer to "does the bench send every field the contract documents?".
- *
- * A hardcoded partial request files a FALSE bug: the API validates the missing field and answers an
- * error the bench reads as a product defect (the KMail signature endpoints did exactly this). This
- * spec builds each endpoint's real request body from its own factory and compares its keys against the
- * documented request fields, splitting "missing" into two classes so the real risk stands out:
- *
- *   - **missing-from-EXAMPLE** — the field appears in the documented request *example* (the payload
- *     the product actually sends). This is the KMail-signature class: a real false-bug risk, because
- *     the API expects it and validates its absence.
- *   - **missing-from-SCHEMA-only** — the field is a property of the request schema but not in any
- *     example. On the admin surface the springdoc schema lists the *whole entity DTO* (every optional
- *     field); the frontend, measured, sends a subset. Omitting these is correct, not a defect.
- *
- * It writes `docs/generated/payload-audit.md`. The example-missing column is the queue to fix.
+ * Payload completeness audit: does each endpoint send every field of its documented example?
+ * A partial request files a false bug. Schema-only fields are listed but usually correct.
+ * Writes `docs/generated/payload-audit.md`.
  */
 
-// A stub `call` for the static audit — it never chains to a real endpoint, so an empty object is
-// returned for whatever type a factory expects (cast because `call` is generic in its return type).
+// A stub `call` for the static audit: never contacts an endpoint, returns an empty object.
 const STUB: RequestFactoryHelpers = {
   call: (() => Promise.resolve({})) as RequestFactoryHelpers['call'],
   tenantId: 'qa-audit',
 };
 
-/**
- * `productionSafe` endpoints that run on the default live run yet legitimately omit a
- * documented-example field, each with the reason. The guard asserts this stays EMPTY unless a real
- * exception is recorded — a live-running endpoint that under-sends auto-files a false bug.
- * (Currently empty: every live-running endpoint sends every documented-example field.)
- */
+/** `productionSafe` endpoints that legitimately omit a documented-example field, with reasons. */
 const LIVE_OMISSIONS: Record<string, string> = {};
 
 /**
- * GATED writes / needs-id reads that omit a documented-example field for a REAL, recorded reason.
- *
- * Why this must be exhaustive — the contamination rule (docs/reference/kpost-product.md): KPost runs on a **shared
- * monolithic database with circular module dependencies**, so a wrong or incomplete payload sent to
- * ONE write can persist bad data that a DIFFERENT endpoint later reads — the failure then surfaces
- * somewhere else entirely and looks like that endpoint's bug. A write's payload is therefore
- * safety-critical, not cosmetic. So every gated omission is accounted for here: the field is supplied
- * at RUNTIME by the endpoint's `*_LIFECYCLE` spec (a real msgID/ObjectId/draftID a fabricated value
- * cannot replace), or the authoritative frontend client deliberately does NOT send the stale
- * workbook-example field (adding it back is what a wrong payload looks like — see `recall`). A new
- * gated write that omits an example field fails the guard until it is completed or recorded here, so
- * a wrong/incomplete write payload can never reach the bench unexamined.
+ * Gated writes / needs-id reads that omit a documented-example field, with the reason. Exhaustive
+ * because a bad write payload can contaminate other endpoints through the shared DB.
  */
 const GATED_WRITE_OMISSIONS: Record<string, string> = {
-  // The workbook example documents `sendDate`, but the owner-verified WORKING live curl (2026-09-19)
-  // sends { otp, countryID, mobileNumber } WITHOUT it — a `sendDate: Date.now()` epoch pushed the API
-  // into a failure path that answered 500. Deliberately omitted to match the real, working contract.
-  // (`common-validate-otp` itself no longer under-sends per the audit, so it carries no entry.)
+  // The working request omits the workbook's `sendDate` (sending it answers 500).
   'common-validate-mail-otp': 'workbook `sendDate` omitted — matches the working validateOTP shape',
-  // Katchup forwards/bulk — the reference-message object + source msgIDs are minted by the running
-  // conversation and supplied by the KATCHUP_LIFECYCLE spec; a static value would be a fabricated id.
-  // (`katchup-forward-message`, the older path, was retired 2026-09-28 — confirmed unused by the
-  // current client.)
+  // Katchup forwards/bulk: the referenced msgIDs are minted at runtime by KATCHUP_LIFECYCLE.
   'katchup-forward-message-new':
     'referenceMessage + source msgIDs supplied at runtime by the katchup lifecycle',
   'katchup-send-forward-selected-attachment':
@@ -74,13 +40,10 @@ const GATED_WRITE_OMISSIONS: Record<string, string> = {
   'katchup-send-bulk': 'mapDetails (per-recipient) supplied at runtime by the katchup lifecycle',
   'katchup-messages-by-reference':
     'read keyed by a runtime referenceMessageID list a send flow mints',
-  // Deliberate: the authoritative live client sends {msgID, groupFlag}; the workbook `status:5` is
-  // stale AND not a valid katchupStatus. Adding it back would be the wrong payload.
+  // The frontend sends {msgID, groupFlag}; the workbook `status:5` is stale and invalid.
   'katchup-recall-message':
     'frontend sends {msgID, groupFlag}; workbook `status` is stale/invalid — deliberately omitted',
-  // Admin company/member writes are sideEffect:global — blocked on live in EVERY mode (the guard
-  // clears only `data` writes via allowLiveWrite), contract-validated off-live only, never driven on
-  // live. A real payload would be built by an authorized admin flow; the placeholder cannot contaminate.
+  // Admin `global` writes are blocked on live in every mode, so the placeholder is never sent.
   'admin-update-company-details':
     'global write, blocked on live in every mode; never driven — real payload built by an authorized admin flow',
   'admin-update-bank-account':
@@ -91,18 +54,13 @@ const GATED_WRITE_OMISSIONS: Record<string, string> = {
     'global write, blocked on live in every mode; never driven — real payload built by an authorized admin flow',
   'admin-hold-or-release':
     'global write, blocked on live in every mode; never driven — real payload built by an authorized admin flow',
-  // Gated data-writes/needs-id reads: the missing fields are runtime ids/optional values the
-  // lifecycle spec fills, self-cleaning on our own QA records only.
+  // Gated data writes / needs-id reads: the lifecycle spec fills runtime ids and optional values.
   'profile-update-contact':
     'gated PROFILE_LIFECYCLE, self-restoring; optional contact fields (addressLine2/alternateMobile/landline)',
-  // The backend binds a List<ContactsRO>, so the definition sends a JSON ARRAY whose elements carry
-  // every documented field; the workbook example documents one bare contact object, so the audit
-  // sees its top-level keys as "missing" when they are in fact sent inside each element.
+  // The backend takes a JSON array; the fields are sent inside each element, not at the top level.
   'contacts-add-multiple':
     'documented fields are sent inside each array element (backend takes a JSON array, the example shows one object)',
-  // Never driven: a real seat hold on third-party bus inventory, unconditionally skipped in
-  // feature.spec.ts until the owner authorises it; the trip/boarding/route ids only exist after a
-  // live search, so a static payload would be fabricated.
+  // Never driven: a real third-party seat hold; its ids only exist after a live search.
   'kbooking-block-ticket':
     'never executed (real third-party seat hold, needs owner authorisation); trip/boarding/route ids come from a live search',
   'kmail-draft-content':
@@ -158,15 +116,11 @@ test.describe('payload completeness audit @framework', () => {
       } catch {
         continue; // a factory that needs a live `call()` — skip in the static audit
       }
-      // Multipart carries its fields in a `text` JSON part, not `body` — audited separately, skip.
+      // Multipart carries its fields in a `text` JSON part, not `body`: skip.
       if (spec.multipart) continue;
-      // A GET has no request body, so a documented (POST-era) example body does not describe fields
-      // it should send — its identity rides in the token and its args in the path/query. Comparing
-      // a GET against a stale POST example false-flags it (e.g. the method-corrected fetchUserDetails).
+      // A GET has no body, so a stale POST-era example body does not apply.
       if (d.method === 'GET') continue;
-      // A field is "sent" whether it rides in the body, the query string or a path param. Compare
-      // case-insensitively: the workbook and the working client sometimes differ only in casing
-      // (`deviceIdentity_Primary` vs `deviceIdentity_primary`), and the client is authoritative.
+      // "Sent" = body, query or path param, compared case-insensitively (workbook casing drifts).
       const sent = new Set(
         [...keysOf(spec.body), ...keysOf(spec.query), ...keysOf(spec.pathParams)].map((k) =>
           k.toLowerCase(),
@@ -197,9 +151,7 @@ test.describe('payload completeness audit @framework', () => {
         Number(b.runsLive) - Number(a.runsLive) ||
         b.missingFromExample.length - a.missingFromExample.length,
     );
-    // The decisive filter: only a `productionSafe` endpoint runs on the default live run, so only
-    // it can auto-file a false bug from a missing field. A gated write's payload is supplied by its
-    // own lifecycle spec (with runtime ids), and is never fuzzed on live by the engine.
+    // Only a `productionSafe` endpoint runs on the default live run, so only it files false bugs.
     const liveRisks = risks.filter((r) => r.runsLive);
     const gatedRisks = risks.filter((r) => !r.runsLive);
     const schemaOnly = rows.filter((r) => r.missingFromExample.length === 0);
@@ -268,29 +220,21 @@ test.describe('payload completeness audit @framework', () => {
     for (const r of liveRisks)
       console.log(`  LIVE RISK  ${r.id}: ${r.missingFromExample.join(', ')}`);
 
-    // The regression guard, in two tiers, so NO payload gap — read or write — can pass unexamined.
-    //
-    // Tier 1 — live false-bug risk. A `productionSafe` endpoint runs on the default live run, so one
-    // that omits a documented-example field is the exact shape that filed the KMail-signature false
-    // bug. It must send the field or be recorded in LIVE_OMISSIONS.
+    // Tier 1: a live-running endpoint must send every example field or be in LIVE_OMISSIONS.
     const liveUnaccounted = liveRisks.filter((r) => !(r.id in LIVE_OMISSIONS));
     expect(
       liveUnaccounted.map((r) => `${r.id}: missing ${r.missingFromExample.join(', ')}`),
       'a productionSafe endpoint under-sends a documented-example field (false-bug risk) — complete its payload or record it in LIVE_OMISSIONS',
     ).toEqual([]);
 
-    // Tier 2 — contamination risk (docs/reference/kpost-product.md). A gated WRITE with a wrong/incomplete payload can
-    // persist bad data the shared DB then serves to OTHER endpoints. So every gated omission must be
-    // recorded in GATED_WRITE_OMISSIONS with the reason it is safe (runtime/lifecycle-supplied, or a
-    // deliberate frontend-authoritative omission). A new one fails here until it is examined.
+    // Tier 2: every gated omission must be recorded in GATED_WRITE_OMISSIONS with its reason.
     const gatedUnaccounted = gatedRisks.filter((r) => !(r.id in GATED_WRITE_OMISSIONS));
     expect(
       gatedUnaccounted.map((r) => `${r.id}: missing ${r.missingFromExample.join(', ')}`),
       'a gated write/read omits a documented-example field with no recorded reason — a wrong/incomplete write payload can contaminate other endpoints via the shared DB (§3); complete it or record why the field is runtime/lifecycle-supplied in GATED_WRITE_OMISSIONS',
     ).toEqual([]);
 
-    // Keep the allowlists honest: an entry that no longer names a current risk is stale and must be
-    // removed, so the recorded reasons cannot rot into a list nobody has revisited.
+    // An allowlist entry that no longer names a current risk is stale.
     const currentRiskIds = new Set(risks.map((r) => r.id));
     const staleAllowlisted = [
       ...Object.keys(LIVE_OMISSIONS),

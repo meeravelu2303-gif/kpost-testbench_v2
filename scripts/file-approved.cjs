@@ -1,19 +1,12 @@
 #!/usr/bin/env node
 /**
- * Files/ reopens the EXACT would-file + reopen findings a human has approved, straight from the
- * existing dry-run REPORT.json — WITHOUT re-running the (hour-plus) suite. The sibling
- * `file-reviewed.cjs` only handles `needs-review` entries; this one handles the `would-file` (create)
- * and `reopened` (regression of a RESOLVED bug) entries, but ONLY the ids you name explicitly — naming
- * an id IS the approval, so nothing is ever filed that you did not list.
+ * Files or reopens the would-file / reopened findings you name, from the dry-run REPORT.json,
+ * without re-running the suite. Naming an id is the approval; dry by default, and every create is
+ * preceded by a live duplicate check on its `[KP-]` tag.
  *
  *   node scripts/file-approved.cjs KP-06F947 KP-86FC80            # preview (dry — writes nothing)
  *   node scripts/file-approved.cjs KP-06F947 --live               # actually create it
  *   node scripts/file-approved.cjs KP-6F5E6B --live               # reopen its existingId with evidence
- *
- * Safety: dry by default. Every CREATE is preceded by a live duplicate check on the `[KP-]` tag (all
- * statuses) — if any ticket already carries the tag, nothing is created. A `reopened` entry updates
- * its `existingId` (status REOPENED, resolution cleared) and adds a comment with the evidence;
- * it refuses if that id is not actually resolved.
  */
 require(require('node:path').join(__dirname, '..', 'node_modules', 'dotenv')).config({
   path: require('node:path').join(__dirname, '..', '.env'),
@@ -44,11 +37,7 @@ if (!BZ || !KEY) {
 const SEVERITY = { CRITICAL: 'critical', HIGH: 'major', MEDIUM: 'minor', LOW: 'trivial' };
 const PRIORITY = { CRITICAL: 'Highest', HIGH: 'High', MEDIUM: 'Normal', LOW: 'Low' };
 
-/**
- * The whiteboard exactly as src/bug-tracker/bug-builder.ts buildWhiteboard writes it, because the
- * BUGZILLA-UI tracker reads all three tags: [cat:] (category), [browser:] (real browser names only —
- * the admin-ui project runs chromium) and [source:automation] (these are the bench's own findings).
- */
+/** The whiteboard exactly as bug-builder.ts buildWhiteboard writes it: [cat:][browser:][source:]. */
 function whiteboardFor(cand) {
   const tags = [`[cat:${(cand && cand.category) || 'Functional'}]`];
   const browsers = [

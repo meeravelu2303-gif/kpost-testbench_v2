@@ -1,15 +1,8 @@
 import type { Page } from '@playwright/test';
 
 /**
- * Answer the forgot-password SMS requests IN THE BROWSER, so a test can open the reset dialog
- * without texting anyone.
- *
- * Clicking "Forgot Password ?" alone sends a real SMS (Login.js `handleForgetPassword` →
- * `forgotPasswordOTPOrSentKpostIDSms`), and the server never applies the OTP bypass to it
- * (UserProfileServiceImpl.forgotPassword). Owner rule (2026-10-20): one forgot-password SMS per run,
- * sent only by `login-forgot-password-lifecycle.spec.ts`. Every other test that opens the dialog
- * calls this first. The reply mirrors the server's own success body, so the dialog opens exactly as
- * it would; the request itself never leaves the browser.
+ * Stub the forgot-password SMS requests in the browser (with the server's success body), so a test can
+ * open the reset dialog without sending a real SMS. Only the lifecycle spec sends the one real SMS per run.
  */
 export async function answerForgotPasswordSmsLocally(page: Page): Promise<void> {
   await page.route(/\/forgotPasswordOTPOrSentKpostIDSms|\/forgotPasswordOrKpostID/i, (route) =>

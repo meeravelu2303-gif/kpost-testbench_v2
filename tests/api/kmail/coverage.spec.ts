@@ -8,12 +8,11 @@ import { foreignIdentifiers } from '@engine/qa-identifier-guard';
 import { expect, test } from '@fixtures';
 
 /**
- * Self-tests for the KMail module (kmail-api suite, host kmail5). No HTTP. The strict
- * "every documented path is covered" assertion is enabled once the write stages land; for now this
- * pins contract agreement, auth, the guard on cleared reads, and the case count.
+ * Self-tests for the KMail definitions, no HTTP: coverage, contract agreement, auth, the live-write
+ * and identifier guards, and the planned case count.
  */
 test.describe('KPost KMail · module coverage', () => {
-  // Gated while KMail refuses every valid token — see src/fixtures/kmail-auth-gate.ts.
+  // Gated while KMail refuses every valid token (src/fixtures/kmail-auth-gate.ts).
   test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
 
   test('every documented KMail endpoint has a definition @framework', () => {
@@ -34,8 +33,6 @@ test.describe('KPost KMail · module coverage', () => {
     const publicOnes = kmailApis
       .filter((api) => api.authentication?.required === false)
       .map((api) => api.id);
-    // The attachment thumbnail was once permitAll()'d; live-verified 2026-10-14 it now requires a
-    // login too (attachment-idor.spec.ts), so KMail is entirely authenticated.
     expect(publicOnes, 'KMail is entirely authenticated').toEqual([]);
   });
 

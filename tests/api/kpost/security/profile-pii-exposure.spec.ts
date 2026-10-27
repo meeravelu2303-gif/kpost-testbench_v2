@@ -1,23 +1,10 @@
-// Cross-account PII over-exposure via getUserProfileUsingKpostID. No live setup needed —
-// productionSafe, read-only, already uses a second account's kpostID as its default body.
+// Cross-account PII over-exposure via getUserProfileUsingKpostID. Read-only, no live setup.
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * `getUserProfileUsingKpostID` (KDirectory "view full profile", FR-KD-005) is meant to let any
- * authenticated caller look up ANOTHER account's profile — that part is the intended feature. But
- * the response is not properly privacy-filtered: `UserProfileControllerV2.java:319` carries its own
- * unfinished TODO ("Need to validate based on privacy setting"), and the filter it actually calls
- * (`UserProfileDaoImpl.filterProfilePrivacySetting`, lines 1305-1331) only ever redacts
- * aboutYourself/experienceDetails/schoolDetails/collegeDetails/universityDetails/otherActivities/
- * mobileNumber — never dateOfBirth, aadhaarNumber, presentAddress, alternateMobileno, or
- * landLineNumber. Those five fields have no privacy control at all, for any account, confirmed live
- * 2026-10-05 (bug #1037) — the same field family already confirmed CRITICAL via a different endpoint
- * (globalSearch, bug #1005), reachable here through a second, independent code path.
- *
- * This is read-only and uses the endpoint's own already-`productionSafe` default body (a second real
- * QA account's kpostID) — no new live setup needed. The verdict is simply: does the response for an
- * account OTHER than the caller contain these fields with real, non-empty values.
+ * Viewing another account's profile (FR-KD-005) is intended, but DOB, Aadhaar, address and phones
+ * are never privacy-filtered (known defect #1037). Verdict: are they returned non-empty?
  */
 test.describe(
   'KPost Security · Profile getUserProfileUsingKpostID PII over-exposure @api @kpost-api @security @profile',
@@ -48,8 +35,7 @@ test.describe(
       ];
       const foundFields = sensitiveFields.filter((f) => lower.includes(`"${f}"`));
 
-      // A found field with a non-null, non-empty value is the real disclosure — not just the key
-      // existing with a null placeholder, which this ORM includes unconditionally.
+      // Only a non-empty value is a disclosure; a null placeholder key is not.
       const leakedWithValue = foundFields.filter((f) => {
         const re = new RegExp(`"${f}"\\s*:\\s*"[^"]+"`, 'i');
         return re.test(text);

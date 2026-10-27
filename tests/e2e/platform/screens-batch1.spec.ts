@@ -4,9 +4,8 @@ import { test } from '@fixtures';
 import { runScreenSweep } from '../support/screen-sweep';
 
 /**
- * Deep UI sweep, batch 1 of 3 (Home, Katchup, Kall, KMail, Profile) — split from the original
- * single `screens.spec.ts` to avoid the request burst that tripped a server-side rate-limiter.
- * See `screen-sweep.ts` for why, and the shared test body all three batches run.
+ * Deep UI sweep, batch 1 of 3 (Home, Katchup, Kall, KMail, Profile) — see `screen-sweep.ts` for why
+ * this sweep is split into batches and paced between screens.
  */
 const BATCH = new Set(['home', 'katchup', 'kall', 'kmail', 'profile']);
 

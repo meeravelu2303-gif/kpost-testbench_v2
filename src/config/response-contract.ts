@@ -3,44 +3,8 @@ import type { HttpMethod } from '@api/client/request-builder';
 import { apiConfig, errorEnvelopeSchema, successEnvelopeSchema } from './api.config';
 
 /**
- * The shape an API's responses take, declared once per API rather than per endpoint.
- *
- * ## Why this exists
- *
- * The central validators used to assert one hard-coded envelope — `{ success, data, metadata }`
- * with `correlationId`, a POST answering 201, and an `x-correlation-id` header. That is a sound
- * design, but **it is not what KPost returns**. KPost answers
- *
- *     { "status": "SUCCESS", "statusCode": 200, "urlPath": "sendOTP", "message": "...", "data": … }
- *
- * with 200 on a POST, no metadata block and no correlation header. Validating KPost against the
- * other contract fails every endpoint for a reason that says nothing about the API — the worst
- * kind of test result, because it buries real defects under noise.
- *
- * So the envelope becomes data: an endpoint names the contract it follows, and the validators read
- * it from here. Adding an API means adding a profile, not editing validators.
- *
- * ## Where the KPost profile comes from
- *
- * Measured, not assumed — every documented success sample in the workbook (119 of them):
- *
- *     status      108/119     always the string "SUCCESS"
- *     urlPath     104/119     the endpoint's own name
- *     statusCode   99/119     mirrors the HTTP status
- *     data         67/119     the payload, when there is one
- *     message      50/119     human-readable text
- *
- * Some responses add domain fields alongside those (`mobileNumber`, `eventID`), so the envelope is
- * **open**: unknown top-level keys are allowed. All 11 samples without `status` are KDiary
- * (`/dairySchedule/*`) and one KMail dashboard route — none in the modules using this profile; when
- * KDiary is tested it gets its own profile rather than a weakened shared one.
- *
- * ## What is deliberately absent
- *
- * `error` is **undefined** for KPost: the workbook documents no error response at all — no 400,
- * 401, 404 or 409 sample anywhere. A validator that cannot know the contract must say so, so
- * error-format validation SKIPS with that reason instead of inventing a shape and passing. Status codes on error responses are still asserted; only their
- * body shape is unknown.
+ * The shape an API's responses take, declared once per API; endpoints name the contract they follow
+ * and the validators read it from here. Envelopes are open: extra top-level keys are allowed.
  */
 export interface ResponseContract {
   id: ResponseContractId;
@@ -52,8 +16,8 @@ export interface ResponseContract {
   /** Key holding the payload, if the envelope wraps one. */
   dataKey?: string;
   /**
-   * What an endpoint's `responseSchema` describes: the whole body, or just the payload under
-   * `dataKey`. KPost's schemas are generated from full documented samples, envelope included.
+   * Whether an endpoint's `responseSchema` describes the whole body or just the payload under
+   * `dataKey`.
    */
   schemaTarget: 'body' | 'data';
   /** True when the envelope carries a metadata block with correlationId + timestamp. */
@@ -62,11 +26,7 @@ export interface ResponseContract {
   errorStatusInBody: boolean;
   /** Field carrying that number (`status` in the reference contract, `statusCode` in KPost). */
   errorStatusField: string;
-  /**
-   * Field holding a machine-readable error code (`UNAUTHORIZED`, `NOT_FOUND`, …), when the API has
-   * one. KPost has none - its errors carry a prose `message` and a `traceId` - so demanding one
-   * would fail every error response and say nothing true.
-   */
+  /** Field holding a machine-readable error code, when the API has one (KPost does not). */
   errorCodeField?: string;
   /** Headers every response of this API must carry. */
   requiredHeaders: readonly string[];
@@ -74,20 +34,13 @@ export interface ResponseContract {
   expectedStatus: Record<HttpMethod, readonly number[]>;
   /** Whether the correlation header sent is expected to be echoed back. */
   echoesCorrelationId: boolean;
-  /**
-   * What an identifier looks like in this API. KPost uses auto-increment integers
-   * (`countryID: 1`, `id: 790`); the bench's reference contract uses UUIDs. Holding KPost ids to
-   * a UUID shape produced 243 failures on a single states lookup and said nothing true.
-   */
+  /** What an identifier looks like in this API (KPost: integers; reference contract: UUIDs). */
   idFormat: { pattern: RegExp; description: string };
 }
 
 export type ResponseContractId = 'standard' | 'kpost' | 'kmail' | 'admin';
 
-/**
- * KPost's live envelope. `looseObject` keeps it open — a response may carry its own top-level
- * fields, and flagging those as structural violations would be wrong.
- */
+/** KPost's success envelope; open, since responses may carry their own top-level fields. */
 const kpostSuccessEnvelope = z.looseObject({
   status: z.string().regex(/^success$/i, 'status must be SUCCESS'),
   statusCode: z.number().int().optional(),
@@ -96,27 +49,8 @@ const kpostSuccessEnvelope = z.looseObject({
 });
 
 /**
- * KPost's error envelope, **observed on the live API rather than documented**.
- *
- * The workbook contains no error sample at all, so this was derived by probing 192.168.0.66 with
- * a bad type, an unknown path, a wrong OTP and malformed JSON. Every one answered in this shape:
- *
- *     { "status": "FAILURE", "statusCode": 409, "message": "…",
- *       "urlPath": "/v2/common/getTotalCountByDate",
- *       "timestamp": "2026-09-12T12:59:20.705+05:30", "traceId": "038788be-…" }
- *
- * Two deliberate loosenings, both forced by what the API actually does:
- *
- *  - `status` is matched case-insensitively. The framework layer answers `"FAILURE"` while a
- *    handler answers `"Failure"` - the same inconsistency the success envelope shows between
- *    `"SUCCESS"` and `"Success"`. Reported once as its own finding, not 300 times as noise.
- *  - `timestamp` and `traceId` are optional: a routing 404 omits them, a handled error includes
- *    them. Requiring a traceId would fail the 404s, and losing the traceId on a 500 is itself
- *    worth knowing, so it is reported rather than asserted.
- *
- * Because it is inferred, it stays open (`looseObject`). If the API team documents the contract,
- * replace this with the documented shape - the comment is the audit trail for why it looks like
- * this.
+ * KPost's error envelope, observed live (the workbook documents none). `status` is case-insensitive
+ * (FAILURE vs Failure); `timestamp`/`traceId` are optional because routing 404s omit them.
  */
 const kpostErrorEnvelope = z.looseObject({
   status: z.string().regex(/^(failure|error)$/i, 'error status must be FAILURE'),
@@ -128,20 +62,8 @@ const kpostErrorEnvelope = z.looseObject({
 });
 
 /**
- * KMail's envelope. A separate service in a separate repository, and a **third** shape - measured
- * across its 26 documented responses:
- *
- *     urlPath   26/26
- *     status    26/26
- *     value     20/26     <- the payload key is `value`, not `data`
- *
- * No `statusCode` at all, unlike KPost core. Reusing the `kpost` profile here would look tidy and
- * be wrong: every response would be reported as missing `statusCode`, and `data` would be read as
- * the payload when the payload is under `value`.
- *
- * Its error shape is unknown: the only observed error is `403` with an **empty body**, which is
- * not enough to write a contract from, so `error` stays undefined and error-format validation
- * skips with that reason rather than inventing one.
+ * KMail's envelope: payload under `value`, no `statusCode`. Its error shape is unknown, so
+ * error-format checks skip.
  */
 const kmailSuccessEnvelope = z.looseObject({
   status: z.string().regex(/^success$/i, 'status must be SUCCESS'),
@@ -149,21 +71,8 @@ const kmailSuccessEnvelope = z.looseObject({
 });
 
 /**
- * The **Admin module** envelope — measured from the backend source, not the Excel (which documents no
- * response at all). Every controller returns `Map<String,Object>` built from `KPOSTConstants`
- * (`ApiResponseEnvelope.java`, `D:\KPOST_PROJECTS\Admin_Module`):
- *
- *     { "value": <payload>, "status": "SUCCESS", "statusCode": 200, "urlPath": "save",
- *       "error": <exception message, on FAILURE>, "message": <note, some endpoints> }
- *
- * Two things distinguish it from the KPost core envelope, both confirmed in the controllers:
- *  - **the payload key is `value`, not `data`** (like KMail), and
- *  - **any handled failure returns HTTP 500** with `status: FAILURE`, `statusCode: 500` — including
- *    "document not found". So a client error answered 500 is the module's contract, not a defect the
- *    bench should be surprised by (it is still a finding: a 4xx belongs where a 500 is returned).
- *
- * Ids are MongoDB **ObjectIds** (24-hex strings), and `companyId` is a **string** — unlike the KPost
- * core's auto-increment integers.
+ * The Admin module envelope, from the backend source: payload under `value`, any handled failure is
+ * HTTP 500 with `status: FAILURE`. Ids are 24-hex MongoDB ObjectIds.
  */
 const adminSuccessEnvelope = z.looseObject({
   status: z.string().regex(/^success$/i, 'status must be SUCCESS'),
@@ -237,7 +146,7 @@ export const RESPONSE_CONTRACTS: Record<ResponseContractId, ResponseContract> = 
     requiredHeaders: [],
     expectedStatus: { GET: [200], POST: [200], PUT: [200], PATCH: [200], DELETE: [200] },
     echoesCorrelationId: false,
-    // MongoDB ObjectIds — 24 hex characters, not the KPost core's integers.
+    // MongoDB ObjectIds: 24 hex characters.
     idFormat: { pattern: /^[0-9a-fA-F]{24}$/, description: 'a 24-character hex ObjectId' },
   },
 

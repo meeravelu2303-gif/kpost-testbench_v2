@@ -8,13 +8,8 @@ import {
 } from '../kpost-endpoint';
 
 /**
- * Company lookups and the company logo.
- *
- * Two of the lookups take a company identifier straight from an untrusted caller and return that
- * company's record with no token at all — `getCompanyDetails` by mobile number and
- * `getCompanyDetailsByAdmin`. Whether that is acceptable is a product decision, but a bench that
- * does not probe it is not doing its job: the central cross-resource and information-disclosure
- * validators try a neighbouring id and a wrong-tenant id on every run.
+ * Company lookups and the company logo. Two lookups return a company's record with no token, so the
+ * cross-resource and information-disclosure validators probe them every run.
  */
 const COMPANY_TAGS = ['common', 'common-company'] as const;
 
@@ -26,9 +21,8 @@ export const companyDetailsApi = defineKpostEndpoint({
   tags: [...COMPANY_TAGS, 'enumeration-surface'],
   destructive: false,
   productionSafe: true,
-  // The workbook documents this one as a NUMBER while getCompanyDetailsByAdmin uses a string.
-  // Sent exactly as documented — normalising it here would hide a real inconsistency. The BUSINESS_M
-  // admin's mobile resolves our OWN company (1067) on live.
+  // Documented as a number (getCompanyDetailsByAdmin uses a string); sent as documented. Resolves
+  // our own company.
   request: body(() => ({ mobileNumber: Number(testData.businessMMobile) })),
 });
 
@@ -38,11 +32,7 @@ export const companyDetailsByAdminApi = defineKpostEndpoint({
   path: '/v2/common/getCompanyDetailsByAdmin',
   summary: "Fetch a company's details as an administrator",
   tags: [...COMPANY_TAGS, 'privileged-lookup'],
-  /*
-   * "ByAdmin" in the name, no token in the contract. Either the name is misleading or the endpoint
-   * is missing its authorization check - one of those is a defect. The tag makes it easy to review
-   * every such endpoint at once once auth is documented.
-   */
+  // "ByAdmin" in the name but no token in the contract; the tag marks it for review.
   destructive: false,
   productionSafe: true,
   request: body(() => ({ mobileNumber: testData.businessMMobile })),
@@ -71,59 +61,17 @@ export const companyNameExistApi = defineKpostEndpoint({
   summary: 'Check whether a company name exists on KPost or KSMACC',
   tags: [...COMPANY_TAGS, 'enumeration-surface'],
   destructive: false,
-  /*
-   * The name travels in the path, so this is the one common endpoint where an injection payload
-   * lands in the URL rather than a JSON body. The central injection and XSS validators cover
-   * path parameters too, which is why the parameter is declared here rather than inlined.
-   */
+  // The name is a path parameter, declared so the injection and XSS probes target the URL.
   request: pathParams(() => ({ companyName: testData.companyNameAbsent })),
   pathParamsSchema: pathParamSchema('companyName'),
-  // Types-only, from a CAPTURED live body (2026-10-11): { message, urlPath, status, statusCode }.
+  // Types-only, from a captured live body.
   responseSchema: typesOnlySchema({ message: '', urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 
 /*
- * ## The company-logo trio, corrected from the live application
- *
- * The workbook records all three against `kpostapis.kpostindia.com` and **without the `/v2`
- * prefix**, which is why the bench saw 404s: it was calling paths that do not exist. The API owner
- * supplied working calls from the live application, and the corrected paths answer on our own host:
- *
- *     POST /v2/common/updateCompanyLogo         multipart: file=@img.jpg, text={"companyID":4}
- *     GET  /v2/common/downloadCompanyLogo/{id}
- *     POST /admin/removeCompanyLogo             {"companyId": 4}
- *
- * Three details no schema would have revealed, all taken from those calls:
- *
- *  - **The JSON arguments travel in a form field named `text`.** Not a body, not `data` — a
- *    multipart part called `text` whose value is a JSON string, alongside the image in `file`.
- *  - **`removeCompanyLogo` spells it `companyId`** (lower-case d) where every other endpoint in the
- *    product uses `companyID`. Sent exactly as the working call does; normalising it here would
- *    hide a real inconsistency from whoever has to maintain both.
- *  - **Our tokens carry fewer claims than the owner's, because they come from a different
- *    deployment.** Theirs decodes to `{sub, companyID: 4, role: "admin", …}`; ours carry only
- *    `{sub, exp, deviceID, iat}` — from `userLogin` and `adminUserLogin` alike, for all four
- *    accounts, including the ones just created through `adminRegistration`. That is not an account
- *    problem and no login here can fix it: the reference token's subject `pd@cake.kpost.in` does
- *    not exist on this host (`kpostIdExist` reports it available) and neither does the company
- *    "cake" its domain comes from, so it was signed by another auth service — one build further on,
- *    where `companyID` and `role` were added to the JWT. Ours (`1.0.48:220`) stops at `deviceID`.
- *    Worth knowing, but **not** the reason these fail: see below.
- *
- * ## The download endpoint 500s regardless of the caller
- *
- * Tested on our host with three credentials:
- *
- *     no token at all                              -> 500 (empty body)
- *     our BUSINESS_S token                         -> 500 (empty body)
- *     the owner's admin token (companyID 4, valid) -> 500 (empty body)
- *
- * So the claims hypothesis is **wrong** — the endpoint fails for every caller, and it fails
- * *before authenticating*, since an anonymous request should be 401. Two candidates remain: the
- * route is broken on this host, or it 500s when the company has no logo (which would still be a
- * defect — a missing image is a 404). No company here has one, because `updateCompanyLogo` has
- * never succeeded. Deciding between them means uploading a logo first, which is a write on a
- * company using a token we were given for reference — not something to do unasked.
+ * The company-logo trio, on the live paths (the workbook omits the `/v2` prefix). The upload sends
+ * its JSON arguments in a multipart field named `text`; `removeCompanyLogo` spells it `companyId`,
+ * sent as-is.
  */
 export const updateCompanyLogoApi = defineKpostEndpoint({
   id: 'common-update-company-logo',
@@ -164,11 +112,8 @@ export const downloadCompanyLogoApi = defineKpostEndpoint({
   summary: "Download a company's logo",
   tags: [...COMPANY_TAGS, 'binary', 'needs-admin-token'],
   requirements: ['FR-S05'],
-  /*
-   * Returns an image, not the KPost envelope. `envelope: false` switches off the JSON-shaped
-   * checks (structure, schema, data conventions) while keeping status, headers, security,
-   * performance and the auth probes — the ones that still mean something for a binary response.
-   */
+  // Returns an image, so the JSON-shaped checks are off; status, headers, security and auth still
+  // run.
   authentication: { required: true, role: 'COMPANY_ADMIN' },
   envelope: false,
   contentType: 'image/png',
@@ -192,13 +137,8 @@ export const removeCompanyLogoApi = defineKpostEndpoint({
 });
 
 /**
- * **Public, pre-login** profile-image download. The login screen shows a user's avatar before any
- * token exists (Login.js:1754, 2040 build `${EndPointURL}/common/downloadProfileImage/${kpostID}`);
- * after login the app switches to the authenticated `/v2/profile/downloadProfileImage/{kpostID}`
- * (`profile-download-image`). Both are real: backend `CommonControllerV2.getProfileImage`
- * (`@GetMapping("downloadProfileImage/{kpostID}")`, no token) and the profile controller's own, with
- * `/v2/common/**` public per `SecurityConfiguration`. Owner-confirmed 2026-10-11. Undocumented in the
- * workbook, so the schema is frontend-confirmed; returns an image, so `envelope:false`.
+ * Public pre-login profile-image download (the login screen's avatar); not in the workbook, returns
+ * an image.
  */
 export const downloadProfileImagePublicApi = defineUndocumentedKpostEndpoint({
   id: 'common-download-profile-image',

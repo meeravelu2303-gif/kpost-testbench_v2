@@ -14,9 +14,8 @@ import {
 import { expect, test } from '@fixtures';
 
 /**
- * The type codes are part of the API contract — a payload that sends `kmailType: 11` means
- * "share". These pin the groups and a few load-bearing values, so a workbook edit that renames or
- * renumbers something fails here instead of silently changing what the bench sends.
+ * The workbook type codes are part of the API contract (`kmailType: 11` means "share"): pins the
+ * groups and load-bearing values so a rename or renumber fails here.
  */
 
 /** Every group the workbook is expected to define. A missing one is a contract change. */

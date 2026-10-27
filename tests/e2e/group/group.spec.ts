@@ -2,18 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * **Group** — group messaging inside Katchup (create → members → admin → rename → delete). Lives in
- * `Katchup/bubble/ContactList/ContactList.js`: a "Create New Group" modal with a "Group Name" field
- * and a member picker (`setCreateGrp`, `finalSubmit={NewGrpMembers}`), and `EditGroupName` for rename.
- * The API group lifecycle (create → add → admin → rename → image → leave → remove → delete) is green.
- *
- * Gated behind `GROUP_UI_LIFECYCLE=true` and self-cleaning (delete the group it creates — the app
- * requires removing all members before delete, per the API finding).
- *
- * FIRST-RUN NOTE: the create-group trigger and the member-picker + submit are a nested multi-step
- * modal that needs one live recording pass. This first-draft reliably verifies the create-group modal
- * opens and accepts a Group Name (the entry), then attempts the member-add + submit + delete as
- * best-effort. Never runs on a default run.
+ * Katchup Create New Group modal (`ContactList.js`): opens and accepts a Group Name; the member add
+ * and submit are best-effort. Gated behind GROUP_UI_LIFECYCLE=true.
  */
 test.describe(
   'KPost Group — create / rename / delete (write)',
@@ -39,17 +29,13 @@ test.describe(
           .waitFor({ state: 'hidden', timeout: 30_000 })
           .catch(() => undefined);
 
-        // Open the "Create New Group" modal via its icon trigger (`.icon-KP_112-Group-Add`, same convention
-        // as contacts-functional.spec.ts). A text match on "New Group" is NOT safe here — several existing,
-        // real groups in this account are literally named "New Group", so a text-based `.first()` click
-        // opens one of THOSE conversations instead of the create-group modal.
+        // Icon, not text: real groups named "New Group" exist, so a text match opens one of those.
         await page
           .locator('.icon-KP_112-Group-Add')
           .first()
           .click()
           .catch(() => undefined);
 
-        // The modal exposes a Group Name field — the reliable entry assertion.
         const nameField = page
           .getByRole('textbox', { name: /Group Name/i })
           .or(page.getByPlaceholder(/Group Name/i))
@@ -63,7 +49,7 @@ test.describe(
         await nameField.fill(groupName);
         await expect(nameField, 'the Group Name field accepts text').toHaveValue(groupName);
 
-        // Best-effort: add the 2nd QA account as a member and submit, then delete the group to clean up.
+        // Best-effort: add the 2nd QA account as a member and submit.
         await page
           .getByText(testData.victimKpostId)
           .first()

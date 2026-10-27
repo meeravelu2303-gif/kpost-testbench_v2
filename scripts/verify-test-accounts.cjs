@@ -1,18 +1,7 @@
 #!/usr/bin/env node
 /**
- * Reconciles `src/fixtures/test-accounts.json` against the live KPOST_QA database.
- *
- * The registry records what the bench BELIEVES exists; this asks the database what actually does.
- * They drift in both directions and each direction is its own problem:
- *
- *  - `provisioned: true` for an account that is gone → specs fail with a login error and the cause
- *    looks like an API defect.
- *  - `provisioned: false` for an account that exists → specs skip, and the bench silently reports
- *    less coverage than it could deliver.
- *
- * Read-only: it issues SELECTs and prints a report. It never edits the registry, because marking an
- * account live is a decision about whether the account is *usable* (password set, correct type, in
- * the right company), not merely whether a row exists.
+ * Reconciles src/fixtures/test-accounts.json against the live KPOST_QA database and reports drift
+ * either way (marked provisioned but gone, or present but not marked). Read-only SELECTs.
  *
  * Usage: npm run accounts:verify
  */

@@ -12,25 +12,9 @@ import {
 import { settleFrames } from '../support/settle';
 
 /**
- * Unread BADGE refreshes after a conversation is read (the UI half of FR-K07).
- *
- * Why: a QA complaint that the Katchup unread count "shows 4 or 5 even after the message is read". The
- * API side is already proven correct — `unread-count-clears-on-read.spec.ts` shows the server drops the
- * per-sender unread to 0 the moment the conversation is opened. This test covers the OTHER half: whether
- * the on-screen badge actually reflects that, or stays stuck at a stale number.
- *
- * Faithful repro of the user's flow: opening a conversation does NOT navigate away from the Katchup
- * list — the list (and its unread badges) stays on the left while the thread opens on the right — so a
- * correct UI must clear the badge IN PLACE (the client re-fetches the count on the `senderMsgCount`
- * socket event). This test never reloads the page after reading; a reload would re-fetch and mask the
- * staleness, which is exactly the bug.
- *
- * Account 2 (STORAGE_STATE_2) sends to account 1 (the default `page`, the viewer we measure). Gated
- * KATCHUP_UI_LIFECYCLE + both QA accounts, like every write flow. Self-cleans the probe message.
- *
- * NOTE (needs one live selector-tuning pass): the unread badge is `.Msg-Count` / `.Msg-Count-Font`
- * (ContactCircle, from the Unopened-Messages strip). `badgeCountFor` tries to scope it to account 2's
- * row/circle and falls back to the page-wide badge; confirm the scoping on the first live run.
+ * Katchup unread badges (per-sender strip and side-menu total) drop in place after a conversation is
+ * read, with no reload (a reload would mask a stale count). Account 2 sends to account 1; gated behind
+ * KATCHUP_UI_LIFECYCLE, self-cleaning.
  */
 test.describe(
   'KPost Katchup · unread badge refreshes after read (FR-K07, UI)',
@@ -64,12 +48,9 @@ test.describe(
     }
 
     /**
-     * The unread badge on the Unopened-Messages strip item for `senderName` (0 when the item or badge
-     * is gone). Live-confirmed 2026-10-14: a strip item is a ContactCircle with no id — its avatar is a
-     * token-fetched blob: URL (AuthenticatedAvatar), so the only stable per-sender handle is the
-     * `.UserName` text, whose parent holds the `.Msg-Count-Font` badge. The same name can also appear
-     * in Frequently Accessed (which never carries a count), so the highest count among the matches is
-     * the strip's.
+     * The unread badge on the Unopened-Messages strip for `senderName` (0 when gone). Strip items have
+     * no id, so the `.UserName` text is the handle; the same name in Frequently Accessed has no count,
+     * so the highest match wins.
      */
     async function badgeCount(page: Page, senderName: string): Promise<number> {
       const names = page.locator('.UserName', { hasText: senderName });
@@ -101,8 +82,7 @@ test.describe(
       const victim = testData.victimKpostId;
       const sender = await openSender(browser);
 
-      // Track what the SERVER tells this page about account 2's unread, so a failure can say plainly
-      // whether the API or the UI is wrong. `postReadServer` only records responses after the read.
+      // Record the server's count so a failure says whether the API or the UI is wrong.
       let senderName: string | undefined;
       let readAt = Number.POSITIVE_INFINITY;
       let postReadServer: number | undefined;
@@ -136,7 +116,7 @@ test.describe(
         const before = await badgeCount(page, name);
         expect(before, "a fresh unread message raises account 2's unread badge").toBeGreaterThan(0);
 
-        // Read it: open the conversation (this stays on the Katchup list — the badge is still on screen).
+        // Opening the conversation keeps the list (and its badge) on screen.
         readAt = Date.now();
         await page.locator(`[id="${victim}"], [id^="${victim}-"]`).first().click();
 
@@ -157,9 +137,6 @@ test.describe(
           type: 'observed',
           description: `${name} unread badge: before read=${before}, after read=${after}; ${server}`,
         });
-        // Correct behaviour: the badge drops (to 0 / below its pre-read value) in place. A badge that
-        // stays at its old number after the message is read is the reported "stuck at 4/5" bug — and
-        // when the server already says 0, that pins the fault on the UI, not the API.
         expect(
           after,
           `the unread badge must drop after the conversation is read (was ${before}, still ${after}; ` +
@@ -179,20 +156,7 @@ test.describe(
       }
     });
 
-    /**
-     * The SIDE-MENU Katchup badge (the total unread number on the Katchup icon, Header.js
-     * `RouetesCount.Katchup` → `.icon-KP_04-Katchup .Header_msg_count`) is a different badge from the
-     * per-sender strip above, with a different refresh path — and the likelier home of the reported
-     * "shows 4 or 5 even after reading":
-     *   - it is fetched once on mount (`useEffect(UnopenedHeaderCount, [])`) and afterwards only changes
-     *     when a socket count event arrives;
-     *   - both socket helpers (socketService.js `deviceMsgCount` / `senderMsgCount`) do
-     *     `socket.off(event)` before `socket.on(event)`, which removes EVERY listener for that event — and
-     *     the Header (re-binding on every render) and the Katchup Unopened strip (UnOpenedMessage.js:222)
-     *     both bind `receive_senderKatchupMessageCountReducer`. Whichever rendered last owns the event;
-     *     the other badge stops refreshing until a reload.
-     * Same flow as above, measured on the side-menu badge, never reloading after the read.
-     */
+    // The side-menu total refreshes only on a socket event, which the strip can steal (both bind it).
     test('reading a conversation also lowers the side-menu Katchup total, with no page reload @ui', async ({
       page,
       browser,

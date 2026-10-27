@@ -5,20 +5,8 @@ import type { RequestSpec } from '@api/client/request-builder';
 import { expect, test } from '@fixtures';
 
 /**
- * Frontend-verified payload guard — the answer to "is the body correct when the workbook has NO
- * example to check against?".
- *
- * `payload-audit.spec.ts` compares each request to the workbook's documented *example*, so it cannot
- * see an endpoint the workbook documents no body for. Those bodies are built from the authoritative
- * source — the real KPost / KMail frontend (`D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1`, and the KMail
- * UI inside it) and, where the frontend does not call the route, the backend controller/DTO. This
- * guard pins the field set that source review established (2026-09-18), so a later edit that drops or
- * renames a field — the exact regression that files a false bug (e.g. sending `msgID` where the app
- * sends `messageIds`, or omitting `selectedContact` and tripping the backend's unguarded
- * `selectedContact.toLowerCase()` NPE) — fails the build instead of shipping.
- *
- * Each entry is the MINIMUM set of top-level fields the real client sends. The bench may send more
- * (a superset is fine); it may never send fewer or a differently-named field.
+ * Frontend-verified payload guard for endpoints the workbook has no example for: pins the minimum
+ * top-level fields the real frontend (or backend DTO) sends. A superset is fine; fewer fails.
  */
 
 // Same static stub as payload-audit: these factories never chain to a live call.
@@ -27,10 +15,7 @@ const STUB: RequestFactoryHelpers = {
   tenantId: 'qa-audit',
 };
 
-/**
- * endpoint id -> the exact top-level fields the authoritative client sends. Verified against the
- * frontend service layer (and, for the two routes the frontend never calls, the KMail backend DTO).
- */
+/** endpoint id -> the top-level fields the frontend service layer (or KMail backend DTO) sends. */
 const FRONTEND_VERIFIED: Record<string, string[]> = {
   // --- KMail (KPost React app's KMail UI + KMail backend controllers) ---
   // Kmail.js getKmailChat / KmailMessage.fetchMail — thread paging fields.

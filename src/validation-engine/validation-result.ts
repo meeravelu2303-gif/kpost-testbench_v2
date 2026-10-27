@@ -35,13 +35,7 @@ export interface CheckDetail {
   actual?: unknown;
   message?: string;
   correlationId?: string;
-  /**
-   * The request this individual case sent, recorded on FAILURES only.
-   *
-   * A probe-based validator sends many requests; without this, a filed bug could only show the
-   * endpoint's happy-path call, leaving the developer to reconstruct the payload that actually
-   * broke it. Kept off passing cases so a green report stays small.
-   */
+  /** The request this case sent, on failures only, so a ticket shows the payload that broke it. */
   request?: RequestSpec;
 }
 
@@ -75,13 +69,7 @@ export interface ValidationResult {
   error?: { name: string; message: string };
   correlationId: string;
   details?: CheckDetail[];
-  /**
-   * How the reproduction gate scored this check: `failures` of `attempts` passes failed.
-   *
-   * Set only where the gate actually ran (retryable stages). It travels on the result so the ticket
-   * can state it — the gate used to compute this, log it and drop it, which left every filed defect
-   * silent on the one question a developer asks first: did it fail once, or every time?
-   */
+  /** How the reproduction gate scored this check: `failures` of `attempts` passes failed. */
   reproduction?: { attempts: number; failures: number };
 }
 
@@ -97,19 +85,11 @@ export interface ValidationReport {
   endpointId: string;
   endpoint: string;
   method: HttpMethod;
-  /**
-   * The exact request the primary exchange sent, masked. Carried so a filed bug can show a
-   * copy-pasteable `curl` — a developer should never have to reconstruct the call from prose.
-   */
+  /** The primary request, masked, so a filed bug can show a runnable `curl`. */
   request?: RequestSpec;
   /** Whether the endpoint needs a token, so a filed bug's curl shows the header. */
   requiresAuth?: boolean;
-  /**
-   * Status and body of the primary response, truncated and masked.
-   *
-   * A ticket saying "Actual: 409" makes the reader go and re-run the call to find out what the API
-   * actually said. The existing tickets in this Bugzilla quote the body, and they are right to.
-   */
+  /** Status and body of the primary response, truncated and masked, quoted in the ticket. */
   primary?: { status: number; body?: string };
   /** Endpoint tags — used to route a filed bug to its Bugzilla component. */
   tags: readonly string[];

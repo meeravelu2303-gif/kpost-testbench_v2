@@ -1,19 +1,8 @@
 import { expect, test } from '@fixtures';
 
 /**
- * Home — the header "Start voice command" mic (button.header-voice-mic) (reported manually
- * 2026-10-13: "works the first time, then shows an error toast after 3-4 clicks").
- *
- * The voice command uses the Web Speech API, whose real `webkitSpeechRecognition.start()` THROWS an
- * InvalidStateError if called while a recognition is already running. The reported symptom is the
- * classic unguarded double-start: click 1 starts recognition; click 2+ calls start() again without
- * stopping first, which throws, and the app surfaces an error toast. A real microphone is not
- * available headless, so this injects a FAITHFUL fake of the Speech Recognition API (same
- * start()-throws-if-already-started contract as the browser's own) before the page loads, so the
- * app's own handling of a repeat click is exercised deterministically.
- *
- * Correct behaviour: the app guards the repeat click (stops/ignores while already listening) — no
- * error toast, no uncaught error. The bug would be an error toast appearing on the repeat click.
+ * Home header voice-command mic: repeated clicks must not show an error toast. Headless has no mic,
+ * so a fake Web Speech API is injected whose start() throws if already started, like the real one.
  */
 test.describe(
   'KPost Home · voice-command mic survives repeated clicks',
@@ -86,7 +75,7 @@ test.describe(
         .catch(() => false);
       expect(alive, 'the page is still alive after repeated voice-command clicks').toBe(true);
 
-      // Reported symptom: an error toast after a few clicks. Correct behaviour: none.
+      // No error toast may appear.
       const errorToast = page.locator(
         '.Toastify__toast--error, [role="alert"].error, .toast-error',
       );

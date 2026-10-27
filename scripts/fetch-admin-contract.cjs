@@ -1,27 +1,10 @@
 #!/usr/bin/env node
 /**
- * Generates the Admin module contract from the Admin service's own OpenAPI (the service under test,
- * `ADMIN_API_BASE_URL`; the live `adminmodule.kpostindia.com` publishes the same document).
+ * Builds openapi/admin-api.openapi.json from the Admin service's own OpenAPI (ADMIN_API_BASE_URL,
+ * /v3/api-docs) with every $ref inlined; falls back to the cached contracts/admin-api.source.json.
  *
  *   node scripts/fetch-admin-contract.cjs ["<api-docs url>"]
- *
- * ## Why this and not the Excel
- *
-^ * The old Admin_module.xlsx (removed 2026-10-26) documented ~35 endpoints with simplified shapes (integer `companyId`, no arrays,
- * a couple of wrong methods). The Admin service is Spring Boot + springdoc and publishes its OWN
- * OpenAPI — generated from the controllers' rich Swagger annotations — at
- * `https://adminmodule.kpostindia.com/v3/api-docs`: 112 operations, 38 schemas, accurate methods and
- * types (`companyId` is a string, ids are 24-hex ObjectIds, bulk writes take arrays). That is the
- * authoritative contract, so the bench reads it, not the Excel.
- *
- * ## What this does
- *
- *   1. fetches the live api-docs (falls back to the cached `contracts/admin-api.source.json`)
- *   2. **dereferences** every `$ref` (the bench's validators need inline JSON Schema, not refs)
- *   3. writes `openapi/admin-api.openapi.json` in the shape `workbook-contract.ts` reads, and caches
- *      the raw source for an offline regen.
- *
- * Refresh it whenever the Admin service changes: `npm run contract:admin`.
+ *   npm run contract:admin
  */
 'use strict';
 
@@ -33,8 +16,7 @@ require(path.join(ROOT, 'node_modules', 'dotenv')).config({
   path: path.join(ROOT, '.env'),
   quiet: true,
 });
-// The Admin service the bench tests — `ADMIN_API_BASE_URL` in `.env` (the test box), never the live
-// `adminmodule.kpostindia.com` host by default. An explicit api-docs URL argument still wins.
+// The Admin test box from `.env`; an explicit api-docs URL argument wins.
 const SERVER = (process.env.ADMIN_API_BASE_URL || '').replace(/\/+$/, '');
 const URL = process.argv[2] || (SERVER ? `${SERVER}/v3/api-docs` : '');
 if (!URL) {

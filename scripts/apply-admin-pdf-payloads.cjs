@@ -1,19 +1,10 @@
 #!/usr/bin/env node
 /**
- * Rewrites the request bodies in `openapi/admin-api.openapi.json` to match the OWNER's authoritative
- * payload doc — `Admin_module - API Services.pdf` (2026-09-19). The live springdoc api-docs types every
- * admin request with a broad shared DTO (e.g. `getEmployeeByCompanyId` lists 13 fields); the reads only
- * use `{ companyId }`, so fuzzing the full DTO filed false "input validation" bugs. This makes the
- * contract reflect the real per-endpoint payload.
+ * Rewrites the request bodies of the 38 Admin endpoints the bench uses in
+ * openapi/admin-api.openapi.json to the owner's payload PDF (springdoc lists a broad shared DTO
+ * instead). Idempotent; tier/variable/location saves take an array, everything else an object.
  *
- * Deterministic + idempotent: re-running produces the same file. Only the 38 endpoints the bench uses are
- * touched; the other ~74 springdoc paths are left as-is. Run: `node scripts/apply-admin-pdf-payloads.cjs`.
- *
- * Structural facts kept from live reality (measured, see docs/reference/decision-log.md, 2026-09-19 Admin OpenAPI entry): the tier/variable/location SAVES take
- * an ARRAY of the object; everything else is a single object. Fields carry no `required` (an example does
- * not prove a field mandatory — repo convention). Two documented-vs-live notes are preserved as-is on the
- * definitions, not here: `getWorkPlaceHierarchy` needs a runtime `parentAttributeId` the PDF omits, and
- * `getSuspendOrTerminateEmployee`'s real `requestType` enum is unconfirmed.
+ *   node scripts/apply-admin-pdf-payloads.cjs
  */
 const fs = require('fs');
 const path = require('path');

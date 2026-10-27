@@ -17,15 +17,8 @@ import {
 import { validationRegistry } from '@validators/index';
 
 /**
- * The concurrency layer, proved without a host and without a database.
- *
- * Everything here is the part of a concurrency finding that must be right before the finding can be
- * believed: that the burst really was simultaneous, that two responses are only called different
- * when they meaningfully differ, and that a table name can never become SQL. A race probe whose
- * dispatcher quietly serializes reports PASSED on an endpoint it never tested — so the dispatcher
- * is tested here rather than trusted.
- *
- * These run with no environment, so they cannot be skipped for want of a target.
+ * The concurrency primitives, with no host or database: the burst really is simultaneous, responses
+ * differ only when they meaningfully differ, and a table name can never become SQL.
  */
 test.describe('concurrency primitives @framework', () => {
   test('a burst dispatches every task from the same tick', async () => {
@@ -42,11 +35,7 @@ test.describe('concurrency primitives @framework', () => {
       result.outcomes.every((o) => o.status === 'fulfilled'),
       'no task was reported as rejected',
     ).toBe(true);
-    /*
-     * The point of the barrier. If the tasks were started by the map itself, each 20ms sleep would
-     * be serialized and the spread would be ~160ms; released together it is a couple of
-     * milliseconds. This is the assertion that would catch a refactor removing the barrier.
-     */
+    // Serialized, the 20ms sleeps would spread ~160ms; released together, a few milliseconds.
     expect(result.dispatchSkewMs, 'the tasks left together').toBeLessThanOrEqual(
       thresholds.concurrency.maxDispatchSkewMs,
     );
@@ -155,12 +144,7 @@ test.describe('response comparison @framework', () => {
 });
 
 test.describe('SQL identifier safety @framework', () => {
-  /*
-   * Values are bound as parameters, but table and column names cannot be — MySQL does not
-   * parameterize identifiers — so they are the one part of a statement built by concatenation, and
-   * therefore the one place an injection could enter. These pin the rule that makes it safe: the
-   * pattern must reject a backtick, which is what MySQL's own identifier quoting uses.
-   */
+  // MySQL cannot bind identifiers, so table/column names are the one injectable part.
   const HOSTILE = [
     'users; DROP TABLE users',
     'users"',
@@ -195,10 +179,7 @@ test.describe('SQL identifier safety @framework', () => {
   });
 
   test('a legitimate name is backtick-quoted, and left unqualified by default', () => {
-    /*
-     * Unqualified, deliberately: in MySQL the database IS the schema and the connection already
-     * selected it, so prefixing a configured schema would name the wrong thing.
-     */
+    // Unqualified: in MySQL the database is the schema, already selected by the connection.
     expect(qualify('users')).toBe('`users`');
     expect(qualify('KPOST_QA.users'), 'an explicit database is honoured').toBe(
       '`KPOST_QA`.`users`',
@@ -206,10 +187,7 @@ test.describe('SQL identifier safety @framework', () => {
   });
 
   test('values become ? placeholders, and null becomes IS NULL', () => {
-    /*
-     * `column = NULL` is never true in SQL, so building it would turn "this field was cleared, as
-     * expected" into "the record does not exist" — a passing assertion that reports the wrong fact.
-     */
+    // `column = NULL` is never true in SQL.
     const { clause, values } = buildWhere({ id: 7, deletedAt: null, name: 'qa' });
 
     expect(clause).toBe('WHERE `id` = ? AND `deletedAt` IS NULL AND `name` = ?');
@@ -217,10 +195,7 @@ test.describe('SQL identifier safety @framework', () => {
   });
 
   test('the ? placeholders stay aligned with the values when a null sits between them', () => {
-    /*
-     * MySQL binds positionally, so an `IS NULL` term that wrongly consumed a placeholder would
-     * shift every later value by one — silently querying the right columns with the wrong data.
-     */
+    // MySQL binds positionally: an `IS NULL` term must not consume a placeholder.
     const { clause, values } = buildWhere({ a: 1, b: null, c: 2, d: null, e: 3 });
 
     expect(clause).toBe('WHERE `a` = ? AND `b` IS NULL AND `c` = ? AND `d` IS NULL AND `e` = ?');

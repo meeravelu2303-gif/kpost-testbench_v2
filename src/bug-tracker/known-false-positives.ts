@@ -1,24 +1,9 @@
 import type { BugCandidate } from './bug-candidate';
 
 /**
- * Human-judged false positives: findings the validators correctly produced but that a QA reviewer
- * has decided are NOT product defects, for a reason no automated gate can infer from the record
- * alone (e.g. "that value is our own seeded test data", or "that field is inert device metadata").
- *
- * This is the one place such judgments live, so they are auditable and survive across runs. A
- * candidate matching an entry is REJECTED by the validity gate (never filed), and the rejection is
- * reported with the reason below — the gate's rule is that every suppression is visible, never silent.
- *
- * ## How to add one (the review-checkpoint flow)
- *
- * When `npm run report:filing` shows a finding under WILL CREATE that you judge is not a real bug,
- * add an entry here instead of filing-and-resolving-INVALID in Bugzilla (which litters the tracker).
- * Match as narrowly as the judgment allows:
- *   - `fingerprint` — the exact `[KP-xxxxxx]` id (most precise; use this unless the fingerprint drifts).
- *   - `endpoint` + `validator` (+ optional `field`) — a class match, when the same judgment applies to
- *     every field/variant of one (endpoint, validator) and the fingerprint changes run-to-run.
- * Always give a `reason`, `judgedBy` and `date`. Keep the match tight: an over-broad entry hides real
- * regressions. These are judgments, not permanent truths — delete an entry the moment it stops holding.
+ * Human-judged false positives, rejected by the validity gate with their reason shown. Add one when
+ * `report:filing` lists a non-bug under WILL CREATE; match as tightly as possible (fingerprint,
+ * else endpoint + validator/field), since an over-broad entry hides real regressions.
  */
 export interface KnownFalsePositive {
   /** Exact `[KP-]` fingerprint (with or without brackets); matched case-insensitively. */
@@ -29,10 +14,7 @@ export interface KnownFalsePositive {
   validator?: string;
   /** Substring that must appear in the finding's title/narrative (e.g. 'deviceType'). */
   field?: string;
-  /**
-   * Substring that must appear in the finding's ACTUAL evidence (e.g. the seeded value '12345').
-   * Anchors a class match to the judged value, so a future genuinely-bad value still files.
-   */
+  /** Text the finding's Actual must contain, so a really bad value on the field still files. */
   actualContains?: string;
   reason: string;
   judgedBy: string;
@@ -40,19 +22,8 @@ export interface KnownFalsePositive {
   date: string;
 }
 
-/**
- * Seeded from the run-96b9c68c triage (2026-10-11). The two `security.*` "accepted (HTTP 200)" entries
- * are a genuine judgment call (userLogin stores deviceType as inert metadata, never executing or
- * reflecting it) — confirm them before relying on the suppression.
- */
 export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
-  /*
-   * Input fuzz on Admin READS keyed by an id (2026-10-26: these reads were correctly marked non-destructive,
-   * so the engine now fuzzes their input). A null or numeric id answers 200 with an empty result. The same
-   * class on sibling reads was closed INVALID by the developers: #331 (getAllLocation), #337
-   * (getAdminTierVariable), #355 (getHrSetUpTierVariable). Reads only; a write that accepts bad input is
-   * still filed.
-   */
+  // Admin id-keyed reads answering 200 (empty) to a fuzzed id; reads only, a write still files.
   ...(
     ['/location/getLocation', '/rolePosting/getRolePostingByCompanyIdAndEmployeeId'] as const
   ).flatMap((endpoint) =>
@@ -74,13 +45,7 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     judgedBy: 'QA triage (run-ab440f10, source-confirmed)',
     date: '2026-10-23',
   },
-  /*
-   * The two date judgments below are CLASS matches (endpoint + field + the judged value), not
-   * fingerprints: the finding's count ("21/625" → "42/1295") changes every run, which mints a new
-   * fingerprint and let the same false positive back in on run-23c39a35 (as KP-56E4B1/KP-CB27D6/
-   * KP-61D743/KP-B95D16). `actualContains` anchors each to the judged value, so a genuinely bad
-   * date on the same field still files.
-   */
+  // Class matches on the judged value: these findings' counts change the fingerprint every run.
   {
     endpoint: '/v2/dashboard/homeDashboardMsgs',
     field: 'repeatedDate',
@@ -117,12 +82,7 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     judgedBy: 'QA triage (run-23c39a35)',
     date: '2026-10-11',
   },
-  /*
-   * NOT a product bug and NOT a reopen: the bench's kallDashboard happy-path fixture sends an EMPTY
-   * kallID, and the server correctly rejects it with FAILURE/400 (verified by live replay,
-   * run-96b9c68c triage). Without this entry the gate tries to REOPEN resolved #117 every run.
-   * Remove this entry once the fixture sends a valid kallID.
-   */
+  // Bench-fixture fault (empty kallID); delete once the fixture sends a valid one.
   {
     endpoint: '/v2/kall/kallDashboard',
     field: 'status must be SUCCESS',
@@ -131,13 +91,6 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     judgedBy: 'QA triage (run-96b9c68c)',
     date: '2026-10-11',
   },
-  /*
-   * KMail getInstantReply: the "id must be a positive integer" check is wrong for THIS endpoint —
-   * its default replies use numeric ids ("1","2") but CUSTOMIZED replies legitimately use UUIDs
-   * (e.g. cb0b8d19-7de7-...). So a UUID id is correct data, not a defect. Class match on the
-   * endpoint + validator so a genuinely bad id on a different endpoint still files. (run-42e9a1f1,
-   * was KP-16FB8E.)
-   */
   {
     endpoint: '/common/getInstantReply',
     validator: 'common.id',
@@ -146,12 +99,7 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     judgedBy: 'QA triage (run-42e9a1f1)',
     date: '2026-10-12',
   },
-  /*
-   * KMail sentAndInboxMailContent 403: the bench sends a PLACEHOLDER kmailID:0 (a mail that does not
-   * exist / is not the caller's), so a 403 is correct — it is a bench-fixture gap, not a defect.
-   * Fix the fixture to send a real owned kmailID, then DELETE this entry (a 403 on a real owned mail
-   * would be a genuine bug). (run-42e9a1f1, was KP-6CDA7E / KP-6B74E1.)
-   */
+  // Bench-fixture fault (placeholder kmailID:0); delete once the fixture sends a real owned mail.
   {
     endpoint: '/readMail/sentAndInboxMailContent',
     actualContains: '403',
@@ -178,13 +126,7 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     judgedBy: 'QA triage (run-96b9c68c)',
     date: '2026-10-11',
   },
-  /*
-   * Live re-verification of run-420b3816's would-file/reopen plan (2026-10-12). Each was replayed on
-   * testingapi and judged NOT a product defect — see the per-entry reason. (The 4 genuine findings
-   * from the same run — KP-06F947, KP-86FC80, KP-E667CA, and the #1267 reopen — were filed.)
-   */
   {
-    // Class match (the "1 schema violation" count is stable, but keep it endpoint+field anchored).
     endpoint: '/v2/kall/scheduledKall',
     field: 'must be object,null',
     reason:
@@ -223,9 +165,8 @@ function norm(tag: string): string {
 }
 
 /**
- * The reason this candidate is a known, human-judged false positive — or undefined when none matches.
- * An entry matches only when every field it specifies matches; an entry with no match fields never
- * matches (so an empty/typo entry cannot suppress everything).
+ * Why this candidate is a known false positive, or undefined. Every specified field must match; an
+ * empty entry never matches.
  */
 export function knownFalsePositiveReason(candidate: BugCandidate): string | undefined {
   const id = norm(candidate.id);
@@ -246,17 +187,9 @@ export function knownFalsePositiveReason(candidate: BugCandidate): string | unde
 }
 
 /**
- * Sanity-side judgments: an engine check that FAILS exactly the way a person already ruled "not a
- * defect" in Bugzilla (INVALID / WONTFIX) is reported as SKIPPED with that ruling, not as a failure, so
- * a sanity run is not red forever on findings nobody will fix. Separate from `KNOWN_FALSE_POSITIVES`
- * (which only stops filing) on purpose: each entry here is backed by a closed Bugzilla ticket, and the
- * match is strict — EVERY failing sub-check must be a judged field (and carry the judged value, where the
- * ruling depended on it). Any other failing field, or the same field with a different value, still fails.
- *
- * Not here on purpose: a ruling that the CHECK itself was wrong is fixed in the validator instead
- * (#210/#665 `emailId` → common.id, #630 empty optional URL → common.url), and rulings about the
- * environment rather than the behaviour (e.g. #480, "the endpoint
- * is unavailable on the test env") — a route that never answers stays a sanity failure.
+ * A check failure a closed Bugzilla ticket (INVALID/WONTFIX) ruled not a defect, reported as
+ * SKIPPED with that ruling. Strict: every failing sub-check must be a judged field (with the judged
+ * value, if set).
  */
 export interface JudgedCheck {
   /** The Bugzilla ticket whose resolution is the ruling. */
@@ -269,10 +202,7 @@ export interface JudgedCheck {
   fields?: readonly string[];
   /** When set, each failing sub-check's actual value must match it. */
   actualPattern?: RegExp;
-  /**
-   * For a check that fails as a whole (no field-level sub-checks, e.g. `response.structure`): the
-   * failure message must contain this exact text — the symptom the ruling was about.
-   */
+  /** For a whole-check failure (no sub-checks): text the failure message must contain. */
   messageContains?: string;
   reason: string;
 }
@@ -305,10 +235,7 @@ export const JUDGED_CHECKS: readonly JudgedCheck[] = [
   },
 ];
 
-/**
- * The Bugzilla ruling that covers this failed check, or undefined when it is not (fully) judged.
- * `failed` must be every FAILED sub-check of the result, not the truncated message list.
- */
+/** The ruling covering this failed check, or undefined. `failed` = every FAILED sub-check. */
 export function judgedCheckReason(
   path: string,
   validator: string,

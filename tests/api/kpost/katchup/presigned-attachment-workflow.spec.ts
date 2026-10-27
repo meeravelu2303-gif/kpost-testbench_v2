@@ -5,18 +5,9 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Katchup **attachment upload — the real, current production flow**.
- *
- * Owner-confirmed 2026-09-26: `katchup-send-multipart` (direct multipart upload) is legacy and not
- * used by the current client (see its own definition comment and `attachment-workflow.spec.ts`). The
- * real flow is: generate a presigned S3 URL (`aws-katchup-presigned`), PUT the file straight to S3
- * with it, then send an ordinary `katchup-send-message` whose `uuid` array names the upload. This is
- * the first live test of that full cycle, and it mints the real attachment uuid the six
- * download/streaming reads need — previously recorded as blocked in `needs-id-workflow.spec.ts`.
- *
- * Live-verified 2026-09-26: the flow works — `attachmentUuid` comes back correctly set, and every
- * one of the six reads answers 200/303 for a real uuid, not a crash. Two genuine data-quality defects
- * were found underneath that success (see the two filed findings below).
+ * Katchup attachment upload, the client's real flow: presign an S3 URL, PUT the file, send a message
+ * naming the uuid, then exercise the download/streaming reads with that real uuid.
+ * Gated behind `KATCHUP_LIFECYCLE` and `AWS_LIFECYCLE`: it uploads to S3 and sends a real message.
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 
@@ -43,7 +34,7 @@ test.describe(
         { label: 'presigned:generate', auth: { principal: A }, allowLiveWrite: true },
       );
       expect(presign.status, 'generate-presigned-url succeeds').toBeLessThan(300);
-      // A bare link on older builds; a { presignedURL, status } JSON envelope since #942/#935 — accept both.
+      // Either a bare link or a { presignedURL, status } JSON envelope; accept both.
       const raw = presign.bodyText.trim();
       const url = raw.startsWith('{')
         ? String((JSON.parse(raw) as { presignedURL?: string }).presignedURL ?? '')
@@ -61,14 +52,8 @@ test.describe(
       });
       expect(putRes.status, 'the direct S3 upload succeeds').toBeLessThan(300);
 
-      /*
-       * Live-verified 2026-09-27: passing ANY value for `attachmentCaption` — even the plain filename
-       * string this used to send — now 400s "attachmentCaption must be a valid JSON array" (also tried
-       * a JSON-encoded array string and a raw array; both still rejected). Leaving it at `sendShape`'s
-       * own default (`null`) works: the server derives `attachmentCaptionDetails` (fileName, caption,
-       * fileSize, uuid) from the uploaded file itself. This was a stale override in this bench's own
-       * test, not a product regression — `fileName` is still threaded through for the assertions below.
-       */
+      // `attachmentCaption` stays at its default (null): any value 400s, and the server derives the
+      // caption details from the uploaded file.
       const sent = await endpoints.sendTo(
         'katchup-send-message',
         { body: sendShape({ uuid: uuid ? [uuid] : [] }) },
@@ -104,7 +89,7 @@ test.describe(
         'QA bench presigned attachment content',
       );
       try {
-        // The real production flow, unlike the legacy multipart route (#614): the uuid IS attached.
+        // Unlike the legacy multipart route, this flow does attach the uuid.
         expect(
           attachmentUuid,
           'the message carries the uploaded uuid as its attachmentUuid',
@@ -134,14 +119,7 @@ test.describe(
         expect(dl.status, 'download succeeds').toBe(200);
         expect(dl.bodyText, 'the exact uploaded bytes are served back').toBe(content);
 
-        /*
-         * Live-verified 2026-09-26, reproduced twice with different file types (.txt and .pdf): the
-         * response body is always byte-correct, but the Content-Type header is hardcoded to
-         * `image/jpeg` regardless of the real uploaded file's type. A client that trusts the header
-         * (rather than sniffing the bytes) would mishandle or fail to render a non-image attachment.
-         * This is a 2xx-but-wrong-metadata finding the engine's status-code-driven pipeline cannot see.
-         * Filed as #617 [KP-CBBC90], HIGH, KPost API.
-         */
+        // Known defect #617: Content-Type is always image/jpeg. A 2xx finding, so recorded explicitly.
         const contentType = dl.headers?.['content-type'];
         if (contentType !== 'text/plain') {
           endpoints.recordBusinessRuleViolation({
@@ -183,15 +161,8 @@ test.describe(
           'another-name.pdf',
         );
 
-        /*
-         * Live-verified 2026-09-26, reproduced with two different real file names: the presigned GET
-         * URL's `response-content-disposition` always carries `filename="file.xlsx"` as its ASCII
-         * fallback, alongside a correct `filename*=UTF-8''<real name>` extended parameter. Modern
-         * browsers prefer `filename*` and save the right name, but any client that only reads the plain
-         * `filename` parameter (older tooling, some download managers, curl -J) saves it as
-         * "file.xlsx" — wrong for every attachment, every time, not just this one. Filed as #618
-         * [KP-2CAEB3], HIGH, KPost API.
-         */
+        // Known defect #618: the ASCII `filename=` fallback is always "file.xlsx" (`filename*` is
+        // correct), so clients that read only `filename` save the wrong name.
         const disposition = decodeURIComponent(body.url ?? '');
         const asciiFilenameHardcoded = disposition.includes('filename="file.xlsx"');
         if (asciiFilenameHardcoded) {
@@ -262,8 +233,7 @@ test.describe(
           { pathParams: { uuid: uuid ?? '' } },
           { label: 'presigned:media-streaming', auth: { principal: A }, allowLiveRead: true },
         );
-        // 303 (redirect to the real media URL) is the observed, reasonable shape for a non-media file;
-        // asserted as "reachable, not a crash" rather than a specific status.
+        // A non-media file may answer 303 (redirect), so only "no 5xx" is asserted.
         expect
           .soft(streaming.status, 'mediaStreaming does not crash for a real uuid')
           .toBeLessThan(500);

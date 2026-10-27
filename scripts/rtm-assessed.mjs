@@ -1,6 +1,5 @@
-// Analyst-assigned requirements for the areas the per-module FRD is silent on (results: reports/rtm.xlsx, via npm run lint:tags).
-// Consumed by scripts/rtm-lib.mjs. `files` are in-scope spec path fragments that cover the requirement
-// (used to resolve a verified link); empty `files` => Not covered / blocked.
+// Analyst-assigned requirements for areas the FRD is silent on, consumed by rtm-lib.mjs. `files`
+// are in-scope spec path fragments that cover the requirement; empty `files` => Not covered.
 export const ASSESSED = [
   {
     id: 'RTM-KALL-A01',

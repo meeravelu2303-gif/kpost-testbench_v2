@@ -4,13 +4,9 @@ import { body } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint } from './kmail-endpoint';
 
 /**
- * KMail **sends** — compose (`postMail`), multipart compose, and bulk send.
- *
- * The recipient model is `toAddress` (TO) + `ccList` (COPY) + **`bccList` (CONFIDENTIAL — hidden from
- * the others**, KMail's NFR-SEC02). `kmailType` selects the action (New/Reply/Forward/…) and
- * `priority` the KMAIL_PRIORITY. Every send reaches a real inbox, so **none is `productionSafe`**;
- * they run through the gated feature flow (`KMAIL_LIFECYCLE=true`) with `allowLiveWrite`, to our own
- * accounts, self-cleaning. Payload from the live client (`WriteMailBox.js`) + the workbook.
+ * KMail sends: compose, multipart and bulk. Recipients are `toAddress`, `ccList` and `bccList`
+ * (hidden from the others). None is `productionSafe`; the self-cleaning KMAIL_LIFECYCLE flow drives
+ * them.
  */
 const SEND_TAGS = ['kmail-send'] as const;
 
@@ -41,8 +37,7 @@ export function mailShape(overrides: Record<string, unknown> = {}): Record<strin
     ccList: [] as string[],
     bccList: [] as string[],
     attachmentCaption: null,
-    // Documented field — empty for a text mail (no attachment). Included so the payload matches the
-    // contract in full and the API does not flag a missing field.
+    // Empty for a text mail; sent so the payload matches the contract in full.
     attachmentUuid: [] as string[],
     ...overrides,
   };
@@ -57,8 +52,8 @@ export const postMailApi = defineKmailEndpoint({
   summary: 'Compose and send a mail — the primary send path',
   tags: [...SEND_TAGS, 'critical'],
   destructive: true,
-  // Not yet exercised: every DB validation reports SKIPPED until DB_SSL_CA is supplied (see plan
-  // §16 P0 item 2). Wired now so it runs the instant that's resolved — see src/database/validations/kmail.db.ts.
+  // Reports SKIPPED until the KMail DB connection is configured
+  // (src/database/validations/kmail.db.ts).
   database: { validations: ['kmail-mail-persisted'] },
   request: body(() => mailShape()),
 });
@@ -72,15 +67,9 @@ export const postBulkMailApi = defineKmailEndpoint({
   tags: [...SEND_TAGS, 'bulk'],
   // Bulk to our own second account only, so no stranger is mailed.
   destructive: true,
-  // Live-verified 2026-09-26: a successful send answers 202 Accepted, not 200 — the generic engine's
-  // default expectation flagged this as a false "expected 200, got 202" defect before this was set.
+  // A successful bulk send answers 202 Accepted.
   expectedStatus: [202],
-  /*
-   * Dev-confirmed 2026-09-26 (a working curl against a dev host): `postBulkMail` is NOT `postMail`'s
-   * shape plus `toAddressList` — it has its own small, distinct contract. Spreading the full
-   * `mailShape()` in (saluation, groupFlag, senderLatitde/Longitude, forwardList, …) is what caused
-   * the previous bare 400 "Bad Request" with no detail; none of those fields belong here.
-   */
+  // Its own small contract, not `mailShape()` plus `toAddressList`; the extra fields 400.
   request: body(() => ({
     toAddressList: [testData.victimKpostId],
     kmailSubject: 'QA Bench Bulk Mail',

@@ -21,16 +21,8 @@ export function maskString(value: string): string {
 }
 
 /**
- * Masks CREDENTIALS but leaves identifiers readable.
- *
- * Bug reports need the opposite trade-off from logs. In KPost a `kpostID` **is** an e-mail address,
- * so the general e-mail rule turns the one value a developer needs — who the request was made as —
- * into `***`, and the attached cURL stops being runnable. A ticket nobody can reproduce is the most
- * common reason a real defect gets closed as "cannot reproduce".
- *
- * What stays masked here is what is genuinely a credential: passwords, JWTs, `Bearer`/`Basic`
- * values and connection strings. Those are secrets whether or not the reader is a developer, and a
- * token pasted into a ticket outlives the bug it was filed for.
+ * Masks credentials (passwords, JWTs, Bearer/Basic values, connection strings) but leaves e-mails
+ * readable, since a kpostID is an e-mail and a ticket's curl needs it.
  */
 export function maskSecretsInString(value: string): string {
   return value
@@ -45,11 +37,8 @@ export function maskSensitive<T>(value: T, depth = 0): T {
 }
 
 /**
- * Like `maskSensitive`, but keeps identifiers (e-mails, and therefore `kpostID`s) readable.
- *
- * For Bugzilla artifacts only — the payload and the cURL a developer is meant to run. Keys that
- * name a credential (`password`, `token`, …) are still replaced wholesale, so the exception is
- * narrow: it admits identifiers, not secrets.
+ * Like `maskSensitive` but keeps e-mails/kpostIDs readable; for Bugzilla artifacts only. Credential
+ * keys stay masked.
  */
 export function maskSecretsOnly<T>(value: T, depth = 0): T {
   return maskDeep(value, depth, maskSecretsInString);

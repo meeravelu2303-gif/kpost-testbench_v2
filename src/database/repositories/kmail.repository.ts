@@ -2,13 +2,9 @@ import type { JsonObject } from '@utils/json';
 import type { DatabaseClient } from '../database-client';
 
 /**
- * Repository over the KMail tables on KPOST_QA. Full mapping and its surprises: `docs/modules/kmail-schema.md`.
- *
- * The one structural fact worth repeating here, because it shapes every method below: **per-recipient
- * state is not on the mail.** `TBL_KPOST_KMAIL_MASTER` holds the mail once; read, star, delete and
- * recall are columns on `TBL_KPOST_KMAIL_TRANSACTION`, one row per recipient. "Is this mail read?"
- * therefore has as many answers as there are recipients, and a method that returned one boolean for
- * a mail would be answering a question the schema cannot answer.
+ * Repository over the KMail tables on KPOST_QA (see `docs/modules/kmail-schema.md`). Per-recipient
+ * state (read, star, delete, recall) lives on `TBL_KPOST_KMAIL_TRANSACTION`, one row per recipient,
+ * not on the mail.
  */
 
 /** `TBL_KPOST_KMAIL_MASTER` — the mail. `kmail_subject` is ENCRYPTED at rest (longtext, not BLOB). */
@@ -24,11 +20,8 @@ export interface KmailMasterRecord extends JsonObject {
 }
 
 /**
- * `TBL_KPOST_KMAIL_TRANSACTION` — one row per recipient.
- *
- * Every state column is a `char` holding `'Y'`, `'N'` or (on 107 legacy rows) a NUL byte — never a
- * boolean and never a tinyint. Read them through `kmailFlag()`, never with a truthiness test:
- * `'N'` is a non-empty string and is therefore truthy.
+ * `TBL_KPOST_KMAIL_TRANSACTION`, one row per recipient. State columns are `'Y'`/`'N'` chars: read
+ * them with `kmailFlag()`.
  */
 export interface KmailTransactionRecord extends JsonObject {
   id: number | string;

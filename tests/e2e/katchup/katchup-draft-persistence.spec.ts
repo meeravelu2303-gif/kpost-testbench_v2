@@ -4,27 +4,9 @@ import { EDITOR, gotoKatchup, parkPointerAwayFromSideMenu } from '../support/kat
 import { settleFrames } from '../support/settle';
 
 /**
- * Katchup DRAFT persistence (coverage gap — no draft test existed at any tier).
- *
- * Confirmed from the live frontend source (bubble/Katchup.js `DraftMsg`/`handleDraftMsg`,
- * WriteMessage.js:148 `setDraft`): a draft is **client-side React state only** — there is no draft API
- * and no localStorage, and the per-contact keying in `handleDraftMsg` is commented out. So the testable
- * contract is the IN-SESSION one: text typed into a conversation's composer survives switching to
- * another conversation and back, WITHOUT a page reload (a reload clears the useState and is out of
- * scope — drafts are not persisted across reloads by design).
- *
- * This asserts the correct behaviour: switch away from a half-typed message and back, and the draft is
- * still there. If it comes back empty (or shows the other conversation's text), that is a real draft
- * defect — the commented-out per-contact keying — and this surfaces it.
- *
- * Switching is done by clicking conversation ROWS in the left list (in-SPA), never `openConversation`
- * (which does a full /katchup navigation and would reset the draft state). Needs a second real contact
- * (qatest3) alongside the 2nd QA account. Does not send anything, so it is read-only aside from typing;
- * still gated KATCHUP_UI_LIFECYCLE for consistency with the other composer specs.
- *
- * NOTE (needs one live selector-tuning pass): the composer-open control (`.msg-arrow`) and the
- * row ids are reused from the shared helpers; confirm the draft actually restores on the first live run
- * (the source suggests it may not be per-contact).
+ * Katchup draft: a half-typed message survives switching conversations and back within the session
+ * (drafts are client-side state only, so no reload). Switches by in-SPA row clicks, never
+ * `openConversation`, which navigates and resets the draft. Sends nothing.
  */
 const SECOND_CONTACT_ID = 'qatest3@kpostindia.com';
 
@@ -47,8 +29,7 @@ test.describe(
       const draftSubject = `QA draft ${Date.now()}`;
       const draftBody = `QA draft body ${Date.now()} — should survive a conversation switch`;
 
-      // One load of the Katchup list; every switch after this is an in-SPA row click (no reload, so
-      // the draft's React state is never torn down).
+      // One load; every switch after this is an in-SPA row click.
       await gotoKatchup(page);
       await parkPointerAwayFromSideMenu(page);
 
@@ -80,7 +61,6 @@ test.describe(
       await page.locator('.msg-arrow').first().click();
       await settleFrames(page).catch(() => undefined);
 
-      // The draft must still be there — both the Subject and the body.
       await expect(
         page.getByRole('textbox', { name: 'Subject' }),
         'the draft Subject survives switching away and back',

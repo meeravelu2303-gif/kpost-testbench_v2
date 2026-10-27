@@ -10,15 +10,8 @@ import {
 } from './support/journey';
 
 /**
- * JOURNEY 7 · SIGNING OUT AND BACK IN — a user ends their session and starts a new one.
- *
- * A is working (Katchup open) → logs out through the header menu → every protected screen now sends
- * them to the login screen → the browser's Back button does not bring a protected screen back →
- * A signs in again through the real login screen → lands on Home → their screens work again.
- *
- * Logging out ends A's session on the server, which is the session `.auth/user.json` holds
- * (`login-token-security.spec.ts`). The journey's last step signs A in again and re-saves that file,
- * so the rest of the run keeps a live session — the same end state a real user is in.
+ * Journey 7: A logs out, protected screens (and Back) go to login, A signs in again and works. The
+ * last step re-saves .auth/user.json so the rest of the run keeps a live session.
  */
 const PROTECTED = ['/katchup', '/kmail', '/kall', '/settings', '/userprofile'] as const;
 

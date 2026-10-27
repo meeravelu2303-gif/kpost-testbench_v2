@@ -10,30 +10,16 @@ import {
 } from '../support/katchup';
 
 /**
- * Katchup sender **sub-flow** actions — the bell-menu items that open a further surface (a modal, a
- * contact picker, or the composer in a re-post mode): **Note · Reminder · Transfer · Forward ·
- * Forward-with-thread · Recall & Repost** (the `bellIconContent` array, `KatchupMessage.js`).
- *
- * Each test reliably verifies the ACTION ENTRY is wired — send a message → open the bell menu → click
- * the action → the menu item is dismissed (the action was accepted and its next surface took over) —
- * then self-cleans by deleting the source message. All gated behind `KATCHUP_UI_LIFECYCLE=true`.
- *
- * FIRST-RUN NOTE: the sub-flow COMPLETION (typing the note, setting the reminder time, picking the
- * forward/transfer recipient and confirming) needs one live recording pass to capture each modal's
- * internals — those components live in `forwardFooter/`, `Transfer`, and the note/reminder modals. The
- * entry assertion here is the validated part; completion is the tuning step. Never runs by default.
+ * Katchup bell-menu sub-flow entries (Note, Reminder, Transfer, Forward): the item opens its next
+ * surface. Completion is tested in the *-subflow-e2e specs. Gated behind KATCHUP_UI_LIFECYCLE; self-cleaning.
  */
 
-// `req`: the FRD requirement whose ENTRY this proves (a requirement-partial link — the completion is
-// asserted elsewhere, e.g. katchup-note-subflow-e2e for Note, or not yet at all).
+// `req`: the FRD requirement whose entry this proves (completion is asserted elsewhere, if at all).
 const SUBFLOW_ACTIONS: ReadonlyArray<{ id: string; menu: RegExp; req?: string }> = [
   { id: 'Note', menu: /Note/i, req: 'FR-KU-032' },
   { id: 'Reminder', menu: /Reminder/i, req: 'FR-KU-033' },
   { id: 'Transfer', menu: /Transfer/i, req: 'FR-KU-034' },
-  // "Forward" (end-anchored) matches the plain Forward, not "Forward With Thread". Forward-with-thread
-  // is covered by the `forward` feature in the catalogue (FR-K15/K16 = forward with/without thread);
-  // its bell menu item is a nested-div label with no matchable accessible name, so it is not a
-  // separate entry here.
+  // End-anchored so it skips "Forward With Thread", whose item has no matchable accessible name.
   { id: 'Forward', menu: /Forward\s*$/i },
 ];
 
@@ -64,9 +50,7 @@ test.describe(
           await openComposer(page);
           const message = await sendMessage(page, subject, `QA UI ${action.id} — self-cleaning`);
 
-          // Open the bell menu and click the action. The menu item must be present (the action exists on
-          // a message we sent) and, once clicked, must be dismissed — the action was accepted and its next
-          // surface (modal / picker / composer) has taken over.
+          // A dismissed menu item means the action was accepted and its next surface took over.
           await openBellMenu(page, message);
           const item = page.getByRole('menuitem', { name: action.menu });
           await expect(item, `the bell menu offers ${action.id}`).toBeVisible({ timeout: 15_000 });
@@ -75,14 +59,11 @@ test.describe(
             timeout: 15_000,
           });
 
-          // Dismiss whatever surface opened (modal / picker), without submitting, so no extra state is
-          // left. A sub-flow modal (the Transfer/Forward contact picker is a ModalComponent that Escape
-          // does not always close) can overlay the thread and block the bell menu the self-clean needs, so
-          // reopen the conversation fresh — that unmounts any open modal — before deleting.
+          // Escape does not always close the picker modal, so reopen the conversation to unmount it
+          // before the cleanup needs the bell menu.
           await page.keyboard.press('Escape').catch(() => undefined);
           await openConversation(page, testData.victimKpostId).catch(() => undefined);
 
-          // Self-clean: delete the source message so the account ends as it started.
           if (await messageBySubject(page, subject).count()) {
             await deleteSentMessage(page, subject);
           }

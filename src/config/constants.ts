@@ -9,9 +9,7 @@ export const STORAGE_STATE_3 = path.join(ROOT_DIR, '.auth', 'user3.json');
 /** A BUSINESS_S admin's session, for the company-admin UI (User Management on the main app). */
 export const STORAGE_STATE_BUSINESS = path.join(ROOT_DIR, '.auth', 'business.json');
 /**
- * A BUSINESS_M admin's session for the **Admin/HR-Setup UI** on the separate `kpostadmin` origin.
- * Holds the SSO-planted localStorage (`accessToken` + `AuthUser` + `companyID`) that its own
- * `Callback.js` writes, so the admin app boots straight to `/dashboard`.
+ * A BUSINESS_M admin's session for the Admin/HR-Setup UI origin, with the SSO localStorage planted.
  */
 export const STORAGE_STATE_ADMIN = path.join(ROOT_DIR, '.auth', 'admin.json');
 export const REPORTS_DIR = path.join(ROOT_DIR, 'reports');
@@ -24,9 +22,7 @@ export const TIMEOUTS = {
   navigation: 30_000,
 } as const;
 
-// The tag taxonomy lives in the PURE `./tags` module (no Node built-ins) so the plain-Node runner and
-// lint:tags can import it directly; re-exported here so existing `import { TAGS } from './constants'`
-// keeps working unchanged.
+// Tags live in the pure `./tags` module; re-exported for existing imports.
 export { TAGS, MODULE_TAGS, bugTag, ALL_TAGS, isValidTag } from './tags';
 export type { Tag } from './tags';
 

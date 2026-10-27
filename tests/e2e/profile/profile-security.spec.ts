@@ -3,18 +3,9 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 
 /**
- * Security-fuzzing angle for the Profile **About** field — a higher-value XSS surface than a
- * self-only search box or even a 2-party chat message: About is rendered on the profile page for
- * EVERY visitor who looks the account up, so a stored payload here would fire for every viewer, not
- * just the account holder. Same execution-based check as `login-security.spec.ts`/
- * `home-security.spec.ts`/`katchup-security.spec.ts` (a `dialog` listener, not string-matching).
- *
- * Reuses `profile-edit.spec.ts`'s own proven read → edit → verify → restore flow and its exact
- * selectors (`#About`, `.icon-KP_236_Edit` with an "Edit Profile" fallback, the "Write about
- * yourself..." placeholder, the "Update" button) so the account's real About text is never lost —
- * each payload is written, checked, then the ORIGINAL text is restored before the next one runs.
- *
- * Gated behind `PROFILE_UI_LIFECYCLE=true` (it writes a profile field), same as `profile-edit.spec.ts`.
+ * Stored-XSS fuzz of the Profile About field, which every visitor sees; a payload "executes" if a
+ * dialog fires. Each payload is written, checked, then the original text restored. Gated behind
+ * PROFILE_UI_LIFECYCLE.
  */
 test.describe(
   'KPost Profile · About field security fuzzing',
@@ -58,7 +49,7 @@ test.describe(
         const about = page.locator('#About');
         await expect(about, 'the About section renders').toBeVisible({ timeout: 20_000 });
 
-        // Read the current About text so we can restore it — a genuine value read, not an assertion.
+        // Read the current About text so we can restore it.
         const original = ((await about.locator('.nuntio-font').first().textContent()) ?? '').trim();
 
         const marker = `QA SEC ${Date.now()} ${payload.value}`;
@@ -101,9 +92,7 @@ test.describe(
           `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
         ).toBe(false);
 
-        // Restore the original About so the account ends as it started — best-effort re-entry, same
-        // caution as `profile-edit.spec.ts` (the hover-revealed pencil is flaky on re-render); the
-        // fuzz check above is the assertion, this cleanup must not fail the test if re-entry misses.
+        // Restore the original About; best-effort, since the hover pencil is flaky on re-render.
         try {
           await about.hover().catch(() => undefined);
           await about.locator('.icon-KP_236_Edit').first().click({ force: true, timeout: 5_000 });
@@ -112,7 +101,7 @@ test.describe(
           await restoreEditor.fill(original);
           await page.getByRole('button', { name: /^Update$/i }).click();
         } catch {
-          // Re-entry missed — the QA account keeps the fuzz marker in About (harmless, own account).
+          // Re-entry missed: our own QA account keeps the fuzz marker in About.
         }
       });
     }

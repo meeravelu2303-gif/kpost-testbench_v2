@@ -16,14 +16,8 @@ import { writeFileSync } from 'node:fs';
 import { settleFrames } from '../support/settle';
 
 /**
- * Deep WCAG accessibility angle (axe-core, full ruleset) for the SIGNED-OUT screens — the same tool
- * `accessibility-axe.spec.ts` runs on every authenticated screen, applied here to Signup and Login.
- * Neither was ever scanned before: the authenticated sweep skips entirely when there is no session
- * (`skipIfSignedOut`), and Signup/Login are reached BEFORE one exists — so this was a genuine 0%
- * coverage gap, not a thin one.
- *
- * Same structured-evidence shape as the authenticated sweep (`AXE_JSON_ATTACHMENT`), so the existing
- * bug-filing pipeline picks these up automatically — no new filing logic needed, just new screens.
+ * axe-core WCAG scans of the signed-out Signup and Login screens, with the same evidence attachments
+ * as the authenticated sweep so the filing pipeline picks them up.
  */
 test.describe(
   'KPost signed-out screens — accessibility (axe-core WCAG)',
@@ -75,8 +69,7 @@ test.describe(
         path: evidencePath,
         contentType: 'application/json',
       });
-      // Every failing element with selector, HTML and (for contrast) colours + ratio — what the UI
-      // developers asked for on the WCAG tickets; uploaded to the ticket as text.
+      // Every failing element with selector, HTML and contrast details, uploaded to the ticket.
       if (critical.length + serious.length) {
         const detailsPath = testInfo.outputPath('a11y-details.txt');
         writeFileSync(detailsPath, axeDetailsText(screenName, [...critical, ...serious]));
@@ -174,9 +167,7 @@ test.describe(
     }, testInfo) => {
       await page.goto(loginPage.path, { waitUntil: 'domcontentloaded', timeout: 45_000 });
       await loginPage.expectLoaded();
-      // The "Forgot Password ?" link only renders on the PASSWORD step, not the initial id-entry
-      // step — a known id must advance the flow first (same precondition as the existing, working
-      // `login-session.spec.ts` test for this same link).
+      // The "Forgot Password ?" link only renders on the password step.
       await loginPage.enterLoginId(testData.kpostId);
       await loginPage.passwordInput
         .waitFor({ state: 'visible', timeout: 20_000 })
@@ -199,13 +190,7 @@ test.describe(
       await scanCurrentPage(page, testInfo, 'Login — Forgot Password modal', '/login');
     });
 
-    /*
-     * The two deeper signup screens below were unreachable before the Cloudflare Turnstile fix
-     * (2026-09-30) — mobile verification never completed, so nothing past it could be scanned. Each
-     * uses its own fresh, throwaway mobile number: unlike the lifecycle specs, this never completes a
-     * signup (no account is created), so no reserved identity is needed — a collision just means
-     * re-running with a different generated number.
-     */
+    // The post-OTP screens use a throwaway mobile: no signup is completed, so no reserved identity.
     function freshMobile(): string {
       return `77${Date.now().toString().slice(-8)}`;
     }

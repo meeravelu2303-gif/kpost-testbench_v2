@@ -4,15 +4,8 @@ import { body } from '../kpost-endpoint';
 import { defineKallEndpoint } from './kall-endpoint';
 
 /**
- * Kall **reads** — the call log, today's scheduled calls, frequent contacts, and status lookups.
- *
- * The log/contact reads need only our own account, so they run on live. The two `kallID`-keyed
- * status reads need a real call id we do not have on live (a fabricated one would 404 or name a
- * stranger's call), so they stay registered and blocked, tagged `needs-kall-id`, until the write
- * lifecycle (`docs/modules/kall-flow.md` §5) creates one. All are POST reads except the two GETs, so each
- * POST states `destructive: false` — without it the resolved endpoint defaults destructive true for
- * POST, is tagged `@destructive`, and the production `grepInvert` silently drops every one of its
- * tests (see the Dashboard decision-log entry).
+ * Kall reads. Log and contact reads run on live; `kallID`-keyed reads are `needs-kall-id` until the
+ * lifecycle creates a call. POST reads set `destructive: false`.
  */
 const READ_TAGS = ['kall-read'] as const;
 
@@ -55,10 +48,7 @@ export const kallInfoApi = defineKallEndpoint({
   path: '/v2/kall/kallInfo',
   summary: 'The call history with one contact',
   tags: [...READ_TAGS, 'log'],
-  /*
-   * The contact is our own second account, so this reads a history we are a party to. `kallID: null`
-   * means "all calls with this contact", exactly as the client sends on first open.
-   */
+  // History with our second account; `kallID: null` means all calls with this contact.
   destructive: false,
   productionSafe: true,
   request: body(() => ({ contactID: testData.victimKpostId, kallID: null })),
@@ -70,11 +60,7 @@ export const contactInfoApi = defineKallEndpoint({
   path: '/v2/kall/contactInfo/',
   summary: "Contact details for the caller's call contacts",
   tags: [...READ_TAGS, 'contacts'],
-  /*
-   * The workbook documents no payload, but the API rejects an empty body with 400 "Malformed or
-   * missing request body" — it needs a `contactID`. Sends our OWN second account (allowlisted), so
-   * it reads our own contact and is cleared for live.
-   */
+  // Needs a `contactID` (an empty body 400s); sends our own second account.
   destructive: false,
   productionSafe: true,
   request: body(() => ({ contactID: testData.victimKpostId, kallID: null })),
@@ -95,10 +81,7 @@ export const fetchScheduledRepeatKallApi = defineKallEndpoint({
   request: body(() => ({ scheduledStartTime: '2024-06-14' })),
 });
 
-/*
- * Reads keyed by a real `kallID` we own. Blocked on live until the lifecycle test creates one — a
- * fabricated id would 404 or name a stranger's call. Tagged `needs-kall-id`.
- */
+// Reads keyed by a real `kallID` we own; blocked on live until the lifecycle creates one.
 export const getKallStatusApi = defineKallEndpoint({
   id: 'kall-get-status',
   requirements: ['FR-KL-008'],

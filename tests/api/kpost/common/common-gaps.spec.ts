@@ -1,20 +1,9 @@
 import { expect, test } from '@fixtures';
 
 /**
- * Common **recorded gaps — not workarounds**.
- *
- *   - `common-save-unsubscriber-details`: 404, route not deployed on this test build (same pattern
- *     as `kos-list-documents`/`kmail-postbox-contacts`/`katchup-messages-subject` this session).
- *   - `common-update-flutter-app-version`: `sideEffect: 'global'`, public and unauthenticated —
- *     changes what EVERY mobile client in production is told to install. Never cleared for live
- *     under any flag; per the endpoint definition's own warning, a wrong value here is a production
- *     incident, not a test finding.
- *   - `common-update-company-logo` / `common-download-company-logo` / `common-remove-company-logo`:
- *     all three are `authentication: { role: 'COMPANY_ADMIN' }` and the first two are `sideEffect:
- *     'global'` — and the endpoint definitions' own extensive documented investigation already
- *     concluded that deciding whether `downloadCompanyLogo`'s existing 500 is a route defect or a
- *     "no logo yet" case "means uploading a logo first... not something to do unasked." That stands;
- *     not overridden here without the same explicit authorization already declined for it.
+ * Common recorded gaps: save-unsubscriber-details (404, not deployed), update-flutter-app-version
+ * (global: changes what every mobile client installs) and the company-logo trio (needs a logo upload,
+ * not authorized).
  */
 
 test.describe(

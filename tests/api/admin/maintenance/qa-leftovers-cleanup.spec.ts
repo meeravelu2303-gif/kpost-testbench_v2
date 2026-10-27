@@ -6,15 +6,9 @@ import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
 
 /**
- * Finds — and, only when asked, deletes — records the bench itself left behind in the QA testing company
- * (BUSINESS_M, company 242). A record counts as the bench's own ONLY if its name carries the bench's
- * pattern: `QA <label> <13-digit Date.now() stamp>` (feature, lifecycle and fuzz specs all name records
- * that way); the company's own records never match.
- *
- *   ADMIN_QA_CLEANUP=list    list what would be deleted (read-only)
- *   ADMIN_QA_CLEANUP=delete  delete it, children before parents, and fail on anything left
- *
- * Added 2026-10-26 after the write fuzz was found leaving every accepted malformed save behind.
+ * Finds, and on request deletes, records the bench left in QA company 242. Only names matching the
+ * bench pattern `QA <label> <13-digit stamp>` count. ADMIN_QA_CLEANUP=list is read-only; =delete
+ * removes them children first and fails on anything left.
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',
@@ -54,8 +48,7 @@ test.describe('Admin · QA leftovers in the QA testing company @api @admin-api',
       '242',
     );
 
-    // Root level only. A variable saved with NO parentVariableId cannot be listed (the list answers 400
-    // to a null parent), so the fuzz now deletes those by id the moment they are accepted.
+    // Root level only: a variable with no parentVariableId cannot be listed (the fuzz deletes those by id).
     const byRoot = (id: string): Promise<Row[]> => rows(endpoints, id, { parentVariableId: 0 });
     const employees = (await rows(endpoints, 'admin-employee-details', {})).filter((r) => {
       const p = isPlainObject(r.personalInformationObj) ? r.personalInformationObj : {};

@@ -6,33 +6,9 @@ import type { Browser, Page } from '@playwright/test';
 import { deleteSentMessage, gotoKatchup, openComposer, openConversation } from '../support/katchup';
 
 /**
- * Katchup **Copy (Cc) · Confidential Copy (NFR-SEC02) · Bulk** — the multi-recipient features, tested
- * with three real QA accounts (sender = account 1 `page`; account 2 = TO recipient, session
- * `.auth/user2.json`; account 3 = the Copy / Confidential / additional recipient, `.auth/user3.json`).
- * The message-type is 14 (Copies): `revealContactList` = a **visible** Copy, `hiddenContactList` = a
- * **Confidential** Copy hidden from the other recipients.
- *
- * The **security property is the point** and it is fully encoded here:
- *   - a visible **Copy**: account 2 CAN see that account 3 was copied,
- *   - a **Confidential Copy**: account 2 must NOT see account 3 (NFR-SEC02), while account 3 DOES
- *     receive the message.
- *
- * Gated behind `KATCHUP_UI_LIFECYCLE=true`, self-cleaning (account 1 deletes its message).
- *
- * FIRST-RUN NOTE: `addCopy()`'s trigger is now source-confirmed, not guessed — the test-file
- * classification audit (2026-10-02) flagged the original `getByText(/^Copy$/i)` as targeting the
- * wrong UI paradigm (this screen uses icon controls, not text buttons), matching the already-tracked
- * "Katchup Copies selectors unverified" gap. Traced `WriteMessage.js:3366-3388`: the single trigger
- * is the icon `.icon-KP_229_Copies1`, which opens ONE shared `MultipleContact`/Copies modal for both
- * visible and confidential copies — there is no separate "Confidential Copy" trigger icon. Inside
- * that modal (`MultipleContact.js:1444-1473`), each contact row renders two bare, unlabeled
- * `<input type="radio" name="copiesRadio {index}">` elements sharing one radio group per row — the
- * FIRST is "Copy" (`handleCopiesRadioButtonClick`), the SECOND is "Confidential Copy"
- * (`handleCCRadioButtonClick`); confirmed submitted via a real `Done` button
- * (`className="Done-button"`, `label={t("Done")}`) at `MultipleContact.js:1957-1982`. The row-scoping
- * below (finding the two radios nearest the contact's own text) is still best-effort pending one live
- * recording pass to confirm the exact DOM nesting; the trigger and Done-button fixes are source-exact.
- * The multi-account VERIFY (who can see whom) is the validated security logic and was already correct.
+ * Katchup Copy, Confidential Copy (NFR-SEC02) and Bulk across three QA accounts (1 sends, 2 is TO,
+ * 3 is copied). A Confidential Copy must reach account 3 but stay hidden from account 2.
+ * Gated behind KATCHUP_UI_LIFECYCLE; account 1 deletes its message afterwards.
  */
 
 const CONFIG_OK =
@@ -65,14 +41,13 @@ test.describe(
      * (`confidential: true`). Best-effort — the exact picker selectors need one recording pass.
      */
     async function addCopy(page: Page, kpostId: string, confidential: boolean): Promise<void> {
-      // Single shared trigger for both Copy and Confidential Copy — WriteMessage.js:3366-3388.
+      // One shared trigger icon for both Copy and Confidential Copy.
       await page
         .locator('.icon-KP_229_Copies1')
         .first()
         .click()
         .catch(() => undefined);
-      // Each contact row has 2 bare radios sharing one group: [0] = Copy, [1] = Confidential Copy
-      // (MultipleContact.js:1444-1473). Row-scoping is best-effort pending a live recording pass.
+      // Each row has two unlabeled radios: [0] = Copy, [1] = Confidential Copy. Row scoping is best-effort.
       const row = page.locator('div').filter({ hasText: kpostId }).last();
       const radios = row.locator('input[type="radio"]');
       await radios
@@ -87,9 +62,8 @@ test.describe(
     }
 
     /**
-     * What the composer actually sent: start waiting BEFORE pressing Enter, then read the copies from
-     * the message request (sharedMessageDetails.revealContactList / hiddenContactList). This proves the
-     * best-effort `addCopy` really chose Copy vs Confidential Copy before anything is judged.
+     * Reads reveal/hidden copies from the send request (call BEFORE pressing Enter), proving which
+     * kind of copy `addCopy` really chose.
      */
     function captureCopies(page: Page, subject: string) {
       return page
@@ -128,11 +102,7 @@ test.describe(
       return `${d.firstName ?? ''} ${d.lastName ?? ''}`.trim();
     }
 
-    /**
-     * As the TO recipient: open the conversation with the sender, click the message's Copies icon
-     * (.icon-KP_229_Copies1) and return the "Message With Copies" dialog text — what the TO recipient
-     * is told about who else got the message. '' when the message offers no Copies icon at all.
-     */
+    /** The TO recipient's "Message With Copies" dialog text; '' when the message has no Copies icon. */
     async function copiesShownTo(page: Page, subject: string): Promise<string> {
       await openConversation(page, testData.kpostId);
       const message = page.locator('[id]').filter({ hasText: subject }).last();

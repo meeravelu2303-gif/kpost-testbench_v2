@@ -4,10 +4,7 @@ import { plannedCases } from '@engine/endpoint-cases';
 import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
-/**
- * Self-tests for the common module's coverage. These send no HTTP requests — they assert that the
- * module is fully and honestly wired, which a reviewer would otherwise have to take on trust.
- */
+/** Self-tests (no HTTP) that the common module is fully wired. */
 test.describe('KPost common · module coverage', () => {
   test('every documented common endpoint has a definition @framework', () => {
     // Fails the moment a new workbook dump adds a common endpoint nobody has covered.
@@ -16,11 +13,7 @@ test.describe('KPost common · module coverage', () => {
 
   test('every definition matches the generated contract @framework', () => {
     for (const api of commonApis) {
-      /*
-       * `contractPath` where the live API disagrees with the sheet: the schema still comes from the
-       * documented row, but the request goes to the real path. Asserting only `api.path` would make
-       * a corrected endpoint fail this test for being correct.
-       */
+      // `contractPath` is the documented row when the live path differs from the sheet.
       const documented = api.contractPath ?? api.path;
       const contract = workbookContract('kpost-api', api.method, documented);
       expect(contract.path, `${api.id} contract path`).toBe(documented);
@@ -28,16 +21,8 @@ test.describe('KPost common · module coverage', () => {
   });
 
   /**
-   * The common module is public except for the company-logo trio, which the API owner's working
-   * calls confirm require a Bearer token.
-   *
-   * An exact list, so an endpoint that starts *or* stops requiring a token fails this test rather
-   * than changing the module's security posture silently.
-   *
-   * One earlier claim here was wrong and is worth remembering: the bench cited a 401 as proof that
-   * `downloadCompanyLogo` was protected. This gateway answers 401 to *any* unrouted path without a
-   * token, so that proved nothing - the route was simply absent at the path the workbook gave. The
-   * authority for these three is the owner's curl, not our probe.
+   * Common is public except the company-logo trio (per the API owner's curls; this gateway answers
+   * 401 to any unrouted path, so a 401 proves nothing). Exact list, so any change fails the test.
    */
   const REQUIRES_TOKEN = [
     'common-download-company-logo',

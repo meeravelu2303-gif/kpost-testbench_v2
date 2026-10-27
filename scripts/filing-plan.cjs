@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 /**
- * Prints the filing PLAN from the last run's reports/REPORT.json in plain English — the review
- * checkpoint between a dry run and a real `:file`. Read-only: it never touches Bugzilla.
+ * Prints the filing plan from the last run's REPORT.json in plain English: the review checkpoint
+ * between a dry run and a real `:file`. NEEDS REVIEW items are held back. Read-only.
  *
  *   npm run report:filing                 # read reports/REPORT.json
  *   npm run report:filing -- <path.json>  # read a specific report
- *
- * The point of the checkpoint: everything under WILL CREATE / REOPEN / COMMENT / CLOSE is
- * high-confidence and files automatically on the next `:file`. Everything under NEEDS REVIEW is
- * held back for a human — read those, then file.
  */
 const fs = require('fs');
 const path = require('path');
@@ -54,8 +50,7 @@ function modeLabel() {
 }
 console.log(`FILING PLAN — ${meta.testRunId || '(run id?)'}  ·  ${meta.generatedAt || ''}`);
 console.log(
-  // `filing` is null when nothing reached the filer (no valid defects), so the mode must also come
-  // from the status pass — otherwise a dry run with nothing to file was labelled "LIVE (filed)".
+  // `filing` is null when nothing reached the filer, so the mode also comes from the status pass.
   `Mode: ${modeLabel()}  ·  Environment: ${meta.environment || '?'}`,
 );
 

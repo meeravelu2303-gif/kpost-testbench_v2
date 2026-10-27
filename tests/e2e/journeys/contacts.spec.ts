@@ -5,19 +5,9 @@ import { contactsSearchBox, gotoContacts, openPeopleSearch } from '../support/co
 import { A, requireAccounts, requireFlags, restoreSavedSession } from './support/journey';
 
 /**
- * JOURNEY 6 · BUILDING AN ADDRESS BOOK — find someone in the directory and keep them as a contact.
- *
- * A opens KDirectory people search → finds a person by mobile number → adds them → the contact is in
- * A's Contacts list in the UI → and in A's contacts on the server → the contact is removed again.
- *
- * Order matters because of the one-session rule: the server check and the clean-up are API calls as
- * A, which sign A's browser out, so they come LAST and the journey ends by signing A back in through
- * the real login screen (`restoreSavedSession`), leaving `.auth/user.json` valid for the rest of the run.
- *
- * UNPROVEN STEP (first live run): finding the new contact in the Contacts tab's own search. Adding is
- * proven (`contacts-functional.spec.ts`); listing it in the tab has not been asserted before.
- * Not covered: removing a contact in the UI and starting a chat from a contact card — neither has a
- * recorded UI path yet; removal runs through the API.
+ * Journey 6: A finds a person in KDirectory by mobile number, adds them, sees them in Contacts and on
+ * the server, then removes them via the API. The API calls as A sign A out, so they run last and the
+ * journey signs A back in (restoreSavedSession).
  */
 test.describe(
   'JOURNEY 6 · building an address book',

@@ -8,22 +8,8 @@ import type { Page } from '@playwright/test';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * INTERACTION sweep — the counterpart to the read-only screen sweep (`screens.spec.ts`).
- *
- * The screen sweep loads each screen and checks it at rest. But the defects a user actually hits live
- * in USE, not on load: a search box that hangs the tab, a click that crashes the app, a page that
- * freezes after an action. This drives real (non-destructive) interactions on every screen — type in
- * the search box, scroll the list, open a conversation, press Escape — while the health monitor and a
- * hang detector watch, and files the unambiguous defects:
- *
- *   - a JS crash triggered by the interaction (`pageErrors`),
- *   - the app's own asset failing to load during the flow (`brokenResources`),
- *   - the page freezing — its main thread stops responding after an action (`isResponsive` = false).
- *
- * These are selector-INDEPENDENT signals: every interaction is best-effort (a missing control is
- * skipped, never failed), so a tuning gap can never file a false bug — only a real crash / freeze
- * does. Runs on Chromium, Firefox and WebKit (via `npm run product:kpost-ui`), so a browser-specific freeze/crash
- * is caught and the ticket names the browser. Read-only: it types, scrolls and opens, never writes.
+ * Interaction sweep: type in search, scroll, open a row and press Escape on each interactive screen,
+ * failing only on a JS crash, a broken asset or a frozen page. Every step is best-effort and read-only.
  */
 
 /** Try an interaction; a missing element / timeout is skipped, not failed (no false positives). */
@@ -48,8 +34,7 @@ const SEARCH_SELECTORS = [
 async function drive(page: Page): Promise<string[]> {
   const skipped: string[] = [];
 
-  // 1. Search: the box the owner reported as flaky. Type a query, let it filter, then clear — a
-  //    crash or a freeze here is exactly the "search bar not working / screen hangs" class.
+  // 1. Search: type a query, let it filter, then clear.
   const search = page.locator(SEARCH_SELECTORS.join(', ')).first();
   const s = await attempt('search', async () => {
     await search.waitFor({ state: 'visible', timeout: 5000 });
@@ -69,8 +54,7 @@ async function drive(page: Page): Promise<string[]> {
   });
   if (scroll) skipped.push(scroll);
 
-  // 3. Open the first conversation/list row (read-only) — opening a thread is where render/JS bugs
-  //    and hangs often surface. Best-effort: a plain list item, no destructive control.
+  // 3. Open the first conversation/list row (read-only).
   const openRow = await attempt('open-row', async () => {
     const row = page
       .locator('[id*="@"], [class*="conversation" i], [class*="contact" i] li, [role="listitem"]')

@@ -5,12 +5,8 @@ import path from 'node:path';
 export const REPORT_HISTORY_KEEP = 10;
 
 /**
- * Moves the previous run's `REPORT.json` / `REPORT.md` into `reports/history/` before a new run
- * overwrites them, then drops all but the newest `keep` runs.
- *
- * Every run writes the same two files, so a `product:all` run used to keep only its last product's
- * report, and the manual `REPORT-before-*` backups piled up without limit. The history name carries
- * the product (`BENCH_PRODUCT`, set by each `product:*` command) so a reader can tell the runs apart.
+ * Moves the previous `REPORT.json`/`.md` into `reports/history/` (named by `BENCH_PRODUCT`) before
+ * a new run overwrites them, keeping the newest `keep` runs.
  */
 export function archivePreviousReport(
   dir: string,

@@ -11,23 +11,8 @@ import {
 } from '../support/katchup';
 
 /**
- * Katchup **recall → edit & repost → recall again → delete** (FR-KU-029, FR-KU-030, FR-KU-031 —
- * Katchup FRD §7, "Post-Recall Menu / Edit & Repost Sheet / Reposted View / Recall Available Again /
- * Delete Option, Confirmation, and Success").
- *
- * Read from source (`bubble/KatchupMessage/KatchupMessage.js`, 2026-10-11):
- *   - `handleReplyAction`: for a SENT message that is recalled (`messageType === 7`) and still unread,
- *     the bell menu is reduced to exactly **Edit & Repost** and **Delete** (FR-KU-029 step 1);
- *   - "Edit & Repost" → `notMessage.EditandRepostMsg = true` → `WriteMessage` opens with
- *     `isEditedandRepost` and the recalled body pre-filled (FR-KU-029 steps 2–4);
- *   - the reposted message is a normal sent message again, so its bell menu offers **Recall** once
- *     more while unread (FR-KU-030);
- *   - "Delete" → the "Delete Message" confirmation (`deleteConfirm`, "Do you want to Delete this
- *     Message? Please confirm", Cancel / Confirm) → `handleDeleteButtonClickBell` (FR-KU-031);
- *   - `MessageType.js` renders the "Recalled" prefix for `messageType 7`.
- *
- * Writes real messages to the 2nd QA account (which never opens them, so they stay unread and
- * recallable) and deletes everything it created. Gated behind `KATCHUP_UI_LIFECYCLE=true`.
+ * Katchup recall → Edit & Repost → recall again → Delete on a sent message. The 2nd QA account never
+ * opens it, so it stays unread and recallable. Gated behind KATCHUP_UI_LIFECYCLE; deletes what it made.
  */
 test.describe(
   'KPost Katchup · recall, edit & repost, delete (FR-KU-029..031)',

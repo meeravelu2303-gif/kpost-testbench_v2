@@ -3,16 +3,8 @@ import { body, pathParams } from '../kpost-endpoint';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
- * Katchup **attachment** endpoints — download, thumbnail, streaming, and thumbnail generation.
- *
- * Every one is keyed by a `uuid` that must belong to a real attachment on a message the caller can
- * see. Unblocked 2026-09-26: the real, current production upload flow (owner-confirmed) is a
- * presigned S3 URL (`aws-katchup-presigned`) + a direct S3 PUT + an ordinary `katchup-send-message`
- * whose `uuid` array names the upload — NOT the legacy `katchup-send-multipart` route. See
- * `presigned-attachment-workflow.spec.ts` for the live tests and two confirmed defects found this
- * way (`katchup-download`'s wrong Content-Type, `katchup-download-attachment`'s hardcoded filename
- * fallback). The downloads return binary, not the JSON envelope, so `envelope: false` keeps the
- * JSON-shaped checks off while status, headers, security and auth still apply.
+ * Katchup attachment endpoints, keyed by a real attachment `uuid` (live tests in
+ * presigned-attachment-workflow.spec.ts). Downloads are binary, so `envelope: false`.
  */
 const ATTACH_TAGS = ['katchup-attachment', 'binary', 'needs-attachment'] as const;
 
@@ -30,8 +22,6 @@ export const downloadApi = defineKatchupEndpoint({
   contentType: 'application/octet-stream',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
-  // Live-verified 2026-09-26: serves the exact uploaded bytes, but Content-Type is hardcoded to
-  // image/jpeg regardless of the real file type. Filed as #617 [KP-CBBC90], HIGH, KPost API.
   note: 'bytes correct, Content-Type wrong (hardcoded image/jpeg) — see #617',
 });
 
@@ -46,9 +36,6 @@ export const downloadAttachmentApi = defineKatchupEndpoint({
   contentType: 'application/octet-stream',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
-  // Live-verified 2026-09-26: the JSON metadata's real fileName is correct, but the presigned GET
-  // URL's Content-Disposition ASCII filename fallback is hardcoded to "file.xlsx" for every
-  // attachment. Filed as #618 [KP-2CAEB3], HIGH, KPost API.
   note: 'metadata correct, ASCII filename fallback hardcoded to "file.xlsx" — see #618',
 });
 
@@ -63,7 +50,6 @@ export const downloadFromS3Api = defineKatchupEndpoint({
   contentType: 'application/octet-stream',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
-  // Live-verified 2026-09-26: confirmed working — resolves to a real S3 URL naming the same uuid.
   note: 'confirmed working live 2026-09-26 with a real attachment uuid',
 });
 
@@ -77,7 +63,6 @@ export const downloadThumbnailApi = defineKatchupEndpoint({
   contentType: 'image/png',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
-  // Live-verified 2026-09-26: reachable, does not crash for a real attachment uuid.
   note: 'confirmed reachable live 2026-09-26 with a real attachment uuid',
 });
 
@@ -91,8 +76,6 @@ export const mediaStreamingApi = defineKatchupEndpoint({
   contentType: 'application/octet-stream',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
-  // Live-verified 2026-09-26: answers 303 (redirect to the real media URL) for a real, non-media
-  // attachment uuid — reachable, not a crash.
   note: 'confirmed reachable live 2026-09-26 with a real attachment uuid (303 redirect)',
 });
 
@@ -106,7 +89,6 @@ export const generateThumbnailApi = defineKatchupEndpoint({
   destructive: true,
   sideEffect: 'data',
   request: body(() => ({ uuid: [] })),
-  // Live-verified 2026-09-26: confirmed working (200) for a real attachment uuid.
   note: 'confirmed working live 2026-09-26 with a real attachment uuid',
 });
 

@@ -38,11 +38,7 @@ export interface ValidationEngineDeps {
   validators: ValidationRegistry;
   businessRules: BusinessRuleRegistry;
   databaseValidations: DatabaseValidationRegistry;
-  /**
-   * One client per suite, not one for the run: KPost/KMail point at the KPOST_QA test database and
-   * Admin at a live production one, with different write policies. The endpoint under validation
-   * decides which it gets.
-   */
+  /** One client per suite (KPOST_QA for KPost/KMail, the live Admin DB for Admin). */
   databases: DatabasePool;
   log: Logger;
   /** Called with every finished report (the test fixture attaches it to the Playwright report). */
@@ -186,12 +182,7 @@ export class ValidationEngine {
     const notApplicable = validator.notApplicable(context);
     if (notApplicable) return skip(notApplicable);
 
-    /*
-     * A failure is re-run before it is believed. This is the only place it can be: once the run
-     * ends, the request, the token and the server state are gone, so the reporter cannot retry
-     * anything. Eligibility and backoff are decided in reproduction-gate.ts; a check that recovers
-     * comes back as a WARNING and is never filed.
-     */
+    // A failure is re-run before it is believed (reproduction-gate.ts); recovered = WARNING.
     const confirmation = await confirmFailure(validator, context, () =>
       validator.validate(context),
     );
@@ -201,11 +192,7 @@ export class ValidationEngine {
           `(${confirmation.reproduced ? 'reproduced — fileable' : 'intermittent — not filed'})`,
       );
     }
-    /*
-     * Carry the gate's verdict on the result. Recorded even for a single-attempt check, because
-     * "1/1" is itself information: it says the check was not eligible for retry rather than that
-     * nobody measured. A reader can then tell a confirmed 3/3 from an unretryable primary check.
-     */
+    // The gate's verdict, even "1/1" (not retryable) for a single attempt.
     return {
       ...confirmation.result,
       reproduction: { attempts: confirmation.attempts, failures: confirmation.failures },
@@ -235,11 +222,7 @@ export class ValidationEngine {
   }
 
   private databaseValidators(endpoint: ResolvedEndpoint): Validator[] {
-    /*
-     * Resolved from the endpoint's own suite, so a KMail validation queries KPOST_QA and an Admin
-     * one queries the Admin database under its own (write-banned) policy. Reading this from the
-     * endpoint rather than from the run is what keeps the two targets from ever being confused.
-     */
+    // From the endpoint's own suite, so KPOST_QA and the write-banned Admin DB are never confused.
     const database = this.deps.databases.for(endpoint.suite.id);
     return endpoint.databaseValidations.map((id) => {
       const validation = this.deps.databaseValidations.get(id);

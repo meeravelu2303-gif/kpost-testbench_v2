@@ -5,17 +5,8 @@ import { isKnownAppAlert } from '../support/known-dialogs';
 import { settleFrames } from '../support/settle';
 
 /**
- * Security-fuzzing angle for KMail's **compose** Subject + body — a mail actually delivered to a
- * SECOND real account's inbox (our own 2nd QA account), the same high-value "stored payload reaches
- * another real session" reasoning as `katchup-security.spec.ts`. Same execution-based check as the
- * other `*-security.spec.ts` files (a `dialog` listener, not string-matching).
- *
- * Reuses `kmail-compose.spec.ts`'s own proven send flow and selectors (body typed before the To field,
- * since filling To opens a destabilising autocomplete; Subject is `.toInput`; send is
- * `.post_button_size`). Unlike Katchup, KMail has no recall — sending is one-way — so, like
- * `kmail-compose.spec.ts`'s own send test and `settings-security.spec.ts`'s Instant Reply test, this
- * does NOT clean up after itself; each payload leaves one real mail in the 2nd QA account's inbox.
- * Gated behind `KMAIL_UI_LIFECYCLE=true`, same as `kmail-compose.spec.ts`.
+ * KMail compose Subject + body security fuzzing, delivered to our 2nd QA account's inbox and judged by a
+ * dialog listener. Gated behind KMAIL_UI_LIFECYCLE=true; KMail has no recall, so each payload leaves a mail.
  */
 test.describe(
   'KPost KMail · compose security fuzzing',
@@ -58,8 +49,7 @@ test.describe(
           .waitFor({ state: 'hidden', timeout: 30_000 })
           .catch(() => undefined);
 
-        // /writemail intermittently lands on the error boundary ("Something went wrong") — the
-        // screen-crash class the screen sweep reports; here it is a skip with the reason.
+        // A /writemail page crash is the screen sweep's finding; skip with the reason.
         const crashed = await page
           .getByText(/Something went wrong/i)
           .first()

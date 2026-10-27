@@ -6,9 +6,8 @@ import { RESPONSES, USER_SCHEMA_OPEN, USER_SCHEMA_STRICT } from './support/fixtu
 import { fakeContext, fixtureEndpoint, verdict } from './support/validator-harness';
 
 /**
- * `response.schema` turns contract drift into a bug. A false FAILED files a schema defect against a
- * correct API; a false PASSED hides a broken payload. Both directions are pinned, along with what
- * the validator deliberately cannot see (an open, types-only contract).
+ * `response.schema`: pins both false FAILED and false PASSED, and what an open, types-only contract
+ * cannot catch.
  */
 test.describe('validator unit · response.schema', { tag: '@framework' }, () => {
   const withSchema = (schema: ContractSchema = USER_SCHEMA_STRICT) =>
@@ -118,11 +117,7 @@ test.describe('validator unit · response.schema', { tag: '@framework' }, () => 
     });
   });
 
-  /*
-   * What the validator CANNOT catch, by construction. These are characterisation tests: they pin
-   * today's behaviour so a change to it is a decision, not an accident. See
-   * the 2026-10-19 test-suite audit (removed 2026-10-26; in git history), finding 3.
-   */
+  // What the validator CANNOT catch, by construction: pinned so a change is a decision, not an accident.
   test.describe('blind spots of open contracts (pinned behaviour)', () => {
     test('an open contract accepts an undocumented field', async () => {
       const result = await verdict(

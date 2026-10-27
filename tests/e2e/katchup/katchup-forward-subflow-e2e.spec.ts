@@ -11,46 +11,15 @@ import {
 } from '../support/katchup';
 import { settleFrames } from '../support/settle';
 
-/** A real contact in the primary QA account's own address book, distinct from `victimKpostId` —
- * needed because Forward excludes the currently-open thread's counterpart from its own recipient
- * list (see the class comment below). Confirmed present via the `contacts-my-contacts` API. */
+/** A contact in the QA account's address book other than `victimKpostId`: Forward hides the open
+ * thread's counterpart from its recipient list. */
 const FORWARD_TARGET_CONTACT_ID = 'qatest3@kpostindia.com';
 const FORWARD_TARGET_SEARCH_TERM = 'Qatest3';
 
 /**
- * Completes the "Forward" sub-flow entry assertion already in katchup-actions-more.spec.ts, which
- * explicitly documents completion as a gap ("needs one live recording pass").
- *
- * Read directly from source (bubble/forwardFooter/ForwardFooter.js, bubble/MultipleContact/
- * MultipleContact.js — bubble confirmed live/default via Katchup.js's dynamic require):
- *   1. Bell menu "Forward" sets up `selectedMsg` and reveals a circular forward-trigger icon
- *      (`fDIcon`, onClick -> setForwardModal(true)).
- *   2. The "Forward To" picker (MultipleContact, `hideSelectAll={false}`) opens; typing in
- *      "Search Contacts" narrows the list to exactly one real contact.
- *   3. "Done" (handleDoneContact) only stores the selection and closes the picker — it does NOT
- *      send. The actual send is a separate button back in the forward view, class
- *      `post_button_size` (no accessible name — the same gap already filed as #963), which calls
- *      handleKatchupSubmit().
- *
- * Selection fix (2026-10-03): earlier attempts used "Select All" (its toggle-based handleSelectAll
- * math left the button disabled even though the checkbox rendered checked — a real edge case, but
- * one the app doesn't require using) and a row-scoped-by-text locator for the individual checkbox
- * (unreliable — ContactBar's name text and its own checkbox aren't both inside one cleanly filterable
- * wrapper). The fix proven on the sibling Transfer picker (katchup-transfer-subflow-e2e.spec.ts, same
- * ContactBar-based row rendering): searching first narrows the list to exactly one contact, so the
- * dialog renders exactly two checkboxes total — "Select All" (first) and this one contact's own row
- * checkbox (last) — and the per-row checkbox uses simple additive handleMultipleContact logic with no
- * toggle-math edge case.
- *
- * Recipient choice (2026-10-03): this picker is NOT interchangeable with Transfer's — ForwardFooter.js
- * passes `selectedContact={selectContact}` (the currently-open thread's counterpart) into
- * MultipleContact, whose `filterOutSelectedContact` removes that exact contact from the list before
- * the search even runs. Forwarding a message FROM the Hamza Ali thread TO Hamza Ali therefore
- * correctly shows "No Contacts" — confirmed by reading the victim contact's own raw record via the
- * `contacts-my-contacts` API (firstName/lastName "hamza"/"ali", no casing or data issue) and tracing
- * the exclusion in source; this is the app working as designed, not a bug. The forward target here
- * must be a different real contact already in the account's own address book — "Kapildev Thagapillai"
- * (contactID 8056go@kpostindia.com), confirmed present via that same API read.
+ * Katchup Forward end to end: bell menu → Forward → pick one contact → Done → send, then verify the
+ * copy in the target's thread. "Done" only stores the selection; the unlabeled post button (#963) sends.
+ * Writes real messages and deletes them afterwards.
  */
 test.describe(
   'KPost Katchup · Forward sub-flow completion @ui',
@@ -86,13 +55,11 @@ test.describe(
         .filter({ has: page.locator('svg, img') })
         .last();
       await forwardToTrigger.click({ timeout: 15_000 }).catch(async () => {
-        // Fallback: the trigger may just be any clickable circular icon near the forward footer —
-        // try the most generic candidate the source confirms exists (fDIcon-controlled onClick).
+        // Fallback: the most generic circular icon near the forward footer.
         await page.locator('div[style*="border-radius"]').last().click({ timeout: 10_000 });
       });
 
-      // Scope everything to the "Forward To" dialog so row/checkbox lookups never collide with the
-      // Katchup page rendered behind it (same scoping fix used by the Transfer sub-flow test).
+      // Scope to the dialog so lookups never hit the Katchup page behind it.
       const recipientDialog = page.getByRole('dialog').filter({ hasText: 'Forward To' });
       await expect(recipientDialog, 'the Forward To recipient picker opens').toBeVisible({
         timeout: 15_000,
@@ -101,9 +68,7 @@ test.describe(
       await expect(searchBox, 'the recipient search box is available').toBeVisible({
         timeout: 10_000,
       });
-      // This search matches contacts by DISPLAY NAME, not kpostID/email. The Hamza Ali conversation
-      // partner is excluded from this specific picker (see class comment), so the target here is a
-      // different real contact already in the account's own address book.
+      // The search matches display name, not kpostID/email.
       await searchBox.fill(FORWARD_TARGET_SEARCH_TERM);
       await settleFrames(page);
 
@@ -117,9 +82,7 @@ test.describe(
         `no contact matching "${FORWARD_TARGET_SEARCH_TERM}" is in this account's address book right now — nothing to forward to`,
       );
 
-      // With the list narrowed to one contact, the dialog renders exactly two checkboxes: "Select All"
-      // (first, hideSelectAll=false here) and this one contact's own row (last) — grab the row checkbox
-      // directly instead of trying to scope it by surrounding row text.
+      // Narrowed to one contact there are two checkboxes: "Select All" (first) and the row (last).
       const rowCheckbox = recipientDialog.getByRole('checkbox').last();
       await expect(rowCheckbox, "the target contact's own row checkbox is available").toBeVisible({
         timeout: 10_000,
@@ -143,9 +106,7 @@ test.describe(
       });
       await finalSend.click();
 
-      // Verify delivery: the sender is also a party to their own 1:1 thread with the forward target, so
-      // the forwarded content should appear there without needing a second browser session. This is a
-      // different conversation than the Hamza Ali one the source message was sent in.
+      // Verify delivery in the sender's own thread with the target; no second session needed.
       await page
         .locator(EDITOR)
         .first()
@@ -157,10 +118,7 @@ test.describe(
         'the forwarded message content appears in the sender-target thread (forward actually sent)',
       ).toBeVisible({ timeout: 20_000 });
 
-      // Self-clean: delete the forwarded copy from the sender's side of the target conversation, then
-      // the original source message in the Hamza Ali thread (the forward copy in the actual recipient's
-      // own account is left alone deliberately — recalling/deleting someone else's received copy is not
-      // how this app works, same business rule BR-KU-RECALL already covers).
+      // Clean up the sender's copies; the recipient's received copy cannot be deleted (BR-KU-RECALL).
       const forwardedCopySubject = messageBySubject(page, sourceSubject);
       if (await forwardedCopySubject.count()) {
         await deleteSentMessage(page, sourceSubject);

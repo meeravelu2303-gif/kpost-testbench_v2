@@ -1,6 +1,3 @@
-// An orchestrated KMail lifecycle (compose → read back → act → delete), not simple assertions; the
-// conditionals guard optional steps and cleanup of real live data.
-
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import type { Principal } from '@config/auth.config';
@@ -11,13 +8,9 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import { testData } from '@config/test-data.config';
 
 /**
- * KMail **feature flow** — the FRD's mail behaviours (FR-M01..M09, BR-M01), end to end on kmail5,
- * self-cleaning. Gated `KMAIL_LIFECYCLE=true`, each write `allowLiveWrite`, all to our own accounts.
- *
- * Covers: compose (New) issuing a kmailID (FR-M01); mark-important; the post-send action types
- * (Reply/Forward/Note/Comment/Clarify); the confidential recipient hidden from the others
- * (`bccList`, BR mirrors NFR-SEC02); drafts (save → delete); and the settings writes. `expect.soft`
- * so one run reports every finding.
+ * KMail FRD behaviours end to end between our own accounts: compose, read-back, action types,
+ * confidential recipients, drafts, settings and business rules. Every mail made is deleted.
+ * Gated by KMAIL_LIFECYCLE=true (sends real mail).
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -122,9 +115,8 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
   test('read the composed mail back through every kmailID-keyed endpoint @api @kmail', async ({
     endpoints,
   }) => {
-    // Exercises the needs-id READS on live with a REAL kmailID the compose mints — the coverage the
-    // static run cannot reach (a fabricated id would 404/500 and read as a false bug). A 5xx from any
-    // of these is a genuine crash and files via the flow-finding pipeline; a 4xx does not.
+    // The id-keyed reads, fed a real kmailID (a fabricated one would read as a false bug).
+    // A 5xx from any of these files via the flow-finding pipeline; a 4xx does not.
     const subject = `QA Mail ${Date.now()}`;
     const sent = await send(
       endpoints,
@@ -151,8 +143,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
           ['kmail-reply-not-req-sender', { selectedContact: B.username, kmailID: id }],
           ['kmail-reply-not-req-receiver', { selectedContact: B.username, kmailID: id }],
           ['kmail-group-read-status', { kmailID: id }],
-          // Contact-scoped reads: not kmailID-keyed, but real now that A→B has an actual mail
-          // between them (previously only reachable off-live with a placeholder contact).
+          // Contact-scoped reads, meaningful now that A and B share a real mail.
           ['kmail-subjects', { selectedContact: B.username }],
           ['kmail-sent-not-opened', { selectedContact: B.username }],
           ['kmail-reply-not-received', { kpostUser: A.username, selectedContact: B.username }],
@@ -161,8 +152,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
           ['kmail-all-mail-count', { selectedContact: B.username, groupFlag: false }],
           ['kmail-drafts-for-contact', { toAddress: B.username }],
           ['kmail-status-with-count', { kmailStatusFlag: 2 }],
-          // destructive:false explicitly, no productionSafe — needs allowLiveRead (added below on
-          // every call here), not allowLiveWrite, to run at all.
+          // Not productionSafe: needs allowLiveRead (set on every call below).
           ['kmail-bulk-dashboard', { kmailID: id }],
         ];
         for (const [epId, reqBody] of reads) {
@@ -179,8 +169,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
           expect.soft(ex.status, `${epId} reads the mail without a server error`).toBeLessThan(500);
         }
 
-        // GET, path-param-keyed (not a body read like the others above) — real now that this flow
-        // has a real kmailID. destructive:false (GET) with no productionSafe: needs allowLiveRead.
+        // A GET keyed by path param; not productionSafe, so it needs allowLiveRead.
         const copies = await endpoints.sendTo(
           'kmail-copies-info',
           { pathParams: { kmailID: id } },
@@ -203,11 +192,8 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
     'the To: field takes a single recipient; extra people go to Cc (FR-KM-005) @api @kmail',
     { annotation: [{ type: 'requirement', description: 'FR-KM-005' }] },
     async ({ endpoints }) => {
-      /*
-       * FR-KM-005 — Enforce Single Recipient in To:. The mail model carries exactly ONE `toAddress`
-       * (a string, not a list); additional recipients ride in `ccList`. This asserts the model
-       * structurally (the contract) AND drives a real send with one TO + one Cc.
-       */
+      // The model carries one toAddress string; extra recipients go in ccList. Checked on the
+      // contract and with a real send.
       const shape = mailShape({ toAddress: B.username, ccList: [C.username] });
       expect
         .soft(typeof shape.toAddress, 'the To: field is a single address, not a list (FR-KM-005)')
@@ -227,12 +213,8 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
       expect.soft(sent.kmailID, 'a kmailID is issued').toBeTruthy();
       await del(endpoints, A, sent.transactionIDs);
 
-      /*
-       * The rule's other half: a SECOND address in To must be refused. Live 2026-10-15 (3/3) a
-       * comma-separated To answers HTTP 200 "SUCCESS" while the reply's own mailDeliveryStatus is
-       * "FAILURE" and nobody receives it — #1365. Asserted as the correct behaviour (red until fixed).
-       * Nothing to clean up: such a send creates no recipient transactions.
-       */
+      // A second address in To must be refused. Known defect #1365: it answers 200 but delivers
+      // nothing. Nothing to clean up: such a send creates no transactions.
       const twoTo = await endpoints.sendTo(
         'kmail-post-mail',
         {
@@ -394,8 +376,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
         B.username,
       );
 
-      // kmail-draft-content is a "needs-id" read (destructive:false, no productionSafe) — real now
-      // that this flow minted a real draftMailID, via allowLiveRead.
+      // An id-keyed read, not productionSafe: needs allowLiveRead.
       const content = await endpoints.sendTo(
         'kmail-draft-content',
         { body: { draftKmailID: draftMailID, kmailSendDate: Date.now(), kmailSubject: marker } },
@@ -461,8 +442,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
       ],
     },
     async ({ endpoints }) => {
-      // A unique marker per run: this account already accumulates real saved saluations, so a fixed
-      // literal like "QA Dr" cannot be told apart from a leftover of a PRIOR run.
+      // A unique marker per run, so a leftover from an earlier run cannot match.
       const marker = `QA Saluation ${Date.now()}`;
       const saved = await endpoints.sendTo(
         'kmail-save-saluation',
@@ -571,12 +551,8 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
     'postMail rejects a salutation outside the allowed set (BR-KM-SALUTE) @api @kmail',
     { annotation: [{ type: 'requirement', description: 'BR-KM-SALUTE' }] },
     async ({ endpoints }) => {
-      /*
-       * BR-KM-SALUTE (docs/reference/business-rules.md, ⬜ to-do): salutation must be one of
-       * {Hi,Hello,Dear,Sir,Madam,Respect}, default Hi. `mailShape()`'s own default is 'Hello' (a valid
-       * member), so this test overrides it with a value outside the set and expects rejection or
-       * normalization — never silent storage of an out-of-set value.
-       */
+      // The salutation must be one of Hi/Hello/Dear/Sir/Madam/Respect: an out-of-set value is
+      // rejected or normalized, never stored verbatim.
       const sent = await send(
         endpoints,
         A,
@@ -589,8 +565,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
       );
       try {
         if (sent.status < 300 && sent.kmailID) {
-          // Accepted — the rule must still hold at the data layer: read it back and check it was
-          // either rejected at write time (caught above) or normalized, never stored verbatim.
+          // Accepted: read it back to check the value was normalized.
           const readBack = await endpoints.sendTo(
             'kmail-details-by-id',
             { body: { kmailIDs: [sent.kmailID] } },
@@ -625,7 +600,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
     'postMail rejects an empty body (BR-KM-BODY) @api @kmail',
     { annotation: [{ type: 'requirement', description: 'BR-KM-BODY' }] },
     async ({ endpoints }) => {
-      // BR-KM-BODY (⬜ to-do): send requires body text — an empty kmailContent must not be accepted.
+      // An empty kmailContent must not be accepted.
       const sent = await send(
         endpoints,
         A,
@@ -649,9 +624,7 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
     'postMail accepts a non-KPost external address as recipient (BR-KM-EXTERNAL) @api @kmail',
     { annotation: [{ type: 'requirement', description: 'BR-KM-EXTERNAL' }] },
     async ({ endpoints }) => {
-      // BR-KM-EXTERNAL (⬜ to-do): a non-KPost email is accepted as a recipient. Uses the bench's own
-      // reserved OTP-destination mailbox (testData.otpEmail) — a real, bench-owned external address —
-      // never an invented third-party inbox, consistent with the qa-identifier-guard's email policy.
+      // Uses the bench's own external mailbox (testData.otpEmail), never an invented inbox.
       const sent = await send(
         endpoints,
         A,

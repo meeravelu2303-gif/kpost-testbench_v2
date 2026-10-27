@@ -1,6 +1,3 @@
-// An orchestrated group lifecycle driving every group write, not simple assertions; the conditionals
-// guard optional steps and cleanup of real live data.
-
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
@@ -8,14 +5,9 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Group **feature flow** — create a group and drive every group WRITE end to end on a real host,
- * self-cleaning: add a member, grant admin, rename, group-image update/download/remove, a member
- * leaves, remove a member, delete. Gated `GROUP_LIFECYCLE=true`, each write `allowLiveWrite`, all on
- * our own accounts. The two group-image DOWNLOADS are reads keyed by the runtime groupKpostID this
- * flow just created — `destructive: false` with no `productionSafe`, so they need `allowLiveRead`
- * (added to the engine for exactly this class of dependency-driven read) to run at all.
- * `updateGroupProfileImage` needs a real image part, so a JSON-only call may 4xx — a finding,
- * `expect.soft`.
+ * Group feature flow: create a group and drive every group write (members, admin, rename, image,
+ * leave, remove, delete) on our own accounts, self-cleaning. Gated behind `GROUP_LIFECYCLE=true`
+ * because it writes real groups on the shared test server.
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -79,11 +71,7 @@ async function readAs(
   return { status: ex.status, bodyText: ex.bodyText ?? '' };
 }
 
-/**
- * `group-details-by-id` (added this session) returns the group record (name, members, image) — the
- * route that previously didn't exist, which is why `group-edit-name`/`group-add-user` could only be
- * checked for "answered a status," not for the field they actually changed.
- */
+/** The group record (name, members, image), used to recheck the field each write changed. */
 async function groupDetails(
   endpoints: EndpointExecutor,
   who: Principal,
@@ -100,10 +88,7 @@ async function groupDetails(
   return (value.known_group as Record<string, unknown> | undefined) ?? {};
 }
 
-/**
- * The ACTIVE members of a group. A removed or departed member stays in `memberDetails` with
- * `removedFlag: true` (live-verified 2026-10-15), so "listed" and "count" mean the unflagged rows.
- */
+/** The ACTIVE members of a group: removed or departed members stay listed with `removedFlag: true`. */
 async function activeMembers(
   endpoints: EndpointExecutor,
   groupKpostID: string,
@@ -170,10 +155,7 @@ test.describe(
                 { groupKpostID, groupKpostName: 'QA Bench Renamed' },
                 'edit-name',
               ],
-              // Downloads keyed by the REAL groupKpostID this flow just created — previously untestable
-              // on live (destructive:false, no productionSafe: allowLiveWrite alone cannot unlock a
-              // read). Run right after update-image (below), before remove-image takes the image away
-              // again. Handled via readAs() below (branched on the "group-download-" id prefix), not as().
+              // Image downloads (reads via readAs()): after update-image, before remove-image.
               [A, 'group-download-image', { groupKpostID, kpostID: A.username }, 'download-image'],
               [
                 A,
@@ -182,8 +164,7 @@ test.describe(
                 'download-full-image',
               ],
               [A, 'group-remove-image', { groupKpostID }, 'remove-image'],
-              // `id` is C's own membership-row id, resolved when the step runs (an id of '0' answers
-              // 400 "you are not a member" — live 2026-10-15 — so the exit was never really driven).
+              // `id` (C's own membership-row id) is resolved when the step runs; '0' answers 400.
               [C, 'group-leave', { groupID, groupKpostID }, 'leave'],
               [
                 A,
@@ -193,15 +174,8 @@ test.describe(
               ],
             ];
 
-            /*
-             * `group-update-image` run separately, BEFORE the loop: live-verified 2026-09-26, this route
-             * is multipart/form-data with a `file` part — the loop's generic JSON-body `as()` helper
-             * always sent a plain JSON body, which 400d "Request must be multipart/form-data..." every
-             * time (hidden by a `status < 600` check). Fixed in group.api.ts; here it's driven directly
-             * with the real groupKpostID and its own JPEG fixture (PNG is rejected — same class of
-             * restriction as `profile-update-image`), then the download steps below confirm a real image
-             * now comes back, not an empty/stale one.
-             */
+            // update-image is multipart with a `file` part (JPEG; PNG is rejected), so it runs here
+            // rather than through the JSON-body `as()` loop.
             const imageUpdate = await endpoints.sendTo(
               'group-update-image',
               {
@@ -217,17 +191,12 @@ test.describe(
               .toBeLessThan(300);
 
             for (const [who, id, bodyObj, label] of steps) {
-              // The two group-image downloads are GET reads keyed by PATH params, not a body write —
-              // and need allowLiveRead (destructive:false), not allowLiveWrite. Branched here rather
-              // than given their own loop: they still need to run interleaved, right after update-image
-              // and before remove-image takes the image away.
+              // Image downloads are path-param reads (allowLiveRead), kept in order with the writes.
               if (id.startsWith('group-download-')) {
                 const read = await readAs(endpoints, who, id, bodyObj, label);
                 expect.soft(read.status, `${label} returns a status`).toBeLessThan(600);
                 if (imageUpdate.status < 300 && read.status === 200) {
-                  // A real, freshly-uploaded image must come back non-trivially sized, not an empty or
-                  // placeholder response — a coarse but honest check given the transport encodes binary
-                  // image bytes as text here (no raw-buffer access), so an exact byte match isn't made.
+                  // Bytes arrive as text (no raw buffer), so only "not empty" is checked.
                   expect
                     .soft(
                       read.bodyText.length,
@@ -244,8 +213,7 @@ test.describe(
                 const status = (await as(endpoints, who, id, body, label)).status;
                 expect.soft(status, `${label} returns a status`).toBeLessThan(600);
 
-                // Membership arithmetic, judged by the group's own member read-back: the active-member
-                // count moves by exactly one and the right person appears / disappears.
+                // The active-member count moves by exactly one and the right person appears/disappears.
                 const memberStep: Record<string, [string, string, number]> = {
                   'group-add-user': ['FR-GM-010', C.username, +1],
                   'group-leave': ['FR-GM-015', C.username, -1],
@@ -270,12 +238,7 @@ test.describe(
                   ).toBe(delta > 0);
                 }
 
-                /*
-                 * Field-level recheck via `group-details-by-id` (added this session — previously no
-                 * registered group read exposed the name/members, so `group-add-user`/`group-edit-name`
-                 * could only be checked for "answered a status," not for the field each one actually
-                 * changed. Soft so a recheck failure doesn't hide a later step's finding.
-                 */
+                // Read the group back to confirm the rename actually landed.
                 if (status < 300 && id === 'group-edit-name') {
                   const details = await groupDetails(endpoints, A, groupKpostID);
                   expect(
@@ -288,8 +251,7 @@ test.describe(
           }
         } finally {
           if (groupID) {
-            // deleteGroup refuses while members remain, so remove whoever is still active first —
-            // otherwise a failed step leaves the group behind on the shared test server.
+            // deleteGroup refuses while members remain, so remove whoever is still active first.
             if (createdKpostID) {
               const left = (await activeMembers(endpoints, createdKpostID).catch(() => []))
                 .map((m) => m.kpostID)
@@ -323,27 +285,9 @@ test.describe(
         ],
       },
       async ({ endpoints, databases }) => {
-        /*
-         * FR-GM-012 Add Admin / FR-GM-013 Remove Admin, and the crown BR FR-GM-014: a group must always
-         * retain at least one active admin, so the sole admin is blocked from exiting. We create A(admin)
-         * + B(member), promote B, demote B (leaving A sole admin), then A tries to exit — which the rule
-         * must block. If the backend allows it (200), that is a real finding: the BR is UI-only.
-         *
-         * ## Why the membership id is read from MySQL
-         *
-         * `addOrRemoveAdminAccess` takes `ids` — the row ids of the MEMBERSHIPS being changed, not the
-         * accounts. This test used to send `ids: [0]` as a placeholder and the endpoint answered 500 on
-         * both promote and demote; the endpoint definition's own note already said it "needs a real group
-         * id and membership id". A placeholder id is the bench's bug, not the product's, and reporting it
-         * as a server defect would have sent a developer after nothing. The real id lives in
-         * `TBL_KPOST_USERGROUP_MEMBERDETAILS.id` and the bench can read it, so it does.
-         *
-         * ## Why the assertions are on the row, not the response
-         *
-         * `addOrRemoveAdminAccess` answers SUCCESS whatever it wrote. Admin rights that report granted
-         * and are not stored is a privilege bug that no response-level check can see — and the inverse,
-         * rights that persist after a demote, is a security hole. `admin_access` is the fact.
-         */
+        // Promote B, demote B (A is now sole admin), then A tries to exit, which must be blocked.
+        // `ids` are membership-row ids (read from MySQL), and results are checked on the row because
+        // addOrRemoveAdminAccess answers success whatever it stored.
         const database = databases.for('kpost-api');
         let groupID: number | undefined;
         let groupKpostID: string | undefined;
@@ -354,16 +298,11 @@ test.describe(
           expect.soft(groupKpostID, 'a groupKpostID is returned').toBeTruthy();
           if (!(groupID && groupKpostID)) return;
 
-          /*
-           * The membership row for B in THIS group. Scoped by both group_id and kpost_id: the same
-           * account is a member of many groups on a shared test database, and promoting the wrong
-           * membership would grant admin somewhere else entirely.
-           */
+          // B's membership row in THIS group (B belongs to many groups on the shared DB).
           const membership = database.enabled
             ? await database.findOne<{ id: number; admin_access: string }>({
                 table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
-                // removed_flag is numeric (0 = present, 1 = removed) on live, not 'Y'/'N' — confirmed by
-                // direct query 2026-10-02.
+                // removed_flag is numeric: 0 = present, 1 = removed.
                 where: { group_id: groupID, kpost_id: testData.victimKpostId, removed_flag: 0 },
               })
             : undefined;
@@ -414,10 +353,7 @@ test.describe(
           );
           expect.soft(demote.status, 'demote from admin is accepted (FR-GM-013)').toBeLessThan(300);
 
-          /*
-           * The security half: rights must actually be REVOKED. A demote that reports success and leaves
-           * `admin_access = 'Y'` leaves a user with group-admin powers nobody believes they have.
-           */
+          // The revoke must be stored, or B keeps admin powers nobody believes B has.
           const afterDemote = await database.findOne<{ admin_access: string }>({
             table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
             where: { id: memberRowId },
@@ -427,13 +363,8 @@ test.describe(
             'FR-GM-013: the revoke is stored, not just reported',
           ).toBe('N');
 
-          // FR-GM-014 — A is now the SOLE admin; exiting must be blocked (min-one-admin rule). The
-          // leave names A's OWN membership-row id: an id of '0' is answered 400 "you are not a member"
-          // (live 2026-10-15), which made this check pass without ever attempting the exit.
-          //
-          // OPT-IN (GROUP_SOLE_ADMIN_EXIT=true): while the rule is violated, a genuine attempt leaves a
-          // group with ZERO admins that nobody can administer or delete (group 5214, 2026-10-15) — so a
-          // default run does not attempt it, and says so, instead of orphaning a group every run.
+          // FR-GM-014: the sole admin's exit (with A's own membership-row id) must be blocked. Opt-in
+          // via GROUP_SOLE_ADMIN_EXIT=true: while #1366 is open, the exit orphans a zero-admin group.
           if (process.env.GROUP_SOLE_ADMIN_EXIT !== 'true') {
             test.info().annotations.push({
               type: 'skipped-check',
@@ -462,13 +393,7 @@ test.describe(
             `GROUP sole-admin exit (group ${groupID} / ${groupKpostID}): HTTP ${exit.status}`,
           );
 
-          /*
-           * Asserted against the DATABASE rather than the response code, because either answer is
-           * defensible at the API layer and only one is defensible in the data: whatever the endpoint
-           * replies, the group must still have an admin afterwards. A group with zero admins cannot be
-           * administered by anyone again — members cannot be added, removed or promoted, and the group
-           * is effectively orphaned.
-           */
+          // Checked in the DB: whatever the reply, the group must still have an admin afterwards.
           const admins = await database.findMany<{ id: number; kpost_id: string }>({
             table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
             where: { group_id: groupID, admin_access: 'Y', removed_flag: 0 },
@@ -482,8 +407,8 @@ test.describe(
             .toBeGreaterThan(0);
         } finally {
           if (groupID && groupKpostID) {
-            // deleteGroup refuses while members remain: remove B first (A is still admin unless the
-            // opt-in sole-admin exit ran and succeeded — then nobody can delete it; see above).
+            // deleteGroup refuses while members remain: remove B first. (If the opt-in sole-admin
+            // exit succeeded, nobody can delete the group.)
             const left = (await activeMembers(endpoints, groupKpostID).catch(() => []))
               .map((m) => m.kpostID)
               .filter((k) => k !== A.username);
@@ -529,10 +454,7 @@ test.describe(
         const groupID = created.data.groupID as number | undefined;
         const groupKpostID = created.data.groupKpostID as string | undefined;
         if (groupID && groupKpostID) {
-          // A group that never had a second member cannot be deleted — deleteGroup answers 400
-          // "invalid Parameters" (live 2026-10-15; the admin-delete UPDATE inner-joins a group
-          // read-status row such a group never gets). Adding and removing one member first makes it
-          // deletable, so this check no longer leaves a "QA Solo Group" behind on every run.
+          // A group that never had a second member cannot be deleted (400), so add and remove one first.
           await as(
             endpoints,
             A,
@@ -572,11 +494,7 @@ test.describe(
       'a sole admin cannot be demoted — Remove Admin needs >1 admin to exist (FR-GM-013) @api @group @security',
       { annotation: [{ type: 'requirement', description: 'FR-GM-013' }] },
       async ({ endpoints, databases }) => {
-        /*
-         * FR-GM-013 is distinct from FR-GM-014 (sole-admin EXIT is blocked, tested above): this is about
-         * DEMOTION — addOrRemoveAdminAccess(hasAdminAccess:'N') targeting the only admin a group has.
-         * A is created as the group's sole admin, C as a plain member; A then tries to demote themself.
-         */
+        // Demotion (not exit): A, the group's only admin, tries to demote themself.
         const database = databases.for('kpost-api');
         let groupID: number | undefined;
         let groupKpostID: string | undefined;
@@ -603,9 +521,7 @@ test.describe(
             'demote-sole-admin',
           );
 
-          // Asserted against the database, not the status code: whatever the endpoint replies, A must
-          // still be an admin afterward — a group that loses its only admin is orphaned, same reasoning
-          // as FR-GM-014 above.
+          // Checked in the DB: whatever the reply, A must still be an admin afterwards.
           const afterwards = database.enabled
             ? await database.findOne<{ admin_access: string }>({
                 table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
@@ -647,15 +563,8 @@ test.describe(
       },
     );
 
-    /*
-     * FR-GM-014 as the owner states it (Meera, 2026-10-15): a promoted admin has exactly the creator's
-     * rights, and NO admin may exit — admins remove members; only a member exits. (The FRD's older
-     * wording blocked only the SOLE admin; the web app follows that wording, the server checks nothing.)
-     *
-     * Each case uses its own group with a SECOND admin who stays, so even when the server wrongly lets
-     * the leaver go the group keeps an admin and is cleaned up by that admin — nothing is orphaned.
-     * The sole-admin case (which does orphan a group while the bug exists) stays opt-in above.
-     */
+    // FR-GM-014: NO admin may exit; only members exit. Each case keeps a second admin who stays, so
+    // the group can still be cleaned up even if the exit is wrongly allowed.
     for (const [leaverKey, label] of [
       ['creator', 'the creator, while a promoted co-admin remains'],
       ['co-admin', 'a promoted co-admin, while the creator remains'],
@@ -766,9 +675,8 @@ test.describe(
                   .toBe(200);
                 break;
               }
-              // A group the creator has left still shows in the creator's own group list until the
-              // creator deletes it too (live 2026-10-15: the co-admin's delete answered 200, yet the
-              // group remained listed for qatest1), so the creator always deletes last, best-effort.
+              // The group stays in the creator's list until the creator deletes it too, so the
+              // creator always deletes last, best-effort.
               await as(
                 endpoints,
                 A,

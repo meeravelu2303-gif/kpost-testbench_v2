@@ -7,11 +7,8 @@ import type { Validator } from '@engine/validator';
 import { expect, test } from '@fixtures';
 
 /**
- * The gate that stands between "a check failed" and "a developer gets a ticket".
- *
- * Filing is irreversible — Bugzilla has no delete, only resolve — so an unreproducible ticket costs
- * a human's attention permanently. These pin the two rules that prevent it: a failure must happen
- * again to count, and a failure that has already been filed must be recognised as the same one.
+ * The reproduction gate and fingerprint dedup: a failure must happen again to be filed, and an
+ * already-filed failure must be recognised as the same one (Bugzilla has no delete).
  */
 
 /** A validator stub carrying only the fields the gate reads. */
@@ -68,11 +65,7 @@ test.describe('reproduction gate @framework', () => {
   });
 
   test('a failure that recovers becomes a WARNING and is never filed', async () => {
-    /*
-     * The case the whole gate exists for: a slow first response, a read racing a write, a session
-     * refreshing mid-probe. Evidence indistinguishable from a real defect, and a developer who
-     * cannot reproduce it.
-     */
+    // What the gate exists for: a slow first response, a read racing a write, a session refresh.
     const outcome = await confirmFailure(
       validator('probe'),
       context(),
@@ -106,10 +99,7 @@ test.describe('reproduction gate @framework', () => {
       return Promise.resolve(result('FAILED'));
     });
 
-    /*
-     * Re-reading an exchange already in hand cannot disagree with itself, so a retry is wasted
-     * traffic — but the failure is still real and must remain fileable.
-     */
+    // Re-reading the same exchange cannot disagree with itself, so a retry would be wasted.
     expect(calls, 'a primary-stage check re-reads the same response').toBe(1);
     expect(outcome.reproduced, 'determinism is its own confirmation').toBe(true);
     expect(outcome.result.status).toBe('FAILED');
@@ -122,10 +112,7 @@ test.describe('reproduction gate @framework', () => {
       return Promise.resolve(result('FAILED'));
     });
 
-    /*
-     * Its first pass creates a row, so a second pass races that row instead of a clean slate —
-     * retrying would manufacture the very failure it is looking for.
-     */
+    // Its first pass creates a row, so a retry would manufacture the failure it looks for.
     expect(calls, 'duplicate-write must run once or not at all').toBe(1);
   });
 
@@ -149,11 +136,7 @@ test.describe('reproduction gate @framework', () => {
 });
 
 test.describe('fingerprint deduplication @framework', () => {
-  /*
-   * The fingerprint is what a re-run searches Bugzilla for, so it must be stable across runs and
-   * distinct between real defects. Both halves matter: an unstable fingerprint files a duplicate
-   * every run, and an over-broad one hides a second defect behind the first.
-   */
+  // The fingerprint must be stable across runs (no duplicates) and distinct between defects.
   const base = {
     prefix: 'KPV2',
     endpointId: 'profile-user-profile-by-kpostid',
@@ -162,10 +145,7 @@ test.describe('fingerprint deduplication @framework', () => {
   };
 
   test('the same defect fingerprints identically across runs', () => {
-    /*
-     * Run-to-run noise — correlation ids, generated e-mails, durations — is collapsed before
-     * hashing, so the second run recognises the first run's ticket instead of filing another.
-     */
+    // Run-to-run noise (correlation ids, e-mails, durations) is collapsed before hashing.
     const run1 = apiFingerprint({
       ...base,
       message: `${base.message} (correlationId tb-1f0e4c2a-1111-2222-3333-444455556666, 214 ms)`,

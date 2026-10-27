@@ -8,20 +8,8 @@ const businessM = K.principals.find((p) => p.key === 'business-m');
 const businessS = K.principals.find((p) => p.key === 'business-s');
 
 /**
- * Admin HR-Setup — cross-tenant read-by-id, confirmed live 2026-10-05 on the REAL, frontend-used V2
- * controllers. `getLocationById` takes a bare id with no companyId cross-check anywhere in the call
- * chain, despite its sibling `ByCompanyId` read on the same controller being correctly scoped.
- *
- * 2026-10-06: the companion `adminTierAttribute/getAttribute` cross-tenant case (and the department
- * cross-tenant update case below it) were removed along with their endpoint definitions — the Admin
- * module's test scope is now restricted to the endpoints in `docs/api-specs/Admin_module - API Services.pdf`, which
- * does not document either `adminTierAttribute/getAttribute` or any `department/*` path. The
- * already-filed finding on `adminTierAttribute/getAttribute` (bug #KPV2-ADMINV2READBYID, worse than
- * the already-filed #KPV2-ADMINV1LEGACYLEAK on the dead legacy controller) loses bench regression
- * coverage as a result — only a manual re-test can catch a future regression there.
- *
- * `businessM` creates a disposable record of its own; `businessS` reads it back by id alone. Both
- * companies are bench-owned (QA_BUSINESS_M/S_COMPANY_ID) — never touches a real third party's data.
+ * Admin cross-tenant read-by-id: getLocationById takes a bare id with no company check. BUSINESS_M
+ * creates a location; BUSINESS_S (another QA company) must not read it by id alone.
  */
 test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @security', () => {
   test.skip(!businessM || !businessS, 'needs both BUSINESS_M and BUSINESS_S principals');
@@ -34,7 +22,7 @@ test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @secu
     endpoints,
   }) => {
     const marker = `QA Loc XTENANT ${Date.now()}`;
-    // A location needs its workplace level (enforced since 2026-10-26): company 242 creates both first.
+    // A location needs its workplace level: company 242 creates both first.
     const owned = { auth: { principal: businessM! }, allowLiveWrite: true };
     const idOf = (text: string | undefined): string | undefined =>
       (JSON.parse(text || '{}') as { value?: Array<{ id?: string }> }).value?.[0]?.id;

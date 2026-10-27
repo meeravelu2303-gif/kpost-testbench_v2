@@ -31,10 +31,7 @@ export const responseStructureValidator = defineValidator({
     const issues = result.success
       ? []
       : result.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`);
-    /*
-     * Only demand the payload key where the contract says every success carries one. KPost's
-     * envelope has `data` on 67 of 119 documented responses - a message-only reply is valid.
-     */
+    // Require the payload key only where the contract does; a message-only KPost reply is valid.
     if (
       !primary.isErrorStatus &&
       contract.dataKey &&

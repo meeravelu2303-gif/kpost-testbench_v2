@@ -4,13 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Common **platform business rules** — service status, the mobile app version gate, usage totals,
- * and the public enquiry-capture write. The 3 reads are not gated (`productionSafe: true`); the
- * enquiry write is a `data`-side-effect public write, safe to exercise directly with `allowLiveWrite`
- * (unlike `updateFlutterAppVersion`, which is `sideEffect: 'global'` and changes what every mobile
- * client is told to install — never exercised here, see the endpoint definition's own warning).
- *
- * `saveUnsubscriberDetails` is NOT exercised here — see `common-gaps.spec.ts`.
+ * Common platform rules: service status, the app version gate, usage totals (ungated reads) and the
+ * public enquiry write (a `data` write, safe with allowLiveWrite).
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -68,13 +63,8 @@ test.describe(
     });
 
     test('saveEnquiryDetails accepts its own documented default payload', async ({ endpoints }) => {
-      /*
-       * Live-verified 2026-09-24: this exact, contract-matching payload 500s deterministically
-       * ("could not execute statement... ConstraintViolationException"), reproduced twice. A real
-       * defect — a public-facing enquiry form must never crash the server, even on a constraint it
-       * cannot satisfy; that belongs in a 4xx. It's a genuine 5xx from an authorized write, so the
-       * engine's own flow-finding pipeline files it automatically; no manual recording needed here.
-       */
+      // Known defect: this contract payload 500s (ConstraintViolationException); the flow-finding
+      // pipeline files the 5xx, so no manual recording here.
       const ex = await endpoints.sendTo(
         'common-save-enquiry-details',
         {

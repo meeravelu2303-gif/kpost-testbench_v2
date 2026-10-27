@@ -5,12 +5,8 @@ import { test } from '@fixtures';
 import { runScreenSweep } from '../support/screen-sweep';
 
 /**
- * Deep UI sweep of the BUSINESS_S-session screens (User Management today). Runs in the company-admin
- * session saved by `auth-business.setup.ts`, so it is gated the same way as the other business specs:
- * `BUSINESS_UI_LIFECYCLE=true` (set by every `ui*` product command) and a configured BUSINESS_S account
- * (kept under `QATEST_ONLY` since 2026-10-10). Added 2026-10-10 with the registry extension.
- *
- * Not yet on the reporter's UI filing allow-list (needs clean runs first; see bug-filing.md).
+ * Deep UI sweep of the BUSINESS_S-session screens, gated by `BUSINESS_UI_LIFECYCLE=true` and a
+ * configured BUSINESS_S account. Not yet on the UI filing allow-list.
  */
 test.describe(
   'KPost deep UI sweep — business screens (BUSINESS_S session)',

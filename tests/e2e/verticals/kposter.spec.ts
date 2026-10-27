@@ -4,19 +4,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * KPoster (`/kposter`, embedded in the authenticated app per `MenuRoutes.js` line 435) — a
- * self-contained business/social feed feature. Confirmed from source: `KPOSTER_DEMO =
- * process.env.REACT_APP_KPOSTER_MODE !== 'api'` — DEMO MODE IS THE DEFAULT for any build that doesn't
- * explicitly opt into `REACT_APP_KPOSTER_MODE=api`. In demo mode every write (posts, likes, follows,
- * comments) goes through IndexedDB (`kposter-demo-v1`), entirely local to the browser — NOT the real
- * KPost backend. This is a fundamentally different safety profile from every other module tested this
- * session: nothing here touches shared server state, so this file is deliberately more thorough and
- * ungated than the rest of this suite's write-heavy tests.
- *
- * Confirmed nav is exactly 4 links: Home, Discover, Saved, Activity. "Create post" only renders for
- * business accounts (`isBusiness(actor)` — `/^BUSINESS(?:_[A-Z]+)?$/` on userType). The embedded
- * layout (used here, since we're authenticated) has NO search bar — that only exists in the
- * standalone/logged-out shell, tested separately in `kposter-public.spec.ts`.
+ * KPoster (/kposter, signed in). In the default demo mode every write goes to browser IndexedDB, not
+ * the backend, so these tests are ungated. "Create post" renders only for business accounts.
  */
 test.describe(
   'KPost KPoster — embedded nav and feed',
@@ -106,11 +95,7 @@ test.describe(
   'KPost KPoster — Composer (BUSINESS_S)',
   { tag: ['@ui', '@verticals', '@regression'] },
   () => {
-    // Confirmed live 2026-10-01: this block was missing its own storage state and was silently running
-    // as the default (personal) QA account, so "Create post" never appeared - not because of a product
-    // bug, but because a personal account genuinely never sees it (confirmed by the sibling "visibility
-    // gating" describe block above). Added the real BUSINESS_S session, matching
-    // settings-business-bank-details.spec.ts's own convention.
+    // A personal account never sees "Create post", so this block runs as BUSINESS_S.
     test.use({ storageState: STORAGE_STATE_BUSINESS });
 
     test.skip(

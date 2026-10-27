@@ -4,14 +4,8 @@ import { body } from '../kpost/kpost-endpoint';
 import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
- * Admin module — **HR Breakdown Setup** (step 3 of the org-build). See `docs/modules/admin-flow.md` §4.
- *
- *   hrSetUpTierAttribute/*  the HR TIERS (levels), e.g. Department / Designation / Role
- *   hrSetUpTierVariable/*    the HR VARIABLES (nodes), e.g. IT / Developer / Team Lead
- *
- * The workbook documents `companyId` as a STRING ("1") on the two HR reads (it is a number on the
- * workplace side) — a documented inconsistency; the payload sends it as documented so a real 400
- * would be a finding, not a test bug. Reads are company-scoped and live; writes are gated.
+ * Admin HR Breakdown Setup: HR tiers (levels) and variables (nodes). Reads run live; writes are
+ * gated.
  */
 
 const companyId = (): string => String(testData.businessMCompanyId);
@@ -24,7 +18,7 @@ export const adminHrApis: EndpointDefinition[] = [
     path: '/hrSetUpTierAttribute/getAttributeByCompanyId',
     summary: 'List HR tier attributes (levels) for the company',
     tags: ['hr-tier-attribute'],
-    // No companyId in the body — the company comes from the token (owner requirement, 2026-10-08).
+    // No companyId in the body: the company comes from the token.
     request: body(() => ({})),
     requestSchema: COMPANY_SCOPED_READ,
     destructive: false,
@@ -36,8 +30,7 @@ export const adminHrApis: EndpointDefinition[] = [
     path: '/hrSetUpTierAttribute/save',
     summary: 'Create an HR tier attribute (level)',
     tags: ['hr-tier-attribute'],
-    // HrTierSetUpAttributeController.save takes List<HrSetUpTierAttributeEntity>, not a single
-    // object (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
+    // The controller takes a list; a bare object 400s "Request body is invalid".
     request: body(() => [
       {
         attributeName: `QA HR Tier ${Date.now()}`,
@@ -98,8 +91,7 @@ export const adminHrApis: EndpointDefinition[] = [
     path: '/hrSetUpTierVariable/save',
     summary: 'Create an HR tier variable (node)',
     tags: ['hr-tier-variable'],
-    // HrSetUpTierVariableController.save takes List<HrSetUpTierVariableEntity>, not a single
-    // object (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
+    // The controller takes a list; a bare object 400s "Request body is invalid".
     request: body(() => [
       {
         attributeId: 1,

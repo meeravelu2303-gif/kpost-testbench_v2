@@ -4,19 +4,7 @@ import { expect, test } from '@fixtures';
 import { settleFrames, settleNetwork } from '../support/settle';
 import type { Page } from '@playwright/test';
 
-/**
- * K-ECommerce (`/e-commerce`) — has a real, correctly-wired backend
- * (`Fetch_ECommerceDetails()` -> `GET /v2/ecommerce/getEcommerceDetails/`), which `docs/generated/coverage.md`
- * marks **out-of-scope — third-party commerce; confirm scope with owner** for API testing. UI testing
- * matches that same caution: read-only render check only, no assumption that a purchase/click-through
- * action is safe to drive.
- *
- * Confirmed from source, a genuine gap worth documenting directly rather than silently working
- * around: there is NO loading state and NO error state in `ECommerceList.js` — a failed or
- * non-SUCCESS response only `console.log`s and leaves the list empty, which is visually
- * indistinguishable from a legitimate "no merchants" response. This test asserts what IS there
- * (the grid renders, one way or another) without pretending the empty/error ambiguity doesn't exist.
- */
+/** K-ECommerce (/e-commerce): read-only render check; third-party purchases are never driven. */
 test.describe(
   'KPost K-ECommerce — merchant grid',
   { tag: ['@ui', '@verticals', '@regression'] },

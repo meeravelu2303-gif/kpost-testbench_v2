@@ -2,14 +2,8 @@ import { PUBLIC_SCREENS } from '@ui/screens';
 import { expect, test } from '@fixtures';
 
 /**
- * **Visual regression baselines** — the cross-cutting test type the production plan listed as
- * absent. Starts with the PUBLIC screens (login, signup, child-safety policy, the signed-out Kall
- * window, the KPoster demo): they have no session and little dynamic content, so a pixel diff
- * means the screen changed, not the data.
- *
- * Baselines live next to this file (`visual-baselines.spec.ts-snapshots/`, one per browser) and
- * are created on the first run with `--update-snapshots`; a later diff above 2% of pixels fails.
- * Animations are disabled for the capture and the viewport is the project's default.
+ * Visual baselines for the public screens (little dynamic content, so a diff means the screen changed).
+ * Created with `--update-snapshots`; a later diff above 2% of pixels fails.
  */
 test.describe(
   'KPost visual baselines — public screens',

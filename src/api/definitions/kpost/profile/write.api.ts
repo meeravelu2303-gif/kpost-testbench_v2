@@ -4,12 +4,8 @@ import { body } from '../kpost-endpoint';
 import { defineProfileEndpoint, defineUndocumentedProfileEndpoint } from './profile-endpoint';
 
 /**
- * Profile **writes** — updates to the caller's own profile: about, designation, basic and contact
- * info, privacy, education/experience records, and sharing.
- *
- * Every one modifies OUR OWN profile, so they are `destructive` `data`. None is `productionSafe`:
- * like the Katchup sends, a live write runs only through the authorized feature flow (which sets
- * a value it can restore). Off-live they run against the mock with full request fuzzing.
+ * Profile writes on our own profile (`data`). None is `productionSafe`; the feature flow restores
+ * what it changes.
  */
 const WRITE_TAGS = ['profile-write'] as const;
 
@@ -99,13 +95,8 @@ export const shareUserDetailsApi = defineProfileEndpoint({
   request: body(() => ({ kpostID: testData.victimKpostId })),
 });
 
-/*
- * ## Education / experience records — save and delete
- *
- * Each `saveOrUpdate` creates or updates a record on the caller's profile; each `delete` needs a
- * real record id. The deletes are `needs-record-id` — a lifecycle test creates a record, reads its
- * id, then deletes it. All `data` writes on our own profile.
- */
+// Education / experience records. Deletes are `needs-record-id`: the lifecycle creates a record
+// first.
 const saveEducation = (path: string, id: string, payload: Record<string, unknown>) =>
   defineProfileEndpoint({
     id,
@@ -200,12 +191,7 @@ export const deleteExperienceApi = deleteRecord(
   'experienceID',
 );
 
-/**
- * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. Every
- * sibling delete (college/school/university/experience, above) is documented and registered; this
- * one was simply never added to the workbook at all. Real caller: `OtherActivities.js:74-79`
- * (`DeleteOtherActivity(activityID)` → `{activityID}`), via `Setting.js#OtherActivityList`.
- */
+/** Not in the workbook: deletes an "other activity" record (OtherActivities.js:74-79). */
 export const deleteOtherActivityApi = defineUndocumentedProfileEndpoint({
   id: 'profile-delete-other-activity',
   method: 'POST',

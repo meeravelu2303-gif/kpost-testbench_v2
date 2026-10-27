@@ -1,6 +1,3 @@
-// An orchestrated multi-step feature flow (send → read → recall → clean up), not simple assertions;
-// the conditionals guard optional steps and best-effort cleanup of real live data.
-
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/contract/kpost-types';
@@ -10,16 +7,9 @@ import { expect, test } from '@fixtures';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 
 /**
- * Katchup **feature flow** — the FRD's message behaviours, end to end, across our six PERSONAL
- * accounts on a real KPost host.
- *
- * Every test here WRITES a real message (or group) and cleans up after itself. It runs only with
- * `KATCHUP_LIFECYCLE=true`, so it never fires on a default run. Findings use `expect.soft` so one
- * run reports every defect instead of halting at the first.
- *
- * Coverage: reply/edit/note/comment/clarify (message-type variants), recall removing a message from
- * the recipient's view (BR-K03), group send + per-recipient read receipts (FR-K06/K07), and the
- * Confidential-Copy secrecy rule (FR-K05 / NFR-SEC02) — the one that needs four distinct people.
+ * Katchup feature flow: message types, recall, group read receipts, Confidential Copy secrecy and
+ * forwards, across our PERSONAL accounts. Gated behind `KATCHUP_LIFECYCLE=true` because every test
+ * writes real messages (cleaned up after itself).
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -83,10 +73,8 @@ async function conversation(
 }
 
 /**
- * How an Edit points at the message it edits. Since 2026-10-12 the server finds the original only via
- * `referenceMessage` (a JSON object with `msgID` — what the web client sends) or `referenceMessageIDList`;
- * `temporaryMsgID` is ignored and the edit 404s. The bench uses the id list: the QA-identifier guard
- * cannot vouch for ids inside a JSON string, but does for a list of our own msgIDs.
+ * How an Edit points at the message it edits (`temporaryMsgID` is ignored). The id list is used
+ * because the QA-identifier guard can vouch for it, but not for ids inside a `referenceMessage` string.
  */
 function editOf(original: number): Record<string, unknown> {
   return { referenceMessageIDList: [original] };
@@ -219,17 +207,11 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       const view = await conversation(endpoints, B, A.username);
       expect.soft(view.text, 'the body itself still changes').toContain('QA subj-lock edited body');
 
-      // The real UI client locks the Subject field during edit (WriteMessage.js: `isDisabled={isEdited
-      // || isEditedandRepost}` on both Subject inputs) — a normal user can never trigger this. But the
-      // server itself has no equivalent guard: calling editMessage with a different `subject` silently
-      // accepts and persists it. Recorded as a confirmed (defense-in-depth) rule violation, not a hard
-      // failure — the real product is not reachable through this path today.
-      // The rule itself: the Subject is NOT changed by an edit…
+      // The UI locks the Subject during edit; this checks the server enforces it too (defense in depth).
       expect
         .soft(view.text, 'the edited message keeps its original Subject')
         .not.toContain(attemptedSubject);
-      // …and the edit is marked as one: it is stored as an Edit (messageType editMessage) that points
-      // at the original — what the client renders as the "Edited" marker.
+      // The edit is stored as an Edit row pointing at the original (the client's "Edited" marker).
       const editRow = (
         JSON.parse(view.text || '{}') as {
           data?: Array<{
@@ -347,7 +329,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
         const sent = await send(endpoints, A, {
           receiver: groupKpostID,
           status: KATCHUP_STATUS.group,
-          // A STRING, per the groupFlag convention (see send.api.ts) — a real boolean 400s here too.
+          // groupFlag is a STRING (see send.api.ts); a real boolean 400s.
           groupFlag: 'true',
           groupmemberList: [B.username, C.username, D.username],
           actualMessage: 'QA group hello',
@@ -379,9 +361,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
             )
             .not.toBe('Y');
 
-          // B opens the group conversation — this is what marks a group message read FOR B specifically
-          // (confirmed from source: `katchupMessagesForSelectedContactID`'s groupFlag branch calls
-          // `groupReadStatusRepository.updateReadStatus` scoped to the calling receiver).
+          // B opening the group conversation marks the message read for B only.
           await conversation(endpoints, B, groupKpostID!, true);
 
           const receiptsAfter = await endpoints.sendTo(
@@ -416,7 +396,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
             .not.toBe('Y');
         }
       } finally {
-        // Cleanup: remove members, then delete the group (verified order on live).
+        // Cleanup: remove members, then delete the group (deleteGroup refuses while members remain).
         if (groupID && groupKpostID) {
           await endpoints
             .sendTo(
@@ -447,17 +427,9 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     'a Confidential Copy is hidden from the other recipients (FR-K05 / NFR-SEC02) @api @katchup @security',
     { annotation: [{ type: 'requirement', description: 'NFR-SEC02' }] },
     async ({ endpoints }) => {
-      /*
-       * The crown-jewel security test. A sends to B (TO), Copies C (visible), Confidential-Copies D.
-       * B and C must NOT be able to see that D was copied; D must receive it. Needs four distinct
-       * people, which is why it waited on the extra accounts.
-       */
+      // A sends to B (TO), Copies C, Confidential-Copies D: B and C must not see that D was copied.
       const marker = `QA confidential ${Date.now()}`;
-      /*
-       * A copies message (messageType 14) is shaped as the client builds it (KatchupMessage.js):
-       * `sharedMessageDetails` carries revealContactList (visible Copy = C) and hiddenContactList
-       * (Confidential Copy = D), and `forwardReceiverList` is copies + confidential + the TO recipient.
-       */
+      // Shaped as the client builds a copies message (type 14): reveal list = C, hidden list = D.
       const sent = await send(endpoints, A, {
         receiver: B.username,
         messageType: KATCHUP_MESSAGE_TYPE.copiesMessage,
@@ -512,10 +484,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to forward' });
     expect(seed.msgID, 'seed created').toBeTruthy();
 
-    // Forward shape from the client (ForwardFooter.js): forwardReceiverList + referenceMessageIDList
-    // (the source msgIDs), not a single `receiver`. `forwardKatchupMessage` (the older path) is
-    // confirmed unused by the current client — this now targets `forwardKatchupMessageNew`, the one
-    // actually live (retired 2026-09-28, see manage.api.ts).
+    // Forward shape from the client (ForwardFooter.js): forwardReceiverList + referenceMessageIDList.
     const fwd = await endpoints.sendTo(
       'katchup-forward-message-new',
       {
@@ -532,12 +501,8 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       },
       { label: 'feature:forward', auth: { principal: A }, allowLiveWrite: true },
     );
-    /*
-     * Forward answers 400 to this minimal payload — it validates a full `referenceMessage` object
-     * (the source message's content, not just its id), which the client assembles from the message
-     * being forwarded. Asserted as "does not crash" (no 5xx): the endpoint validates correctly; a
-     * complete forward needs the source object, out of scope for this smoke of the action.
-     */
+    // This minimal payload 400s (a full forward needs the source `referenceMessage` object), so
+    // only "no 5xx" is asserted.
     expect.soft(fwd.status, 'forward validates without crashing (no 5xx)').toBeLessThan(500);
     await cleanup(endpoints, A, seed.msgID);
   });
@@ -553,12 +518,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       ],
     },
     async ({ endpoints }) => {
-      /*
-       * The four Forward variants the FRD splits out (source Hidden vs Revealed × single vs
-       * with-thread), mapped to the message-type enum: 16 Hidden, 15 Reveal, 21 thread-Hidden,
-       * 20 thread-Reveal. As with the single forward above, the minimal payload 400s (the endpoint
-       * validates a full referenceMessage object), so each is asserted as "handled, no 5xx".
-       */
+      // Hidden/Revealed × single/with-thread forwards; as above, each is asserted as "no 5xx".
       const T = KATCHUP_MESSAGE_TYPE as Record<string, number>;
       const seed = await send(endpoints, A, {
         receiver: B.username,
@@ -604,8 +564,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
 
       const saved = await endpoints.sendTo(
         'katchup-save-messages',
-        // groupFlag is a STRING here too (see send.api.ts) — a real boolean 400s "Malformed or missing
-        // request body", live-verified 2026-09-25.
+        // groupFlag is a STRING here too (see send.api.ts); a real boolean 400s.
         { body: { groupKpostID: B.username, msgIDs: [seed.msgID], groupFlag: 'false' } },
         { label: 'feature:save', auth: { principal: A }, allowLiveWrite: true },
       );
@@ -620,8 +579,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       );
       expect.soft(marked.status, 'mark-important accepted').toBeLessThan(300);
 
-      // Same discipline as recall/delete: the response answers success regardless, so the row is the
-      // judge. TBL_KPOST_KATCHUP_MESSAGES had no registered check for this write before.
+      // The response answers success regardless, so the DB row is the judge.
       const database = databases.for('kpost-api');
       if (database.enabled && seed.msgID) {
         const row = await new KpostRepository(database).katchupMessage(seed.msgID);
@@ -687,13 +645,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       ],
     },
     async ({ endpoints }) => {
-      /*
-       * Disappearing / Secret Messages — the compose lock-icon feature (Katchup FRD FR-KU-017..024).
-       * The frontend composer (WriteMessage.js) offers two modes and adds two fields to the normal send:
-       *   DeleteAfterRead     → isVanished: true            (vanishes once the recipient opens it)
-       *   DeleteAsPerSchedule → secretMessageExpireTime: ms (auto-deletes at that future time)
-       * Both fields already exist in sendShape(); this proves the API accepts and carries them.
-       */
+      // Two modes: isVanished (gone once read) and secretMessageExpireTime (gone at a set time).
 
       // Mode 1 — Disappear After Reading.
       const afterRead = await send(endpoints, A, {
@@ -721,9 +673,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       });
       expect.soft(scheduled.status, 'disappear-as-per-schedule send is accepted').toBeLessThan(300);
       const row2 = firstRow(scheduled.body);
-      // Live-verified 2026-09-25: `secretMessageExpireTime` comes back as an ISO string; the numeric
-      // epoch is `secretMessageExpireTimeAsLong`, same `...AsLong` convention as messageTime/serverTime
-      // in this same response.
+      // The expiry comes back as an ISO string; the numeric epoch is `...AsLong`.
       if (row2 && row2.secretMessageExpireTimeAsLong != null) {
         expect
           .soft(Number(row2.secretMessageExpireTimeAsLong), 'the scheduled expiry is carried back')
@@ -795,8 +745,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
         if (id === 'katchup-forward-message-new' && result.msgID) forwardedMsgID = result.msgID;
       }
 
-      // katchup-forward-backtrack: destructive:false, no productionSafe — needs allowLiveRead, fed
-      // the REAL forwarded message's own msgID (not the seed) to trace it back to its origin.
+      // Backtrack is fed the forwarded message's own msgID (not the seed); a read, so allowLiveRead.
       if (forwardedMsgID) {
         const backtrack = await endpoints.sendTo(
           'katchup-forward-backtrack',
@@ -807,10 +756,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
           .soft(backtrack.status, 'forwardMessageBacktrackByMsgID traces a real forwarded message')
           .toBeLessThan(500);
       } else {
-        // Recorded rather than silently skipped: forward-message-new did not return a usable
-        // msgID (per its own response), so forward-backtrack still has no live-verified test.
-        // Matches the pre-existing #611 [KP-A082D1] forwardKatchupMessageNew crash — not a new
-        // regression; the endpoint itself 500s on a real msgID (confirmed 2026-09-25).
+        // Known defect #611: forward-message-new returns no msgID, so backtrack cannot run.
         expect
           .soft(forwardedMsgID, 'forward-message-new returned a real msgID to backtrack from')
           .toBeTruthy();
@@ -869,7 +815,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     'recall is blocked once the recipient has already read the message (BR-KU-RECALL-UNREAD) @api @katchup @security',
     { annotation: [{ type: 'requirement', description: 'BR-KU-RECALL-UNREAD' }] },
     async ({ endpoints }) => {
-      // BR-KU-RECALL-UNREAD (⬜ to-do): recall is allowed ONLY before the recipient has read it.
+      // Recall is allowed ONLY before the recipient has read the message.
       const marker = `QA recall-unread ${Date.now()}`;
       const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
       expect(sent.msgID, 'message created').toBeTruthy();
@@ -885,9 +831,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
           { label: 'feature:recall-after-read', auth: { principal: A }, allowLiveWrite: true },
         );
 
-        // Asserted against B's view, not the status code: whatever recall replies, an already-read
-        // message must still be visible to B afterward — recalling history B has already seen is
-        // exactly what this rule exists to prevent.
+        // Judged on B's view, not the status: an already-read message must stay visible to B.
         const viewAfter = await conversation(endpoints, B, A.username);
         if (!viewAfter.text.includes(marker)) {
           endpoints.recordBusinessRuleViolation({
@@ -915,7 +859,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
     'recall is unavailable for a group message (BR-KU-RECALL-SCOPE) @api @katchup @security',
     { annotation: [{ type: 'requirement', description: 'BR-KU-RECALL-SCOPE' }] },
     async ({ endpoints }) => {
-      // BR-KU-RECALL-SCOPE (⬜ to-do): recall is unavailable for copies and group messages.
+      // Recall is unavailable for copies and group messages.
       const members = [B, C].map((p) => ({
         createdBy: A.username,
         hasAdminAccess: 'N',

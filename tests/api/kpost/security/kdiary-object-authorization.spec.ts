@@ -1,35 +1,13 @@
-// KDiary cross-tenant IDOR — getEventDate (read) and updateEvent (disclosure + unauthorized touch).
-// Gated: creates/deletes a real diary event on principal A's own account via the standard
-// KDIARY_LIFECYCLE write path.
+// KDiary cross-tenant IDOR. Gated on KDIARY_LIFECYCLE: creates and deletes a real event for A.
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { scheduleShape } from '@api/definitions/kpost/kdiary/write.api';
 import { expect, test } from '@fixtures';
 
 /**
- * Per the 2026-10-04 KDiary ground-truth audit (independently re-verified by direct source reading of
- * `KdiaryScheduleController.java` lines 194-295, `KdiaryScheduleServiceImpl.java` lines 215-233 and
- * 278-279, `KdiaryRO.java` line 18, and `KdiaryScheduleRepository.java` line 36), neither
- * `getEventDate` nor `updateEvent` ever reads `request.getAttribute("kpostID")` — both look a diary
- * event up by the body's own `eventID`/`eventIds` with no ownership check at all.
- *
- * `getEventDate` (`kdiaryScheduleRepository.findByEventIDIn`) maps the full row (title, description,
- * start/end time, remarks) into the response for ANY eventIds, owned or not — CONFIRMED live below.
- *
- * `updateEvent`'s content-mutation surface was initially overclaimed from source alone: the service
- * method (lines 215-233) reads `isRepeat`/`isDaily`/`isWeekly`/`isMonthly` off the body and, on paper,
- * reassigns the event's recurrence `type` accordingly. A **live run disproved this** — three
- * consecutive attempts with a correctly-serialized `{repeat:true, daily:true}` body (confirmed via a
- * debug annotation of the literal outgoing JSON) left the victim's `type` unchanged at `0`, meaning the
- * deployed server does not behave exactly like this local checkout's source for that branch. What DID
- * reproduce live, every time: (1) `updateEvent`'s own 200 response body discloses the full victim event
- * (same disclosure as `getEventDate`, just reached through a write endpoint), and (2) the victim's
- * `modifiedDate` audit column silently changes as a side effect of a write issued by a wholly unrelated
- * caller — an unauthorized touch with no real content change, but still evidence the row was saved on
- * an unrelated caller's say-so. Both still trace to the identical missing-ownership-check root cause as
- * `getEventDate`, just with a narrower confirmed blast radius than first suspected.
- *
- * A is the event owner; C is a wholly unrelated principal who should never see or touch A's event.
+ * `getEventDate` and `updateEvent` look an event up by body `eventID(s)` with no ownership check:
+ * the read discloses the event, and the update discloses it and touches `modifiedDate`.
+ * A owns the event; C is an unrelated principal who must never see or touch it.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;

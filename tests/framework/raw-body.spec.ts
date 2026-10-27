@@ -5,9 +5,8 @@ import { ApiClient } from '../../src/api/client/api-client';
 import type { ApiRequest } from '../../src/api/client/request-builder';
 
 /**
- * Regression: the malformed-JSON and empty-body probes must send exactly the bytes they name.
- * Playwright rewrites a non-JSON STRING body under a JSON content-type into a quoted (valid) JSON
- * string, so the probes were never malformed and correct servers were reported as defects.
+ * The malformed-JSON and empty-body probes must send exactly their bytes: Playwright would re-encode
+ * a non-JSON string body as valid quoted JSON.
  */
 test.describe('raw request bodies reach the server verbatim @framework', () => {
   let server: Server;

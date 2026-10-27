@@ -3,18 +3,11 @@ import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
 
 /**
- * Katchup **compose** flow — the deepest, most valuable UI interaction: it drives the composer like a
- * user and proves KPost's reason-to-exist differentiator on screen — **a Subject on every chat
- * message (BR-K01)**, which no mainstream chat product has.
- *
- * Selectors are the real ones recorded from the live app. Two things live tuning taught:
- *  - a conversation row carries the counterpart's KPOST ID as its element `id`;
- *  - `.ql-editor` matches BOTH sent-message displays (`contenteditable="false"`) and the composer, so
- *    the composer is targeted by `contenteditable="true"`;
- *  - a full-screen `.loader-overlay` intercepts clicks while the SPA loads, so we wait for it to clear.
+ * Katchup composer: a Subject on every chat message (BR-K01), plus a gated send-and-recall.
+ * A conversation row's element `id` is the counterpart's KPOST ID.
  */
 
-/** The composer's editable Quill area (not a read-only sent-message display). */
+/** The composer's editable Quill area; `.ql-editor` alone also matches sent-message displays. */
 const EDITOR = '.ql-editor[contenteditable="true"]';
 
 /** Open Katchup, wait out the loader overlay, open the 2nd QA account's conversation, open the composer. */
@@ -46,7 +39,6 @@ test.describe('KPost Katchup compose', { tag: ['@ui', '@katchup', '@regression']
     async ({ page }) => {
       await openComposer(page);
 
-      // The Subject field — BR-K01, the product differentiator: a subject on every chat message.
       const subject = page.getByRole('textbox', { name: 'Subject' });
       await expect(subject, 'a chat message carries a Subject field (BR-K01)').toBeVisible({
         timeout: 15_000,
@@ -64,12 +56,7 @@ test.describe('KPost Katchup compose', { tag: ['@ui', '@katchup', '@regression']
   );
 });
 
-/**
- * Katchup compose **SEND** — a real write, so it is gated (`KATCHUP_UI_LIFECYCLE=true`) and
- * self-cleaning: it sends a uniquely-subjected message to our OWN 2nd QA account, verifies it appears,
- * then **recalls** it, so the accounts end exactly as they started (send = the icon button in
- * `#ChatTop`; recall = the message action menu → "Recall").
- */
+/** Compose send: a real write gated behind KATCHUP_UI_LIFECYCLE; sends to the 2nd QA account, then recalls. */
 test.describe(
   'KPost Katchup compose · send (write)',
   { tag: ['@ui', '@katchup', '@regression'] },
@@ -99,14 +86,11 @@ test.describe(
       // Send.
       await page.locator('#ChatTop').getByRole('button').filter({ hasText: /^$/ }).first().click();
 
-      // The sent message appears in the conversation, carrying its Subject (BR-K01, on live).
       await expect(page.getByText(subject).first(), 'the sent message appears').toBeVisible({
         timeout: 20_000,
       });
 
-      // Clean up: recall OUR message. Each message is a DOM element whose id is its msgID and which
-      // carries its own action icon — so find the message that has our unique subject AND an action
-      // icon, and recall that one (recall = unsend; the recipient never sees it — FR-K10/BR-K03).
+      // Clean up: recall the message element that has our subject and its own action icon.
       const sentMessage = page
         .locator('[id]')
         .filter({ hasText: subject })
@@ -120,9 +104,8 @@ test.describe(
       });
       await recall.click();
 
-      // Recall UNSENDS the message (the recipient never sees it — FR-K10/BR-K03); the sender keeps a
-      // "recalled" marker, so we confirm the action was ACCEPTED (the menu closed), not that the text
-      // vanished from our own view. The recipient-side effect is covered by the API Katchup lifecycle.
+      // The sender keeps a "recalled" marker, so check the menu closed; the recipient side is the
+      // API Katchup lifecycle's job.
       await expect(recall, 'the recall action was accepted (menu closed)').toHaveCount(0, {
         timeout: 15_000,
       });

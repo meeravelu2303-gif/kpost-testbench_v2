@@ -5,9 +5,8 @@ import { expect, test } from '@fixtures';
 import { archivePreviousReport } from '@reporting/report-archive';
 
 /**
- * Every run writes the same `reports/REPORT.*`. Before 2026-10-27 a `product:all` run kept only its last
- * product's report, and hand-made backups piled up without limit. These pin the fix: the previous report
- * moves to `reports/history/` under its product's name, and only the newest runs are kept.
+ * The previous `reports/REPORT.*` moves to `reports/history/` under its product's name, and only the
+ * newest runs are kept.
  */
 test.describe('report archive', () => {
   let dir: string;

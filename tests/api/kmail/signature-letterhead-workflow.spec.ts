@@ -6,11 +6,8 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * KMail **signature components + letterhead + count-days-limit** — each signature-section write
- * (company/graphics/style/social/template/full) is verified against `getMailSignature`, not just
- * accepted, and the letterhead set/read pair is driven with a REAL letterhead id from
- * `getAllLetterHead` rather than a placeholder. Gated `KMAIL_LIFECYCLE=true`: these persist to the
- * caller's own KMail settings row.
+ * KMail signature sections, letterhead and count-days-limit: each write is read back, and the
+ * letterhead uses a real id from getAllLetterHead. Gated by KMAIL_LIFECYCLE=true (real settings).
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -42,10 +39,7 @@ test.describe(
     test('signature graphics/style/social/template writes are accepted and actually persist', async ({
       endpoints,
     }) => {
-      // None of these fields match the qa-identifier-guard's resource-identifier pattern, so they
-      // need no QA-owned allowlisted value — unlike companyName (see the sig-company test below).
-      // A unique marker per field, so the readback below proves THESE writes landed, not a stale value
-      // left over from an earlier run.
+      // A unique marker, so the read-back proves these writes landed, not an earlier run's value.
       const marker = `QA-${Date.now()}`;
       const style = { color: '#1A73E8', fontStyle: marker };
 
@@ -81,12 +75,6 @@ test.describe(
         )
         .toBeLessThan(300);
 
-      /*
-       * Live-verified 2026-09-26: previously this readback only checked `status === 200`, the exact
-       * "readback call present but nothing compared" shape that hid a real bug in Kall's reschedule.
-       * Here the writes DO genuinely persist — confirmed by comparing each field against the unique
-       * marker just sent, not merely that a 200 came back.
-       */
       const read = await endpoints.sendTo(
         'kmail-mail-signature',
         {},
@@ -112,14 +100,8 @@ test.describe(
     test('sig-company: saveOrUpdateMailSignatureCompanyData is accepted and reflected on getMailSignature', async ({
       endpoints,
     }) => {
-      /*
-       * companyName is a hard-required IDENTITY_FIELD — a fabricated value would tell the
-       * QA-identifier guard that some arbitrary/real company is ours to name. Unblocked 2026-09-25:
-       * `QA_COMPANY_NAME=Nebius Solutions` is now set in `.env`, confirmed live via
-       * `common-company-details` authenticated AS the `business-m` principal itself (co 242) —
-       * genuinely owner-confirmed, not invented. A company signature only makes sense for a business
-       * account, so this runs as `business-m`, not the personal principal every other test here uses.
-       */
+      // companyName is an identity field: it must be our own QA company (QA_COMPANY_NAME). A company
+      // signature needs a business account, so this runs as business-m.
       const BM = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'business-m')!;
       const company = {
         companyName: testData.companyName,
@@ -153,13 +135,8 @@ test.describe(
       endpoints,
     }) => {
       const marker = `QA Full Sig ${Date.now()}`;
-      /*
-       * emailId/mobileNumber/alternateMobile match the qa-identifier-guard's resource-identifier
-       * pattern and need QA-owned allowlisted values on live. companyData.companyName does too, but
-       * (see the sig-company test above) QA_COMPANY_NAME is not configured — companyData is omitted
-       * here rather than sent with a fabricated name; if the endpoint schema-requires it, that 4xx
-       * would itself confirm the field is mandatory, which is worth knowing regardless.
-       */
+      // The contact fields use QA-owned values (identifier guard). companyData is omitted rather
+      // than sent with an invented name.
       const full = {
         personalData: {
           firstName: 'QA',

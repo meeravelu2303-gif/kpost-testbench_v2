@@ -13,18 +13,8 @@ import {
 } from '../support/katchup';
 
 /**
- * Katchup · the per-message action menus, Transfer and Translate — each asserted by its RESULT.
- *
- * Traced from source 2026-10-20 (bubble theme, KatchupMessage.js / Transfer.js / MessageBox.js):
- * - The SENDER's menu is the bell (`NotificationsNoneIcon`), the RECIPIENT's the reply arrow
- *   (`ReplyIcon`); both open MUI `#long-menu`. Their "More" item is dead code — each menu only renders
- *   in its show-all state, so every action is listed at once (FR-KU-025..026).
- * - Transfer opens "Transfer Message": KMail (→ /writemail prefilled with the message), Katchup (a
- *   forward), and "Other Applications" tiles that open the app in a new tab with the message in the URL
- *   (Gmail, Yahoo, WhatsApp …) — the "external app" of FR-KU-034.
- * - Translate is an icon on each message (`.icon-KP_75-translate`, not a menu item): it opens a
- *   "Translate" language list and shows `<from> ▶ <to>` with the translated text under the message
- *   (KMail translator service). Nothing is stored (RTM-KU-M06).
+ * Katchup per-message action menus (sender bell / recipient reply arrow), Transfer to KMail or an
+ * outside app, and the Translate icon, each asserted by its result. Gated behind KATCHUP_UI_LIFECYCLE.
  */
 const SENDER_ACTIONS = [
   'Edit',

@@ -4,13 +4,8 @@ import { setupStep } from '@ui/setup-step';
 import type { Locator, Page } from '@playwright/test';
 
 /**
- * Shared Katchup UI helpers — the validated selectors and steps (recall passed green on live) reused
- * across the Katchup specs so a selector lives in one place:
- *   - a conversation row's element `id` is the counterpart's KPOST ID,
- *   - the composer is the Quill editor with `contenteditable="true"` (type, never `.fill()`),
- *   - a `.loader-overlay` intercepts clicks while the SPA loads,
- *   - a message is a DOM element whose `id` is its msgID with its own `NotificationsNoneIcon` (bell),
- *   - the send button is the icon button in `#ChatTop`.
+ * Shared Katchup UI helpers. A conversation row's `id` is the counterpart's KPOST ID; the composer is
+ * a Quill editor (type, never `.fill()`); a sent message is an element with its own bell icon.
  */
 
 /** The composer's editable Quill area (not a read-only sent-message display). */
@@ -34,9 +29,7 @@ export async function openConversation(page: Page, kpostId: string): Promise<voi
     await conversation.click();
     return;
   }
-  // The Recents list only renders the most recent conversations ("Today 20"); once other threads
-  // (e.g. the QA UI groups, 2026-10-11) push this one out, find it through the list's own search box
-  // (`RecentMessage.js` → search categories; result rows are keyed `<kpostId>-<msgID|time>`).
+  // Recents renders only the latest conversations; when this one is pushed out, try the list search.
   const search = page.getByPlaceholder('Search').first();
   await expect(search, setupStep('the Katchup list search box renders')).toBeVisible({
     timeout: 10_000,
@@ -47,9 +40,7 @@ export async function openConversation(page: Page, kpostId: string): Promise<voi
     await hit.click();
     return;
   }
-  // Live 2026-10-22: the Recents search no longer matches a KPOST ID (it did on 2026-10-11; it now
-  // searches message text). Open the chat the way a person does instead: Contacts tab → search →
-  // click the contact, whose row is its avatar image named after it ("qatest2 bench").
+  // The Recents search may not match a KPOST ID, so fall back to Contacts tab → search → contact.
   await page.getByRole('tab', { name: 'Contacts' }).click();
   const local = kpostId.split('@')[0] ?? kpostId;
   await page.getByRole('searchbox', { name: 'Search' }).last().fill(local);
@@ -57,8 +48,7 @@ export async function openConversation(page: Page, kpostId: string): Promise<voi
   await expect(contact, setupStep(`${kpostId} is listed in My Contacts`)).toBeVisible({
     timeout: 20_000,
   });
-  // The contact's name opens the chat (the avatar itself does not). Exact text, visible only: the
-  // same name also sits inside longer, hidden Recents message previews.
+  // The name (not the avatar) opens the chat; exact + visible-only skips hidden Recents previews.
   await page
     .getByText(new RegExp(`^${local} bench$`, 'i'))
     .filter({ visible: true })
@@ -85,11 +75,7 @@ export async function gotoKatchup(page: Page): Promise<void> {
     .catch(() => undefined);
 }
 
-/**
- * Open a RECEIVED conversation by the message's unique `subject` — the sender may be an unknown
- * contact (so its row is not keyed by `[id=<kpostId>]`), but the list preview shows the subject, and
- * clicking it opens the thread.
- */
+/** Open a RECEIVED conversation by its unique `subject` (an unknown sender's row has no KPOST ID). */
 export async function openReceivedConversation(page: Page, subject: string): Promise<void> {
   await gotoKatchup(page);
   const preview = page.getByText(subject).first();
@@ -100,18 +86,9 @@ export async function openReceivedConversation(page: Page, subject: string): Pro
 }
 
 /**
- * Open a GROUP conversation by its `groupKpostID`. A freshly created group is in the Recents list
- * (its row `id` is the groupKpostID — `RecentMessage.js`): creating it posts the "<creator> added
- * <members>" activity message, which gives it a Recents entry. A group created moments ago through the
- * API can take a reload or two to appear (the list is fetched once per load). Returns false, without
- * failing, when the group never shows: the caller decides what that means.
- *
- * Measured live 2026-10-10: the row sits at x≈82–455 in a 1280px viewport, and the left side menu
- * (`.menu.menuss1`, `Header.js`) widens from 60px to `clamp(190px, 12vw, 240px)` while the pointer
- * is over it and stays open as long as the pointer stays inside — which it does once Playwright moves
- * the pointer to the row's centre (x≈269) while the menu is already open. Every row click then reports
- * "`.menu` subtree intercepts pointer events" until it times out (4/4 Group Info failures). Parking
- * the pointer over the thread area first collapses the menu, and the click lands.
+ * Open a GROUP conversation by its `groupKpostID`, reloading up to 4 times for a new group to reach
+ * Recents. Returns false when it never shows. The pointer is parked first so the hover-expanded side
+ * menu does not intercept the click.
  */
 export async function openGroupConversation(page: Page, groupKpostID: string): Promise<boolean> {
   const groupRow = page.locator(`[id="${groupKpostID}"]`).first();
@@ -130,10 +107,7 @@ export async function openGroupConversation(page: Page, groupKpostID: string): P
   return false;
 }
 
-/**
- * Move the pointer over the main content area so the hover-expanding side menu (`.menu.menuss1`)
- * collapses back to 60px and stops covering the left list column. Idempotent and cheap.
- */
+/** Move the pointer to the content area so the hover-expanding side menu collapses. */
 export async function parkPointerAwayFromSideMenu(page: Page): Promise<void> {
   const size = page.viewportSize() ?? { width: 1280, height: 720 };
   await page.mouse.move(Math.round(size.width / 2), Math.round(size.height / 2));
@@ -153,12 +127,7 @@ export function receivedMessageBySubject(page: Page, subject: string): Locator {
     .last();
 }
 
-/**
- * Submit the composer by pressing **Enter** in the editor — the app's own send trigger
- * (`WriteMessage.js` `handleKeyDown`: Enter without Shift → `handleKatchupSubmit`). This is immune to
- * the composer's button layout (the send icon moves / is disabled-until-ready in the K-AI variant),
- * so it works in every composer state. Assumes the editor is focused (type into it first).
- */
+/** Send with Enter (the app's own trigger, independent of the send-button layout); editor must be focused. */
 export async function submitComposer(page: Page): Promise<void> {
   await page.keyboard.press('Enter');
 }
@@ -182,21 +151,14 @@ export async function sendMessage(page: Page, subject: string, body: string): Pr
 
 /** Open the sender action (bell) menu on a specific sent message. */
 export async function openBellMenu(page: Page, message: Locator): Promise<void> {
-  // Bring the message into view first — a message low in a scrollable thread is not hoverable until
-  // scrolled to (the bell action only appears on hover).
+  // The bell only appears on hover, so scroll the message into view first.
   await message.scrollIntoViewIfNeeded().catch(() => undefined);
-  // Hover reveals the bell, but a still-rendering thread churns the message's layout so a strict hover
-  // can never satisfy the "stable" actionability check (seen as a 15s timeout on Transfer). Hover is
-  // therefore best-effort, and the bell is clicked with `force`: the click handler is attached
-  // regardless of the hover-reveal opacity, and `force` skips the stability wait that was flaking.
+  // A re-rendering thread never passes the "stable" check, so hover is best-effort and the click forced.
   await message.hover().catch(() => undefined);
   await message.getByTestId('NotificationsNoneIcon').first().click({ force: true });
 }
 
-/**
- * Open the recipient action menu (the `ReplyIcon` trigger) on a RECEIVED message — the receive-side
- * twin of `openBellMenu`, same hover-reveal caveat, so the same best-effort hover + forced click.
- */
+/** Open the recipient (`ReplyIcon`) menu on a RECEIVED message; same hover caveat as `openBellMenu`. */
 export async function openReplyMenu(page: Page, message: Locator): Promise<void> {
   await message.scrollIntoViewIfNeeded().catch(() => undefined);
   await message.hover().catch(() => undefined);

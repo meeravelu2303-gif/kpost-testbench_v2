@@ -3,15 +3,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * `/digital-card/:id` (`GloabalDigitalCard.js`) — a PUBLIC, read-only shareable digital business
- * card, no auth required. Calls the same public `POST /v2/profile/shareUserDetails/` as
- * `ProfileWebView.js`. Confirmed source INCONSISTENCY worth documenting directly: unlike
- * ProfileWebView (which cleanly redirects to `/not-found` on a bad id), this component has no
- * equivalent handling — a failed fetch just leaves `contactData` as `{}`, silently degrading to a
- * near-blank card (placeholder avatar, name "-") rather than any explicit not-found state. Whether
- * that degraded state is the intended design for a "card" (vs. a full profile page) isn't something
- * to assume either way — this test asserts the one thing that's unambiguously correct (no crash) and
- * records the degraded-render behavior as an observation for a product-owner call, not a hard failure.
+ * /digital-card/:id, the public shareable card. A bad id renders a near-blank card rather than
+ * /not-found; that is only recorded, and the test asserts no crash.
  */
 test.describe(
   'KPost — /digital-card/:id public digital card',

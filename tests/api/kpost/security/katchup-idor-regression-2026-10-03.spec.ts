@@ -1,14 +1,5 @@
-// Regression coverage for the IDOR/BOLA/disclosure findings confirmed live 2026-10-03 and filed as
-// Bugzilla #952, #953, #954, #957, #958, #960, #961. Each test is the exact reproduction used to
-// file its bug — kept here so a future run re-flags it automatically if the fix regresses or was
-// never deployed, instead of relying on the one-off scratch files used during the original
-// investigation (see the 2026-10-03 Katchup ground-truth audit (removed 2026-10-26; in git history) §4 for the full writeup).
-//
-// #959 is deliberately NOT covered here: it was closed INVALID after the developer clarified that
-// KPost's message history is intentionally account-scoped and device-independent (a user keeps
-// access to anything they legitimately received, from any device, forever — unlike WhatsApp's
-// device-local cache model). What looked like "a former group member can still fetch old history"
-// is the correct, intended behavior for this product, not a bug.
+// Regression guards for Katchup IDOR/disclosure bugs #952, #953, #954, #957, #958, #960, #961:
+// each test is that bug's reproduction. #959 is not covered: history is account-scoped by design.
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';

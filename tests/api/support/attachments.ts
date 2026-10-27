@@ -4,16 +4,8 @@ import { sha256, type SampleFile } from '@fixtures/files';
 import { expect } from '@fixtures';
 
 /**
- * The real client's upload flow, in ONE place (it was re-implemented in six specs, one of which never
- * unwrapped the reply):
- *
- *   1. ask the KPost API for a presigned S3 URL — Katchup `/v2/aws/katchup/generate-presigned-url`
- *      (`WriteMessage.js:604`) or KMail `/v2/aws/generate-presigned-url` (`WriteMailPage.js:692`);
- *   2. PUT the bytes straight to S3 with the file's Content-Type (`axios.put(url, file)`);
- *   3. the returned uuid is what a message or mail then names in `attachmentUuid`.
- *
- * The presign reply was a bare quoted link on older builds and a `{ presignedURL, status }` envelope since
- * #942 — `presignedUrlOf` accepts both. Every upload must be removed again with `deleteUploaded`.
+ * The real client's upload flow: get a presigned S3 URL (Katchup or KMail route), PUT the bytes to
+ * S3, then name the uuid in `attachmentUuid`. Remove every upload again with `deleteUploaded`.
  */
 export type UploadRoute = 'katchup' | 'kmail';
 

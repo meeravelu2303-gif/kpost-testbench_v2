@@ -10,26 +10,8 @@ import {
 } from '../support/contacts';
 
 /**
- * Contacts **functional** UI testing — the client's own behaviour, and whether an action in the UI
- * actually reaches the server, that a pure API test cannot see.
- *
- * Navigation and selectors come from `support/contacts.ts` (read from the front-end source,
- * 2026-10-11): the Contacts tab, its search box, the Add-contact wizard (now the KDirectory page:
- * Country → Language → vertical → Continue → people search → Advanced Search), and the Create New
- * Group modal.
- *
- * ## What each angle proves
- *  - **search** narrows the list (client filtering works);
- *  - **the add wizard opens** and reaches its people-search step (the feature is usable);
- *  - **guards**: "Add To Contact" with nothing selected, and "Create" a group with no name, must not
- *    dispatch a write — client validation, no junk data;
- *  - **cross-layer add**: a contact added in the UI actually appears in `myContacts` (UI → API → DB);
- *  - **advanced search** by mobile responds.
- *
- * ## Safety
- * The read/validation angles write nothing. The one add-and-verify test is gated behind
- * `CONTACTS_UI_LIFECYCLE`, captures the exact contactID the UI dispatched, and deletes only that in a
- * `finally`, so it removes precisely what it created and nothing else.
+ * Contacts screen: search, the Add-contact wizard, empty-input guards, advanced search, and a
+ * UI -> API -> DB add. The add is gated behind CONTACTS_UI_LIFECYCLE and deletes only what it added.
  */
 
 test.describe(
@@ -213,8 +195,7 @@ test.describe(
           const search = await openPeopleSearch(page);
           expect(search, 'the people-search step renders').not.toBeNull();
           await search!.click();
-          // A QA account that is NOT already a live contact of this account (read from the contacts
-          // table), so the add makes a real new row — found by name in the directory search.
+          // Pick a QA account that is not already a live contact, so the add makes a new row.
           const live = await db.query<{ contact_id: unknown }>(
             "SELECT contact_id FROM TBL_KPOST_USER_CONTACTS WHERE kpost_id = ? AND (delete_status IS NULL OR delete_status NOT IN ('1', 'Y', 'y'))",
             [testData.kpostId],
@@ -277,8 +258,7 @@ test.describe(
             description: `addContact → HTTP ${addResponse?.status()}; row: ${rowSummary(stored, ['contact_id', 'first_name', 'delete_status'])}`,
           });
 
-          // Cross-layer: the contact the UI added must be present in myContacts (read with the page's
-          // own session — an API login as the same account would sign this browser out).
+          // Read with the page's own session: an API login as the same account would sign it out.
           await expect
             .poll(
               async () => {

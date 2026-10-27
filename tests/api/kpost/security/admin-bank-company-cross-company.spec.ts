@@ -4,21 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * `GET /admin/getBankAndCompanyDetails/{companyID}` — a company admin's Company/Bank settings screen.
- *
- * The companyID travels in the path and (per the 2026-10-05 Admin backend ground-truth audit) is used
- * to resolve the record without checking it belongs to the CALLER's company — the same unscoped-lookup
- * class behind the member-count leak guarded by `admin-usermanagement-cross-company.spec.ts`. The
- * bank/PAN/GST half of this disclosure is already filed as **bug #982**; this spec is a REGRESSION
- * GUARD for that fix, not a new finding.
- *
- * Deliberately NON-FILING: it asserts the correct behaviour (a company admin naming another company's
- * ID must not get that company's details back) and surfaces a regression as a visible test failure,
- * but it does NOT call `recordBusinessRuleViolation`, so it can never auto-file a duplicate of #982.
- * When #982 is fixed the assertion passes; until then it fails loudly, which is the intended signal.
- *
- * Verdict: does a company admin calling this with a DIFFERENT company's ID get back that company's
- * real company/bank details (name, address, PAN, GST)?
+ * `GET /admin/getBankAndCompanyDetails/{companyID}`: an admin naming another company must not get its
+ * company/bank details. Regression guard for #982; records no violation, so it never refiles it.
  */
 test.describe('KPost Security · Admin getBankAndCompanyDetails cross-company disclosure @api @kpost-api @security @admin', () => {
   test("a company admin must not read another company's bank/company details @api @security", async ({

@@ -12,40 +12,11 @@ import {
 } from './support/journey';
 
 /**
- * JOURNEY 10 · A VOICE CALL (and its VIDEO twin) — A rings B from the Kall screen, B answers, both are
- * connected, A mutes and unmutes (voice) or turns the camera off and on (video), A hangs up.
- *
- * Built from source (KPOST_REACTJS_2023_V1, read 2026-10-20), every call component mounted globally by
- * `containers/Header.js`, so B is reachable on any signed-in page:
- * - A: `/kall` › Contacts › B's row call icon (`ContactList.js` `MdAddCall`) › "Kall Info" modal ›
- *   the **Connected Devices** voice icon (`KallModal.js` `handleClick("audio", false)`). The SIM and
- *   landline icons dial B's phone (`isPrimary`), which a web client ignores (Header.js:1462).
- *   → `POST /kall/initiateKall` → socket `kallInitiate` → A's `GlobalKallSender` panel says "Calling...".
- * - B: socket `receiveKallInitiate` → `InComingKall` card "Incoming call … is calling you..." with
- *   "📞 Accept" / "📞 Reject" (it auto-declines after 30 s).
- * - Accept → `updateKallStatus(1)` → socket `kallAccept` → both sides join the Agora channel and
- *   publish a microphone track. The panels' `.kall-status-text` switches from "Calling..." to a
- *   mm:ss timer that only ticks once that side has JOINED (`isJoined`), so a timer moving past 00:00
- *   on both pages is the proof the call connected — media included, from Chromium's fake microphone
- *   (`playwright.config.ts` CHROMIUM_MEDIA).
- * - Video (the same row's `icon-KP_159-facecall`, `handleClick("video", false)`): B's card says
- *   "Incoming video call"; once accepted A's panel becomes `.kall-video-wrap` with a
- *   `.kall-video-duration-badge` timer and the overlay controls mic · **camera** (`.kall-btn--cam`,
- *   `toggleVideoTrack` → `localVideoTrack.setEnabled`, gains `kall-btn--cam-off` while off) · end. The
- *   camera button exists only on an ACCEPTED video call and is a no-op until the local track is
- *   published — so RTM-KALL-A04's camera half cannot be driven without a connected call.
- * - A's `.kall-btn--end` → `POST /kall/endIndividualKall` → socket `kallClose`; both panels unmount.
- *
- * Needs A and B in each other's contacts (B's panel reads A from its contact map). B's display name
- * comes from the public user-details lookup, made as C — an API call as A or B would sign their
- * browsers out (the one-session rule, `support/journey.ts`).
- *
- * LIVE STATUS 2026-10-20 — fails on #1680, so not in sanity yet (it joins once it passes 2/2). Every
- * step up to "A sees the call ringing" passes; B never rings. The socket capture (the `observed`
- * annotation) shows A's real UI emits `kallInitiate` for B, and B — on a restored session and on a
- * fresh sign-in alike — has sent `user-join` and holds a live socket, but no `receiveKallInitiate`
- * (nor any ack to A) arrives; 2/2 attempts on each of 7 runs. If A shows "On Another Call..." instead,
- * B is marked busy by leftover repeat-meeting copies (#1679): end them before blaming this flow.
+ * Journey 10: A voice- or video-calls B from Kall (Connected Devices), B accepts, A toggles mic or
+ * camera, A hangs up. "Connected" = both timers tick past 00:00, which happens only after joining.
+ * Needs A and B as mutual contacts; B's name is looked up as C so A's and B's sessions survive.
+ * Known defect #1680: B never receives the incoming call. Known defect #1679: leftover repeat-meeting
+ * copies can mark B busy ("On Another Call...").
  */
 
 /** How the caller's and the callee's call panel are told apart (GlobalKallSender / GlobalReceiveKall). */
@@ -101,8 +72,7 @@ test.describe(
       await b.addInitScript(() => {
         window.speechSynthesis.speak = () => undefined;
       });
-      // B's socket traffic (socket.io to socketreact): the readiness signal below — any server frame on the
-      // live socket — and the evidence of whether `receiveKallInitiate` ever reached B.
+      // B's socket traffic: the readiness signal, and evidence of whether receiveKallInitiate arrived.
       const bLog: string[] = [];
       let bSocketUp = false;
       b.on('websocket', (ws) => {
@@ -151,13 +121,10 @@ test.describe(
 
       try {
         await test.step('B is signed in and online on Home', async () => {
-          // A fresh sign-in through the login screen (Login.js connectSocket → user-join), the way a
-          // real user arrives; it also re-saves B's session file for the rest of the run.
           await restoreSavedSession(b, testData.victimKpostId, testData.password, STORAGE_STATE_2);
           await waitLoaded(b);
           await expect(b, 'B is signed in').toHaveURL(/\/home/);
-          // Header binds the incoming-call listener on a render only once the socket is connected
-          // (socketService.js getincomingcall): wait for the live socket.
+          // The incoming-call listener is bound only once the socket is connected.
           await expect
             .poll(() => bSocketUp, {
               message: 'B is listening for incoming calls (socket connected)',
@@ -187,7 +154,7 @@ test.describe(
           const initiated = page.waitForResponse((r) => r.url().includes('/kall/initiateKall'), {
             timeout: 30_000,
           });
-          // The Connected Devices row (KallModal.js:240) — the web-to-web call, not SIM/landline.
+          // Connected Devices is the web-to-web call; SIM/landline dial a phone.
           await info
             .locator('div.justify-content-between', { hasText: 'Connected Devices' })
             .last()
@@ -234,8 +201,7 @@ test.describe(
 
         if (video)
           await test.step('A turns the camera off and on again during the call', async () => {
-            // GlobalKallSender.toggleVideoTrack: the button swaps IoVideocam ⇄ IoVideocamOff and gains
-            // `kall-btn--cam-off` while the camera is off.
+            // The button gains kall-btn--cam-off while the camera is off.
             const cam = panel(page).locator('.kall-btn--cam');
             await expect(cam, 'A has a camera control on the video call').toBeVisible();
             await cam.click();
@@ -245,8 +211,6 @@ test.describe(
           });
 
         await test.step('A mutes and unmutes the microphone during the call', async () => {
-          // GlobalKallSender.toggleMic: the button switches icon-KP_53-Mic-on ⇄ icon-KP_52-Mic-Off and
-          // gains `kall-btn--muted` while muted.
           const mic = panel(page).locator('.kall-btn--mic');
           await mic.click();
           await expect(mic, 'muted: the button shows Mic-Off').toHaveClass(/kall-btn--muted/);
@@ -271,8 +235,7 @@ test.describe(
           connected = false;
         });
       } finally {
-        // Both screens as they are NOW — before the clean-up below hangs up — so a failure shows what
-        // the caller and the callee were each looking at.
+        // Screenshot both sides before the clean-up hangs up.
         for (const [who, p] of [
           ['A-caller', page],
           ['B-callee', b],

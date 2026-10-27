@@ -3,16 +3,8 @@ import { expect, test } from '@fixtures';
 import { openConversation } from '../support/katchup';
 
 /**
- * **Contacts** — the address book the messaging/calling modules act on. It has no standalone route; the
- * contact list/search lives inside the Katchup rail (`ContactList/ContactList.js`, categories
- * "Contacts" / "Unknown Contacts" / "Groups" / "Unknown Groups"), block management also on
- * `Settings/BlockedContact`. The API Contacts lifecycle (add → verify → delete, block → unblock) is
- * green; this is the UI side.
- *
- * The read-only checks below are reliable and safe. The write flows (add / block / unblock) are gated
- * behind `CONTACTS_UI_LIFECYCLE=true` and self-cleaning; their exact in-rail triggers
- * (`AddContact.js`, `BlockContact.js`) are deeply nested, so they are first-drafts pending one live
- * recording pass (FIRST-RUN NOTE on each).
+ * Contacts UI: the contact list/search in the Katchup rail and Settings > Blocked Contacts.
+ * The block/unblock write flow is gated behind CONTACTS_UI_LIFECYCLE=true and restores itself.
  */
 test.describe('KPost Contacts — read-only', { tag: ['@ui', '@contacts', '@regression'] }, () => {
   test.skip(
@@ -27,13 +19,8 @@ test.describe('KPost Contacts — read-only', { tag: ['@ui', '@contacts', '@regr
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    // The contact/search box is present and the 2nd QA account is a known contact. Both the Recents and
-    // Contacts tab panels stay mounted (Recents slides off-screen rather than unmounting), each with its
-    // own copy of this contact's avatar — `.last()` is the on-screen Contacts-panel copy (confirmed via
-    // live DOM inspection: the Recents copy always renders first). The name is matched exactly and in
-    // lowercase because the Personal list renders it lowercase ("hamza ali"), distinct from the
-    // Frequently-Accessed strip's title-case, broken-image copy of the same avatar (alt="Hamza Ali"),
-    // which is a separate widget that does not respond to this search box.
+    // Recents and Contacts panels both stay mounted; `.last()` is the on-screen Contacts copy. The
+    // exact lowercase name skips the Frequently-Accessed strip's title-case copy of the same avatar.
     await expect(
       page.locator('[placeholder*="Search" i]').first(),
       'the contact search box is present',
@@ -51,8 +38,7 @@ test.describe('KPost Contacts — read-only', { tag: ['@ui', '@contacts', '@regr
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    // The section lives under the collapsed "General Settings" group and is labelled exactly
-    // "Blocked Contacts" (confirmed from the live DOM) — expand the group, then open the section.
+    // The section sits under the collapsed "General Settings" group.
     await page.getByText('General Settings', { exact: true }).first().click();
     await page.getByText('Blocked Contacts', { exact: true }).first().click();
 
@@ -78,14 +64,8 @@ test.describe(
     );
 
     /**
-     * NEEDS-CODEGEN: the block/unblock trigger lives in the contact's profile/options inside the Katchup
-     * rail (`BlockContact.js`, `handleBlock` → `BlockContactService {contactID, isBlocked}`). Verified on
-     * live this session that the affordance is NOT a plain text/menu item on the open conversation (a
-     * `.icon-KP_144---More-Vertical` force-click surfaces no Block option) — it is a hover-revealed /
-     * deeply-nested in-rail control whose deployed selector needs one interactive `codegen` pass to
-     * capture. The flow (open the contact → Block → confirm → Unblock, self-restoring) and gating are
-     * correct once the selector lands. The API Contacts block/unblock lifecycle is green, so the operation
-     * itself is proven — only the UI-driving selector is pending. Gated, so it never runs by default.
+     * NEEDS-CODEGEN: the Block control (`BlockContact.js`) is a nested in-rail control, not on the
+     * conversation's three-dot menu; its selector still needs one codegen pass.
      */
     test('block then unblock the 2nd QA account, leaving it unblocked @ui', async ({ page }) => {
       await openConversation(page, testData.victimKpostId);

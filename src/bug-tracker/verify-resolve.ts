@@ -3,45 +3,18 @@ import type { BugSummary } from './bugzilla-client';
 import type { ValidationReport } from '../validation-engine/validation-result';
 
 /**
- * Deciding which OPEN, bench-filed bugs this run VERIFIED as fixed — so they can be auto-closed
- * (RESOLVED/FIXED) instead of lingering open after the developer has already fixed them.
- *
- * The safety rule, and why it is safe: a bug is resolved ONLY when the exact check that filed it —
- * its (endpoint, validator) — actually RAN this run and did NOT fail. If the endpoint was skipped
- * or the validator did not execute, the run proved nothing and the bug stays open. And if the
- * bench is wrong, it self-corrects: a later run that finds the fault again REOPENS the ticket. So
- * the worst case is a temporary wrong-close that the next run undoes — never a lost defect.
- *
- * Verification is at the (endpoint, validator) level on purpose. Matching by the `[KP-]` tag alone
- * would be fooled by a "fingerprint shift" (the build changes an error message, the tag changes,
- * and the same fault looks gone) — so we check the underlying behaviour, not the tag.
+ * Decides which open bench-filed bugs this run verified as fixed. A bug closes only when its own
+ * (endpoint, validator) check ran and passed; matching on behaviour, not the tag, survives
+ * fingerprint shifts.
  */
 
 /** Normalizes a validator NAME (from the run) or a bug SUMMARY (free text) to one shared class. */
 export function normalizeValidator(text: string): string {
   const t = text.toLowerCase();
-  /*
-   * The hand-written admin write-fuzz checks (write-fuzz-workflow.spec.ts) record violations under
-   * a ruleId that is ALREADY a precise, per-check identifier — e.g. "ADMIN-WRITE-FUZZ-admin-hr-tier-
-   * attribute-save" or "ADMIN-WRITE-FUZZ-XSS-INJECTION-admin-employee-save". That exact string also
-   * appears verbatim in the filed bug's own summary. Used as the class directly (not collapsed into
-   * one generic bucket), so a "missing field" violation and an "XSS" violation on the SAME endpoint
-   * stay distinguishable — confusing them would let one's pass wrongly auto-resolve the other.
-   * Found 2026-10-01: before this, every one of these fell through to 'other' (NON_VERIFIABLE),
-   * so these bugs could only ever be re-verified by an exact tag match, never by this (endpoint,
-   * validator) check — 17 open tickets sat unverified every run regardless of whether their own
-   * check had actually re-run, purely because of this classification gap.
-   */
+  // Admin write-fuzz rule ids are already per-check, so each is its own class.
   const writeFuzzRule = t.match(/admin-write-fuzz-[a-z0-9-]+/);
   if (writeFuzzRule) return `business-rule.${writeFuzzRule[0]}`;
-  /*
-   * `flowFindingReports` (flow-finding.ts) records a lifecycle write-flow crash under the FIXED
-   * validator name `flow.server-error`, with message text "write flow received HTTP {status} — a
-   * server error where a 4xx (or success) belongs ... never crash the server." Must map to that
-   * EXACT class, not the generic `response.status-code` catch-all below — they are different live
-   * validators, and conflating them would make this check pass on an unrelated status-code success
-   * rather than on this ticket's own flow-crash check actually re-running clean.
-   */
+  // A lifecycle flow crash is its own class, not the generic status-code one below.
   if (/write flow received http|never crash the server/.test(t)) return 'flow.server-error';
   if (/security[- ]?headers/.test(t)) return 'security.security-headers';
   if (/missing[- ]?token|no authorization header/.test(t)) return 'auth.missing-token';
@@ -96,12 +69,7 @@ export interface RunIndex {
   ranClass: Set<string>;
 }
 
-/**
- * A FAILED result whose only evidence is that the server never answered (timeout, dropped socket,
- * disposed request context, throttling). It proves neither "fixed" nor "still broken" — the same rule
- * the validity gate applies before filing. Without this, a run against a hung or throttled host would
- * mark every bug "confirmed still failing" and tell developers so in a dated comment — a false claim.
- */
+/** The server never answered (timeout, dropped socket, 429): proves neither fixed nor broken. */
 const ENVIRONMENTAL_FAILURE =
   /Timeout\s*\d+\s*ms exceeded|no HTTP response|Request context disposed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|socket hang up|\b429\b|Too many requests/i;
 
@@ -119,8 +87,7 @@ export function buildRunIndex(reports: readonly ValidationReport[]): RunIndex {
       if (r.status === 'SKIPPED') continue; // a skipped check verified nothing
       if (r.status === 'FAILED') {
         const text = `${r.message} ${r.error?.message ?? ''}`;
-        // A multi-case check can mix one timed-out case with genuine "expected 400, got 200" ones —
-        // that is still real evidence, so only a failure with NO real HTTP answer in it is discarded.
+        // Drop only failures with no real HTTP answer; a mixed multi-case failure is evidence.
         if (ENVIRONMENTAL_FAILURE.test(text) && !/\bgot \d{3}\b/i.test(text)) continue;
       }
       const endpoint = normalizeEndpoint(r.endpoint);
@@ -150,16 +117,8 @@ export interface ResolveDecision {
 }
 
 /**
- * The UI-side counterpart of `RunIndex` — same safety rule (resolve only what genuinely ran clean
- * this pass), applied where there is no endpoint/validator pair: a UI finding's identity is the
- * Playwright test that produced it.
- *
- * Added 2026-10-07: before this, no mechanism checked open UI bugs against anything at all — a UI
- * run's auto-resolve pass always reported "checked 0 bugs", so a UI ticket only ever got touched
- * when its exact scenario happened to rerun AND its fingerprint still matched (see the
- * `feedback_ui_bugs_no_auto_verify_mechanism` incident). This closes that gap for the common case:
- * one ticket, one originating test. A platform-wide UI ticket (no single originating test) is not
- * covered yet — it falls through to `'could not match a single originating test'`, same as before.
+ * The UI counterpart of `RunIndex`, keyed on the originating test title. A platform-wide UI ticket
+ * (no single originating test) is not verified this way.
  */
 export interface UiRunIndex {
   /** Test titles that ran and did NOT pass cleanly this run (failed, or flaky across retries). */
@@ -198,9 +157,7 @@ export function buildUiRunIndex(records: readonly UiTestOutcome[]): UiRunIndex {
     if (r.outcome === 'skipped') continue; // a skipped test verified nothing
     idx.ranTitle.add(r.title);
     if (r.project) add(idx.ranBy, r.project, r.title);
-    // 'flaky' (failed at least once, then passed on retry) is treated as NOT a clean pass — the
-    // same caution this bench applies elsewhere to an intermittent reproduction: a flake is not
-    // proof of a fix, it is proof the fault is inconsistent.
+    // 'flaky' is not a clean pass: a flake is not proof of a fix.
     if (r.outcome !== 'expected') {
       idx.failedTitle.add(r.title);
       if (r.project) add(idx.failedBy, r.project, r.title);
@@ -211,9 +168,8 @@ export function buildUiRunIndex(records: readonly UiTestOutcome[]): UiRunIndex {
 }
 
 /**
- * The test projects that re-check a UI bug, from its whiteboard `[browser:chromium,firefox]` tag.
- * The tag holds real browser names (the tracker's list), so a KPost Admin UI bug's `chromium` is the
- * `admin-ui` project that filed it (`projectForBrowser`); an older `[browser:admin-ui]` still matches.
+ * The test projects that re-check a UI bug, from its `[browser:…]` whiteboard tag (Admin UI's
+ * `chromium` is `admin-ui`).
  */
 function bugBrowsers(bug: BugSummary): string[] {
   const m = (bug.whiteboard ?? '').match(/\[browser:([^\]]+)\]/i);
@@ -225,16 +181,9 @@ function bugBrowsers(bug: BugSummary): string[] {
     : [];
 }
 
-/**
- * A bug's summary is `[TAG] <original test title>`, truncated with a trailing `…` when the title
- * was over Bugzilla's 255-character summary column (`buildSummary`). An exact match is used when
- * the title fit whole; a prefix match otherwise — matching how it was truncated, not guessing.
- */
+/** Whether a bug summary (tag stripped, maybe truncated with `…`) belongs to this test title. */
 export function uiTitleMatches(wantedFromSummary: string, actualTestTitle: string): boolean {
-  // A filed UI bug's summary is `<test title>: <first line of the error>` (`candidateFromUiFailure`),
-  // not the bare title — so the test is a PREFIX of the summary, followed by ": ". Until 2026-10-08
-  // only an exact match was accepted, which matched 0 of 24 open chromium bugs: every one read as
-  // "its test did not run" even when it had just run.
+  // A UI summary is `<test title>: <error line>`, so the title is a prefix followed by ": ".
   const base = wantedFromSummary.endsWith('…') ? wantedFromSummary.slice(0, -1) : wantedFromSummary;
   if (base === actualTestTitle || base.startsWith(`${actualTestTitle}: `)) return true;
   // Summary truncated inside the title itself (a very long test name).
@@ -242,10 +191,8 @@ export function uiTitleMatches(wantedFromSummary: string, actualTestTitle: strin
 }
 
 /**
- * The KINDS of problem a UI failure message reports — layout, broken images, slow render, a JS error,
- * a resource failing with a given status, a freeze, a crash when offline — so a bug can be matched to
- * its own problem rather than to any failure of the same multi-check test. Empty when the message
- * carries none of these markers (then any failure of the test still counts, as before).
+ * The kinds of problem a UI failure message reports, so a bug matches its own problem rather than
+ * any failure of the same multi-check test. Empty when there are no markers.
  */
 export function uiProblemSignature(text: string): Set<string> {
   const sig = new Set<string>();
@@ -289,11 +236,7 @@ export function classifyUiResolve(
     };
   }
 
-  /*
-   * A bug tagged with its browsers is verified on THOSE browsers only, and closed only when its test
-   * ran and passed cleanly on every one of them. Without this, a chromium-only run would close a
-   * Firefox-only bug (e.g. #980) just because the same test passes on chromium.
-   */
+  // A browser-tagged bug is verified only on its own browsers, and must be clean on all of them.
   const browsers = bugBrowsers(bug);
   if (browsers.length) {
     for (const browser of browsers) {
@@ -325,12 +268,7 @@ export function classifyUiResolve(
       [...(index.failedBy.get(browser) ?? [])].some((t) => uiTitleMatches(title, t)),
     );
     if (failingOn.length) {
-      /*
-       * One screen test checks several things (layout, images, speed, crashes…), so it can fail for a
-       * reason that has nothing to do with THIS bug. Only call the bug "still broken" when its OWN
-       * problem shows up in this run's failure (2026-10-09: #1104, a layout-overflow bug, was marked
-       * still broken although its test failed only on render speed and news images).
-       */
+      // A multi-check test can fail for another reason: broken only if this bug's problem shows.
       const own = uiProblemSignature(title.replace(/^[^:]*:\s*/, ''));
       const reproducedOn = own.size
         ? failingOn.filter((browser) => {
@@ -406,12 +344,9 @@ export function parseAffectedEndpoints(description: string): string[] {
 }
 
 /**
- * Decides whether one open bench bug was verified fixed this run. An endpoint-specific bug is fixed
- * only when its own (endpoint, validator) ran and passed. A systemic (platform-wide) bug is verified
- * against the endpoints IT LISTS (`affectedEndpoints`, parsed from its description) — a platform fault
- * that no longer fails on any of the ticket's own endpoints is fixed FOR THAT TICKET, even if the same
- * class still fails on an unrelated endpoint (that unrelated failure is a different ticket). Only when
- * the ticket's affected endpoints are unknown does it fall back to the global "fails nowhere" check.
+ * Whether one open bench bug was verified fixed: its own (endpoint, validator) ran and passed. A
+ * systemic bug is checked against the endpoints it lists, falling back to "fails nowhere" when
+ * those are unknown.
  */
 export function classifyResolve(
   bug: BugSummary,

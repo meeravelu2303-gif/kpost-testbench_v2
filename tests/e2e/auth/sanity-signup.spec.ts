@@ -10,18 +10,8 @@ import {
 } from '../support/sanity-account';
 
 /**
- * SANITY · signup — one brand-new person signs up on the real screens, signs in, and sees their own
- * name; then the account is removed again (owner, 2026-10-20).
- *
- * - ONE account per run: `sanitykpost<N>@<personal domain>` with mobile `90000008NN`, N being the
- *   lowest number still free (normally 1, because every run deletes its account). Retries are off,
- *   so a failure can never sign up a second one.
- * - Mock OTP: the signup mobile OTP goes through the test gateway (`otpBypass`, code 123456) — no
- *   SMS is sent (CommonServiceImpl.sendOtp).
- * - Removal is a direct delete of the rows the signup created (`support/sanity-account.ts` says why
- *   the app's own Delete Account cannot be used: it sends a real SMS and only deactivates).
- *
- * Steps are the proven ones of JOURNEY 1a (`journeys/first-use.spec.ts`), on a fresh identity.
+ * Sanity signup: one new `sanitykpost<N>` account signs up (mock OTP), signs in and sees its name, then
+ * its rows are deleted from the DB. Retries are off so a run never creates a second account.
  */
 const PASSWORD = 'QaBench@2026';
 

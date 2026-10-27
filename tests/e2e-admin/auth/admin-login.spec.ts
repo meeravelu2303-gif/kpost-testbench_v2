@@ -3,14 +3,8 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 
 /**
- * Admin HR-Setup's OWN login screen (`Login.js`, `/login`) — a full KPOST-ID/mobile+password flow
- * with its own forgot-password OTP flow. Confirmed from the 2026-10-05 frontend ground-truth audit
- * to have ZERO existing test coverage: the bench's SSO setup (`auth-admin.setup.ts`) always seeds
- * the session via the `Callback.js` token hand-off instead, so this screen — the one a real admin
- * actually sees and uses whenever that SSO hand-off doesn't happen — has never been exercised.
- *
- * Uses a clean, unauthenticated context (no planted SSO token) so the real login form is reachable,
- * the same way a real first-time visitor would see it.
+ * The Admin app's own login screen, which the SSO setup always bypasses. Runs in a clean,
+ * signed-out context so the real login form is reachable.
  */
 test.describe('Admin/HR-Setup Login screen', { tag: '@admin-ui' }, () => {
   test.use({ storageState: { cookies: [], origins: [] } });

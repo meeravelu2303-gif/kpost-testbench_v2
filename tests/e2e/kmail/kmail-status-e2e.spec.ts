@@ -8,21 +8,8 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import type { Page } from '@playwright/test';
 
 /**
- * KMail through the screens — Status of Mails, starring, priority and voice search (live-explored
- * 2026-10-15; source components/Kmail):
- *   - Status of Mails tab: totals from GET /common/statusOfKmailsContactsTotalCount/, each list from
- *     POST /common/statusOfKmailsContactsWithCount/ {kmailStatusFlag: 0 Sent Mail Not Opened,
- *     1 Reply Not Received, 2 Reply Not Sent} → rows of {receiver|sender, count}; a contact row opens
- *     that contact's mails (ContactMailStatus).
- *   - Star: `.icon-KP_43-Fav` on a mail → POST /common/setKmailAsImportant/ → "Mail marked as
- *     important" / "unimportant"; a starred mail's star is coloured (#eba708).
- *   - Priority: Write Mail chip (`.priorityIconInside`, default Low) → Low 0 / Normal 1 / High 2 in
- *     postMail; the mail shows `icon-KP_76-Pri-Low` / `icon-KP_77-pri-medium` / `icon-KP_78-Pri-High`.
- *   - Voice search: the search bar's mic (common/MicInput → browser SpeechRecognition) puts the heard
- *     text in the search box. Headless browsers have no speech engine, so a stand-in recogniser
- *     "hears" a fixed phrase — this checks KMail's wiring, not the browser's speech engine.
- * Accounts: A = default page (qatest1), B = STORAGE_STATE_2 (qatest2); seed mails for the
- * one-account tests come from qatest3 through the API (never logging a browser account in via API).
+ * KMail Status of Mails (counts per flag, Clear All), starring, priority and voice search. Voice
+ * search uses a stand-in SpeechRecognition (headless has none). Seed mails come from qatest3 via the API.
  */
 const C: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-3')!;
 type Flag = 0 | 1 | 2;
@@ -128,10 +115,7 @@ test.describe(
       return (res.request().postDataJSON() ?? {}) as Record<string, unknown>;
     }
 
-    /**
-     * Open Status of Mails › `flag` on a fresh KMail page and return what the screen shows: the total
-     * in the side list ("Reply Not Sent • 31") and the per-contact count the list is rendered from.
-     */
+    /** Open Status of Mails › `flag` and return the side-list total and the per-contact count. */
     async function status(
       p: Page,
       flag: Flag,
@@ -208,8 +192,7 @@ test.describe(
           bNotSent0.forContact + 1,
         );
 
-        // B opens the mail → it leaves A's Sent Mail Not Opened. Opening is the content call
-        // (sentAndInboxMailContent, kmailType "Received"), which is where the server marks it read.
+        // B opens the mail (the content call marks it read), so it leaves A's Sent Mail Not Opened.
         const opened = b.waitForResponse(
           (r) => r.url().includes('/readMail/sentAndInboxMailContent'),
           {
@@ -411,10 +394,8 @@ test.describe(
       page,
       endpoints,
     }) => {
-      // Clear All (StatusType.js → POST /common/clearStatusOfAllKmailsContacts {kmailStatusFlag,
-      // selectMailType:"A"}) only sets a "cleared" flag on the last 30 days' rows
-      // (CommonDaoImpl.clearAllKmail* → SET … = 'C'); it must not touch the mails themselves.
-      // Uses "Reply Not Sent" (mail received, not replied) with a fresh mail from qatest3.
+      // Clear All only flags the last 30 days' status rows as cleared; the mails themselves stay.
+      // Uses "Reply Not Sent" with a fresh mail from qatest3.
       const subject = `QA KMail clear all ${Date.now()}`;
       await seed(endpoints, subject);
       const before = await status(page, 2, testData.personal3KpostId);
@@ -467,12 +448,9 @@ test.describe(
 
       // The mail itself is untouched: it still opens normally.
       await openMail(page, subject);
-      // Clear All on an empty list answers 400 "unable to clear Mails" and the app shows "Something
-      // Went Wrong !" — that 400 was reported as #681 and closed INVALID (judged not a defect), so
-      // it is only recorded in the observation above, not asserted.
+      // The 400 "unable to clear Mails" on an empty list was judged not a defect, so it is only recorded.
 
-      // After a reload the list must stay empty — and opening the empty list must not crash the
-      // page (the server sends "data":"No Content" for an empty list — #1362).
+      // After a reload the list stays empty and opening it must not crash (#1362: "data":"No Content").
       const after = await status(page, 2, testData.personal3KpostId);
       const shotEmpty = test.info().outputPath('clear-all-after-reload.png');
       await page.screenshot({ path: shotEmpty });
@@ -495,8 +473,7 @@ test.describe(
       page,
       browserName,
     }) => {
-      // common/MicInput calls alert("Microphone not available in this browser") as soon as it
-      // mounts when the browser has no SpeechRecognition — on every page with a search bar.
+      // MicInput alerts "Microphone not available" on mount when the browser has no SpeechRecognition.
       const dialogs: string[] = [];
       page.on('dialog', (d) => {
         dialogs.push(`${d.type()}: ${d.message()}`);

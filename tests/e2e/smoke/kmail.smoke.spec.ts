@@ -34,8 +34,7 @@ test.describe(
 
       const b = await openSession(browser, STORAGE_STATE_2);
       try {
-        // What the server hands back when the recipient opens the mail: an empty record is the known
-        // intermittent fault #1348 (the mail opens with no text), so the failure explains itself.
+        // Known intermittent defect #1348: the opened mail comes back as an empty record.
         const opened: string[] = [];
         b.page.on('response', (r) => {
           if (!r.url().includes('/readMail/sentAndInboxMailContent')) return;
@@ -49,8 +48,7 @@ test.describe(
             .catch(() => undefined);
         });
         await openMail(b.page, subject);
-        // Opening from search shows the conversation's mail cards; the app expands the newest one only
-        // sometimes (live 2026-10-22), so read it the way a person does: click the mail, then read.
+        // The newest mail card is only sometimes expanded, so click it before reading.
         const text = b.page.getByText(body, { exact: false }).first();
         if (!(await text.isVisible().catch(() => false))) {
           await b.page

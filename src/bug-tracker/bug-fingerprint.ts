@@ -1,11 +1,9 @@
 import { createHash } from 'node:crypto';
 
 /**
- * A defect's identity must be stable across runs, or dedupe never catches anything: the tag is
- * what a re-run searches Bugzilla for. Failure messages carry values that change every run —
- * correlation IDs, generated e-mails, UUIDs, ports, durations — so they are collapsed to
- * placeholders before hashing. The full message still becomes the ticket text; only the hashing
- * input is normalised.
+ * Run-specific values (correlation ids, e-mails, UUIDs, ports, durations) replaced before hashing,
+ * so a defect's tag stays stable across runs. Only the hash input is normalised, not the ticket
+ * text.
  */
 const VOLATILE_PATTERNS: readonly [RegExp, string][] = [
   [/\btb-[0-9a-f-]{8,}\b/gi, '<correlation>'],
@@ -35,11 +33,7 @@ export function normalizeForFingerprint(message: string): string {
 const digest = (key: string): string =>
   createHash('sha1').update(key).digest('hex').slice(0, 6).toUpperCase();
 
-/**
- * Identity of an API defect: the endpoint plus the validator plus the normalised message.
- * The endpoint is part of it on purpose — the same validator failing on two endpoints is two
- * tickets, because they are two components and usually two fixes.
- */
+/** API defect identity: endpoint + validator + normalised message (two endpoints, two fixes). */
 export function apiFingerprint(input: {
   prefix: string;
   endpointId: string;
@@ -50,14 +44,7 @@ export function apiFingerprint(input: {
   return `${input.prefix}-${digest(key)}`;
 }
 
-/**
- * Identity of a PLATFORM-WIDE defect: one shared root cause that surfaces on every endpoint — a
- * missing gateway header, the auth filter answering the wrong status. The endpoint is deliberately
- * EXCLUDED (the opposite of `apiFingerprint`), so the same fault across sixty endpoints collapses
- * to ONE ticket that lists them, instead of sixty near-duplicates that bury the endpoint-specific
- * bugs. Two different symptoms (2/5 headers vs 5/5 headers) still hash apart, because the message
- * differs — so a real distinction is never merged away.
- */
+/** Platform-wide defect identity: no endpoint, so one fault on many endpoints is one ticket. */
 export function systemicFingerprint(input: {
   prefix: string;
   validatorName: string;
@@ -68,25 +55,15 @@ export function systemicFingerprint(input: {
 }
 
 /**
- * Identity of a PLATFORM-WIDE UI defect: a shared background component (a global widget, a
- * socket connection, a third-party script) that fails the same way on every screen it appears on
- * — the screen-under-test has nothing to do with the fault, so including it (as `uiFingerprint`
- * does) would create one ticket per screen for a single root cause. `causeKey` is a short, STABLE
- * label the caller picks for the known cause (e.g. `rss-widget-cors`), not the raw message — the
- * raw message usually carries a screen-specific or request-specific URL that would defeat
- * deduplication if hashed directly. See `humanizeUiFailure` in `bug-candidate.ts` for the patterns
- * that resolve to a `causeKey`.
+ * Identity of a platform-wide UI defect (a shared component failing on every screen): a stable
+ * `causeKey` such as `rss-widget-cors`, never the screen or the raw message.
  */
 export function uiSystemicFingerprint(input: { prefix: string; causeKey: string }): string {
   const key = `ui-platform|${input.causeKey}`;
   return `${input.prefix}-${digest(key)}`;
 }
 
-/**
- * Identity of a UI defect: spec file plus test title plus the normalised first error line.
- * The browser project is deliberately excluded, so one fault across three browsers is one
- * ticket that lists them (`[browser:…]`), not three.
- */
+/** UI defect identity: spec + title + first error line; no browser, so one ticket covers all. */
 export function uiFingerprint(input: {
   prefix: string;
   file: string;

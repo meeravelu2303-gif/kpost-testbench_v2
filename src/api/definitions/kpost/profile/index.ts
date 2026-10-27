@@ -5,18 +5,7 @@ import { profileImageApis } from './image.api';
 import { profileReadApis } from './read.api';
 import { profileWriteApis } from './write.api';
 
-/**
- * The KPost **Profile** module — `/v2/profile/*`. The account owner's own profile: details, search,
- * education/experience, images, privacy, device designation and account security.
- *
- * **Undocumented.** None of the five documents describe Profile, so these definitions carry no FR
- * ids; their contracts come from the workbook and the live web client (`KPOST_REACTJS_2023_V1`).
- *
- *   read.api.ts    fetch, search, digital card, languages, downloads   (live-safe)
- *   write.api.ts   about, designation, basic, contact, privacy, education, share
- *   image.api.ts   profile / cover / signature / attachment uploads
- *   device.api.ts  primary/secondary device (OTP-gated), password, deactivate
- */
+/** Profile (`/v2/profile/*`): reads, profile writes, image uploads and device/account security. */
 export const profileApis: EndpointDefinition[] = [
   ...profileReadApis,
   ...profileWriteApis,

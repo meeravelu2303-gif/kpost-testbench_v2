@@ -1,32 +1,12 @@
 import { expect, test } from '@fixtures';
 
 /**
- * Profile **device/security endpoints — architecturally excluded from live testing, by design**.
- *
- * Every endpoint in `device.api.ts` falls into one of three categories the bench's own safety
- * design (`src/validation-engine/production-guard.ts`) refuses on live, unconditionally:
- *
- *   - **OTP senders** (`sideEffect: 'external'`, `otpDependent: 'sends'`) — deliver a real SMS/
- *     email. Blocked by the kill-switch in every mode; only a confirmed OTP test gateway
- *     (`OTP_TEST_GATEWAY` + `TEST_DB_MODE`) opens them, and this bench has neither configured.
- *   - **Session-destroyers** (`setDeviceAs*`, `updateDeviceAs*`, `deactivateAccount`) — named
- *     explicitly in the guard's `isSessionDestroyer` pattern, which stays blocked EVEN on a
- *     confirmed OTP test gateway: running them would displace or disable the account every other
- *     test in the suite logs in with.
- *   - **Global credential/account changes** (`changePassword`, `deactivateAccount`) —
- *     `sideEffect: 'global'`, never cleared for live regardless of any flag.
- *
- * This is not a coverage gap to close — it is the framework correctly refusing to let an automated
- * run text a real phone, lock the QA account out mid-suite, or disable it. Recorded here as
- * explicit, individually-reasoned skips (Phase 1's "don't leave a gap silent") rather than folded
- * into a single blanket note, so each endpoint's specific block reason is traceable.
+ * Profile device/security endpoints are refused on live by the production guard: OTP senders,
+ * session destroyers and global account changes. Each gets an explicit skip with its reason.
  */
 
-// Ids deliberately NOT collected into an array of string literals: this file's coverage-depth
-// audit counts an endpoint id as "addressed" when its exact quoted literal appears anywhere in a
-// rich test file, and these are recorded gaps, not real business-rule tests — each id is embedded
-// only inside its own test title (a template literal, not a standalone quoted match) so the audit
-// keeps counting them honestly as not-yet-covered.
+// Ids appear only inside test titles, not as quoted literals, so the coverage audit keeps
+// counting these endpoints as not covered.
 
 test.describe(
   'KPost Profile · device/security endpoints (recorded architectural gaps)',

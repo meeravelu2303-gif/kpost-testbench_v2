@@ -13,11 +13,8 @@ import { readBugzillaConfig } from '../../src/config/bugzilla.config';
 import { expect, test } from '@fixtures';
 
 /**
- * A gated lifecycle flow finds bugs the engine never touches (a 5xx on a real write). This proves
- * those findings reach Bugzilla through the SAME pipeline as engine bugs — so they inherit every
- * guarantee the owner requires: no duplicate (a stable `[KP-]` dedupe tag), no invalid bug (the
- * validity gate), and no false bug (only a 5xx is collected; a 4xx — which might be our payload — is
- * never turned into a finding).
+ * Lifecycle-flow findings (a 5xx on a real write) go through the same pipeline as engine bugs:
+ * stable `[KP-]` dedupe tag, validity gate, and only a 5xx is collected (a 4xx may be our payload).
  */
 
 const config = { ...readBugzillaConfig(), tagPrefix: 'KP' };

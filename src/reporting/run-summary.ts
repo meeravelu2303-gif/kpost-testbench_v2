@@ -1,17 +1,9 @@
 import type { ValidationReport, ValidationStatus } from '../validation-engine/validation-result';
 
 /**
- * The EXECUTION-HEALTH section of the single run report — `reports/REPORT.md` (+ `REPORT.json`),
- * written on every run by the reporter.
- *
- * It answers, in one screen: how many endpoints were tested and how many checks passed / failed /
- * skipped / warned, broken down by module and by category, with the top failing validators (so the
- * systemic noise collapses to its real size) and the worst endpoints; and the SAME for the UI —
- * per browser project and per spec, with the real failures.
- *
- * This is EXECUTION HEALTH; the bug report (distinct defects found and filed) is the section that
- * follows it in the same file. API numbers are check-level (from the validation-report attachments);
- * UI numbers are test-level (from Playwright outcomes) — each labelled so the two are never conflated.
+ * The execution-health section of `reports/REPORT.md`/`.json`: checks by module, category,
+ * validator and endpoint, plus UI results per project and spec. API numbers are check-level, UI
+ * numbers test-level.
  */
 
 /** One UI/browser test outcome, as seen by the Playwright reporter. */
@@ -98,12 +90,7 @@ export interface RunSummary {
     byCategory: CategoryRow[];
     topFailingValidators: ValidatorRow[];
     endpointsWithFailures: EndpointRow[];
-    /**
-     * The honest breakdown of WHY checks skipped, so the raw skip count is not read as a coverage
-     * hole. Most skips are a validator correctly declining an endpoint it cannot apply to (a body
-     * fuzzer on a GET, an authz check on a public route) — that is full coverage of what applies,
-     * not a gap. See `classifySkip`.
-     */
+    /** Why checks skipped (see `classifySkip`), so the count is not read as a coverage hole. */
     skips: {
       notApplicable: number;
       recoverable: number;
@@ -111,11 +98,7 @@ export interface RunSummary {
       environmental: number;
       deliberate: number;
     };
-    /**
-     * Coverage measured over the checks that actually APPLIED and ran (passed + failed), ignoring the
-     * inapplicable matrix cells. This is the number that means something — a GET fully checked by the
-     * validators that apply to a GET is 100% here, even though the body-fuzzers "skipped" it.
-     */
+    /** Pass rate over the checks that applied and ran, ignoring inapplicable cells. */
     applicable: { ran: number; passed: number; passRate: number };
   };
   ui: {
@@ -144,22 +127,9 @@ const MAX_ENDPOINT_ROWS = 40;
 const MAX_VALIDATOR_ROWS = 20;
 
 /**
- * Why a check skipped, in the terms that matter for coverage.
- *
- *  - **not-applicable** the validator cannot apply to this endpoint/response by design — a body
- *    fuzzer on a GET with no body, an authz check on a public route, an email-format check on a
- *    response with no email field. This is NOT a gap: it is full coverage of what applies.
- *  - **recoverable** a contract or config gap the team can close — a missing response schema, an
- *    undocumented error envelope, an unconfigured cross-tenant scenario. Filling it makes the check
- *    run.
- *  - **blocked-by-defect** a dependent check that could not run because the primary request already
- *    failed (a 401/500/400, or a failed prerequisite). It recovers automatically when the root
- *    defect is fixed — it is not a separate gap.
- *  - **environmental** a timeout or no-response — transient, not a coverage decision.
- *  - **deliberate** switched off for this endpoint on purpose (`skipValidators`).
- *
- * The point of splitting these is that a single "skipped" total is misleading: the overwhelming
- * majority is not-applicable-by-design, and only `recoverable` is a coverage hole anyone can act on.
+ * Why a check skipped: not-applicable (by design), recoverable (a contract/config gap — the only
+ * real coverage hole), blocked-by-defect (the primary request failed), environmental, or
+ * deliberate.
  */
 export type SkipClass =
   'not-applicable' | 'recoverable' | 'blocked-by-defect' | 'environmental' | 'deliberate';
@@ -229,9 +199,7 @@ export function buildRunSummary(input: RunSummaryInput): RunSummary {
     passRate: ran > 0 ? Math.round((checks.passed / ran) * 1000) / 10 : 0,
   };
 
-  // Aggregate by DISTINCT endpoint — an endpoint can produce several reports in one run (multiple
-  // test blocks, or a retry), and counting each report as an endpoint would inflate the totals and
-  // list the same endpoint many times. One row per `suite + endpoint`, summing its checks.
+  // One row per `suite + endpoint`: an endpoint can produce several reports in one run.
   const endpointAgg = new Map<string, EndpointRow>();
   for (const report of reports) {
     const key = `${report.suite}  ${report.endpoint}`;
@@ -526,17 +494,7 @@ const pad = (value: string | number, width: number, right = false): string => {
 const share = (part: number, whole: number): string =>
   whole === 0 ? '  — ' : `${((part / whole) * 100).toFixed(1).padStart(5)}%`;
 
-/**
- * The end-of-run summary printed to the terminal.
- *
- * The same numbers already go to `reports/REPORT.md`, but a file nobody opens is not a report. This
- * is the version a person reads the moment a run finishes: how much ran, what passed, how much of
- * the API surface was actually covered, and — separately — the browser results.
- *
- * API numbers are CHECK-level and UI numbers are TEST-level. They are never added together, because
- * one endpoint contributes dozens of checks and one browser test contributes one result; a combined
- * "total" would be a number with no meaning. Each block says which it is.
- */
+/** End-of-run terminal summary. API (check-level) and UI (test-level) counts are never summed. */
 export function renderRunSummaryConsole(s: RunSummary): string {
   const out: string[] = [];
   const api = s.api;
@@ -570,11 +528,7 @@ export function renderRunSummaryConsole(s: RunSummary): string {
     out.push(`    warnings           ${pad(c.warnings, 6, true)}   ${share(c.warnings, c.total)}`);
     out.push(`    skipped            ${pad(c.skipped, 6, true)}   ${share(c.skipped, c.total)}`);
 
-    /*
-     * Applicable coverage — the number that means something. Of the checks that actually applied and
-     * ran, how many passed. The skipped total above is dominated by validators correctly declining
-     * endpoints they cannot apply to, so a raw "X% skipped" understates coverage badly.
-     */
+    // Applicable coverage: of the checks that applied and ran, how many passed.
     out.push('');
     out.push(
       `  Applicable coverage  ${api.applicable.passed}/${api.applicable.ran} checks passed  (${api.applicable.passRate}%)`,
@@ -611,11 +565,7 @@ export function renderRunSummaryConsole(s: RunSummary): string {
     }
 
     if (api.topFailingValidators.length) {
-      /*
-       * The top failing validators, because a platform-wide fault inflates the raw failure count
-       * enormously — 71 "information-disclosure" failures are one missing header, not 71 defects.
-       * Showing this next to the totals stops the headline number being read as 71 problems.
-       */
+      // Top failing validators: one platform-wide fault can inflate the raw failure count.
       out.push('');
       out.push('  Most frequent failures (one root cause can span many endpoints):');
       for (const row of api.topFailingValidators.slice(0, 5)) {

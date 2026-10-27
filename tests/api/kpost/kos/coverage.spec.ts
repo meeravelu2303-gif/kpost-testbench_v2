@@ -41,11 +41,8 @@ test.describe('KPost KOS · module coverage', () => {
   });
 
   test('the AI generation endpoints are metered and never productionSafe @framework', () => {
-    /*
-     * They call a real, billed AI service, so they must never run on a default live pass — the cost
-     * gate is the `metered` tag plus `productionSafe: false` (the engine never sends them), with the
-     * `KOS_AI_LIVE` flag gating the one owner-authorized test that does.
-     */
+    // Billed AI calls: `metered` + productionSafe false keep the engine from sending them;
+    // only the KOS_AI_LIVE test does.
     const ai = kosApis.filter((api) => api.tags?.includes('metered'));
     expect(
       ai.map((api) => api.id).sort(),

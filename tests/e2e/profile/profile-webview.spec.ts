@@ -4,11 +4,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames, settleNetwork } from '../support/settle';
 
 /**
- * `/profile-webview/:id` (`ProfileWebView.js`) — a PUBLIC, read-only shareable profile card, no auth
- * required. Confirmed from source: it calls the genuinely public `POST /v2/profile/shareUserDetails/`
- * (Authorization header commented out) and, on a non-SUCCESS response — the expected outcome for a
- * malformed/stranger id — cleanly `navigate("/not-found")`, no crash. This is the CORRECT behavior to
- * assert directly, matching the source's own confirmed handling.
+ * /profile-webview/:id: the public, no-login profile card (POST /v2/profile/shareUserDetails/). An
+ * unknown id must redirect to /not-found; a valid id must render without leaking credential fields.
  */
 test.describe(
   'KPost — /profile-webview/:id public profile card',
@@ -34,35 +31,15 @@ test.describe(
       expect(health.pageErrors, 'no uncaught JS error on an invalid id').toEqual([]);
     });
 
-    /**
-     * The valid-id case, never previously covered: does the public card actually render for a real
-     * account, and — since this screen is reachable with NO login and NO Authorization header — does
-     * the backend's own `shareUserDetails` response mask sensitive fields itself, rather than relying on
-     * the frontend's purely cosmetic `isMasked()` check (source: ProfileWebView.js's `isMasked = (value)
-     * => typeof value === "string" && value.includes("X")` — a display-only heuristic, not a security
-     * boundary; a caller hitting the API directly, bypassing this component entirely, would see whatever
-     * the backend actually sends).
-     *
-     * Confirmed live 2026-10-04: the backend DOES mask server-side (`mobileNumber` comes back as
-     * "9X9X9X3X5X", `dateOfBirth` as "19XX-04-XX", no password/kmailPassword/accessCode fields at all) —
-     * this is correct, secure behavior, not a bug. Note for the record, not filed: the route's `:id` is
-     * an AES-encrypted kpostID (`src/utils/Crypto.js`), but the AES key is a hardcoded literal
-     * ("your-secret-key") shipped in the public JS bundle — trivially reversible/forgeable by anyone, so
-     * the encryption provides no real access control. Low impact in practice since the endpoint already
-     * masks every sensitive field for any caller regardless of how the id was obtained, and the card is
-     * intentionally public by design — but worth knowing if a real access-control decision is ever added
-     * here later, since this "encryption" would not back it up.
-     */
+    // The backend must mask sensitive fields itself: the frontend's isMasked() is display-only, and
+    // the endpoint needs no login.
     test('a valid id renders the public card, with no unmasked credential fields in the raw response @ui', async ({
       page,
     }) => {
       test.skip(!testData.victimKpostId, 'needs a real live account (QA_VICTIM_KPOST_ID)');
 
-      // The route param is NOT the raw kpostID — ProfileWebView.js decrypts it first
-      // (`decryptId(id)`, AES via crypto-js, src/utils/Crypto.js) before using it. Mint a matching
-      // encrypted id the same way the app does, via crypto-js loaded live in the page itself (the bench
-      // has no crypto-js dependency of its own, and hand-rolling AES/OpenSSL-KDF compatibly is not worth
-      // it for one id).
+      // The route param is the AES-encrypted kpostID; mint it as the app does, with crypto-js loaded
+      // in the page (the bench has no crypto-js dependency).
       await page.goto('about:blank');
       await page.addScriptTag({
         url: 'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js',

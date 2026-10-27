@@ -1,6 +1,3 @@
-// An orchestrated profile write lifecycle (read → update → read back → restore), not simple
-// assertions; the conditionals guard optional steps and restore of real live data.
-
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
@@ -9,31 +6,15 @@ import { JPEG_1X1 } from '@api/definitions/kpost/profile/image.api';
 import { expect, test } from '@fixtures';
 
 /**
- * Profile **write lifecycle** — the updates the FRD-less module supports, end to end, on a real
- * host, each **self-restoring**: read the current value, change it, read it back to confirm, then
- * put the original back. Nothing is left altered on the account.
- *
- * Gated behind `PROFILE_LIFECYCLE=true` (it writes real profile data), and every write call carries
- * `allowLiveWrite: true` — the same authorized-write control Katchup uses. `expect.soft` on findings
- * so one run reports every defect.
+ * Profile write lifecycle: read, update, read back, restore, so nothing is left altered.
+ * Gated behind `PROFILE_LIFECYCLE=true` because it writes real profile data.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 
 /**
- * The caller's editable profile fields. The about/designation/education records live under
- * `data.userProfile` (not the flat `fetchUserDetails` response).
- *
- * Uses `profile-get-user-profile` (the caller's own profile, no id needed) rather than
- * `profile-user-profile-by-kpostid` with `testData.kpostId` — that endpoint's own definition
- * documents the primary QA account as broken on it (previously 404 "No user found", now a 500
- * "Unable to fetch user details" — confirmed live 2026-10-02). Every write-lifecycle test in this
- * file authenticates as the primary account, so a read-back against it 500ed every time, silently:
- * `mine` was always `undefined`, `expect.soft` reported it (easy to miss in a long soft-assertion
- * list), and — critically — the cleanup delete never ran, since it's gated on `mine` existing. That
- * left real orphaned records on the shared QA account across every past run of this file (confirmed:
- * ~18 stray "other activity" rows alone). `profile-get-user-profile` returns the identical
- * `userProfile` shape for the caller's own account and has no such defect.
+ * The caller's editable profile fields (`data.userProfile`). Uses `profile-get-user-profile`, not
+ * the by-kpostid lookup, which fails for the primary account and would skip every cleanup delete.
  */
 async function fetchProfile(endpoints: EndpointExecutor): Promise<Record<string, unknown>> {
   const exchange = await endpoints.sendTo(
@@ -137,15 +118,7 @@ test.describe(
     test('basic, contact and privacy updates are accepted and actually persist @api @profile', async ({
       endpoints,
     }) => {
-      /*
-       * Live-verified 2026-09-26: previously these three only checked `status < 300` — the same
-       * "response looks fine, nothing confirmed changed" shape that hid a real bug in Kall's
-       * reschedule. Here the writes DO genuinely persist (confirmed field-by-field against
-       * `getUserProfileUsingKpostID`'s `userProfile`), so this is a stronger test, not a new finding.
-       * `gender`/`dateOfBirth` (also sent by `profile-update-basic`) are NOT independently verifiable:
-       * no registered read endpoint exposes them back, so `knownLanguages` (which the response DOES
-       * carry) is the field-level marker for that write instead.
-       */
+      // No read endpoint returns gender/dateOfBirth, so knownLanguages marks the basic update.
       const before = await fetchProfile(endpoints);
       const marker = `QA-${Date.now()}`;
 
@@ -238,16 +211,8 @@ test.describe(
     test('an education record can be saved and then deleted @api @profile', async ({
       endpoints,
     }) => {
-      /*
-       * A unique marker per run: this account has accumulated several "QA Bench College" leftovers
-       * from before this fix (see below), so a fixed literal can no longer be told apart from those.
-       *
-       * `collegeDetails` on getUserProfileUsingKpostID's response is a JSON-encoded STRING, not an
-       * array — `collegeDetailsAsJson` is the already-parsed array. Reading `collegeDetails` here
-       * (as the test previously did) made `Array.isArray(...)` false, so `mine` was always undefined
-       * and `profile-delete-college` was never actually reached: dead code masquerading as a passing
-       * cleanup step, real 2026-09-24.
-       */
+      // A unique marker per run tells this record from leftovers. `collegeDetails` is a JSON
+      // string; `collegeDetailsAsJson` is the parsed array, so read that one.
       const marker = `QA Bench College ${Date.now()}`;
       const saved = await write(
         endpoints,
@@ -284,10 +249,7 @@ test.describe(
     test('school/university records can each be saved and then deleted @api @profile', async ({
       endpoints,
     }) => {
-      // Mirrors the college test above for two of the four remaining education-record types, each
-      // with its own field/array names. A unique marker per run distinguishes this run's record from
-      // any leftover of a prior one when searching the read-back for it. experience and other-activity
-      // are deliberately NOT included here — see the two recorded-gap tests below for why.
+      // Same save → read back → delete as the college test, for school and university.
       const marker = Date.now();
       const records: Array<{
         saveId: string;
@@ -308,9 +270,7 @@ test.describe(
               { schoolID: '', schoolName: `QA Bench School ${marker}`, standard: '10' },
             ],
           },
-          // *DetailsAsJson is the already-parsed array; the plain *Details key is a JSON-encoded
-          // STRING (see the college test's comment above) — kept as a documented, deliberately-unused
-          // fallback so a future reader isn't tempted to "simplify" this back to the broken key.
+          // *DetailsAsJson is the parsed array; the plain *Details key is a JSON string.
           listKeys: ['schoolDetailsAsJson', 'schoolDetails'],
           nameField: 'schoolName',
           nameValue: `QA Bench School ${marker}`,
@@ -371,15 +331,7 @@ test.describe(
     test('experience and other-activity records can each be saved and then deleted @api @profile', async ({
       endpoints,
     }) => {
-      /*
-       * Both were previously recorded gaps:
-       *  - experience: `companyName` matches the qa-identifier-guard's resource-identifier pattern and
-       *    is a hard-required IDENTITY_FIELD, so a schema default could not stand in for it on live.
-       *    `QA_COMPANY_NAME` is now configured (`.env`, "Nebius Solutions"), which resolves that.
-       *  - other-activity: there was no delete endpoint to clean up with — `profile-delete-other-activity`
-       *    was added this session (`defineUndocumentedProfileEndpoint`, confirmed live), closing it.
-       * Mirrors the school/university test above: a unique marker per run, saved → read back → deleted.
-       */
+      // Experience needs a real company name (QA_COMPANY_NAME): the QA-identifier guard checks it.
       test.skip(
         !process.env.QA_COMPANY_NAME,
         'set QA_COMPANY_NAME to a real company name to unblock this',
@@ -480,29 +432,8 @@ test.describe(
     test('every image write (upload / cover / signature / attachments) then remove, on our own profile @api @profile', async ({
       endpoints,
     }) => {
-      /*
-       * Live-verified 2026-09-26: previously this whole test only checked `status < 600` for every
-       * write — accepting a 4xx/5xx as "fine" — which is exactly how two real, previously-hidden
-       * defects went unnoticed:
-       *   - `profile-update-image` rejects a PNG with 400 "Invalid File Format" — this endpoint is
-       *     JPEG-only by design (owner-confirmed 2026-10-12), even though the sibling uploads accept the
-       *     same PNG bytes. That product inconsistency is NOT a defect (#626 closed FIXED). Its own
-       *     definition (image.api.ts) uses a JPEG so the lifecycle exercises the real flow; the PNG
-       *     check below now only guards against a 5xx CRASH, which would be the one genuine defect.
-       *   - `profile-upload-attachments` 400d "Required part 'files' is missing" every time — the
-       *     bench was sending the wrong multipart field name (`file` instead of `files`). Fixed in
-       *     image.api.ts; this was a bench bug, not a product defect.
-       * `profile-update-signature` still 500s regardless of format — already tracked as #559
-       * [KP-7D1F6B], CRITICAL; not re-filed here.
-       */
-      // CORRECTED 2026-10-05: `endpoints.sendTo(id, {}, …)` sends `{}` as the LITERAL request body —
-      // it does not fall back to the endpoint definition's own default `request()` factory the way
-      // `endpoints.call()` does (see feedback_sendto_literal_body_bug_class in this engagement's own
-      // notes; this is the same bug class found twice before, in signup and Katchup). `raw()` below
-      // relied on that fallback for the JPEG check, so it was silently sending an EMPTY multipart body
-      // and getting a 400 "Request must be multipart/form-data with the required file parts" — a bench
-      // fixture bug, not a real regression on JPEG uploads. Fixed by building the JPEG body explicitly,
-      // the same way the PNG check just below it already does.
+      // Known defect #559: profile-update-signature returns 500 (tracked, not re-filed here).
+      // `sendTo(id, {})` sends `{}` literally (no default request()), so the JPEG body is built here.
       const raw = async (id: string, label: string): Promise<number> => {
         const ex = await endpoints.sendTo(
           id,
@@ -551,11 +482,7 @@ test.describe(
         },
         { label: 'profile:upload-profile-image-png', auth: { principal: A }, allowLiveWrite: true },
       );
-      // updateProfileImage is JPEG-only BY DESIGN: a PNG is correctly rejected with 400 "File size
-      // should be less than 500 KB or Invalid File Format" (owner-confirmed 2026-10-12; #626 closed
-      // FIXED as not-a-defect). The sibling uploads happen to accept PNG, but this endpoint does not —
-      // that is a product choice, not a bug. The ONLY real defect here would be a 5xx CRASH on a PNG
-      // instead of a clean client-error rejection, so that is what we assert.
+      // JPEG-only by design: a PNG 4xx is correct; only a 5xx crash is a defect.
       if (pngUpload.status >= 500) {
         endpoints.recordBusinessRuleViolation({
           endpointId: 'profile-update-image',

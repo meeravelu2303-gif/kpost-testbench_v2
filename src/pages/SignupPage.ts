@@ -3,32 +3,15 @@ import { test } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 /**
- * The signup screen: account-type/domain selection (read-only, used by every spec) plus the full
- * PERSONAL registration write flow (`completeSignup()` and its steps), gated at the SPEC level —
- * `signup-login-lifecycle.spec.ts` is the only caller, behind `SIGNUP_UI_LIFECYCLE=true` +
- * `OTP_TEST_GATEWAY=true` + `TEST_DB_MODE=true`. `signup-domain.spec.ts` only ever calls
- * `chooseAccountType()`/`domainOptions()`, so it stays exactly as read-only as before this was added.
- *
- * ## Why the react-select handling lives here
- *
- * The form is built from `react-select`, whose menu is a detached portal that mounts on click and
- * unmounts on commit. Driving it needs a small settle between the click and the read, which is
- * exactly the kind of mechanical detail a page object exists to absorb — a spec asserting "Personal
- * offers one domain" should not also be responsible for knowing how the widget mounts.
- *
- * Selectors are taken from the live screen: the controls are `.react-select__input` in form order
- * (Country, Language, KPOST Domain) and options carry a `-option` class suffix. Addressing them by
- * ORDER rather than by id is deliberate — a deploy on 2026-09-30 changed the id scheme from
- * react-select's own generated `react-select-N-input` to a custom `kpost-select-rN` (confirmed live:
- * `id="kpost-select-r0"`, `aria-label="Country"` — an accessibility improvement, not a regression),
- * which broke every id-based locator here overnight. The CLASS name (`react-select__input`, from the
- * library itself) is what's actually stable across a markup change like this; matching by that plus
- * position is now the resilient choice, not just the original one.
+ * The signup screen: account-type/domain selection plus the Personal and Business registration
+ * write flows (the write flows are gated by their specs). react-select inputs are addressed by
+ * class and form order (Country, Language, Domain), because the generated ids change between
+ * deploys.
  */
 export class SignupPage extends BasePage {
   readonly path = '/signup';
 
-  /** Any open react-select menu's options — class-based (see the class comment above for why). */
+  /** Any open react-select menu's options. */
   private readonly options = this.page.locator('[class*="-option"]');
 
   constructor(page: Page) {
@@ -36,10 +19,7 @@ export class SignupPage extends BasePage {
   }
 
   /**
-   * The account-type chooser is the screen's first step, so its presence means "loaded". Below the
-   * 992px desktop/mobile breakpoint the heading text is shorter ("Select Account Option", no "for
-   * Signup" suffix) and the desktop copy is a hidden `display:none` duplicate — `.filter({ visible:
-   * true })` on the shared substring handles both viewports.
+   * The account-type chooser means "loaded"; the visible filter handles the shorter mobile heading.
    */
   async expectLoaded(): Promise<void> {
     await this.page
@@ -49,17 +29,7 @@ export class SignupPage extends BasePage {
       .waitFor({ state: 'visible', timeout: 30_000 });
   }
 
-  /**
-   * Chooses an account type from "Select Account Option for Signup". Each card renders TWICE (a
-   * hidden, `display:none` responsive/mobile duplicate alongside the visible one — same pattern as
-   * `chooseBusinessCategory`'s own cards) — `.filter({ visible: true })` narrows to the one shown.
-   *
-   * Found live 2026-10-01: at a mobile viewport (480×900) the hidden duplicate resolves FIRST in DOM
-   * order — the opposite of desktop, where `.first()` alone happened to hit the visible one. Without
-   * the filter, `signup-mobile-lifecycle.spec.ts` timed out clicking an invisible element — a bench
-   * selector bug, not a product defect (the mobile-viewport describe block in `signup-business.spec.ts`
-   * already used the filtered form; this method just hadn't caught up).
-   */
+  /** Chooses an account type; each card renders twice (a hidden mobile copy), so filter visible. */
   async chooseAccountType(type: 'Personal' | 'Business'): Promise<void> {
     await this.page
       .getByText(new RegExp(`^${type}$`, 'i'))
@@ -69,10 +39,7 @@ export class SignupPage extends BasePage {
   }
 
   /**
-   * The domain options offered for the currently selected account type.
-   *
-   * Country and language are chosen first because the domain list depends on the country — reading
-   * it beforehand returns an empty list and would assert nothing.
+   * The domain options for the selected account type; country and language must be chosen first.
    */
   async domainOptions(country: string, language: string): Promise<string[]> {
     await this.chooseFromSelect(0, country);
@@ -86,11 +53,7 @@ export class SignupPage extends BasePage {
   /** Opens the nth select and commits the option matching `filter`. */
   private async chooseFromSelect(index: number, filter: string): Promise<void> {
     await this.openSelect(index);
-    /*
-     * Typed, then Enter. react-select commits the *highlighted* option, and with no filter text
-     * nothing is highlighted — Enter then does nothing, the menu stays open, and it swallows the
-     * click meant for the next control.
-     */
+    // Type then Enter: react-select commits only the highlighted option, and text highlights one.
     await this.page.keyboard.type(filter);
     await this.settle();
     await this.page.keyboard.press('Enter');
@@ -98,13 +61,8 @@ export class SignupPage extends BasePage {
   }
 
   /**
-   * The Gender select, specifically — confirmed live 2026-10-04 to occasionally not commit on
-   * Firefox (the Date of Birth field it gates stays `disabled`, unlike on Chromium/WebKit where this
-   * never reproduced). `chooseFromSelect` itself is left untouched (its own doc comment already notes
-   * every state-based alternative was tried and was worse for the general case) — this wraps it with
-   * a call-site-local verify-and-retry instead, checked against the one real signal that matters here
-   * (the DOB field actually becoming enabled), so Chromium/WebKit's already-stable behavior (first
-   * attempt always succeeds) is unaffected and Firefox gets one automatic retry before failing.
+   * Chooses Gender and retries once until the Date of Birth field it gates is enabled (Firefox
+   * sometimes misses the commit).
    */
   private async chooseGenderAndVerify(index: number, gender: string): Promise<void> {
     const dobField = this.page.getByPlaceholder('Select Date of Birth');
@@ -124,25 +82,12 @@ export class SignupPage extends BasePage {
     await this.settle();
   }
 
-  /**
-   * A short pause for the menu to mount or unmount.
-   *
-   * A deliberate exception to "never sleep in a test": the thing being waited for is the *absence*
-   * of a race inside a third-party widget, and every state-based alternative was tried and was
-   * worse — waiting for options to appear fails when the click was swallowed, and waiting for them
-   * to disappear fails when the previous menu is still animating. Confined to the page object so no
-   * spec has to know about it.
-   */
+  /** A short pause for the react-select menu to mount or unmount (state-based waits were worse). */
   private async settle(): Promise<void> {
     await this.page.waitForTimeout(700);
   }
 
-  // ============================================================================================
-  // PERSONAL registration — the write flow. NEEDS-LIVE-TUNING: built from the real component
-  // (`PersonalSignup.js` in KPOST_REACTJS_2023_V1) rather than a codegen recording, since a full
-  // signup mints a real account and cannot be rehearsed cheaply. Selectors are cited against that
-  // source below; remove this note once a run has gone green and confirmed them on live.
-  // ============================================================================================
+  // PERSONAL registration write flow (selectors from `PersonalSignup.js`).
 
   /** After `chooseAccountType('Personal')`: PersonalSignup's own Country/Language/Domain step. */
   async selectCountryLanguageDomain(
@@ -159,14 +104,9 @@ export class SignupPage extends BasePage {
   }
 
   /**
-   * Enters the mobile number and requests its OTP (`PersonalSignup.js`'s "Verify" link).
-   *
-   * The product checks existence BEFORE sending an OTP: `already-exists` means the number is
-   * already registered (a toast, no OTP modal) — a valid outcome on a re-run, not a failure.
-   *
-   * Found live 2026-10-01: below the 992px breakpoint this screen is a DIFFERENT, mobile-specific
-   * component whose placeholder reads "Enter the Number", not desktop's "Enter Mobile Number" — a
-   * bench selector gap (the field itself works fine), not a product defect. The regex matches both.
+   * Enters the mobile number and requests its OTP. `already-exists` (number already registered) is
+   * a valid outcome on a re-run. The placeholder regex covers the mobile layout's different
+   * wording.
    */
   async requestMobileOtp(mobileNumber: string): Promise<'sent' | 'already-exists'> {
     return test.step(`Signup: verify mobile ${mobileNumber}`, async () => {
@@ -186,14 +126,7 @@ export class SignupPage extends BasePage {
     });
   }
 
-  /**
-   * Types a mobile number that is NOT 10 digits and clicks "Verify". `Mobile()`'s own input mask
-   * (`/^\d{0,10}$/`) already blocks non-digit characters and anything past 10 digits as they are
-   * typed, so this only usefully exercises a SHORT digit string — `sendOTP()` checks the length
-   * itself before ever calling the network (`if (enteredNumber.length !== 10) { toast.error(...) }`),
-   * so neither the OTP modal nor an "already exists" toast can appear here; this is the third, purely
-   * client-side outcome those two don't cover.
-   */
+  /** Types a too-short mobile number and clicks "Verify"; the app rejects it before any OTP. */
   async attemptVerifyWithInvalidMobile(mobileNumber: string): Promise<void> {
     await test.step(`Signup: verify an invalid mobile number ${mobileNumber}`, async () => {
       await this.page.getByPlaceholder('Enter Mobile Number').fill(mobileNumber);
@@ -212,15 +145,7 @@ export class SignupPage extends BasePage {
     await this.page.getByPlaceholder('Select Date of Birth').click();
   }
 
-  /**
-   * True when the given day/month/year cell carries react-datepicker's own disabled class —
-   * `DateSelect.js`'s `maxDate` (18 years before today) should make any day within that window
-   * unselectable.
-   *
-   * Re-opens the picker itself on every call rather than assuming a prior call left it open and in
-   * the right month/year: live-verified 2026-09-28, calling this twice in a row without an explicit
-   * reopen between checks was flaky (the year `<select>` intermittently had no options yet).
-   */
+  /** True when the day cell is disabled (DOB must be 18+ years ago); re-opens the picker. */
   async isDateOfBirthDayDisabled(day: number, month: string, year: number): Promise<boolean> {
     await this.openDateOfBirthPicker();
     await this.page.locator('.react-datepicker__year-select').selectOption(String(year));
@@ -234,30 +159,12 @@ export class SignupPage extends BasePage {
   }
 
   /**
-   * Types the 6-digit OTP into the modal's per-digit boxes (`id="input_0"`..`"input_5"`, set by
-   * `PersonalSignup.js` from the `Input` component's `id` prop). The form auto-validates on the
-   * 6th digit and closes the modal on success — no separate submit button to click.
-   *
-   * Returns `invalid` rather than throwing when the app itself rejects the code (its own
-   * `validateOTP` call, not one this bench controls — the OTP box's auto-submit is a black box
-   * from here), so a caller can tell "the code was rejected" apart from a genuine hang.
-   *
-   * Live-verified 2026-09-28: a WRONGLY suspected bug was filed and retracted here (#721, closed
-   * INVALID) — `validateOTP` seemed to reject even the correct bypass code. Two wrong theories were
-   * ruled out first (server load from a concurrent API sweep; the `sendDate` field itself — a
-   * byte-identical request succeeded when sent standalone). The real cause: this method filled the
-   * OTP digits too soon after the modal's title became visible, before the digit boxes were actually
-   * ready to receive input. See the settle below.
+   * Types the 6-digit OTP into the per-digit boxes; the form auto-validates on the 6th digit.
+   * Returns `invalid` when the app rejects the code, so a rejection is distinct from a hang.
    */
   async enterMobileOtp(otp: string): Promise<'verified' | 'invalid'> {
     return test.step('Signup: enter mobile OTP', async () => {
-      /*
-       * Live-verified 2026-09-28: the modal's TITLE becomes visible slightly before its digit boxes
-       * are ready to receive input reliably — filling them immediately after the title appears was
-       * the actual cause of #721 (retracted), not `sendDate` or server load. Waiting for the first
-       * box to actually be visible+enabled (not just a fixed delay) is the real readiness signal; a
-       * short settle after it closes the remaining gap — a fixed 3s alone still occasionally raced.
-       */
+      // The title appears before the digit boxes accept input: wait for the first box, then settle.
       const firstBox = this.page.locator('#input_0');
       await firstBox.waitFor({ state: 'visible', timeout: 15_000 });
       await this.settle();
@@ -278,16 +185,9 @@ export class SignupPage extends BasePage {
   }
 
   /**
-   * The rest of PersonalSignup's second screen: name, gender, date of birth, postal pincode — up to
-   * and including the auto-opened "Pincode Details" confirm modal a valid 6-digit pincode triggers.
-   *
-   * Gender is the only react-select mounted on this screen (Country/Language/Domain from the
-   * previous screen have unmounted), so it is `chooseFromSelect(0, ...)` here, not index 2.
-   *
-   * Live-verified 2026-09-28: the Pincode modal's "Confirm" stays disabled until an Area is picked —
-   * it only auto-selects when the pincode has exactly one area, which most real pincodes (including
-   * the default 600001, with 6) do not. Gender's select is still mounted behind the modal, so Area
-   * is `chooseFromSelect(1, ...)`, not `0`.
+   * Name, gender, date of birth and pincode, including the "Pincode Details" modal. Gender is
+   * select 0; Area is select 1 because Gender stays mounted behind the modal, and Confirm needs an
+   * Area picked.
    */
   async fillPersonalDetails(details: {
     firstName: string;
@@ -310,21 +210,13 @@ export class SignupPage extends BasePage {
       await pincodeModalTitle.waitFor({ state: 'visible', timeout: 15_000 });
       await this.chooseFromSelect(1, details.area);
       await this.page.getByRole('button', { name: /^Confirm$/i }).click();
-      /*
-       * Live-verified 2026-09-28: clicking "Continue" (the next step) immediately after this modal's
-       * own "Confirm" is flaky — the modal's closing animation (a Bootstrap `.fade`) briefly
-       * intercepts pointer events even after "Confirm" resolves. Waiting for the title to actually
-       * leave the DOM avoids the race instead of relying on Playwright's click-retry to paper over it.
-       */
+      // The modal's closing fade intercepts clicks, so wait for it to leave the DOM.
       await pincodeModalTitle.waitFor({ state: 'hidden', timeout: 15_000 });
     });
   }
 
   /**
-   * Fills the personal-details screen's identity fields (name, gender, DOB) but NOT the postal
-   * pincode, so a test can then type a pincode of its own and assert how the form validates it.
-   * `fillPersonalDetails` cannot be reused for an INVALID pincode because its valid-path area-confirm
-   * step hangs waiting for a "Pincode Details" modal that a too-short pincode never opens.
+   * Fills name, gender and DOB but not the pincode, so a test can type an invalid pincode itself.
    */
   async fillPersonalIdentityNoPincode(details: {
     firstName: string;
@@ -357,15 +249,7 @@ export class SignupPage extends BasePage {
       .catch(() => false);
   }
 
-  /**
-   * Drives the `react-datepicker` popup (`DateSelect.js`): `showMonthDropdown` + `showYearDropdown`
-   * + `dropdownMode="select"` render real `<select>` elements for month/year rather than arrow
-   * pagers — the stable part of this widget's DOM across versions.
-   *
-   * Live-verified 2026-09-28: the month `<option>`s carry the FULL name as their label ("June", not
-   * "Jun") and a 0-indexed numeric string as their value ("0".."11") — `selectOption` matches by
-   * value first, so passing a month name only works via `{ label }`, and only the full name matches.
-   */
+  /** Picks a date via the datepicker's month/year selects; `month` is the full name ("June"). */
   private async chooseDateOfBirth(day: number, month: string, year: number): Promise<void> {
     await this.page.getByPlaceholder('Select Date of Birth').click();
     const popup = this.page.locator('.react-datepicker-popper');
@@ -376,30 +260,16 @@ export class SignupPage extends BasePage {
       .getByText(new RegExp(`^${day}$`), { exact: true })
       .first()
       .click();
-    /*
-     * Live-verified 2026-09-28: picking a day closes the calendar, but not instantly — the still-
-     * closing popup can sit over the "Continue" button and swallow that click. Same race as the
-     * Pincode modal above; waited out the same way instead of leaning on click-retry.
-     */
+    // The closing popup can swallow the next click, so wait for it to hide.
     await popup.waitFor({ state: 'hidden', timeout: 15_000 });
   }
 
-  /**
-   * The "Continue" button gated on `ValidData && otpValidationStatus` (mobile OTP + pincode confirm).
-   *
-   * `force: true`: live-verified 2026-09-28, a leftover datepicker day cell intermittently still
-   * intercepts pointer events here even after `chooseDateOfBirth` confirms its popup hidden — the
-   * same category of overlay race `openSelect` above already forces through for react-select.
-   */
+  /** "Continue" after OTP and pincode; forced, since a leftover datepicker cell can block it. */
   async continueToKpostId(): Promise<void> {
     await this.page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
   }
 
-  /**
-   * The third screen's Preferred KPOST ID field — a plain `<input>`, not the `Input` component, but
-   * it still carries the placeholder used to locate it. Availability is checked live (debounced);
-   * `taken` is a valid outcome (the local part collided), not a failure.
-   */
+  /** Types a Preferred KPOST ID and waits for the availability check; `taken` is valid. */
   async choosePreferredKpostId(local: string): Promise<'available' | 'taken'> {
     return test.step(`Signup: preferred KPOST ID ${local}`, async () => {
       await this.page.getByPlaceholder('Enter Preferred KPOST ID').fill(local);
@@ -414,12 +284,7 @@ export class SignupPage extends BasePage {
     });
   }
 
-  /**
-   * Types a Preferred KPOST ID and reports which validation state the screen settles into. Unlike
-   * `choosePreferredKpostId` (available/taken only), this also recognises the length-policy error,
-   * so a test can assert an out-of-range id (e.g. a single character, below the 5-char minimum) is
-   * rejected rather than silently accepted. Clears the field first so each call re-validates fresh.
-   */
+  /** The state a Preferred KPOST ID settles into, including the 5-12 character length error. */
   async kpostIdValidationState(
     local: string,
   ): Promise<'available' | 'taken' | 'length-error' | 'none'> {
@@ -443,11 +308,7 @@ export class SignupPage extends BasePage {
     });
   }
 
-  /**
-   * "Get Suggestion from KPOST" → the "Suggestion from KPOST" window (PersonalSignup.js: one
-   * `.Borber-Bottom.font-weight-bolder.Cursor_pointer` row per `ListName`). Returns the suggested ids
-   * and picks the first, which fills the Preferred KPOST ID field and closes the window.
-   */
+  /** Opens "Get Suggestion from KPOST", returns the suggested ids and picks the first. */
   async pickKpostIdSuggestion(): Promise<{ suggestions: string[]; picked: string }> {
     return test.step('Signup: get KPOST ID suggestions and pick one', async () => {
       await this.page.getByText(/^Get Suggestion from KPOST$/i).click();
@@ -482,31 +343,14 @@ export class SignupPage extends BasePage {
     });
   }
 
-  // ============================================================================================
-  // BUSINESS (Small) registration — a separate multi-screen flow from Personal, driven from
-  // `SmallBusiness.js` in KPOST_REACTJS_2023_V1. After `chooseAccountType('Business')` the screen
-  // shows a CATEGORY picker (Small/Medium/Large/Multi-National) before any registration form mounts;
-  // only "Small" is wired to a real flow today (Medium/Large use a much larger, separately-built
-  // component; Multi-National is unimplemented and just toasts "in progress"). Country/Language/
-  // Domain, the mobile-OTP mechanism, the date-of-birth picker, the password policy, and the success
-  // modal are ALL identical to Personal's (same components/selectors) — only reused, not redefined
-  // here. NEEDS-LIVE-TUNING to the same degree as the Personal write flow: built from source, not a
-  // codegen recording, since a full run mints a real, permanent company (see adminRegistration's own
-  // `global` side-effect note in the API definitions).
-  // ============================================================================================
+  // BUSINESS (Small) registration (`SmallBusiness.js`); reuses Personal's shared steps.
 
-  /**
-   * The category picker shown after choosing "Business" (`MainSignup.js`'s `signupBoolean.category`
-   * screen). Each card is `.category-contentBox-layout` with a `.category-title` naming it; the click
-   * target is that SAME card's own "Continue" span, scoped by card so the right one is hit among the
-   * (currently 4) identically-labelled "Continue" controls on this screen.
-   */
+  /** Clicks the chosen category card's own "Continue" (every card has one). */
   async chooseBusinessCategory(
     category: 'Small' | 'Medium' | 'Large' | 'Multi-National',
   ): Promise<void> {
     await test.step(`Signup: business category ${category}`, async () => {
-      // The screen renders each category card TWICE (a hidden, `display:none` responsive/mobile
-      // duplicate alongside the visible one) — `.filter({ visible: true })` narrows to the one shown.
+      // Each card renders twice (a hidden mobile duplicate), so filter to visible.
       await this.page
         .locator('.category-contentBox-layout', { hasText: category })
         .filter({ visible: true })
@@ -515,12 +359,7 @@ export class SignupPage extends BasePage {
     });
   }
 
-  /**
-   * Business's own second screen (post country/language/domain): the same name/gender/DOB fields as
-   * Personal, but NO Postal Pincode/Area here — Business collects pincode later, on the Company
-   * Details screen, instead (`updateValidity()` forces `isPinCodeValid = true` for Business on this
-   * screen). Gender is still the only react-select mounted here, so `chooseFromSelect(0, …)`.
-   */
+  /** Business admin's name, gender and DOB; the pincode comes later on Company Details. */
   async fillBusinessPersonalDetails(details: {
     firstName: string;
     lastName: string;
@@ -538,12 +377,8 @@ export class SignupPage extends BasePage {
   }
 
   /**
-   * The Company Details screen (`SmallBusiness.js`'s `smallBusiness` step) — Business-only, no
-   * Personal equivalent. Company Name and Business Short Unique Name are each existence-checked
-   * live on BLUR; this fills every field in tab order (so each blur fires naturally) and returns
-   * both availability outcomes plus the pincode-modal's area-confirm handling (identical widget to
-   * Personal's — live-verified 2026-09-29: Gender's select from the PREVIOUS screen is still mounted
-   * behind this modal too, same as Personal's, so Area is `chooseFromSelect(1, …)` here, not `0`).
+   * Fills Company Details in tab order. Company Name and Business Short Unique Name are checked on
+   * blur; both outcomes are returned. Area is select 1, as on Personal.
    */
   async fillCompanyDetails(details: {
     companyName: string;
@@ -609,9 +444,7 @@ export class SignupPage extends BasePage {
   }
 
   /**
-   * Advances from Company Details to the final screen. Unlike Personal, the KPOST ID isn't typed
-   * here — clicking Continue itself derives `preAdminDesignationId.businessUniqueName` and checks its
-   * availability, which the NEXT screen then displays read-only.
+   * Continues from Company Details; this derives and checks the KPOST ID shown on the next screen.
    */
   async continueToBusinessFinalStep(): Promise<void> {
     await test.step('Signup: continue from company details', async () => {
@@ -619,11 +452,7 @@ export class SignupPage extends BasePage {
     });
   }
 
-  /**
-   * Reads the passively-displayed KPOST ID availability message on the final screen (the field
-   * itself is `readOnly` here — availability was already checked when Continue was clicked on the
-   * previous screen). Same message text as Personal's `choosePreferredKpostId`.
-   */
+  /** Reads the read-only KPOST ID availability message on the final Business screen. */
   async businessKpostIdAvailability(): Promise<'available' | 'taken'> {
     return test.step('Signup: read business KPOST ID availability', async () => {
       const available = this.page.getByText(/KpostID is Available/i);
@@ -637,33 +466,11 @@ export class SignupPage extends BasePage {
     });
   }
 
-  // ============================================================================================
-  // BUSINESS (Medium/Large) registration — a THIRD, separate flow from both Personal and Small
-  // Business, driven from `MLRegister.js` in KPOST_REACTJS_2023_V1 (~2,100 lines — a materially
-  // bigger component, not a variant of `SmallBusiness.js`). Reached the same way as Small
-  // (`chooseAccountType('Business')` then `chooseBusinessCategory('Medium' | 'Large')`) and its
-  // Country/Language/Domain step, Gender/DOB step, mobile-OTP mechanism, and final KPOST-ID/password
-  // screen are ALL byte-identical in markup to Small's (confirmed live 2026-09-30: same
-  // `.react-select__input` selects, same `#input_0`..`#input_5` OTP boxes, same "Enter Password"/
-  // "Enter Confirm Password " placeholders) — so `selectCountryLanguageDomain`, `requestMobileOtp`,
-  // `enterMobileOtp`, `fillBusinessPersonalDetails`, `continueToBusinessFinalStep`,
-  // `businessKpostIdAvailability`, `setPasswordAndSubmit` and `confirmSuccessAndGoToLogin` are all
-  // reused as-is. Only the Company Details step differs — it has 5 extra fields Small does not
-  // collect (Website, Registration No, GST No, No of Employee, No of Licenses) — so that is the one
-  // new method this section adds.
-  //
-  // For India (the only country this bench ever signs up as), mobile OTP is the verification
-  // channel exactly like Small/Personal — `MLRegister.js` only switches to an email-OTP channel for
-  // non-India signups, which is out of scope here.
-  // ============================================================================================
+  // BUSINESS (Medium/Large) registration (`MLRegister.js`); only Company Details differs.
 
   /**
-   * The Medium/Large Company Details screen (`MLRegister.js`'s `smallBusiness` step — the flag name
-   * is a leftover from a copy/paste of `SmallBusiness.js`, not a sign the two components share code).
-   * Fields are progressively `isDisabled` until the previous one is filled, so this fills them in the
-   * screen's own order. Company Name and Business Short Unique Name are each existence-checked live
-   * on BLUR, same mechanism as Small's `fillCompanyDetails` — GST No and No of Employee have no such
-   * check (confirmed from source: no blur handler, just `setGstNo`/`setEmployeeCount`).
+   * Medium/Large Company Details, filled in screen order (each field unlocks the next). Company
+   * Name and Business Short Unique Name are checked on blur, as on Small.
    */
   async fillMediumLargeCompanyDetails(details: {
     typeOfBusiness: string;

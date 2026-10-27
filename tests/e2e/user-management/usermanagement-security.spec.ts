@@ -5,15 +5,8 @@ import { expect, test } from '@fixtures';
 import { openAddMemberForm, typeIntoDesignation } from '../support/usermanagement';
 
 /**
- * Security-fuzzing angle for User Management's **Designation** field — an async-search `react-select`
- * input in the "Add Manually" member form (`usermanagement.spec.ts`'s own selectors:
- * `.react-select__input` first, typed text, `Enter`). This is the field a fresh keystroke reaches
- * first and the only one probed here: the Mobile No / First Name fields sit BEHIND a same-company
- * collision guard that `usermanagement.spec.ts` deliberately never gets past with a fabricated value
- * (see that file's own "STOPS there" note — completing the flow provisions a real member account).
- * Fuzzing Designation keeps that same boundary: the form is never advanced past it, so Add is never
- * reachable. Same execution-based check as the other `*-security.spec.ts` files (a `dialog` listener,
- * not string-matching).
+ * Fuzzes the Designation react-select in User Management's Add Manually form and checks no payload
+ * executes (a `dialog` listener). The form never advances, so no member is provisioned.
  */
 test.describe(
   'KPost User Management · Designation field security fuzzing (BUSINESS_S)',
@@ -55,10 +48,8 @@ test.describe(
         // Type into the real, visible control — the 4px-wide inner input needed a forced click.
         await typeIntoDesignation(page, modal, payload.value);
 
-        // The moment that matters is when the async search answers and react-select renders the
-        // result list (that is where a reflected payload would land), so wait for the menu rather
-        // than a fixed pause. "No options" is a menu too. If no menu ever appears, that is recorded,
-        // not failed — the assertions below are about execution, not about search results.
+        // Wait for the result menu (where a reflected payload would land; "No options" counts).
+        // No menu is recorded, not failed: the assertions are about execution.
         const menuAppeared = await page
           .locator('.react-select__menu')
           .first()

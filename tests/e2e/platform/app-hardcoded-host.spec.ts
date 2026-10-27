@@ -4,17 +4,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * App-wide HARD-CODED HOST guard. On the TEST build, `ServiceURL.js` resolves every API/media base to
- * the configured test hosts (`apiV2 = testingapi.kpostindia.com`, `mail = testkmail.kpostindia.com`).
- * Several components instead bake in a LITERAL host — `https://devapi2.kpostindia.com`, a `192.168.x`
- * LAN box, or the prod `kpostadmin` host — so those requests bypass the environment config entirely:
- * the resource 401s / fails to load on test, and on prod they point at the wrong environment. Examples
- * from the frontend ground-truth read: dashboard + Kall avatars (`RecentMessage.js`, `KallModal.js`
- * → devapi2 `downloadProfileImage`), voice-note translate, AI message-assist, the KBooking wallet flow.
- *
- * This test records every network request a screen makes on load and asserts NONE targets a
- * non-configured host. It asserts correct behaviour; a failure lists the exact offending URLs — that
- * list is the evidence. (It also serves as a regression guard for the already-fixed Profile case #339.)
+ * Hard-coded host guard: no request a screen makes on load may target a host outside the test build's
+ * config (devapi2, a 192.168.x box, the prod admin host). A failure lists the offending URLs.
  */
 test.describe(
   'KPost · no hard-coded (non-configured) hosts on load',

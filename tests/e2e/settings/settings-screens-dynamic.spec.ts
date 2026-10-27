@@ -4,11 +4,7 @@ import { watchUiHealth } from '@ui/ui-health';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
-/**
- * The health/performance/layout counterpart to `settings-accessibility.spec.ts`'s 2 dynamic states —
- * General Settings expanded, Profile Creation expanded. Same `runUiChecks`/`watchUiHealth` machinery
- * as every other dynamic-state file this session.
- */
+/** Health, performance and layout checks for Settings with General Settings / Profile Creation expanded. */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 
 async function assertNoFileableIssues(

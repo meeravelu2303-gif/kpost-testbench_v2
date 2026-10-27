@@ -5,29 +5,9 @@ import { env } from './env';
 export type DatabaseClientKind = 'mysql' | 'none';
 
 /**
- * Which database each suite talks to, and what it is allowed to do there.
- *
- * ## Why this is per-suite and not one connection
- *
- * KPost and KMail run against **KPOST_QA**, a disposable test database where writes, transaction
- * experiments and row-count assertions are all fair game. The **Admin module runs against a live
- * production database**. Those are not the same risk, so they cannot share one configuration: a
- * single `allowWrites` flag governing both would mean the switch that unlocks a useful test on
- * KPOST_QA also unlocks a destructive one on live Admin data.
- *
- * So the write permission is a property of the *target*, not of the run.
- *
- * ## The Admin ban is in code, not in configuration
- *
- * `WRITE_BANNED_SUITES` cannot be overridden by any environment variable, including
- * `DB_ALLOW_WRITES=true`. This mirrors how the production endpoint allowlist already works, and for
- * the same reason: an environment variable is inherited from a shell, a CI job or a stale `.env`,
- * and the failure it would cause here — an unaudited write into live Admin data, through a path
- * with none of the application's validation or permission checks — cannot be undone.
- *
- * Admin also gets its **own** connection variables (`ADMIN_DB_*`). Pointing Admin at the test
- * database, or the KPost suites at the live one, has to be a deliberate edit rather than a default
- * quietly shared between them.
+ * Which database each suite talks to and what it may do there. Write permission belongs to the
+ * target: KPost/KMail use a disposable test DB, while the live Admin DB is write-banned in code (no
+ * env var unlocks it).
  */
 
 /** Suites whose database is a live production system. Writes are refused, always. */
@@ -65,10 +45,7 @@ export interface DatabaseTarget {
 const hasKpostConnection = Boolean(env.DB_HOST && env.DB_NAME);
 const hasAdminConnection = Boolean(env.ADMIN_DB_HOST && env.ADMIN_DB_NAME);
 
-/*
- * `DB_ENABLED` overrides in both directions. Left unset, the database is used when a connection is
- * actually configured.
- */
+// `DB_ENABLED` overrides both ways; unset, the database is used when a connection is configured.
 const enabled = env.DB_ENABLED ?? hasKpostConnection;
 
 /** Reads a CA file once, at configuration time, so a bad path fails loudly rather than per query. */
@@ -114,10 +91,7 @@ function mysqlConnection(scope: 'kpost' | 'admin'): MysqlConnection | undefined 
     tls: source.ssl
       ? {
           ca: source.ca,
-          /*
-           * A supplied CA is the point of supplying one, so it implies verification: it would be
-           * silently pointless to read a CA file and then not check the chain against it.
-           */
+          // A supplied CA implies verifying the chain against it.
           rejectUnauthorized: source.ca ? true : source.rejectUnauthorized,
         }
       : undefined,

@@ -2,16 +2,9 @@ import { writeFileSync } from 'node:fs';
 import type { Page, TestInfo } from '@playwright/test';
 
 /**
- * Records, for every browser test, what a developer needs to fix a failure — and writes it as a
- * plain-text "failure diagnosis" attached to the test ONLY when it fails.
- *
- * Built from the UI developers' review of 118 bugs (2026-10-08): they asked again and again for the
- * exception stack, the exact steps (each click, or the Tab path element by element), the console
- * errors, each failing request with the element that made it, and — for layout bugs — the element
- * that sticks out. Before this, only the Profile/Settings/Contacts breakage sweeps wrote any of it.
- *
- * Never changes a test's assertion message: that message is the bug's fingerprint, and changing it
- * would re-file every existing bug as a duplicate. Everything new goes in the attachment.
+ * Records what a developer needs to fix a browser-test failure (stack, steps, console errors,
+ * failed requests and who made them) and attaches it only on failure. Never changes the assertion
+ * message, which is the bug's fingerprint.
  */
 
 export const FAILURE_DIAGNOSIS_ATTACHMENT = 'failure-diagnosis';
@@ -81,12 +74,7 @@ export function noteDiagnostic(page: Page, title: string, text: string): void {
   notes.set(page, list);
 }
 
-/*
- * Runs in every document of the page. Keeps, in sessionStorage so it survives navigations within the
- * tab: (1) the last steps taken — clicks, focus changes (the Tab path), focus-moving keys, form
- * changes, offline/online; (2) every image / media / stylesheet that failed to load, with the element
- * that asked for it, recorded at the moment it failed (that element may be gone by failure time).
- */
+// Runs in every document; keeps the last steps and every failed asset in sessionStorage.
 const PAGE_RECORDER = `(() => {
   if (window.__qaRecorder) return; window.__qaRecorder = true;
   const read = (k) => { try { return JSON.parse(sessionStorage.getItem(k) || '[]'); } catch (e) { return []; } };
@@ -234,10 +222,7 @@ async function readSession<T>(page: Page, key: string): Promise<T[]> {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-/**
- * The same endpoint failing the same way many times (e.g. one image per contact) becomes ONE line with
- * a count and one example — otherwise 40 identical lines bury the one request that matters.
- */
+/** Groups identical request failures into one line with a count and one example. */
 function groupRequests(requests: Recorded['requests'], assets: FailedAsset[]): string[] {
   const initiatorOf = (url: string): string | undefined => {
     const base = url.split('?')[0];
@@ -340,8 +325,7 @@ export async function writeDiagnosisIfFailed(
   writeFileSync(file, `${lines.join('\n')}\n`);
   await testInfo.attach(FAILURE_DIAGNOSIS_ATTACHMENT, { path: file, contentType: 'text/plain' });
 
-  // Structured signals for the reporter: did the test lose its session (→ not a screen defect), and
-  // which API calls failed during the failure (→ likely contract drift the UI did not handle).
+  // Signals for the reporter: a lost session, and the API calls that failed.
   const finalUrl = alive ? page.url() : '';
   const signals = deriveFailureSignals(finalUrl, rec.requests);
   const signalsFile = testInfo.outputPath('failure-signals.json');

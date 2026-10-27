@@ -1,19 +1,8 @@
 import { expect, test } from '@fixtures';
 
 /**
- * Login — the selected country must constrain the mobile-number lookup (reported manually 2026-10-13
- * with a screenshot). The login screen has a Country selector (dialing code, e.g. "+44 United
- * Kingdom") next to the KPOST ID / Mobile Number field. Choosing United Kingdom (+44) and entering an
- * INDIAN (+91) 10-digit mobile number, then pressing Submit, still resolves the Indian account and
- * proceeds to the "Select a KPOST Channel" step — the selected country is ignored in the lookup.
- *
- * Correct behaviour: a +91 number under a +44 country is a mismatch and must NOT resolve — the app
- * must stay on the id step (an error / "doesn't exist"), not proceed to channel selection or the
- * password step.
- *
- * The registered mobile is supplied out-of-band via QA_LOGIN_MISMATCH_MOBILE (a real India-registered
- * number), never hardcoded here (it is personal data). The test stops at the lookup — it never enters
- * a password or picks a channel, so it does not log in.
+ * Login: an Indian mobile under a +44 country selection must not resolve the account. The mobile
+ * comes from QA_LOGIN_MISMATCH_MOBILE (personal data); the test stops at the lookup.
  */
 const MISMATCH_MOBILE = process.env.QA_LOGIN_MISMATCH_MOBILE;
 const MISMATCH_COUNTRY = process.env.QA_LOGIN_MISMATCH_COUNTRY || 'United Kingdom';

@@ -1,31 +1,9 @@
 import accounts from '../fixtures/test-accounts.json';
 
 /**
- * `QATEST_ONLY=true` runs the bench on the dedicated qatest1..6 accounts and nothing else.
- *
- * The older QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID, the business tiers ...) are shared with
- * developers who are logging in and fixing bugs, so a run on them can lose its session, trip the
- * rate limiter, or fail on data someone else just changed. The qatest accounts are ours alone.
- *
- * The bench reads its accounts from the `QA_*` variables, so this re-points those at the qatest
- * accounts rather than touching every spec. Roles:
- *
- *     QA_KPOST_ID              <- qatest1   primary / record owner
- *     QA_VICTIM_KPOST_ID       <- qatest2   counterparty / stranger
- *     QA_PERSONAL_3/4_KPOST_ID <- qatest3/4 group and Cc parties
- *     QA_PERSONAL_5_KPOST_ID   <- qatest5   sacrificial write target (see api/sweep-target.ts)
- *     QA_FORGOT_PASSWORD_...   <- qatest6   spare: forgot-password and lockout probes
- *
- * What the qatest accounts cannot stand in for is handled two ways:
- *
- *  - **Business tiers, their members and company ids are KEPT** (owner decision 2026-10-10: "test
- *    everything"). They have no qatest equivalent, and removing them had silently switched off every
- *    business-tier UI spec, the admin-api suite and the engine's role/cross-tenant authorization
- *    validators under the product commands. Their password is preserved as `QA_BUSINESS_PASSWORD`
- *    before `QA_PASSWORD` is re-pointed at the shared qatest password.
- *  - **Personal-6** (an older shared PERSONAL account with no qatest stand-in) is removed. An unset
- *    account has no principal, so the checks that need it skip with that reason, and its id never
- *    enters the QA-identifier allowlist.
+ * `QATEST_ONLY=true` re-points the PERSONAL `QA_*` accounts at the dedicated qatest1..6 accounts (1
+ * primary, 2 counterparty, 3-4 group, 5 write target, 6 forgot-password spare). Business accounts
+ * are kept with their own password; personal-6 is removed.
  */
 
 type Env = Record<string, string | undefined>;
@@ -42,7 +20,7 @@ const ROLE_TO_QATEST: Readonly<Record<string, string>> = {
 /** Older PERSONAL-only values with no qatest equivalent. Business values are deliberately NOT here. */
 const REMOVED = ['QA_PERSONAL_6_KPOST_ID'] as const;
 
-/** The business-tier variables that must survive the switch (documented so a reviewer can check). */
+/** The business-tier variables that must survive the switch. */
 export const KEPT_BUSINESS = [
   'QA_BUSINESS_S_KPOST_ID',
   'QA_BUSINESS_M_KPOST_ID',
@@ -69,9 +47,8 @@ function account(id: string): { kpostIdEnv: string; mobile?: string } {
 }
 
 /**
- * The environment values to apply. A `string` sets the variable, `undefined` removes it.
- * Throws when a qatest account is not configured: falling back to an older account would defeat
- * the point of the switch.
+ * The environment values to apply (`undefined` removes one); throws when a qatest account is not
+ * configured.
  */
 export function qatestOnlyOverrides(source: Env): Env {
   const out: Env = {};
@@ -83,8 +60,7 @@ export function qatestOnlyOverrides(source: Env): Env {
   }
   const password = source.QATEST_SHARED_PASSWORD;
   if (!password) throw new Error('QATEST_ONLY needs QATEST_SHARED_PASSWORD in .env');
-  // The business accounts keep logging in with their own password: it is captured under its own
-  // name before QA_PASSWORD is re-pointed, unless the operator set QA_BUSINESS_PASSWORD explicitly.
+  // Capture the business password before QA_PASSWORD is re-pointed, unless it was set explicitly.
   if (!source.QA_BUSINESS_PASSWORD && source.QA_PASSWORD) {
     out.QA_BUSINESS_PASSWORD = source.QA_PASSWORD;
   }

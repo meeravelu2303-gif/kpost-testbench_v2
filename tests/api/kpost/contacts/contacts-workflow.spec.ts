@@ -5,32 +5,9 @@ import { requireAll } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
 
 /**
- * Contacts — add → list → block → delete, asserted against the relationship row each step.
- *
- * ## The failure this is built around
- *
- * A contact's state lives in **one tinyint each** on `TBL_KPOST_USER_CONTACTS`: `is_blocked` and
- * `delete_status`. Every interesting fault is a flag that did not move, and none of them is visible
- * in the response — these endpoints answer SUCCESS regardless:
- *
- *  - Delete reports success and leaves `delete_status = 0`, so the contact reappears on next login.
- *  - Delete **hard-deletes** the row, taking the counterparty's side of the relationship with it.
- *  - Block reports success and leaves `is_blocked = 0`, so the blocked user can still reach you —
- *    a privacy failure that looks identical to success from the client.
- *
- * ## Directionality is the part that is easy to get wrong
- *
- * The table stores the relationship **once per direction**: `(kpost_id, contact_id)` is a distinct
- * row from `(contact_id, kpost_id)`. Measured on KPOST_QA, the two directions genuinely disagree —
- * one account's row can be soft-deleted while the other's is active. So every assertion below names
- * the direction it is checking, and the counterparty's row is asserted to be *untouched*: my
- * removing you from my address book must not remove me from yours.
- *
- * ## Safety
- *
- * Writes only to the caller's own address book, restores the starting state, and carries
- * `allowLiveWrite` per call — the executor's authorization for a `data` write on live. The
- * QA-identifier guard still refuses any payload naming a record we do not own.
+ * Contacts: add → delete, asserted against the TBL_KPOST_USER_CONTACTS row (these endpoints answer
+ * success regardless). Rows are stored once per direction, so the counterparty's row must stay untouched.
+ * Writes only to our own address book and restores it in `afterAll`.
  */
 test.describe(
   'KPost Contacts · relationship workflow @api @kpost-api @contacts @database',
@@ -69,11 +46,7 @@ test.describe(
       const mine = await repo.contact(me(), them());
       const theirs = await repo.contact(them(), me());
 
-      /*
-       * Not an assertion that both exist — one may legitimately not have added the other. What is
-       * pinned is that the repository addresses them SEPARATELY, because a lookup that collapsed the
-       * two directions would make every assertion below meaningless.
-       */
+      // Either direction may be missing; what matters is that the two are looked up separately.
       expect(mine ?? theirs, 'at least one direction of the relationship exists').toBeDefined();
       if (mine) expect(text(mine.kpost_id), 'my row is keyed by me').toBe(me());
       if (theirs) expect(text(theirs.contact_id), 'their row points back at me').toBe(me());
@@ -99,18 +72,8 @@ test.describe(
         { label: 'contacts-workflow:add', allowLiveWrite: true },
       );
 
-      /*
-       * Accepted OR already present — both are valid starting states.
-       *
-       * This suite restores the contact in `afterAll`, so a re-run legitimately finds it there. The
-       * API signals that with {"status":"Already","statusCode":500,"message":"ContactID is already in
-       * your contact list"} — a 500 for a benign, expected condition (409 or 200 would be right, and
-       * it is the same HTTP-200-carrying-500 envelope pattern documented in Bugzilla #494). Failing
-       * the test on it would make the suite pass only on its first ever run.
-       *
-       * What matters is the END STATE of the row, asserted below — not whether this particular call
-       * inserted or found it.
-       */
+      // Accepted or "Already" (statusCode 500, see #494) are both fine: `afterAll` restores the
+      // contact, so a re-run finds it. The row's end state below is what counts.
       const parsed = exchange.json();
       const envelope = parsed.ok ? (parsed.value as { statusCode?: number; status?: string }) : {};
       const alreadyPresent = /already/i.test(
@@ -163,11 +126,7 @@ test.describe(
       const repo = new KpostRepository(database);
       const mine = await repo.contact(me(), them());
 
-      /*
-       * The assertion no response can make, and the one that matters most: the ROW must still exist.
-       * A hard delete here would also destroy the counterparty's view of the relationship, and on the
-       * wire that is indistinguishable from a correct soft delete.
-       */
+      // The row must still exist: a hard delete looks identical on the wire.
       expect(mine, 'a soft delete leaves the row in place').toBeDefined();
       const deleted = kpostDb.deleteStatus(mine, true);
       expect(deleted.status, `${deleted.name}: got ${String(deleted.actual)}`).toBe('PASSED');
@@ -184,12 +143,8 @@ test.describe(
 );
 
 /**
- * Blocking — its own describe (not chained to the add/delete lifecycle above) so it's unaffected by
- * that suite's ordering and always starts from "the contact exists, unblocked."
- *
- * Same silent-failure shape as delete: `blockOrUnBlockContact` answers SUCCESS whatever it did to the
- * row, so the flag — not the response — is the only honest judge (the sibling describe's own
- * docstring already flags this exact gap: "Block reports success and leaves is_blocked = 0").
+ * Block/unblock, judged by the is_blocked flag (the response says success regardless). Separate
+ * describe so it always starts from "contact exists, unblocked".
  */
 test.describe(
   'KPost Contacts · block @api @kpost-api @contacts @database',

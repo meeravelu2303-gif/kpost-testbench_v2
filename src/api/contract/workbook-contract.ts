@@ -7,17 +7,8 @@ import type { HttpMethod } from '../client/request-builder';
 import type { JsonSchema } from '../schema/contract-schema';
 
 /**
- * Reads the generated contracts, so an endpoint definition never restates what the workbook
- * already says.
- *
- * Schemas and examples come from `openapi/*.openapi.json`, which is produced by
- * `npm run contract:excel` from `KPOST API (N).xlsx`. A definition therefore carries only what the
- * workbook cannot express — which values to send, whether a call is destructive, which business
- * rules apply — and a new workbook dump updates every schema and example without a code change.
- *
- * Asking for an endpoint that is not in the contracts **throws**. Silently returning `undefined`
- * would let a typo become an endpoint with no schema, validated against nothing and reported as
- * passing.
+ * Reads the generated contracts (`openapi/*.openapi.json`) so definitions never restate the
+ * workbook. Asking for an endpoint that is not in them throws.
  */
 export interface WorkbookContract {
   method: HttpMethod;

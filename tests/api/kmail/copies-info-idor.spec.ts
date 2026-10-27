@@ -4,29 +4,8 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import { expect, test } from '@fixtures';
 
 /**
- * KMail recipient-list IDOR — can an outsider read who a mail was sent to (its To + Copy/CC lists) by
- * naming its kmailID?
- *
- * `GET /readMail/getCopiesInfo/{kmailID}` (`ReadKmailController.java:265`) passes the caller's JWT
- * kpostID to `ReadKmailServiceImpl.getCopiesInfo` (`:1343`), but the service loads EVERY transaction
- * for that kmailID with a bare `findTransactionListUsingKmailID(kmailID)` — no ownership filter — and
- * then, for a caller who is NOT the sender, still adds every To (receiverType 1) and Copy/CC
- * (receiverType 2) recipient to the response (`:1367` — the `else if (getReceiverType() != 3)` branch
- * has no participant check). Only the Confidential/BCC entries (type 3) are gated to their own
- * recipient. So on paper any authenticated account can read the To + CC recipient lists (addresses +
- * read times) of ANY mail by id. This is the recipient-metadata analogue of the mail-content IDOR
- * (`content-idor.spec.ts`).
- *
- * Verdict is the response BODY, not the HTTP status — like the other KMail BOLA endpoints it answers
- * 200 regardless of the caller. The BCC address is included as a CONTROL: if the test is meaningful,
- * BCC must stay hidden from the outsider while To/CC leak. `expect.soft` so one run reports both.
- *
- * Accounts: A sends; To = victim, CC = personal-4; C = personal-3 is the outsider (never sender / To /
- * CC). The vulnerable branch covers To (type 1) and CC (type 2); BCC (type 3) is separately gated to
- * its own recipient, so the To/CC exposure alone is the finding. (A BCC control was dropped because
- * qatest5 is blocked-in-BCC on this environment, which would fail the send for an unrelated reason.)
- * Source suggests this reads from the transaction table (written synchronously with the send), so it
- * should not be subject to the content store's async delay — but a short settle is kept for safety.
+ * KMail recipient-list IDOR (getCopiesInfo): can an outsider (C) read the To and CC addresses of a
+ * mail A sent to B and CC, by kmailID alone? The verdict is the response body (it answers 200 either way).
  */
 const K = AUTH_PROFILES.kpost;
 const A = K.principals.find((p) => p.key === 'personal')!; // sender
@@ -59,7 +38,7 @@ test.describe(
       let kmailId: number | undefined;
 
       try {
-        // --- Setup: A sends a real mail with a To, a CC and a BCC -------------------------------
+        // --- Setup: A sends a real mail with a To and a CC -------------------------------------
         const sent = await endpoints.sendTo(
           'kmail-post-mail',
           {

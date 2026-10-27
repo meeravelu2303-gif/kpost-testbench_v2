@@ -2,13 +2,8 @@ import { env } from '@config/env';
 import { MongoClient, ReadPreference, type Document, type Filter } from 'mongodb';
 
 /**
- * A **read-only** view of the Admin backend's MongoDB (`admin_enterprise`) for the Admin cross-layer
- * checks: a record made on the Admin screen must be the document the Admin API stored.
- *
- * The Admin database is treated as live (CLAUDE.md §5.9), so this module exposes `findOne` and
- * `find` only — there is no write, update, delete, command or raw-collection accessor to reach for.
- * The client is opened with a secondary-preferred read preference and is never handed out.
- * `ADMIN_MONGO_URI` may carry credentials and is never logged or put into a message.
+ * A read-only view of the Admin MongoDB for cross-layer checks. The Admin DB is live, so only
+ * `findOne` and `find` exist; `ADMIN_MONGO_URI` may hold credentials and is never logged.
  */
 export interface AdminMongoReader {
   findOne<T extends Document>(collection: string, filter: Filter<T>): Promise<T | null>;

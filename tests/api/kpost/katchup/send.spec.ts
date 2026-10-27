@@ -2,13 +2,8 @@ import { describeEndpointCases } from '@engine/endpoint-cases';
 import { test } from '@fixtures';
 
 /**
- * WHAT is tested: the Katchup send endpoints — the create-a-message routes.
- * HOW is owned by the central validation engine.
- *
- * Every send is a write that reaches a real inbox, so on the live application these are blocked
- * (no send is `productionSafe` yet — owner sign-off pending, `docs/modules/katchup-flow.md` §6). Off-live,
- * against the mock, they run in full — including the injection, null-value and type probes that a
- * write endpoint most needs and that must never be aimed at a live conversation.
+ * The Katchup send endpoints, through the validation engine. Sends reach a real inbox, so they are
+ * blocked on live (none is productionSafe) and run in full only against the mock.
  */
 test.describe('KPost Katchup · sends', { tag: ['@api', '@katchup', '@regression'] }, () => {
   describeEndpointCases({ tags: ['katchup-send'] });

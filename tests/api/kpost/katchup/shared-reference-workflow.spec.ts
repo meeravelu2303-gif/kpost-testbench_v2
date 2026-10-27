@@ -5,26 +5,9 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Katchup **shared/reference reads** — unblocked 2026-09-25 once `katchup-send-message` was fixed
- * (see `send-regression.spec.ts`): these needed a real message id to test with, and nothing could be
- * sent while that regression was live.
- *
- * ## The "no id-minting endpoint" theory was wrong
- *
- * The prior gap notes assumed `sharedMessageId` came from a separate "share a message" action this
- * suite hadn't found. Live-verified 2026-09-25: it doesn't — **every** `sendMessage` response already
- * carries a `sharedMessageId` (equal to `messageTimeAsLong`), and `referenceMessageIDList`/
- * `sourceMsgID` work with a plain sent `msgID` too, no reply/forward required. A single ordinary send
- * is enough to drive all four reads below.
- *
- * ## Two confirmed crashes, two confirmed working
- *
- * - `getBulkMessageInfo` and `getReferenceMSGDetails` — real 200s with real data.
- * - `getSharedMessageInfo` and `getSharedMessageDetails` — both 500, auto-filed via the engine's own
- *   flow-finding pipeline as **#612** and **#613**, both CRITICAL, KPost API.
- * - `getMessagesByReferenceMessageList` fed a plain sent msgID: a clean 404 "No messages found for
- *   the given Data" — reachable, well-formed, not a crash, but not yet confirmed positive (it may
- *   need a message that was genuinely referenced by another, not just any sent message).
+ * Katchup shared/reference reads, driven by one ordinary send: its response already carries a
+ * `sharedMessageId`, and the reference reads accept a plain sent msgID.
+ * Known defects #612/#613: getSharedMessageInfo and getSharedMessageDetails answer 500.
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 
@@ -123,7 +106,7 @@ test.describe(
             allowLiveRead: true,
           },
         );
-        // Not yet confirmed positive (see module docstring) — asserted as "reachable, not a crash".
+        // A plain sent msgID answers 404 (it may need a genuinely referenced message), so only "no 5xx".
         expect(
           ex.status,
           'getMessagesByReferenceMessageList does not crash for a well-formed reference list',

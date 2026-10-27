@@ -8,12 +8,8 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Contacts **feature flow** — the address book, end to end, on a real host, self-restoring.
- *
- * Gated behind `CONTACTS_LIFECYCLE=true`; every write carries `allowLiveWrite: true`. It adds and
- * blocks our own second account, verifies each, then unblocks and deletes — the account's address
- * book is left as it was. `importPhoneContacts` / `updateInviteStatus` are not exercised here (they
- * carry phone numbers / an invite action) — they stay contract-validated off-live.
+ * Contacts feature flow: add, block, unblock and delete our own second account, leaving the address
+ * book as it was. Gated by CONTACTS_LIFECYCLE=true (real writes).
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -127,11 +123,7 @@ test.describe(
     test('add-multiple, import-phone and update-invite, all on our own data @api @contacts', async ({
       endpoints,
     }) => {
-      /*
-       * The remaining writes, driven live with ONLY our own account and number so no other user's data
-       * is touched: `importPhoneContacts` imports a single contact — our own number — and
-       * `updateInviteStatus` acts on our own number. Cleaned up by deleting the added contact.
-       */
+      // Only our own account and number; cleaned up by deleting the added contact.
       try {
         const multi = await write(
           endpoints,
@@ -156,12 +148,7 @@ test.describe(
           .soft(imported, 'importPhoneContacts (own number) returns a status')
           .toBeLessThan(600);
 
-        /*
-         * Checked 2026-09-26: no registered contacts read endpoint exposes invite status back (the
-         * module's reads return contact rows/lists, never an invite flag), so this write's field-level
-         * effect is NOT independently verifiable via this API — status is the most this bench can
-         * honestly assert, not worked around by inventing a check against data that isn't exposed.
-         */
+        // No read endpoint exposes invite status, so only the status can be asserted.
         const invite = await write(
           endpoints,
           'contacts-update-invite',

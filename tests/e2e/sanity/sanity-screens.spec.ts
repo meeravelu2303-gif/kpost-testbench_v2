@@ -11,17 +11,11 @@ import { expect, test } from '@fixtures';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * FULL SANITY · every screen loads — each route in the screen registry (`src/ui/screens.ts`), in the
- * session it needs, must mount (its own `ready` selector), with no JS crash, no broken asset and no
- * server error on the calls it makes while loading.
- *
- * The light counterpart of the deep sweep (`screens-batch*`, `screens-business`, `screens-public`),
- * which adds controls, performance, layout, accessibility and the rest of the check catalogue at
- * regression time. Selection comes from the registry, so a new screen joins sanity automatically
- * and a paused one (`PAUSED_SCREENS`, KDoc) leaves it.
+ * Sanity: every registry screen (src/ui/screens.ts, minus PAUSED_SCREENS) mounts in its session with
+ * no JS crash, broken asset or server error. The light counterpart of the deep screen sweep.
  */
 
-/** Pause between screens: the same request-rate pacing as the deep sweep (rate-limiter, 2026-10-07). */
+/** Pause between screens: the same request-rate pacing as the deep sweep. */
 const PACE_MS = 4_000;
 
 /** Which module a screen belongs to, so `--module <name>` sanity picks it up. */

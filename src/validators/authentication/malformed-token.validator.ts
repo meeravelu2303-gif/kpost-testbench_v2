@@ -13,15 +13,7 @@ export const malformedTokenValidator = defineValidator({
   toggle: 'authentication',
   profiles: PROFILE_SETS.DEEP_AND_SECURITY,
   stage: 'probe',
-  /*
-   * An auth probe proves nothing when the route does not exist.
-   *
-   * This gateway answers 401 to ANY unrouted path without a token, and 404 with one - verified
-   * against `/common/definitelyNotARoute9f2a`. So "no token -> 401" is the default for everything,
-   * and reading it as "the endpoint is protected" is a false pass: the same 401 comes back for an
-   * endpoint that was never deployed. When the primary call 404s, auth is unverifiable and the
-   * probe says so instead of passing.
-   */
+  // The gateway 401s any unrouted path without a token, so a 404 primary leaves auth unverifiable.
   appliesTo: ({ endpoint, primary }) => {
     if (!endpoint.authentication.required) return 'endpoint is public';
     if (primary.status === 404)

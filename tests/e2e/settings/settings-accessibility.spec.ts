@@ -8,16 +8,8 @@ import type { Page, TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 
 /**
- * Deep WCAG scan (axe-core) for Settings' own DYNAMIC states — a nav group EXPANDED, revealing its
- * sub-items. `accessibility-axe.spec.ts`'s per-screen sweep only ever scans `/settings` in its
- * DEFAULT (all-collapsed) state (`src/ui/screens.ts`), so the expanded state — where most of the
- * screen's actual interactive content lives — was never scanned, the same genuine-gap reasoning as
- * Home's, Katchup's and Profile's own dynamic-state files.
- *
- * Selectors reused from `settings-sections.spec.ts`'s own proven, read-only expand flow.
- *
- * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new screens
- * need their own clean run(s) before earning a place in the auto-filing allow-list.
+ * Axe WCAG scan of Settings with a nav group expanded (the sweep only scans the collapsed default).
+ * Kept out of the trusted auto-filing sweep until it has proven clean runs.
  */
 test.describe(
   'KPost Settings · dynamic-state accessibility (axe-core WCAG)',

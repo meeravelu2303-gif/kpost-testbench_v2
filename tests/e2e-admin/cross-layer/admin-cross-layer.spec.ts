@@ -24,12 +24,9 @@ import {
 } from '../support/admin-workflow';
 
 /**
- * CROSS-LAYER (UI → API → DB) for **Admin / HR-Setup**: a workplace tier is created on the real Work Place
- * Setup screen, the request the screen sent and the answer it got are captured, and the Admin backend's
- * MongoDB document (`admin_enterprise.table_admin_tier_attribute`, `AdminTierAttributeEntity`) must hold
- * exactly that name for the signed-in company; after the delete on screen, the document must be gone
- * (hard `deleteById`). The database is only READ, through `src/database/admin-mongo.ts` (find/findOne only).
- * Host-guarded like every Admin write test. Matrix: docs/reference/cross-layer-matrix.md.
+ * Admin cross-layer (UI → API → DB): a workplace tier created on screen must appear in MongoDB with
+ * that name for the company, and be gone after the on-screen delete. The Admin DB is live, so it is
+ * only read. Host-guarded.
  */
 interface TierDoc extends Document {
   _id: ObjectId;

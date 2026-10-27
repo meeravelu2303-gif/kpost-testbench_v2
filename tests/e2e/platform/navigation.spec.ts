@@ -4,10 +4,8 @@ import { expect, test } from '@fixtures';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * Navigation flow — the first UI **interaction** test (a real user action, not a scripted `goto`):
- * from the Home screen, click each destination in the nav rail and confirm it opens the right route.
- * This exercises the shell's routing end to end and catches a broken/mis-wired nav link, which a
- * per-screen `goto` test can never see. Read-only.
+ * Navigation: from Home, click each nav-rail destination and confirm it opens the right route
+ * (catches a mis-wired link a `goto` test cannot see). Read-only.
  */
 test.describe(
   'KPost navigation — the nav rail routes correctly',

@@ -6,22 +6,9 @@ import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
 import { expect, test } from '@fixtures';
 
 /**
- * Kall **read business rules** — the 6 endpoints `feature.spec.ts`'s status-transition flow never
- * touches: `kallDashboard`, `todayKoolKall`, `frequentKallContacts`, `kallInfo`, `contactInfo`,
- * `fetchScheduledRepeatKall`. All `productionSafe: true`; the two chain tests place/schedule a real
- * call, so they run only with `KALL_LIFECYCLE=true` (same gate as `feature.spec.ts`), self-cleaning.
- *
- * ## Confirmed defect: `contactInfo` never resolves real data
- *
- * Live-verified 2026-09-24: `POST /v2/kall/contactInfo/` returns an envelope of all-null/empty
- * fields (`{"kpostID":null,"contactID":null,"firstName":null,...}`, HTTP 200 "SUCCESS") for every
- * input tried — a real, restored (non-deleted), actively-in-call-history contact
- * (`testData.victimKpostId`), the caller's OWN account, `kallID: null`, and a real `kallID` from a
- * call placed seconds earlier. `kallDashboard` and `kallInfo`, queried for the exact same call in
- * the exact same test, correctly return full details (`senderName`, `kallStartTime`, etc.) — so the
- * data exists and other reads see it; `contactInfo` alone never does, regardless of input. Filed via
- * `recordBusinessRuleViolation` (a 2xx-but-empty-data defect the engine's own validators cannot see)
- * as **#599** [KP-FC6594], HIGH, KPost API.
+ * Kall read rules for the six reads the feature flow does not cover (dashboard, today, frequent
+ * contacts, kallInfo, contactInfo, repeat series). The chain tests place/schedule a real call, so
+ * they need `KALL_LIFECYCLE=true`. Known defect #599: contactInfo returns all-null fields (a 2xx).
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 const contactId = testData.victimKpostId;
@@ -230,18 +217,12 @@ test.describe(
         process.env.KALL_LIFECYCLE !== 'true',
         'schedules a real repeating call; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5)',
       );
-      /*
-       * A ONE-DAY series: it ends on the day it starts (the meeting's own day — scheduleShape starts it
-       * an hour out). A series that ends later is copied every night by RepeatKallMaterializerJob until
-       * its end date, and nothing the test can call stops that: clearKallHistory only marks the parent
-       * deleted, which the job ignores. Those copies leave both accounts "On Another Call" (#1679) —
-       * 18 of them did, after a 6-day series here (2026-10-11..13).
-       */
+      // A ONE-DAY series only: a longer one is copied nightly by RepeatKallMaterializerJob, which no
+      // cleanup call stops, leaving both accounts "On Another Call" (#1679).
       const startDate = new Date(Date.now() + 3_600_000).toISOString().slice(0, 10);
       const endDate = startDate;
-      // scheduledRepeatKall answers only "Repeat Kool Kall Created" — no kallID (KallControllerV3) —
-      // so the series is found by the unique kallSession it was created with. #1681: the list reads the
-      // old TBL_KPOST_REPEAT_KOOL_KALL table, so a series created today is not found (fails 2/2).
+      // No kallID comes back, so the series is found by its unique kallSession.
+      // Known defect #1681: the list reads an old table, so today's series is not found.
       const body = scheduleShape({
         repeatType: 1,
         repeatedDate: JSON.stringify({ start_date: startDate, end_date: endDate }),

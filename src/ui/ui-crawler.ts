@@ -2,22 +2,9 @@ import type { Locator, Page } from '@playwright/test';
 import { isResponsive } from './ui-health';
 
 /**
- * Safe systematic UI crawler — the automated equivalent of a diligent manual tester clicking through
- * every control on a screen and noticing when something breaks, but exhaustive and on three browsers.
- *
- * It is GENERIC: it discovers whatever controls the screen renders and exercises them, so it needs no
- * per-feature selectors and cannot rot as the app changes. After each interaction it checks the app is
- * still healthy — did it crash, freeze, or render a raw `undefined`/`NaN`/`[object Object]`? Those are
- * selector-INDEPENDENT signals, so a crawl can only ever report a REAL defect, never a false one.
- *
- * ## Safety — the target is a disposable TEST environment, so it exercises writes too
- * Everything (`test.kpostindia.com`, the test APIs, the test DB) is throwaway, so the crawler is free
- * to click write controls (send, save, create, delete a message/contact) — that is deeper coverage,
- * and any junk it leaves is reset with the DB. The ONLY controls it refuses are the ones that would
- * abort its OWN run or destroy its login (`OPERATIONAL_BLOCK`: logout, deactivate/terminate/delete the
- * account) — not for product safety, but so the crawl can keep going and the account survives to be
- * re-tested. It still Escapes after each click and returns if it navigates away, so it never gets
- * stuck. Result: broad "every control, every screen" coverage including the write paths.
+ * Generic UI crawler: clicks every discovered control and fills every input, then checks for a
+ * crash, freeze or raw `undefined`/`NaN` render (selector-independent signals). On the disposable
+ * test environment writes are allowed; only `OPERATIONAL_BLOCK` controls are skipped.
  */
 
 export interface CrawlFinding {
@@ -28,11 +15,7 @@ export interface CrawlFinding {
   message: string;
 }
 
-/**
- * The ONLY controls the crawler refuses — the ones that would end its session or destroy the test
- * account, aborting the rest of the run. This is operational (keep going, survive to re-test), NOT
- * product safety: on the disposable test environment every other write is fair game and desirable.
- */
+/** Controls the crawler skips because they would end its session or destroy the test account. */
 const OPERATIONAL_BLOCK =
   /(log\s?out|sign\s?out|deactivate|terminate|delete\s+(my\s+)?account|close\s+account|remove\s+account)/i;
 
@@ -61,11 +44,7 @@ async function describe(loc: Locator): Promise<string> {
   }
 }
 
-/**
- * Edge-case values fed into every input — the deep input-handling angle. If any of these crashes,
- * freezes, or corrupts the render, that is a real defect (bad length handling, an unescaped value, a
- * number parse that throws). Filling never submits, so it stays safe on the live QA accounts.
- */
+/** Edge-case values fed into every input; filling never submits. */
 const EDGE_VALUES = [
   'a'.repeat(4000), // very long — length/overflow handling
   '😀🔥💯 unicode ćafé', // multibyte / emoji
@@ -155,9 +134,8 @@ async function rawValueLeaks(page: Page): Promise<string[]> {
 }
 
 /**
- * Exercise the screen's controls one by one, reporting any that crash, freeze, or corrupt the render.
- * `pageErrors` (crashes) are collected by the caller's health monitor; this returns the hang/content
- * findings and never throws — a screen with no safe controls simply returns no findings.
+ * Exercises the screen's controls one by one and returns hang/content findings (crashes come from
+ * the health monitor). Never throws.
  */
 export async function crawlScreen(page: Page, route: string): Promise<CrawlFinding[]> {
   // First the deep input angle — fill every field with edge values and watch for a break.
@@ -180,8 +158,7 @@ export async function crawlScreen(page: Page, route: string): Promise<CrawlFindi
   for (let i = 0; i < total && clicked < MAX_CLICKS; i += 1) {
     const loc = candidates.nth(i);
     const label = await describe(loc);
-    // Skip only the controls that would log us out / destroy the account and abort the run; every
-    // other write is fair game on the disposable test environment.
+    // Skip only controls that would end the session or destroy the account.
     if (!label || OPERATIONAL_BLOCK.test(label)) continue;
 
     try {

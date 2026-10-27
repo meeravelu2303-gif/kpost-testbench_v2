@@ -2,42 +2,24 @@ import type { Severity, ValidationCategory } from '@engine/validation-result';
 import { env } from './env';
 
 /**
- * How this bench files defects into Bugzilla.
- *
- * **Where a ticket goes** (product, component, assignee) is not decided here — that is
- * ownership, and it lives in one place: `src/config/ownership.config.ts`. This file only
- * covers how a ticket is shaped and when filing may happen.
- *
- * Conventions that are a contract with other systems and must not drift:
- * - `[<tag>]` in the summary is how a re-run finds its own ticket instead of duplicating it.
- * - `[cat:Xxx]` on the status whiteboard is parsed by the BUGZILLA-UI backend; `[browser:a,b]`
- *   is read by the same UI for browser-specific defects.
- * - The description is line-anchored (`Classification:`, `Expected:`, `Actual:`, ...) so the Bug
- *   Tracker UI renders a structured report instead of a raw dump.
+ * How tickets are shaped and when filing may happen (where they go is in ownership.config.ts). The
+ * summary `[<tag>]`, the whiteboard tags and the line-anchored description are read by other
+ * systems.
  */
 
 /**
- * Defect type axis, written as `[cat:Xxx]`. Bugzilla has no native field for it. The values are the
- * BUGZILLA-UI tracker's own list (`backend/src/lib/classification.ts` CATEGORIES, minus its
- * `Unclassified` fallback): a value outside it shows as Unclassified there AND drops out of every
- * category filter, including Unclassified's.
+ * Defect type, written as `[cat:Xxx]`; must be one of the tracker's own categories or it drops out
+ * of every filter.
  */
 export type BugCategory =
   'Functional' | 'Security' | 'Performance' | 'Compatibility' | 'Accessibility';
 
-/**
- * Who filed the bug, written as `[source:automation|manual]`. The tracker's Source filter, its
- * "UI/API Automation" vs "Manual UI/API test" badge and the export's Test Type read only this tag in
- * lists (`sourceOf`, BUGZILLA-UI classification.ts). The bench's own findings are `automation`; a bug
- * a person writes by hand through the bench (`npm run bug:file`) is `manual`, like one filed in the UI.
- */
+/** Who filed the bug, written as `[source:automation|manual]` (`manual` for `npm run bug:file`). */
 export type BugSource = 'automation' | 'manual';
 
 /**
- * Playwright project names that are not browser names, and the browser each one really runs. The
- * tracker's `[browser:]` list is `chromium | firefox | webkit | mobile-chrome`; anything else shows as
- * an unknown browser. Re-verification maps it back (`projectForBrowser`), because it matches the tag
- * against the project that ran the test.
+ * Non-browser Playwright project names → the browser each really runs (the tracker knows only real
+ * browsers).
  */
 const PROJECT_BROWSER: Readonly<Record<string, string>> = { 'admin-ui': 'chromium' };
 /** The product whose UI bugs are re-checked by a non-browser-named project. */
@@ -115,10 +97,7 @@ export interface BugzillaConfig {
   timeoutMs: number;
 }
 
-/**
- * Resolves the filing configuration. Missing URL or key is a decision, not a fault: the
- * reporter then says so in one line and files nothing.
- */
+/** Resolves the filing configuration; a missing URL or key means file nothing. */
 export function readBugzillaConfig(): BugzillaConfig {
   return {
     enabled: Boolean(env.BUGZILLA_URL && env.BUGZILLA_API_KEY),

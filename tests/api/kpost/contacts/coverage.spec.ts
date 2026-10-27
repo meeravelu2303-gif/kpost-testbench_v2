@@ -7,9 +7,8 @@ import { foreignIdentifiers } from '@engine/qa-identifier-guard';
 import { expect, test } from '@fixtures';
 
 /**
- * Self-tests for the Contacts module. No HTTP — full coverage, contract agreement, that every write
- * is gated, and — the one that matters on live — that every cleared read's payload passes the
- * QA-identifier guard.
+ * Self-tests for the Contacts module. No HTTP: full coverage, contract agreement, every write gated,
+ * and every cleared read's payload passes the QA-identifier guard.
  */
 test.describe('KPost Contacts · module coverage', () => {
   test('every documented contacts endpoint has a definition @framework', () => {

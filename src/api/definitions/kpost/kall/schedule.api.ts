@@ -5,24 +5,16 @@ import { body } from '../kpost-endpoint';
 import { defineKallEndpoint } from './kall-endpoint';
 
 /**
- * Kall **scheduled-call (Kool Kall)** writes — scheduling a call for later, rescheduling it
- * (FR-KL-004: the status tag moves `Scheduled → Rescheduled` while the entry keeps its identity),
- * joining, ending, repeat scheduling, and modifying the member list.
- *
- * Every one is a write and **none is `productionSafe`**: scheduling notifies the participants and
- * puts an entry on their calendars, so it is treated like a Katchup send — exercised only through
- * the gated feature flow (`docs/modules/kall-flow.md` §5, `KALL_LIFECYCLE=true`) with `allowLiveWrite`.
- * Payloads mirror the live web client (`Services/Kall.js`).
+ * Kall scheduled-call (Kool Kall) writes: schedule, reschedule, join, end, repeat, members. None is
+ * `productionSafe` (it notifies participants); the gated KALL_LIFECYCLE flow drives them.
  */
 const SCHEDULE_TAGS = ['kall-schedule'] as const;
 
 const now = (): number => Date.now();
 
 /**
- * The live client's `scheduledKall` object — a one-off audio Kool Kall to our own second account.
- *
- * `repeatedDate` is a **stringified JSON** object (not a nested object), exactly as the client
- * sends it. Exported so `reScheduleKall` and the feature spec build from one source.
+ * The live client's `scheduledKall` object for a one-off audio call; `repeatedDate` is stringified
+ * JSON, as the client sends it.
  */
 export function scheduleShape(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const start = now() + 3_600_000; // an hour out, so it is a real future slot
@@ -59,10 +51,7 @@ export const reScheduleKallApi = defineKallEndpoint({
   path: '/v2/kall/reScheduleKall',
   summary: 'Reschedule an existing scheduled call (Scheduled → Rescheduled)',
   tags: [...SCHEDULE_TAGS, 'critical'],
-  /*
-   * FR-KL-004: the entry keeps its identity (its `kallID`) while the status tag moves to Rescheduled.
-   * Needs a real `kallID` from `scheduledKall`, so it is exercised by the lifecycle flow.
-   */
+  // Needs a real `kallID` from `scheduledKall`, so the lifecycle flow drives it.
   destructive: true,
   request: body(() => scheduleShape({ kallID: 0 })),
   note: 'needs a real kallID from scheduledKall; exercised by the lifecycle flow',
@@ -99,10 +88,7 @@ export const scheduledRepeatKallApi = defineKallEndpoint({
   path: '/v2/kall/scheduledRepeatKall',
   summary: 'Create a repeating scheduled call',
   tags: [...SCHEDULE_TAGS, 'schedule'],
-  /*
-   * The workbook documents no payload; the client reuses the schedule shape with a non-none
-   * `repeatType` and a `repeatedDate` range. Destructive, lifecycle-only.
-   */
+  // The client reuses the schedule shape with a `repeatType` and a `repeatedDate` range.
   destructive: true,
   request: body(() =>
     scheduleShape({
@@ -126,10 +112,7 @@ export const modifyKallMembersApi = defineKallEndpoint({
   path: '/v2/kall/modifyKallMembers',
   summary: 'Add or remove members on a scheduled call',
   tags: [...SCHEDULE_TAGS, 'members'],
-  /*
-   * The `addingUserIds` / `removingUserIds` are participant kpostIDs — the guard checks each element,
-   * so on live they must be our own accounts. Needs a real `kallID`, so lifecycle-only.
-   */
+  // The guard checks every participant id, so they must be our own accounts. Needs a real `kallID`.
   destructive: true,
   request: body(() => ({
     kallID: 0,

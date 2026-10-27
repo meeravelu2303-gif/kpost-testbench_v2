@@ -1,5 +1,4 @@
-// This spec GENERATES docs/generated/live-endpoints.md, so the "conditionals" it is flagged for are string
-// and data formatting (a table cell, a summary line, a filter), not branches guarding an assertion.
+// Generates docs/generated/live-endpoints.md: its conditionals format strings, not assertions.
 
 import { env } from '@config/env';
 import fs from 'node:fs';
@@ -12,14 +11,8 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /**
- * Writes **the** endpoint reference: what runs against the live application and what does not.
- *
- * Generated from the definitions rather than maintained by hand, because a hand-written list of 46
- * endpoints is wrong within a week and then actively misleads — somebody reads "blocked" for an
- * endpoint that has since been cleared, or the reverse, which is worse.
- *
- * It is a test rather than a script so it can import the registry through the same path aliases the
- * bench uses, and so it fails if the reasons stop making sense. Run `npm run framework`.
+ * Writes the endpoint reference (what runs on live and what does not) from the definitions.
+ * A test rather than a script so it shares the bench's path aliases. Run `npm run framework`.
  */
 
 /** Why an endpoint does not run on live, in the order the reasons take effect. */
@@ -34,15 +27,6 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
   }
   if (definition.productionSafe) return undefined;
   const p = definition.path;
-  /*
-   * Attachment/media endpoints keyed by a real S3 uuid used to be an unconditional "needs a real
-   * uploaded attachment, nobody has built that yet" block. That stopped being true on 2026-09-26
-   * (Katchup, `presigned-attachment-workflow.spec.ts`, KATCHUP_LIFECYCLE+AWS_LIFECYCLE) and
-   * 2026-10-02 (KMail, `attachment-idor.spec.ts`, KMAIL_LIFECYCLE+AWS_LIFECYCLE) — both built a real
-   * presigned-upload flow and drive all nine of these endpoints live with a real attachment uuid. The
-   * tag-based check below (`attachment`/`needs-attachment`/`katchup-attachment`) now catches every one
-   * of them as covered; this function no longer special-cases their paths before reaching that check.
-   */
   if (definition.sideEffect === 'global') {
     return 'OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle)';
   }
@@ -54,50 +38,26 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
     if (/\/common\/save(Enquiry|Unsubscriber)/i.test(p)) {
       return 'OFF-LIVE by choice: persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle';
     }
-    /*
-     * Found 2026-10-02: this generic "destructive => some *_LIFECYCLE flow covers it" claim was
-     * FALSE for `blockTicket` — no `KBOOKING_LIFECYCLE` env var is ever actually read anywhere in
-     * this repo (confirmed by grep), and `feature.spec.ts` unconditionally `test.skip`s it pending
-     * explicit owner authorization (a real third-party seat hold, unconfirmed sandbox — same standing
-     * as the Razorpay payment path). Calling this "COVERED" was a false positive this bench's own
-     * report was making about itself. Named explicitly rather than silently trusting the generic
-     * branch for every future destructive write without a real, grep-confirmed env gate.
-     */
+    // No lifecycle flag drives blockTicket (a real third-party seat hold), so it is not "covered".
     if (definition.id === 'kbooking-block-ticket') {
       return "OFF-LIVE (WRITTEN, execution blocked): no env flag actually gates this (KBOOKING_LIFECYCLE is referenced only in comments) — unconditionally test.skip'd pending explicit owner authorization, not driven by any lifecycle flow";
     }
     return 'COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning';
   }
   const tags = definition.tags ?? [];
-  /*
-   * Confirmed dead routes — checked BEFORE the needs-id branch below on purpose: both of these also
-   * carry a `needs-id` tag, and an earlier version of this function let that branch claim them first,
-   * which wrongly reported them as "COVERED via lifecycle" when no lifecycle actually exercises them
-   * at all. They curl-verified 404 "No matching endpoint for this request" on the current test build
-   * (not a business-account issue) — `katchup/needs-id-workflow.spec.ts` and `kos/feature.spec.ts`
-   * both record this explicitly with their own recorded-gap test.
-   */
+  // Routes that 404 on this build: checked first, or the needs-id branch would claim them.
   if (/getKatchupMessagesSubject|\/kword\/documents\/$/.test(definition.path)) {
     return 'OFF-LIVE: route not deployed on this test build (confirmed 404 — needs the dev to confirm deployment, not a business-account gap)';
   }
-  // Reads keyed by a RUNTIME id — a message/call/group/attachment/mail/document id that only a
-  // completed write produces. Detected by tag OR by a runtime-id path param. NOT a business-account
-  // block: these are covered by the gated lifecycle flows that create the id first.
+  // Reads keyed by a runtime id a write mints (tag or path param): covered by lifecycle flows.
   const RUNTIME_ID_PATH = /\{(uuid|docId|sessionId|kmailID|msgID|eventID)\}/i;
   if (
-    // Confirmed 2026-10-02: the bare `needs-id` tag (25 endpoint definitions use it, e.g.
-    // kmail-bulk-dashboard) never matched this regex — only the more specific `needs-message-id`
-    // etc. did — so every one of those 25 silently fell through to the generic "needs business
-    // setup" catch-all below, which is wrong for all of them (they need a runtime id from a prior
-    // write, not a business-tier account). Found while investigating why `kmail-bulk-dashboard`
-    // appeared in that bucket despite its own definition note clearly saying "needs a real kmailID".
     tags.some((tag) => /^needs-(id|message-id|kall-id|group|attachment)$/.test(tag)) ||
     RUNTIME_ID_PATH.test(definition.path)
   ) {
     return 'COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints';
   }
-  // The admin reporting/location reads keyed by a runtime ObjectId a create mints (covered by the
-  // admin lifecycle, not a business-account block).
+  // Admin reporting/location reads keyed by a runtime ObjectId a create mints.
   if (
     /getLocation|getLocationById|Reporting\w*Hierarchy|RolePostingByCompanyIdAndEmployeeId/.test(
       definition.path,
@@ -105,8 +65,7 @@ function blockedReason(definition: EndpointDefinition): string | undefined {
   ) {
     return 'COVERED via admin lifecycle: read keyed by a runtime ObjectId the create-sequence mints';
   }
-  // KMail reads that need a real mail/kmailID (the id is in the body, not the path) — covered by the
-  // KMail lifecycle, not a business-account block.
+  // KMail reads keyed by a real kmailID in the body, not the path.
   if (/readMail|kmailGroupReadStatus|replyNotRequired|bulkMail\/status/.test(definition.path)) {
     return 'COVERED via KMail lifecycle: read keyed by a real mail / kmailID a send flow mints';
   }
@@ -225,9 +184,7 @@ test.describe('live endpoint coverage @framework', () => {
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
 
-    // This file lists ONLY the endpoints NOT tested on the live application. The other blocked
-    // endpoints (writes + runtime-id reads) ARE tested on live via the gated lifecycle flows, so they
-    // are deliberately excluded here — listing them would misrepresent them as untested.
+    // blocked-endpoints.md lists only the not-tested; lifecycle-covered endpoints are excluded.
     const coveredCount = blocked.filter((d) => !isTrulyOffLive(blockedReason(d) ?? '')).length;
     const offLive = blocked.filter((d) => isTrulyOffLive(blockedReason(d) ?? ''));
 
@@ -308,15 +265,7 @@ test.describe('live endpoint coverage @framework', () => {
   });
 
   test('every live-cleared endpoint is a read, or a named write to our own state', () => {
-    /*
-     * `productionSafe` is a human claim, and this is the part of it a machine can check.
-     *
-     * No cleared endpoint may reach beyond its own request (`external` or `global`). A cleared
-     * WRITE is allowed only by name, below, with the reason it touches nothing but our own state —
-     * so widening the live scope to a new write is a visible, reviewable change to this list rather
-     * than a flag flipped in a definition nobody re-reads. The rest of the claim — "uses only
-     * identifiers we own" — is enforced at runtime by the QA-identifier guard.
-     */
+    // The checkable part of `productionSafe`: no external/global effect; writes by name only.
     const LIVE_OWN_WRITES: Record<string, string> = {
       'signup-login-user-logout':
         'ends only the session whose token and device it is sent with — one the test opened',
@@ -349,15 +298,8 @@ test.describe('live endpoint coverage @framework', () => {
   });
 
   test('a cleared READ does not resolve to destructive (or grepInvert drops it on live)', () => {
-    /*
-     * `destructive` defaults to true for POST/PUT/PATCH/DELETE. A cleared endpoint that is a read
-     * but forgets `destructive: false` therefore RESOLVES to destructive, gets the `@destructive`
-     * test tag, and is silently removed by the production `grepInvert` — the whole endpoint collects
-     * zero engine tests while every other check passes. (The dashboard POST reads hit exactly this.)
-     *
-     * The intentional cleared writes (userLogout) run through a flow, not `describeEndpointCases`,
-     * and are exempt by name here — the same list the test above uses.
-     */
+    // `destructive` defaults to true for POST, so a cleared read without `destructive: false` is
+    // tagged `@destructive` and silently dropped on live. Named cleared writes run via a flow.
     const LIVE_CLEARED_WRITES = new Set(['signup-login-user-logout']);
     const dropped = apiRegistry
       .all()

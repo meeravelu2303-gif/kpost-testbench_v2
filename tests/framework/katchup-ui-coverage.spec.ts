@@ -6,21 +6,13 @@ import { KATCHUP_FEATURES, KATCHUP_REQUIREMENTS } from '@ui/katchup-features';
 import { expect, test } from '@fixtures';
 
 /**
- * Katchup UI coverage — makes "every Katchup feature is covered, nothing missed" **measurable**, the
- * front-end analogue of the API coverage ledger. It reconciles the feature catalogue
- * (`src/ui/katchup-features.ts`, enumerated from the FRD + the message-type enum + the frontend action
- * menus) and FAILS the build if:
- *   - a feature has no status,
- *   - a `built` feature names a spec that does not exist on disk,
- *   - a non-`built` feature has no reason,
- *   - any FR-K / BR-K / NFR the FRD defines for Katchup is represented by no feature.
- *
- * It also writes `docs/generated/katchup-ui-coverage.md` so the picture is legible without reading code.
+ * Katchup UI coverage: fails if a feature in `src/ui/katchup-features.ts` lacks a status, a spec
+ * on disk or a reason, or an FRD requirement maps to no feature. Writes the generated doc.
  */
 test.describe('Katchup UI coverage @framework', () => {
   test('every Katchup feature is classified, specced or blocked-with-reason, and every FR is covered', () => {
     const e2eDir = path.join(ROOT_DIR, 'tests', 'e2e');
-    // Specs live in module folders (tests/e2e/<module>/, 2026-10-22); a feature names its spec by file name.
+    // Specs live in module folders (tests/e2e/<module>/); a feature names its spec by file name.
     const specNames = new Set(
       fs
         .readdirSync(e2eDir, { recursive: true, encoding: 'utf8' })

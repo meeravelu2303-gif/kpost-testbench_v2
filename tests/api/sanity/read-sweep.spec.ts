@@ -19,17 +19,9 @@ import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { test } from '@fixtures';
 
 /**
- * FULL SANITY · API read sweep — every live-safe read endpoint of every in-scope module, at the
- * engine's SMOKE profile: the right status, the documented envelope and schema, the right content
- * type, and a refusal without a token. One generated test per endpoint × check.
- *
- * Selection is DERIVED, never listed: an endpoint joins the sweep the moment its definition says
- * `productionSafe: true` (a reviewed claim that it reads only our own data). OTP-dependent endpoints
- * stay out (SMS kill-switch), and KOS/KWord is paused by the owner. Writes are not swept; each
- * module's core write is a curated `@sanity` test in its own feature spec.
- *
- * Tagged `@sanity-sweep`, not `@regression`: the module wrappers (`tests/api/kpost/<module>/*.spec.ts`)
- * already run these endpoints at the FULL profile, so regression would only repeat them.
+ * Sanity read sweep: every productionSafe, non-OTP read of each in-scope module at the SMOKE profile,
+ * one test per endpoint × check. Tagged @sanity-sweep, not @regression: the module specs already run
+ * these at the FULL profile.
  */
 const liveReads = (apis: readonly EndpointDefinition[]): string[] =>
   apis.filter((api) => api.productionSafe === true && !api.otpDependent).map((api) => api.id);
@@ -58,8 +50,7 @@ for (const sweep of SWEEPS) {
     { tag: [TAGS.api, sweep.tag, TAGS.sanity, TAGS.sanitySweep] },
     () => {
       const ids = liveReads(sweep.apis);
-      // Group has no live-safe read today (every group read needs a group id a lifecycle creates);
-      // its sanity is the curated group feature flow. An empty sweep is a skip, not a failure.
+      // An empty sweep (e.g. Group, whose reads all need a group id) is a skip, not a failure.
       describeEndpointCases({ ids }, { profile: 'SMOKE', allowEmpty: true });
     },
   );
@@ -69,8 +60,7 @@ test.describe(
   'SANITY · API reads · KMail',
   { tag: [TAGS.api, TAGS.kmail, TAGS.sanity, TAGS.sanitySweep] },
   () => {
-    // Same gate as every KMail spec: while the host refuses valid tokens, the sweep would only
-    // re-report that one root cause per endpoint (src/fixtures/kmail-auth-gate.ts).
+    // Same gate as every KMail spec, so a refused token is not re-reported per endpoint.
     test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
     describeEndpointCases({ ids: liveReads(kmailApis) }, { profile: 'SMOKE', allowEmpty: true });
   },

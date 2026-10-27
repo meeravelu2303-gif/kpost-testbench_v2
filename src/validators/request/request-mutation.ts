@@ -55,12 +55,7 @@ export function sectionSchema(
   return section === 'query' ? endpoint.querySchema : endpoint.pathParamsSchema;
 }
 
-/**
- * Whether the endpoint's LIVE method carries a request body. A GET/HEAD does not: the server ignores
- * any body sent with one, so a body fuzzer's "got 200" means "the body was ignored", not "invalid
- * input was accepted" — a false positive. A method-corrected GET keeps a POST-era `requestSchema` for
- * documentation, but its body must not be fuzzed. Body-section request validators gate on this.
- */
+/** Whether the live method has a body; a GET/HEAD body is ignored, so fuzzing it misleads. */
 export function carriesRequestBody(endpoint: ResolvedEndpoint): boolean {
   return endpoint.method !== 'GET';
 }
@@ -153,8 +148,7 @@ async function buildCases(
   const cases: ProbeCase[] = [];
 
   for (const section of sections) {
-    // A GET/HEAD carries no request body, so a body sent with it is ignored — fuzzing it produces
-    // false positives (a 200 means "ignored", not "invalid input accepted"). Query/path still apply.
+    // No body fuzzing on a GET/HEAD; query and path still apply.
     if (section === 'body' && !carriesRequestBody(context.endpoint)) continue;
     const schema = sectionSchema(context.endpoint, section);
     if (!schema) continue;

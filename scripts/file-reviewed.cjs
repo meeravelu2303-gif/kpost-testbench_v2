@@ -1,19 +1,12 @@
 #!/usr/bin/env node
 /**
- * Files NEEDS-REVIEW findings a human has approved — the last step of the review checkpoint.
- *
- * The pipeline holds some brand-new findings for a human (intermittent repros, flow 500s, aggregate
- * error-response findings that overlap specific ones). After you review them in
- * `npm run report:filing`, this files the ones you approve — with the EXACT ticket text the engine
- * prepared (the dry run stores the full summary/description per entry in REPORT.json).
+ * Files the NEEDS-REVIEW findings you approve after `npm run report:filing`, with the exact ticket
+ * text stored in the dry-run REPORT.json. Dry by default; every create is preceded by a live
+ * duplicate check on its `[KP-]` tag.
  *
  *   npm run bug:file-reviewed -- KP-A082D1              # preview one (dry — writes nothing)
  *   npm run bug:file-reviewed -- KP-A082D1 KP-81C8F4    # preview several
  *   npm run bug:file-reviewed -- KP-A082D1 --live        # actually file it
- *
- * Safety: dry by default; every create is preceded by a live duplicate check on the `[KP-]` tag
- * (all statuses) — if ANY ticket already carries the tag, nothing is created and the match is shown.
- * Only entries whose decision is `needs-review` in the report are eligible.
  */
 require(require('node:path').join(__dirname, '..', 'node_modules', 'dotenv')).config({
   path: require('node:path').join(__dirname, '..', '.env'),
@@ -49,11 +42,7 @@ const candidates = (r.bugs && r.bugs.candidates) || [];
 const SEVERITY = { CRITICAL: 'critical', HIGH: 'major', MEDIUM: 'minor', LOW: 'trivial' };
 const PRIORITY = { CRITICAL: 'Highest', HIGH: 'High', MEDIUM: 'Normal', LOW: 'Low' };
 
-/**
- * The whiteboard exactly as src/bug-tracker/bug-builder.ts buildWhiteboard writes it, because the
- * BUGZILLA-UI tracker reads all three tags: [cat:] (category), [browser:] (real browser names only —
- * the admin-ui project runs chromium) and [source:automation] (these are the bench's own findings).
- */
+/** The whiteboard exactly as bug-builder.ts buildWhiteboard writes it: [cat:][browser:][source:]. */
 function whiteboardFor(cand) {
   const tags = [`[cat:${(cand && cand.category) || 'Functional'}]`];
   const browsers = [

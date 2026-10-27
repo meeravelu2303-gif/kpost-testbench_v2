@@ -3,26 +3,9 @@ import type { BugzillaClient } from './bugzilla-client';
 import { candidateRejection } from './validity-gate';
 
 /**
- * The one gate every bug passes through before it reaches Bugzilla.
- *
- * Before this existed, two filing paths had two different standards: the engine ran the validity
- * gate and deduped, while a hand-authored finding (`manual-bug.spec.ts`) only deduped — so a person
- * filing by hand could create a ticket the automated path would have rejected as a bench fault. This
- * closes that: automated and manual filings now make the SAME decision, here, and nowhere else.
- *
- * The gate answers one question — *may this be filed, right now?* — in four ordered stages, cheapest
- * and most certain first:
- *
- *   1. EVIDENCE      the finding is actionable at all (endpoint, expected, actual, a reproduction
- *                    verdict). A ticket a developer cannot act on is worse than no ticket.
- *   2. VALIDITY      it is a product defect, not a bench/infra/transient fault. This is the existing
- *                    `candidateRejection` — the accumulated set of real false positives.
- *   3. REPRODUCED    the reproduction gate confirmed it (every pass failed). A one-off is a flake.
- *   4. DEDUPLICATED  Bugzilla does not already hold it — open (comment instead) or closed-as-not-a-
- *                    defect (a human judged it; never re-file).
- *
- * Only a candidate that clears all four is FILE. Everything else carries the reason, so the preview
- * explains every decision rather than silently dropping tickets.
+ * The one gate automated and manual filings both pass: EVIDENCE (actionable), VALIDITY (not a bench
+ * fault), REPRODUCED (every pass failed), DEDUPLICATED (not already in Bugzilla). Every refusal
+ * carries a reason.
  */
 
 export type GateDecision = 'FILE' | 'REJECT' | 'DUPLICATE' | 'JUDGED_NOT_DEFECT' | 'ERROR';
@@ -38,8 +21,7 @@ export interface GateVerdict {
 const JUDGED_NOT_A_DEFECT = new Set(['INVALID', 'WONTFIX', 'WORKSFORME', 'DUPLICATE']);
 
 /**
- * Stage 1 — evidence. Kept here rather than in the validity gate because it is about the TICKET's
- * usefulness, not the finding's truth: a real defect with no expected/actual still cannot be worked.
+ * Stage 1: the ticket is actionable (a real defect with no expected/actual still cannot be worked).
  */
 function evidenceRejection(candidate: BugCandidate): string | undefined {
   if (!candidate.id) return 'no fingerprint id — deduplication depends on it';
@@ -55,11 +37,8 @@ function evidenceRejection(candidate: BugCandidate): string | undefined {
 }
 
 /**
- * Stage 3 — reproduction. The gate REQUIRES a verdict: a finding that never went through the
- * reproduction gate has `reproduction` undefined, and that is itself a reason to withhold it, because
- * "did it fail every time?" is the question that separates a defect from a flake. A caller that
- * genuinely cannot reproduce (a one-shot manual observation) must say so by setting
- * `{ attempts: 1, failures: 1 }` deliberately, which documents that it was seen once.
+ * Stage 3: a reproduction verdict is required. A one-shot manual observation must set `{ attempts:
+ * 1, failures: 1 }` explicitly.
  */
 function reproductionRejection(candidate: BugCandidate): string | undefined {
   const r = candidate.reproduction;
@@ -72,10 +51,7 @@ function reproductionRejection(candidate: BugCandidate): string | undefined {
   return undefined;
 }
 
-/**
- * The static half of the gate — everything decidable without touching Bugzilla. Pure, so it is
- * unit-testable and the preview can show exactly why a candidate would be dropped, offline.
- */
+/** The gate's static half, decidable offline without Bugzilla. */
 export function staticVerdict(candidate: BugCandidate): GateVerdict {
   const evidence = evidenceRejection(candidate);
   if (evidence) return { decision: 'REJECT', reason: evidence };
@@ -90,12 +66,8 @@ export function staticVerdict(candidate: BugCandidate): GateVerdict {
 }
 
 /**
- * The full gate, including the live duplicate check. Async because the last stage asks Bugzilla.
- *
- * A dedup lookup that ERRORS (network, auth) returns `ERROR`, and the caller must treat that as
- * "do not file" — a transient search failure must never be read as "no duplicate exists" and used to
- * justify creating one. That is the single rule that stops a flaky connection from doubling every
- * ticket in the tracker.
+ * The full gate, including the live duplicate check. A failed lookup returns `ERROR`, which means
+ * "do not file": a search failure must never read as "no duplicate exists".
  */
 export async function gatekeep(
   candidate: BugCandidate,
@@ -129,8 +101,7 @@ export async function gatekeep(
     };
   }
 
-  // Phrase match: a different run may have filed the same endpoint defect under a different tag
-  // (the engine's hash tag vs a hand-authored one). Caught on the endpoint path in the summary.
+  // Phrase match: the same endpoint defect may exist under a different tag.
   if (candidate.endpoint) {
     const byPhrase = await client.findOpenByPhrase(
       candidate.product,
@@ -147,8 +118,7 @@ export async function gatekeep(
         };
       }
     }
-    // A phrase-search error is NOT fatal here: the fingerprint check above already passed cleanly,
-    // which is the authoritative dedup. The phrase check is a best-effort second net.
+    // A phrase-search error is not fatal: the tag check above is the authoritative dedup.
   }
 
   return { decision: 'FILE', reason: 'no existing bug found — safe to file' };

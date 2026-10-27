@@ -3,27 +3,9 @@ import { resolvePath } from '@api/client/request-builder';
 import { maskSecretsOnly } from '@utils/masking';
 
 /**
- * Builds the `curl` a developer can paste into a terminal to see the defect themselves.
- *
- * ## Why a ticket needs this
- *
- * The house style already carries Expected/Actual. What it lacked was a command: the reader had to
- * reconstruct the call from prose, and the first thing anyone does with a bug report is try to
- * reproduce it. A wrong or missing repro is the most common reason a real defect gets closed as
- * "cannot reproduce".
- *
- * ## What it will and will not print
- *
- * - The **real** path (path parameters substituted) and the **real** body, so the command actually
- *   reproduces the failure rather than describing it.
- * - `Authorization: Bearer $KPOST_TOKEN` as a placeholder, never a live token. Tokens are
- *   credentials; a ticket is readable by anyone with a Bugzilla account, and a JWT pasted into one
- *   is a credential leak that outlives the bug.
- * - **Real identifiers.** `kpostID` values are printed as-is, because in KPost a kpostID IS an
- *   e-mail and the general e-mail mask turned the one value a developer needs into `***` — which
- *   left an unrunnable command. Credentials are still masked: a password in a login payload appears
- *   as `***`, so that command needs one edit before it runs. That is the right trade — a
- *   reproducible password in a ticket is worse than a one-word edit.
+ * Builds a runnable `curl` for a ticket: the real path, body and kpostIDs, but the token as a
+ * `$KPOST_TOKEN` placeholder and passwords masked, since a ticket is readable by every Bugzilla
+ * user.
  */
 export interface CurlOptions {
   method: string;
@@ -47,10 +29,7 @@ function queryString(query: RequestSpec['query']): string {
 export function buildCurl(options: CurlOptions): string {
   const { method, path, baseUrl, request, authenticated, contentType } = options;
 
-  /*
-   * A path parameter the request never supplied stays as `{name}`: better an obviously
-   * unsubstituted placeholder than a command that silently calls the wrong resource.
-   */
+  // An unsupplied path parameter stays as `{name}` rather than silently calling the wrong resource.
   let resolved: string;
   try {
     resolved = resolvePath(path, request?.pathParams);

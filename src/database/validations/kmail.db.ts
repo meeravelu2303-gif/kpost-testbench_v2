@@ -6,19 +6,8 @@ import { kmailDb } from '../kmail-assertions';
 import { KmailRepository } from '../repositories/kmail.repository';
 
 /**
- * Persistence checks against the real KMail tables (`TBL_KPOST_KMAIL_MASTER` /
- * `TBL_KPOST_KMAIL_TRANSACTION`), confirmed live 2026-10-02 (both from direct DB sampling and
- * independently from the KMail backend source audit — entity fields match exactly).
- *
- * **Not yet executable**: `KPOST_QA` requires TLS and the bench correctly refuses to disable
- * certificate verification without `DB_SSL_CA` (see the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) §16 P0 item 2)
- * — every DB validation currently reports SKIPPED, this one included. Written now so it is ready to
- * run the instant that's resolved, per the same "write now, verify later" discipline this plan
- * already applies to concurrency.
- *
- * The assertion logic itself (`kmailDb.addressedTo`/`subjectEncrypted`) was NOT written for this
- * file — it already existed, fully correct, built from the KMAIL-SCHEMA investigation. This file is
- * only the wiring: connect `kmail-post-mail`'s response to that existing, trusted assertion layer.
+ * Persistence checks against the KMail tables, wiring `kmail-post-mail`'s response to the `kmailDb`
+ * assertions. Reports SKIPPED until `DB_SSL_CA` is set, since KPOST_QA requires TLS.
  */
 
 /** The response body, or an empty object when it was not JSON. */

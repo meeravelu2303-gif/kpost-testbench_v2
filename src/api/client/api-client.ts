@@ -21,26 +21,16 @@ export class ApiClient {
 
   async execute(apiRequest: ApiRequest, label?: string): Promise<ApiResponseWrapper> {
     const started = performance.now();
-    /*
-     * `rawBody` must reach the server byte for byte, so it goes as a Buffer. A STRING under a JSON
-     * content-type is not sent verbatim: Playwright keeps it only when it parses as JSON and otherwise
-     * wraps it in quotes (JSON.stringify), turning `{"field": ` into the valid JSON string
-     * `"{\"field\": "` and an empty body into `""`. Every malformed-JSON and empty-body probe was
-     * silently sending valid JSON, so a server that correctly checks its input still answered 200
-     * and was reported as a defect.
-     */
+    // `rawBody` goes as a Buffer: Playwright re-encodes a non-JSON string body as a quoted JSON
+    // string.
     const data =
       apiRequest.rawBody !== undefined
         ? Buffer.from(apiRequest.rawBody, 'utf8')
         : apiRequest.body === undefined
           ? undefined
           : JSON.stringify(apiRequest.body);
-    /*
-     * A raw body REPLACES any multipart parts. The malformed-JSON and empty-body probes copy the valid
-     * request and set `rawBody`; when that request was multipart, sending the parts instead silently
-     * delivered the VALID upload, so every multipart endpoint "accepted malformed JSON" (a false
-     * defect) and each probe really sent a message or image.
-     */
+    // A raw body replaces any multipart parts, or a malformed-body probe would send the valid
+    // upload.
     const sendMultipart = apiRequest.multipart !== undefined && apiRequest.rawBody === undefined;
     const headers =
       apiRequest.multipart !== undefined && !sendMultipart
@@ -57,12 +47,8 @@ export class ApiClient {
         failOnStatusCode: false,
         maxRedirects: 0,
       });
-      /*
-       * Read the body ONCE as a Buffer, then derive the text from it. Playwright lets a body be
-       * consumed only once, and the raw leading bytes are what a binary check needs: a lossy UTF-8
-       * decode drops the very magic-number bytes (0x89 for PNG, 0xFF for JPEG) that identify the
-       * real format, so `bodyText` alone cannot tell a mislabelled image from a correct one.
-       */
+      // Read the body once as a Buffer: binary checks need the magic bytes a UTF-8 decode would
+      // lose.
       const buffer = await response.body();
       const bodyText = buffer.toString('utf8');
       const bodyPrefixHex = buffer.subarray(0, 16).toString('hex');

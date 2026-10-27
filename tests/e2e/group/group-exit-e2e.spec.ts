@@ -8,16 +8,9 @@ import type { Browser, Locator, Page } from '@playwright/test';
 import { openGroupConversation } from '../support/katchup';
 
 /**
- * Group exit through the screen, by role (owner rule, Meera 2026-10-15): a promoted admin has the
- * creator's rights and NO admin may exit — admins remove members; only a plain member exits.
- *
- *   - a plain member sees only "Exit Group", confirms, leaves — and the app must stay usable
- *     (live 2026-10-15: the exit works but the screen crashes, TypeError reading 'group' — #1368);
- *   - a promoted co-admin must NOT be offered "Exit Group" (offered until the #1367 fix, verified
- *     2026-10-21; server side #1366).
- *
- * qatest1 creates the group through the API; qatest2 (STORAGE_STATE_2) drives the screen. Every group
- * is removed in `finally` by qatest1, who stays its admin throughout.
+ * Group exit by role: a plain member can exit and the app stays usable (known defect #1368: the
+ * screen crashes after exit); no admin is offered "Exit Group". qatest1 creates and removes the
+ * group via the API; qatest2 (STORAGE_STATE_2) drives the screen.
  */
 const K = AUTH_PROFILES.kpost.principals;
 const A = K.find((p) => p.key === 'personal')!;

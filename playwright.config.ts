@@ -4,11 +4,7 @@ import { env } from './src/config/env';
 
 const BUGZILLA_REPORTER = './src/reporting/bugzilla-reporter.ts';
 
-/**
- * The KPost test bench runs against a LOW-CAPACITY shared server. Workers are hard-capped at 2 and
- * default to 1, enforced here (not only in npm scripts) so no invocation can overload the server.
- * `WORKERS` may lower it to 1 but can never raise it past 2.
- */
+/** Workers default to 1 and are hard-capped at 2 here, so no invocation overloads the shared server. */
 const WORKERS_CAP = 2;
 const resolveWorkers = (): number => Math.min(Math.max(1, env.WORKERS ?? 1), WORKERS_CAP);
 
@@ -28,12 +24,7 @@ const browserProject = (
   retries: RETRIES,
 });
 
-/**
- * Chromium needs fake media so Kall (voice/video) can reach ringing/connecting without a real
- * camera or microphone, with the permissions pre-granted. Harmless for non-media tests. Firefox and
- * WebKit are not used for smoke/sanity (and only Chromium has the fake-device flags), so Kall media
- * flows run on Chromium.
- */
+/** Fake camera/microphone with permissions granted, so Kall media flows run on Chromium. */
 const CHROMIUM_MEDIA: Project['use'] = {
   launchOptions: {
     args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
@@ -47,8 +38,7 @@ export default defineConfig({
   timeout: TIMEOUTS.test,
   expect: { timeout: TIMEOUTS.expect },
 
-  // Kept true (pre-existing); with workers defaulting to 1 the run is effectively serial, which is
-  // what the low-capacity server needs. The hard worker cap below is the real throughput guard.
+  // With 1 worker the run is effectively serial; the worker cap is the real throughput guard.
   fullyParallel: true,
   forbidOnly: env.CI,
   retries: RETRIES,
@@ -58,9 +48,7 @@ export default defineConfig({
   grepInvert:
     env.IS_PRODUCTION && !env.ALLOW_DESTRUCTIVE_TESTS ? new RegExp(TAGS.destructive) : undefined,
 
-  // One run, one report: the Bugzilla reporter writes reports/REPORT.{md,json} (execution health +
-  // bugs) and files once from the complete run. Every run is a single serial process on this
-  // machine (see docs/guides/commands.md), so there is nothing to shard or merge.
+  // The Bugzilla reporter writes reports/REPORT.{md,json} and files once from the complete run.
   reporter: [['list'], ['html', { open: 'never' }], [BUGZILLA_REPORTER]],
 
   use: {
@@ -75,9 +63,7 @@ export default defineConfig({
   },
 
   projects: [
-    // The login setup navigates the live SPA, which occasionally answers a transient
-    // ERR_CONNECTION_RESET; retries absorb that so one flaky navigation does not collapse the run
-    // (a genuine credential/route failure still fails all attempts).
+    // Logs in and saves the sessions; retried so one connection reset cannot collapse the run.
     {
       name: 'setup',
       testDir: './tests/setup',
@@ -85,9 +71,8 @@ export default defineConfig({
       retries: RETRIES,
     },
     browserProject('chromium', devices['Desktop Chrome'], CHROMIUM_MEDIA),
-    // FIREFOX_SPEECH_ON=true switches on Firefox's (normally hidden) speech recognition so the app's
-    // "Microphone not available" alert() on every search bar (#1360) — which also crashes React in
-    // Firefox (#980) — does not block the rest of a Firefox run. Off by default so #1360 stays visible.
+    // FIREFOX_SPEECH_ON=true enables speech recognition so the app's "Microphone not available"
+    // alert() does not block a Firefox run. Off by default so that defect stays visible.
     browserProject(
       'firefox',
       devices['Desktop Firefox'],
@@ -103,9 +88,8 @@ export default defineConfig({
         : {},
     ),
     browserProject('webkit', devices['Desktop Safari']),
-    // The Admin/HR-Setup UI is a SEPARATE SPA (kpostadmin.kpostindia.com) on its own origin, SSO'd
-    // by the session `auth-admin.setup.ts` seeds. Its own baseURL + storageState + testDir keep it
-    // out of the main-app browser glob; it self-skips unless ADMIN_UI_LIFECYCLE seeds a real session.
+    // The Admin UI is a separate SPA with its own baseURL and the session auth-admin.setup.ts seeds;
+    // it self-skips unless ADMIN_UI_LIFECYCLE is on.
     {
       name: 'admin-ui',
       testDir: './tests/e2e-admin',

@@ -3,11 +3,8 @@ import type { ValidationResult } from '@engine/validation-result';
 import { expect, test } from '@playwright/test';
 
 /**
- * Guard for the "lenient input is not a bug" rule (see #534).
- *
- * KPost fields are often optional filters: a null / empty / differently-typed value is legitimately
- * ACCEPTED and the endpoint returns 2xx with data. A negative-input probe flagging that is a false
- * positive and must NOT be filed. But a 5xx CRASH on bad input is a real fault and must still file.
+ * Lenient input is not a bug: an optional filter accepting null/empty/odd types with 2xx is not filed,
+ * but a 5xx crash on bad input still is.
  */
 const result = (validatorName: string, statuses: number[]): ValidationResult =>
   ({

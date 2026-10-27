@@ -4,45 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Admin module security probes — proofs for plan items 0c and 0d (the 2026-10-02 test-bench plan (removed 2026-10-26; in git history)
- * §16 P0), both READ-ONLY and both against the bench's already-configured `ADMIN_API_BASE_URL`
- * (confirmed on-prem/local test box, never the live `adminmodule.kpostindia.com` host — see the
- * plan's §3/§5 notes on this). Nothing here writes to the Admin database, which the bench's own
- * code-level `WRITE_BANNED_SUITES` guard enforces regardless.
- *
- * ## What's being proven
- *
- * The Admin_Module backend source audit (2026-10-02) found two architectural gaps:
- *   0c — Spring Security's filter chain permits every request unconditionally; the custom
- *        `AuthenticationFilter` only rejects a PRESENT-but-invalid token, defaulting
- *        `kpostID`/`companyID` to null/"0" when no `Authorization` header is sent at all, rather
- *        than rejecting the request outright.
- *   0d — most Admin service methods take `companyId` from the request BODY rather than
- *        cross-checking it against the JWT's own `companyID` claim, so tenancy is enforced by what
- *        the caller SAYS, not by what their token actually grants.
- *
- * Three genuinely different, bench-owned companies exist (`QA_BUSINESS_S/M/L_COMPANY_ID` = 1034 /
- * 242 / 1075), which makes 0d directly testable rather than theoretical: can the BUSINESS_M token
- * read BUSINESS_S's or BUSINESS_L's company data by naming their companyId in the body?
- *
- * **Update, live-verified 2026-10-05** (the first time this host was actually reachable from this
- * environment — see `project_kpost_admin_hrsetup_network_blocked_2026_10_04`): the 2026-10-02
- * SOURCE-level claim above does NOT hold for the endpoints in `CROSS_TENANT_CANDIDATES` below.
- * Every one of them ignores the request's `companyId` entirely and always returns the CALLER'S OWN
- * company's data (byte-identical whether 242 or 1034 is requested) — safe, if confusingly unused as
- * a parameter. This was caught only by comparing own-vs-other content directly; a naive "non-empty
- * response = leak" check (the loop's first version) mistook this for 9 cross-tenant leaks and
- * auto-filed 9 false CRITICAL bugs (#1028-1036, since closed INVALID). Left the 0c/0d architectural
- * description above as the historical source-audit finding, but it should not be assumed current
- * without live re-verification, same as every other claim in this codebase.
- *
- * **2026-10-06**: the standalone `admin-department-by-company` probes for 0c (missing-header bypass)
- * and the 0d baseline (both below) were removed along with the `department/*` endpoint definitions —
- * the Admin module's test scope is now restricted to `docs/api-specs/Admin_module - API Services.pdf`'s 36
- * endpoints, which do not include any `department/*` path. These two tests were the clearest,
- * already-filed CRITICAL reproduction of 0c/0d combined; that finding loses bench regression coverage
- * as a result. Six `CROSS_TENANT_CANDIDATES` entries were removed for the same reason (their
- * endpoints no longer have definitions); the rest of the extended 0d sweep below is unaffected.
+ * Admin cross-tenant probe (0d), read-only: can the BUSINESS_M token read BUSINESS_S's company
+ * (1034) data by naming its companyId in the request?
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',
@@ -54,14 +17,7 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
     'needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID)',
   );
 
-  /*
-   * 0d, extended to every other company-scoped `productionSafe` read in the module. The single
-   * `admin-department-by-company` probe above already found and filed a real CRITICAL finding
-   * (0d/0c combined); this is that exact proven pattern, parameterized — not new design — across
-   * every endpoint whose request shape takes `companyId` the same way, per the 2026-10-03
-   * ground-truth re-audit's top recommendation. `ids` cover every shape companyId appears in:
-   * JSON body (most), a path param, and a query param.
-   */
+  // Every company-scoped read that takes companyId in its request.
   const CROSS_TENANT_CANDIDATES: Array<{
     id: string;
     extra?: Record<string, unknown>;
@@ -77,18 +33,8 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
     { id: 'admin-workplace-location-all', shape: 'body' },
   ];
 
-  /*
-   * Live-verified 2026-10-05 (the first time this environment was reachable — see
-   * project_kpost_admin_hrsetup_network_blocked_2026_10_04): a plain "did we get non-empty data
-   * back" check is NOT sufficient here. Every one of these 9 endpoints answered with BYTE-IDENTICAL
-   * bodies whether the request named company 242 (the caller's own) or 1034 (BUSINESS_S's) — the
-   * backend is ignoring the request's companyId entirely and always returning the CALLER'S OWN data,
-   * scoped correctly by token identity. That is SAFE, not a leak — but the old "non-empty = leak"
-   * check could not tell that apart from a genuine cross-tenant disclosure, and reported all 9 as
-   * failing. Fixed by also fetching the caller's OWN company's data and comparing: a real leak must
-   * show content that is DIFFERENT from the caller's own AND actually matches the other company (its
-   * own companyId field, where present, equals the one requested) — not merely non-empty.
-   */
+  // Non-empty data is not a leak: the backend ignores the requested companyId and returns the
+  // caller's own. A leak is content that differs from the caller's own AND carries company 1034's id.
   for (const candidate of CROSS_TENANT_CANDIDATES) {
     test(`0d (extended): BUSINESS_M's token cannot read BUSINESS_S's company data via ${candidate.id}`, async ({
       endpoints,
@@ -130,8 +76,7 @@ test.describe('Admin module · security probes (plan items 0c/0d) @api @admin-ap
           };
           const rows = parsed.value ?? parsed.data ?? [];
           const rowArray = Array.isArray(rows) ? rows : [];
-          // A real leak: the different content actually carries the OTHER company's id, not just
-          // "some non-empty array" — this is what the old check was missing.
+          // A real leak carries the other company's id, not just a non-empty array.
           returnedOtherCompanyData =
             rowArray.length > 0 &&
             JSON.stringify(rowArray).includes(`"companyId":"${otherCompanyId}"`);

@@ -4,39 +4,14 @@ import type { Locator, Page } from '@playwright/test';
 import { messageBySubject, openComposer, openConversation, sendMessage } from '../support/katchup';
 import { settleFrames } from '../support/settle';
 
-/** Same real forward target as the single-forward sub-flow test (katchup-forward-subflow-e2e) —
- * Forward excludes the open thread's counterpart, so the target must be a different contact. */
+/** Forward excludes the open thread's counterpart, so the target must be a different contact. */
 const FORWARD_TARGET_CONTACT_ID = 'qatest3@kpostindia.com';
 const FORWARD_TARGET_SEARCH_TERM = 'Qatest3';
 
 /**
- * Multi-select Forward (several messages in one forward) — the forward angle the single-forward
- * sub-flow test does not reach. Added 2026-10-14 after a user complaint that "forward is not working":
- * the bell-menu single forward passes, so this covers the other real entry point.
- *
- * Read directly from source (bubble/KatchupMessage/KatchupMessage.js, bubble/MessageBox/MessageBox.js,
- * bubble/forwardFooter/ForwardFooter.js):
- *   1. The thread header's "More" icon (`.icon-KP_59-More-Lined`) switches the thread into select mode
- *      (`setCheckBoxValue(true)` + `forwardMessage: true`): every message gets its own checkbox
- *      (`.message-select-box input`, next to the subject in `.message-topbar`), and the forward footer
- *      shows "Selected Messages: N / 5" (`role="status"`), "Select All" and a Forward button
- *      (`.blueBack` holding `.icon-KP_119-Forward`).
- *   2. With more than one message ticked, Forward (`handleForwardShow`) opens the forward write view;
- *      its "Forward To" text (`.forwardtextto`) opens the same MultipleContact picker as single forward.
- *   3. The send button (`.post_button_size`, no accessible name — #963) calls `sendMultiForward`, which
- *      POSTs every selected msgID in one `POST /v2/katchup/forwardKatchupMultipleMsgs/` and toasts
- *      "Message Forward successfully" on `status: "SUCCESS"`.
- *   4. Limit: more than 5 selected (`MAX_FORWARD_MESSAGES`) must be refused with "Only up to 5 messages
- *      can be forwarded at a time" — nothing is sent.
- *
- * Live 2026-10-14: the multi-forward WORKS — HTTP 200 SUCCESS, the server creates one forwarded copy
- * per selected message (messageType 15, the original carried as a quoted `referenceMessage`), and both
- * show in the target's thread. Each copy's subject is "General", not the original subject.
- *
- * Source suspects this test is designed to expose (ForwardFooter.js): the send handler fires
- * `sendMultiForward()` WITHOUT await and immediately calls `handleClose()`, and a failed send only
- * shows a generic toast. So the test reads the server's real response, then verifies delivery in the
- * target's thread — a toast alone is not proof.
+ * Katchup multi-select forward (thread "More" icon → tick messages → Forward): several messages go in
+ * one request and arrive, and more than 5 is refused. Delivery is checked in the target's thread
+ * because the UI's success toast is not proof. Gated behind KATCHUP_UI_LIFECYCLE, self-cleaning.
  */
 test.describe(
   'KPost Katchup · Multi-select forward @ui',
@@ -108,9 +83,7 @@ test.describe(
       const bodyB = `QA multi-forward body B ${stamp}`;
       // Two sends + select + picker + delivery check + cleanup in two threads.
       test.setTimeout(150_000);
-      // The forwarded copies' msgIDs, from the server's response — used to clean them up. (Live
-      // 2026-10-14: a forwarded copy gets the subject "General", not the original subject, so it cannot
-      // be found by subject; a message's DOM `id` is its msgID.)
+      // Forwarded copies are subjected "General", so clean them up by msgID (a message's DOM id).
       let forwardedIds: number[] = [];
 
       await openComposer(page);
@@ -186,8 +159,7 @@ test.describe(
           ).toBeVisible({ timeout: 20_000 });
         }
       } finally {
-        // Best-effort, time-boxed self-clean (a missing message must never hang the test): the forwarded
-        // copies by msgID in the target thread, then the two source messages in the victim thread.
+        // Best-effort, time-boxed cleanup: forwarded copies in the target thread, then the sources.
         await page.keyboard.press('Escape').catch(() => undefined);
         if (forwardedIds.length) {
           await openConversation(page, FORWARD_TARGET_CONTACT_ID).catch(() => undefined);
@@ -214,8 +186,7 @@ test.describe(
         if (/\/katchup\/forward/i.test(r.url())) forwardSent = true;
       });
 
-      // Select All selects every LOADED message (`handleSelectAll` over messageArr), which can be more
-      // than the checkboxes on screen — so read how many it picked from the app's own counter.
+      // Select All picks every loaded message, not just those on screen, so read the app's counter.
       await page.locator('.selectAllCheck').first().check();
       const counter = page.getByRole('status').filter({ hasText: /Selected Messages/i });
       await expect(counter, 'Select All updates the counter').toContainText(/:\s*[1-9]/, {

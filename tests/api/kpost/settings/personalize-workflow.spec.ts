@@ -2,19 +2,8 @@ import { requireAll } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
 
 /**
- * Personalization (font + theme) — change → persist → read back, asserted on the caller's settings
- * row. Mirrors `notifications-workflow.spec.ts`'s pattern for the same table.
- *
- * `generalSetting/*` answers SUCCESS whatever it wrote, so persistence is checked against
- * `TBL_KPOST_GENERAL_SETTINGS.font` / `.theme` directly, not just the response envelope. And
- * `getPersonalize` (`settings-get-personalize`) is checked against that same row, not against what
- * the test just sent — an endpoint serving a cached or default value instead of the stored row would
- * otherwise pass unnoticed.
- *
- * Writes only to the caller's own settings row, captures the original value and restores it exactly
- * — both font AND theme. `feature.spec.ts`'s theme test restored only font; the live QA account was
- * found still holding that test's theme values (kpostLayoutTheme: "purple", Colour Palette: "#0001")
- * from a prior run, confirming the gap. Fixed there too.
+ * Personalization (font + theme): change, persist, read back, checked against
+ * `TBL_KPOST_GENERAL_SETTINGS` (the API says SUCCESS regardless). Restores both font and theme.
  */
 test.describe(
   'KPost Settings · personalize (font/theme) @api @kpost-api @settings @database',
@@ -31,9 +20,7 @@ test.describe(
     let original: { font?: unknown; theme?: unknown } | undefined;
 
     test.afterAll(async ({ endpoints }) => {
-      // Restore BOTH font and theme to what this account actually had before this spec ran — not a
-      // guessed default. Leaving the theme changed on a shared QA account silently changes what any
-      // other test or human sees on it next.
+      // Restore both font and theme to the captured values: the QA account is shared.
       if (!accounts.ok || !original) return;
       const font = original.font as { 'Font Size'?: string; 'Font Style'?: string } | undefined;
       const theme = original.theme as

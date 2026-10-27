@@ -2,12 +2,8 @@ import { describeEndpointCases } from '@engine/endpoint-cases';
 import { test } from '@fixtures';
 
 /**
- * WHAT is tested: the Katchup attachment download, thumbnail, streaming.
- * HOW is owned by the central validation engine.
- *
- * These act on a real message id / attachment uuid the caller owns, which the live application does
- * not have until a lifecycle test creates one — so they are skipped there with the reason, and run
- * in full off-live against the mock.
+ * The Katchup attachment download, thumbnail and streaming endpoints, through the validation engine.
+ * They need a real attachment uuid, so they skip on live with the reason and run in full against the mock.
  */
 test.describe('KPost Katchup · attachments', { tag: ['@api', '@katchup', '@regression'] }, () => {
   describeEndpointCases({ tags: ['katchup-attachment'] });

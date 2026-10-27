@@ -4,18 +4,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * Home — resilience to bad/failed API data. The frontend ground-truth read (`RecentMessage.js`,
- * `Header.js`, `AppErrorBoundary.js`) showed two concrete risks that a stub can drive:
- *
- *  1. A single malformed item in the `homeDashboardMsgs` response dereferences a missing array
- *     during render (e.g. a Kall item whose `kallDetails` is empty/null), which throws and drops the
- *     WHOLE app to `AppErrorBoundary` ("Something went wrong"). One bad row must never crash the app.
- *  2. The unread badges render their count via `String(count).padStart(...)` with no numeric guard,
- *     so an object/odd count shows "[object Object]"; a failed count silently vanishes. Neither
- *     should ever show broken text.
- *
- * NEEDS-LIVE-TUNING: the `kall` item shape is modelled on the source crash paths; if the live markup
- * differs the crash test can only PASS falsely (never fail falsely), so it is safe to ship and tune.
+ * Home with stubbed bad data: one malformed Recents row must not crash the app to AppErrorBoundary,
+ * and an odd unread count must not render as "[object Object]" (`RecentMessage.js`, `Header.js`).
  */
 test.describe(
   'KPost Home · resilience to bad API data',

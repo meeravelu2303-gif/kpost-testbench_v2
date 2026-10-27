@@ -14,16 +14,8 @@ import { writeFileSync } from 'node:fs';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * Deep WCAG accessibility angle — axe-core runs the full ruleset (colour contrast, ARIA validity,
- * roles, names, landmarks, …) on every screen, far beyond the alt/label/lang/title the built-in
- * `ui.accessibility` check covers.
- *
- * Each screen still SOFT-asserts zero critical/serious violations, so a run stays green-by-default
- * and one screen's issues never hide another's. What changed: alongside the human-readable summary,
- * each screen now attaches a STRUCTURED JSON report (`AXE_JSON_ATTACHMENT`) that the bug-filing
- * pipeline reads back. It groups violations by RULE across every screen — the same collapse used for
- * the platform-wide API findings — so one ticket per WCAG rule lists every screen it hit, instead of
- * one ticket per screen flooding the queue with near-duplicates of the same rule.
+ * axe-core WCAG scan of every signed-in screen; soft-asserts zero critical/serious violations. The JSON
+ * attachment lets the filing pipeline file one ticket per WCAG rule across all screens.
  */
 test.describe(
   'KPost accessibility (axe-core WCAG) — every screen',
@@ -62,8 +54,7 @@ test.describe(
           contentType: 'text/plain',
         });
 
-        // Structured evidence for the filing pipeline: only the tiers the assertions below gate on
-        // (critical/serious) — a moderate/minor finding is real but not fileable at this bar.
+        // Evidence for the filing pipeline: only the critical/serious tiers the assertions gate on.
         const evidence: AxeScreenResult = {
           screen: screen.name,
           route: screen.route,
@@ -83,8 +74,7 @@ test.describe(
           path: evidencePath,
           contentType: 'application/json',
         });
-        // Every failing element with selector, HTML and (for contrast) colours + ratio — what the UI
-        // developers asked for on the WCAG tickets; uploaded to the ticket as text.
+        // Every failing element with selector, HTML and (for contrast) colours + ratio, for the ticket.
         if (critical.length + serious.length) {
           const detailsPath = testInfo.outputPath('a11y-details.txt');
           writeFileSync(detailsPath, axeDetailsText(screen.name, [...critical, ...serious]));
@@ -94,12 +84,7 @@ test.describe(
           });
         }
 
-        // A WCAG violation is a static property (missing alt text, low contrast, …) — nothing visibly
-        // changes on the page, so a plain screenshot/video would show nothing wrong and the recorded
-        // video would just be an unremarkable, unchanging screen for its whole length. Painting the
-        // violations onto the page turns BOTH into real evidence: this screenshot shows them directly,
-        // and holding the overlay means Playwright's own on-failure screenshot/video (captured at test
-        // end) also ends on this readable report instead of a blank page.
+        // Paint the violations onto the page so the screenshot and failure video show them.
         if (evidence.violations.length) {
           await renderAccessibilityOverlay(page, screen.name, evidence.violations);
           const overlayPath = testInfo.outputPath('a11y-evidence.png');

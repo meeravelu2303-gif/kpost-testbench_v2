@@ -6,40 +6,9 @@ import { isKnownAppAlert } from '../support/known-dialogs';
 import { settleFrames } from '../support/settle';
 
 /**
- * Stored-XSS verification for KMail's thread-view mail-bubble renderer.
- *
- * A ground-truth source audit of `KmailMessageBox.js` (the mail-bubble renderer) found the mail BODY
- * rendered via `dangerouslySetInnerHTML` (`.para_fontkm.ql-editor...parent-container`,
- * `__html: normalizedPara`) with NO sanitization applied at render time: the file imports DOMPurify
- * and defines its own `sanitizeHTML` helper, but the only call site is commented out — dead code.
- *
- * `kmail-security.spec.ts` only proves the SENDER's own compose screen never executes a payload right
- * after sending. It never reopens the thread to see whether the body executes on RENDER, which is the
- * actual `dangerouslySetInnerHTML` code path the audit flagged — a payload that is inert on the
- * sender's compose screen could still be live when a RECEIVER's thread view renders it from storage.
- * This test closes that specific gap: account A sends a real mail to account B
- * (`testData.victimKpostId`); account B opens it in a second browser context (the `STORAGE_STATE_2`
- * pattern from `katchup-two-session.spec.ts`); we check whether the payload executes when account B's
- * thread view renders the stored body.
- *
- * Payload form: a literal `<script>` tag inserted via `dangerouslySetInnerHTML` never executes in a
- * real browser (the HTML parser does not run script elements inserted this way) — only an
- * event-handler payload (`onerror` on an `<img>`) does, so that is the form used here.
- *
- * Same execution-based check as every other `*-security.spec.ts` file in this bench: a global flag
- * the payload's own `onerror` sets (not string-matching), a `dialog` listener, and `watchUiHealth` for
- * any uncaught JS error — PLUS a direct read of the rendered body's `innerHTML` as supporting evidence
- * either way: did the raw, unescaped markup survive into the live DOM, or was it neutralised upstream
- * of the renderer (e.g. by the compose editor's own serialisation) before ever reaching
- * `dangerouslySetInnerHTML`? Either outcome is useful evidence; the test asserts the CORRECT (secure)
- * behaviour so a live failure is the proof.
- *
- * Gated exactly like `kmail-security.spec.ts` (`KMAIL_UI_LIFECYCLE=true`, both QA accounts configured)
- * PLUS `KATCHUP_UI_LIFECYCLE=true`, which is what makes `auth2.setup.ts` actually log STORAGE_STATE_2
- * in as the real 2nd QA account instead of saving an anonymous session (see `auth2.setup.ts`).
- *
- * KMail has no recall, so — like `kmail-security.spec.ts` — this does NOT clean up after itself; it
- * leaves one real mail in the 2nd QA account's inbox.
+ * KMail stored XSS: account A mails an onerror payload to account B, whose thread view renders the
+ * body via unsanitized dangerouslySetInnerHTML. Gated (KMAIL_ + KATCHUP_UI_LIFECYCLE); leaves one
+ * real mail behind, since KMail has no recall. (A <script> tag never runs via innerHTML, so onerror.)
  */
 test.describe(
   'KPost KMail · stored XSS on thread-view render',
@@ -72,9 +41,7 @@ test.describe(
       const subject = `QA XSS RENDER ${marker}`;
       const payload = `<img src=x onerror="window.__xssFired=true">`;
 
-      // --- Account A (sender, the default session): compose and send a real mail carrying the
-      // payload in the BODY (the field the audit flagged; subject stays plain so the receiver-side
-      // search match below is unambiguous). ---
+      // Account A (sender): payload in the BODY; the subject stays plain so the receiver can search it.
       const stopSender = watchUiHealth(page);
       let dialogFiredSender = false;
       page.on('dialog', (dialog) => {
@@ -88,8 +55,7 @@ test.describe(
         .waitFor({ state: 'hidden', timeout: 30_000 })
         .catch(() => undefined);
 
-      // Body FIRST — filling the To field opens a recipient autocomplete that destabilises the layout
-      // (same proven order as `kmail-compose.spec.ts` / `kmail-security.spec.ts`).
+      // Body first: filling To opens an autocomplete that destabilises the layout.
       const body = page.locator('.ql-editor[contenteditable="true"]').first();
       await body.click();
       await page.keyboard.type(`QA UI stored-XSS render check — ${payload}`);
@@ -123,10 +89,7 @@ test.describe(
       await settleFrames(page);
 
       const healthSender = stopSender();
-      // Logged as context, not asserted: the sender screen can throw unrelated JS errors (other
-      // screen chrome, notification polling, etc.) that have nothing to do with THIS payload — that
-      // general sender-screen health is already `kmail-security.spec.ts`'s job. The only thing this
-      // test cares about on the sender side is that the payload itself never executes there either.
+      // Sender page errors are logged, not asserted: unrelated errors there are kmail-security.spec.ts's job.
       test.info().annotations.push({
         type: 'observed-sender',
         description: `sender pageErrors: ${JSON.stringify(healthSender.pageErrors)}`,
@@ -135,8 +98,7 @@ test.describe(
         false,
       );
 
-      // --- Account B (the receiver): a second browser context restored from STORAGE_STATE_2, the
-      // established two-session pattern (`katchup-two-session.spec.ts`). ---
+      // Account B (receiver): a second browser context from STORAGE_STATE_2.
       const context = await browser.newContext({ storageState: STORAGE_STATE_2 });
       const receiver = await context.newPage();
       try {
@@ -153,28 +115,23 @@ test.describe(
           .waitFor({ state: 'hidden', timeout: 30_000 })
           .catch(() => undefined);
 
-        // Filter the recent-mail list down to our unique subject. `MessageContainer.js` filters its
-        // mail list by `kmailSubject` against this search box (`.Serach_input`, `SearchBar.js`).
+        // The search box filters the list by subject, client-side; the visibility wait below suffices.
         const search = receiver.locator('.Serach_input').first();
         await search.fill(subject);
-        // The list filter is client-side; the visibility wait below is the only wait it needs.
 
         const received = receiver.getByText(subject, { exact: false }).first();
         await expect(received, 'account 2 receives the mail account 1 sent').toBeVisible({
           timeout: 25_000,
         });
 
-        // Click the mail row to expand it — `KmailMessageBox.showMailContent()`, wired to the
-        // collapsed row's own onClick — which is what actually renders the body through
-        // `dangerouslySetInnerHTML` (the code path the source audit flagged).
+        // Expanding the row renders the body through dangerouslySetInnerHTML.
         await received.click();
 
         const bodyLocator = receiver.locator('.para_fontkm.ql-editor.parent-container').first();
         await expect(bodyLocator, 'the mail body renders in the thread view').toBeVisible({
           timeout: 20_000,
         });
-        // An injected `onerror` fires when its image fails to load — wait for the body's images to
-        // settle (loaded or errored) instead of guessing a delay.
+        // onerror fires when the image fails, so wait for the body's images to settle, not a delay.
         await bodyLocator
           .evaluate((el) =>
             Promise.all(
@@ -206,19 +163,14 @@ test.describe(
 
         console.log(`[kmail-stored-xss-render] ${summary}`);
 
-        // NOTE: a pre-existing, unrelated `TypeError: Cannot read properties of undefined (reading
-        // 'status')` fires on BOTH the sender and receiver screens regardless of this payload (seen
-        // identically with the payload absent) — almost certainly a background notification/socket
-        // poll race, not caused by this test. Logged for context, not asserted here; the two hard
-        // gates below are what this test exists to prove.
+        // Receiver page errors are context only: an unrelated background TypeError fires with or
+        // without the payload.
         test.info().annotations.push({
           type: 'context-pageErrors',
           description: `receiver pageErrors (not asserted, see note above): ${JSON.stringify(health.pageErrors)}`,
         });
 
-        // Precondition (2026-10-14): the verdict below only means something if the body actually
-        // rendered. Opened mails currently show an EMPTY body (#1348), so "no script ran" proved
-        // nothing — this test passed without ever rendering the payload. Red until #1348 is fixed.
+        // Precondition: an empty body proves nothing. Known defect #1348: opened mails show an empty body.
         expect(
           rawHtml.trim().length,
           'the received mail body actually renders (an empty body cannot prove the payload is inert — #1348)',

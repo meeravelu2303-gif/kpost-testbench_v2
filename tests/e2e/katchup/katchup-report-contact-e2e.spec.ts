@@ -4,21 +4,9 @@ import type { Locator, Page } from '@playwright/test';
 import { openConversation } from '../support/katchup';
 
 /**
- * Report Contact (Katchup → a contact's Digital Card → Report) — the last uncovered Katchup report
- * surface. There is NO message-level report in the live (bubble) app: the only report flow is the
- * Digital Card's "Report Contact" (DigitalCard.js featureButtons, `aria-label="Report Contact"`, or the
- * card footer's "Report" link), which opens ReportContact.js.
- *
- * Read directly from source (bubble/ReportContact/ReportContact.js):
- *   - the dialog lists abuse reasons as checkboxes (`name="Check"`) and one "Block this Contact in my
- *     KPOST & Clear the Data" checkbox (`name="mainCheck"`);
- *   - Confirm is disabled until that block box is ticked;
- *   - Confirm (`confirmbutton`) only closes the dialog — it calls NO service at all. That is the open
- *     bug **#966** [KP-REPORTCONTACT-NOOP].
- *
- * Target: qatest3, NOT the victim account (qatest2). Confirm sits behind "Block this Contact & Clear
- * the Data", so if a newer build really does block and clear, it must not wipe the qatest1↔qatest2
- * thread every other Katchup spec relies on. The confirm test unblocks qatest3 again afterwards.
+ * Katchup Report Contact (a contact's Digital Card → Report): the reasons dialog, and that Confirm
+ * reaches the server. Targets qatest3, not qatest2, because Confirm may block and clear the thread
+ * other specs rely on; the confirm test unblocks qatest3 afterwards.
  */
 const REPORT_TARGET_CONTACT_ID = 'qatest3@kpostindia.com';
 
@@ -97,9 +85,7 @@ test.describe(
           process.env.KATCHUP_UI_LIFECYCLE !== 'true',
           'confirms a real report (and may block qatest3); set KATCHUP_UI_LIFECYCLE=true',
         );
-        // Correct behaviour asserted on purpose: a report the user confirms must reach the server. Today it
-        // does not (#966, open) — this test is the live re-verification of that bug, so it fails until
-        // #966 is fixed.
+        // Known defect #966: Confirm only closes the dialog and sends nothing, so this fails until fixed.
         try {
           await (await openReportTrigger(page)).click();
           const dialog = reportDialog(page);

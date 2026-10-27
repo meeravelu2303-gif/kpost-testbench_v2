@@ -1,27 +1,6 @@
-// Requirements Traceability Matrix generator.
-//
-// Driven by Playwright `annotation` entries, NOT by tags:
-//   'requirement'          — the test asserts the requirement's acceptance criterion;
-//   'requirement-partial'  — the test exercises the requirement but asserts only part of it (an entry
-//                            point, a status code, one half of a two-part rule); it links the test but
-//                            the requirement can be at most Partial on this link alone;
-//   'non-functional'       — security / accessibility / resilience / performance (no requirement row).
-// Every requirement / requirement-partial id must exist in the docs or ASSESSED; unknown ids are listed
-// on the "Unknown links" sheet (a typo or a legacy SRS id would otherwise link silently to nothing).
-// Called from `scripts/lint-tags.mjs --report` with the already-listed Playwright JSON, so it adds no
-// extra `--list`. Writes reports/rtm.xlsx. Pure analysis — never runs tests.
-//
-// Coverage definitions (applied consistently):
-//   Covered     — a requirement has >=1 in-scope test linked to it (requirement annotation OR the FR id
-//                 in the test title OR, for analyst-assigned RTM-* rows, a cited in-scope spec) AND the
-//                 source doc marks it covered. Owner rule 2026-10-22: a correct test that fails ONLY on an
-//                 open, filed bug counts as covered; its doc row says "covered (bug #N)", and the failure
-//                 still shows in "Last result" / "Covered & passing", so coverage and pass rate stay apart.
-//   Partial     — linked but the doc marks it partial/finding, OR the doc claims covered but only a
-//                 file-level (not assertion) link resolves.
-//   Not covered — nothing links it.
-// "Covered and passing" additionally requires the linked test(s) to have passed in the latest regression
-// report (reports/<level>/<suite>/<ts>/report.json); otherwise flaky / failed / not run.
+// Requirements Traceability Matrix generator (reports/rtm.xlsx), called by `lint-tags.mjs --report`.
+// Tests link through annotations ('requirement', 'requirement-partial', 'non-functional') or an FR
+// id in the title; "Covered and passing" also needs a pass in the latest regression report.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,9 +8,7 @@ import { createRequire } from 'node:module';
 
 const norm = (f) => String(f).replace(/\\/g, '/');
 const base = (f) => norm(f).split('/').pop();
-// Canonicalise a spec path to its testDir-relative form (the `--list` reporter already emits this
-// form, e.g. "api/kpost/x.spec.ts"; the regression report.json emits absolute paths). Keying both on
-// this makes "Last result" line up.
+// testDir-relative spec path, so `--list` paths and report.json absolute paths key the same.
 const canon = (f) =>
   norm(f)
     .replace(/.*\/tests\//, '')
@@ -230,8 +207,7 @@ export async function generateRtm({ report, root }) {
     for (const id of t.reqAnns) addLink(id, t);
     for (const id of t.titleIds) addLink(id, t);
   }
-  // The Admin(ref) rows (BR-ADM-*) can only ever be proven by the Admin suite, which is otherwise out
-  // of this KPost scope: link Admin tests to those rows alone (they stay out of orphans/scope counts).
+  // Admin tests link to the BR-ADM-* rows only; they stay out of orphan and scope counts.
   for (const r of seen.values()) {
     if (!(isAdminPath(r.file) || isAdminTags(r.tags)) || isMetaPath(r.file)) continue;
     const ids = (kind) =>
@@ -367,7 +343,7 @@ export async function generateRtm({ report, root }) {
       );
       if (bucket === 'Covered') {
         if (files.length) {
-          status = 'Partial'; // doc claimed covered; a spec file exists in-scope but no assertion-level link — needs review
+          status = 'Partial'; // doc says covered, but only a file-level link: needs review
           reviewLinks.push({
             'Req ID': id,
             Module: module,

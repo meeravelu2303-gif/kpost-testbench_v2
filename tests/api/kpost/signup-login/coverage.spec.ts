@@ -24,10 +24,7 @@ test.describe('KPost Signup & Login · module coverage', () => {
   });
 
   test('the auth profile logs in at a registered endpoint @framework', () => {
-    /*
-     * If this id ever stops matching a real definition, every authenticated endpoint in the bench
-     * fails with "endpoint not registered" instead of a useful message.
-     */
+    // Otherwise every authenticated endpoint fails with "endpoint not registered".
     const loginId = AUTH_PROFILES.kpost.loginEndpointId;
     expect(
       signupLoginApis.map((api) => api.id),
@@ -43,10 +40,7 @@ test.describe('KPost Signup & Login · module coverage', () => {
   });
 
   test('endpoints that change a credential or end other sessions stay blocked on live @framework', () => {
-    /*
-     * `userLogoutFromAllDevices` also ends the owner's own manual sessions on these accounts;
-     * `setAccessCode` changes a credential. Neither is scoped to the bench, so both stay `global`.
-     */
+    // Logout-all also ends the owner's manual sessions; setAccessCode changes a credential.
     for (const id of ['signup-login-logout-all-devices', 'signup-login-set-access-code']) {
       const api = signupLoginApis.find((candidate) => candidate.id === id);
       expect(api?.sideEffect, `${id} must stay global`).toBe('global');
@@ -55,11 +49,8 @@ test.describe('KPost Signup & Login · module coverage', () => {
   });
 
   test('single-session logout never runs through the shared engine run @framework', () => {
-    /*
-     * The engine authenticates with the token provider's cached token. If `userLogout` ever lost
-     * its `session-ending` tag, `login.spec.ts` would log that shared session out and every later
-     * test in the run would report 401 — an outage the bench caused, filed as auth defects.
-     */
+    // Without the `session-ending` tag, the engine run would log out the shared token and every later
+    // test would 401.
     const logout = signupLoginApis.find((api) => api.id === 'signup-login-user-logout');
     expect(logout?.tags, 'userLogout is excluded from describeEndpointCases').toContain(
       'session-ending',
@@ -68,21 +59,7 @@ test.describe('KPost Signup & Login · module coverage', () => {
   });
 
   test('signup is in scope, and nothing under /signupLogin is silently excluded @framework', () => {
-    /*
-     * This inverts an invariant that had gone stale.
-     *
-     * It previously asserted that the five registration ids were ABSENT and that
-     * `SIGNUP_OUT_OF_SCOPE` held five entries. Signup came back into scope on 2026-09-19 — the
-     * testingapi test database runs an OTP TEST GATEWAY, so registration and the OTP flows can run
-     * end to end without sending real SMS — and `SIGNUP_OUT_OF_SCOPE` was emptied accordingly. The
-     * test was not updated with it, so it had been asserting the opposite of the bench's actual
-     * configuration.
-     *
-     * Two of those ids matter beyond bookkeeping: `kpostIdExist` and `kpostIdSuggestions` register
-     * nothing at all. They are the availability and suggestion calls the signup screen makes as the
-     * user types — reads, `destructive: false`, cleared for live. Excluding them as "registration"
-     * left the signup front door untested; including them is what surfaced Bugzilla #497.
-     */
+    // Signup runs on the OTP test gateway, so the registration ids are in scope.
     const ids = signupLoginApis.map((api) => api.id);
     for (const covered of [
       'signup-login-signup',
@@ -97,11 +74,7 @@ test.describe('KPost Signup & Login · module coverage', () => {
     // The login screen's step 1 is NOT signup, whatever its path looks like.
     expect(ids).toContain('signup-login-fetch-user-details');
 
-    /*
-     * The list is empty, and the assertion is that it STAYS empty rather than that it has some
-     * length: an entry added here removes a path from coverage, and that should be a deliberate act
-     * that fails this test until someone confirms it.
-     */
+    // Must stay empty: adding an entry removes a path from coverage, so it should fail until confirmed.
     expect(
       SIGNUP_OUT_OF_SCOPE,
       'no /signupLogin path is deliberately out of scope; an addition here must be justified',

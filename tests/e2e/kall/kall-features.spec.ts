@@ -3,12 +3,8 @@ import { expect, test } from '@fixtures';
 import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall';
 
 /**
- * **Kall** feature flows (FR-C01..C09, BR-C01), from `components/Kall/` (see `docs/ui/ui-screens.md`).
- * Root `.kall-layout-shell`; tabs "Recents" / "Contacts" / "Kool Kall".
- *
- * Direct calling **rings a real device**, so it is **assert-only** (open the Kall-Info modal, confirm
- * the audio/video controls exist, never place the call). Scheduling a Kool Kall is a safe write, gated
- * behind `KALL_UI_LIFECYCLE=true` and self-cleaning.
+ * Kall screen: tabs, the Contacts count breakdown, and the Kool Kall schedule form. Calls are never
+ * placed (they ring a real device); scheduling is gated on KALL_UI_LIFECYCLE.
  */
 test.describe('KPost Kall — read-only', { tag: ['@ui', '@kall', '@regression', '@sanity'] }, () => {
   test.skip(
@@ -45,11 +41,8 @@ test.describe('KPost Kall — read-only', { tag: ['@ui', '@kall', '@regression',
     'the Contacts screen shows the contact count, and each breakdown adds up to its total @ui',
     { annotation: [{ type: 'requirement', description: 'FR-KL-007' }] },
     async ({ page }) => {
-      // KallContact.js (2026-10-20): the Contacts tab shows a chip "My Contacts • N"
-      // (`.contact-background-style` / `.contact-chip-count`, N = the contact list's length). Opening it
-      // lists each group as a `.contact-dropdown-main` row with its count, followed by its kinds
-      // (`.contact-dropdown-sub`: Personal / Business / Institution / Government) with theirs. A kind
-      // count is the number of that group's contacts of that kind, so the kinds must add up to the group.
+      // The chip "My Contacts • N" opens a list of groups (`.contact-dropdown-main`), each followed by
+      // its kinds (`.contact-dropdown-sub`); the kind counts must add up to the group's count.
       await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
       await page
         .locator('.loader-overlay')
@@ -64,8 +57,7 @@ test.describe('KPost Kall — read-only', { tag: ['@ui', '@kall', '@regression',
       await expect(chip, 'the Contacts screen names the list').toContainText(/My Contacts/i, {
         timeout: 20_000,
       });
-      // The count fills in after the contact list loads ("•" first, "• 1" a moment later; full sanity
-      // 2026-10-22 read it too early as 0), so wait for the number rather than reading it once.
+      // The count fills in after the list loads, so poll for it rather than reading it once.
       const countNow = async (): Promise<number> =>
         Number((await chip.locator('.contact-chip-count').innerText()).replace(/[^\d]/g, ''));
       await expect
@@ -116,25 +108,13 @@ test.describe(
       'needs a real live account',
     );
 
-    /**
-     * The CreateKallModal is opened by the cursor-pointer `.create_font` "Create" control (the sibling
-     * `.create_button` div is a silent no-op), and its schedule fields are **native HTML inputs**
-     * (`type=date name=birthday`, two `type=time` From/To) — `fill()` with ISO values is reliable, no
-     * custom picker. This drives and verifies the whole schedule form green: modal → Meeting Title →
-     * future Date → From/To times → the participant picker OPENS (Invite Participants reveals the
-     * contacts). Submit stays disabled until a participant is added.
-     *
-     * NEEDS-CODEGEN — the final Submit: the participant is chosen from a **nested-scroll custom contact
-     * picker** (the rows are not a plain button/checkbox and sit in an off-viewport scroll container), so
-     * selecting one and enabling Submit needs one interactive `codegen` pass. The API Kall lifecycle
-     * (`scheduledKall` → `reScheduleKall`, BR-C01, green on live) proves the schedule create/reschedule
-     * itself works — only the participant-picker UI-driving step is pending.
-     */
+    // Fills the schedule form (native date/time inputs) and opens the participant picker. Choosing a
+    // participant and submitting is not automated yet: the picker is a nested-scroll custom list.
     test('the schedule modal opens and accepts the meeting details (title + future date + time) @ui', async ({
       page,
     }) => {
       const title = `QA UI kall ${Date.now()}`;
-      // Kool Kall tab + Create → the Create Kool Kall modal (support/kall.ts, re-tuned 2026-10-11).
+      // Kool Kall tab + Create → the Create Kool Kall modal.
       await gotoKoolKall(page);
       const opened = await openCreateKall(page);
       expect(opened, 'the schedule modal opens').not.toBeNull();
@@ -156,10 +136,7 @@ test.describe(
       await expect(modal.locator('input[name="birthday"]').first()).toHaveValue('2026-12-31');
       await expect(times.nth(0)).toHaveValue('10:00');
 
-      // The participant picker opens (Invite Participants reveals the contact list) — the last step before
-      // Submit; selecting a contact from it is the codegen-pending piece documented above.
-      // The "Invite" action beside the Participant field opens the picker (the field text itself is
-      // a placeholder, not the trigger — screenshot 2026-10-11).
+      // "Invite" beside the Participant field opens the picker; the field text is only a placeholder.
       await modal
         .getByText(/^Invite$/)
         .first()

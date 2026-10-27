@@ -12,14 +12,8 @@ function sacrificialKpostId(): string {
 }
 
 /**
- * Points an endpoint's requests at a throwaway account instead of the shared counterparty.
- *
- * The generic sweep sends an endpoint's valid ("primary") request for real, then derives every probe
- * from it. For writes that act on another person (add / block / delete a contact, call, schedule,
- * add to a group) the shared `victimKpostId` would be blocked, deleted or called for real, and every
- * lifecycle flow that uses it as the counterparty would then start failing for a reason that has
- * nothing to do with the product. The throwaway account is used by no flow as a counterparty, so
- * acting on it contaminates nothing.
+ * Points an endpoint's requests at the throwaway account, so sweep writes never block or delete the
+ * shared counterparty.
  */
 export function withSacrificialTarget(definition: EndpointDefinition): EndpointDefinition {
   const factory = definition.request;
@@ -39,10 +33,8 @@ export function withSacrificialTarget(definition: EndpointDefinition): EndpointD
 const EXPECTS_SUCCESS: ReadonlySet<string> = new Set(['group-create']);
 
 /**
- * Marks a write as one whose valid request needs data the sweep cannot supply (an existing group,
- * call, event, contact or image) or depends on state an earlier run left behind. The sweep's primary
- * request then legitimately gets a client rejection: "groupID not found", "Kall not found",
- * "ContactID is already in your contact list". See `EndpointDefinition.precondition`.
+ * Marks a write whose valid request needs data the sweep cannot supply, so a client rejection is
+ * accepted.
  */
 export function withPlaceholderPrimary(definition: EndpointDefinition): EndpointDefinition {
   if (definition.precondition || definition.expectedStatus || EXPECTS_SUCCESS.has(definition.id)) {

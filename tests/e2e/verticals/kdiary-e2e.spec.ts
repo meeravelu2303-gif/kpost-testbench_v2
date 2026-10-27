@@ -5,20 +5,9 @@ import { requireKpostDb, rowSummary, rowWhen } from '../support/cross-layer';
 import { pickReactSelect } from '../support/react-select';
 
 /**
- * **KDiary through the screens** — the module had NO working UI coverage: the old `kdiary.spec.ts` is
- * hard-skipped citing "`/kdiary` is commented out / no entry point (#812)", but that is out of date —
- * `/kdiary` is now routed (`MenuRoutes.js:442` → `<KDiary/>` → `Diary`), reachable in the deployed
- * build (verified live 2026-10-15), and #812 does not exist in Bugzilla. The Diary panel shows a
- * day filter, a task %/count, the schedule list, and a "+ Add" button opening the "KDiary" modal
- * (Add Schedule / Add Report).
- *
- * This drives the core user action end to end: open the modal, create a one-time schedule, confirm it
- * lands in the list (and the server accepted it via CreateDiarySchedule), then delete it through the
- * task's remarks modal (window.confirm "Delete this task?") so nothing is left on the account.
- *
- * Required fields for a one-time schedule (Diary.js validateForm): Title, Description, Date (prefilled
- * today), Start Time, End Time, Priority — Save stays disabled until all are set. Priority is a
- * react-select. Gated behind KDIARY_UI_LIFECYCLE (it writes a real schedule) and self-cleaning.
+ * KDiary (/kdiary): create a one-time schedule, see it in the list and the DB, then delete it via the
+ * remarks modal. Save stays disabled until Title, Description, Date, Start/End Time and Priority are
+ * set. Gated behind KDIARY_UI_LIFECYCLE; self-cleaning.
  */
 test.describe(
   'KPost KDiary · create and delete a schedule @ui',
@@ -148,9 +137,7 @@ test.describe(
           await page.screenshot({ path: shot });
           await test.info().attach('kdiary-created', { path: shot, contentType: 'image/png' });
 
-          // --- Delete it: each card's right-side status button (aria-label "Update remarks for <title>")
-          //     opens the "KDiary Remarks" modal with a "Delete Task" button (handleDeleteTask →
-          //     window.confirm "Delete this task?" → DeleteDiaryScheduleEvent).
+          // --- Delete it: the card's status button opens "KDiary Remarks" with "Delete Task" ---
           await page
             .getByRole('button', { name: `Update remarks for ${title}` })
             .first()

@@ -16,13 +16,7 @@ import { profileApis } from './kpost/profile/index';
 import { signupLoginApis } from './kpost/signup-login/index';
 import { kmailApis } from './kmail';
 
-/**
- * Every endpoint under test, across all KPost modules.
- *
- * Each definition carries its `suite`, which decides the host it is called on and — when a
- * defect is found — the Bugzilla product, component and developer it goes to. Adding an
- * endpoint is one definition; adding a module is one entry in ownership.config.ts.
- */
+/** Every endpoint under test; each one's `suite` picks its host and Bugzilla owner. */
 export const apiRegistry = new ApiRegistry().register(
   // KPost core API (suite: kpost-api, default) — Jaganathan Murthy
   // KPost common module - public endpoints, no token required.
@@ -51,8 +45,7 @@ export const apiRegistry = new ApiRegistry().register(
   ...profileApis,
   // KPost Dashboard - the Home recent-messages panel (undocumented module).
   ...dashboardApis,
-  // KPost KBooking - RedBus bus search/booking (non-payment surface). Added 2026-10-02 scope
-  // rebuild — confirmed frontend-active via KBook.js, previously untested entirely.
+  // KPost KBooking - RedBus bus search/booking (non-payment surface).
   ...kbookingApis,
   // Admin module — Karan S. Loaded from its own spec when ADMIN_API_BASE_URL is set.
   ...adminApis,

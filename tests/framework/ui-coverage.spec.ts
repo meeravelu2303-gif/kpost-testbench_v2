@@ -14,12 +14,8 @@ import { UI_CHECKS } from '@ui/ui-checks';
 import { expect, test } from '@fixtures';
 
 /**
- * THE UI coverage ledger — the front-end analogue of `coverage-ledger.spec.ts`. It accounts for every
- * screen the deep suite drives, the check catalogue every screen inherits, and the interaction flows,
- * and it **fails the build** if a screen would route a bug to a component that does not exist in the
- * KPost UI product. So UI coverage is measurable and self-checking, not asserted by hand.
- *
- * Generated to `docs/generated/ui-coverage.md`, never hand-kept.
+ * The UI coverage ledger (screens, inherited checks, flows): docs/generated/ui-coverage.md.
+ * Fails if a screen would route a bug to a component that does not exist in KPost UI.
  */
 
 /** The interaction flows that exist today (spec files under tests/e2e), for the ledger. */
@@ -142,11 +138,7 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
   },
 ];
 
-/**
- * The deep write flows still to build (need the gated-write approval + live tuning). Selectors are
- * mined in `docs/ui/ui-screens.md` (the original flow plan is archived as
- * the 2026-09-28 UI write-flows plan (removed 2026-10-26; in git history)); each has a green API lifecycle.
- */
+/** Deep write flows still to build (selectors: `docs/ui/ui-screens.md`); each has a green API flow. */
 const PLANNED_FLOWS = [
   'Katchup group send + per-recipient read receipts (needs 3 QA accounts + recording — confidential-copy and attachments are now built, see Interaction flows above)',
   'KMail composer: open → recipient/subject → send (gated) → verify in Sent → delete; reply, drafts',

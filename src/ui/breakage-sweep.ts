@@ -11,15 +11,9 @@ import {
 import type { UiHealthReport } from '@ui/ui-health';
 
 /**
- * Shared screen-breakage sweep — "does this screen crash?" — reused by every screen-breakage spec.
- *
- * A screen that renders can still be broken: it can throw an uncaught JS exception, fail to load its
- * own assets, or hang. Those are real UI defects an API test never sees. This drives a screen, watches
- * its health, and — crucially — when it finds a crash it produces proof a HUMAN can understand: a
- * plain-English diagnosis file, a full-screen overlay painted onto the page naming the error + stack +
- * failing API calls, a screenshot of that overlay, and a SHORT video that ends on it (because most
- * crashes fire on load, it captures the proof immediately instead of recording a minute of an
- * unchanging screen).
+ * Shared screen-breakage sweep ("does this screen crash?"): drives a screen, watches its health,
+ * and on a crash attaches a diagnosis, an annotated screenshot and a short video ending on the
+ * overlay.
  */
 
 /** Open a labelled section/tab if present; never fails the walk if a label is absent on this build. */
@@ -41,11 +35,7 @@ export async function settleLoader(page: Page): Promise<void> {
     .catch(() => undefined);
 }
 
-/**
- * Turn an invisible JS crash into proof a human can SEE and READ: diagnosis file + on-screen overlay +
- * annotated screenshot, with the overlay held so the (short) video ends on the readable crash report.
- * Best-effort — proof must never mask the real assertion the caller makes next.
- */
+/** Attaches crash proof (diagnosis, overlay, screenshot); best-effort, never hides an assertion. */
 export async function attachCrashEvidence(
   page: Page,
   screen: string,
@@ -69,9 +59,9 @@ export async function attachCrashEvidence(
 }
 
 /**
- * Load a screen, then check health in two phases — load first (short, focused proof), then a deeper
- * walk only if load was clean. `arrive` navigates to the screen (defaults to `page.goto(route)`);
- * `mount` asserts it appeared; `walk` opens its sub-sections.
+ * Loads a screen and checks its health, then walks its sub-sections only if the load was clean.
+ * `arrive` navigates (default `page.goto(route)`), `mount` asserts it appeared, `walk` opens
+ * sections.
  */
 export async function sweepScreen(
   page: Page,

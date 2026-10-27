@@ -2,12 +2,7 @@ import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body } from '../kpost-endpoint';
 import { defineKdiaryEndpoint } from './kdiary-endpoint';
 
-/**
- * KDiary **reads** — today's schedules, all events, today's report, and events by date. Each reads
- * only the caller's own diary, so all run on live. The date the client sends matches the create
- * field name (`scheduleStartDateAndTime`); the workbook documents no body, so the empty-body and
- * null probes also carry the load. POST reads state `destructive: false` (the grep-drop trap).
- */
+/** KDiary reads of the caller's own diary, all run on live. POST reads set `destructive: false`. */
 const READ_TAGS = ['kdiary-read'] as const;
 
 export const todaySchedulesApi = defineKdiaryEndpoint({
@@ -26,7 +21,7 @@ export const getEventsApi = defineKdiaryEndpoint({
   summary: 'All diary events for the caller',
   tags: [...READ_TAGS, 'event'],
   productionSafe: true,
-  // Types-only, from a CAPTURED live body (2026-10-11): { data:[event…], urlPath, status, statusCode }.
+  // Types-only, from a captured live body.
   responseSchema: typesOnlySchema({ data: [], urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 
@@ -48,15 +43,8 @@ export const getEventDateApi = defineKdiaryEndpoint({
   summary: 'Event details for a list of eventIDs',
   tags: [...READ_TAGS, 'event', 'needs-id'],
   destructive: false,
-  // CORRECTED 2026-10-04: the previous body (scheduleStartDateAndTime/scheduleEndDateAndTime) was
-  // wrong — confirmed via direct source read of KdiaryRO.java and
-  // KdiaryScheduleServiceImpl.getEventDate (line 279): the real required field is `eventIds: List
-  // <Long>`, passed straight into `kdiaryScheduleRepository.findByEventIDIn(eventIds)` with NO
-  // ownership/participant scoping at all — a confirmed cross-tenant read-IDOR (filed, see Bugzilla).
-  // The old date-shaped payload left `eventIds` null, which is exactly what produced the "Value must
-  // not be null" 500 — a wrong payload, not a server bug. No frontend caller exists for this route
-  // (the app uses getEvents + getEventSelectedDate instead), but it is live, authenticated, and
-  // directly callable.
+  // The required field is `eventIds` (KdiaryRO.java). No frontend caller, and the server reads the
+  // events without checking ownership.
   request: body(() => ({ eventIds: [0] })),
   requestSchema: typesOnlySchema({ eventIds: [0] }),
   note: 'needs a real eventID; CONFIRMED cross-tenant read-IDOR (no ownership check) — see tests/api/kpost/security/kdiary-object-authorization.spec.ts',
@@ -70,7 +58,7 @@ export const getEventSelectedDateApi = defineKdiaryEndpoint({
   tags: [...READ_TAGS, 'event'],
   destructive: false,
   productionSafe: true,
-  // 204 (no events on the selected date) is a valid empty response, not a defect.
+  // 204 (no events on the selected date) is valid.
   expectedStatus: [200, 204],
   // Live client (Diary.js GetDiaryScheduleBySelectedDate): the date range is start + (null) end.
   request: body(() => ({

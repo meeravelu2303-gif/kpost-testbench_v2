@@ -2,17 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Settings · Delete Account panel (`Deleteaccount.js`) — the single most destructive, irreversible
- * flow in the entire app: its terminal action (`DeactivateMyAccount` -> `POST
- * /v2/profile/deactivateAccount/`) permanently deactivates the account and purges the whole local
- * session. Getting there requires a REAL OTP send (`AccountDeactivationOtp` ->
- * `GET /v2/profile/sendAccountDeactivationOtp/`) as early as step 1's "Confirm" button.
- *
- * HARD SAFETY BOUNDARY, same rigor as K-Booking's payment flow: this test suite NEVER clicks
- * "Confirm" on the reason-selection screen, because that alone fires a real OTP-send call against
- * whichever account is signed in. There is no dedicated disposable "delete me" account, and even
- * requesting the OTP is a real, unnecessary side effect against a shared QA account. Scope is
- * strictly the reason-selection UI, which is genuinely safe: it never leaves local state.
+ * Settings › Delete Account: the reason-selection UI only. Confirm is never clicked, because it sends a
+ * real account-deactivation OTP.
  */
 test.describe(
   'KPost Settings · Delete Account panel (reason selection only — never confirms)',
@@ -54,8 +45,7 @@ test.describe(
       });
       await reasonField.fill('QA UI test — reason-selection render check only, never confirmed');
 
-      // The safety boundary: confirm the Confirm button exists (proving the panel is fully reachable
-      // and usable) WITHOUT EVER CLICKING IT — clicking it fires a real account-deactivation OTP send.
+      // Confirm exists but is NEVER clicked: it sends a real deactivation OTP.
       await expect(
         page.getByRole('button', { name: /^Confirm$/i }).first(),
         'the Confirm control is present — NOT clicked, since it fires a real OTP send',

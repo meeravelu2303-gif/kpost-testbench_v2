@@ -4,12 +4,8 @@ import { expect, test as setup } from '@fixtures';
 import { reuseValidSession } from './session-reuse';
 
 /**
- * Logs in once through the real login screen and saves the session for every browser project.
- *
- * KPost stores its tokens in `localStorage` (not cookies), which Playwright's `storageState`
- * captures per origin — so the UI tests reuse this session without logging in again. With no real
- * account configured (a mock or unconfigured run) an anonymous state is saved and the UI tests
- * self-skip.
+ * Logs in once through the real login screen and saves the session (tokens live in localStorage)
+ * for every browser project. With no real account configured, an anonymous state is saved.
  */
 setup('authenticate', async ({ page, browser, loginPage, log }) => {
   if (await reuseValidSession(browser, STORAGE_STATE, log)) setup.skip();

@@ -4,9 +4,8 @@ import type { Principal } from '@config/auth.config';
 import { expect, test } from '@playwright/test';
 
 /**
- * In a browser project the API must reuse the browser's own saved session instead of logging in:
- * KPost keeps one session per account, so an API login signs the screens out (2026-10-20: one such
- * login turned a Chrome UI run into 300+ blank-screen failures). `browser-session-token.ts`.
+ * In a browser project the API reuses the browser's saved session (`browser-session-token.ts`):
+ * KPost keeps one session per account, so an API login would sign the screens out.
  */
 const principal = { key: 'personal', username: 'qatest1@kpostindia.com' } as unknown as Principal;
 const profile = { id: 'kpost-test-session' } as unknown as AuthProfile;

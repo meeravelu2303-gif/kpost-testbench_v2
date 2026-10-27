@@ -1,9 +1,5 @@
-// Regression coverage for the legacy KatchupController.recallMessage (V1, no v2 prefix) finding
-// confirmed live 2026-10-07: the endpoint has no HttpServletRequest parameter at all and trusts the
-// request body's own `sender` field, unlike its V2 sibling (katchup-recall-message), which correctly
-// overrides sender from the JWT. Dead from the real frontend (EndPointURL bakes in /v2, see
-// src/api/definitions/kpost/katchup/manage.api.ts's own comment on legacyRecallMessageApi) but still
-// deployed and directly callable.
+// Legacy V1 recallMessage trusts the body's `sender` (V2 takes it from the JWT). The frontend no
+// longer calls it, but it is still deployed and callable.
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';

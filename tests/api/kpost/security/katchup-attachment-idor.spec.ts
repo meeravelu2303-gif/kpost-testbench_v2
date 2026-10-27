@@ -5,16 +5,8 @@ import { expect, test } from '@fixtures';
 import { deleteUploaded, uploadFile } from '../../support/attachments';
 
 /**
- * Katchup attachment IDOR — can an outsider fetch another pair's attachment by its S3 uuid alone?
- * Same question already proven exploitable for KMail's attachment routes (#944) and the same
- * bare-uuid shape Katchup's `download`/`downloadAttachment`/`downloadFromS3`/`downloadThumbnail`/
- * `mediaStreaming`/`generateThumbnailUsingUUID` all share — none had an IDOR test before this
- * (2026-10-03 ground-truth re-audit: 0/6).
- *
- * 2026-10-23: the upload now goes through `tests/api/support/attachments.ts`. Before, this spec never
- * unwrapped the presign reply's `{ presignedURL }` envelope (#942), so its S3 PUT went to a non-URL and
- * the verdicts since then were not about Katchup at all. It also gained the owner control (B's own
- * download must succeed, or C's refusal proves nothing) and removes the S3 object afterwards.
+ * Katchup attachment IDOR: can an outsider fetch another pair's attachment by its S3 uuid alone?
+ * B's own download is the control; the S3 object is removed afterwards.
  */
 const K = AUTH_PROFILES.kpost;
 const A = K.principals.find((p) => p.key === 'personal')!; // sender/owner

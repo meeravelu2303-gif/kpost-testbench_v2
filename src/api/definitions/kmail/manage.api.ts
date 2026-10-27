@@ -3,12 +3,8 @@ import { body } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint, defineUndocumentedKmailEndpoint } from './kmail-endpoint';
 
 /**
- * KMail **manage** — delete, mark-important, clear status, convert-to-PDF, external-domain contacts,
- * OD attachment download, and mail credentials. All write / act on the caller's own mail; **none is
- * `productionSafe`**. The external-domain contact writes take a non-KPost email — the guard refuses a
- * stranger's, so those are exercised only with an owned address and stay off live otherwise.
- * `getMailCredentials` returns account credentials and takes a password, so it is registered but not
- * driven on live.
+ * KMail manage actions on the caller's own mail (delete, mark, clear status, PDF, external
+ * contacts, credentials). None is `productionSafe`.
  */
 const M = ['kmail-manage'] as const;
 
@@ -35,14 +31,7 @@ export const setImportantApi = defineKmailEndpoint({
   note: 'needs a real kmailID; exercised by the lifecycle',
 });
 
-/*
- * Dev-confirmed 2026-09-26: the previous 500 crash "was fixed by using some custom annotations" —
- * partly true. `kmailStatusFlag`'s mere PRESENCE (any int 0-4) avoids the crash, turning it into a
- * clean 400 `{"valueFor":"REPLY_NOT_SENT","message":"Parameter Invalid"}`; its ABSENCE still crashes
- * with a 500 `{"errorCode":"clear mails exception occured",...}` (see manage-workflow.spec.ts). No
- * value tried (0-4) ever clears "REPLY_NOT_SENT", even live-verified across a real reply exchange
- * between the two accounts — the exact contract remains Unknown/Requires Clarification.
- */
+// Without `kmailStatusFlag` this 500s; its valid values are unclear (see manage-workflow.spec.ts).
 export const clearStatusApi = defineKmailEndpoint({
   id: 'kmail-clear-status',
   method: 'POST',
@@ -130,10 +119,7 @@ export const mailCredentialsApi = defineKmailEndpoint({
   path: '/sentMail/getMailCredentials/',
   summary: 'Fetch the caller’s mail send credentials',
   tags: [...M, 'sensitive'],
-  /*
-   * Returns account mail credentials and takes a password. Registered for contract validation but
-   * NOT driven on live — sending a real password and receiving credentials is a sensitive operation.
-   */
+  // Takes a password and returns credentials, so it is contract-validated but never driven on live.
   destructive: true,
   sideEffect: 'global',
   request: body(() => ({ kpostID: testData.kpostId, password: '' })),
@@ -141,12 +127,8 @@ export const mailCredentialsApi = defineKmailEndpoint({
 });
 
 /*
- * The e-mail-footer unsubscribe. The KPost workbook documents it under /v2/common (a KPost path the KPost
- * host does not serve: #725, closed WORKSFORME), but it is KMail's (CommonMailController
- * `@PostMapping("/saveUnsubscriberDetails")`, public in SecurityConfiguration, body = KmailUnsubscriber).
- * Defined here at its real home and mapped to the documented row via `contractPath`. A public write
- * with no delete/undo path, so it is never written on live: contract-validated off live, like the
- * enquiry capture (CLAUDE.md §5 rule 8).
+ * The e-mail-footer unsubscribe: documented under KPost's /v2/common but served by KMail, so it
+ * maps to that row via `contractPath`. A public write with no undo, so it is never written on live.
  */
 export const saveUnsubscriberApi = {
   ...defineUndocumentedKmailEndpoint({

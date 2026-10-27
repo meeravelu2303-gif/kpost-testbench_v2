@@ -11,19 +11,9 @@ import {
 } from '../support/katchup';
 
 /**
- * Katchup **content correctness** (FRD row 13) from the send path: a message body must round-trip
- * unchanged for non-ASCII content — Indian-language text (Tamil, Hindi), emoji, and a long body —
- * not mojibake, `?` replacement characters, or silent truncation.
- *
- * Reuses the shared, live-validated compose helpers (`openComposerFor`/`sendMessage`/`deleteSentMessage`),
- * which TYPE into the Quill editor (never `.fill()`), so Unicode is entered the way a real keyboard
- * would. Each test self-cleans (deletes the message it sent) and is gated behind KATCHUP_UI_LIFECYCLE
- * like every write flow. The ASCII `marker` is the Subject (reliable to locate); the assertion is on
- * the non-ASCII BODY rendering unchanged.
- *
- * The sender's own thread can render from local state, so for text content each test ALSO reads the
- * RECIPIENT's copy back from the server (qatest2's conversation with qatest1, via the API) and requires
- * the exact characters there — the round-trip a real receiver gets (RTM-CON01/02/03).
+ * Katchup content correctness: Tamil/Hindi, emoji, a long body and an attachment round-trip unchanged,
+ * checked in the sender's thread and in the recipient's server copy (the sender view can render from
+ * local state). Gated behind KATCHUP_UI_LIFECYCLE; each test deletes its message.
  */
 const RECIPIENT = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim')!;
 
@@ -154,15 +144,12 @@ test.describe(
       },
     );
 
-    // #1331 (tag KP-ATT405) was the broken attachment upload (client PUT to a malformed URL → 405);
-    // re-verified FIXED live 2026-10-13 after the frontend deploy, so this runs live again (un-fixme).
     test(
       'an uploaded attachment is served back byte-identical (no corruption) @ui',
       { annotation: [{ type: 'requirement-partial', description: 'RTM-CON04' }] },
       async ({ page }) => {
         const subject = `QA attach-integrity ${Date.now()}`;
-        // A tiny real 1x1 JPEG (same fixture the attach-send E2E uses). Small enough that the app has no
-        // reason to down-scale it, so the served attachment should be the uploaded bytes verbatim.
+        // A tiny real 1x1 JPEG (same fixture as the attach-send E2E).
         const jpegBuffer = Buffer.from(
           '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
           'base64',
@@ -194,11 +181,9 @@ test.describe(
           const thumb = sent.locator('img').first();
           await expect(thumb, 'the attachment thumbnail renders').toBeVisible({ timeout: 10_000 });
 
-          // The thumbnail first shows a small PNG PLACEHOLDER (a data: URL) and swaps in the real image
-          // only when /v2/katchup/downloadThumbnail answers — which takes 10+ s since 2026-10-15
-          // (#1364). So the rendered source is POLLED until it is the attachment itself; the time it
-          // took is recorded. The SERVER round-trip (recipient download, byte-identical by SHA-256) is
-          // asserted separately by tests/api/kpost/katchup/attachment-integrity.spec.ts.
+          // The thumbnail starts as a data: placeholder and swaps in the real image when
+          // downloadThumbnail answers (10+ s, #1364), so the source is polled. The byte-identical
+          // server round-trip is asserted in tests/api/kpost/katchup/attachment-integrity.spec.ts.
           const readRendered = async (): Promise<{ src: string; got: Buffer }> => {
             const src = (await thumb.getAttribute('src')) ?? '';
             if (!src) return { src, got: Buffer.alloc(0) };
@@ -220,8 +205,7 @@ test.describe(
             b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
           const isPng = (b: Buffer) =>
             b.length >= 24 && b.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
-          // The thread shows a THUMBNAIL the server derives from the upload (a PNG), after a data:
-          // placeholder. The real preview is therefore "not the data: placeholder, a valid JPEG or PNG".
+          // The real preview: not the data: placeholder, and a valid JPEG or PNG (server-derived).
           type Rendered = { src: string; got: Buffer };
           const isPreview = (r: Rendered) =>
             !r.src.startsWith('data:') && (isJpeg(r.got) || isPng(r.got));
@@ -255,10 +239,7 @@ test.describe(
             description: `preview after ${Date.now() - t0} ms: ${summarize(last)}`,
           });
           console.log(`CONTENT ${test.info().annotations.at(-1)?.description ?? ''}`);
-          // The app re-encodes image attachments (confirmed live 2026-10-13 after #1331's upload fix)
-          // and the thread shows a server-derived thumbnail, so an exact byte match is the wrong
-          // expectation here: the check is that the preview becomes a VALID image, not corrupted/empty.
-          // `jpegBuffer` is referenced so the fixture stays meaningful.
+          // The app re-encodes images, so the check is a valid preview, not a byte match.
           void jpegBuffer;
           expect(last.got.length, 'the retrieved attachment is non-empty').toBeGreaterThan(0);
           expect(

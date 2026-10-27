@@ -16,17 +16,8 @@ import { expect, test } from '@fixtures';
 import { validationRegistry } from '@validators/index';
 
 /**
- * The live-application safety controls, asserted rather than assumed.
- *
- * Three independent controls stand between this bench and a live customer's data, and each one is
- * a few lines of code that a refactor could quietly neuter:
- *
- *   1. the endpoint allowlist   — only `productionSafe: true` runs
- *   2. the validator allowlist  — nothing that mutates and re-sends a request runs
- *   3. the QA-identifier guard  — no request may name a record we do not own
- *
- * A control nobody tests is a control that works until the day it matters. These run with no HTTP
- * and no environment, so they cannot be skipped for want of a host.
+ * The live-application safety controls: endpoint and validator allowlists, QA-identifier guard.
+ * No HTTP and no environment needed, so they can never be skipped for want of a host.
  */
 test.describe('live-application safety @framework', () => {
   /*
@@ -46,12 +37,6 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('ALLOW_DESTRUCTIVE_TESTS cannot unlock anything on the live application', () => {
-    /*
-     * The old guard returned early on `allowDestructive`, so this flag unlocked `external` and
-     * `global` endpoints everywhere — including production. That is the single most dangerous
-     * shape this file exists to prevent: one inherited environment variable and the suite may
-     * text real people and overwrite another account's password on live.
-     */
     // A non-SMS destructive endpoint: the flag must not bypass the production allowlist.
     const unflagged: GuardedEndpoint = {
       label: 'POST /admin/removeCompanyLogo',
@@ -62,8 +47,7 @@ test.describe('live-application safety @framework', () => {
       'the flag must not bypass the production allowlist',
     ).toContain('not cleared for the live application');
 
-    // An external side effect stays blocked on live even when cleared — now via the SMS kill-switch,
-    // which supersedes (it fires first for any external/OTP sender against a real host).
+    // An external side effect stays blocked on live even when cleared: the SMS kill-switch wins.
     const cleared: GuardedEndpoint = {
       label: 'POST /v2/common/sendOTP/',
       destructive: true,
@@ -77,11 +61,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('allowLiveRead unlocks a non-destructive "needs-id" read on live, and nothing else', () => {
-    /*
-     * The read-side counterpart to allowLiveWrite, added so a dependency-driven flow (create a doc,
-     * then read it back) can exercise a "needs-id" read that has no productionSafe flag — previously
-     * impossible under any flag combination (see the API coverage-depth audit (removed 2026-10-26; in git history)'s "systemic ceiling").
-     */
+    // Read-side counterpart to allowLiveWrite: lets a flow read back a record it just created.
     const needsIdRead: GuardedEndpoint = {
       label: 'GET /v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID}',
       destructive: false,
@@ -162,9 +142,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('SMS/OTP kill-switch: an OTP/SMS sender is blocked in EVERY mode', () => {
-    // The endpoints that deliver a real SMS: flagged (otpDependent / external) AND a mis-flagged one
-    // caught only by the path/label backstop. Each must be refused regardless of TEST_ENV or any
-    // unlock flag — every host this bench talks to is a real one.
+    // Real SMS senders (incl. one caught only by the label backstop): refused in every mode.
     const senders: GuardedEndpoint[] = [
       { label: 'POST /v2/common/sendOTP/', destructive: true, otpDependent: 'sends' },
       { label: 'POST /v2/common/sendOTPtoMail/', destructive: true, sideEffect: 'external' },
@@ -241,8 +219,7 @@ test.describe('live-application safety @framework', () => {
       'a non-OTP global write is NOT opened by the gateway flag',
     ).toBeTruthy();
 
-    // Session-destroyers stay blocked even on the gateway — the fuzzer must not deactivate our own
-    // account or displace its session by re-designating the primary device.
+    // Session-destroyers (deactivate, re-designate primary device) stay blocked on the gateway.
     for (const destroyer of [
       'POST /v2/profile/deactivateAccount/',
       'POST /v2/profile/setDeviceAsPrimary/',
@@ -262,7 +239,6 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('every registered OTP/SMS sender is blocked against a real host', () => {
-    // No definition can slip through: every OTP sender in the real registry is refused on a real host.
     const senders = apiRegistry
       .all()
 
@@ -289,8 +265,7 @@ test.describe('live-application safety @framework', () => {
       'a test-owned data write needs no flag off production',
     ).toBeUndefined();
 
-    // A shared-state (`global`) write off production is gated, and the flag unlocks it. An SMS
-    // (`external`) is NOT: the kill-switch fires in every mode (asserted in its own test above).
+    // A `global` write off production is gated and the flag unlocks it (an SMS never unlocks).
     const globalWrite: GuardedEndpoint = {
       label: 'POST /x',
       destructive: true,
@@ -319,10 +294,7 @@ test.describe('live-application safety @framework', () => {
       .map((validator) => validator.name)
       .filter((name) => !classified.has(name));
 
-    /*
-     * An unclassified validator is denied at runtime, which is safe but invisible — nobody would
-     * learn they need to decide. Failing here is how the decision gets made.
-     */
+    // Unclassified is denied at runtime (safe but silent); failing here forces the decision.
     expect(
       unclassified,
       'classify these in src/validation-engine/production-validators.ts',
@@ -335,11 +307,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('no request-mutating validator is cleared for the live application', () => {
-    /*
-     * The categories whose whole method is "change the request and send it again". If one ever
-     * appears in the safe list, the allowlist has been widened past its purpose — most likely by
-     * someone chasing coverage on a live run.
-     */
+    // Validators whose method is "change the request and send it again".
     const mutating = PRODUCTION_SAFE_VALIDATORS.filter(
       (name) =>
         name.startsWith('request.') ||
@@ -356,8 +324,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('the injection and cross-tenant validators are excluded on live, read or write', () => {
-    // These can never run on live: injection could turn a read into a destructive write, and the
-    // cross-tenant/abuse probes target other users or degrade the shared service.
+    // Injection can turn a read into a write; cross-tenant/abuse probes hit other users.
     for (const name of [
       'security.injection',
       'security.xss',
@@ -378,8 +345,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('input-validation fuzzers run on live READS but stay blocked on writes', () => {
-    // A read persists nothing and the identifier guard confines every mutation to our own data, so
-    // fuzzing a read's input is safe and finds the wrong-handling class (null/type/boundary/…).
+    // A read persists nothing and the identifier guard confines it to our data: safe to fuzz.
     for (const name of [
       'request.null-value',
       'request.data-type',
@@ -397,7 +363,7 @@ test.describe('live-application safety @framework', () => {
         productionExclusion(name, { destructive: true }),
         `${name} must stay blocked on a live write`,
       ).toBeTruthy();
-      // Called without an endpoint (the older signature), they stay blocked — safe default.
+      // Without endpoint context they stay blocked (safe default).
       expect(productionExclusion(name), `${name} blocked with no endpoint context`).toBeTruthy();
     }
   });
@@ -413,7 +379,7 @@ test.describe('live-application safety @framework', () => {
    * ## Control 3 — the QA-identifier guard
    */
   test('a postal mailing address and an empty value are not identifiers; e-mails still are', () => {
-    // 2026-10-26: the Admin employee body. `mailing*` is a place; an empty value names nothing.
+    // The Admin employee body: `mailing*` is a place; an empty value names nothing.
     const body = {
       personalInformationObj: { alternativeMobileNo: '', alternativeEmailAddress: '' },
       mailingObj: { mailingCountry: 'India', mailingZipCode: '600001', mailingCity: 'Chennai' },
@@ -443,12 +409,8 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('per-call minted identifiers: only the exact values, only for that call', () => {
-    /*
-     * `SendOptions.ownedIdentifiers` (owner-approved 2026-10-23, Admin role posting): a lifecycle may pass
-     * the exact values its own write just minted — e.g. the kpostID the server generated for a posting.
-     * Values, never key names: a stranger's kpostID in the same payload is still refused, and the same
-     * payload without the per-call list is refused as before.
-     */
+    // `SendOptions.ownedIdentifiers`: a flow may allow the exact values its own write just minted
+    // (values, never key names), for that one call only.
     const payload = {
       body: { kpostID: 'qarote171.ns@kpost.in', ksmaccCompanyID: 1083, employeeId: 'x' },
     };
@@ -474,10 +436,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('bulk id arrays of tenant identifiers are checked element by element', () => {
-    /*
-     * A list of another user's kpostIDs — the shape `removeGroupMember` / `modifyKallMembers` take —
-     * is checked element by element, so a fuzzer cannot slip a stranger's account into one element.
-     */
+    // The `removeGroupMember` / `modifyKallMembers` shape: a stranger cannot hide in one element.
     const foreign = foreignIdentifiers({
       body: { addingUserIds: ['jitendra9@kpostindia.com', 'limson@kpostindia.com'] },
     });
@@ -488,13 +447,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('runtime-scoped ids (kallIds, groupID) are exempt; the tenant kpostID beside them is not', () => {
-    /*
-     * `kallIds` and `groupID` name a call we placed and a group we made — runtime-scoped, created
-     * during a flow, so they cannot be pre-allowlisted and are exempt like `msgID` (a fuzzer never
-     * reaches them: no productionSafe endpoint accepts one). The kpostID list beside them is a TENANT
-     * identifier and stays checked, so `modifyKallMembers`/`removeGroupMember` cannot target a
-     * stranger even though their kallID/groupID rides along.
-     */
+    // kallIds/groupID are created during a flow (cannot be pre-allowlisted), so exempt like msgID.
     const foreign = foreignIdentifiers({
       body: { kallIds: [2, 3], groupID: 1141, memberKpostIdList: ['jitendra9@kpostindia.com'] },
     });
@@ -502,11 +455,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('a bare `id` is exempt (an echoed row id), but a qualified id is still checked', () => {
-    /*
-     * `updateKallStatus`/`endKoolKall` echo the kall's row id as `{id: <our kall>}`. A bare `id` is
-     * exempt (a runtime row id; this API names cross-tenant targets with a QUALIFIED key). The
-     * exemption must be surgical: `companyID`/`kpostID` beside it stay refused, or it would be a hole.
-     */
+    // `updateKallStatus`/`endKoolKall` echo the kall row id as `{id}`; tenants use qualified keys.
     const foreign = foreignIdentifiers({
       body: { id: 41307, companyID: 4, kpostID: 'x@y.kpost.in' },
     });
@@ -517,11 +466,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('reference data and bench-generated values are not treated as resources', () => {
-    /*
-     * If these were flagged, every request would be refused and somebody would switch the guard
-     * off — which is how a safety control dies. `countryID: 1` is shared reference data, and
-     * `sessionID`/`deviceID` are values this bench mints for itself.
-     */
+    // Flagging these would refuse every request. countryID is shared; sessionID/deviceID are ours.
     const foreign = foreignIdentifiers({
       body: {
         countryID: 1,
@@ -537,12 +482,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   test('the exact login payload the token provider sends passes the guard', () => {
-    /*
-     * Built by the real builder, not a hand-copied literal, so this breaks the moment a new field is
-     * added to the login request that the guard would refuse. That is how `userType` was caught:
-     * it contains "user", matched the identifier pattern, and would have refused every login on the
-     * live application — failing the whole run before a single endpoint was tested.
-     */
+    // Built by the real builder, so a new login field the guard would refuse fails here.
     const principal = AUTH_PROFILES.kpost.principals[0]!;
     const spec = AUTH_PROFILES.kpost.loginRequest(principal);
     const foreign = foreignIdentifiers({ body: spec.body });
@@ -563,11 +503,7 @@ test.describe('live-application safety @framework', () => {
   });
 
   /*
-   * ## Preflight: what the CURRENT environment is actually pointed at
-   *
-   * These assert the configuration rather than the code, so they only mean anything when the run
-   * is aimed at the live application. Skipped otherwise - a developer running the framework suite
-   * locally must not be told their `.env` is wrong for an environment they are not using.
+   * ## Preflight: the current environment's configuration (skipped unless TEST_ENV=production)
    */
   test('live preflight: every module host is https and none is an internal address', () => {
     test.skip(!env.IS_PRODUCTION, 'only meaningful when TEST_ENV=production');
@@ -580,17 +516,9 @@ test.describe('live-application safety @framework', () => {
     };
 
     for (const [name, url] of Object.entries(hosts)) {
-      // The one hard requirement: the host is SET. A blank host makes every endpoint 404, which reads
-      // as an API defect — a configuration mistake dressed as a finding, exactly what this prevents.
+      // A blank host makes every endpoint 404: a config mistake posing as a defect.
       expect(url, `${name} must be set`).toBeTruthy();
-      /*
-       * The target is now a dedicated TEST environment (testingapi / testkmail / test.kpostindia.com,
-       * and an on-prem admin box on the LAN), NOT the public production app. So an internal address or
-       * plain http is legitimate here and is WARNED, not failed — the old hard rule assumed a public
-       * live target and would false-fail a valid on-prem test host. The controls that actually prevent
-       * harm (destructive-mutation disarm, the OTP/SMS kill-switch, the QA-identifier guard) are
-       * asserted separately and stay armed regardless of the host.
-       */
+      // The target is an on-prem TEST environment, so internal/plain-http hosts only warn.
       if (/localhost|127\.0\.0\.1|192\.168\.|10\.\d+\.|172\.(1[6-9]|2\d|3[01])\./.test(url ?? '')) {
         console.warn(
           `[preflight] ${name} is an internal address (${url}) — expected for on-prem test.`,
@@ -605,25 +533,11 @@ test.describe('live-application safety @framework', () => {
   test('live preflight: destructive mutation stays disarmed and a live run is serial', () => {
     test.skip(!env.IS_PRODUCTION, 'only meaningful when TEST_ENV=production');
 
-    /*
-     * These never relax on live, and are the controls that actually protect the application:
-     *  - the engine must never fuzz/mutate live data;
-     *  - a live run is serial (concurrent logins answer 500 — a real finding, but it must not
-     *    turn a whole filing run red).
-     */
     expect(env.ALLOW_DESTRUCTIVE_TESTS, 'ALLOW_DESTRUCTIVE_TESTS must be false on live').toBe(
       false,
     );
     expect(env.WORKERS ?? 1, 'a live run must be serial: concurrent logins answer 500').toBe(1);
-
-    /*
-     * Bug filing on live is the owner's deliberate opt-in (`BUGZILLA_DRY_RUN`). The first-live-run
-     * "keep it dry" precaution has been met — the environment is profiled — so filing is intentionally
-     * armed. What keeps an armed run safe is not dry-run but the three filters that always apply:
-     * the validity gate (drops infra noise / self-contradicting findings), the severity floor
-     * (`BUGZILLA_MIN_SEVERITY`), and the live `[KPV2-…]` dedup (a re-run comments, never duplicates).
-     * So dry-run is NOT forced here; only destructive mutation and parallelism stay hard-disarmed.
-     */
+    // BUGZILLA_DRY_RUN is not forced: the validity gate, severity floor and dedup keep filing safe.
   });
 
   /*
@@ -631,13 +545,8 @@ test.describe('live-application safety @framework', () => {
    */
   test('every OTP-dependent endpoint in the contracts is flagged in its definition', () => {
     /*
-     * Derived from `contracts/*.contract.json` on every run, so a workbook dump that adds an OTP
-     * endpoint fails here until its definition carries `otpDependent`. Three ways to depend on one:
-     *
-     *   sends     its path names an OTP send (a real SMS or email reaches a person)
-     *   consumes  its documented payload carries an `otp` key, at any depth
-     *   requires  an OTP must be validated in an earlier step though its payload shows none —
-     *             not derivable from the workbook, so listed here with the evidence for each
+     * Derived from the contracts: an OTP endpoint `sends` (path names an OTP send), `consumes` (an
+     * `otp` key in its payload) or `requires` (an earlier OTP step; not derivable, so listed here).
      */
     const REQUIRES_PRIOR_OTP = [
       'POST /v2/signupLogin/signup/', // verified: fails until sendOTP + validateMailOTP

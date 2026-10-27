@@ -1,21 +1,11 @@
-// The OTP + signup flows, driven end to end on the disposable test DB whose OTP subsystem is a TEST
-// GATEWAY (no real SMS/e-mail; 123456 validates). Not simple assertions: orchestrated flows with
-// best-effort steps, so the conditionals are intentional.
-
 import { testData } from '@config/test-data.config';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
 
 /**
- * KPost **Signup & OTP** feature flow — the registration and password-recovery chains a user runs
- * before they have a token. These are `otpDependent` (external/global) and are opened ONLY on the OTP
- * test gateway: `OTP_TEST_GATEWAY=true` + `TEST_DB_MODE=true` (see `production-guard.ts`). On a real
- * gateway they stay hard-blocked by the SMS kill-switch. Identities are the allowlisted signup fixtures,
- * so the QA-identifier guard passes; the disposable DB should be reset between full runs (a signup
- * cannot be deleted, so a re-run is "already exists").
- *
- * `123456` (`QA_BYPASS_OTP`) validates. Every step is `expect.soft` so one run reports every finding,
- * and a 500 from any of these public, unauthenticated endpoints is a real, fileable defect.
+ * Signup and password-recovery chains end to end. Runs only on the OTP test gateway
+ * (OTP_TEST_GATEWAY + TEST_DB_MODE), where 123456 validates. A signup cannot be deleted, so a
+ * re-run answers "already exists".
  */
 const OTP = testData.bypassOtp;
 
@@ -57,19 +47,8 @@ test.describe(
       );
       expect.soft(validateMobile.status, 'validateOTP accepted the bypass code').toBeLessThan(500);
 
-      /*
-       * 3. Send + validate the mail OTP.
-       *
-       * The gateway bypass is SMS-ONLY. Measured on this database: the mobile channel stores the
-       * literal `123456`, while the mail channel stores a real random code and sends it. This step
-       * used to post `123456` to validateMailOTP and treat the resulting 500 as a product defect —
-       * the code was simply wrong and the endpoint refused it correctly.
-       *
-       * So the real code is read from the row the send just created. Legitimate only because this is
-       * the disposable TEST database the bench is authorised to read, and it is the one way to drive
-       * the mail path without a mailbox. The mechanics are covered in full by
-       * `otp-lifecycle-db.spec.ts`; here it is a step in the signup chain.
-       */
+      // 3. Send + validate the mail OTP. The bypass is SMS-only, so the real code is read from the
+      // row the send just created on the test DB.
       const sendMail = await endpoints.sendTo(
         'common-send-otp-to-mail',
         { body: { otherEmail: testData.otpEmail } },
@@ -94,11 +73,8 @@ test.describe(
       );
       expect.soft(validateMail.status, 'validateMailOTP accepted the real code').toBeLessThan(500);
 
-      /*
-       * 4. Register the personal account (both OTPs validated). Fresh DB → created; re-run →
-       * already-exists. `sendTo` sends a LITERAL request — it does not run the endpoint's own request
-       * factory — so the body here mirrors `signupApi`'s `request` in signup.api.ts exactly.
-       */
+      // 4. Register the personal account. `sendTo` sends a literal body, so this mirrors `signupApi`'s
+      // request in signup.api.ts.
       const signup = await endpoints.sendTo(
         'signup-login-signup',
         {
@@ -130,13 +106,7 @@ test.describe(
         .soft(signup.status, 'signup answered (created or already-exists, not a 5xx)')
         .toBeLessThan(500);
 
-      /*
-       * 5. VERIFY the account really exists now — signup must do more than "not 5xx". Whether this run
-       * created it (fresh/reset DB) or it was already there (re-run), the identity must be REGISTERED:
-       * kpostIdExist reports a registered id as "already exists". To sign up a genuinely NEW user each
-       * run, set QA_SIGNUP_KPOST_ID / QA_SIGNUP_MOBILE / the signup email to fresh allowlisted values
-       * (or reset the disposable test DB); the guard permits those because they come from config.
-       */
+      // 5. The identity is now registered (created this run or already there).
       const exists = await endpoints.sendTo(
         'signup-login-kpost-id-exist',
         {
@@ -156,10 +126,7 @@ test.describe(
         )
         .toMatch(/already exi/);
 
-      /*
-       * 6. Cross-layer proof: the account row is really in the user master (when the DB is reachable).
-       * This is the difference between "the endpoint answered" and "a user was actually created".
-       */
+      // 6. The user row really exists in TBL_KPOST_USER_MASTER.
       if (database.enabled) {
         const userRows = await database.findMany<{
           kpost_id: string;
@@ -183,14 +150,8 @@ test.describe(
       }
     });
 
-    /*
-     * BR-SL-PWD (NFR-SEC03): password must be ≥8 chars with upper/lower/digit/special, or rejected.
-     * Previously marked ⛔ "OTP-gated" in docs/reference/business-rules.md — signup is back in scope (the OTP
-     * gateway fix earlier this session), so this is now testable. Confirmed live 2026-10-03: password
-     * validation runs BEFORE the "already exists" check, so this works even against the already-
-     * registered `signupKpostId` from the test above — every weak variant below gets a clean,
-     * password-specific rejection, never "already exists".
-     */
+    // BR-SL-PWD: password needs ≥8 chars with upper/lower/digit/special. Password validation runs
+    // before the "already exists" check, so the registered `signupKpostId` can be reused.
     test(
       'a weak password is rejected at every missing requirement (BR-SL-PWD) @api',
       { annotation: [{ type: 'requirement', description: 'BR-SL-PWD' }] },
@@ -275,12 +236,7 @@ test.describe(
       endpoints,
       databases,
     }) => {
-      /*
-       * `adminRegistrationApi` creates a whole company/tenant, not just an account (see the `global`
-       * note on `adminRegistrationApi` in signup.api.ts) — a bigger, permanent footprint than the
-       * personal-signup test above, so this stays behind its own explicit opt-in on top of the OTP
-       * gateway gate, same spirit as the forgot-password test's spare-account gate below.
-       */
+      // Creates a permanent company/tenant, so it needs its own opt-in (BUSINESS_SIGNUP_LIVE).
       test.skip(
         process.env.BUSINESS_SIGNUP_LIVE !== 'true',
         'mints a permanent company/tenant on the test DB; set BUSINESS_SIGNUP_LIVE=true to run it. ' +
@@ -313,8 +269,7 @@ test.describe(
       );
       expect.soft(validateMobile.status, 'validateOTP accepted the bypass code').toBeLessThan(500);
 
-      // Same mail-OTP mechanics as the personal flow above: the mobile bypass is SMS-only, the mail
-      // channel stores a real code that has to be read back from the disposable test DB.
+      // As above: the mail code is read back from the test DB.
       const sendMail = await endpoints.sendTo(
         'common-send-otp-to-mail',
         { body: { otherEmail: testData.otpEmail } },
@@ -339,10 +294,7 @@ test.describe(
       );
       expect.soft(validateMail.status, 'validateMailOTP accepted the real code').toBeLessThan(500);
 
-      /*
-       * Register the business account + company (both OTPs validated). `sendTo` sends a LITERAL
-       * request, so the body mirrors `adminRegistrationApi`'s own `request` in signup.api.ts exactly.
-       */
+      // Register the business account + company; the body mirrors `adminRegistrationApi`'s request.
       const signup = await endpoints.sendTo(
         'signup-login-admin-registration',
         {
@@ -427,20 +379,8 @@ test.describe(
     test('forgot-password OTP → set a new password on the spare account @api', async ({
       endpoints,
     }) => {
-      /*
-       * Skipped unless a spare account is explicitly configured, because this flow REWRITES a
-       * password.
-       *
-       * `testData.forgotPasswordKpostId` defaults to an address that deliberately does not exist, so
-       * that "an unconfigured run cannot change anything real" — and `.env` ships with
-       * QA_FORGOT_PASSWORD_KPOST_ID commented out. The test ignored that and fired anyway, which put
-       * a nonexistent id on the wire and was correctly refused by the QA-identifier guard — reported
-       * as a red failure rather than as the "not configured" it actually was.
-       *
-       * A skip is right here where the bench normally avoids them: there is no safe default target.
-       * Inventing one would mean rewriting the password of an account chosen by the test, and using
-       * the login account would lock every other suite out mid-run.
-       */
+      // Rewrites a password, so it runs only on an explicitly configured spare account; the default
+      // id deliberately does not exist.
       test.skip(
         testData.forgotPasswordKpostId === 'no.such.user.9f2a@kpost.in',
         'set QA_FORGOT_PASSWORD_KPOST_ID to a spare account whose password may be rewritten; ' +

@@ -5,20 +5,8 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import { expect, test } from '@fixtures';
 
 /**
- * Attachment DELETE IDOR — can an unrelated account delete another pair's attachment from S3 by UUID?
- *
- * The companion `attachment-idor.spec.ts` covers the READ side (download/thumbnail/stream by uuid) and
- * deliberately leaves the delete path out. `GET /v2/aws/deleteAttachmentFromS3/{uuid}` is the
- * destructive counterpart: `PreSignedURLServiceImpl.deleteAttachmentFromS3(uuid, kpostID, bucket)`
- * resolves the S3 path with `kmailAttachmentRepo.getAttachmentPath(uuid, kpostID)` (and the katchup
- * repo) — keyed by BOTH the uuid AND the caller's kpostID — so a stranger's uuid should resolve to
- * null ("Invalid_uuid") and nothing should be deleted. This proves that holds on the live server: if
- * the read side was the standing finding, the delete being wrong would be worse (anyone could wipe
- * anyone's attachments by walking uuids). A owns the file; C is unrelated and must not be able to
- * delete it.
- *
- * Safe to run: a harmless bench JPEG, uploaded by A, referenced in an A→B mail between bench accounts;
- * C is a bench account. A deletes its own attachment and mail in `finally`.
+ * Attachment delete IDOR: can C (unrelated) delete A's KMail attachment from S3 by UUID? The verdict
+ * is whether A can still download it afterwards. All accounts are ours; A deletes its file and mail.
  */
 const K = AUTH_PROFILES.kpost;
 const A = K.principals.find((p) => p.key === 'personal')!; // owner

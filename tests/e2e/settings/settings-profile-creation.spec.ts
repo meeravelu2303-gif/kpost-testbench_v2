@@ -2,20 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Settings · the profile header card (`ProfileCreation.js`, the `SettingProfile` panel) — NOT reached
- * via the nav accordion at all; confirmed from source it's always rendered above the nav tree
- * (`showProfile` defaults `true` in `Setting.js`), so it's visible immediately on `/settings`.
- *
- * Scoped to the Cover Photo only: it has a clean, real inverse action ("Remove") to self-restore with,
- * unlike the Avatar (`ProfileUpload`/`DeletePicUpload` both call `window.location.reload()` on
- * success, and there is no equivalent simple round trip without knowing/restoring a specific prior
- * avatar). Confirmed asymmetry worth flagging directly: Cover upload validates the file's MIME type
- * client-side before ever calling the API (`allowedTypes` check, rejects with a toast); Avatar upload
- * has NO equivalent check in source — an inconsistency between two visually-identical upload controls
- * on the same panel.
- *
- * Gated behind `SETTINGS_UI_LIFECYCLE=true` (a real destructive write), same convention as
- * `settings-digital-card.spec.ts`.
+ * Settings profile header card (always shown on /settings): Cover Photo upload and Remove, which restores
+ * itself. Avatar is skipped (it reloads the page). Gated behind SETTINGS_UI_LIFECYCLE=true.
  */
 test.describe(
   'KPost Settings · Profile header (Cover Photo)',
@@ -82,9 +70,7 @@ test.describe(
       });
       await uploadPromise;
 
-      // Confirmed live 2026-10-01: this is a real <button>, but its icon-font span's generated content
-      // defeats getByRole's accessible-name match - getByText (matching the button's own text content
-      // directly) is the reliable way to find it.
+      // The icon-font span defeats getByRole's accessible name, so match the button's text.
       const removeButton = page.getByText(/^Remove$/i).first();
       await expect(removeButton, 'a Remove control appears once a cover is set').toBeVisible({
         timeout: 15_000,

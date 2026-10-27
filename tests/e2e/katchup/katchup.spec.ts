@@ -2,15 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * The Katchup **screen** on the live front end, using the authenticated session `setup` saved.
- *
- * Because the session is reused, these do not log in — so they are far more stable than the login
- * screen tests. The component ships no `data-testid` hooks, so locators are structural (classes and
- * text from `KPOST_REACTJS_2023_V1`), each noted so a UI change points here.
- *
- * The compose/send flow writes a real message, so it is gated behind `KATCHUP_LIFECYCLE=true` (the
- * same authorization as the API feature flow). Without it, this file asserts the screen renders and
- * carries its differentiator — the Subject field (BR-K01) — which no mainstream chat product has.
+ * Katchup screen basics with the saved session: it loads, has the contact search and the compose
+ * entry point. Read-only; the app has no data-testid hooks, so locators are structural.
  */
 test.describe('KPost Katchup screen', { tag: ['@ui', '@katchup', '@regression'] }, () => {
   test.skip(
@@ -38,16 +31,8 @@ test.describe('KPost Katchup screen', { tag: ['@ui', '@katchup', '@regression'] 
   test('the compose entry point is available on the Katchup workspace @ui', async ({ page }) => {
     await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
-    /*
-     * The Subject field itself (`.fw_Msg_subject`) mounts only inside an open conversation, and the
-     * landing DOM differs by engine (present in Chromium/WebKit, absent in Firefox) — so it is not a
-     * reliable cross-browser landing assertion. The Subject differentiator (BR-K01) is instead proven
-     * by the API feature flow, where every message is verified to carry its subject.
-     *
-     * What IS reliably on the workspace in every engine is the **compose entry point** — the
-     * write-message icon (`icon-KP_02-Write-Letter`), the door to the Subject-bearing composer. That
-     * is the meaningful, browser-agnostic screen check.
-     */
+    // The Subject field only mounts in an open conversation (and not on Firefox's landing page), so
+    // the write-message icon is the cross-browser check.
     await expect(
       page.locator('.icon-KP_02-Write-Letter').first(),
       'the write-message entry point is on the Katchup workspace',

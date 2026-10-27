@@ -1,16 +1,6 @@
 /**
- * The Admin / HR-Setup UI screen registry (`kpostadmin.kpostindia.com`, a CoreUI-Pro SPA), the
- * admin-side analogue of `src/ui/screens.ts`. Every route the app routes (from `src/routes.js`),
- * with the STABLE selectors that prove it (a) mounted and (b) rendered its own key controls.
- *
- * Mined from the frontend source (`ADMIN_HR_MODULES_25/src`). Facts that shape these selectors:
- *   - the app ships NO `data-testid`, so selectors are text/className;
- *   - each screen's mount proof is a `<div class="title-font">…</div>` heading — EXCEPT
- *     `/hr-breakdown-setup`, whose title-font text is the copy-pasted "Work Place Setup" (a real
- *     product bug), so that screen is proven by its Tier/Variable tab pair instead;
- *   - tables are CoreUI-Pro `CSmartTable` inside `.table-scroll-container`;
- *   - the Add / View-eye controls are icon-only clickable divs `.boderIcon` (no text/label).
- * The global shell is the fixed `.sidebar-nav` and the `.header.header-sticky` topbar.
+ * The Admin/HR-Setup UI screen registry, the admin analogue of `screens.ts`. No `data-testid`s, so
+ * each screen is proven by its `.title-font` heading (or its controls) and its key controls.
  */
 
 export interface AdminControl {
@@ -88,8 +78,7 @@ export const ADMIN_SCREENS: readonly AdminScreenDef[] = [
   {
     route: '/hr-breakdown-setup',
     name: 'HR Breakdown Setup',
-    // The `.title-font` here reads "Work Place Setup" (a copy-paste bug in the product); proving the
-    // screen by its own tabs avoids asserting the wrong text. The buggy title is noted, not asserted.
+    // The heading wrongly reads "Work Place Setup" (a product bug), so the tabs prove the screen.
     title: null,
     controls: [
       { selector: TAB, hasText: 'Tier', label: 'Tier tab' },
@@ -106,8 +95,7 @@ export const ADMIN_SCREENS: readonly AdminScreenDef[] = [
     route: '/employee-data',
     name: 'Employee Data',
     title: 'Employee Data',
-    // The Add/View icon row here is role-conditional (renders only for role===1), so it is not a
-    // reliable mount control; the `.title-font` heading proves the screen loaded. Verified on live.
+    // The Add/View icons render only for role 1, so the heading alone proves the screen loaded.
     controls: [],
   },
   {

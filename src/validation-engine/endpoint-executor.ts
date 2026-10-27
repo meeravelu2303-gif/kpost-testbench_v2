@@ -28,37 +28,22 @@ export interface SendOptions {
   /** Default: the endpoint's primary role (or no header for public endpoints). */
   auth?: AuthMode;
   timeoutMs?: number;
-  /**
-   * Override the HTTP method. Used only by the method-not-allowed probe, which deliberately calls
-   * an endpoint with a verb it does not implement.
-   */
+  /** Override the HTTP method (the method-not-allowed probe only). */
   method?: HttpMethod;
   /** Override the Content-Type, for the unsupported-media-type probe. */
   contentType?: string;
-  /**
-   * Explicitly authorize a `data` write to run on the live application (see SafetyFlags). Only an
-   * owner-approved feature spec sets this, per call; the engine never does, so its probes stay
-   * blocked. The QA-identifier guard still confines the payload to accounts we own.
-   */
+  /** Authorize this `data` write on live (see SafetyFlags); set per call, never by the engine. */
   allowLiveWrite?: boolean;
   /**
-   * Explicitly authorize a non-destructive "needs-id" read to run on the live application (see
-   * SafetyFlags). The read-side counterpart to `allowLiveWrite`, for a dependency-driven flow that
-   * reads back an id a prior step in the same flow just minted. Same rules: an owner-approved
-   * feature spec sets this per call, never the engine; the QA-identifier guard still applies.
+   * Authorize this "needs-id" read on live, for an id the same flow just minted (see SafetyFlags).
    */
   allowLiveRead?: boolean;
-  /**
-   * The request names an account or mobile number that does not exist, so an SMS sender has nobody
-   * to text (see SafetyFlags). Required for any API call to the forgot-password senders.
-   */
+  /** The request names a non-existent account/mobile, so an SMS sender texts nobody. */
   noSmsRecipient?: boolean;
   /**
-   * Exact identifier VALUES this call's own flow just minted (e.g. the kpostID the server generated
-   * for a role posting the same test saved a moment earlier), so the QA-identifier guard accepts
-   * them for THIS request only. Values, never key names: every other identifier in the payload is
-   * still checked. Only an owner-approved lifecycle spec sets it, from its own write's response —
-   * never the engine, never a literal (owner-approved 2026-10-23, Admin role posting).
+   * Exact identifier values this call's own flow just minted, trusted by the QA-identifier guard
+   * for this request only. Set by a lifecycle spec from its own write's response, never by the
+   * engine.
    */
   ownedIdentifiers?: readonly (string | number)[];
 }
@@ -69,25 +54,15 @@ const MAX_ERROR_BODY_CHARS = 300;
 export class EndpointExecutor {
   readonly tokens: TokenProvider;
 
-  /**
-   * Server errors (5xx) seen while a gated lifecycle flow drove a real write or read
-   * (`allowLiveWrite`/`allowLiveRead`). Drained by the `endpoints` fixture at test end and filed to
-   * Bugzilla — a lifecycle crash the developer would otherwise never see. Only 5xx: a 4xx might be
-   * our payload, so it is never filed.
-   */
+  /** 5xx responses from gated lifecycle flows, filed by the `endpoints` fixture (4xx are not). */
   readonly flowFindings: FlowFinding[] = [];
 
   /**
-   * Documented BUSINESS-RULE violations a gated feature flow CONFIRMED on live (reschedule created a
-   * new id, a recalled message stayed visible, …). A spec calls `recordBusinessRuleViolation` only for
-   * a real rule violation — never a bench/selector failure — and the `endpoints` fixture files them.
+   * Business-rule violations a feature flow confirmed on live, filed by the `endpoints` fixture.
    */
   readonly businessRuleFindings: BusinessRuleFinding[] = [];
 
-  /**
-   * Record a confirmed business-rule violation for filing. Call this ONLY when the response/state
-   * proves the rule is broken (e.g. `rescheduledId !== kallID` for BR-C01), not on a bench failure.
-   */
+  /** Records a business-rule violation; only when the response or state proves the rule broken. */
   recordBusinessRuleViolation(input: {
     endpointId: string;
     ruleId: string;
@@ -114,17 +89,10 @@ export class EndpointExecutor {
     private readonly clients: ApiClientPool,
     private readonly apiRegistry: ApiRegistry,
     private readonly log: Logger,
-    /**
-     * Browser projects: reuse the saved browser session's token instead of logging in — an API login
-     * would sign that account's browsers out (one session per account). See `browser-session-token.ts`.
-     */
+    /** `shareBrowserSessions`: reuse the browser's token (an API login would sign it out). */
     options: {
       shareBrowserSessions?: boolean;
-      /**
-       * Values THIS executor's own flow just minted (e.g. the kpostID the server generated for a role posting
-       * the test saved), trusted by the QA-identifier guard on every request it sends — the engine's primary
-       * request and its probes alike. Exact values, never key names; one executor per validate() call.
-       */
+      /** Values this executor's flow minted, trusted by the QA-identifier guard on its requests. */
       ownedIdentifiers?: readonly (string | number)[];
     } = {},
   ) {
@@ -170,12 +138,7 @@ export class EndpointExecutor {
     });
     if (blocked) throw new ProductionSafetyError(blocked);
 
-    /*
-     * Every request passes through here - primary calls, probe mutations and setup chains alike -
-     * which is the only place that can see the payload as it will actually be sent. On the live
-     * application an identifier we do not own is refused here, because several endpoints act on
-     * the id in the payload rather than on the caller (see qa-identifier-guard.ts).
-     */
+    // Every request passes here, the one place that sees the payload as sent, so ids are checked.
     assertQaOwnedIdentifiers(
       { body: spec.body, query: spec.query, pathParams: spec.pathParams },
       options.label ?? endpoint.label,
@@ -196,10 +159,7 @@ export class EndpointExecutor {
     const client = await this.clients.get(endpoint.suite);
     const exchange = await client.execute(request, options.label);
 
-    // A server error while an owner-authorized lifecycle flow drove a real write OR read is a
-    // fileable product defect (a server must never 5xx — even bad input warrants a 4xx). Collected
-    // here, at the one chokepoint every flow call passes through, and filed by the fixture. A 4xx is
-    // NOT collected: it might be our payload, and the feature spec's own assertions surface it.
+    // A 5xx during an authorized lifecycle call is a fileable defect; a 4xx may be our payload.
     if ((options.allowLiveWrite || options.allowLiveRead) && isServerError(exchange.status)) {
       this.flowFindings.push({
         endpoint,
@@ -229,11 +189,7 @@ export class EndpointExecutor {
     return principal;
   }
 
-  /**
-   * The principal to run `endpoint`'s primary request as: the exact one it names by key when it does
-   * (the Admin module names `business-m`, since several principals share COMPANY_ADMIN), else a
-   * principal for the role.
-   */
+  /** The principal for `endpoint`: the one it names by key (several share a role), else by role. */
   private principalFor(endpoint: ResolvedEndpoint, roleOverride?: Role): Principal {
     const key = endpoint.authentication.principalKey;
     if (key) {
@@ -267,13 +223,7 @@ export class EndpointExecutor {
     return (endpoint.envelope ? getPath(parsed.value, 'data') : parsed.value) as T;
   }
 
-  /**
-   * A genuinely expired token, in order of preference:
-   *   1. EXPIRED_TOKEN, when someone set it explicitly (a manual override always wins);
-   *   2. the newest token from an EARLIER run that has since aged past its exp (the automatic path —
-   *      see token-history.ts, this is what stops the check skipping without any manual step).
-   * Undefined only on a brand-new checkout that has not yet run long enough for a token to mature.
-   */
+  /** An expired token: EXPIRED_TOKEN if set, else an aged one from an earlier run. */
   expiredToken(): Promise<string | undefined> {
     return Promise.resolve(env.EXPIRED_TOKEN ?? oldestExpiredToken());
   }
@@ -288,21 +238,14 @@ export class EndpointExecutor {
     const principal =
       auth && 'principal' in auth ? auth.principal : this.principalFor(endpoint, auth?.role);
     const token = await this.tokens.tokenFor(principal, profile);
-    // Record every token as it is minted, so a later run's expired-token check has an aged one to
-    // use and never has to skip.
+    // Recorded so a later run's expired-token check has an aged token.
     recordToken(token);
     return `${profile.scheme} ${token}`;
   }
 
   /**
-   * Log in and return a token the resource endpoints will actually ACCEPT.
-   *
-   * KPost's auth is non-deterministic (as of the 2026-09 deploy): roughly half of all logins return
-   * HTTP 200 with a well-formed, unexpired token that every authenticated endpoint then rejects with
-   * 401 "UNAUTHORIZED USER" — the login session is not shared across backend instances (filed as its
-   * own defect). A single such token 401s every call in the run and floods the report with hundreds
-   * of false defects. So this canaries the minted token against a lightweight authed endpoint and
-   * re-logs-in until it holds one the API accepts, or gives up after MAX_LOGIN_ATTEMPTS.
+   * Logs in and returns a token the resource endpoints accept. Known defect: some logins mint a
+   * token every endpoint 401s, so each token is canaried and the login retried.
    */
   private async login(principal: Principal, profile: AuthProfile): Promise<string> {
     // A principal may name its own login endpoint (BUSINESS_M/L → adminUserLogin); else the profile's.
@@ -343,11 +286,8 @@ export class EndpointExecutor {
   }
 
   /**
-   * Does a resource endpoint actually accept this token? Canaries it against a lightweight, read-only
-   * authed endpoint (fetchUserDetails on the caller's own account). 401/403 means the token was NOT
-   * accepted (the intermittent-auth defect); anything else (200, 404, even 500) means auth passed and
-   * only the resource result differs. A transport error is not a verdict — treat as accepted rather
-   * than loop on a network blip.
+   * Whether a token-required endpoint accepts this token: only 401/403 is a rejection; a transport
+   * error counts as accepted.
    */
   private async tokenIsAccepted(
     profile: AuthProfile,
@@ -355,10 +295,7 @@ export class EndpointExecutor {
     token: string,
   ): Promise<boolean> {
     try {
-      // Canary MUST be a token-REQUIRED endpoint. fetchUserDetails is public (returns 200 with no
-      // token at all), so it cannot tell a good token from a bad one and would pass every token —
-      // defeating the retry. myContacts requires auth (401 without a valid token), so a 200 here
-      // means the token is genuinely accepted by the resource layer.
+      // The canary must require a token: myContacts does; fetchUserDetails is public.
       const canary = resolveEndpoint(this.apiRegistry.get('contacts-my-contacts'));
       const res = await this.send(
         canary,

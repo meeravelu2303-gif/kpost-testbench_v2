@@ -8,21 +8,9 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import { KMAIL_TYPE } from '@api/contract/kpost-types';
 
 /**
- * KMail REPLY / REPLY-ALL / FORWARD + CC/BCC (RTM-KMAIL-F01, RTM-KMAIL-F06) — a documented "Not
- * covered" gap. KMail has no dedicated reply/forward endpoints: reply and forward are the SAME compose
- * endpoint (`kmail-post-mail`) driven with a different `kmailType` (1 = Reply, 2 = Forward) plus the
- * reference/forward fields. CC and BCC are the `ccList` / `bccList` fields on the same body (BCC =
- * KMail's Confidential copy, NFR-SEC02). So this reuses `mailShape()` with overrides — no new endpoint.
- *
- * Flow per test: A (`personal`) sends a NEW mail to B (`victim`), capture its `kmailID`, then exercise
- * the reply/forward/cc-bcc variant, and clean up EVERY created mail via `kmail-delete`
- * ({ transactionIDs }) in a finally. All recipients are our own owned QA accounts so nothing lands in a
- * stranger's inbox and everything is cleanable.
- *
- * GATING: the whole KMail suite is paused behind `kmailAuthGate()` (testkmail 401s a valid KPost token
- * — a server-side regression; clears with KMAIL_AUTH_FIXED=true), and writes also need
- * KMAIL_LIFECYCLE=true. Both guards are mandatory or the spec floods the report with 401 noise. It will
- * run once the KMail auth regression is fixed; it is written and ready.
+ * KMail reply, forward and CC. Reply and forward are the compose endpoint with a different
+ * `kmailType` plus reference fields. A mails B, then the variant runs; every mail made is deleted.
+ * All recipients are our own QA accounts. Gated by KMAIL_LIFECYCLE=true.
  */
 const K = AUTH_PROFILES.kpost;
 const principal = (key: string): Principal => K.principals.find((x) => x.key === key)!;
@@ -192,9 +180,7 @@ test.describe(
       { annotation: [{ type: 'requirement', description: 'RTM-KMAIL-F06' }] },
       async ({ endpoints }) => {
         const stamp = Date.now();
-        // To = B, Cc = A's own second identity is not available, so Cc the 2nd account's own address is
-        // avoided; Cc a third owned account if configured, else assert the single-recipient path still
-        // carries an empty ccList cleanly. Here we Cc B as a smoke of the ccList field being accepted.
+        // To = B, Cc = C (a third QA account).
         let ids: number[] = [];
         try {
           const sent = await send(

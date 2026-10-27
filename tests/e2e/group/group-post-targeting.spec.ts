@@ -5,19 +5,9 @@ import { createQaGroup, deleteQaGroup, GROUP_CREATOR, type QaGroup } from '../su
 import { EDITOR, openGroupConversation } from '../support/katchup';
 
 /**
- * Group messaging — **Post To: All Members / Selected Members** (FR-GMSG, the Katchup FRD §8 rows the
- * requirement map listed as the remaining UI GAP for group messaging).
- *
- * Read from source (`bubble/WriteMessage/WriteMessage.js`, 2026-10-10): in a group with more than one
- * active member and no members yet selected, the Post button (`.post_button_size`) does NOT send on
- * the first click — it opens the targeting options (`.grp_optPosition` / `.grp_optExpandPosition`):
- * "All Members" (`icon-KP_111-Group`, sends to everyone) and "Selected Members"
- * (`icon-KP_117-User-Tick`, opens the "Select Members" modal, `groupPost.selectModal`). This spec
- * drives exactly that far and never sends: it asserts the two targets are offered, that "Selected
- * Members" opens the picker listing the other members, and then clears the draft.
- *
- * The group comes from `support/groups.ts` (created by personal-3 with the browser's account as a
- * second admin — never authenticating the API as the browser's own account), and is torn down fully.
+ * Group Post To targeting (FR-GMSG, `WriteMessage.js`): the first Post click in a multi-member group
+ * offers All Members / Selected Members, and Selected Members opens the picker. Never sends.
+ * The group is created by personal-3 and torn down.
  */
 const VIEWER = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal');
 const OTHER = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim');

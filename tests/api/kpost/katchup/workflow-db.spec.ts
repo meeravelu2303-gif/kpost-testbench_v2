@@ -7,34 +7,9 @@ import type { KatchupMessageRecord } from '@database/repositories/kpost.reposito
 import { expect, test } from '@fixtures';
 
 /**
- * The Katchup message lifecycle, asserted at **both** layers after every step.
- *
- * ## What this adds over `lifecycle.spec.ts`
- *
- * That flow proves the API's own story: send returns a `msgID`, read returns the message, recall
- * reports success. This one asks whether the database agrees — and the interesting cases are
- * exactly the ones where it might not:
- *
- *  - A send that answers 200 having stored the subject as an empty BLOB.
- *  - A recall that reports success and leaves `deleted_by_sender` clear, so the message is still in
- *    the sender's own thread.
- *  - A delete that removes the row outright where the product promises a soft delete, taking the
- *    recipient's copy with it.
- *
- * None of those is visible from the response. Every one is a single column.
- *
- * ## Why the state is captured between steps rather than only at the end
- *
- * A lifecycle assertion made once at the end cannot say *which* step broke. Reading the row after
- * each transition costs one indexed query on a primary key and turns "the message is wrong" into
- * "recall did not set the flag" — the difference between a ticket a developer can act on and one
- * they have to reproduce first.
- *
- * ## Safety
- *
- * It writes a real message between our own two accounts and cleans up after itself, so it carries
- * the same `KATCHUP_LIFECYCLE` opt-in as the existing flow, for the same reason: until the owner
- * has signed off on sending on the live application, this must not run there by accident.
+ * The Katchup message lifecycle (send, read, delete, recall) checked in MySQL after every step, so a
+ * failure names the step that broke. Gated behind `KATCHUP_LIFECYCLE=true`: it writes a real message
+ * between our own two accounts and cleans up after itself.
  */
 test.describe(
   'KPost Katchup · lifecycle with MySQL assertions @api @kpost-api @katchup @database',
@@ -92,15 +67,10 @@ test.describe(
       const stored = await row(new KpostRepository(database), msgId);
 
       expect(stored, `TBL_KPOST_KATCHUP_MESSAGES must hold msg_id ${String(msgId)}`).toBeDefined();
-      /*
-       * Decoded before comparison. `subject` is a BLOB, so a raw equality check fails even when the
-       * stored bytes are exactly right — which would read as "the API stored the wrong subject" on a
-       * perfectly healthy API.
-       */
+      // `subject` is a BLOB, so it is decoded before comparison.
       expect(text(stored?.subject), 'the Subject is persisted as sent (BR-K01)').toBe(subject);
       expect(text(stored?.sender), 'the sender is the calling account').toBe(testData.kpostId);
-      // `sendShape` addresses our second account; asserted here so a change to that default shows up
-      // as a failing expectation rather than as a message quietly sent somewhere else.
+      // Guards `sendShape`'s default receiver (our second account).
       expect(text(stored?.receiver), 'the receiver is the second QA account').toBe(
         testData.victimKpostId,
       );
@@ -136,26 +106,15 @@ test.describe(
         { label: 'workflow-db:read' },
       );
 
-      /*
-       * The read is asserted against the DATABASE's copy, not against what the test sent. If the API
-       * ever returned a different message for this id — the class of bug the concurrency probes look
-       * for from the other direction — comparing against our own variable would hide it, because our
-       * variable is what we hoped for rather than what is stored.
-       */
+      // Compared with the DB's stored copy, not with what the test sent.
       expect(exchange.status, 'the read succeeds').toBeLessThan(300);
       expect(exchange.bodyText, 'the response carries the stored subject').toContain(
         text(stored?.subject) ?? subject,
       );
     });
 
-    /*
-     * "delete" runs BEFORE "recall" deliberately (against its own, independent seed message, not the
-     * shared `msgId` above). This describe block is `serial` (required: the project runs
-     * `fullyParallel`, see `endpoint-cases.ts`), and `serial` skips every later test once ANY earlier
-     * one fails — regardless of soft vs. hard assertions. `recall` (below) is a known, permanently-open
-     * regression (#610); ordering "delete" after it would mean this soft-delete check could never run
-     * at all. See `lifecycle.spec.ts`'s empty-subject test for the same independence pattern.
-     */
+    // Delete runs BEFORE recall, on its own seed message: `serial` skips later tests once one
+    // fails, so a recall failure must not stop this check.
     test('delete: the message is soft-deleted, not removed from the table', async ({
       endpoints,
       databases,
@@ -186,12 +145,7 @@ test.describe(
 
       const stored = await row(new KpostRepository(database), deleteMsgId);
 
-      /*
-       * The distinction that matters, and the one the response cannot express: KPost deletes a
-       * Katchup message per participant, so the ROW must survive with a flag set. A hard delete would
-       * also take the counterparty's copy — the recipient's message vanishing because the sender
-       * tidied up is a data-loss defect, and on the wire it looks identical to a correct soft delete.
-       */
+      // Delete is per participant: the row must survive with a flag set, or the recipient loses it too.
       expect(
         stored,
         'a per-participant delete must leave the row in place for the other party',
@@ -224,15 +178,7 @@ test.describe(
 
       const stored = await row(new KpostRepository(database), msgId);
 
-      /*
-       * BR-C01-style correction, 2026-09-26: this test used to check `deleted_by_sender`/
-       * `deleted_by_receiver` and filed #610 [KP-80AC38] when neither moved. The dev closed it
-       * INVALID: "Recall message is handled using messageType [...], it is a different from delete by
-       * sender or receiver." Live-verified directly against MySQL the same day: a fresh message starts
-       * at `message_type=0`; after a successful recall it reads `message_type=7` — a real, distinct DB
-       * effect, just not the one this test used to look for. #610 was correctly closed; this now checks
-       * the field the product actually uses.
-       */
+      // Recall is stored in `message_type` (0 → 7), not in the deleted_by_* flags.
       expect(stored, 'a recall is a soft delete: the row must still exist').toBeDefined();
       const recalledMessageType = Number(stored?.message_type ?? 0);
       expect

@@ -2,13 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * The Profile **screens** on the live front end, across all browsers, using the session `setup`
- * saved. No `data-testid` hooks, so locators are structural classes from `KPOST_REACTJS_2023_V1`,
- * each noted so a UI change points here.
- *
- * These are read-only screen checks (the profile-edit and settings writes are the API lifecycle's
- * job). They confirm the screens render the caller's own profile and the settings workspace in
- * Chromium, Firefox and WebKit.
+ * Read-only checks that the own-profile and settings screens render, on every browser. No data-testid
+ * hooks exist, so locators are structural classes.
  */
 test.describe('KPost Profile screens', { tag: ['@ui', '@profile', '@regression'] }, () => {
   test.skip(
@@ -22,8 +17,7 @@ test.describe('KPost Profile screens', { tag: ['@ui', '@profile', '@regression']
       /\/userprofile/,
     );
 
-    // The profile renders the account holder's name and photo (`.name_font_profile`,
-    // `.Main-Profile-image`) — the core of the screen.
+    // The profile renders the account holder's name and photo.
     await expect(page.locator('.name_font_profile').first(), 'the name is shown').toBeVisible({
       timeout: 20_000,
     });
@@ -36,8 +30,7 @@ test.describe('KPost Profile screens', { tag: ['@ui', '@profile', '@regression']
   test('the profile screen has the About and information sections @ui', async ({ page }) => {
     await page.goto('/userprofile', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
-    // "About" is a labelled profile section; asserting it exists proves the editable profile detail
-    // is surfaced (its values are exercised by the API write lifecycle).
+    // The About section is present (its values are covered by the API lifecycle).
     await expect(page.getByText(/^About/i).first(), 'the About section is present').toBeVisible({
       timeout: 20_000,
     });
@@ -52,9 +45,7 @@ test.describe('KPost Profile screens', { tag: ['@ui', '@profile', '@regression']
       .waitFor({ state: 'hidden', timeout: 30_000 })
       .catch(() => undefined);
 
-    // On the account holder's OWN profile the self-actions render (UserProfile.js selfProfile branch):
-    // "Edit Profile", the share button (icon-KP_120-KShare) and the change-photo button
-    // (icon-KP_67-Camera) — the entry points to every profile write.
+    // The own profile shows Edit Profile, Share and Change Photo.
     await expect(
       page.getByText(/^Edit Profile$/i).first(),
       'the Edit Profile control is present on the own profile',

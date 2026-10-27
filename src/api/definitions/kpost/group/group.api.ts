@@ -11,13 +11,9 @@ import {
 } from '../kpost-endpoint';
 
 /**
- * The KPost **Group** module — `/v2/group/*`. Groups are what Katchup group messaging (FR-K06)
- * needs: `createUserGroup` returns a `groupKpostID`, which is then the receiver for a group send.
- *
- * Verified on live: create → group send → clean up requires **removeGroupMember(all) then
- * deleteGroup** (deleteGroup alone answers 400 "you need to remove all the members"). All writes;
- * none `productionSafe` — a group of our own accounts is still real state, exercised only by the
- * Katchup feature spec with `KATCHUP_LIFECYCLE=true`, which cleans up after itself.
+ * Group (`/v2/group/*`): `createUserGroup` returns the `groupKpostID` a group send targets. Cleanup
+ * is removeGroupMember(all) then deleteGroup. No write is `productionSafe`; the Katchup lifecycle
+ * drives them.
  */
 function defineGroupEndpoint(config: KpostEndpointConfig): EndpointDefinition {
   return defineKpostEndpoint({
@@ -102,13 +98,8 @@ export const removeGroupMemberApi = defineGroupEndpoint({
 });
 
 /**
- * **V1 legacy** route — `GroupController.java` (base `group`, no `v2` prefix), still live alongside
- * the hardened V2 route above. Source-confirmed (`GroupServiceDaoImpl.deleteUserFromGroup`, a raw
- * `DELETE ... WHERE group_id = :groupId AND kpost_id IN (:kpostID)`) to perform **zero ownership or
- * membership check**: the controller only requires *some* valid authenticated caller, then deletes
- * whatever `groupID` + `memberKpostIdList` the request names — it never checks that the caller is an
- * admin, or even a member, of that group. Tracked as its own endpoint (not reusing `group-remove-
- * member`, the V2 id) because the two routes have materially different authorization behaviour.
+ * Legacy V1 remove-member route, still live: it checks no ownership or membership before deleting.
+ * Its own endpoint because its authorization differs from the V2 route.
  */
 export const removeGroupMemberV1LegacyApi = defineUndocumentedGroupEndpoint({
   id: 'group-remove-member-v1-legacy',
@@ -200,14 +191,7 @@ export const updateGroupImageApi = defineGroupEndpoint({
   tags: ['group-manage', 'needs-message-id'],
   destructive: true,
   sideEffect: 'data',
-  /*
-   * Live-verified 2026-09-26: this route is `multipart/form-data`, not JSON — the previous plain-JSON
-   * body always 400d "Request must be multipart/form-data with the required file parts", so this
-   * write had never once succeeded in this bench's history (hidden by a `status < 600` check in
-   * feature.spec.ts). The file part is `file` (confirmed against `image`/`groupImage`/`profileImage`/
-   * `files`, all rejected as "Required part 'file' is missing"). It also rejects PNG — same class of
-   * format restriction as `profile-update-image` — with "Invalid File Format"; JPEG is accepted.
-   */
+  // Multipart with the file part named `file`; JPEG only (PNG gets "Invalid File Format").
   request: () => ({
     multipart: {
       file: {
@@ -267,10 +251,8 @@ export const downloadGroupFullImageApi = defineGroupEndpoint({
 });
 
 /**
- * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. Heavily
- * used: 7 real call sites across `App.js`, Home's `RecentMessage.js`/`MainHomePage.js`, all 3
- * Katchup UI variants, and Kmail's `MessageContainer.js`. Real shape: `Contacts.js:93-98`
- * (`FetchGroupDetailsByGroupID(groupKpostID)`), a GET with the id in the path, no body.
+ * Not in the workbook: group details by groupKpostID, a bodyless GET used by 7 screens
+ * (Contacts.js:93-98).
  */
 export const groupDetailsByIdApi = defineUndocumentedGroupEndpoint({
   id: 'group-details-by-id',

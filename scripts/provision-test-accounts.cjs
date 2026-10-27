@@ -1,17 +1,8 @@
 #!/usr/bin/env node
 /**
- * Creates the bench's `qatestN@<domain>` accounts on the KPost test environment, through the product's
- * own signup API, and records each one in `src/fixtures/test-accounts.json` as it is proven usable.
- *
- * Run deliberately, with the owner's sign-off: **an account cannot be deleted through the KPost API**,
- * so every row this creates is permanent.
- *
- * ## Why signup needs a human or the database
- *
- * The mobile OTP is a test gateway (the code `QA_BYPASS_OTP` always validates and no SMS is sent). The
- * e-mail OTP is NOT: the backend generates a real code, stores it, and sends it. It can only be read
- * from the mailbox it was sent to, or from `TBL_KPOST_EMAIL_OTP_VALIDATION` when the database is
- * reachable from this machine. So signup is two phases:
+ * Creates the `qatestN` accounts on the KPost test environment through the signup API and records
+ * each in src/fixtures/test-accounts.json once it logs in. Accounts cannot be deleted, so run it
+ * deliberately. Signup is two phases because the e-mail OTP is real (read from the mailbox or the DB).
  *
  *   node scripts/provision-test-accounts.cjs                         status of every account (read-only)
  *   node scripts/provision-test-accounts.cjs --send                  phase 1: mobile OTP + send the e-mail OTP
@@ -19,16 +10,8 @@
  *   node scripts/provision-test-accounts.cjs --finish --codes=qatest1:123456,qatest2:654321
  *
  * Add `--only=qatest1,qatest2` to limit either phase. The e-mail codes expire after about 10 minutes,
- * so run phase 2 soon after phase 1.
- *
- * ## Safety
- *
- * - Idempotent: an existing account is reported and left alone; the registry is only marked
- *   `provisioned` after the new account has logged in successfully.
- * - Every id and mobile is checked free through the product (`kpostIdExist`, `mobileNoExist`) first.
- * - The e-mail address that receives the codes comes from `QATEST_OTP_MAILBOX_TEMPLATE` (for example
- *   `qa.bench+{id}@kpost.in`); there is deliberately no default, so a code is never sent to a mailbox
- *   nobody reads. The password comes from `QATEST_SHARED_PASSWORD` only.
+ * so run phase 2 soon after phase 1. Needs QATEST_OTP_MAILBOX_TEMPLATE (no default) and
+ * QATEST_SHARED_PASSWORD.
  */
 require('dotenv').config({ path: '.env', quiet: true });
 

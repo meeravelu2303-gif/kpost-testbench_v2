@@ -3,12 +3,8 @@ import { expect, test } from '@fixtures';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * The shared **Header shell** that wraps every authenticated screen (`containers/Header.js`), across
- * all browsers, using the session `setup` saved.
- *
- * This is the one place the app's navigation lives, so testing it once covers the entry point to
- * every module. The nav is an `icon-KP_*` rail (always in the DOM); each icon routes to a module
- * (`docs/ui/ui-screens.md`). Read-only: it asserts the controls are present, it does not click through.
+ * The Header shell that wraps every signed-in screen: the user chip and each `icon-KP_*` nav entry are
+ * present. Read-only; it does not click through.
  */
 test.describe('KPost app shell', { tag: ['@ui', '@platform', '@regression'] }, () => {
   test.skip(
@@ -32,8 +28,7 @@ test.describe('KPost app shell', { tag: ['@ui', '@platform', '@regression'] }, (
   test('the navigation rail links to every core module @ui', async ({ page }) => {
     await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
-    // One icon per destination (docs/ui/ui-screens.md · shell). The rail is always in the DOM; assert
-    // each nav icon is attached, so a renamed/removed nav entry fails here rather than silently.
+    // The rail is always in the DOM, so assert each nav icon is attached (a removed entry fails here).
     for (const icon of [
       'icon-KP_01-Home',
       'icon-KP_03-KMail',

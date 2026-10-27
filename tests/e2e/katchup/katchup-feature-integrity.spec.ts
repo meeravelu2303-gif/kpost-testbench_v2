@@ -10,20 +10,8 @@ import {
 import { settleFrames } from '../support/settle';
 
 /**
- * Katchup feature integrity — do the per-message features actually work / are they wired correctly?
- *
- * Covers, from the bubble frontend ground-truth read:
- *  - Voice Transcription: present but wired to a HARD-CODED devapi2 host (KatchupMessage.js:4207/6377,
- *    VoiceMessagePlayer.js:261) instead of the configured base, so it can never work for a non-devapi2
- *    user. (BUG — asserts the call honours the env config.)
- *  - Print: the Print action must open the PrintView modal and drive window.print(). (feature works)
- *  - Mark/Star important: the star toggle must call markOrUnmarkImportantMessage and surface success
- *    AND a failure envelope (the handler has an else branch). (feature works + error handling)
- *  - Voice-message record: the composer mic must start a recording and show the stop/attach controls
- *    (mic + MediaRecorder mocked so it runs headless). (feature works)
- *
- * A seeded SENT message (sender = me) gives each per-message action its bell menu / star without a
- * real write; the per-action backend call is stubbed, so these do not need KATCHUP_UI_LIFECYCLE.
+ * Katchup per-message features: Voice Transcription, Print, Mark important (success and failure) and
+ * voice recording. A stubbed sent message and stubbed backend calls mean nothing is written.
  */
 
 /** One realistic thread message (shape mirrors the live thread-fetch; msgID 999000301). */
@@ -145,11 +133,7 @@ test.describe(
         type: 'observed',
         description: `voice transcription requested: ${translateUrl}`,
       });
-      // Correct behaviour: Voice Transcription reaches the voice/translate service. Unlike the rest of
-      // the app, the voice/transcription service is hosted on devapi2 BY DESIGN (owner-confirmed
-      // 2026-10-13: hitting Voice Transcription on the test environment is expected to call devapi2),
-      // so this asserts the call reaches the voice endpoint rather than policing the host. The earlier
-      // "must not be devapi2" assertion encoded a wrong assumption and would file a false bug.
+      // The voice service lives on devapi2 by design, so only the endpoint is checked, not the host.
       expect(
         /\/voice\/translate/i.test(translateUrl),
         `Voice Transcription must reach the voice/translate service (saw: ${translateUrl})`,

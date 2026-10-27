@@ -8,76 +8,29 @@ export class ProductionSafetyError extends Error {
 export interface SafetyFlags {
   isProduction: boolean;
   allowDestructive: boolean;
-  /**
-   * A caller explicitly authorizes THIS write on the live application. It unlocks a `data`-side-
-   * effect destructive endpoint only — `external` (real SMS/email) and `global` (shared state) are
-   * never unlocked this way — and the QA-identifier guard still confines it to accounts we own. Set
-   * per call by an owner-approved feature spec, never by the engine (so fuzzing stays blocked).
-   */
+  /** Per-call authorization of one live `data` write by a feature spec; never set by the engine. */
   allowLiveWrite?: boolean;
-  /**
-   * A caller explicitly authorizes THIS non-destructive "needs-id" read on the live application —
-   * the read-side counterpart to `allowLiveWrite`, for a dependency-driven flow that mints a real id
-   * (a doc, an attachment, a group image) and then needs to read it back. Scoped identically: `data`-
-   * side-effect only (`external`/`global` and OTP stay blocked regardless), the QA-identifier guard
-   * still confines it to accounts we own, and it is set per call by an owner-approved feature spec —
-   * never by the engine, so its probes and fuzzers stay blocked.
-   */
+  /** Per-call authorization of one live read of an id the flow just minted; never the engine. */
   allowLiveRead?: boolean;
-  /**
-   * The caller declares this request names an account or mobile number that does NOT exist, so an
-   * SMS-sending endpoint has nobody to text. The only thing that lets an API call reach the
-   * forgot-password senders, whose SMS is real even on the test gateway. Set per call, never by the
-   * engine.
-   */
+  /** The request names an account/mobile that does not exist, so an SMS sender texts nobody. */
   noSmsRecipient?: boolean;
-  /**
-   * Deep write-fuzzing on a disposable TEST DB. When both this and `testDbMode` are set, the engine
-   * may run its fuzzers on a `data`-side-effect WRITE endpoint (which persists junk — hence test-DB
-   * only). It never unlocks `external`/`global`/OTP writes, and the QA-identifier guard stays armed.
-   */
+  /** With `testDbMode`, lets the engine fuzz `data` writes (they persist junk, so test DB only). */
   writeFuzz?: boolean;
   /** The target is a throwaway test database (see env `TEST_DB_MODE`); required for `writeFuzz`. */
   testDbMode?: boolean;
-  /**
-   * The target env's OTP subsystem is a TEST GATEWAY (no real SMS/e-mail; `123456` validates). When
-   * set together with `testDbMode`, it lifts the OTP/SMS kill-switch for `otpDependent` endpoints ONLY
-   * (see env `OTP_TEST_GATEWAY`), so signup/registration/device/forgot-password/validate flows run on
-   * the disposable test DB. Never unlocks a non-`otpDependent` write; the QA-identifier guard stays armed.
-   */
+  /** OTP is a test gateway (`123456` validates); with `testDbMode` it opens the OTP endpoints. */
   otpTestGateway?: boolean;
-  /**
-   * Env `ADMIN_LIFECYCLE`: the owner has opted the run into the admin member/company lifecycle. On its
-   * own it unlocks NOTHING — it only takes effect together with a per-call `allowGlobalLifecycle` set
-   * by the one deliberate lifecycle spec (never by the engine), so fuzzers can never reach a `global`
-   * write. The QA-identifier guard stays armed regardless.
-   */
+  /** Env `ADMIN_LIFECYCLE`; unlocks nothing without a per-call `allowGlobalLifecycle`. */
   adminLifecycle?: boolean;
-  /**
-   * Set per call by the owner-approved admin lifecycle spec to authorize THIS `global` admin write on
-   * the live host. Scoped tightly: it unlocks only a `global` destructive write and only when
-   * `adminLifecycle` (env) is also on; it never touches the OTP/SMS kill-switch or `external`, and the
-   * QA-identifier guard still confines every id to accounts we own. The engine never sets it.
-   */
+  /** Per-call authorization of one live `global` admin write; also needs `adminLifecycle`. */
   allowGlobalLifecycle?: boolean;
 }
 
 /**
- * How far outside the test's own data an endpoint reaches.
- *
- * `destructive` alone was too blunt. It blocked writes on production and allowed them everywhere
- * else, which is right for creating a throwaway user — and wrong for the three kinds of call below,
- * where a "dev" environment is no safer than production:
- *
- *   `data`      creates or changes records the tests own. Safe off production. The default.
- *   `external`  sends something to a real person: an SMS, an email. Costs money, annoys humans,
- *               and trips carrier rate limits that then break every later test.
- *   `global`    changes state shared by everyone on the environment: the mobile app version every
- *               client is told to install, or another account's password.
- *
- * `external` and `global` are blocked on **every** environment unless `ALLOW_DESTRUCTIVE_TESTS=true`,
- * so running the suite cannot text somebody by accident. Turning the flag on is a deliberate act;
- * the endpoints are fully tested when it is.
+ * How far outside the test's own data an endpoint reaches: `data` (records the tests own, the
+ * default), `external` (texts or mails a real person), `global` (state shared by everyone, e.g. the
+ * app version). `external` and `global` are blocked on every environment unless
+ * `ALLOW_DESTRUCTIVE_TESTS=true`.
  */
 export type SideEffect = 'data' | 'external' | 'global';
 
@@ -100,12 +53,9 @@ const OTP_REASONS: Record<NonNullable<GuardedEndpoint['otpDependent']>, string> 
 };
 
 /**
- * Reason an endpoint must not be called at all, or undefined when it may be.
- *
- * Enforced inside the executor, so setup calls and probes are covered too — not just tests. The
- * order of the checks below is the order of severity, and it matters: the production allowlist is
- * consulted **before** `allowDestructive`, because on the live application that flag must not be
- * able to unlock anything.
+ * Why an endpoint must not be called, or undefined when it may be. Enforced in the executor, so
+ * setup calls and probes are covered too. Checks run in severity order; on live `allowDestructive`
+ * unlocks nothing.
  */
 export function destructiveBlockReason(
   endpoint: GuardedEndpoint,
@@ -119,40 +69,18 @@ export function destructiveBlockReason(
   },
 ): string | undefined {
   /*
-   * ## SMS / OTP kill-switch — the FIRST check, un-bypassable, in EVERY mode
-   *
-   * An endpoint that delivers a real OTP / SMS / e-mail (`otpDependent`, or `sideEffect: 'external'`)
-   * must NEVER be sent — not on production, not on dev, not on any run — because it costs money and
-   * exhausts the SMS gateway. Every host this bench talks to is a real one. No flag
-   * (`allowDestructive`, `allowLiveWrite`, a wrong `TEST_ENV`) can unlock it; only a CONFIRMED test
-   * gateway (below) can. This sits above every other check so nothing downstream can reach an SMS
-   * sender.
+   * SMS/OTP kill-switch, first and in every mode: a real OTP/SMS/e-mail costs money and exhausts
+   * the gateway. Only a confirmed test gateway unlocks it. The label regex catches a mis-flagged
+   * endpoint.
    */
-  // A path/label backstop: even if an endpoint were mis-flagged (no `otpDependent`/`external`), any
-  // OTP / SMS / send-code / forgot-password path is caught here so it can NEVER send against a real host.
   const looksLikeSmsSender = /otp|sms|sendcode|forgotpassword|sentkpostidsms/i.test(endpoint.label);
   const isOtpFlow = Boolean(endpoint.otpDependent) || looksLikeSmsSender;
-  /*
-   * A few `otpDependent` writes would destroy the RUNNING session — deactivate our own account, or
-   * displace it by re-designating the primary device. Blind engine fuzzing of those on `product:kpost-api`
-   * would break the run (every later login fails) and, for deactivate, take the QA account offline.
-   * So they stay blocked even on the test gateway; a deliberate lifecycle on a throwaway account is
-   * the right way to exercise them, not the fuzzer. (Secondary-device + registration are fine.)
-   */
+  // Deactivate / re-designate-primary would end the running session: blocked even on the gateway.
   const isSessionDestroyer =
     /deactivat|delete\s*account|close\s*account|setdeviceasprimary|updatedeviceasprimary/i.test(
       endpoint.label,
     );
-  /*
-   * ## TEST-GATEWAY unlock for the OTP flows
-   *
-   * On a disposable test DB whose OTP subsystem is a CONFIRMED test gateway (`OTP_TEST_GATEWAY=true`,
-   * no real SMS/e-mail, `123456` validates), the OTP flows are opened end to end — signup, registration,
-   * device designation, forgot-password, validate. It requires BOTH flags (`otpTestGateway` AND
-   * `testDbMode`, the disposable-DB contract, exactly like WRITE_FUZZ) and opens ONLY `otpDependent` /
-   * SMS endpoints (never a session-destroyer, never a non-OTP `external`/`global` write). The
-   * QA-identifier guard is a SEPARATE control and stays armed, so every id is still confined to us.
-   */
+  // The test-gateway unlock needs both `otpTestGateway` and `testDbMode`, and opens OTP flows only.
   const otpTestAuthorized =
     flags.otpTestGateway === true && flags.testDbMode === true && isOtpFlow && !isSessionDestroyer;
 
@@ -163,14 +91,8 @@ export function destructiveBlockReason(
     return `${endpoint.label}: sends a real OTP/SMS/e-mail — BLOCKED (SMS kill-switch); it may run only against a confirmed test gateway (OTP_TEST_GATEWAY+TEST_DB_MODE)`;
   }
   /*
-   * ## Forgot-password texts are REAL even on the test gateway
-   *
-   * `forgotPassword` never consults the `otpBypass` setting (UserProfileServiceImpl): it sends a
-   * random OTP — or the KPOST ID — through the live SMS provider on every host. Owner rule
-   * (2026-10-20): ONE such SMS per run, sent only by the browser forgot-password lifecycle
-   * (`login-forgot-password-lifecycle.spec.ts`). So no API call may reach these two endpoints
-   * unless the caller declares it names an account or number that does not exist, which cannot
-   * text anyone (`forgot-password-limited.spec.ts`).
+   * forgotPassword ignores the OTP bypass and texts a real phone on every host. The one such SMS
+   * per run belongs to the browser lifecycle, so API calls need `noSmsRecipient`.
    */
   if (
     /forgotpassword/i.test(endpoint.label) &&
@@ -180,50 +102,26 @@ export function destructiveBlockReason(
     return `${endpoint.label}: texts a real phone even on the test gateway (forgotPassword ignores the OTP bypass) — BLOCKED; the one forgot-password SMS per run belongs to the browser lifecycle test`;
   }
   /*
-   * ## On the live application, default deny
-   *
-   * Every endpoint is blocked unless its definition says `productionSafe: true`. This is checked
-   * first and cannot be overridden by any environment variable, because the failure it prevents is
-   * irreversible: a delete against a real customer's record.
-   *
-   * A blocklist would have been less code and is the wrong shape — it admits every endpoint nobody
-   * has thought about yet, which is exactly the set most likely to be dangerous.
+   * Live default deny: blocked unless `productionSafe: true`, since a delete on a real record is
+   * irreversible. An allowlist, because a blocklist admits every endpoint nobody has thought about.
    */
   const isLive = flags.isProduction;
 
-  /*
-   * A `data` write the caller has explicitly authorized for this run (an owner-approved feature
-   * spec). It bypasses the `productionSafe` gate below but nothing else: `external`/`global` stay
-   * blocked by the side-effect check further down, and the QA-identifier guard still confines the
-   * payload to accounts we own. The engine never sets this, so its probes remain blocked.
-   */
+  // An explicitly authorized `data` write bypasses only the productionSafe gate.
   const liveWriteAuthorized =
     isLive &&
     flags.allowLiveWrite === true &&
     endpoint.destructive === true &&
     (endpoint.sideEffect ?? 'data') === 'data';
 
-  /*
-   * The read-side counterpart, for a "needs-id" read fed a real id a lifecycle flow just minted
-   * (e.g. reading back a group image right after uploading it). `destructive !== true` rather than
-   * requiring it false: a read is never destructive, so this simply excludes writes, which have
-   * their own authorization above. `external`/`global` reads still fall through to the side-effect
-   * check below unauthorized, exactly like an unauthorized write would.
-   */
+  // The read-side counterpart, for reading back an id a lifecycle flow just minted.
   const liveReadAuthorized =
     isLive &&
     flags.allowLiveRead === true &&
     endpoint.destructive !== true &&
     (endpoint.sideEffect ?? 'data') === 'data';
 
-  /*
-   * Deep write-fuzzing on a disposable TEST DB. Lets the ENGINE run a `data`-side-effect destructive
-   * write (so its fuzzers/attack probes exercise the write's input validation) — which persists junk,
-   * so it requires BOTH `writeFuzz` and `testDbMode`. It opens ONLY `data` writes: `external` (SMS/
-   * account provisioning) is still blocked by the kill-switch above and the side-effect check below,
-   * `global` by the side-effect check, OTP by the OTP check — and the QA-identifier guard still
-   * confines every id to accounts we own. Never set against a shared/real database.
-   */
+  // Write-fuzzing on a disposable test DB opens `data` writes only.
   const writeFuzzAuthorized =
     isLive &&
     flags.writeFuzz === true &&
@@ -245,30 +143,14 @@ export function destructiveBlockReason(
     );
   }
 
-  /*
-   * ## OTP-dependent endpoints cannot work on live, and trying costs something
-   *
-   * Skipped rather than failed: a 400 from a missing OTP is a known precondition, not a defect,
-   * and 16 endpoints reporting it would bury the findings that matter. `sends` is blocked for the
-   * opposite reason — it *would* succeed, and deliver a real message.
-   */
+  // OTP-dependent endpoints are skipped on live: a missing-OTP 400 is a precondition, not a bug.
   if (isLive && endpoint.otpDependent && !otpTestAuthorized) {
     return `${endpoint.label} ${OTP_REASONS[endpoint.otpDependent]}`;
   }
 
   if (!endpoint.destructive) return undefined;
 
-  /*
-   * ## `ALLOW_DESTRUCTIVE_TESTS` is refused outright on the live application
-   *
-   * Off production it is a useful switch: it lets a deliberate run exercise registration and the
-   * OTP senders. On production the endpoints it unlocks are precisely the ones that must never run
-   * unattended — `forgotPasswordUpdate`, `removeCompanyLogo`, `updateFlutterAppVersion` — and an
-   * environment variable is far too easy to inherit from a shell, a CI job or a stale `.env`.
-   *
-   * So on production the flag grants nothing, and saying so explicitly is better than appearing to
-   * work: somebody who sets it needs to learn that it did not take effect.
-   */
+  // ALLOW_DESTRUCTIVE_TESTS grants nothing on live (too easy to inherit by accident), and says so.
   const sideEffect = endpoint.sideEffect ?? 'data';
 
   if (isLive) {
@@ -279,11 +161,7 @@ export function destructiveBlockReason(
         `(ALLOW_DESTRUCTIVE_TESTS does not apply to the live application)`
       );
     }
-    /*
-     * A `data` write on the live application is allowed only for an endpoint already cleared
-     * above, and only because the QA-identifier guard has verified every id in its payload belongs
-     * to us. Without that guard this branch would be the hole in the whole scheme.
-     */
+    // A cleared live `data` write is safe only because the identifier guard checks every id.
     return undefined;
   }
 
@@ -292,7 +170,6 @@ export function destructiveBlockReason(
   if (sideEffect !== 'data') {
     return `${endpoint.label} ${REASONS[sideEffect]} (set ALLOW_DESTRUCTIVE_TESTS=true to run it)`;
   }
-  // A plain `data` write off the live application needs no flag — that is what a test-owned
-  // record is for. On production the same endpoint was already stopped by the allowlist above.
+  // A plain `data` write off live needs no flag.
   return undefined;
 }

@@ -21,29 +21,13 @@ import { normalizeForFingerprint } from './bug-fingerprint';
 import { normalizeEndpoint, normalizeValidator } from './verify-resolve';
 
 /**
- * Decides what to do with each candidate and does it.
- *
- * The decision tree — the reason re-running this never multiplies tickets:
- *
- *   tagged bug is OPEN                         → comment (it reproduced)
- *   tagged bug is INVALID/WONTFIX/WORKSFORME/DUPLICATE → skip forever (a human judged it)
- *   tagged bug is resolved otherwise (FIXED)   → reopen the original
- *   an untagged OPEN ticket describes the same fault → comment + adopt it with our tag
- *   nothing found                              → file a new bug
- *   the SEARCH failed                          → file nothing (a transient error must never
- *                                                mint a duplicate)
- *
- * Every new ticket is assigned to the module's developer (ownership.config.ts) once the account
- * is verified; an unverifiable account means the field is omitted and Bugzilla's component
- * default assignee takes it, rather than the create being refused.
+ * Decides what to do with each candidate and does it, so re-running never multiplies tickets:
+ *   tagged bug OPEN → comment · judged INVALID/WONTFIX/WORKSFORME/DUPLICATE → skip forever
+ *   tagged bug FIXED → reopen · untagged open ticket for the same fault → adopt · nothing → file
+ *   search failed → file nothing (a transient error must never mint a duplicate)
  */
 
-/**
- * Largest proof file uploaded to a ticket. Screenshots are tiny; a UI video is usually 1–10 MB. The
- * cap keeps one giant recording from stalling the filer or exceeding Bugzilla's limit — over it, the
- * file is skipped with a warning (the screenshot still attaches). Bugzilla's own `maxattachmentsize`
- * may be lower; a rejected upload only warns and never fails the run.
- */
+/** Largest proof file uploaded; a bigger one is skipped with a warning, never failing the run. */
 const MAX_PROOF_MB = 25;
 const MAX_PROOF_BYTES = MAX_PROOF_MB * 1024 * 1024;
 
@@ -110,12 +94,7 @@ export class BugzillaFiler {
   private readonly faultUsed = new Set<number>();
   /** Bench bugs resolved FIXED, by `partialFixKey` — reopened when the same fault returns. */
   private readonly fixedIndex = new Map<string, BugSummary>();
-  /**
-   * Bench bugs resolved FIXED, by their `[KP-]` TAG. The live path reopens an exact-tag match to a
-   * resolved bug via `findByTag` (process(), the `resolved` branch); the dry-run preview must show
-   * the SAME decision, or it mislabels a guaranteed reopen as `would-file` and the report cannot be
-   * trusted. This index gives the preview that exact-tag reopen without a per-candidate network call.
-   */
+  /** FIXED bench bugs by tag, so the dry-run preview shows the same reopen the live run makes. */
   private readonly fixedTags = new Map<string, BugSummary>();
   private readonly fixedUsed = new Set<number>();
 
@@ -135,9 +114,7 @@ export class BugzillaFiler {
 
     const products = [...new Set(Object.values(SUITES).map((suite) => suite.bugzilla.product))];
     const metadata = await this.client.productMetadata(products);
-    // Build-independent dedup: index existing open bugs by (endpoint, validator) so a fault whose
-    // message SHIFTED across builds (new `[KP-]` tag) still finds its ticket and comments, never
-    // duplicates. Only the products this run actually files to.
+    // Index open bugs by (endpoint, validator): a fault with a shifted tag still finds its ticket.
     await this.loadExisting([...new Set(candidates.map((c) => c.product))]);
     let created = 0;
 
@@ -206,8 +183,7 @@ export class BugzillaFiler {
           if (key && !this.faultIndex.has(key)) this.faultIndex.set(key, bug);
         }
       }
-      // Judged (human-closed not-a-defect) tags, so the preview never says "would-file" for a fault
-      // the live run would skip. Collect every tag from the summary AND whiteboard (adopted tags).
+      // Human-judged not-a-defect tags, from the summary and whiteboard (adopted tags).
       const judged = await this.client.judgedBenchBugs(product, this.config.tagPrefix);
       if ('error' in judged) {
         this.log.warn(`dedup: could not list judged ${product} bugs — ${judged.error}`);
@@ -243,8 +219,7 @@ export class BugzillaFiler {
         reason: 'existing ticket (same tag) — would comment',
       });
     }
-    // Exact-tag match to a FIXED bug: the live path (process(), `resolved` branch) reopens it via
-    // findByTag. Show that here so the preview matches the live decision, not a false `would-file`.
+    // An exact-tag match to a FIXED bug is reopened on the live path, so preview it the same way.
     const fixedByTag = this.fixedTags.get(tag);
     if (fixedByTag) {
       const hold = flowFindingHoldReason(candidate);
@@ -333,12 +308,7 @@ export class BugzillaFiler {
       return this.entry(candidate, 'failed', { reason: `dedupe search failed: ${found.error}` });
     }
 
-    // Match only tickets in the candidate's OWN product. A platform-wide fault files one ticket PER
-    // product (the same `[KP-]` tag can exist on both a KPost and a KMail ticket), so a KMail finding
-    // must dedupe onto the KMail ticket and never comment on / reopen the KPost one. The tag is
-    // unchanged, so nothing already filed is orphaned or duplicated — only the CHOICE of which
-    // ticket to match is product-scoped. If the tag exists only under a sibling product, this
-    // correctly falls through to CREATE the missing ticket in the right product.
+    // Own product only: a platform-wide fault has one ticket per product under the same tag.
     const bugs = found.bugs.filter(
       (bug) => bug.product === undefined || bug.product === candidate.product,
     );
@@ -381,10 +351,7 @@ export class BugzillaFiler {
         : this.entry(candidate, 'reopened', { bugId: resolved.id });
     }
 
-    // Build-independent dedup: a fault whose message shifted across builds (so its `[KP-]` tag no
-    // longer matches) still finds its existing ticket by (endpoint, validator) and comments on it,
-    // tagging it so the next run matches by tag directly. This is what stops a re-run against a
-    // DIFFERENT build (devapi2 → testingapi) from duplicating every fault under a new tag.
+    // A fault whose tag shifted across builds still finds its ticket by (endpoint, validator).
     const faultAdopted = await this.adoptByFault(candidate);
     if (faultAdopted) return faultAdopted;
 
@@ -394,9 +361,7 @@ export class BugzillaFiler {
     const reopened = flowHold ? undefined : await this.reopenByFault(candidate);
     if (reopened) return reopened;
 
-    // Nothing existing matched at all — this would mint a brand new ticket number, the one step
-    // that is hard to undo. Hold it for a human when the evidence itself is not confident enough
-    // (an intermittent repro), rather than filing it as a confirmed defect sight-unseen.
+    // A new ticket is hard to undo, so uncertain evidence (intermittent repro) is held for review.
     const reviewReason = candidate.reviewHold ?? uncertainNewDefect(candidate);
     if (reviewReason) return this.entry(candidate, 'needs-review', { reason: reviewReason });
 
@@ -413,13 +378,7 @@ export class BugzillaFiler {
     return this.entry(candidate, 'created', { bugId: created.id });
   }
 
-  /**
-   * Uploads a UI defect's proof — its screenshot(s) and video(s) — to the bug, so the ticket carries
-   * visible evidence, not just prose. Idempotent: it skips any proof already attached (by file name),
-   * so re-running never piles up duplicate screenshots on a ticket it comments on. A missing or
-   * oversized file only warns; the bug itself is already filed. API defects carry no proof here — for
-   * them the curl + response body in the description is the reproduction.
-   */
+  /** Uploads a UI defect's screenshots/videos, skipping any already attached by file name. */
   private async attachProof(bugId: number, candidate: BugCandidate): Promise<void> {
     const proof = candidate.proof ?? [];
     if (!proof.length) return;
@@ -452,11 +411,7 @@ export class BugzillaFiler {
     }
   }
 
-  /**
-   * Comments on the existing OPEN bug for the SAME (endpoint, validator) as this candidate, when the
-   * `[KP-]` tag no longer matches because the build changed the error message. Tags the ticket with
-   * the new tag so the next run dedupes by tag directly.
-   */
+  /** Comments on the open bug for the same (endpoint, validator) under a shifted tag; tags it. */
   private async adoptByFault(candidate: BugCandidate): Promise<FilingEntry | undefined> {
     const match = this.matchFault(candidate);
     if (!match) return undefined;
@@ -479,12 +434,7 @@ export class BugzillaFiler {
     return bug && !this.fixedUsed.has(bug.id) ? bug : undefined;
   }
 
-  /**
-   * Reopens the FIXED ticket for a fault that came back under a shifted tag — typically a partial fix
-   * ("2/3 cases failed" → "1/3"): the remaining case is the same defect the developer marked fixed, so
-   * the standing rule is to reopen that ticket, never mint a new one (#1063 vs #1269, 2026-10-08).
-   * Tags the ticket with the new fingerprint so the next run matches it by tag directly.
-   */
+  /** Reopens the FIXED ticket for a fault back under a shifted tag (a partial fix), and tags it. */
   private async reopenByFault(candidate: BugCandidate): Promise<FilingEntry | undefined> {
     const match = this.matchFixed(candidate);
     if (!match) return undefined;
@@ -506,11 +456,7 @@ export class BugzillaFiler {
     });
   }
 
-  /**
-   * Finds an OPEN ticket describing the same fault that simply predates our tag (for example one
-   * filed by the previous bench or by a human), comments on it and tags it, so this run does not
-   * add a second ticket for a problem the team already tracks.
-   */
+  /** Adopts an open untagged ticket that already describes the same fault: comment and tag it. */
   private async adoptExisting(candidate: BugCandidate): Promise<FilingEntry | undefined> {
     const phrase = summaryPhrase(candidate);
     if (phrase.length < 20) return undefined;
@@ -548,13 +494,7 @@ export class BugzillaFiler {
       component: candidate.component,
       assignee: candidate.assignee,
       severity: candidate.severity,
-      /*
-       * The full ticket text, on a dry run only.
-       *
-       * A dry run whose artifact holds nothing but summaries cannot be reviewed - and reviewing
-       * what will be filed is the entire point of having one. On a live run it is omitted: the
-       * text is already in Bugzilla, and duplicating it here would bloat the artifact.
-       */
+      // The full ticket text on a dry run only, so the preview can be reviewed.
       ...(this.config.dryRun ? { description: buildDescription(candidate) } : {}),
       ...extra,
     };
@@ -562,9 +502,8 @@ export class BugzillaFiler {
 }
 
 /**
- * A build-independent fault key from a bug SUMMARY: `${product}||${endpoint|SYSTEMIC}||${validator}`.
- * Undefined when the validator or endpoint can't be pinned down confidently — a weak signal must
- * never merge two different faults into one ticket, so we would rather file than wrongly dedup.
+ * `${product}||${endpoint|SYSTEMIC}||${validator}` from a summary; undefined when weak, since a
+ * wrong merge is worse.
  */
 function faultKeyFromSummary(product: string, summary: string): string | undefined {
   const validator = normalizeValidator(summary);
@@ -576,11 +515,8 @@ function faultKeyFromSummary(product: string, summary: string): string | undefin
 }
 
 /**
- * A partially-fixed fault's identity across runs: product + endpoint + validator class + the FIRST
- * failing case, with probe counts normalised. "2/3 negative request cases failed: body.sourceCityID:
- * number instead of string (…); body.x …" and, after a partial fix, "1/3 … failed: body.sourceCityID:
- * number instead of string (…)" share it. Undefined when any part is too weak to pin down — a wrong
- * reopen of an unrelated ticket is worse than filing.
+ * A partially-fixed fault's identity: product + endpoint + validator + first failing case, counts
+ * normalised. Undefined when weak, since reopening an unrelated ticket is worse than filing.
  */
 export function partialFixKey(product: string, summary: string): string | undefined {
   const m = summary.match(/\]\s*(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+?):\s*(.*)$/i);

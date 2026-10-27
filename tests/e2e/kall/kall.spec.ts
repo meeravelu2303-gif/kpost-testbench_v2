@@ -2,13 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * The Kall **screen** on the live front end, across all browsers, using the session `setup` saved.
- * No `data-testid` hooks, so locators are structural classes from `KPOST_REACTJS_2023_V1`, each
- * noted so a UI change points here.
- *
- * Read-only screen checks: the placing/scheduling of a real call is the API lifecycle's job (a call
- * rings a real device and cannot complete headlessly). These confirm the Kall workspace renders its
- * layout, tabs and contact search for a logged-in user in Chromium, Firefox and WebKit.
+ * Read-only: the Kall screen renders its layout, tabs and contact search. Locators are structural
+ * classes (no data-testid hooks). Placing a call is left to the API lifecycle.
  */
 test.describe('KPost Kall screen', { tag: ['@ui', '@kall', '@regression'] }, () => {
   test.skip(
@@ -30,9 +25,8 @@ test.describe('KPost Kall screen', { tag: ['@ui', '@kall', '@regression'] }, () 
   test('the kall screen offers contact search and the call tabs @ui', async ({ page }) => {
     await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
-    // The contact search (placeholder just "Search", confirmed live 2026-10-01 - not "Search
-    // Contacts" as previously assumed) is the entry point to placing a call, and the tab strip
-    // (`.tabs-wrapper`) carries Recent / Frequent. Either proves the panel mounted.
+    // The contact search (placeholder "Search") or the tab strip (`.tabs-wrapper`) proves the panel
+    // mounted.
     await expect(
       page
         .getByPlaceholder(/^search$/i)

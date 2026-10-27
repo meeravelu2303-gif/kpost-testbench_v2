@@ -1,6 +1,3 @@
-// A cross-account authorization (IDOR / BOLA) flow: an outsider acting on another account's group.
-// Conditionals guard the setup/teardown of real live data, so they are intentional here.
-
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
@@ -8,37 +5,9 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Object-level authorization — can an outsider act on a group they neither own nor belong to?
- *
- * ## Why this is the check that mattered most to add
- *
- * The contract sweep proves each endpoint validates its own input. What it never asked is the
- * authorization question that only appears across TWO accounts: `addOrRemoveAdminAccess`,
- * `removeGroupMember` and `editGroupName` all take a `groupID`, and nothing in the payload ties that
- * id to the caller. So the real test is: does the server check that the caller actually administers
- * the group, or does it act on any `groupID` it is handed? The second is the classic BOLA / IDOR
- * hole — one account silently administering another's group.
- *
- * This was chosen over the other deny-list candidates deliberately. `deleteContact` and the
- * other-domain contact edits are NOT exploitable this way: their payload names no other account's
- * list — the owner is always the token — so an attacker can only ever affect their own data. A group
- * id, by contrast, is an object handle an attacker can point anywhere. Testing an endpoint that has
- * no cross-account surface would only manufacture a false negative.
- *
- * ## Why the database is the judge, not the response
- *
- * KPost answers HTTP 200 with a failure envelope, and an authorization bug is precisely the case
- * where the response cannot be trusted — a server that wrongly allows the action may still answer
- * "success". The authoritative assertion is therefore the ROW: after the outsider's attempt, the
- * group's admin set, membership and name must be UNCHANGED. A response is an opinion; the table is
- * the fact.
- *
- * ## Safety
- *
- * The owner creates a throwaway group and deletes it in teardown. Every write is on that group only,
- * carries `allowLiveWrite`, and acts on accounts the bench owns. The attacker's writes are EXPECTED
- * to be denied; if the product is vulnerable they would take effect on the throwaway group, which is
- * removed either way.
+ * Object-level authorization (IDOR/BOLA): can an outsider administer, empty or rename another
+ * account's group by its `groupID`? The database row is the verdict, not the response.
+ * The owner creates a throwaway group and deletes it in teardown.
  */
 test.describe(
   'KPost Security · object-level authorization (IDOR/BOLA) @api @kpost-api @security @database',
@@ -65,11 +34,8 @@ test.describe(
     });
 
     /**
-     * Send `id` as a specific principal, returning status + the envelope's data.
-     *
-     * An attacker probe that the identifier guard refuses to send comes back as status -1 rather than
-     * throwing, so one blocked probe cannot abort the database verdicts for the others — each attack is
-     * judged independently by the row it did or did not change.
+     * Send `id` as a principal. A probe the identifier guard blocks returns status -1 instead of
+     * throwing, so it cannot abort the other attacks' verdicts.
      */
     async function as(
       endpoints: EndpointExecutor,
@@ -96,20 +62,7 @@ test.describe(
       endpoints,
       databases,
     }) => {
-      /*
-       * Bugzilla #507 was closed RESOLVED/FIXED on 2026-09-22 — but live-verified again 2026-09-26,
-       * with a real outsider account (`personal-3`) and a fresh throwaway group, the BOLA hole is
-       * still there: `removeGroupMember` lets an outsider remove a legitimate member from a group they
-       * neither own nor belong to (`removed_flag` moves to 1 in the database — a 200 that actually
-       * mutated another tenant's data). The other two attacks (grant-self-admin, rename) are correctly
-       * denied — only the remove-member path is vulnerable. #507 reopened with this evidence. Filed
-       * explicitly below (a soft assertion alone was never enough to get this tracked — it takes a
-       * DB-level check to see a BOLA hole at all, and nothing upstream auto-files a 200 that shouldn't
-       * have worked). The first run after this fix filed a new ticket (#623) instead of commenting on
-       * the reopened #507 — a new `recordBusinessRuleViolation` call always mints its own fingerprint,
-       * it doesn't know about a differently-fingerprinted ticket for the same fault. #623 closed as a
-       * duplicate of #507; #507 is the ticket of record going forward.
-       */
+      // Known defect #507: removeGroupMember lets an outsider remove a member.
       const database = databases.for('kpost-api');
       test.skip(
         !database.enabled,
@@ -140,16 +93,10 @@ test.describe(
         expect(groupID, 'the owner created the group').toBeTruthy();
         if (!groupID) return;
 
-        /*
-         * The membership row for the counterparty in this group — the id addOrRemoveAdminAccess and
-         * removeGroupMember operate on. Read from MySQL because the attacker would have to know or
-         * guess it, and we are testing whether knowing it is enough to act (it must not be).
-         */
+        // The counterparty's membership row id: knowing it must not be enough to act on it.
         const victimMembership = await database.findOne<{ id: number; admin_access: string }>({
           table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
-          // removed_flag is numeric (0 = present, 1 = removed) on live, not 'Y'/'N' — confirmed by
-          // direct query 2026-10-02; admin_access on the same table genuinely IS 'Y'/'N', which is
-          // presumably how the two got conflated here originally.
+          // removed_flag is numeric (0 = present, 1 = removed); admin_access is 'Y'/'N'.
           where: { group_id: groupID, kpost_id: testData.victimKpostId, removed_flag: 0 },
         });
         const membershipId = victimMembership?.id ?? 0;
@@ -187,9 +134,7 @@ test.describe(
           'attacker-renames',
         );
 
-        /*
-         * The verdicts, read from the database — the only source that cannot be spoofed by a 200.
-         */
+        // The verdicts, read from the database.
         const attackerRow = await database.findOne<{ admin_access: string }>({
           table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
           where: { group_id: groupID, kpost_id: attacker!.username },
@@ -217,8 +162,7 @@ test.describe(
           table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
           where: { group_id: groupID, kpost_id: testData.victimKpostId },
         });
-        // Numeric encoding confirmed live 2026-10-02: 0 = still a member, 1 = removed. A vanished row
-        // (undefined) is treated as the worst case (removed) rather than silently passing.
+        // 0 = still a member, 1 = removed; a vanished row counts as removed.
         const removedFlag = Number(memberStillThere?.removed_flag ?? 1);
         if (removedFlag !== 0) {
           endpoints.recordBusinessRuleViolation({

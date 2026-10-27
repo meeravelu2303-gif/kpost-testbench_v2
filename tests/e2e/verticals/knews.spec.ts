@@ -4,16 +4,8 @@ import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
 
 /**
- * KNews (`/knews`) — confirmed from source: NO KPost backend for content at all. `NewsList.js`
- * fetches EXTERNAL RSS feeds directly (`fetch()` to third-party country/RSS URLs), so this suite is
- * inherently at the mercy of live external feed availability. Scope is deliberately "does the screen
- * render SOMETHING and handle a feed failure gracefully" (the component has real, source-confirmed
- * loading/error/empty states for exactly this), never an assertion on specific article content.
- *
- * The one genuine KPost-backend touchpoint is the Share-to-Katchup flow (confirmed: `SendMessage` from
- * `Services/Katchup`) — this test only confirms the Forward modal opens, and deliberately never
- * completes a real send (that would dispatch an actual Katchup message from an unrelated module,
- * out of proportion for a "does the button work" check).
+ * KNews (/knews) reads third-party RSS feeds directly, so tests assert only that the screen settles
+ * (articles, empty or error state), never article content. Share-to-Katchup only opens, never sends.
  */
 test.describe(
   'KPost KNews — content feed',
@@ -24,14 +16,9 @@ test.describe(
       'needs a real live account (QA_KPOST_ID)',
     );
 
-    /**
-     * KNews settles into one of three documented states — articles, the empty state, or the feed-error
-     * state. Waiting for whichever arrives first replaces the fixed sleeps this file used until
-     * 2026-10-11 (the feed is slow and third-party; a timer was either too short or wasted time).
-     */
+    /** Waits for whichever state arrives first: articles, the empty state, or the feed-error state. */
     async function settledKnews(page: Page): Promise<void> {
-      // First let the feed's own loading state finish (a "Loading…" label plus the app's spinner
-      // overlay); the skeleton cards it shows meanwhile must not count as articles.
+      // Let the loading state finish first; its skeleton cards must not count as articles.
       await page
         .locator('.loader-overlay')
         .waitFor({ state: 'hidden', timeout: 45_000 })

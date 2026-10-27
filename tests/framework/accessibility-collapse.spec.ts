@@ -10,13 +10,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 /**
- * Regression guard for "one WCAG rule across many screens is one ticket".
- *
- * axe-core reports the SAME rule on every screen that reuses the offending component (a shared header
- * failing color-contrast shows up on every page). Filing per screen would flood the queue with near-
- * duplicates of the same root cause — the UI-side analogue of the platform-wide API collapse. These
- * tests lock in: one ticket per rule id, the affected-screen list, severity escalation to the worst
- * tier observed, and a stable fingerprint independent of screen order.
+ * One WCAG rule across many screens is one ticket: one per rule id, listing the screens, at the worst
+ * severity seen, with a fingerprint independent of screen order.
  */
 const config = readBugzillaConfig();
 
@@ -112,7 +107,7 @@ test.describe('accessibility rule collapse — one WCAG rule is one ticket @fram
     const [candidate] = accessibilityCandidatesFromScreens(screens, config);
     expect(candidate?.source).toBe('ui');
     expect(candidate?.suiteId).toBe('kpost-ui');
-    // The BUGZILLA-UI tracker has its own Accessibility category (2026-10-20).
+    // The BUGZILLA-UI tracker has its own Accessibility category.
     expect(candidate?.category).toBe('Accessibility');
   });
 
@@ -146,8 +141,7 @@ test.describe('accessibility rule collapse — one WCAG rule is one ticket @fram
   });
 
   test('proofFrom with includeVideo:false attaches the screenshot but never the video', () => {
-    // A WCAG violation is a static property (missing alt text, low contrast) — the first frame and
-    // the last frame of a recording look identical, so a video is pure wasted storage for it.
+    // A WCAG violation is static, so a video adds nothing.
     const attachments = [
       { name: 'screenshot', path: '/tmp/shot.png', contentType: 'image/png' },
       { name: 'video', path: '/tmp/clip.webm', contentType: 'video/webm' },
@@ -159,9 +153,8 @@ test.describe('accessibility rule collapse — one WCAG rule is one ticket @fram
   });
 
   test('proofFrom picks the LARGEST video when Playwright emits more than one under the same name', () => {
-    // Reproduces the real bug: a brief secondary browser context (e.g. an auth-state check) leaves a
-    // near-empty "stub" video attached under the same name as the real recording. Picking "first in
-    // the array" grabbed the stub every time; picking "largest file on disk" always finds the real one.
+    // A brief secondary context leaves a near-empty "stub" video under the same name; the largest
+    // file on disk is the real recording.
     const dir = mkdtempSync(join(tmpdir(), 'kp-proof-test-'));
     const stubPath = join(dir, 'stub.webm');
     const realPath = join(dir, 'real.webm');

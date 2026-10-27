@@ -23,34 +23,19 @@ process.env.TEST_RUN_ID ||= `run-${randomUUID()}`;
 
 const EnvSchema = z.object({
   TEST_ENV: z.enum(['local', 'dev', 'qa', 'staging', 'production']).default('local'),
-  /**
-   * The KPost front end under test. The bench has exactly one UI target, the TEST deployment
-   * (`test.kpostindia.com`) — never the live `account.kpostindia.com` — so that is the default; `.env`
-   * still sets it explicitly and `npm run preflight` refuses to start without it.
-   */
+  /** The KPost front end under test: the TEST deployment only. */
   BASE_URL: z.url().default('https://test.kpostindia.com'),
-  /**
-   * The Admin/HR-Setup UI origin (`kpostadmin.kpostindia.com`), a SEPARATE front end from the main
-   * KPost app (`BASE_URL`). Backed by `ADMIN_API_BASE_URL` (adminmodule). SSO: the same KPost login
-   * token is planted in this origin's localStorage (`accessToken` + `AuthUser` + `companyID`), the
-   * way the app's own `Callback.js` does. Only the `admin-ui` Playwright project uses it.
-   */
+  /** The Admin/HR-Setup UI origin, a separate front end; used only by the `admin-ui` project. */
   ADMIN_UI_BASE_URL: z.url().optional(),
   API_BASE_URL: z.url().optional(),
   /**
-   * Per-module API base URLs. KPost is one product built from separately maintained modules
-   * that are deployed independently, so each suite targets its own host. Unset falls back to
-   * API_BASE_URL.
+   * Per-module API base URLs (each module deploys separately); unset falls back to API_BASE_URL.
    */
   KPOST_API_BASE_URL: z.url().optional(),
   ADMIN_API_BASE_URL: z.url().optional(),
   KMAIL_API_BASE_URL: z.url().optional(),
   /**
-   * The path prefix KMail serves under, prepended to every KMail request path (the base URL is the
-   * origin — Playwright drops a base-URL path for an absolute request path). The test host
-   * `testkmail.kpostindia.com` — the only KMail host the bench targets — serves under
-   * `/testkmail/v2` (the live host uses `/kmail5/v2`). Set it to match the host, or every KMail call
-   * 404s and reads as a false bug.
+   * Path prefix for every KMail request (Playwright drops a base-URL path); must match the host.
    */
   KMAIL_PATH_PREFIX: z.string().default('/testkmail/v2'),
 
@@ -63,66 +48,35 @@ const EnvSchema = z.object({
   /** Tenant/company used for data created by tests. */
   TEST_COMPANY_ID: z.string().optional(),
 
-  /**
-   * Force database access on or off. Unset, it follows what is reachable: MySQL when
-   * `DB_HOST`/`DB_NAME` are set, otherwise nothing.
-   */
+  /** Force database access on or off; unset, MySQL is used when `DB_HOST`/`DB_NAME` are set. */
   DB_ENABLED: z.stringbool().optional(),
-  /**
-   * MySQL host. A JDBC URL (`jdbc:mysql://host:3306`) is accepted and reduced to its host, because
-   * that is the form the connection details are normally handed over in — see `mysqlHost()` below.
-   */
+  /** MySQL host; a JDBC URL is accepted and reduced to its host (`parseMysqlHost`). */
   DB_HOST: z.string().optional(),
   DB_PORT: z.coerce.number().int().positive().default(3306),
   DB_USER: z.string().optional(),
   DB_PASSWORD: z.string().optional(),
-  /** Database (schema) name — in MySQL these are the same thing. */
+  /** Database (schema) name. */
   DB_NAME: z.string().optional(),
   /** Pooled connections. Must exceed the concurrency burst size, or the bench throttles itself. */
   DB_POOL_SIZE: z.coerce.number().int().positive().default(10),
   /** Per-statement timeout; a query outliving it is abandoned and reported as a failed check. */
   DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
-  /**
-   * TLS for the MySQL connection. On by default, and the KPOST_QA server enforces it
-   * (`--require_secure_transport=ON`), so a plaintext attempt is refused before it authenticates.
-   */
+  /** TLS for the MySQL connection; the server requires it. */
   DB_SSL: z.stringbool().default(true),
-  /**
-   * Path to the server's CA certificate (PEM). Supply this when the server presents a private or
-   * self-signed certificate, which is what makes verification possible rather than skipped.
-   */
+  /** Path to the server's CA certificate (PEM), for a private or self-signed certificate. */
   DB_SSL_CA: z.string().optional(),
   /**
-   * Verify the server's certificate chain. **Leave this on.**
-   *
-   * Turning it off keeps the connection encrypted but stops authenticating the server, so anything
-   * positioned between the bench and the database can present its own certificate and read the
-   * credentials in the handshake. That matters here because the host is a public address, not a
-   * machine on a private network. It exists as an escape hatch for a self-signed server whose CA
-   * has not been handed over yet — the fix is `DB_SSL_CA`, not living with this off.
+   * Verify the server's certificate chain. Leave on; for a self-signed server set `DB_SSL_CA`
+   * instead.
    */
   DB_SSL_REJECT_UNAUTHORIZED: z.stringbool().default(true),
   /**
-   * Permit non-SELECT SQL on the KPost/KMail **test** database.
-   *
-   * Default deny: a direct write bypasses the application's own validation, permissions and audit
-   * trail, so it is a separate decision from `ALLOW_DESTRUCTIVE_TESTS`. It has **no effect on the
-   * Admin database**, which is a live production system and is write-banned in code — see
-   * `src/config/database.config.ts`.
+   * Permit non-SELECT SQL on the KPost/KMail test DB. No effect on the Admin DB, which is
+   * write-banned in code.
    */
   DB_ALLOW_WRITES: z.stringbool().default(false),
 
-  /*
-   * ---- Admin module database (SEPARATE, and LIVE) ----------------------------------------------
-   *
-   * The Admin module runs against a production database while KPost/KMail run against KPOST_QA, so
-   * it gets its own connection rather than sharing one. These are deliberately distinct variables:
-   * pointing Admin at the test DB, or the KPost suites at the live one, must take an explicit edit
-   * rather than an inherited default.
-   *
-   * Writes are refused on this connection regardless of `DB_ALLOW_WRITES`, so there is no
-   * combination of environment variables that lets the bench write to live Admin data.
-   */
+  // ---- Admin module database: separate and LIVE; writes are refused whatever the flags say.
   ADMIN_DB_HOST: z.string().optional(),
   ADMIN_DB_PORT: z.coerce.number().int().positive().default(3306),
   ADMIN_DB_USER: z.string().optional(),
@@ -130,13 +84,11 @@ const EnvSchema = z.object({
   ADMIN_DB_NAME: z.string().optional(),
   ADMIN_DB_SSL: z.stringbool().default(true),
   ADMIN_DB_SSL_CA: z.string().optional(),
-  /** Certificate verification for the LIVE Admin database. Turning this off is a worse idea here. */
+  /** Certificate verification for the live Admin database. */
   ADMIN_DB_SSL_REJECT_UNAUTHORIZED: z.stringbool().default(true),
   /**
-   * The Admin backend's real store is MongoDB (`Admin_Module` application.properties), not the MySQL
-   * connection above. Read-only reader: `src/database/admin-mongo.ts` exposes find/findOne only.
-   * Unset, the Admin cross-layer checks report SKIPPED with the reason. The URI may carry
-   * credentials: it is never logged.
+   * The Admin backend's MongoDB store, read-only; unset, Admin cross-layer checks are SKIPPED.
+   * Never logged.
    */
   ADMIN_MONGO_URI: z.string().optional(),
   ADMIN_MONGO_DB: z.string().default('admin_enterprise'),
@@ -153,75 +105,35 @@ const EnvSchema = z.object({
   BUGZILLA_MAX_FILE: z.coerce.number().int().min(0).default(0),
   /** File failures from the browser (UI) suites as well. */
   BUGZILLA_FILE_UI_FAILURES: z.stringbool().default(true),
-  /**
-   * File WCAG (accessibility) findings from `accessibility-axe.spec.ts`, one ticket per RULE across
-   * every screen it hit — not one per screen. Independent of BUGZILLA_FILE_UI_FAILURES so a11y
-   * filing can be turned off on its own without touching crash/breakage filing.
-   */
+  /** File accessibility findings, one ticket per rule across all screens. */
   BUGZILLA_FILE_ACCESSIBILITY: z.stringbool().default(true),
-  /**
-   * Auto-close a bench-filed bug that this run VERIFIED as fixed — its exact endpoint+validator ran
-   * and passed, and the fault did not reproduce. Marked RESOLVED/FIXED with a comment. Default on;
-   * it only acts on a real filing run (never a dry run) and never touches a human-judged resolution.
-   */
+  /** Auto-close a bench-filed bug whose own check passed this run (real filing runs only). */
   BUGZILLA_AUTO_RESOLVE: z.stringbool().default(true),
-  /**
-   * Resolve-only: close the verified-fixed bugs but do NOT file or comment new ones. For a pass that
-   * only reconciles "what the developers already fixed" without adding tickets yet.
-   */
+  /** Close verified-fixed bugs but file or comment nothing new. */
   BUGZILLA_RESOLVE_ONLY: z.stringbool().default(false),
 
-  /**
-   * Concurrency probes (read-consistency, burst-resilience, session-isolation, duplicate-write) fire
-   * a request as a SIMULTANEOUS BURST to catch races. On a host SHARED with the live application that
-   * load can degrade or take down production, so this switch turns them ALL off regardless of the
-   * validation profile. Default on; set CONCURRENCY_PROBES=false while the test app shares a server
-   * with live, and turn it back on once the test app has its own isolated server.
-   */
+  /** Concurrency probes (simultaneous bursts); false turns them all off whatever the profile. */
   CONCURRENCY_PROBES: z.stringbool().default(true),
 
   VALIDATION_PROFILE: z.enum(VALIDATION_PROFILES).default('REGRESSION'),
   ALLOW_DESTRUCTIVE_TESTS: z.stringbool().default(false),
-  /**
-   * The target is a throwaway TEST DATABASE, so the full test-type matrix (injection, XSS,
-   * rate-limit, performance, every fuzzer) may run on READ endpoints. The QA-identifier guard and the
-   * OTP/SMS kill-switch stay armed regardless; writes stay covered by the self-cleaning lifecycle
-   * flows. Off by default — only set it when the host genuinely points at a test DB.
-   */
+  /** The target is a disposable test DB, so the full validator matrix may run on read endpoints. */
   TEST_DB_MODE: z.stringbool().default(false),
-  /**
-   * Deep write-fuzzing: run the engine's fuzzers/attack probes directly on `data`-side-effect WRITE
-   * endpoints (not just reads), so bad input, injection and malformed payloads are tested on writes
-   * too. This PERSISTS junk into the schema, so it is only for a disposable test DB — it requires
-   * `TEST_DB_MODE=true`, never unlocks `external`/`global`/OTP writes, and the QA-guard stays armed.
-   */
+  /** Fuzz `data` write endpoints too. It persists junk, so it requires TEST_DB_MODE. */
   WRITE_FUZZ: z.stringbool().default(false),
   /**
-   * The target env's OTP subsystem is a **TEST GATEWAY** — `sendOTP`/`sendOTPtoMail` create the OTP
-   * record but deliver **no real SMS/e-mail**, and `123456` (`QA_BYPASS_OTP`) always validates. When
-   * set together with `TEST_DB_MODE=true`, it lifts the OTP/SMS kill-switch for `otpDependent`
-   * endpoints ONLY (signup, registration, device designation, forgot-password, deactivate, validate),
-   * so those flows run end to end on the disposable test DB. It changes nothing for a non-`otpDependent`
-   * endpoint, and the QA-identifier guard stays armed. **Set it ONLY when the OTP gateway is genuinely a
-   * test gateway** — against a real gateway it would send real messages. Off by default.
+   * The OTP gateway is a test gateway (no real SMS, `123456` validates). With TEST_DB_MODE it lifts
+   * the OTP kill-switch for `otpDependent` endpoints only. Never set it against a real gateway.
    */
   OTP_TEST_GATEWAY: z.stringbool().default(false),
   /**
-   * Owner-gated unlock for the **admin member/company lifecycle** on the live test host. The admin
-   * writes (`addingUserByAdmin`, `terminateUser`, `resetPassword`, `createOrRemoveBackupAdmin`,
-   * `updateCompanyDetails`, `updateBankAccountDetails`) are `sideEffect: 'global'` and blocked on
-   * production because they change shared state. This flag lets ONE deliberate, self-cleaning
-   * lifecycle spec exercise them — and ONLY in combination with the spec's own per-call
-   * `allowGlobalLifecycle` authorization, so the engine's fuzzers can never reach a `global` write
-   * (the flag alone unlocks nothing). The QA-identifier guard stays armed, so every id is still
-   * confined to accounts we own. Intended for a DISPOSABLE business company. Off by default.
+   * Lets the self-cleaning admin lifecycle spec send `global` admin writes; also needs its per-call
+   * `allowGlobalLifecycle`.
    */
   ADMIN_LIFECYCLE: z.stringbool().default(false),
   /**
-   * Admin ROLE POSTING lifecycle (save → assign → suspend → revoke → terminate → delete). Owner-authorized
-   * 2026-10-23 for the QA testing companies only: KPost calls go to testingapi (Admin_Module d7abadf) and
-   * KSMACC has no test server, so the live one is accepted (#13234 WONTFIX). Off by default; only the
-   * dedicated lifecycle spec sends these endpoints (the engine never fuzzes `role-posting-mutation`).
+   * Run the role-posting lifecycle (writes to live KSMACC), QA companies only; the engine never
+   * fuzzes it.
    */
   ADMIN_ROLE_POSTING_LIVE: z.stringbool().default(false),
 
@@ -252,17 +164,8 @@ if (!parsed.success) {
 const data = parsed.data;
 
 /**
- * Reduces a MySQL host setting to a bare host and, when the value carries one, a port.
- *
- * Connection details are usually handed over as a JDBC URL — `jdbc:mysql://db.example:3306` —
- * because that is what the application's own configuration holds. Passing that string to a driver
- * as a hostname produces a DNS failure whose message says nothing about the real cause, so it is
- * normalized here, once, at the edge.
- *
- * A port inside the URL that **disagrees** with the separate `*_DB_PORT` variable throws rather
- * than picking a winner. Either choice would be a guess about which the author meant, and a bench
- * silently connecting to a different port than its configuration states is the kind of fault that
- * gets diagnosed as "the database is down".
+ * Reduces a MySQL host setting (bare host or JDBC URL) to host and port; throws if a URL port
+ * disagrees with `*_DB_PORT`.
  */
 export function parseMysqlHost(
   value: string | undefined,

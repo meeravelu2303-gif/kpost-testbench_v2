@@ -1,10 +1,5 @@
-// Business-specific concurrency/race-condition scenarios, hand-written on top of the engine's generic
-// `concurrency.*` validators (read-consistency, burst-resilience, duplicate-write, session-isolation —
-// see src/validators/concurrency/, permanently blocked on any production-labelled target by
-// PRODUCTION_BLOCKED_VALIDATORS in src/validation-engine/production-validators.ts). Those four are
-// endpoint-agnostic; the scenarios below encode what a SPECIFIC double-fire actually means for each
-// workflow (does a second simultaneous call create a duplicate record, corrupt a shared field, or
-// collide on an id?) — a question the generic probes don't ask.
+// Hand-written race scenarios: what a double-fire means for each specific workflow (duplicate record,
+// corrupted field, colliding id), which the engine's generic `concurrency.*` validators don't ask.
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
@@ -15,26 +10,8 @@ import { contactShape } from '@api/definitions/kpost/contacts/write.api';
 import { expect, test } from '@fixtures';
 
 /**
- * CONCURRENCY — real setup, gated behind `CONCURRENCY_LIFECYCLE=true`, off by default.
- *
- * Every test in this file is fully implemented (built on the same `runSimultaneously` barrier
- * dispatcher the engine's own concurrency validators use — tasks are constructed first and released
- * together from one tick, so the race genuinely reproduces instead of degrading into two sequential
- * calls). They used to be unconditionally skipped with no way to enable them short of deleting code;
- * 2026-10-04 this was switched to the same one-env-var lifecycle-flag pattern every other
- * real-write-against-shared-environment suite in this bench already uses (`KALL_LIFECYCLE`,
- * `KATCHUP_LIFECYCLE`, `CONTACTS_LIFECYCLE`, etc.) — set `CONCURRENCY_LIFECYCLE=true` to run them.
- *
- * The underlying caution has NOT changed and is NOT waived by this flag existing: the 2026-10-02
- * task-owner note is still in force — the shared test environment has no one available to
- * restart/recover it if a burst of simultaneous writes knocks it over. This flag makes execution
- * POSSIBLE on a one-line command rather than impossible outright; it does not itself authorize firing
- * a burst against the shared environment. Get explicit confirmation that recovery capability exists
- * (or that this run targets an environment where an outage is acceptable) before setting it `true`
- * against anything other than a throwaway/local target.
- *
- * See the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) §"Concurrency" for the full catalog, including scenarios not
- * yet encoded here.
+ * Gated behind `CONCURRENCY_LIFECYCLE=true` (off by default): nobody can restart the shared test
+ * environment if a burst knocks it over. `runSimultaneously` releases all requests from one tick.
  */
 const DEFERRED_REASON =
   'CONCURRENCY: set CONCURRENCY_LIFECYCLE=true to run — off by default because the shared test ' +
@@ -55,22 +32,7 @@ test.describe(
     test('Katchup sendMessage: two identical sends fired together (duplicate-tap) @api @katchup @concurrency', async ({
       endpoints,
     }) => {
-      /*
-       * Scenario: a user double-taps "send" (or a flaky client retries) before the first response
-       * returns, firing the exact same message body twice, simultaneously.
-       * Endpoint: katchup-send-message (POST /v2/katchup/sendMessage/).
-       * Test data: 2 identical bodies (same subject/text/receiver), from the same sender, to the
-       * victim test account — fully disposable, no production data involved.
-       * Requests: 2, dispatched from the same tick via runSimultaneously(2, ...).
-       * Expected behavior (TO BE CONFIRMED against the product owner, not assumed here): the app has
-       * no idempotency key on this endpoint, so the most defensible expectation is that BOTH sends
-       * succeed and create TWO distinct messages (msg_id differs) — not that the server silently
-       * dedupes one, and CRITICALLY not that either response is a 5xx. A 5xx under concurrent load
-       * on a plain two-request burst would itself be the finding.
-       * Race condition this detects: a write path that isn't safe under two simultaneous callers
-       * (e.g. a non-atomic read-modify-write on a per-conversation counter) crashing or corrupting
-       * state instead of just creating two ordinary messages.
-       */
+      // Double-tap send: no idempotency key, so two distinct messages are fine; a 5xx is the finding.
       test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const sender = principal('personal');
       const body = {
@@ -104,20 +66,8 @@ test.describe(
       endpoints,
       databases,
     }) => {
-      /*
-       * Scenario: two admins (or one admin's double-tap) call removeGroupMember for the SAME member
-       * of the SAME group at the same instant.
-       * Endpoint: group-remove-member (POST /v2/group/removeGroupMember/).
-       * Test data: a throwaway group created by this test, with the victim account as a plain member.
-       * Requests: 2, identical body { memberKpostIdList: [victim], groupID }, both from the group owner.
-       * Expected behavior: exactly one call's effect lands (removed_flag -> 1, confirmed numeric per
-       * the 2026-10-02 flag-encoding fix in security/object-authorization.spec.ts); the OTHER call
-       * must answer something sane (a clean no-op 2xx or a 4xx "already removed"), never a 5xx, and
-       * the database must never end up in an inconsistent state (e.g. removed_flag flapping, or two
-       * audit rows disagreeing about who removed whom).
-       * Race condition this detects: a non-atomic "check membership exists, then update" pattern
-       * racing with itself — the classic double-delete TOCTOU bug.
-       */
+      // Same member removed twice at once on a throwaway group: no 5xx, and removed_flag ends at 1
+      // (detects a check-then-update double-delete race).
       test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const owner = principal('personal');
       const victim = testData.victimKpostId;
@@ -217,25 +167,8 @@ test.describe(
     test('KOS saveContent: two simultaneous edits to the same document (lost-update) @api @kos @concurrency', async ({
       endpoints,
     }) => {
-      /*
-       * Scenario: two collaborators (or one client's duplicate autosave tick) call saveContent for
-       * the SAME docId at the same instant with DIFFERENT content.
-       * Endpoint: kos-save-content (needs a real docId from kos-create-doc).
-       * BLOCKER NOTE: kos-create-doc is currently broken live (#499 — does not return a docId), so
-       * this scenario cannot even reach a real document today regardless of the concurrency
-       * restriction. Written against the day #499 is fixed; until then it would skip on that
-       * dependency even with the deferred-execution skip removed.
-       * Test data: one throwaway document created by this test; two distinct content payloads, one
-       * per simultaneous request, so a lost-update is distinguishable (we know which one "should"
-       * have been overwritten by whichever actually landed last).
-       * Requests: 2, dispatched together.
-       * Expected behavior: the document ends up with ONE of the two payloads (last-write-wins is
-       * acceptable), never a corrupted merge of both, never a 5xx, and a subsequent read returns
-       * content matching exactly one of the two writers — not silently losing the write that "won"
-       * at the HTTP layer while persisting the other at the DB layer (a response/state mismatch).
-       * Race condition this detects: a non-atomic read-modify-write on the document body letting two
-       * writers silently clobber each other into an inconsistent response-vs-stored-state pair.
-       */
+      // Two different saves to one document at once: last-write-wins is fine, a merge or 5xx is not.
+      // Known defect #499: kos-create-doc returns no docId, so this cannot reach a real document yet.
       test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       test.skip(
         true,
@@ -278,23 +211,8 @@ test.describe(
     test('Kall reScheduleKall: the same call rescheduled twice, simultaneously @api @kall @concurrency', async ({
       endpoints,
     }) => {
-      /*
-       * Scenario: two simultaneous reschedule calls on the SAME kallID (e.g. a double-tap on
-       * "reschedule" in the UI before the first response returns).
-       * Endpoint: kall-reschedule (POST /v2/kall/reScheduleKall). Per the 2026-09-26 finding
-       * (the API coverage-depth audit (removed 2026-10-26; in git history)), a reschedule is EXPECTED to mint a brand-new kallID each time and
-       * flip the original's senderKallStatus 6 (Scheduled) -> 7 (ReScheduled) — this is confirmed
-       * correct product behavior, not a bug, so the concurrency question here is narrower: what
-       * happens when the SAME original kallID is rescheduled twice before either completes?
-       * Test data: one throwaway scheduled call created by this test.
-       * Requests: 2, identical body { kallID }, dispatched together.
-       * Expected behavior: at most one of the two calls should succeed in moving the original to
-       * ReScheduled and minting a new kallID; the other should see the original already
-       * ReScheduled and be refused cleanly (4xx) or report the same new kallID (idempotent-looking),
-       * never both succeeding and minting TWO new kallIDs from one original, and never a 5xx.
-       * Race condition this detects: two reschedules racing to read-then-write the original's status,
-       * both seeing "still Scheduled" and both minting a new call from the same original.
-       */
+      // A reschedule mints a new kallID and marks the original ReScheduled (status 7). Rescheduling
+      // the same call twice at once must mint at most one new call, and never 5xx.
       test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const owner = principal('personal');
       const receiver = principal('victim');
@@ -365,19 +283,8 @@ test.describe(
     test('Profile updateBasicInformation: two simultaneous conflicting updates (lost-update) @api @profile @concurrency', async ({
       endpoints,
     }) => {
-      /*
-       * Scenario: two simultaneous profile updates from the SAME account with DIFFERENT values for
-       * the same field (e.g. two open tabs, or a retry racing the original request).
-       * Endpoint: profile-update-basic (POST /v2/profile/updateBasicInformation/).
-       * Test data: two bodies identical except `designation` ("QA Concurrency A" vs "QA Concurrency
-       * B"), on the bench's own primary account — restored to its original value in `finally`.
-       * Requests: 2, dispatched together.
-       * Expected behavior: the account ends up with EXACTLY ONE of the two designations (never a
-       * corrupted mix of both requests' fields), neither response is a 5xx, and a follow-up read
-       * matches whichever response claimed success last — not a response/stored-state mismatch.
-       * Race condition this detects: a non-atomic field-level update letting two simultaneous writers
-       * interleave and leave the row in a state neither caller actually requested.
-       */
+      // Two conflicting designation updates at once: the stored value must be exactly one writer's.
+      // The original designation is restored in `finally`.
       test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const owner = principal('personal');
       const original = await endpoints.sendTo(
@@ -460,27 +367,8 @@ test.describe(
     test('KMail postMail: two identical sends fired together (duplicate-tap) @api @kmail @concurrency', async ({
       endpoints,
     }) => {
-      /*
-       * Scenario: a user double-taps "send" on the compose screen (or a flaky client retries) before
-       * the first response returns, firing the exact same mail twice, simultaneously. Structurally
-       * identical to the Katchup scenario above. Previously catalogued but deliberately NOT encoded
-       * (see this file's history) because KMail's write-lifecycle flows were still being reconciled
-       * after the 2026-10-02 auth-regression fix — that has since settled (the 2026-10-04 KMail
-       * ground-truth audit built and ran multiple new live write-lifecycle tests successfully:
-       * `content-idor.spec.ts`, the existing `mutation-idor.spec.ts`), so this is now safe to encode.
-       * Endpoint: kmail-post-mail (POST /v2/sentMail/postMail/).
-       * Test data: 2 identical bodies (same subject/content/receiver), sent to the victim test
-       * account — fully disposable, cleaned up via kmail-delete in `finally`.
-       * Requests: 2, dispatched from the same tick via runSimultaneously(2, ...).
-       * Expected behavior: no idempotency key exists on this endpoint (confirmed via source this
-       * session — Services/Kmail.js's sendMultiPartMailService has no dedup logic), so the most
-       * defensible expectation is that BOTH sends succeed and create TWO distinct mails (different
-       * kmailID), not that the server silently dedupes one — and CRITICALLY not that either response
-       * is a 5xx, which would itself be the finding.
-       * Race condition this detects: a non-atomic write path (e.g. a shared mail-count/sequence
-       * column) crashing or corrupting state under two simultaneous callers instead of just creating
-       * two ordinary mails.
-       */
+      // Double-tap send on compose: no idempotency key, so two distinct mails are fine; a 5xx is the
+      // finding. Both mails are deleted in `finally`.
       test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const sender = principal('personal');
       const receiver = principal('victim');
@@ -548,24 +436,8 @@ test.describe(
       endpoints,
       databases,
     }) => {
-      /*
-       * Scenario: a double-tap on "Add Contact" (or a flaky client retry) fires two simultaneous
-       * addContact calls for the SAME counterparty from the SAME account.
-       * Endpoint: contacts-add (POST /v2/contacts/addContact). Confirmed from the 2026-10-04 Contacts
-       * ground-truth audit that this endpoint's ownership check (`checkContact`/`contactExists`,
-       * scoped by kpostID+contactID) is correct for single calls — the open question here is
-       * specifically what happens when two identical adds race each other.
-       * Test data: our own second account (victim) as the target contact — fully disposable, removed
-       * in `finally` regardless of outcome.
-       * Requests: 2, identical body, dispatched together.
-       * Expected behavior: exactly one contact row for this pair after both calls settle (not two
-       * duplicate rows, not a UNIQUE-constraint 5xx on the second writer — a clean 2xx no-op or a
-       * sane 4xx "already a contact" is acceptable for whichever call loses the race), and no 5xx on
-       * either response.
-       * Race condition this detects: a non-atomic "check contact doesn't exist yet, then insert"
-       * pattern racing with itself — the classic double-insert TOCTOU, same shape as the Group
-       * double-remove scenario above but on the insert side instead of the delete side.
-       */
+      // Same contact added twice at once: one row at most, no 5xx (detects a check-then-insert
+      // race). The contact is removed in `finally`.
       test.skip(process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON);
       const owner = principal('personal');
       const target = testData.victimKpostId;
@@ -622,23 +494,6 @@ test.describe(
   },
 );
 
-/**
- * Catalog entries applicable but NOT YET encoded as runnable (even skipped) tests, with the reason:
- *
- * - Admin `rolePosting/suspendOrTerminateEmployee` (admin-role-posting-suspend-terminate): a
- *   concurrent suspend+terminate race on the same employee is a real, high-value scenario — but this
- *   endpoint writes to LIVE PRODUCTION data (Admin's database is live, not a test instance) and fans
- *   out to two external systems (the core KPost backend's `/admin/holdOrRelease/` and, on terminate,
- *   KSMACC at `apigateway.ksmacc.in`) with no visible compensating rollback between them. Writing even
- *   a permanently-skipped test against this endpoint risks someone later removing the skip without
- *   fully appreciating the blast radius. Deferred until a disposable "expendable" employee record and
- *   explicit owner sign-off exist for this specific scenario — tracked in
- *   the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) rather than half-implemented here.
- * - KBooking seat/order concurrency (two simultaneous attempts to hold the same seat): applicable in
- *   principle (classic double-booking race), but no KBooking endpoint definitions exist in the bench
- *   yet (search/seat-selection API coverage is itself still TODO, independent of concurrency). Revisit
- *   once the non-payment KBooking API surface is built.
- *
- * (KMail send duplicate-tap was in this catalog as deferred; it is now implemented above as a real
- * test, 2026-10-04, since the write-lifecycle reconciliation it was waiting on has settled.)
- */
+// Not encoded on purpose:
+// - Admin suspend+terminate race: writes live Admin data and KSMACC with no rollback.
+// - KBooking double-booking a seat: no seat-selection endpoint definitions exist yet.

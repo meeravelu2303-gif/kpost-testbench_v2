@@ -108,11 +108,7 @@ export const validationRegistry = new ValidationRegistry().register(
   rateLimitValidator,
   informationDisclosureValidator,
   sensitiveDataValidator,
-  /*
-   * Concurrency — the faults that need two requests inside the handler at once. Placed after
-   * security because they are the most expensive probes in the suite (each one is a burst), and a
-   * cheap check that will fail anyway should fail first.
-   */
+  // Concurrency: the most expensive probes (bursts), so they run after the cheaper checks.
   readConsistencyValidator,
   burstResilienceValidator,
   duplicateWriteValidator,

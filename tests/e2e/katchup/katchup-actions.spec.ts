@@ -9,32 +9,9 @@ import {
 } from '../support/katchup';
 
 /**
- * Katchup **sender message actions** — the post-send control set that is KPost's reason to exist
- * (docs/reference/kpost-product.md: "Rich post-send control"). The sender's bell menu (the `NotificationsNoneIcon` on a
- * message the caller sent) offers **Edit / Recall / Note / Reminder / Transfer / Forward /
- * Forward-with-thread / Copy / Save / Delete** — the `bellIconContent` array in the frontend
- * `Katchup/bubble/KatchupMessage/KatchupMessage.js` (recipient actions live in `replyIconContent`,
- * reached from the ReplyIcon on a received message).
- *
- * These are **real writes**, so the whole file is gated behind `KATCHUP_UI_LIFECYCLE=true` and every
- * test is **self-cleaning**, targeting only our own 2nd QA account:
- *   - **Delete** is its own cleanup — send → delete → the message is gone (sender-side delete).
- *   - **Edit** re-sends an edited body (visible `Edited:` marker, BR-K03), then **deletes** to clean up.
- *
- * The selectors are the validated ones from `katchup-compose.spec.ts` (recall passed green on live):
- * a conversation row's element `id` is the counterpart's KPOST ID; the composer is the Quill editor
- * with `contenteditable="true"`; a message is a DOM element whose `id` is its msgID and which carries
- * its own `NotificationsNoneIcon` action trigger; the send button is the icon button in `#ChatTop`.
- *
- * FIRST-RUN NOTE: this file has not been tuned on live (the message-action menu needs one recording
- * pass like recall did). It never runs on a default run — only when the flag is set — so it cannot
- * file a false bug. Tune with a `codegen` recording, then remove this note.
+ * Katchup sender actions from the bell menu (Delete, Edit, Save, Copy) on a message sent to the 2nd
+ * QA account. Real writes, gated behind KATCHUP_UI_LIFECYCLE; every test deletes what it sent.
  */
-
-// Shared Katchup steps live in support/katchup.ts (2026-10-11: this file's private copies were
-// retired — its `openComposer` could not find the 2nd account once the Recents list filled up with
-// other threads; the shared one falls back to the list search).
-
 test.describe(
   'KPost Katchup · sender message actions (write)',
   { tag: ['@ui', '@katchup', '@regression'] },
@@ -69,10 +46,8 @@ test.describe(
         });
         await confirm.click();
 
-        // Clicking Confirm triggers the delete (handleDeleteButtonClickBell) and the dialog closes — that
-        // is the reliable "delete was accepted" signal. The message shows in several DOM places (thread,
-        // recents, the list preview), so asserting the text vanishes everywhere is unreliable; the actual
-        // server-side removal is the API Katchup lifecycle's assertion (deleteKatchUpMessage, green).
+        // The dialog closing is the reliable signal: the text appears in several DOM places, and the
+        // server-side removal is asserted by the API Katchup lifecycle.
         await expect(confirm, 'the delete was accepted (the confirm dialog closed)').toHaveCount(
           0,
           {
@@ -138,12 +113,8 @@ test.describe(
         await openComposer(page);
         const message = await sendMessage(page, subject, 'QA UI save — self-cleaning');
 
-        // Bell menu → Save. `handleSaveButtonClickBell([msgID])` opens a NATIVE `window.confirm`
-        // ("Only the selected message will be saved, the rest will be deleted. Click OK to confirm" /
-        // "You have selected only N out of M …") and only then POSTs /katchup/saveKatchupMessages/.
-        // Until 2026-10-11 this test called the menu closing "accepted" while Playwright silently
-        // auto-dismissed that confirm — nothing was ever saved. Accepting it would delete every other
-        // message in the shared QA conversation, so the test verifies the confirmation and cancels.
+        // Save opens a native confirm before POSTing saveKatchupMessages. Accepting would delete every
+        // other message in the shared QA conversation, so the test checks the confirm and cancels it.
         const confirms: string[] = [];
         page.on('dialog', (d) => {
           confirms.push(`${d.type()}: ${d.message()}`);

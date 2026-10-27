@@ -6,14 +6,8 @@ import { expect, test } from '@fixtures';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * Keyboard-operability angle — can a keyboard-only user reach the app's controls, and does driving
- * it from the keyboard ever crash or freeze it?
- *
- * The signals are SELECTOR-INDEPENDENT, so they never false-file: pressing Tab repeatedly from a
- * freshly loaded screen must move focus INTO an interactive control (not stay stuck on <body>) —
- * a screen you cannot Tab into is a real WCAG 2.1.1 (Keyboard) defect — and the whole sequence runs
- * under the health monitor + responsiveness probe, so a JS crash or a frozen main thread during
- * keyboard use is caught. Files to KPost UI → Ayyappan (see UI_FILING_SPECS).
+ * Keyboard operability: Tab from a fresh screen must reach an interactive control (WCAG 2.1.1), and
+ * keyboard use must not crash or freeze the page.
  */
 test.describe(
   'KPost keyboard navigation — every screen',

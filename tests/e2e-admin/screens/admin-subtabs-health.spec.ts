@@ -6,13 +6,8 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 
 /**
- * Sub-tabs the main `admin-screens.spec.ts` sweep never actually clicks into — it only verifies
- * each tab LINK is present on the default tab, not that switching to it renders something healthy.
- * Confirmed from the 2026-10-05 ground-truth audit: Work Place Setup and HR Breakdown Setup each
- * have a distinct "Variable" tab with its own API surface the default "Tier" tab view never
- * exercises, and Employee Management's 5 live sub-tabs (Promote/Transfer/Suspend/Revoke/Terminate)
- * are each a separate component with their own health surface — only the default "Promote" tab
- * gets any coverage from the main sweep.
+ * The sub-tabs the main screen sweep only sees as links: each Variable tab and the Employee
+ * Management tabs are opened and must render healthy.
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 

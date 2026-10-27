@@ -2,22 +2,8 @@ import { testData } from '@config/test-data.config';
 import { body, defineKpostEndpoint } from '../kpost-endpoint';
 
 /**
- * OTP and password-recovery endpoints of the common module. All public — they are called before
- * anyone has a token, which is exactly why they are the most exposed surface in the product.
- *
- * ## Every endpoint here is `destructive: true`
- *
- * Not because it deletes anything, but because it **sends something to a real person**: an SMS to
- * a mobile number, an email to a mailbox, or a new password onto an account. The central
- * production guard blocks these unless `ALLOW_DESTRUCTIVE_TESTS=true`, so a default run against a
- * live host cannot text a customer. The destinations come from `testData.otpMobile` /
- * `testData.otpEmail`, which must be throwaway.
- *
- * ## Rate limiting is off by default
- *
- * `security.rateLimit` would fire dozens of sends to find the throttle. That is a real cost (SMS
- * is billed) and a real risk (an IP ban mid-run makes every later test fail for the wrong
- * reason). Enable it deliberately, per endpoint, when the throttle is what you mean to test.
+ * Public OTP and password-recovery endpoints. Senders are destructive because they reach a real
+ * person (SMS, email, a new password); rate-limit probes stay off because every send is billed.
  */
 const OTP_TAGS = ['common', 'common-otp', 'security-sensitive'] as const;
 
@@ -45,19 +31,12 @@ export const validateOtpApi = defineKpostEndpoint({
   method: 'POST',
   path: '/v2/common/validateOTP/',
   summary: 'Validate a mobile OTP',
-  // `otp-consume` excludes it from the STANDALONE engine run (otp.spec.ts excludeTags): validating an
-  // OTP requires a live session created by a PRIOR sendOTP in the same run, which the standalone engine
-  // does not do — so standalone it always answers 500 "OTP validation failed" (verified by curl
-  // 2026-09-19: bare validateOTP → 500; sendOTP then validateOTP → 200). It is exercised end-to-end by
-  // the OTP signup lifecycle (send → validate). The `common-otp` tag is kept for component routing.
+  // `otp-consume` keeps it out of the standalone engine run: it needs a prior sendOTP in the same
+  // run, so it is covered by the OTP signup lifecycle instead.
   tags: [...OTP_TAGS, 'otp-consume'],
   destructive: false,
   note: 'lifecycle-only: needs a prior sendOTP session in the same run (standalone → 500 "OTP validation failed", a bench-precondition, not a product defect); covered by otp-signup-lifecycle',
-  // Payload now matches the REAL Signup UI exactly, `sendDate` included. This field was blamed twice
-  // for a failure (500 on 2026-09-19, then 400 "Invalid OTP" as Bugzilla #875 on 2026-10-01) and
-  // omitted from this definition both times as a workaround. Re-verified live 2026-10-03, replaying
-  // the exact #875 repro (bypass code + sendDate): 200 "OTP has been validated successfully." — #875
-  // is genuinely fixed, not just avoided, so the bench payload now carries the field it was hiding.
+  // Matches the Signup UI's payload exactly, `sendDate` included.
   request: body(() => ({
     otp: testData.bypassOtp,
     countryID: testData.countryId,
@@ -108,11 +87,8 @@ export const forgotPasswordOtpApi = defineKpostEndpoint({
   tags: OTP_TAGS,
   destructive: true,
   sideEffect: 'external',
-  /*
-   * The forgot-password OTP is REAL on the live gateway (owner, 2026-10-09). The engine's probes would
-   * each send another, ~250 per run, so they are off: the run sends this one primary request. The few
-   * negative cases that send nothing live in tests/api/kpost/common/forgot-password-limited.spec.ts.
-   */
+  // This OTP is real, so the probes (each a send) are off; send-free negatives are in
+  // forgot-password-limited.spec.ts.
   validations: {
     request: false,
     security: false,
@@ -131,37 +107,12 @@ export const forgotPasswordUpdateApi = defineKpostEndpoint({
   path: '/v2/common/forgotPasswordUpdate',
   summary: 'Set a new password after a successful OTP check',
   tags: [...OTP_TAGS, 'account-takeover-surface'],
-  /*
-   * The single most dangerous endpoint in the common module: it changes a password and requires no
-   * token. If it accepts a kpostID without proof that the caller holds the OTP, anyone can take
-   * over any account. The central authorization and injection validators probe exactly that, and
-   * it stays destructive so a default run never rewrites a real password.
-   */
-  // Rewrites an account's password: shared state, never run without the explicit flag.
+  // Changes a password with no token: an account-takeover surface. Never runs without the explicit
+  // flag.
   destructive: true,
   sideEffect: 'global',
-  /*
-   * Payload exactly as documented: `{ kpostID, forgotPassword }`.
-   *
-   * Two deliberate choices about the values:
-   *
-   *  - **A spare account**, never `testData.kpostId`. A successful call rewrites the password that
-   *    every other suite logs in with, and the whole run would then fail on authentication.
-   *    `QA_FORGOT_PASSWORD_KPOST_ID` is `meera962@kpostindia.com`, verified to exist.
-   *  - **The new password is the standard one.** Setting it to `QA_PASSWORD` makes the call
-   *    idempotent: the spare keeps a credential we know, so the endpoint can be exercised as often
-   *    as needed without locking anybody out or needing a reset afterwards. A random password would
-   *    work once and leave an account nobody can log into.
-   *
-   * ## Its current 400 is a missing prerequisite, not a defect
-   *
-   * The live endpoint answers `400 "OTP validation failed"` until an OTP has been validated for
-   * that account - which is the correct behaviour, and good news: the password cannot be changed
-   * without one. But the step that satisfies it is not the documented `validateOTP`: calling
-   * `forgotPasswordOTPOrSentKpostIDSms` and then `validateOTP` with the bypass code still leaves it
-   * at 400, so the flow keeps its own OTP state reached by some other call. Open with the API owner
-   * (see docs/reference/decision-log.md). Recorded here so the 400 is not filed as a bug.
-   */
+  // A spare account, never the login account, reset to the standard password so the call is
+  // idempotent. A 400 "OTP validation failed" without a validated OTP is correct, not a defect.
   request: body(() => ({
     kpostID: testData.forgotPasswordKpostId,
     forgotPassword: testData.password,

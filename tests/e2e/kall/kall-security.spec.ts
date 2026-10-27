@@ -5,16 +5,8 @@ import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall
 import { settleFrames } from '../support/settle';
 
 /**
- * Security-fuzzing angle for Kall's two free-text fields — the main screen's contact search box
- * (client-side filter, self-only) and the CreateKallModal's Meeting Title field. Same execution-based
- * check as `login-security.spec.ts`/`home-security.spec.ts`/`contacts-security.spec.ts` (a `dialog`
- * listener, not string-matching).
- *
- * Neither field is ever actually submitted here: direct calling rings a real device (assert-only, per
- * `kall-features.spec.ts`), and the Kool Kall schedule form's Submit is blocked on a codegen-pending
- * participant-picker step (documented in that same file) — so this only fills and reads back each
- * field's own value, exactly like that file's own "the fields hold their values" assertion, never
- * reaching a real write. No lifecycle gate needed as a result.
+ * Injection payloads in Kall's contact search and Meeting Title fields must not execute (dialog
+ * listener). Fields are only filled, never submitted, so no lifecycle gate is needed.
  */
 test.describe(
   'KPost Kall · contact search box security fuzzing',
@@ -51,8 +43,7 @@ test.describe(
           .waitFor({ state: 'hidden', timeout: 30_000 })
           .catch(() => undefined);
 
-        // Found live 2026-10-01: the real placeholder is just "Search", not "Search Contacts" as
-        // previously assumed (confirmed via screenshot) — a bench selector gap, not a product defect.
+        // The placeholder is just "Search".
         const search = page.getByPlaceholder(/^search$/i).first();
         await expect(search, 'the contact search box is present').toBeVisible({ timeout: 20_000 });
         await search.click();

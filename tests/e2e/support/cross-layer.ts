@@ -48,10 +48,8 @@ export async function rowWhen<T extends JsonObject>(
 }
 
 /**
- * POST to the KPost API with the PAGE's own session (its `accessToken`), the way the app itself calls.
- * Clean-ups and read-backs inside a UI test go through this, never through `endpoints` as the same
- * account: KPost keeps one session per account, so an API login would sign the browser out — and every
- * later test sharing that saved session with it.
+ * POST to the KPost API with the page's own session token. Use this for clean-ups inside a UI test:
+ * an API login as the same account would sign the browser out (one session per account).
  */
 export async function postAsPage(
   page: Page,
@@ -76,10 +74,8 @@ export async function postAsPage(
 }
 
 /**
- * A DATETIME column read back as epoch ms, taking its wall-clock value as UTC. KPOST stores UTC in
- * zone-less DATETIME columns; the driver reads them as the machine's local time, so the raw `Date`
- * is shifted by the local offset (IST: 5 h 30 m) and must not be compared directly with what the
- * screen sent.
+ * A DATETIME column as epoch ms, read as UTC. KPOST stores UTC in zone-less columns that the driver
+ * reads as local time, so the raw `Date` is off by the local offset.
  */
 export function storedUtcMs(value: unknown): number | undefined {
   if (!(value instanceof Date)) return undefined;

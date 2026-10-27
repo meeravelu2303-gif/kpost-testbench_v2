@@ -4,13 +4,8 @@ import { expect, test as setup } from '@fixtures';
 import { reuseValidSession } from './session-reuse';
 
 /**
- * Logs in as the **3rd QA account** and saves its session to `.auth/user3.json`, for the Cc /
- * Confidential-Copy (NFR-SEC02) / bulk tests (a sender, a TO recipient, and a Copy / Confidential /
- * additional recipient — three views of one message).
- *
- * Like `auth2.setup.ts`, it only performs the real login when the multi-account suite will run
- * (`KATCHUP_UI_LIFECYCLE=true`); otherwise it saves an anonymous state so a normal run does not do a
- * third fresh login.
+ * Logs in as the 3rd QA account and saves the session, for the Cc / confidential-copy tests (three
+ * views of one message). Without KATCHUP_UI_LIFECYCLE=true it saves an anonymous state.
  */
 setup('authenticate third account', async ({ page, browser, loginPage, log }) => {
   if (await reuseValidSession(browser, STORAGE_STATE_3, log)) setup.skip();

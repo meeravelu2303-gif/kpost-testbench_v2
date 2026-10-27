@@ -2,15 +2,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * `/kposter` — the STANDALONE, logged-out shell (`MenuRoutes.js` line 404: `{!user.user &&
- * <Route path="/kposter/*" .../>}`, rendering `<KPoster />` with `embedded` defaulting `false`). This
- * layout has a topbar with a search input that the embedded/authenticated layout (tested in
- * `kposter.spec.ts`) does not.
- *
- * Confirmed from source: even logged out, `sessionStorage.getItem('kposter-demo-identity')` defaults
- * to `'studio.cove'`, a DEMO business identity — so a logged-out visitor still acts as a demo business
- * account in demo mode (the default), not a true guest. Everything here is IndexedDB-local demo data,
- * same safety profile as `kposter.spec.ts`.
+ * /kposter logged out: the standalone shell, whose topbar search the signed-in layout lacks. All data
+ * is local demo data in IndexedDB.
  */
 test.describe(
   'KPost KPoster — public/standalone shell',

@@ -8,15 +8,9 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import { KMAIL_PRIORITY, KMAIL_RECEIVER_TYPE } from '@api/contract/kpost-types';
 
 /**
- * KMail mail behaviour, three accounts (A = personal sends, B = victim receives, C = personal-3):
- * BCC privacy, priority, read status, starring / the Important list, and delete-only-your-own-side.
- * These are the semantics the endpoint-level engine never asserts (it checks each call in isolation).
- *
- * Shapes are live-measured (2026-10-14): a mail in a thread read (`selectedContactMails`) carries
- * `kmailTransactionList[]` rows with `receiver`, `receiverType` (1 To / 2 Cc / 3 Bcc), `readStatus`,
- * `markedByReceiver`, `deleteBySender/Receiver`, `transactionID`, plus top-level `priority` and
- * `kmailNumber`. The mail body is readable a few seconds after the send (an immediate read returned
- * an empty record), so the read step polls.
+ * KMail behaviour across three accounts (A sends, B receives, C is BCC): BCC privacy, priority, read
+ * status, the Important list, and delete-only-your-own-side. Per-recipient state is read from the
+ * thread's `kmailTransactionList` rows (receiverType 1 To / 2 Cc / 3 Bcc).
  */
 const P = (key: string): Principal => AUTH_PROFILES.kpost.principals.find((p) => p.key === key)!;
 const A = P('personal');
@@ -196,8 +190,7 @@ test.describe(
         ],
       },
       async ({ endpoints }) => {
-        // The composer's default when no priority is picked is `selectedPriorityId || 0` = Low
-        // (WriteMailPage.js) — so this sends exactly what an untouched Write Mail sends.
+        // The composer's default priority is Low, so this sends what an untouched Write Mail sends.
         const kmailID = await send(endpoints, {
           kmailSubject: `QA priority default ${Date.now()}`,
           priority: KMAIL_PRIORITY.low,
@@ -221,11 +214,7 @@ test.describe(
     test('opening a mail marks it read: it leaves "sent, not opened" and the unread count drops', async ({
       endpoints,
     }) => {
-      // OPEN QUESTION (2026-10-14): from the bench's API client this open call returns an empty record
-      // (kmailID 0) even after 30 s of retries, while the KMail screen's identical request returns the
-      // full mail (kmail-two-session-e2e.spec.ts records it). 2026-10-22: the browser gets the same empty record
-      // intermittently too (the KMail smoke recorded it), which is #1348 — the read
-      // status itself works in the browser (opened mails switch to the read colour). Parked, not faked.
+      // Known defect #1348: the open call returns an empty record (kmailID 0).
       test.fixme(
         true,
         'API open call returns an empty record (kmailID 0) — the intermittent empty-record fault #1348, seen in the browser too on 2026-10-22; parked until it is fixed',
@@ -258,8 +247,8 @@ test.describe(
         );
         const before = await unread();
 
-        // Open it the way the KMail screen does (MessageContainer MailObj); the body becomes readable
-        // a few seconds after the send, so poll until the real mail comes back.
+        // Open it the way the KMail screen does; the body is readable a few seconds after the send,
+        // so poll.
         await expect
           .poll(
             async () =>
@@ -368,8 +357,7 @@ test.describe(
             'semantics:b-deletes',
           );
           expect(del.status, `B's delete is accepted: ${del.text.slice(0, 160)}`).toBe(200);
-          // The server flags rather than removes (live-measured): B's own transaction is marked
-          // deleteByReceiver=Y; the KMail screen hides flagged mail.
+          // The server flags rather than removes: B's transaction gets deleteByReceiver=Y.
           const afterB = await rowFor(endpoints, B, A.username, kmailID);
           expect(
             afterB?.kmailTransactionList.find((t) => t.receiver === B.username)?.deleteByReceiver,

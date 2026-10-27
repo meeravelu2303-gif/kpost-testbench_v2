@@ -8,18 +8,8 @@ import { deleteSentMessage, gotoKatchup, openConversation, sendMessage } from '.
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * Continuous messaging — the owner's reported defect: after sending one message you cannot send
- * another (to the same or a second person) without refreshing the page. This reproduces that flow
- * directly: it opens a conversation and sends SEVERAL messages in ONE session, with a real gap
- * between them and NO reload, asserting every send goes through.
- *
- * Two independent signals catch the bug, so it is not selector-fragile:
- *   - the message actually appears (`sendMessage` waits for it) — a broken 2nd send times out, and
- *   - no send API call failed (`failedUserActions`) and the page did not crash or freeze.
- *
- * Gated behind `KATCHUP_UI_LIFECYCLE=true` (it writes real messages, then self-cleans), so it runs
- * under `npm run product:kpost-ui` but never on a default run. Runs on all three browsers, so a browser-specific
- * "must refresh to send again" is caught and the ticket names the browser.
+ * Katchup continuous send: several messages in one session, with a real gap and no reload, must all
+ * go through (each appears, no send call fails). Gated behind KATCHUP_UI_LIFECYCLE; self-cleaning.
  */
 test.describe(
   'KPost Katchup · continuous send (no refresh between messages)',

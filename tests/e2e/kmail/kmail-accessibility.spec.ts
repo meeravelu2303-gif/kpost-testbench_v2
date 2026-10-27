@@ -7,15 +7,8 @@ import { expect, test } from '@fixtures';
 import { writeFileSync } from 'node:fs';
 
 /**
- * Deep WCAG scan (axe-core) for KMail's **compose** form (`/writemail`) — a DIFFERENT route from
- * `/kmail`, which `accessibility-axe.spec.ts`'s per-screen sweep already scans by default
- * (`src/ui/screens.ts`). `/writemail` opens the compose form directly (`Kmail.js`'s `showWriteMail`
- * branch) and was never itself scanned.
- *
- * Navigation reuses `kmail-compose.spec.ts`'s own proven selectors.
- *
- * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new screens
- * need their own clean run(s) before earning a place in the auto-filing allow-list.
+ * Axe WCAG scan of the KMail compose form (/writemail), a route the per-screen sweep does not cover.
+ * Kept out of the trusted auto-filing sweep until it has proven clean runs.
  */
 test.describe(
   'KPost KMail · compose form accessibility (axe-core WCAG)',

@@ -12,15 +12,8 @@ import {
 import { openSession, requireAccounts, requireFlags, waitLoaded } from './support/journey';
 
 /**
- * JOURNEY 2 · A CONVERSATION — two people talk in Katchup, in two real browsers.
- *
- * A writes to B with a Subject → B, sitting on Katchup, sees it arrive with no refresh → B's Home
- * shows it among the recent activity → B opens the thread and answers in it → A sees the answer in
- * the same thread, marked as received → both delete what they sent.
- *
- * UNPROVEN STEP (first live run): B's Home "Recents" panel — its selectors are built from source
- * (`HomePage.ts`, NEEDS-LIVE-TUNING) and no spec has asserted a new message there yet. The check is
- * the visible subject text on /home, the weakest selector that can be right.
+ * Journey 2: A writes to B with a Subject; B sees it live and on Home; B answers; A sees the answer
+ * marked received; both delete. The Home check uses only the visible subject text (fragile panel).
  */
 test.describe(
   'JOURNEY 2 · a conversation',

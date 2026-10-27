@@ -6,15 +6,8 @@ const SENSITIVE_KEY =
   /pass(word|wd)?(hash)?$|^pwd$|secret|api[-_]?key|private[-_]?key|^ssn$|credit[-_]?card|card[-_]?number|^cvv$|^pin$|refresh[-_]?token|access[-_]?token|^token$/i;
 
 /**
- * KPost's **disappearing / secret message** domain fields match `secret` but are timestamps, flags,
- * options, icons and id lists — NOT credentials. The feature has TWO modes (per the Katchup FRD,
- * FR-KU-017..024, and `docs/modules/katchup-flow.md`): **Disappear As Per Schedule** carries a time
- * (`secretMessageExpireTime` / `…AsLong`, an epoch), so the message stays until that time; **Disappear
- * After Reading** carries no time (`isVanished`), so it stays until read then vanishes. Both, plus the
- * id list `secret_message_msgIDs`, are ordinary metadata the client needs — flagging them as an exposed
- * secret is a false positive (see docs/reference/decision-log.md, 2026-09-17 secret-message entry). The name may be camelCase (`secretMessage…`) or snake_case
- * (`secret_message_…`), so an optional separator is allowed. Genuinely credential-like `secret` fields
- * (`secretKey`, `secret_key`, `clientSecret`, `secretToken`) do NOT match and stay flagged.
+ * Katchup's disappearing ("secret") message fields (timestamps, flags, id lists), in camelCase or
+ * snake_case: metadata, not credentials. Real secrets (`secretKey`, `clientSecret`, …) still match.
  */
 const BENIGN_SECRET_FIELD =
   /^secret[_-]?(message|timestamp|icon|option|scheduled?|delete|timers?|expire)/i;

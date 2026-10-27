@@ -126,12 +126,7 @@ export const PRECONDITION_STATUS: readonly number[] = [200, 201, 204, 400, 403, 
 export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoint {
   const contract = responseContract(definition.responseContract);
   const roles = definition.authorization?.roles ?? [];
-  /*
-   * The default role belongs to the API being tested, not to the bench. KPost has no ADMIN
-   * principal - its accounts are USER (personal) and COMPANY_ADMIN (business) - so falling back to
-   * the mock's ADMIN default made every authenticated KPost endpoint fail with "no principal
-   * configured for role ADMIN": 82 cases reporting a configuration mismatch as an API failure.
-   */
+  // The default role comes from the API's auth profile (KPost has no ADMIN principal).
   const profileDefaultRole = authProfileFor().defaultRole;
   const primaryRole =
     definition.authentication?.role ??
@@ -171,10 +166,7 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
     responseSchema: definition.responseSchema,
     pagination: definition.pagination ?? false,
     sideEffect: definition.sideEffect ?? 'data',
-    /*
-     * Default false, deliberately. An endpoint reaches the live application only because somebody
-     * wrote the flag and said why - never because a default let it through.
-     */
+    // Default false: an endpoint reaches live only when someone set the flag on purpose.
     productionSafe: definition.productionSafe ?? false,
     otpDependent: definition.otpDependent,
     requiredHeaders: [...contract.requiredHeaders, ...(definition.headers?.required ?? [])],
@@ -202,14 +194,9 @@ export function policyExclusion(
   validator: Pick<Validator, 'name' | 'toggle'>,
   endpoint: ResolvedEndpoint,
 ): string | undefined {
-  /*
-   * The live application first: a validator that modifies and re-sends the request is not run
-   * there at all, whatever the endpoint's own policy says. Checked before the per-endpoint
-   * toggles so that no endpoint configuration can re-enable it. See production-validators.ts.
-   */
+  // Live first, before the endpoint toggles, so no endpoint can re-enable a mutating validator.
   if (env.IS_PRODUCTION) {
-    // A read endpoint (destructive === false) additionally clears the input-validation fuzzers:
-    // a read persists nothing, and the identifier guard still confines every mutation to our data.
+    // A read endpoint also clears the input fuzzers (see production-validators.ts).
     const excluded = productionExclusion(validator.name, { destructive: endpoint.destructive });
     if (excluded) return excluded;
   }

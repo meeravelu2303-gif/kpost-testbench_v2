@@ -8,10 +8,8 @@ import {
 } from '../support/tier-variable-flows';
 
 /**
- * Admin UI · **Work Place Setup** (/workplace-setup), done on screen: a QA tier and a QA top-level variable are each
- * created in the drawer, renamed and deleted, with the request and answer of every step checked and
- * an API clean-up if a step fails. Host-guarded: nothing is written unless the screen's Admin calls go
- * to the test Admin API (support/admin-workflow.ts).
+ * Admin UI Work Place Setup: a QA tier and a QA top-level variable are created, renamed and deleted
+ * on screen. Host-guarded: nothing is written unless the screen calls the test Admin API.
  */
 const SCREEN: TierScreen = {
   name: 'Work Place Setup',

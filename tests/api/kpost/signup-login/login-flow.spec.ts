@@ -6,23 +6,9 @@ import { expect, test } from '@fixtures';
 import { decodeJwt, jwtSubject } from '@utils/jwt';
 
 /**
- * Login **behaviour** — the assertions the central engine cannot make.
- *
- * `login.spec.ts` runs the contract validators (status, schema, headers, security) once per
- * endpoint. This file tests what those cannot: that a wrong password is rejected, that failure
- * cannot be used to tell a real account from a fake one, what the token actually claims, and that a
- * session can be ended without harming the shared one. Each test drives the endpoints directly and
- * asserts a specific outcome.
- *
- * ## Live-safety rules obeyed here
- *
- *  - **Only our own accounts.** `QA_KPOST_ID` and `QA_VICTIM_KPOST_ID`, never a real customer id.
- *  - **Every wrong-password attempt is paired with a good login in the same test**, and the live run
- *    is `workers: 1`, so attempts never overlap. A bench that locks its own QA account out stops
- *    every other module — the cost of a lockout is far higher than the value of a second negative
- *    case, so each test cleans up after itself rather than relying on run order.
- *  - **A fresh session for the logout test.** It logs in on its own device id and logs *that* out,
- *    so the token every other test shares is untouched.
+ * Login behaviour the engine cannot check: wrong password, account enumeration, token claims, logout.
+ * Every wrong-password attempt is followed by a good login, and logout uses its own device session
+ * so the shared token is untouched.
  */
 
 /** The `message` field of a response body as a string, or '' — module scope so it is not test flow. */
@@ -30,10 +16,7 @@ function bodyMessage(body: Record<string, unknown>): string {
   return typeof body.message === 'string' ? body.message : '';
 }
 
-/**
- * KPost lower-cases the kpostID in the token `sub` (verified on live: `Qatesting@` → `qatesting@`).
- * That is correct — an email identifier is case-insensitive — so identity is compared case-folded.
- */
+/** KPost lower-cases the kpostID in the token `sub`, so identity is compared case-folded. */
 function sameAccount(a: string | undefined, b: string): boolean {
   return (a ?? '').toLowerCase() === b.toLowerCase();
 }
@@ -72,13 +55,7 @@ async function login(
 }
 
 test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'] }, () => {
-  /*
-   * `default`, not `serial`. Serial skips every later test after the first failure — and several of
-   * these assertions are *meant* to stay red (they report live defects), which would hide every
-   * finding after the first. Each test is self-contained (a wrong attempt is always paired with a
-   * good login in the same test), and the live run is `workers: 1`, so they still run one at a time.
-   * Findings use `expect.soft` so a single run surfaces all of them at once.
-   */
+  // Not `serial`: one failing finding must not skip the tests after it. Each test is self-contained.
   test.describe.configure({ mode: 'default' });
 
   test(
@@ -118,9 +95,7 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
   test('a wrong password is rejected, and the account still logs in afterwards @api @signup-login @security', async ({
     endpoints,
   }) => {
-    // Negative-login attempts run against a DEDICATED throwaway account, never the primary
-    // `kpostId`: a wrong password can trigger lockout/throttling, and that must not cascade into
-    // the account every setup + test depends on. Skip (don't hammer the primary) if unprovisioned.
+    // Wrong passwords go to a dedicated throwaway account so a lockout never hits the primary.
     const negConfigured =
       testData.negLoginKpostId &&
       !testData.negLoginKpostId.includes('qa.neg') &&
@@ -140,12 +115,7 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
     // No token is the one thing the API gets right here — assert it hard.
     expect(wrong.body.accessToken ?? null, 'no token on a failed login').toBeNull();
 
-    /*
-     * THE FINDING (soft, so the run continues and reports every defect): on live, a wrong password
-     * answers **HTTP 200** `"Invalid Credential"` — the same status as success. A caller reading the
-     * HTTP status cannot tell a failed login from a successful one. It must be a 4xx (401). Soft so
-     * this stays red and reported without halting the suite. See docs/reference/decision-log.md.
-     */
+    // Known defect: a wrong password answers HTTP 200 "Invalid Credential"; it must be a 4xx.
     expect
       .soft(wrong.status, 'a wrong password must not answer 2xx — it does (HTTP 200)')
       .toBeGreaterThanOrEqual(400);
@@ -158,11 +128,7 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
     'login failure cannot distinguish a real account from an unknown one @api @signup-login @security',
     { annotation: [{ type: 'requirement', description: 'BR-SL-ENUM' }] },
     async ({ endpoints }) => {
-      /*
-       * BR: a failure must not reveal whether the id or the password was wrong (account enumeration).
-       * A wrong password on OUR account and any password on an account that does not exist should be
-       * indistinguishable — same status, same message.
-       */
+      // A wrong password on a real account and an unknown account must look identical.
       const realButWrong = await login(endpoints, testData.kpostId, 'WrongPassword!9f2a');
       const doesNotExist = await login(endpoints, testData.kpostIdAbsent, 'WrongPassword!9f2a');
 
@@ -183,11 +149,7 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
     'a session can be ended without harming the shared session @api @signup-login @database',
     { tag: '@sanity' },
     async ({ endpoints, databases }) => {
-      /*
-       * Open a NEW session on a device id of our own, then log exactly that one out. The token the
-       * rest of the run shares is on KPOST_DEVICE_IDENTITY, so it is untouched — which the final
-       * assertion confirms by logging in again on the shared device.
-       */
+      // Log out a fresh session on our own device id; the shared token (KPOST_DEVICE_IDENTITY) is untouched.
       const ownDevice = `qa-bench-flow-${randomUUID()}`;
       const opened = await login(
         endpoints,
@@ -224,8 +186,7 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
       );
       expect(logout.status, 'logout of our own session succeeds').toBeLessThan(400);
 
-      // The endpoint answers success whatever it did to the row — same discipline as every other
-      // "reports success regardless" check in this bench — so the row itself is the judge.
+      // Logout answers success regardless, so the row is the judge.
       if (database.enabled) {
         const afterLogout = await database.findOne<{ device_identity_primary: string }>({
           table: 'TBL_KPOST_LOGIN_SESSION',
@@ -237,13 +198,7 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
         ).toBeUndefined();
       }
 
-      /*
-       * BR-SL-LOGOUT (SRS-S05): "logout invalidates the session token" — the row being gone is not the
-       * same claim as the TOKEN no longer authenticating. A JWT is self-contained; unless the server
-       * actively checks the session store on every authenticated call, a logged-out token could still
-       * verify cryptographically and keep working. This is the actual business rule, not a proxy for
-       * it — tries the now-logged-out token against a real authenticated endpoint.
-       */
+      // BR-SL-LOGOUT: a deleted row is not enough; the logged-out JWT itself must stop authenticating.
       const reuseAttempt = await endpoints.sendTo(
         'signup-login-active-session',
         {},
@@ -269,19 +224,8 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
     'mobile and the full domain-qualified ID log in; the bare KPost ID is correctly rejected (BR-SL-3IDS) @api @signup-login',
     { annotation: [{ type: 'requirement', description: 'BR-SL-3IDS' }] },
     async ({ endpoints }) => {
-      /*
-       * BR-SL-3IDS (docs/reference/business-rules.md): the FRD text this rule was originally transcribed from reads as
-       * if mobile, bare KPost ID, and full domain-qualified ID were three equally valid login
-       * identifiers for the same account. That reading is wrong — confirmed by the developer 2026-10-03
-       * (Bugzilla #949, closed INVALID): a KPost ID's local part (before the `@`) is not unique across
-       * domains, so a bare ID is genuinely ambiguous and login correctly requires either the mobile
-       * number or the full, domain-qualified ID. The bare form must be REJECTED, not accepted.
-       *
-       * The primary test account's real mobile number was confirmed directly against
-       * TBL_KPOST_USER_MASTER (2026-10-02) — `8122016145` — not taken from `QA_MOBILE_EXISTS`, which was
-       * checked and found to belong to a DIFFERENT account entirely; using it here would have produced a
-       * meaningless mismatch, not a rule violation.
-       */
+      // Mobile or the full ID log in; the bare local part is ambiguous across domains, so it is
+      // refused. The primary account's mobile is hardcoded: `QA_MOBILE_EXISTS` is another account's.
       const bareId = testData.kpostId.split('@')[0] ?? testData.kpostId;
       const primaryMobile = '8122016145';
 
@@ -295,8 +239,7 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
         expect
           .soft(status, `BR-SL-3IDS: login via ${label} ("${identifier}") must succeed`)
           .toBe(200);
-        // Evaluated unconditionally (a non-200 body has no accessToken, so sameAccount() with an empty
-        // subject just reports false) — a failed login is still a failed BR-SL-3IDS case, not a skip.
+        // Evaluated unconditionally: a failed login is a failed case, not a skip.
         const token = typeof body.accessToken === 'string' ? body.accessToken : '';
         expect
           .soft(
@@ -306,8 +249,6 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
           .toBe(true);
       }
 
-      // The bare (no-domain) form is correctly ambiguous across domains and must be refused, not
-      // silently accepted — this is the behavior #949 incorrectly flagged as a defect.
       const bare = await login(endpoints, bareId, testData.password);
       expect
         .soft(

@@ -7,17 +7,8 @@ import { otpApis } from './otp.api';
 import { platformApis } from './platform.api';
 
 /**
- * The KPost **common** module — every endpoint under `/common` and `/v2/common`.
- *
- * Grouped by what they do rather than by their URL, because that is how they fail:
- *
- *   otp.api.ts       sending and checking OTPs, and password recovery  (side effects: SMS, email)
- *   location.api.ts  countries, states, cities, postcodes, languages   (read-only reference data)
- *   identity.api.ts  "does this exist" lookups                         (enumeration surface)
- *   company.api.ts   company records and the logo                      (cross-tenant surface)
- *   platform.api.ts  service status, app version, enquiry capture      (public writes)
- *
- * None require a token: the common module is what a client talks to before anyone has logged in.
+ * The common module (`/common`, `/v2/common`), all public: OTP and recovery, location reference
+ * data, identity lookups, company records and platform endpoints.
  */
 export const commonApis: EndpointDefinition[] = [
   ...otpApis,
@@ -27,13 +18,7 @@ export const commonApis: EndpointDefinition[] = [
   ...platformApis,
 ];
 
-/**
- * Paths the workbook documents for this module but no definition covers.
- *
- * A module is only "finished" when this is empty, and the assertion lives in a test rather than
- * in a reviewer's memory — see tests/api/kpost/common/coverage.spec.ts. Without it, an endpoint
- * added to a future dump would sit untested and nothing would say so.
- */
+/** Documented paths in this module no definition covers; asserted empty by coverage.spec.ts. */
 export function uncoveredCommonPaths(): string[] {
   // Both the live path and the workbook path it corrects, or a corrected route reads as untested.
   const covered = new Set(

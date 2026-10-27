@@ -6,22 +6,11 @@ import { gotoKoolKall } from '../support/kall';
 import { C, openSession, requireAccounts, requireFlags } from './support/journey';
 
 /**
- * JOURNEY 4 · A MEETING — an organizer schedules a Kool Kall and the people invited see it.
- *
- * C (the organizer, through the API) schedules a meeting an hour from now inviting A and B → A opens
- * Kall › Kool Kall and sees the meeting → B does the same in their own browser → C ends the meeting.
- *
- * Why the organizer is C, through the API: no spec has ever submitted the Create-Kool-Kall modal
- * (its participant picker needs a recording pass — `kall-features.spec.ts`, NEEDS-CODEGEN), and an
- * API call as A or B would sign their browsers out (one session per account). Scheduling as a third
- * account is also the honest model of the journey: the invitees are the users under test.
- *
- * Proven live 2/2 on 2026-10-20: the meeting row on the Kool Kall tab, found by the meeting's unique
- * title as visible text, for both invitees. Part of full sanity (`@sanity`).
- * A connected 1:1 call (ring → accept → both joined → hang up) is JOURNEY 10, `voice-call.spec.ts`.
+ * Journey 4: C schedules a Kool Kall via the API inviting A and B; each sees it under Kall › Kool
+ * Kall; C ends it. C is the organizer because an API call as A or B would sign their browser out.
  */
 
-/** The kallID in a scheduledKall reply (as `tests/api/kpost/kall/feature.spec.ts` reads it). */
+/** The kallID in a scheduledKall reply. */
 function kallIdOf(body: Record<string, unknown>): number | undefined {
   const data = body.data;
   const row = Array.isArray(data) ? (data[0] as Record<string, unknown> | undefined) : undefined;
@@ -92,7 +81,7 @@ test.describe(
             });
           });
         } finally {
-          // `kallID` alone: sending `id` too makes endKoolKall answer 500 (kall feature spec).
+          // `kallID` alone: sending `id` too makes endKoolKall answer 500.
           if (kallID)
             await endpoints
               .sendTo(

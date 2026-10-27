@@ -6,12 +6,8 @@ import type { BurstResult } from '@utils/concurrency';
 import { getPath, isPlainObject } from '@utils/json';
 
 /**
- * Shared machinery for the simultaneous-request validators.
- *
- * The hard part of concurrency testing is not firing requests together — it is deciding which
- * differences between two responses are a defect. Two identical reads answered a millisecond apart
- * legitimately differ in a server clock or a view counter; they must never differ in whose record
- * they contain. Everything here exists to hold that line, so the probes themselves stay short.
+ * Shared machinery for the simultaneous-request validators: deciding which response differences are
+ * defects (a clock may differ, whose record it is may not).
  */
 
 /** How many requests this endpoint's probes dispatch together, clamped to the central cap. */
@@ -20,14 +16,7 @@ export function burstSize(endpoint: ResolvedEndpoint): number {
   return Math.max(2, Math.min(requested, thresholds.concurrency.maxRequests));
 }
 
-/**
- * Leaf names whose value is expected to move between two otherwise identical responses.
- *
- * Matched on the key name rather than a path, because the same field appears at many depths and an
- * endpoint should not have to enumerate every one. An endpoint adds its own through
- * `concurrency.volatilePaths`; nothing is ever removed from this list to make a test pass — a field
- * that genuinely should be stable belongs in the comparison.
- */
+/** Key names expected to differ between identical responses, at any depth (+ `volatilePaths`). */
 const VOLATILE_KEYS = new Set(
   [
     'timestamp',
@@ -55,12 +44,7 @@ const VOLATILE_KEYS = new Set(
 
 const VOLATILE_PLACEHOLDER = '<volatile>';
 
-/**
- * A deterministic string for one response body, with volatile leaves masked and object keys sorted.
- *
- * Sorting matters: JSON object order is not significant, but two serializations that differ only in
- * key order would otherwise read as a divergence and file a bug about nothing.
- */
+/** A deterministic string for a body: volatile leaves masked, keys sorted (order is not a diff). */
 export function canonicalBody(value: unknown, extraPaths: readonly string[] = []): string {
   const masked = new Set(extraPaths);
 
@@ -91,10 +75,7 @@ export function bodyOf(exchange: ApiResponseWrapper): unknown {
 }
 
 /**
- * The caller-identity values an endpoint declared, as a single comparable string.
- *
- * Returns undefined when the endpoint declares no identity paths — which is the common case, and
- * the reason the identity check reports SKIPPED rather than inventing a field to compare.
+ * The endpoint's declared caller-identity values as one string, or undefined when it declares none.
  */
 export function identityOf(
   body: unknown,
@@ -104,13 +85,7 @@ export function identityOf(
   return JSON.stringify(paths.map((path) => getPath(body, path) ?? null));
 }
 
-/**
- * Refuses a burst that did not actually overlap.
- *
- * A machine under load can serialize the dispatches, and a sequential burst proves nothing about
- * locking. Reporting that as PASSED is the failure mode this guard exists to prevent: it would mark
- * the endpoint concurrency-safe on the strength of a test that never ran concurrently.
- */
+/** Refuses a burst that did not overlap: a sequential burst proves nothing about locking. */
 export function inconclusiveIfSerialized<T>(
   result: BurstResult<T>,
   subject: string,

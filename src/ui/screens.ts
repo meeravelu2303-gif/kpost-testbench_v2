@@ -1,18 +1,9 @@
 /**
- * THE screen registry — every authenticated KPost screen the deep UI suite drives, with the stable
- * selectors that prove it (a) mounted and (b) rendered its own key controls, not just an empty shell.
- *
- * Selectors come from the front-end source map (`docs/ui/ui-screens.md`, mined from
- * `KPOST_REACTJS_2023_V1`). The app ships almost no `data-testid`s, so these are structural — each
- * one is the element the screen is known to render at load. A UI change that removes one is exactly
- * the kind of regression this suite exists to catch.
+ * The screen registry: every KPost screen the UI suite drives, with structural selectors (from
+ * `docs/ui/ui-screens.md`) proving it mounted and rendered its key controls.
  */
 
-/**
- * Which session a screen needs. `personal` (the default) is the qatest PERSONAL login the sweep
- * batches run in; `business` is the BUSINESS_S company-admin login (`.auth/business.json`); `public`
- * is no session at all — the screen must render for an anonymous visitor.
- */
+/** The session a screen needs: `personal` (default), `business` (BUSINESS_S) or `public` (none). */
 export type ScreenSession = 'personal' | 'business' | 'public';
 
 export interface ScreenDef {
@@ -31,9 +22,7 @@ export interface ScreenDef {
 }
 
 /**
- * The always-present nav rail: each destination icon and the route it must open. The `icon-KP_*`
- * font class encodes the destination, so a test can click the icon and assert the route — exercising
- * the real navigation a user does, not a scripted `goto`.
+ * The nav rail: each `icon-KP_*` icon and the route it must open, so tests navigate as a user does.
  */
 export const NAV_LINKS: readonly { icon: string; route: string; name: string }[] = [
   { icon: '.icon-KP_01-Home', route: '/home', name: 'Home' },
@@ -89,11 +78,7 @@ const ALL_AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
     ready: ['.settings-theme-shell'],
     controls: [{ selector: '.settings-theme-shell', label: 'settings workspace' }],
   },
-  // --- Secondary + vertical screens: the deep CHECK CATALOGUE (health / performance / layout / a11y)
-  // runs on each. They ship generic bootstrap layouts with no distinctive root, so the mount anchor is
-  // the authenticated **shell** (nav rail / header) — which proves the route loaded signed-in (not
-  // bounced to /login) — plus the screen's own distinctive root where the frontend has one. The value
-  // here is the check sweep catching a JS crash, a broken asset, overflow or an a11y gap on any of them.
+  // --- Secondary and vertical screens: no distinctive root, so the shell is the mount anchor.
   {
     route: '/kdiary',
     name: 'KDiary',
@@ -175,12 +160,8 @@ const ALL_AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
       },
     ],
   },
-  // --- Added 2026-10-10 from a live route probe (every route in the front-end map now has a screen).
   {
-    // `/writemail` is the KMail workspace with the compose form opened (Kmail.js reads the path).
-    // Live 2026-10-10: a PERSONAL user landing here got the error boundary ("Something went wrong —
-    // KPOST could not display this page"), the shape of #990 (RESOLVED FIXED). The sweep keeps it
-    // honest: the workspace must mount, or that is the finding.
+    // The KMail workspace with the compose form open; it must mount, not the error boundary.
     route: '/writemail',
     name: 'WriteMail',
     screen: 'writemail',
@@ -190,8 +171,7 @@ const ALL_AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
     ],
   },
   {
-    // KPoster: a client-side demo feed (no backend — see the KPoster memory/decision). Signed in it
-    // renders inside the shell; it also renders anonymously (listed again under PUBLIC_SCREENS).
+    // KPoster: a client-side demo feed; also listed under PUBLIC_SCREENS.
     route: '/kposter',
     name: 'KPoster',
     screen: 'kposter',
@@ -209,11 +189,7 @@ const ALL_AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
   },
 ];
 
-/**
- * Screens that need the BUSINESS_S company-admin session. A PERSONAL user who opens `/usermanagement`
- * gets the shell with no workspace (verified live 2026-10-10), so these only mean something in the
- * business session — `screens-business.spec.ts`, gated by `BUSINESS_UI_LIFECYCLE`.
- */
+/** Screens that need the BUSINESS_S company-admin session (`screens-business.spec.ts`). */
 const ALL_BUSINESS_SCREENS: readonly ScreenDef[] = [
   {
     route: '/usermanagement',
@@ -229,10 +205,8 @@ const ALL_BUSINESS_SCREENS: readonly ScreenDef[] = [
 ];
 
 /**
- * Screens an anonymous visitor can open. No session, no `skipIfSignedOut`: a bounce to `/login` is a
- * FAILURE here, because these pages are public by design. Selectors from the live probe 2026-10-10.
- * The parameterised public routes (`/digital-card/:id`, `/koolkall/:id`, `/profile-webview/:id`) need
- * a real id and keep their own specs instead.
+ * Screens an anonymous visitor can open; a bounce to `/login` is a failure. Parameterised public
+ * routes (`/digital-card/:id`, …) need a real id and have their own specs.
  */
 const ALL_PUBLIC_SCREENS: readonly ScreenDef[] = [
   {
@@ -281,12 +255,7 @@ const ALL_PUBLIC_SCREENS: readonly ScreenDef[] = [
   },
 ];
 
-/**
- * Screens the owner has paused from ALL testing (API and UI) until their development is finished —
- * KDoc/KOS since 2026-10-07. Every UI sweep (screens, crawl, keyboard, axe, network, interactions,
- * visual) reads this list, so this is the one place to exclude it; the KDoc-only specs are tagged
- * `@kos` and excluded by `--grep-invert @kos` in the UI scripts. Empty this set when KDoc is un-paused.
- */
+/** Screens paused from all testing (KDoc); every UI sweep reads this. Empty it to resume. */
 const PAUSED_SCREENS: ReadonlySet<string> = new Set(['kdoc']);
 
 const notPaused = (screen: ScreenDef): boolean => !PAUSED_SCREENS.has(screen.screen);

@@ -13,18 +13,8 @@ import {
 } from '../support/usermanagement';
 
 /**
- * Deep WCAG scan (axe-core) for User Management's own DYNAMIC states — the "Add Communication
- * Channels" chooser (Add Manually / Bulk-Upload), and the "Add Manually" member-form modal in its
- * default (untouched) state. Neither is reached by the generic per-screen sweep, which only ever
- * scans `/usermanagement` itself. The form modal is scanned before Designation is set, so the flow
- * never advances toward the same-company mobile-collision guard or Add — same boundary
- * `usermanagement.spec.ts` and `usermanagement-security.spec.ts` both keep.
- *
- * Navigation goes through `support/usermanagement.ts`, shared with the other two User Management
- * specs and re-tuned live on 2026-10-10 (no forced clicks, no fixed sleeps).
- *
- * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new screens
- * need their own clean run(s) before earning a place in the auto-filing allow-list.
+ * axe-core WCAG scan of User Management's modals: the Add Channels chooser and the untouched Add
+ * Manually form (never submitted). Kept out of the trusted a11y sweep until it has clean runs.
  */
 test.describe(
   'KPost User Management · dynamic-state accessibility (axe-core WCAG, BUSINESS_S)',
@@ -44,13 +34,7 @@ test.describe(
       'needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID)',
     );
 
-    /**
-     * Scoped to the open modal. This spec exists for the form's OWN dynamic states; the page behind
-     * it (`/usermanagement` with the Katchup Recent sidebar) is the per-screen sweep's job. Scanning
-     * the whole page here re-reported the sidebar's known findings — an avatar with no alt text
-     * (#1011) and the Recent name/date labels' contrast (#926, platform-wide #1022) — as if they
-     * were defects of the Add Manually form. Found live 2026-10-10.
-     */
+    /** Scoped to the open modal: the page behind it is the per-screen sweep's job. */
     const OPEN_MODAL = '.modal.show, [role="dialog"]';
 
     async function scanCurrentPage(
@@ -128,8 +112,8 @@ test.describe(
       page,
     }, testInfo) => {
       await openAddChannelsChooser(page);
-      // Let the chooser's fade-in finish before axe measures colour contrast on it. Scoped to the
-      // chooser itself: the page behind it has a looping animation that never "finishes".
+      // Let the fade-in finish before axe measures contrast; scoped to the chooser because the page
+      // behind it has a looping animation.
       await settleAnimations(page.locator('.modal.show, [role="dialog"]').last());
       await scanCurrentPage(page, testInfo, 'User Management — Add Channels chooser');
     });
@@ -137,8 +121,7 @@ test.describe(
     test('User Management — Add Manually member-form modal open — WCAG violations (axe) @ui', async ({
       page,
     }, testInfo) => {
-      // openAddMemberForm asserts the form and its Designation picker are up and waits for the
-      // modal's fade to finish, so a form that fails to open is a failure here, not a silent skip.
+      // Fails (not skips) if the form does not open; also waits for the fade to finish.
       await openAddMemberForm(page);
       await scanCurrentPage(page, testInfo, 'User Management — Add Manually form');
     });

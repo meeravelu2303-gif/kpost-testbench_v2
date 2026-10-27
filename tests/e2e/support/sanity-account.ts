@@ -1,18 +1,9 @@
 import type { SqlDatabaseClient } from '@database/database-client';
 
 /**
- * The ONE throwaway account a sanity run signs up, and its removal afterwards (owner, 2026-10-20:
- * "only one account per sanity run, then delete it from the DB; name it sanitykpost1, sanitykpost2…;
- * mock OTP").
- *
- * Why a direct DB delete and not the app's own "Delete account": that flow (Settings › Delete
- * Account → sendAccountDeactivationOtp → deactivateAccount) always sends a REAL SMS — it ignores the
- * OTP bypass — and only DEACTIVATES: the row stays, `findById` still sees the KPOST ID, so the name
- * could never be used again (SignUpLoginServiceImpl.isKpostIdExists). Deleting the rows the signup
- * created frees both the id and the mobile, so the next run starts again from sanitykpost1.
- *
- * Only rows that name THIS account are touched: every statement binds the exact KPOST ID or the
- * exact mobile number, both owned by the bench (`sanitykpost<N>@…`, `90000008NN`).
+ * The one throwaway `sanitykpost<N>` account a sanity run signs up, and its DB removal afterwards.
+ * The app's own "Delete account" sends a real SMS and only deactivates, so the rows are deleted
+ * directly; every statement binds this account's exact KPOST ID or mobile.
  */
 
 /** The pieces of one sanity identity. */
@@ -26,13 +17,8 @@ export interface SanityIdentity {
 const USER_TABLE = 'TBL_KPOST_USER_MASTER';
 
 /**
- * Every table a fresh Personal signup + first login writes for the new account, and the column that
- * names it. Found live on 2026-10-20 by signing up sanitykpost1 and searching KPOST_QA: the 9 foreign
- * keys into the user table, plus 132 id-like text columns (`information_schema`). Two welcome
- * messages from info@kpostindia.com arrive as Katchup rows addressed to the account; nothing hangs
- * off them (no rows in the two tables that reference a message). The audit log is left alone — it
- * is a history, not account data. Children first, the user row last (LOGIN_SESSION and USER_PROFILE
- * hold foreign keys to it).
+ * Every table a Personal signup + first login writes for the account, and the column naming it.
+ * Children first, the user row last (foreign keys); the audit log is left alone.
  */
 export const SIGNUP_FOOTPRINT: ReadonlyArray<{
   table: string;
@@ -91,8 +77,7 @@ export async function deleteSanityAccount(
     await db.query(`DELETE FROM ${table} WHERE ${column} = ?`, [value]);
     removed[table] = (removed[table] ?? 0) + Number(before?.n ?? 0);
   }
-  // The two welcome messages are sent a few seconds AFTER signup (seen live: 0 removed on one run, 2
-  // on the next). Watch briefly for late ones so each run leaves nothing behind on its own.
+  // The welcome messages arrive a few seconds after signup, so watch briefly for late ones.
   for (let i = 0; i < 5; i++) {
     await new Promise((r) => setTimeout(r, 2_000));
     const [late] = await db.query<{ n: string }>(

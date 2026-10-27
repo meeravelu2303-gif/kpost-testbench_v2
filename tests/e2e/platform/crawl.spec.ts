@@ -6,17 +6,8 @@ import { expect, test } from '@fixtures';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * Systematic crawl — the "every angle, better than a manual tester" sweep.
- *
- * On EVERY authenticated screen it discovers the controls the screen renders and clicks each safe one
- * in turn (`ui-crawler.ts`), watching the whole time for the defects a user would notice: a crash, a
- * freeze, or a value rendered as raw `undefined`/`NaN`/`[object Object]`. It needs no per-feature
- * selectors — it exercises whatever is there — so it covers the app broadly and cannot go stale, and
- * its signals are unambiguous, so it files only REAL defects. Runs on Chromium, Firefox and WebKit
- * (`npm run product:kpost-ui`), so a browser-specific crash/freeze is caught and the ticket names the browser.
- *
- * Safety: the crawler never clicks a destructive/committing control (send, delete, logout, confirm …)
- * and Escapes after every click — it opens/expands/views, never writes. See `ui-crawler.ts`.
+ * Crawl: on every signed-in screen, click each safe control (`ui-crawler.ts`) and fail on a crash, a
+ * freeze or a raw `undefined`/`NaN`/`[object Object]`. Destructive controls are never clicked.
  */
 test.describe(
   'KPost UI systematic crawl — every control, every screen',
@@ -38,13 +29,7 @@ test.describe(
       test(`${screen.name} — crawl every control without crashing or freezing @ui`, async ({
         page,
       }) => {
-        // Up to 24 real clicks, several of which navigate and trigger a full reload
-        // (`waitUntil: 'domcontentloaded'` against the live production app) rather than a local mock —
-        // the default 60s test timeout is too tight for that real network cost once a screen has enough
-        // candidates to hit the click cap. Confirmed live 2026-09-30: a "timeout" failure here was
-        // mid-crawl (still working through the candidate list, not frozen) — a budget problem, not a
-        // product defect. 150s comfortably covers the worst case while still catching a genuinely
-        // frozen screen (which stalls far longer than any real reload ever would).
+        // Up to 24 real clicks, some of which reload the page, outgrow the default 60s timeout.
         test.setTimeout(150_000);
         const stop = watchUiHealth(page);
 

@@ -2,18 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * **Settings → Personalize → KPost Layout Theme** driven through the UI — the safest write the bench
- * makes: cosmetic, on the caller's OWN account, and **self-restoring** (it puts the original theme
- * back). It is the UI analogue of the API `changeTheme` lifecycle (already 2/2 green on live).
- *
- * Selectors are mined from `Settings/Personalize/Personalize.js` and are unusually stable for this app
- * — the swatches are real `<button class="k-color-swatch" aria-label="<theme name>">`, the selected
- * one carries `k-color-swatch--active` and a `✓` (`.k-color-swatch-check`), and the commit button is
- * labelled **"Apply Theme"**. So this needs little tuning, but it still WRITES a preference, so it is
- * gated behind `SETTINGS_UI_LIFECYCLE=true` and never runs on a default run.
- *
- * Self-restore is by reading the CURRENT active swatch first (not hard-coding a theme), switching to a
- * different one, then switching back — so whatever the account's theme is, the run leaves it unchanged.
+ * Settings › Personalize › KPost Layout Theme: switch to a different swatch, then restore the original.
+ * Writes a preference, so gated behind SETTINGS_UI_LIFECYCLE=true.
  */
 test.describe(
   'KPost Settings · Personalize theme (write)',
@@ -37,8 +27,7 @@ test.describe(
         .waitFor({ state: 'hidden', timeout: 30_000 })
         .catch(() => undefined);
 
-      // "Personalize" is nested under the collapsed "General Settings" group (confirmed live and in
-      // settings-sections.spec.ts) — expand it first, then open Personalize.
+      // "Personalize" is nested under the collapsed "General Settings" group.
       await page.getByText('General Settings', { exact: true }).first().click();
       await page
         .getByText(/^Personalize$/)
@@ -56,8 +45,7 @@ test.describe(
         timeout: 20_000,
       });
 
-      // Read the CURRENT theme so we can restore it (do not assume which one it is). This is a genuine
-      // value READ (needed to switch back later), not an assertion, so getAttribute is correct here.
+      // Read the current theme so it can be restored (do not assume which one it is).
       const activeSwatch = page.locator('.k-color-swatch--active').first();
       await expect(activeSwatch, 'a theme is currently selected').toBeVisible({ timeout: 10_000 });
       const originalTheme = (await activeSwatch.getAttribute('aria-label')) ?? '';
@@ -70,9 +58,8 @@ test.describe(
       await target.click();
       await page.getByRole('button', { name: /Apply Theme/i }).click();
 
-      // The chosen theme is now active. The "Katchup Preview" panel is the source of truth for what
-      // actually got applied (see #810: the previous swatch keeps a stale --active class after applying a
-      // new one, so exactly-one-active-swatch cannot be asserted here — that staleness is the tracked bug).
+      // The "Katchup Preview" panel is the source of truth. Known defect #810: the previous swatch keeps
+      // a stale --active class, so exactly-one-active-swatch cannot be asserted.
       await expect(
         page
           .getByText(new RegExp(targetTheme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), {
@@ -81,8 +68,8 @@ test.describe(
           .first(),
         'the Katchup Preview reflects the newly-applied theme',
       ).toBeVisible({ timeout: 15_000 });
-      // Re-locate by the captured theme name (not the `target` filter-locator, which re-evaluates against
-      // the now-changed checkmark state and would drift to a different swatch entirely).
+      // Re-locate by the captured name: the `target` filter re-evaluates against the changed checkmark
+      // and would drift to another swatch.
       await expect(
         page.getByRole('button', { name: targetTheme }),
         'the chosen swatch is marked active (even if a stale one also is - #810)',

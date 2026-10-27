@@ -3,15 +3,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Settings · Small Business Settings → Business Bank Account Details (`BankDetails.js`, BUSINESS_S
- * admin only). Confirmed from source: adding a bank record calls a real
- * `UpdateBankAccountDetails` -> `POST /v2/admin/updateBankAccountDetails/`, but the per-record
- * "Delete" button is CLIENT-SIDE ONLY (its own code comment says `// confirm and delete API` — no
- * actual delete endpoint is wired). That means completing a real "Add" here would leave a permanent
- * bank record with NO confirmed way to remove it through the UI — so this test deliberately stops
- * short of the final Submit, matching the same conservative boundary as `settings-change-password` /
- * `settings-delete-account`. It DOES exercise the real, safe-to-repeat IFSC lookup behavior, stubbed
- * to avoid depending on the live third-party `ifsc.razorpay.com` API during automated runs.
+ * Settings › Small Business Settings › Bank Details (BUSINESS_S admin). Delete is client-side only, so the
+ * test stops short of Submit (no way to remove a record). The IFSC lookup is stubbed.
  */
 test.describe(
   'KPost Settings · Business Bank Account Details (BUSINESS_S, validation only)',
@@ -32,7 +25,7 @@ test.describe(
       page,
       settingsPage,
     }) => {
-      // Stub the third-party lookup so the test never depends on ifsc.razorpay.com's real availability.
+      // Stub the third-party lookup so the test never depends on ifsc.razorpay.com.
       await page.route('https://ifsc.razorpay.com/**', (route) =>
         route.fulfill({
           status: 200,

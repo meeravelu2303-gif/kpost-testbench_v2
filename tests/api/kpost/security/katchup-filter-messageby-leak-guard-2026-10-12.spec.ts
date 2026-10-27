@@ -1,10 +1,5 @@
-// Regression guard for the Katchup filter cross-user leak (KP-818553), confirmed FIXED live
-// 2026-10-12: `filterKatchUpMessage` binds the query to the caller's sender/receiver only for a
-// recognised `messageBy` value (All/sent/received). An out-of-enum value used to drop that predicate
-// and `SELECT *` across EVERY user's messages. The controller now rejects an unknown `messageBy` with
-// 400 before the DAO runs. This test pins that behaviour so a regression that re-opens the leak fails.
-//
-// Read-only (a filter query), so it needs no lifecycle flag — just one KPost principal.
+// Regression guard for KP-818553: an unknown `messageBy` in filterKatchUpMessage must be rejected
+// (400), never drop the caller predicate and return other users' messages. Read-only, no flag.
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';

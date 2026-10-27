@@ -4,17 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Common **company-lookup business rules**. Not gated: all `productionSafe: true`, safe on every
- * default run.
- *
- * `getCompanyDetails`, `getCompanyDetailsByAdmin` and `getCompanyDetailsByMobileNoAndproductId` all
- * answer the SAME question (which company does this business-M admin's mobile number belong to)
- * through three different routes — a real consistency check, not just "does each one respond".
- *
- * The three admin-token-gated endpoints (`common-update-company-logo`, `common-download-company-logo`,
- * `common-remove-company-logo`) are NOT exercised here — see the endpoint definitions' own extensive
- * documented investigation (uploading a logo on a token given for reference, not something to do
- * unasked) and `common-gaps.spec.ts` for the recorded gap.
+ * Common company-lookup rules (read-only, ungated): three routes answer the same "which company owns
+ * this admin's mobile" question and must agree. The company-logo endpoints are in common-gaps.spec.ts.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -75,13 +66,8 @@ test.describe(
         'getCompanyDetailsByMobileNoAndproductId agrees with getCompanyDetails on the companyID for the same mobile number',
       ).toBe(detailsRow?.companyID);
 
-      /*
-       * Live-verified 2026-09-24: countryID does NOT agree across these three — getCompanyDetails
-       * answered 1 (India) while the other two answered 0, for the identical company/mobile number in
-       * the same run. CONFIRMED (2xx-but-wrong-behaviour, not a bench mistake) — filed via
-       * recordBusinessRuleViolation rather than left as a plain soft-assert, since it's a read-side
-       * data-consistency defect the engine's own validators cannot see.
-       */
+      // Known defect: countryID disagrees across the three (1 vs 0). Recorded explicitly, since the
+      // engine's validators cannot see a 2xx data-consistency fault.
       if (byAdminRow?.countryID !== detailsRow?.countryID) {
         endpoints.recordBusinessRuleViolation({
           endpointId: 'common-company-details-by-admin',

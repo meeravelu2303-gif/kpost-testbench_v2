@@ -6,11 +6,7 @@ export interface EndpointFilter {
   ids?: readonly string[];
   /** Endpoint must have at least one of these tags. */
   tags?: readonly string[];
-  /**
-   * Endpoint must have NONE of these tags. Lets a spec cover a module while leaving out the
-   * endpoints it cannot run yet (`needs-login`) without deleting their definitions - which would
-   * silently drop them from coverage.
-   */
+  /** Endpoint must have NONE of these tags. */
   excludeTags?: readonly string[];
   methods?: readonly HttpMethod[];
   /** Module the endpoint belongs to (see src/config/ownership.config.ts). */
@@ -28,11 +24,7 @@ export class ApiRegistry {
       if (this.endpoints.has(definition.id)) {
         throw new Error(`Endpoint "${definition.id}" is already registered`);
       }
-      /*
-       * Uniqueness is per module, not global. KPost's modules are separate services with
-       * their own hosts, and they genuinely share paths — every Spring Boot service answers
-       * `GET /health`, for instance. Only a collision WITHIN one module is a mistake.
-       */
+      // Uniqueness is per module: separate services legitimately share paths like `GET /health`.
       const clash = this.all().find(
         (e) =>
           suiteOf(e) === suiteOf(definition) &&

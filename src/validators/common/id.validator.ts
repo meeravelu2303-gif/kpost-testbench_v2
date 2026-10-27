@@ -2,13 +2,8 @@ import { apiConfig } from '@config/api.config';
 import { createFieldConventionValidator } from './field-convention';
 
 /**
- * `*Id` field names that are NOT the platform's primary-key id format — they are business / reference
- * identifiers with their own shape, so holding them to the ObjectId/UUID pattern is a false positive:
- *   - `companyId` (a company number, e.g. "242"), `countryId` (a reference number, e.g. 1),
- *   - `employeeId` (a human-readable code, e.g. "EMP3411ES").
- * Measured from the live admin responses; see the 2026-09-19 decision-log entry.
- *   - `emailId` (an e-mail address, e.g. KMail signatures' `personalData.emailId`; its format is the
- *     `common.email` check's job). Bugzilla #210 / #665, closed INVALID 2026-09-28 for exactly this.
+ * `*Id` fields that are business/reference identifiers with their own shape (a company number, an
+ * employee code, an e-mail), not the platform id format.
  */
 const NOT_PLATFORM_ID = /^(companyId|countryId|employeeId|ksmaccCompanyID|emailId)$/i;
 
@@ -25,8 +20,7 @@ export const idValidator = createFieldConventionValidator({
   field: apiConfig.dataConventions.id.field,
   // The shape of an identifier is a property of the API - see src/config/response-contract.ts.
   check: (value, visit, context) => {
-    // Business/reference ids (companyId, countryId, employeeId) have their own shape, and a "0"/""
-    // value is the "no reference" sentinel — neither is the platform id format, so neither is a defect.
+    // Reference ids have their own shape, and "0"/"" means "no reference".
     if (NOT_PLATFORM_ID.test(visit.key) || isAbsentId(value)) return undefined;
     const { pattern, description } = context.endpoint.contract.idFormat;
     return pattern.test(String(value)) ? undefined : `not ${description}`;

@@ -6,10 +6,8 @@ import { expect, test } from '@fixtures';
 import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall';
 
 /**
- * The health/performance/layout counterpart to `kall-accessibility.spec.ts`'s 2 dynamic states — the
- * Kool Kall tab active, and the schedule modal (CreateKallModal) open. Same `runUiChecks`/
- * `watchUiHealth` machinery; never completes Submit (blocked on a codegen-pending participant-picker
- * step, same as `kall-features.spec.ts`).
+ * Health/performance/layout checks for Kall's dynamic states: the Kool Kall tab and the open schedule
+ * modal (never submitted).
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 

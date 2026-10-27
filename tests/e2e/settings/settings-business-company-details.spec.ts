@@ -3,29 +3,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Settings · Small Business Settings → Company Details (`CompanyDetails.js`, BUSINESS_S admin only).
- * Confirmed from source: `UpdateCompanyDetails` -> `POST /v2/admin/updateCompanyDetails/` updates the
- * company's PAN/GST numbers — a genuine UPDATE on existing fields (not an additive, undeletable record
- * like Bank Details), so a self-restoring round trip is meaningful here: read the current values,
- * change them, confirm the write, then restore the originals — same discipline as
- * `profile-edit.spec.ts`'s About field.
- *
- * Also confirmed from source: `handleInputChange` forces both fields to `.toUpperCase()` as the user
- * types — asserted directly, not assumed.
- *
- * NEEDS-CODEGEN fix applied 2026-10-04: the component uses MUI's `<Edit />` icon
- * (`@mui/icons-material`), not a `.icon-KP_236_Edit` KPost font-icon — the old `.icon-KP_236_Edit,
- * [class*="edit"]` selector matches neither (MUI renders `MuiSvgIcon-root`, no literal "edit"
- * substring), so the edit form never actually opened. There are also TWO `<Edit />` icons on this page
- * when the summary view is showing — one beside "Company Address" with no `onClick` at all (a second,
- * separate dead-icon defect, not exercised here), and the functional one beside "Company Registration
- * Details" — scoped to by that heading specifically.
- *
- * Also confirmed from source, a real defect worth asserting directly: on a successful save,
- * `handleSaveCompanyDetails` calls `setCompanyDetails({ panNumber: '', gstNumber: '' })` — wiping the
- * local state to blank — instead of the values just saved, before flipping back to the read-only
- * summary view. The backend update itself succeeds; only the immediately-following UI display is
- * wrong, falsely showing both fields as blank right after a successful save.
+ * Settings › Small Business Settings › Company Details (BUSINESS_S admin): edit PAN/GST, confirm the
+ * update and the upper-casing, then restore the originals.
  */
 test.describe(
   'KPost Settings · Company Details (BUSINESS_S, self-restoring)',
@@ -57,8 +36,7 @@ test.describe(
       // Read the current values before touching anything, so they can be restored.
       const panField = page.getByPlaceholder('Enter PAN details');
       const gstField = page.getByPlaceholder('Enter GST details');
-      // Scoped to the "Company Registration Details" heading specifically — a second, non-functional
-      // <Edit /> icon also sits beside "Company Address" elsewhere on this page.
+      // Scoped to this heading: a second, non-functional edit icon sits beside "Company Address".
       const editIcon = page
         .locator('h3', { hasText: 'Company Registration Details' })
         .locator('svg')
@@ -97,9 +75,7 @@ test.describe(
         'a success toast confirms the update',
       ).toBeVisible({ timeout: 10_000 });
 
-      // Confirmed from source: handleSaveCompanyDetails wipes local state to blank on success instead
-      // of showing the just-saved values — the summary view falsely displays blank PAN/GST right after
-      // a successful update, even though the backend write itself succeeded.
+      // On success the component wipes local state to blank instead of showing the saved values.
       const panSummaryValue = page
         .locator('p', { hasText: 'Company Pan Card Number' })
         .locator('b')

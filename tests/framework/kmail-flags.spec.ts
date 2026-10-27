@@ -10,21 +10,13 @@ import {
 import { expect, test } from '@fixtures';
 
 /**
- * KMail's `'Y'`/`'N'` flag reader, and the account registry — both provable with no database.
- *
- * The flag tests exist because the obvious implementation is wrong in a way that still passes:
- * `Boolean('N')` is `true`, so a truthiness check reports every mail as read, starred and deleted
- * simultaneously, and every assertion built on it goes green. That failure is invisible in a test
- * run, so it has to be caught here.
+ * KMail's `'Y'`/`'N'` flag reader and the account registry, both provable with no database.
+ * `Boolean('N')` is true, so a truthiness check would pass every flag assertion silently.
  */
 test.describe('KMail flag semantics @framework', () => {
   test("'Y' is set and 'N' is clear — not truthiness", () => {
     expect(kmailFlag('Y')).toBe('set');
     expect(kmailFlag('N')).toBe('clear');
-    /*
-     * The trap: `'N'` is a non-empty string. Any implementation doing `if (row.read_status)` reads
-     * "not read" as "read", which is exactly backwards and never fails a test.
-     */
     expect(Boolean('N'), 'the naive check is true for N — which is why kmailFlag exists').toBe(
       true,
     );
@@ -38,10 +30,7 @@ test.describe('KMail flag semantics @framework', () => {
   });
 
   test('the NUL byte found on 107 live rows is unknown, not clear', () => {
-    /*
-     * Folding it into `clear` would make a data-quality artefact look like product behaviour, and a
-     * test would then report "the mail was never marked" when the truth is "we cannot tell".
-     */
+    // Folding it into `clear` would turn "we cannot tell" into "never marked".
     expect(kmailFlag('\u0000')).toBe('unknown');
     expect(kmailFlag(null)).toBe('unknown');
     expect(kmailFlag(undefined)).toBe('unknown');
@@ -64,10 +53,7 @@ test.describe('KMail flag semantics @framework', () => {
   });
 
   test('a plaintext subject is reported as an encryption failure', () => {
-    /*
-     * KMail stores subjects as ciphertext. If a stored subject ever equals what was sent, encryption
-     * at rest has stopped being applied — a security regression that no API response would reveal.
-     */
+    // A stored subject equal to what was sent means encryption at rest has stopped.
     const plaintext = 'QA Bench subject';
     const leaked = kmailDb.subjectEncrypted({ kmail_subject: plaintext } as never, plaintext);
     const encrypted = kmailDb.subjectEncrypted(
@@ -87,15 +73,8 @@ test.describe('KMail flag semantics @framework', () => {
 
 test.describe('test account registry @framework', () => {
   test('every account resolves to an id that satisfies the domain policy', () => {
-    /*
-     * The registry points at pre-existing accounts in `.env`, so this is the check that the roles
-     * were wired to the RIGHT accounts. A personal role pointed at a business account would still
-     * log in — and would quietly invalidate every permission and routing assertion built on it.
-     *
-     * `legacyDomain` accounts are exempt by declaration: a personal account on @kpost.in is
-     * pre-existing data (205 of them on KPOST_QA), not a defect, and a kpost_id is the primary key
-     * across ~90 tables.
-     */
+    // A role wired to the wrong account type still logs in but invalidates every check built on it.
+    // `legacyDomain` accounts (personal on @kpost.in, pre-existing data) are exempt by declaration.
     const offenders = TEST_ACCOUNTS.flatMap((account) => {
       const id = kpostIdOf(account);
       if (!id) return [];
@@ -109,7 +88,7 @@ test.describe('test account registry @framework', () => {
   });
 
   test('the domain policy itself matches the product', () => {
-    // Verified on the live signup screen and against KPOST_QA — see signup-domain.spec.ts.
+    // See signup-domain.spec.ts.
     expect(domainFor('PERSONAL')).toBe('kpostindia.com');
     for (const type of ['BUSINESS_S', 'BUSINESS_M', 'BUSINESS_L'] as const) {
       expect(domainFor(type), `${type} is a business type`).toBe('kpost.in');
@@ -126,10 +105,7 @@ test.describe('test account registry @framework', () => {
   });
 
   test('no account embeds an id or a password — both are environment pointers', () => {
-    /*
-     * The file is committed. An id here would name a real account on a shared environment, and a
-     * password would be in the git history permanently and un-rotatable by redeploying.
-     */
+    // The registry is committed: ids and passwords must come from the environment.
     for (const account of TEST_ACCOUNTS) {
       // Only the identity fields — `purpose` is prose and legitimately mentions domains.
       expect(
@@ -144,11 +120,7 @@ test.describe('test account registry @framework', () => {
   });
 
   test('roles are distinct: no two point at the same account', () => {
-    /*
-     * The failure this prevents is silent and total: a sender/receiver flow where both ends are one
-     * account still passes every assertion while testing nothing, and an admin/member permission
-     * check becomes the admin testing itself.
-     */
+    // A sender/receiver flow with one account on both ends passes while testing nothing.
     const ids = TEST_ACCOUNTS.flatMap((account) => {
       const id = kpostIdOf(account);
       return id ? [id.toLowerCase()] : [];

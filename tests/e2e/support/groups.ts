@@ -4,18 +4,9 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect } from '@playwright/test';
 
 /**
- * Group fixtures for UI specs, through the API — create a known group, tear it down completely.
- *
- * Two live facts shape this (2026-10-10):
- *
- *  1. **Never authenticate the API as the account the browser is signed in as.** KPost keeps one
- *     session per account: minting an API token for it kicks the browser session to `/login`
- *     (12 of 12 Group Info attempts died that way). So the group is created by `personal-3`
- *     (qatest3), with the browser's `personal` account as a second admin when the spec needs the
- *     admin view, and every API call here runs as the creator.
- *  2. **`deleteGroup` is refused while members remain** ("Group Deleted Failed you need to remove all
- *     the members"). Teardown removes every member but the creator first, then deletes. A spec that
- *     only called delete left 12 groups behind.
+ * Group fixtures for UI specs, through the API. The group is created by `personal-3`, never the
+ * browser's account (an API login would sign the browser out); teardown removes the members first
+ * because `deleteGroup` is refused while any remain.
  */
 const K = AUTH_PROFILES.kpost;
 export const GROUP_CREATOR: Principal | undefined = K.principals.find(

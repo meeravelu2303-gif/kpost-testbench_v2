@@ -6,14 +6,8 @@ import { expect, test } from '@fixtures';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * Network-resilience angle — when the connection drops mid-session (a phone in a lift, flaky wifi),
- * does the app degrade gracefully, or does it CRASH / FREEZE? This is close to the owner's reported
- * "can't send a second message without refreshing" class: a screen wedged after a failed request.
- *
- * Selector-INDEPENDENT signals only: the screen is loaded online, the network is cut
- * (`context.setOffline`), then a real interaction is driven — and the check is that the page did not
- * throw an uncaught error and did not freeze the main thread. A graceful "offline" state passes; a
- * white-screen crash or a hung tab fails. Files to KPost UI → Ayyappan.
+ * Network resilience: load a screen, go offline, interact, and fail only on an uncaught error or a
+ * frozen main thread. A graceful "offline" state passes.
  */
 test.describe(
   'KPost network resilience — offline mid-session',

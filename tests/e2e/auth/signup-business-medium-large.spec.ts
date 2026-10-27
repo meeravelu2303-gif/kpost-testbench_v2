@@ -3,26 +3,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Business (Medium/Large) signup — the third and last account-tier flow, driven from
- * `MLRegister.js` (a separate, ~2,100-line component — not a variant of `SmallBusiness.js`).
- * Reached via `chooseAccountType('Business')` → `chooseBusinessCategory('Medium' | 'Large')`,
- * confirmed live 2026-09-30 to actually navigate into this component for both tiers (neither is a
- * dead end like Multi-National).
- *
- * Everything except the Company Details step is byte-identical in markup to Small Business's flow
- * (same react-select country/language/domain, same mobile-OTP mechanism, same final KPOST-ID/
- * password screen) — see `SignupPage.ts`'s Medium/Large section doc comment for the confirmation.
- * Only `fillMediumLargeCompanyDetails` is new; everything else reuses Small's own page-object
- * methods.
- *
- * GST No / Registration No / Website have no client-side format validation (confirmed from source:
- * plain `setGstNo`/`setRegNo`/`setWebsite`, no regex, no blur check) — safe to fill with obvious QA
- * placeholder values.
- *
- * Safety: each tier gets its OWN reserved identity (`QA_SIGNUP_MEDIUM_BUSINESS_*` /
- * `QA_SIGNUP_LARGE_BUSINESS_*`), separate from Small's, so the three never race for the same
- * "is it taken?" answer. Like Small, `adminRegistration`-equivalent here mints a real, PERMANENT
- * company — expected to run at most once per identity, same convention as Small's own lifecycle spec.
+ * Business Medium/Large signup (MLRegister.js) through to login. Mints a real, permanent company, so
+ * it is gated on SIGNUP_UI_LIFECYCLE and each tier uses its own reserved identity.
  */
 test.describe(
   'KPost Business signup · Medium/Large full registration → login',
@@ -106,20 +88,8 @@ test.describe(
             website: 'https://qa-bench.example.com',
             registrationNo: 'QA-REG-0000',
             gstNo: 'QA-GST-0000',
-            /*
-             * The product's OWN stated tier boundaries — literal text on the category-picker cards
-             * (`MainSignup.js` lines 451/462/471, confirmed by reading the source): Small "up to 250",
-             * Medium "above 250 up to 2000", Large "above 1500". 300 for Medium is safely inside its
-             * stated range (confirmed live 2026-09-30: 50 and 100 were both rejected with a 400 "Invalid
-             * maximumMembersCount for userType" — both fall in SMALL's range instead, not Medium's).
-             *
-             * Large's own value here (500) is BELOW its stated "above 1500" minimum — deliberately kept
-             * unchanged after the fact as evidence: it was ACCEPTED, and a real permanent company now
-             * exists with a userType of BUSINESS_L despite having far fewer members than the product's
-             * own UI says that tier requires. That is the confirmed defect (see the bug filed for it) —
-             * changing this value now would erase the reproduction. A FRESH Large-tier identity, if one
-             * is ever needed again, should use something unambiguously above 1500 (e.g. 2000) instead.
-             */
+            // Tier bounds on the picker cards: Medium 250-2000, Large above 1500. Large's 500 is kept
+            // below its minimum on purpose: it reproduces the known defect that it is accepted.
             employeeCount: tier.category === 'Medium' ? '300' : '500',
             pincode: testData.pinCode,
             area: 'Chennai',
@@ -168,15 +138,8 @@ test.describe(
 );
 
 /**
- * Discovered live 2026-09-30 while building the Medium tier's own lifecycle test above: an Employee
- * Count of 50 (a perfectly plausible value a real user might type) is rejected by the backend with a
- * 400 `"Invalid maximumMembersCount for userType"` — confirmed via the Playwright trace's own network
- * log, not a guess — and the UI shows absolutely nothing when that happens: no toast, no inline error,
- * the screen just sits there with the same Submit button, indistinguishable from a hang. This is the
- * same silent-failure pattern as #821/#822/#823/#824, just newly found on this flow.
- *
- * `1` is used here (rather than 50) so this regression check does not depend on knowing any tier's
- * exact valid boundary — it only needs a value confidently below EVERY tier's minimum.
+ * An out-of-range Employee Count gets a 400 from the server; the UI must show feedback, not silence.
+ * `1` is below every tier's minimum, so the check does not depend on exact boundaries.
  */
 test.describe(
   'KPost Business signup · Medium/Large employee-count validation',

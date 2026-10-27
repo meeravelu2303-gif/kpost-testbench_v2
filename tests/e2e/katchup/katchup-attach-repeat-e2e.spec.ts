@@ -4,25 +4,8 @@ import type { Page } from '@playwright/test';
 import { EDITOR, messageBySubject, openComposer } from '../support/katchup';
 
 /**
- * Katchup attachments sent ONE AFTER ANOTHER without a page reload.
- *
- * Why: a manual QA report (2026-10-14) — "the first attachment sends fine; the next one, sent again
- * without a refresh, can't be sent / the screen gets stuck", and it happens only sometimes.
- * `katchup-attach-send-e2e.spec.ts` covers a single send only.
- *
- * Source (bubble/WriteMessage/WriteMessage.js, the live composer):
- *   - picking files (`#fileInput` onChange → handleSelectedFile) adds them to `selectedFiles`, asks
- *     `POST /v2/aws/katchup/generate-presigned-url` per file, PUTs the file to storage, then gives the
- *     file a `uuid`; the attachment modal's "Done" stays disabled until every file has one;
- *   - after a successful send, handleKatchupSubmit (:1083) clears `selectedFiles` but does NOT reset
- *     the file input's value (`fileInputRef.current.value = ""` happens only when the modal is closed
- *     with X, :4297, or a file is removed, :921) and does not reset `uploadProgress` (keyed by file
- *     name). In a real browser, re-picking the SAME file then fires no change event at all → nothing
- *     is attached → it looks stuck until a reload. Playwright's setInputFiles always fires the event,
- *     so that case is checked directly: the input must be empty after a send.
- *
- * Every send records each step (presign → storage upload → Done → sendMessage → thread render) so a
- * stuck send names the step it stuck on. ATTACH_REPEAT (default 3) sets the consecutive-send count.
+ * Katchup attachments sent back to back without a page reload; each step is asserted so a stuck send
+ * names where it stuck. ATTACH_REPEAT (default 3) sets the consecutive-send count.
  */
 const REPEAT = Math.max(2, Number(process.env.ATTACH_REPEAT ?? 3));
 
@@ -156,8 +139,8 @@ test.describe(
       try {
         await attachAndSend(page, subjects[0]!, file);
 
-        // In a real browser, choosing the same file again only works if the input was cleared:
-        // otherwise its value is unchanged, no change event fires, and nothing gets attached.
+        // Playwright's setInputFiles always fires change, so check the input directly: in a real
+        // browser an uncleared input fires no change event for the same file and nothing attaches.
         const left = await page
           .locator('#fileInput')
           .evaluate((el: HTMLInputElement) => ({ value: el.value, files: el.files?.length ?? 0 }));
@@ -168,8 +151,7 @@ test.describe(
         console.log(
           `ATTACH-RESEND file input after the send: value="${left.value}", files=${left.files}`,
         );
-        // Proof of the state right after the first send: the message is delivered and the composer
-        // shows no attachment, while the hidden picker still holds the sent file.
+        // Screenshot of the composer state right after the first send, as evidence.
         const shot = test.info().outputPath('after-first-send.png');
         await page.screenshot({ path: shot });
         await test.info().attach('after-first-send', { path: shot, contentType: 'image/png' });

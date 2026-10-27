@@ -1,12 +1,8 @@
 import { testData } from '@config/test-data.config';
 
 /**
- * The Admin screens' own, complete save payloads (ADMIN_HR_MODULES_25), in one place for every Admin spec.
- *
- * Why one place: on 2026-10-26 the server started enforcing the fields the screens require (#13245, #13246,
- * #13252, #13253 fixed). Specs that each built a minimal record of their own (no date of birth, no state …)
- * all broke at once; with this module a future rule change is a single edit. Every value is a QA value: the
- * employee's mobile and e-mail are the reserved QA test-employee identity (QA_ROLE_EMPLOYEE_MOBILE/EMAIL).
+ * The Admin screens' own complete save payloads, shared by every Admin spec so a server rule change
+ * is one edit. Every value is a QA value (the employee uses QA_ROLE_EMPLOYEE_MOBILE/EMAIL).
  */
 type Json = Record<string, unknown>;
 
@@ -22,10 +18,7 @@ export const variablePayload = (attributeId: string, variableName: string): Json
   reportingJson: '[]',
 });
 
-/**
- * A workplace location (WorkPlaceLocationSetup.js:98-120, required :1228-1236): the level, name, country,
- * 6-digit pincode with its state/city/area, and both address lines.
- */
+/** A workplace location: level, name, country, pincode with state/city/area, both address lines. */
 export const locationPayload = (
   attributeId: string,
   variableId: string,
@@ -48,8 +41,8 @@ export const locationPayload = (
 });
 
 /**
- * An employee, all six Employee Data steps (ManualEntry.js:261-420). `lastName` identifies the test's record
- * (the leftovers tool matches the stamped QA patterns). Saves take the object itself, not an array.
+ * An employee, all six Employee Data steps. `lastName` identifies the test's record (the leftovers
+ * tool matches stamped QA names). Saves take the object itself, not an array.
  */
 export const employeePayload = (lastName: string, firstName = 'QA'): Json => ({
   personalInformationObj: {

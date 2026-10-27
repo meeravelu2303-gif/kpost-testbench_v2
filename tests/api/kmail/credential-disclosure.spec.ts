@@ -3,51 +3,9 @@ import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { expect, test } from '@fixtures';
 
 /**
- * KMail credential disclosure — proof for plan item 0b (the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) §16 P0 /
- * §24 re-justification pass).
- *
- * ## What the source shows
- *
- * `SentMailServiceImpl.getMailCredentials` (`Kpost_Kmail_5.0`):
- *
- *     User userObject = userService.getUserOrGroupPassword(kmailCredentialsRO.getKpostID(), "1111111");
- *     ...
- *     if (userObject.getKmailPassword().equals(kmailCredentialsRO.getPassword())) {
- *       responseObj.setFromAddPassword(userObject.getKmailPassword());   // echoed back in plaintext
- *       ...
- *     } else throw new KPOSTWebServiceException("Invalid password");
- *
- * The lookup key is `kpostID` **from the request body** — never the authenticated token's own
- * identity. So the only gate on reading back ANY account's `kmailPassword` is knowing that
- * account's `kmailPassword` already — there is no check that the caller IS that account. This
- * test proves (or refutes) the one part of that finding this bench can test without a real
- * customer password: whether the endpoint is bound to the caller's own identity at all.
- *
- * ## Why this was blocked, and why it no longer is
- *
- * Registered but never driven on live because of the `testkmail` KMail-401 regression (every
- * token answered 401, making any live call meaningless) — see `kmail-auth-gate.ts`. That
- * regression is confirmed resolved (2026-10-02, 499/1755 validations ran clean on the full dry
- * run), so `KMAIL_AUTH_FIXED=true` is set and this is no longer blocked by it.
- *
- * ## Why this is safe to run
- *
- * Two of this bench's own throwaway accounts, which this environment documents as sharing one
- * default password (`QA_PASSWORD`). No real customer credential is sent or guessed — the only
- * password used is the bench's own already-known shared default. This cannot change any state
- * (the endpoint is a pure lookup); nothing is written and nothing needs cleanup.
- *
- * ## A second, independent blocker (confirmed 2026-10-02, after the above was written)
- *
- * `kmail-credentials` is `sideEffect: 'global'` in its own definition (`manage.api.ts`), and
- * `src/validation-engine/production-guard.ts` refuses ANY `global` write on `TEST_ENV=production`
- * unconditionally, by deliberate design — the same wall documented in `docs/generated/blocked-endpoints.md` for the
- * admin company-admin writes. This test would throw `ProductionSafetyError` on this environment even
- * if the safety-classifier pause below were lifted. Both blockers are real and independent; lifting
- * one does not lift the other.
- *
- * The actual disclosed password value (if any) is NEVER logged or asserted on directly — only a
- * boolean (`host` present / HTTP status) is read, so this test's own output cannot leak a secret.
+ * KMail credential disclosure (IDOR): getMailCredentials looks up the body's kpostID, not the
+ * caller's, so A's token may read B's mail credentials. Skipped: the endpoint is sideEffect 'global',
+ * which the production guard always refuses. A disclosed password is never logged, only a boolean.
  */
 const K = AUTH_PROFILES.kpost;
 const A = K.principals.find((p) => p.key === 'personal')!; // caller
@@ -67,11 +25,6 @@ test.describe(
   },
   () => {
     test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
-    // Confirmed live 2026-10-02: `kmail-credentials` is `sideEffect: 'global'`, which
-    // production-guard.ts refuses unconditionally on TEST_ENV=production — KMAIL_LIFECYCLE cannot
-    // change that. Independently, this session's own safety classifier also refused the one attempt
-    // to run this. Both blockers are real; stays test.skip'd rather than left to fail with
-    // ProductionSafetyError every run. See docs/generated/blocked-endpoints.md.
     test.skip(
       true,
       'PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND ' +
@@ -91,9 +44,7 @@ test.describe(
         type: 'note',
         description: `self-lookup status=${ex.status} (establishes whether kmailPassword == the shared QA default for this account at all, before testing cross-account)`,
       });
-      // Not a pass/fail claim by design — a baseline reading only. A 200 means kmailPassword equals
-      // the shared default for THIS account; anything else means it does not, which the cross-account
-      // test below must then be read in light of. The one assertion here is just "got a response".
+      // A baseline reading only: 200 means this account's kmailPassword is the shared QA default.
       expect(
         ex.status,
         'the endpoint answers (any status) for a well-formed self-lookup',

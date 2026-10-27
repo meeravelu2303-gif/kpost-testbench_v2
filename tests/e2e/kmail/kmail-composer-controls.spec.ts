@@ -3,24 +3,8 @@ import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
 
 /**
- * KMail composer controls — the FRD rows that were UI-only GAPs (`requirements-frd.md`, KMail):
- *
- *   FR-KM-016  font / formatting   "Formatting Options" shows the Quill toolbar; Bold / Italic apply
- *   FR-KM-017  AI Assist           the K-AI Assist trigger opens its panel (no generation is run)
- *
- * Read from source (`Kmail/components/WriteMailPage/WriteMailPage.js`,
- * `common/ComposeAssist/ComposeAssist.js`, 2026-10-10):
- *   - the action bar (`.writeMailActionBar`) carries `.icon-KP_98-Font-Style[title="Formatting
- *     Options"]` → `handleTxtFormat` → `showToolbar={showTextEditor}` on `KmailQuillEditor`;
- *   - the K-AI entry is `ComposeAssist`: `.cas-trigger[aria-label="K-AI Assist"]` toggles the
- *     `.cas-pop` panel; opening it makes no AI call — only its actions do (`GeneratePropmt`,
- *     metered), so this test opens and closes the panel and never triggers an action.
- *
- * FR-KM-013 (remove the default signature block) has NO control in the source: the signature dock
- * (`.writeMailSignatureDock`) is display-only and Settings › Mail Signature only edits the fields the
- * block is generated from — recorded as a product gap in `requirements-frd.md`, not tested here.
- *
- * Nothing is sent: the composer is left with an unsent draft that the next navigation discards.
+ * KMail composer controls on /writemail: formatting, K-AI Assist (panel only, no metered generation),
+ * attachments, To suggestions, external recipients and the greeting row. Nothing is sent.
  */
 test.describe(
   'KPost KMail · composer controls (FR-KM-016/017)',
@@ -37,9 +21,7 @@ test.describe(
         .locator('.loader-overlay')
         .waitFor({ state: 'hidden', timeout: 30_000 })
         .catch(() => undefined);
-      // /writemail intermittently lands on the error boundary ("Something went wrong") — the shape of
-      // #990. That is a defect the screen sweep (`screens-batch4`) reports; here it is a skip with the
-      // reason, so a composer-control test never files a duplicate of a page-crash finding.
+      // A page crash (#990) is the screen sweep's finding; skip so this never files a duplicate.
       const crashed = await page
         .getByText(/Something went wrong/i)
         .first()
@@ -105,9 +87,7 @@ test.describe(
         await openCompose(page);
         const aiCalls: string[] = [];
         page.on('request', (r) => {
-          // ComposeAssist's actions all go through TanslateMessage → /translator/translation/; also
-          // catch any whole "ai"/"prompt"/"generate"/"gpt" path segment. (Match segments, not
-          // substrings: "getKmailDashboardMsg" and font file names contain the letters "ai".)
+          // Match whole path segments: "getKmailDashboardMsg" and font names contain the letters "ai".
           const p = new URL(r.url()).pathname;
           if (/\/translator\/translation|\/(ai|prompt|generate|openai|gpt)(\/|$)/i.test(p))
             aiCalls.push(r.url());
@@ -151,7 +131,6 @@ test.describe(
           bar.locator('.icon-KP_36-Attach[title="Attachment"]').first(),
           'the action bar offers Attachment',
         ).toBeVisible();
-        // `input#fileInput` (multiple) sits under the Attachment icon's label — WriteMailPage.js.
         await bar.locator('input#fileInput[type="file"]').setInputFiles([
           { name: 'qa-one.txt', mimeType: 'text/plain', buffer: Buffer.from('QA attachment one') },
           { name: 'qa-two.txt', mimeType: 'text/plain', buffer: Buffer.from('QA attachment two') },
@@ -172,10 +151,7 @@ test.describe(
         ],
       },
       async ({ page }) => {
-        // WriteMailPage.js: focusing To calls getAllKnownContactsAndGroups() and opens
-        // `.suggestion-dropdown`; every keystroke re-filters (getSuggestions) on the contact's name,
-        // id, reference name or designation. The contact list loads asynchronously after focus, so
-        // the first narrowing step POLLS for the list rather than reading it once.
+        // Contacts load asynchronously after focus, so the first narrowing step polls.
         await openCompose(page);
         const to = page.getByRole('textbox', { name: 'To' }).first();
         await to.click();
@@ -202,8 +178,7 @@ test.describe(
           rows.filter({ hasText: target }).first(),
           `the full id still suggests ${needle}`,
         ).toBeVisible();
-        // The QA account knows several qatest* contacts, so the prefix matches more than one and the
-        // full id must strictly narrow; with a single match there is nothing left to narrow.
+        // With a single prefix match there is nothing left to narrow.
         if (broad > 1)
           await expect
             .poll(() => rows.count(), {
@@ -245,13 +220,7 @@ test.describe(
       },
     );
 
-    /**
-     * Compose to the second QA account and return its greeting row. WriteMailPage.js (2026-10-20): the
-     * salutation box is an `Input[placeholder="Select Salutation"]` whose value is `searchTerm` (set to
-     * "Hi" when a recipient is chosen); focusing it opens `.custom-dropdown-menu` with the account's
-     * saluation list (kmail-saluations); a pick calls handleSelect → the box shows it and the menu
-     * closes. The name box beside it is `.himessagetextbox`, auto-filled from the recipient.
-     */
+    /** Compose to the second QA account and return its greeting row (salutation box + name box). */
     async function greetingRow(page: Page) {
       await openCompose(page);
       const to = page.getByRole('textbox', { name: 'To' }).first();
@@ -271,8 +240,7 @@ test.describe(
       await expect(name, 'the recipient name is filled in next to it').not.toHaveValue('', {
         timeout: 10_000,
       });
-      // The To suggestion panel can stay open over the greeting row; Escape in To closes it
-      // (handleKeyDown → setShowContactList(false)).
+      // The To suggestion panel can stay open over the greeting row; Escape closes it.
       await to.press('Escape');
       await page
         .locator('.suggestion-dropdown')
@@ -303,9 +271,7 @@ test.describe(
         test
           .info()
           .annotations.push({ type: 'observed', description: `list: ${options.join(' | ')}` });
-        // The FRD figure lists Hi, Hello, Dear, Sir, Madam, Respect; the web list (18 defaults,
-        // kmail-saluations) carries Sir / Madam / Respect only inside longer forms ("Respected Sir",
-        // "Dear Madam"), so those three are matched as part of an option.
+        // Sir / Madam / Respect only appear inside longer forms ("Respected Sir"), so match a substring.
         for (const s of ['Hi', 'Hello', 'Dear'])
           expect(options, `the list offers "${s}" (FR-KM-007)`).toContain(s);
         for (const s of ['Sir', 'Madam', 'Respect'])
@@ -329,8 +295,7 @@ test.describe(
       'FR-KM-008 — the auto-filled recipient name in the greeting row can be edited by hand @ui',
       { annotation: [{ type: 'requirement-partial', description: 'FR-KM-008' }] },
       async ({ page }) => {
-        // FRD alternative flow. The box has no onChange (commented out in WriteMailPage.js), so typing
-        // is discarded — red on #13213 (KPost UI, 2026-10-20).
+        // Known defect #13213: the name box has no onChange, so typing is discarded.
         test.skip(!testData.victimKpostId, 'needs a second QA account as the recipient');
         const { name, autoName } = await greetingRow(page);
         await name.click();

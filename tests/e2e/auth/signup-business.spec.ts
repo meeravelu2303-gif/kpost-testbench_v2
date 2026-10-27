@@ -5,40 +5,9 @@ import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
 
 /**
- * **Business (Small) signup** — the second of the two account types the signup screen offers.
- * Reached via `chooseAccountType('Business')`, which shows a CATEGORY picker (Small / Medium /
- * Large / Multi-National) before any registration form mounts. Only "Small" is wired to a real,
- * self-serve flow today (`SmallBusiness.js`); Medium/Large use a separate, much larger component not
- * covered here, and Multi-National is unimplemented (just a toast).
- *
- * Country/Language/Domain, the mobile-OTP mechanism, the date-of-birth 18-year floor, the password
- * policy, and the success modal are IDENTICAL to Personal's (same components) — this file only adds
- * the Business-only screens (Company Details) and the category picker, and reuses everything else
- * from `SignupPage`.
- *
- * Safety: the read-only/validation tests never reach Submit. The one full-lifecycle write test is
- * gated behind `SIGNUP_UI_LIFECYCLE=true` (same flag as Personal's) and mints a real, PERMANENT
- * company (`adminRegistration` is a `global` side effect on the API side — a company cannot be
- * deleted through this API), so it uses its own reserved identity
- * (`QA_SIGNUP_BUSINESS_UI_MOBILE`/`QA_SIGNUP_BUSINESS_COMPANY_NAME`/etc.) and is expected to run at
- * most once per identity, same convention as Personal's lifecycle spec.
- *
- * ## Mobile-number uniqueness — the real rule, confirmed with the product owner (2026-09-29)
- *
- * One mobile number MAY legitimately belong to multiple Business accounts, as long as each is a
- * DIFFERENT company — confirmed live: registering a fresh company with an already-registered mobile
- * (no pre-check on this path, unlike Personal's) succeeds outright (200), and this is correct,
- * intended behavior, not a defect. What must never happen is the SAME company having two
- * members/accounts sharing one mobile number — this IS covered, but not from this file: the
- * `admin-adding-user-by-admin` / `POST /admin/addingUserByAdmin/` API endpoint is a `global`-
- * side-effect write this bench's own production-safety guard blocks unconditionally (by design —
- * `productionSafe` is checked before `ALLOW_DESTRUCTIVE_TESTS`, which can never unlock a `global`
- * write here), so that path is not how this gets tested. Instead, see
- * `tests/e2e/user-management/usermanagement.spec.ts` ("adding a member with a mobile already used in THIS company is
- * rejected"): the REAL admin UI, through a normal authenticated session (`STORAGE_STATE_BUSINESS`,
- * no bypass of any kind), confirms the rejection — `POST /v2/common/mobileNoExistInsideCompany/`
- * correctly reports the collision and the form stays blocked before ever reaching ADD, so that test
- * is fully safe to run unattended and never provisions a real member.
+ * Business (Small) signup: the category picker, Company Details validation, and one full registration.
+ * The full flow mints a real, permanent company, so it is gated on SIGNUP_UI_LIFECYCLE and uses its
+ * own reserved identity. One mobile may legitimately belong to several different companies.
  */
 test.describe(
   'KPost signup · Business category picker (read-only)',
@@ -53,8 +22,7 @@ test.describe(
       await signup.goto();
       await signup.chooseAccountType('Business');
 
-      // Each card renders twice (a hidden responsive/mobile duplicate alongside the visible one) —
-      // confirmed live: 8 `.category-contentBox-layout` elements, 4 visible + 4 `display:none`.
+      // Each card renders twice (a hidden mobile duplicate), so filter to the visible one.
       for (const category of ['Small', 'Medium', 'Large', 'Multi-National']) {
         await expect(
           page
@@ -64,8 +32,7 @@ test.describe(
         ).toBeVisible({ timeout: 15_000 });
       }
 
-      // Multi-National has no registration flow behind it — it must say so, not silently do nothing
-      // and not pretend to proceed. A toast is the product's own documented way of saying "not yet".
+      // Multi-National has no flow behind it; it must say so with a toast, not go silent.
       await signup.chooseBusinessCategory('Multi-National');
       await expect(
         page.getByText(/currently in progress/i),
@@ -89,11 +56,8 @@ test.describe(
 );
 
 /**
- * See #825 (CRITICAL, confirmed 2026-09-29): below the 992px desktop/mobile CSS breakpoint, the app
- * routes into a separate, self-contained legacy signup implementation embedded in MainSignup.js
- * (not the SmallBusiness.js component desktop uses). Personal signup works correctly on this path;
- * Business does not — tapping any category resets the whole flow back to the account-type picker.
- * Read-only: never reaches a form, so there's nothing to clean up either way.
+ * Below the 992px breakpoint the app uses a separate legacy signup in MainSignup.js (#825).
+ * Read-only: never submits a form.
  */
 test.describe(
   'KPost signup · mobile viewport (below 992px)',
@@ -134,8 +98,6 @@ test.describe(
         .click();
       await page.waitForTimeout(1500);
 
-      // #825 (fixed, re-verified live 2026-10-05): this used to reset back to the very first "Select
-      // Account Option" screen on a narrow viewport instead of reaching the registration form.
       await expect(
         page.locator('.react-select__input').first(),
         'Business signup reaches a registration form on mobile, matching Personal — #825',
@@ -210,11 +172,7 @@ test.describe(
     }) => {
       await reachCompanyDetails(signupPage, page);
 
-      // No known-taken unique name exists in test data (testData.uniqueName is confirmed genuinely
-      // available via a live check — see the investigation that led to #816), so the positive case is
-      // what this can honestly assert live; the negative case (already-taken) is covered below by
-      // stubbing the endpoint directly, since #816 already proves this component's error-display path
-      // for the sibling Company Name field is broken and the same pattern is worth checking here too.
+      // testData.uniqueName is free, so only the accepted case is live; the taken case is stubbed below.
       const { uniqueNameOutcome } = await signupPage.fillCompanyDetails({
         companyName: `QA Fresh Co ${Date.now()}`,
         typeOfBusiness: 'QA Testing',
@@ -232,10 +190,7 @@ test.describe(
       page,
       signupPage,
     }) => {
-      // No real already-taken unique name is available in test data, so the server's rejection is
-      // stubbed here — the subject under test is the CLIENT's rendering of that response, which a
-      // stubbed 409 exercises exactly as well as a real one (same convention as
-      // login-functional.spec.ts's stubbed-error test).
+      // No taken unique name exists in test data, so the 409 is stubbed; the client's rendering is tested.
       await page.route('**/uniqueNameExist**', async (route) => {
         await route.fulfill({
           status: 409,
@@ -268,16 +223,8 @@ test.describe(
       ).toBeVisible({ timeout: 10_000 });
     });
 
-    /*
-     * Confirmed from source (SmallBusiness.js): Submit's `disabled` expression ANDs five conditions
-     * together, including `password !== confirmpassword` — so in the normal case (matching passwords)
-     * the button is NOT disabled even with the agree-checkbox unchecked. The actual gate is inside the
-     * onClick handler (`if (agreeChecked) { adminRegister(); }`), so clicking Submit without agreeing
-     * is a SILENT no-op: no error, no toast, nothing — the button just does nothing and looks broken.
-     * This is the exact "server/product validates something the UI does not surface properly" class of
-     * defect the rest of this session has been hunting for; verified live below rather than asserted
-     * from source alone.
-     */
+    // SmallBusiness.js gates on agreeChecked inside onClick, not on `disabled`, so Submit without
+    // agreeing is a silent no-op. Only "no registration is dispatched" is asserted.
     test('Submit without agreeing to the terms silently does nothing (no error is shown) @ui', async ({
       page,
       signupPage,
@@ -326,8 +273,6 @@ test.describe(
           `an error/prompt about agreeing was shown: ${anyErrorShown}`,
       });
 
-      // The one thing that must never happen regardless of how the UI signals it: a company must not
-      // get created without the terms being agreed to.
       expect(
         registerRequests,
         'no registration request may be dispatched while the agree-checkbox is unchecked',
@@ -365,9 +310,7 @@ test.describe(
       await signupPage.selectCountryLanguageDomain('India', 'English', 'kpost.in');
 
       const otpOutcome = await signupPage.requestMobileOtp(mobileNumber);
-      // Confirmed from source: unlike Personal, Business's sendOTP does not pre-check mobile existence
-      // before sending an OTP (the check is Personal-only), so 'already-exists' is not expected to fire
-      // here — but the union member exists on the shared method signature, so it is still handled.
+      // Business's sendOTP does not pre-check the mobile, so this is handled only defensively.
       test.skip(
         otpOutcome === 'already-exists',
         `${mobileNumber} was reported as already registered — unexpected on the Business path per ` +
@@ -424,8 +367,7 @@ test.describe(
         timeout: 20_000,
       });
 
-      // The full KPOST ID is only known now (dot-joined local part + whatever domain the dropdown
-      // offered) — read it back from the success flow having completed, then log in with it.
+      // The Business KPOST ID is the dot-joined designation id and unique name.
       const fullKpostId = `${testData.signupBusinessDesignationId}.${testData.signupBusinessUniqueName}@kpost.in`;
 
       recordCreatedAccount({

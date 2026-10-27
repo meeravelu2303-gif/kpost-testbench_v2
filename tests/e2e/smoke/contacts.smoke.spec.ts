@@ -19,8 +19,7 @@ test.describe(
       expect(await gotoContacts(page), 'the Contacts tab opens with its search box').toBe(true);
       const known = testData.victimKpostId.split('@')[0]!;
       await contactsSearchBox(page).fill(known);
-      // A My Contacts row is the contact's avatar image, named after them ("qatest2 bench"). Plain text
-      // is not enough: the same name also appears in hidden Recents message previews.
+      // Match the avatar image: the plain name also appears in hidden Recents previews.
       await expect(
         page.getByRole('img', { name: new RegExp(`^${known} `, 'i') }).first(),
         `My Contacts lists ${known}`,

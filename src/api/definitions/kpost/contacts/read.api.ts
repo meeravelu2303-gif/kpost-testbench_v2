@@ -3,13 +3,8 @@ import { body } from '../kpost-endpoint';
 import { defineContactsEndpoint } from './contacts-endpoint';
 
 /**
- * Contacts **reads** — the caller's address book, groups, imported phone contacts, blocked list, and
- * the two search surfaces.
- *
- * Every one reads only our own account or performs a harmless search, so all run on live. The
- * `lastfetchDate: null` the client sends means "the full list" (a delta sync passes a date). The
- * POST reads state `destructive: false` — without it a POST resolves to destructive, is tagged
- * `@destructive`, and the production `grepInvert` drops all its tests (the Dashboard trap).
+ * Contacts reads: address book, groups, phone contacts, blocked list and search. All run on live.
+ * `lastfetchDate: null` means the full list; POST reads set `destructive: false`.
  */
 const READ_TAGS = ['contacts-read'] as const;
 
@@ -24,9 +19,7 @@ export const myContactsApi = defineContactsEndpoint({
   tags: [...READ_TAGS, 'list'],
   destructive: false,
   productionSafe: true,
-  // A contact's email is USER-ENTERED data stored in the DB; the read faithfully returns it. A
-  // malformed email in one contact row is a data-quality issue in that record, not a defect in this
-  // read — so common.email (which flags returned email strings) is not meaningful here.
+  // Contact emails are user-entered data returned as-is, so common.email does not apply.
   skipValidators: ['common.email'],
   request: body(() => ({ lastfetchDate: null })),
 });
@@ -39,8 +32,7 @@ export const myUnknownContactsApi = defineContactsEndpoint({
   tags: [...READ_TAGS, 'list'],
   destructive: false,
   productionSafe: true,
-  // Same as myContacts: emails here are the un-saved senders' own data, returned as-is — a malformed
-  // one is that record's data quality, not a defect in this read.
+  // As in myContacts, emails are other people's data returned as-is.
   skipValidators: ['common.email'],
   request: body(() => ({ lastfetchDate: null })),
 });
@@ -84,7 +76,7 @@ export const blockedContactsApi = defineContactsEndpoint({
   summary: 'The contacts the caller has blocked',
   tags: [...READ_TAGS, 'block'],
   productionSafe: true,
-  // Types-only, from a CAPTURED live body (2026-10-11): { data:[kpostID…], urlPath, status, statusCode }.
+  // Types-only, from a captured live body.
   responseSchema: typesOnlySchema({ data: [], urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 
@@ -116,16 +108,8 @@ export const searchDetailsApi = defineContactsEndpoint({
   // Reference data (area names), not a person. Harmless read.
   destructive: false,
   productionSafe: true,
-  /*
-   * A REAL cascade, not independent lookups — live-verified 2026-09-24, correcting the prior
-   * assumption here (that `areaName` "ignores" the other fields). The server requires each level
-   * populated from the one above it: `country` -> `provienceName` (a ZONE, e.g. "Southern Zone", not
-   * a state) -> `state` (needs `provienceName`) -> `city` (needs `provienceName` + `state`) ->
-   * `areaName` (needs all three). Requesting `areaName` with the lower levels empty 400s
-   * ("Missing required fields for requestType 'areaName'") — that was this default, so the
-   * endpoint's own baseline call always failed. `provienceName` is the only level valid with just
-   * `country`, so it is the new default; `contacts-search-cascade.spec.ts` drives the full chain.
-   */
+  // A cascade: country -> provienceName (a zone) -> state -> city -> areaName, each needing the
+  // levels above. Only `provienceName` works with just `country`; the cascade spec drives the rest.
   request: body(() => ({
     requestType: 'provienceName',
     country: 'INDIA',

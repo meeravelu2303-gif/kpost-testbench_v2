@@ -11,14 +11,9 @@ import {
 } from '../support/screen-payloads';
 
 /**
- * Input hardening on every Admin record the screens edit (owner 2026-10-26):
- *   1. XSS on UPDATE — each free-text field updated with markup must be refused, or at least never stored
- *      and handed back verbatim (the saves already refuse markup; the updates were never probed).
- *   2. Oversized input — an oversized text value (100 KB) on save and on update must get a clean 4xx: a 5xx is a crash, a
- *      200 means the field has no length limit at all.
- * One request per case, sequential (not load). QA company 242 only; everything created is deleted. Role
- * postings are left out on purpose: their text is forwarded to KPost and live KSMACC accounts, and attack
- * payloads must not be pushed into those systems.
+ * Input hardening on every Admin record type: markup in an update must not be stored verbatim, and
+ * oversized text on save/update must get a clean 4xx. QA company 242 only; everything is deleted.
+ * Role postings are left out: their text is forwarded to KPost and live KSMACC.
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',
@@ -26,7 +21,7 @@ const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
 const stamp = Date.now();
 const name = (label: string): string => `QA HARDEN ${label} ${stamp}`;
 const XSS = ['<script>alert(document.cookie)</script>', '<img src=x onerror=alert(1)>'];
-// 100 KB by default: 1 MB sometimes got no answer at all (a timeout proves nothing). OVERSIZE_CHARS overrides.
+// 100 KB by default (larger sizes can time out, which proves nothing). OVERSIZE_CHARS overrides.
 const HUGE = 'A'.repeat(Number(process.env.OVERSIZE_CHARS ?? 100_000));
 const SIZE = `${Math.round(HUGE.length / 1000)} KB`;
 
@@ -258,9 +253,8 @@ test.describe('Admin · input hardening: XSS on updates and oversized input @api
               .toBe(false);
           }
 
-        // 2. Oversized input on save and on update (the first free-text field). Opt-in while #13258 is open:
-        // the server stores these minutes AFTER answering (or after the bench gave up), so records land past
-        // this test's own clean-up — remove them with qa-leftovers-cleanup afterwards.
+        // 2. Oversized input on the first free-text field. Opt-in (known defect #13258): the server
+        // stores these after the test's clean-up, so run qa-leftovers-cleanup afterwards.
         if (process.env.ADMIN_OVERSIZE !== 'true') {
           test.info().annotations.push({
             type: 'skipped part',

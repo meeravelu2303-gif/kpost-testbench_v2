@@ -4,15 +4,9 @@ import type { BugCandidate } from './bug-candidate';
 import { knownFalsePositiveReason } from './known-false-positives';
 
 /**
- * Two gates stand between a failing run and a Bugzilla ticket. Filing is irreversible (Bugzilla
- * has no delete, only resolve), so an invalid ticket costs a human's time forever.
- *
- * 1. The RUN gate — is this run trustworthy at all?
- * 2. The CANDIDATE gate — does this finding's own evidence support its claim?
- *
- * Both are deliberately narrow. A gate that guesses suppresses real defects, which is worse
- * than letting a weak one through, so every rule below rejects only what can be read off the
- * record itself. Every suppression is reported, never silent.
+ * The run gate (is this run trustworthy?) and the candidate gate (does the finding's own evidence
+ * support it?). Filing is irreversible, but a guessing gate hides real defects, so each rule
+ * rejects only what the record shows, and every rejection is reported.
  */
 
 export interface RunValidityInput {
@@ -34,11 +28,7 @@ export interface RunValidity {
 /** Below this share of collected tests, the run collapsed and its findings are a partial sample. */
 const MIN_EXECUTION_RATIO = 0.5;
 
-/**
- * A bench that cannot run must be loud, never clean — and must never file. A run where every
- * spec failed to import produces zero findings, which is indistinguishable from a healthy API
- * unless this gate says otherwise.
- */
+/** A collapsed run must be loud and never file: no findings from a broken bench looks healthy. */
 export function assessRunValidity(input: RunValidityInput): RunValidity {
   const { executed, collected, loadErrors, status } = input;
 
@@ -80,12 +70,8 @@ const BENCH_FAULT = [
 ];
 
 /**
- * A failure whose only evidence is that the app could not be reached or did not answer in time — the
- * API's timeouts, and the browsers' own network errors (Firefox `NS_ERROR_NET_TIMEOUT`, Chromium
- * `net::ERR_CONNECTION_TIMED_OUT`, WebKit "Timeout was reached" / "Could not resolve hostname"). Never filed, and never treated as proof
- * that a bug is still broken. The browser forms were missing until 2026-10-09: a Firefox run hit by
- * server throttling (25 of its last 40 failures were NS_ERROR_NET_TIMEOUT) would have filed them as
- * new bugs and marked open bugs "still broken" with a screenshot of an error page as "proof".
+ * The app could not be reached or did not answer (API timeouts and each browser's network errors).
+ * Never filed, and never proof that a bug is still broken.
  */
 export const ENVIRONMENTAL_UI_OR_API_FAILURE =
   /no HTTP response|apiRequestContext\.fetch|Timeout\s*\d+\s*ms exceeded|Test timeout of \d+\s*ms exceeded|NS_ERROR_[A-Z_]+|net::ERR_[A-Z_]+|Could not connect to (the )?server|ERR_CONNECTION|page\.goto: Timeout was reached|is interrupted by another navigation|interrupted by another navigation to|frame was detached|Execution context was destroyed|auth session dropped|lost its login session|Could not resolve hostname|The network connection was lost|A server with the specified hostname could not be found/i;
@@ -103,15 +89,11 @@ function statusIn(text: string): number | undefined {
 }
 
 /**
- * Why this candidate must not be filed, or undefined when it may be.
- *
- * The evidence rules come from real false positives: a claim that data was exposed cannot rest
- * on a response the server refused (401/403), and a claim that identifiers are enumerable
- * cannot rest on a 404 where nothing resolved.
+ * Why this candidate must not be filed, or undefined. E.g. "data exposed" cannot rest on a 401/403,
+ * and "ids enumerable" cannot rest on a 404.
  */
 export function candidateRejection(candidate: BugCandidate): string | undefined {
-  // A reviewer has judged this finding a non-defect (see known-false-positives.ts). Checked first so
-  // the reason is recorded verbatim, rather than the finding being rejected for an incidental reason.
+  // Checked first, so a reviewer's judgment is the recorded reason.
   const knownFp = knownFalsePositiveReason(candidate);
   if (knownFp) return knownFp;
 
@@ -119,20 +101,12 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
     return `severity ${candidate.severity} is below the filing floor`;
   }
 
-  // A standalone response-time/timeout finding is environmental — the same endpoint is fast on the
-  // next run — so it is never filed on its own. A genuine timeout still surfaces as the endpoint's
-  // 5xx/error ticket (the cascade anchor), which is not a performance validator.
+  // A standalone response-time finding is environmental; a real timeout files via the cascade.
   if (/^performance\.(response-time|timeout)$|^response\.time$/.test(candidate.classification)) {
     return 'a response-time / timeout check is environmental (it flaps between runs), not a filed defect';
   }
 
-  // A GATEWAY 5xx (502/503/504) or a no-HTTP-response/timeout means the UPSTREAM never answered — the
-  // API gateway could not reach the app, or the request timed out. That is transient/environmental and
-  // proves nothing about the endpoint: its real behaviour (200, or a real 4xx/500 the app returns) shows
-  // up on a healthy run, and probing it several times confirms whether it reproduces. So it is never
-  // filed. NB: a genuine app 500/501 (the app itself returning a server error, e.g. an NPE) is a real
-  // crash and is NOT dropped here — only gateway-level failures (502/503/504) and non-responses are.
-  // (Raw socket errors — ECONNREFUSED / ENOTFOUND / socket hang up — are caught below by BENCH_FAULT.)
+  // A gateway 502/503/504 or no response is transient; an app 500/501 still files.
   const transient = `${candidate.actual} ${candidate.title} ${candidate.narrative}`;
   if (
     candidate.responseStatus === 502 ||
@@ -144,8 +118,7 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
     return 'a gateway 5xx (502/503/504) or a no-response/timeout is a transient upstream failure (the app did not respond), not a product defect';
   }
 
-  // The test failed at a step marked as setup (src/ui/setup-step.ts), so it never reached the check
-  // its title names. Read off the record, not guessed: only an explicitly marked assertion matches.
+  // Failed at a marked setup step (src/ui/setup-step.ts), so the named check never ran.
   if (`${candidate.actual} ${candidate.title}`.includes(SETUP_STEP_MARKER)) {
     return 'a setup step failed (the test stopped before its own check), so this is not evidence of the defect it names';
   }
@@ -180,13 +153,9 @@ export function candidateRejection(candidate: BugCandidate): string | undefined 
 }
 
 /**
- * Why a flow-triggered server error must be verified by hand before it creates or reopens a ticket.
- *
- * A `flow.server-error` is a 5xx seen once during a lifecycle flow. It carries no reproduction score
- * and often no replayable request (a multipart upload, a request built from earlier steps), and the
- * fault can be intermittent (about 1 in 15 for removeGroupMember and scheduledKall) or tied to state
- * (removing a profile image that does not exist). Auto-reopening on it reopened bugs that did not
- * reproduce. Commenting on an already-open ticket stays automatic; only create and reopen wait.
+ * Why a `flow.server-error` must be verified by hand before it creates or reopens a ticket: a
+ * one-off 5xx with no reproduction score, often intermittent. Commenting on an open ticket stays
+ * automatic.
  */
 export function flowFindingHoldReason(candidate: BugCandidate): string | undefined {
   if (candidate.classification !== 'flow.server-error') return undefined;
@@ -196,15 +165,7 @@ export function flowFindingHoldReason(candidate: BugCandidate): string | undefin
   );
 }
 
-/**
- * Why a BRAND NEW candidate (no existing ticket found at all) should be held for a human to judge
- * rather than auto-filed as a confirmed defect — or undefined when it is confident enough to file.
- *
- * Only called on the `createBug` path. A finding that already matches an existing ticket is never
- * held back here: commenting on / reopening something a human already triaged is low-risk and
- * should never wait on manual review, no matter how the reproduction scored. This only guards the
- * one moment that is hard to undo — minting a brand new ticket number.
- */
+/** Why a brand-new candidate should be held for review rather than filed; create path only. */
 export function uncertainNewDefect(candidate: BugCandidate): string | undefined {
   const flowHold = flowFindingHoldReason(candidate);
   if (flowHold) return flowHold;

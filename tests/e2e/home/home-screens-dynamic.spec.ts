@@ -6,21 +6,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * The health/performance/layout counterpart to `home-accessibility.spec.ts`'s two dynamic states —
- * Contacts tab active, and Advanced Search modal open. The generic per-screen sweep (`screens.ts`)
- * only ever drives `/home` in its DEFAULT state (Recents tab, no modal), so `runUiChecks`'s full
- * catalogue — health, performance, and (for this desktop-only app) the `ui.layout` check at the two
- * SUPPORTED desktop widths (1280px/1440px, confirmed from `ui-checks.ts`'s own `responsiveCheck`) —
- * never ran against either of these two states. This is Home's "responsive" coverage in the sense
- * that actually applies here: KPost has no mobile layout by design (`ui-checks.ts`), so the
- * meaningful responsive question for an authenticated screen is "does it hold together across the
- * desktop widths it DOES support," not "does it work on a phone" — the same reasoning
- * `signup-login-responsive.spec.ts` documents for why ITS mobile/tablet checks are scoped to the
- * public, pre-auth Signup/Login screens only.
- *
- * Kept in a SEPARATE file from `home-accessibility.spec.ts` and out of `UI_FILING_SPECS`, same reason
- * as `signup-screens-post-otp.spec.ts`: unproven new screens need their own clean run(s) before a
- * selector mistake on the very first run can auto-file a false bug.
+ * runUiChecks (health, performance, desktop layout at 1280/1440px) on Home's Contacts tab and the
+ * Advanced Search modal, which the per-screen sweep never reaches. Out of UI_FILING_SPECS for now.
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 

@@ -3,9 +3,8 @@ import addFormats from 'ajv-formats';
 import { z } from 'zod';
 
 /**
- * Endpoints may describe payloads with zod (code-first) or plain JSON Schema (OpenAPI-first).
- * Both are normalised to JSON Schema and validated by one Ajv instance, so schema validation,
- * negative-case generation and OpenAPI import all share a single implementation.
+ * A payload schema as zod or JSON Schema; both normalise to JSON Schema and validate through one
+ * Ajv instance.
  */
 export type JsonSchema = Record<string, unknown>;
 export type ContractSchema = z.ZodType | JsonSchema;

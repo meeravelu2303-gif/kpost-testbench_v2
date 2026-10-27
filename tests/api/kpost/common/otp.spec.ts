@@ -12,10 +12,8 @@ test.describe(
   'KPost common · OTP and password recovery',
   { tag: ['@api', '@platform', '@regression'] },
   () => {
-    // Exclude the OTP-CONSUME endpoints (validateOTP / validateMailOTP): validating a code needs a live
-    // session from a PRIOR send in the SAME run, which the standalone engine does not do — so run
-    // standalone they always answer 500 ("OTP validation failed"), a bench precondition, not a defect.
-    // They are exercised end-to-end (send → validate) by the OTP signup lifecycle instead.
+    // Exclude validateOTP / validateMailOTP: they need a prior send in the same run, so standalone
+    // they always 500. The OTP signup lifecycle covers them end to end.
     describeEndpointCases({ tags: ['common-otp'], excludeTags: ['otp-consume'] });
   },
 );

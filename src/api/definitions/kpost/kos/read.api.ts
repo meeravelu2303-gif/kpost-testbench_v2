@@ -3,10 +3,8 @@ import { pathParams } from '../kpost-endpoint';
 import { defineKosEndpoint, defineUndocumentedKosEndpoint } from './kos-endpoint';
 
 /**
- * KOS **reads** — the caller's KWord document list and K-AI sessions run on live; the reads keyed by
- * a real `docId` / `sessionId` (document detail, presence, access activity, revisions, AI messages)
- * need an id only a create/session produces, so they stay blocked (`needs-doc-id`) and are exercised
- * by the lifecycle.
+ * KOS reads: the document list and AI sessions run on live; reads keyed by a real
+ * `docId`/`sessionId` are lifecycle-only.
  */
 const READ_TAGS = ['kos-read'] as const;
 
@@ -17,21 +15,12 @@ export const listDocumentsApi = defineKosEndpoint({
   summary:
     "The caller's KWord documents (workbook-documented path — confirmed not the real one, see kos-documents-type)",
   tags: [...READ_TAGS, 'kword', 'needs-id'],
-  // testingapi answers 404 "No matching endpoint for this request" — the KWord route is not deployed
-  // on the test build. CONFIRMED 2026-10-02 via frontend trace: this path has no caller anywhere in
-  // the real client at all — GetAllKWordDocs (KOS.js:235-263) calls /kword/documentsType instead
-  // (see kos-documents-type below). The 404 may simply be this exact path never having been real.
   note: 'testingapi 404 "No matching endpoint" — AND confirmed zero frontend callers of this exact path; the real list call is kos-documents-type',
 });
 
 /**
- * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. This is
- * the function the real client actually uses to list KWord documents (`listDocumentsApi` above,
- * `/kword/documents/`, is the workbook's documented-but-dead path). Real callers:
- * `KOS.js:235-263` (`GetAllKWordDocs(type)`, an OPTIONAL query param — `?type=` only appends when
- * truthy), used at `KWord.js:2375,2747` and in KPresenter, **always called with no argument at all**
- * in both real call sites — so the confirmed-real shape is no query string whatsoever, not a guessed
- * `type` value.
+ * Not in the workbook: the client's real KWord document list (KOS.js:235-263), always called with
+ * no query string.
  */
 export const documentsTypeApi = defineUndocumentedKosEndpoint({
   id: 'kos-documents-type',
@@ -50,8 +39,8 @@ export const aiSessionsApi = defineKosEndpoint({
   path: '/ai/sessions',
   summary: "The caller's K-AI session history",
   tags: [...READ_TAGS, 'ai'],
-  // Reads our own AI session list. The client passes the model as `/ai/sessions/{aiType}`; the
-  // workbook documents `/ai/sessions`, so a query carries the model without changing the contract row.
+  // Our own AI sessions; a query carries the model so the request matches the workbook's
+  // `/ai/sessions` row.
   productionSafe: true,
   request: () => ({ query: { aiType: 'general' } }),
 });

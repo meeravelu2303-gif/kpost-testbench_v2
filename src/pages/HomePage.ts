@@ -3,15 +3,9 @@ import { test } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 /**
- * The Home screen's OWN dashboard — the Recents/Contacts tab switcher (`HomeDashboard.js`) and the
- * Recents tab's search + Advanced Search (`Recent.js`). Deliberately scoped narrow: the Contacts tab
- * renders Katchup's own shared `Contact` component (already covered by `contacts*.spec.ts`), and the
- * Recents list itself renders the shared `RecentMessage` component (already covered by
- * `katchup*.spec.ts`) — this page object only owns what is unique to Home: the tab switch and the
- * search/filter UI wrapped around that shared list.
- *
- * NEEDS-LIVE-TUNING: built from source (`KPOST_REACTJS_2023_V1`'s `HomeDashboard.js`/`Recent.js`),
- * not a codegen recording — remove this note once a run has confirmed the selectors below.
+ * The Home dashboard's own controls: the Recents/Contacts tabs and the Recents search and Advanced
+ * Search (`HomeDashboard.js`, `Recent.js`). The shared contact and message lists belong to other
+ * page objects.
  */
 export class HomePage extends BasePage {
   readonly path = '/home';
@@ -46,27 +40,17 @@ export class HomePage extends BasePage {
   }
 
   /**
-   * Types into the Recents search box — a pure client-side filter on the already-loaded message
-   * list (`Recent.js` passes `searchQuery` straight into `RecentMessage` as a prop), NOT a network
-   * call and NOT the same thing as opening Advanced Search (see `openAdvancedSearch` below).
+   * Types into the Recents search box: a client-side filter, not a network call or Advanced Search.
    */
   async searchRecents(query: string): Promise<void> {
     await test.step(`Home: filter recents by "${query}"`, async () => {
-      // Both the Recents and Contacts tab panels stay mounted (same pattern documented in
-      // contacts.spec.ts) - each with its own "Search" placeholder. Recents renders first in the
-      // DOM, so `.first()` is the on-screen Recents copy when that tab is active (Home's default).
+      // Both tab panels stay mounted with a "Search" box; Recents renders first.
       await this.page.getByPlaceholder('Search').first().fill(query);
     });
   }
 
   /**
-   * Opens the Advanced Search modal via its own dedicated icon button
-   * (`.icon-KP_225_Advanced-Search`), next to the mic icon in the Recents search bar.
-   *
-   * Found live 2026-10-01 (after a deploy): clicking the search placeholder itself no longer opens
-   * Advanced Search — confirmed via DOM inspection that the search box, mic, and Advanced Search are
-   * now three separate controls. Previously the placeholder click doubled as the trigger; that is no
-   * longer true, so this targets the dedicated icon directly instead.
+   * Opens Advanced Search via its own icon button (`.icon-KP_225_Advanced-Search`) beside the mic.
    */
   async openAdvancedSearch(): Promise<void> {
     await test.step('Home: open Advanced Search', async () => {
@@ -78,24 +62,10 @@ export class HomePage extends BasePage {
   }
 
   /**
-   * Fills any subset of Advanced Search's fields. Confirmed from source: the "Search" submit button
-   * stays `isDisabled` until "To" (a date) is filled — REGARDLESS of which other fields are set. That
-   * is asserted on directly in `home-functional.spec.ts` as its own finding, not silently worked
-   * around here, since a non-date search (e.g. "Enter Word" only) being unable to submit without
-   * ALSO picking a date range is exactly the kind of thing worth surfacing.
-   *
-   * The four dropdowns are react-select (`common/Select/Select.js` — confirmed
-   * `classNamePrefix="react-select"`, same as Signup's own) AND form a CHAIN of dependencies,
-   * confirmed from source — filling them out of order does nothing, since the later one is still
-   * `isDisabled`:
-   *   dataType  ->  enables messageBy  ->  enables messageType  ->  enables contentType
-   * This method always fills them in that order regardless of the order given in `filters`.
-   *
-   * Found live 2026-10-01 (after a deploy): "Enter Word" itself is now disabled until ALL FOUR
-   * dropdowns are filled — previously it was reachable independently of the chain (see the filed
-   * ticket on this). So whenever `word` is requested without the caller also naming all four
-   * dropdowns, this defaults every unset one to "All" purely to reach the field — a test-plumbing
-   * concession, not a statement that "All" is what a real user would pick.
+   * Fills any subset of Advanced Search. The dropdowns form a chain (dataType → messageBy →
+   * messageType → contentType), so they are filled in that order. "Enter Word" unlocks only when
+   * all four are set, so unset ones default to "All" when `word` is given. Search stays disabled
+   * until "To" is set.
    */
   async fillAdvancedSearch(filters: {
     dataType?: string;
@@ -107,9 +77,7 @@ export class HomePage extends BasePage {
     toDate?: string;
   }): Promise<void> {
     await test.step('Home: fill Advanced Search filters', async () => {
-      // "All" only stands in for a dropdown the caller never named, and only when `word` needs the
-      // full chain completed to unlock — a caller testing the chain itself (no `word`) still gets
-      // the exact, untouched subset it asked for.
+      // Without `word`, the caller gets exactly the subset it asked for.
       const fallback = filters.word ? 'All' : undefined;
       const dataType = filters.dataType ?? fallback;
       const messageBy = filters.messageBy ?? fallback;
@@ -127,13 +95,7 @@ export class HomePage extends BasePage {
     });
   }
 
-  /**
-   * Opens one of Advanced Search's 4 react-select dropdowns (addressed by its own placeholder text,
-   * since all 4 share the exact same underlying widget) and commits the option matching `label`.
-   * Multiple react-selects are mounted at once here (unlike Signup's single-select-at-a-time
-   * screens), so this locates the SPECIFIC input belonging to the labelled dropdown rather than
-   * addressing by position.
-   */
+  /** Commits `label` in one Advanced Search dropdown, found by its placeholder. */
   private async chooseAdvancedSearchDropdown(
     placeholderLabel: string,
     optionLabel: string,
@@ -150,23 +112,14 @@ export class HomePage extends BasePage {
     await this.page.waitForTimeout(300);
   }
 
-  /**
-   * The separate quick date-filter icon next to the search box (`Datefun`/`Date.js`,
-   * `.Date_alignment` — distinct from Advanced Search's own From/To date fields). Confirms it opens
-   * a date-picker popup; does not drive full date selection.
-   */
+  /** Opens the quick date-filter popup beside the search box (not Advanced Search's From/To). */
   async toggleQuickDateFilter(): Promise<void> {
     await test.step('Home: toggle the quick date-filter icon', async () => {
       await this.page.locator('.Date_alignment').first().click();
     });
   }
 
-  /**
-   * The Recents list's own items — confirmed from source (`RecentMessage.js`) to call
-   * `onDataFromChild1_1_1(object)` on click, which Home wires up to open that conversation. Returns
-   * `false` (rather than throwing) when the list is empty, so a caller can skip cleanly instead of
-   * failing on an account with no message history.
-   */
+  /** Opens the first Recents conversation; `false` when the list is empty, so callers can skip. */
   async openFirstRecentConversation(): Promise<boolean> {
     return test.step('Home: open the first Recents item', async () => {
       const items = this.page.locator(
@@ -186,8 +139,7 @@ export class HomePage extends BasePage {
 
   async closeAdvancedSearch(): Promise<void> {
     await test.step('Home: close Advanced Search', async () => {
-      // ModalComponent's own close affordance (an X, confirmed pattern elsewhere in this app) —
-      // scoped to the open modal so it can't match an unrelated close icon on the page behind it.
+      // The modal's own close X, scoped so it cannot match a close icon behind it.
       await this.page
         .locator('.modal, [role="dialog"]')
         .filter({ has: this.page.getByText(/Advanced Search/i) })

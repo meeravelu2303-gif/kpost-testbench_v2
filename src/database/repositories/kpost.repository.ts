@@ -2,16 +2,8 @@ import type { JsonObject } from '@utils/json';
 import type { DatabaseClient } from '../database-client';
 
 /**
- * Repositories over the **real KPOST_QA tables**.
- *
- * Table and column names are taken from `information_schema` on the live QA database rather than
- * from the workbook or from the API's field names, which differ from both: the API returns
- * `kpostID`, the column is `kpost_id`, and the workbook sometimes calls it `kpostId`. A repository
- * is the one place that translation is allowed to happen, so a validation never has to know it.
- *
- * Every table here is read-only in practice — the bench asserts what the API wrote, it does not
- * write rows itself — and the client refuses non-`SELECT` statements anyway unless the target
- * permits them.
+ * Read-only repositories over the real KPOST_QA tables, named from `information_schema`. The one
+ * place API field names (`kpostID`) are translated to columns (`kpost_id`).
  */
 
 /** `TBL_KPOST_USER_MASTER` — the account. Keyed by `kpost_id`, a varchar, not a synthetic id. */

@@ -4,19 +4,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * Security-fuzzing angle for Settings' **Instant Reply** field — an auto-reply message body that
- * gets sent BACK to whoever messages the account, so a stored payload here would render in a real
- * correspondent's inbox, not just the account holder's own settings list. Same execution-based check
- * as `login-security.spec.ts`/`home-security.spec.ts`/`katchup-security.spec.ts`/
- * `profile-security.spec.ts` (a `dialog` listener, not string-matching).
- *
- * Reuses `settings-functional.spec.ts`'s own proven "adding an Instant Reply shows it in the list"
- * flow and exact selectors. That existing test is itself additive with no delete step (the feature
- * has no built delete flow to reuse yet), so — like it — this does not clean up after itself; each
- * payload adds one more Instant Reply entry to the shared QA account. Kept to running this file
- * sparingly for that reason.
- *
- * Gated behind `SETTINGS_UI_LIFECYCLE=true`, same gate as `settings-functional.spec.ts`.
+ * Settings Instant Reply security fuzzing (the reply is sent to correspondents), judged by a dialog
+ * listener. No delete flow exists, so each payload adds an entry. Gated behind SETTINGS_UI_LIFECYCLE=true.
  */
 test.describe(
   'KPost Settings · Instant Reply security fuzzing',
@@ -52,8 +41,7 @@ test.describe(
           void dialog.dismiss();
         });
 
-        // Nested under "KMail Settings" — must be expanded first, or the item is not in the DOM
-        // (see SettingsPage.ts / Settingdetails.js's single-group-open accordion).
+        // Nested under "KMail Settings", which must be expanded first.
         await settingsPage.goto();
         await settingsPage.openPanel('KMail Settings', 'Instant Reply');
         await page

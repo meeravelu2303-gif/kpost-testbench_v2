@@ -8,16 +8,8 @@ import type { Page, TestInfo } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 
 /**
- * Deep WCAG scan (axe-core) for Profile's own DYNAMIC states — the three-dot action menu open, and
- * the Share modal open. `accessibility-axe.spec.ts`'s per-screen sweep already covers `/userprofile`
- * and `/settings` in their DEFAULT state (`src/ui/screens.ts`), so these two states — which only exist
- * once a menu is opened — were never scanned, the same genuine-gap reasoning as Home's and Katchup's
- * own dynamic-state files.
- *
- * Selectors reused from `profile-actions.spec.ts`'s own proven, read-only three-dot menu flow.
- *
- * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new screens
- * need their own clean run(s) before earning a place in the auto-filing allow-list.
+ * axe-core WCAG scan of Profile's dynamic states (three-dot menu open, Share modal open), which the
+ * per-screen sweep in accessibility-axe.spec.ts does not reach.
  */
 test.describe(
   'KPost Profile · dynamic-state accessibility (axe-core WCAG)',
@@ -131,8 +123,7 @@ test.describe(
         .getByText(/^Share$/i)
         .first()
         .click();
-      // `.first()` on each side independently still lets `.or()` match 2 elements (both the dialog
-      // role AND the modal-content div exist at once) - wrap `.first()` around the combined OR instead.
+      // .first() wraps the combined .or(): the dialog and .modal-content both exist at once.
       await expect(
         page.getByRole('dialog').or(page.locator('.modal-content')).first(),
         'the Share modal opens',

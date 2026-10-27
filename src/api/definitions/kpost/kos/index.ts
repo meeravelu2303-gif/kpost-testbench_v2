@@ -4,14 +4,8 @@ import { kosReadApis } from './read.api';
 import { kosWriteApis } from './write.api';
 
 /**
- * The KPost **KOS** module — the office suite. `/kword/*` (KWord documents) and `/ai/*` (K-AI).
- *
- *   read.api.ts   document list + AI sessions (live); doc/session-keyed reads (needs-doc-id)
- *   write.api.ts  KWord CRUD + share/join/exit/convert (gated lifecycle); AI generation (metered)
- *
- * Undocumented (no FR ids). The KOS screen renders "Coming Soon" today, so this module is API-only.
- * The two AI generation endpoints (`chatResponse`, `messageAssist`) call a real metered AI service,
- * so they are `external` and stay blocked until the owner authorizes the spend.
+ * KOS (`/kword/*`, `/ai/*`): KWord documents and K-AI. The AI generation endpoints call a metered
+ * service.
  */
 export const kosApis: EndpointDefinition[] = [...kosReadApis, ...kosWriteApis];
 

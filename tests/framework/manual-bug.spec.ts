@@ -8,22 +8,8 @@ import { gatekeep } from '../../src/bug-tracker/gatekeeper';
 import type { BugCandidate } from '../../src/bug-tracker/bug-candidate';
 
 /**
- * The single supported way to file a bug BY HAND.
- *
- * ## Why this exists
- *
- * Most defects are filed by the engine, which formats them through `buildDescription()`. Findings
- * reached by investigation — a defect proved with a database query, a control matrix, or a chain of
- * calls the engine does not model — have no candidate object, and were being filed with ad-hoc
- * curl scripts. Six tickets went in that way and none of them matched the layout of the several
- * hundred already in the tracker: no Classification, no Module, no Owner, no Filed-by, and
- * headings invented per ticket.
- *
- * Every filing now goes through the same three functions the engine uses — `buildSummary()`,
- * `buildDescription()`, `buildBugFields()` — so a hand-filed ticket is indistinguishable in shape
- * from a generated one, carries the fingerprint tag that deduplication depends on, and gets the
- * severity and priority mapping from one place. The format cannot drift, because there is no second
- * copy of it.
+ * The single supported way to file a bug by hand: it uses the engine's formatter and gatekeeper,
+ * so a hand-filed ticket has the same layout and fingerprint tag as a generated one.
  *
  * ## Usage
  *
@@ -43,7 +29,7 @@ import type { BugCandidate } from '../../src/bug-tracker/bug-candidate';
  *   expected        one line
  *   actual          one line
  *
- * Strongly encouraged, and the reason several earlier tickets were weak without them:
+ * Strongly encouraged:
  *
  *   repro           the steps, including the 3-pass gate result
  *   curl            runnable, with $KPOST_TOKEN in place of a real bearer token
@@ -62,12 +48,8 @@ const REQUIRED = [
   'actual',
 ] as const;
 
-/*
- * The pipeline's severity scale is CRITICAL | HIGH | MEDIUM | LOW | INFO, but a human writing a
- * finding naturally reaches for Bugzilla's words (blocker, major, normal). Accept both and normalise
- * to the internal scale, so a finding written as "MAJOR" is not silently rejected by the severity
- * floor (SEVERITY_RANK has no "MAJOR" key, so it would rank as undefined and fail every comparison).
- */
+// Accept Bugzilla's severity words too (blocker, major, normal) and map them to the internal scale,
+// or the severity floor would silently reject them.
 const SEVERITY_ALIASES: Record<string, string> = {
   blocker: 'CRITICAL',
   critical: 'CRITICAL',
@@ -109,11 +91,7 @@ function loadCandidate(): BugCandidate {
   }
   raw.severity = normaliseSeverity(raw.severity);
 
-  /*
-   * Defaults for the bookkeeping fields. They exist so a hand-written finding does not have to
-   * restate the environment on every filing, and so the "Filed by" line is always present — its
-   * absence is one of the things that made the earlier hand-filed tickets look unlike the rest.
-   */
+  // Defaults for the bookkeeping fields, so a finding need not restate the environment.
   return {
     source: 'api',
     suiteId: 'kpost-api',
@@ -137,12 +115,7 @@ function loadCandidate(): BugCandidate {
 
 // eslint-disable-next-line playwright/expect-expect -- a filing tool, not a check: it skips unless a finding is supplied and its outcome is the Bugzilla write it logs.
 test('file a hand-authored finding through the standard formatter', async () => {
-  /*
-   * Inert unless a finding is supplied. This spec lives in the framework project so it can reuse the
-   * bench's TypeScript and its Bugzilla client, which means `npm run framework` picks it up like
-   * any other spec — and a tool that fails the suite when nobody asked it to do anything is a tool
-   * people delete.
-   */
+  // Inert unless a finding is supplied (`npm run framework` also picks this spec up).
   const supplied =
     process.argv.some((a) => a.startsWith('--bug=')) || Boolean(process.env.MANUAL_BUG);
   test.skip(!supplied, 'no finding supplied — pass --bug=<file.json> (see the usage block above)');
@@ -156,7 +129,7 @@ test('file a hand-authored finding through the standard formatter', async () => 
     assignee: candidate.assignee,
   });
 
-  // Always print what would be filed. A ticket nobody read before sending is how a bad one gets in.
+  // Always print what would be filed.
   console.log(
     [
       '',
@@ -171,14 +144,8 @@ test('file a hand-authored finding through the standard formatter', async () => 
 
   const client = new BugzillaClient(bugzillaConfig, log);
 
-  /*
-   * THE GATEKEEPER. Both the static checks (evidence, validity, reproduction) and the live duplicate
-   * check run here — the same decision the automated filer makes, so filing by hand cannot slip
-   * anything past a check the engine would have enforced.
-   *
-   * On a dry run the live half still runs (it only READS Bugzilla), so the preview tells the truth:
-   * it shows FILE / REJECT / DUPLICATE / JUDGED before anything is created.
-   */
+  // The same gatekeeper the automated filer uses (static checks + live duplicate search). The
+  // duplicate search only reads Bugzilla, so it runs on a dry run too.
   const verdict = await gatekeep(candidate, client);
   console.log(`\nGATEKEEPER: ${verdict.decision} — ${verdict.reason}`);
 

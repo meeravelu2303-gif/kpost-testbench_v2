@@ -9,12 +9,8 @@ import { outcome, type ValidationResult } from '@engine/validation-result';
 import type { Logger } from '@utils/logger';
 
 /**
- * Offline harness for unit-testing a validator's VERDICT: no Playwright request context, no host,
- * no token. A validator only ever reads a `ValidationContext`, so a context whose `send()` answers
- * from a scripted fake server exercises exactly the code that runs live, minus the network.
- *
- * Scenarios are named after what the server does ("rejects every probe", "crashes", "throttles"),
- * so each spec reads as "given a server that does X, the validator says Y".
+ * Offline harness for unit-testing a validator's verdict: a `ValidationContext` whose `send()`
+ * answers from a scripted fake server, so the live validator code runs without a network.
  */
 
 /** One canned HTTP answer. `transportError` means no response arrived (status 0, empty body). */
@@ -167,9 +163,8 @@ export function fakeContext(options: FakeContextOptions = {}): FakeContext {
 }
 
 /**
- * The verdict the engine would record: a validator that does not apply is SKIPPED with its reason
- * (`ValidationEngine.execute`), otherwise its own `validate()` result. Policy toggles, prerequisite
- * gating and the reproduction retry are engine concerns with their own self-tests, not modelled here.
+ * The verdict the engine would record: SKIPPED with its reason if the validator does not apply,
+ * otherwise its `validate()` result. Policy, prerequisites and retries are not modelled here.
  */
 export async function verdict(
   validator: Validator,

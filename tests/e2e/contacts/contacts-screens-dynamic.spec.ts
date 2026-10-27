@@ -12,10 +12,8 @@ import {
 } from '../support/contacts';
 
 /**
- * The health/performance/layout counterpart to `contacts-accessibility.spec.ts`'s 3 dynamic states —
- * the Add-contact wizard's people-search step, its nested Advanced Search step, and the Create-Group
- * dialog. Same `runUiChecks`/`watchUiHealth` machinery and the same reused navigation as that file (no
- * shared `support/contacts.ts` module exists).
+ * runUiChecks (health, performance, layout) on Contacts' people search, Advanced Search and
+ * Create-Group dialog states.
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 

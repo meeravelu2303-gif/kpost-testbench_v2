@@ -3,24 +3,8 @@ import { OPENAPI_DIR } from './constants';
 import { env } from './env';
 
 /**
- * THE routing table for the whole KPost platform: which module a test belongs to, where its
- * defects are filed, and **which developer owns them**.
- *
- * KPost is one product built from separately maintained modules, so a defect is only useful
- * when it reaches the person who maintains that module:
- *
- * | Suite       | Module                    | Bugzilla product | Owner              |
- * | ----------- | ------------------------- | ---------------- | ------------------ |
- * | kpost-api   | KPost core API            | KPost API        | Jaganathan Murthy  |
- * | admin-api   | Admin module (own repo)   | KPost Admin      | Karan S            |
- * | kmail-api   | KMail module (own repo)   | KMail API        | Jitendra Kumar     |
- * | kpost-ui    | KPost React front end     | KPost UI         | Ayyappan Ashok     |
- * | admin-ui    | Admin/HR-Setup SPA        | KPost Admin UI   | Ayyappan Ashok     |
- *
- * This file is the single source of truth. Endpoint definitions declare a `suite`, and
- * everything else — base URL, product, component, assignee — follows from here. A test in
- * tests/framework checks these owners still match the live Bugzilla component defaults, so
- * drift on either side is caught instead of silently misrouting tickets.
+ * The routing table: each suite's base URL, Bugzilla product, components and owning developer.
+ * Single source of truth; a framework test fails when it drifts from live Bugzilla.
  */
 
 export const SUITE_IDS = ['kpost-api', 'admin-api', 'kmail-api', 'kpost-ui', 'admin-ui'] as const;
@@ -39,11 +23,7 @@ export interface SuiteOwnership {
     /** Used when a tag/screen maps to no component; must itself exist in the product. */
     fallbackComponent: string;
     /**
-     * Where a PLATFORM-WIDE (systemic) defect is filed — a shared gateway/auth-filter fault that is
-     * not specific to any one module (missing security headers, the auth filter answering 400/403
-     * instead of 401). These are all security/auth concerns, so on KPost API they go to the real
-     * `Authentication V2` component rather than the generic catch-all. Must exist in the product;
-     * defaults to `fallbackComponent` when unset.
+     * Component for platform-wide (systemic) gateway/auth faults; defaults to `fallbackComponent`.
      */
     systemicComponent?: string;
     /** Swagger tag (or UI screen) → Bugzilla component, when the names differ. */
@@ -55,18 +35,7 @@ export interface SuiteOwnership {
   specFile?: string;
 }
 
-/**
- * KPost API: the module tags the bench puts on its endpoints, mapped to the Bugzilla components
- * that already exist in this instance (27 of them, read live on 2026-09-12).
- *
- * Without this map every finding landed on `kpost-webservice-application`, the catch-all — and the
- * tickets the previous bench filed (bugs 95-101) are on precise components like
- * `KPresentation` and `User Profile V2`. A whole module's defects arriving on one generic
- * component is how a queue becomes unreadable, and it loses the per-component default assignee that
- * Bugzilla would otherwise apply.
- *
- * Keys are lower-cased; `componentFor` looks up both the tag and its lower-case form.
- */
+/** KPost API module tags → existing Bugzilla components. Keys are lower-cased. */
 const KPOST_COMPONENT_BY_TAG: Record<string, string> = {
   // Signup & Login (FR-S01..S12)
   'signup-login': 'Authentication V2',
@@ -87,9 +56,7 @@ const KPOST_COMPONENT_BY_TAG: Record<string, string> = {
   // Company records, the logo and business registration.
   'common-company': 'Company Administration',
   company: 'Company Administration',
-  // The feature modules built since — each maps its module tag to the component that already
-  // exists in this Bugzilla (see KNOWN_COMPONENTS). Without these every one of their defects
-  // landed on the `kpost-webservice-application` catch-all.
+  // Feature modules.
   katchup: 'Katchup Messaging V2',
   kall: 'Kall (Voice/Video) V2 - current',
   contacts: 'Contacts Directory V2',
@@ -105,18 +72,8 @@ const KPOST_COMPONENT_BY_TAG: Record<string, string> = {
 };
 
 /**
- * KMail routes by functional **area**, not by module: every KMail endpoint is tagged
- * `['kmail-api', 'kmail', 'kmail-<area>', '<sub-area>?', …]`, so the module tag is generic and the
- * component comes from the area / sub-area tags. Two tiers:
- *
- * - **`kmail-<area>`** — the per-file default (read / send / draft / manage / settings), used when an
- *   endpoint carries no finer tag.
- * - **bare sub-area tags** — a specific endpoint's component (`contacts`, `status`, `content`, …);
- *   these WIN over the area default (see `componentFor`'s kmail-api branch).
- *
- * `external` is deliberately unmapped: it means other-domain *mails* on one endpoint and other-domain
- * *contacts* on another, so it falls back to the endpoint's area rather than being mis-filed.
- * Targets are the exact live component names of the KMail API product (read 2026-09-14).
+ * KMail routes by area: `kmail-<area>` is the per-file default and a bare sub-area tag wins over
+ * it. `external` is unmapped on purpose (it means different things on different endpoints).
  */
 const KMAIL_COMPONENT_BY_TAG: Record<string, string> = {
   // Area defaults (the per-file tag).
@@ -125,7 +82,7 @@ const KMAIL_COMPONENT_BY_TAG: Record<string, string> = {
   'kmail-draft': 'Draft Mail',
   'kmail-manage': 'Mailbox, Folders & Follow-up',
   'kmail-settings': 'KMail Settings - Signature & Letterhead',
-  // Sub-area tags — a specific endpoint's component, overriding its area default.
+  // Sub-area tags, which override the area default.
   content: 'Read Mail & Attachments',
   attachment: 'Read Mail & Attachments',
   'read-receipt': 'Read Mail & Attachments',
@@ -142,11 +99,7 @@ const KMAIL_COMPONENT_BY_TAG: Record<string, string> = {
   translate: 'Translation',
 };
 
-/**
- * Admin module tags → components of the `KPost Admin` product. Each admin endpoint carries one slug
- * tag naming the org-setup resource it belongs to (see `src/api/definitions/admin/`); the slug maps
- * to the exact live component name. Targets read from the live instance (2026-09-12).
- */
+/** Admin resource slug tags → components of the `KPost Admin` product. */
 const ADMIN_COMPONENT_BY_TAG: Record<string, string> = {
   'workplace-tier-attribute': 'Workplace Tier — Attributes (Levels)',
   'workplace-tier-variable': 'Workplace Tier — Variables (Nodes)',
@@ -160,10 +113,8 @@ const ADMIN_COMPONENT_BY_TAG: Record<string, string> = {
 };
 
 /**
- * Admin/HR-Setup SPA screens (tests/e2e-admin, kpostadmin.kpostindia.com) → components of the
- * **KPost Admin UI** product, which has exactly two: the employee/user administration screens and
- * a catch-all. (The in-app `/usermanagement` screen of the KPost React app is a KPost UI screen and
- * stays in `UI_COMPONENT_BY_SCREEN` below.)
+ * Admin/HR-Setup SPA screens → KPost Admin UI components (User Management, or the General
+ * catch-all).
  */
 const ADMIN_UI_COMPONENT_BY_SCREEN: Record<string, string> = {
   employee: 'User Management',
@@ -202,8 +153,7 @@ const UI_COMPONENT_BY_SCREEN: Record<string, string> = {
   kpay: 'KPay',
   a11y: 'Accessibility',
   accessibility: 'Accessibility',
-  // Screens added to the registry 2026-10-10. KPoster is a client-side demo with no backend and no
-  // Bugzilla component of its own; the 404 page and the compliance page are platform surfaces.
+  // Platform surfaces with no component of their own.
   kposter: 'General',
   'not-found': 'General',
   'child-safety-policy': 'General',
@@ -221,8 +171,6 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       product: 'KPost API',
       version: 'unspecified',
       fallbackComponent: 'kpost-webservice-application',
-      // Platform-wide auth/security defects (missing headers, wrong auth status codes) → the real
-      // security component, never the generic catch-all.
       systemicComponent: 'Authentication V2',
       componentByTag: KPOST_COMPONENT_BY_TAG,
     },
@@ -234,7 +182,6 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
     label: 'KPost Admin module API',
     kind: 'api',
     repository: 'admin-module (separate repo)',
-    // Owner changed 2026-10-24 (owner directive): Admin module defects go to Karan S.
     owner: { name: 'Karan S', email: 'karans@kpost.in' },
     bugzilla: {
       product: 'KPost Admin',
@@ -243,8 +190,7 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       componentByTag: ADMIN_COMPONENT_BY_TAG,
     },
     baseUrl: env.ADMIN_API_BASE_URL ?? env.API_BASE_URL,
-    // Contract generated from the live Admin api-docs (`npm run contract:admin`; the old Admin_module.xlsx was removed 2026-10-26) → `openapi/admin-api.openapi.json` by
-    // `scripts/excel-to-contract.cjs`; definitions live in `src/api/definitions/admin/`.
+    // The Admin contract is generated from the live api-docs (`npm run contract:admin`).
     specFile: undefined,
   },
   'kmail-api': {
@@ -257,8 +203,6 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       product: 'KMail API',
       version: '5.0',
       fallbackComponent: 'kmail-application',
-      // Platform-wide KMail faults (security headers, auth-filter status, error envelope) consolidate
-      // here instead of the catch-all — the KMail parallel to KPost's 'Authentication V2'.
       systemicComponent: 'Authentication & Gateway',
       componentByTag: KMAIL_COMPONENT_BY_TAG,
     },
@@ -291,8 +235,7 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
       fallbackComponent: 'General',
       componentByTag: ADMIN_UI_COMPONENT_BY_SCREEN,
     },
-    // The Admin SPA has its own host; the reporter names it in the ticket. Falls back to the KPost
-    // front end only for type completeness — the Admin UI command needs ADMIN_UI_BASE_URL set.
+    // The fallback is only for type completeness; the Admin UI command needs ADMIN_UI_BASE_URL.
     baseUrl: env.ADMIN_UI_BASE_URL ?? env.BASE_URL,
   },
 };
@@ -307,16 +250,10 @@ export function apiSuites(): SuiteOwnership[] {
   return Object.values(SUITES).filter((suite) => suite.kind === 'api');
 }
 
-/**
- * The Bugzilla component for a defect, from the endpoint's tags (or a UI screen name).
- * Tags usually ARE the component name; the map covers the modules where they differ.
- */
-/**
- * Generic suite-level tags every factory prepends (the suite id, plus KMail's `kmail`). They are
- * NOT module tags, so component routing skips them when it looks for the module a defect belongs to.
- */
+/** Generic suite-level tags every factory prepends; component routing skips them. */
 const SUITE_LEVEL_TAGS = new Set<string>(['kpost-api', 'admin-api', 'kmail-api', 'kmail']);
 
+/** The Bugzilla component for a defect, from the endpoint's tags (or a UI screen name). */
 export function componentFor(suite: SuiteOwnership, tags: readonly string[]): string {
   const lookup = (tag: string): string | undefined =>
     suite.bugzilla.componentByTag[tag] ?? suite.bugzilla.componentByTag[tag.toLowerCase()];
@@ -332,26 +269,15 @@ export function componentFor(suite: SuiteOwnership, tags: readonly string[]): st
   const directKnown = (): string | undefined => tags.find((tag) => known?.has(tag));
 
   if (suite.id === 'kmail-api') {
-    /*
-     * KMail routes by functional AREA, not by module: tags[0] is the generic `kmail-api`, so the
-     * component comes from the area / sub-area tags. A bare sub-area tag (`contacts`, `status`,
-     * `content`, `draft`, …) names the component and WINS over the per-file `kmail-<area>` default;
-     * with neither, the module catch-all. (`kmail` itself is bare-but-unmapped, so it is skipped.)
-     */
+    // A bare sub-area tag wins over the per-file `kmail-<area>` default.
     const subArea = firstMapped(tags.filter((tag) => !tag.startsWith('kmail-')));
     const area = firstMapped(tags.filter((tag) => tag.startsWith('kmail-')));
     return subArea ?? area ?? directKnown() ?? suite.bugzilla.fallbackComponent;
   }
 
   if (suite.kind === 'api') {
-    /*
-     * KPost / Admin: after the generic suite tag every factory writes the MODULE tag first
-     * (`['kpost-api', '<module>', '<module>-<area>', ...]`), and it is authoritative. A bare sub-tag
-     * that happens to be ANOTHER module's name must not steal it — a Kall endpoint tagged
-     * `[..., kall, kall-read, contacts]` belongs to Kall, not to Contacts. So the module tag sets the
-     * component, and only a *hyphenated* refinement (`common-company` refines `common`,
-     * `business-tier` refines the enterprise login) may override it.
-     */
+    // The first non-suite tag is the module and sets the component; only a hyphenated refinement
+    // (`common-company`) may override it, so a bare tag naming another module cannot steal it.
     const routing = tags.filter((tag) => !SUITE_LEVEL_TAGS.has(tag));
     const moduleTag = routing[0];
     const moduleComponent = moduleTag ? lookup(moduleTag) : undefined;
@@ -363,10 +289,7 @@ export function componentFor(suite: SuiteOwnership, tags: readonly string[]): st
     if (refinement) return refinement;
     if (moduleComponent) return moduleComponent;
   } else {
-    /*
-     * UI "tags" are unordered screen tokens (from the spec path + title), so there is no module
-     * tag to anchor on — the most specific (longest) matching key wins.
-     */
+    // UI tags are unordered screen tokens, so the longest matching key wins.
     const match = tags
       .map((tag) => ({ tag, component: lookup(tag) }))
       .filter((entry): entry is { tag: string; component: string } => Boolean(entry.component))
@@ -378,9 +301,8 @@ export function componentFor(suite: SuiteOwnership, tags: readonly string[]): st
 }
 
 /**
- * Components that exist in each product, as read from the live instance on 2026-09-12.
- * Only used to recognise a tag that is already a component name; the filer still validates
- * every component against Bugzilla before filing, so a stale entry here cannot lose a ticket.
+ * Components that exist in each product, to recognise a tag that already is one (the filer
+ * re-validates live).
  */
 export const KNOWN_COMPONENTS: Partial<Record<SuiteId, Set<string>>> = {
   'kpost-api': new Set([

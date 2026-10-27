@@ -7,12 +7,8 @@ import { expect, test } from '@fixtures';
 /** Self-tests for the KBooking module wiring. No HTTP. */
 test.describe('KPost KBooking · module coverage', () => {
   test('every documented, frontend-active redbus endpoint has a definition @framework', () => {
-    /*
-     * `boardingPoint`, `tripdetailsV2` and `updatecitylist` have no caller in the web app
-     * (docs/scope/unused-endpoints.md), but they are part of the published API, so since 2026-10-22
-     * (regression coverage to 100%) every documented redbus path has a definition: the two reads run
-     * live in the feature chain, the city-list refresh is a shared write checked off live only.
-     */
+    // Every documented path has a definition, including three the web app never calls
+    // (boardingPoint, tripdetailsV2, updatecitylist).
     expect(uncoveredKBookingPaths(), 'every documented redbus path has a definition').toEqual([]);
   });
 
@@ -26,12 +22,7 @@ test.describe('KPost KBooking · module coverage', () => {
   });
 
   test('every endpoint is cleared for live or excused in writing @framework', () => {
-    /*
-     * Unlike Dashboard (all reads), KBooking mixes reads with one real third-party write
-     * (blockTicket), so the "cleared" half of the claim is "productionSafe, OR excluded with a
-     * stated reason" rather than "all reads". A note is mandatory wherever `productionSafe` is
-     * false, so nothing can drift out of live coverage silently.
-     */
+    // Each endpoint is productionSafe OR excluded with a written note (e.g. blockTicket).
     for (const api of kbookingApis) {
       expect(api.authentication?.required, `${api.id} authenticated`).toBe(true);
       if (api.productionSafe) continue;

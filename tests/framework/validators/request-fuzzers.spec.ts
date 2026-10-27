@@ -20,10 +20,8 @@ import {
 } from './support/validator-harness';
 
 /**
- * The schema-driven request fuzzers (`request-mutation.ts`). Each derives invalid values from the
- * request contract, sends only those the contract itself rejects, and expects 400/422 back. These
- * tests pin, offline, that: a server that refuses bad input passes; one that accepts or crashes on
- * it fails and the failing case carries its exact request; and no contract means no verdict.
+ * The schema-driven request fuzzers (`request-mutation.ts`), offline: refusing bad input passes,
+ * accepting or crashing fails with the exact request, and no contract means no verdict.
  */
 
 const VALID_BODY = VALID_SEND.body as Record<string, unknown>;
@@ -150,12 +148,8 @@ test.describe('validator unit · request.data-type', { tag: '@framework' }, () =
       expect(result.message).toMatch(/rate limited \(HTTP 429\) - inconclusive/);
     });
 
-    /*
-     * Pinned behaviour, worth a decision: a probe that got NO response is counted FAILED (status 0
-     * is not in 400/422), with the transport message as the reason. It stays out of Bugzilla only
-     * because the validity gate rejects that message. CLAUDE.md §7 says "no response ≠ failed check",
-     * so if this ever becomes SKIPPED, update this test deliberately.
-     */
+    // Pinned: a probe with NO response counts FAILED (status 0); only the validity gate keeps it
+    // out of Bugzilla. If this becomes SKIPPED ("no response ≠ failed check"), update this test.
     test('a probe with no response fails with a transport message the validity gate rejects', async () => {
       const result = await verdict(dataTypeValidator, contextFor(unreachable));
       expect(result.status).toBe('FAILED');
@@ -264,10 +258,7 @@ test.describe('validator unit · request.empty-value', { tag: '@framework' }, ()
     expect(result.status).toBe('SKIPPED');
   });
 
-  /*
-   * Pinned blind spot (audit finding 2): KPost's workbook contracts carry no minLength/minItems,
-   * so an empty value never violates them, no probe is sent, and the check can only skip.
-   */
+  // Pinned blind spot: workbook contracts carry no minLength/minItems, so this check can only skip.
   test('SKIPPED: a types-only contract (how KPost documents bodies) gives it nothing to send', async () => {
     const context = contextFor(acceptsEverything, SEND_SCHEMA_UNCONSTRAINED);
     const result = await verdict(emptyValueValidator, context);

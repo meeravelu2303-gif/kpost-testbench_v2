@@ -6,14 +6,8 @@ import { expect, test } from '@fixtures';
 import { gotoKatchup, openConversation } from '../support/katchup';
 
 /**
- * The health/performance/layout counterpart to `katchup-accessibility.spec.ts`'s 3 dynamic states —
- * the conversation list default, an open conversation thread, and the composer with Subject focused.
- * Same `runUiChecks`/`watchUiHealth` machinery as `home-screens-dynamic.spec.ts`; the `ui.layout`
- * check IS this app's "responsive" concern (the 1280px/1440px SUPPORTED desktop widths — KPost has no
- * mobile layout by design, see `ui-checks.ts`).
- *
- * Kept in its own file, out of `UI_FILING_SPECS`, same reason as every other new dynamic-state file
- * this session: unproven screens need clean run(s) before earning the auto-filing allow-list.
+ * Katchup health/performance/layout checks on three states: the conversation list, an open thread,
+ * and the composer with Subject focused. Not in UI_FILING_SPECS until it has clean runs.
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 

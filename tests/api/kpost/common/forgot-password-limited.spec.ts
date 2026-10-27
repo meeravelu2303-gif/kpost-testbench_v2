@@ -2,15 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Forgot-password negative cases, deliberately capped at five requests per run.
- *
- * The forgot-password OTP is REAL on the live gateway (owner, 2026-10-09): a successful request
- * texts a registered number. So the sweep only sends each endpoint's single primary request, and
- * this spec adds the few negative cases that cannot send anything: an account that does not exist,
- * a missing field, and a wrong type. A server must answer each with a client error, never a 5xx.
- *
- * Runs only where the OTP flows are opened (`OTP_TEST_GATEWAY` + `TEST_DB_MODE`); anywhere else the
- * SMS kill-switch refuses these requests and the spec skips.
+ * Forgot-password negative cases that cannot text anyone (absent account, missing field, wrong type),
+ * capped at five requests: each must get a 4xx, never a 5xx. Needs OTP_TEST_GATEWAY + TEST_DB_MODE.
  */
 test.describe(
   'Forgot-password negative cases (capped) @api',
@@ -54,8 +47,7 @@ test.describe(
         const exchange = await endpoints.sendTo(
           c.id,
           { body: c.body },
-          // Every case names nobody real (an absent id/number, or none), so nothing can be texted —
-          // the declaration the production guard demands before any API call reaches these senders.
+          // Every case names nobody real, so nothing can be texted; the production guard requires this.
           { label: `limited:forgot-password:${c.label}`, noSmsRecipient: true },
         );
         expect(exchange.status, `${c.id} with ${c.label}`).toBeLessThan(500);

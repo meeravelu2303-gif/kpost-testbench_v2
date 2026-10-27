@@ -1,16 +1,10 @@
 #!/usr/bin/env node
 /**
- * Runs every product, one after another: `npm run product:all` (preview) / `product:all:file` (file).
- *
- * Replaces an `a && b && c` chain, which stopped at the first product: Playwright exits 1 whenever a
- * test fails, so a run that FOUND bugs ended the chain and the later products never ran. Here each
- * product runs whatever the previous one returned, and the exit code is non-zero if any of them failed.
+ * Runs every product in turn, whatever the previous one returned (a found bug exits 1, which
+ * stopped an `a && b` chain); exits non-zero if any failed. Each product's report is archived.
  *
  *   node scripts/run-products.mjs          # preview every product (dry run, files nothing)
  *   node scripts/run-products.mjs --file   # every product, filing to Bugzilla
- *
- * Each product's report is kept: the reporter moves the previous REPORT.* into reports/history/
- * (named after the product) before the next one writes.
  */
 import { spawnSync } from 'node:child_process';
 

@@ -5,34 +5,10 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * MONITORING SMOKE (FRD row 5, "Production monitoring") — a shallow, **read-only** health check meant
- * to be run on a SCHEDULE to catch an outage early, run with `npm run product:kpost-ui:monitor`.
- *
- * ## Why this targets the TEST deployment, not production
- *
- * The bench's standing safety rule is "test the deployment only, never live hosts" — so this monitors
- * `test.kpostindia.com` (the host comes from `.env`, same as every other spec), NOT the live
- * production site. It is production-STYLE monitoring (scheduled, read-only, outage-catching) pointed at
- * the environment we are allowed to touch. If a true production monitor is ever wanted, it needs an
- * explicit sign-off to relax the test-only rule and its own production credentials.
- *
- * ## Read-only on purpose
- *
- * Unlike `smoke.spec.ts` (the build-acceptance gate, which also sends a Katchup + a KMail), a scheduled
- * monitor must leave NO data behind on every tick, so this only navigates and reads. It checks two
- * things an outage would break first: (1) the public login page is reachable and renders for a
- * signed-OUT visitor (the front door is up), and (2) each core authenticated screen still loads for a
- * signed-in session and does not fall to the error boundary.
- *
- * ## Scheduling
- *
- * This has no scheduler wired up (creating a cron / Windows Task on the host is a persistent,
- * outward change left to the operator). To run it every 15 minutes, point Task Scheduler (Windows) or
- * cron at `npm run product:kpost-ui:monitor` from the repo root. Keep the cadence modest — the server is shared and
- * low-capacity (see the perf safety protocol).
+ * Read-only monitoring smoke (`npm run product:kpost-ui:monitor`) against the TEST deployment: the
+ * signed-out login page renders and each core signed-in screen loads without the error boundary.
+ * Selected by path, so it deliberately carries no `@smoke` tag.
  */
-// Selected by PATH (`npm run product:kpost-ui:monitor`), not by the `@smoke` tag, so it deliberately does NOT carry
-// `@smoke` (that tag has a per-module budget the scheduled monitor should not eat into).
 test.describe(
   'KPost · monitoring smoke (scheduled health)',
   {
@@ -55,8 +31,7 @@ test.describe(
         await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => undefined);
         await settleFrames(page).catch(() => undefined);
 
-        // The login form's id field is the single most reliable "the app booted, not a blank 5xx page"
-        // signal for a signed-out visitor.
+        // The id field is the most reliable "the app booted" signal for a signed-out visitor.
         await expect(
           page.locator('[placeholder*="KPOST ID" i]').first(),
           'the login screen rendered its id field (the front door is up)',

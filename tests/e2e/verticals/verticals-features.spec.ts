@@ -3,10 +3,8 @@ import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
 
 /**
- * **Verticals** — feature-level read-only coverage on top of the deep screen sweep (which already
- * runs the 9 checks on each). Each vertical asserts a distinctive feature control from the frontend
- * (see `docs/ui/ui-screens.md`), proving the screen renders its OWN content, not just the shell.
- * All read-only and safe (no writes; external links are not followed).
+ * Verticals: each screen shows a distinctive feature control of its own, not just the shell.
+ * Read-only; external links are not followed.
  */
 test.describe(
   'KPost verticals — feature render',
@@ -90,7 +88,7 @@ test.describe(
       },
     ];
 
-    // KDoc/KOS is paused from all testing by the owner (2026-10-07) — remove this filter when un-paused.
+    // KDoc/KOS is excluded from testing; remove this filter when it is back in scope.
     for (const c of cases.filter((v) => v.route !== '/kdoc')) {
       test(`${c.name} renders its own feature content @ui`, async ({ page }) => {
         await page.goto(c.route, { waitUntil: 'domcontentloaded', timeout: 45_000 });

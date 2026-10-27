@@ -5,23 +5,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Can an outsider delete or edit a KWord document they do not own?
- *
- * `/kword/delete` and `/kword/update` take a `docId` and nothing tying it to the caller — the same
- * object-handle shape behind Bugzilla #507. Only the document's owner (or someone it was shared
- * with) should be able to delete or change it.
- *
- * ## Self-activating — queued behind #499
- *
- * The setup creates a document, and `/kword/create` currently answers HTTP 500 for every payload
- * (Bugzilla #499). While that is open there is no docId to attack, so this SKIPS with a reason
- * instead of re-reporting #499. The moment create works, the setup succeeds and the BOLA attack runs
- * automatically — no edit here.
- *
- * ## The database is the judge
- *
- * The verdict is `TBL_KPOST_KWORD_DOCUMENT.delete_status` (and the title/heading for the edit): after
- * the outsider's attempt, the owner's document must be intact, whatever the response said.
+ * Can an outsider delete or edit a KWord document (bare `docId`) they do not own? The verdict is
+ * the row. Known defect #499: `/kword/create` returns 500, so this skips until create works.
  */
 test.describe(
   'KPost Security · KWord document authorization (IDOR/BOLA) @api @kpost-api @security @kos @database',
@@ -69,10 +54,7 @@ test.describe(
           ? ((data.id ?? data.docId) as string | undefined)
           : undefined;
 
-      /*
-       * Queued behind #499: no docId means create is still 500ing. Skip with a reason; the test
-       * activates once create is fixed.
-       */
+      // No docId means create still fails (#499).
       test.skip(
         !docId,
         `blocked by Bugzilla #499 (kword/create 500) — activates automatically once a docId is issued ` +

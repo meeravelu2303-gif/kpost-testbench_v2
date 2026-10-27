@@ -3,16 +3,8 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 
 /**
- * Responsive matrix for Signup/Login at the widths `signup-business.spec.ts`'s existing mobile check
- * (480px only) never covered: TABLET (768px) and LANDSCAPE mobile. Unlike the authenticated app shell
- * (desktop-only by design — see `@ui/ui-checks`'s `ui.layout` comment), Signup/Login are public-facing
- * pages with their own dedicated sub-992px implementation (`MainSignup.css`'s breakpoint), so testing
- * the WHOLE sub-992px range here — not just one phone width — is testing something the product
- * actually claims to support, not a size it never targets.
- *
- * Each case asserts no uncaught JS crash and that the key control for that step is actually usable
- * (visible, not clipped/unreachable) at that viewport — the same bar #825 (Business mobile) was
- * originally found against, just at two more points in the same range.
+ * Signup/Login at tablet (768px) and landscape-mobile widths: no JS crash, and each step's key control
+ * is usable. These public pages support the whole sub-992px range, unlike the desktop-only app shell.
  */
 test.describe(
   'KPost signup/login · responsive matrix (tablet + landscape)',

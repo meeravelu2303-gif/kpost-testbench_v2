@@ -53,117 +53,47 @@ import {
 } from './run-summary';
 
 /**
- * Files this run's defects into Bugzilla.
- *
- * Order of operations, and why:
- *   1. the RUN gate — a collapsed run files nothing, or a broken bench becomes 50 fake tickets
- *   2. candidates are built only from evidence the run produced (validation results, UI failures)
- *   3. the CANDIDATE gate drops infrastructure noise and claims their own evidence contradicts
- *   4. the filer dedupes against live Bugzilla and creates, comments, reopens or skips
- *
- * Dry run is the default (`BUGZILLA_DRY_RUN`), because filing cannot be undone. Nothing here can
- * fail the run or change its exit code.
+ * Files this run's defects into Bugzilla: run gate, candidates from run evidence, validity gate,
+ * then dedupe and file. Dry run is the default because filing cannot be undone; never fails the
+ * run.
  */
 const BROWSER_PROJECTS = new Set(['chromium', 'firefox', 'webkit']);
 const LOG = '[bugzilla]';
 
 /**
- * Only the **observational** UI specs may file bugs: the deep screen sweep (`screens-batch1/2/3.spec.ts`
- * — 9 checks on every screen, calibrated to zero false positives, split into 3 batches 2026-10-07) and
- * the structural smoke
- * (`navigation`/`shell` — a route that will not open or a missing shell is a real defect). The
- * interaction / write-flow specs (the gated `*_UI_LIFECYCLE` feature tests, compose, search, login,
- * two-session, copies, contacts, group, profile-edit, settings-theme, …) are FUNCTIONAL tests whose
- * failures during the build/tuning phase are selector issues, not app defects — filing those would
- * put false bugs on the developer's queue. Their failures still surface in the Playwright report for
- * human triage; they are simply never auto-filed.
+ * The UI specs allowed to file bugs: only those whose signals are selector-independent (crashes,
+ * broken assets, freezes, dead routes, executed payloads). Other UI failures stay in the Playwright
+ * report for triage.
  */
 const UI_FILING_SPECS = new Set([
-  // The deep screen sweep was split into 3 batches on 2026-10-07 (same catalogue, same filing
-  // rationale as before) to stop a continuous 13-screen run from tripping a server-side
-  // rate-limiter — see `tests/e2e/support/screen-sweep.ts` for why.
   'screens-batch1.spec.ts',
   'screens-batch2.spec.ts',
   'screens-batch3.spec.ts',
   'navigation.spec.ts',
   'shell.spec.ts',
-  // The interaction sweep files too: its signals (a JS crash, a broken asset, or a frozen main
-  // thread during real use) are selector-INDEPENDENT — a real defect, never a tuning miss.
   'interactions.spec.ts',
-  // The systematic crawl files for the same reason: it clicks every safe control and reports only
-  // crashes / freezes / raw-value renders — unambiguous defects, never a false bug from a selector.
   'crawl.spec.ts',
-  // Keyboard navigation and network resilience file too: their signals are selector-INDEPENDENT — a
-  // screen you cannot Tab into (WCAG 2.1.1), or one that crashes/freezes when the network drops — a
-  // real defect, never a tuning miss. (axe-a11y and visual regression are review-only, not here.)
+  // axe-a11y and visual regression are review-only, so not listed.
   'keyboard-nav.spec.ts',
   'network-resilience.spec.ts',
-  // The Profile/Settings breakage sweep files too: it reports only crashes / broken assets / frozen
-  // renders across those screens' sections and panels — selector-INDEPENDENT defects, never a
-  // tuning miss.
   'profile-settings-breakage.spec.ts',
-  // The Contacts breakage sweep files for the same reason — crashes / broken assets on the Contacts
-  // tab and its Add / KDirectory / Group surfaces.
   'contacts-breakage.spec.ts',
-  // The chat session-safety check files: "clicking a contact avatar logs the user out" is a
-  // selector-INDEPENDENT, unambiguous functional defect (the session ends), captured with clear
-  // visible proof — never a tuning miss.
   'chat-avatar-session.spec.ts',
-  // The signed-out (Signup/Login) screen sweep files too, for the same reason as `screens.spec.ts`
-  // itself — same catalogue (health/performance/layout), just applied to the two screens that sweep
-  // cannot reach (it requires a live session). Confirmed clean across two consecutive live runs
-  // (2026-09-29) before being added here.
   'signup-login-screens.spec.ts',
-  // The Admin/HR-Setup SPA (`admin-ui` project → Bugzilla "KPost Admin UI"): its screen/sub-tab
-  // health sweeps, the dead-screen crash pins and the login-screen injection probes report only
-  // crashes, JS errors, broken assets or an executed payload — selector-independent defects. The
-  // PII-masking spec stays review-only: a masking verdict needs a person to confirm the cell read.
+  // Admin UI health sweeps; the PII-masking spec stays review-only (a person must check it).
   'admin-screens.spec.ts',
   'admin-subtabs-health.spec.ts',
   'admin-dead-screens.spec.ts',
   'admin-login.spec.ts',
-  // Home API-response mishandling: DETERMINISTIC stub tests (they fulfil the dashboard response
-  // themselves, so a failure is a real code defect, never a selector/tuning miss). The one filing
-  // failure is the empty-but-successful load (#1322, LOW): a brand-new user's genuinely-empty inbox
-  // renders a blank panel with no "no messages" state. That empty SUCCESS body is a real server
-  // state, so it clears the realistic bar. Selector-INDEPENDENT (asserts on the empty-state text /
-  // error banner, not a brittle locator chain).
+  // Deterministic stubs of states the real server returns, so a failure is a code defect. Stubs of
+  // shapes the server never returns (`home-resilience.spec.ts`) are not real bugs and are not
+  // listed.
   'home-api-handling.spec.ts',
-  // NOTE (2026-10-12): `home-resilience.spec.ts` was REMOVED from this list. Its two failures (a
-  // malformed Kall row crashing the app; an object-valued unread badge rendering "[object Object]")
-  // are DEFENSIVE GAPS forced by stubs the server never actually produces — the live dashboard
-  // returns well-formed rows and a NUMERIC msgsCount, and accounts show a welcome message, not an
-  // empty inbox. Per the realistic-bug bar (a stub is only a real bug if the server returns that
-  // shape), those are not user-facing defects and must not auto-file. The spec still runs for human
-  // triage; it is simply not an auto-filing source.
-  // Katchup thread API handling (katchup-api-handling.spec.ts): DETERMINISTIC stub tests of
-  // server-returnable states, added 2026-10-12.
-  //  - Stored XSS on open: PROVEN end-to-end — the live `sendMessage` API accepts a raw-HTML
-  //    `actualMessage`, stores it and echoes it back VERBATIM (round-trip confirmed, msgID 855056),
-  //    and `renderMessage()` (KatchupMessage.js:4386) feeds any non-JSON body straight to
-  //    `dangerouslySetInnerHTML` (L4408) with no sanitiser. The stub mirrors that exact message; the
-  //    test asserts the payload must NOT execute and fails because it does. CRITICAL, selector-
-  //    independent (asserts on JS execution with a render-guard against false pass).
-  //  - Thread-load 500 -> silent empty conversation: a real server 500 makes the catch do
-  //    `setMessageArr([])`, so the user sees an empty thread with no error. Deterministic 500 stub.
   'katchup-api-handling.spec.ts',
-  // Katchup write-action failure feedback (katchup-write-handling.spec.ts), added 2026-10-12.
-  // DETERMINISTIC stubs of a FAILURE envelope the server genuinely returns on write edge cases
-  // (deleted/blocked recipient, already-deleted message, transient 5xx). The Delete handler
-  // (KatchupMessage.js:3222) gates success on status==="SUCCESS" with NO else branch, so a rejected
-  // delete is silent — no toast, message left as-is, user cannot tell it failed. The test drives the
-  // real bell->Delete->Confirm flow and GUARDS on the delete call actually firing, so a selector drift
-  // cannot fake the bug. (The send-failure test in the same file PASSES — send already surfaces an
-  // error — so it never files; only a genuine silent-failure regression would.)
   'katchup-write-handling.spec.ts',
 ]);
 
-/**
- * Deterministic filing order so Bugzilla ids come out **ascending by module** — KPost API first, then
- * Admin, then KMail, then UI — and within a module by component, then endpoint, then summary. Without
- * this, parallel test completion would file candidates in a random order and the bug ids would not
- * track the modules. (Running one module per command reinforces the same ordering across runs.)
- */
+/** Filing order (module, component, endpoint, summary), so new bug ids ascend by module. */
 const SUITE_FILING_ORDER: Record<string, number> = {
   'kpost-api': 0,
   'admin-api': 1,
@@ -229,8 +159,7 @@ export default class BugzillaReporter implements Reporter {
   }
 
   private async publish(result: FullResult): Promise<void> {
-    // Candidates and the validity gate need no Bugzilla connection, so they are computed on every
-    // run — the in-bench bug report is written even when filing is off (dry run, no host).
+    // Candidates and the gate need no Bugzilla, so the report is written even when filing is off.
     const tests = this.suite?.allTests() ?? [];
     const uiRecords = this.uiTestRecords(tests);
     const candidates = consolidateCascades(
@@ -268,19 +197,14 @@ export default class BugzillaReporter implements Reporter {
           'resolve-only mode — verified-fixed bugs are being closed; no new tickets filed';
       } else if (gate.filed.length) {
         const filer = new BugzillaFiler(client, this.config, this.log);
-        // File in module order so created bug ids are ascending (KPost → KMail → UI). Aggregate
-        // error-response findings whose endpoint also has specific per-case findings are held for
-        // review rather than auto-filed as an overlapping ticket (holdAggregatesForReview).
+        // File in module order; overlapping aggregate findings are held for review.
         outcome = await filer.file(orderedForFiling(holdAggregatesForReview(gate.filed)));
       } else {
         notFiledReason = `no valid defects (${gate.rejected.length} rejected by the validity gate)`;
       }
-      // Auto-close bugs this run VERIFIED as fixed — independent of whether anything was filed, so a
-      // clean run (nothing to file) still closes what the developers already fixed. On a DRY run it
-      // only REPORTS what it would close (a reviewable preview); it writes to Bugzilla only for real.
+      // Close bugs this run verified as fixed, even when nothing was filed. A dry run previews.
       if (this.config.autoResolve) {
-        // Bugs the filing pass already wrote a dated comment to moments ago (reproduced, reopened,
-        // adopted) — the status pass must not post a second note on them in the same run.
+        // Bugs the filing pass already commented on; the status pass must not post a second note.
         const touchedByFiler = new Set(
           (outcome?.entries ?? [])
             .filter(
@@ -289,8 +213,7 @@ export default class BugzillaReporter implements Reporter {
             )
             .map((e) => e.bugId as number),
         );
-        // A candidate the gate rejected as a timeout / bench fault / throttle / failed setup step is
-        // not a reproduction: it must not mark a bug "confirmed still broken".
+        // A transient/bench-fault rejection is no reproduction, so cannot mark a bug still broken.
         const transient = new Set(
           gate.rejected
             .filter(({ reason }) =>
@@ -308,10 +231,7 @@ export default class BugzillaReporter implements Reporter {
       }
     }
 
-    // The single, in-bench report — ONE Markdown + ONE JSON, always written, the source of truth
-    // for a run. The Markdown carries execution health (endpoints, pass/fail/skip by module + UI)
-    // followed by the bug report (distinct defects, filed-by-developer, not-filed reasons); the JSON
-    // is the structured companion (run summary + quality gate + bug candidates/filing/resolved).
+    // The run's single report: REPORT.md (health, then bugs) and its structured REPORT.json.
     const generatedAt = new Date().toISOString();
     const reportInput = {
       environment: env.TEST_ENV,
@@ -361,8 +281,7 @@ export default class BugzillaReporter implements Reporter {
       },
     };
     const markdown = `${renderRunSummaryMarkdown(runSummary)}\n${buildBugReportMarkdown(reportInput)}`;
-    // A bench self-test run tests no product: it must not replace the last product run's report,
-    // which `report:filing` and the filing scripts read.
+    // A framework-only run must not replace the last product run's report.
     const frameworkOnly =
       tests.length > 0 && tests.every((test) => test.parent.project()?.name === 'framework');
     if (!frameworkOnly) {
@@ -370,11 +289,7 @@ export default class BugzillaReporter implements Reporter {
       this.writeReport('REPORT.json', JSON.stringify(combined, null, 2));
       this.writeReport('REPORT.md', markdown);
     }
-    /*
-     * Execution health first, then the defects: "what ran" before "what is broken". A bug count
-     * read without the coverage that produced it is unanchored — 4 defects out of 5 checks and
-     * 4 out of 4,000 describe very different runs.
-     */
+    // Execution health first, so the bug count is read against the coverage that produced it.
     console.log(`\n${renderRunSummaryConsole(runSummary)}`);
     console.log(`\n${buildBugReportConsole(reportInput)}`);
   }
@@ -386,9 +301,7 @@ export default class BugzillaReporter implements Reporter {
       const project = test.parent.project()?.name ?? '';
       if (!BROWSER_PROJECTS.has(project) && project !== 'admin-ui') continue;
       const failure = [...test.results].reverse().find((attempt) => attempt.error?.message);
-      // Every failed attempt was the app not answering (throttling, a network blip) — not evidence about
-      // the app, either way. The status pass treats such a test as not run, and its "error page"
-      // screenshot is never attached as proof. (The run summary below still shows the true outcome.)
+      // Failed only because the app did not answer: counts as not run, and is never used as proof.
       const failedAttempts = test.results.filter((attempt) => attempt.error?.message);
       const envOnly =
         failedAttempts.length > 0 &&
@@ -410,12 +323,9 @@ export default class BugzillaReporter implements Reporter {
   }
 
   /**
-   * The per-run status pass over EVERY open bug of each product tested this run. Bench-filed bugs
-   * (carrying our `[KP-xxxxxx]` tag) are closed when this run VERIFIED the fix (their endpoint+validator
-   * ran and passed, and the fault did not reproduce); every bug that stays open gets a dated,
-   * plain-English status note. Hand-filed bugs (manual/security findings, other tag formats) are never
-   * auto-closed — no single automated check stands for them — but still get the dated note, so no open
-   * bug is ever left without an update. A wrong close is self-correcting: a later run reopens it.
+   * Status pass over every open bug of each product tested: bench-tagged bugs close when this run
+   * verified the fix; every other open bug gets a dated note. Hand-filed bugs are never
+   * auto-closed.
    */
   private async autoResolve(
     client: BugzillaClient,
@@ -438,25 +348,19 @@ export default class BugzillaReporter implements Reporter {
     const uiIndex = buildUiRunIndex(
       uiRecords.map((record) => {
         if (!this.uiEnvironmentalOnly.has(`${record.project}::${record.title}`)) return record;
-        // Failed only because the app did not answer: proves nothing (as if not run); a flaky one that then
-        // passed counts as the clean pass it was.
+        // Environmental-only failures count as not run; flaky-then-passed counts as a pass.
         return { ...record, outcome: record.outcome === 'flaky' ? 'expected' : 'skipped' };
       }),
     );
     const reproduced = new Set(candidates.map((c) => c.id.replace(/^\[|\]$/g, '')));
-    // Two UI products, one per front end: the browser projects drive the KPost React app, the
-    // `admin-ui` project the Admin/HR-Setup SPA. A product's open bugs are re-checked only when its
-    // own front end actually ran this pass.
+    // A UI product's bugs are re-checked only when its own front end ran this pass.
     const uiProducts = new Set<string>();
     if (uiRecords.some((r) => r.project !== 'admin-ui'))
       uiProducts.add(suiteFor('kpost-ui').bugzilla.product);
     if (uiRecords.some((r) => r.project === 'admin-ui'))
       uiProducts.add(suiteFor('admin-ui').bugzilla.product);
     const products = new Set(this.validationReports.map((r) => suiteFor(r.suite).bugzilla.product));
-    // UI tests never produce a `ValidationReport` (that's an API-only attachment), so a UI
-    // product would otherwise never appear here at all — which is exactly why a UI run's
-    // auto-resolve pass always reported "checked 0 bugs" before this. Any UI test having run this
-    // pass (regardless of pass/fail) is reason enough to check that product's open bugs.
+    // UI tests produce no ValidationReport, so add the UI products explicitly.
     for (const product of uiProducts) products.add(product);
     const benchTag = new RegExp(`\\[${this.config.tagPrefix}-[0-9A-F]{6}\\]`, 'i');
     for (const product of products) {
@@ -495,9 +399,7 @@ export default class BugzillaReporter implements Reporter {
           );
           continue;
         }
-        // A systemic (platform-wide) ticket is verified against ITS OWN endpoints, not globally — so a
-        // ticket whose endpoints are fixed closes even if the same class still fails on an unrelated
-        // endpoint (which is a different ticket). Read those from the description.
+        // A platform-wide ticket is verified against its own endpoints, read from its description.
         let affected: string[] | undefined;
         if (/platform-wide/i.test(bug.summary)) {
           const description = await client.firstComment(bug.id);
@@ -522,17 +424,13 @@ export default class BugzillaReporter implements Reporter {
   ): Promise<void> {
     if (decision.action !== 'resolve') {
       summary.keptOpen += 1;
-      // Split kept-open bugs: did the run confirm the fault still fails on THIS host, or was the
-      // check simply not exercised (a write/OTP endpoint, a UI test that didn't run, a hand-filed
-      // finding) so it stays unverified on this URL?
+      // Split kept-open bugs into confirmed still failing vs not verified this run.
       if (/still fail|fails somewhere|reproduced/i.test(decision.reason)) {
         summary.confirmedFailing += 1;
       } else {
         summary.notVerified += 1;
       }
-      // Standing owner directive: every open bug is touched every run with today's date. A bug the
-      // filing pass already commented on moments ago (reproduced / reopened / adopted) is skipped —
-      // two notes on one ticket in one run is noise, not a second signal.
+      // Every open bug gets a dated note each run, unless the filing pass already commented on it.
       if (touchedByFiler) {
         summary.touched += 1;
         return;
@@ -564,9 +462,8 @@ export default class BugzillaReporter implements Reporter {
   }
 
   /**
-   * Attaches THIS run's failure screenshot to a UI bug whose test just failed again — dated proof that
-   * it is still broken, not the screenshot from when it was first filed. Named by date + browser so a
-   * second run the same day does not upload it twice. Returns a plain-English note for the comment.
+   * Attaches this run's failure screenshot and diagnosis to a UI bug that failed again, named by
+   * date and browser so a same-day re-run does not upload twice. Returns a note for the comment.
    */
   private async attachDatedProof(
     client: BugzillaClient,
@@ -605,8 +502,7 @@ export default class BugzillaReporter implements Reporter {
           `Proof ${day} (${project}): the screen test failed again in this run — screenshot of the failure`,
         );
       }
-      // The developers' diagnostics: JS stack, the steps / Tab path, console errors, failed requests and
-      // the element that made each one, and (layout) the elements wider than the screen.
+      // JS stack, steps, console errors and failed requests.
       const diagnosis = proof.find((p) => p.label.startsWith('Failure diagnosis'));
       if (diagnosis) {
         await upload(
@@ -632,8 +528,7 @@ export default class BugzillaReporter implements Reporter {
     if (!this.config.fileUiFailures) return [];
     return tests.flatMap((test) => {
       const project = test.parent.project()?.name ?? '';
-      // Only consistently failing UI tests: a flaky pass-on-retry is not solid evidence. The three
-      // browser projects drive the KPost React app; `admin-ui` drives the Admin/HR-Setup SPA.
+      // Only consistently failing UI tests; a flaky pass-on-retry is not solid evidence.
       if (!BROWSER_PROJECTS.has(project) && project !== 'admin-ui') return [];
       if (test.outcome() !== 'unexpected') return [];
       // Only the observational specs file; a feature/write-flow selector failure is not a defect.
@@ -668,20 +563,15 @@ export default class BugzillaReporter implements Reporter {
   }
 
   /**
-   * WCAG (accessibility) findings from `accessibility-axe.spec.ts`, collapsed to one ticket per RULE
-   * across every screen it hit. Reads back the structured JSON each screen attached (see
-   * `@ui/accessibility-evidence`) regardless of that screen's pass/fail outcome — a screen with only
-   * moderate/minor findings still "passes" its soft assertions, but any critical/serious violation the
-   * JSON carries is still a candidate; the severity bar is enforced in `accessibilityCandidatesFromScreens`,
-   * not by filtering on outcome here.
+   * WCAG findings from the axe specs, one ticket per rule. Reads every screen's evidence JSON
+   * regardless of test outcome; the severity bar is applied in
+   * `accessibilityCandidatesFromScreens`.
    */
   private accessibilityCandidates(tests: readonly TestCase[]): BugCandidate[] {
     if (!this.config.fileAccessibilityFailures) return [];
     const screens: AccessibilityScreenInput[] = [];
     for (const test of tests) {
-      // `signup-login-accessibility.spec.ts` runs the identical axe-core scan + evidence shape,
-      // just on the signed-out Signup/Login screens `accessibility-axe.spec.ts` cannot reach
-      // (it requires a live session). Same rule-level consolidation applies across both files.
+      // The signed-out Signup/Login scan uses the same evidence shape.
       if (
         !['accessibility-axe.spec.ts', 'signup-login-accessibility.spec.ts'].includes(
           path.basename(test.location.file),
@@ -696,17 +586,12 @@ export default class BugzillaReporter implements Reporter {
             readFileSync(attachment.path, 'utf8'),
           ) as AccessibilityScreenInput;
           if (parsed.violations?.length) {
-            // The screenshot/video Playwright captured for this failing test. A WCAG violation
-            // is a static property (nothing visibly changes), so the test paints the violations onto
-            // the page and holds them before finishing — the video now ends on that readable report
-            // instead of an unremarkable blank page, and the annotated screenshot ('a11y-evidence')
-            // shows the same thing as a still image. Both are meaningful now, so both are kept.
+            // The test paints the violations onto the page, so screenshot and video both show them.
             parsed.proof = proofFrom(result.attachments, parsed.screen);
             screens.push(parsed);
           }
         } catch {
-          // A missing/malformed evidence file is a bench problem, not a product defect — skip it
-          // rather than let a parse error crash the whole reporting pass.
+          // A malformed evidence file is a bench problem, not a defect; skip it.
         }
       }
     }
@@ -728,10 +613,8 @@ export default class BugzillaReporter implements Reporter {
 const HAND_FILED = 'hand-filed';
 
 /**
- * The dated status note written to an open bug on every run (and the close note when one is verified
- * fixed). Written for a developer reading the exported sheet's "Last Comment" column, not for QA: it
- * restates which bug this is, gives the date, the result in capitals, why, and an explicit bottom line —
- * never the bench's internal validator jargon on its own.
+ * The dated plain-English status note (or close note) for an open bug, written for a developer who
+ * reads only the latest comment: which bug, the date, the result, why, and a bottom line.
  */
 export function plainStatusComment(
   bug: BugSummary,
@@ -796,10 +679,7 @@ export function plainStatusComment(
     );
   }
   let why = r;
-  // Order matters: the UI reason "its originating test did not run on firefox this pass" also contains
-  // "did not run on", so it must be matched BEFORE the API one ("validator X did not run on <endpoint>").
-  // Checked the other way round (2026-10-09), ~every Firefox/WebKit-only UI bug was told its check was
-  // "skipped on its endpoint" — a wrong reason, though the status (still open) was right.
+  // Order matters: the UI reason also contains "did not run on", so match it before the API one.
   if (/originating test did not run/i.test(r)) {
     const browser = r.match(/did not run on (\w+)/i)?.[1];
     why = browser
@@ -835,11 +715,6 @@ function firstLine(message: string): string {
     .slice(0, MAX);
 }
 
-/**
- * The screenshot and video Playwright captured for a failed UI test, as proof to attach to the
- * ticket. Playwright records these on failure (`screenshot: 'only-on-failure'`, `video:
- * 'retain-on-failure'`); each attachment carries the file `path` and `contentType`.
- */
 /** Bytes on disk, or -1 if the file cannot be statted (never wins a largest-file comparison). */
 function fileSize(path: string): number {
   try {
@@ -849,9 +724,7 @@ function fileSize(path: string): number {
   }
 }
 
-/** Among several attachments sharing a name, the one whose file is actually the largest — Playwright
- * can emit more than one under the same name (e.g. a brief secondary browser context produces a
- * near-empty stub video alongside the real recording), and "first in the array" is not reliable. */
+/** The largest same-named attachment (a secondary context can add a near-empty stub video). */
 function largestByName(
   attachments: readonly { name: string; path?: string; contentType: string }[],
   name: string,
@@ -879,15 +752,13 @@ export function readFailureSignals(
   }
 }
 
+/**
+ * The screenshot, video and diagnostics Playwright captured for a failed UI test, as ticket proof.
+ */
 export function proofFrom(
   attachments: readonly { name: string; path?: string; contentType: string }[] | undefined,
   browser: string,
-  // A video only earns its storage cost when it shows something a still image cannot — motion, a
-  // sequence, an overlay appearing. A static defect (a WCAG rule, a form's resting state) looks
-  // IDENTICAL at the first frame and the last: the whole recording is just a blank/unchanging page,
-  // which bloats Bugzilla's attachment storage for zero extra evidence. Callers for that kind of
-  // finding pass includeVideo: false so only the screenshot — which shows exactly the same thing —
-  // gets attached.
+  // Static defects pass includeVideo: false; their video shows nothing the screenshot does not.
   { includeVideo = true }: { includeVideo?: boolean } = {},
 ): ProofFile[] {
   const proof: ProofFile[] = [];
@@ -913,42 +784,35 @@ export function proofFrom(
     if (a.name === 'screenshot' || a.name === 'video') {
       continue;
     } else if (a.name === 'a11y-evidence') {
-      // The WCAG violations painted onto the actual page — the only way a static accessibility
-      // defect (missing alt text, low contrast, …) becomes visible in a screenshot at all.
+      // The WCAG violations painted onto the page.
       proof.push({
         path: a.path,
         contentType: a.contentType,
         label: `Annotated WCAG screenshot (${browser})`,
       });
     } else if (a.name === 'crash-evidence') {
-      // An annotated screenshot: the JS crash painted onto the page as readable text, so the IMAGE
-      // itself shows the bug (the raw screenshot only shows a normal-looking screen).
+      // The JS crash painted onto the page as text, since the raw screenshot looks normal.
       proof.push({
         path: a.path,
         contentType: a.contentType,
         label: `Annotated crash screenshot (${browser})`,
       });
     } else if (a.name === 'crash-diagnosis') {
-      // A plain-English explanation of a JS crash (error + stack + the API call behind it) — the
-      // evidence a screenshot/video cannot give for an exception that fires silently in the console.
+      // A plain-English explanation of a JS crash (error, stack, the API call behind it).
       proof.push({
         path: a.path,
         contentType: a.contentType,
         label: `Crash diagnosis (${browser})`,
       });
     } else if (a.name === 'trace') {
-      // The full Playwright trace (network, DOM snapshots, console, every action) — lets a developer
-      // step through the exact failure in trace viewer rather than guessing from a still frame. Can
-      // be large; `attachProof`'s own size cap silently skips it rather than failing the ticket.
+      // The full Playwright trace; the filer's size cap skips it when too large.
       proof.push({
         path: a.path,
         contentType: a.contentType,
         label: `Playwright trace (${browser})`,
       });
     } else if (a.name === FAILURE_DIAGNOSIS_ATTACHMENT || a.name === AXE_DETAILS_ATTACHMENT) {
-      // The evidence the UI developers asked for (stack, steps, failed requests + who made them,
-      // overflowing elements / failing elements with colours). Dated label → a fresh copy is attached
-      // on each day it is re-confirmed, not skipped as "already there" from an older run.
+      // Dated label, so a fresh copy is attached on each day the failure is re-confirmed.
       const day = new Date().toISOString().slice(0, 10);
       const what =
         a.name === AXE_DETAILS_ATTACHMENT ? 'Accessibility details' : 'Failure diagnosis';

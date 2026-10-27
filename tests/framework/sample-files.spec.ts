@@ -10,10 +10,8 @@ import {
 } from '@fixtures/files';
 
 /**
- * The sample files (`src/fixtures/files`) are what every upload/download test sends and compares, so a
- * broken one would turn a product verdict into noise. These checks need no network and no browser.
- * Independently confirmed once, 2026-10-23: DOCX/XLSX opened by .NET ZipFile with every part parsing as XML;
- * JPEG/PNG/GIF (incl. the 520 000-byte padded JPEG) decoded by GDI+; the WAV loaded by SoundPlayer.
+ * The sample upload files (`src/fixtures/files`) must be valid, or upload/download verdicts become
+ * noise. Offline checks.
  */
 test.describe('Sample files are valid, deterministic files of their type @framework', () => {
   test('every file is byte-identical on every generation (stable SHA-256)', () => {

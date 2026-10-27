@@ -4,13 +4,8 @@ import { expect, test as setup } from '@fixtures';
 import { reuseValidSession } from './session-reuse';
 
 /**
- * Logs in as the **BUSINESS_S company admin** (`sma.qa@kpost.in`) and saves its session to
- * `.auth/business.json`, for the company-admin UI on the main KPost app — the **User Management**
- * screen a business admin has (`/usermanagement`), which a PERSONAL account does not.
- *
- * Only performs the real login when a company-admin UI spec will run (`BUSINESS_UI_LIFECYCLE=true`);
- * otherwise it saves an anonymous state so a normal browser run does not do an extra fresh login
- * (which re-hits the throttling country-list endpoint).
+ * Logs in as the BUSINESS_S company admin and saves the session, for the User Management UI.
+ * Without BUSINESS_UI_LIFECYCLE=true it saves an anonymous state, avoiding an extra login.
  */
 setup('authenticate BUSINESS_S admin', async ({ page, browser, loginPage, log }) => {
   if (await reuseValidSession(browser, STORAGE_STATE_BUSINESS, log)) setup.skip();

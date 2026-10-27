@@ -201,8 +201,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
       'Test timeout of 600000ms exceeded.',
       'Error: page.goto: Timeout was reached',
       'Error: page.goto: Could not resolve hostname',
-      // A navigation race / redirect-in-flight is a test-harness artifact, not a product crash —
-      // on a throttled server a whole run of these must never become new bugs (run-2f18b0d8).
+      // A navigation race / redirect-in-flight is a test-harness artifact, not a product crash.
       'Error: page.goto: Navigation to "https://test.kpostindia.com/home" is interrupted by another navigation to "https://test.kpostindia.com/login"',
       'Error: Execution context was destroyed, most likely because of a navigation',
     ]) {
@@ -343,8 +342,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     const auth = buildDescription(candidate({ classification: 'authentication.missing-token' }));
     expect(auth, 'auth bugs explain the 401 contract').toContain('HTTP 401');
 
-    // The common.* data-shape validators (which dominate KMail's findings) also teach the developer,
-    // so a KMail ticket is as self-explanatory as a KPost one.
+    // The common.* data-shape validators also carry developer guidance.
     for (const validator of ['common.api-error', 'common.id', 'common.date', 'common.boolean']) {
       const desc = buildDescription(candidate({ classification: validator }));
       expect(desc, `${validator} explains itself`).toContain('What this means:');
@@ -616,8 +614,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     );
     const desc = buildDescription(ui);
 
-    // The developer has the app, not our test bench — so no internal file path, run command, or the
-    // name of our frontend repository.
+    // The developer has the app, not the bench: no internal file path, run command or repo name.
     expect(desc, 'no internal test file path').not.toContain('tests/e2e');
     expect(desc, 'no internal test command').not.toContain('npx playwright');
     expect(desc, 'no internal repo name').not.toContain('KPOST_REACTJS_2023_V1');

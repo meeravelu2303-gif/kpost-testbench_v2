@@ -4,12 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Common **reference-data business rules** — countries/states/cities/postcodes/languages/
- * designations. Not gated: all `productionSafe: true`, safe on every default run.
- *
- * The real finding here is cross-endpoint consistency, not just "does it return 200": a region id
- * from `getStates` should resolve to real cities of `getCitiesByRegionId`, and a designation search
- * should actually filter by its prefix rather than return an unrelated list.
+ * Common reference-data rules (read-only, ungated): a getStates region id must resolve to cities, and a
+ * designation search must filter by its prefix.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;

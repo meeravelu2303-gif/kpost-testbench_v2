@@ -6,23 +6,8 @@ import { kallReadApis } from './read.api';
 import { kallScheduleApis } from './schedule.api';
 
 /**
- * The KPost **Kall** module — voice/video calling. `/v2/kall/*`.
- *
- * FR-C01..C09 and BR-C01. Grouped by what an endpoint does, because that is how it fails and how it
- * is gated for the live application:
- *
- *   read.api.ts      call log, today's scheduled, frequent contacts, status   (log reads run live)
- *   direct.api.ts    place a normal call, move its status, end, clear log      (writes — lifecycle)
- *   schedule.api.ts  schedule / reschedule / join / end / repeat / members     (writes — lifecycle)
- *   legacy.api.ts    dead-from-frontend V1 writes (no /v2 prefix), still live  (security regression)
- *
- * The status / type / mode / repeat-type codes and the flows are analysed in `docs/modules/kall-flow.md`;
- * the codes come from `@api/contract/kpost-types`.
- *
- * **Scope on live today:** the log reads run on our own account; every write is gated behind
- * `KALL_LIFECYCLE=true` (a call rings a real device / notifies participants), and the two
- * `kallID`-keyed status reads wait on a real call id the lifecycle creates. `docs/generated/live-endpoints.md`
- * shows the per-endpoint status.
+ * Kall (`/v2/kall/*`): reads, direct-call and scheduled-call writes (KALL_LIFECYCLE only), and
+ * legacy V1 writes still live. See `docs/modules/kall-flow.md`.
  */
 export const kallApis: EndpointDefinition[] = [
   ...kallReadApis,
@@ -32,11 +17,8 @@ export const kallApis: EndpointDefinition[] = [
 ];
 
 /**
- * Documented `/kall` paths that no definition covers.
- *
- * Asserted by tests/api/kpost/kall/coverage.spec.ts, so a future workbook dump that adds an endpoint
- * here fails the run instead of being quietly untested. Both the live path and any `contractPath`
- * count as covered.
+ * Documented `/kall` paths no definition covers (live path or `contractPath`); asserted by
+ * coverage.spec.ts.
  */
 export function uncoveredKallPaths(): string[] {
   const covered = new Set(

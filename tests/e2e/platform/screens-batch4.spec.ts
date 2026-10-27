@@ -4,12 +4,8 @@ import { test } from '@fixtures';
 import { runScreenSweep } from '../support/screen-sweep';
 
 /**
- * Deep UI sweep, batch 4 (WriteMail, KPoster, NotFound) — the PERSONAL-session screens added on
- * 2026-10-10 when the registry was extended to every route in the front-end map. Same shared body
- * and pacing as batches 1–3 (`screen-sweep.ts`).
- *
- * Not yet on the reporter's UI filing allow-list: a new sweep earns that after clean runs on all
- * three browsers (docs/guides/bug-filing.md). Until then its failures are read in the report.
+ * Deep UI sweep, batch 4 (WriteMail, KPoster, NotFound; personal session). Not yet on the UI filing
+ * allow-list, so its failures are read in the report.
  */
 const BATCH = new Set(['writemail', 'kposter', 'notfound']);
 

@@ -2,10 +2,8 @@ import { pruneTokenHistory, type StoredToken } from '@engine/token-history';
 import { expect, test } from '@fixtures';
 
 /**
- * The expired-token check needs a QA token from an earlier run that has aged past its `exp`. Before
- * 2026-10-20 the history kept only the newest 20, so one busy day pushed every older token out and the
- * check skipped for ever. These pin the fix: each account keeps the token that matures first, and its
- * newest already-expired one, whatever the volume.
+ * The expired-token check needs an aged QA token, so each account keeps the token that matures first
+ * and its newest already-expired one, whatever the volume.
  */
 const DAY = 24 * 3600;
 

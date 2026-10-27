@@ -7,14 +7,9 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * RTM-KU-M05 — a message sent while the recipient is OFFLINE is waiting for them, unread, when they
- * next sign in.
- *
- * B goes offline the way a person does: B signs in on a device of its own and signs out of it
- * (the bench's shared session lives on a different device and is untouched — the pattern of
- * `login-flow.spec.ts` "a session can be ended…"). A then sends B a message. B signs in again on that
- * device, opens the conversation with A, and finds the message. The database row is the judge of
- * "unread until opened": `read_time` is empty before B opens it.
+ * RTM-KU-M05: a message sent while the recipient is offline is waiting, unread, at next sign-in.
+ * B signs out on a device of its own (the shared session is untouched), A sends, B signs back in and
+ * opens it; `read_time` in the DB stays empty until B opens it.
  */
 const P = AUTH_PROFILES.kpost.principals;
 const A = P.find((p) => p.key === 'personal')!;

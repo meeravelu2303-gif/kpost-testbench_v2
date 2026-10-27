@@ -3,7 +3,27 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — Commands per product, report retention, stale docs removed
+### 2026-10-27 (latest) — Comments cut to what the code needs; a README per main folder
+
+Owner: "keep the valid short comments only … whoever sees the folder must understand the files". Chose:
+remove history and shorten long headers.
+
+- **Comments 19,456 → 7,617 lines (19% → 8% of the code), 591 files.** Removed dated incident stories,
+  bug back-stories, owner quotes and "removed … in git history" notes (this log is where history
+  lives); file headers and long JSDoc are now 1–3 lines saying what the code is and, where not
+  obvious, why. Kept one-line whys on the safety guards and a bare bug id only where a test depends on
+  that defect. Several comments that no longer matched the code were corrected rather than shortened
+  (e.g. business-m logs in via `userLogin`, not `adminUserLogin`).
+- **Proof:** every changed file was tokenised (TypeScript scanner) with comments removed and compared
+  with HEAD. Identical in 590 of 591; strings, test titles, tags, skip reasons and directives are
+  unchanged, so bug fingerprints and the generated ledgers are unaffected. No tests were run (owner).
+- **The one code change:** `tests/api/admin/flows/role-posting-lifecycle.spec.ts` had a regex with its
+  backslashes lost (`"companyName"s*:s*`), so the company-name fallback never matched JSON with a
+  space after the colon. Fixed to `\s*`, matching the three other copies.
+- **Folder guides:** `src/README.md`, `tests/README.md`, `scripts/README.md` (one line per folder or
+  script). Removed the empty, untracked `src/api/schemas/`.
+
+### 2026-10-27 — Commands per product, report retention, stale docs removed
 
 Owner: "clear structure, proper run commands for each product, remove the legacy documents, no duplicate
 files, no large unwanted data; bugs must file automatically, valid and without duplicates".

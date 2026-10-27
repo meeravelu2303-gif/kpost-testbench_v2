@@ -4,12 +4,8 @@ import { defineKpostEndpoint, type KpostEndpointConfig } from '../kpost-endpoint
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
 
 /**
- * The KPost **AWS** module — S3 presigned URLs and attachment lifecycle. `/v2/aws/*`.
- *
- * The presigned-URL generators take only harmless file metadata (`extension`/`fileName`/`fileSize`),
- * write nothing persistent and name no one, so they run on live as read-shaped generators. The check
- * and delete are keyed by a real `uuid` the generator mints, so they run through the gated feature
- * flow (`AWS_LIFECYCLE=true`). Payloads from the workbook + live client (`Services/Katchup.js`).
+ * AWS (`/v2/aws/*`): presigned-URL generators take only file metadata and run on live; check and
+ * delete need a real `uuid`, so the gated AWS_LIFECYCLE flow drives them.
  */
 function defineAwsEndpoint(config: KpostEndpointConfig): EndpointDefinition {
   return defineKpostEndpoint({
@@ -21,8 +17,7 @@ function defineAwsEndpoint(config: KpostEndpointConfig): EndpointDefinition {
 
 const fileMeta = () => ({ extension: 'pdf', fileName: 'qa-bench.pdf', fileSize: '940' });
 
-// Types-only, from a CAPTURED live body (2026-10-11): { presignedURL, urlPath, status, statusCode }.
-// The workbook documents no response for these; open + nullable so a varying signed URL never fails.
+// Types-only, from a captured live body (the workbook documents no response).
 const presignedResponse = () =>
   typesOnlySchema({ presignedURL: '', urlPath: '', status: 'SUCCESS', statusCode: 200 });
 
@@ -57,9 +52,7 @@ export const checkAttachmentApi = defineAwsEndpoint({
   path: '/v2/aws/checkAttachmentS3/',
   summary: 'Check whether attachments exist in S3',
   tags: ['attachment'],
-  // A read. An EMPTY `attachmentsUuid` array is rejected with 400 "attachmentsUuid is required", so
-  // it sends one known-absent uuid: the S3 check answers "does not exist" (200) without naming a real
-  // attachment. `attachmentsUuid` is guard-exempt (a runtime S3 id), so this runs on live harmlessly.
+  // A read. An empty array 400s, so it sends one known-absent uuid, which answers "does not exist".
   destructive: false,
   productionSafe: true,
   request: body(() => ({ attachmentsUuid: ['qa-nonexistent-attachment-0000'] })),

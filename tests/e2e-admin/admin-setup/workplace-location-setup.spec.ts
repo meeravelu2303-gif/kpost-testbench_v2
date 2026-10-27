@@ -22,13 +22,8 @@ import {
 } from '../support/admin-workflow';
 
 /**
- * Admin UI · **Work Place Location Setup** (/workplace-location-setup), done on screen: a QA location is
- * added under the company's existing workplace tiers, renamed and deleted. Read from
- * `AdminSetup/MediumLarge/WorkPlaceLocationSetup/WorkPlaceLocationSetup.js` (2026-10-22): one dropdown per
- * workplace tier (label = tier name, placeholder "Select "), cascading; then name, country, a 6-digit
- * pincode that fills state and city, area, address. Save/Update need all of those (:1232-1240).
- * `/location/save|update|delete` only; delete is refused while a role posting uses the location (none
- * does: it is new). Host-guarded like every Admin write test.
+ * Admin UI Work Place Location Setup: a QA location is added under the company's workplace tiers (one
+ * cascading dropdown per tier), renamed and deleted on screen. Host-guarded.
  */
 const ok = (r: { status: number; body: { status?: string } }): boolean =>
   r.status === 200 && r.body.status === 'SUCCESS';

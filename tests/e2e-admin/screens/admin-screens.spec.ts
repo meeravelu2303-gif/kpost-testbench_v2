@@ -8,19 +8,9 @@ import type { Locator, Page } from '@playwright/test';
 import { expect, test } from '@fixtures';
 
 /**
- * Deep UI sweep across every Admin / HR-Setup screen (`kpostadmin.kpostindia.com`) — the admin-side
- * analogue of the KPost `screens.spec.ts`. For each screen, in the SSO'd session:
- *
- *   1. navigate and confirm the screen MOUNTED (its `.title-font` heading, or its tabs where the
- *      heading text is a known product bug),
- *   2. assert the global shell (sidebar + header) and every key CONTROL it should render,
- *   3. run the whole UI check catalogue (`src/ui/ui-checks.ts`) — JS crash / broken asset, render
- *      budget, no phone-width overflow, accessibility — surfacing MEDIUM+ findings.
- *
- * Read-only and gated: it self-skips unless `ADMIN_UI_LIFECYCLE=true` seeded a real BUSINESS_M
- * session (`auth-admin.setup.ts`) and the admin host is configured, so a normal run never touches it.
- * It is deliberately NOT in `UI_FILING_SPECS`, so a selector miss surfaces for triage but never files
- * a bug against the wrong product (admin-UI bug routing is a follow-up).
+ * Read-only sweep of every Admin/HR-Setup screen: it mounts, the shell and key controls render, and
+ * the UI check catalogue (crashes, assets, render time, overflow, a11y) finds nothing MEDIUM or worse.
+ * Needs ADMIN_UI_LIFECYCLE=true and the BUSINESS_M admin session.
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 
@@ -47,8 +37,7 @@ test.describe('Admin/HR-Setup deep UI sweep — every screen', { tag: '@admin-ui
         new RegExp(screen.route.replace(/[/-]/g, '\\$&')),
       );
 
-      // 1. The screen mounted — its title heading, or (where the heading text is a product bug) its
-      //    first key control.
+      // 1. The screen mounted: its title, or its first key control where the title text is a known bug.
       if (screen.title) {
         await expect(
           page.locator('.title-font').filter({ hasText: screen.title }).first(),

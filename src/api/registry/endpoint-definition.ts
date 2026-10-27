@@ -11,9 +11,7 @@ export type AuthFailureMode = 'missing' | 'invalid' | 'expired' | 'malformed';
 /** Helpers available while building an endpoint's valid request. */
 export interface RequestFactoryHelpers {
   /**
-   * Execute another registered endpoint (its own request factory merged with `overrides`),
-   * assert its expected status and return the response `data`. Lets `GET /users/{id}` reuse
-   * `create-user` instead of duplicating its payload.
+   * Run another registered endpoint (with `overrides`), assert its status and return its `data`.
    */
   call<T = Record<string, unknown>>(endpointId: string, overrides?: RequestSpec): Promise<T>;
   /** Tenant (company) that test data is created in. */
@@ -24,9 +22,8 @@ export interface RequestFactoryHelpers {
 export type RequestFactory = (helpers: RequestFactoryHelpers) => RequestSpec | Promise<RequestSpec>;
 
 /**
- * Everything that is specific to one endpoint. Everything that is common to all endpoints
- * (how to test auth, status, schema, headers, security, ...) lives in the central validators.
- * Only `id`, `method` and `path` are required — every other property has a central default.
+ * What is specific to one endpoint; everything common lives in the central validators. Only `id`,
+ * `method`, `path` are required.
  */
 export interface EndpointDefinition {
   id: string;
@@ -34,52 +31,29 @@ export interface EndpointDefinition {
   /** OpenAPI-style template, e.g. `/users/{id}`. */
   path: string;
   /**
-   * The path the workbook documents, when it disagrees with the live API.
-   *
-   * Kept on the definition (not just consumed when building it) so the coverage self-tests can
-   * reconcile "what the sheet documents" with "what we actually call" - otherwise a corrected path
-   * looks like an uncovered endpoint and the real one looks undocumented.
+   * The path the workbook documents, when it differs from the live API (lets coverage reconcile the
+   * two).
    */
   contractPath?: string;
   /**
-   * The method the workbook documents, when the live API answers a different verb. The schema is
-   * read from the documented (method, path) row while requests use `method`. See `contractMethod`
-   * in kpost-endpoint.ts — used where a derived verb is wrong (e.g. profile fetchUserDetails).
+   * The method the workbook documents, when the live API answers a different verb; the schema is
+   * read from that row.
    */
   contractMethod?: HttpMethod;
-  /**
-   * Which KPost module this endpoint belongs to. Decides the base URL it is called on and,
-   * when a defect is found, the Bugzilla product, component and owning developer.
-   * Default: `kpost-api`. See src/config/ownership.config.ts.
-   */
+  /** Owning module: picks the base URL and the Bugzilla product/owner. Default `kpost-api`. */
   suite?: SuiteId;
   summary?: string;
-  /**
-   * Why this endpoint cannot be exercised the obvious way, in one line.
-   *
-   * Already carried by 107 definitions before it was declared here — typically to record that a
-   * call needs a runtime id from a prior request (a `draftMailID`, a `parentAttributeId`), or
-   * that a documented payload is refused by the running service. Declared so the convention is
-   * typed rather than tolerated, and so coverage invariants can require one where an endpoint is
-   * excluded from something — an exclusion with a written reason is auditable, a bare flag is not.
-   */
+  /** One line on why this endpoint cannot be exercised the obvious way. */
   note?: string;
   tags?: readonly string[];
-  /**
-   * Requirement ids from the Full Suite FRD v2.0 that this endpoint exercises (FR-S01, BR-K02,
-   * NFR-SEC01, ...). Recorded so coverage can be reported against the 55 FRs and 9 BRs the
-   * documents define, rather than against a count of endpoints - which says nothing about whether
-   * the product's rules are tested.
-   */
+  /** FRD requirement ids this endpoint exercises (FR-S01, BR-K02, ...). */
   requirements?: readonly string[];
 
   /** Defaults to apiConfig.defaultExpectedStatus[method]. */
   expectedStatus?: readonly number[];
   /**
-   * Set when this endpoint's valid request needs data the generic sweep cannot supply (an existing
-   * group, call, event, contact or image) or depends on state an earlier run left behind. The
-   * sweep's primary request then legitimately gets a client rejection, so a 2xx or a 4xx other than
-   * 401 is an acceptable answer; a 5xx or a 401 is still a defect. The text says why.
+   * Why the sweep cannot supply valid data for this endpoint. A 2xx or a non-401 4xx is then
+   * accepted; a 5xx or 401 is still a defect.
    */
   precondition?: string;
   /** Defaults to apiConfig.defaultContentType. */
@@ -87,8 +61,8 @@ export interface EndpointDefinition {
   /** Response wrapped in the envelope of `responseContract`. Default: true. */
   envelope?: boolean;
   /**
-   * Which API response contract this endpoint follows - see src/config/response-contract.ts.
-   * Default: `standard`. Real KPost endpoints use `kpost`.
+   * The response contract this endpoint follows (response-contract.ts). Default `standard`; KPost
+   * uses `kpost`.
    */
   responseContract?: ResponseContractId;
 
@@ -97,11 +71,7 @@ export interface EndpointDefinition {
     required?: boolean;
     /** Role used for the primary request. Default: the auth profile's role (USER) or the first allowed role. */
     role?: Role;
-    /**
-     * The exact principal (by `key`) to authenticate the primary request as, when a role alone is
-     * ambiguous. The Admin module is driven by a specific business tier (`business-m`) though several
-     * principals share the `COMPANY_ADMIN` role, so the endpoint names the one it needs.
-     */
+    /** The exact principal (by `key`) for the primary request, when a role alone is ambiguous. */
     principalKey?: string;
     failureStatus?: Partial<Record<AuthFailureMode, readonly number[]>>;
   };
@@ -144,36 +114,23 @@ export interface EndpointDefinition {
     rateLimit?: { maxRequests: number; request: RequestFactory };
   };
 
-  /**
-   * Tuning for the simultaneous-request validators (`src/validators/concurrency`).
-   *
-   * Every field is optional: the probes work from central defaults, and an endpoint states only
-   * what is specific to it. The two `*Paths` lists exist because a concurrency finding is only
-   * trustworthy when the bench knows which differences between two identical responses are normal —
-   * without them a server-generated timestamp reads as one caller receiving another's record.
-   */
+  /** Tuning for the simultaneous-request validators (`src/validators/concurrency`). */
   concurrency?: {
     /** Requests dispatched together. Default: `thresholds.concurrency.defaultRequests`. */
     requests?: number;
     /**
-     * Response paths that may legitimately differ between two identical reads — a server clock, a
-     * view counter, a freshly minted token. Excluded before bodies are compared, so ordinary
-     * volatility is never reported as a race.
+     * Response paths that may differ between identical reads (clock, counter, token); ignored when
+     * comparing.
      */
     volatilePaths?: readonly string[];
     /**
-     * Response paths carrying the CALLER'S OWN identity (`data.kpostID`, `data.companyID`). Every
-     * response in a burst must repeat the same value: a different one means one caller was handed
-     * another caller's record, which is the most serious fault this category can find.
+     * Response paths holding the caller's own identity; a different value in a burst means a leaked
+     * record.
      */
     identityPaths?: readonly string[];
     /**
-     * This endpoint creates something that must exist at most once — a unique constraint, an
-     * idempotency key, a single seat. Enables the duplicate-write race probe: the same payload
-     * dispatched twice simultaneously must yield exactly one success and one rejection.
-     *
-     * Opt-in, because only the endpoint knows whether a second identical write is a duplicate or a
-     * legitimate second record — two messages with the same text are two messages.
+     * The write must succeed at most once: two simultaneous identical writes give one success, one
+     * rejection.
      */
     singleWriteWins?: boolean;
   };
@@ -189,42 +146,18 @@ export interface EndpointDefinition {
   /** Mutates or deletes data. Default: true for POST/PUT/PATCH/DELETE. */
   destructive?: boolean;
   /**
-   * How far the side effect reaches: `data` (test-owned records, the default), `external` (sends
-   * a real SMS or email) or `global` (changes shared environment state). See production-guard.ts.
+   * How far a write reaches: `data` (test-owned records, default), `external` (real SMS/email) or
+   * `global` (shared state).
    */
   sideEffect?: SideEffect;
   /**
-   * Cleared to run against the LIVE application.
-   *
-   * **Default deny.** With `TEST_ENV=production` an endpoint without this flag does not run at
-   * all — not its primary call, not its probes. A blocklist was considered and rejected: it fails
-   * silently the day somebody adds an endpoint, and the failure mode is a live request nobody
-   * reviewed.
-   *
-   * Setting it is an assertion about the endpoint, and the reviewer has to be able to check it:
-   *
-   *  - it neither writes nor deletes, OR every record it writes is one of our own QA accounts',
-   *  - every identifier it accepts is supplied by us and validated by the QA-identifier guard,
-   *  - it does not send an SMS or an email,
-   *  - it does not change state shared by other users of the live application.
-   *
-   * Cite the reason in a comment next to the flag. "It looked read-only" is not a reason —
-   * `getCompanyDetailsByAdmin` looks read-only and returns any company's record to an anonymous
-   * caller.
+   * Cleared to run against the live application (default deny). Set only when it writes nothing but
+   * our own QA records, sends no SMS/email and changes no shared state; cite the reason next to it.
    */
   productionSafe?: boolean;
   /**
-   * This endpoint cannot complete without a one-time password.
-   *
-   * The dev host has a bypass (`123456`); production does not, and must not. So these are skipped
-   * on live with the reason attached rather than failing 16 times over.
-   *
-   *   `sends`     delivers a real OTP by SMS or email — works, but costs money and reaches a person
-   *   `consumes`  its payload carries an `otp` field we cannot fill
-   *   `requires`  needs an OTP validated in an earlier step, though its own payload shows none
-   *
-   * `tests/framework/live-safety.spec.ts` derives the OTP endpoints from `contracts/` and fails on
-   * any that lacks this flag, so an endpoint cannot quietly lose it when a workbook dump changes.
+   * Needs a one-time password, so it is skipped where no bypass OTP exists. `sends` delivers a real
+   * OTP, `consumes` carries an `otp` field, `requires` needs one validated in an earlier step.
    */
   otpDependent?: 'sends' | 'consumes' | 'requires';
 }

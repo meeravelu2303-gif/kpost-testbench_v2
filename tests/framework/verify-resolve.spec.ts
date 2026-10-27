@@ -13,9 +13,8 @@ import type {
 import { expect, test } from '@fixtures';
 
 /**
- * Auto-resolve must only close a bug it PROVED fixed — its exact (endpoint, validator) ran and
- * passed this run. These pin that: still-failing, not-tested, and environmental checks stay open,
- * and a systemic class is only cleared when it no longer fails anywhere.
+ * Auto-resolve closes a bug only when its exact (endpoint, validator) ran and passed this run;
+ * a systemic class clears only when it fails nowhere.
  */
 
 function result(endpoint: string, validator: string, status: string): ValidationResult {
@@ -223,11 +222,7 @@ test.describe('auto-resolve verification', () => {
   });
 });
 
-/**
- * The UI counterpart — added 2026-10-07 to close the "UI bugs are never auto-verified" gap (see
- * `feedback_ui_bugs_no_auto_verify_mechanism`). A UI bug has no endpoint, so its identity for this
- * check is the originating Playwright test's title, embedded in the bug's own summary.
- */
+/** The UI counterpart: a UI bug is identified by its originating test title, embedded in its summary. */
 function uiBug(summary: string): BugSummary {
   return { id: 2, summary, is_open: true, product: 'KPost UI' };
 }
@@ -299,7 +294,7 @@ test.describe('auto-resolve verification — UI', () => {
   });
 
   test('matches the REAL filed summary format "<test title>: <error>" to its test @framework', () => {
-    // Exactly how candidateFromUiFailure titles a UI bug — the format that matched 0 of 24 before.
+    // Exactly how candidateFromUiFailure titles a UI bug.
     const filed: BugSummary = {
       ...uiBug(`[KP-B9A1E4] ${T}: Error: Home broke while crawling its controls — broken resource`),
       whiteboard: '[cat:Functional][browser:chromium]',

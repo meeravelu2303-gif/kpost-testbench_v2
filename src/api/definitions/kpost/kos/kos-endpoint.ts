@@ -6,12 +6,7 @@ import {
   type UndocumentedKpostEndpointConfig,
 } from '../kpost-endpoint';
 
-/**
- * A KOS endpoint: `defineKpostEndpoint` with authentication required (post-login) and the `kos` tag.
- * KOS is the office suite — KWord documents (`/kword/*`) and K-AI (`/ai/*`). The KOS screen renders
- * "Coming Soon" today, so this module is API-only. Payloads from the live client (`Services/KOS.js`,
- * `KAI.js`) and the workbook; the AI generation endpoints call a real (metered) AI service.
- */
+/** A KOS endpoint: `defineKpostEndpoint` with authentication required and the `kos` tag. */
 export function defineKosEndpoint(config: KpostEndpointConfig): EndpointDefinition {
   return defineKpostEndpoint({
     ...config,

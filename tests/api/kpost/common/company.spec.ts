@@ -6,11 +6,6 @@ import { test } from '@fixtures';
  * HOW is owned by the central validation engine.
  */
 test.describe('KPost common · company', { tag: ['@api', '@platform', '@regression'] }, () => {
-  /*
-   * Nothing is excluded. The logo routes were corrected from the API owner's working calls, so they
-   * reach real handlers now — and what they report is a genuine finding rather than configuration
-   * noise: `downloadCompanyLogo` answers 500 to every request, including an unauthenticated one.
-   * See company.api.ts for the corrections and the evidence behind them.
-   */
+  // Nothing excluded. Known defect: downloadCompanyLogo answers 500 to every request.
   describeEndpointCases({ tags: ['common-company'] });
 });

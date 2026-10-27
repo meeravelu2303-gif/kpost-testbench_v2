@@ -11,22 +11,8 @@ import { settleFrames } from '../support/settle';
 import { openConversation } from '../support/katchup';
 
 /**
- * Completes the "Transfer" sub-flow — a documented coverage gap (no existing spec touches Transfer at
- * all beyond the bell-menu hover fix already made in support/katchup.ts's openBellMenu comment).
- *
- * Read directly from source (bubble/KatchupMessage/KatchupMessage.js handleDropDownClick,
- * CommonComponent/TransferMessage/Transfer.js, Katchup/components/MultipleContact/MultipleContact.js):
- *   1. Bell menu "Transfer" sets `setTransfer(true)`, opening a small "Transfer Message" modal
- *      (KMail / Katchup / other-application share targets).
- *   2. Clicking "Katchup" there opens a recipient picker reusing MultipleContact, but with
- *      `hideSelectAll={true}` — Transfer's picker has NO "Select All" control at all, so the toggle-math
- *      bug that blocked the Forward sub-flow's completion (katchup-forward-subflow-e2e.spec.ts) doesn't
- *      apply here. Each contact row's own checkbox calls `handleMultipleContact`, a simple
- *      append/remove — no batch-selection edge case.
- *   3. "Done" (handleDoneContact) is unconditional — unlike Forward's separate `.post_button_size` send
- *      button, Transfer's `finalSubmit` prop IS `handleForward`, which calls the ForwardMessage API and
- *      the forward socket event directly. Clicking Done in the picker completes the whole transfer in
- *      one step; there is no second "send" button to find afterwards.
+ * Katchup bell-menu Transfer → Katchup: pick one contact, press Done (which sends in one step), and
+ * the content arrives. Gated behind KATCHUP_UI_LIFECYCLE; deletes the source message.
  */
 test.describe(
   'KPost Katchup · Transfer sub-flow completion @ui',
@@ -53,8 +39,7 @@ test.describe(
       await expect(transferItem, 'the bell menu offers Transfer').toBeVisible({ timeout: 15_000 });
       await transferItem.click();
 
-      // Scope everything to the "Transfer Message" dialog so this never collides with the many other
-      // places in the app that reuse the same "Katchup" icon/label (left nav, switch-account, etc).
+      // Scope to the dialog: the "Katchup" label also appears in the left nav and elsewhere.
       const transferDialog = page.getByRole('dialog').filter({ hasText: 'Transfer Message' });
       await expect(transferDialog, 'the Transfer Message modal opens').toBeVisible({
         timeout: 15_000,
@@ -67,23 +52,16 @@ test.describe(
         timeout: 15_000,
       });
 
-      // Same name-based search as the Forward picker — matches by display name, not kpostID/email.
+      // The search matches by display name, not kpostID/email.
       const searchBox = recipientDialog.getByRole('searchbox');
       await expect(searchBox, 'the recipient search box is available').toBeVisible({
         timeout: 10_000,
       });
-      // Like the Forward picker, this one excludes the open thread's own counterpart (the 2nd QA
-      // account shows "No Contacts" — screenshot 2026-10-11), so the target is a third contact in the
-      // primary account's address book: personal-3 ("Qatest3 Bench"). Matched by display name.
+      // The picker excludes the open thread's counterpart, so the target is a third contact (Qatest3).
       await searchBox.fill('Qatest3');
       await settleFrames(page);
 
-      // No "Select All" exists in this picker (hideSelectAll=true) — go straight to the contact's own
-      // row checkbox, which here uses simple additive handleMultipleContact logic (not the Select-All
-      // toggle math that broke the Forward sub-flow). Row-level text scoping was unreliable for this
-      // exact picker in the Forward sub-flow (ContactBar's name/checkbox aren't in one easily-filterable
-      // wrapper) — searching first narrows the contact list to this one real match, so the picker renders
-      // exactly one checkbox, which can be grabbed directly instead.
+      // Row-level scoping is unreliable here; the search leaves exactly one checkbox to grab.
       const narrowed = await recipientDialog
         .getByText(/Qatest3/i)
         .first()
@@ -99,20 +77,15 @@ test.describe(
       });
       await rowCheckbox.check();
 
-      // "Selected Contacts" count updates from "No Contacts Selected" once the pick registers — confirms
-      // the click actually reached handleMultipleContact's state before relying on it.
       await expect(
         recipientDialog.getByText(/1 Contacts? Selected/i),
         'the picker reflects one contact selected before Done is pressed',
       ).toBeVisible({ timeout: 10_000 });
 
-      // Done has no disabled/enabled gating in source (unlike Forward) — clicking it submits whatever is
-      // currently selected and completes the transfer in one step (handleDoneContact -> finalSubmit ->
-      // handleForward -> ForwardMessage API + forward socket event).
+      // Done sends the transfer itself; there is no separate send button.
       await recipientDialog.getByRole('button', { name: /^Done$/i }).click();
 
-      // Verify delivery: the sender is also a party to their own 1:1 thread with the recipient, so the
-      // transferred content appears in the qatest1 ↔ qatest3 thread without a second browser session.
+      // The sender's own thread with the recipient shows the transfer, so no second session is needed.
       await openConversation(page, 'qatest3@kpostindia.com');
       await expect(
         page.getByText('QA UI Transfer — source message', { exact: false }).first(),
@@ -121,8 +94,7 @@ test.describe(
       // Back to the source thread for the self-clean below.
       await openConversation(page, testData.victimKpostId);
 
-      // Self-clean: delete the source message (the transferred copy in the recipient's own account is
-      // left alone deliberately, same as the Forward sub-flow's cleanup rationale).
+      // Delete the source; the copy in the recipient's account is left alone.
       if (await messageBySubject(page, sourceSubject).count()) {
         await deleteSentMessage(page, sourceSubject);
       }

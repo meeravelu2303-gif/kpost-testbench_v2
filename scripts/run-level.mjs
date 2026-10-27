@@ -1,5 +1,5 @@
-// Run-level runner: the one entry point for smoke / sanity / regression. Cross-platform (Node, no
-// bash). See docs/guides/run-levels.md.
+// Run-level runner for smoke / sanity / regression (docs/guides/run-levels.md). Lints tags first,
+// never files bugs (dry run, reports under reports/<level>/), and refuses any non-test host.
 //
 //   node scripts/run-level.mjs --level smoke
 //   node scripts/run-level.mjs --level sanity                  (FULL sanity: every module + Admin)
@@ -7,20 +7,6 @@
 //   node scripts/run-level.mjs --level sanity --module admin
 //   node scripts/run-level.mjs --level sanity --bug 1267
 //   node scripts/run-level.mjs --level regression
-//
-// Guarantees:
-//   - lint:tags runs first; a tag violation aborts before any test runs.
-//   - NO run level files bugs: BUGZILLA_DRY_RUN=true is forced and the Bugzilla reporter is replaced
-//     with html+junit+json written under reports/<level>/<suite>/<timestamp>/.
-//   - workers is capped at 2 by the config; this runner defaults it to 1.
-//   - Admin joins SANITY and SMOKE (`@admin` + the level tag), always in its own stages; the KPost
-//     smoke gate and regression never select it, so an unreachable Admin box blocks neither.
-//   - Runs exactly like the module scripts (`product:kpost-api`, `product:kmail-api`, `product:kpost-ui:chromium`): QA test accounts only
-//     (QATEST_ONLY), every module's write/lifecycle flow switched on, and paused KDoc (@kos) excluded —
-//     so a run level measures the same suite the team runs day to day, on accounts no developer uses.
-//   - Live-host guard: every level refuses to start unless every target host is a TEST deployment.
-//     (.env sets TEST_ENV=production as a safety MODE while pointing at the test hosts, so the guard
-//     checks where the tests actually go, not that label.)
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,14 +15,13 @@ import dotenv from 'dotenv';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-// Read the same env files the Playwright config reads (process env > .env.<TEST_ENV> > .env), so the
-// guard below sees the hosts the tests will really use.
+// Same env files as the Playwright config, so the host guard sees the hosts the tests will use.
 dotenv.config({
   path: [path.join(ROOT, `.env.${process.env.TEST_ENV || 'local'}`), path.join(ROOT, '.env')],
   quiet: true,
 });
 
-/** The flags the module scripts set (package.json `product:kpost-api` + `product:kmail-api` + `product:kpost-ui:chromium`). */
+/** The flags the product scripts set, so a run level runs the same suite on QA accounts. */
 const RUN_FLAGS = {
   QATEST_ONLY: 'true',
   CONCURRENCY_PROBES: 'false',
@@ -66,17 +51,15 @@ const RUN_FLAGS = {
   BUSINESS_UI_LIFECYCLE: 'true',
   // Admin UI session (auth-admin.setup.ts seeds it); read-only screens in sanity.
   ADMIN_UI_LIFECYCLE: 'true',
-  // Admin API core write flow in sanity: the self-cleaning org-setup lifecycle (tier → variable →
-  // location, HR tier, employee; all deleted). Role posting stays off: it provisions real accounts.
+  // Admin API self-cleaning org-setup lifecycle. Role posting stays off: it provisions real accounts.
   ADMIN_LIFECYCLE: 'true',
-  // KMail's token refusal is fixed on the test deployment; without this every KMail check skips.
+  // Without this every KMail check skips.
   KMAIL_AUTH_FIXED: 'true',
-  // The forgot-password lifecycle sends ONE real SMS to the spare account per run (owner,
-  // 2026-10-20). Its retries are off and every other dialog test answers the SMS request in-browser.
+  // Sends ONE real SMS to the spare account per run; every other dialog test stubs the SMS request.
   FORGOT_PASSWORD_SMS: 'true',
 };
 
-/** Paused modules, never run by any level (KDoc/KOS paused by the owner since 2026-10-07). */
+/** Paused modules, never run by any level (KDoc/KOS). */
 const PAUSED_TAGS = '@kos';
 
 /** The only hosts a run level may target: the test deployment (and a local server). */
@@ -84,10 +67,7 @@ const TEST_HOSTS = new Set([
   'test.kpostindia.com',
   'testingapi.kpostindia.com',
   'testkmail.kpostindia.com',
-  // Admin test deployment (CLAUDE.md §1): the API test box and the Admin UI. The live counterpart
-  // (adminmodule.kpostindia.com) is deliberately absent, so pointing at it is refused.
-  // Current addresses (owner, 2026-10-26): the Admin API + its MongoDB, and the Admin UI test build.
-  // Retired addresses are removed on purpose: an internal IP can be reassigned to another machine.
+  // Admin test API (+ MongoDB) and Admin UI. The live Admin host is deliberately absent.
   '192.168.11.11',
   '192.168.10.22',
   'kpostadmin.kpostindia.com',
@@ -162,16 +142,14 @@ if (offTest.length) {
 }
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 
-/** Output dirs produced this invocation, scanned at the end for login-throttling (an ENVIRONMENT
- * condition, not a product failure). */
+/** Output dirs of this invocation, scanned at the end for login throttling. */
 const RUN_DIRS = new Set();
 const THROTTLE_RE =
   /\b429\b|too many (requests|attempts)|rate.?limit|throttl|try again (in|later)|temporarily (locked|blocked)|maximum login attempts/i;
 
 /**
- * Scan this run's report.json files for login-throttling markers. One throttled account can fail
- * hundreds of tests for a single environment reason, so surface it distinctly instead of letting it
- * read as ordinary test failures. Returns the number of throttle-tainted test results found.
+ * Counts test results in this run's report.json files that carry a throttling marker, and reports
+ * them as an environment condition (one throttled account can fail hundreds of tests).
  */
 function reportThrottle() {
   let hits = 0;
@@ -216,10 +194,7 @@ function reportThrottle() {
   return hits;
 }
 
-/**
- * Keeps the newest KEEP_RUNS timestamped runs of one level+suite. Each run holds a full HTML report
- * with traces and videos (tens of MB); the bugs themselves live in Bugzilla, so old runs are noise.
- */
+/** Keeps the newest KEEP_RUNS runs of one level+suite (each holds tens of MB of traces and video). */
 const KEEP_RUNS = 3;
 function pruneRunDirs(suiteDir) {
   const runs = fs
@@ -241,11 +216,9 @@ function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
   const args = ['playwright', 'test', `--project=${project}`, ...(paths || []), '--grep', grep];
   // Paused modules are excluded from every level, whatever the caller's invert.
   args.push('--grep-invert', grepInvert ? `${grepInvert}|${PAUSED_TAGS}` : PAUSED_TAGS);
-  // Reporters: human list + the three machine artifacts. This REPLACES the config's Bugzilla reporter,
-  // so no run level can ever file a bug.
+  // Replaces the config's Bugzilla reporter, so no run level can file a bug.
   args.push('--reporter=list,html,junit,json');
-  // A module may have tests in only one suite (e.g. a UI-only module's API run matches nothing). An
-  // empty match is "nothing to run", not a failure — otherwise one-suite modules fail sanity spuriously.
+  // A UI-only module's API run matches nothing; that is "nothing to run", not a failure.
   args.push('--pass-with-no-tests');
   const env = {
     ...process.env,
@@ -260,8 +233,7 @@ function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
     `\n▶ ${label}  [project=${project}  grep=${grep}${grepInvert ? `  invert=${grepInvert}` : ''}]`,
   );
   console.log(`  report: ${path.relative(ROOT, outDir)}  (dry-run: no bugs filed)`);
-  // Quote EVERY arg (JSON.stringify → double-quoted + escaped) so shell metacharacters in grep
-  // patterns — | ( ) . * — are passed literally to Playwright, not interpreted by cmd/sh.
+  // Quote every arg so grep metacharacters (| ( ) . *) reach Playwright, not the shell.
   const res = spawnSync(`npx ${args.map((a) => JSON.stringify(a)).join(' ')}`, {
     cwd: ROOT,
     stdio: 'inherit',
@@ -287,9 +259,8 @@ function lintGate() {
 
 // Tag grep helpers. Playwright matches --grep as a regex against "<title> <tags>"; lookahead ANDs tags.
 const and = (...tags) => tags.map((t) => `(?=.*${t})`).join('');
-// Never pull destructive/quarantined/framework-meta into smoke or sanity; regression drops
-// @quarantine and @framework always, and @destructive unless explicitly allowed. @framework = the
-// bench's own self-tests (they do not exercise KPOST and run via `npm run check`).
+// Smoke/sanity never run @destructive, @quarantine or @framework (bench self-tests); regression
+// allows @destructive only with ALLOW_DESTRUCTIVE_TESTS.
 const SMOKE_INVERT = '@quarantine|@destructive|@framework';
 const regressionInvert = () =>
   process.env.ALLOW_DESTRUCTIVE_TESTS === 'true'
@@ -302,9 +273,8 @@ const KPOST_HOST_VARS = ['BASE_URL', 'KPOST_API_BASE_URL', 'KMAIL_API_BASE_URL']
 const ADMIN_HOST_VARS = ['ADMIN_API_BASE_URL', 'ADMIN_UI_BASE_URL'];
 
 /**
- * Is the test deployment reachable at all? Any HTTP answer counts (even a 404); only a network error
- * or a timeout does not. Without this, an outage reads as "smoke failed" and looks like a broken build
- * (2026-10-21: an internet outage failed 57 UI tests with net::ERR_CONNECTION_TIMED_OUT).
+ * Lists the hosts that do not answer. Any HTTP answer counts (even a 404); only a network error or
+ * timeout does, so an outage is reported as ENVIRONMENT DOWN instead of a failed smoke.
  */
 async function environmentReachable(hostVars) {
   const down = [];
@@ -320,9 +290,8 @@ async function environmentReachable(hostVars) {
   return down;
 }
 
-// Smoke is selected PURELY by the @smoke tag (no file scoping): @smoke is reserved for the curated
-// run-level smoke specs (tests/api/smoke/, tests/e2e/smoke/, tests/e2e-admin/smoke/), so grepping it
-// yields exactly those. The KPost gate leaves Admin out (`@admin`); Admin has its own stages below.
+// Smoke is selected by the @smoke tag alone (reserved for the curated smoke specs). The KPost gate
+// leaves Admin out; Admin has its own stages below.
 function smokeGate() {
   // API smoke, then UI smoke; stop at the first failing suite.
   if (suiteArg === 'all' || suiteArg === 'api') {
@@ -353,8 +322,7 @@ function smokeGate() {
 }
 
 /**
- * The Admin smoke stages (`npm run test:smoke` only; the regression gate never runs them). Both stages
- * run even when one fails, and a down Admin box is reported as ENVIRONMENT DOWN, not as a failure.
+ * The Admin smoke stages (never part of the regression gate). Both run even when one fails.
  * Returns 'pass' | 'fail' | 'down'.
  */
 async function adminSmoke() {
@@ -500,7 +468,6 @@ if (level === 'smoke') {
     }
   }
 } else if (level === 'regression') {
-  // (The live-host guard at the top already refused any non-test target.)
   console.log('— regression gate: full smoke must pass first —');
   if (!smokeGate()) {
     console.error('\n✗ smoke gate failed — regression not started.');

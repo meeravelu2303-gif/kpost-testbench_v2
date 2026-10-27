@@ -13,19 +13,12 @@ const centralValidatorNames = (validators: Validator[]): string[] =>
     .filter((name) => !name.startsWith('business-rule.') && !name.startsWith('database.'))
     .sort();
 
-/**
- * Self-tests proving the architecture's guarantees, against the real KPost registry.
- *
- * Nothing here sends a request: every assertion is about what the engine PLANS for an endpoint, so
- * the suite runs anywhere, with no host and no credentials, and still proves the engine is wired.
- */
+/** Engine self-tests against the real KPost registry: they check what the engine PLANS, offline. */
 test.describe('Validation framework', { tag: '@framework' }, () => {
   test('a public endpoint, an authenticated read and a write all receive the same central validators', ({
     validationEngine,
   }) => {
-    // The plan honours the run's concurrency switch, so the expectation must too: on a server shared
-    // with live the bench runs with CONCURRENCY_PROBES=false and those validators are deliberately
-    // absent from every plan.
+    // The plan honours CONCURRENCY_PROBES, so the expectation must too.
     const everyValidator = validationRegistry
       .all()
       .filter((v) => env.CONCURRENCY_PROBES || v.category !== 'CONCURRENCY')
@@ -61,11 +54,7 @@ test.describe('Validation framework', { tag: '@framework' }, () => {
   });
 
   test('production guard: SMS senders are blocked everywhere, writes need clearance on live', () => {
-    /*
-     * Literal endpoints, not registry ones, so this tests the rules rather than any one definition's
-     * flags. The live-application rules in full (allowlist, OTP, ALLOW_DESTRUCTIVE_TESTS granting
-     * nothing) are covered in tests/framework/live-safety.spec.ts.
-     */
+    // Literal endpoints test the rules, not a definition's flags (full rules: live-safety.spec.ts).
     const offLive = { isProduction: false, allowDestructive: false };
     const sms = { label: 'POST /x', destructive: true, sideEffect: 'external' as const };
 

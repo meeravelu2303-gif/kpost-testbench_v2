@@ -3,11 +3,8 @@ import path from 'node:path';
 import { expect, test } from '@fixtures';
 
 /**
- * `.env.example` is what a fresh checkout starts from. It drifted for a month because every new
- * account or flag went straight into `.env`; a second machine set up from the template could not
- * run. This guard makes the template a contract: every key the code reads must be named in it (a
- * commented `# KEY=` line counts — it documents a flag the commands set), and on a machine that has
- * a real `.env`, every key in that file must be named too.
+ * `.env.example` must name every key the code reads (a commented `# KEY=` counts) and, where a real
+ * `.env` exists, every key in it.
  */
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (rel: string) => readFileSync(path.join(ROOT, rel), 'utf8');

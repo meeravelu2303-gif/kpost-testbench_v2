@@ -22,18 +22,13 @@ export class TokenProvider {
     /** Separates caches of different API base URLs. */
     private readonly scope: string,
     /**
-     * A live token the caller already holds for this principal (a browser project's saved session —
-     * `browser-session-token.ts`). Tried first and never cached, so a re-saved session is picked up.
+     * A live token the caller already holds (a browser's saved session); tried first, never cached.
      */
     private readonly existingSession?: (principal: Principal) => string | undefined,
   ) {}
 
   /**
-   * A token for `principal` from `profile`'s login endpoint.
-   *
-   * The profile is part of the cache key: the same principal key can exist in two profiles (the
-   * mock's "admin" and KPost's), and handing a mock-minted token to the live API would be
-   * rejected as invalid - a failure that looks like an API defect but is the bench's fault.
+   * A token for `principal` from `profile`'s login endpoint; the profile is part of the cache key.
    */
   async tokenFor(principal: Principal, profile: AuthProfile): Promise<string> {
     const existing = this.existingSession?.(principal);

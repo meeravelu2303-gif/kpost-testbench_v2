@@ -1,4 +1,3 @@
-// An orchestrated settings lifecycle (read → change → restore), not simple assertions.
 import { notificationToggleBody } from '@api/definitions/kpost/settings/write.api';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
@@ -6,17 +5,8 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Settings **feature flow** — change the caller's own preferences and put them back. These are the
- * safest writes in the bench (cosmetic, own-account, no other user), but they persist, so the flow
- * is gated `SETTINGS_LIFECYCLE=true`, each write `allowLiveWrite`, and restores to a sensible default
- * in a `finally`.
- *
- * The font/theme change test that used to live here moved to `personalize-workflow.spec.ts`: it
- * restored only the font on cleanup, never the theme, and the live QA account was found still
- * holding a prior run's theme values (kpostLayoutTheme: "purple") as a result. The replacement
- * captures the account's real original font AND theme from the database and restores both exactly,
- * and additionally verifies the write persists to `TBL_KPOST_GENERAL_SETTINGS` and that
- * `settings-get-personalize` reflects the stored row rather than a cached/default value.
+ * Settings feature flow: change the caller's own preferences and restore them in a `finally`.
+ * Gated `SETTINGS_LIFECYCLE=true` because the writes persist. Font/theme: personalize-workflow.spec.ts.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;

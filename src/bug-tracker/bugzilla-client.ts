@@ -3,14 +3,9 @@ import { isPlainObject } from '@utils/json';
 import type { Logger } from '@utils/logger';
 
 /**
- * Bugzilla REST transport. Three rules it never breaks:
- *
- * 1. **The API key travels as the `api_key` query parameter.** The `X-BUGZILLA-API-KEY` header
- *    is ignored by this instance (5.2) — requests sent that way are anonymous, which silently
- *    returns empty searches and would make a re-run duplicate every ticket.
- * 2. **`HTTP 200` carrying `{"error": true}` is a failure.** Bugzilla reports application errors
- *    that way; reading only `response.ok` counts a refused create as a success with a missing id.
- * 3. **It never throws.** A reporting failure must not fail the run.
+ * Bugzilla REST transport. The API key goes in the `api_key` query parameter (this 5.2 instance
+ * ignores the header, and anonymous searches would duplicate every ticket); HTTP 200 with
+ * `{"error": true}` is a failure; it never throws.
  */
 
 export interface CallResult {
@@ -72,11 +67,7 @@ export class BugzillaClient {
     return metadata;
   }
 
-  /**
-   * Every bug carrying this dedupe tag, in the summary or on the whiteboard. Both are searched:
-   * tickets this bench files carry the tag in the summary, while a pre-existing ticket adopted
-   * by `adopt()` carries it on the whiteboard.
-   */
+  /** Every bug carrying this tag in its summary or (for an adopted ticket) its whiteboard. */
   async findByTag(tag: string): Promise<{ bugs: BugSummary[] } | { error: string }> {
     const bySummary = await this.call(
       'GET',
@@ -112,10 +103,7 @@ export class BugzillaClient {
     return { bugs: readBugs(result.json).filter((bug) => bug.is_open) };
   }
 
-  /**
-   * Whether a Bugzilla account exists and can log in. Checked before a ticket is assigned:
-   * Bugzilla refuses a create with an unknown `assigned_to`, which would lose the ticket.
-   */
+  /** Whether a Bugzilla account exists; a create with an unknown `assigned_to` is refused. */
   async userExists(email: string): Promise<boolean> {
     const result = await this.call('GET', `/user?names=${encodeURIComponent(email)}`);
     if (!result.ok) {
@@ -143,12 +131,8 @@ export class BugzillaClient {
   }
 
   /**
-   * Reopens a resolved bug and records why, rather than filing a second ticket for one fault.
-   *
-   * The status is REOPENED, not CONFIRMED: the BUGZILLA-UI tracker counts REOPENED on its own
-   * ("Fixes that didn't hold", `ops/bugzilla/setup-reopened-status.pl`), and moving a fixed bug back
-   * to CONFIRMED hides that it came back. Bugzilla requires a comment on the move; we always send one.
-   * An instance without the REOPENED status refuses it, and then CONFIRMED is the fallback.
+   * Reopens a resolved bug with a comment. Status REOPENED (the tracker counts "fixes that didn't
+   * hold"), falling back to CONFIRMED where REOPENED does not exist.
    */
   async reopen(bugId: number, comment: string): Promise<{ ok: true } | { error: string }> {
     const reopen = (status: string) =>
@@ -175,11 +159,7 @@ export class BugzillaClient {
     return result.ok ? { ok: true } : { error: describeFailure(result) };
   }
 
-  /**
-   * Marks a bug RESOLVED/INVALID, recording why — for a finding judged NOT a product defect (a
-   * bench-payload artefact, a transient environmental failure, …). The live filer then skips it via
-   * `findByTag` / `judgedBenchBugs`, so a re-run never re-files the same false positive.
-   */
+  /** Marks a bug RESOLVED/INVALID with a reason; the filer then never re-files it. */
   async resolveInvalid(bugId: number, comment: string): Promise<{ ok: true } | { error: string }> {
     const result = await this.call('PUT', `/bug/${bugId}`, {
       status: 'RESOLVED',
@@ -189,12 +169,7 @@ export class BugzillaClient {
     return result.ok ? { ok: true } : { error: describeFailure(result) };
   }
 
-  /** Every OPEN bug of a product that carries our dedupe tag (`[<prefix>-…]`) — the auto-resolve set. */
-  /**
-   * EVERY open bug of a product, whatever its tag — including hand-filed security findings
-   * (`[KPV2-…]`) and non-hex bench tags. The per-run status pass uses this so no open bug is ever
-   * silently left without a dated update; dedup keeps using `openBenchBugs` (tag-scoped on purpose).
-   */
+  /** Every open bug of a product, whatever its tag, so the status pass updates them all. */
   async openBugs(product: string): Promise<{ bugs: BugSummary[] } | { error: string }> {
     const result = await this.call(
       'GET',
@@ -204,8 +179,9 @@ export class BugzillaClient {
     return { bugs: readBugs(result.json).filter((bug) => bug.is_open) };
   }
 
-  /** Bench-tagged bugs of a product resolved FIXED — candidates for a reopen when the same fault
-   * comes back under a shifted tag (e.g. a partial fix changed "2/3 cases failed" to "1/3"). */
+  /**
+   * Bench-tagged bugs resolved FIXED, to reopen when the same fault returns under a shifted tag.
+   */
   async fixedBenchBugs(
     product: string,
     tagPrefix: string,
@@ -219,6 +195,7 @@ export class BugzillaClient {
     return { bugs: readBugs(result.json).filter((bug) => tag.test(bug.summary)) };
   }
 
+  /** Every open bug of a product carrying our dedupe tag (`[<prefix>-…]`), for dedup. */
   async openBenchBugs(
     product: string,
     tagPrefix: string,
@@ -233,10 +210,7 @@ export class BugzillaClient {
   }
 
   /**
-   * Every bug of a product with our tag that a HUMAN closed as not-a-defect
-   * (INVALID/WONTFIX/WORKSFORME/DUPLICATE). The live filer skips these via `findByTag`; loading them
-   * lets the DRY-RUN preview show `judged-skip` too, so a re-run's preview never reads "would-file" for
-   * a fault someone already judged. Whiteboard is included so an adopted (shifted) tag is caught.
+   * Bench-tagged bugs a human closed as not-a-defect, so the dry-run preview shows `judged-skip`.
    */
   async judgedBenchBugs(
     product: string,
@@ -290,8 +264,7 @@ export class BugzillaClient {
     return bugs?.[String(bugId)]?.comments?.[0]?.text;
   }
 
-  /** Every comment body on a bug, oldest first — used to count how many times it has already
-   * been reopened, so a repeat reopen can say so instead of reading identically to the first. */
+  /** Every comment body on a bug, oldest first (used to count prior reopens). */
   async commentTexts(bugId: number): Promise<string[]> {
     const result = await this.call('GET', `/bug/${bugId}/comment`);
     if (!result.ok || !result.json) return [];
@@ -311,11 +284,7 @@ export class BugzillaClient {
     return new Set(list.map((a) => a.file_name).filter((n): n is string => Boolean(n)));
   }
 
-  /**
-   * Uploads a binary proof file (a UI screenshot or video) to a bug, so the developer SEES the
-   * defect. A failure only warns — the bug itself is already filed, and a missing screenshot must
-   * never fail the run. Returns whether it attached, so the caller can report proof coverage.
-   */
+  /** Uploads a screenshot or video to a bug; a failure only warns. Returns whether it attached. */
   async attachFile(
     bugId: number,
     file: { fileName: string; summary: string; data: Buffer; contentType: string },

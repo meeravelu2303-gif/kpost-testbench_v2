@@ -3,24 +3,8 @@ import type { Locator, Page } from '@playwright/test';
 import { parkPointerAwayFromSideMenu } from './katchup';
 
 /**
- * Shared Contacts steps, read from the front-end source (2026-10-11) — the one place these selectors
- * live, so a product change is re-tuned once:
- *
- *   - the Katchup list is a react-bootstrap `Tabs` (`bubble/KKatch/KatchupPage.js`): tab "Contacts";
- *     both panels stay mounted and slide, so the Contacts panel's `SearchBar` (`type="search"`,
- *     placeholder "Search") is the LAST searchbox on the page;
- *   - the Contacts panel's icons (`bubble/ContactList/ContactList.js`): `.icon-KP_107-User-Add` now
- *     NAVIGATES TO `/kdirectory` (the Add-contact wizard is the KDirectory page), and
- *     `.icon-KP_112-Group-Add` opens the "Create New Group" modal;
- *   - KDirectory (`Kdirectory/components/KdirectoryModal/KdirectoryModal.js`): Country and Language
- *     are react-selects, the vertical is a `.dirCategory-box`, "Continue" enables once a vertical is
- *     chosen; the second phase has the people `SearchBar` whose `.icon-KP_225_Advanced-Search`
- *     button opens Advanced Search ("Enter Mobile Number", "Search"); results are `ContactBar`s with
- *     checkboxes and an "Add To Contact" button.
- *
- * Why the 2026-10 re-tune: until then every Contacts spec carried a private copy of these steps that
- * clicked "Personal" straight after the add icon — the page it navigates to needs Country and
- * Language first, so all 22 sites skipped as "did not open on this build".
+ * Shared Contacts steps (Katchup's Contacts tab, the Add-contact → KDirectory wizard, Create Group),
+ * so these selectors live in one place.
  */
 
 /** Open Katchup's Contacts tab; true when the Contacts panel (its search box) is showing. */

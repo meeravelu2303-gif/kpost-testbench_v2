@@ -6,15 +6,8 @@ import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
 
 /**
- * KMail end to end in the browser, two people: A composes and sends in the UI, B finds the mail in
- * KMail, opens it and reads the exact body. (No UI test sent a KMail and checked the other side.)
- *
- * The receiver's open is recorded at the network level too (`/readMail/sentAndInboxMailContent/`):
- * an API-level probe on 2026-10-14 got an empty record back (kmailID 0) for every request shape, so
- * this test shows what the real screen sends and receives when a user opens a mail.
- *
- * Accounts: A = the default `page` (qatest1), B = STORAGE_STATE_2 (qatest2, needs auth2.setup.ts,
- * which runs when KATCHUP_UI_LIFECYCLE=true — same pattern as kmail-stored-xss-render.spec.ts).
+ * KMail two people in the browser: A sends in the UI, B finds the mail, opens it and reads the exact body;
+ * reply and forward too. Needs STORAGE_STATE_2 (auth2.setup.ts, KATCHUP_UI_LIFECYCLE=true).
  */
 test.describe(
   'KPost KMail · two-person flow in the browser @ui',
@@ -188,8 +181,7 @@ test.describe(
             'the mail opens',
           ).toBeVisible({ timeout: 20_000 });
 
-          // The opened (newest) mail's reply arrow → its menu → "Reply" (KmailMessageBox.js:
-          // ReplyIcon → openReplyMenu → replyIconContent "Reply").
+          // The opened (newest) mail's reply arrow → its menu → "Reply".
           await receiver.getByTestId('ReplyIcon').first().click();
           // The menu item's accessible name includes its icon, so match the visible label exactly.
           await receiver
@@ -271,13 +263,13 @@ test.describe(
             'the mail opens',
           ).toBeVisible({ timeout: 20_000 });
 
-          // Reply arrow → More → Forward (KmailMessageBox.js replyIconContent → wriemailboxOpen).
+          // Reply arrow → More → Forward.
           await receiver.getByTestId('ReplyIcon').first().click();
           const menu = receiver.locator('[role="menu"]');
           await menu.getByText('More', { exact: true }).first().click();
           await menu.getByText('Forward', { exact: true }).first().click();
 
-          // The forward footer's "Forward To" opens the recipient picker (MailFooter.js setForwardModal).
+          // The forward footer's "Forward To" opens the recipient picker.
           await receiver
             .getByText('Forward To', { exact: true })
             .first()
@@ -290,8 +282,7 @@ test.describe(
           ).toBeVisible({ timeout: 10_000 });
           await picker.getByRole('checkbox').last().check();
           await picker.getByRole('button', { name: /^Done$/i }).click();
-          // A forward needs a note when it carries no attachments (MailFooter.js: "Mail Content cannot be
-          // empty") — type one, as a user would.
+          // A forward without attachments needs a note ("Mail Content cannot be empty").
           const note = receiver.locator('.ql-editor[contenteditable="true"]').last();
           await note.click();
           await receiver.keyboard.type(`QA forward note ${stamp}`);

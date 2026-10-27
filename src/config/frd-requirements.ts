@@ -1,12 +1,6 @@
 /**
- * The canonical set of FRD requirement ids, from the six per-module FRDs in `D:\Kpost Documents`
- * (2026-09-16). Every `requirements` tag on an endpoint definition must name an id that exists here;
- * `tests/framework/requirements-traceability.spec.ts` enforces it and reports FR coverage.
- *
- * The old FullSuite scheme (`FR-S/K/C/M`, `BR-*`) was renumbered into per-module `FR-xx-NNN`. Legacy
- * ids still on some definitions are listed in `LEGACY_REQUIREMENTS` so the guard passes during the
- * migration while that set visibly shrinks to empty (docs/reference/decision-log.md, 2026-09-16 "NEW DOCS" entry, to-do item 3). The FR→coverage
- * map is `docs/reference/requirements-frd.md`.
+ * The FRD requirement ids from the six per-module FRDs; every endpoint `requirements` tag must name
+ * one (enforced by requirements-traceability.spec.ts). Map: `docs/reference/requirements-frd.md`.
  */
 
 /** Builds `PREFIX-001..PREFIX-NNN`. */
@@ -36,15 +30,9 @@ export const NFR_IDS: readonly string[] = [
   'NFR-P01',
 ];
 
-/**
- * Legacy ids still present on definitions, pending migration to the per-module scheme. Each line is
- * a to-do; the guard fails if a tag names an id in NEITHER the current scheme nor this list, and
- * reports how many legacy ids remain so the migration is measurable. Migrated modules are removed
- * from here. (Kall was migrated first — its `FR-C*`/`BR-C01` ids are gone.)
- */
+/** Legacy ids still on definitions, pending migration to the per-module scheme. */
 export const LEGACY_REQUIREMENTS: readonly string[] = [
-  // These have NO clean equivalent in the new per-module scheme, so they stay tagged as-is rather
-  // than be force-mapped (each is a genuine endpoint whose behaviour the new FRDs do not FR-trace):
+  // No clean equivalent in the per-module scheme, so they stay as-is rather than be force-mapped:
   'FR-K07', // Katchup unread-count / read-receipt reads — no count/receipt FR in FR-KU-*
   'FR-M02', // KMail draft — drafts are not an FR in the 25-FR KMail scheme
   'FR-M07', // KMail delete — not FR-traced

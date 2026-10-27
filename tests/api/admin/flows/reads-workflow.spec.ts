@@ -4,10 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Admin module **plain reads** — reference-data lookups with no dependency on the org-build
- * lifecycle. Not gated behind `ADMIN_LIFECYCLE`: `admin-country-address-by-pincode` is
- * `productionSafe: true` and writes nothing, so it runs on every default run once the BUSINESS_M
- * account is configured (same account the gated lifecycle spec needs).
+ * Admin plain reads with no lifecycle dependency (pincode lookup, suspend/terminate lists). They write
+ * nothing, so they are not gated by ADMIN_LIFECYCLE; they need only the BUSINESS_M account.
  */
 
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
@@ -46,10 +44,8 @@ test.describe('Admin module · plain-read business rules @api @admin-api', () =>
     test(`getSuspendOrTerminateEmployee answers the ${requestType} list (#320: an empty list may be a 400)`, async ({
       endpoints,
     }) => {
-      // The Admin UI's own call (EmployeeManagement/Suspend.js:302, Terminate.js:205). A list with members
-      // is 200 SUCCESS + the array. An EMPTY list is answered 400 "requestType is Empty or Invalid"
-      // (RolePostingSetUpController:348); #320 (adopting this finding's tag, KP-63C403) was closed INVALID
-      // by the team, so that answer is accepted as "nobody listed" and never re-filed. Anything else fails.
+      // The Admin UI's own call. A list with members is 200 SUCCESS; an empty list answers 400
+      // "requestType is Empty or Invalid", accepted as "nobody listed" (#320 closed INVALID).
       const ex = await endpoints.sendTo(
         'admin-role-posting-suspended-list',
         { body: { requestType } },
@@ -83,8 +79,7 @@ test.describe('Admin module · plain-read business rules @api @admin-api', () =>
   test('getSuspendOrTerminateEmployee without a body is refused as a bad request', async ({
     endpoints,
   }) => {
-    // Control: an empty body is the one genuine input error; the server checks the body before the field
-    // (live 2026-10-23: 400 "Request body is empty or invalid").
+    // Control: an empty body is a genuine input error, checked before the field.
     const ex = await endpoints.sendTo(
       'admin-role-posting-suspended-list',
       { body: {} },

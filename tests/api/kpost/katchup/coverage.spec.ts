@@ -10,9 +10,8 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /**
- * Self-tests for the Katchup module. No HTTP — these assert the wiring a reviewer would otherwise
- * take on trust: full coverage, contract agreement, that the enum codes still mean what
- * `docs/modules/katchup-flow.md` says, and that every send is authenticated and gated.
+ * Katchup module self-tests (no HTTP): coverage, contract agreement, pinned enum codes, and every
+ * send authenticated and gated.
  */
 test.describe('KPost Katchup · module coverage', () => {
   test('every documented katchup endpoint has a definition @framework', () => {
@@ -21,8 +20,7 @@ test.describe('KPost Katchup · module coverage', () => {
 
   test('every definition matches the generated contract @framework', () => {
     for (const api of katchupApis) {
-      // Deliberate exception: confirmed real from the live frontend, not the workbook — see
-      // `defineUndocumentedKpostEndpoint`'s own doc comment. Nothing to cross-check against.
+      // Taken from the live frontend, not the workbook: nothing to cross-check against.
       if ((api.tags ?? []).includes('undocumented-contract')) continue;
       const documented = api.contractPath ?? api.path;
       expect(workbookContract('kpost-api', api.method, documented).path, `${api.id} path`).toBe(
@@ -40,11 +38,7 @@ test.describe('KPost Katchup · module coverage', () => {
   });
 
   test('the message-type, status and share-type codes match the analysis @framework', () => {
-    /*
-     * Pins the codes the payloads use against the owner's definitions (docs/modules/katchup-flow.md §1). A
-     * workbook edit that renumbered them would fail here rather than silently change what a send
-     * means.
-     */
+    // Pins the codes (docs/modules/katchup-flow.md §1) so a workbook renumbering fails here.
     expect(KATCHUP_STATUS.sent).toBe(0);
     expect(KATCHUP_STATUS.group).toBe(4);
     expect(KATCHUP_MESSAGE_TYPE.normalMessage).toBe(0);
@@ -57,11 +51,7 @@ test.describe('KPost Katchup · module coverage', () => {
   });
 
   test('no send or message-mutating endpoint is cleared for the live application @framework', () => {
-    /*
-     * Sends reach a real inbox and mutations act on a real message; both wait on the owner's
-     * sign-off and on real message ids. If one were ever marked productionSafe, a live run would
-     * write to a real conversation. This is the assertion that stops that.
-     */
+    // A productionSafe write would let a live run write to a real conversation.
     const cleared = katchupApis
       .filter((api) => api.destructive && api.productionSafe)
       .map((api) => api.id);
@@ -72,10 +62,7 @@ test.describe('KPost Katchup · module coverage', () => {
   });
 
   test('every read cleared for live owns nothing it was not given @framework', () => {
-    /*
-     * The reads marked productionSafe must be reads (not destructive). The identifier guard checks
-     * the built payload at runtime; this checks the flag itself is only on reads.
-     */
+    // productionSafe may only be set on reads (the guard checks payloads at runtime).
     const badClears = katchupApis
       .filter((api) => api.productionSafe && api.destructive)
       .map((api) => api.id);

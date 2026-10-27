@@ -2,22 +2,8 @@ import type { ConsoleMessage, Page, Request, Response } from '@playwright/test';
 import { env } from '@config/env';
 
 /**
- * UI health monitor — the "deep on every screen" signal for the front end.
- *
- * A screen that *renders* can still be broken: it can throw an uncaught JavaScript exception, fail to
- * load its own scripts/styles/images, or console-error its way through a flow. Those are real UI
- * defects a render-only smoke test never sees. This attaches listeners to a page and collects them
- * while a test drives a screen, so any e2e test can assert the screen is not just present but *healthy*.
- *
- * Deliberate scoping to keep tickets trustworthy (no false-positive floods on the UI developer):
- *  - **pageErrors** — uncaught JS exceptions — are the strongest, lowest-noise UI-bug signal.
- *  - **brokenResources** — the app's own scripts/styles/images/fonts that failed to load — are
- *    front-end defects (a 404 asset, a broken bundle).
- *  - **failedApiCalls** (5xx / 4xx from the KPost API hosts) are collected but treated as CONTEXT,
- *    not a UI bug: the root cause is the backend, and the API suite already owns those. They are
- *    surfaced so a screen failure can point at the call behind it.
- *  - **consoleErrors** are collected for context only — they are too noisy (third-party warnings) to
- *    fail a run on their own.
+ * UI health monitor: collects uncaught JS errors and the app's broken assets (the failing signals)
+ * plus failed API calls and console errors (context only) while a test drives a screen.
  */
 
 export interface FailedCall {
@@ -71,14 +57,7 @@ function isAppRequest(url: string, hosts: readonly string[]): boolean {
   }
 }
 
-/**
- * Start watching a page. Call the returned function to stop watching and get the report.
- *
- *   const stop = watchUiHealth(page);
- *   … drive the screen …
- *   const health = stop();
- *   expect(health.pageErrors, 'no JS crash on this screen').toEqual([]);
- */
+/** Starts watching a page; call the returned function to stop and get the report. */
 export function watchUiHealth(page: Page): () => UiHealthReport {
   const hosts = appHosts();
   const report: UiHealthReport = {
@@ -94,8 +73,7 @@ export function watchUiHealth(page: Page): () => UiHealthReport {
   };
   const onPageError = (error: Error): void => {
     report.pageErrors.push(`${error.name}: ${error.message}`.slice(0, 500));
-    // The stack is what tells a developer WHICH line of their code threw — essential for a JS crash,
-    // which (unlike a broken layout) is invisible in a screenshot or video.
+    // The stack shows which line threw; a JS crash is invisible in a screenshot.
     report.pageErrorStacks.push((error.stack ?? '(no stack captured)').slice(0, 4000));
   };
   const onResponse = (response: Response): void => {
@@ -129,12 +107,7 @@ export function healthFailures(report: UiHealthReport): string[] {
   ];
 }
 
-/**
- * Is the page's main JS thread responsive, or hung? A queued `page.evaluate` cannot run while the
- * renderer is blocked by a long task / infinite loop, so racing a trivial evaluate against a timeout
- * detects the "screen hangs" class directly: if the probe does not return within the budget, the UI
- * is frozen. Used after an interaction to catch a hang the static render checks never see.
- */
+/** Whether the main thread responds: a trivial evaluate missing the budget means a frozen UI. */
 export async function isResponsive(page: Page, budgetMs = 8000): Promise<boolean> {
   const probe = page
     .evaluate(() => true)
@@ -144,19 +117,14 @@ export async function isResponsive(page: Page, budgetMs = 8000): Promise<boolean
   return Promise.race([probe, hung]);
 }
 
-/** POST/PUT/PATCH/DELETE app-API calls that failed — the calls a USER ACTION triggers (a send, a
- * save). Unlike a background GET poll, a failed write on a deliberate action is the defect the user
- * feels ("I sent a message and nothing happened"), so it is a fileable signal, not just context. */
+/** Failed writes (POST/PUT/PATCH/DELETE) from a user action: fileable, unlike a background GET. */
 export function failedUserActions(report: UiHealthReport): FailedCall[] {
   return report.failedApiCalls.filter((c) => c.method !== 'GET' && c.method !== 'HEAD');
 }
 
 /**
- * A plain-English, developer- and reviewer-readable explanation of a screen crash — the evidence a
- * screenshot or video CANNOT give, because a JS exception happens silently in the browser console,
- * not on screen. It states, in simple words, what broke, the exact error, the stack trace (which app
- * code threw), and the API calls that failed during the same screen load — the almost-certain
- * trigger. Attached to the ticket so a human understands the defect without replaying a video.
+ * A plain-English crash explanation for the ticket: the error, its stack, and the API calls that
+ * failed during load.
  */
 export function crashDiagnosis(screen: string, route: string, report: UiHealthReport): string {
   const line = '='.repeat(66);
@@ -218,14 +186,7 @@ export function crashDiagnosis(screen: string, route: string, report: UiHealthRe
   return parts.filter((l): l is string => l !== null).join('\n');
 }
 
-/**
- * Renders the crash as something a human can SEE. A JS exception is invisible on the page — a normal
- * screenshot or video just shows a normal-looking screen. This injects a full-screen overlay onto the
- * live page that spells out, in large readable text, that the screen crashed, the exact error, where
- * it threw, and the API calls that failed behind it. The caller then screenshots it and holds it on
- * screen, so BOTH the image and the end of the recording show the defect a viewer can read and
- * understand — turning "static screen for a minute" into self-explanatory proof.
- */
+/** Paints the crash onto the page as a readable overlay, so the screenshot and video show it. */
 export async function renderCrashOverlay(
   page: Page,
   screen: string,

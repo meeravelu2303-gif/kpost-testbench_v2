@@ -14,30 +14,9 @@ import type { ValidationReport, ValidationResult } from './validation-result';
 import { STAGE_ORDER } from './validator';
 
 /**
- * Reports every central validation as its own Playwright test case.
- *
- * `describeEndpointContracts` gives one test per endpoint: right for a CI gate, poor as a report —
- * "POST /v2/common/sendOTP/ failed" does not say what failed. This gives a named case per
- * validation, so a run reads like a test plan:
- *
- *     POST /v2/common/sendOTP/
- *       ✓ response.status-code — the primary response status is one of the expected statuses
- *       ✓ response.schema — payload conforms to the endpoint's response schema
- *       ✗ security.security-headers — x-content-type-options missing
- *       - authentication.missing-token — endpoint is public (skipped, with the reason)
- *
- * The *content* of each case still belongs entirely to the central validators. Registering a new
- * validator adds a case to every endpoint automatically; no spec file changes.
- *
- * ## One HTTP run per endpoint, not one per case
- *
- * The engine executes once per endpoint and each case asserts its own slice of the report. That is
- * a correctness requirement, not an optimisation: these endpoints send SMS and email, so running
- * the engine per case would send a message per case per run.
- *
- * The project runs `fullyParallel`, which would scatter cases across workers and defeat that, so
- * each endpoint's block is pinned to one worker with `mode: 'default'` — sequential, but *not*
- * `serial`, whose "first failure skips the rest" would hide the very detail this exists to show.
+ * Reports each central validation as its own Playwright test case (`<endpoint> › <validator>`). The
+ * engine runs once per endpoint and every case asserts its slice, so the endpoint's block is pinned
+ * to one worker (`mode: 'default'`, not `serial`, so one failure does not skip the rest).
  */
 export interface EndpointCaseOptions {
   profile?: ValidationProfile;
@@ -47,11 +26,7 @@ export interface EndpointCaseOptions {
   transform?: (definition: EndpointDefinition) => EndpointDefinition;
 }
 
-/**
- * One engine run per endpoint and profile, shared by that endpoint's cases. Keyed by profile too:
- * the sanity sweep runs an endpoint at SMOKE while a regression wrapper runs it at FULL, and a
- * shared SMOKE report would leave every FULL-only case "not executed".
- */
+/** One engine run per endpoint and profile, shared by that endpoint's cases. */
 const runs = new Map<string, Promise<ValidationReport | ProductionSafetyError>>();
 
 interface PlannedCase {
@@ -60,12 +35,8 @@ interface PlannedCase {
 }
 
 /**
- * The validations that will be reported for an endpoint, derived without sending anything.
- *
- * Validators the policy excludes are deliberately **kept**: they become skipped cases carrying the
- * reason ("endpoint is public", "no request schema"), which documents the endpoint's shape far
- * better than silently omitting them. Business rules and database validations are named the way
- * the engine names them, so their results line up.
+ * The validations reported for an endpoint, derived without sending anything. Excluded validators
+ * stay as skipped cases with their reason.
  */
 export function plannedCases(
   endpoint: ResolvedEndpoint,
@@ -154,10 +125,7 @@ export function describeEndpointCases(
             }
 
             const result = resultFor(report, planned.name);
-            /*
-             * Planned but absent means the engine never reached it, because a prerequisite failed.
-             * Saying which prerequisite is more useful than a bare "not run".
-             */
+            // Planned but absent: a prerequisite failed, so name it.
             if (!result) {
               const blocking = report.gate.blocking.join(', ');
               test.skip(
@@ -170,8 +138,7 @@ export function describeEndpointCases(
               test.skip(true, result.message);
               return;
             }
-            // A failure a person already ruled "not a defect" in Bugzilla (every failing sub-check
-            // covered) is reported as skipped with that ruling, never silently passed.
+            // A failure ruled "not a defect" in Bugzilla is skipped with that ruling.
             const judged =
               result.status === 'FAILED'
                 ? judgedCheckReason(
@@ -187,10 +154,7 @@ export function describeEndpointCases(
               return;
             }
 
-            // Sanity's read sweep (the SMOKE profile): a response over its time budget is a WARNING,
-            // shown with its timing, not a failure. Speed on the shared test server is environmental
-            // and never filed (validity gate). A request that never answers still fails
-            // (`performance.timeout`), and regression keeps the strict budget. Owner, 2026-10-22.
+            // SMOKE: over budget is a WARNING (speed is environmental); no answer still fails.
             if (
               result.status === 'FAILED' &&
               planned.name === 'performance.response-time' &&

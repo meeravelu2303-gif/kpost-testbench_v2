@@ -2,11 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * The **Home** screen on the live front end, across all browsers, using the session `setup` saved.
- *
- * `/home` is where a login lands. Its recent-messages panel is fed by the Dashboard endpoints
- * (`/v2/dashboard/*`). No `data-testid` hooks, so locators are structural classes from the live app
- * (`KPOST_REACTJS_2023_V1` — `HomeDashboard.js`, `RecentMessage.js`).
+ * The Home screen (`/home`) renders its header, Recent panel and tabs with the saved session.
+ * No data-testid hooks, so locators are structural classes (`HomeDashboard.js`, `RecentMessage.js`).
  */
 test.describe('KPost Home screen', { tag: ['@ui', '@home', '@regression'] }, () => {
   test.skip(

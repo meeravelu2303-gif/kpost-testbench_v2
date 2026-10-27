@@ -1,23 +1,13 @@
-// Profile sub-record cross-account authorization — the education/experience/other-activity DELETEs.
-// Closes the long-standing "profile-delete-* has no owner-vs-stranger spec" gap (needed a lifecycle to
-// mint a real record id first). A creates a record on their OWN profile and reads its real id; C, a
-// wholly unrelated principal, then names that id to each delete endpoint. The record must survive, and
-// nothing of A's must be disclosed back to C.
+// Profile sub-record DELETEs across accounts: A creates a record, C names its id on each delete
+// endpoint. The record must survive, and nothing of A's may be disclosed to C.
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * From source (`UserProfileControllerV2.java` delete* methods + `UserProfileDaoImpl.java`
- * delete{College,School,University,Experience}Detail / deleteOtherActivity): every V2 delete sets
- * `userProfileRO.setKpostID(request.getAttribute("kpostID"))` from the caller's JWT, loads THAT
- * user's `UserProfile` row, and removes the sub-record only if its id matches one the row already
- * holds. So a stranger naming A's record id should load their OWN profile, find no such id, and change
- * nothing — the correct, owner-scoped design. This spec proves that holds on the live server rather
- * than trusting the source (the V1 `profile` controller, #981, is the standing proof that a sibling
- * can skip the identity override). A is the owner; C is unrelated and must neither delete nor see A's
- * records. Gated behind PROFILE_LIFECYCLE because A really creates and deletes its own records.
+ * The V2 deletes scope by the caller's JWT, so C should change nothing; this proves it live.
+ * Gated behind PROFILE_LIFECYCLE because A really creates and deletes its own records.
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 const C: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-3')!;

@@ -3,10 +3,8 @@ import { body, pathParams } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint, defineUndocumentedKmailEndpoint } from './kmail-endpoint';
 
 /**
- * KMail **reads** — dashboards, counts, mail lists, subjects, statuses, drafts, settings and
- * translation. The parameterless GETs and the contact-scoped reads (asked with OUR OWN second
- * account) run on live; the reads keyed by a real `kmailID`/`uuid` stay blocked (`needs-id`) until a
- * lifecycle mail exists. POST reads state `destructive: false` (the grep-drop trap).
+ * KMail reads. Parameterless GETs and contact-scoped reads (our second account) run on live; reads
+ * keyed by a real `kmailID`/`uuid` stay blocked (`needs-id`). POST reads set `destructive: false`.
  */
 const R = ['kmail-read'] as const;
 
@@ -133,8 +131,7 @@ const contactRead = (
     summary,
     tags: [...R, ...tags],
     destructive: false,
-    // A read that needs a real runtime id (a kmailID / reference-mail id) is NOT run standalone on
-    // live — a placeholder body 400s and reads as a false bug; it is driven by the lifecycle instead.
+    // A read needing a real runtime id is not run standalone on live; the lifecycle drives it.
     productionSafe: opts.productionSafe ?? true,
     expectedStatus: opts.expectedStatus,
     request: body(() => bodyObj),
@@ -150,17 +147,8 @@ export const dashboardApi = contactRead(
   { kmailID: '' },
   ['dashboard'],
 );
-/*
- * `selectedContact`/`kpostUser` are genuine tenant identifiers (a real contact's kpostID) — the
- * qa-identifier-guard correctly refuses to let the generic fuzzers (security.xss, security.injection,
- * request.data-type) mutate them into arbitrary garbage and send it to the LIVE application, exactly
- * as designed (`qa-identifier-guard.ts`: "a resource id never belongs [in NOT_A_RESOURCE]"). That
- * refusal surfaces as a loud validator FAILURE rather than a skip, which is correct for a human to
- * read once — found live 2026-10-02 triaging the first post-auth-fix KMail run, confirmed NOT a
- * product defect (the guard is doing its job), and skipped here the same way `kmail-translation`
- * already skips probes that don't apply to it. Fuzzing these fields is simply out of scope on a
- * target the bench does not control.
- */
+// `selectedContact`/`kpostUser` are real identifiers the QA guard refuses to fuzz on live, so these
+// probes are skipped.
 const SELECTED_CONTACT_SKIP = ['security.xss', 'security.injection', 'request.data-type'] as const;
 
 export const subjectsApi = contactRead(
@@ -209,7 +197,7 @@ export const draftsForContactApi = contactRead(
   'Drafts for a contact',
   { toAddress: testData.victimKpostId },
   ['draft'],
-  // 204 (no content) is a valid response when the contact has no drafts — not a defect.
+  // 204 is valid when the contact has no drafts.
   { expectedStatus: [200, 204] },
 );
 export const statusWithCountApi = contactRead(
@@ -227,16 +215,7 @@ export const postBoxContactsApi = contactRead(
   ['contacts', 'needs-id'],
   {
     productionSafe: false,
-    // CONFIRMED from KMail backend source (2026-10-02, full-repo audit): this route was renamed/
-    // deprecated. `CommonMailController.java:223` maps the method as `@PostMapping("unusedpostBoxContacts")`
-    // — there is no `postBoxContacts` mapping at all on the live backend; this path is permanently
-    // stale, not a transient 404. The real route IS reachable, but attempting to retarget this
-    // definition to it (2026-10-02) found `workbookContract()` throws — `/common/unusedpostBoxContacts/`
-    // is not documented in the Excel-workbook-generated contract either, only the dead
-    // `/common/postBoxContacts/` is. Same external/documentation blocker as KBooking's
-    // bookticket/cancelticket (see kbooking.api.ts) — cannot be defined here until the workbook owner
-    // adds the real path. Kept as `productionSafe: false` so it never files a false "endpoint missing"
-    // bug against a path that can never respond.
+    // Dead route: the backend maps only `unusedpostBoxContacts`, which the workbook does not list.
     note: 'dead route (confirmed from source) AND the real route is undocumented in the workbook contract — two separate blockers, not one',
   },
 );
@@ -261,17 +240,14 @@ export const bulkDashboardApi = contactRead(
   'Bulk mail dashboard',
   { kmailID: null },
   ['bulk', 'needs-id'],
-  // The API rejects an empty body ("Request body should not be empty"); it needs a real kmailID the
-  // frontend supplies from a loaded bulk mail — a runtime id, so not run standalone on live.
+  // Needs a real kmailID from a loaded bulk mail, so it is not run standalone on live.
   { productionSafe: false, note: 'needs a real kmailID; empty body 400s' },
 );
 export const selectedContactMailsApi = contactRead(
   'kmail-selected-contact-mails',
   '/common/selectedContactMails/',
   'Mail thread with a contact',
-  // Full live-client body (Kmail.js getKmailChat / KmailMessage.fetchMail): the thread read pages
-  // by count and by first/last kmailID. Sending only `selectedContact` under-sends what the app
-  // sends; verified against the frontend (2026-09-18), the backend reads all of these.
+  // The full live-client body (Kmail.js getKmailChat): pages by count and first/last kmailID.
   {
     selectedContact: testData.victimKpostId,
     fetchMailType: 'A',
@@ -288,14 +264,9 @@ export const translationApi = contactRead(
   'Translate mail content',
   { langFrom: 'en', langTo: 'hi', msgToTranslate: 'QA bench message' },
   ['translate'],
-  // This endpoint proxies an EXTERNAL translation service whose latency is unbounded — even a 30s
-  // budget was intermittently exceeded, and a timeout that lands during a negative-auth probe reports
-  // as a spurious "missing-token" CRITICAL that duplicates the real auth-bypass finding, and the
-  // auth-probe suffix on the disclosure message stops it consolidating with the platform-wide
-  // Server-header ticket. So the negative-auth probes and the disclosure check are unreliable HERE and
-  // are skipped (owner decision 2026-09-19). The endpoint's own auth-bypass — it answers 200 with NO
-  // token, unlike every other KMail endpoint — is a REAL finding recorded in the note below for the
-  // dev to confirm (translation may be a deliberately public utility). Functional checks still run.
+  // Proxies an external translator with unbounded latency; timeouts during the negative-auth probes
+  // read as false findings, so those and the disclosure check are skipped. Functional checks still
+  // run.
   {
     timeoutMs: 30_000,
     skipValidators: [
@@ -314,7 +285,7 @@ export const referenceMailContentApi = contactRead(
   'Reference mail content',
   { referenceMails: [] as number[] },
   ['content', 'needs-id'],
-  // Empty `referenceMails` → 400 Bad Request; it needs real reference-mail ids from a loaded mail.
+  // Needs real reference-mail ids from a loaded mail (empty → 400).
   { productionSafe: false, note: 'needs real referenceMails ids from a loaded mail' },
 );
 
@@ -355,16 +326,7 @@ export const downloadThumbApi = idRead(
   '/readMail/downloadThumbnail/{uuid}',
   'Attachment thumbnail',
   pathParams(() => ({ uuid: '' })),
-  // LIVE-VERIFIED 2026-10-14 (attachment-idor.spec.ts, bench-owned accounts): the thumbnail now
-  // REQUIRES a login — no token -> 401, an unrelated account's download/stream -> 403, while the
-  // sender gets the real thumbnail (200). The 2026-10-02 source audit below (permitAll) is stale.
-  // Historical: `SecurityConfiguration.java` explicitly
-  // `permitAll()`s this exact path — no token is required at all, unlike every other KMail endpoint.
-  // Combined with `AWSs3ClientServiceImpl.fileDownloadFromS3` looking attachments up by UUID alone
-  // with no sender/receiver ownership check, this means anyone who obtains or guesses a thumbnail
-  // UUID can fetch it, authenticated or not, regardless of whether they ever sent/received that mail.
-  // Tracked as a security finding in the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) (§16 P0, item 0a) — not filed yet,
-  // pending a controlled live proof using only bench-owned accounts.
+  // Ownership of thumbnails is checked by attachment-idor.spec.ts with bench-owned accounts.
   'needs a real attachment uuid; genuinely unauthenticated on live (see note above), not a bench gap',
   ['attachment'],
 );
@@ -445,10 +407,8 @@ export const mailContentApi = idRead(
   'POST',
   '/readMail/sentAndInboxMailContent/',
   'Sent/inbox mail content',
-  // Full live-client body (MessageContainer MailObj / KmailMessage.showMailMessage). The backend
-  // dereferences `selectedContact.toLowerCase()` UNGUARDED (ReadKmailController.java:179): omitting
-  // it NPEs a 500, which would look like a product bug — so the bench sends the whole row the app
-  // sends (verified against the frontend + backend, 2026-09-18).
+  // The full live-client body; the backend dereferences `selectedContact` unguarded, so omitting it
+  // 500s.
   body(() => ({
     kmailID: 0,
     kmailNumber: 0,

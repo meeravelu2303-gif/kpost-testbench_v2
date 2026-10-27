@@ -10,22 +10,8 @@ import {
 import { settleFrames } from '../support/settle';
 
 /**
- * Katchup write-action **failure feedback**. The frontend ground-truth read (bubble/KatchupMessage.js,
- * bubble/WriteMessage.js) showed that the Send, Delete and Save handlers gate their success work on
- * `response?.status === "SUCCESS"` with NO `else` branch and only a `console.*` catch:
- *   - Send  : handleSendKatchupMsg / SendMessage success at KatchupMessage.js:1825, no else.
- *   - Delete: handleDeleteButtonClickBell at KatchupMessage.js:3222, no else (also a stray `debugger`).
- *   - Save  : handleSaveButtonClickBell at KatchupMessage.js:3272, no else.
- * So when the server answers with a FAILURE envelope (HTTP 200 carrying `status:"FAILURE"` — which it
- * genuinely does on edge cases: a deleted/blocked recipient, a not-a-group-member send, a transient
- * backend error), the action silently does nothing: the message appears to vanish / the delete leaves
- * the message in place, with no toast, no banner, nothing. The user cannot tell success from failure.
- *
- * These are DETERMINISTIC stub tests (we fulfil the specific write call with a FAILURE envelope the
- * server really returns), so a failure here is a real code defect, not a selector/tuning miss. Each
- * asserts the CORRECT behaviour (the user must be told); the live app's silence is the evidence.
- *
- * No real write happens — the write call is intercepted — so these do not need KATCHUP_UI_LIFECYCLE.
+ * Katchup Send, Delete and Save must tell the user when the server answers with a FAILURE envelope.
+ * The write call is stubbed (no real write), so these need no KATCHUP_UI_LIFECYCLE.
  */
 test.describe(
   'KPost Katchup · write-action failure feedback',
@@ -148,8 +134,7 @@ test.describe(
           }),
         }),
       );
-      // The delete call fails with a FAILURE envelope. Track that it actually fired, so a future
-      // selector drift (menu/Confirm not clicked) can never masquerade as the silent-failure bug.
+      // Track that the delete fired, so a selector miss cannot pass for the silent-failure bug.
       let deleteCalled = false;
       await page.route('**/katchup/deleteKatchUpMessage/**', (route) => {
         deleteCalled = true;
@@ -192,7 +177,6 @@ test.describe(
         .isVisible()
         .catch(() => false);
 
-      // A selector miss must not fake the bug: the delete must have actually been dispatched.
       expect(
         deleteCalled,
         'the delete request must have fired (bell → Delete → Confirm) to exercise the flow',
@@ -202,8 +186,6 @@ test.describe(
         type: 'observed',
         description: `after a rejected delete — delete fired: ${deleteCalled}; error shown: ${errorShown}; message still visible: ${stillThere}`,
       });
-      // Correct behaviour: a rejected delete must tell the user (and leave the message visibly present).
-      // The bug is the SILENT case: no error AND the message stays (so it looks like nothing happened).
       expect(
         errorShown,
         'a delete the server rejects must surface an error — a silent no-op leaves the user unsure whether ' +
@@ -214,8 +196,7 @@ test.describe(
     test('a save that the server REJECTS (FAILURE envelope) must tell the user, not fail silently @ui', async ({
       page,
     }) => {
-      // Save confirms via a native window.confirm (KatchupMessage.js:3293) — accept it so the save fires
-      // (an unhandled confirm returns false under Playwright and the save would never run).
+      // Accept Save's native confirm; Playwright would otherwise dismiss it and the save never fires.
       page.on('dialog', (d) => void d.accept());
 
       const subject = `QA save-fail ${Date.now()}`;

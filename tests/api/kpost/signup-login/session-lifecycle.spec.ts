@@ -5,37 +5,9 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Signup-login **session/token business rules** — the endpoints Phase 2 calls out by name as the
- * "token/session validation" category, none of which had a business-rule test before this file.
- *
- * `signup-login-active-session` and `signup-login-login-history` are `productionSafe: true` reads;
- * `signup-login-fetch-user-details`/`kpost-id-suggestions` are public/no-op writes, also
- * `productionSafe: true`. Those run against the SHARED cached `personal` principal like every other
- * test in the run — they only ever read, never log in, so they cannot disturb it.
- *
- * ## Why the login-chain tests use a DIFFERENT, otherwise-unused principal
- *
- * Live-verified 2026-09-24: logging in again for an account invalidates that account's PREVIOUS
- * session immediately, server-side — confirmed by logging in on a brand-new random device id and
- * watching the shared cached principal's token 401 on its very next call, even though nothing in
- * this bench touched that device. The engine's own token cache (`token-provider.ts`) only re-logs-in
- * when a cached JWT's OWN expiry has passed — it has no way to know the server invalidated it early
- * — so this would poison the shared `personal` token for the rest of the run (`workers: 1`, one
- * cache per worker process). `signup-login-generate-jwt` and the getActiveSession chain below both
- * NEED a second login to exist, so they run it against `personal-5` (`QA_PERSONAL_5_KPOST_ID`)
- * instead — configured but, as of this writing, referenced nowhere else in the suite (verified by
- * search), and authorized with the login's own literal token (`auth: { header: ... }`) rather than
- * `auth: { principal }`, so the engine's token cache for that principal is never touched either way.
- *
- * ## `generate-jwt`'s own definition undersold it
- *
- * The endpoint definition's comment says testingapi's login response "does not expose a
- * `refreshToken` where the chain can read it". Live-verified 2026-09-24: it does — the chain helper
- * just reuses the shared cached login, which the bench never re-logs-in to read a fresh
- * `refreshToken` from. A dedicated login exposes one, and redeeming it is genuinely device/session-
- * scoped: it works when the caller is authorized with THAT SAME login's own access token, and is
- * refused (401) when authorized with a DIFFERENT (even currently-valid) session's token for the same
- * account. Both branches are exercised below with two `personal-5` logins, never the shared cache.
+ * Session and token rules: user lookup, login history, getActiveSession, refresh-token redemption.
+ * A new login invalidates the account's previous session, so the login tests use `personal-5` with
+ * its own literal token and never disturb the shared cached `personal` token.
  */
 const A = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 const FRESH = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-5')!;
@@ -226,8 +198,7 @@ test.describe(
         { body: { refreshToken: first.refreshToken } },
         {
           label: 'session-lifecycle:generate-jwt-other-session',
-          // `second` is the account's CURRENT session (still valid — the login above proves it works),
-          // but it is not the session `first.refreshToken` was issued to.
+          // A valid session, but not the one `first.refreshToken` was issued to.
           auth: { header: `Bearer ${second.accessToken}` },
           allowLiveRead: true,
         },

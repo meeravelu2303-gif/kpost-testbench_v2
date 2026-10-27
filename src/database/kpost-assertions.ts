@@ -3,24 +3,9 @@ import type { CheckDetail } from '@engine/validation-result';
 import type { JsonObject } from '@utils/json';
 
 /**
- * Assertions shaped to the **real KPOST_QA schema**. (The mock-schema `db-assertions.ts` it once sat
- * beside was unused and removed on 2026-10-26.) KPost has no `id` / `createdAt` / `updatedAt` /
- * `deletedAt` convention, so the real schema gets its own vocabulary here, and each difference below
- * is a fact read off `information_schema`, not a guess:
- *
- *  - **Primary keys are natural, not synthetic.** A user is keyed by `kpost_id` (a varchar e-mail
- *    address), not an integer `id`.
- *  - **Audit columns are `created_date` / `modified_date`**, with `created_by` / `modified_by`
- *    beside them. `mysql2` returns these as `Date`, not as ISO strings.
- *  - **Deletion is a flag, and the flag is not the same shape twice.** `TBL_KPOST_USER_MASTER` and
- *    `TBL_KPOST_USERGROUP_MASTER` use `active_status` with the *strings* `'yes'`/`'no'`;
- *    `TBL_KPOST_USER_CONTACTS` uses a tinyint `delete_status`; Katchup marks each side separately
- *    with `deleted_by_sender` / `deleted_by_receiver`. An assertion that assumed one of these would
- *    silently pass on the other two.
- *  - **Text columns are frequently BLOBs.** `subject`, `actual_message`, `group_name` and
- *    `receiver_name` are all binary, so the driver hands back a `Buffer`. Comparing one to a string
- *    always fails, which would read as "the API stored the wrong subject" when it stored the right
- *    one — see `text()`.
+ * Assertions shaped to the real KPOST_QA schema: natural keys (`kpost_id`),
+ * `created_date`/`modified_date` audit columns, a different deletion flag per table, and text often
+ * stored as BLOBs (see `text()`).
  */
 
 const detail = (name: string, ok: boolean, expected: unknown, actual: unknown): CheckDetail => ({
@@ -30,12 +15,7 @@ const detail = (name: string, ok: boolean, expected: unknown, actual: unknown): 
   actual,
 });
 
-/**
- * A column's value as a string, decoding the BLOBs KPost stores text in.
- *
- * This is the single most common way a correct API gets reported as broken: `subject` is a BLOB, so
- * `record.subject === 'QA Bench 123'` is false even when the stored bytes spell exactly that.
- */
+/** A column's value as a string, decoding BLOBs (a Buffer never equals a string). */
 export function text(value: unknown): string | undefined {
   if (value === null || value === undefined) return undefined;
   if (Buffer.isBuffer(value)) return value.toString('utf8');
@@ -44,10 +24,7 @@ export function text(value: unknown): string | undefined {
     return String(value);
   }
   if (value instanceof Date) return value.toISOString();
-  /*
-   * Anything else — a JSON column, an unexpected object — is serialized rather than allowed to
-   * become "[object Object]", which would make two different values compare equal and pass.
-   */
+  // Serialized, so two different objects never both become "[object Object]" and compare equal.
   return JSON.stringify(value);
 }
 
@@ -79,12 +56,7 @@ export const kpostDb = {
     });
   },
 
-  /**
-   * `created_date` is set and sane, `modified_date` does not precede it.
-   *
-   * `modified_date` is nullable on a never-updated row, and that is correct rather than a fault —
-   * asserting it is always present would fail every freshly created record.
-   */
+  /** `created_date` is set and sane; `modified_date` (null if never updated) is not before it. */
   auditFields(record: JsonObject | undefined, options: { createdBy?: string } = {}): CheckDetail[] {
     const created = timeOf(record?.created_date);
     const modified = timeOf(record?.modified_date);
@@ -116,10 +88,7 @@ export const kpostDb = {
   },
 
   /**
-   * `active_status`, the `'yes'`/`'no'` flag on USER_MASTER and USERGROUP_MASTER.
-   *
-   * Compared case-insensitively: the column is a free-text varchar with no constraint, so a row
-   * written as `'Yes'` is the same state and must not read as a deactivated account.
+   * `active_status` ('yes'/'no') on USER_MASTER and USERGROUP_MASTER, compared case-insensitively.
    */
   activeStatus(record: JsonObject | undefined, expected: 'yes' | 'no'): CheckDetail {
     const actual = text(record?.active_status)?.toLowerCase();
@@ -150,13 +119,7 @@ export const kpostDb = {
     );
   },
 
-  /**
-   * Katchup's per-side deletion flags.
-   *
-   * A recall or a delete removes the message for ONE participant, so a single "is it deleted?"
-   * question has two answers and asserting only one of them would miss a message that vanished for
-   * the wrong party.
-   */
+  /** Katchup's per-side deletion flags: a delete affects one participant, so both are asserted. */
   katchupDeletion(
     record: JsonObject | undefined,
     expected: { sender?: boolean; receiver?: boolean },
@@ -197,13 +160,7 @@ export const kpostDb = {
     );
   },
 
-  /**
-   * A logical foreign key that MySQL does not enforce.
-   *
-   * KPOST_QA declares almost no FK constraints — `TBL_KPOST_USER_MASTER.company_id` points at
-   * `TBL_KPOST_ADMIN_REGISTRATION.id` by convention only. That makes the orphan check worth running
-   * rather than redundant: nothing in the database prevents one.
-   */
+  /** A logical foreign key MySQL does not enforce (KPOST_QA declares almost no FK constraints). */
   foreignKey(label: string, parent: JsonObject | undefined): CheckDetail {
     return detail(
       `${label} resolves`,

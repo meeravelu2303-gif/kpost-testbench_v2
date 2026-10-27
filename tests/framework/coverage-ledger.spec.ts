@@ -9,13 +9,8 @@ import { ROOT_DIR } from '@config/constants';
 import { expect, test } from '@fixtures';
 
 /**
- * THE coverage ledger — one generated file (`docs/generated/coverage.md`) that accounts for **every** endpoint
- * the workbook documents and **every** screen the app has, with a status for each. It is the answer
- * to "did we miss anything": nothing can be silently uncovered, because every documented path lands
- * in exactly one bucket and every module carries an explicit scope decision.
- *
- * Generated from the registry + the generated contracts, never hand-kept — a hand-written coverage
- * list of 337 endpoints is wrong within a day and then lies. Run `npm run framework`.
+ * The coverage ledger (`docs/generated/coverage.md`): every documented endpoint and every screen,
+ * each with a status, generated from the registry and contracts. Run `npm run framework`.
  */
 
 /** KMail spreads across many URL prefixes; it is one module (its own suite, host and owner). */
@@ -38,11 +33,7 @@ function moduleKey(suite: string, p: string): string {
   return KMAIL_PREFIXES.has(mod) ? 'kmail' : mod;
 }
 
-/**
- * Every module's scope decision. `built` modules are under test today; the rest carry the reason
- * they are not, so a gap is a recorded decision rather than an oversight. A module prefix that
- * appears in the contract but not here fails the assertion below — nothing stays unclassified.
- */
+/** Every module's scope decision; a contract module missing here fails the assertion below. */
 type Scope =
   | { status: 'built'; note: string }
   | { status: 'backlog'; note: string }
@@ -137,8 +128,7 @@ test.describe('coverage ledger @framework', () => {
       apiRegistry
         .all()
         .filter((d: EndpointDefinition) => d.productionSafe)
-        // include contractPath too — KMail's request path is prefixed (/kmail5/v2), while the
-        // documented path (what we bucket by) is the unprefixed contractPath.
+        // Include contractPath: KMail's request path is prefixed, the documented path is not.
         .flatMap((d: EndpointDefinition) => [d.path, ...(d.contractPath ? [d.contractPath] : [])]),
     );
 
@@ -148,13 +138,7 @@ test.describe('coverage ledger @framework', () => {
       ...contractPaths('admin-api').map((p) => ({ suite: 'admin-api', path: p })),
     ];
 
-    /*
-     * The workbook documents some endpoints under two path spellings — a legacy `/kmail5/…` or a
-     * bare `/kmailSetting/…` alongside the `/v2/…` form we register under. They are the SAME
-     * endpoint, so a literal string compare reports the second spelling as "uncovered" when it is
-     * fully tested. Canonicalise both sides — drop a leading `/kmail5` and `/v2` and a trailing
-     * slash — so a covered endpoint matches whichever spelling the ledger walks.
-     */
+    // The workbook spells some paths two ways (`/kmail5/…`, `/v2/…`); canonicalise both sides.
     const canon = (p: string): string =>
       p
         .replace(/^\/kmail5(?=\/)/, '')
@@ -261,22 +245,14 @@ test.describe('coverage ledger @framework', () => {
 
     // Nothing stays unclassified: a new module prefix must be given a scope decision here.
     expect([...unclassified], 'add these module prefixes to MODULE_SCOPE with a scope').toEqual([]);
-    // No phantom coverage: every registered non-fixture endpoint's documented path (its
-    // `contractPath` when the live path was corrected, else its path) is in a contract.
-    //
-    // Deliberate exception: `undocumented-contract`-tagged endpoints (2026-10-02 scope rebuild —
-    // "cover all frontend-integrated endpoints") are confirmed real from the live frontend source
-    // but genuinely absent from the workbook — see `defineUndocumentedKpostEndpoint`'s own doc
-    // comment. These are an intentional, evidence-backed exception to "the workbook is the only
-    // source of truth", not an accidental phantom; excluding them here is the point of that helper
-    // existing, not a loophole.
+    // No phantom coverage: every registered endpoint's documented path is in a contract, except
+    // the deliberate undocumented-but-frontend-real ones (`defineUndocumentedKpostEndpoint`).
     const documentedPaths = new Set(documented.map((d) => d.path));
     const phantom = apiRegistry
       .all()
 
       .filter((d: EndpointDefinition) => !(d.tags ?? []).includes('undocumented-contract'))
-      // The KMail twin (`defineUndocumentedKmailEndpoint`) marks the same exception with its note
-      // prefix instead of the tag (endpoint tags become test tags), as its own doc comment says.
+      // The KMail twin marks the same exception with a note prefix instead of a tag.
       .filter((d: EndpointDefinition) => !(d.note ?? '').startsWith('UNDOCUMENTED IN WORKBOOK'))
       .map((d: EndpointDefinition) => d.contractPath ?? d.path)
       .filter((p: string) => !documentedPaths.has(p) && !p.includes('{'));

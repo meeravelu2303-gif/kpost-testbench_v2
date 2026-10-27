@@ -14,31 +14,9 @@ import {
 import { openGroupConversation } from '../support/katchup';
 
 /**
- * Katchup **Group Info** — the FRD rows that were UI GAPs (`requirements-frd.md`, Group Management):
- *
- *   FR-GM-001..002  open Group Info from the thread header; an admin sees the admin view
- *   FR-GM-004..006  per-member quick actions (KMail / Katchup / Kall) on another member's row
- *   FR-GM-007       the Group Management three-dot menu (Edit · Add Members · Remove Members ·
- *                   Add Admin · Remove Admin; no Exit Group for an admin, #1367)
- *   FR-GM-016       the activity feed: an admin action posts a system message into the thread
- *
- * Read from source (`bubble/KatchupMessage/KatchupMessage.js`, 2026-10-10):
- *   - the thread header `ContactBar` (`.background-color-katchup`) `onClick` → `setGroupInfo(true)`;
- *   - the panel renders `#ChatTop .comm_back` titled "Katchup Group Info", a `ContactBar` with
- *     "N Members", the three-dot `.icon-KP_144---More-Vertical` whose menu is `.back_three_color`
- *     (admin-only items guarded by `isGroupAdmin`; "Exit Group" only for a plain member since the
- *     #1367 fix, live 2026-10-21), a search bar and the
- *     member list in `.group_info_height`; every row that is not the viewer carries
- *     `.icon-KP_02-Write-Letter`, `.icon-KP_03-KMail`, `.icon-KP_04-Katchup`, `.icon-KP_05-Kall`
- *     (`NavToComponentGroup`); the creator's row is labelled "Admin" (`.superadmin_font`), other
- *     admins' rows "Admin" (`.admin_font`).
- *   - backend `GroupServiceImpl` posts a Katchup message into the group on add / remove / leave
- *     ("<admin name> added <names>", "... Removed ...", "<name> Left the Group").
- *
- * The group comes from `support/groups.ts`: created by personal-3 with the browser's account as a
- * second admin (so `isGroupAdmin` is true and the admin view renders) and `victim` as a plain member.
- * No API call in this file ever authenticates as the browser's account — doing so kicks the browser
- * session to `/login` (KPost keeps one session per account; 12/12 failures on 2026-10-10).
+ * Katchup Group Info panel (FR-GM-001/002, 004-007, 016): admin view, member quick actions, the
+ * three-dot menu and the activity feed. Selectors from `bubble/KatchupMessage/KatchupMessage.js`.
+ * The browser account is a second admin; no API call logs in as it (one session per account).
  */
 const K = AUTH_PROFILES.kpost;
 const VIEWER: Principal | undefined = K.principals.find((p) => p.key === 'personal'); // the browser
@@ -63,10 +41,8 @@ async function openGroupInfo(page: Page, group: QaGroup): Promise<Locator> {
     !opened,
     'the new group was not listed in Katchup right now (four reloads) — a list or session condition, not a Group Info defect',
   );
-  // `ContactBar` attaches the header's `onClick` to its name/description column
-  // (`div.line_height`, `common/ContactBar/ContactBar.js`), not to the `.background-color-katchup`
-  // wrapper — a click on the wrapper's centre lands beside the column and opens nothing (measured
-  // 2026-10-10: the click registered on `.contactBar_Dropdown.background-color-katchup`, no panel).
+  // The header's onClick is on the name column (`.line_height`), not the wrapper; clicking the
+  // wrapper's centre opens nothing.
   await page.locator('#ChatTop .background-color-katchup .line_height').first().click();
   const panel = page.locator('#ChatTop .comm_back').first();
   await expect(panel.getByText(/Katchup Group Info/i), 'the Group Info panel opens').toBeVisible({
@@ -118,9 +94,8 @@ test.describe(
             panel.locator('.group_info_height'),
             'the member list renders',
           ).toBeVisible();
-          // Two admins (creator + the viewer) → two badges: the creator's `.superadmin_font` and the
-          // viewer's `.admin_font` (KatchupMessage.js), both reading "Admin"; one plain member without.
-          // (Counted on the panel, not on the scroll list: the viewer's own "You" row sits outside it.)
+          // Two admins → two "Admin" badges. Counted on the panel: the viewer's "You" row sits
+          // outside the scroll list.
           const badges = panel.locator('.superadmin_font, .admin_font');
           await expect(badges, 'the admin view shows one Admin badge per admin').toHaveCount(2);
           await expect(badges.nth(0), 'the first badge reads "Admin"').toHaveText(/Admin/);
@@ -198,7 +173,7 @@ test.describe(
               `menu offers "${item}"`,
             ).toBeVisible();
           }
-          // Admins cannot exit (owner rule 2026-10-15; fixed with #1367, verified 2026-10-21).
+          // Admins cannot exit a group.
           await expect(
             menu.getByText('Exit Group', { exact: true }),
             'an admin is not offered "Exit Group"',
@@ -237,9 +212,7 @@ test.describe(
           const opened = await openGroupConversation(page, group.groupKpostID);
           test.skip(!opened, 'the new group was not listed in Katchup right now (four reloads)');
 
-          // Backend: `<admin first last> added <member names>` is sent as a Katchup message to the group.
-          // The creation itself already posts one "added" line (creator added the initial members); the
-          // add-member call must post a second, naming the added account.
+          // Creation already posts one "added" line; the add-member call must post a second.
           const thread = page.locator('#ChatTop, .chat-container');
           await expect(
             thread.getByText(/\badded\b/i).first(),

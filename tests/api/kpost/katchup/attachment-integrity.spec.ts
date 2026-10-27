@@ -6,18 +6,9 @@ import { expect, test } from '@fixtures';
 import { deleteUploaded, uploadFile } from '../../support/attachments';
 
 /**
- * Katchup **attachment byte integrity** (RTM-CON04): the file the RECIPIENT downloads must be the
- * exact bytes the sender uploaded — same length, same SHA-256.
- *
- * Why a binary, non-image file: the UI integrity check (`katchup-content-correctness`) can only prove
- * an image comes back as a valid JPEG, because the app re-encodes images. A PDF-typed payload is
- * stored as-is, and filling it with every byte value 0x00–0xFF means any text decode, charset
- * conversion or truncation on the way through S3 → download changes the digest. The comparison uses
- * the client's `bodyDigest` (taken from the raw buffer before any text decode), not `bodyText`.
- *
- * Flow (the real client flow, see `presigned-attachment-workflow.spec.ts`): A presigns, PUTs the
- * bytes to S3, sends a message to B naming the uuid; B — and A as the control — download it.
- * Self-cleaning: the message is deleted and the S3 object removed in `finally`.
+ * RTM-CON04: the recipient downloads the exact bytes the sender uploaded (same length, same SHA-256).
+ * Uses a PDF-typed file of every byte value 0x00–0xFF (images are re-encoded), compared via the raw
+ * `bodyDigest`. The message and the S3 object are removed in `finally`.
  */
 const K = AUTH_PROFILES.kpost;
 const principal = (key: string): Principal => {

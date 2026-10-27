@@ -8,15 +8,13 @@ import {
 } from '../support/tier-variable-flows';
 
 /**
- * Admin UI · **HR Breakdown Setup** (/hr-breakdown-setup), done on screen: a QA tier and a QA top-level variable are each
- * created in the drawer, renamed and deleted, with the request and answer of every step checked and
- * an API clean-up if a step fails. Host-guarded: nothing is written unless the screen's Admin calls go
- * to the test Admin API (support/admin-workflow.ts).
+ * Admin UI HR Breakdown Setup: a QA tier and a QA top-level variable are created, renamed and deleted
+ * on screen. Host-guarded: nothing is written unless the screen calls the test Admin API.
  */
 const SCREEN: TierScreen = {
   name: 'HR Breakdown Setup',
   route: '/hr-breakdown-setup',
-  // The page heading wrongly reads "Work Place Setup" (HRBreakdownSetup.js:12); the route tells them apart.
+  // The page heading wrongly reads "Work Place Setup"; the route tells them apart.
   title: /Work Place Setup|HR Breakdown/,
   tierApi: '/hrSetUpTierAttribute',
   variableApi: '/hrSetUpTierVariable',

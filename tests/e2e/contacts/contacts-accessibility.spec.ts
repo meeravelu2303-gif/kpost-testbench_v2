@@ -14,17 +14,8 @@ import {
 import { settleAnimations } from '../support/usermanagement';
 
 /**
- * Deep WCAG scan (axe-core) for Contacts' own DYNAMIC states — the Add-contact wizard's people-search
- * step, its nested Advanced Search step, and the Create-Group dialog. `accessibility-axe.spec.ts`'s
- * per-screen sweep only ever scans `/katchup` in its DEFAULT state, so none of these three states (each
- * reached only via a wizard/dialog trigger inside the Contacts tab) were ever scanned — the same
- * genuine-gap reasoning as Home's, Katchup's, Profile's and Settings' own dynamic-state files.
- *
- * Navigation mirrors `contacts-functional.spec.ts`'s own proven `gotoContacts` helper and wizard steps
- * exactly (no shared `support/contacts.ts` module exists yet to import from).
- *
- * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new screens
- * need their own clean run(s) before earning a place in the auto-filing allow-list.
+ * axe-core WCAG scan of Contacts' dialog states (people search, Advanced Search, Create-Group), which
+ * the per-screen sweep never reaches. Kept out of the trusted a11y sweep until it has clean runs.
  */
 
 test.describe(

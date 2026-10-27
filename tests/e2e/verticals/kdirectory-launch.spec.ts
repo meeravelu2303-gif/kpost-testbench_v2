@@ -6,19 +6,8 @@ import { requireKpostDb, rowSummary } from '../support/cross-layer';
 import { parkPointerAwayFromSideMenu } from '../support/katchup';
 
 /**
- * KDirectory — **initiate Katchup / Kall from a directory entry's profile** (FR-KD-006, KDirectory
- * FRD §7: "User selects Message or Call on the profile view; system opens a new Katchup message or
- * places a Kall to that contact").
- *
- * Read from source (`Kdirectory/components/KdirectoryModal/KdirectoryModal.js`,
- * `Katchup/bubble/DigitalCard/DigitalCard.js`, 2026-10-11): the directory asks for Country →
- * Language → vertical (`.dirCategory-box`) → Continue; the second phase has a `SearchBar`
- * (debounced `GetKdirectorySearch`) whose result rows are `ContactBar`s whose avatar `imgClick` opens
- * the person's `DigitalCard`. The card's feature row renders `button.dc-feature-button` with
- * `aria-label` **Write Mail · KMail · Katchup · Kall**; Katchup → `NavToComponentGroup(id,
- * "katchupModal")` → `navigate('/katchup', {state:{myProp:id, unknown:{…}}})`; Kall → `setKall({state:
- * true, contact})` → `KallModal`. Nothing is sent and no call is placed: the Kall modal is opened and
- * dismissed.
+ * KDirectory: search (Country → Language → vertical → Continue), result rows vs the API and DB, and
+ * Katchup / Kall from an entry's Digital Card. Nothing is sent and no call is placed.
  */
 const SEARCH_TERM = process.env.KDIRECTORY_SEARCH_TERM ?? 'Qatest';
 
@@ -50,8 +39,7 @@ interface DirEntry {
 
 /**
  * Country → Language → vertical → Continue → search; returns the result rows and the API's entries.
- * Defaults to the Personal vertical and the QA accounts' name. The Business vertical is how entries with
- * a designation and company are reached (the personal QA accounts carry neither).
+ * Use the Business vertical for entries with a designation and company.
  */
 async function searchDirectory(
   page: Page,
@@ -82,9 +70,8 @@ async function searchDirectory(
 
   const search = page.getByRole('searchbox').first();
   await expect(search, 'the directory search renders').toBeVisible({ timeout: 15_000 });
-  // `handleContactSearch` debounces 1 s, then POSTs /contacts/globalSearch/ — wait for that answer so
-  // "no rows" can be told apart from "rows not rendered".
-  // The box searches as you type: wait for the answer to THIS term, not an earlier partial one.
+  // The box searches as you type (debounced): wait for the answer to THIS term, so "no rows" can be
+  // told apart from "rows not rendered".
   const answer = page.waitForResponse(
     (r) =>
       r.url().includes('/contacts/globalSearch/') &&
@@ -160,9 +147,7 @@ test.describe(
       'each result row shows the person’s name and location (FR-KD-003) @ui',
       { annotation: [{ type: 'requirement', description: 'FR-KD-003' }] },
       async ({ page }) => {
-        // FR-KD-003: every directory entry shows the user's name, role/designation and team. The rows
-        // are ContactBars rendering `name={item.fullName}` (KdirectoryModal.js) — compared here with the
-        // name the search API returned for the same entries (firstName + lastName, contract fields).
+        // Rows are compared with the names the search API returned for the same entries.
         const { rows, entries } = await searchDirectory(page);
         const rowBars = page.locator('.contactDir_scrollHeight').first();
         const shown = await rowBars.innerText();
@@ -188,9 +173,7 @@ test.describe(
       'each business result row shows the person’s name, role/designation and team (company) (FR-KD-003) @ui',
       { annotation: [{ type: 'requirement', description: 'FR-KD-003' }] },
       async ({ page }) => {
-        // FR-KD-003 in full: name, role/designation and team. Personal QA accounts carry no designation or
-        // company, so this searches the Business vertical for the QA test company's own members ("Nebius
-        // Solutions", company 242): each entry the API returns has a designation and a companyName.
+        // Personal QA accounts have no designation or company, so search the QA company (242) members.
         const { rows, entries } = await searchDirectory(page, {
           vertical: 'Business',
           term: 'Nebius',
@@ -236,10 +219,8 @@ test.describe(
         ],
       },
       async ({ page, databases }) => {
-        // Read-only at every layer: a search on the real screen, the reply it got, and the account rows
-        // behind each entry (ContactsDirectoryDaoImpl.globalSearch reads VW_KPOST_USER_DETAIL, a view over
-        // these two tables). The designation the screen leaves out (#13220) is judged in the FR-KD-003
-        // test above; here the screen half checks name and company, so a failure points at one layer.
+        // Read-only. Designation on screen is judged in the FR-KD-003 test; here the UI half checks only
+        // name and company, so a failure points at one layer.
         const db = requireKpostDb(databases);
         const { rows, entries, status } = await searchDirectory(page, {
           vertical: 'Business',
@@ -318,12 +299,9 @@ test.describe(
       'the directory screen shows the total contact count for the search (FR-KD-004) @ui',
       { annotation: [{ type: 'requirement', description: 'FR-KD-004' }] },
       async ({ page }) => {
-        // FR-KD-004 (KDirectory FRD): "The system shall display the total contact count on the directory
-        // screen." The count must be the number of entries the search returned, stated as a count
-        // ("6 contacts", "Results: 6", "Total 6") — not just six rows on screen.
+        // The count must be stated as text ("6 contacts", "Total 6"), not just six rows on screen.
         const { rows, entries } = await searchDirectory(page);
-        // The captured reply can be an earlier, empty search (the box debounces); the rows are what the
-        // user sees counted.
+        // The captured reply can be an earlier empty search, so fall back to the rows.
         const n = entries.length || (await rows.count());
         const screen = page.locator('.secondPhase, .contactDir_scrollHeight').first().locator('..');
         const shown = await screen.innerText();

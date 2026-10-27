@@ -3,31 +3,12 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Personal signup — client-side validation, every angle the happy path in
- * `signup-login-lifecycle.spec.ts` never exercises: a rejected mobile format, required fields that
- * must block progress, the 18-years-old floor, and the password policy (weak + mismatched).
- *
- * None of these tests complete a signup — each either fails before an account could be created, or
- * deliberately stops short of the final "Submit" once its own check is made. No account is created
- * and nothing needs recording in `src/fixtures/created-accounts.ts`.
- *
- * ## Gating
- *
- * Same two gates as the lifecycle spec: `SIGNUP_UI_LIFECYCLE=true` + `OTP_TEST_GATEWAY=true` +
- * `TEST_DB_MODE=true`. Three of the four tests below still need a real mobile OTP cycle to reach the
- * screen the validation lives on (empty-field gating, the age floor, and the password policy are all
- * past the OTP step) — only the invalid-mobile-format check is otsp-free.
- *
- * ## A fresh mobile number per test, not the shared identity
- *
- * `testData.signupUiMobile` is reserved for the one test that actually completes a signup
- * (`signup-login-lifecycle.spec.ts`) and gets consumed there. These tests never create an account,
- * so a locally-generated, never-reused-elsewhere number is enough — it just needs to be free right
- * now, which a timestamp-derived one reliably is.
+ * Personal signup client-side validation: mobile format, required fields, the 18+ age floor, the
+ * password policy and the debounced KPOST ID check. No test reaches Submit, so no account is created.
+ * Gated like the lifecycle spec because most checks sit past the mobile OTP step.
  */
 function freshMobile(): string {
-  // 77 + 8 digits derived from the clock: free with overwhelming likelihood, never collides with the
-  // fixed identities other specs reserve (all in the 9000000xxx range).
+  // 77 + 8 clock digits: free right now and outside the reserved 9000000xxx identities.
   return `77${Date.now().toString().slice(-8)}`;
 }
 
@@ -54,11 +35,9 @@ test.describe(
         await signupPage.chooseAccountType('Personal');
         await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
 
-        // Mobile() masks input to \d{0,10} as it's typed; sendOTP() then checks the LENGTH before ever
-        // calling the network — the client-side check this test is actually pinning.
+        // sendOTP() checks the length before calling the network.
         await signupPage.attemptVerifyWithInvalidMobile('12345');
 
-        // The OTP modal must never have appeared — a short number must be rejected, not silently sent.
         await expect(
           page.getByText(/^Enter your OTP$/i),
           'no OTP modal opens for an invalid-length mobile number',
@@ -108,18 +87,8 @@ test.describe(
       ).toBeDisabled();
     });
 
-    /*
-     * CORRECTED 2026-10-05 (was filed/reopened as #817, now RESOLVED INVALID): the original version of
-     * this test asserted that the First Name INPUT's raw value must not equal the typed payload — the
-     * wrong signal. The app's real defense (confirmed in src/utils/validation.js, and in the frontend's
-     * own dedicated unit test literally titled "signup name validation (KPA-817)") is
-     * isValidSignupName(), which correctly rejects raw markup and drives `ValidData`, which disables
-     * Continue — it does not strip the character out of the live input box, which is a legitimate,
-     * common UX choice (show the user exactly what they typed, tell them why it's invalid, block
-     * progression) rather than a defect. The user confirmed this by hand: typing the payload leaves it
-     * visible but Continue will not proceed. The real, meaningful assertion is that Continue stays
-     * disabled and the error message appears — not that the box silently rewrites what was typed.
-     */
+    // The app keeps the typed markup visible but blocks Continue and shows an error; that is asserted,
+    // not that the input strips the characters.
     test('the First Name field rejects a script tag — Continue stays disabled and an error shows @ui', async ({
       signupPage,
       page,
@@ -175,10 +144,7 @@ test.describe(
 
       const thisYear = new Date().getFullYear();
 
-      // The 18-year floor is enforced by excluding recent years from the YEAR dropdown entirely (not by
-      // disabling individual days within a selectable year) — confirmed live: the dropdown's options run
-      // 1900 up to (this year − 18), with nothing more recent offered at all. So the correct assertion is
-      // on the dropdown's own option list, not on a specific day's disabled state for an unreachable year.
+      // The 18-year floor removes recent years from the year dropdown, so assert on its option list.
       await signupPage.openDateOfBirthPicker();
       const yearOptions = await page
         .locator('.react-datepicker__year-select option')
@@ -229,11 +195,7 @@ test.describe(
       });
       await signupPage.continueToKpostId();
 
-      // A KPOST ID local part derived from the mobile number: unique enough not to collide, never
-      // reused elsewhere (this test never reaches Submit, so nothing is ever actually registered).
-      // "qavalid" + 6 digits is 13 chars, over the product's own 5-12 char KPOST ID limit — confirmed live
-      // (the product correctly rejects it with "KPOST ID must be between 5 and 12 characters"). "qaval" (5)
-      // + 6 digits keeps this at 11, safely within bounds.
+      // "qaval" + 6 digits = 11 chars, inside the 5-12 char KPOST ID limit.
       const kpostIdOutcome = await signupPage.choosePreferredKpostId(`qaval${mobile.slice(-6)}`);
       test.skip(
         kpostIdOutcome === 'taken',
@@ -271,16 +233,8 @@ test.describe(
       ).toBeDisabled();
     });
 
-    /**
-     * The one genuinely untested angle of "editing a field before submit": the Preferred KPOST ID
-     * field's availability check is live and DEBOUNCED (per `choosePreferredKpostId`'s own doc
-     * comment). The password-policy test above already proves a plain re-`fill()` correctly re-runs
-     * pure client-side validation — this instead targets the NETWORK-backed check specifically, where
-     * a stale response for an earlier value arriving late could incorrectly overwrite what should be
-     * shown for the value the user has since changed to. Uses a real registered id (`testData.kpostId`,
-     * expected "taken") followed by a fresh generated one (expected "available") to prove the SECOND
-     * check's result is what actually displays, not a stale first one.
-     */
+    // The KPOST ID availability check is debounced: a taken id then a fresh one must show the second
+    // result, not a stale first response.
     test('editing the Preferred KPOST ID after a check re-validates the NEW value, not a stale result @ui', async ({
       signupPage,
     }) => {

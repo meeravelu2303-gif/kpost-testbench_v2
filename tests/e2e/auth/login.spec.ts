@@ -2,20 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * The login **screen** on the live front end — the two-step KPOST flow, across all browsers.
- *
- * Modelled on `src/components/auth/Login.js` (KPOST_REACTJS_2023_V1). The component ships no
- * `data-testid` hooks, so assertions target **stable states** (which step is shown, which URL),
- * not transient toasts.
- *
- * ## One navigation, not four
- *
- * Loading `/login` fetches the country list from an endpoint that **rate-limits after repeated fresh
- * loads** — and each separate test navigates fresh, so a suite of four login tests exhausts the
- * limit and the later ones cannot even render the form (worst in the slower engines). So the screen
- * behaviours are checked in a **single test with one navigation**, walking the real flow: unknown id
- * does not advance → a valid id advances → a wrong password is rejected. That both mirrors a real
- * session and keeps the suite reliable in Chromium, Firefox and WebKit.
+ * The two-step login screen. One test with one navigation, because loading /login fetches a country
+ * list that rate-limits after repeated fresh loads.
  */
 test.describe('KPost login screen', { tag: ['@ui', '@auth', '@regression'] }, () => {
   // Log OUT: the login screen must be tested from a fresh session, not the one `setup` saved.
@@ -53,8 +41,7 @@ test.describe('KPost login screen', { tag: ['@ui', '@auth', '@regression'] }, ()
         timeout: 20_000,
       });
 
-      // FR-SL-025 — the password step identifies the user: the card shows the account's own name
-      // (Login.js `.login__user-name` ← fetchUserDetails first + last name) and the id that was typed.
+      // FR-SL-025: the password step shows the account's name (from fetchUserDetails) and the typed id.
       const details = await endpoints.sendTo(
         'signup-login-fetch-user-details',
         { body: { kpostID: testData.kpostId, countryID: testData.countryId } },
@@ -87,8 +74,5 @@ test.describe('KPost login screen', { tag: ['@ui', '@auth', '@regression'] }, ()
     },
   );
 
-  /*
-   * That a CORRECT login reaches /home is proven by the `setup` project (it logs in with this same
-   * account through this same page object before every browser run), so it is not duplicated here.
-   */
+  // A correct login reaching /home is proven by the `setup` project, so it is not duplicated here.
 });

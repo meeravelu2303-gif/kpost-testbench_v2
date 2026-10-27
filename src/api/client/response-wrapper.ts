@@ -25,23 +25,15 @@ export class ApiResponseWrapper {
     readonly transportError?: TransportError,
     /** Which probe produced the exchange, e.g. `primary` or `authentication.missing-token`. */
     readonly label = 'primary',
-    /**
-     * The first 16 bytes of the raw body as hex, captured before any lossy text decode. Used to
-     * identify a binary body's real format from its magic number — the bytes `bodyText` cannot keep.
-     */
+    /** The first 16 raw body bytes as hex, to identify a binary body's real format. */
     readonly bodyPrefixHex?: string,
-    /**
-     * SHA-256 (hex) and length of the FULL raw body, taken before the lossy text decode — what a
-     * byte-integrity check compares (`bodyText` mangles any byte that is not valid UTF-8).
-     */
+    /** SHA-256 (hex) and length of the full raw body, for byte-integrity checks. */
     readonly bodyDigest?: { sha256: string; bytes: number },
   ) {}
 
   /**
-   * The image/document format the body ACTUALLY is, read from its magic number — independent of the
-   * Content-Type header the server claimed. `undefined` when the prefix matches no known signature
-   * (a JSON or text body, or an unknown format). This is what makes "header says jpeg, bytes are
-   * png" visible.
+   * The format the body really is, from its magic number (independent of Content-Type); undefined
+   * if unknown.
    */
   get magicType(): string | undefined {
     const hex = (this.bodyPrefixHex ?? '').toLowerCase();

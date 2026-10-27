@@ -10,18 +10,9 @@ import { createQaGroup, deleteQaGroup, type QaGroup } from '../support/groups';
 import { isKnownAppAlert } from '../support/known-dialogs';
 
 /**
- * KMail features through the real screens (live-explored 2026-10-15):
- *   - Write Mail "Add copies" → "Mail With Copies" picker: per contact a Copy (CC) and a Confidential
- *     Copy (BCC) radio, then Done;
- *   - Write Mail "Group Mail" → the To field searches groups;
- *   - the footer "Save Draft" icon (`.icon-KP_95-Write-Mail-Temp`) → POST /draft/draftMail/ →
- *     KMail › Status of Mails › Draft Mails;
- *   - an opened mail's reply arrow menu: Comment (kmailType 8), Clarify (9), More › Delete;
- *   - a received mail with an attachment: the recipient sees it and can download it.
- *
- * API cross-checks only ever authenticate as personal-3 (qatest3): logging in through the API as an
- * account that is signed in to a browser kills that browser session (one session per account).
- * Accounts: A = default page (qatest1), B = STORAGE_STATE_2 (qatest2), C = personal-3 (qatest3).
+ * KMail features on the real screens: copies (CC/BCC), group mail, save draft, Comment / Clarify /
+ * Delete, and received attachments. API cross-checks log in only as qatest3: an API login as a browser
+ * account kills its session. Accounts: A = qatest1, B = STORAGE_STATE_2 (qatest2), C = qatest3.
  */
 const C: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-3')!;
 const QATEST4 = 'qatest4@kpostindia.com';
@@ -65,15 +56,13 @@ test.describe(
         .first()
         .click({ timeout: 4_000 })
         .catch(() => undefined);
-      // The To suggestion list stays open after a pick and covers the message editor (live
-      // 2026-10-15) — close it.
+      // The To suggestion list stays open after a pick and covers the editor, so close it.
       await page.keyboard.press('Escape').catch(() => undefined);
     }
 
     async function fillSubjectBody(page: Page, subject: string, body: string): Promise<void> {
       const box = page.locator('.toInput').first();
-      // Type it like a user: in Firefox, after the "Mail With Copies" picker, Playwright's fill()
-      // leaves this field empty while real typing works (checked 2026-10-15) — not an app bug.
+      // Type like a user: in Firefox, fill() leaves this field empty after the copies picker (not an app bug).
       await box.click();
       await page.keyboard.type(subject);
       await expect(box, 'the subject is typed').toHaveValue(subject);
@@ -239,9 +228,8 @@ test.describe(
         });
         expect(sent.status, `the group mail is sent: ${sent.text}`).toBe(200);
         expect(sent.body.groupFlag, 'it is sent as a group mail').toBe(true);
-        // A member's group thread would be read by the group's id, which the bench's live-safety
-        // guard refuses (a runtime id it does not own) — so check qatest3's KMail dashboard (its
-        // recent mails), which names no identifier at all.
+        // The group thread would need the group id, which the live-safety guard refuses, so check
+        // qatest3's KMail dashboard instead.
         let dashboard = '';
         const received = await expect
           .poll(
@@ -353,9 +341,8 @@ test.describe(
             timeout: 20_000,
           },
         );
-        // Delete asks with the browser's own confirm box (KmailMessage.js handleDeleteKmail →
-        // window.confirm), which Playwright dismisses unless accepted — accept it, as a user would.
-        // Accept only the confirm box — the app's own microphone alerts (#1360) can arrive first.
+        // Delete uses window.confirm, which Playwright dismisses unless accepted. Accept only the
+        // confirm box: the app's microphone alerts (#1360) can arrive first.
         let confirmText = '';
         const onDialog = (dialog: Dialog) => {
           if (isKnownAppAlert(dialog) || dialog.type() !== 'confirm') {
@@ -375,9 +362,8 @@ test.describe(
           description: `delete ${res.request().method()} ${res.url()} -> ${res.status()}`,
         });
         expect(res.status(), 'the delete is accepted').toBe(200);
-        // Reopen B's conversation with A after a reload and read what it lists (the Recents search is
-        // not a reliable check here: typed before the list loads it filters nothing — an earlier
-        // version of this test passed on that empty list).
+        // Reopen B's conversation after a reload; the Recents search filters nothing if typed before
+        // the list loads.
         await b.reload({ waitUntil: 'domcontentloaded' });
         await waitLoaded(b);
         await expect(b.getByText('Today', { exact: true }).first()).toBeVisible({
@@ -391,9 +377,7 @@ test.describe(
           .filter({ visible: true })
           .first()
           .click();
-        // By design a deleted mail stays in the conversation, greyed out and closed (KmailMessageBox:
-        // isDeletedMail → class "deletedMail", never expands) — the server keeps the row with
-        // deleteByReceiver = "Y".
+        // By design a deleted mail stays in the conversation, greyed out and closed.
         const data = (await (await thread).json()) as {
           data?: {
             kmailSubject?: string;
@@ -429,7 +413,7 @@ test.describe(
       'Attachment received: the recipient sees the attached file on the opened mail and can download it @ui',
       { annotation: [{ type: 'requirement-partial', description: 'RTM-KMAIL-F02' }] },
       async ({ page, endpoints }) => {
-        // qatest3 uploads (through the API — the browser upload is broken, #1347) and sends to qatest1.
+        // qatest3 uploads through the API (known defect #1347: the browser upload is broken) and sends to qatest1.
         const subject = `QA KMail attachment in ${Date.now()}`;
         const jpeg = Buffer.from(
           '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
@@ -516,8 +500,8 @@ test.describe(
         const shot = test.info().outputPath('received-attachment.png');
         await page.screenshot({ path: shot });
         await test.info().attach('received-attachment', { path: shot, contentType: 'image/png' });
-        // The opened mail intermittently renders without its body AND attachments (#1348) — reopen up
-        // to 3 times so the download itself can still be tested; the attempt count is recorded.
+        // Known defect #1348: the opened mail intermittently renders without body or attachments, so
+        // reopen up to 3 times; the attempt count is recorded.
         const chip = page.getByText(fileName.slice(0, 12), { exact: false }).first();
         let attempts = 1;
         while (!(await chip.isVisible({ timeout: 10_000 }).catch(() => false)) && attempts < 3) {
@@ -538,9 +522,7 @@ test.describe(
         ).toBeVisible({
           timeout: 10_000,
         });
-        // The attachment box's download icon — for a single file it is `.icon-KP_294_Download
-        // .attachment-download-all` (AttachmentHandler.js) → MailAttachmentDownload → POST
-        // /readMail/downloadODAttachment.
+        // The attachment box's download icon (POST /readMail/downloadODAttachment).
         const download = page.waitForResponse(
           (r) => r.url().includes('/readMail/downloadODAttachment'),
           { timeout: 20_000 },
@@ -562,8 +544,8 @@ test.describe(
       endpoints,
     }) => {
       const stamp = Date.now();
-      // The exact HTML a mail written in Write Mail carries (captured from a live send 2026-10-14):
-      // greeting, the body in a <div>, then the app's <table id='signature'> block.
+      // The exact HTML a mail written in Write Mail carries: greeting, the body in a <div>, then the
+      // app's <table id='signature'> block.
       const signature =
         " <table id='signature' cellpadding='0' cellspacing='0' border='0' style='font-size:14px; margin-top:15px;'> <tr> <td style='padding-right:8px;'> <div style='width:50px; height:50px; border-radius:50%; background-color:#ccc; display:table;'> <span style='display:table-cell; text-align:center; vertical-align:middle; font-weight:bold; font-size:18px; color:#333;'>QB</span> </div> </td> <td style='vertical-align:middle;'> <div style='font-weight:bold;'>Thanks &amp; Regards,</div> <div>Qatest3 Bench</div> </td> </tr> </table> ";
       const variants = [

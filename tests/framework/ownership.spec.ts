@@ -15,9 +15,8 @@ import { candidateFromUiFailure, candidatesFromReport } from '../../src/bug-trac
 import type { ValidationReport } from '../../src/validation-engine/validation-result';
 
 /**
- * Defect ownership is the one thing that must never be wrong: a ticket that reaches the wrong
- * developer is worse than no ticket. These pin the routing table and check it still agrees with
- * the live Bugzilla configuration.
+ * Pins the defect-routing table (a ticket to the wrong developer is worse than none) and checks it
+ * still agrees with the live Bugzilla configuration.
  */
 
 function reportWith(suite: SuiteId, tags: string[]): ValidationReport {
@@ -108,7 +107,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
 
     const ui = candidateFromUiFailure(
       {
-        // Routing reads the file NAME and title, not the module folder (screenTokens, 2026-10-22).
+        // Routing reads the file NAME and title, not the module folder (screenTokens).
         file: 'tests/e2e/kmail/writemail.spec.ts',
         title: 'sends a mail',
         message: 'expected button to be enabled',
@@ -199,9 +198,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
   test('a multi-case validator renders a clean case → code Expected/Actual, not a masked blob', () => {
     const config = readBugzillaConfig();
     const report = reportWith('kpost-api', ['kpost-api', 'dashboard']);
-    // A per-endpoint multi-case validator. (An auth-family validator would be consolidated into one
-    // platform-wide ticket by design — `SYSTEMIC_VALIDATORS` — and rendered differently; that path
-    // is covered by systemic-collapse.spec.ts.)
+    // A per-endpoint multi-case validator (auth-family ones collapse; see systemic-collapse.spec.ts).
     report.results[0] = {
       ...report.results[0]!,
       validatorName: 'request.negative-input',

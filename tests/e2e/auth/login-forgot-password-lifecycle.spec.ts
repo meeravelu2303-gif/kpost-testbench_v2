@@ -4,27 +4,9 @@ import { isSqlClient } from '@database/database-client';
 import { expect, test } from '@fixtures';
 
 /**
- * The FULL forgot-password reset — request OTP → verify → set the password → log in with it — with
- * exactly ONE real SMS per run (owner, 2026-10-20).
- *
- * ## Why the SMS is real, and how it is kept to one
- *
- * `forgotPassword` never applies the test gateway's OTP bypass (UserProfileServiceImpl): clicking
- * "Forgot Password ?" texts a random 6-digit code to the account's registered mobile. So:
- * - the link is clicked ONCE, and "Resend OTP" is never touched;
- * - retries are OFF for this file — a failed attempt is never repeated in the same run;
- * - the code is read from the test database (TBL_KPOST_OTP_VALIDATION, the row the request just
- *   wrote), so nobody has to read the phone;
- * - every other test that opens the dialog answers the request in the browser instead
- *   (`support/no-real-sms.ts`), and the production guard blocks any API call to these senders.
- *
- * ## Never strands the account
- *
- * It runs only on the dedicated spare account (`QA_FORGOT_PASSWORD_KPOST_ID`, qatest6), and it resets
- * the password TO THE SAME VALUE the account already has: the server accepts that (no same-password
- * rule), so there is nothing to restore and no second SMS is ever needed. The reset is still proven
- * to have been written: bcrypt salts every save, so the stored hash must change — and the account
- * must sign in with the password afterwards.
+ * Full forgot-password reset (request OTP, verify, set password, log in) with exactly one real SMS
+ * per run (no OTP bypass here; the code is read from the DB, retries are off). Runs on the spare
+ * account and resets the password to its current value, so nothing needs restoring.
  */
 test.describe(
   'KPost login · forgot-password full reset cycle',
@@ -137,9 +119,8 @@ test.describe(
         });
 
         await test.step('the used code cannot be used again (RTM-SEC03)', async () => {
-          // Replays of what the reset just did, with the SAME code — no new SMS. Sent straight to the
-          // API (the engine blocks this endpoint): the update re-sets the SAME password, so even if
-          // the server wrongly accepts it, the account is left exactly as it is.
+          // Replays with the SAME code (no new SMS), sent straight to the API; re-setting the same
+          // password leaves the account unchanged even if wrongly accepted.
           const api = suiteFor('kpost-api').baseUrl;
           const replayed = await request.post(`${api}/v2/common/validateOTP/`, {
             data: {

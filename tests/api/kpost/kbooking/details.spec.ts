@@ -2,11 +2,9 @@ import { describeEndpointCases } from '@engine/endpoint-cases';
 import { test } from '@fixtures';
 
 /**
- * WHAT is tested: the KBooking trip-detail reads (v1, v2) and the boarding-point read, which take ids
- * minted by a prior search (the feature chain feeds them real ones).
- * HOW is owned by the central validation engine; the placeholder id exercises the not-found path.
- * `kbooking-block-ticket` is deliberately left out: a successful call holds a seat at the booking
- * partner, a real external side effect (see tests/framework/sweep-completeness.spec.ts).
+ * WHAT is tested: the KBooking trip-detail (v1, v2) and boarding-point reads; the placeholder id
+ * exercises the not-found path. HOW is owned by the central validation engine. block-ticket is left
+ * out: it holds a real seat at the booking partner.
  */
 test.describe('KPost KBooking · details', { tag: ['@api', '@verticals', '@regression'] }, () => {
   describeEndpointCases({

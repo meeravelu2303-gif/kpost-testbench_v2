@@ -9,11 +9,9 @@ import { expect, test } from '@fixtures';
 import { employeePayload } from '../support/screen-payloads';
 
 /**
- * Response times of all 38 Admin endpoints, measured from repeated SEQUENTIAL calls (never parallel: this is
- * per-request latency, not a load test, which the owner excluded). Each endpoint gets p50 / p95 / max over its
- * samples, and its p95 is held to the bench budget for its method (thresholds.config.ts: POST 1500 ms, GET
- * 800 ms) — a bench default, not a product SLA. Every record is created by the test and deleted again; role
- * posting runs on the QA company with live KSMACC (owner-approved 2026-10-26).
+ * Response times of all 38 Admin endpoints from repeated sequential calls (per-request latency, not
+ * load). Each endpoint's p95 is held to its method's bench budget (thresholds.config.ts). Every record
+ * is created by the test and deleted again; role posting runs on the QA company only.
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',
@@ -138,7 +136,7 @@ const location = (attributeId: string, variableId: string, label: string): Json 
   countryId: 1,
   countryName: 'India',
 });
-// The Employee Data screen's full record (the server enforces its required fields since 2026-10-26).
+// The Employee Data screen's full record (the server enforces its required fields).
 const employee = (label: string): Json => employeePayload(`Lat ${label} ${stamp}`);
 
 test.describe('Admin · response times of all 38 endpoints @api @admin-api @performance', () => {

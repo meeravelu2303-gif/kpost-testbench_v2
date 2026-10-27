@@ -5,15 +5,8 @@ import { expect, test } from '@fixtures';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * Visual-regression angle — pixel-compares every screen against an approved baseline, so an
- * unintended layout/style change (a broken CSS bundle, a shifted component, a blank region) is
- * caught even when the DOM checks pass.
- *
- * It is GATED behind `VISUAL_REGRESSION=true` and is NOT in the default `npm run product:kpost-ui`, because it
- * needs baselines: run `npm run product:kpost-ui:visual:update` ONCE to capture them (per browser), then
- * `npm run product:kpost-ui:visual` compares. It is NOT in `UI_FILING_SPECS` — a visual diff is a human-review
- * signal (fonts/anti-aliasing differ across environments), not an auto-filed defect. A generous
- * `maxDiffPixelRatio` + disabled animations keep it from flapping on trivial rendering noise.
+ * Visual regression of every screen against approved baselines, gated behind `VISUAL_REGRESSION=true`
+ * (`product:kpost-ui:visual:update` captures, `product:kpost-ui:visual` compares). Human review only, never filed.
  */
 test.describe(
   'KPost visual regression — every screen',

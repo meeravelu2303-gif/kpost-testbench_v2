@@ -4,14 +4,8 @@ import { SUITES } from '../config/ownership.config';
 import type { ValidationReport } from '../validation-engine/validation-result';
 
 /**
- * The BUG-REPORT section of the single run report — the second half of `reports/REPORT.md` (its
- * structured form is the `bugs` object in `reports/REPORT.json`), written on every run.
- *
- * It answers, in one place: how many endpoints were tested, how many checks ran and how many
- * passed / failed / skipped; how many DISTINCT valid defects that collapsed to; which were filed to
- * Bugzilla and to which developer; and which findings were NOT filed, with the reason. The
- * execution-health half of the same file (endpoints, pass/fail/skip by module, and the UI) is
- * rendered by `run-summary.ts`. So "what did this run find and file" never needs the console scrollback.
+ * The bug-report half of `reports/REPORT.md` (the `bugs` object in REPORT.json): distinct defects,
+ * what was filed to whom, and why the rest were not. The execution-health half is `run-summary.ts`.
  */
 
 export interface BugReportInput {
@@ -39,18 +33,11 @@ export interface ResolveSummary {
   keptOpen: number;
   checked: number;
   failed: number;
-  /**
-   * Split of the kept-open bugs: `confirmedFailing` = the run exercised the exact check on THIS
-   * host and it still failed (a real defect on this URL); `notVerified` = the check did not run this
-   * run (a write/OTP endpoint, or unparseable), so it could not be confirmed on this host.
-   */
+  /** Kept-open bugs whose check ran here and still failed (`notVerified`: it did not run). */
   confirmedFailing: number;
   notVerified: number;
   /**
-   * Of the bugs kept open, how many got a fresh dated status comment this run (the standing
-   * owner directive: every open bug is touched every run, not just the ones a candidate happened
-   * to reproduce). Excludes bugs already commented on via the filing pass itself (reproduced-tag
-   * match), since posting twice on the same bug in one run would be noise, not a second signal.
+   * Kept-open bugs that got a dated status note this run (or already had one from the filing pass).
    */
   touched: number;
   /** True on a preview run — the list is what WOULD be closed; nothing was written to Bugzilla. */
@@ -89,9 +76,7 @@ function runTotals(reports: readonly ValidationReport[]): RunTotals {
 }
 
 /**
- * Buckets each SKIPPED check by WHY it was skipped, so the report explains the large skip count
- * (the three production safety controls at work), not just its size. Order matters — the first
- * pattern that matches wins, so specific reasons (OTP, needs-id) are tested before generic ones.
+ * Buckets SKIPPED checks by reason; the first matching pattern wins, so specific ones come first.
  */
 const SKIP_BUCKETS: readonly (readonly [string, RegExp])[] = [
   ['OTP-gated — no OTP bypass on the live app', /\botp\b/i],
@@ -307,9 +292,7 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
     }
   }
 
-  // 3c. Needs manual review — a brand new candidate whose evidence wasn't confident enough to
-  // auto-file (currently: an intermittent reproduction). Never a ticket already dedupe-matched to
-  // something existing — those always comment/reopen regardless of how the repro scored.
+  // 3c. Needs manual review: brand-new candidates held back from auto-filing.
   const needsReview = input.outcome?.entries.filter((e) => e.decision === 'needs-review') ?? [];
   if (needsReview.length) {
     lines.push(

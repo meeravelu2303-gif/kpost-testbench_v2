@@ -1,11 +1,6 @@
 import type { Page } from '@playwright/test';
 
-/**
- * The shared shape between `accessibility-axe.spec.ts` (which writes it) and the Bugzilla reporter's
- * accessibility candidate builder (which reads it back). Keeping the attachment name and type in one
- * place means the two can never drift silently — a rename here breaks the build, not a silent
- * "0 accessibility candidates" at filing time.
- */
+// The attachment shape shared by the axe spec (writer) and the reporter (reader).
 
 /** A single axe-core rule violation, trimmed to what a ticket and the filer both need. */
 export interface AxeViolationEvidence {
@@ -50,10 +45,8 @@ interface RawAxeViolation {
 }
 
 /**
- * Every failing element of every critical/serious rule — not just 3 examples — with its selector, its
- * HTML, axe's own "fix any of the following", and for colour contrast the actual text colour,
- * background colour and ratio. This is exactly what the UI developers asked for on the WCAG tickets
- * (2026-10-08: "obtain the axe target selectors plus computed text and background colors").
+ * Every failing element of every critical/serious rule: selector, HTML, axe's fix hints and, for
+ * contrast, the actual colours and ratio.
  */
 export function axeDetailsText(screen: string, violations: readonly RawAxeViolation[]): string {
   const lines = [`ACCESSIBILITY DETAILS — ${screen}`, `Recorded: ${new Date().toISOString()}`, ''];
@@ -87,14 +80,7 @@ export function axeDetailsText(screen: string, violations: readonly RawAxeViolat
   return lines.join('\n');
 }
 
-/**
- * Paints the WCAG violations found on this screen as readable text ONTO the page itself, the same
- * technique used for JS-crash proof (`renderCrashOverlay`) and for the same reason: a WCAG violation
- * (missing alt text, low contrast, no accessible name) is a static DOM/attribute property — nothing
- * visibly happens, so a plain screenshot or video of the page shows nothing wrong. This overlay is
- * what turns the screenshot AND the recorded video into real evidence: the video now ends on a
- * readable violation report instead of an unremarkable, unchanging page.
- */
+/** Paints the screen's WCAG violations onto the page, so the screenshot and video show them. */
 export async function renderAccessibilityOverlay(
   page: Page,
   screen: string,

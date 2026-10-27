@@ -15,27 +15,12 @@ import {
 } from '../support/katchup';
 
 /**
- * Katchup **two-session** flows — the features that only exist between a sender and a receiver:
- * **read receipts, the unread badge, and the recipient actions Reply / Comment / Clarify / Report**
- * (FR-K07, FR-K21..K25). Account 1 is the default `page` (session `.auth/user.json`); account 2 is a
- * second browser context restored from `.auth/user2.json` (written by `auth2.setup.ts` when
- * `KATCHUP_UI_LIFECYCLE=true`).
- *
- * The hard assertion in every test is **cross-account delivery** — account 2 actually receives what
- * account 1 sent — which alone proves the send→receipt machinery on live. The recipient ACTION on top
- * (via the received message's `ReplyIcon` menu) is a gated first-draft.
- *
- * Every test is self-cleaning (both sides delete what they created) and gated behind
- * `KATCHUP_UI_LIFECYCLE=true`, so it never runs on a default run.
- *
- * FIRST-RUN NOTE: the recipient reply-menu completion (ReplyIcon → menu item → composer → send) needs
- * one live recording pass to confirm the received-message menu selectors; the delivery assertion is
- * the validated part. Remove this note after tuning.
+ * Katchup between two accounts: delivery, realtime push and the recipient Reply/Comment/Clarify menu.
+ * Account 2 is a second context from `.auth/user2.json`. Writes real messages (self-cleaning), so
+ * gated behind KATCHUP_UI_LIFECYCLE=true.
  */
 
-// The menu items carry a leading space from their icon glyph (accessible name is " Reply"), so the
-// name regex tolerates surrounding whitespace while staying anchored (so "Forward" ≠ "Forward With
-// Thread").
+// Menu item names carry a leading space from their icon glyph (" Reply").
 const RECIPIENT_ACTIONS: ReadonlyArray<{ id: string; menu: RegExp }> = [
   { id: 'Reply', menu: /Reply/i },
   { id: 'Comment', menu: /Comment/i },
@@ -80,16 +65,13 @@ test.describe(
         await openComposer(page);
         await sendMessage(page, subject, 'QA UI two-session delivery — self-cleaning');
 
-        // Account 2 SEES the message in its conversation list — the subject appears (delivery + receipt).
-        // (Account 1 may be an unknown contact to account 2, so we match the message, not a contact row.)
+        // Match the message, not a contact row: account 1 may be an unknown contact to account 2.
         await gotoKatchup(receiver);
         await expect(
           receiver.getByText(subject).first(),
           'account 2 receives the message account 1 sent',
         ).toBeVisible({ timeout: 25_000 });
 
-        // Account 1's side now reflects that the message exists (and, once opened, its read state — the
-        // exact open-time is the API lifecycle's assertion; here we prove the cross-account path works).
         await expect(
           page.getByText(subject).first(),
           'account 1 still shows the sent message',
@@ -109,9 +91,7 @@ test.describe(
         const subject = `QA UI realtime ${Date.now()}`;
         const receiver = await openReceiver(browser);
         try {
-          // Account 2 is already sitting on its Katchup list. From here on NOTHING navigates or
-          // reloads account 2 — the whole point of this test (unlike the delivery test above, which
-          // does a fresh gotoKatchup AFTER the send) is to prove a live push to an idle, open page.
+          // From here on nothing navigates or reloads account 2: this proves a live push to an open page.
           await gotoKatchup(receiver);
           await expect(
             receiver.getByText(subject),
@@ -122,9 +102,6 @@ test.describe(
           await openComposer(page);
           await sendMessage(page, subject, 'QA UI realtime delivery — self-cleaning');
 
-          // With no goto/reload on account 2, the new message must surface on the already-open list
-          // via live push. If it only shows after a manual refresh, this (correctly) fails: the
-          // "B receives without refreshing" requirement (FRD row 11) would not be met.
           await expect(
             receiver.getByText(subject).first(),
             'account 2 sees the new message on its already-open screen, no refresh (realtime push)',
@@ -136,28 +113,7 @@ test.describe(
       },
     );
 
-    /**
-     * Unread badge / message count (FR-K07) — RESOLVED as a confirmed product gap, filed as #978, not
-     * an automatable test.
-     *
-     * Three rounds of live DOM diagnostics (across two sessions) traced this conclusively: the one
-     * working unread-badge mechanism (`.Msg-Count` / `.Msg-Count-Font`, real and functional — confirmed
-     * showing correct non-zero counts for established contacts) exists ONLY on the "Frequently
-     * Accessed" strip (`components/FrequentlyAccessed/FrequentlyAccessed.js`), which is populated from
-     * a separate, server-ranked `FetchFrequentContact` call — not recency, not unread status. A
-     * freshly-sent, still-unopened message's own Recents row (confirmed found correctly, `id=<sender
-     * kpostID>`, class `recent-hover-card`) has ZERO unread-related markup anywhere in its DOM subtree
-     * — no `.Msg-Count`, no `.contact_msgCount`, no conditional bold/weight class (`ContactBar.js`, the
-     * real row renderer, has no `isRead`/unread-conditional styling at all). `Recent.js` (which DOES
-     * contain `msgCount` markup) is confirmed dead code — hardcoded mock data, never imported from the
-     * live `bubble/Katchup.js` entry point.
-     *
-     * This means the Recents list — the primary, default way any user checks for new messages — has no
-     * unread indicator at all, independent of whether the sender happens to also be a long-standing
-     * frequent contact. Filed as **#978** from this source+live-DOM evidence directly (the same
-     * standard used for #976): there is no reliable automated repro to build here because the gap is an
-     * absence of a code path, not a flaky live behavior.
-     */
+    // Known defect #978: the Recents list has no unread badge at all, so there is nothing to test here.
 
     for (const action of RECIPIENT_ACTIONS) {
       test(

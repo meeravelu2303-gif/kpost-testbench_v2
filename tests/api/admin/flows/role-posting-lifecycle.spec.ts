@@ -11,23 +11,10 @@ import { employeePayload, locationPayload } from '../support/screen-payloads';
 import { ADMIN_RESPONSE_SCHEMAS } from '@api/definitions/admin/response-schemas';
 
 /**
- * Admin **role posting, end to end** on the QA testing company (BUSINESS_M, company 242): build the org
- * structure it needs, save a role posting, assign a QA employee to it, suspend, revoke, terminate, delete —
- * then remove every record in reverse order.
- *
- * Owner-authorized 2026-10-23, QA testing companies only: role posting's KPost calls go to testingapi
- * (Admin_Module d7abadf); KSMACC has no test server, so the live one is accepted (#13234 WONTFIX). Each run
- * creates a KPost account on testingapi and a KSMACC account (deactivated by the terminate step). The
- * assign step's KPost SMS template does not send (owner). The employee's mobile and email are the reserved
- * QA test-employee identity (QA_ROLE_EMPLOYEE_MOBILE / QA_ROLE_EMPLOYEE_EMAIL): the QA-identifier guard trusts
- * them only when they are set in .env, exactly like every other QA identity.
- *
- * Payloads are the Admin screens' own (ADMIN_HR_MODULES_25, read 2026-10-23):
- *   save    RolePostingSetup.js:553-634       update  AssignRolePosting.js:322-331 (requestType 'reallocate')
- *   suspend Suspend.js:273-283                revoke  Revoke.js:168-178   terminate Terminate.js:176-186
- * and the backend's needs (RolePostingSetUpServiceImpl): the assign step reads the employee's name, mobile,
- * gender, date of birth and residential country/state/zip; update needs id, employeeId and rolePostingId;
- * a posting can only be deleted once terminate has unassigned it.
+ * Role posting end to end on QA company 242: build the org structure, save a posting, assign a QA
+ * employee, suspend, revoke, terminate, delete, then remove every record in reverse order.
+ * Each run creates a KPost (testingapi) and a live KSMACC account, so QA companies only.
+ * Payloads are the Admin screens' own; a posting can only be deleted once terminate unassigns it.
  */
 const K = AUTH_PROFILES.kpost;
 const businessM: Principal | undefined = K.principals.find((p) => p.key === 'business-m');
@@ -73,11 +60,9 @@ async function send(
 }
 
 /**
- * The centralized engine on a role-posting WRITE, acting on the posting this test owns (coverage 2026-10-26,
- * owner-approved live KSMACC for the QA companies). The definition is cloned `productionSafe` for this call
- * only; the minted ids are trusted for this call only. The engine's primary request performs the step, and
- * its probes (bad/missing/expired tokens) are refused before any account is touched. Same shape as `send`;
- * the report keeps only 2 KB of the answer, so a long answer may not parse — callers read back instead.
+ * Runs the validation engine on a role-posting write for the posting this test owns (definition
+ * cloned `productionSafe` for this call only). The report keeps only 2 KB of the answer, so a long
+ * answer may not parse; callers read back instead.
  */
 async function engineSend(
   validationEngine: ValidationEngine,
@@ -178,7 +163,7 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
               allowLiveRead: true,
             },
           );
-          companyName = /"companyName"s*:s*"([^"]+)"/.exec(me.bodyText ?? '')?.[1] ?? '';
+          companyName = /"companyName"\s*:\s*"([^"]+)"/.exec(me.bodyText ?? '')?.[1] ?? '';
         }
         test.info().annotations.push({
           type: 'observed',
@@ -249,9 +234,7 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         const emp = await send(
           endpoints,
           'admin-employee-save',
-          // The screen's full record. Until 2026-10-26 this employee had no additional information on
-          // purpose (#13242's crash case); the server now requires it, so that case cannot be created any
-          // more — #13242 was verified fixed the same day.
+          // The screen's full record.
           employeePayload(`Role${String(stamp).slice(-6)}`),
           'employee',
         );
@@ -335,10 +318,8 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         const assign = await engineSend(
           validationEngine,
           'admin-role-posting-update',
-          // Exactly the Assign Role Posting screen's body (AssignRolePosting.js:322-331): the posting row
-          // spread in, plus the employee — no rolePostingId (the screen's line is commented out). Live
-          // 2026-10-23 this gets 400 "rolePostingId is required", and adding it gets 400 "Request
-          // parameter is invalid" (the entity has no such field) — #13237.
+          // The Assign screen's body: the posting row plus the employee, no rolePostingId.
+          // Known defect #13237: the server demands rolePostingId but refuses it when sent.
           {
             companyId: '242',
             ...posting,
@@ -417,8 +398,8 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
           { requestType: 'suspend' },
           'suspended-list',
         );
-        // The only point where this list is certainly non-empty (empty answers 400, #320), so its response
-        // schema is checked here rather than by the engine.
+        // The only point where this list is surely non-empty (an empty list answers 400), so its
+        // response schema is checked here rather than by the engine.
         const shape = ADMIN_RESPONSE_SCHEMAS['admin-role-posting-suspended-list']!.safeParse(
           JSON.parse(list.text || '{}'),
         );
@@ -498,11 +479,8 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
         ).catch(() => undefined);
         postingGone = Boolean(removed && ok(removed));
       }
-      /*
-       * Only remove what the posting points at once the posting itself is gone. Deleting the tiers,
-       * variables, location or employee under a posting that is still there (e.g. terminate failed, so it
-       * stays assigned) leaves an orphan the server can no longer read ("No value present", 2026-10-24).
-       */
+      // Remove what the posting points at only once the posting is gone; otherwise the posting is
+      // orphaned and the server can no longer read it.
       if (!postingGone) {
         test.info().annotations.push({
           type: 'cleanup-blocked',
@@ -524,12 +502,9 @@ test.describe('Admin · role posting, end to end on the QA testing company @api 
 });
 
 /**
- * Role posting field rules (owner 2026-10-26: cover everything in role postings, live KSMACC is fine for the
- * QA companies). The Role Posting Setup screen builds every field from its dropdowns and enables "Add To
- * List" only when all tiers are chosen (RolePostingSetup.js:549-660, 929), so each field it sends is
- * required: save, assign and suspend/terminate must refuse a request without one. Each save case uses a
- * fresh HR variable so "Already exists" cannot hide the answer; a posting the server wrongly accepts is found
- * and deleted. Every case runs (soft checks).
+ * Role posting field rules: the screen always sends every field, so save, assign and suspend/terminate
+ * must refuse a request missing one. Each save case uses a fresh HR variable so "Already exists" cannot
+ * hide the answer; a posting wrongly accepted is deleted.
  */
 test.describe('Admin · role posting field rules on the QA testing company @api @admin-api', () => {
   test.describe.configure({ timeout: 300_000 });

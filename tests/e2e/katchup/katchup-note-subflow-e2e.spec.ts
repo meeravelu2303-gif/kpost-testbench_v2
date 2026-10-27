@@ -10,16 +10,8 @@ import {
 } from '../support/katchup';
 
 /**
- * Completes the "Note" sub-flow entry assertion already in katchup-actions-more.spec.ts, which
- * explicitly documents that only entry (menu item exists, clicking dismisses it) is proven there —
- * completion was left as a documented gap pending "one live recording pass".
- *
- * Read directly from source (KatchupMessage.js handleDropDownClick, bubble variant — the live
- * default theme): "Note" does not open a separate custom modal. It opens the SAME composer used for
- * an ordinary send (`setThreeDat({ writeMessage: true, ... })`), pre-populated with the original
- * message as reply context (`notMessage.Content`). So completing it means: click Note, the normal
- * composer opens, type a note body, send it — the existing `sendMessage`/`EDITOR` helpers apply
- * unchanged.
+ * Katchup bell-menu Note: opens the normal composer with the source message as context, and the note
+ * sends. Gated behind KATCHUP_UI_LIFECYCLE; deletes both messages.
  */
 test.describe(
   'KPost Katchup · Note sub-flow completion @ui',
@@ -52,10 +44,7 @@ test.describe(
           timeout: 15_000,
         });
 
-        // In this reply/note context the Subject is NOT an editable field — it's shown as read-only text
-        // inherited from the source message (confirmed in source: WriteMessage.js renders
-        // `{t("Subject")}: {Content.parentMsg.subject}` as plain text here, not an <input>). Only the body
-        // is user-entered.
+        // Here the Subject is read-only text inherited from the source, not an input.
         await expect(
           page.getByText(sourceSubject, { exact: false }).first(),
           "the Note composer shows the source message's subject as inherited, read-only context",

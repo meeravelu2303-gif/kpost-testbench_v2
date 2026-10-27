@@ -4,14 +4,8 @@ import type { Page } from '@playwright/test';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * **Keyboard navigation — depth.** `keyboard-nav.spec.ts` already proves Tab reaches SOME control on
- * every screen without a crash. This file asks the two questions that one does not:
- *   1. Can a keyboard user reach the MAIN NAVIGATION? Every side-menu entry (`NAV_LINKS`) must be a
- *      native control or carry a `tabindex` — a `div` with only an `onClick` is unreachable without
- *      a mouse (WCAG 2.1.1).
- *   2. Is every tab stop something the user can SEE? A stop on an off-screen or hidden element is a
- *      focus trap; and Escape with nothing open must not navigate away.
- * The first 25 stops of each screen are recorded as an annotation. Paced 4 s between screens.
+ * Keyboard depth: every side-menu entry must be keyboard-reachable (WCAG 2.1.1), every tab stop must be
+ * visible, and Escape with nothing open must not navigate away. Paced 4 s between screens.
  */
 type Stop = { tag: string; role: string | null; name: string; visible: boolean };
 

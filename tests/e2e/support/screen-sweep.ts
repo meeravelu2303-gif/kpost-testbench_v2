@@ -5,23 +5,12 @@ import { expect, test } from '@fixtures';
 import { skipIfSignedOut } from './session';
 
 /**
- * Shared body for the deep UI sweep (`screens-batch*.spec.ts`), extracted so the sweep can run in
- * smaller BATCHES instead of one single file hammering every screen back to back.
- *
- * Why batches: found 2026-10-07 — one continuous run across all 13 screens in rapid succession
- * reliably tripped a server-side rate-limiter after 3 independent confirmations (chromium twice,
- * firefox once, all breaking at this exact sweep's first screen): 429s appeared, then the session's
- * own token started being rejected (401) on every endpoint, not just the one being probed — a
- * false-positive storm, not real per-screen defects. Splitting into smaller files is necessary but
- * not sufficient on its own (Playwright runs sibling spec files back to back with no gap), so this
- * also adds a deliberate settle delay between screens — the actual lever that reduces request rate.
- * See `feedback_webkit_hang_mitigation` for the same batching idea applied to a different failure
- * mode (a hung worker, not a rate limit) found earlier the same week.
+ * Shared body for the deep UI sweep (`screens-batch*.spec.ts`). It runs in small batches with a
+ * pause between screens because a back-to-back sweep trips the server's rate limiter (429, then 401).
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 
-/** Paced gap between screens — long enough to visibly thin the request burst, short enough that a
- * 4-5 screen batch still finishes in a reasonable time. */
+/** Paced gap between screens, to thin the request burst. */
 const SETTLE_MS = 4_000;
 
 export function runScreenSweep(
@@ -40,9 +29,7 @@ export function runScreenSweep(
     test(`${screen.name} screen — controls, health, performance, responsive, a11y @ui`, async ({
       page,
     }) => {
-      // Pace every screen but the first in this batch, so the burst that tripped the rate-limiter
-      // never recurs within a batch. This is a deliberate throttle between screens, not a wait for
-      // a page condition, so there is no condition to replace it with — see the header above.
+      // A deliberate throttle between screens, not a wait for a page condition.
       // eslint-disable-next-line playwright/no-wait-for-timeout -- intentional request-rate pacing (rate-limiter, 2026-10-07)
       if (index > 0) await page.waitForTimeout(SETTLE_MS);
 

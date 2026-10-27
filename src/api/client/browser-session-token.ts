@@ -8,16 +8,9 @@ import {
 import { jwtExpiry, jwtSubject } from '@utils/jwt';
 
 /**
- * The access token of a SAVED BROWSER SESSION for `username`, when one is live.
- *
- * KPost keeps one session per account: an API login for an account signs out every browser that
- * account is signed into — including the saved session (`.auth/*.json`) that every later UI spec
- * shares. One such login in a long UI run (2026-10-20: `group-exit-e2e` creating its group as
- * qatest1) turned the rest of the run into 300+ blank-screen failures. So in a browser project the
- * API calls REUSE the browser's own session token instead of logging in; the API and the screens then
- * share one session and nothing is signed out.
- *
- * Read fresh on every call (a spec that signs in again re-saves the file mid-run).
+ * The access token of a saved browser session for `username`. KPost allows one session per account,
+ * so browser projects reuse it instead of an API login that would sign the browser out. Read fresh
+ * each call.
  */
 const SESSION_FILES = [STORAGE_STATE, STORAGE_STATE_2, STORAGE_STATE_3, STORAGE_STATE_BUSINESS];
 const MARGIN_MS = 60_000;

@@ -8,10 +8,8 @@ import { expect, test } from '@fixtures';
 import { kallReadApis } from '@api/definitions/kpost/kall/read.api';
 
 /**
- * Self-tests for the Kall module. No HTTP — these assert the wiring a reviewer would otherwise take
- * on trust: full coverage, contract agreement, that the status/type/mode/repeat codes still mean
- * what `docs/modules/kall-flow.md` says, that every write is gated, and — the one that matters most on live
- * — that every cleared read's payload passes the QA-identifier guard.
+ * Kall module self-tests (no HTTP): coverage, contract agreement, pinned codes, gated writes, and
+ * cleared reads passing the QA-identifier guard.
  */
 test.describe('KPost Kall · module coverage', () => {
   test('every documented kall endpoint has a definition @framework', () => {
@@ -35,11 +33,7 @@ test.describe('KPost Kall · module coverage', () => {
   });
 
   test('the status, type, mode and repeat-type codes match the analysis @framework', () => {
-    /*
-     * Pins the codes the payloads use against the owner's definitions (docs/modules/kall-flow.md §1). A
-     * workbook edit that renumbered them would fail here rather than silently change what a call
-     * placement or status transition means.
-     */
+    // Pins the codes (docs/modules/kall-flow.md §1) so a workbook renumbering fails here.
     expect(KALL_STATUS.new).toBe(0);
     expect(KALL_STATUS.connected).toBe(1);
     expect(KALL_STATUS.scheduled).toBe(6);
@@ -53,11 +47,7 @@ test.describe('KPost Kall · module coverage', () => {
   });
 
   test('no Kall write is cleared for the live application @framework', () => {
-    /*
-     * A call rings a real device / notifies participants, and the clear endpoints delete the log.
-     * Every write waits on the gated feature flow. If one were marked productionSafe, a live run
-     * would place a real call or wipe the log. This is the assertion that stops that.
-     */
+    // A productionSafe write would let a live run place a real call or wipe the log.
     const cleared = kallApis
       .filter((api) => api.destructive && api.productionSafe)
       .map((api) => api.id);
@@ -65,12 +55,7 @@ test.describe('KPost Kall · module coverage', () => {
   });
 
   test('every cleared read passes the QA-identifier guard on live @framework', async () => {
-    /*
-     * The reads run on the live application, so every identifier in their built payload must be one
-     * we own (or an exempt enum/session/timestamp field). The guard trips on `kall*` keys by default
-     * — this proves the exemptions in qa-identifier-guard.ts cover exactly the fields these reads
-     * send, so a future added field cannot silently get every Kall read refused on live.
-     */
+    // The guard trips on `kall*` keys by default; this proves its exemptions cover these reads' fields.
     const helpers = { call: () => Promise.resolve({} as never), tenantId: '' };
     const reads = kallReadApis.filter((api) => api.productionSafe);
     const specs = await Promise.all(reads.map((api) => Promise.resolve(api.request?.(helpers))));

@@ -3,19 +3,8 @@ import type { Page } from '@playwright/test';
 import { skipIfSignedOut } from '../support/session';
 
 /**
- * **Internationalisation** — the cross-cutting test type the production plan listed as absent.
- *
- * The front end uses i18next with an HTTP backend (`src/i18n.js`): the header's
- * `select.Header_Language` (`containers/Header.js`) calls `i18n.changeLanguage` and stores the choice
- * in `localStorage.i18nextLng`; bundles are served from `/locales/<language>/translation.json`.
- * The languages OFFERED are read live from that select (2026-10-11: English, Russian, Japanese —
- * Tamil is commented out in the source although its bundle is still served).
- *
- *   1. Coverage: every offered language's bundle is compared with the English one; keys missing or
- *      empty fall back to English on screen, so a language offered to users must not be mostly
- *      English. Served-but-not-offered bundles are reported, not judged.
- *   2. Live switch: choosing the first offered non-English language changes the "Katchup" label to
- *      that bundle's string; the choice survives a reload; English is restored at the end.
+ * i18n: each language offered by the header select must have a bundle that is not mostly English, and
+ * switching language must change the "Katchup" label and survive a reload (English restored after).
  */
 async function bundle(page: Page, lang: string): Promise<Record<string, unknown> | null> {
   const res = await page.request.get(`/locales/${lang}/translation.json`);

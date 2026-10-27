@@ -4,11 +4,8 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 
 /**
- * Screens/tabs confirmed dead from source (2026-10-05 ground-truth audit,
- * `project_kpost_admin_frontend_ground_truth_2026_10_05`) — pinned here so a future accidental
- * implementation (or regression) doesn't go unnoticed either way. Each assertion matches what the
- * source says TODAY; if one of these ever starts doing something real, this test should start
- * failing, which is the signal to update it rather than silently keep skipping it.
+ * Admin screens and tabs that are dead in the source stay harmlessly dead (no API calls, no crash).
+ * If one starts doing something real, the failing test is the signal to update it.
  */
 test.describe(
   'Admin/HR-Setup — confirmed-dead screens stay harmlessly dead',
@@ -45,10 +42,7 @@ test.describe(
       await page.waitForTimeout(1_000);
       const tab = page.locator('.nav-pills .nav-link', { hasText: 'Add From Application' }).first();
       const tabVisible = await tab.isVisible({ timeout: 10_000 }).catch(() => false);
-      // Confirmed live 2026-10-05: EmployeeData.js gates its entire Add/Edit area (including this tab)
-      // behind `role === 1/2/3` (EmployeeData.js:158-219) — BUSINESS_M's current role value shows none
-      // of the three branches, so no tabs render at all. The role system itself wasn't mapped by the
-      // 2026-10-05 frontend audit; needs a account with the right role value to actually reach this.
+      // The tab only renders for certain admin role values, so it may not be reachable.
       test.skip(
         !tabVisible,
         '"Add From Application" tab not reachable with this account\'s role value',

@@ -2,22 +2,9 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import { expect, test } from '@fixtures';
 
 /**
- * Maintenance: delete the groups the UI specs create (`support/groups.ts` names them
- * `QA UI <label> <timestamp>`) and could not tear down.
- *
- * Why it exists (2026-10-10): `deleteGroup` is refused while members remain, and
- * `removeGroupMember` answers HTTP 500 ("Remove user from an Existing Group failed") for every
- * well-formed call — owner or co-admin, fresh group or old, bench names or real names — so a group
- * with members cannot be cleaned up through the API at all right now. Each Group Info / targeting
- * run therefore leaves its groups behind. Run this once the removal route works again:
- *
- *   QA_GROUP_CLEANUP=true QATEST_ONLY=true npx playwright test --project=api tests/api/kpost/group/qa-ui-group-cleanup.spec.ts
- *
- * It only touches groups whose name starts with "QA " and only through the two qatest accounts
- * that create them. Skipped unless `QA_GROUP_CLEANUP=true`.
- *
- * 2026-10-14: removeGroupMember still 500s, so when it fails each qatest member leaves on their own
- * (`group-leave`) before the delete — the path katchup-group-receipts-e2e cleans up with.
+ * Maintenance: delete leftover "QA " groups the UI specs could not tear down, via the qatest owners.
+ * Members are removed (or, if removeGroupMember fails, each leaves on their own) before the delete.
+ * Skipped unless `QA_GROUP_CLEANUP=true`.
  */
 const OWNERS = ['personal', 'personal-3']
   .map((key) => AUTH_PROFILES.kpost.principals.find((p) => p.key === key))
@@ -82,8 +69,7 @@ test.describe(
           }
         };
         walk(parsed.ok ? parsed.value : {});
-        // "QA UI *" (support/groups.ts) plus the other bench-created names ("QA UI Receipts Group *",
-        // ad-hoc "QA * probe" groups) — all start with "QA ", and only qatest-owned groups are listed.
+        // Every bench-created group name starts with "QA "; only qatest-owned groups are listed.
         const mine = found.filter((g) => /^QA /.test(g.groupKpostName));
         console.log(`[${who.key}] groups: ${found.length}; QA UI leftovers: ${mine.length}`);
         for (const g of mine) {
@@ -102,15 +88,13 @@ test.describe(
             );
             console.log(`  remove ${others.length} from ${g.groupKpostName} -> ${rm.status}`);
             if (rm.status >= 300) {
-              // removeGroupMember still 500s (2026-10-14) — fall back to each qatest member leaving
-              // on their own (`group-leave`), the path proven by katchup-group-receipts-e2e.
+              // Removal failed: each qatest member leaves on their own instead.
               for (const id of others) {
                 const member = PRINCIPALS.find((p) => p.username === id);
                 if (!member) continue;
                 const leave = await endpoints.sendTo(
                   'group-leave',
-                  // The leaver's OWN membership-row id — an id of '0' answers 400 "you are not a
-                  // member" (live 2026-10-15), so this fallback never actually left.
+                  // The leaver's OWN membership-row id ('0' answers 400 "you are not a member").
                   {
                     body: {
                       id: String(g.rowIds[id] ?? ''),

@@ -1,14 +1,9 @@
 #!/usr/bin/env node
 /**
- * Preflight — run before any live run (`npm run preflight`).
+ * Proves every prerequisite of a live run up front (.env keys, no other Playwright run, hosts and
+ * the Bugzilla key answer) and exits non-zero on a hard failure. Read-only; prints key names only.
  *
- * A hand-run bench fails in the first minute for boring reasons: a key missing from `.env`, a second
- * Playwright run still going, a host that does not answer, a Bugzilla key that expired, a report
- * from the last run about to be overwritten. This proves each prerequisite up front and exits
- * non-zero on a hard failure, so the run that follows can be trusted to have started clean.
- *
- * Read-only. (The previous `reports/REPORT.*` is archived to `reports/history/` by the reporter
- * itself at the start of the next run.) It never prints a secret — key NAMES only.
+ *   npm run preflight
  */
 'use strict';
 
@@ -202,8 +197,7 @@ async function bugzilla() {
     return;
   }
   if (!env('BUGZILLA_API_KEY')) return;
-  // Bugzilla 5.2 has no `whoami` resource; an authenticated read validates the key the same way —
-  // an invalid key is refused with error 306 before any query runs. One bug, one field, no write.
+  // Bugzilla 5.2 has no `whoami`; a one-field read refuses an invalid key (error 306), no write.
   try {
     const w = await fetch(
       `${base}/bug?limit=1&include_fields=id&api_key=${encodeURIComponent(env('BUGZILLA_API_KEY'))}`,

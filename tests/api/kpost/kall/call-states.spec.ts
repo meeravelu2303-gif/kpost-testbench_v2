@@ -6,19 +6,9 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Kall · what the SERVER records for each way a call can go — answered, declined, missed, and a
- * Kool Kall joined — read back from the call log (`kallInfo`), the record both apps show.
- *
- * Driven through the API as the two people involved (A = qatest1 calls, B = qatest2 answers), exactly
- * as the web client does (`InComingKall.handleUpdateKall`, `GlobalKallSender.endIndividualKall`):
- *   initiateKall → updateKallStatus {id: B's row id, kallStatus, kallID, reason} → endIndividualKall.
- * Status codes are the workbook's (`KALL_STATUS`): connected 1, declined 4, noresponse 3, closed 8.
- * Accepting stamps kallStartTime on both rows; ending stamps kallEndTime and kallDuration
- * (KallDaoImplV3.updateConnectedKallStatus / endIndividualKall).
- *
- * The media side of a call (ringing on screen, audio) is `journeys/voice-call.spec.ts`, blocked by #1680
- * (the callee is never rung); everything here is the server's record, which does not depend on it.
- * Every call is ended in `finally`: an open call (status 0/1) leaves the account "On Another Call".
+ * What the server records for each call outcome (answered, declined, missed, Kool Kall joined), read
+ * back from `kallInfo`. Driven as the web client does: initiate → updateKallStatus (B's row id) → end.
+ * Every call is ended in `finally`: an open call leaves the account "On Another Call".
  */
 /** The workbook's Kall status codes this file uses; a missing label fails here, not in a check. */
 function code(label: string): number {
@@ -299,8 +289,7 @@ test.describe(
           expect(guest?.receiverKallStatus, 'B is connected').toBe(S.connected);
         } finally {
           if (kallID) {
-            // The host ends the meeting; B closes their own row (the invitee is not covered by
-            // the host's end — KallDaoImplV3.endKall), or B would stay "On Another Call" (#1679).
+            // The host's end does not close B's row, so B closes it too, or B stays "On Another Call".
             await endpoints
               .sendTo(
                 'kall-end-kool',

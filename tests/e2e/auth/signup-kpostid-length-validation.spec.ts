@@ -3,15 +3,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Personal signup — Preferred KPOST ID length validation (reported manually 2026-10-13): the KPOST
- * ID must be 5–12 characters, but on a second/third attempt a SINGLE character is accepted. Correct
- * behaviour: a single character is below the 5-char minimum and must be rejected EVERY time it is
- * entered — the "between 5 and 12 characters" error must show and "KpostID is Available" must never
- * appear for it, no matter how many times it is retried.
- *
- * Reaches signup screen 3 (the KPOST ID screen) via a valid screen-2 (India, real pincode/area), then
- * stops — it never sets a password or submits, so no account is created. Same gates as
- * signup-validation.spec.ts.
+ * Personal signup: a single-character KPOST ID (below the 5-12 limit) must be rejected on every retry.
+ * Stops at the KPOST ID screen, so no account is created.
  */
 function freshMobile(): string {
   return `77${Date.now().toString().slice(-8)}`;
@@ -64,16 +57,14 @@ test.describe(
       });
       await signupPage.continueToKpostId();
 
-      // Baseline: a valid-length id resolves to a real availability verdict (NOT a length error) —
-      // proves we are on the KPOST ID screen and the checker works.
+      // Baseline: a valid-length id gets an availability verdict, not a length error.
       const baseline = await signupPage.kpostIdValidationState(`qaid${mobile.slice(-6)}`);
       expect(
         ['available', 'taken'],
         `a valid-length KPOST ID must get an availability verdict, got "${baseline}"`,
       ).toContain(baseline);
 
-      // The real check: a single character is below the 5-char minimum and must be rejected on
-      // EVERY attempt — never accepted on a 2nd/3rd retry.
+      // A single character must be rejected on every attempt, not accepted on a retry.
       for (const [attempt, single] of ['a', 'b', 'c'].entries()) {
         const state = await signupPage.kpostIdValidationState(single);
         expect(

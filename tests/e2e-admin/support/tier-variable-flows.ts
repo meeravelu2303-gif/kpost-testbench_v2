@@ -20,12 +20,9 @@ import {
 } from './admin-workflow';
 
 /**
- * The Tier and Variable tabs of **Work Place Setup** and **HR Breakdown Setup** are the same component
- * pair over different endpoints (`WPSetupTier/WPSetupVariable.js`, `HRSetupTier/HRSetupVariable.js`), so
- * both specs drive these two flows. Each creates a QA record on screen, edits it, deletes it, and checks
- * the request each step sent and the answer it got; the `finally` deletes through the API if a step
- * failed midway. Deletes are hard (`deleteById`) and nothing here has an external side effect
- * (backend grep: no mail/SMS/HTTP client in these services).
+ * Tier and Variable flows shared by Work Place Setup and HR Breakdown Setup (same components, different
+ * endpoints): create, edit and delete a QA record on screen. If a step fails, `finally` deletes it
+ * through the API. No external side effects.
  */
 export interface TierScreen {
   /** e.g. 'Work Place Setup'. */

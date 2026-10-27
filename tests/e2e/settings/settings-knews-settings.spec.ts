@@ -4,14 +4,8 @@ import { expect, test } from '@fixtures';
 import { pickReactSelect, reactSelectByPlaceholder } from '../support/react-select';
 
 /**
- * Settings · KNews Settings panel (`Knewssettings.js`) — an 11-field cascading form (Country ->
- * Publications -> State -> Category -> City/Town -> Sub-Category -> News Type -> Retention days ->
- * News Source -> Archive days -> Language), each disabled until the previous is set, ending in a
- * "Submit" that only reveals a summary screen. Confirmed from source: NO `Services/*` import
- * anywhere — the whole flow, including the summary's cost figures (300 items / ₹30 / ₹54 GST /
- * ₹384 total), is hardcoded and identical regardless of what was actually selected, despite the
- * summary's own "Kindly Confirm to Reach KPAY The Payment Gateway System..." text implying a real
- * payment hand-off that never happens.
+ * Settings › KNews Settings: an 11-field cascading form ending in a Submit that only shows a summary.
+ * No service is called; the summary's cost figures are hardcoded whatever was selected.
  */
 test.describe(
   'KPost Settings · KNews Settings panel',
@@ -23,23 +17,12 @@ test.describe(
     );
 
     /**
-     * Locate by the react-select PLACEHOLDER text itself (`.first()`), not a fragile container+hasText
-     * filter — the placeholder is rendered as plain visible text until a value is chosen, at which point
-     * it disappears from the match set entirely. This is what makes `.first()` safe even for "Select your
-     * days" (retention + archive both use this exact placeholder): once the first one is filled, only the
-     * second still matches. Proven pattern, same one used for Settings' Personalize country/language
-     * fields earlier this session.
-     *
-     * Four fields (Publications, Category, Sub-Category, City/Town) are `isMulti` CHECKBOX lists, not
-     * plain single-select — confirmed from source (`Knewssettings.js`, `isMulti={true}`). A checkbox
-     * list has no close-on-select behavior, so after checking one box this presses Escape to close the
-     * menu and commit the field as "set" (the component only cares that `knewsdata.<field>` is
-     * non-empty to unlock the next field, per the `isDisabled={knewsdata.X ? false : true}` chain).
+     * Fill the control still showing `placeholder` (safe for the two "Select your days" fields: the
+     * filled one stops matching).
      */
     async function pick(page: Page, placeholder: string, option: string, multi = false) {
-      // The control still SHOWING its placeholder is the unfilled one (support/react-select.ts) —
-      // typed into its own input, option clicked, menu confirmed closed; no forced click, no timers.
-      // The isMulti checkbox lists do not filter on typed text, so they are opened and read instead.
+      // Driven through the control's own input (support/react-select.ts); the isMulti checkbox lists
+      // do not filter on typed text, so they are opened and read instead.
       await pickReactSelect(reactSelectByPlaceholder(page, placeholder), option, {
         multi,
         typeToFilter: !multi,
@@ -60,9 +43,7 @@ test.describe(
       const submitButton = page.getByRole('button', { name: /^Submit$/i });
       await expect(submitButton, 'Submit starts disabled with nothing selected').toBeDisabled();
 
-      // Excludes static assets (scripts/styles/fonts) and health checks — this watches for a real
-      // XHR/fetch to a KPost backend endpoint, not incidental page-chrome resource loading (a Google
-      // Fonts woff2 request was the one false positive found while building this check).
+      // Excludes static assets and health checks: only a real XHR/fetch to a KPost backend counts.
       let requestFired = false;
       page.on('request', (req) => {
         const url = req.url();
@@ -79,9 +60,7 @@ test.describe(
         requestFired = true;
       });
 
-      // Values below are each real option labels confirmed directly from Knewssettings.js's own option
-      // arrays — several fields have NO "All" option at all (State, Publications, both day-pickers,
-      // Languages all use specific values only; Category/Sub-Category use "All Category", not "All").
+      // Real option labels from the source; several fields have no "All" option.
       await pick(page, 'Select Country Name', 'India');
       await pick(page, 'Select Publications', 'India Today', true); // isMulti checkbox list, no "All"
       await pick(page, 'Select State', 'Tamil Nadu'); // no "All" option exists for State

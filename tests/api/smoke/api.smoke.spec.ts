@@ -4,11 +4,8 @@ import { API_SMOKE } from './smoke-checks';
 import { expectSmokeRead } from './smoke-read';
 
 /**
- * API SMOKE — the build-acceptance gate for the API layer (`npm run test:smoke:api`): every in-scope
- * module's service is up and serves the signed-in user's own data, read-only. Runs before the UI
- * smoke; if it fails, nothing deeper is worth running. Target ≤ 2 min.
- *
- * The checks are data (`smoke-checks.ts`); this file only turns each row into a test.
+ * API smoke, the build-acceptance gate: every in-scope module's service is up and serves our own data,
+ * read-only. Runs before the UI smoke. The checks are rows in smoke-checks.ts; one test per row.
  */
 for (const mod of API_SMOKE) {
   test.describe(

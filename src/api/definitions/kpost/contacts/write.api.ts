@@ -4,22 +4,12 @@ import { body } from '../kpost-endpoint';
 import { defineContactsEndpoint } from './contacts-endpoint';
 
 /**
- * Contacts **writes** — add / delete a contact, add a reference, block / unblock, import phone
- * contacts, and update an invite status.
- *
- * Every one modifies the caller's own address book and **none is `productionSafe`**. The
- * account-targeting writes target our own second account, so the identifier guard permits them; all
- * run through the gated feature flow (`CONTACTS_LIFECYCLE=true`) with `allowLiveWrite`, self-restoring.
- * `importPhoneContacts` and `updateInviteStatus` carry phone numbers / an invite action, so the flow
- * drives them with **only our own number** — no other user's data is touched. Payloads mirror the
- * live client (`Services/Contacts.js`, `BlockContact.js`).
+ * Contacts writes on the caller's own address book, targeting our second account or our own number.
+ * None is `productionSafe`; the self-restoring CONTACTS_LIFECYCLE flow drives them.
  */
 const WRITE_TAGS = ['contacts-write'] as const;
 
-/**
- * The add-contact payload. Exported so a workflow spec can target a specific counterparty without
- * hand-copying the field list — which is how a payload drifts out of sync with the endpoint.
- */
+/** The add-contact payload, shared so a workflow spec can target another counterparty. */
 export const contactShape = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   contactID: testData.victimKpostId,
   firstName: 'Qa',
@@ -46,8 +36,7 @@ export const addMultipleContactApi = defineContactsEndpoint({
   summary: 'Add several contacts at once',
   tags: [...WRITE_TAGS, 'bulk'],
   destructive: true,
-  // The controller binds a List<ContactsRO>: a JSON ARRAY. A single object is "Malformed or missing
-  // request body" (the workbook example shows one contact, which is why it was sent bare).
+  // The controller takes a JSON array; a single object is "Malformed or missing request body".
   request: body(() => [contactShape()]),
   note: 'backend takes a JSON array of contacts (ContactsDirectoryControllerV2.addMultipleContact)',
 });
@@ -78,10 +67,7 @@ export const blockContactApi = defineContactsEndpoint({
   path: '/v2/contacts/blockOrUnBlockContact/',
   summary: 'Block or unblock a contact',
   tags: [...WRITE_TAGS, 'block'],
-  /*
-   * `{contactID, isBlocked}` from the live client (BlockContact.js). Blocks our own second account;
-   * the lifecycle unblocks it afterward, so the accounts are left as they were.
-   */
+  // Blocks our second account (BlockContact.js shape); the lifecycle unblocks it afterwards.
   destructive: true,
   request: body(() => ({ contactID: testData.victimKpostId, isBlocked: true })),
   requestSchema: typesOnlySchema({ contactID: testData.victimKpostId, isBlocked: true }),

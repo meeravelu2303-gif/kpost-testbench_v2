@@ -2,11 +2,8 @@ import type { HttpMethod } from '@api/client/request-builder';
 import type { Severity } from '@engine/validation-result';
 
 /**
- * Every numeric limit used by validators lives here. Endpoints may override per endpoint
- * (`performance`), tests never hard-code them.
- *
- * Response-time checks are functional, per-request budgets — NOT load/performance testing.
- * Keep load tests (k6, Artillery, ...) in a separate suite.
+ * Every numeric limit the validators use; endpoints may override via `performance`. Response times
+ * are per-request budgets, not load tests.
  */
 export const thresholds = {
   responseTime: {
@@ -29,31 +26,21 @@ export const thresholds = {
     /** Safety cap for rate-limit probes regardless of endpoint configuration. */
     maxRateLimitBurst: 50,
   },
-  /**
-   * Simultaneous-request probes. Deliberately small: these exist to expose a race, not to load-test.
-   * Eight parallel callers is enough to catch a missing lock, a shared mutable handler field or a
-   * connection-pool bleed, while staying well under any sane rate limit — a burst that trips
-   * throttling teaches nothing about locking, because the second write never reaches the handler.
-   */
+  /** Simultaneous-request probes: small enough to expose a race without tripping a rate limit. */
   concurrency: {
     /** Requests dispatched together when the endpoint does not say otherwise. */
     defaultRequests: 8,
     /** Hard cap, whatever an endpoint configures. */
     maxRequests: 25,
     /**
-     * Largest spread between first and last dispatch that still counts as simultaneous. Above it
-     * the burst degraded into a sequence and its result is reported INCONCLUSIVE rather than
-     * PASSED — a race that never had the chance to happen is not evidence that it cannot.
+     * Largest dispatch spread that still counts as simultaneous; above it the result is
+     * INCONCLUSIVE.
      */
     maxDispatchSkewMs: 150,
   },
   /**
-   * How many times a FAILED check is re-run before it is believed (`src/validation-engine/
-   * reproduction-gate.ts`). Only probes that issue fresh work are retried; a deterministic check
-   * cannot disagree with itself, and retrying it would be pure traffic.
-   *
-   * Three passes is the point of diminishing returns: one flake is common, two in a row is rare
-   * enough that a third pass changes the verdict on almost nothing while tripling the cost.
+   * How many times a FAILED probe is re-run before it is believed (reproduction-gate.ts);
+   * deterministic checks are not retried.
    */
   reproduction: {
     attempts: 3,

@@ -4,48 +4,10 @@ import { openConversation } from '../support/katchup';
 import { settleFrames } from '../support/settle';
 
 /**
- * Completes the "Share digital card" compose-time feature (FR-K17), a documented coverage gap
- * ("the shared card is verified in the recipient conversation; needs 2 sessions" in
- * src/ui/katchup-features.ts) — this test only needs ONE session, since the sender can also open the
- * recipient's own thread to verify delivery, same pattern already proven for Forward/Transfer today.
- *
- * Read directly from source (bubble/DigitalCard/DigitalCard.js, bubble/ShareContactTo/ShareContactTo.js
- * — both confirmed live via the thread header's ContactBar `imgClick`):
- *   1. Opening a conversation's header avatar (`imgClick`) sets `setProfileModal(true)`, opening the
- *      Digital Card for the thread's counterpart.
- *   2. The Digital Card's Share icon (`FiShare2`, class `dc-secondary-icon`, no accessible name) opens
- *      ShareContactTo's main screen (`dirState.shareTo = true`) — a KMail/Katchup/Other-Applications
- *      icon grid, confirmed genuinely functional: `sendKatchup` (DigitalCard.js:494-550) calls the real
- *      `SendMessage` API with `messageType: 22` and reports a real "Contact Shared successfully" toast
- *      on success — unlike the Share Location feature (separately confirmed this session to be a
- *      non-functional stub whose send call is commented out).
- *   3. Clicking "Katchup" in that screen sets `shareState.forwardTo = true`, opening the same
- *      `MultipleContact` picker pattern as Transfer (`hideSelectAll={true}`, search-narrows-to-one,
- *      grab the resulting single checkbox directly) — `selectedContact={selectContact}` here excludes
- *      the card's own owner (Hamza) from the picker, same rationale as Forward's exclusion, so the
- *      share target here is a different real contact ("Kapildev Thagapillai", already confirmed in
- *      this account's address book and reused from the Forward sub-flow test for the same reason).
- *
- * NOT COMPLETED — root cause found and filed as #979, not a selector problem. The Digital Card modal
- * itself opens correctly and reliably (its own "View Profile" CTA renders every time) — the underlying
- * flow (steps 1-3 above) is real, traced from source, and confirmed functional. What actually blocks
- * this test is a session-stability bug, confirmed via a dedicated diagnostic (live network/navigation
- * logging): simply opening a Katchup conversation triggers 200+ background profile/group-image fetches
- * (`/v2/profile/downloadProfileImage/...`, `/v2/group/downloadGroupProfileImage/...`), a large fraction
- * of which correctly 401 (images belonging to other company tenants this account has no access to —
- * confirmed 220+ such 401s BEFORE the Digital Card avatar is even clicked). The global fetch
- * interceptor (`src/interceptFetch.js:269-308`) treats ANY non-"token expired" 401 on these domains as
- * grounds to force-logout via `window.location.replace('/login')` (`beginLogout()`, line 169) — with no
- * distinction between the user's own session being invalid and one irrelevant background image being
- * correctly denied. The result: within ~5 seconds of opening ANY Katchup conversation on an account with
- * enough historical groups/contacts, the session gets killed out from under the test, independent of
- * anything this test does with the Share button. Filed as **#979** (CRITICAL) — this test cannot run
- * reliably until that session-killing bug is fixed, since the session may already be dead before the
- * Share icon is even reached.
+ * Katchup "Share digital card" (FR-K17): header avatar → Digital Card → Share → Katchup → pick a
+ * contact → post, then verify delivery in the target's thread. One session; sends a real message.
  */
-// Use the same real contact the Forward sub-flow test shares to (qatest3) — confirmed present in this
-// account's address book and passing live; the earlier "Kapildev"/8056go contact is no longer reliably
-// in Recents (2026-10-14: the share picker opened but the contact was not found).
+// The picker excludes the card's own owner, so the target is a different contact in the address book.
 const SHARE_TARGET_CONTACT_ID = 'qatest3@kpostindia.com';
 const SHARE_TARGET_SEARCH_TERM = 'Qatest3';
 
@@ -63,23 +25,16 @@ test.describe(
     );
 
     test("sharing a contact's Digital Card via Katchup actually sends it @ui", async ({ page }) => {
-      // RE-ENABLED 2026-10-14: #979 (the background-image-401 → force-logout root cause documented above)
-      // is RESOLVED/FIXED and confirmed on the test deployment (an isolated Katchup run opened
-      // conversations without being force-logged-out). This runs live again; if the force-logout recurs,
-      // re-fixme and reopen #979.
       await openConversation(page, testData.victimKpostId);
 
-      // The thread header's avatar is the Digital Card trigger — a shared `ContactBar` renders it as
-      // `<Avatar onClick={imgClick} className="font-Family-Nunito ..." />` (common/ContactBar/
-      // ContactBar.js:378-402), scoped to the header row by its `background-color-katchup` class.
+      // The thread header's avatar (ContactBar) opens the Digital Card.
       const headerAvatar = page
         .locator('.background-color-katchup')
         .locator('.font-Family-Nunito')
         .first();
       await headerAvatar.click({ timeout: 15_000 });
 
-      // Wait for the Digital Card modal to actually finish rendering before touching anything inside it
-      // — "View Profile" (DigitalCard.js's own CTA, always present) is the sync point.
+      // "View Profile" is always present, so it marks the modal as fully rendered.
       await expect(
         page.getByText('View Profile', { exact: true }).first(),
         'the Digital Card modal opens',
@@ -118,11 +73,7 @@ test.describe(
         timeout: 10_000,
       });
       await rowCheckbox.check();
-      // The share picker runs MultipleContact in `shareNote` mode (ShareContactTo.js:326-336), whose
-      // footer is a "Shared Note" box + "NN Contacts Selected" + an unlabeled post button
-      // (`.post_button_size` holding the `icon-KP_3164` send glyph — the #963 no-accessible-name
-      // class) wired to `handlePostSubmit` → `finalSubmit` → `sendKatchup`. There is NO "Done" in this
-      // mode (MultipleContact.js:1825-1870) — pressing post is what actually shares the card.
+      // In shareNote mode there is no "Done": the unlabeled post button (#963) sends the card.
       const post = page
         .locator('.shareNote_footerBG .post_button_size')
         .filter({ has: page.locator('.icon-KP_3164') })

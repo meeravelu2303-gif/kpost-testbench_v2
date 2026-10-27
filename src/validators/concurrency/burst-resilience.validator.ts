@@ -6,31 +6,9 @@ import { runSimultaneously } from '@utils/concurrency';
 import { burstSize, describeResponses, inconclusiveIfSerialized } from './support';
 
 /**
- * Under a simultaneous burst an endpoint must either serve every caller or throttle the excess —
- * it must not fall over.
- *
- * ## Why this exists next to `security.rate-limit`
- *
- * They look similar and answer opposite questions. `security.rate-limit` sends requests **one after
- * another** and asks "is there a limit, and does it say Retry-After?" — a policy question. This one
- * sends them **at the same instant** and asks "what happens to the ones that arrive together?" — a
- * robustness question. A sequential probe cannot produce the failure this one looks for, because
- * the server never has more than one request in hand.
- *
- * The distinction matters in practice: an endpoint with a correct rate-limit policy can still 500
- * on the third simultaneous caller because its connection pool holds two, and only the parallel
- * burst shows it.
- *
- * ## The verdict
- *
- *  - **5xx → FAILED (HIGH).** Collapsing under eight callers is a defect. Eight is not load; it is
- *    an ordinary afternoon.
- *  - **Throttled without `Retry-After` → WARNING.** The limit works; the client is left guessing
- *    when to retry. Worth reporting, not worth a P1.
- *  - **Everything served, or cleanly throttled → PASSED.**
- *
- * A 4xx that is neither the expected status nor the throttle status is reported as an
- * inconsistency, because the same request answered 2xx a moment earlier as the primary exchange.
+ * Under a simultaneous burst an endpoint must serve every caller or throttle the excess, never fall
+ * over (unlike `security.rate-limit`, which probes sequentially). 5xx FAILS; throttling without
+ * `Retry-After` is a WARNING; an unexpected 4xx is reported as an inconsistency.
  */
 export const burstResilienceValidator = defineValidator({
   name: 'concurrency.burst-resilience',

@@ -44,15 +44,7 @@ export async function runProbes(
     });
     const statusOk = statusMatches(exchange.status, probe.expectedStatus);
     const problem = statusOk ? probe.assert?.(exchange) : exchange.transportError?.message;
-    /*
-     * A throttled probe taught us nothing.
-     *
-     * Some endpoints rate-limit (adminUserLogin, uniqueNameExist), and a run that sends a dozen
-     * negative probes trips them. The 429 is the bench's own doing: reporting it as a failed
-     * error-shape check would blame the API for the load we generated, and reporting it as a pass
-     * would claim we verified something we never saw. So it is SKIPPED with the reason - unless
-     * 429 is itself the expected status, which is what the rate-limit validator asserts.
-     */
+    // A 429 is our own load, so the probe is SKIPPED, unless 429 is the expected status.
     const throttled =
       exchange.status === apiConfig.rateLimitStatus &&
       !probe.expectedStatus?.includes(apiConfig.rateLimitStatus);

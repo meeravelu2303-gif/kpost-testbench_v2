@@ -4,18 +4,8 @@ import { expect, test } from '@fixtures';
 import { requireAccounts, requireFlags, waitLoaded } from './support/journey';
 
 /**
- * JOURNEY 8 · MAKING THE ACCOUNT YOUR OWN — a user personalizes their profile and the app.
- *
- * A opens Settings › Profile Creation › About, writes something new and saves → leaves, comes back
- * (a full reload) and it is still there → opens General Settings › Personalize › Change Theme, picks
- * another theme and applies it → reloads and the new theme is still the active one → both are put
- * back exactly as they were.
- *
- * Steps from `profile-functional.spec.ts` (About, verified live 2026-10-11) and
- * `settings-theme.spec.ts`; the persistence-after-reload checks are this journey's own addition —
- * neither spec checked that a change survives leaving the screen.
- * Known open bug: #810 — the previously active theme swatch keeps a stale "active" class, so the
- * journey asserts the NEW theme is active, not that it is the only one.
+ * Journey 8: A edits About and changes the theme; both survive a reload; both are restored.
+ * Known defect #810: the old theme swatch keeps a stale "active" class, so only the new one is asserted.
  */
 async function openAbout(page: Page) {
   await page.goto('/settings', { waitUntil: 'domcontentloaded', timeout: 45_000 });

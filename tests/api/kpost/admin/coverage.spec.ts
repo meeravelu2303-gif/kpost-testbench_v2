@@ -5,11 +5,7 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /**
- * Self-tests for the core `/admin/*` module (business-tier company administration, inside the
- * `kpost-api` suite — distinct from the separate `admin-api` Admin/HR-Setup microservice, which has
- * its own `coverage.spec.ts`). Every other kpost sub-module has one of these; this one previously
- * rode silently on `common/company.spec.ts`'s `common-company` tag sweep, which happened to include
- * all 12 endpoints but gave this module no dedicated, auditable self-test of its own.
+ * Self-tests for the core `/admin/*` module in the kpost-api suite (not the separate admin-api service).
  */
 test.describe('KPost core admin (/admin/*) · module coverage', () => {
   test('every definition matches the generated contract @framework', () => {

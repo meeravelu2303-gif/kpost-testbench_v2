@@ -10,15 +10,8 @@ import type { Page } from '@playwright/test';
 import { settleFrames } from '../support/settle';
 
 /**
- * Finding and counting mail in KMail (live-explored 2026-10-15):
- *   - the Recents search box (`.Serach_input`) filters the mail list by subject;
- *   - the calendar next to it (`.Date_alignment` → react-calendar) reloads Recents from a chosen day
- *     (RecentKmail handleDateChange → MessageContainer GetRecentMail(null, date) →
- *     POST /common/getKmailDashboardMsg/ with that date);
- *   - the side-menu KMail badge (`.icon-KP_03-KMail .Header_msg_count`) is the unread total
- *     (unOpenedMailCountBySenderID → UnOpenedMailCount).
- * Seed mails are sent by qatest3 through the API (never logging the browser account in via API).
- * Bulk Mail is not reachable in the UI (its Write Mail button and Recents tab are commented out).
+ * KMail finding and counting: Recents search, the calendar date reload, the unread badge and outside
+ * contacts. Seed mails are sent by qatest3 through the API, never as the browser account.
  */
 const C: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-3')!;
 
@@ -136,8 +129,8 @@ test.describe(
       page,
     }) => {
       await openKmail(page);
-      // Only the date-driven reload carries "selectedDate"; ordinary list refreshes ({"kmailID":…})
-      // can still be in flight after the page loads (seen in Firefox) and must not be mistaken for it.
+      // Only the date-driven reload carries "selectedDate"; ordinary list refreshes can still be in
+      // flight after load (Firefox) and must not be mistaken for it.
       const reload = page.waitForRequest(
         (r) =>
           r.url().includes('/common/getKmailDashboardMsg') &&
@@ -189,8 +182,7 @@ test.describe(
       await openKmail(page);
       const before = await badgeCount(page);
       const subject = `QA KMail badge ${Date.now()}`;
-      // Sent by qatest2 FROM THE BROWSER, so the app's own live-update signal (the sender's screen
-      // notifies the recipient) is part of the test — an API-sent mail would not emit it.
+      // Sent by qatest2 from the browser, so the sender screen's live-update signal is part of the test.
       const ctx = await browser.newContext({ storageState: STORAGE_STATE_2 });
       const sender = await ctx.newPage();
       try {
@@ -269,16 +261,9 @@ test.describe(
     test('outside-domain contacts: listed in KMail Contacts, open their conversation, and an unknown outside sender can be added @ui', async ({
       page,
     }) => {
-      // KMail › Contacts has "Other Domain Contact" (saved outside contacts) and "Unknown Other
-      // Domain Contact" (outside senders not yet saved, each with "Add Contact" → AddOtherDomain
-      // "Add To Contact" → POST /common/addOtherDomainContacts/). An unknown outside sender only
-      // appears when mail arrives from outside KPost, which the bench cannot produce — so the add
-      // step runs only when one is present (since 2026-10-15 qatest1 has one: a mail from a QA
-      // Gmail address). The contact this test adds is removed again at the end, so the sender goes
-      // back to "Unknown" and every run repeats the full add. The app offers no Remove ("You can
-      // only Add / Edit the reference for Other Domain Contact"), so the removal calls
-      // /common/deleteOtherDomainContact/ with THIS browser session's own token — never a second
-      // login, which would end the browser's session.
+      // An unknown outside sender appears only when mail arrives from outside KPost, so the add step
+      // runs only when one is present. The app has no Remove, so cleanup calls
+      // /common/deleteOtherDomainContact/ with this browser session's own token (no second login).
       let addedEmail = '';
       const section = (title: string) =>
         page.getByText(title, { exact: true }).first().locator('xpath=..');
@@ -310,8 +295,7 @@ test.describe(
 
       if (unknown > 0) {
         const name = `QA Outside ${Date.now()}`;
-        // The "Add Contact" shown under the Unknown section — the Recents and other panels carry
-        // off-screen copies of the same label, so pick the on-screen one below that heading.
+        // Off-screen panels carry copies of the same label, so pick the one under the Unknown heading.
         const heading = await page
           .getByText('Unknown Other Domain Contact', { exact: true })
           .first()
@@ -335,7 +319,7 @@ test.describe(
           'the sender’s address is filled in for the user',
         ).not.toHaveValue('');
         const email = await form.getByPlaceholder('Enter the email id').inputValue();
-        // Save stays disabled until a Reference is given (AddOtherDomain.js — by design).
+        // Save stays disabled until a Reference is given (by design).
         await form.getByPlaceholder('Add Reference').fill('QA outside reference');
         const added = page.waitForResponse(
           (r) => r.url().includes('/common/addOtherDomainContacts'),
@@ -362,8 +346,8 @@ test.describe(
         saved === 0 && unknown === 0,
         'qatest1 has no outside-domain contacts on this account to open',
       );
-      // The first saved outside contact: its picture opens "Edit Reference" (the only edit allowed for
-      // outside contacts — closed without saving); its name opens its KMail conversation.
+      // The first saved outside contact: its picture opens "Edit Reference" (closed without saving);
+      // its name opens its KMail conversation.
       const avatar = known.locator('xpath=following::div[contains(@class,"sb-avatar")][1]');
       await avatar.click({ timeout: 10_000 });
       const ref = page.getByRole('dialog').filter({ hasText: 'Edit Reference' });

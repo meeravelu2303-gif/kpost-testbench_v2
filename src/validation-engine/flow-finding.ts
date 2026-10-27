@@ -6,18 +6,8 @@ import type { ResolvedEndpoint } from './validation-policy';
 import type { ValidationReport } from './validation-result';
 
 /**
- * A server error observed while a gated lifecycle flow drove a real write.
- *
- * Why this exists: the lifecycle feature specs (`*_LIFECYCLE`) drive writes the engine never touches,
- * and they FIND real bugs (a 5xx on `employeeDetails/save`, on the scheduled-call endpoints, …). But
- * those specs use raw `helpers.call()` + `expect.soft`, so their failures were only test failures —
- * they never reached Bugzilla, and a bug the developer never sees is a bug that never gets fixed.
- *
- * The safe, narrow rule for turning a flow failure into a ticket: **only a `5xx` counts.** A server
- * that crashes is the developer's defect no matter what we sent — even a malformed or incomplete
- * request must be answered with a 4xx, never a 500. A `4xx` might be OUR payload (the contamination
- * risk), and a bench/sequencing failure is our fault, so neither is filed. That keeps the
- * "no false bugs" guarantee while making genuine write crashes visible to the developer.
+ * A 5xx seen while a gated lifecycle flow drove a real write, so it can be filed. Only a 5xx
+ * counts: a server must never crash on any input, while a 4xx might be our own payload.
  */
 export interface FlowFinding {
   endpoint: ResolvedEndpoint;
@@ -89,14 +79,8 @@ export function flowFindingReports(findings: readonly FlowFinding[]): Validation
 }
 
 /**
- * A documented BUSINESS RULE a gated flow found violated on live — the product's logic, not a crash or
- * a schema fault: reschedule created a new id instead of keeping it (BR-C01), a recalled message stayed
- * visible (BR-K03), a confidential copy leaked (NFR-SEC02), an existing id was reported available
- * (BR-S02), … These are 2xx-but-wrong-behaviour defects the engine's validators cannot see; a feature
- * spec detects them by comparing the RESPONSE/state to the rule, and records one here ONLY when it is a
- * CONFIRMED violation (never a bench/selector/sequencing failure — that stays a plain test failure).
- * It then files through the same safe pipeline as any finding (product-scoped dedupe, validity gate,
- * routed to the module's developer).
+ * A documented business rule a gated flow confirmed violated on live (e.g. BR-C01 reschedule kept
+ * the id): 2xx-but-wrong behaviour the validators cannot see. Filed through the normal pipeline.
  */
 export interface BusinessRuleFinding {
   endpoint: ResolvedEndpoint;

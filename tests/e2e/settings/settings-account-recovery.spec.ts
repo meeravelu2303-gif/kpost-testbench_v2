@@ -2,10 +2,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Settings · Account Recovery panel (`AccountRecovery.js`) — confirmed from source: a pure static
- * info panel, no inputs, no `Services/*` call, only a back-arrow control. Reached via "General
- * Settings" → "Account Recovery Settings". Scope is necessarily a smoke/render check — there is no
- * other interactive surface to test.
+ * Settings › Account Recovery: a static info panel (no inputs, no service), so a render check only.
  */
 test.describe(
   'KPost Settings · Account Recovery panel',

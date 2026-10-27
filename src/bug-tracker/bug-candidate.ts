@@ -18,13 +18,9 @@ import {
 } from './bug-fingerprint';
 
 /**
- * Validators whose failure is ONE platform-wide root cause, not an endpoint's own bug: a defect in
- * the shared API gateway (security headers missing) or the shared auth filter (a bad token answered
- * 400/403 instead of 401, or with a body that is not the error envelope). These are filed as a
- * SINGLE consolidated ticket across every endpoint that shows them — see `systemicFingerprint`.
- *
- * Everything else stays per-endpoint on purpose: the same validator failing on two endpoints is
- * usually two different fixes (a 500 here, a 404 there), so those remain distinct tickets.
+ * Validators whose failure is one platform-wide fault (shared gateway or auth filter), filed as a
+ * single ticket. Everything else stays per-endpoint: the same validator failing twice is usually
+ * two fixes.
  */
 const SYSTEMIC_VALIDATORS = new Set<string>([
   'security.security-headers',
@@ -37,19 +33,10 @@ const SYSTEMIC_VALIDATORS = new Set<string>([
 
 function isSystemicFinding(validatorName: string, message: string): boolean {
   if (SYSTEMIC_VALIDATORS.has(validatorName)) return true;
-  /*
-   * `response.error-format` is mixed: when it reports the negative-probe (auth-rejection) envelopes
-   * it is describing the shared auth filter — one platform-wide fault. When it reports a malformed
-   * PRIMARY response it is that endpoint's own bug. The engine already separates the two into
-   * distinct results, and only the endpoint-specific one names "primary (" in its message.
-   */
+  // Auth-rejection envelopes are the shared filter's; a bad "primary (" response is the endpoint's.
   if (validatorName === 'response.error-format') return !message.includes('primary (');
-  /*
-   * `security.information-disclosure` is mixed too: a disclosed **technology header** (a versioned
-   * `Server` header, `X-Powered-By`, …) is a shared-gateway property present on every response — one
-   * platform-wide fault, so consolidate it. A **body** leak (a stack trace, SQL, a file path, a
-   * credential) is that endpoint's own bug and must stay a distinct ticket, never folded away.
-   */
+  // A disclosed technology header is the shared gateway; a body leak (stack trace, SQL, path) is
+  // the endpoint's own bug.
   if (validatorName === 'security.information-disclosure') {
     const headerDisclosure =
       /server header|powered-by|x-powered|technology header|via header/i.test(message);
@@ -63,13 +50,9 @@ function isSystemicFinding(validatorName: string, message: string): boolean {
 }
 
 /**
- * A STABLE, endpoint- and probe-order-independent signature for a systemic (platform-wide) fault, so
- * every endpoint that shows the SAME shared root cause collapses to ONE ticket. The raw validator
- * message is a volatile concatenation of every probe that observed the fault — and those probes run
- * asynchronously, so their ORDER changes between runs. Fingerprinting that raw message split a single
- * fault (e.g. a versioned `Server` header present on every response) into dozens of near-duplicate
- * tickets. Hashing this signature instead means one root cause = one ticket, with the affected
- * endpoints listed on it.
+ * A stable signature for a systemic fault, independent of endpoint and probe order, so one root
+ * cause is one ticket. The raw message lists probes in a run-dependent order and would split it
+ * into duplicates.
  */
 export function systemicSignature(validatorName: string, message: string): string {
   const m = message.toLowerCase();
@@ -94,8 +77,7 @@ export function systemicSignature(validatorName: string, message: string): strin
   return validatorName;
 }
 
-/** A concise, human-readable one-liner for a systemic ticket's title and Actual — never the volatile
- * probe concatenation, so the ticket reads cleanly and stays identical run to run. */
+/** A stable one-line headline for a systemic ticket's title and Actual. */
 function systemicHeadline(validatorName: string, message: string): string {
   const sig = systemicSignature(validatorName, message);
   switch (validatorName) {
@@ -115,12 +97,8 @@ function systemicHeadline(validatorName: string, message: string): string {
 }
 
 /**
- * A defect ready to be filed — derived from evidence the run already produced, never invented.
- * One candidate is one Bugzilla ticket; repeated observations raise `occurrences`.
- *
- * Where it goes (product, component, owner) comes entirely from the endpoint's module, so a
- * KMail defect reaches the KMail developer and an Admin defect the Admin developer without any
- * per-test configuration. See src/config/ownership.config.ts.
+ * A defect ready to be filed: one candidate is one Bugzilla ticket. Product, component and owner
+ * come from the endpoint's module (src/config/ownership.config.ts).
  */
 export interface BugCandidate {
   /** Dedupe tag, e.g. `KP-A1B2C3`. Written into the summary as `[KP-A1B2C3]`. */
@@ -150,29 +128,14 @@ export interface BugCandidate {
   responseStatus?: number;
   /** A copy-pasteable command that reproduces the failure. */
   curl?: string;
-  /**
-   * The SQL a developer can run to see the same discrepancy in the database.
-   *
-   * Present when the finding was reached by asserting MySQL state rather than a response — a write
-   * that reported success and stored nothing, a transition the row never recorded. Without it the
-   * ticket asserts something about the data and gives the reader no way to check it.
-   */
+  /** SQL that shows the same discrepancy in the database, for findings asserted on MySQL state. */
   verificationSql?: string;
-  /**
-   * How the reproduction gate scored this finding: `failures` of `attempts` passes failed.
-   *
-   * The gate already computes this before deciding to file, and it used to be discarded — so a
-   * filed ticket never said whether the defect failed once or every time. That distinction is the
-   * whole difference between a defect and a flake, and it is the first thing a developer asks.
-   */
+  /** How the reproduction gate scored it: `failures` of `attempts` passes failed. */
   reproduction?: { attempts: number; failures: number };
   correlationId?: string;
   /** Browser projects that observed a UI failure. */
   browsers?: string[];
-  /**
-   * Who files it, for the `[source:]` whiteboard tag. Unset = `automation` (the bench's own finding);
-   * `manual` only for a bug a person writes by hand (`tests/framework/manual-bug.spec.ts`).
-   */
+  /** `[source:]` whiteboard tag: unset = `automation`; `manual` for a hand-written bug. */
   filedBy?: BugSource;
   occurrences: number;
   environment: string;
@@ -183,9 +146,7 @@ export interface BugCandidate {
   /** Full, unabridged evidence for the ticket attachment. */
   evidence: Record<string, unknown>;
   /**
-   * Binary proof to attach to the ticket — a UI failure's screenshot and video, so the developer
-   * SEES the defect. File paths on disk (Playwright's `test-results/…`), uploaded by the filer when
-   * the bug is created. API defects carry no proof here (their curl + response body is the proof).
+   * Screenshot/video files on disk attached to a UI ticket (API tickets use curl + body instead).
    */
   proof?: ProofFile[];
   /** A platform-wide fault (gateway/auth filter) — filed once, listing every endpoint it hits. */
@@ -193,9 +154,7 @@ export interface BugCandidate {
   /** For a systemic defect: every endpoint the same fault was observed on, listed in the ticket. */
   affectedEndpoints?: string[];
   /**
-   * Why this brand-new candidate is held for human review instead of auto-filed (see
-   * `holdAggregatesForReview`). Only consulted on the create path — a finding that matches an
-   * existing ticket still comments/reopens automatically. Cleared once a human files it.
+   * Why a brand-new candidate is held for human review instead of auto-filed (create path only).
    */
   reviewHold?: string;
 }
@@ -225,21 +184,14 @@ const oneValue = (value: unknown): string => {
 };
 
 /**
- * A READABLE Expected/Actual for a multi-case validator (the auth-token probes, error-shape, …).
- *
- * Those validators report a per-case `details` array, and their top-level expected/actual are a
- * mixed object where masking turns half the entries into a meaningless `"empty token": "***"`. So
- * when there are failing sub-cases, build one aligned line PER FAILED CASE — `case → code` — so the
- * ticket's green (Expected) and red (Actual) boxes read as a clean, line-by-line diff. Falls back to
- * the raw expected/actual when a validator has no sub-cases (a single-shot check like status-code).
+ * Expected/Actual as one aligned `case → value` line per failed sub-case, so the ticket reads as a
+ * line-by-line diff. Falls back to the raw values for single-shot validators.
  */
 function renderExpectedActual(result: ValidationResult): { expected: string; actual: string } {
   const failed = (result.details ?? []).filter((d) => d.status === 'FAILED');
   if (failed.length > 0) {
     const width = Math.min(Math.max(...failed.map((d) => d.name.length)), 40);
-    // The case NAME is a static validator label ("Basic credentials", "missing Bearer scheme"), not
-    // user data — show it in full. Only the VALUE is mask-checked (via oneValue), and status codes
-    // are numbers, so nothing is masked here.
+    // The case name is a static validator label, so only the value is mask-checked.
     const row = (name: string, value: unknown): string =>
       `${name.slice(0, 40).padEnd(width)}  →  ${oneValue(value)}`;
     return {
@@ -252,8 +204,7 @@ function renderExpectedActual(result: ValidationResult): { expected: string; act
 
 /** Words from a spec path and test title, used to find the UI screen's component. */
 export function screenTokens(file: string, title: string): string[] {
-  // The file NAME and the title, never its folders: the e2e module folders (2026-10-22) must not move a
-  // bug to another component (e.g. `profile/profile-settings-breakage.spec.ts` is a Settings screen).
+  // File name and title only: a module folder must not move a bug to another component.
   const name = file.split(/[\\/]/).pop() ?? file;
   return `${name} ${title}`
     .toLowerCase()
@@ -262,18 +213,8 @@ export function screenTokens(file: string, title: string): string[] {
 }
 
 /**
- * Turns one endpoint's validation report into candidates — one per FAILED validation.
- * WARNING and SKIPPED never become tickets: a warning is not a defect, and a skip is the
- * framework saying it did not check.
- */
-/**
- * Negative-input probes that assert bad/optional input is REJECTED (4xx). On KPost these fields are
- * frequently optional filters, so the endpoint legitimately ACCEPTS a null / empty / differently-typed
- * value and returns 2xx with data — that is lenient-by-design, not a defect (e.g. #534: a null
- * serverTime/lastMsgID on homeDashboardMsgs still fetches and returns 200). So a negative-input
- * finding is filed ONLY when the endpoint CRASHED (5xx) on the input — a real fault — and suppressed
- * when it simply accepted the input (2xx/3xx). Genuine 5xx on the primary request is independently
- * caught by response.status-code / flow.server-error, so nothing real is lost.
+ * Negative-input probes. KPost fields are often optional filters, so accepting bad input (2xx) is
+ * lenient by design; these findings are filed only when the endpoint crashed (5xx).
  */
 const LENIENT_INPUT_VALIDATORS = new Set<string>([
   'request.null-value',
@@ -293,8 +234,7 @@ export function isLenientAcceptanceFalsePositive(result: ValidationResult): bool
   if (!LENIENT_INPUT_VALIDATORS.has(result.validatorName)) return false;
   const failed = (result.details ?? []).filter((d) => d.status === 'FAILED');
   if (!failed.length) return false;
-  // A 5xx on bad input is a real crash — keep it. Suppress only when every failing case was ACCEPTED
-  // (the observed status is not a server error), which is lenient-by-design, not a bug.
+  // A 5xx on bad input is a real crash; suppress only when every failing case was accepted.
   const crashed = failed.some((d) => {
     const code = Number(d.actual);
     return Number.isFinite(code) && code >= 500 && code < 600;
@@ -302,6 +242,7 @@ export function isLenientAcceptanceFalsePositive(result: ValidationResult): bool
   return !crashed;
 }
 
+/** One candidate per FAILED validation; WARNING and SKIPPED never become tickets. */
 export function candidatesFromReport(
   report: ValidationReport,
   context: { baseURL: string },
@@ -357,8 +298,7 @@ function fromValidationResult(
     category: categoryFor(result.category),
     classification: result.validatorName,
     product: suite.bugzilla.product,
-    // A cross-cutting gateway/auth fault → the product's real platform-security component (KPost:
-    // Authentication V2), never the generic catch-all. Falls back only if none is configured.
+    // A gateway/auth fault goes to the product's platform-security component, not the catch-all.
     component: systemic
       ? (suite.bugzilla.systemicComponent ?? suite.bugzilla.fallbackComponent)
       : componentFor(suite, report.tags),
@@ -375,30 +315,15 @@ function fromValidationResult(
     /** What the endpoint actually replied, quoted the way the existing tickets here do. */
     responseBody: report.primary?.body?.trim() ? report.primary.body : undefined,
     responseStatus: report.primary?.status,
-    // No internal test-bench command in the ticket — the developer has the app, not our repo. The
-    // curl below is the runnable, application-level way to reproduce.
+    // The developer has the app, not our repo, so the reproduction is a curl, not a bench command.
     curl: buildCurl({
       method: report.method,
-      /*
-       * `result.endpoint` is the label "POST /v2/common/validateOTP/", not a path. Split at the
-       * first space rather than with a regex: an earlier regex here lost its escapes while being
-       * edited and produced `http://host:8989POST /v2/...` — a curl that cannot run, in a ticket
-       * whose whole purpose is to be runnable.
-       */
+      // `result.endpoint` is a label ("POST /v2/…"), not a path.
       path: endpointPath(result.endpoint),
       baseUrl: context.baseURL,
-      /*
-       * The request of the case that actually FAILED, when a probe recorded one. A probe validator
-       * sends many requests, and the happy-path call does not reproduce the defect — a developer
-       * pasting it would see a 200 and close the ticket.
-       */
+      // The failing probe's request: the happy-path call would just return 200.
       request: failingRequest(result) ?? report.request,
-      // Shown only where the endpoint needs one, so a public endpoint's repro stays copy-and-run.
-      /*
-       * From the endpoint's own contract, not from a tag: a token endpoint whose curl omits the
-       * header reproduces as 401 and sends the reader chasing an authentication problem that is
-       * not the bug.
-       */
+      // Token header only where the contract needs one; omitting it would reproduce as a false 401.
       authenticated: report.requiresAuth ?? Boolean(report.request?.headers?.Authorization),
     }),
     correlationId: result.correlationId,
@@ -454,23 +379,17 @@ export interface UiFailureInput {
   observedAt: string;
   /** Screenshot / video captured for this failure, uploaded to the ticket as proof. */
   proof?: ProofFile[];
-  /**
-   * The test lost its login session (bounced to the sign-in screen with 401s) — the screen under
-   * test never loaded, so this is a test-session/auth issue, not a defect in this screen.
-   */
+  /** Bounced to the sign-in screen, so the screen never loaded (a session issue, not a defect). */
   endedOnAuthScreen?: boolean;
   /**
-   * API calls that returned a non-2xx status while this screen was loading, as "METHOD /path →
-   * STATUS". Named in the ticket as the likely cause (the API changed and the UI did not adapt).
+   * Non-2xx API calls while the screen loaded ("METHOD /path → STATUS"), named as the likely cause.
    */
   failedApiCalls?: readonly string[];
 }
 
 /**
- * Known shared background components that fail the SAME way on every screen they happen to be
- * mounted on — the screen under test is incidental, not the cause. Keyed by a snippet found in the
- * failing request's own hostname; add to this list whenever a new one turns up (recognisable by
- * the same symptom being filed against many unrelated screens for what is really one component).
+ * Shared background components that fail the same way on every screen, keyed by the failing
+ * request's hostname; their failures collapse into one ticket.
  */
 const KNOWN_BACKGROUND_WIDGETS: ReadonlyArray<{
   hostMatch: string;
@@ -491,11 +410,8 @@ function hostnameIn(message: string): string | undefined {
 }
 
 /**
- * Rewrites a raw Playwright/browser failure message into something a non-technical reader can
- * follow, and — for a small set of known shared background components — recognises that the
- * failure has nothing to do with the screen under test, so every screen's occurrence should
- * collapse into ONE ticket instead of one per screen. Never invents a cause outside this list;
- * anything not recognised still gets a readable sentence, just without the systemic collapse.
+ * Rewrites a raw browser failure into plain English, and marks known background-widget failures as
+ * systemic so every screen's occurrence collapses into one ticket.
  */
 function humanizeUiFailure(message: string): {
   classification: string;
@@ -572,10 +488,7 @@ function humanizeUiFailure(message: string): {
 }
 
 /**
- * Which UI product a browser test belongs to, from where its spec lives: `tests/e2e-admin/` is the
- * Admin/HR-Setup SPA (Bugzilla "KPost Admin UI"); everything else is the KPost React app ("KPost UI").
- * The spec path is the one fact every failure carries, so routing cannot depend on a tag someone
- * forgot to add.
+ * UI product from the spec path: `tests/e2e-admin/` is the Admin UI, everything else the KPost UI.
  */
 export function uiSuiteForFile(file: string): 'kpost-ui' | 'admin-ui' {
   return /(^|[\\/])tests[\\/]e2e-admin[\\/]/.test(file) ? 'admin-ui' : 'kpost-ui';
@@ -589,8 +502,7 @@ export function candidateFromUiFailure(
   const suite = suiteFor(uiSuiteForFile(input.file));
   // The component doubles as the screen name for the reproduction steps.
   const component = componentFor(suite, screenTokens(input.file, input.title));
-  // A test that lost its login session proves nothing about the screen — classify it as the auth
-  // drop it is, so the validity gate rejects it (environmental) instead of filing a false screen bug.
+  // A lost session proves nothing about the screen; mark it an auth drop for the validity gate.
   const humanized = input.endedOnAuthScreen
     ? {
         classification: 'The test lost its login session and was bounced to the sign-in screen',
@@ -600,8 +512,7 @@ export function candidateFromUiFailure(
           'never loaded. This is a test-session / auth-reliability issue, not a defect in this screen.',
       }
     : humanizeUiFailure(input.message);
-  // When the screen broke while specific API calls were failing, name those endpoints as the likely
-  // cause: a status the UI did not handle usually means the API contract changed and the UI did not.
+  // Failing API calls during load usually mean the API contract changed and the UI did not.
   const apiCauseNarrative =
     !input.endedOnAuthScreen && input.failedApiCalls && input.failedApiCalls.length
       ? `\n\nLikely API cause (contract drift — the UI did not handle these responses): while this ` +
@@ -627,8 +538,7 @@ export function candidateFromUiFailure(
     title: humanized.systemic
       ? `App-wide: ${humanized.classification}`
       : `${input.title}: ${maskString(input.message)}`,
-    // Application-level, for a developer who has the app but not our test repo: no internal file path
-    // or test command — the screen, the browser, and what went wrong.
+    // Application-level wording: no internal file paths or test commands.
     narrative: humanized.systemic
       ? humanized.systemic.narrative
       : `A front-end (UI) defect on the ${suite.label} at ${input.baseURL}, seen in ${input.browser}. ` +
@@ -652,8 +562,7 @@ export function candidateFromUiFailure(
     testRunId: input.testRunId,
     observedAt: input.observedAt,
     evidence: maskSensitive({
-      // The product-level module only — never our internal repo name or test paths (a developer has
-      // the app, not our bench, and our repo layout is not their concern).
+      // Product-level module only, never internal repo paths.
       module: suite.label,
       screen: component,
       title: input.title,
@@ -668,12 +577,9 @@ export function candidateFromUiFailure(
 }
 
 /**
- * One API fault seen through several specs in the same run differs only in its probe counts —
- * "17/31 error responses failed" vs "18/32 …" — so each sighting hashed to its own tag and became its
- * own ticket (2026-10-08: 15 tickets #1270–#1285 for 6 faults). The fingerprint itself keeps counts on
- * purpose: changing it would shift every existing ticket's tag, and a fixed-then-broken bug would then
- * be filed fresh instead of reopened. So the counts are collapsed HERE, for in-run merging only: same
- * product + endpoint + validator + message-with-counts-normalised → one candidate under the first id.
+ * Merges in-run sightings of one API fault that differ only in probe counts ("17/31" vs "18/32").
+ * The fingerprint keeps counts so existing tickets' tags never shift; only in-run merging ignores
+ * them.
  */
 export function collapseCountVariants(candidates: readonly BugCandidate[]): BugCandidate[] {
   const canonical = new Map<string, string>();
@@ -699,15 +605,8 @@ export function collapseCountVariants(candidates: readonly BugCandidate[]): BugC
 const AGGREGATE_ERROR_VALIDATOR = 'common.api-error';
 
 /**
- * Holds the aggregate error-response finding (`common.api-error`, "N/M error responses failed") for
- * human review when the SAME endpoint also produced specific per-case findings this run (e.g.
- * `request.data-type`, `security.injection`). The aggregate and the specifics overlap — the aggregate
- * says "this endpoint's error handling is broadly wrong", the specifics pin the exact inputs — so
- * filing both auto-creates two overlapping tickets. This drops nothing: the aggregate becomes a
- * `needs-review` entry (via `reviewHold`), so a human decides whether the broader ticket adds value
- * on top of the specific ones. An aggregate on an endpoint with NO specific findings is left alone
- * (it is that endpoint's only finding and files normally). Only the create path honours the hold, so
- * an aggregate that already matches an existing ticket still comments/reopens automatically.
+ * Holds the aggregate `common.api-error` finding for review when the same endpoint also has
+ * specific findings this run, since both would file overlapping tickets. Nothing is dropped.
  */
 export function holdAggregatesForReview(candidates: readonly BugCandidate[]): BugCandidate[] {
   const endpointsWithSpecifics = new Set(
@@ -780,8 +679,7 @@ export function mergeCandidates(candidates: readonly BugCandidate[]): BugCandida
 }
 
 /**
- * Validators that read the primary response — they cannot pass once the endpoint returns a 5xx or
- * times out, so on a broken endpoint they are SYMPTOMS of one root cause, not distinct defects.
+ * Validators that read the primary response, so on a 5xx or timeout they are symptoms, not defects.
  */
 const CASCADE_DEPENDENT = new Set([
   'response.structure',
@@ -807,11 +705,8 @@ const looksLikeTimeout = (c: BugCandidate): boolean =>
   /timeout|timed out|exceeds budget|\bms exceeds\b/i.test(`${c.actual} ${c.title}`);
 
 /**
- * One malformed ERROR body (no `message`, a `status` that is not FAILURE) fails both
- * `response.error-format` and `response.structure` ("not a valid error envelope"). They describe the
- * same response, so they are one root cause: the structure finding folds into the error-format one.
- * A "not a valid SUCCESS envelope" finding (HTTP 200 carrying a FAILURE body) is a different defect
- * and is left alone.
+ * Folds a "not a valid error envelope" structure finding into the error-format finding for the same
+ * malformed error body. A bad success envelope is a different defect and is left alone.
  */
 function foldEnvelopePair(group: readonly BugCandidate[]): BugCandidate[] {
   const format = group.find((c) => c.classification === 'response.error-format');
@@ -832,13 +727,8 @@ function foldEnvelopePair(group: readonly BugCandidate[]): BugCandidate[] {
 }
 
 /**
- * Collapses a per-endpoint CASCADE into one ticket: when an endpoint's primary response is a 5xx or
- * a timeout, every response-reading check on it fails as a consequence — filing 6 tickets for one
- * broken endpoint is noise. Keeps the real anchor (the status-code / server-error finding) plus any
- * INDEPENDENT findings (input-validation probes send their own request; a security-header/auth check
- * is not about the body), and folds the dependent symptoms into the anchor's narrative. A TIMEOUT
- * takes the whole endpoint down (even the independent probes time out), so it collapses to one.
- * Systemic (platform-wide) candidates are never touched.
+ * Collapses a per-endpoint cascade: on a 5xx, dependent checks fold into the status-code anchor and
+ * independent findings stay; on a timeout everything folds. Systemic candidates are untouched.
  */
 export function consolidateCascades(candidates: readonly BugCandidate[]): BugCandidate[] {
   const byEndpoint = new Map<string, BugCandidate[]>();
@@ -868,12 +758,7 @@ export function consolidateCascades(candidates: readonly BugCandidate[]): BugCan
       group.find((c) => c.classification === 'response.status-code') ??
       group.find((c) => !CASCADE_DEPENDENT.has(c.classification)) ??
       group[0]!;
-    /*
-     * When the VALID request itself crashes (the status-code finding is a 5xx), an input probe that
-     * also got a 5xx proves nothing extra: the endpoint answers 500 to everything, valid input
-     * included, so null / wrong-type / empty-body / injection / xss "500"s are the same root cause.
-     * A probe that crashes while the valid request succeeds (e.g. one bad field) stays independent.
-     */
+    // When the valid request itself 5xx'd, an input probe's 5xx is the same root cause.
     const primaryCrashed =
       anchor.classification === 'response.status-code' && (anchor.responseStatus ?? 0) >= 500;
     const sameCrash = (c: BugCandidate): boolean =>
@@ -907,17 +792,8 @@ export function consolidateCascades(candidates: readonly BugCandidate[]): BugCan
 }
 
 /**
- * WCAG (accessibility) findings, grouped into ONE ticket per RULE rather than one per screen.
- *
- * axe-core reports the same rule violation on many screens (a shared header component with low
- * contrast fails `color-contrast` on every page that uses it). Filing per screen would flood the
- * queue with dozens of near-duplicates of the same underlying defect — the same problem the
- * platform-wide API collapse (`systemicSignature`) solves, applied here to the UI side: the rule id
- * IS the root cause, so it is the fingerprint, and the ticket lists every screen affected.
- *
- * Only CRITICAL and SERIOUS violations are candidates — the same bar `accessibility-axe.spec.ts`
- * soft-asserts on, so a finding here is never news to that spec's own report; moderate/minor findings
- * stay visible in the per-screen attachment but are not fileable at this bar.
+ * One screen's axe-core results. Findings are filed as one ticket per WCAG rule listing every
+ * screen, and only critical/serious violations are fileable.
  */
 export interface AccessibilityScreenInput {
   screen: string;
@@ -931,8 +807,7 @@ export interface AccessibilityScreenInput {
     nodeCount: number;
     targets: string[];
   }[];
-  /** This screen's screenshot/video from the failing test run, so the ticket shows the actual page —
-   * not just the JSON evidence — the way every other UI ticket does. */
+  /** This screen's screenshot/video from the run. */
   proof?: ProofFile[];
 }
 
@@ -941,9 +816,7 @@ const A11Y_SEVERITY: Record<'critical' | 'serious', Severity> = {
   serious: 'HIGH',
 };
 
-/** The single Bugzilla component for a rule's affected screens: that screen's component when every
- * affected screen shares one, otherwise the UI suite's fallback — a rule hitting screens across
- * several components is a shared/cross-cutting defect, not any one team's alone. */
+/** The screens' shared component, or the UI fallback when a rule spans several components. */
 function componentForScreens(
   suite: ReturnType<typeof suiteFor>,
   screens: readonly string[],
@@ -958,8 +831,7 @@ export function accessibilityCandidatesFromScreens(
 ): BugCandidate[] {
   const suite = suiteFor('kpost-ui');
 
-  // Group every (screen, violation) pair by rule id, keeping one entry per screen per rule (a rule
-  // hit twice on the same screen across browser projects counts as one affected screen, not two).
+  // Group by rule id, one entry per screen (repeats across browsers count once).
   const byRule = new Map<
     string,
     { impact: 'critical' | 'serious'; help: string; helpUrl: string; tags: string[] } & {
@@ -976,8 +848,7 @@ export function accessibilityCandidatesFromScreens(
         tags: v.tags,
         screens: new Map<string, { nodeCount: number; targets: string[]; proof?: ProofFile[] }>(),
       };
-      // The worse tier observed for this rule wins, so a rule that is critical on one screen and
-      // serious on another files at CRITICAL — the severity a developer should actually triage at.
+      // The worse impact observed for the rule wins.
       if (v.impact === 'critical') entry.impact = 'critical';
       const existing = entry.screens.get(screen.screen);
       if (!existing || v.nodeCount > existing.nodeCount) {
@@ -997,18 +868,14 @@ export function accessibilityCandidatesFromScreens(
     const component = componentForScreens(suite, screenNames);
     const totalNodes = [...rule.screens.values()].reduce((sum, s) => sum + s.nodeCount, 0);
     const exampleTargets = [...rule.screens.values()][0]?.targets ?? [];
-    // Every affected screen's screenshot/video, so the ticket shows the actual page(s) — not just
-    // the JSON evidence — the way every other UI ticket already does. Deduped by label: a flaky retry
-    // can recapture the same screen's proof more than once, and "Screenshot (Home)" is meant to be
-    // unique per candidate — a repeat is always a duplicate, never a second distinct piece of proof.
+    // Every affected screen's proof, deduped by label (a retry can recapture the same screen).
     const seenLabels = new Set<string>();
     const proof = [...rule.screens.values()]
       .flatMap((s) => s.proof ?? [])
       .filter((p) => (seenLabels.has(p.label) ? false : (seenLabels.add(p.label), true)));
 
     return {
-      // Stable per RULE, independent of which screens observed it or in what order — one root
-      // cause, one ticket, reused verbatim across runs so a re-run comments/reopens, never dupes.
+      // Stable per rule, so a re-run comments/reopens instead of duplicating.
       id: systemicFingerprint({
         prefix: config.tagPrefix,
         validatorName: `accessibility.${ruleId}`,
@@ -1025,8 +892,7 @@ export function accessibilityCandidatesFromScreens(
         `ticket rather than one per screen. See ${rule.helpUrl} for the rule's full explanation and how ` +
         `to fix it.`,
       severity: A11Y_SEVERITY[rule.impact],
-      // The tracker has its own Accessibility category (chart bucket + filter); filing these as
-      // Functional hid every WCAG ticket among the functional ones.
+      // The tracker filters on its own Accessibility category.
       category: 'Accessibility',
       classification: `accessibility.${ruleId}`,
       product: suite.bugzilla.product,

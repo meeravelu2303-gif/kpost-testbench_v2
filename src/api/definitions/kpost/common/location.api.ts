@@ -1,14 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { body, defineKpostEndpoint } from '../kpost-endpoint';
 
-/**
- * Reference data for address forms: countries, states, cities, postcodes.
- *
- * Read-only and public, which makes them the ideal first endpoints to run: no token, no side
- * effects, and a failure here is unambiguous. They are also the endpoints most likely to expose
- * an unbounded response — a country list is small, a city list is not — so the central
- * payload-size and response-time validators matter more here than anywhere else.
- */
+/** Public, read-only reference data for address forms: countries, states, cities, postcodes. */
 const LOCATION_TAGS = ['common', 'common-reference', 'location'] as const;
 
 export const countriesApi = defineKpostEndpoint({

@@ -4,24 +4,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * PERFORMANCE — single user (FRD row 25): a page-load-time sanity budget for the core screens, one
- * real navigation per screen. Run with `npm run product:kpost-ui:perf`.
- *
- * ## Deliberately low-impact
- *
- * The server is a single, shared, low-capacity box (see the perf safety protocol) — load/stress
- * testing (row 26) is DEFERRED to a separate environment for that reason. This row is different: it is
- * ONE page load per screen by ONE user, which is no more traffic than a normal smoke pass. So it is
- * safe to run on the shared box, but it is still gated behind `PERF_SINGLE_USER=true` so it never adds
- * itself to a default run.
- *
- * ## A sanity budget, not an SLO
- *
- * The budgets below are generous upper bounds meant to catch a gross regression (a screen that went
- * from ~2s to ~20s), NOT a tight opinion about the ideal load time. They are measured from the
- * browser's own `PerformanceNavigationTiming` (`domContentLoadedEventEnd` and `loadEventEnd`, relative
- * to `startTime`), the same numbers a real user's browser reports. A screen that blows the budget is
- * reported with its actual timings so the regression is visible, not just "failed".
+ * Single-user page-load budget for the core screens (`npm run product:kpost-ui:perf`, gated behind
+ * `PERF_SINGLE_USER=true`). Generous budgets from the browser's navigation timing catch gross regressions.
  */
 interface NavTiming {
   domContentLoaded: number;

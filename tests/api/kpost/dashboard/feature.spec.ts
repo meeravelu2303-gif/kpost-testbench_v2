@@ -3,15 +3,8 @@ import type { Principal } from '@config/auth.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Dashboard **business-rule flow** — beyond the generic schema/auth sweep (`read.spec.ts`), this
- * verifies what the Home recent-messages panel is actually FOR: `homeDashboardMsgs` and
- * `katchupDashboardMsg` both describe "the current recent-activity window" for the same account, and
- * a caller reading either must see the same window, not two independently-drifting views.
- *
- * `homeDashboardNewMsgs` (the incremental "only newer than a marker" refresh) is `destructive: false`
- * with no `productionSafe` flag (a null marker 500s the backend — see its definition's note), so it
- * needs `allowLiveRead` to run here at all, fed the REAL `firstMsgID`/`LastFetchDate` marker a prior
- * `homeDashboardMsgs` call just returned.
+ * Dashboard rules: homeDashboardMsgs and katchupDashboardMsg must show the same recent-activity window.
+ * homeDashboardNewMsgs runs with allowLiveRead, fed the real marker a prior homeDashboardMsgs returned.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -83,8 +76,7 @@ test.describe(
       const homeBody = JSON.parse(home.bodyText ?? '{}') as DashboardWindow;
       const katchupBody = JSON.parse(katchup.bodyText ?? '{}') as DashboardWindow;
 
-      // Both are read moments apart for the same account; the marker triple is the panel's definition
-      // of "current window" and must match, or the two surfaces are silently drifting.
+      // Read moments apart for the same account, the marker triple must match.
       expect(
         katchupBody.LastFetchDate,
         'LastFetchDate matches between the two dashboard reads',

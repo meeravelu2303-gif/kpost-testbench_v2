@@ -4,12 +4,8 @@ import { settingsReadApis } from './read.api';
 import { settingsWriteApis } from './write.api';
 
 /**
- * The KPost **Settings** module — `/generalSetting/*`, the caller's own preferences.
- *
- *   read.api.ts   getPersonalize, getAllNotification            (run on live)
- *   write.api.ts  font, theme, katchup/kmail/kall notifications (gated lifecycle, self-restoring)
- *
- * Undocumented (no FR ids). The `/settings` screen is exercised by `tests/e2e/settings/settings-sections.spec.ts`.
+ * Settings (`/generalSetting/*`): reads run on live; writes go through the self-restoring
+ * lifecycle.
  */
 export const settingsApis: EndpointDefinition[] = [...settingsReadApis, ...settingsWriteApis];
 

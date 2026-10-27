@@ -24,19 +24,9 @@ import {
 } from './support/journey';
 
 /**
- * JOURNEY 1 · FIRST USE (RTM-E2E01) — the path a new person takes, end to end, in the browser.
- *
- * 1a. **Becoming a user:** sign up on the real screens (mobile OTP through the confirmed test gateway)
- *     → first login → Home → the profile shows the name they gave at signup → log out.
- * 1b. **First day:** one continuous signed-in session walks Home → own Profile → sends a first Katchup
- *     message → sends a first KMail — and the OTHER person (B, a second browser) receives both. Each
- *     write is deleted again in the UI.
- *
- * Two tests, not one, because a brand-new account has no conversations yet: starting a chat from it
- * needs the directory → add-contact route, which no spec has proven on live. 1b therefore runs the
- * first-day half on the seeded QA account. The FIRST CALL is JOURNEY 10 (`voice-call.spec.ts`: A rings
- * B, B answers, both connected, hang up), kept separate so the golden path here is not red on the
- * calling bug #1680. 1a + 1b + journey 10 together cover RTM-E2E01.
+ * Journey 1 (RTM-E2E01): 1a signs up a throwaway account and signs in; 1b walks Home → Profile → first
+ * Katchup → first KMail on the seeded account, B receives both, and each write is deleted. The first
+ * call is journey 10 (voice-call.spec.ts).
  */
 
 /** The authenticated app shell (side menu) — present on every signed-in screen. */
@@ -74,7 +64,7 @@ test.describe(
     test.describe.configure({ timeout: 240_000 });
 
     test.describe('1a · becoming a user', () => {
-      // No retries: a retry would sign up a SECOND throwaway account (owner: one per run).
+      // No retries: a retry would sign up a second throwaway account (one per run).
       test.describe.configure({ retries: 0 });
       test.use({ storageState: { cookies: [], origins: [] } });
       requireFlags('SIGNUP_UI_LIFECYCLE', 'OTP_TEST_GATEWAY', 'TEST_DB_MODE');
@@ -83,8 +73,7 @@ test.describe(
         'a person signs up, signs in for the first time and sees their own name',
         { annotation: [{ type: 'requirement', description: 'RTM-E2E01' }] },
         async ({ signupPage, page, databases }) => {
-          // One throwaway identity per run (sanitykpost<N>, removed afterwards) — the owner's rule
-          // for accounts the bench creates (2026-10-20), shared with sanity-signup.spec.ts.
+          // One throwaway identity per run (sanitykpost<N>), removed afterwards.
           const db = databases.for('kpost-api');
           if (!isSqlClient(db)) {
             test.skip(true, 'needs the KPOST_QA database to pick the identity and remove it');
@@ -152,7 +141,7 @@ test.describe(
       requireAccounts('A', 'B');
       requireFlags('KATCHUP_UI_LIFECYCLE', 'KMAIL_UI_LIFECYCLE');
 
-      // The golden path is part of full sanity (RTM-E2E01's own plan: "sanity, one golden-path journey").
+      // The golden path is part of full sanity.
       test(
         'one session walks Home → Profile → first Katchup → first KMail, and B receives both',
         { tag: '@sanity' },

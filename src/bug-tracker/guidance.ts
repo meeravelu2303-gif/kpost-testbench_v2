@@ -1,10 +1,6 @@
 /**
- * Plain-language guidance embedded in every filed ticket, keyed by the validator that found the
- * defect. The goal: a developer opening the bug in Bugzilla understands **what it is, why it
- * matters, and how to fix it** without asking anyone — so the ticket is self-explanatory.
- *
- * Kept short (a few sentences each) so it informs without burying the evidence. Matched by exact
- * validator name, with a prefix fallback for the auth-token and input-validation families.
+ * Plain-language "what it means / why it matters / how to fix" text for each ticket, by validator
+ * name (with a prefix fallback for the auth-token and input families).
  */
 
 export interface Guidance {

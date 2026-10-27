@@ -29,13 +29,7 @@ test.describe(
     });
 
     test("getUserProfile returns the caller's own profile @api", async ({ endpoints }) => {
-      /*
-       * `profile-get-user-profile` — undocumented in the workbook, added this session via
-       * `defineUndocumentedProfileEndpoint` (confirmed live). It is the real call the signup/login flow
-       * makes immediately after login (17 call sites per its own evidence comment in read.api.ts), yet
-       * had no test referencing it at all until now — the highest-traffic profile read with the least
-       * attention. A bodyless GET: the only question is whether it resolves to the caller's own account.
-       */
+      // Undocumented in the workbook but called right after every login; must resolve to the caller.
       const ex = await endpoints.sendTo(
         'profile-get-user-profile',
         {},
@@ -83,9 +77,7 @@ test.describe(
         { label: 'profile:advanced-search', auth: { principal: A } },
       );
       expect(ex.status, 'advancedSearch succeeds').toBe(200);
-      // Not asserting a specific match count/shape here: the search is a filter combination the
-      // backend may score however it likes. What matters is that a real, owned mobile number in the
-      // filter doesn't crash the endpoint (it previously couldn't be sent at all — see read.api.ts).
+      // No match count asserted (scoring is the backend's); an owned mobile number must not crash it.
     });
 
     test('isDevicePrimaryOrNot returns a boolean for the current device', async ({ endpoints }) => {
@@ -105,9 +97,7 @@ test.describe(
     test('getlanguages: both GET and POST now answer 200 (stale "no working verb" finding retired), but the list is empty', async ({
       endpoints,
     }) => {
-      // Live-verified 2026-09-24: the endpoint definition's old note claimed GET->405/POST->500 with
-      // no working verb — no longer true (re-verified twice). What IS still true, and worth a real
-      // assertion rather than silence: the language reference list itself is empty on this account.
+      // The language reference list is empty on this account; asserted rather than left silent.
       const get = await endpoints.sendTo(
         'profile-get-languages',
         {},
@@ -146,9 +136,7 @@ test.describe(
         {},
         { label: 'profile:signature', auth: { principal: A } },
       );
-      // Live-verified 2026-09-24: 404 on an account with no signature image — a real, distinct-from-
-      // the-other-images behavior (they answer 204 for "none"), already noted as a minor inconsistency
-      // in the endpoint's own definition. Asserted here rather than left generic-only.
+      // No signature image answers 404, unlike the other images (204 for "none").
       expect(
         [200, 204, 404],
         'getSignatureImage answers a documented status, not a server error',

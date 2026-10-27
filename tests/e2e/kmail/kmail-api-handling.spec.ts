@@ -3,14 +3,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * KMail inbox — API response handling. KMail is the other messaging core but, unlike Home and Katchup,
- * has no failure-handling coverage. Its inbox list loads from `POST /common/getKmailDashboardMsg/`
- * (KmailEndPointURL). The frontend's service layer uses the same empty-catch idiom as the rest of the
- * app, so a failing/empty load can render a confident-but-false empty inbox with no error — an outage
- * looks identical to "you have no mail" (the #1322 class, proven on Home).
- *
- * DETERMINISTIC stubs of the real inbox-load endpoint. Each guards that the load actually fired, so a
- * flow difference surfaces as a clear failure rather than a false pass. Asserts correct behaviour.
+ * KMail inbox: API response handling with stubs of POST /common/getKmailDashboardMsg/. A failed load must
+ * not look like an empty inbox. Each test checks the load actually fired.
  */
 test.describe(
   'KPost KMail · inbox API failure handling',
@@ -49,8 +43,7 @@ test.describe(
       await page.waitForLoadState('load', { timeout: 15_000 }).catch(() => undefined);
       await settleFrames(page).catch(() => undefined);
 
-      // KMail shows its loading splash first and only then requests the inbox (live 2026-10-15) — wait
-      // for the request instead of checking straight after the page's load event.
+      // KMail shows its loading splash before requesting the inbox, so wait for the request.
       await expect
         .poll(() => called, {
           message: 'the inbox-load endpoint must fire on /kmail (else the stub/flow is wrong)',

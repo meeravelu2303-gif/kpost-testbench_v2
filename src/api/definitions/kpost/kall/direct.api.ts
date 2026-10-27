@@ -4,24 +4,17 @@ import { body } from '../kpost-endpoint';
 import { defineKallEndpoint } from './kall-endpoint';
 
 /**
- * Kall **direct-call** writes — placing a normal (ad-hoc) call and moving it through its status
- * lifecycle, plus clearing the call log.
- *
- * Every one is a write and **none is `productionSafe`**. `initiateKall` rings the receiver's device
- * in real time — a real-time side effect on a real recipient, even our own second account — so it is
- * treated like a Katchup send: `data` + destructive, exercised only through the gated feature flow
- * (`docs/modules/kall-flow.md` §5, `KALL_LIFECYCLE=true`) with `allowLiveWrite`, never by the engine. The
- * clear endpoints delete the caller's own log and are gated for the same reason.
+ * Kall direct-call writes: place a call, move it through its statuses, clear the log. None is
+ * `productionSafe`; `initiateKall` rings a real device, so only the gated KALL_LIFECYCLE flow
+ * drives them.
  */
 const DIRECT_TAGS = ['kall-direct'] as const;
 
 const now = (): number => Date.now();
 
 /**
- * The live client's `initiateKall` object for a normal 1:1 audio call to our own second account.
- *
- * Exported so the feature spec builds every variant (audio/video, status transitions) from one
- * source rather than hand-copying the payload per case.
+ * The live client's `initiateKall` object for a 1:1 audio call to our second account; shared by
+ * every variant.
  */
 export function initiateShape(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -42,11 +35,7 @@ export const initiateKallApi = defineKallEndpoint({
   path: '/v2/kall/initiateKall',
   summary: 'Place a normal (ad-hoc) call',
   tags: [...DIRECT_TAGS, 'critical'],
-  /*
-   * Rings a real device in real time. `data`+destructive to our own second account, cleaned up by
-   * the lifecycle test (end → clear). NOT cleared for live — a fuzzed `receiver`/`kallMode` would
-   * ring a stranger. Payload is the live client's (flow doc §3).
-   */
+  // Rings a real device; never cleared for live, since a fuzzed `receiver` would ring a stranger.
   destructive: true,
   request: body(() => initiateShape()),
 });
@@ -97,11 +86,7 @@ export const clearKallByIdsApi = defineKallEndpoint({
   path: '/v2/kall/clearKallBykallIds',
   summary: 'Clear specific calls from the caller log by id',
   tags: [...DIRECT_TAGS, 'clear'],
-  /*
-   * Deletes rows from our own call log. `data`+destructive. The `kallIds` are real ids the caller
-   * owns; on live the guard would refuse fabricated ones (`[2,3]` are strangers' calls), which is
-   * why this runs only through the lifecycle flow with ids it just created.
-   */
+  // Deletes our own call-log rows; only the lifecycle flow runs it, with ids it just created.
   destructive: true,
   request: body(() => ({ kallIds: [] as number[] })),
   note: 'deletes from the caller own log; lifecycle-only',
@@ -113,11 +98,7 @@ export const clearKallHistoryApi = defineKallEndpoint({
   path: '/v2/kall/clearKallHistory',
   summary: "Clear the caller's entire call history",
   tags: [...DIRECT_TAGS, 'clear'],
-  /*
-   * A GET that DELETES the whole call log for the caller. Token-scoped (only our own history), but
-   * destructive and irreversible, so `data`+destructive and never cleared for live — a default run
-   * must not wipe the QA account's log.
-   */
+  // A GET that irreversibly deletes the caller's whole call log, so it is never cleared for live.
   destructive: true,
   note: 'GET that clears the entire caller history; never run on a default live pass',
 });

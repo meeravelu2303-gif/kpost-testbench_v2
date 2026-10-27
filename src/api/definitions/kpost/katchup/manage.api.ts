@@ -5,15 +5,8 @@ import { body, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
- * Katchup **message actions** — recall, delete, mark, report, and the forwards.
- *
- * Every one acts on a `msgID` that must be a real message the caller owns. On live we have no such
- * id until the send-lifecycle test has created one, and a fabricated id would 404 or (worse) name a
- * stranger's message. So these are `needs-message-id`, registered and blocked, run by the lifecycle
- * test once it has minted an id. None is `productionSafe`: they all mutate.
- *
- * `recallMessage` follows the **live client** (`{msgID, groupFlag}`), not the workbook's stale
- * `{msgID, status:5}` — see `docs/modules/katchup-flow.md` §2.1.
+ * Katchup message actions: recall, delete, mark, report, forward. Each needs a real `msgID` we own,
+ * so they are `needs-message-id` and run by the lifecycle test. None is `productionSafe`.
  */
 const MANAGE_TAGS = ['katchup-manage'] as const;
 
@@ -32,23 +25,10 @@ export const recallMessageApi = defineKatchupEndpoint({
 });
 
 /*
- * Legacy "V1" twin of recallMessageApi — confirmed dead from the real frontend (EndPointURL already
- * bakes in /v2, so every live call resolves to KatchupControllerV2, never this bare "katchup" path)
- * but still deployed. KatchupController.recallMessage (KatchupController.java, no HttpServletRequest
- * parameter AT ALL) passes the client-supplied FetchKatchupRO straight to
- * KatchupServiceImpl.recallMessage, which matches purely on the body's own `sender` field
- * (katchupRepo.recallKatchupMessage(msgID, sender, status)) — unlike its V2 sibling, which
- * correctly overrides sender from the JWT (`fetchKatchupRO.setSender((String)
- * request.getAttribute("kpostID"))`, KatchupControllerV2.java:741) before calling the identical
- * service method. Registered here only to prove/track the live cross-account message-tampering
- * gap — never driven as a normal client flow.
+ * Legacy V1 twin of recallMessage: unused by the frontend but deployed, and it trusts the body's
+ * `sender` instead of the token. Registered only to track that cross-account gap. Not in the
+ * workbook, so it is defined as undocumented to skip the contract lookup.
  */
-// Not in the generated OpenAPI contract at all (it's a dead V1 path, never documented in the
-// workbook) — defineKatchupEndpoint's workbookContract() lookup throws at module-load time for any
-// path the contract doesn't know, which previously crashed every spec that imports this module.
-// defineUndocumentedKpostEndpoint skips that lookup; it's normally used for real-but-undocumented
-// frontend calls, but its only actual requirement is a path the generated contract doesn't have, so
-// it's the correct escape valve here too.
 export const legacyRecallMessageApi = defineUndocumentedKpostEndpoint({
   id: 'katchup-legacy-recall-message',
   method: 'POST',
@@ -74,9 +54,7 @@ export const deleteMessageApi = defineKatchupEndpoint({
   tags: [...MANAGE_TAGS, 'sender-action', 'needs-message-id'],
   destructive: true,
   sideEffect: 'data',
-  // Live client (Katchup.js DeleteMessage): the field is `messageIds` (an ARRAY), not `msgID`.
-  // Sending `msgID` is the wrong shape and can leave the message undeleted (orphan). Verified
-  // against the frontend, 2026-09-18. The lifecycle test supplies the real msgID it created.
+  // The live client sends `messageIds` (an array), not `msgID`; the lifecycle supplies the real id.
   request: body(() => ({ messageIds: [0], groupFlag: false })),
   requestSchema: typesOnlySchema({ messageIds: [0], groupFlag: false }),
   note: 'live-client payload {messageIds:[...], groupFlag}; needs a real owned msgID',
@@ -103,8 +81,7 @@ export const saveMessagesApi = defineKatchupEndpoint({
   tags: [...MANAGE_TAGS, 'sender-action', 'needs-message-id'],
   destructive: true,
   sideEffect: 'data',
-  // groupFlag is a STRING here (see send.api.ts's groupFlag comment) — a real boolean 400s
-  // "Malformed or missing request body", live-verified 2026-09-25 (feature.spec.ts).
+  // groupFlag is a string here, as in send.api.ts; a real boolean 400s.
   request: body(() => ({ groupKpostID: testData.victimKpostId, msgIDs: [], groupFlag: 'false' })),
   note: 'needs real owned msgIDs',
 });
@@ -116,10 +93,7 @@ export const reportAbuseApi = defineKatchupEndpoint({
   path: '/v2/katchup/reportAbuse',
   summary: 'Report a received message as abusive',
   tags: [...MANAGE_TAGS, 'recipient-action', 'needs-message-id'],
-  /*
-   * Reports a message to moderation — a real, visible action that names a msgID and a reason set.
-   * `reportingKpostID` is our own account. Needs a real received message; blocked until one exists.
-   */
+  // Reports a received message to moderation; `reportingKpostID` is our own account.
   destructive: true,
   sideEffect: 'data',
   request: body(() => ({
@@ -131,13 +105,7 @@ export const reportAbuseApi = defineKatchupEndpoint({
   note: 'needs a real received msgID',
 });
 
-/*
- * ## Forwards — all need a source message id
- *
- * `/v2/katchup/forwardKatchupMessage/` (the older path) is confirmed unused by the current client —
- * only `forwardKatchupMessageNew` is live. Its endpoint definition, the tests that exercised it, and
- * its filed bugs were retired 2026-09-28 rather than kept testing a dead route.
- */
+// Forwards: all need a source message id.
 export const forwardMessageNewApi = defineKatchupEndpoint({
   id: 'katchup-forward-message-new',
   requirements: ['FR-KU-035', 'FR-KU-037'],
@@ -165,8 +133,7 @@ export const forwardMessageApi = defineKatchupEndpoint({
   tags: [...MANAGE_TAGS, 'forward', 'needs-message-id'],
   destructive: true,
   sideEffect: 'data',
-  // The workbook's own example shape. The web app imports `SendForwardMessage` (this route) in all three
-  // forward footers but never calls it (2026-10-22): it forwards through forwardKatchupMessageNew.
+  // The workbook's example shape; the web app forwards through forwardKatchupMessageNew instead.
   request: body(() => ({
     receiver: '',
     messageType: KATCHUP_MESSAGE_TYPE.forwardMessageReveal,

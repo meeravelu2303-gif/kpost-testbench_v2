@@ -3,26 +3,9 @@ import { expect, test } from '@fixtures';
 import { decodeJwt, jwtSubject } from '@utils/jwt';
 
 /**
- * Server-side session expiry (RTM-SEC02): a session ends when the server says so, not when the
- * client feels like it — and the client cannot talk its way past that.
- *
- * What the server actually enforces (KPOST_V5.0 `config/filter/AuthenticationFilter.java`, read
- * 2026-10-15): every protected call needs (a) a JWT that verifies against the server's signing key
- * and is not past its `exp` ("Token has expired" → 401), and (b) a still-active device session row
- * for that token (`loginSessionRepository.getDeviceLoginIDs`) — so logout revokes server-side
- * (BR-SL-LOGOUT, login-flow / login-token-security).
- *
- * Lifetime rule (owner, Meera 2026-10-16): a token is valid for exactly 24 h from issue, whether it is
- * used or not, and then expires on its own. There is no separate idle timeout, and none is required.
- *
- * Checked read-only, on the caller's own session list (`getActiveSession`, which takes the account
- * from the token):
- *   1. control — the bench's live token for qatest1 is accepted, and expires exactly 24 h after issue;
- *   2. a genuinely EXPIRED token (the bench's own token history — a QA account's token minted on an
- *      earlier run and now past its exp) is refused;
- *   3. the live token with its `exp` pushed 30 days out (signature unchanged) is refused — a session
- *      cannot be extended by editing the token;
- *   4. the live token with its `exp` moved into the past is refused.
+ * Server-side session expiry (RTM-SEC02), read-only via `getActiveSession`. A token lives exactly 24 h
+ * from issue (no idle timeout). Checks: the live token works; expired, exp-extended and back-dated
+ * tokens are refused.
  */
 const K = AUTH_PROFILES.kpost.principals;
 const A = K.find((p) => p.key === 'personal')!;
@@ -73,8 +56,6 @@ test.describe(
       const claims = decodeJwt(token ?? '')?.payload;
       const exp = claims?.exp;
       expect(typeof exp, 'the live token carries an exp').toBe('number');
-      // The requirement (owner, 2026-10-16): a token is valid for exactly 24 hours from issue, used or
-      // not — it expires on its own; there is no separate idle timeout.
       expect(
         Number(exp) - Number(claims?.iat),
         'the token expires exactly 24 hours (86 400 s) after it was issued',

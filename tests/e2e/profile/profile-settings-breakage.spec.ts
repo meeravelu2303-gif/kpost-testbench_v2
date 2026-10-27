@@ -3,17 +3,8 @@ import { openSection, sweepScreen } from '@ui/breakage-sweep';
 import { expect, test } from '@fixtures';
 
 /**
- * Profile & Settings **screen-breakage** sweep — the front-end analogue of "does this screen crash".
- *
- * The deep Profile and Settings screens (editor drawers, tabbed sections, settings sub-panels) are
- * where a user spends real time and where a broken bundle, a 404 asset, an unhandled exception or a
- * frozen render actually bites — and none of it is visible to an API test. This opens each SUB-SECTION
- * captured from a live codegen pass and checks the health of every one.
- *
- * The shared `sweepScreen` helper checks health right after load first (most crashes fire on load),
- * so when the screen already crashed it captures short, readable proof and finishes — rather than
- * walking every panel and recording a minute of an unchanging screen. Read-only: it only navigates
- * and opens panels/tabs, never toggling a preference or clicking Save.
+ * Screen-breakage sweep of Profile and Settings sub-sections (JS errors, failed assets, frozen render).
+ * Read-only: it opens panels and tabs, never toggles a preference or clicks Save.
  */
 
 test.describe(

@@ -1,19 +1,12 @@
-/*
- * Type-only, so it is erased at compile time and `mysql2` is still loaded lazily at runtime by the
- * dynamic import inside `connect()`. A value import here would pull the driver into every run,
- * including the ones that never touch a database.
- */
+// Type-only, so `mysql2` loads lazily in `connect()` and runs without a database never load it.
 import type { Pool as MysqlPool } from 'mysql2/promise';
 import { databaseConfig, type DatabaseTarget } from '@config/database.config';
 import type { SuiteId } from '@config/ownership.config';
 import type { JsonObject } from '@utils/json';
 
 /**
- * Minimal, adapter-agnostic query surface used by repositories. Validators never talk to the
- * database; DB validations use repositories, repositories use this client.
- *
- * Two adapters implement it — the disabled one and real MySQL — so a DB validation is written once
- * and runs wherever its suite is pointed, and reports SKIPPED (never PASSED) where nothing is.
+ * Adapter-agnostic query surface used by repositories (disabled or MySQL), so a DB validation
+ * reports SKIPPED, never PASSED, where no database is configured.
  */
 export interface DbQuery {
   table: string;
@@ -28,36 +21,18 @@ export interface DatabaseClient {
   readonly writable: boolean;
   findOne<T extends JsonObject>(query: DbQuery, correlationId?: string): Promise<T | undefined>;
   findMany<T extends JsonObject>(query: DbQuery, correlationId?: string): Promise<T[]>;
-  /**
-   * Rows matching `where`, counted in the database rather than fetched and measured here.
-   *
-   * The duplicate-write race is the reason this is a first-class operation: proving that two
-   * simultaneous writes produced one row means counting rows, and `findMany().length` would pull
-   * every matching record across the wire to do it.
-   */
+  /** Rows matching `where`, counted in the database rather than fetched. */
   count(query: DbQuery, correlationId?: string): Promise<number>;
   /** Releases pooled connections. Safe to call on any adapter, including those that hold none. */
   dispose?(): Promise<void>;
 }
 
-/**
- * Raw SQL, available only on a real database.
- *
- * `DbQuery` is deliberately too simple for transaction-isolation work: proving that one
- * transaction cannot see another's uncommitted row needs two connections held open across several
- * statements, which no table/where pair can express. Rather than inflate the shared interface,
- * that power lives here and callers test for it with `isSqlClient` — so a probe that needs real
- * transactions reports SKIPPED on a disabled target instead of silently checking something weaker.
- */
+/** Raw SQL inside a transaction, only on a real database (callers check `isSqlClient`). */
 export interface SqlTransaction {
   query<T extends JsonObject>(text: string, params?: readonly unknown[]): Promise<T[]>;
 }
 
-/**
- * Ordered from weakest to strongest. MySQL/InnoDB supports all four and defaults to REPEATABLE
- * READ — unlike PostgreSQL, READ UNCOMMITTED is a real level here and genuinely permits dirty
- * reads, so it is spelled out rather than silently promoted.
- */
+/** Weakest to strongest. MySQL defaults to REPEATABLE READ; READ UNCOMMITTED allows dirty reads. */
 export type IsolationLevel =
   'READ UNCOMMITTED' | 'READ COMMITTED' | 'REPEATABLE READ' | 'SERIALIZABLE';
 
@@ -76,8 +51,7 @@ export interface SqlDatabaseClient extends DatabaseClient {
     correlationId?: string,
   ): Promise<T[]>;
   /**
-   * Runs `fn` inside one transaction on one dedicated connection, committing on return and rolling
-   * back on throw. Two of these running at once is how an isolation level is actually tested.
+   * Runs `fn` in one transaction on a dedicated connection: commit on return, roll back on throw.
    */
   transaction<T>(
     fn: (tx: SqlTransaction) => Promise<T>,
@@ -90,17 +64,9 @@ export function isSqlClient(db: DatabaseClient): db is SqlDatabaseClient {
 }
 
 /**
- * A MySQL identifier the bench is willing to interpolate.
- *
- * Table and column names cannot be bound as parameters — MySQL only parameterizes values — so they
- * are the one part of a statement built by concatenation. Every one is matched against this pattern
- * and then backtick-quoted, which is the combination that makes it safe: the pattern admits no
- * backtick, quote, semicolon, whitespace or comment marker, and the quoting stops a
- * legal-but-surprising name (a reserved word such as `order`, or a name differing only in case)
- * from changing the statement's meaning.
- *
- * Identifiers reach here from endpoint definitions and repositories, not from API responses. The
- * check exists anyway, because "the input is trusted" is the assumption behind most injections.
+ * Identifiers cannot be bound as parameters, so each is matched against this pattern and
+ * backtick-quoted before interpolation (no quotes, semicolons, whitespace or comment markers get
+ * through).
  */
 const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_$]*$/;
 
@@ -115,11 +81,8 @@ export function quoteIdentifier(name: string, role: string): string {
 }
 
 /**
- * `` `database`.`table` ``, each part validated and backtick-quoted.
- *
- * An unqualified name is left unqualified: the connection is opened against a specific database, so
- * MySQL resolves it there. Prefixing it with a configured schema the way PostgreSQL needs would be
- * wrong here — in MySQL the database *is* the schema, and it is already chosen by the connection.
+ * `` `database`.`table` ``, each part validated and quoted; an unqualified name resolves in the
+ * connection's database.
  */
 export function qualify(table: string): string {
   const parts = table.split('.');
@@ -131,13 +94,7 @@ export function qualify(table: string): string {
 }
 
 /**
- * `WHERE` clause plus its bound values, using MySQL's positional `?` placeholders.
- *
- * `null` becomes `IS NULL` rather than `= ?`, because `column = NULL` is never true in SQL and
- * would silently return no rows — turning "this field was cleared, as expected" into "the record
- * does not exist", which is a different and much more alarming test failure. MySQL's `<=>`
- * null-safe operator would also work, but `IS NULL` is what a developer reading the filed bug
- * expects to see.
+ * `WHERE` clause plus bound values; `null` becomes `IS NULL`, since `column = NULL` is never true.
  */
 export function buildWhere(where: DbQuery['where']): { clause: string; values: unknown[] } {
   const values: unknown[] = [];
@@ -151,16 +108,8 @@ export function buildWhere(where: DbQuery['where']): { clause: string; values: u
 }
 
 /**
- * Statements the bench may run on a target where writes are not permitted.
- *
- * `WITH` is deliberately **absent**, unlike the PostgreSQL version this replaced. MySQL 8 allows a
- * common table expression to head an `UPDATE` or `DELETE` (`WITH x AS (...) DELETE FROM ...`), so
- * treating a `WITH` prefix as proof of a read would let a write through on the live Admin database
- * — precisely the statement this gate exists to stop. A read that genuinely needs a CTE can be
- * written as a subquery; refusing a legitimate read is recoverable, and the other mistake is not.
- *
- * Default-deny for the same reason the production endpoint allowlist is: anything unrecognised,
- * including a statement type added by a future MySQL release, is treated as a write.
+ * Statements allowed where writes are not; anything else counts as a write. `WITH` is excluded
+ * because MySQL 8 allows `WITH … DELETE`, which would reach the live Admin database.
  */
 const READ_ONLY_START = /^\s*(?:select|explain|describe|desc|show)\b/i;
 
@@ -194,12 +143,7 @@ class DisabledDatabaseClient implements DatabaseClient {
   }
 }
 
-/**
- * Real MySQL over `mysql2/promise`.
- *
- * The driver is imported lazily so that a run which never touches a database — most of them — does
- * not load it. One pool per target, closed by `dispose()`.
- */
+/** Real MySQL over `mysql2/promise`, loaded lazily; one pool per target, closed by `dispose()`. */
 class MysqlDatabaseClient implements SqlDatabaseClient {
   readonly enabled = true;
   readonly kind = 'mysql' as const;
@@ -214,13 +158,7 @@ class MysqlDatabaseClient implements SqlDatabaseClient {
     this.writable = target.allowWrites;
   }
 
-  /**
-   * Refuses a statement this target may not run.
-   *
-   * The message carries the *reason* rather than just the rule, because the two refusals mean very
-   * different things: on KPOST_QA it means "set DB_ALLOW_WRITES if you meant this", and on Admin it
-   * means "this is a live database and no flag will change that".
-   */
+  /** Refuses a statement this target may not run, naming the target's own reason. */
   private assertPermitted(text: string): void {
     if (isReadOnlyStatement(text)) return;
     if (this.target.allowWrites) return;
@@ -244,24 +182,18 @@ class MysqlDatabaseClient implements SqlDatabaseClient {
         user: connection.user,
         password: connection.password,
         database: connection.database,
-        /*
-         * The KPOST_QA server runs with `--require_secure_transport=ON`, so a plaintext connection
-         * is refused before authentication. `undefined` (TLS off) is therefore a configuration
-         * error there rather than a fallback, and is left to fail with the server's own message.
-         */
+        // KPOST_QA requires TLS, so TLS off fails there with the server's own message.
         ssl: connection.tls
           ? { ca: connection.tls.ca, rejectUnauthorized: connection.tls.rejectUnauthorized }
           : undefined,
         connectionLimit: databaseConfig.poolSize,
         waitForConnections: true,
         connectTimeout: databaseConfig.queryTimeoutMs,
-        // Keep DECIMAL/BIGINT as strings rather than lossy numbers; the callers that need a number
-        // convert explicitly, and an id silently rounded by IEEE-754 is a bug nobody finds twice.
+        // DECIMAL/BIGINT as strings, so large ids are never rounded.
         decimalNumbers: false,
         supportBigNumbers: true,
         bigNumberStrings: true,
-        // Never allow more than one statement per call: it is the control that stops an injected
-        // `; DROP ...` from ever being a second statement, independently of the identifier check.
+        // One statement per call, so an injected `; DROP …` can never run.
         multipleStatements: false,
       });
     })();
@@ -317,32 +249,21 @@ class MysqlDatabaseClient implements SqlDatabaseClient {
     const pool = await this.connect();
     const connection = await pool.getConnection();
     const isolation = options.isolation ?? 'REPEATABLE READ';
-    /*
-     * Validated against the union rather than interpolated as given: it is the one place a
-     * caller-supplied string reaches the statement text, since SET TRANSACTION takes no parameters.
-     */
+    // SET TRANSACTION takes no parameters, so the level is validated before interpolation.
     if (!ISOLATION_LEVELS.includes(isolation)) {
       throw new Error(`Unknown isolation level "${isolation}"`);
     }
-    // Read-only unless the target permits writes AND the caller asked for them, so the default on
-    // every connection is the safe one and Admin can never reach a READ WRITE transaction.
+    // Read-only by default; Admin can never reach a READ WRITE transaction.
     const readOnly = options.readOnly ?? !this.target.allowWrites;
 
     try {
-      /*
-       * MySQL needs these as two statements, and the access mode belongs on START TRANSACTION —
-       * `SET TRANSACTION ISOLATION LEVEL ... READ ONLY` is not the same thing and would leave the
-       * transaction writable. Getting this pair wrong is how a "read-only" probe writes.
-       */
+      // The access mode belongs on START TRANSACTION; on SET TRANSACTION it stays writable.
       await connection.query(`SET TRANSACTION ISOLATION LEVEL ${isolation}`);
       await connection.query(`START TRANSACTION ${readOnly ? 'READ ONLY' : 'READ WRITE'}`);
 
       const tx: SqlTransaction = {
         query: async <R extends JsonObject>(text: string, params: readonly unknown[] = []) => {
-          /*
-           * Checked per statement, not once at START: opening a READ WRITE transaction must not
-           * become a way around the target's write policy.
-           */
+          // Checked per statement, so a READ WRITE transaction cannot bypass the write policy.
           this.assertPermitted(text);
           const [rows] = await connection.query(
             { sql: text, timeout: databaseConfig.queryTimeoutMs },
@@ -371,12 +292,7 @@ class MysqlDatabaseClient implements SqlDatabaseClient {
   }
 }
 
-/**
- * The client for one suite's database.
- *
- * Prefer `DatabasePool` (`src/database/database-pool.ts`) — it caches one client per suite and
- * disposes them together. This is the factory underneath it.
- */
+/** The client for one suite's database; prefer `DatabasePool`, which caches and disposes them. */
 export function createDatabaseClient(suite: SuiteId): DatabaseClient {
   const target = databaseConfig.forSuite(suite);
   switch (target.kind) {

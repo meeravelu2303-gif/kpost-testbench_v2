@@ -3,17 +3,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * `/koolkall/:id` (`GlobalKoolKall.js`) — a PUBLIC call-join link, no auth required. Confirmed from
- * source: this embeds a REAL Jitsi Meet room (`@jitsi/react-sdk`) and clicking "Submit" on the
- * name-capture modal immediately joins the actual live room — not a mock. This test suite therefore
- * NEVER clicks "Submit" (that would connect a headless browser to a real Jitsi room, audible/visible
- * to whoever else is in it) — it stays scoped to the pre-join modal and the malformed-id crash-safety
- * question, matching the same hard safety boundary already established for K-Booking's payment flow
- * and the OTP/SMS-sending endpoints.
- *
- * Confirmed source gap worth exercising directly: `decryptId(decodeURIComponent(id))` is called
- * inline in JSX with no try/catch around the render path, unlike `ProfileWebView.js`'s equivalent
- * call (which IS wrapped). A malformed id could throw before the modal ever renders.
+ * The public `/koolkall/:id` join link: the pre-join modal, and a malformed id must not crash the page
+ * (decryptId is called unguarded). Submit is never clicked: it joins a real live Jitsi room.
  */
 test.describe(
   'KPost — /koolkall/:id public call-join link',
@@ -38,8 +29,7 @@ test.describe(
         description: `page errors: ${JSON.stringify(health.pageErrors)}`,
       });
 
-      // Predicted from source as a risk (inline, unguarded decryptId call): if this fails, the finding
-      // is a real unguarded-decrypt crash on a public URL anyone can hit with a bad/expired link.
+      // A failure here is an unguarded-decrypt crash on a public URL.
       expect(
         health.pageErrors,
         'a malformed :id must not crash the page before the name-capture modal can render — ' +
@@ -67,7 +57,7 @@ test.describe(
         page.getByRole('button', { name: /^Cancel$/i }),
         'Cancel is present',
       ).toBeVisible();
-      // Submit is confirmed to join a REAL live Jitsi room — present but never clicked.
+      // Submit joins a real live Jitsi room: asserted present, never clicked.
       await expect(
         page.getByRole('button', { name: /^Submit$/i }),
         'Submit is present — NOT clicked, since it joins a real live call',

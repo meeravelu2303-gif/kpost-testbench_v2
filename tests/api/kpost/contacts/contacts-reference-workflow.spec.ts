@@ -4,18 +4,8 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Contacts **reference/search business rules** — `globalSearch`'s filter enforcement and
- * `getSearchDetails`'s location cascade. Both `productionSafe: true`, ungated.
- *
- * ## `getSearchDetails` is a cascade, not independent lookups
- *
- * The endpoint definition's own default request used to ask for `requestType: 'areaName'` with
- * `provienceName`/`state`/`city` all empty — live-verified 2026-09-24: the server 400s that with
- * "Missing required fields for requestType 'areaName'", so the endpoint's own baseline call always
- * failed (fixed in `read.api.ts`, default now `provienceName`). The real chain, traced live:
- * `country` -> `provienceName` (a ZONE, e.g. "Southern Zone" — NOT a state) -> `state` (needs
- * `provienceName`) -> `city` (needs `provienceName` + `state`) -> `areaName` (needs all three, and
- * values are case-sensitive: cities came back upper-cased, e.g. "CHENNAI"). Driven end to end below.
+ * Contacts search rules (read-only, ungated): globalSearch's filters and getSearchDetails' cascade
+ * provienceName (a zone) → state → city → areaName, each needing the previous; values are case-sensitive.
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 

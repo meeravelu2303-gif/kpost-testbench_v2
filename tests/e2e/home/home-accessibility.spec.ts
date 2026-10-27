@@ -8,13 +8,8 @@ import { expect, test } from '@fixtures';
 import { writeFileSync } from 'node:fs';
 
 /**
- * Deep WCAG scan (axe-core) for Home's own DYNAMIC states — the Contacts tab active, and the
- * Advanced Search modal open. `accessibility-axe.spec.ts`'s per-screen sweep only ever scans Home in
- * its DEFAULT state (Recents tab, no modal), so these two states were never scanned at all, the same
- * genuine-gap reasoning as Signup/Login's own post-OTP screens.
- *
- * Kept in its own file, not added to `accessibility-axe.spec.ts`'s trusted sweep: unproven new
- * screens need their own clean run(s) before earning a place in the auto-filing allow-list.
+ * axe-core WCAG scan of Home's Contacts tab and Advanced Search modal, which the per-screen sweep
+ * never reaches. Kept out of the trusted a11y sweep until it has clean runs.
  */
 test.describe(
   'KPost Home · dynamic-state accessibility (axe-core WCAG)',

@@ -1,19 +1,8 @@
 import { expect, test } from '@fixtures';
 
 /**
- * Katchup **attachment upload** — recorded gap, not a workaround.
- *
- * `katchup-send-multipart` (`sendKatchupMsgMultiPart`) previously had a live business-rule test here:
- * it accepted a file part (200, real msgID — unblocked by the 2026-09-25 `groupFlag` fix) but the
- * created message's `attachmentUuid` came back `null`, both immediately and on readback. Filed as
- * **#614** [KP-90586F], HIGH, KPost API.
- *
- * **Owner-confirmed 2026-09-26: that route is legacy and not used by the current client.** The
- * product's real attachment flow generates a presigned S3 URL (`aws-katchup-presigned`), uploads the
- * file directly to S3 with it, then sends an ordinary `katchup-send-message` whose `uuid` array names
- * the uploaded attachment — see `presigned-attachment-workflow.spec.ts`. #614 is closed WONTFIX: the
- * behaviour is real, but the route it was found on is dead code from the product's own perspective,
- * so it is not chased further and no longer asserted here.
+ * The legacy multipart upload route is not used by the current client, so it has no business-rule
+ * test here (recorded skip). The real upload flow is `presigned-attachment-workflow.spec.ts`.
  */
 test.describe(
   'KPost Katchup · attachment upload (legacy multipart route)',

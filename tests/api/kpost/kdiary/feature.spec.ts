@@ -9,18 +9,8 @@ import { expect, test } from '@fixtures';
 import { scheduleShape } from '@api/definitions/kpost/kdiary/write.api';
 
 /**
- * KDiary **feature flow** — every diary WRITE, end to end on a real host, self-cleaning. Gated
- * `KDIARY_LIFECYCLE=true`, each write `allowLiveWrite`, all on our own account.
- *
- * `createEvent`, `deleteEvent`, `updateScheduleRemarks` (`{eventIds:[id], …}`) and `addparticipants`
- * (`{eventID, participants}`, singular) are the client's real shapes (verified against the frontend,
- * 2026-09-18). The rest (`createSchedule`, `updateEvent`, `editScheduleEvent`, `saveReport`,
- * `editReport`) are **not called anywhere in the frontend** — documented-but-unused endpoints — so
- * their bodies are best-effort and a 4xx/5xx from them is a finding on an unused route, not a
- * regression. `expect.soft` reports every one.
- *
- * Cleanup is exhaustive: a `finally` reads `getEvents` and deletes every QA-titled event by
- * `eventID`, so no run can leave an orphan on the account.
+ * KDiary feature flow: every diary write end to end on our own account. Gated by KDIARY_LIFECYCLE=true
+ * (real writes); a `finally` deletes every QA-titled event. Frontend-unused routes may 4xx/5xx (findings).
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -93,8 +83,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
         const eventID = extractId(created.body);
         expect.soft(eventID, 'createEvent issues an eventID').toBeTruthy();
 
-        // Database coverage was previously 0/14 for this module — the endpoint answering 200 is not
-        // proof a row exists, same reasoning as every other module's "answers success regardless" gap.
+        // A 200 is not proof a row exists; check the table.
         if (eventID && database.enabled) {
           const row = await database.findOne<{ event_id: number; title: string }>({
             table: 'TBL_KPOST_KDIARY_SCHEDULE',
@@ -103,8 +92,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
           expect
             .soft(row, 'createEvent actually wrote a row to TBL_KPOST_KDIARY_SCHEDULE')
             .toBeDefined();
-          // title is a blob/mediumtext holding plain text here; no decoding needed, unlike
-          // Katchup's BLOB subject column.
+          // title holds plain text here; no decoding needed.
           expect.soft(row?.title, 'the stored title matches what was sent').toBe(createTitle);
         }
 
@@ -133,18 +121,11 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
               { eventIds: [eventID], remarks: 1, remarksDescription: 'Completed by QA' },
               'remarks',
             ],
-            /*
-             * Live-verified 2026-09-24: the report FIELD is `taskReport`, not `report` — `report` is
-             * silently accepted (200) but never persisted (see `saveReportApi`'s comment). `saveReport`
-             * is also date-scoped ("Report already exists for today" on a re-run the same day), which
-             * is fine here since it stays out of `clientUsed` below.
-             */
+            // The field is `taskReport` (`report` is accepted but not stored); one report per day.
             ['kdiary-save-report', { eventID, taskReport: 'QA bench report' }, 'save-report'],
           ];
-          // The client-used endpoints must succeed; the frontend-unused ones may 4xx/5xx (findings).
-          // `addparticipants` now carries the client field shape (`{eventID, participants}`) but the
-          // exact participant-object form is not fully pinned, so it stays finding-tolerant (not in
-          // `clientUsed`) — a 4xx there is reported, not a hard failure of the flow.
+          // Client-used endpoints must succeed; the rest may 4xx/5xx (findings). addparticipants'
+          // participant form is not pinned, so it stays finding-tolerant.
           const clientUsed = new Set(['remarks']);
           for (const [id, bodyObj, label] of steps) {
             const r = await write(endpoints, id, bodyObj, label);
@@ -153,10 +134,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
               .toBeLessThan(clientUsed.has(label) ? 300 : 600);
           }
 
-          /*
-           * Live-verified 2026-09-26: `kdiary-update-remarks` genuinely persists both fields — this
-           * was previously status-only (accepted, but never confirmed the actual event row changed).
-           */
+          // update-remarks must persist both fields.
           const eventsAfterRemarks = await endpoints.sendTo(
             'kdiary-get-events',
             {},
@@ -171,8 +149,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
             .soft(eventRow?.remarksDescription, 'the new remarksDescription actually persisted')
             .toBe('Completed by QA');
 
-          // Same fact, confirmed at the database row directly rather than through the API's own
-          // read-back — a cross-check that the API's answer and the table it reads from agree.
+          // Cross-check the API read-back against the table.
           if (database.enabled) {
             const remarksRow = await database.findOne<{
               remarks: number;
@@ -187,11 +164,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
               .toBe('Completed by QA');
           }
 
-          /*
-           * `editReport` needs the REPORT's own id (not eventID) — read it back from `getTodayReport`
-           * so this works whether the `save-report` step above just created it or "already exists for
-           * today" fired instead (a report for today exists either way).
-           */
+          // editReport needs the report's own id, read from getTodayReport (exists either way).
           const todayReport = await endpoints
             .sendTo(
               'kdiary-today-report',
@@ -213,12 +186,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
             expect.soft(edited.status, 'edit-report status').toBeLessThan(300);
           }
 
-          /*
-           * deleteEvent — the other half of this module's 0/14 database coverage. Deleted explicitly
-           * here (not left to the sweep below) so the row's actual post-delete state can be checked:
-           * `delete_by_sender` has a tinyint column on this table, so this treats it the same way as
-           * every other soft-delete flag in this bench — a response answering success is not proof.
-           */
+          // Deleted here (not by the sweep) so the row's post-delete state can be checked.
           const deleted = await write(
             endpoints,
             'kdiary-delete-event',
@@ -231,9 +199,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
               table: 'TBL_KPOST_KDIARY_SCHEDULE',
               where: { event_id: eventID },
             });
-            // Either shape counts as deleted: a hard delete (row gone) or a soft delete (flag set) —
-            // what must NOT happen is the row surviving with the flag still clear, which is the
-            // "reports success, changed nothing" failure mode this bench keeps finding elsewhere.
+            // Row gone (hard delete) or flag set (soft delete) both count as deleted.
             const reallyDeleted = !afterDelete || Number(afterDelete.delete_by_sender ?? 0) === 1;
             expect
               .soft(
@@ -252,16 +218,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
   test("an unrelated account cannot delete another account's private diary event (IDOR) @api @kdiary @security", async ({
     endpoints,
   }) => {
-    /*
-     * KDiary events are keyed by a freestanding `eventID` (same shape as Group's membership ids and
-     * KWord's docId before those were checked) — a plausible IDOR surface this plan's matrix had
-     * marked MISSING. A creates a PRIVATE event (no participants, so B has no relationship to it at
-     * all); B then tries to delete it by naming A's real eventID directly.
-     *
-     * `deleteEvent` is confirmed exercised by the real frontend (unlike updateEvent/editScheduleEvent,
-     * which this file's own header notes are unused routes) — so this targets the live, real mutation
-     * path, not a best-effort one.
-     */
+    // A creates a private event (no participants); unrelated B tries to delete it by eventID.
     const B: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim')!;
     const created = await write(
       endpoints,
@@ -281,9 +238,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
         { label: 'kdiary:idor-attacker-delete', auth: { principal: B }, allowLiveWrite: true },
       );
 
-      // Verdict read back as the OWNER, not the attacker's response — the same discipline as the
-      // Group BOLA test: a 200 that didn't actually delete anything is still a finding worth knowing
-      // about, and a clean denial must be confirmed by the event still existing, not assumed from status.
+      // Verdict from the owner's read-back, not the attacker's status.
       const stillThere = await endpoints
         .sendTo(
           'kdiary-get-events',

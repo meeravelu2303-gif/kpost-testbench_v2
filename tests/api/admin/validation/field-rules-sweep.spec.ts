@@ -5,16 +5,10 @@ import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
 
 /**
- * Field rules, both directions, on every Admin record the screens create (owner 2026-10-26: find every bug in
- * one pass). For each record type, from the screen's OWN full payload and the screen's OWN rules
- * (ADMIN_HR_MODULES_25):
- *   1. control: the full payload saves, and every field reads back as sent;
- *   2. each field the screen requires, left out → save must refuse (400);
- *   3. each field the screen leaves optional, blank → save AND update must accept;
- *   4. a complete update is accepted; an update without a required field is refused;
- *   5. ordinary words in names/addresses ("Union", "Select", "--") are accepted.
- * Every case runs (soft checks); every record is deleted. QA testing company 242 only. Role postings are
- * left out: their writes create KPost/KSMACC accounts (role-posting-lifecycle.spec.ts).
+ * Field rules in both directions for every Admin record type, from the screen's own payload and rules:
+ * the full payload saves and reads back; a missing required field is refused on save and update; a
+ * blank optional field and ordinary words ("Union", "Select", "--") are accepted. QA company 242 only;
+ * every record is deleted. Role postings have their own spec.
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',
@@ -81,10 +75,7 @@ interface RecordType {
   readBack?: (send: Send, id: string, payload: Json) => Promise<unknown>;
   /** Leaf paths the server does not echo by design (derived or token-scoped); skipped in the read-back. */
   notEchoed?: RegExp;
-  /**
-   * Fields left out of the update checks after their own finding is recorded, so one rejected field does not
-   * mask every other update case (Employee: the update refuses the whole request when it carries aadharcard).
-   */
+  /** Fields left out of the later update cases, so one rejected field does not mask the others. */
   updateDrops?: string[];
 }
 type Send = (id: string, body: unknown, label: string) => Promise<Reply>;
@@ -161,8 +152,7 @@ const TYPES: RecordType[] = [
       listRow(send, 'admin-hr-tier-variable-list', { parentVariableId: 0 }, id),
   },
   {
-    // WorkPlaceLocationSetup.js:1228-1236 — tiers, name, country, 6-digit pincode, state, city, area
-    // required; Address 1 and Address 2 optional (their checks are commented out).
+    // Per the screen: tiers, name, country, pincode, state, city, area required; addresses optional.
     label: 'Workplace location',
     save: 'admin-workplace-location-save',
     update: 'admin-workplace-location-update',
@@ -218,8 +208,7 @@ const TYPES: RecordType[] = [
     },
   },
   {
-    // ManualEntry.js:261-420 — the six steps' required fields; landline, marital status, the alternative
-    // mobile/e-mail and the mailing block (copied from residential) are optional.
+    // Per the screen's six steps; landline, marital status, alternative contacts and mailing are optional.
     label: 'Employee',
     save: 'admin-employee-save',
     update: 'admin-employee-update',

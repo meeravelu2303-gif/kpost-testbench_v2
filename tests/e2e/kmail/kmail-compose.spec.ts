@@ -3,24 +3,10 @@ import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
 
 /**
- * **KMail compose → send** (FR-M01). Navigating to `/writemail` opens the compose form directly
- * (`Kmail.js` sets `showWriteMail` when the path is `/writemail` → renders `WriteMailPage.js`).
- *
- * Selectors from `WriteMailPage.js` (see `docs/ui/ui-screens.md`):
- *   To      `input[name="to"]` (`.subjectTextboxKmailTO`)
- *   Subject `.toInput` (maxlen 70)
- *   Body    the Quill editor (placeholder "Type your mail here")
- *   Send    `.post_button_size` (carries `.icon-KP_3164`), onClick=PostMail(false)
- *
- * The compose-form check is read-only and safe. The **send** is a real write, so it is gated behind
- * `KMAIL_UI_LIFECYCLE=true` and targets our own 2nd QA account.
- *
- * Tuned GREEN on live: the body Quill is `contenteditable=true` but is destabilised by the To-field
- * autocomplete, so the body is typed FIRST; the recipient is then picked from the suggestion dropdown;
- * send is `.post_button_size` (icon `.icon-KP_3164`); success is asserted by the react-toastify success
- * message / compose clearing. Sent mail lands in the 2nd QA account's inbox (own account — harmless).
+ * KMail compose → send (FR-M01) on /writemail. The form check is read-only; the send is gated behind
+ * KMAIL_UI_LIFECYCLE=true and goes to our own 2nd QA account.
  */
-/** /writemail intermittently lands on the error boundary (#990-shaped crash, reported by the screen sweep) — skip with the reason. */
+/** /writemail intermittently lands on the error boundary (#990, reported by the screen sweep), so skip. */
 async function skipIfWriteMailCrashed(page: Page): Promise<void> {
   const crashed = await page
     .getByText(/Something went wrong/i)
@@ -102,19 +88,15 @@ test.describe(
           .catch(() => undefined);
         await skipIfWriteMailCrashed(page);
 
-        // Body FIRST — filling the To field opens a recipient autocomplete dropdown that destabilises the
-        // layout, so interacting with the Quill body before that keeps the body click stable.
+        // Body first: the To autocomplete destabilises the layout.
         const body = page.locator('.ql-editor[contenteditable="true"]').first();
         await body.click();
         await page.keyboard.type('QA UI KMail body — self-cleaning');
 
-        // Recipient (our own 2nd QA account): type the address, then pick it from the suggestion dropdown
-        // if one surfaces (KMail resolves the recipient from the picker, not from raw text).
         const to = page.locator('.subjectTextboxKmailTO, input[name="to"]').first();
         await to.click();
         await to.fill(testData.victimKpostId);
-        // Pick the recipient from the suggestion dropdown if one surfaces (the click waits for it; the
-        // typed value alone may not register the recipient). Best-effort — some builds accept raw text.
+        // Pick the recipient from the dropdown if one surfaces; some builds accept raw text.
         await page
           .locator('.suggestion-dropdown')
           .getByText(testData.victimKpostId, { exact: false })
@@ -122,10 +104,8 @@ test.describe(
           .click({ timeout: 4_000 })
           .catch(() => undefined);
 
-        // Subject.
         await page.locator('.toInput').first().fill(subject);
 
-        // Send (PostMail): the button carries the send icon KP_3164.
         await page
           .locator('.post_button_size')
           .filter({ has: page.locator('.icon-KP_3164') })
@@ -133,7 +113,7 @@ test.describe(
           .click()
           .catch(() => page.locator('.post_button_size').first().click());
 
-        // Sent: a react-toastify success message appears, or the compose surface clears. Accept either.
+        // Sent: a success toast appears or the compose surface clears.
         await expect(
           page
             .getByText(/sent|success/i)

@@ -12,37 +12,10 @@ import {
 } from './support';
 
 /**
- * The same read, issued by several callers at the same instant, must answer all of them the same
- * way — and must never answer one of them with another caller's record.
- *
- * ## What this catches that a sequential test cannot
- *
- * Every fault below is invisible to a suite that sends one request at a time, because each one
- * needs two requests inside the handler simultaneously:
- *
- *  - **Response bleed.** A pooled HTTP client, a reused buffer or a mis-scoped response object
- *    hands caller A the body built for caller B. The single-caller tests pass forever.
- *  - **Handler state on a shared instance.** A field on a singleton controller (`this.userId`,
- *    a request-scoped value cached at class level) is overwritten by the second request while the
- *    first is still using it — the classic Spring/Express singleton bug.
- *  - **Connection-pool exhaustion.** The eighth simultaneous reader gets a 500 because the pool is
- *    sized for one, while the first seven are served normally.
- *
- * ## Why the three checks carry different weights
- *
- * They are not equally certain, and reporting them at one severity would either bury the serious
- * finding or flood the tracker with noise:
- *
- *  - **status divergence → FAILED.** One caller getting 500 while another gets 200 for the
- *    identical request is a defect under any reading.
- *  - **identity divergence → FAILED.** Responses carrying different `identityPaths` values means
- *    one caller received another's data. Nothing legitimate produces this.
- *  - **body divergence → WARNING.** Genuinely ambiguous: it may be a bleed, or the record may have
- *    changed between two reads a millisecond apart. It is surfaced with both bodies attached for a
- *    human to judge, and deliberately not filed as a defect on its own.
- *
- * Reads only. A burst of writes is a different question with a different answer, and it belongs to
- * `concurrency.duplicate-write`.
+ * The same read sent by several callers at once must answer all of them alike, never with another
+ * caller's record (catches response bleed, shared handler state, pool exhaustion). Status or
+ * identity divergence FAILS; body divergence is only a WARNING, since the record may have changed.
+ * Reads only.
  */
 export const readConsistencyValidator = defineValidator({
   name: 'concurrency.read-consistency',
@@ -55,10 +28,7 @@ export const readConsistencyValidator = defineValidator({
   stage: 'probe',
   appliesTo: ({ endpoint, primary }) => {
     if (endpoint.destructive) return 'a write — covered by concurrency.duplicate-write';
-    /*
-     * A primary that already failed makes every comparison meaningless: the burst would agree with
-     * it perfectly and report a clean pass on a broken endpoint.
-     */
+    // A failed primary makes every comparison meaningless.
     if (primary.isErrorStatus) return `the primary request answered ${primary.status}`;
     return true;
   },
@@ -157,11 +127,7 @@ export const readConsistencyValidator = defineValidator({
           : `${divergentBodies.length} of ${responses.length} bodies differ — either a cross-caller bleed or a record that changed mid-burst; add the moving field to concurrency.volatilePaths if it is expected to change`,
     });
 
-    /*
-     * The burst's own telemetry rides along as a passing check rather than as free text: a reader
-     * judging an identity divergence needs to see how tightly the requests actually overlapped,
-     * and `fromChecks` only carries what the checks carry.
-     */
+    // The burst's timing rides along as a passing check, showing how tightly requests overlapped.
     checks.push({
       name: 'the burst overlapped',
       status: 'PASSED',

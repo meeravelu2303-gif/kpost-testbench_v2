@@ -2,15 +2,8 @@ import type { SuiteId } from '@config/ownership.config';
 import { createDatabaseClient, type DatabaseClient } from './database-client';
 
 /**
- * One database client per suite, mirroring `ApiClientPool`.
- *
- * The suites do not share a database: KPost and KMail run against KPOST_QA, a disposable test
- * database, while Admin runs against a live production system. Holding one client for the whole run
- * would mean one connection and one write policy for both — and the write policy is precisely the
- * thing that must differ.
- *
- * Clients are created lazily, so a run that only touches KMail never opens a connection to Admin's
- * database at all, and disposed together at the end of the test.
+ * One database client per suite, since KPOST_QA and the live Admin DB need different write
+ * policies. Clients open lazily and are disposed together.
  */
 export class DatabasePool {
   private readonly clients = new Map<SuiteId, DatabaseClient>();

@@ -2,15 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Login submit state (reported manually 2026-10-13): after Login is pressed the button enters a
- * loading state, but the password field still accepts typing. Correct behaviour: while a login is
- * in flight the form is locked — the password cannot be edited mid-submit (preventing a second,
- * racing submit and the confusing case where the field value no longer matches what was sent).
- *
- * The `userLogin` response is DELAYED (not provoked with a real wrong password — repeated wrong
- * passwords would lock this shared account out of every other suite) so the in-flight/loading window
- * stays open long enough to observe. The assertion is behavioural (typing during the window must not
- * change the field) so it holds whether the fix disables the input or makes it read-only.
+ * While a login is in flight the password field must not accept typing. The userLogin response is
+ * held open to keep the window observable; the check is behavioural (disabled or read-only both pass).
  */
 test.describe(
   'KPost UI · login submit locks the form while in flight',
@@ -21,7 +14,6 @@ test.describe(
       'needs a real, known KPOST ID to reach the password step',
     );
 
-    // Re-verifying #1335 [KP-LOGINSUBMITUNLOCKED] post-deploy 2026-10-13: run live (un-fixme).
     test('the password field cannot be edited while a login is submitting @ui', async ({
       loginPage,
       page,

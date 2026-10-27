@@ -9,15 +9,9 @@ import type { BugCandidate } from './bug-candidate';
 import { developerGuidance } from './guidance';
 
 /**
- * Turns a candidate into the exact ticket shape this Bugzilla expects.
- *
- * The description is **line-anchored** (`Classification:` / `Category:` / `Representative
- * endpoint:` / `Module:` / `Expected:` / `Actual:` / `Repro:` / `Owner:` / `Environment:` /
- * `Run date:`). The BUGZILLA-UI front end parses exactly these anchors to render a structured
- * report, so each label is one space after the colon, with no padding and no underline.
- *
- * `assigned_to` is never set: the component's default assignee owns the ticket, and the server
- * mints the `KPA-###` alias itself.
+ * Turns a candidate into the ticket shape this Bugzilla expects. The description is line-anchored
+ * (`Classification:`, `Expected:`, `Actual:`, `curl:` …) because the BUGZILLA-UI tracker parses
+ * those labels.
  */
 
 export interface BugFields {
@@ -32,8 +26,9 @@ export interface BugFields {
   platform: string;
   /** `[cat:Xxx]` (+ `[browser:…]`). The create parameter is `status_whiteboard`. */
   status_whiteboard: string;
-  /** The module's developer. Omitted when the account cannot be verified, so the
-      component's default assignee takes the ticket rather than the create failing. */
+  /**
+   * The module's developer; omitted when unverifiable, so the component default assignee takes it.
+   */
   assigned_to?: string;
 }
 
@@ -71,25 +66,16 @@ export function sameFault(a: string, b: string): boolean {
 export function buildWhiteboard(candidate: BugCandidate): string {
   const tags = [`[cat:${candidate.category}]`];
   if (candidate.browsers?.length) {
-    // Real browser names only (the tracker's list); a project like `admin-ui` is written as the
-    // browser it runs, and mapped back at re-verification (`projectForBrowser`).
+    // Real browser names only; `admin-ui` is written as the browser it runs.
     const browsers = [...new Set(candidate.browsers.map(browserForProject))].sort();
     tags.push(`[browser:${browsers.join(',')}]`);
   }
-  // Marks who filed it; the tracker's Source filter and its "UI/API Automation" badge read this
-  // tag. The bench's own findings are automation; a bug a person writes by hand is manual.
+  // The tracker's Source filter reads this tag.
   tags.push(`[source:${candidate.filedBy ?? 'automation'}]`);
   return tags.join('');
 }
 
-/**
- * Wrap prose to 78 columns, preserving deliberate line breaks.
- *
- * Bugzilla renders a comment inside a <pre> element, which does NOT wrap. A 300-character narrative
- * on one line therefore becomes a horizontal scrollbar and everything past the fold is invisible
- * until the reader drags. Pre-formatted blocks (curl, SQL, JSON) are never passed through this —
- * they are line-broken where they are built, by something that knows the syntax.
- */
+/** Wraps prose to 78 columns: Bugzilla shows comments in a non-wrapping <pre>. Not for curl/SQL. */
 function wrap(text: string, width = 78): string[] {
   const out: string[] = [];
   for (const paragraph of String(text).split('\n')) {
@@ -111,37 +97,7 @@ function wrap(text: string, width = 78): string[] {
   return out;
 }
 
-/**
- * The ticket body a developer reads in Bugzilla.
- *
- * ## The format is the one already in this tracker — deliberately
- *
- * The labels and their order below reproduce the tickets this bench has been filing since the start
- * (see bug 187 and every other [KP-*] ticket). That consistency is the point: a developer who has
- * triaged one of these can find Expected, Actual, the curl and the owner in the same places in all
- * of them, and a reviewer can diff two tickets. A layout that is merely tidier, but different from
- * the other several hundred tickets in the tracker, is worse.
- *
- * Three sections are NEW, and they only appear when there is something to put in them:
- * "Steps to reproduce", "Database verification SQL", and the reproduction-gate line under
- * Environment. Nothing that was already in the format has been moved or renamed.
- *
- * ## Why plain text, with no Markdown
- *
- * This is Bugzilla 5.2: comments have no `is_markdown` field (the REST API accepts the flag and
- * silently ignores it — measured), and the instance exposes no markdown parameter. Asterisks written
- * for bold would render as literal asterisks and a triple-backtick fence as three backticks. The
- * monospace panel a reader sees is the skin styling the <pre> that wraps EVERY comment on this
- * instance; it is not something a payload opts into, and it is why these tickets already look the
- * way the older ones do.
- */
-/**
- * A one-line "what state was the system in before this failed" summary.
- *
- * Every other reproduction detail (environment, browser, curl) was already in the ticket; this is
- * the one piece a developer otherwise has to infer from the narrative prose — made an explicit,
- * labelled field instead, so it reads the same way across every ticket.
- */
+/** A one-line "state of the system before this failed" summary. */
 function buildPreconditions(candidate: BugCandidate): string {
   if (candidate.source === 'ui') {
     const where = candidate.browsers?.length ? `in ${candidate.browsers.join('/')}, ` : '';
@@ -150,6 +106,10 @@ function buildPreconditions(candidate: BugCandidate): string {
   return 'A valid, authenticated test account calling the endpoint below with a live session token.';
 }
 
+/**
+ * The ticket body. Labels and their order match every existing [KP-*] ticket, so all read alike.
+ * Plain text only: this Bugzilla 5.2 ignores Markdown.
+ */
 export function buildDescription(candidate: BugCandidate): string {
   const endpointLabel = candidate.source === 'api' ? 'Representative endpoint:' : 'Endpoint:';
   const lines = [
@@ -164,8 +124,7 @@ export function buildDescription(candidate: BugCandidate): string {
     ...wrap(candidate.narrative),
   ];
 
-  // Self-explanatory ticket: what the defect is, why it matters, and how to fix it — so a developer
-  // opening it in Bugzilla understands it without asking.
+  // What it means, why it matters and how to fix it.
   const guidance = developerGuidance(candidate.classification);
   if (guidance) {
     lines.push('', ...wrap(`What this means: ${guidance.meaning}`));
@@ -178,8 +137,7 @@ export function buildDescription(candidate: BugCandidate): string {
   }
 
   if (candidate.affectedEndpoints && candidate.affectedEndpoints.length > 1) {
-    // A single platform-wide fault: name every endpoint it was seen on, so triage can confirm the
-    // one shared fix covers them all rather than hunting for the scope.
+    // A platform-wide fault lists every endpoint it was seen on.
     lines.push(
       '',
       `Affects ${candidate.affectedEndpoints.length} endpoints — one shared fix resolves all of them:`,
@@ -217,18 +175,10 @@ export function buildDescription(candidate: BugCandidate): string {
 
   if (candidate.repro) lines.push('', 'Steps to reproduce:', clamp(candidate.repro, 'repro'));
 
-  /*
-   * The curl goes last of the reproduction material, matching the tickets already in this Bugzilla
-   * (see bug 98). Any token is a $KPOST_TOKEN placeholder and masked values stay masked - see
-   * src/bug-tracker/curl.ts for why that is deliberate.
-   */
+  // The curl goes last; tokens are a $KPOST_TOKEN placeholder (see curl.ts).
   if (candidate.curl) lines.push('', 'curl:', clamp(candidate.curl, 'curl'));
 
-  /*
-   * NEW section. Present only for a finding reached by asserting MySQL state, where the response
-   * alone cannot show the defect — a write that reported success and stored nothing. Without the
-   * query, such a ticket asserts something about the data and gives the reader no way to check it.
-   */
+  // Only for findings asserted on MySQL state, so the reader can check the data.
   if (candidate.verificationSql) {
     lines.push('', 'Database verification SQL:', clamp(candidate.verificationSql, 'sql'));
   }
@@ -239,11 +189,7 @@ export function buildDescription(candidate: BugCandidate): string {
     `Environment: ${candidate.environment} (${candidate.baseURL})`,
   );
 
-  /*
-   * NEW line. The reproduction gate already computed this before deciding to file; it used to be
-   * logged and discarded, so no ticket ever said whether the defect failed once or every time —
-   * which is the first thing a developer asks, and the difference between a defect and a flake.
-   */
+  // Whether the defect failed every time or intermittently.
   if (candidate.reproduction) {
     const { attempts, failures } = candidate.reproduction;
     const verdict = failures === attempts ? 'confirmed, not flake' : 'INTERMITTENT';
@@ -311,19 +257,13 @@ export function buildReproducedComment(candidate: BugCandidate): string {
     `Host: ${candidate.baseURL}\n` +
     `Check: ${candidate.classification}. Observed ${candidate.occurrences} time(s) this run.` +
     (candidate.correlationId ? `\nCorrelation ID: ${candidate.correlationId}` : '') +
-    // The current, runnable reproduction against the host actually tested — so the ticket carries an
-    // up-to-date command even when its original description was filed against an older host.
+    // A current reproduction against the host actually tested.
     (candidate.curl ? `\n\ncurl (current host):\n${candidate.curl}` : '')
   ).slice(0, BUGZILLA_LIMITS.comment);
 }
 
 /**
- * `priorReopens` is how many times this exact ticket has already been through a
- * resolved-then-reopened cycle (counted from its own comment history). A first reopen reads as a
- * normal regression note; from the second reopen on, the comment says so explicitly — a ticket
- * that keeps cycling without a lasting fix is a different situation from a one-off regression, and
- * the plain "Reopening: observed again" text looked identical either way, which is exactly how a
- * bug can cycle for weeks before anyone notices the pattern from inside Bugzilla itself.
+ * The reopen comment; from the second reopen (`priorReopens`) on, it calls out the repeated cycle.
  */
 export function buildReopenComment(
   candidate: BugCandidate,

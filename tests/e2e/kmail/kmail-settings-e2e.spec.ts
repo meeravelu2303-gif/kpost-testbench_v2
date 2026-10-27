@@ -6,18 +6,8 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import type { Page, Request } from '@playwright/test';
 
 /**
- * KMail settings → does saving them actually change KMail? (Settings › KMail Settings, live
- * 2026-10-15.) The existing settings specs only check these panels render / do not crash.
- *
- * Source (components/Settings): Mail Signature and Vacation Response import NO service at all — every
- * Save is `onClick={() => setInputvalue("")}` — and no Services/*.js function saves a signature or a
- * vacation response (only salutations and instant replies are saved). These tests assert the correct,
- * user-visible behaviour: a saved setting is still there after a reload (and a request was sent).
- * Instant Reply is the positive control: a reply added in Settings must show in KMail's Instant Reply
- * picker on a received mail.
- *
- * API calls only ever run as personal-3 (qatest3) — the browser account is never logged in through
- * the API (one session per account).
+ * KMail settings: does a saved Mail Signature / Vacation Response survive a reload (neither panel calls a
+ * service), and does an Instant Reply added in Settings show in KMail's picker? API calls run as qatest3 only.
  */
 const C: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-3')!;
 
@@ -43,8 +33,7 @@ test.describe(
       page.on('request', onRequest);
       try {
         await run();
-        // A fixed window on purpose: the check is that NO save request fires, so there is no event to
-        // wait for — give any request 3 s to appear before reading the list.
+        // A fixed window on purpose: the check is that NO save request fires, so there is no event to wait for.
         // eslint-disable-next-line playwright/no-wait-for-timeout
         await page.waitForTimeout(3_000);
       } finally {

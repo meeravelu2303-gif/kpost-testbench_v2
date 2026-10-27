@@ -6,16 +6,9 @@ import { expect, test } from '@fixtures';
 import { deleteUploaded, uploadFile } from '../support/attachments';
 
 /**
- * KMail **attachment byte integrity** (RTM-CON04, RTM-KMAIL-F02 download half): the file the
- * RECIPIENT downloads from a received mail must be the exact bytes the sender uploaded — same length,
- * same SHA-256.
- *
- * A PDF-typed payload carrying every byte value 0x00–0xFF is used, so any text decode, charset
- * conversion or truncation between S3 and `kmail-download-attachment` changes the digest. The
- * comparison uses the client's `bodyDigest` (raw buffer, before any text decode). The upload goes
- * through the API, as in `attachment-idor.spec.ts`, because the browser upload is broken (#1347).
- *
- * Self-cleaning: the mail (every transaction) and the S3 object are deleted in `finally`.
+ * KMail attachment integrity: the recipient downloads exactly the bytes the sender uploaded (length
+ * and SHA-256). The file holds every byte value 0x00–0xFF, so any decode or truncation changes the
+ * digest. The mail and the S3 object are deleted afterwards.
  */
 const K = AUTH_PROFILES.kpost;
 const A = K.principals.find((p) => p.key === 'personal')!; // sender
@@ -31,7 +24,7 @@ test.describe(
     ],
   },
   () => {
-    // Each file read takes ~12 s on the test server (#1364); several in a row outlast the 60 s default.
+    // Each file read is slow on the test server (#1364); several in a row outlast the default timeout.
     test.describe.configure({ timeout: 180_000 });
     test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
     test.skip(

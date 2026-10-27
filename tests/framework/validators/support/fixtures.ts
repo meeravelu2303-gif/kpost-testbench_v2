@@ -3,17 +3,15 @@ import type { JsonSchema } from '@api/schema/contract-schema';
 import type { FakeResponse } from './validator-harness';
 
 /**
- * Captured-shape fixtures for the validator unit tests. Field names and envelope follow the real
- * KPost API (`status` / `statusCode` / `message` / `data`, a Katchup-like message send), so a
- * verdict proven here is a verdict about the shapes the bench actually meets on testingapi.
+ * Fixtures for the validator unit tests, shaped like the real KPost API envelope
+ * (`status` / `statusCode` / `message` / `data`) and a Katchup-like message send.
  */
 
 // ---------------------------------------------------------------- request contract
 
 /**
- * A send-message body with one field of every type a request validator mutates. `note` is
- * nullable; `subject` and `tags` carry the constraints KPost's own contracts do NOT carry
- * (`minLength`/`minItems`), so the empty-value validator has something to enforce.
+ * A send-message body with one field of every type a request validator mutates. `subject` and
+ * `tags` carry `minLength`/`minItems` so the empty-value validator has something to enforce.
  */
 export const SEND_SCHEMA: JsonSchema = {
   type: 'object',

@@ -1,8 +1,5 @@
-// Regression coverage for three V1 KallController (no `/v2` prefix, dead from the real frontend —
-// see src/api/definitions/kpost/kall/legacy.api.ts) findings confirmed from source 2026-10-06/07.
-// `setKallStatus` and `cancelScheduleKall` share the SAME root cause (cancelScheduleKall calls the
-// identical kallService.setKallStatus) and are filed under the same ruleId so the bug-filing engine
-// consolidates them into one ticket covering both routes, per the "state the affected count" rule.
+// Regression guards for three legacy V1 KallController writes (not called by the frontend).
+// setKallStatus and cancelScheduleKall share one root cause, so they share one ruleId (one ticket).
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';

@@ -9,11 +9,8 @@ import {
 } from '../support/contacts';
 
 /**
- * Security-fuzzing angle for Contacts' two free-text query fields — the contact-list search box
- * (client-side filter) and the Add-contact wizard's Advanced Search mobile-number field (a real
- * network round-trip). Same execution-based check as `login-security.spec.ts` /
- * `katchup-security.spec.ts` (a `dialog` listener, not string-matching). Both fields are read-only
- * queries — no lifecycle gate needed. Navigation: `support/contacts.ts` (re-tuned 2026-10-11).
+ * XSS fuzzing of the contact search box and the Advanced Search mobile field, detected with a
+ * `dialog` listener. Both are read-only queries, so no lifecycle gate.
  */
 
 const PAYLOADS: Array<{ name: string; value: string }> = [

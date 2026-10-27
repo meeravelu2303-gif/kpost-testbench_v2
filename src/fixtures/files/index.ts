@@ -5,18 +5,9 @@ export { allBytes, docx, gif, jpeg, jpegOfSize, pdf, png, wav, webp, xlsx } from
 export { JPEG_1X1_BASE64 } from './generate';
 
 /**
- * The bench's **sample files** for upload/download tests: one valid file per type the product handles,
- * plus the edge and hostile cases a server must refuse or neutralise. Generated in memory (no binary files
- * in git) and deterministic, so `sha256(file.bytes())` is stable and a download can be compared with what
- * was uploaded byte for byte.
- *
- *   import { FILES, sha256, uniqueName, asUpload } from '@fixtures/files';
- *   const file = FILES.pdf;
- *   await page.setInputFiles('input[type=file]', asUpload(file, 'katchup'));
- *
- * Every hostile file is INERT: the HTML and SVG carry a harmless marker attribute and no script that
- * reaches the network, and the "exe" is an MZ header followed by zeros. They exist to prove what the
- * server stores and how it serves it (type allow-list, Content-Type, Content-Disposition), never to run.
+ * Sample files for upload/download tests: one valid file per type plus edge and hostile cases,
+ * generated deterministically so a download can be compared byte for byte. Hostile files are inert
+ * (a marker, no script).
  */
 export interface SampleFile {
   /** Stable key, e.g. 'pdf'. */

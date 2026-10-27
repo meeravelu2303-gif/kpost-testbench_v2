@@ -6,13 +6,8 @@ import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';
 
 /**
- * KMail **plain reads** not covered by the compose/draft/settings flows — mostly account-scoped
- * summaries (contacts, counts, dashboard, translation). These don't need a real kmailID or a
- * dependency chain, but "returns 200" alone would still miss what Phase 2 asks for: does the value
- * actually MOVE when the underlying state changes.
- *
- * `kmail-unopened-count` is the one with a real, live-verified before/after: unread count for a
- * recipient increases by exactly one after a fresh, unread mail arrives.
+ * KMail account-scoped reads (contacts, counts, dashboard, translation): shape checks, plus an
+ * unread count that must rise by exactly one when a fresh mail arrives.
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -101,13 +96,7 @@ test.describe(
       endpoints,
     }) => {
       const before = await read(endpoints, 'kmail-unopened-count', B, 'unopened-before');
-      /*
-       * Live-verified 2026-09-24: unOpenedLettersCountBySenderID 500s deterministically for every
-       * account tried ("could not extract ResultSet; ... SQLGrammarException"), not an occasional
-       * flake. A real product defect, not a bench issue — soft-asserted so it's reported rather than
-       * aborting the whole file, but the before/after delta below cannot mean anything while the
-       * baseline call itself is broken, so it is skipped rather than compounding the noise.
-       */
+      // Soft, so a failing baseline is reported; the delta check is then skipped, as it means nothing.
       expect
         .soft(before.status, `unOpenedMailCountBySenderID succeeds (body: ${before.bodyText})`)
         .toBe(200);
@@ -115,8 +104,7 @@ test.describe(
         before.status !== 200,
         'unOpenedMailCountBySenderID is currently 500 for every account',
       );
-      // The count is the top-level `UnOpenedMailCount` — what the web app reads (Login.js, Header.js);
-      // this endpoint carries no `data` field, so reading `data` always gave 0 (2026-10-14).
+      // The count is the top-level `UnOpenedMailCount` (what the web app reads); there is no `data`.
       const beforeBody = JSON.parse(before.bodyText || '{}') as { UnOpenedMailCount?: number };
       const baseline = beforeBody.UnOpenedMailCount ?? 0;
 
@@ -171,12 +159,8 @@ test.describe(
         'the response carries translated content, not an empty/error envelope',
       ).toBeTruthy();
 
-      /*
-       * Re-confirms the endpoint definition's own recorded AUTH-BYPASS note (kmail/read.api.ts):
-       * answers 200 with NO token, unlike every other KMail endpoint. Kept as an explicit assertion
-       * here (not just a comment) so a future fix that starts requiring auth is caught by this test
-       * turning red, not by nobody noticing a silent behavior change either way.
-       */
+      // Translation answers 200 with no token, unlike every other KMail endpoint. Asserted so a
+      // change either way is noticed.
       const withoutAuth = await endpoints.sendTo(
         'kmail-translation',
         { body: { langFrom: 'en', langTo: 'hi', msgToTranslate: 'Good morning' } },
@@ -194,8 +178,7 @@ test.describe(
     test('kmail-all-drafts and kmail-draft-contacts respond even with no drafts, without a server error', async ({
       endpoints,
     }) => {
-      // Baseline shape check independent of the draft lifecycle test — this account may have zero
-      // drafts at the moment this runs, which must be a clean empty result, not a 5xx.
+      // Zero drafts must be a clean empty result, not a 5xx.
       const drafts = await read(endpoints, 'kmail-all-drafts', A, 'drafts-baseline');
       expect(drafts.status, 'getAllDraftMails succeeds with zero or more drafts').toBe(200);
 

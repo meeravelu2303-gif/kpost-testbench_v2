@@ -4,14 +4,8 @@ import { systemicFingerprint } from '../../src/bug-tracker/bug-fingerprint';
 import { expect, test } from '@playwright/test';
 
 /**
- * Regression guard for "one root cause across many endpoints = ONE bug".
- *
- * A systemic fault (a versioned `Server` header, a missing security header, the shared auth filter)
- * is observed on many endpoints, and each observation's raw message is a concatenation of every
- * probe that saw it — probes that run ASYNCHRONOUSLY, so the message's line order changes between
- * runs and even between two endpoints. Fingerprinting that raw message split one fault into dozens
- * of near-duplicate tickets. The fix fingerprints a STABLE signature instead; these tests lock that
- * in so the duplication cannot silently come back.
+ * One root cause across many endpoints = ONE bug. Async probes reorder a systemic finding's
+ * message, so it is fingerprinted by a stable signature, not the raw text.
  */
 
 // Two real messages from the field: same defect (versioned Server header), different probe ORDER.
@@ -99,9 +93,7 @@ test.describe('systemic collapse — one root cause is one ticket @framework', (
   });
 
   test('a body leak is NOT collapsed with a header disclosure (distinct signatures)', () => {
-    // A stack-trace / SQL body leak is that endpoint's own bug and must stay its own ticket; only the
-    // shared technology-header disclosure is systemic. (isSystemicFinding keeps body leaks per-endpoint;
-    // here we assert the signatures differ so they could never share a fingerprint.)
+    // A body leak stays per-endpoint; only the shared header disclosure is systemic.
     const header = systemicSignature('security.information-disclosure', 'versioned Server header');
     const jwt = systemicSignature('security.jwt', 'alg-none accepted');
     expect(header).not.toBe(jwt);

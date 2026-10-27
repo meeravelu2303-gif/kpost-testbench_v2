@@ -8,16 +8,8 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * KOS **feature flow** — create a KWord document and drive every KWord WRITE and doc-keyed read end
- * to end on a real host, self-cleaning (delete in `finally`). Gated `KOS_LIFECYCLE=true`, each write
- * `allowLiveWrite`, all on our own account / second account. The two K-AI generation endpoints
- * (`chatResponse`, `messageAssist`) are `external` (metered) and are NOT driven here.
- *
- * `kos-ai-sessions`, `kos-ai-messages` and `kos-list-documents` are covered at the bottom of this
- * file: the sessions list is a free (non-metered) read exercised directly; the messages read needs a
- * real sessionId that only a metered chat call can create, so it is chained into the KOS_AI_LIVE test
- * below rather than exercised standalone; `kos-list-documents` 404s on this test build (route not
- * deployed) and is recorded as a gap.
+ * KOS feature flow: create a KWord doc, drive every KWord write and doc-keyed read, delete it in
+ * `finally`. Gated by KOS_LIFECYCLE=true (real writes); the metered K-AI calls need KOS_AI_LIVE=true too.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -57,25 +49,7 @@ test.describe('KPost KOS · feature flow', { tag: ['@api', '@platform', '@regres
   test('KWord document lifecycle: create → save → update → share → join → reads → delete @api @kos', async ({
     endpoints,
   }) => {
-    /*
-     * Bugzilla #499 was closed RESOLVED/FIXED on 2026-09-22 — but live-verified again 2026-09-26
-     * with KOS_LIFECYCLE=true and it still reproduces exactly as originally reported: /kword/create
-     * still fails to return a docId, so the whole downstream lifecycle (save/update/share/join/
-     * reads/delete) still cannot run. #499 reopened with this evidence. This test previously trusted
-     * the ticket's FIXED status and switched from a pinned `test.fail()` to a plain soft assertion
-     * with no explicit filing — that assertion alone did not get this reliably tracked on every run
-     * (the auto-pipeline did not pick it up on the re-verification run), so it is filed explicitly
-     * below now, matching the pattern used for the other "reported fixed but wasn't" tickets found
-     * this session (#501, #507). The first run after this fix filed a new ticket (#624) instead of
-     * commenting on the reopened #499 — closed as a duplicate of #499, which is the ticket of record
-     * going forward.
-     *
-     * Pinning the WHOLE lifecycle is right in this one case, where it would be wrong elsewhere:
-     * every later step (save, update, share, join, delete) takes a docId that only create can
-     * issue, so there is no downstream assertion for the inversion to mask. The moment create
-     * works, this turns RED (in the sense of "0 findings, nothing filed") and the rest of the flow
-     * starts being exercised for real.
-     */
+    // Known defect #499: /kword/create returns no docId, so every later step (all docId-keyed) is skipped.
     let docId: string | undefined;
     try {
       const created = await run(
@@ -155,13 +129,7 @@ test.describe('KPost KOS · feature flow', { tag: ['@api', '@platform', '@regres
           expect.soft(r.status, `${label} returns a valid status`).toBeLessThan(600);
         }
 
-        /*
-         * Field-level check for `kos-update-doc`, added 2026-09-26: previously nothing here (or the
-         * doc-keyed reads below) ever confirmed the "Introduction" heading sent above was actually
-         * stored — every check in this file was status-only. Cannot be live-verified yet: this whole
-         * test never reaches this point while #499 (kword/create) is still broken (docId is always
-         * undefined), so this is the correct assertion to have ready, not a live-confirmed one.
-         */
+        // The heading sent by kos-update-doc must actually be stored.
         const getDoc = await run(
           endpoints,
           'kos-get-document',
@@ -207,15 +175,8 @@ test.describe('KPost KOS · feature flow', { tag: ['@api', '@platform', '@regres
     // the KOS_LIFECYCLE gate. One prompt each, on our own account.
     test.skip(process.env.KOS_AI_LIVE !== 'true', 'metered AI calls; set KOS_AI_LIVE=true to run');
 
-    /*
-     * aiType is sent as 'general' here and in the endpoint definitions (kos/write.api.ts,
-     * kos/read.api.ts), but the workbook contract documents only chatgpt/perplexity/gemini/mistral/
-     * deepseek as valid values (messageAssist: aiType is optional and defaults to deepseek).
-     * 'general' is off-contract. What the backend actually does with an unrecognized value — silently
-     * defaults, errors, or something else — is Unknown/Requires Clarification: verifying it means a
-     * real metered call, which is exactly what this gate exists to prevent doing casually. Left as-is
-     * pending an owner decision on whether to correct it to a real model name.
-     */
+    // aiType 'general' is off-contract (the workbook lists chatgpt/perplexity/gemini/mistral/deepseek);
+    // kept as-is pending an owner decision.
     const chat = await run(
       endpoints,
       'kos-ai-chat',
@@ -225,8 +186,7 @@ test.describe('KPost KOS · feature flow', { tag: ['@api', '@platform', '@regres
     expect.soft(chat.status, 'chatResponse status (>0 means sent)').toBeGreaterThan(0);
     expect.soft(chat.status, 'chatResponse returns a valid status').toBeLessThan(600);
 
-    // The live client (AI_Common.js) sends {message, prompt, requestType} for messageAssist, NOT
-    // {prompt, aiType} (that is chatResponse's shape) — see the endpoint definition's own note.
+    // The live client sends {message, prompt, requestType} for messageAssist, not chatResponse's shape.
     const assist = await run(
       endpoints,
       'kos-ai-assist',
@@ -242,9 +202,7 @@ test.describe('KPost KOS · feature flow', { tag: ['@api', '@platform', '@regres
     expect.soft(assist.status, 'messageAssist status (>0 means sent)').toBeGreaterThan(0);
     expect.soft(assist.status, 'messageAssist returns a valid status').toBeLessThan(600);
 
-    // Cross-endpoint dependency (Phase 4): a session chatResponse just created should be
-    // discoverable via ai-sessions, and its content readable via ai-messages — neither of which can
-    // be verified without a real sessionId, which only this metered call can produce.
+    // The session chatResponse just created should be listed by ai-sessions and readable via ai-messages.
     const sessions = await run(
       endpoints,
       'kos-ai-sessions',
@@ -265,9 +223,7 @@ test.describe('KPost KOS · feature flow', { tag: ['@api', '@platform', '@regres
         .soft(messages.status, 'ai-messages succeeds for the session chatResponse just created')
         .toBeLessThan(300);
     } else {
-      // Recorded rather than silently skipped: chatResponse's response shape hasn't been observed
-      // (no session id in its data under any of the field names guessed below), so ai-messages
-      // still has no live-verified business-rule test.
+      // Recorded rather than silently skipped: no session id found in chatResponse's data.
       expect
         .soft(sessionId, "chatResponse's response carries a discoverable session id")
         .toBeTruthy();
@@ -275,14 +231,7 @@ test.describe('KPost KOS · feature flow', { tag: ['@api', '@platform', '@regres
   });
 });
 
-/*
- * A separate, UNGATED describe: these do not need KOS_LIFECYCLE. `ai-sessions` is a free
- * (non-metered) read, safe to run on every default run; the list-documents test is a recorded gap
- * placeholder, not a write. Keeping them out of the KOS_LIFECYCLE-gated describe above matters
- * because `test.skip(condition, reason)` at a describe's top level applies to every test registered
- * in that describe, not just the ones after it — nesting them there would have silently skipped both
- * on a default run.
- */
+// Ungated: free reads only. Kept outside the describe above, whose top-level test.skip would skip them too.
 test.describe(
   'KPost KOS · read-only business rules @api @kos',
   { tag: ['@api', '@platform', '@regression'] },
@@ -290,8 +239,7 @@ test.describe(
     test('ai-sessions: the model-bucket envelope is stable regardless of the aiType query value', async ({
       endpoints,
     }) => {
-      // Live-verified 2026-09-24: a nonsense aiType returns the SAME four-model envelope as a real
-      // one — the backend does not filter by aiType at all, it always returns every model's bucket.
+      // The backend ignores aiType and always returns every model's bucket.
       const [withRealType, withNonsenseType] = await Promise.all([
         run(endpoints, 'kos-ai-sessions', { query: { aiType: 'general' } }, 'sessions-real-type'),
         run(

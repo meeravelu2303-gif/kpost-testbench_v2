@@ -57,7 +57,7 @@ export function png(width = 4, height = 4, rgb: [number, number, number] = [32, 
   ]);
 }
 
-/** A baseline 1×1 JPEG — the bytes the profile/group image tests have used since 2026-09 (live-verified). */
+/** A baseline 1×1 JPEG used by the profile/group image tests. */
 export const JPEG_1X1_BASE64 =
   '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
 export const jpeg = (): Buffer => Buffer.from(JPEG_1X1_BASE64, 'base64');

@@ -1,6 +1,3 @@
-// An orchestrated Admin/HR org-setup lifecycle (tier → variable → location → HR → employee → clean up),
-// not simple assertions; the conditionals guard optional steps and best-effort teardown of real records.
-
 import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
@@ -11,46 +8,10 @@ import { expect, test } from '@fixtures';
 import { employeePayload, locationPayload, variablePayload } from '../support/screen-payloads';
 
 /**
- * Admin module **feature flow** — the organisation-build sequence a BUSINESS_M admin runs in the
- * Admin/HR-Setup module (`kpostadmin.kpostindia.com` UI / `adminmodule.kpostindia.com` API), end to
- * end on live, self-cleaning. Full flow: `docs/modules/admin-flow.md`. Payloads measured from the frontend
- * (`ADMIN_HR_MODULES_25/src/Services/{AdminSetup,HumanResources}.js`), not guessed:
- *
- *   - tier/variable/location **saves are ARRAYS**; the created id is at `value[i].id`.
- *   - a single save's id is at `value.id`; the envelope is `{ value, status, statusCode }`.
- *   - branch on the envelope `status` ("SUCCESS"/"FAILURE"), NOT the HTTP code — a documented backend
- *     quirk returns HTTP 500 on some success paths.
- *
- * Two tiers of write, split by side effect:
- *
- *  - **`ADMIN_LIFECYCLE=true`** — the SAFE structure: workplace tier→variable→location, HR
- *    tier→variable, and an employee master record. All are pure Mongo inserts with **no external side
- *    effect** (confirmed in `EmployeeDetailsServiceImpl.java`: no OTP/invite/login), so the flow
- *    creates then deletes every record (teardown in reverse dependency order — deletes are hard, no
- *    cascade). It also drives the id-keyed reads (`getLocation`, `getLocationById`, the reporting
- *    hierarchies, `getRolePostingByCompanyIdAndEmployeeId`) with the real ObjectIds it minted.
- *  - **Role posting** (`rolePosting/save`, `/update`, `/delete`, `/suspendOrTerminateEmployee`) is never
- *    sent: it provisions real accounts on the LIVE KPost and KSMACC platforms (hard-coded hosts in
- *    `RolePostingSetUpServiceImpl`). Recorded in `role-posting-blocked.spec.ts`.
- *
- * Every write carries `allowLiveWrite: true` (the authorized-write control), runs as the BUSINESS_M
- * admin, and uses `expect.soft` so one run reports every finding.
- *
- * **2026-09-26: closed 4 of this module's undocumented coverage gaps** (no FRD exists for this
- * module, so each was verified directly against live behaviour rather than a spec):
- * `admin-workplace-tier-attribute-by-company` and `admin-hr-tier-attribute-by-company` now assert
- * the just-created attribute genuinely appears on a fresh company-scoped read (not just that the
- * save answered success); `admin-role-posting-by-company` asserts every returned row genuinely
- * belongs to this company. `admin-country-address-by-pincode` is a dependency-free reference lookup,
- * moved to `reads-workflow.spec.ts` instead, ungated.
- *
- * **`admin-role-posting-suspended-list`** is covered in `reads-workflow.spec.ts` (2026-10-22). The
- * 2026-09 probes misread it: the backend accepts any non-empty `requestType`, and its 400
- * "requestType is Empty or Invalid" is the answer to an EMPTY list, not to a bad value. The UI sends
- * 'suspend' / 'terminate'.
- *
- * **Role posting writes are blocked by the product, not by a flag:** see `role-posting-blocked.spec.ts`.
- * The test Admin backend calls the live devapi2.kpostindia.com and ksmacc hosts, hard-coded.
+ * Admin/HR org-setup lifecycle as the BUSINESS_M admin: workplace tier → variable → location, HR
+ * tier → variable, employee; each is read back, then all are deleted in reverse order (no cascade).
+ * Gated by ADMIN_LIFECYCLE=true. Saves take arrays; branch on the envelope `status`, not the HTTP
+ * code, since some success paths return HTTP 500. Role posting has its own spec.
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -107,8 +68,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
   test(
     'workplace + HR + employee: create → read-back → self-clean @api @admin-api',
     {
-      // The Admin API's core write flow in full sanity (2026-10-22): pure inserts, no external side
-      // effect, every record deleted in `finally`. Role posting (real KSMACC accounts) stays out.
+      // In sanity: pure inserts, no external side effect, every record deleted in `finally`.
       tag: ['@sanity', '@admin'],
       annotation: [{ type: 'requirement', description: 'BR-ADM-TIER-ORDER' }],
     },
@@ -132,8 +92,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         expect.soft(statusOf(wpAttr), 'workplace tier attribute saved').toMatch(/success/i);
         expect.soft(wpAttrId, 'workplace tier attribute returns an id').toBeTruthy();
 
-        // Read back the company's tier attributes and confirm the one just created is really in there
-        // — not just "the save answered success", but that it is actually visible on a fresh read.
+        // The new attribute must appear on a fresh company read, not just be claimed by the save.
         const wpAttrList = await call(
           endpoints,
           'admin-workplace-tier-attribute-by-company',
@@ -201,9 +160,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           );
           expect.soft(statusOf(wpAttrUpd), 'workplace tier attribute updated').toMatch(/success/i);
 
-          // Live-verified 2026-09-26: previously only the envelope status was checked here (the sibling
-          // SAVE calls in this file already cross-check a fresh read; the UPDATE calls never did) — the
-          // exact "response looks fine, nothing confirmed changed" shape found in Kall's reschedule.
+          // Re-read to confirm the new name persisted, not just that the update said success.
           const wpAttrRecheck = await call(
             endpoints,
             'admin-workplace-tier-attribute-by-company',
@@ -267,14 +224,13 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
             const locUpd = await call(
               endpoints,
               'admin-workplace-location-update',
-              // The screen sends the whole record on update; the server requires it (2026-10-26).
+              // The screen sends the whole record on update; the server requires it.
               { ...locationPayload(wpAttrId, wpVarId, locEdited), id: locId },
               'loc-update',
             );
             expect.soft(statusOf(locUpd), 'workplace location updated').toMatch(/success/i);
 
-            // Live-verified 2026-09-26: re-read the SAME location by id (the exact endpoint already
-            // used above) and confirm the new name actually landed, not just that the write said so.
+            // Re-read the location by id to confirm the new name persisted.
             const locRecheck = await call(
               endpoints,
               'admin-workplace-location-by-id',
@@ -291,22 +247,8 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           }
         }
 
-        /*
-         * Fixed 2026-09-26, found while adding new coverage to this file (unrelated to it): this call
-         * always threw before reaching the HR/employee/role-posting sections below, so none of those
-         * had ever actually run to completion in this suite's history. Two bugs, both now fixed:
-         *   1. `admin-workplace-hierarchy` is `destructive: false`, not `productionSafe` — it needs
-         *      `allowLiveRead`, not `allowLiveWrite` (the `call()` helper's blanket flag, fine for the
-         *      other `productionSafe` reads in this file, doesn't unlock this one).
-         *   2. Its own definition documents "400 without a real parentAttributeId" — the call sent only
-         *      `{ companyId }`, never the real one this test already minted (`wpAttrId`/`wpVarId`).
-         * Fixing those two unblocked everything below (HR/employee/role-posting never used to run at
-         * all), but the endpoint's own contract is still Unknown/Requires Clarification: a real Mongo
-         * ObjectId in `parentAttributeId`/`parentVariableId` gets 400 "Request parameter is invalid" —
-         * a DIFFERENT error than the "…is required" it gives with none at all, so some value is
-         * expected but a real id isn't accepted either. No confirmed payload produces 200 yet. Left
-         * soft (not hard) so this genuine, still-open finding doesn't block the sections after it.
-         */
+        // The hierarchy contract is unknown: even the real parent ids just minted get a 400. Soft, so
+        // the open finding does not block the HR and employee steps below.
         const hierarchy = await endpoints.sendTo(
           'admin-workplace-hierarchy',
           { body: { parentAttributeId: wpAttrId ?? '0', parentVariableId: wpVarId ?? '0' } },
@@ -334,8 +276,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         expect.soft(statusOf(hrAttr), 'HR tier attribute saved').toMatch(/success/i);
         expect.soft(hrAttrId, 'HR tier attribute returns an id').toBeTruthy();
 
-        // Same real cross-check as the workplace side: the created attribute must actually show up on
-        // a fresh company-scoped read, not just be claimed by the save response.
+        // Same fresh-read cross-check as the workplace side.
         const hrAttrList = await call(
           endpoints,
           'admin-hr-tier-attribute-by-company',
@@ -432,7 +373,7 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
         const emp = await call(
           endpoints,
           'admin-employee-save',
-          // The Employee Data screen's full record: the server enforces its required fields (2026-10-26).
+          // The Employee Data screen's full record: the server enforces its required fields.
           employeePayload(`Employee ${stamp}`),
           'employee-save',
         );
@@ -475,15 +416,13 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
           const empUpdate = await call(
             endpoints,
             'admin-employee-update',
-            // The screen sends the whole record on update; the server requires it (2026-10-26).
+            // The screen sends the whole record on update; the server requires it.
             { ...employeePayload(empLastNameEdited), id: empId },
             'employee-update',
           );
           expect.soft(statusOf(empUpdate), 'employee updated').toMatch(/success/i);
 
-          // Live-verified 2026-09-26: re-read the company's employee list (the exact endpoint already
-          // used above) and confirm the new name actually landed for THIS employee, not just that the
-          // write said so.
+          // Re-read the employee list to confirm the new last name persisted for this employee.
           const empRecheck = await call(
             endpoints,
             'admin-employee-details',
@@ -536,9 +475,8 @@ test.describe('Admin/HR org-setup lifecycle (BUSINESS_M)', { tag: '@admin-api' }
     'an employee saved without its employment details is refused with a 4xx, not a 500 @api @admin-api',
     { annotation: [{ type: 'requirement', description: 'BR-ADM-500-VALIDATION' }] },
     async ({ endpoints }) => {
-      // The lifecycle above has to send `employmentObj: {}` because, without it, the backend NPEs
-      // ("getEmploymentObj() is null"). A missing required part is a client error: the answer must be
-      // a 4xx (or a FAILURE envelope under 500), never a server crash. Any record created is deleted.
+      // Without employmentObj the backend NPEs; a missing required part must be a 4xx, not a 500.
+      // Any record created is deleted.
       const resp = await call(
         endpoints,
         'admin-employee-save',

@@ -5,36 +5,9 @@ import { runSimultaneously } from '@utils/concurrency';
 import { burstSize, describeResponses, inconclusiveIfSerialized } from './support';
 
 /**
- * Two identical writes dispatched at the same instant must produce exactly one record.
- *
- * ## The bug this exists for
- *
- * The overwhelmingly common way to enforce uniqueness in application code is check-then-write:
- *
- * ```
- * const existing = await repo.findByName(name);   // ← both requests reach here and see nothing
- * if (existing) throw new ConflictError();
- * await repo.insert(name);                        // ← both insert
- * ```
- *
- * Sequentially this is correct and every ordinary test passes. Concurrently both callers pass the
- * check before either writes, and two rows appear — a duplicate company, a double-charged payment,
- * two users holding the same seat. The only fix is a database unique constraint or a lock, and the
- * only way to find out whether one exists is to send the two writes together.
- *
- * ## Opt-in, and why it must be
- *
- * The probe cannot infer that a second identical write is wrong. Sending the same message twice is
- * two messages, legitimately; creating the same company twice is a defect. Only the endpoint knows
- * which it is, so this runs solely where a definition sets `concurrency.singleWriteWins`.
- *
- * ## Safety
- *
- * It writes, twice, so every existing control applies unchanged: the production guard blocks it on
- * the live application, the QA-identifier guard refuses any payload naming a record we do not own,
- * and it reaches a real host only under `WRITE_FUZZ` + `TEST_DB_MODE` on a disposable database.
- * It deliberately uses the SAME payload for both requests — a fresh one per request would create
- * two legitimately different records and prove nothing.
+ * Two identical writes sent at once must produce exactly one record (catches check-then-write
+ * races). Opt-in via `concurrency.singleWriteWins`, since only the endpoint knows a duplicate is
+ * wrong. All write guards apply; runs only under `WRITE_FUZZ` + `TEST_DB_MODE`.
  */
 export const duplicateWriteValidator = defineValidator({
   name: 'concurrency.duplicate-write',
@@ -54,16 +27,9 @@ export const duplicateWriteValidator = defineValidator({
   },
   check: async (context) => {
     const { endpoint } = context;
-    /*
-     * Two is the right number, not `burstSize`. The race needs exactly two writers to be proven,
-     * and every extra writer that wins leaves another row to clean up on a shared test database.
-     */
+    // Two writers prove the race; more only leave extra rows to clean up.
     const writers = Math.min(2, burstSize(endpoint));
-    /*
-     * ONE payload, built once and reused. `nextRequest()` per writer would mint fresh data for a
-     * mutating endpoint (that is its whole purpose), producing two records that SHOULD both exist —
-     * and the probe would pass while the race it was written to find stayed untested.
-     */
+    // One payload for both writers; fresh data each would make two legitimately different records.
     const spec = await context.nextRequest();
 
     const burst = await runSimultaneously(writers, (index) =>

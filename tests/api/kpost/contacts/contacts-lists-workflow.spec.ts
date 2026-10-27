@@ -4,17 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Contacts **list data-quality and block-cycle business rules**.
- *
- * The four reads below (`myUnknownContacts`, `myGroups`, `myUnknownGroups`, `getImportedPhoneContacts`)
- * are `productionSafe: true` and never gated — real ownership/duplicate checks that don't depend on
- * this run's own writes. The block/unblock cycle IS a write, gated behind `CONTACTS_LIFECYCLE=true`
- * like the module's existing `feature.spec.ts`; it targets our own second account and restores it.
- *
- * `myContacts`'s own persistence after `deleteContact` is NOT re-tested here — that exact failure
- * mode (delete reports success but leaves the row live) is already covered, against the raw DB flag,
- * by `contacts-workflow.spec.ts`. A list-membership check here would just rediscover the same known
- * issue less precisely.
+ * Contacts list rules: ownership/duplicate checks on four ungated reads, plus a block/unblock cycle on
+ * our own second account (a write, gated by CONTACTS_LIFECYCLE=true, restored afterwards).
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
 const contactId = testData.victimKpostId;

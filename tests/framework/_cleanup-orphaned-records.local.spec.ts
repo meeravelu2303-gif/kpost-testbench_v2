@@ -8,10 +8,8 @@ const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'perso
 const QA_MARKER = /^QA( Bench)?( College| School \d+| University \d+)?( \d{10,})?$/i;
 
 /*
- * A MANUAL probe, never part of an ordinary `npm run framework`: it logs into the live application
- * and reads the primary account's profile. CLEANUP_PLAN=true lists the orphaned QA records (college,
- * school, university, experience and other-activity entries left behind by earlier write-fuzz runs);
- * CLEANUP_EXECUTE=true deletes them. Without either flag the file skips with this reason.
+ * MANUAL probe against the live app: CLEANUP_PLAN=true lists orphaned QA profile records left by
+ * write-fuzz runs, CLEANUP_EXECUTE=true deletes them; otherwise it skips.
  */
 test.skip(
   process.env.CLEANUP_PLAN !== 'true' && process.env.CLEANUP_EXECUTE !== 'true',

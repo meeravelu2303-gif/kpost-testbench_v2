@@ -2,27 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Settings · Change Password panel (`Changepassword.js`) — this DOES call a real backend endpoint
- * (`changePasswordApi` -> `POST /v2/profile/changePassword`) and, on success, force-logs-out the
- * account. Unlike the forgot-password flow (which has its own dedicated spare account,
- * `QA_FORGOT_PASSWORD_KPOST_ID`), no spare account exists for THIS in-app flow, which additionally
- * requires the CURRENT password matched against Redux state before it even reaches the API — there is
- * no safe way to complete it against any account this bench manages. So this file deliberately never
- * clicks the final "Submit" that fires the real API call; it only exercises the extensive CLIENT-SIDE
- * validation, which is itself real, substantial surface:
- *
- *  - Old Password step gates on a Redux-stored password comparison (client-side, no API) before
- *    progressing — confirmed from source: a mismatch never reaches the network.
- *  - New Password requires the regex `/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&~...])[...]{6,}$/`
- *    (lower+upper+digit+special, min 6, no spaces — space is blocked at keystroke level too).
- *  - Confirm Password must match New Password, checked live while typing in both directions.
- *
- * A DEEPER finding to verify, not exercised by writing this validation-only test but recorded here so
- * it isn't lost: `changePasswordApi`'s request body sends ONLY `{ oldPassword, confirmPassword }` —
- * the validated `newPassword` value is never included in the payload sent to the server. If accurate,
- * completing this flow could set the password to something other than what the user typed as "new",
- * or the server could reject/ignore the call outright. This needs a dedicated spare account before it
- * can be verified live — flagged, not filed, until that exists.
+ * Settings › Change Password: client-side validation only (old-password check, new-password rules,
+ * confirm match). No spare account exists, so the real change-password call is blocked and Submit is never clicked.
  */
 test.describe(
   'KPost Settings · Change Password panel (validation only, no real submit)',
@@ -49,7 +30,7 @@ test.describe(
       await expect(oldPasswordField, 'the Old Password step renders').toBeVisible({
         timeout: 15_000,
       });
-      // Deliberately wrong — this must be rejected against Redux state, never reach the API.
+      // Deliberately wrong: rejected against Redux state, never reaching the API.
       await oldPasswordField.fill('definitely-the-wrong-password-99');
       await page
         .getByRole('button', { name: /^Continue$/i })
@@ -72,10 +53,8 @@ test.describe(
       page,
       settingsPage,
     }) => {
-      // The bench knows qatest1's current password (QA_PASSWORD). The Old Password step compares it in
-      // the browser (Changepassword.js `oldPasswordevent`, against the Redux-held password) — no request.
-      // Belt and braces: the change-password call is BLOCKED at the network, so even a stray Submit
-      // cannot change the shared account's password. Submit is never clicked.
+      // The Old Password step compares in the browser (no request). The change-password call is also
+      // blocked at the network, so a stray Submit cannot change the shared account's password.
       let changeAttempts = 0;
       await page.route('**/profile/changePassword**', (route) => {
         changeAttempts += 1;

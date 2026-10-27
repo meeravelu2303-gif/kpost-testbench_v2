@@ -1,10 +1,5 @@
-// Shared "what is an in-scope run-level test" filter — the SINGLE definition used by both
-// `lint:tags` (to compute the in-scope set) and `run-level.mjs` (to build its grep exclusions), so
-// the two can never disagree on which tests count. Admin and the bench's own @framework self-tests
-// are out of scope and never selected by any run level.
-//
-// Playwright reports spec paths relative to the top-level testDir (./tests), e.g. "e2e/foo.spec.ts",
-// "api/kpost/...", "framework/...", "e2e-admin/...". Match on those.
+// The single "in-scope run-level test" filter, shared by lint:tags and run-level.mjs so they agree.
+// Admin and @framework self-tests are out of scope. Paths are relative to ./tests ("e2e/x.spec.ts").
 
 const norm = (f) => String(f).replace(/\\/g, '/');
 
@@ -37,10 +32,8 @@ export const isInScope = (file, tags) =>
 export const RUN_LEVELS = ['@smoke', '@sanity', '@regression'];
 
 /**
- * The run levels an Admin test may join, always with `@admin`: sanity (since 2026-10-19) and smoke
- * (since 2026-10-22, owner: "cover admin api and ui"). The runner gives Admin smoke its own stages, so
- * an unreachable Admin box never blocks the KPost smoke or the regression gate. `@regression` on an
- * Admin test is still a leak: regression runs the KPost flags and accounts, not the Admin command's.
+ * The run levels an Admin test may join, always with `@admin`; the runner gives them their own
+ * stages. `@regression` on an Admin test is a leak.
  */
 export const ADMIN_RUN_LEVELS = ['@sanity', '@smoke'];
 

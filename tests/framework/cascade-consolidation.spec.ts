@@ -7,9 +7,8 @@ import { candidateRejection } from '../../src/bug-tracker/validity-gate';
 import { expect, test } from '@fixtures';
 
 /**
- * A broken endpoint (5xx or timeout) trips every response-reading check at once — filing one ticket
- * per check is noise. These pin that a cascade collapses to ONE anchor ticket, that a healthy
- * endpoint's distinct findings are untouched, and that a lone timeout check is never filed.
+ * A broken endpoint's cascade collapses to ONE anchor ticket; a healthy endpoint's findings are
+ * untouched; a lone timeout check is never filed.
  */
 
 function cand(over: Partial<BugCandidate>): BugCandidate {

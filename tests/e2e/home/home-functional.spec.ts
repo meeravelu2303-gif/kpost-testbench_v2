@@ -3,14 +3,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * Functional coverage for what is UNIQUELY Home's own: the Recents/Contacts tab switcher and the
- * Recents search + Advanced Search UI (`HomeDashboard.js`/`Recent.js`). The existing `home.spec.ts`
- * only proves these controls are PRESENT; this file actually drives them.
- *
- * Deliberately NOT re-tested here: the Contacts tab's own content (Katchup's shared `Contact`
- * component — see `contacts*.spec.ts`) and the Recents list's own message rendering (the shared
- * `RecentMessage` component — see `katchup*.spec.ts`). Only the tab switch and the search wrapper
- * around them are Home's own surface.
+ * Home dashboard: drives the Recents/Contacts tab switch, Recents search, Advanced Search and the
+ * quick date filter (`HomeDashboard.js`/`Recent.js`). Shared list content is tested elsewhere.
  */
 test.describe(
   'KPost Home · dashboard functional behaviour',
@@ -53,8 +47,6 @@ test.describe(
       await homePage.goto();
       await homePage.switchToRecentsTab();
 
-      // A search query with no plausible real match — a client-side filter should be able to empty
-      // the visible list instantly; a broken filter would leave the unfiltered list showing instead.
       const improbableQuery = `zzqanomatch${Date.now()}`;
       await homePage.searchRecents(improbableQuery);
 
@@ -63,10 +55,7 @@ test.describe(
         description: `searched for a query with no plausible real match: "${improbableQuery}"`,
       });
 
-      // The exact "no results" affordance isn't pinned (a spinner, an empty-state message, or simply
-      // zero list rows are all valid implementations), so this asserts only what the title claims and
-      // what is selector-independent: a client-side filter keeps the user on the Home screen — it must
-      // not navigate away or reload into a search results route.
+      // The empty-state UI isn't pinned; a client-side filter must simply stay on /home.
       await settleFrames(page);
       await expect(
         page,
@@ -87,11 +76,7 @@ test.describe(
         'the Advanced Search modal opens',
       ).toBeVisible({ timeout: 10_000 });
 
-      // Confirmed from source (Recent.js): the Search button's `isDisabled` is gated on `Todate`
-      // ALONE — filling every other filter (e.g. a specific word) still leaves it disabled without
-      // also picking a date range. Documenting this as an explicit, asserted finding rather than
-      // silently working around it in the page object: a user searching by keyword only, with no
-      // intent to filter by date, cannot submit at all.
+      // Recent.js gates Search on To-date alone, so a keyword-only search cannot be submitted.
       await homePage.fillAdvancedSearch({ word: 'invoice' });
       await expect(
         homePage.advancedSearchSubmitButton,
@@ -112,13 +97,7 @@ test.describe(
       ).toBeVisible({ timeout: 15_000 });
     });
 
-    /**
-     * Confirmed from source (`Recent.js`): the 4 dropdowns form a CHAIN —
-     * dataType -> messageBy -> messageType -> contentType — each `isDisabled` until the one before it
-     * is set. This drives the full chain in order and confirms the LAST dropdown (Content Type,
-     * disabled the longest) actually becomes usable once every prior link is filled — the strongest
-     * proof the whole chain is wired correctly, not just the first link.
-     */
+    /** The dropdowns chain dataType -> messageBy -> messageType -> contentType (`Recent.js`). */
     test("Advanced Search's 4 dropdown filters unlock each other in the documented chain order @ui", async ({
       homePage,
       page,
@@ -159,9 +138,7 @@ test.describe(
       await homePage.switchToRecentsTab();
       await homePage.toggleQuickDateFilter();
 
-      // The exact calendar widget isn't pinned to one implementation — a `react-datepicker` popup or
-      // an inline calendar grid are both valid; what matters is that clicking the icon opens SOMETHING,
-      // confirming this control (distinct from Advanced Search's own date fields) is actually wired up.
+      // Any calendar widget counts; the icon just has to open one.
       await expect(
         page.locator('.CalenderPostion, .react-datepicker, [class*="calendar"]').first(),
         'the quick date-filter icon opens a date-picker popup',
@@ -178,8 +155,7 @@ test.describe(
       const opened = await homePage.openFirstRecentConversation();
       test.skip(!opened, 'this account has no message history to click into — nothing to test');
 
-      // Soft, deliberately: the exact "conversation opened" UI (an expanded chat panel, a route
-      // change, a modal) isn't pinned — this only confirms the click didn't leave the page broken.
+      // The opened-conversation UI isn't pinned; only checks the page survived the click.
       await settleFrames(page);
       await expect(page.locator('body')).toBeVisible();
     });

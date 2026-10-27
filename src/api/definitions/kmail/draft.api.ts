@@ -3,10 +3,7 @@ import { body } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint } from './kmail-endpoint';
 import { mailShape } from './send.api';
 
-/**
- * KMail **drafts** — save a draft (`kmailType: 4`), multipart draft, and delete a draft. Each writes
- * to the caller's own drafts; **none is `productionSafe`** (gated `KMAIL_LIFECYCLE`, self-cleaning).
- */
+/** KMail drafts (save, multipart, delete) on the caller's own drafts. None is `productionSafe`. */
 const DRAFT_TAGS = ['kmail-draft', 'draft'] as const;
 
 export const draftMailApi = defineKmailEndpoint({
@@ -26,9 +23,7 @@ export const draftMailMultipartApi = defineKmailEndpoint({
   method: 'POST',
   path: '/draft/draftMailMultiPart',
   summary: 'Save a draft with attachments (multipart)',
-  // Dev-confirmed 2026-09-26: this route is not in use — intentionally unavailable on this build,
-  // not a deployment gap. Its 404 is expected, not a defect; excluded from the generic contract-suite
-  // sweep via this tag so a deep-fuzz run doesn't keep re-filing an already-answered question.
+  // Intentionally unused on this build, so its 404 is expected; the tag keeps it out of the sweep.
   tags: [...DRAFT_TAGS, 'attachment', 'not-in-use'],
   destructive: true,
   request: () => ({

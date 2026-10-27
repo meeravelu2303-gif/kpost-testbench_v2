@@ -4,17 +4,8 @@ import { expect, test } from '@fixtures';
 import { gotoContacts, openCreateGroup } from '../support/contacts';
 
 /**
- * Security-fuzzing angle for Group's **Group Name** field. Deliberately never reaches Create: unlike
- * the other write flows this session's fuzz specs reuse (Katchup recall, Settings/KMail's own accepted
- * no-cleanup precedent), `group.spec.ts`'s own create flow does NOT implement the delete step its
- * docstring claims ("self-cleaning") — completing Create here would leave a real, permanent,
- * un-deletable-by-this-suite group with a fuzzed name, visible to the 2nd QA account as an invited
- * member. So this only fills the Group Name field and reads its value back, exactly like
- * `kall-security.spec.ts`'s Meeting Title test — no lifecycle gate needed as a result.
- *
- * No separate `group-accessibility.spec.ts`: the Create-Group modal this field lives in is the SAME
- * dialog (`.icon-KP_112-Group-Add`) already scanned in `contacts-accessibility.spec.ts`'s "Create-Group
- * dialog open" test, so a second scan of it would be a pure duplicate.
+ * Fuzzes the Create Group "Group Name" field and reads it back; never clicks Create, which would
+ * leave a group this suite cannot delete. The modal's a11y scan is in contacts-accessibility.spec.ts.
  */
 test.describe(
   'KPost Group · Group Name field security fuzzing',
@@ -45,7 +36,7 @@ test.describe(
           void dialog.dismiss();
         });
 
-        // The create-group icon lives in the Contacts tab (support/contacts.ts, re-tuned 2026-10-11).
+        // The create-group icon lives in the Contacts tab.
         const tabOpened = await gotoContacts(page);
         test.skip(
           !tabOpened,

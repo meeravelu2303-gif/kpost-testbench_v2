@@ -3,40 +3,21 @@ import { body } from '../kpost-endpoint';
 import { defineProfileEndpoint } from './profile-endpoint';
 
 /**
- * Profile **image writes** — profile picture, cover image, signature, attachments.
- *
- * All `destructive` `data` (they change the caller's own images); downloads live in read.api.ts.
- * A 1x1 PNG is used for uploads — the smallest honest image. `convertBase64ToImage` is a transform
- * that also returns an image, so it runs on live as a read-shaped call (it converts a value we
- * supply and owns nothing), but it is kept `data` because it may persist to storage.
+ * Profile image writes (picture, cover, signature, attachments): all `data`, on the caller's own
+ * images. Downloads live in read.api.ts.
  */
 const IMG_TAGS = ['profile-image', 'image'] as const;
 
 const PNG_1X1 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AL+6ZlWAAAAAElFTkSuQmCC';
 
-/*
- * A tiny valid JPEG — `updateProfileImage`/`updateSignatureImage` (unlike their siblings) are
- * JPEG-only and reject the PNG above with 400 "File size should be less than 500 KB or Invalid File
- * Format" for both a 1x1 and a 10x10 PNG (live-verified 2026-09-26; the same bytes succeed on
- * `uploadCoverImage`/`uploadImageToS3` at 200). Owner-confirmed 2026-10-12 this format restriction
- * is BY DESIGN, not a defect — #626 closed FIXED. This constant lets the lifecycle exercise the real
- * upload→download round trip; `feature.spec.ts` now only guards that a PNG is rejected CLEANLY (a
- * 4xx, never a 5xx crash).
- */
+// A tiny valid JPEG: `updateProfileImage`/`updateSignatureImage` accept JPEG only, by design.
 export const JPEG_1X1 =
   '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
 
 /**
- * A JPEG padded to `targetBytes` using a standard JPEG COM (comment, marker `0xFFFE`) segment right
- * after the SOI — every decoder skips COM segments, so the image itself is still the same valid 1x1
- * pixel, but the FILE size genuinely grows by the padding, unlike appending bytes after the JPEG's
- * own EOI marker (which some servers strip or reject as trailing garbage).
- *
- * Exists because `updateSignatureImage` answers 400 "Signature must be between 10KB and 50KB in
- * size" for the plain `JPEG_1X1` above — confirmed live 2026-09-30 this was a bench fixture problem
- * (a tiny fixture failing a real size floor), not a product defect: it produced a false CRITICAL
- * "expected 200, got 400" candidate before this fix.
+ * A JPEG padded to `targetBytes` with a COM segment after the SOI (decoders skip it, so it stays a
+ * valid 1x1 image). The signature upload requires 10KB-50KB.
  */
 function paddedJpeg(targetBytes: number): string {
   const tiny = Buffer.from(JPEG_1X1, 'base64');
@@ -101,9 +82,7 @@ export const uploadAttachmentsApi = imageUpload(
   '/v2/profile/uploadProfileAttachments',
   'profile-upload-attachments',
   "Upload attachments to the caller's profile",
-  // Live-verified 2026-09-26: this route's multipart field is `files` (plural), not the `file`
-  // every sibling upload uses — sending `file` 400s "Required part 'files' is missing" every time,
-  // so this write had never actually succeeded once in this bench's history.
+  // This route's multipart field is `files` (plural), unlike its siblings.
   'files',
 );
 
@@ -118,12 +97,7 @@ export const updateSignatureImageApi = imageUpload(
   'profile-update-signature',
   "Update the caller's signature image",
   'file',
-  // Live-verified 2026-09-26: this route 500'd "API error" regardless of format (PNG or JPEG) —
-  // tracked as #559 [KP-7D1F6B], CRITICAL. Re-verified 2026-09-30 (post-deployment): the 500 is
-  // GONE — the tiny 1x1 fixture now gets a proper 400 "Signature must be between 10KB and 50KB in
-  // size" instead, i.e. real, correct size validation. That suggests #559 may already be fixed;
-  // switched to a properly-sized (~25KB) fixture here to find out whether a genuinely valid upload
-  // now succeeds, rather than leaving this on a fixture that can never pass the real size floor.
+  // A ~25KB JPEG, inside the route's 10KB-50KB size rule.
   { name: 'qa-bench-signature.jpg', mimeType: 'image/jpeg', base64: JPEG_25KB },
 );
 

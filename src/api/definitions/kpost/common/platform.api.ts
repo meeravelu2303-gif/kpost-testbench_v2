@@ -2,16 +2,9 @@ import { testData } from '@config/test-data.config';
 import { body, defineKpostEndpoint } from '../kpost-endpoint';
 
 /**
- * Platform and back-office endpoints that happen to live under `/common`: service status, the
- * mobile app's version gate, enquiry and unsubscribe capture, and a usage count.
- *
- * Two of them deserve attention rather than a routine pass:
- *
- * - `updateFlutterAppVersion` **changes what every mobile client is told to install**, with no
- *   token. A wrong value here is a production incident, not a test failure, so it is destructive.
- * - `saveEnquiryDetails` and `saveUnsubscriberDetails` are public write endpoints: anyone can
- *   insert rows. They are the natural target for spam and injection, which is what the central
- *   validators probe.
+ * Platform endpoints under `/common`: service status, the mobile version gate, enquiry capture and
+ * a usage count. `updateFlutterAppVersion` changes every mobile client's upgrade prompt, so it is
+ * destructive.
  */
 export const msStatusApi = defineKpostEndpoint({
   id: 'common-ms-status',
@@ -21,13 +14,7 @@ export const msStatusApi = defineKpostEndpoint({
   path: '/v2/common/msStatus/',
   summary: 'Microservice health status',
   tags: ['common', 'common-platform'],
-  /*
-   * The cheapest possible reachability check, and the only common endpoint whose documented response
-   * is just `{ status }`. The run-level "is the API up?" smoke check lives in the curated smoke spec
-   * (tests/api/smoke/smoke-checks.ts); `@smoke` is reserved for run levels, so it is NOT an endpoint tag here.
-   * (Live this returns plaintext `SUCCESS` instead of the documented `{ status }` JSON — an API
-   * contract drift the engine surfaces for the normal review workflow; not suppressed, not filed here.)
-   */
+  // The cheapest reachability check. Not tagged `@smoke`: that tag is reserved for run levels.
   destructive: false,
 });
 
@@ -61,11 +48,7 @@ export const saveEnquiryDetailsApi = defineKpostEndpoint({
   summary: 'Capture a sales enquiry',
   tags: ['common', 'common-platform', 'public-write'],
   destructive: true,
-  // Confirmed live 2026-09-30: the server's own 400 spells out the full required set —
-  // "companyName, entity, maximumMembersCount, firstName, lastName, designation, mobileNumber,
-  // email and timeToContact are required". This definition was missing `timeToContact`, so the
-  // "primary" request was never actually well-formed — a bench fixture bug, not a product defect
-  // (it produced a false CRITICAL "expected 200, got 400" candidate before this fix).
+  // Every field the server requires, `timeToContact` included.
   request: body(() => ({
     companyName: testData.companyNameAbsent,
     entity: 'Cake Shop',
@@ -79,17 +62,8 @@ export const saveEnquiryDetailsApi = defineKpostEndpoint({
   })),
 });
 
-/*
- * `saveUnsubscriberDetails` is NOT a KPost API endpoint — it belongs to KMail. It was defined here
- * against the KPost API host (`/v2/common/saveUnsubscriberDetails` on testingapi.kpostindia.com),
- * which does not serve it, so every call 404'd — a wrong-service artifact tracked as #725 (KP-D25BBE),
- * closed WORKSFORME 2026-10-12. The real endpoint is KMail's CommonMailController
- * (`@RequestMapping("v2/common")` + `@PostMapping("/saveUnsubscriberDetails")`):
- *   https://testkmail.kpostindia.com/testkmail/v2/common/saveUnsubscriberDetails
- * The KPost React frontend never calls it (it is a server-side email-footer unsubscribe endpoint).
- * Removed from the KPost API here; add it to the KMail suite (defineKmailEndpoint, path
- * '/common/saveUnsubscriberDetails') with a verified KmailUnsubscriber body if KMail coverage is wanted.
- */
+// `saveUnsubscriberDetails` belongs to KMail (`/common/saveUnsubscriberDetails`), not the KPost
+// API.
 
 export const totalCountByDateApi = defineKpostEndpoint({
   id: 'common-total-count-by-date',
@@ -100,8 +74,7 @@ export const totalCountByDateApi = defineKpostEndpoint({
   summary: 'Usage totals for a date',
   tags: ['common', 'common-platform', 'reporting'],
   destructive: false,
-  // The common module defaults to public, but this one answers 401 "Login required" without a token
-  // (measured 2026-10-09). Declared public, the bench sent no token and filed that 401 as a defect.
+  // Unlike the rest of the common module, this one requires a token.
   authentication: { required: true },
   // Epoch milliseconds, as documented. Midnight today keeps the query deterministic.
   request: body(() => ({ date: new Date(new Date().toDateString()).getTime() })),

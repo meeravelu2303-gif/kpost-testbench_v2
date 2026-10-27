@@ -3,16 +3,8 @@ import { expect, test } from '@fixtures';
 import { EDITOR, deleteSentMessage, openComposer } from '../support/katchup';
 
 /**
- * E2E coverage gap identified 2026-10-03 (katchup-ground-truth-coverage report, §6 "E2E" row):
- * no existing UI test drives the real compose -> attach -> upload -> send -> thread-render flow.
- * `attachment-workflow.spec.ts` (API) proves the backend accepts a presigned-upload attachment;
- * this proves the ACTUAL UI wiring works end to end — file picker -> presigned upload -> attachment
- * preview -> send -> the sent message renders with its attachment in the thread.
- *
- * Selectors confirmed by reading the live source directly (src/components/Katchup/components/
- * WriteMessage/WriteMessage.js): the hidden file input is `#fileInput` (accepts `multiple`, no
- * `accept` filter); each selected file is uploaded via a presigned URL and gets a `uuid` once done;
- * the attachment modal's "Done" button stays disabled until every file has a `uuid`.
+ * Katchup attach and send end to end: file picker (#fileInput) → presigned upload → Done → send →
+ * the message renders with its attachment in the thread.
  */
 test.describe(
   'KPost Katchup · attach-and-send E2E @ui',
@@ -76,9 +68,7 @@ test.describe(
         });
         await doneButton.click();
 
-        // The editor loses focus once the attachment modal closes — re-focus it before submitting,
-        // otherwise Enter is captured by whatever element the modal's close left focused instead
-        // (confirmed live: without this, Enter navigated away from the thread entirely).
+        // Re-focus the editor after the modal closes, or Enter goes elsewhere and leaves the thread.
         await page.locator(EDITOR).first().click();
         await page.keyboard.press('Enter');
 

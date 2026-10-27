@@ -3,14 +3,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * Settings · Digital Card Settings panel (`DigitalCardSettings.js`) — 7 real, optimistic toggles
- * (Mobile Number, About, Education — School/College/University, Experience, Other Activities), each
- * firing `UpdateDigitalCardSettings` -> `POST /v2/profile/updatePrivacySettingDetails` immediately on
- * click, with the source's own comment confirming a rollback-on-failure design ("Rollback on API
- * failure" / "Rollback on network error"). Self-restoring: this test flips ONE toggle, confirms the
- * real request fires and the UI reflects the new state, then flips it back so the account's privacy
- * settings end exactly as they started — same discipline as `settings-functional.spec.ts`'s
- * notification-toggle test for the same "does a toggle animate without persisting" risk class (#495).
+ * Settings › Digital Card Settings: flip one privacy toggle, confirm the request and new state, flip it
+ * back; plus the rollback when the update fails (stubbed).
  */
 test.describe(
   'KPost Settings · Digital Card Settings panel',
@@ -86,7 +80,7 @@ test.describe(
       });
       const before = await experienceCheckbox.isChecked();
 
-      // Stub the update endpoint to fail, per the source's own documented "Rollback on API failure".
+      // Stub the update endpoint to fail; the component should roll the toggle back.
       await page.route('**/profile/updatePrivacySettingDetails', (route) =>
         route.fulfill({ status: 500, contentType: 'application/json', body: '{"status":"ERROR"}' }),
       );

@@ -2,20 +2,8 @@
 import { expect, test } from '@fixtures';
 
 /**
- * KDirectory's `globalSearch` returns the raw `VW_KPOST_USER_DETAIL` entity for every matching user,
- * with no DTO/projection and no `@JsonIgnore` on any field — confirmed via the 2026-10-04 Contacts
- * ground-truth audit (`ContactsDirectoryDaoImpl.java:440-547`, `ContactsDirectoryControllerV2.java:
- * 965-968`). The entity includes `aadhaarNumber` (India's national ID, SSN-equivalent), `dateOfBirth`,
- * `presentAddress`, `pinCode`, `alternateMobileno`, `landLineNumber`, `email` — for ANY active user the
- * search matches, not just the caller's own contacts. The only predicates applied are `kpostID !=
- * caller` and `activeStatus = "yes"`; the entity's own `privacyStatus`/`privacySettings` fields exist
- * but are never used as a query filter here, even though the identical privacy-exclusion pattern
- * (`cb.notEqual(root.get("privacyStatus"), "1")`) is already used elsewhere in this same codebase
- * (`UserProfileDaoImpl.java:232,286`) — proving the gap is a missing filter, not a deliberate design.
- *
- * This is read-only and uses the bench's own regularly-run, `productionSafe` search request — no new
- * live setup needed. The verdict is simply: does the response body for a broad, generic search term
- * contain the Aadhaar/DOB/address fields for records that are not the caller's own?
+ * `globalSearch` returns the raw user-detail entity (Aadhaar, DOB, address, phones) for any matching
+ * user, with no privacy filter. Verdict: does a broad search expose those fields for other users?
  */
 test.describe(
   'KPost Security · Contacts globalSearch PII over-exposure @api @kpost-api @security @contacts',
@@ -54,16 +42,14 @@ test.describe(
       ];
       const foundFields = sensitiveFields.filter((f) => lower.includes(`"${f}"`));
 
-      // A found field with a non-null, non-empty value is the real disclosure — not just the key
-      // existing with a null placeholder, which some ORMs include unconditionally.
+      // Only a non-empty value is a disclosure; a null placeholder key is not.
       const leakedWithValue = foundFields.filter((f) => {
         const re = new RegExp(`"${f}"\\s*:\\s*"[^"]+"`, 'i');
         return re.test(text);
       });
 
       if (leakedWithValue.length > 0) {
-        // Count occurrences per field (not the values themselves) — useful triage signal without
-        // dumping real PII into test output/reports every run.
+        // Count per field, never the values, so no real PII lands in reports.
         const counts = leakedWithValue.map((field) => {
           const re = new RegExp(`"${field}"\\s*:\\s*"[^"]+"`, 'gi');
           return `${field}=${(text.match(re) ?? []).length}`;

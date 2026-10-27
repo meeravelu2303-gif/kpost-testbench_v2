@@ -8,15 +8,8 @@ import { expect, test } from '@fixtures';
 import { mailShape } from '@api/definitions/kmail/send.api';
 
 /**
- * KMail **manage** writes not covered by the compose/draft/settings flows: status-clearing,
- * PDF conversion, the external-domain (OD) contact CRUD, other-domain attachment download, bulk
- * send, and a multipart draft. Gated `KMAIL_LIFECYCLE=true`, each write `allowLiveWrite`.
- *
- * OD-contact writes take a non-KPost email; the QA-identifier guard refuses a stranger's, so — per
- * the endpoint definition's own note — an address we own (`testData.kpostId`) stands in for the
- * external contact. `kmail-credentials` (sensitive: returns credentials) and `kmail-postbox-contacts`
- * (dev-confirmed 2026-09-26: not in use) are deliberately NOT exercised here; see the recorded-gap
- * tests at the end.
+ * KMail manage writes not covered elsewhere: status clearing, PDF conversion, other-domain contact
+ * CRUD, OD attachment download and bulk send. Gated by KMAIL_LIFECYCLE=true (real KMail writes).
  */
 
 const K = AUTH_PROFILES.kpost;
@@ -51,27 +44,8 @@ test.describe(
     test('clearStatusOfKmailsContacts and clearStatusOfAllKmailsContacts: `kmailStatusFlag` is required, but no value satisfies it', async ({
       endpoints,
     }) => {
-      /*
-       * Dev-confirmed 2026-09-26: this 500 crash "was fixed by using some custom annotations." Re-tested
-       * live the same day — it is only PARTLY fixed. `selectedContact` alone (this endpoint's previous
-       * default body) still 500s `{"errorCode":"clear mails exception occured",...}`; adding a
-       * `kmailStatusFlag` field (any int 0-4) avoids the crash and gets a clean 400
-       * `{"valueFor":"REPLY_NOT_SENT","message":"Parameter Invalid"}` instead. So the annotation fix
-       * only covers the "field present" case — a genuinely missing `kmailStatusFlag` still reaches an
-       * uncaught exception rather than a validation error. Filed automatically by the engine's own
-       * flow-finding pipeline (a live 5xx auto-files/comments; no manual recordBusinessRuleViolation
-       * needed) — this assertion is what keeps that finding open until the dev also validates the
-       * field's ABSENCE, not just a bad value.
-       *
-       * Separately, and still open: no value of `kmailStatusFlag` (0-4, as an int) ever satisfies
-       * "REPLY_NOT_SENT" — live-verified across a real send AND a real reply exchange between the two
-       * test accounts (A sends to B, B replies to A, then A calls clear-status for B): identical error,
-       * unchanged by the reply actually existing. This means either `kmailStatusFlag` is the wrong field
-       * name entirely (its mere presence avoids the crash by luck, e.g. a null-check elsewhere), or the
-       * real precondition for clearing status is unrelated to a reply happening at all. Not worked
-       * around by guessing further — needs the dev to give the exact field name/type AND the account
-       * state "REPLY_NOT_SENT" actually checks for.
-       */
+      // A missing kmailStatusFlag must be a 4xx, not a 500. With the flag present, no value (0-4)
+      // passes the REPLY_NOT_SENT check; the real contract is still unknown.
       expect
         .soft(
           await act(
@@ -159,22 +133,9 @@ test.describe(
     });
 
     test('other-domain contact: add → edit → delete @api', async ({ endpoints }) => {
-      /*
-       * The guard refuses a non-owned email, so testData.kpostId stands in for "an external contact"
-       * — matching addOtherDomainContactApi's own definition note. `referenceName` ALSO matches the
-       * guard's identifier pattern and needs a QA-owned allowlisted value, so the same owned address
-       * is reused there too. `contactName` is a free-text display name (exempted in
-       * qa-identifier-guard.ts 2026-09-26 — it was wrongly treated as a resource id, so the edit below
-       * could previously only ever "change" the name back to the same owned address, a no-op that hid
-       * the fact nothing was really being tested).
-       *
-       * There is no registered read endpoint that exposes an other-domain contact's stored name back
-       * (`kmail-misc-contacts` returns bare email strings; `kmail-other-domain-mails` returns mail
-       * records, not contact records) — live-verified 2026-09-26. So the edit's field-level effect is
-       * NOT independently verifiable via this API; asserted as "accepted", which is the most this
-       * bench can honestly claim, not worked around by inventing a check against data that isn't
-       * exposed.
-       */
+      // The QA-identifier guard refuses a stranger's email, so our own address stands in for the
+      // external contact (and for referenceName). No read endpoint returns the stored contact name,
+      // so the edit can only be asserted as accepted.
       const contactEmailID = testData.kpostId;
 
       const added = await act(
@@ -205,16 +166,8 @@ test.describe(
     test('postBulkMail: sends to multiple recipients with its own, distinct contract @api', async ({
       endpoints,
     }) => {
-      /*
-       * Dev-confirmed 2026-09-26 (a working curl on a dev host): `postBulkMail` is NOT `postMail`'s
-       * shape plus `toAddressList` — spreading `mailShape()` in (as this test previously did) is what
-       * produced the bare 400 "Bad Request" with no detail. The real, minimal contract is just:
-       * `{ toAddressList, kmailSubject, kmailContent, priority, kmailType: 13, attachmentUuid }`.
-       * Live-verified against testkmail.kpostindia.com with this exact shape: 202 "Bulk PostMail Send
-       * SuccessFully". (Also confirmed live: sending to the CALLER's own address 400s "Receiver Cannot
-       * be same as sender" — sensible validation, not a defect — so the recipient list below is our
-       * second QA account only, never the caller's own.)
-       */
+      // postBulkMail has its own minimal contract, not postMail's shape plus toAddressList.
+      // The caller's own address is refused as a recipient, so only the second QA account is used.
       const bulk = await endpoints.sendTo(
         'kmail-post-bulk',
         {
@@ -230,19 +183,9 @@ test.describe(
         { label: 'kmail:post-bulk', auth: { principal: A }, allowLiveWrite: true },
       );
       expect.soft(bulk.status, 'postBulkMail is accepted').toBeLessThan(300);
-      /*
-       * No cleanup step: the response carries no transaction/kmailID (just a plain success message),
-       * so there is nothing here to delete by id — a real, permanent limitation of this endpoint's own
-       * response shape, not something this bench can work around without inventing an id.
-       */
+      // No cleanup: the response carries no id to delete by.
 
-      /*
-       * kmail-bulk-status, unblocked by the same fix: it was recorded as blocked on "a real bulk-mail
-       * fromAddress, which only a successful postBulkMail produces" — but `fromAddress` is just the
-       * CALLER's own address (testData.kpostId), which needs no send to exist at all. Live-verified
-       * 2026-09-26 right after a real bulk send: it correctly reports the just-sent mail's processing
-       * state (`{"total":1,"status":"PROCESSING",...}`), not a stale/empty read.
-       */
+      // bulk-status is keyed by the caller's own address and should report the mail just sent.
       const status = await endpoints.sendTo(
         'kmail-bulk-status',
         { pathParams: { fromAddress: testData.kpostId } },
@@ -270,18 +213,7 @@ test.describe(
     test('referenceMailContent: exact request shape is Unknown/Requires Clarification (identifier-guard gap fixed)', async ({
       endpoints,
     }) => {
-      /*
-       * The identifier-guard half of this gap is FIXED 2026-09-25: `referencekmailid`/`referencemails`
-       * are now exempted as runtime-scoped KMail ids (same class as `kmailid`/`kallid` already were),
-       * so a real mail's id can be used here instead of the guard refusing it outright.
-       *
-       * The request SHAPE is still Unknown/Requires Clarification, live-verified 2026-09-25: sending a
-       * real kmailID from a mail just sent 400s "Bad Request" (a plain Spring deserialization failure,
-       * no custom envelope) under every shape tried — `{referenceMails:[id]}` (number and string form),
-       * `{referenceKmailID:id}`, `{kmailIDs:[id]}`, `{kmailIds:[id]}`, a raw `[id]` array body, and
-       * `referenceMails`/`kmailID` as query params. Not worked around by guessing further; recorded
-       * with a real id now available whenever the correct shape is confirmed.
-       */
+      // The request shape is unknown: every shape tried with a real kmailID returns 400.
       const composed = await endpoints.sendTo(
         'kmail-post-mail',
         {
@@ -319,23 +251,8 @@ test.describe(
     test('kmail-download-thumbnail / kmail-media-streaming / kmail-download-attachment: happy path still needs an attachment upload lifecycle; nonexistent-uuid handling is tested', async ({
       endpoints,
     }) => {
-      /*
-       * The HAPPY PATH (a real attachment uuid from a mail that actually has a file attached) is still
-       * a recorded gap: `postMail` only accepts a JSON body with a pre-existing `attachmentUuid` — live-
-       * verified 2026-09-25, it answers 415 "Unsupported Media Type" for a multipart request — and the
-       * one documented multipart upload route, `draftMailMultiPart`, still 404s (see the test above).
-       * There is no way to mint a real, uploaded attachment uuid for KMail yet, so the happy path is not
-       * worked around with a fabricated one.
-       *
-       * What IS testable without a real upload: how each endpoint handles a well-formed but NONEXISTENT
-       * uuid — and that surfaced a real, reproducible defect. Live-verified 2026-09-25 across 3 distinct
-       * fake uuids: `downloadAttachment`/`downloadThumbnail` both answer 200 with an EMPTY body (should
-       * be 404, not a silent empty "success"); `mediaStreaming` answers 500 every time (a crash on input
-       * that will occur for real whenever a client holds a stale/deleted attachment reference) — filed
-       * as **#604**, CRITICAL, KMail API.
-       */
-      // A genuine 5xx from an allowLiveRead-authorized call auto-files via the engine's own
-      // flow-finding pipeline (verified: filed as #604) — no manual recordBusinessRuleViolation needed.
+      // No way to mint a real attachment uuid here, so only nonexistent-uuid handling is tested.
+      // Known defect #604: mediaStreaming 500s on a nonexistent uuid (a 5xx here auto-files).
       const fakeUuids = ['test-uuid', 'no-such-attachment-9f2a', 'another-fake-uuid-123'];
       for (const uuid of fakeUuids) {
         const stream = await endpoints.sendTo(

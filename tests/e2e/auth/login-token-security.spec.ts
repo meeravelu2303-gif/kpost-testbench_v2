@@ -3,20 +3,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * Inspects the actual token the app issues after a real login — the piece of Login's security
- * coverage `login-security.spec.ts` (signed-out field fuzzing) never touches, since it needs a real
- * authenticated session to exist first.
- *
- * Confirmed from a direct live inspection of a saved session (not assumed from source alone): the
- * access token is NOT an HttpOnly cookie — it is stored in plain `localStorage` under its OWN
- * top-level key, `accessToken` (a SEPARATE key from `Authuser`, which holds profile fields like
- * kpostID/firstName/userType but carries no token itself). That is itself worth stating plainly
- * rather than assuming: any XSS anywhere on an authenticated page can read it directly
- * (`localStorage.getItem('accessToken')`), no cookie-jar bypass needed. This is the same underlying
- * exposure #808 already covers via the `/profile` debug-page route — this file checks a different
- * angle: whether the token itself is well-formed and time-bounded, not just where it's stored.
- * Live-confirmed token lifetime: 24 hours (iat/exp 86400s apart) — well inside this test's own
- * 30-day sanity bound.
+ * The access token issued after a real login (stored in localStorage `accessToken`): a well-formed
+ * JWT with a bounded expiry.
  */
 test.describe(
   'KPost login · issued-token inspection',
@@ -70,9 +58,7 @@ test.describe(
         const nowSeconds = Date.now() / 1000;
         expect(payload.exp!, 'the token must not already be expired').toBeGreaterThan(nowSeconds);
 
-        // A generous upper bound, not a tight one: this is a sanity check against an effectively
-        // unbounded token (e.g. a 10-year expiry, which is expiry-in-name-only), not an opinion about
-        // the exact right session length for this product.
+        // A generous bound against an effectively unbounded token, not a view on the right length.
         const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60;
         expect(
           payload.exp! - nowSeconds,
@@ -85,20 +71,9 @@ test.describe(
 );
 
 /**
- * Session invalidation on LOGOUT (FRD row 16, "Security: sessions") — the one session check the rest of
- * the session coverage stops short of. `login-session.spec.ts` proves an ABSENT session is bounced to
- * `/login`; this proves a session that WAS valid is dead on the server AFTER logout — i.e. logout is a
- * real server-side invalidation, not just a client-side `localStorage` wipe. (The sibling gap,
- * password-reset OTP re-use, is NOT automatable here: the OTP test gateway accepts a fixed BYPASS code
- * by design, so one-time-use can't be exercised without a real SMS we can't receive.)
- *
- * ## Why its OWN gate, not LOGIN_UI_LIFECYCLE
- *
- * This logs the shared QA account OUT, which invalidates the saved `.auth/user.json` session every
- * other UI spec logs in with. So it must NOT ride along on a normal `ui` run (which sets
- * LOGIN_UI_LIFECYCLE). It is gated behind its own `SESSION_INVALIDATION_CHECK=true` flag and run in
- * isolation via `npm run product:kpost-ui:session-check`. RE-RUN `setup` afterwards to restore the saved
- * session for the rest of the suite.
+ * Logout must invalidate the session on the server, not just clear localStorage. It logs the shared
+ * account out, so it has its own SESSION_INVALIDATION_CHECK gate and runs in isolation; re-run `setup`
+ * afterwards.
  */
 test.describe(
   'KPost login · session invalidation on logout',
@@ -127,8 +102,7 @@ test.describe(
         await loginPage.login(testData.kpostId, testData.password);
         await expect(page, 'the account is signed in').toHaveURL(/\/home/, { timeout: 20_000 });
 
-        // 2. Snapshot the full authenticated localStorage — exactly what a stolen-session attacker
-        //    (or a shared/forgotten machine) would still hold after the real user logs out.
+        // 2. Snapshot localStorage: what a stolen session would still hold after logout.
         const snapshot = await page.evaluate(() => {
           const out: Record<string, string> = {};
           for (let i = 0; i < localStorage.length; i++) {
@@ -161,10 +135,7 @@ test.describe(
         await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
         await settleFrames(page).catch(() => undefined);
 
-        // 5. Correct behaviour: the server rejects the logged-out token, so the app bounces back to
-        //    /login. If it instead settles on an authenticated /home, the pre-logout token still works
-        //    — logout only cleared the client, the server never invalidated the session. That is the
-        //    finding, and this assertion surfaces it.
+        // 5. The server must reject the logged-out token, bouncing the app back to /login.
         await expect(
           page,
           'the pre-logout token must stop working after logout — the app returns to /login',

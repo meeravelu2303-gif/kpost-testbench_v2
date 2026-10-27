@@ -21,12 +21,8 @@ import {
 } from '../support/admin-workflow';
 
 /**
- * Admin UI · **Employee Data** (/employee-data), done on screen: a QA employee is entered through the
- * six-step "Add Employee Data" form, found in the list, edited and deleted. Read from
- * `HumanResources/MediumLarge/EmployeeData/{EmployeeData,ManualEntry}.js` (2026-10-22). The record is a
- * MongoDB row only: no login, invite, mail or SMS (EmployeeDetailsServiceImpl; the "Send user id"
- * modal is unreachable). The person is obviously fake (example.com mail, test PAN/Aadhaar patterns).
- * Host-guarded like every Admin write test.
+ * Admin UI Employee Data: a fake QA employee is entered through the six-step form, listed, edited and
+ * deleted on screen. The record is a MongoDB row only (no login, invite, mail or SMS). Host-guarded.
  */
 const ok = (r: { status: number; body: { status?: string } }): boolean =>
   r.status === 200 && r.body.status === 'SUCCESS';
@@ -59,7 +55,7 @@ async function employeeLifecycle(page: Page): Promise<void> {
         await openAdd(page);
         await page.getByText('Add Employee Data', { exact: true }).first().click();
 
-        // Step 1 — personal information (error texts: ManualEntry.js:264-284).
+        // Step 1 — personal information.
         await page.locator('#firstName').fill(first);
         await page.locator('#lastName').fill(last);
         await page.locator('#dob').fill('1990-01-15');
@@ -100,13 +96,12 @@ async function employeeLifecycle(page: Page): Promise<void> {
         await page.locator('#yearofgraduation-0').fill('2012-05-31');
         await next(page);
 
-        // Step 5 — work experience: "No" lets the step pass (ManualEntry.js:3050).
+        // Step 5 — work experience: "No" lets the step pass.
         await pickByPlaceholder(page, 'Select Work Experience', 'No');
         await next(page);
 
         // Step 6 — additional, then Submit → the "Confimation" modal → Submit.
-        // Step 6 has its OWN required Nationality (additionalObj.nationality, ManualEntry.js:403), separate
-        // from step 1's personalInformationObj.nationality; step 1's choice does not carry over.
+        // Step 6 has its own required Nationality; step 1's choice does not carry over.
         await pickByPlaceholder(page, 'Select Nationality', 'India');
         await pickByPlaceholder(page, 'Select Citizenship');
         await page.getByPlaceholder('Enter PAN Number').fill('ABCPE1234F');
@@ -149,8 +144,7 @@ async function employeeLifecycle(page: Page): Promise<void> {
         (r) => r.url().includes('/employeeDetails/update') && r.method() === 'POST',
       );
       const updated = await nextAdminCall(page, '/employeeDetails/update', () => update.click());
-      // The edit must send back what was saved and not touched (#13250: institute name and mailing
-      // country came back blank/missing).
+      // The edit must send back the untouched saved fields (#13250).
       const body = JSON.parse((await sent).postData() ?? '{}') as {
         educationObj?: Array<{ instituteName?: unknown }>;
         mailingObj?: { mailingCountry?: unknown };

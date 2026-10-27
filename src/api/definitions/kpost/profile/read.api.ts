@@ -4,42 +4,30 @@ import { body, pathParams } from '../kpost-endpoint';
 import { defineProfileEndpoint, defineUndocumentedProfileEndpoint } from './profile-endpoint';
 
 /**
- * Profile **reads** — fetch a profile, search, digital card, languages, device state.
- *
- * All run on live: each is asked with OUR OWN kpostID / mobile, or a harmless search term, so no
- * identifier naming a stranger is sent. `getUserProfileUsingKpostID` and the search endpoints are
- * an information-disclosure surface (they return another person's profile from a kpostID/name), so
- * the central sensitive-data and info-disclosure validators examine them — asked with our own id.
+ * Profile reads: fetch, search, digital card, languages, device state. All run on live with our own
+ * ids or a harmless search term; the lookups are an information-disclosure surface the central
+ * validators check.
  */
 const READ_TAGS = ['profile-read'] as const;
 
 export const fetchUserDetailsApi = defineProfileEndpoint({
   id: 'profile-fetch-user-details',
-  // The workbook previously documented POST with a {kpostID, countryID} body (row 2, KatchupAPI) —
-  // wrong on both counts: the live API is GET, and takes no payload at all, identifying the caller
-  // from the token alone (confirmed 2026-09-24). The workbook has been corrected at the source; the
-  // stray payload in row 3's combined URL cell belonged only to the unrelated
-  // /v2/signupLogin/fetchUserDetails/ POST endpoint and has been split out.
+  // GET with no payload: the caller comes from the token.
   method: 'GET',
   path: '/v2/profile/fetchUserDetails/',
   summary: "Fetch the caller's profile details",
   tags: [...READ_TAGS, 'pii'],
   productionSafe: true,
-  /*
-   * The caller's OWN account, so the row is guaranteed to exist whenever the call succeeds — which
-   * is what makes this the right endpoint to anchor the account check on. It confirms in
-   * TBL_KPOST_USER_MASTER that the account behind a 200 is genuinely active: a deactivated account
-   * and a healthy one return the same shape on the wire, and only `active_status` separates them.
-   */
+  // Our own account, so the row must exist; only `active_status` tells a deactivated account apart.
   database: { validations: ['kpost-user-active'] },
 });
 
 export const userProfileByKpostIdApi = defineProfileEndpoint({
   id: 'profile-user-profile-by-kpostid',
-  // Confirms the account behind this profile is real and active in TBL_KPOST_USER_MASTER: an
-  // empty 200 from a deactivated account is indistinguishable from 'no such user' on the wire.
+  // Confirms the account is real and active: on the wire a deactivated one looks like "no such
+  // user".
   database: { validations: ['kpost-user-active'] },
-  // KDirectory "view full profile" (FR-KD-005) — opening a directory entry's full profile.
+  // KDirectory "view full profile".
   requirements: ['FR-KD-005'],
   // A POST read: destructive defaults true for POST, which would grep-drop it on live.
   destructive: false,
@@ -48,26 +36,8 @@ export const userProfileByKpostIdApi = defineProfileEndpoint({
   summary: 'Fetch a profile by KPost ID',
   tags: [...READ_TAGS, 'pii', 'enumeration-surface'],
   productionSafe: true,
-  /*
-   * Looks up the SECOND personal account, not our own (`testData.kpostId`), and the reason is a
-   * product defect rather than a preference.
-   *
-   * `testData.kpostId` (the primary QA account) is answered `404 "No user found for the given
-   * kpostID"` by this endpoint — while the row demonstrably exists: active in
-   * TBL_KPOST_USER_MASTER, one row in TBL_KPOST_USER_PROFILE, present in both VW_KPOST_USER_DETAIL
-   * and VW_KPOST_USER_MASTER, absent from TBL_KPOST_DEACTIVATED_DETAILS, and reachable through
-   * `fetchUserDetails` (200) and `userLogin` (200) with the same credentials.
-   *
-   * It is NOT a self-lookup rule and NOT the privacy flag — both were tested and refuted:
-   * a second account looking itself up succeeds, a third caller asking for THIS account still gets
-   * 404, and three of four `privacy_status = 1` accounts answer 200. See
-   * `tests/api/kpost/profile/directory-lookup.spec.ts`, which pins the behaviour so it stays
-   * visible and gets filed instead of being hidden by this change.
-   *
-   * Pointing the contract probes at a resolvable account is what lets them exercise the endpoint's
-   * real success path (schema, envelope, auth, headers) instead of reporting one 404 forty times
-   * over and burying every other finding on it.
-   */
+  // Looks up the second personal account: the primary one gets a wrong 404 here (pinned in
+  // directory-lookup.spec.ts), and the probes need an account that resolves.
   request: body(() => ({ kpostID: testData.personal3KpostId })),
 });
 
@@ -104,9 +74,8 @@ export const autoSearchApi = defineProfileEndpoint({
   summary: 'Search profiles by name',
   tags: [...READ_TAGS, 'search', 'enumeration-surface'],
   productionSafe: true,
-  // The API returns `data` as an array of NAME STRINGS (autocomplete suggestions), but the workbook
-  // response schema types the elements as objects — a documentation mismatch, not a product defect.
-  // Skip the schema check here (the other validators still run); confirm the intended shape with the dev.
+  // `data` is an array of name strings but the workbook types them as objects, so the schema check
+  // is skipped.
   skipValidators: ['response.schema'],
   request: body(() => ({ fullName: 'qa', country: 'india' })),
 });
@@ -120,15 +89,8 @@ export const advancedSearchApi = defineProfileEndpoint({
   summary: 'Advanced profile search',
   tags: [...READ_TAGS, 'search', 'enumeration-surface'],
   productionSafe: true,
-  // Every documented filter is sent so the payload matches the contract in full (an empty filter is
-  // a no-op, exactly like omitting it, but a strict presence check on the API cannot then 400 us —
-  // the missing-field class that filed a false bug on the KMail signature).
-  //
-  // mobileNumber CANNOT be sent empty: it matches the qa-identifier-guard's resource-identifier
-  // pattern, and an empty string is not in the QA-owned allowlist any more than a stranger's real
-  // number would be (confirmed 2026-09-24 — this previously blocked any live run of this endpoint
-  // outright with a ProductionSafetyError, not just a "no real person named" no-op). testData.mobileExists
-  // is our own QA-owned number, so a real, harmless value satisfies the guard.
+  // Every documented filter is sent, so a strict presence check cannot 400 us. `mobileNumber` uses
+  // our own number: the QA guard refuses an empty one like any unowned identifier.
   request: body(() => ({
     fullName: 'qa',
     mobileNumber: testData.mobileExists,
@@ -149,20 +111,13 @@ export const getLanguagesApi = defineProfileEndpoint({
   path: '/v2/profile/getlanguages/',
   summary: 'Languages the caller can pick for their profile',
   tags: [...READ_TAGS, 'reference'],
-  /*
-   * The "neither verb works" finding this note used to record no longer reproduces: both GET and
-   * POST now answer 200 consistently (re-verified twice, 2026-09-24). What's still true and worth
-   * recording: the response is `{"data": []}` — an empty language list — on every call, so the
-   * profile-language picker this backs currently has nothing to offer. Left as an observation, not
-   * escalated to a defect: Unknown/Requires Clarification whether an empty reference table is
-   * expected on this test build or a real data gap.
-   */
+  // Answers an empty language list on the test build; not treated as a defect.
   productionSafe: true,
 });
 
 export const isDevicePrimaryApi = defineProfileEndpoint({
   id: 'profile-is-device-primary',
-  // FINDING: workbook documents POST; the live API answers only GET (POST -> 405). Verified on devapi2.
+  // The workbook documents POST; the live API answers only GET (POST -> 405).
   method: 'GET',
   contractMethod: 'POST',
   path: '/v2/profile/isDevicePrimaryOrNot/',
@@ -179,11 +134,9 @@ export const downloadProfileImageApi = defineProfileEndpoint({
   tags: [...READ_TAGS, 'image', 'binary'],
   productionSafe: true,
   envelope: false,
-  // The endpoint returns the format the user uploaded (png OR jpeg), so `image/*` is the real
-  // contract — hard-coding `image/png` filed a false content-type bug on a JPEG.
+  // Returns whatever format was uploaded (png or jpeg), so the contract is `image/*`.
   contentType: 'image/*',
-  // 204 (no image present) is a CORRECT response, not a defect — the QA account may have no image.
-  // Only 200 (image) or 204 (none) are valid; a 500 here would (rightly) still fail.
+  // 200 (image) or 204 (no image) are both correct.
   expectedStatus: [200, 204],
   request: pathParams(() => ({ kpostID: testData.kpostId })),
   pathParamsSchema: pathParamSchema('kpostID'),
@@ -213,8 +166,7 @@ export const downloadCoverImageApi = defineProfileEndpoint({
   productionSafe: true,
   envelope: false,
   contentType: 'image/*',
-  // 204 (no cover image) is correct. The old 500-on-no-image is fixed on the test build (now 204);
-  // 200 (image) / 204 (none) are the valid responses.
+  // 200 (image) or 204 (no cover image) are both correct.
   expectedStatus: [200, 204],
   request: pathParams(() => ({ kpostID: testData.kpostId })),
   pathParamsSchema: pathParamSchema('kpostID'),
@@ -229,25 +181,13 @@ export const getSignatureImageApi = defineProfileEndpoint({
   productionSafe: true,
   envelope: false,
   contentType: 'image/*',
-  // No signature on the account answers 404 (a missing resource); 200/204/404 are all valid. (A
-  // sibling image read returns 204 for "none" — the 404-vs-204 inconsistency is a minor note, not a
-  // fileable CRITICAL.)
+  // No signature on the account answers 404, so 200/204/404 are all valid.
   expectedStatus: [200, 204, 404],
 });
 
 /**
- * **UNDOCUMENTED IN THE WORKBOOK** — found via a 2026-10-02 full frontend-integration trace, not the
- * contract. This is the single most load-bearing profile read in the entire app: called immediately
- * after every login (`Login.js:1282`, `getUserProfileList(token)`), plus 16 more call sites across
- * `ProfileWebView.js`, `Settings/{BasicInformation,ContactInformation,Education,Experience,
- * OtherActivities}.js`, and three Katchup `ProfilePage.js` variants (bubble/classic/components). A
- * GET with no body at all —
- * the caller's identity comes from the Bearer token alone (`Setting.js:345-371`).
- *
- * Distinct from `fetchUserDetailsApi` (`/v2/profile/fetchUserDetails/`, also workbook-undocumented
- * historically but now corrected at the source) and `userProfileByKpostIdApi`
- * (`/v2/profile/getUserProfileUsingKpostID/`, looks up someone ELSE's profile by id) — this is a
- * third, separate, real endpoint the workbook has simply never listed.
+ * Not in the workbook: the caller's full profile, read right after every login and by 16 other
+ * screens. A bodyless GET; the caller comes from the token.
  */
 export const getUserProfileApi = defineUndocumentedProfileEndpoint({
   id: 'profile-get-user-profile',
@@ -257,8 +197,7 @@ export const getUserProfileApi = defineUndocumentedProfileEndpoint({
   tags: [...READ_TAGS, 'pii'],
   evidence: 'Setting.js:345-371 (getUserProfileList), caller Login.js:1282 + 16 others',
   productionSafe: true,
-  // A bodyless GET — no requestSchema (confirmed no params/body at the real call site).
-  // Types-only, from a CAPTURED live body (2026-10-11): { data:{profile…}, urlPath, status, statusCode }.
+  // Bodyless GET, so no requestSchema. Types-only response schema from a captured live body.
   responseSchema: typesOnlySchema({ data: {}, urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 

@@ -6,22 +6,12 @@ import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 /**
- * Katchup rules asserted by their END RESULT, as each party sees it in their thread
- * (`katchupMessagesForSelectedContactID`) — not merely "the request was accepted".
- *
- * What the app actually does (traced from source 2026-10-20, KatchupControllerV2 / KatchupServiceImpl /
- * KatchupDaoImpl, KatchupMessage.js):
- * - Disappearing (messageType 18): never deleted from the DB; the thread fetch drops it for BOTH parties
- *   once `isVanished && readTime != null` (after-read) or `secretMessageExpireTime < now` (schedule). The
- *   recipient's FIRST open still returns it (the rows load before the read-update), so it is gone from
- *   the next fetch on. #976 (filed: "never actually disappear") was resolved FIXED 2026-10-05.
- * - Hidden-source forward (bulk, messageType 16): the server replaces the source with an anonymous
- *   replica, so the recipient's row must not carry the original sender anywhere.
- * - Reminder: a normal message of type 3 that points at the original (no date/time; nothing scheduled).
- * - Save: keeps the selected messages and hides every OTHER message of that conversation — for the
- *   caller only (the confirm text says so: "Only the selected message will be saved, the rest will be
- *   deleted"); the other party's view is untouched. Run on qatest3 → qatest4, a pair no other spec
- *   converses on, because it hides qatest3's older messages with qatest4.
+ * Katchup rules checked by their end result in each party's thread, not just "request accepted":
+ * - Disappearing (type 18): the recipient's first open still returns it; gone for both from the next fetch.
+ * - Hidden-source forward (type 16): the recipient's row must not carry the original sender.
+ * - Reminder: a type-3 message pointing at the original.
+ * - Save: hides every OTHER message of the conversation for the caller only. Runs on qatest3 → qatest4,
+ *   a pair no other spec uses, because it hides qatest3's older messages with qatest4.
  */
 const P = AUTH_PROFILES.kpost.principals;
 const who = (key: string): Principal => P.find((p) => p.key === key)!;

@@ -4,19 +4,9 @@ import { expect, test } from '@fixtures';
 import type { Browser, BrowserContext, Page } from '@playwright/test';
 
 /**
- * KMail mail actions through the screens — the menu options not covered elsewhere (live-explored
- * 2026-10-15):
- *   - recipient (reply-arrow menu): Instant Reply (four preset replies + send), Transfer › Katchup
- *     (Transfer.js → "Forward To" picker → POST /katchup/forwardKatchupMessageNew/), Copy (writes the
- *     mail text to the clipboard + "Mail copied to clipboard"), Print ("Print Perview" letter);
- *   - sender (bell menu on their own sent mail): Edit (kmailType 5), Note (6), Reminder (3) — each
- *     opens a composer ("… Mail", "Write your Note" …) and sends through postMail.
- * Forward With Reference is not offered on a received mail's menu (hidden, not broken).
- *
- * Copy, Print and Transfer all take the text from the mail row's `mailContent`
- * (KmailMessage.js wriemailboxOpen), which the row does not carry — the same gap behind #1348/#1351 —
- * so these tests assert the text actually arrives.
- * Accounts: A = default page (qatest1, sender), B = STORAGE_STATE_2 (qatest2, recipient).
+ * KMail mail-menu actions: recipient Instant Reply, Transfer › Katchup, Copy, Print; sender Edit, Note,
+ * Reminder. Copy/Print/Transfer take the row's mailContent, which it lacks (#1348/#1351), so the text
+ * is asserted to arrive. Accounts: A = qatest1 (sender), B = STORAGE_STATE_2 (qatest2, recipient).
  */
 test.describe(
   'KPost KMail · mail actions through the screens @ui',
@@ -44,8 +34,7 @@ test.describe(
       const body = `QA action body ${subject}`;
       await page.goto('/writemail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
       await waitLoaded(page);
-      // Late in a run /writemail sometimes restores the last opened conversation instead of the
-      // compose form (seen 2026-10-15) — reload once if the form is not there.
+      // /writemail sometimes restores the last conversation instead of the form; reload once.
       if (
         !(await page
           .locator('.toInput')

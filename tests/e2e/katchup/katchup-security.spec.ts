@@ -5,21 +5,8 @@ import { EDITOR, openBellMenu, openComposerFor, submitComposer } from '../suppor
 import { settleFrames } from '../support/settle';
 
 /**
- * Security-fuzzing angle for the Katchup **composer** — Subject and message body — the highest-value
- * XSS surface in the whole app: unlike Home's search box (self-only, never leaves the searcher's own
- * session), a stored payload here is read back by a SECOND real account (the 2nd QA account), and by
- * every future viewer of the thread on either side. Same execution-based check as
- * `login-security.spec.ts`/`home-security.spec.ts` (a `dialog` listener, not string-matching — see
- * those files for why naive DOM string-matching produces false positives on any field that legitimately
- * echoes back what was typed).
- *
- * Sends via the shared `support/katchup` helpers (`submitComposer` presses Enter — the app's own send
- * trigger, immune to the composer's button layout — and `openBellMenu` handles the scroll/hover/force-
- * click sequence a still-rendering thread needs), rather than re-deriving those steps here.
- *
- * Each payload is sent for real (BR-K01 requires a Subject on every message) then immediately recalled
- * (unsent — FR-K10/BR-K03), matching `katchup-compose.spec.ts`'s own send-then-recall cleanup pattern,
- * so no fuzzed message is left in either account's history.
+ * Katchup composer XSS fuzzing (Subject + body): a stored payload must render inert, judged by a
+ * `dialog` listener rather than string matching. Each message is sent for real, then recalled.
  */
 test.describe(
   'KPost Katchup · composer security fuzzing',
@@ -59,9 +46,7 @@ test.describe(
         await page.keyboard.type(body);
         await submitComposer(page);
 
-        // The sent message renders back into OUR OWN thread immediately — if the payload were to
-        // execute anywhere, this is the first and fastest place it would (before the 2nd account ever
-        // opens the thread).
+        // Our own thread renders the message first, so a payload would execute here first.
         await expect(
           page.getByText(subject).first(),
           'the sent message appears, rendered as text',
@@ -83,9 +68,7 @@ test.describe(
           `the payload must never execute (no alert/confirm/prompt fired): ${payload.value}`,
         ).toBe(false);
 
-        // Clean up: recall OUR message (not `deleteSentMessage`, which only removes it from our own
-        // view) so the fuzzed payload never reaches the 2nd account's own inbox — recall genuinely
-        // unsends it (FR-K10/BR-K03), matching `katchup-compose.spec.ts`'s own cleanup.
+        // Recall, not delete: delete only hides it from our view, recall unsends it for the receiver too.
         const sentMessage = page
           .locator('[id]')
           .filter({ hasText: subject })

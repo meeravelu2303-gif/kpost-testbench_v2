@@ -11,15 +11,9 @@ import {
 } from '../support/screen-payloads';
 
 /**
- * ONE-TIME SETUP (owner 2026-10-26): a permanent, ordinary (non-admin) employee of QA company 242 with a real
- * KPost login, for role/permission tests. Same path as the Admin screens: Employee Data save → Role Posting
- * Setup save (creates the KPost login) → Assign Role Posting (links it to the employee).
- *
- * The password is then set BY THE OWNER, by hand, through forgot-password on testingapi (its SMS goes to the
- * employee's mobile), and stored in .env. Nothing here is deleted: the names carry no timestamp, so the bench's
- * clean-up tools never match them. Re-running reuses the existing posting instead of creating another.
- *
- * Run only on purpose: ADMIN_CREATE_STAFF=true ADMIN_LIFECYCLE=true ADMIN_ROLE_POSTING_LIVE=true.
+ * One-time setup: a permanent non-admin employee of QA company 242 with a KPost login, for role tests
+ * (employee save → role posting save → assign). Nothing is deleted; names carry no stamp, so clean-up
+ * never matches them, and a re-run reuses the posting. Run with ADMIN_CREATE_STAFF=true.
  */
 const businessM: Principal | undefined = AUTH_PROFILES.kpost.principals.find(
   (p) => p.key === 'business-m',

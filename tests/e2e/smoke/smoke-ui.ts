@@ -46,7 +46,7 @@ export function screensOf(moduleTag: string): readonly ScreenDef[] {
   );
 }
 
-/** Pause between screens in one test: the request-rate pacing of the screen sweeps (2026-10-07). */
+/** Pause between screens in one test: the request-rate pacing of the screen sweeps. */
 const PACE_MS = 3_000;
 
 /** The account the default `page` is signed in as must be a real QA account. */

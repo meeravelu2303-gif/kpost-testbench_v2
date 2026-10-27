@@ -8,16 +8,8 @@ import { KNOWN_COMPONENTS, componentFor, suiteFor, type SuiteId } from '@config/
 import { expect, test } from '@fixtures';
 
 /**
- * Component routing — the answer to "does every endpoint file under the RIGHT Bugzilla component?".
- *
- * It resolves `componentFor` for every registered endpoint and (1) asserts the result is a **real**
- * component of that endpoint's product — the exact set that exists live in the instance
- * (`KNOWN_COMPONENTS`, verified against Bugzilla on 2026-09-14) — so a typo or a renamed component can
- * never silently send tickets to a component that does not exist; and (2) writes
- * `docs/generated/component-routing.md`, a component → endpoints map, so the routing is auditable at a glance.
- *
- * The catch-all fallback components (`kpost-webservice-application`, `kmail-application`) are allowed
- * but surfaced: a built module's endpoints landing there is a routing gap to fix, not an error here.
+ * Every endpoint routes to a real Bugzilla component of its product (`KNOWN_COMPONENTS`), and the
+ * component → endpoints map is written to docs/generated/component-routing.md. Fallbacks are allowed.
  */
 
 const FALLBACKS = new Set(['kpost-webservice-application', 'kmail-application', 'General']);

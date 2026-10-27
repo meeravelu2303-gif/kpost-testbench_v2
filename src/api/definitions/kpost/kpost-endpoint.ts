@@ -6,26 +6,9 @@ import type { ContractSchema } from '../../schema/contract-schema';
 import type { EndpointDefinition, RequestFactory } from '../../registry/endpoint-definition';
 
 /**
- * Declares one real KPost endpoint.
- *
- * ## What a definition does and does not say
- *
- * It says only what the workbook cannot: which values to send, whether the call has side effects,
- * which business rules apply. Everything the workbook already states — the request schema, the
- * response schema, the documented example, the HTTP method's provenance — is read from the
- * generated contract, so a new dump of `KPOST API (N).xlsx` updates every endpoint at once and no
- * schema is ever maintained in two places.
- *
- * Nothing here describes HOW to test. Auth, status, content type, schema, headers, error format,
- * injection, XSS, rate limiting, response time, boundary values, null handling and the rest come
- * from the central validators in `src/validators/`, which apply to every endpoint automatically.
- *
- * ## Why payloads are built from test data, never from the workbook example
- *
- * The documented examples contain real people's mobile numbers and email addresses
- * (`karans@kpostindia.com`, `9003044562`). Replaying them would send real SMS and real mail to
- * colleagues and customers on every run. Request factories therefore take identifiers from
- * `testData`, and the example is used only for its shape.
+ * Declares one real KPost endpoint: only what the workbook cannot say (values to send, side
+ * effects, rules). Schemas come from the generated contract; payloads use `testData`, never the
+ * workbook's real-person examples.
  */
 export interface KpostEndpointConfig {
   /** Stable id used in reports, filters and bug fingerprints. */
@@ -34,48 +17,26 @@ export interface KpostEndpointConfig {
   /** The path the endpoint is actually called on. */
   path: string;
   /**
-   * The path the **workbook** documents, when the live API disagrees with it.
-   *
-   * Schemas and examples are still read from the workbook row, but the request goes to `path`.
-   * Needed because the sheet is wrong in places: it records the company-logo routes without their
-   * `/v2` prefix, and the bench spent a day reporting 404s that were the sheet's error, not the
-   * API's. Every use of this must cite the evidence for the correction.
+   * The path the workbook documents, when it is wrong; schemas come from that row, the request goes
+   * to `path`. Cite the evidence.
    */
   contractPath?: string;
   /**
-   * The method the **workbook** documents, when the live API disagrees. Like `contractPath`, the
-   * schema is still read from the documented (method, path) row, while the request uses `method`.
-   * Needed where the sheet's derived verb is wrong: `/v2/profile/fetchUserDetails/` is documented
-   * POST but the live API answers only GET (405 on POST) — a documentation defect, recorded on the
-   * definition. Every use must cite its evidence.
+   * The method the workbook documents, when the live API answers another verb. Cite the evidence.
    */
   contractMethod?: HttpMethod;
   summary: string;
   /**
-   * Overrides the contract's request schema for THIS endpoint. Use it when the documented/generated
-   * schema is broader than what the endpoint actually accepts — e.g. an admin READ whose real payload
-   * is `{ companyId }` but whose contract is the shared springdoc DTO (`id`, `rejoiningDate`,
-   * `adminKsmaccID`, …). Fuzzing the full DTO on such a read files false "input validation" bugs on
-   * fields the endpoint ignores; a tight schema fuzzes only the real fields. An OPEN `z.object({...})`
-   * still lets the endpoint receive extra fields without an unknown-field probe (the contract permits
-   * them). Every use must reflect the endpoint's MEASURED payload, not a guess.
+   * Overrides the contract's request schema when the real payload is narrower; must match the
+   * measured payload.
    */
   requestSchema?: ContractSchema;
   /**
-   * Overrides the contract's response schema for THIS endpoint. The workbook documents no response
-   * for some real endpoints (several `/admin/*` reads), so `response-shape`/`response-schema` skip
-   * with "no documented response". Where the shape has been CAPTURED from a live read, declare a
-   * types-only schema here (see `typesOnlySchema` in sample-schema.ts) so those checks run against
-   * the measured shape. Must reflect a real captured response, never a guess — an invented shape
-   * manufactures false schema-mismatch bugs. A types-only schema keeps every field optional+nullable,
-   * so it asserts field TYPES without inventing required/null contracts.
+   * Overrides the contract's response schema with a types-only shape captured from a live read,
+   * never a guess.
    */
   responseSchema?: ContractSchema;
-  /**
-   * Schema for path parameters (a `/{uuid}` or `/{companyID}` segment). The generated contract does
-   * not produce one, so an endpoint that wants path-parameter probing (data-type, format) declares it
-   * here — otherwise those validators skip with "no fuzzable path schema". See sample-schema.ts.
-   */
+  /** Schema for path parameters; without it the path-parameter probes skip. */
   pathParamsSchema?: ContractSchema;
   /** Schema for query-string parameters, same rationale as `pathParamsSchema`. */
   querySchema?: ContractSchema;
@@ -95,25 +56,14 @@ export interface KpostEndpointConfig {
   destructive?: boolean;
   /** How far that effect reaches - `external` (SMS/email) and `global` never run by default. */
   sideEffect?: SideEffect;
-  /**
-   * Cleared to run against the LIVE application. Default deny: without it, `TEST_ENV=production`
-   * blocks the endpoint entirely. State the reason in a comment beside it - see
-   * `productionSafe` in src/api/registry/endpoint-definition.ts for what the flag asserts.
-   */
+  /** Cleared to run against the live application (default deny); state the reason beside it. */
   productionSafe?: boolean;
   /** Needs a real OTP, so it is skipped on live. Reconciled against the contracts by `live-safety.spec.ts`. */
   otpDependent?: EndpointDefinition['otpDependent'];
   validations?: Partial<ValidationToggles>;
   skipValidators?: readonly string[];
   businessRules?: readonly string[];
-  /**
-   * Persistence checks against the real KPOST_QA database, by id from
-   * `src/database/validations/index.ts`.
-   *
-   * Only for what the response genuinely cannot prove — a row exists, a soft-delete flag flipped,
-   * a logical foreign key resolves. Anything the body already shows belongs to a response
-   * validator, or the same defect gets filed twice.
-   */
+  /** DB persistence checks (by id), only for what the response itself cannot prove. */
   database?: EndpointDefinition['database'];
   /** Tuning for the simultaneous-request probes (`identityPaths`, `singleWriteWins`, ...). */
   concurrency?: EndpointDefinition['concurrency'];
@@ -124,11 +74,8 @@ export interface KpostEndpointConfig {
 }
 
 /**
- * Builds a definition and cross-checks it against the generated contract.
- *
- * The check is the point: `workbookContract` throws when the method and path are not in the
- * contract, so a renamed or retired endpoint fails at import time with a clear message rather
- * than becoming a test that quietly validates nothing.
+ * Builds a definition; throws at import time when the method and path are not in the generated
+ * contract.
  */
 export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefinition {
   const contract = workbookContract(
@@ -146,8 +93,7 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     suite: 'kpost-api',
     responseContract: 'kpost',
     summary: config.summary,
-    // Carried through to the registry: coverage invariants require a written reason where an
-    // endpoint is excluded from live clearance, and a note that never left the config cannot be read.
+    // Carried through so coverage invariants can read the written reason.
     note: config.note,
     tags: ['kpost-api', ...(config.tags ?? [])],
     requirements: config.requirements,
@@ -176,46 +122,17 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
 }
 
 /**
- * Declares a real KPost endpoint the Excel workbook does NOT document — confirmed instead by
- * reading the live frontend's own call site.
- *
- * ## Why this exists (2026-10-02 scope rebuild, "cover all frontend-integrated endpoints")
- *
- * `defineKpostEndpoint` always calls `workbookContract()`, which throws for any path the generated
- * `openapi/kpost-api.openapi.json` doesn't list — the right default, since a hand-typed path with no
- * contract behind it would validate against nothing and silently report success. But that default
- * also means a GENUINELY REAL, frontend-active endpoint stays permanently untestable until the
- * workbook owner documents it, even when this bench already knows the exact method, path, and
- * payload shape from the live React source. The owner's decision takes time this effort can't wait
- * on — and in the meantime the endpoint sits completely uncovered.
- *
- * So this is the deliberate exception: SAME safety contract, different source of truth. Instead of
- * the workbook, the schema comes from `requestSchema` (required here, never optional) and the
- * evidence trail comes from `evidence` (required) — a `file:line` citation of the real frontend call
- * site this was measured from, so a reviewer can verify the shape independently rather than trust an
- * assertion. No contract, no guess: every field in `requestSchema` must trace to a real `fetch()`/
- * `axios` call this bench's own trace confirmed, the same standard `defineKpostEndpoint` payloads
- * already hold themselves to (test data from `testData`, never the frontend's literal example).
- *
- * `responseSchema` has no workbook sample to fall back on, so it defaults to undefined (response-shape
- * checks skip with that reason). It MAY be supplied when the shape has been CAPTURED from a live read —
- * declare a types-only schema (see `typesOnlySchema`), never a guess, exactly as `requestSchema` here.
- * Use `workbookContract` once it's updated; this function is a bridge, not a replacement for it.
+ * A real KPost endpoint the workbook does not document, confirmed from the frontend call site. The
+ * schema comes from `requestSchema` and the audit trail from `evidence`; switch to the workbook
+ * once it lists it.
  */
 export interface UndocumentedKpostEndpointConfig extends Omit<
   KpostEndpointConfig,
   'requestSchema' | 'contractPath' | 'contractMethod'
 > {
-  /**
-   * The payload's real shape, in full — there is no workbook schema to fall back on. Omit ONLY when
-   * the real frontend call genuinely sends no body/params at all (confirmed from the same call site
-   * named in `evidence`, not assumed) — never omit it just because deriving the schema is more work.
-   */
+  /** The payload's full real shape; omit only when the frontend call sends no body or params. */
   requestSchema?: ContractSchema;
-  /**
-   * Where this was confirmed in the live frontend source — e.g. `"Setting.js:345-371, caller
-   * Login.js:1282"`. Required so every undocumented endpoint carries an audit trail, not a guess.
-   */
+  /** Where this was confirmed in the frontend source, e.g. `"Setting.js:345-371"`. */
   evidence: string;
 }
 

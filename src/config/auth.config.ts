@@ -12,15 +12,10 @@ const PrincipalSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
   /**
-   * KPost's user type (PERSONAL, BUSINESS_S/M/L, INSTITUTION_*). The same password authenticates
-   * a tiered account only when its tier is sent, so it belongs to the principal.
+   * KPost user type (PERSONAL, BUSINESS_S/M/L, ...); part of the credential for a tiered account.
    */
   userType: z.string().min(1).optional(),
-  /**
-   * The login endpoint to authenticate this principal at, overriding the auth profile's default.
-   * BUSINESS_M/L admins log in via `adminUserLogin` (Medium/Large enterprise login), not `userLogin`
-   * — the same token then works on the Admin module. Absent for ordinary accounts.
-   */
+  /** Login endpoint for this principal, overriding the auth profile's default. */
   loginEndpointId: z.string().min(1).optional(),
 });
 export type Principal = z.infer<typeof PrincipalSchema>;

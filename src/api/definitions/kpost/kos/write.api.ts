@@ -4,12 +4,8 @@ import { body, pathParams } from '../kpost-endpoint';
 import { defineKosEndpoint, defineUndocumentedKosEndpoint } from './kos-endpoint';
 
 /**
- * KOS **writes** — KWord document CRUD (create / save / update / delete, headings, share, join,
- * exit, convert-to-KAD) and K-AI generation. Each modifies the caller's own documents and **none is
- * `productionSafe`**; they run through the gated feature flow (`KOS_LIFECYCLE=true`) with
- * `allowLiveWrite`. Payloads from the live client (`Services/KOS.js`, `KAI.js`).
- *
- * **The two AI generation endpoints call a real (metered) AI service** — the flow drives each once.
+ * KOS writes: KWord document CRUD and K-AI generation, on the caller's own documents. None is
+ * `productionSafe`; the gated flow drives them. The two AI endpoints call a metered service.
  */
 const WRITE_TAGS = ['kos-write'] as const;
 
@@ -129,19 +125,12 @@ export const deleteDocApi = defineKosEndpoint({
   tags: [...WRITE_TAGS, 'critical', 'kword'],
   destructive: true,
   request: () => ({ query: { docId: '' } }),
-  // CAUTION (2026-10-02 frontend trace): the real client (KWord.js:4339, KPresenter.js:4419) always
-  // sends POST /kword/delete with a JSON body {docId} — NEVER this GET+query form, which is only what
-  // the workbook documents. Not yet live-verified which form (if either) the backend still honors;
-  // flagged in docs/generated/blocked-endpoints.md as a priority investigation, blocked on #499 providing a real
-  // docId to test against. Left unchanged pending that live check — do not assume this form is wrong.
+  // The real client sends POST /kword/delete with a JSON {docId}; this GET+query form is the
+  // workbook's. Which one the backend honours is not yet verified live.
   note: 'a GET with a docId query param; needs a real docId — see docs/generated/blocked-endpoints.md for a GET-vs-POST discrepancy found 2026-10-02, not yet resolved',
 });
 
-/**
- * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. Real
- * caller: `KADDocument.js:710` (`ChangeDocumentAccess({docId, kpostId, role})`), changing a
- * collaborator's role on a shared document.
- */
+/** Not in the workbook: changes a collaborator's role on a shared document (KADDocument.js:710). */
 export const changeDocumentAccessApi = defineUndocumentedKosEndpoint({
   id: 'kos-change-document-access',
   method: 'POST',
@@ -156,9 +145,8 @@ export const changeDocumentAccessApi = defineUndocumentedKosEndpoint({
 });
 
 /**
- * **UNDOCUMENTED IN THE WORKBOOK** — found via the 2026-10-02 frontend-integration trace. Links a
- * Docling-converted PDF's job id to a KWord document. Real callers: `KWord.js:3404` (sets a real
- * jobId) and `:3444` (clears it with `jobId: null` once the converted HTML is saved).
+ * Not in the workbook: links a converted PDF's job id to a KWord document (KWord.js:3404, cleared
+ * at :3444).
  */
 export const updateJobIdApi = defineUndocumentedKosEndpoint({
   id: 'kos-update-job-id',
@@ -180,11 +168,8 @@ export const aiChatApi = defineKosEndpoint({
   path: '/ai/chatResponse',
   summary: 'Generate a K-AI chat response',
   tags: [...WRITE_TAGS, 'ai', 'metered'],
-  /*
-   * Calls a real, metered AI service (owner-authorized). `{prompt, aiType}` from the live client
-   * (KAI.js). `data` (the caller's own AI request), NOT `productionSafe`, and driven only by the
-   * `KOS_AI_LIVE`-gated test — so a normal run never bills the AI service.
-   */
+  // Calls a metered AI service, so only the `KOS_AI_LIVE`-gated test drives it. Payload from
+  // KAI.js.
   destructive: true,
   sideEffect: 'data',
   request: body(() => ({ prompt: 'Hello from the QA bench.', aiType: 'general' })),
@@ -199,9 +184,7 @@ export const aiMessageAssistApi = defineKosEndpoint({
   tags: [...WRITE_TAGS, 'ai', 'metered'],
   destructive: true,
   sideEffect: 'data',
-  // Live client (AI_Common.js GeneratePropmt / SmartReplySuggestions): the shape is
-  // {message, prompt, requestType:"REPLY"} — NOT {prompt, aiType} (that is chatResponse's shape).
-  // Verified against the frontend, 2026-09-18.
+  // The live client's shape (AI_Common.js); `{prompt, aiType}` is chatResponse's, not this one's.
   request: body(() => ({
     message: 'QA bench conversation context.',
     prompt: 'Reply politely.',

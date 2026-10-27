@@ -2,53 +2,24 @@ import { z } from 'zod';
 import { env } from './env';
 
 /**
- * Every environment-specific value the tests send, in one file, under the `QA_*` names used in
- * `.env`.
- *
- * ## Why it is all here
- *
- * A test that hard-codes `meera960@kpostindia.com` is a test that works on one host. When the QA
- * database is reseeded or the suite is pointed at staging, the failures look like API defects and
- * someone spends an afternoon proving otherwise. So no spec and no endpoint definition contains a
- * literal identifier: they read from here, and this reads from the environment.
- *
- * ## Defaults are placeholders, deliberately visible
- *
- * Every value has a schema default so the bench loads and type-checks with nothing configured —
- * but a default silently standing in for a real account would be dangerous, so `unconfirmed()`
- * lists exactly which values are still placeholders and `describeTestData()` surfaces that on
- * every run. On the live application the identity values must be set explicitly (see below).
- *
- * ## The accounts are real
- *
- * `QA_KPOST_ID` and friends are live accounts on 192.168.0.66 with real passwords. Two
- * consequences the tests respect:
- *
- *  - Nothing here is ever logged: the masking in `src/utils/mask.ts` covers password fields, and
- *    request bodies in reports are masked before they reach a Bugzilla ticket.
- *  - **`forgotPassword` rewrites an account's password.** Pointing it at `QA_KPOST_ID` would
- *    invalidate the credential every other suite logs in with, so it has its own
- *    `QA_FORGOT_PASSWORD_KPOST_ID` and stays behind `ALLOW_DESTRUCTIVE_TESTS`.
+ * Every environment-specific value the tests send, read from the `QA_*` variables in `.env`, so no
+ * spec hard-codes an identifier. Defaults are placeholders; `unconfirmed()` lists the ones still in
+ * use.
  */
 const schema = z.object({
-  /** The primary QA account — a PERSONAL user that exists in the target database. */
+  /** The primary QA account, a PERSONAL user in the target database. */
   kpostId: z.string().min(3).default('qa.bench@kpost.in'),
   password: z.string().min(1).default('mock-password'),
   userType: z.string().min(1).default('PERSONAL'),
   countryId: z.coerce.number().int().positive().default(1),
 
-  /**
-   * The four KPost user types, each a real account on the target host. KPost has exactly these
-   * (confirmed by the API owner): PERSONAL, and BUSINESS_S / _M / _L for Small, Medium and Large.
-   * There is no separate "admin" type - a business account administers its own company.
-   */
+  /** Business Small / Medium / Large accounts; each administers its own company. */
   businessSKpostId: z.string().min(3).default('qa.business.s@kpost.in'),
   businessMKpostId: z.string().min(3).default('qa.business.m@kpost.in'),
   businessLKpostId: z.string().min(3).default('qa.business.l@kpost.in'),
   /**
-   * The business tiers' password. Unset, it is `QA_PASSWORD`; under `QATEST_ONLY` the switch
-   * captures the original `QA_PASSWORD` here before re-pointing it at the shared qatest password,
-   * so the business accounts (which have no qatest stand-in) keep logging in.
+   * The business tiers' password; falls back to `QA_PASSWORD` (QATEST_ONLY keeps the original
+   * here).
    */
   businessPassword: z.string().min(1).optional(),
 
@@ -57,52 +28,39 @@ const schema = z.object({
   adminPassword: z.string().min(1).default('mock-password'),
   adminUserType: z.string().min(1).default('BUSINESS_S'),
 
-  /**
-   * A second real account that owns data the primary account must not see. The cross-resource
-   * validators use it to prove an endpoint enforces ownership rather than trusting an id.
-   */
+  /** A second account whose data the primary must not see, for the cross-resource validators. */
   victimKpostId: z.string().min(3).default('qa.victim@kpost.in'),
   businessReceiverKpostId: z.string().min(3).default('qa.receiver@kpost.in'),
 
   /**
-   * A DEDICATED throwaway account for negative-login tests (wrong password, lockout, throttling).
-   * Kept separate from every other account so a lockout/throttle it triggers can never affect
-   * `kpostId`/`victimKpostId` and cascade-fail hundreds of tests. Unset (the `qa.neg` sentinel) →
-   * the negative-login specs skip with a clear reason rather than hammering the primary account.
-   * Provision via `QA_NEG_KPOST_ID` + `QA_NEG_PASSWORD`.
+   * Throwaway account for negative-login tests, so a lockout never hits the main accounts. Unset →
+   * those specs skip.
    */
   negLoginKpostId: z.string().min(3).default('qa.neg@kpost.in'),
   negLoginPassword: z.string().default(''),
 
   /**
-   * Extra PERSONAL accounts for group messaging, Copy/Confidential-Copy and multi-recipient tests.
-   * Six real accounts exist on live; these are 3-6 (1 is `kpostId`, 2 is `victimKpostId`).
+   * PERSONAL accounts 3-6 for group and multi-recipient tests (1 is `kpostId`, 2 is
+   * `victimKpostId`).
    */
   personal3KpostId: z.string().min(3).default('qa.p3@kpost.in'),
   personal4KpostId: z.string().min(3).default('qa.p4@kpost.in'),
   personal5KpostId: z.string().min(3).default('qa.p5@kpost.in'),
   personal6KpostId: z.string().min(3).default('qa.p6@kpost.in'),
 
-  /** An account that does not exist — the "not found" path, and the enumeration probe. */
+  /** An account that does not exist: the "not found" path and the enumeration probe. */
   kpostIdAbsent: z.string().min(3).default('no.such.user.9f2a@kpost.in'),
 
-  /**
-   * A KPost ID + mobile reserved for REGISTRATION on the disposable test DB (OTP_TEST_GATEWAY). Kept
-   * separate from `kpostIdAbsent` so a signup does not make the enumeration read ("is it available?")
-   * see it as taken. Allowlisted by the QA-identifier guard. On a fresh/reset test DB a signup
-   * succeeds; on a re-run it is "already exists" (BR-SL / BR-S02) — both are valid assertions.
-   */
+  // Reserved signup identities: one set per signup flow, so no two runs race for the same "is it
+  // taken?" answer. On a re-run each one is "already exists", which is also a valid result.
+
+  /** API PERSONAL registration (disposable test DB). */
   signupKpostId: z.string().min(3).default('qabench.signup@kpost.in'),
   signupMobile: z.string().min(6).default('9000000777'),
 
   /**
-   * A SEPARATE reserved identity for BUSINESS registration (`signup-login-admin-registration`) on the
-   * disposable test DB — kept apart from `signupKpostId`/`signupMobile` (PERSONAL) for the same
-   * "never race for the same is-it-taken answer" reason as every other reserved signup identity above.
-   * `adminRegistration` creates a whole company/tenant, not just an account, so it also needs its own
-   * company name and unique name — reusing `signupBusinessCompanyName`/`signupBusinessUniqueName`
-   * (the UI lifecycle's own reserved values) would let an API run and the UI run race for the same
-   * company. On a fresh/reset test DB this registers; on a re-run it is "already exists" — both valid.
+   * API BUSINESS registration; it creates a whole company, so it has its own company and unique
+   * name.
    */
   businessSignupKpostId: z.string().min(3).default('qabenchapibiz@kpostindia.com'),
   businessSignupMobile: z.string().min(6).default('9000000793'),
@@ -110,48 +68,23 @@ const schema = z.object({
   businessSignupUniqueName: z.string().min(2).default('qabenchapibiz'),
 
   /**
-   * A SEPARATE reserved identity for the UI-driven signup (`tests/e2e/auth/signup-login-lifecycle.spec.ts`).
-   *
-   * `signupKpostId`'s default domain (`@kpost.in`) is the legacy domain the API layer already
-   * reserved; the live signup SCREEN only ever offers the current PERSONAL domain policy
-   * (`@kpostindia.com` — see `domainPolicy.PERSONAL` in `test-accounts.json`, and
-   * `tests/e2e/auth/signup-domain.spec.ts`, which asserts exactly that). A UI signup can never produce
-   * `signupKpostId`'s exact string, so it needs its own slot — a LOCAL PART ONLY, because the test
-   * selects whatever domain the dropdown actually offers rather than assuming one. Kept apart from
-   * `signupMobile` too, so a UI run and an API run never race for the same "is it taken?" answer.
+   * UI PERSONAL signup: a local part only, because the test picks whichever domain the dropdown
+   * offers.
    */
   signupUiKpostIdLocal: z.string().min(3).default('qabenchweb'),
   signupUiMobile: z.string().min(6).default('9000000778'),
 
-  /**
-   * A THIRD Personal UI identity, reserved for the mobile-viewport (<992px) full-completion test —
-   * separate from `signupUiKpostIdLocal`/`signupUiMobile` (the desktop lifecycle) for the same
-   * "never race for the same is-it-taken answer" reason those are separate from the API layer's own.
-   */
+  /** UI PERSONAL signup on a mobile viewport (<992px). */
   signupMobileViewportUiKpostIdLocal: z.string().min(3).default('qabenchmob'),
   signupMobileViewportUiMobile: z.string().min(6).default('9000000779'),
 
-  /**
-   * The Business (Small) UI signup lifecycle's own reserved identity — separate from
-   * `signupUiKpostIdLocal`/`signupUiMobile` (Personal) for the same reason those are separate from
-   * `signupKpostId`/`signupMobile` (API): a UI run and any other run must never race for the same
-   * "is it taken?" answer. `signupBusinessUniqueName`/`signupBusinessDesignationId` are the two
-   * pieces the product dot-joins into the actual KPOST ID local part
-   * (`${designationId}.${uniqueName}`) — kept apart so either can be regenerated independently
-   * after a run consumes them, without needing a fresh mobile too.
-   */
+  /** UI Business Small signup; the KPOST ID local part is `${designationId}.${uniqueName}`. */
   signupBusinessUiMobile: z.string().min(6).default('9000000790'),
   signupBusinessCompanyName: z.string().min(3).default('QA Bench Business Co'),
   signupBusinessUniqueName: z.string().min(2).max(10).default('qabenchbz'),
   signupBusinessDesignationId: z.string().min(2).max(10).default('qabbzad'),
 
-  /**
-   * The Medium and Large Business UI signup lifecycles' own reserved identities — `MLRegister.js`
-   * is a THIRD, separate component from both Personal and Small Business, so each tier gets its own
-   * slot for the same "never race for the same is-it-taken answer" reason as Small's own identity
-   * above. Kept as two full sets (not shared) since Medium and Large are independently gated tests
-   * and may run on different days.
-   */
+  /** UI Business Medium and Large signups (`MLRegister.js`), one set each. */
   signupMediumBusinessUiMobile: z.string().min(6).default('9000000791'),
   signupMediumBusinessCompanyName: z.string().min(3).default('QA Bench Medium Co'),
   signupMediumBusinessUniqueName: z.string().min(2).max(10).default('qabenchmd'),
@@ -175,11 +108,8 @@ const schema = z.object({
   domain: z.string().min(1).default('kpost.in'),
 
   /**
-   * The Admin module (`admin-api`) is driven by the BUSINESS_M/L admins; every admin payload carries
-   * the caller's own `companyId`, which is the `companyID` claim in the business-admin login token.
-   * Discovered on the first live login (decode the token) and set here so the guard allowlists it.
-   * Defaults are placeholders — unset on live means the value is not allowlisted and any admin call
-   * naming a company is refused, the same self-enforcing scope the personal accounts use.
+   * Each business admin's own company id (the token's `companyID` claim). Unset → not allowlisted,
+   * so calls naming it are refused.
    */
   businessSCompanyId: z.coerce.number().int().positive().default(1),
   businessMCompanyId: z.coerce.number().int().positive().default(1),
@@ -196,32 +126,23 @@ const schema = z.object({
   regionId: z.coerce.number().int().positive().default(1),
   pinCode: z.string().min(4).default('600001'),
 
-  /**
-   * Throwaway destinations for the OTP endpoints: these receive real SMS and real email on a live
-   * host, so they must never be a customer's or a colleague's address.
-   */
+  /** Throwaway OTP destinations: they receive real SMS and email, so never a real person's. */
   otpMobile: z.string().min(6).default('9000000002'),
   otpEmail: z.string().email().default('qa.bench+otp@kpost.in'),
   /**
-   * The Admin role-posting test EMPLOYEE (role-posting-lifecycle.spec.ts): the mobile and email the employee
-   * record carries, which the assign step pushes to KPost (testingapi) and KSMACC. Throwaway values the team
-   * owns or that reach nobody (the assign SMS template does not send, owner 2026-10-23). Trusted by the
-   * QA-identifier guard ONLY when set explicitly in .env (IDENTITY_FIELDS) — defaults are never trusted.
+   * The role-posting test employee's mobile and email; trusted by the guard only when set in
+   * `.env`.
    */
   roleEmployeeMobile: z.string().min(6).default('9000099901'),
   roleEmployeeEmail: z.string().email().default('qa.role.employee@example.com'),
   /** An OTP that is certainly wrong, for the rejection path. */
   invalidOtp: z.string().min(4).default('000000'),
-  /**
-   * The developer bypass OTP for this environment: it always validates. It makes the happy path
-   * testable without reading the code that was sent - and is itself worth a hard look, because an
-   * OTP that always works is an account-takeover key if it ever reaches production.
-   */
+  /** The test gateway's bypass OTP, which always validates. */
   bypassOtp: z.string().min(4).default('123456'),
 
   /**
-   * The account whose password the forgot-password flow may rewrite. Never the login account.
-   * Defaults to a value that does not exist, so an unconfigured run cannot change anything real.
+   * The account forgot-password may rewrite; never the login account. Defaults to one that does not
+   * exist.
    */
   forgotPasswordKpostId: z.string().min(3).default('no.such.user.9f2a@kpost.in'),
 
@@ -316,26 +237,8 @@ if (!parsed.success) {
 const resolved = parsed.data;
 
 /**
- * Identifiers that name a record somebody could own. On the live application these must be
- * configured explicitly — a default is not allowed to stand in for one.
- *
- * ## Why this is a hard failure and not a warning
- *
- * Every value here is loaded into the QA-identifier guard's allowlist, which is the control that
- * stops a live request naming a record we do not own. The schema defaults were written for the
- * mock server's seed, and two of them are actively dangerous against live:
- *
- *     companyId  defaults to 1        <- company 1 is a REAL company on the live application
- *     kpostId    defaults to 'qa.bench@kpost.in'
- *
- * An unset `QA_COMPANY_ID` would therefore put `1` in the allowlist and tell the guard that a
- * stranger's company is ours to act on — turning the safety control into the thing that authorises
- * the damage. `describeTestData()` only *warns* about placeholders, which is right for a dev host
- * and nowhere near enough here.
- *
- * Values NOT listed: passwords and user types (not identifiers), reference data (`countryId`,
- * `stateId` — shared and read-only), and the `*Absent` fixtures, which are required to match
- * nothing and so cannot name anyone's record.
+ * Identifiers that name a record somebody could own; only explicitly set ones enter the guard's
+ * allowlist. A default must never stand in (e.g. `companyId` defaults to 1, a real company).
  */
 const IDENTITY_FIELDS = [
   'kpostId',
@@ -368,15 +271,7 @@ const IDENTITY_FIELDS = [
 ] as const satisfies readonly (keyof z.infer<typeof schema>)[];
 
 /**
- * Identity values that were set **explicitly** in `.env`, never a schema default.
- *
- * This is what the QA-identifier guard allowlists, and the distinction is the whole point: an
- * unset identifier is **absent** from the allowlist rather than defaulted into it. So while no
- * business account exists on live, `QA_COMPANY_ID` is unset, `1` never enters the allowlist, and
- * any request naming a company is refused before it is sent. The scope enforces itself — nobody
- * has to remember to keep business endpoints out of a PERSONAL-only run.
- *
- * `testData` keeps its defaults so the mock-backed suites still run with nothing configured.
+ * Identity values set explicitly in `.env` (never a default): the QA-identifier guard's allowlist.
  */
 export function providedIdentityValues(): string[] {
   return IDENTITY_FIELDS.filter((field) => field in provided).map((field) =>
@@ -389,11 +284,7 @@ export function isProvided(field: keyof TestData): boolean {
   return field in provided;
 }
 
-/**
- * The six PERSONAL account ids, in order. For group, Copy/Confidential-Copy and multi-recipient
- * tests, which need several real accounts we own. On live all six are configured; off-live these are
- * mock defaults.
- */
+/** The six PERSONAL account ids, in order, for group and multi-recipient tests. */
 export const PERSONAL_ACCOUNTS: readonly string[] = [
   resolved.kpostId,
   resolved.victimKpostId,
@@ -408,12 +299,7 @@ export function defaultedIdentityFields(): string[] {
   return IDENTITY_FIELDS.filter((field) => !(field in provided)).map((field) => SOURCES[field]);
 }
 
-/*
- * Without a primary account nothing can authenticate, and every endpoint that needs a token would
- * report 401 — a configuration mistake dressed up as an API defect, which is the failure this
- * bench exists to avoid producing. Only the two values that make a run possible at all are
- * required; the rest are allowed to be absent, because absence is safe by the design above.
- */
+// A live run without a primary account would report every authenticated endpoint as 401.
 if (env.IS_PRODUCTION && !('kpostId' in provided)) {
   throw new Error(
     'QA_KPOST_ID must be set explicitly for a live run: the default is a mock value that does ' +
@@ -424,12 +310,7 @@ if (env.IS_PRODUCTION && !('kpostId' in provided)) {
 export const testData = resolved;
 export type TestData = typeof testData;
 
-/**
- * Values that are still schema defaults, as `QA_*` names.
- *
- * Anything listed here is a value the tests will send that nobody has confirmed exists in the
- * target database — so a "not found" result may be the test data rather than a defect.
- */
+/** `QA_*` names still on a schema default; a "not found" on these may be the data, not a defect. */
 export function unconfirmed(): string[] {
   return Object.entries(SOURCES)
     .filter(([field]) => !(field in provided))

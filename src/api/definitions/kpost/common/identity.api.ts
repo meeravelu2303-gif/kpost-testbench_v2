@@ -3,21 +3,8 @@ import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body, defineKpostEndpoint } from '../kpost-endpoint';
 
 /**
- * Existence checks and identity lookups: is this mobile number registered, is this company name
- * taken, which KPost ID belongs to this module.
- *
- * ## These are enumeration endpoints, and that is the point of testing them
- *
- * Each one answers a question about somebody else's data, without a token. `mobileNoExist` tells
- * an anonymous caller whether a phone number belongs to a KPost user; `getUserDetailsByMobNo`
- * goes further and returns details. That is a legitimate signup feature and a legitimate privacy
- * risk at the same time, so the central security validators (information disclosure, sensitive
- * data, injection, rate limiting) carry most of the weight here — a 200 with a name and email in
- * it is a finding, not a pass.
- *
- * `/v2/common/mobileNoExist/` is POST only. The workbook's Sheet3 R11 row documents it with no
- * payload, which made the method rule derive a GET; the API owner confirmed that row is
- * incomplete, so the GET variant is recorded as stale rather than tested.
+ * Existence checks and identity lookups. They answer questions about other people's data without a
+ * token, so the central security validators carry most of the weight. `mobileNoExist` is POST only.
  */
 const IDENTITY_TAGS = ['common', 'common-identity', 'enumeration-surface'] as const;
 
@@ -30,15 +17,7 @@ export const mobileNoExistApi = defineKpostEndpoint({
   summary: 'Check whether a mobile number is already registered',
   tags: IDENTITY_TAGS,
   destructive: false,
-  /*
-   * Matches the documented contract exactly (Excel/openapi/kpost-api.openapi.json: countryID +
-   * mobileNumber only — no companyID). This endpoint briefly regressed live and rejected exactly
-   * this shape with 400 "companyID is required" for a PERSONAL check (filed as #720, KPost UI/Auth,
-   * traced from the signup screen never sending companyID either); confirmed fixed live 2026-09-28
-   * — this shape now succeeds again. Kept undoing the earlier `companyID: 0` workaround on purpose:
-   * a workaround that silently absorbs a contract violation is the reason #720 went unnoticed on
-   * the signup screen for as long as it did.
-   */
+  // Exactly the documented contract (countryID + mobileNumber, no companyID); no workaround fields.
   request: body(() => ({
     countryID: testData.countryId,
     mobileNumber: testData.mobileAbsent,
@@ -47,8 +26,7 @@ export const mobileNoExistApi = defineKpostEndpoint({
 
 export const mobileNoExistInsideCompanyApi = defineKpostEndpoint({
   id: 'common-mobile-no-exist-in-company',
-  // Live: read-only membership check on OUR OWN business company (BUSINESS_M, company 1067) with the
-  // admin's own mobile — both allowlisted, so it runs on live and exercises the business surface.
+  // Live: read-only membership check on our own business company with the admin's own mobile.
   productionSafe: true,
   method: 'POST',
   path: '/v2/common/mobileNoExistInsideCompany/',
@@ -59,7 +37,7 @@ export const mobileNoExistInsideCompanyApi = defineKpostEndpoint({
     mobileNumber: testData.businessMMobile,
     companyID: testData.businessMCompanyId,
   })),
-  // Types-only, from a CAPTURED live body (2026-10-11): { statusCode, status, message, urlPath, data }.
+  // Types-only, from a captured live body.
   responseSchema: typesOnlySchema({
     statusCode: 200,
     status: 'SUCCESS',
@@ -108,7 +86,7 @@ export const uniqueNameExistApi = defineKpostEndpoint({
     uniqueName: testData.uniqueName,
     domain: testData.domain,
   })),
-  // Types-only, from a CAPTURED live body (2026-10-11): { message, urlPath, status, statusCode }.
+  // Types-only, from a captured live body.
   responseSchema: typesOnlySchema({ message: '', urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 

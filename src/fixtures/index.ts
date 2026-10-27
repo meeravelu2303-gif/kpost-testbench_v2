@@ -29,14 +29,7 @@ interface TestFixtures {
   apiClients: ApiClientPool;
   /** Calls registered endpoints directly (integration tests, setup). */
   endpoints: EndpointExecutor;
-  /**
-   * One database client per suite, for workflow specs that assert persistence directly.
-   *
-   * A multi-step flow has to check the database *between* steps — send, then confirm the row, then
-   * recall, then confirm the flag — which is not something an endpoint's `database: { validations }`
-   * can express, since those run once per endpoint call. The write policy still comes from the
-   * target: `databases.for('admin-api')` is read-only whatever the environment says.
-   */
+  /** One database client per suite, for workflow specs that check persistence between steps. */
   databases: DatabasePool;
   /** Builds an engine; overrides let framework tests swap registries or reporting. */
   createValidationEngine: (overrides?: Partial<ValidationEngineDeps>) => ValidationEngine;
@@ -72,14 +65,12 @@ export const test = base.extend<TestFixtures>({
   },
 
   endpoints: async ({ apiClients, log }, use, testInfo) => {
-    // In a browser project, API calls share the browser's saved session (no API login that would sign
-    // the screens out — one session per account).
+    // In a browser project, API calls reuse the browser's session (an API login would sign it out).
     const executor = new EndpointExecutor(apiClients, apiRegistry, log, {
       shareBrowserSessions: ['chromium', 'firefox', 'webkit'].includes(testInfo.project.name),
     });
     await use(executor);
-    // After the flow runs, file (a) any server error a gated write hit and (b) any CONFIRMED
-    // business-rule violation it detected — otherwise a lifecycle-only bug reaches no developer.
+    // File any server error a gated flow hit and any confirmed business-rule violation.
     for (const report of [
       ...flowFindingReports(executor.flowFindings),
       ...businessRuleFindingReports(executor.businessRuleFindings),
@@ -97,12 +88,7 @@ export const test = base.extend<TestFixtures>({
   },
 
   createValidationEngine: async ({ apiClients, log }, use, testInfo) => {
-    /*
-     * One pool per test, built here rather than inside the factory: the MySQL adapter owns
-     * connection pools, and building one per `createValidationEngine()` call would leave a pool
-     * open for every engine a framework test constructs. The pool itself creates a client per
-     * suite lazily, so a run that never touches Admin never opens its (live) database.
-     */
+    // One pool per test; clients open lazily, so Admin's live DB opens only when used.
     const databases = new DatabasePool();
     await use(
       (overrides = {}) =>
@@ -126,16 +112,9 @@ export const test = base.extend<TestFixtures>({
     await use(createValidationEngine());
   },
 
-  /*
-   * Every browser test's page records what a developer needs to fix a failure — JS stacks, the last
-   * clicks / Tab path, console errors, failed requests and who made them — and attaches it as a
-   * "failure diagnosis" only when the test fails (see @ui/failure-diagnostics). API tests never ask
-   * for `page`, so they are untouched.
-   */
+  // Records a failure diagnosis on every browser page (see @ui/failure-diagnostics).
   page: async ({ page }, use, testInfo) => {
-    // No browser request may reach a live host, whatever the front-end build was compiled with. A call
-    // to the live KPost API goes to its test counterpart instead (owner, 2026-10-26: "test with
-    // testingapi instead of devapi2"); any other live host is aborted.
+    // No browser request reaches a live host: the live KPost API goes to testingapi, others abort.
     await page.context().route(
       (url) => isLiveHost(url.hostname),
       async (route) => {

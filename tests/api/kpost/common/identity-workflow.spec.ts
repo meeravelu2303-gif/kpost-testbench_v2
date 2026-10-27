@@ -4,13 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Common **identity/existence-check business rules**. Not gated: all `productionSafe: true`, safe
- * on every default run.
- *
- * The real business rule these endpoints exist for is the true/false duplicate-detection logic
- * itself — "does this mobile/name already exist" — not just "does the endpoint respond". Each is
- * asked with BOTH a known-absent value (`*Absent` test data) and a known-existing one, so the
- * actual boolean the endpoint returns is verified, not assumed.
+ * Common existence checks (read-only, ungated): each is asked with a known-absent and a known-existing
+ * value, so the returned boolean is verified both ways.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -128,12 +123,8 @@ test.describe(
         ex.bodyText,
         'a known-absent company name is reported available, not "already exists"',
       ).toContain('Available');
-      /*
-       * The "taken" branch (a REAL, existing company name) is Unknown/Requires Clarification: only
-       * QA_COMPANY_NAME_ABSENT is configured in .env, not a real QA-owned QA_COMPANY_NAME — the same
-       * gap already recorded for kmail-sig-company and profile-save-experience this session. Not
-       * worked around by inventing a name that might collide with a real customer's.
-       */
+      // The "taken" branch is untested: no QA-owned company name is configured, and inventing one
+      // could collide with a real customer's.
     });
 
     test('domain lists at least one real domain suffix for India/BUSINESS', async ({

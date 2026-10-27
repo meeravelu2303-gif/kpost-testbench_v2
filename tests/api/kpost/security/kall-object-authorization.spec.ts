@@ -8,17 +8,8 @@ import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
 import { expect, test } from '@fixtures';
 
 /**
- * Can an outsider end or change the status of a call they are neither the sender nor the receiver
- * of? `updateKallStatus`/`endIndividualKall` take a bare `kallID` and nothing else that ties it to
- * the caller — the same object-handle shape that made `removeGroupMember` exploitable (Bugzilla
- * #507) and that this bench already proved safe for Katchup's recall/delete. Kall had zero IDOR
- * coverage of any kind before this (confirmed: 0/20 endpoints, see the 2026-10-03 ground-truth
- * re-audit) despite several of its writes being exactly this shape.
- *
- * ## The database is the judge
- *
- * `updateKallStatus` answers SUCCESS regardless, so the verdict is the row: after the outsider's
- * attempt, the call's `sender_kall_status` in `TBL_KPOST_KOOL_KALL_MASTER` must be unchanged.
+ * Can an outsider end or change a call they are not party to? The writes take a bare `kallID`.
+ * `updateKallStatus` answers SUCCESS regardless, so the verdict is the row's `sender_kall_status`.
  */
 test.describe(
   'KPost Security · Kall call authorization (IDOR/BOLA) @api @kpost-api @security @kall @database',
@@ -128,17 +119,8 @@ test.describe(
     });
 
     /**
-     * The accept path specifically — `kallStatus: KALL_STATUS.connected` (1) — is a DIFFERENT code path
-     * from the cancel/decline branches the test above exercises: `KallServiceImplV3.updateKallStatus`
-     * routes status 1 to `updateConnectedKallStatus` instead of the normal, correctly sender/receiver
-     * -scoped `updateKallStatus` DAO method. That method's two UPDATEs filter ONLY by `id`/`kallID` —
-     * no `and sender=:sender`/`and receiver=:receiver` guard at all (2026-10-04 ground-truth audit,
-     * `KallDaoImplV3.java:567-600`) — unlike every sibling status-write in the same file. As soon as
-     * either UPDATE affects a row, it unconditionally fetches and returns the full `KallMaster` record
-     * by bare `kallID`, which — per `KpostWelcomeMailAndMessage.modifyKallResponse()` — includes the
-     * real `meetingLink` for that call. So an outsider who merely knows/guesses a `kallID` can both (a)
-     * read back the real join link for a call they were never invited to, and (b) flip that call's real
-     * status as a side effect, with no relationship to the call required at all.
+     * Accept (status 1) takes a separate code path (`updateConnectedKallStatus`) whose UPDATEs filter
+     * only by kallID, then return the full call record, including its real `meetingLink`.
      */
     test('an outsider "accepting" a call they are not party to gets back the real meeting link @api @security', async ({
       endpoints,
@@ -180,9 +162,7 @@ test.describe(
         });
 
         // --- Attack: the outsider "accepts" a call that was never addressed to them -----------------
-        // `id` deliberately left as an arbitrary value (0) — per source, only `kallID` gates the
-        // KallMaster update that triggers the leaked-record fetch; the real participant-row id is not
-        // required at all, which is itself part of the finding (no "you must also know this" barrier).
+        // `id: 0` on purpose: only kallID gates the update, the participant-row id is not needed.
         const attackAccept = await endpoints.sendTo(
           'kall-update-status',
           { body: { id: 0, kallStatus: KALL_STATUS.connected, kallID: realKallId } },
@@ -273,12 +253,8 @@ test.describe(
     });
 
     /**
-     * `reScheduleKall` creates a NEW call (by design — BR-C01, see `feature.spec.ts`) but also flips the
-     * ORIGINAL call's own `senderKallStatus` 6 (Scheduled) -> 7 (ReScheduled), to mark it superseded.
-     * Per the 2026-10-04 ground-truth audit, `KallDaoImplV3.reschedulekall` (lines ~451-464) does this
-     * with NO sender/receiver guard at all — only the original `kallID` named in the request body. So
-     * an outsider can flip the status of someone ELSE's real scheduled call to "ReScheduled" just by
-     * naming it in their own reschedule request, corrupting data they have no relationship to.
+     * Reschedule flips the ORIGINAL call's status 6 (Scheduled) -> 7 (ReScheduled) by kallID alone,
+     * so an outsider naming someone else's kallID could mark it superseded.
      */
     test('an outsider cannot mark someone else\'s scheduled call as "Rescheduled" @api @security', async ({
       endpoints,
@@ -421,13 +397,8 @@ test.describe(
     });
 
     /**
-     * `getKallStatus` answers "what is the status of the call between THIS sender and THIS receiver"
-     * purely from the request body — `KallControllerV3.java:900-914` has its JWT-identity-override line
-     * literally commented out, so an authenticated caller can name ANY two other kpostIDs as
-     * sender/receiver and ask whether/how they are connected on a given kallID, without being either
-     * party. The underlying query itself is correctly scoped by (sender, receiver, kallID) together —
-     * this is not a raw content leak — but it is a cross-tenant STATUS disclosure: an outsider can
-     * confirm two strangers' real call state on a call they have no part in.
+     * `getKallStatus` takes sender/receiver from the body (no JWT identity check), so an outsider
+     * could read the call status between two other accounts.
      */
     test('an outsider can query the status of a call between two OTHER accounts @api @security', async ({
       endpoints,
@@ -460,9 +431,7 @@ test.describe(
         const attackJson = attack.json();
         const attackBody = (attackJson.ok ? attackJson.value : {}) as Record<string, unknown>;
         const attackText = attack.bodyText;
-        // The real finding: the endpoint answers with the call's actual kallStatus (e.g. "busy",
-        // "connected") for two accounts the caller is neither of — a non-empty, non-error kallStatus
-        // value is the disclosure, regardless of whether the response happens to echo the kallID back.
+        // Any non-empty kallStatus returned to the outsider is the disclosure.
         const statusValue = attackBody.kallStatus;
         const disclosed =
           attack.status < 300 &&
@@ -518,7 +487,7 @@ test.describe(
   },
 );
 
-/** Same shape as `feature.spec.ts`'s private `extractKallId`, duplicated locally to avoid a cross-file import of a test-only helper. */
+/** Local copy of `feature.spec.ts`'s `extractKallId` (no cross-spec imports). */
 function extractKallIdLoose(body: Record<string, unknown>): number | undefined {
   const data = body.data;
   const row = Array.isArray(data) ? (data[0] as Record<string, unknown> | undefined) : undefined;
@@ -533,16 +502,8 @@ function extractKallIdLoose(body: Record<string, unknown>): number | undefined {
 }
 
 /**
- * `contactInfo` PII disclosure via a non-"knownContact" `fetchType` — a pure read, places no call,
- * so this does not need `KALL_LIFECYCLE` (own describe block, ungated).
- *
- * Per the 2026-10-04 ground-truth audit: `KallServiceImplV3.ContactInfo()` (lines ~500-572) only
- * scopes its lookup by the caller's own contact list when `fetchType === "knownContact"` (via
- * `contactRepository.getKallContactDetails(kpostID, contactID)`). For ANY other `fetchType` value —
- * including simply omitting the field, which is what this endpoint's own default bench payload
- * already does — it instead does an unscoped `signUpLoginRepository.findByKpostID(contactID)` and
- * returns full PII (mobile number, landline, alternate mobile, country code, full name, user type)
- * for whatever `contactID` is named, with no check that the caller actually knows/has that contact.
+ * `contactInfo` scopes to the caller's contacts only when `fetchType === "knownContact"`; otherwise
+ * it may return any account's PII. A pure read, so not gated on `KALL_LIFECYCLE`.
  */
 test.describe(
   'KPost Security · Kall contactInfo PII disclosure (IDOR/BOLA) @api @kpost-api @security @kall',
@@ -565,8 +526,7 @@ test.describe(
         "needs a real QA_PERSONAL_5_KPOST_ID account not already in the attacker's contacts",
       );
 
-      // --- Control: the SAFE path — fetchType: "knownContact" against a non-contact should disclose
-      // nothing useful (the attacker and the target have no established contact relationship). ---
+      // --- Control: the safe path (fetchType "knownContact") for a non-contact ---
       const safe = await endpoints.sendTo(
         'kall-contact-info',
         { body: { contactID: target!.username, kallID: null, fetchType: 'knownContact' } },
@@ -579,8 +539,7 @@ test.describe(
       const safeJson = safe.json();
       const safeBody = (safeJson.ok ? safeJson.value : {}) as Record<string, unknown>;
 
-      // --- Attack: the VULNERABLE path — omit fetchType entirely (this endpoint's own default bench
-      // payload already does this), which per source skips the contact-relationship check. ---
+      // --- Attack: omit fetchType, which skips the contact-relationship check ---
       const attack = await endpoints.sendTo(
         'kall-contact-info',
         { body: { contactID: target!.username, kallID: null } },

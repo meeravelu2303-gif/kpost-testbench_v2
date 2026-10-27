@@ -1,12 +1,7 @@
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
 import { defineKpostEndpoint, type KpostEndpointConfig } from '../kpost-endpoint';
 
-/**
- * A Kall endpoint: `defineKpostEndpoint` with authentication required (the whole module is
- * post-login; the base factory defaults to public) and the `kall` tag. The status / type / mode /
- * repeat-type codes come from `@api/contract/kpost-types`; the flow is analysed in
- * `docs/modules/kall-flow.md`.
- */
+/** A Kall endpoint: `defineKpostEndpoint` with authentication required and the `kall` tag. */
 export function defineKallEndpoint(config: KpostEndpointConfig): EndpointDefinition {
   return defineKpostEndpoint({
     ...config,

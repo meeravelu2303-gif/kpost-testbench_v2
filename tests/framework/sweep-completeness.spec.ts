@@ -7,15 +7,7 @@ import { DEFAULT_SUITE } from '@config/ownership.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Every KPost API endpoint must be reached by the generic sweep (auth, input fuzz, injection, schema,
- * headers, errors, ...), or be on the short list below with a reason a reviewer can check.
- *
- * Why this exists: a 2026-10-09 audit found 55 live endpoints (Kall, Group, KDiary, Contacts,
- * Settings writes and a few more) that no sweep wrapper selected, so they only ever got one happy-path
- * lifecycle flow. Their input-validation and security bugs surfaced one run at a time, as each module
- * eventually got a wrapper, which is why every run seemed to produce new bugs. A new endpoint whose
- * tags no wrapper selects now fails here instead of staying silently uncovered.
- *
+ * Every KPost API endpoint must be reached by the generic sweep, or be on the list below with a reason.
  * Wrappers are read from the spec files themselves, so the guard cannot drift from what runs.
  */
 
@@ -52,10 +44,8 @@ function stringList(source: string, key: string): string[] | undefined {
 }
 
 /**
- * The full-sanity read sweeps run endpoints at the SMOKE profile (status, envelope, schema, no token)
- * — none of the input fuzzing, injection or authorization probes this guard is about — and they
- * select by a computed id list, which the parser below would read as "every endpoint". Counting them
- * would hide exactly the gap this guard exists to catch.
+ * The full-sanity read sweeps run at the SMOKE profile (no fuzz/injection/authz probes) and select by
+ * a computed id list the parser would read as "every endpoint", so counting them would hide gaps.
  */
 const NOT_A_FULL_SWEEP = /[\\/](sanity[\\/]|sanity-read-sweep\.spec\.ts$)/;
 

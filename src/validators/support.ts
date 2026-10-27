@@ -13,11 +13,7 @@ export function responseData(context: ValidationContext): ParsedJson {
   const parsed = context.primary.json();
   if (!parsed.ok) return parsed;
   const { contract, envelope } = context.endpoint;
-  /*
-   * Where the payload lives is a property of the API, not of every validator. KPost documents
-   * whole bodies (envelope included) and often has no `data` key at all, so unwrapping one would
-   * hand every validator `undefined` and skip the checks that matter.
-   */
+  // The payload key comes from the API contract; KPost often has no `data` key at all.
   const dataKey =
     envelope && contract.schemaTarget === 'data' ? (contract.dataKey ?? undefined) : undefined;
   return { ok: true, value: dataKey ? getPath(parsed.value, dataKey) : parsed.value };

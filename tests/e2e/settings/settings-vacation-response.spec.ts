@@ -4,22 +4,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * Settings · Vacation Response panel (`Vacationresponse.js`) — no `Services/*` import, no API calls;
- * entirely local UI state. Confirmed from source, THREE separate real bugs worth exercising directly
- * rather than only reading about:
- *
- *  1. The on/off toggle sets a `disabled` attribute on a wrapping `<div>`, not on the actual inputs —
- *     `disabled` has no effect on a `<div>`, so the date/text controls below stay interactable no
- *     matter what the toggle shows.
- *  2. Both message `<textarea>` elements have a JSX typo, `v alue={value.textarea}` (two broken props
- *     instead of `value=`) — they are never actually React-controlled.
- *  3. "Save" is wired to `onClick={() => setValue("")}`, which replaces the whole `value` OBJECT state
- *     with a bare STRING — every other control in this component reads `value.from`/`value.to`/etc.,
- *     so this is a live crash candidate on the next render, not a cosmetic issue.
- *
- * This test exercises the full chain (From -> To -> Response -> Message -> Save) and watches for an
- * uncaught JS exception via `watchUiHealth`, rather than assuming the exact failure mechanism — the
- * observable outcome (does the screen actually break) is the honest thing to assert.
+ * Settings › Vacation Response (local state only, no service): the toggle does not disable the inputs,
+ * the textareas are never controlled, and Save replaces object state with a string. Asserts via watchUiHealth.
  */
 test.describe(
   'KPost Settings · Vacation Response panel',
@@ -42,8 +28,7 @@ test.describe(
         timeout: 15_000,
       });
 
-      // Toggle once, whichever direction it lands in — the bug is that `disabled` on a wrapping <div>
-      // has no effect on the real inputs regardless of which state the toggle shows.
+      // Toggle once either way: `disabled` on a wrapping <div> has no effect on the real inputs.
       await page.locator('.icon-KP_289_Toggle-On, .icon-KP_285_Toggle-Off').first().click();
       await settleFrames(page);
 
@@ -91,8 +76,7 @@ test.describe(
         timeout: 5_000,
       });
       await saveButton.click();
-      // Save is confirmed source-side to make no network call; two frames let any render-time throw
-      // surface before the health snapshot.
+      // Save makes no network call; two frames let any render-time throw surface first.
       await settleFrames(page);
 
       const health = stop();
@@ -101,9 +85,7 @@ test.describe(
         description: `page errors after clicking Save: ${JSON.stringify(health.pageErrors)}`,
       });
 
-      // Predicted from source: Save replaces the whole `value` state object with a bare string, which
-      // every other control in this component reads as an object (`value.from`, `value.to`, etc.) — if
-      // that fires an uncaught exception on the next render, this is the evidence, not an assumption.
+      // Save replaces the `value` object state with a string; an uncaught exception here is the evidence.
       expect(
         health.pageErrors,
         'Save is confirmed from source to call setValue("") — replacing an object-shaped state with a ' +

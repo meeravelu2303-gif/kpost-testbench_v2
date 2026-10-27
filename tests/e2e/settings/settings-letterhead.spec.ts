@@ -2,9 +2,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Settings · Letter Head panel (`Letterhead.js`) — confirmed from source: no `Services/*` import, no
- * API calls at all. Selecting a template is purely local UI state (a CSS highlight class), never
- * persisted — a reload loses the selection. Purely cosmetic, safe to fully drive.
+ * Settings › Letter Head: selecting a template is local state only (no service), so a reload loses it.
  */
 test.describe(
   'KPost Settings · Letter Head panel',
@@ -51,7 +49,7 @@ test.describe(
         'Letter Head selection is confirmed from source to be local-only — no network request',
       ).toBe(false);
 
-      // Confirms the finding directly: a reload loses the selection (nothing persisted).
+      // A reload loses the selection (nothing persisted).
       await page.reload({ waitUntil: 'domcontentloaded' });
       await settingsPage.openPanel('KMail Settings', 'Letter Head');
       await expect(

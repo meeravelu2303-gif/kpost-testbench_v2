@@ -16,11 +16,7 @@ export const errorFormatValidator = defineValidator({
   stage: 'aggregate',
   appliesTo: ({ endpoint }) => {
     if (!endpoint.envelope) return 'endpoint does not use the response envelope';
-    /*
-     * The workbook documents no error response for KPost - no 400/401/404/409 sample anywhere.
-     * Asserting an invented shape would manufacture defects; claiming a pass would be a lie. The
-     * gap is the workbook's to fill.
-     */
+    // The workbook documents no KPost error shape, so none is invented.
     if (!endpoint.contract.error)
       return `${endpoint.contract.id} documents no error envelope in the workbook`;
     return true;

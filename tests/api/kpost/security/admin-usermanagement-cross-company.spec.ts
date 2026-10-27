@@ -4,22 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * `GET /admin/userManagementDetails/{companyID}` — a company admin's own User Management screen.
- *
- * Per the 2026-10-04 User Management ground-truth audit, `AdminController.java:196-219` passes the
- * path `companyID` straight through, and `SignUpLoginServiceImpl.userManagementDetails` (lines
- * 1552-1591) uses it UNCHECKED for 3 of its 4 lookups: `signupLoginDao.getTotalMembersCount`,
- * `signUpLoginRepository.getAllocatedMembersCount`/`unAllocatedMembersCount`, and
- * `signupLoginDao.getCurrentPlan` — only the 4th field, `contactsDetails` (the actual employee
- * roster), is correctly scoped to the CALLER's own kpostID. So the member-count/subscription-plan
- * half of this response leaks for ANY companyID an admin cares to name, while the roster half stays
- * safe — a narrower leak than the already-filed #982 (bank/PAN) and #985 (logo), but a real, distinct
- * one independently confirmed by direct source reading (not just an agent's claim) before this test
- * was written, after an unrelated claim about this same endpoint FAMILY was found to be overclaimed
- * this same session (see memory for the resetPassword correction).
- *
- * Verdict: does a company admin calling this with a DIFFERENT company's ID get back real, non-zero
- * member-count/plan data for that other company?
+ * `GET /admin/userManagementDetails/{companyID}` uses the path companyID unchecked for the member
+ * counts and plan. Verdict: does an admin naming ANOTHER company get that company's data back?
  */
 test.describe('KPost Security · Admin userManagementDetails cross-company disclosure @api @kpost-api @security @admin', () => {
   test("a company admin can read another company's member counts and subscription plan @api @security", async ({

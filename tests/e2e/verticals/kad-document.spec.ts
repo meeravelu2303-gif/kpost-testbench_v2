@@ -2,11 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * KOS · KAD Document (`KADDocument.js`) — real backend (`GetAllKWordDocs` -> `GET
- * /v2/kword/documentsType`, `GetKADCounts`), and a real, destructive share action
- * (`ShareKADDocument` -> `POST /v2/kword/share`, reusing `RoleAssignmentModal`). Scoped to the
- * read-only listing/search surface; the share flow is not driven to completion here (it would grant
- * real document access to another account with no simple self-clean available for this pass).
+ * KOS KAD Document: read-only listing and search. Share is not driven: it grants real document access
+ * with no clean-up path.
  */
 test.describe(
   'KPost KOS · KAD Document panel',

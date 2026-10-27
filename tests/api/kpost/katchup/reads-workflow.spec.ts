@@ -4,16 +4,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Katchup **plain reads** not covered by the send/forward/manage flows — badge counts, contacts,
- * conversation counts, search/filter, and reported messages. Not gated: all are `productionSafe:
- * true`, safe on every default run.
- *
- * `katchup-search-message` and `katchup-filter-message` are given a generous timeout rather than
- * the default: live-observed 2026-09-24, both (and `katchup-unopened-total-count`, intermittently)
- * time out well past 10s on this test build. Not confidently a single endpoint's own defect — the
- * intermittency and the fact it spans multiple, otherwise-unrelated endpoints look more like
- * backend load/instability than a code bug in any one of them. Left to the engine's own 3-pass
- * reproduction/validity gate to judge real-vs-environmental rather than hand-classified here.
+ * Katchup plain reads (badge counts, contacts, search/filter, reported messages). Not gated: all are
+ * productionSafe. Search and filter get a longer timeout because they often exceed 10 s on this build.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;

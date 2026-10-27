@@ -2,14 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
- * The append-only log of KPost accounts this bench itself CREATED — the opposite number to
- * `test-accounts.json` (the pre-existing, .env-declared accounts that file explicitly says the
- * bench never created). Anywhere a signup/registration flow mints a brand-new kpostID, it should
- * call `recordCreatedAccount()` right after the create succeeds, so the identity and its mobile
- * number are never lost track of, however many runs later.
- *
- * Single writer at a time: every npm script in this bench runs Playwright with `--workers=1`, so
- * the read-modify-write below is safe without extra locking. If that ever changes, this needs one.
+ * Append-only log of KPost accounts the bench created; call `recordCreatedAccount()` after any
+ * signup. The read-modify-write is unlocked because every script runs with `--workers=1`.
  */
 
 const FILE = path.join(__dirname, 'created-accounts.json');
@@ -40,17 +34,12 @@ function readStore(): Store {
       return parsed as Store;
     }
   } catch {
-    // First write, or the file is missing/corrupt — start a fresh store rather than throwing,
-    // since losing this log is recoverable but a crashed test run isn't.
+    // Missing or corrupt: start fresh rather than crash the run.
   }
   return { accounts: [] };
 }
 
-/**
- * Record a KPost account this run just created. Idempotent on (kpostId, mobileNumber): calling it
- * again for the same pair (e.g. a re-run against a not-yet-reset disposable DB) does not duplicate
- * the entry, just updates its `createdAt`.
- */
+/** Records a KPost account this run created; idempotent on (kpostId, mobileNumber). */
 export function recordCreatedAccount(input: {
   kpostId: string;
   mobileNumber: string;

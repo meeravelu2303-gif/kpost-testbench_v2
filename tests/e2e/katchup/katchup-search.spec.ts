@@ -2,13 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Katchup **contact/conversation search** — a real interaction, but **read-only** (it filters the
- * list, writes nothing), so it needs no lifecycle gate. It proves the search box on the Katchup screen
- * actually filters the conversation list to the typed query — the UI side of the `search-message` /
- * `search-subject` reads the API suite covers.
- *
- * Selectors: the Katchup screen's search box is `[placeholder*="Search" i]` (the screen registry's
- * `contact search box` control); a conversation row's element `id` is the counterpart's KPOST ID.
+ * Katchup conversation search: the box takes a query and clearing it restores the list. Read-only,
+ * so no lifecycle gate. A conversation row's element id is the counterpart's KPOST ID.
  */
 test.describe('KPost Katchup search', { tag: ['@ui', '@katchup', '@regression'] }, () => {
   test.skip(
@@ -34,13 +29,10 @@ test.describe('KPost Katchup search', { tag: ['@ui', '@katchup', '@regression'] 
       timeout: 20_000,
     });
 
-    // Typing filters the list. The box accepts the query (the search is interactive) — we assert the
-    // box behaviour, not a specific match, because the list filters by DISPLAY NAME, not the KPOST ID.
+    // Only the box is asserted: the list filters by display name, not by KPOST ID.
     await search.fill(testData.victimKpostId);
     await expect(search, 'the search box accepts the query').toHaveValue(testData.victimKpostId);
 
-    // Clearing the query restores the full list — the conversation comes back. This proves the search
-    // box drives the list (filter on type, restore on clear). Read-only, nothing written.
     await search.fill('');
     await expect(search, 'the search box is cleared').toHaveValue('');
     await expect(victimRow, 'clearing the search restores the conversation list').toBeVisible({

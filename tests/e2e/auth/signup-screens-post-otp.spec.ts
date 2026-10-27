@@ -6,15 +6,8 @@ import { watchUiHealth } from '@ui/ui-health';
 import { expect, test } from '@fixtures';
 
 /**
- * The health/performance/layout counterpart to `signup-login-accessibility.spec.ts`'s two new
- * post-OTP screens — unreachable before the Cloudflare Turnstile fix (2026-09-30), so never covered
- * by `signup-login-screens.spec.ts`'s otherwise-identical sweep.
- *
- * Kept in a SEPARATE file from `signup-login-screens.spec.ts` deliberately: that file is already in
- * `UI_FILING_SPECS` (proven stable across two clean live runs, so its findings auto-file to
- * Bugzilla). These two tests are brand new and unproven — adding them to the trusted file would let
- * a selector mistake on their very first run auto-file a false bug. This file earns that trust the
- * same way the other one did (two clean runs) before being added to the allow-list itself.
+ * Health/performance/layout checks for the two post-OTP signup screens. Kept apart from
+ * signup-login-screens.spec.ts, which is in UI_FILING_SPECS, until these prove stable.
  */
 const RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
 
@@ -71,14 +64,7 @@ test.describe(
 
       const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
       test.skip(otpOutcome === 'already-exists', 'the random mobile happened to collide — re-run');
-      /*
-       * #896 (closed INVALID 2026-10-03): the timer used to start at `goto()`, which folded the entire
-       * page-load + account-type + country/language/domain flow (~10s, confirmed by direct
-       * instrumentation) into what the bug then called "time for the screen to appear after OTP". The
-       * real post-OTP render is under a second. Starting the clock HERE — right before OTP entry, same
-       * boundary the bug's own wording describes ("the screen right after entering the mobile OTP") —
-       * is what the performance budget below should actually be judging.
-       */
+      // Start the clock right before OTP entry, so the budget judges only the post-OTP render.
       const started = Date.now();
       const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
       test.skip(
@@ -124,8 +110,7 @@ test.describe(
         dobMonth: 'June',
         dobYear: 1995,
       });
-      // Same #896 fix as the Personal test above: time THIS screen's own transition (Continue ->
-      // Company Details rendering), not the whole flow since page load.
+      // Time only this screen's transition (Continue -> Company Details), not the whole flow.
       const started = Date.now();
       await page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
       const loadMs = Date.now() - started;

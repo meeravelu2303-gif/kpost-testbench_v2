@@ -12,31 +12,9 @@ import {
 } from '../support/katchup';
 
 /**
- * Katchup **received-message actions** (FR-KU-048..057, Katchup FRD §7 "Recipient" rows): the
- * extended menu, Transfer, the four Forward variants (plain / with thread × hide / reveal source),
- * Copy, Save, Text-to-Speech and Delete — on a message the browser's account RECEIVED.
- *
- * The received message is sent through the API **by the 2nd QA account** (`victim`), never by the
- * browser's own account (minting a token for it kicks the browser session — see support/groups.ts).
- *
- * Read from source (`bubble/KatchupMessage/KatchupMessage.js`, `bubble/forwardFooter/
- * ForwardFooter.js`, 2026-10-11):
- *   - a received message's trigger is `ReplyIcon`; its menu (`replyIconContent`) lists Reply ·
- *     Comment · Clarify · Transfer · Forward · Forward With Thread · Copy · Save · Delete · Print ·
- *     Text-To-Speech (Voice Transcription only for voice messages); Edit / Recall are sender-only;
- *   - Transfer → `setTransfer(true)` → the "Transfer Message" modal (FR-KU-049; on the web the
- *     "device share sheet" is this Katchup recipient picker);
- *   - Forward → `msgType 15`, forward view with the **Hide Source / Reveal Source** checkboxes
- *     (Reveal is the default — MANTIS-0011652) and the "Forward To" picker (FR-KU-050/051);
- *     Forward With Thread → `msgType 20`, `attachment.Threads` → "Forward With All Threads" with the
- *     same two source modes (FR-KU-052/053);
- *   - Copy → `handleCopyToClipboard` → toast "Text copied to clipboard" (FR-KU-054);
- *   - Save → `handleSaveButtonClickBell` → toast "Message Saved successfully" (FR-KU-055);
- *   - Text-To-Speech → `.tts-modal-advanced` + `window.speechSynthesis.speak(utterance)` (FR-KU-056);
- *   - Delete → "Delete Message" confirmation (Cancel / Confirm) → removed from the view (FR-KU-057).
- *
- * Every test deletes the message it received (the sender's copy is the 2nd account's; the API
- * lifecycle specs clean that side). Gated behind `KATCHUP_UI_LIFECYCLE=true`.
+ * Katchup actions on a RECEIVED message (ReplyIcon menu): Transfer, the four Forward variants, Copy,
+ * Save, Text-To-Speech and Delete. The 2nd QA account sends via the API (an API login for the browser's
+ * own account would kick its session). Gated behind KATCHUP_UI_LIFECYCLE; each test deletes its message.
  */
 const SENDER = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim');
 
@@ -254,12 +232,8 @@ test.describe(
       { annotation: [{ type: 'requirement', description: 'FR-KU-055' }] },
       async ({ page, endpoints }) => {
         const subject = `QA UI recv save ${Date.now()}`;
-        // `handleSaveButtonClickBell` opens a NATIVE `window.confirm` ("You have selected only N out of
-        // M. The remaining … message(s) will be deleted from <contact> Message Folder" / "Only the
-        // selected message will be saved, the rest will be deleted. Click OK to confirm") and only then
-        // POSTs /katchup/saveKatchupMessages/. Accepting would delete every other message in the shared
-        // QA conversation, so this verifies the confirmation step (FR-KU-055 steps 1–2) and cancels;
-        // Playwright would otherwise auto-dismiss the confirm and the action would silently do nothing.
+        // Save opens a native confirm; accepting would delete every other message in the shared QA
+        // conversation, so the test checks the confirm and dismisses it.
         const confirms: string[] = [];
         page.on('dialog', (d) => {
           confirms.push(`${d.type()}: ${d.message()}`);

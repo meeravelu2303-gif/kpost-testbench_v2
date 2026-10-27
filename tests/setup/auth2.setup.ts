@@ -4,12 +4,8 @@ import { expect, test as setup } from '@fixtures';
 import { reuseValidSession } from './session-reuse';
 
 /**
- * Logs in as the **2nd QA account** and saves its session to `.auth/user2.json`, for the two-session
- * Katchup tests (a sender + a receiver, needed for recipient actions and read receipts).
- *
- * Only performs the real login when the two-session suite will actually run
- * (`KATCHUP_UI_LIFECYCLE=true`) — otherwise it saves an anonymous state, so a normal browser run does
- * not do a second fresh login (which would hit the throttling country-list endpoint again).
+ * Logs in as the 2nd QA account and saves the session, for the two-session Katchup tests (sender
+ * and receiver). Without KATCHUP_UI_LIFECYCLE=true it saves an anonymous state, avoiding an extra login.
  */
 setup('authenticate second account', async ({ page, browser, loginPage, log }) => {
   if (await reuseValidSession(browser, STORAGE_STATE_2, log)) setup.skip();

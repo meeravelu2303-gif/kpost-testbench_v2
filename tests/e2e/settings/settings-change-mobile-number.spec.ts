@@ -2,25 +2,8 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * Settings · Change Mobile Number panel (`ChangeNumber.js`) — confirmed from source: this ENTIRE
- * multi-step flow (enter number -> "Change Number" -> OTP modal -> new number -> "Continue" -> second
- * OTP modal -> final confirmation with a real-looking data-loss warning -> "Ok") has NO `Services/*`
- * import and fires ZERO network requests anywhere. Both OTP modals never actually read or validate
- * the typed digits — "Submit" just advances regardless of input. The final "Ok" only closes the
- * modal; nothing is ever persisted.
- *
- * This is safe to drive completely end to end (no real write risk, unlike the destructive account
- * flows elsewhere in Settings) — the test's real value is PROVING, not assuming, that a user who
- * completes this entire flow — including reading a warning that their old number's data "will be
- * automatically deleted" — has changed NOTHING: no request fires, and nothing survives a reload.
- *
- * NEEDS-CODEGEN, confirmed live 2026-10-01: the real panel does NOT match the sequential single-input
- * wizard described above. It actually renders TWO always-visible sections side by side ("New Primary
- * Mobile Number" with its own Continue/"Make Primary as Secondary" buttons, and "Secondary Mobile
- * Number" with its own "Change Number" button) rather than one input that reveals a second input after
- * an OTP step. `getByRole('button', { name: /^Change Number$/i })` actually belongs to the Secondary
- * section, not the Primary one this test means to drive. The flow needs a fresh interactive codegen
- * pass against the live page before this test's steps can be trusted again.
+ * Settings › Change Mobile Number: the whole OTP flow calls no service and the OTP digits are never read.
+ * Safe to drive end to end; proves a completed flow fires no request and changes nothing after a reload.
  */
 test.describe(
   'KPost Settings · Change Mobile Number panel',
@@ -58,14 +41,13 @@ test.describe(
       await expect(page.getByText(/Enter OTP/i).first(), 'the first OTP modal opens').toBeVisible({
         timeout: 10_000,
       });
-      // Confirmed from source: Submit never reads the OTP digits — it advances unconditionally.
+      // Submit never reads the OTP digits; it advances unconditionally.
       await page
         .getByRole('button', { name: /^Submit$/i })
         .first()
         .click();
 
-      // The panel now renders a "New Primary Mobile Number" and a "Secondary Mobile Number" section
-      // (2026-10-11); after the OTP step the input to fill is the VISIBLE one in the new-primary card.
+      // After the OTP step the input to fill is the visible one in the new-primary card.
       const newNumberInput = page.locator('input[placeholder="Enter your No"]:visible').first();
       await expect(newNumberInput, 'the New Primary Mobile Number input appears').toBeVisible({
         timeout: 10_000,
@@ -107,8 +89,7 @@ test.describe(
           'completing every step, including the final confirmation, must not fire a single network request',
       ).toBe(false);
 
-      // Confirms nothing survived: reloading Settings must show the ORIGINAL number's flow again, not
-      // a "changed" state (there is none to show — this documents the flow's statelessness directly).
+      // Reloading Settings must show the original number's flow again, not a "changed" state.
       await page.reload({ waitUntil: 'domcontentloaded' });
       await settingsPage.openPanel('General Settings', 'Change Mobile Number');
       await expect(

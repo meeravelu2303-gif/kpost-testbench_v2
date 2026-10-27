@@ -2,10 +2,8 @@ import { applyQatestOnly, KEPT_BUSINESS, qatestOnlyOverrides } from '../../src/c
 import { expect, test } from '@fixtures';
 
 /**
- * QATEST_ONLY must put the PERSONAL roles on the qatest accounts alone, keep the business tiers
- * (owner decision 2026-10-10: they have no qatest stand-in and must stay tested) with their own
- * password, drop the older personal-6 account, and fail loudly on a missing qatest account instead
- * of quietly falling back to a shared one.
+ * QATEST_ONLY puts PERSONAL roles on qatest accounts only, keeps the business tiers (own password),
+ * drops personal-6, and fails loudly on a missing qatest account.
  */
 
 const base = {

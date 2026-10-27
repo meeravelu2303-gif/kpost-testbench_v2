@@ -7,19 +7,9 @@ import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { expect, test } from '@fixtures';
 
 /**
- * KMail **read receipt** (BR-M01 / SRS-M02, FR-KM-020): the sender sees an exact open time for a
- * recipient only AFTER that recipient opens the mail — never before.
- *
- * The open must happen in the browser: the bench's API client gets an empty record back from the
- * open call (mail-semantics-workflow keeps that case parked), while the screen's own request works.
- * So A (qatest1) sends through the API, B (qatest2, STORAGE_STATE_2) opens it in KMail, and the
- * receipt is judged from A's side, where the sender reads it:
- *   - A's transaction for B:  readStatus 'N' → 'Y', letterReadTime null → a timestamp;
- *   - getCopiesInfo (A's own mail): B's readTime null → a timestamp.
- * The timestamp must fall between the send and "now" (with a small allowance for server clock skew).
- *
- * Known: opening a received mail is intermittently NOT marked read (#1359) — when that happens this
- * test is red for the right reason. Self-cleaning: both sides delete their copy in `finally`.
+ * KMail read receipt (FR-KM-020): A sends via the API, B opens it in the browser (the API open returns
+ * an empty record), and A must then see B's exact open time, never before. Known defect #1359: an
+ * open is intermittently not marked read. Self-cleaning: both sides delete their copy.
  */
 const K = AUTH_PROFILES.kpost.principals;
 const A = K.find((p) => p.key === 'personal')!;
@@ -154,8 +144,7 @@ test.describe(
         await row.click();
         const openResponse = await opened;
         expect(openResponse.status(), 'B’s open request is answered').toBe(200);
-        // What the server handed back for the open — an empty record (kmailID 0, no content) is the
-        // #1348 condition under which the read status is written to the wrong row (#1359).
+        // An empty record here (kmailID 0, #1348) is when the read status goes to the wrong row (#1359).
         const openedRecord = (
           (await openResponse.json().catch(() => ({}))) as { data?: { kmailID?: number } }
         ).data?.kmailID;

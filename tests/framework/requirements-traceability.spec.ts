@@ -8,15 +8,8 @@ import {
 import { expect, test } from '@fixtures';
 
 /**
- * FRD traceability — the answer to "does every `requirements` tag name a real FR, and how far has the
- * migration to the six per-module FRDs (docs/reference/requirements-frd.md, docs/reference/decision-log.md) got?".
- *
- * (1) Every requirement id on every registered endpoint must be a known id — a current `FR-xx-NNN`,
- *     an NFR, or a still-pending legacy id (`LEGACY_REQUIREMENTS`). An unknown id fails the build, so
- *     a typo or an invented FR cannot slip in.
- * (2) `LEGACY_REQUIREMENTS` must not name an id no definition uses any more — the list stays honest
- *     and visibly shrinks as modules are migrated; a stale entry fails, forcing it to be removed.
- * The `docs/reference/requirements-frd.md` FR→coverage map is the human-readable companion to this guard.
+ * Every endpoint's requirement ids must be known (`FR-xx-NNN`, NFR, or `LEGACY_REQUIREMENTS`), and the
+ * legacy list must not keep ids nothing uses. Human-readable map: docs/reference/requirements-frd.md.
  */
 test.describe('requirements traceability @framework', () => {
   const endpoints = apiRegistry.all();

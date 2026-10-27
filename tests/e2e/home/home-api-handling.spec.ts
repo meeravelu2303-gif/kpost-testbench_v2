@@ -4,22 +4,9 @@ import { expect, test } from '@fixtures';
 import { settleFrames } from '../support/settle';
 
 /**
- * Home dashboard — API response-handling. Does the Recents list surface a failing/empty backend
- * honestly, or does it silently show a blank list (indistinguishable, to a user, from "you have no
- * messages")?
- *
- * CORRECTED 2026-10-12 (frontend ground-truth re-read of `Services/Home.js` + `RecentMessage.js`):
- * Home's Recents list is loaded from `POST /dashboard/homeDashboardMsgs/` (initial + pagination)
- * and refreshed via `/dashboard/homeDashboardNewMsgs/` — NOT `katchupDashboardMsg` (that belongs to
- * the /katchup route and is never called here). The previous version of this spec stubbed
- * `katchupDashboardMsg`, so it exercised nothing. These stubs hit the real endpoint.
- *
- * Response shape (from `RecentMessage.js:451-473`): a SUCCESS body carries top-level `katchup`,
- * `kmail` and `kall` arrays, merged with `[...response.katchup, ...response.kmail, ...response.kall]`.
- * The component treats `status === "SUCCESS"` as the success gate and shows an error banner otherwise.
- *
- * NEEDS-LIVE-TUNING: the exact success-body fields are from the source map above; confirm on the first
- * run and tune the empty/No-Data assertion if the live markup differs.
+ * Home Recents: a failing, unreachable or empty `homeDashboardMsgs` response (stubbed) must show an
+ * error banner or an empty state, never a silent blank. Success = `status: "SUCCESS"` with
+ * `katchup`/`kmail`/`kall` arrays (`RecentMessage.js`).
  */
 test.describe(
   'KPost Home · dashboard API failure handling',
@@ -43,8 +30,7 @@ test.describe(
       homePage,
       page,
     }) => {
-      // KPost's envelope anti-pattern: HTTP 200 carrying a failure. The component gates on
-      // status==="SUCCESS", so this must drive the visible error banner.
+      // KPost's envelope: HTTP 200 carrying a failure.
       await page.route(RECENTS, (route) =>
         route.fulfill({
           status: 200,
@@ -83,8 +69,7 @@ test.describe(
       homePage,
       page,
     }) => {
-      // A transport failure returns `undefined` from the service (empty catch in Services/Home.js).
-      // The screen must still tell the user, not render a confident-but-false empty list.
+      // The service swallows a transport failure (empty catch in Services/Home.js).
       await page.route(RECENTS, (route) => route.abort('failed'));
 
       await homePage.goto();
@@ -112,8 +97,7 @@ test.describe(
       homePage,
       page,
     }) => {
-      // Frontend gap (RecentMessage.js): on an empty SUCCESS, `setNodata(true)` is never called, so the
-      // "No Data found" state can never render — the user sees a blank panel with no explanation.
+      // RecentMessage.js never calls setNodata(true) on an empty SUCCESS, so "No Data found" never shows.
       await page.route(RECENTS, (route) =>
         route.fulfill({
           status: 200,
@@ -134,8 +118,6 @@ test.describe(
       await homePage.switchToRecentsTab();
       await settleFrames(page);
 
-      // The list must not be a silent blank: either an explicit empty-state message, OR at least no
-      // false error banner on a legitimately-empty inbox.
       const emptyState = page.getByText(
         /no (data|messages|recent|conversations) (found|yet|available)|you have no|nothing here/i,
       );

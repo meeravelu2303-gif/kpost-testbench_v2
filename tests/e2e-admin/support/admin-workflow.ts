@@ -4,17 +4,9 @@ import { expect, test } from '@fixtures';
 import { isLiveHost } from '@config/live-hosts';
 
 /**
- * Admin UI **functional** helpers: work done on the real Admin/HR-Setup screens (create, edit, delete), with
- * a host guard and a clean-up path. Selectors are read from ADMIN_HR_MODULES_25 (2026-10-22):
- * `Common/IConControl.js` (icon bar), `Common/KDrawer.js` (add/edit drawer), `Common/KSmartTable.js`
- * (list, row ⋮ menu, delete confirmation), `Common/KDropdown.js` (react-select scoped by its label).
- *
- * ## Why every write test is host-guarded
- * The front-end source hard-codes `AdminURL = https://adminmodule.kpostindia.com` (the LIVE Admin API) and
- * `LoginURL = https://devapi2.kpostindia.com` (`Services/ServiceURL.js`). The test build may be compiled
- * differently, but a test that saves records must not trust that: it first proves the screen's Admin calls
- * go to `ADMIN_API_BASE_URL` (the test Admin box), and skips with the hosts it saw otherwise. As a second
- * net, any non-GET request the page sends to a live host is aborted and reported.
+ * Helpers for create/edit/delete flows on the Admin/HR-Setup screens. The front-end source points at
+ * the live Admin API, so a write test first proves the screen calls the test Admin box (else skips),
+ * and any non-GET request to a live host is aborted and reported.
  */
 
 /** Admin API paths the screens call (Services/AdminSetup.js, HumanResources.js). */
@@ -74,10 +66,9 @@ export function requireTestAdminApi(guard: AdminHostGuard): void {
 }
 
 /**
- * One step of a flow that must NOT hide the steps after it (owner 2026-10-26: "test everything, stop only
- * on a blocker"). A failure is recorded (the test still fails, listing every failed stage) and the flow
- * carries on. `blocker: true` is for a step the rest cannot run without — the record was never created —
- * and stops the test as before. Returns whether the stage passed.
+ * One step of a flow that must not hide the steps after it: a failure is recorded (the test still
+ * fails) and the flow carries on. `blocker: true` stops the test, for a step the rest cannot run
+ * without. Returns whether the stage passed.
  */
 export async function stage(
   name: string,
@@ -183,17 +174,12 @@ export async function openTab(page: Page, name: string): Promise<void> {
 }
 
 /**
- * IConControl (src/Common/IConControl.js): plain divs with no text, Add first and the eye (list) always
- * last; a screen passes only the icons it has (the Variable tab has just the eye). Visible ones only: a
- * tabbed screen keeps the other tab's icons in the DOM, hidden, and first.
+ * The icon bar: Add first, the eye (list) always last. Visible ones only: a tabbed screen keeps the
+ * other tab's icons in the DOM, hidden.
  */
 const icons = (page: Page): Locator => page.locator('.boderIcon:visible, .borderIconCol:visible');
 export const openAdd = (page: Page): Promise<void> => icons(page).first().click();
-/**
- * Shows the list. The eye TOGGLES it (`viewClick` in WPSetupTier.js etc.), so a second click hid the list
- * the flows had just opened: click only while no table is showing. (The icon's active class is no guide:
- * Employee Data styles its eye by the user's role, `eyeIcon={role === 1}`.)
- */
+/** Shows the list. The eye toggles it, so click only while no table is showing. */
 export async function openList(page: Page): Promise<void> {
   // KSmartTable's own wrapper (src/Common/KSmartTable.js), not any table: forms have their own.
   const list = page.locator('.smart-table-wrapper:visible').first();

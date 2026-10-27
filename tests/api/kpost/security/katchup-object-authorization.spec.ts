@@ -6,27 +6,8 @@ import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { expect, test } from '@fixtures';
 
 /**
- * Can an outsider recall or delete a Katchup message they did not send?
- *
- * `recallMessage` and `deleteKatchUpMessage` take a `msgID` and nothing else that ties it to the
- * caller — the same object-handle shape that made `removeGroupMember` exploitable (Bugzilla #507).
- * So the question is identical: does the server check that the caller OWNS the message, or act on any
- * msgID it is handed? Only the sender should be able to recall or delete their message.
- *
- * ## Self-activating
- *
- * The setup sends a message; if `sendMessage` ever answers without a usable msgID there is nothing
- * to attack, so this test SKIPS with a reason rather than failing. (It used to be permanently queued
- * behind Bugzilla #494's sendMessage 500 — that was superseded by #594's groupFlag string-typing fix,
- * 2026-09-26, and the skip condition below was always dynamic, not hardcoded to either ticket, so this
- * activates on its own the moment a msgID comes back.)
- *
- * ## The database is the judge
- *
- * Recall and delete report success in the envelope regardless, and an authorization bug is exactly
- * where the response cannot be trusted. The verdict is the row: after the outsider's attempt, the
- * message's `recall_status` / `delete_status` in TBL_KPOST_KATCHUP_GROUPREADSTATUS must be
- * unchanged.
+ * Can an outsider recall or delete a Katchup message they did not send? Both take a bare `msgID`.
+ * The verdict is the row (`recall_status`/`delete_status`), since the envelope says success anyway.
  */
 test.describe(
   'KPost Security · Katchup message authorization (IDOR/BOLA) @api @kpost-api @security @katchup @database',
@@ -52,10 +33,7 @@ test.describe(
       const database = databases.for('kpost-api');
       test.skip(!database.enabled, 'needs the KPOST_QA connection to judge by the row');
 
-      /*
-       * `sendTo` sends a LITERAL request — it does not run the endpoint's own request factory — so the
-       * body here mirrors `katchup-send-message`'s own `sendShape()` in send.api.ts exactly.
-       */
+      // `sendTo` sends a literal body, so this mirrors `sendShape()` in send.api.ts.
       const sent = await endpoints.sendTo(
         'katchup-send-message',
         { body: sendShape() },
@@ -195,14 +173,8 @@ test.describe(
     test("an outsider who is not a group member cannot read the group's read receipts @api @security", async ({
       endpoints,
     }) => {
-      /*
-       * Confirmed as a real, untested gap by the 2026-10-03 ground-truth re-audit: Katchup has no
-       * group-membership of its own (that lives in the Group module), so the question here is
-       * group-MESSAGE scoped — can someone with no relationship to this group read who has seen a
-       * group message by naming its msgID? `personal-5` is used as the outsider: not a member of the
-       * group created below, and not the `personal-3` attacker already used above (kept separate so a
-       * failure in one test can never be explained by state the other left behind).
-       */
+      // Can a non-member read a group message's read receipts by its msgID? `personal-5` is the
+      // outsider, separate from the `personal-3` attacker above so the tests share no state.
       const outsider = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-5');
       const member = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim');
       test.skip(!outsider || !member, 'needs the personal-5 and victim principals');

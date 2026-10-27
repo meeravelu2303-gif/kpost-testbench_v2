@@ -5,32 +5,8 @@ import { KpostRepository } from '@database/repositories/kpost.repository';
 import { expect, test } from '@fixtures';
 
 /**
- * One user journey asserted at all three layers: **UI → API → MySQL**.
- *
- * ## Why login is the right journey to prove this on
- *
- * A login is the only interaction where the three layers can disagree in a way that matters and is
- * invisible from any one of them:
- *
- *  - The **UI** can land on `/home` — the user believes they are signed in.
- *  - The **API** can have issued a token — the client will happily send it.
- *  - And `TBL_KPOST_LOGIN_SESSION` can still hold no row, which means the server has no record of
- *    the session and therefore **cannot revoke it**. "Log out from all devices" then silently does
- *    nothing, and no UI test or API test would ever notice.
- *
- * That is the whole argument for cross-layer assertions: the defect lives in the gap between the
- * layers, so it can only be seen by a test that spans them.
- *
- * ## What this deliberately does not do
- *
- * It does not write to the database, and it does not assert an exact session count. Other people
- * and other suites use these QA accounts, so "exactly one session" is not a property this test can
- * own. It asserts the only thing that is genuinely attributable: a session row for THIS account
- * exists after the UI login, and every row it sees belongs to the account that just signed in.
- *
- * Failure diagnostics — screenshot, video and trace — come from `playwright.config.ts`
- * (`screenshot: 'only-on-failure'`, `video: 'retain-on-failure'`, `trace: 'retain-on-failure'`),
- * so a failure here arrives at Bugzilla with the reproduction attached.
+ * A UI login asserted at UI, API and MySQL: a token without a TBL_KPOST_LOGIN_SESSION row is a
+ * session the server cannot revoke. Read-only; no exact session count (shared QA accounts).
  */
 test.describe(
   'Cross-layer · UI login reaches the database @database',
@@ -79,11 +55,7 @@ test.describe(
         await loginPage.login(testData.kpostId, testData.password);
         expect((await loginAnswer).status(), 'the server accepts the login').toBeLessThan(300);
 
-        /*
-         * Landing on an authenticated route is the UI's claim that the login worked. Asserted first so
-         * that a failure here is reported as a login/UI problem rather than as a missing database row —
-         * which is a different ticket for a different developer.
-         */
+        // Asserted first so a UI login failure is not reported as a missing database row.
         await expect(page, 'a successful login leaves the login screen').not.toHaveURL(/\/login/, {
           timeout: 30_000,
         });
@@ -92,24 +64,11 @@ test.describe(
         const token = await page.evaluate(() => window.localStorage.getItem('accessToken'));
         expect(token, 'the app stored an access token for the signed-in user').toBeTruthy();
 
-        /*
-         * This is a real login for the SAME account every other spec's shared `storageState: STORAGE_STATE`
-         * depends on. If the backend revokes the previous session on a fresh login (plausible — this very
-         * test exists to prove a session row is created and therefore revocable), the OLD token baked into
-         * the shared file at suite start goes dead the instant this test runs, and every later spec in a
-         * long sequential run (workers=1) starts 401-ing simultaneously across unrelated screens — looking
-         * like a mass regression when it is really this test's own side effect. Re-saving the fresh,
-         * just-issued session back to the same shared path heals it for everything that runs afterward.
-         */
+        // A fresh login can revoke the shared saved session; re-save it so later specs don't 401.
         await page.context().storageState({ path: STORAGE_STATE });
 
         // --- Layer 3, after: the server can actually revoke that session -----------------------------
-        /*
-         * Polled rather than read once: the session row is written by the login request, which the SPA
-         * fires as it navigates, so a single immediate read races the server's own commit and would
-         * report a missing row that appears milliseconds later. `expect.poll` waits for the state
-         * instead of asserting a snapshot.
-         */
+        // Polled: a single immediate read races the server's commit of the session row.
         await expect
           .poll(async () => (await repo.sessions(testData.kpostId)).length, {
             message:
@@ -121,8 +80,7 @@ test.describe(
 
         const after = await repo.sessions(testData.kpostId);
 
-        // Every row must belong to the account that signed in: a session attributed to somebody else
-        // is a far more serious fault than a missing one.
+        // Every row must belong to the account that signed in.
         expect(
           after.every((session) => text(session.kpost_id) === testData.kpostId),
           'every session row returned for this account belongs to it',

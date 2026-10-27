@@ -1,23 +1,12 @@
 #!/usr/bin/env node
 /**
- * Duplicate gate — run this BEFORE filing any bug by hand, for ANY module/product.
+ * Duplicate gate for hand-filed bugs: searches every status for the keywords and exits non-zero on
+ * any match, so "no output, exit 0" is the only green light to file.
  *
  *   node scripts/bugzilla-duplicate-check.cjs "<product>" "<component>" "<keyword>" ["<keyword2>" ...]
  *
  * Example:
  *   node scripts/bugzilla-duplicate-check.cjs "KPost UI" "Auth" "forgotPasswordUpdate" "zero feedback"
- *
- * Why this exists: manual bug filing (a raw POST /bug call) does not go through the automated
- * pipeline's fingerprint-based dedup (bugzilla-filer.ts). Every manual filing must be preceded by
- * this check instead — searching ALL statuses, not just open ones, because a bug already closed
- * INVALID/WONTFIX/DUPLICATE must never be re-filed either (see JUDGED_NOT_A_DEFECT in
- * src/config/bugzilla.config.ts for the same rule applied on the automated side).
- *
- * Prints every match it finds, with status/resolution/summary, and exits non-zero when anything
- * matches — so "no output, exit 0" is the only green light to file. A match does not automatically
- * mean "don't file": read the result and decide — reproduce via a comment on an existing OPEN bug,
- * skip entirely if it is JUDGED_NOT_A_DEFECT, or file fresh only if the match is a false positive
- * (same keyword, genuinely different defect).
  */
 'use strict';
 

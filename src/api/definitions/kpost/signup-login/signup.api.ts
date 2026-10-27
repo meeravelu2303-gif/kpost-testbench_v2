@@ -3,22 +3,9 @@ import { typesOnlySchema } from '@api/schema/sample-schema';
 import { body, defineKpostEndpoint } from '../kpost-endpoint';
 
 /**
- * Registration — creating an account, and the checks a signup form makes before it submits.
- *
- * ## Back in scope: the OTP test gateway
- *
- * Signup was out of scope while the live application had no OTP bypass. The testingapi **test DB** now
- * runs a TEST GATEWAY — `sendOTP`/`sendOTPtoMail` create the OTP record but deliver no real SMS/e-mail,
- * and `123456` (`QA_BYPASS_OTP`) always validates. So with `OTP_TEST_GATEWAY=true` + `TEST_DB_MODE=true`
- * these `otpDependent: 'requires'` writes run end to end (the guard opens them; see `production-guard`).
- *
- * ## Identities are ALLOWLISTED, not random
- *
- * The old version minted a random `98765…` mobile per run, which the QA-identifier guard (rightly)
- * refuses. A registration creates a brand-new account — it names no existing user — so it uses the
- * reserved, allowlisted `testData.signupKpostId` / `signupMobile`. On a fresh/reset test DB a signup
- * succeeds; on a re-run it is "already exists" (BR-S02) — both are valid, so reset the disposable DB
- * between full runs. Payload fields follow the workbook / `openapi/kpost-api.openapi.json`.
+ * Registration and the signup form's pre-submit checks. The writes run only on the OTP test gateway
+ * (OTP_TEST_GATEWAY + TEST_DB_MODE), with the reserved signup identities; a re-run gets "already
+ * exists".
  */
 const SIGNUP_TAGS = ['signup-login', 'signup'] as const;
 
@@ -31,10 +18,7 @@ export const signupApi = defineKpostEndpoint({
   path: '/v2/signupLogin/signup/',
   summary: 'Register a personal account',
   tags: [...SIGNUP_TAGS, 'critical'],
-  /*
-   * `global`: an account cannot be deleted through this API, so a run leaves a `qabench.signup@`
-   * row behind — fine on a disposable test DB, reset between full runs.
-   */
+  // `global`: the API cannot delete an account, so each run leaves a row on the disposable test DB.
   destructive: true,
   sideEffect: 'global',
   request: body(() => ({
@@ -59,8 +43,8 @@ export const signupApi = defineKpostEndpoint({
       city: 'Chennai',
     },
   })),
-  // OTP-gated + global, so it never runs on production; the schema lets its negative/injection cases
-  // run on a non-prod OTP-gateway host. Types only — signup field required-ness is not asserted here.
+  // OTP-gated and global, so never on production; the types-only schema enables off-live negative
+  // cases.
   requestSchema: typesOnlySchema({
     kpostID: testData.signupKpostId,
     firstName: 'QA',
@@ -79,9 +63,7 @@ export const signupApi = defineKpostEndpoint({
 
 export const signupGetApi = defineKpostEndpoint({
   id: 'signup-login-signup-get',
-  // A GET on the signup path — answers 405; harmless, and pins a stale Sheet3 row. Never reached the
-  // central engine until this module's signup tag was swept (2026-10-03), which is why this wasn't
-  // declared before: expectedStatus defaults to [200], so an undeclared 405 read as a false failure.
+  // A GET on the signup path answers 405; it pins a stale workbook row.
   expectedStatus: [405],
   productionSafe: true,
   requirements: ['FR-SL-001'],
@@ -100,10 +82,7 @@ export const adminRegistrationApi = defineKpostEndpoint({
   path: '/v2/signupLogin/adminRegistration/',
   summary: 'Register a business account and its company',
   tags: [...SIGNUP_TAGS, 'business-tier'],
-  /*
-   * Creates a company as well as an account — a whole tenant per run. `global`: companies accumulate,
-   * appear in other tenants' lookups, and consume a unique name/domain that cannot be released.
-   */
+  // Creates a whole company per run; `global` because companies accumulate and use up unique names.
   destructive: true,
   sideEffect: 'global',
   request: body(() => ({
@@ -172,10 +151,8 @@ export const kpostIdExistApi = defineKpostEndpoint({
   summary: 'Check whether a KPost ID is already taken',
   tags: [...SIGNUP_TAGS, 'enumeration-surface'],
   destructive: false,
-  /*
-   * Asked with the CONFIGURED absent id/mobile (known-unused, allowlisted), so the happy path is
-   * "available". The "already taken" path (BR-S02) is asserted in the spec against a real account.
-   */
+  // Asked with the configured absent id/mobile, so the happy path is "available"; the spec covers
+  // "taken".
   request: body(() => ({
     kpostID: testData.kpostIdAbsent,
     firstName: 'QA',

@@ -4,18 +4,8 @@ import { body } from '../kpost/kpost-endpoint';
 import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /**
- * Admin module — **Work Place Setup** (step 1 of the org-build) and **Work Place Location Setup**
- * (step 2). See `docs/modules/admin-flow.md` §4.
- *
- *   adminTierAttribute/*   the workplace TIERS (levels), e.g. "category of workplace"
- *   adminTierVariable/*     the workplace VARIABLES (nodes), e.g. "Head office" under a tier
- *   location/*              the workplace locations
- *   workplaceHierarchy      the assembled workplace tree (read)
- *
- * Company-scoped reads (`get*ByCompanyId`, `getAllLocation`, the hierarchy) run on live against the
- * caller's OWN company (`companyId` from the business-admin token). Writes create org structure, so
- * they are destructive and gated (`ADMIN_LIFECYCLE`), self-cleaning through the lifecycle spec. Reads
- * keyed by a runtime id (`getLocation`, `getLocationById`) need an id a write creates — `needs-id`.
+ * Admin Work Place Setup (tiers, variables) and Work Place Location Setup. Company-scoped reads run
+ * on live; writes are gated by ADMIN_LIFECYCLE and self-cleaning; id-keyed reads are `needs-id`.
  */
 
 /** The caller's own company id (business-admin token). Payloads target only our own company. */
@@ -40,8 +30,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/adminTierAttribute/save',
     summary: 'Create a workplace tier attribute (level)',
     tags: ['workplace-tier-attribute'],
-    // AdminTierAttributeController.save takes List<AdminTierAttributeEntity>, not a single object
-    // (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
+    // The controller takes a list; a bare object 400s "Request body is invalid".
     request: body(() => [
       {
         attributeName: `QA WP Tier ${Date.now()}`,
@@ -91,8 +80,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/adminTierVariable/save',
     summary: 'Create a workplace tier variable (node)',
     tags: ['workplace-tier-variable'],
-    // AdminTierVariableController.save takes List<AdminTierVariableEntity>, not a single object
-    // (confirmed from source 2026-10-05) — a bare object 400s "Request body is invalid".
+    // The controller takes a list; a bare object 400s "Request body is invalid".
     request: body(() => [
       {
         attributeId: 1,
@@ -178,8 +166,7 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/location/save',
     summary: 'Create a workplace location',
     tags: ['workplace-location'],
-    // LocationController.save takes List<LocationEntity>, not a single object (confirmed from
-    // source 2026-10-05) — a bare object 400s "Request body is invalid".
+    // The controller takes a list; a bare object 400s "Request body is invalid".
     request: body(() => [
       {
         locationName: `QA Location ${Date.now()}`,
@@ -219,11 +206,8 @@ export const adminWorkplaceApis: EndpointDefinition[] = [
     path: '/workplaceHierarchy/getWorkPlaceHierarchy',
     summary: 'Read the assembled workplace hierarchy for the company',
     tags: ['workplace-hierarchy', 'needs-id'],
-    // Verified on the test host (2026-09-19): with ONLY `{ companyId }` (the owner's PDF payload) the
-    // live backend answers 400 `"parentAttributeId is required"` — so the PDF is INCOMPLETE for this
-    // one endpoint; it genuinely needs a REAL runtime `parentAttributeId` (a created workplace tier).
-    // So it is NOT productionSafe (a standalone call 400s and reads as a false CRITICAL); the admin
-    // lifecycle drives it with an attribute id it created. Left the placeholder fields for the lifecycle.
+    // Needs a real `parentAttributeId` (missing from the PDF payload), so the admin lifecycle
+    // drives it.
     request: body(() => ({
       parentVariableId: '0',
       parentAttributeId: '0',

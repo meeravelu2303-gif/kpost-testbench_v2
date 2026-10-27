@@ -6,12 +6,8 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import type { Locator, Page } from '@playwright/test';
 
 /**
- * KMail on a phone-size screen (390×844). Below the desktop breakpoint Kmail.js shows exactly one
- * panel — Write Mail > open conversation > Recents — so these tests use KMail the way a phone user
- * would: find and open a mail, then write and send one. At every step the page must not scroll
- * sideways and the controls used must sit inside the screen. (responsive-sweep.spec.ts only checks
- * that /kmail mounts without overflow; it never uses KMail.)
- * The seed mail comes from qatest3 through the API (the browser account is never logged in via API).
+ * KMail at phone size (390×844), where one panel shows at a time: open a mail, then write and send one.
+ * The page must never scroll sideways and controls must sit on screen. Seed mail comes from qatest3.
  */
 const C: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-3')!;
 const PHONE = { width: 390, height: 844 };

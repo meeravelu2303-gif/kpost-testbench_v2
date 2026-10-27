@@ -4,15 +4,8 @@ import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
 
 /**
- * Contacts **screen-breakage** sweep — does the Contacts experience crash?
- *
- * Contacts lives as a tab in the Katchup rail, with deep sub-surfaces captured from a live codegen
- * pass: the **Add-User / KDirectory** wizard (`.icon-KP_107-User-Add`, the "…More" → KDirectory
- * menu) and the **Create-Group** dialog (`.icon-KP_112-Group-Add`). Each is a place a broken bundle,
- * a 404 asset or an uncaught exception bites a real user. This opens each one (open only — no add, no
- * create, no message) and, via the shared sweep, captures short readable proof if anything crashes.
- *
- * Read-only by design; runs on any authenticated UI run.
+ * Contacts breakage sweep: opens the Contacts tab, the Add-User/KDirectory wizard and the
+ * Create-Group dialog (open only) and records any crash, 404 asset or uncaught error. Read-only.
  */
 
 /** Open an icon-triggered surface, then dismiss it so the walk can continue. Never fails the walk. */

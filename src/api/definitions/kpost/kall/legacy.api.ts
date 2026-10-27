@@ -3,25 +3,9 @@ import { body } from '../kpost-endpoint';
 import { defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 
 /**
- * Kall **V1 legacy writes** — `KallController.java` (`@RequestMapping("kall")`, no `/v2` prefix,
- * confirmed dead from the real frontend the same way as Katchup's V1 controller: `EndPointURL`
- * already bakes in `/v2`, so every live call resolves to the V3 controller at `/v2/kall/*`, never
- * these bare paths). Still deployed and directly callable. Confirmed 2026-10-06/07 from source:
- * none of the three methods below take an `HttpServletRequest` parameter at all, so none of them can
- * override an identity from the JWT even in principle — unlike their `/v2/kall/*` siblings, which
- * correctly call `kallTracker.setSender((String) request.getAttribute("kpostID"))` first.
- *
- * `setKallStatus` and `cancelScheduleKall` are the SAME root cause under two route names:
- * `KallController.cancelScheduleKall` calls `kallService.setKallStatus(kallTracker)` — the identical
- * service method `setKallStatus` calls — which reaches `KallDaoImpl.setKallStatus` (line ~117):
- * `UPDATE TBL_KPOST_KALL_TRACKERS kall set kall_status=:kallStatus, kall_end_time=:kallEndTime where
- * kall_id = :kallID` — a bare UPDATE by a client-supplied `kallID`, no sender/receiver ownership
- * check anywhere in the call chain. One fix (checking the token's own kpostID against the kall
- * row's sender/receiver before the UPDATE) closes both routes.
- *
- * `removeMemberKatchupKall` is a separate, more severe fault: `KallDaoImpl.removeMemberKatchupKall`
- * (line ~363) runs `delete KallScheduleDetails where id in (:idValue)` — a bulk, permanent HARD
- * DELETE by a raw client-supplied id list, with zero ownership predicate at any layer.
+ * Kall V1 legacy writes (no `/v2` prefix): unused by the frontend but still deployed, and none
+ * checks the caller owns the `kallID` or ids it changes. `setKallStatus` and `cancelScheduleKall`
+ * share one root cause; `removeMemberKatchupKall` hard-deletes by a raw id list.
  */
 export const legacySetKallStatusApi = defineUndocumentedKpostEndpoint({
   id: 'kall-legacy-set-status',

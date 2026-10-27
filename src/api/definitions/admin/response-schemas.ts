@@ -1,15 +1,8 @@
 import { z } from 'zod';
 
 /**
- * Response schemas for the Admin API, from the backend's own classes (Admin_Module at 829331d, the
- * deployed commit, read 2026-10-26): each field typed as its Java declaration (String → string,
- * Integer/int/long → number, boolean → boolean), each route's `value` shaped as its controller returns
- * it (a list, one record, a message, or nothing).
- *
- * Types only, per the rule in kpost-endpoint.ts: every record field is optional and nullable, so a schema
- * asserts TYPES without inventing a required-field contract. The two exceptions are measured on every live
- * answer: the envelope (`urlPath`, `status`, `statusCode`; ApiResponseEnvelope) and a record's `id` (the
- * Mongo key). Unknown keys are allowed (zod's default), so a field the backend adds never fails a check.
+ * Admin API response schemas, typed from the backend's Java classes. Types only: record fields are
+ * optional and nullable, except the envelope and a record's `id`. Unknown keys are allowed.
  */
 const s = z.string().nullable().optional();
 const n = z.number().nullable().optional();
@@ -246,8 +239,7 @@ export const ADMIN_RESPONSE_SCHEMAS: Record<string, z.ZodType> = {
   'admin-hr-tier-variable-save': envelope(z.array(variable)),
   'admin-hr-tier-variable-update': envelope(variable),
   'admin-hr-tier-variable-delete': noValue,
-  // ONE record, unlike its workplace twin's list: HrSetUpTierVariableServiceImpl.getAllReportingHrTierVariableHierarchy
-  // returns a single HrSetUpTierVariableEntity (live answer agrees, 2026-10-26).
+  // One record, unlike its workplace twin's list.
   'admin-hr-tier-variable-reporting-hierarchy': envelope(variable),
   // Locations: save/getLocation/getAllLocation → List, update/getLocationById → one, delete → no value.
   'admin-workplace-location-all': envelope(z.array(location)),

@@ -4,20 +4,9 @@ import { expect, test } from '@fixtures';
 import { requireKpostDb, rowSummary, rowWhen } from '../support/cross-layer';
 
 /**
- * Profile **edit** through the UI — the About section, the cleanest self-restoring profile write and
- * the UI analogue of the green API `updateAbout` lifecycle. Own account, own data.
- *
- * Selectors from `components/UserProfile/UserProfile.js`: the About section is `#About` with a scoped
- * edit pencil `.icon-KP_236_Edit` (self-profile only), which opens an editor whose field carries the
- * placeholder "Write about yourself..." (`Settings/About`) and a save button labelled "Update".
- *
- * Gated behind `PROFILE_UI_LIFECYCLE=true` (it writes a profile field) and **self-restoring** — it
- * reads the current About first and puts it back, so the account ends unchanged.
- *
- * NEEDS-CODEGEN: the profile is a tabbed UI whose About edit pencil is a hover-revealed font-icon; the
- * source selector `.icon-KP_236_Edit` clicks time out on the deployed build even after hover+force, so
- * the real edit affordance needs one interactive `codegen` pass to capture. The flow (read → edit →
- * Update → verify → restore), gating and self-restore here are correct once the selector lands.
+ * Profile About edit through the UI: save request, on-screen text and the DB row. Gated behind
+ * PROFILE_UI_LIFECYCLE; self-restoring. The hover-revealed edit pencil is fragile, so "Edit Profile"
+ * is the fallback entry.
  */
 test.describe(
   'KPost Profile · edit About (write)',
@@ -56,11 +45,10 @@ test.describe(
         const about = page.locator('#About');
         await expect(about, 'the About section renders').toBeVisible({ timeout: 20_000 });
 
-        // Read the current About text so we can restore it (a genuine value read, not an assertion).
+        // Read the current About text so we can restore it.
         const original = ((await about.locator('.nuntio-font').first().textContent()) ?? '').trim();
 
-        // Open the editor. The About section's pencil is a hover-revealed font-icon; the visible
-        // "Edit Profile" control is the reliable entry — click whichever surfaces the editor.
+        // The pencil is hover-revealed; fall back to the visible "Edit Profile" control.
         await about.hover().catch(() => undefined);
         await about
           .locator('.icon-KP_236_Edit')
@@ -76,9 +64,8 @@ test.describe(
         const editor = page.getByPlaceholder(/Write about yourself/i).first();
         await expect(editor, 'the About editor opens').toBeVisible({ timeout: 15_000 });
 
-        // Replace the text and save.
         await editor.fill(marker);
-        // Layer 2: the request the screen sends to save it, and the server's answer.
+        // Layer 2: the save request and the server's answer.
         const saved = page.waitForResponse(
           (r) => r.request().method() === 'POST' && r.url().includes('/profile/'),
           { timeout: 20_000 },
@@ -95,7 +82,6 @@ test.describe(
           'the save carries the new About text',
         ).toContain(marker);
 
-        // The new About surfaces on the profile (best-effort — the read-back can lag eventual consistency).
         await expect(page.getByText(marker).first(), 'the edited About text is shown').toBeVisible({
           timeout: 20_000,
         });
@@ -113,9 +99,7 @@ test.describe(
           description: `row: ${rowSummary(row, ['about_yourself'])}`,
         });
 
-        // Restore the original About so the account ends as it started. Re-entering the editor is
-        // best-effort (the hover-revealed pencil is flaky on re-render) — the EDIT above is the assertion;
-        // this cleanup must not fail the test if the re-entry misses (the account is our own QA account).
+        // Restore the original About; best-effort, since the hover pencil is flaky on re-render.
         try {
           await about.hover().catch(() => undefined);
           await about.locator('.icon-KP_236_Edit').first().click({ force: true, timeout: 5_000 });
@@ -124,7 +108,7 @@ test.describe(
           await restoreEditor.fill(original);
           await page.getByRole('button', { name: /^Update$/i }).click();
         } catch {
-          // Re-entry missed — the QA account keeps the test marker in About (harmless, own account).
+          // Re-entry missed: our own QA account keeps the marker in About.
         }
       },
     );

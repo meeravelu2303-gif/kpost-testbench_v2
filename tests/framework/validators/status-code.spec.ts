@@ -4,11 +4,7 @@ import { statusCodeValidator } from '@validators/response/status-code.validator'
 import { RESPONSES } from './support/fixtures';
 import { fakeContext, fixtureEndpoint, verdict } from './support/validator-harness';
 
-/**
- * `response.status-code` is the gate every other primary check depends on: when it FAILS, the
- * engine skips schema, structure and the rest as "prerequisite did not pass". Its verdict therefore
- * decides whether a whole endpoint's report means anything.
- */
+/** `response.status-code` gates every other primary check: when it FAILS, the rest are skipped. */
 test.describe('validator unit · response.status-code', { tag: '@framework' }, () => {
   const expecting = (...statuses: number[]) => fixtureEndpoint({ expectedStatus: statuses });
 
@@ -73,12 +69,8 @@ test.describe('validator unit · response.status-code', { tag: '@framework' }, (
   });
 
   test.describe('no response', () => {
-    /*
-     * Deliberately NOT SKIPPED: with no primary response nothing downstream can be judged, so this
-     * check fails and every dependent validator is skipped behind it. What keeps a network blip out
-     * of Bugzilla is the validity gate, which rejects "no HTTP response" — pinned here, because if
-     * either side's wording drifts, transport errors start being filed as API defects.
-     */
+    // Deliberately FAILED, not SKIPPED: the validity gate rejects "no HTTP response", so both
+    // wordings are pinned here to keep transport errors out of Bugzilla.
     test('a transport error fails with "no HTTP response", which the validity gate never files', async () => {
       const result = await verdict(
         statusCodeValidator,

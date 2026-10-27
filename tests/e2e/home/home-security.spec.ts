@@ -4,13 +4,8 @@ import { expect, test } from '@fixtures';
 import { settleFrames, settleNetwork } from '../support/settle';
 
 /**
- * Security-fuzzing angle for Home's two free-text inputs — the Recents search box (client-side
- * filter) and Advanced Search's "Enter Word" field (a separate control, submitted as part of a real
- * search request once a date range is also set — see `home-functional.spec.ts`'s own finding on the
- * Search button's date gate). Same execution-based XSS check as `login-security.spec.ts` (a `dialog`
- * listener, not string-matching — see that file's own doc comment for why a naive "does the payload
- * appear in the DOM" check produces false positives on any field that legitimately echoes back what
- * was typed).
+ * XSS fuzzing of Home's Recents search box and Advanced Search "Enter Word" field. Detects execution
+ * with a `dialog` listener, since these fields legitimately echo what was typed.
  */
 test.describe(
   'KPost Home · search box security fuzzing',
@@ -100,9 +95,7 @@ test.describe(
         await homePage.goto();
         await homePage.switchToRecentsTab();
         await homePage.openAdvancedSearch();
-        // A date range is required to enable Search (home-functional.spec.ts's own documented gate) —
-        // fill it alongside Word so the payload actually reaches a real submitted search, not just a
-        // field that's never sent anywhere.
+        // Search needs a date range to enable, so the payload reaches a real submitted search.
         await homePage.fillAdvancedSearch({
           word: payload.value,
           fromDate: '2026-01-01',

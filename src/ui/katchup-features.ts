@@ -1,24 +1,8 @@
 /**
- * THE Katchup UI feature catalogue — every user-facing Katchup feature, enumerated from the three
- * sources of truth so **nothing is missed**:
- *   1. the KPost documents (FRD v2.0: FR-K01..K25, BR-K01..K03) — see docs/reference/kpost-product.md,
- *   2. the message-type enum (`katchupMessageType`, 27 codes) — see `docs/modules/katchup-flow.md`,
- *   3. the live front-end action menus (`bellIconContent` = sender, `replyIconContent` = recipient,
- *      in `Katchup/bubble/KatchupMessage/KatchupMessage.js`).
- *
- * This is the front-end analogue of the API endpoint registry: it makes Katchup UI coverage
- * **measurable**. `tests/framework/katchup-ui-coverage.spec.ts` reconciles it and FAILS the build if a
- * feature has no status, if a `built` feature names no spec, or if any FR-K id is unrepresented — so a
- * Katchup feature cannot be silently dropped.
- *
- * `status` is the same honesty axis the API side uses (built / gated / blocked-with-reason):
- *   - `built`      — a spec drives it today (green, or a gated first-draft awaiting one live tune pass)
- *   - `needs-accounts`  — needs ≥3 QA PERSONAL accounts (group / Cc / confidential / bulk)
- *   - `needs-received`  — needs a message RECEIVED from the other account (2 concurrent sessions)
- *   - `needs-upload`    — needs a real file upload / device capability
- *   - `ui-only`         — a client behaviour with no assertable persisted outcome (audio, print, clipboard)
- *   - `api-only`        — no distinct UI surface; covered by the API lifecycle instead
- * Every non-`built` status carries a `reason`, exactly like a blocked API endpoint.
+ * The Katchup UI feature catalogue, from the FRD (FR-K01..K25), the message-type enum and the
+ * front-end action menus. `katchup-ui-coverage.spec.ts` fails the build if a feature lacks a
+ * status, a `built` feature names no spec, or an FR-K id is missing. Every non-`built` status
+ * carries a `reason`.
  */
 
 export type KatchupCategory = 'compose' | 'sender-action' | 'recipient-action' | 'read-search';

@@ -7,24 +7,9 @@ import { expect, test } from '@fixtures';
 import { isKnownAppAlert } from '../../support/known-dialogs';
 
 /**
- * Shared steps for the end-to-end USER JOURNEYS (`tests/e2e/journeys/*`). Every step here is lifted
- * from a spec that already ran green on live — the source is cited on each — so a journey composes
- * proven pieces rather than inventing selectors. Where a journey needs a step no spec has proven yet,
- * the journey says so in its own header ("UNPROVEN STEP"), never here.
- *
- * ## Who is who
- *
- * - **A** — `qatest1`, the default `page` (`.auth/user.json`).
- * - **B** — `qatest2`, a second browser context (`.auth/user2.json`, `auth2.setup.ts`).
- * - **C** — `qatest3`, used ONLY through the API, as the organizer of a meeting or a group.
- *
- * ## The one-session rule
- *
- * The server keeps ONE session per account: an API call authenticated as A or B logs that account's
- * browser out (`support/groups.ts`, `katchup-group-receipts-e2e.spec.ts`). So a journey never calls
- * the API as A or B while their browsers are open; API set-up and clean-up run as C. Where an API call
- * as A is unavoidable, the journey ends with `restoreSavedSession`, which signs A back in through the
- * real login screen and re-saves `.auth/user.json`, so every later test still has a live session.
+ * Shared steps for the user journeys. A = qatest1 (default page), B = qatest2 (second context),
+ * C = qatest3 (API only). One session per account: an API call as A or B signs that browser out, so
+ * API set-up runs as C, or the journey ends with restoreSavedSession.
  */
 
 const principal = (key: string): Principal | undefined =>
@@ -73,10 +58,7 @@ export async function waitLoaded(page: Page): Promise<void> {
 
 // ------------------------------------------------------------------------------------------- KMail
 
-/**
- * Compose and send a plain mail in the UI (`kmail-two-session-e2e.spec.ts` `sendFromUi`, with the
- * `/writemail` reload guard from `kmail-actions-e2e.spec.ts`). Returns the request the app sent.
- */
+/** Compose and send a plain mail in the UI; returns the request the app sent. */
 export async function sendMailFromUi(
   page: Page,
   to: string,
@@ -117,7 +99,7 @@ export async function sendMailFromUi(
   return (response.request().postDataJSON() ?? {}) as Record<string, unknown>;
 }
 
-/** Find a mail by its subject in KMail and open it (`kmail-two-session-e2e.spec.ts`). */
+/** Find a mail by its subject in KMail and open it. */
 export async function openMail(page: Page, subject: string): Promise<void> {
   await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await waitLoaded(page);
@@ -154,9 +136,8 @@ export async function replyToOpenMail(page: Page, text: string): Promise<Record<
 }
 
 /**
- * Delete the opened mail from this account's side, through the UI: ReplyIcon → More → Delete → the
- * native confirm (`kmail-features-e2e.spec.ts`, proven for the RECEIVER's copy). Best-effort for use
- * in `finally`: returns whether the delete request was accepted.
+ * Delete the opened (received) mail via ReplyIcon → More → Delete → native confirm. Best-effort for
+ * `finally`: returns whether the delete was accepted.
  */
 export async function deleteOpenMail(page: Page): Promise<boolean> {
   const onDialog = (dialog: Dialog): void => {
@@ -179,11 +160,7 @@ export async function deleteOpenMail(page: Page): Promise<boolean> {
   }
 }
 
-/**
- * Delete the opened mail from the SENDER's side: the sender's mail carries the bell menu
- * (KmailMessageBox.js `bellIconContent`, which lists Delete), the recipient's the reply arrow
- * (`deleteOpenMail`). Delete asks with the browser's own confirm box (`cross-layer-flows.spec.ts`).
- */
+/** Delete the opened mail from the sender's side, whose mail carries the bell menu instead. */
 export async function deleteOpenSentMail(page: Page): Promise<boolean> {
   page.once('dialog', (d) => void d.accept().catch(() => undefined));
   await page.getByTestId('NotificationsNoneIcon').first().click();
@@ -200,7 +177,7 @@ export async function deleteOpenSentMail(page: Page): Promise<boolean> {
 
 // ----------------------------------------------------------------------------------------- Session
 
-/** Log out through the header pill and its confirm modal (`login-session.spec.ts`, green on live). */
+/** Log out through the header pill and its confirm modal. */
 export async function logoutFromUi(page: Page): Promise<void> {
   await page.goto('/home', { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await waitLoaded(page);
@@ -245,9 +222,7 @@ export async function restoreSavedSession(
 ): Promise<void> {
   // The browser still holds the dead token; drop it so the app shows its login form, not a redirect.
   await page.context().clearCookies();
-  // The app may be redirecting to /login itself at this moment, which aborts our own goto with
-  // "interrupted by another navigation to …/login" (2026-10-22: that left .auth/user.json dead).
-  // Landing on /login either way is the goal, so only that specific race is tolerated.
+  // The app may be redirecting to /login itself, aborting our goto; only that race is tolerated.
   await page
     .goto('/login', { waitUntil: 'domcontentloaded', timeout: 45_000 })
     .catch(async (error: Error) => {
