@@ -154,14 +154,31 @@ The same fault on several browsers or tests is merged into one ticket that recor
 
 ## 7. Commands — the review-checkpoint workflow
 
-The standing workflow is three commands per product (added 2026-10-11):
+The standing workflow is three commands per product (added 2026-10-11; step 3 is `bug:apply` since
+2026-10-27, so the tests run once):
 
 ```bash
 npm run product:kpost-api          # 1. dry run — decisions now MATCH what the live run will do
 npm run report:filing              # 2. the plan in plain English: WILL CREATE / REOPEN / COMMENT /
-                                   #    CLOSE, NEEDS YOUR REVIEW (held), SUPPRESSED (judged non-defects)
-npm run product:kpost-api:file     # 3. files/reopens/comments/closes exactly what the plan showed
+                                   #    CLOSE, RE-CHECK BY HAND, NEEDS YOUR REVIEW (held),
+                                   #    SUPPRESSED (judged non-defects)
+npm run bug:apply                  # 3. files/reopens/comments/closes that plan, without re-running
 ```
+
+`product:kpost-api:file` is the one-step alternative (run and file together). `bug:apply` refuses a
+plan over 24 h old, from a run that failed the run gate, from a one-off run (not a `product:*`
+command), or already applied.
+
+**RE-CHECK BY HAND** lists the open bugs no run can ever close, each with why:
+
+- filed by hand: its tag is a readable name (`[KP-GROUPADMINEXIT]`), not the bench's 6-hex code, so
+  no single automated check covers it;
+- a speed bug: one fast run does not prove it fixed;
+- its title names no single endpoint/test, or no check the bench can recognise.
+
+Re-run each one's steps by hand and close it in Bugzilla yourself. KDoc/KWord bugs are not listed (that
+module is paused; they get a dated "paused" note). A bug whose check merely did not run this time is
+not listed either: a later run closes it. The same list is in REPORT.md under "Re-check by hand".
 
 The checkpoint (step 2) exists because some false positives are SEMANTIC — only a human knows
 "12345 is our seeded value" or "that field is inert metadata". When a WILL CREATE item is not a real
@@ -170,7 +187,7 @@ it is then suppressed on every run, visibly, instead of littering Bugzilla with 
 
 Findings the engine is not confident enough to auto-file (intermittent repros, one-off flow 500s,
 aggregate error-response findings overlapping specific ones) are HELD as `needs-review` — never filed
-by `:file`. After you review them:
+by `:file` or `bug:apply`. After you review them:
 
 ```bash
 npm run bug:file-reviewed -- KP-A082D1            # preview the approved item (dry)
@@ -225,5 +242,6 @@ Two instance facts worth knowing:
 - **Auto-close safety:** a bug closes only when its own (endpoint, validator) check re-ran clean this
   run — the run itself is the live replay — and a wrong close self-corrects (the next reproduction
   reopens the same id). BOLA/ownership and other business-rule exploit tickets classify as
-  non-verifiable and are NEVER auto-closed; they stay open for a by-hand exploit replay.
+  non-verifiable and are NEVER auto-closed; they stay open for a by-hand exploit replay, and
+  `report:filing` lists them under RE-CHECK BY HAND (§7).
 - **Ownership changes** (a developer hands a module over): edit `ownership.config.ts`, and update the component defaults in Bugzilla. The drift test fails until both agree.

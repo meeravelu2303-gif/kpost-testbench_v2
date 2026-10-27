@@ -40,8 +40,22 @@ export interface ResolveSummary {
    * Kept-open bugs that got a dated status note this run (or already had one from the filing pass).
    */
   touched: number;
+  /**
+   * Open bugs no run can ever close (hand-filed, speed, or no single check matches them): a person
+   * re-checks each one. Absent in reports written before 2026-10-27.
+   */
+  byHand?: HandCheck[];
   /** True on a preview run — the list is what WOULD be closed; nothing was written to Bugzilla. */
   dryRun: boolean;
+}
+
+export interface HandCheck {
+  bugId: number;
+  product: string;
+  component: string;
+  summary: string;
+  /** Why the bench cannot close it, in plain English. */
+  why: string;
 }
 
 const OWNER_BY_PRODUCT = new Map(
@@ -160,12 +174,17 @@ export function buildBugReportConsole(input: BugReportInput): string {
       ? `\nAuto-resolved (verified fixed): ${input.resolved.resolved.length} bug(s) ` +
         (input.resolved.dryRun ? 'WOULD be closed (preview)' : 'closed')
       : '';
+  const byHand = input.resolved?.byHand?.length ?? 0;
+  const byHandLine = byHand
+    ? `Re-check by hand: ${byHand} open bug(s) no run can close (npm run report:filing lists them)`
+    : '';
   return [
     line,
     'BUG REPORT — kpost-testbench_v2',
     line,
     headline(input),
     resolvedLine,
+    byHandLine,
     rows ? `\nBy developer:\n${rows}` : '',
     `\nFull report: reports/REPORT.md`,
     line,
@@ -289,6 +308,23 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
         '',
       );
       if (r.resolved.length > 100) lines.push(`…and ${r.resolved.length - 100} more.`, '');
+    }
+    if (r.byHand?.length) {
+      lines.push(
+        `### Re-check by hand (${r.byHand.length})`,
+        '',
+        'Open bugs that no run can close: re-run the steps in each bug by hand, then close it in ' +
+          'Bugzilla yourself (or leave it open with a note).',
+        '',
+        '| Bug | Component | Bug title | Why the bench cannot close it |',
+        '| --- | --------- | --------- | ----------------------------- |',
+        ...r.byHand.map(
+          (x) =>
+            `| #${x.bugId} | ${x.component.replace(/\|/g, '\\|')} | ` +
+            `${x.summary.slice(0, 110).replace(/\|/g, '\\|')} | ${x.why.replace(/\|/g, '\\|')} |`,
+        ),
+        '',
+      );
     }
   }
 

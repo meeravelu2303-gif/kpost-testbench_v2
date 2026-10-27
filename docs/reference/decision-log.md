@@ -3,7 +3,31 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — `bug:apply`: run the tests once, then file
+### 2026-10-27 (latest) — RE-CHECK BY HAND: open bugs no run can close are listed
+
+Owner asked why some bugs count as hand-filed and where that shows. A read-only audit of all 1,365 bugs
+in the 5 products: every bug's reporter is `meera` (the bench files with that API key), so only the
+whiteboard `[source:]` and the title tag tell them apart. 248 bugs carry a readable tag
+(`[KP-GROUPADMINEXIT]`, `[KPV2-…]`) instead of the 6-hex `[KP-A1B2C3]`; the status pass treats those
+as hand-filed (never auto-closed), including 121 whose whiteboard says `[source:automation]` (written by
+one-off filing scripts). Whiteboards were left as they are (editing them would email developers).
+
+- **The status pass now collects them** (`ResolveSummary.byHand`, `handCheckReason` in `filing-run.ts`):
+  hand-filed, speed (`response.time`), and titles naming no single endpoint/test/check, each with a
+  plain-English why. Shown in `report:filing` (RE-CHECK BY HAND), REPORT.md ("Re-check by hand") and a
+  one-line console count. A bug whose check merely didn't run this time is not listed.
+- **KDoc stays paused:** KDoc/KWord bugs (by path, or by component, e.g. "KWord Documents") are left out
+  of the list, and a hand-filed one now gets the "paused" note instead of "re-check by hand" (the
+  KDoc check now runs before the hand-filed one).
+- **`bug:apply` refuses a one-off run's plan** (`product` missing or `run`): any `playwright test <file>`
+  saves a plan, and applying it would note "not re-checked" on every bug the product preview did check.
+  `report:filing` now says up front when `bug:apply` will refuse (one-off run, run gate blocked)
+  instead of always pointing at it.
+- Verified: `check`; `framework` 354 (new `hand-check.spec.ts`, +1 in `filing-plan-gate.spec.ts`); a
+  live read-only dry run of one GET endpoint listed 7 KPost API bugs (#480, #966, #986, #1336, #1337,
+  #1356, #1357), with KWord #925/#1061 correctly left out. Nothing was written to Bugzilla.
+
+### 2026-10-27 — `bug:apply`: run the tests once, then file
 
 Owner: "run one time, then a command that files and updates Bugzilla; never file duplicates or invalid bugs".
 A product needed two 2-hour runs (preview, then `:file`), because filing needed the live run's in-memory

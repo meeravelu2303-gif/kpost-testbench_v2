@@ -64,6 +64,10 @@ test.describe('bug:apply plan gate @framework', () => {
     expect(refusal(plan({ dryRun: false }))).toContain('not a preview');
   });
 
+  test('a one-off run (no product command): refused', () => {
+    expect(refusal(plan({ product: 'run' }))).toContain('not a product command');
+  });
+
   test('a run that failed the run gate: refused', () => {
     expect(
       refusal(plan({ validity: { valid: false, reason: 'the run was interrupted' } })),

@@ -14,8 +14,10 @@ npm run bug:apply              # 3. file that plan to Bugzilla, without running 
 `bug:apply` uses the same filing step as a `:file` run, with the same strict gates: the validity gate,
 a live duplicate search in Bugzilla for every finding, never refiling a bug closed INVALID / WONTFIX /
 DUPLICATE, reopening a fixed bug that came back, and holding uncertain findings for review. It
-refuses a plan that is more than 24 hours old, came from a run that failed the run gate, or was
-already applied once. Status comments carry the date the tests ran.
+refuses a plan that is more than 24 hours old, came from a run that failed the run gate, came from a
+one-off run instead of a `product:*` command, or was already applied once. Status comments carry the
+date the tests ran. `report:filing` also lists, under RE-CHECK BY HAND, the open bugs no run can close
+(filed by hand, or speed bugs): re-check those yourself and close them in Bugzilla.
 
 The `:file` commands below are the one-step alternative: they run the tests and file in the same run.
 Never start a run while another one is in progress.
@@ -133,7 +135,8 @@ npm run framework            # the bench's self-tests (safety guards, filing gat
 ## After a run
 
 ```powershell
-npm run report:filing        # the filing plan in plain English: create / reopen / comment / close / needs review
+npm run report:filing        # the filing plan in plain English: create / reopen / comment / close / needs review,
+                             # and RE-CHECK BY HAND: open bugs no run can close (hand-filed, speed bugs)
 npm run bug:apply            # file the last preview's plan (once, within 24 h)
 npm run bug:file-reviewed    # file the NEEDS YOUR REVIEW items you approved
 npm run report               # open the Playwright HTML report

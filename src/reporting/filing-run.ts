@@ -28,7 +28,12 @@ import { suiteFor } from '../config/ownership.config';
 import type { Logger } from '../utils/logger';
 import { maskSecretsOnly, maskString } from '../utils/masking';
 import type { ValidationReport } from '../validation-engine/validation-result';
-import { buildBugReportConsole, buildBugReportMarkdown, type ResolveSummary } from './bug-report';
+import {
+  buildBugReportConsole,
+  buildBugReportMarkdown,
+  type HandCheck,
+  type ResolveSummary,
+} from './bug-report';
 import { archivePreviousReport } from './report-archive';
 import {
   buildRunSummary,
@@ -159,7 +164,32 @@ export async function runFiling(
 }
 
 /** Decision reason for a bug with no bench tag — a manual/security finding, never auto-closed. */
-const HAND_FILED = 'hand-filed';
+export const HAND_FILED = 'hand-filed';
+
+/** KDoc/KOS/KWord is paused by owner order: its open bugs only get a dated "paused" note. */
+function isPausedModule(bug: BugSummary, decision: ResolveDecision): boolean {
+  return (
+    /\/kword\/|\/kos\/|\bKDoc\b/i.test(`${decision.endpoint ?? ''} ${bug.summary}`) ||
+    /\b(KWord|KDoc|KOS)\b/i.test(bug.component ?? '')
+  );
+}
+
+/**
+ * Why no run can ever close this kept-open bug, so a person must re-check it; undefined when a
+ * later run can (it still fails, or its check just didn't run this time).
+ */
+export function handCheckReason(decision: ResolveDecision): string | undefined {
+  const r = decision.reason;
+  if (r === HAND_FILED) return 'filed by hand: no single automated check covers it';
+  if (/is environmental — not auto-verified/.test(r)) {
+    return decision.validator === 'response.time'
+      ? 'a speed bug: one fast run does not prove it fixed'
+      : 'its title does not say which check it is';
+  }
+  if (/could not parse endpoint|could not match a single originating test/.test(r))
+    return 'its title does not name one endpoint or test the bench can re-run';
+  return undefined;
+}
 
 /** When and where a status comment says the check ran. */
 export interface CheckedRun {
@@ -181,6 +211,7 @@ async function statusPass(
   touchedByFiler: ReadonlySet<number>,
 ): Promise<ResolveSummary> {
   const dryRun = config.dryRun;
+  const byHand: HandCheck[] = [];
   const summary: ResolveSummary = {
     resolved: [],
     keptOpen: 0,
@@ -189,6 +220,7 @@ async function statusPass(
     confirmedFailing: 0,
     notVerified: 0,
     touched: 0,
+    byHand,
     dryRun,
   };
   const run: CheckedRun = {
@@ -242,6 +274,17 @@ async function statusPass(
           if (description) affected = parseAffectedEndpoints(description);
         }
         decision = classifyResolve(bug, index, reproduced, affected);
+      }
+      // A paused module's bugs wait for testing to resume; they are nobody's re-check yet.
+      const why = isPausedModule(bug, decision) ? undefined : handCheckReason(decision);
+      if (why) {
+        byHand.push({
+          bugId: bug.id,
+          product,
+          component: bug.component ?? '',
+          summary: bug.summary,
+          why,
+        });
       }
       await applyDecision(client, bug, decision, summary, dryRun, touched, log, run, proofNote);
     }
@@ -366,6 +409,13 @@ export function plainStatusComment(
       `Bottom line: no action needed. If the problem comes back, the next run reopens this ticket automatically.`
     );
   }
+  if (isPausedModule(bug, decision)) {
+    return (
+      `${head}Result: NOT RE-CHECKED. The KDoc module is paused from testing by the project owner until ` +
+      `its development is finished, so this bug was not re-tested.\n` +
+      `Bottom line: status unchanged (still open). It will be re-checked once KDoc testing resumes.`
+    );
+  }
   if (r === HAND_FILED) {
     return (
       `${head}Result: NOT AUTOMATICALLY RE-CHECKED. This bug was raised from a manual or security ` +
@@ -400,13 +450,6 @@ export function plainStatusComment(
       `${head}Result: NOT AUTO-CLOSED. This is a speed / response-time finding, which naturally varies ` +
       `between runs, so the bench never closes it automatically.\n` +
       `Bottom line: still open — a person needs to judge whether it is acceptable now.`
-    );
-  }
-  if (/\/kword\/|\/kos\/|\bKDoc\b/i.test(`${decision.endpoint ?? ''} ${bug.summary}`)) {
-    return (
-      `${head}Result: NOT RE-CHECKED. The KDoc module is paused from testing by the project owner until ` +
-      `its development is finished, so this bug was not re-tested.\n` +
-      `Bottom line: status unchanged (still open). It will be re-checked once KDoc testing resumes.`
     );
   }
   let why = r;
@@ -547,6 +590,13 @@ export function loadFilingPlan({
     };
   if (!input.dryRun)
     return { refused: 'that run was not a preview: it already filed its own bugs' };
+  // A one-off `playwright test <file>` saves a plan too; applying it would mark every bug the
+  // product preview checked as "not re-checked".
+  if (!input.product || input.product === 'run')
+    return {
+      refused:
+        'that plan is from a one-off run, not a product command: run the preview again (e.g. npm run product:kpost-api)',
+    };
   if (!input.validity.valid)
     return {
       refused: `that run failed the run gate, so nothing from it may be filed: ${input.validity.reason}`,

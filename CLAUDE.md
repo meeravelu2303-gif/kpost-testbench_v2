@@ -125,13 +125,15 @@ the OTP/SMS kill-switch, and `sideEffect: 'global'`/`external` blocks.
 
 **The review checkpoint (do this between the dry run and the real filing):** after a dry run, run
 `npm run report:filing` to read the plan in plain English — WILL CREATE / REOPEN / COMMENT / CLOSE,
-a **NEEDS YOUR REVIEW** list (held back until you approve), and a **SUPPRESSED** list (human-judged
-non-defects). If a WILL CREATE item is not a real bug, record it in `src/bug-tracker/known-false-positives.ts`
+**RE-CHECK BY HAND** (open bugs no run can close: hand-filed/readable tag, speed, no single check;
+KDoc excluded), a **NEEDS YOUR REVIEW** list (held back until you approve), and a **SUPPRESSED** list
+(human-judged non-defects). If a WILL CREATE item is not a real bug, record it in `src/bug-tracker/known-false-positives.ts`
 (fingerprint + reason + judgedBy + date) rather than filing-and-resolving-INVALID — it is then suppressed
 every run, auditably. When the plan looks right, run **`npm run bug:apply`**: it files that preview's
 plan without re-running the tests (`reports/filing-input.json`, saved by every product preview), through
 the same `runFiling` step as `:file` (`src/reporting/filing-run.ts`): validity gate, live dedupe, reopen/
-comment/close. It refuses a plan older than 24 h, from a run that failed the run gate, or already applied.
+comment/close. It refuses a plan older than 24 h, from a run that failed the run gate, from a one-off run (not a
+`product:*` command), or already applied.
 The `:file` command remains the one-step alternative (run and file together).
 
 Also: `product:kpost-api:verify` (status pass only: closes verified fixes, dates every open bug, files
