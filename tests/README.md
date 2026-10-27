@@ -1,19 +1,22 @@
-# tests/ — every test, by product
+# tests/ — one folder per product
 
-Run them through the product commands in `docs/guides/commands.md`, not by folder.
+Each Bugzilla product has its own folder, and each product folder has its own `smoke/` and
+`sanity/`. Run them through the product commands in `docs/guides/commands.md`, not by folder.
 
-| Folder                      | Bugzilla product | What it holds                                                                                                                                                                   |
-| --------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api/kpost/`                | KPost API        | One folder per module (`katchup/`, `kall/`, `group/`, `profile/`, …) plus `security/`. `feature.spec.ts` in a module is its full lifecycle flow.                                |
-| `api/kmail/`                | KMail API        | `contract.spec.ts` (every endpoint through the engine) plus the workflow and security specs.                                                                                    |
-| `api/admin/`                | KPost Admin      | By test kind: `engine/`, `flows/`, `validation/`, `security/`, `performance/`, `maintenance/` (one-time setup), `support/` (shared payloads).                                   |
-| `api/smoke/`, `api/sanity/` | —                | The quick health checks behind `npm run test:smoke` / `test:sanity`. They never file bugs.                                                                                      |
-| `e2e/`                      | KPost UI         | One folder per module (`katchup/`, `kmail/`, `settings/`, …), plus `platform/` (accessibility, visual, resilience), `journeys/` (end-to-end user stories), `smoke/`, `sanity/`. |
-| `e2e-admin/`                | KPost Admin UI   | One folder per Admin menu area (`admin-setup/`, `human-resources/`, `screens/`, …).                                                                                             |
-| `setup/`                    | —                | Logs each QA account in once and saves the session to `.auth/` for the UI tests.                                                                                                |
-| `framework/`                | —                | The bench's own self-tests: safety guards, filing gates, routing, coverage ledgers. `npm run framework`.                                                                        |
+| Folder       | Bugzilla product | What it holds                                                                                                                                      |
+| ------------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kpost-api/` | KPost API        | One folder per module (`katchup/`, `kall/`, `group/`, `profile/`, …) plus `security/`. A module's `feature.spec.ts` is its full lifecycle flow.    |
+| `kmail-api/` | KMail API        | `contract.spec.ts` (every endpoint through the engine) plus the workflow and security specs.                                                       |
+| `admin-api/` | KPost Admin      | By test kind: `engine/`, `flows/`, `validation/`, `security/`, `performance/`, `maintenance/` (one-time setup), `support/` (shared payloads).      |
+| `kpost-ui/`  | KPost UI         | One folder per module (`katchup/`, `kmail/`, `settings/`, …), plus `platform/` (accessibility, visual, resilience) and `journeys/` (user stories). |
+| `admin-ui/`  | KPost Admin UI   | One folder per Admin menu area (`admin-setup/`, `human-resources/`, `screens/`, …).                                                                |
+| `setup/`     | —                | Logs each QA account in once and saves the session to `.auth/` for the UI tests.                                                                   |
+| `framework/` | —                | The bench's own self-tests: safety guards, filing gates, routing, coverage ledgers. `npm run framework`.                                           |
+| `support/`   | —                | Helpers shared by more than one product (the API smoke checks, attachment helpers). No tests.                                                      |
 
-`support/` folders hold helpers for the specs next to them; they contain no tests.
+A `support/` folder inside a product holds helpers for that product's specs only.
 
-**Do not move or rename a UI spec** (`e2e/`, `e2e-admin/`): its file path is part of each bug's identity in
-Bugzilla, so a move makes the bench refile its bugs as new ones.
+**UI bug identity:** a UI bug's Bugzilla tag is hashed from its spec path. The UI folders were renamed
+from `e2e/` and `e2e-admin/` on 2026-10-27, and the old names are still what gets hashed
+(`uiFingerprintPath` in `src/bug-tracker/bug-fingerprint.ts`), so every existing bug kept its tag.
+Renaming a single UI spec file still changes its bugs' tags, so don't rename UI spec files.

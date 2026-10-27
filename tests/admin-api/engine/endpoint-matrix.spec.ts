@@ -9,7 +9,7 @@ import { formatReport } from '@reporting/report-formatter';
 import { isPlainObject } from '@utils/json';
 import { expect, test } from '@fixtures';
 import { employeePayload } from '../support/screen-payloads';
-import { KNOWN_FALSE_POSITIVES } from '../../../../src/bug-tracker/known-false-positives';
+import { KNOWN_FALSE_POSITIVES } from '../../../src/bug-tracker/known-false-positives';
 
 /**
  * Runs the engine on the Admin writes and id-keyed reads it cannot reach alone (not productionSafe,

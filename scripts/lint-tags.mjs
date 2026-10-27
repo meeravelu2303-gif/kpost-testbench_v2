@@ -101,7 +101,7 @@ for (const { file, title, tags, anns, generated } of seen.values()) {
       errors.push(`ADMIN @smoke test without @admin: ${where}`);
     if (tags.includes('@sanity')) {
       if (!tags.includes('@admin')) errors.push(`ADMIN @sanity test without @admin: ${where}`);
-      adminSanity[/(^|\/)e2e-admin\//.test(String(file).replace(/\\/g, '/')) ? 'ui' : 'api'] += 1;
+      adminSanity[/(^|\/)admin-ui\//.test(String(file).replace(/\\/g, '/')) ? 'ui' : 'api'] += 1;
     }
     continue;
   }

@@ -18,11 +18,11 @@ Declared once in [src/config/ownership.config.ts](src/config/ownership.config.ts
 
 | Bugzilla product | Tests             | Host (from `.env`)   | Owner             |
 | ---------------- | ----------------- | -------------------- | ----------------- |
-| KPost API        | `tests/api/kpost` | `KPOST_API_BASE_URL` | Jaganathan Murthy |
-| KMail API        | `tests/api/kmail` | `KMAIL_API_BASE_URL` | Jitendra Kumar    |
-| KPost Admin      | `tests/api/admin` | `ADMIN_API_BASE_URL` | Karan S           |
-| KPost UI         | `tests/e2e`       | `BASE_URL`           | Ayyappan Ashok    |
-| KPost Admin UI   | `tests/e2e-admin` | `ADMIN_UI_BASE_URL`  | Ayyappan Ashok    |
+| KPost API        | `tests/kpost-api` | `KPOST_API_BASE_URL` | Jaganathan Murthy |
+| KMail API        | `tests/kmail-api` | `KMAIL_API_BASE_URL` | Jitendra Kumar    |
+| KPost Admin      | `tests/admin-api` | `ADMIN_API_BASE_URL` | Karan S           |
+| KPost UI         | `tests/kpost-ui`  | `BASE_URL`           | Ayyappan Ashok    |
+| KPost Admin UI   | `tests/admin-ui`  | `ADMIN_UI_BASE_URL`  | Ayyappan Ashok    |
 
 ## Getting started
 
@@ -54,11 +54,13 @@ Results: `reports/REPORT.md`; earlier runs in `reports/history/`.
 ```
 src/            the framework: API client + endpoint definitions, validation engine, validators,
                 page objects, fixtures, config, database checks, Bugzilla filing, reporting
-tests/api/      API tests:  kpost/<module>  kmail/  admin/<test kind>  smoke/  sanity/
-tests/e2e/      KPost UI tests, one folder per module (+ platform/, journeys/, smoke/, sanity/)
-tests/e2e-admin/ Admin UI tests, one folder per menu area
-tests/setup/    logins that save the browser sessions
-tests/framework/ the bench's self-tests
+tests/          one folder per product, each with its own smoke/ and sanity/:
+  kpost-api/      KPost API, one folder per module
+  kmail-api/      KMail API
+  admin-api/      KPost Admin API, by test kind
+  kpost-ui/       KPost UI, one folder per module (+ platform/, journeys/)
+  admin-ui/       KPost Admin UI, one folder per menu area
+  setup/ framework/ support/   logins · the bench's self-tests · shared helpers
 contracts/, openapi/   generated from the API workbook (docs/api-specs/); never hand-edited
 scripts/        command-line tools behind the npm commands
 docs/           guides, reference, module notes; index in docs/README.md

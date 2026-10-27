@@ -30,12 +30,12 @@ export function expandIds(id) {
 const ID_RE = /\b(?:FR|BR|NFR)-[A-Z0-9][A-Z0-9-]*\b/g;
 
 // ---------- in-scope filter (mirror of test-scope.mjs; kept local to avoid ESM path pain) ----------
-const isAdminPath = (f) => /e2e-admin|\/admin\/|(^|\/)admin[-.]/.test(norm(f));
+const isAdminPath = (f) => /(^|\/)admin-(api|ui)\/|\/admin\/|(^|\/)admin[-.]/.test(norm(f));
 const isAdminTags = (t) =>
   t.some((x) => /^@admin|workplace|hr-tier|employee|role-posting/i.test(x));
 const isMetaPath = (f) => /\.setup\.ts$|(^|\/)framework\//.test(norm(f));
 const isMetaTags = (t) => t.includes('@framework');
-const suiteOf = (f) => (/(^|\/)e2e\//.test(norm(f)) ? 'ui' : 'api');
+const suiteOf = (f) => (/(^|\/)(kpost|admin)-ui\//.test(norm(f)) ? 'ui' : 'api');
 const normTags = (t) => [...new Set((t || []).map((x) => (x.startsWith('@') ? x : `@${x}`)))];
 
 // ---------- markdown requirement-table parser ----------

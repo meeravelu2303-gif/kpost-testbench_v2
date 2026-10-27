@@ -108,7 +108,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
     const ui = candidateFromUiFailure(
       {
         // Routing reads the file NAME and title, not the module folder (screenTokens).
-        file: 'tests/e2e/kmail/writemail.spec.ts',
+        file: 'tests/kpost-ui/kmail/writemail.spec.ts',
         title: 'sends a mail',
         message: 'expected button to be enabled',
         fullMessage: 'expected button to be enabled',
@@ -127,7 +127,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
       assignee: 'ayyappan@kpostindia.com',
     });
 
-    // The Admin/HR-Setup SPA is a separate Bugzilla product: a failure under tests/e2e-admin must
+    // The Admin/HR-Setup SPA is a separate Bugzilla product: a failure under tests/admin-ui must
     // never land in KPost UI. Its two components: User Management for the employee screens, else General.
     const adminUi = (file: string, title: string) =>
       candidateFromUiFailure(
@@ -146,7 +146,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
         config,
       );
     expect(
-      adminUi('tests/e2e-admin/screens/admin-screens.spec.ts', 'Dashboard renders'),
+      adminUi('tests/admin-ui/screens/admin-screens.spec.ts', 'Dashboard renders'),
     ).toMatchObject({
       product: 'KPost Admin UI',
       component: 'General',
@@ -154,7 +154,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
     });
     expect(
       adminUi(
-        'tests/e2e-admin/human-resources/admin-employee-management-pii.spec.ts',
+        'tests/admin-ui/human-resources/admin-employee-management-pii.spec.ts',
         'Employee list masks PAN',
       ),
     ).toMatchObject({ product: 'KPost Admin UI', component: 'User Management' });

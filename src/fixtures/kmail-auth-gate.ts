@@ -1,6 +1,6 @@
 /**
  * Holds the KMail suite back while the host refuses valid tokens (known defect, see
- * `tests/api/kmail/auth-regression.spec.ts`, which is not gated). `KMAIL_AUTH_FIXED=true` turns it
+ * `tests/kmail-api/auth-regression.spec.ts`, which is not gated). `KMAIL_AUTH_FIXED=true` turns it
  * back on.
  */
 
@@ -14,7 +14,7 @@ export function kmailAuthGate(): string | undefined {
   if (kmailAuthFixed()) return undefined;
   return (
     'Skipped pending Bugzilla ticket fix for KMail 401 Unauthorized issue. ' +
-    'testkmail rejects every valid KPost token (see tests/api/kmail/auth-regression.spec.ts); ' +
+    'testkmail rejects every valid KPost token (see tests/kmail-api/auth-regression.spec.ts); ' +
     'set KMAIL_AUTH_FIXED=true to re-enable the whole KMail suite.'
   );
 }

@@ -78,10 +78,10 @@ src/
 ├── reporting/                    # bugzilla-reporter (writes the single REPORT.md/json + files bugs) · run-summary · bug-report · report-formatter · report-attachment
 ├── fixtures/ pages/ ui/ utils/
 contracts/ openapi/               # GENERATED from the workbook (and the Admin spec): the contracts the engine validates against
-tests/api · tests/framework · tests/e2e · tests/e2e-admin · tests/setup
+tests/kpost-api · tests/kmail-api · tests/admin-api · tests/kpost-ui · tests/admin-ui · tests/setup · tests/framework
 ```
 
-`tests/` is split by _kind_ of test (api, framework, e2e). Smoke, regression, security and full are **validation profiles**; the small `smoke/` and `sanity/` folders hold only the run-level entry specs (`docs/guides/run-levels.md`). This way one spec file per module area serves every profile, and nothing is duplicated across `smoke/` and `regression/` folders.
+`tests/` is split by product (one folder per Bugzilla product), plus setup and the bench self-tests. Smoke, regression, security and full are **validation profiles**; the small `smoke/` and `sanity/` folders hold only the run-level entry specs (`docs/guides/run-levels.md`). This way one spec file per module area serves every profile, and nothing is duplicated across `smoke/` and `regression/` folders.
 
 ## 2. What each folder is for
 
@@ -361,7 +361,7 @@ file is the example: with null markers the backend 500s, which would read as a f
 
 ## 12. Example test using the generic engine
 
-[`tests/api/kpost/dashboard/read.spec.ts`](../../tests/api/kpost/dashboard/read.spec.ts). This is the entire file:
+[`tests/kpost-api/dashboard/read.spec.ts`](../../tests/kpost-api/dashboard/read.spec.ts). This is the entire file:
 
 ```ts
 import { describeEndpointCases } from '@engine/endpoint-cases';
@@ -393,7 +393,7 @@ test('dashboard under the security profile', async ({ validationEngine }) => {
 
 KPost's business rules are asserted in the module feature specs, because a real rule needs state
 the generic sweep cannot set up (a second account, a created record, a prior step). The pattern,
-from [`tests/api/kpost/kall/feature.spec.ts`](../../tests/api/kpost/kall/feature.spec.ts):
+from [`tests/kpost-api/kall/feature.spec.ts`](../../tests/kpost-api/kall/feature.spec.ts):
 
 ```ts
 const repeat = await endpoints.sendTo(
@@ -548,12 +548,12 @@ steps. Nothing in the engine, the validators or any other spec changes.
    production guard is default-deny.
 2. **Module index** — `src/api/definitions/kpost/<module>/index.ts` exports the module's definitions
    as one array (`dashboardApis`), and `src/api/definitions/index.ts` spreads it into the registry.
-3. **Wrapper spec** — `tests/api/kpost/<module>/read.spec.ts` (and `write.spec.ts` with
+3. **Wrapper spec** — `tests/kpost-api/<module>/read.spec.ts` (and `write.spec.ts` with
    `{ transform: forWriteSweep }` for writes): three lines calling `describeEndpointCases` on the
    module's tag. `tests/framework/sweep-completeness.spec.ts` fails until every new endpoint is
    reachable by a wrapper or listed as exempt with a reason — a definition cannot be quietly left out
    of the sweep.
-4. **Feature spec** — `tests/api/kpost/<module>/feature.spec.ts` for anything the sweep cannot do
+4. **Feature spec** — `tests/kpost-api/<module>/feature.spec.ts` for anything the sweep cannot do
    alone: lifecycle flows (create → act → clean up, behind a `<MODULE>_LIFECYCLE` flag), `needs-id`
    endpoints fed real ids, and the module's business rules via `recordBusinessRuleViolation` (§13).
 
@@ -640,4 +640,4 @@ npx playwright test --project=api --grep @critical
 - **Response time is a functional per-request budget, not load testing.** Keep load tests (k6, Artillery, …) separate.
 - **Probe volume** is bounded (`thresholds.request.maxCasesPerValidator`, `security.maxInjectionFields`, `maxRateLimitBurst`). Flooding checks run only in SECURITY/FULL.
 - **Login probes** use a dedicated `login-probe` principal, so negative login attempts never lock real accounts.
-- **Test data cleans itself up.** Writes run inside self-cleaning lifecycle flows (`*_LIFECYCLE` flags, `tests/api/kpost/<module>/feature.spec.ts`), and anything the bench creates that cannot be deleted is recorded in `src/fixtures/created-accounts.json`.
+- **Test data cleans itself up.** Writes run inside self-cleaning lifecycle flows (`*_LIFECYCLE` flags, `tests/kpost-api/<module>/feature.spec.ts`), and anything the bench creates that cannot be deleted is recorded in `src/fixtures/created-accounts.json`.

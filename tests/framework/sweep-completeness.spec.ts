@@ -26,8 +26,10 @@ const SWEEP_EXEMPT: Readonly<Record<string, string>> = {
 /** The paused KDoc/KOS module: excluded from every command until the owner says it is ready. */
 const PAUSED_TAG_PREFIX = 'kos-';
 
-/** KPost modules live under `kpost/`; the local mock-API samples are top-level `tests/api/*.spec.ts`. */
-const API_TESTS_DIR = path.join(ROOT_DIR, 'tests', 'api');
+/** The three API products, one folder each. */
+const API_TEST_DIRS = ['kpost-api', 'kmail-api', 'admin-api'].map((dir) =>
+  path.join(ROOT_DIR, 'tests', dir),
+);
 
 function specFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -52,7 +54,7 @@ const NOT_A_FULL_SWEEP = /[\\/](sanity[\\/]|sanity-read-sweep\.spec\.ts$)/;
 /** Every `describeEndpointCases` / `describeEndpointContracts` filter found in the wrapper files. */
 function sweepFilters(): EndpointFilter[] {
   const filters: EndpointFilter[] = [];
-  for (const file of specFiles(API_TESTS_DIR).filter((f) => !NOT_A_FULL_SWEEP.test(f))) {
+  for (const file of API_TEST_DIRS.flatMap(specFiles).filter((f) => !NOT_A_FULL_SWEEP.test(f))) {
     const text = fs.readFileSync(file, 'utf8');
     for (const call of text.matchAll(
       /describeEndpoint(?:Cases|Contracts)\(\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g,
@@ -78,7 +80,10 @@ test.describe('generic sweep completeness @framework', () => {
     (tags ?? []).some((tag) => tag.startsWith(PAUSED_TAG_PREFIX));
 
   test('the wrapper files are discoverable', () => {
-    expect(sweepFilters().length, 'sweep wrapper calls found under tests/api').toBeGreaterThan(20);
+    expect(
+      sweepFilters().length,
+      'sweep wrapper calls found in the API test folders',
+    ).toBeGreaterThan(20);
   });
 
   test('every KPost endpoint is reached by a sweep wrapper, or exempt with a reason', () => {
@@ -92,7 +97,7 @@ test.describe('generic sweep completeness @framework', () => {
 
     expect(
       unreached,
-      'endpoints no sweep wrapper selects: add a tag to a wrapper under tests/api, or an entry with a reason to SWEEP_EXEMPT',
+      'endpoints no sweep wrapper selects: add a tag to a wrapper in an API test folder, or an entry with a reason to SWEEP_EXEMPT',
     ).toEqual([]);
   });
 

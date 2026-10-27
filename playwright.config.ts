@@ -18,7 +18,7 @@ const browserProject = (
   extraUse: Project['use'] = {},
 ): Project => ({
   name,
-  testDir: './tests/e2e',
+  testDir: './tests/kpost-ui',
   use: { ...device, storageState: STORAGE_STATE, ...extraUse },
   dependencies: ['setup'],
   retries: RETRIES,
@@ -92,7 +92,7 @@ export default defineConfig({
     // it self-skips unless ADMIN_UI_LIFECYCLE is on.
     {
       name: 'admin-ui',
-      testDir: './tests/e2e-admin',
+      testDir: './tests/admin-ui',
       use: {
         ...devices['Desktop Chrome'],
         baseURL: env.ADMIN_UI_BASE_URL,
@@ -101,7 +101,12 @@ export default defineConfig({
       dependencies: ['setup'],
       retries: RETRIES,
     },
-    { name: 'api', testDir: './tests/api' },
+    // The three API products, one folder each.
+    {
+      name: 'api',
+      testDir: './tests',
+      testMatch: /(^|[\\/])tests[\\/](kpost|kmail|admin)-api[\\/].*\.spec\.ts$/,
+    },
     { name: 'framework', testDir: './tests/framework' },
   ],
 });

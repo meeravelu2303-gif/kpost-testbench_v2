@@ -49,7 +49,7 @@ export default defineConfig(
             'assertNoFileableIssues',
             'runUiChecks',
             'scanCurrentPage',
-            // The smoke helpers (tests/api/smoke/, tests/e2e/smoke/).
+            // The smoke helpers (tests/support/smoke/, tests/kpost-ui/smoke/).
             'expectSmokeRead',
             'expectModuleScreensLoad',
             'expectAdminScreenLoads',

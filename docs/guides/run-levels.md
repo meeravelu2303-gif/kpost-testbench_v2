@@ -32,14 +32,15 @@ whatever the KPost result, so the two products get two verdicts. An unreachable 
 ENVIRONMENT DOWN (Admin) and never blocks the KPost smoke or the regression gate.
 
 ```
-tests/api/smoke/
+tests/support/smoke/
   smoke-checks.ts      the API checks as data: module → 1–3 reads, the fields each answer must hold
   smoke-read.ts        how a read is judged: HTTP 200, SUCCESS envelope, fields present, our own account, hang guard
-  api.smoke.spec.ts    one test per row, plus "no login → 401"
-  admin.smoke.spec.ts  the Admin API rows (Admin stage), plus "no login → 401"
-tests/e2e-admin/smoke/
+tests/kpost-api/smoke/kpost-api.smoke.spec.ts   one test per KPost row, plus "no login → 401"
+tests/kmail-api/smoke/kmail-api.smoke.spec.ts   one test per KMail row
+tests/admin-api/smoke/admin-api.smoke.spec.ts   the Admin API rows (Admin stage), plus "no login → 401"
+tests/admin-ui/smoke/
   admin.smoke.spec.ts  the Admin login screen for a visitor; every Admin screen loads (company admin)
-tests/e2e/smoke/
+tests/kpost-ui/smoke/
   smoke-ui.ts          shared steps: which screens belong to which module, how a screen proves it loaded
   screens.smoke.spec.ts   every registry screen loads in its session, one test per module
   auth.smoke.spec.ts      sign in through the login screen and sign out (spare account qatest5)
@@ -76,12 +77,12 @@ is open.
 `npm run test:sanity` (no arguments) runs four stages, Chromium only, dry-run, and keeps going after a
 failing stage so one run names every broken area:
 
-| Stage         | What runs                                                                                                                                                                                                                                                                                                                                               | Where it comes from                                                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **KPost API** | Every live-safe read endpoint of every module at the SMOKE profile (status, envelope, schema, content type, refusal without a token); one core write flow per module (send/recall, compose, place a call, add a contact, create a group, edit profile, toggle settings, diary write, booking search, presigned upload, dashboard, login); the API smoke | `tests/api/sanity/read-sweep.spec.ts` (derived from `productionSafe`), `@sanity` on each module's `feature.spec.ts`                |
-| **KPost UI**  | Every screen in the registry loads cleanly in its own session (personal, business, public); each module's curated `@sanity` UI tests; the UI smoke (incl. Katchup + KMail send)                                                                                                                                                                         | `tests/e2e/sanity/sanity-screens.spec.ts` (derived from `src/ui/screens.ts`), `@sanity` on the module specs                        |
-| **Admin API** | Every live-safe Admin / HR-Setup read at the SMOKE profile; the core write flow (workplace tier → variable → location, HR tier, employee record: create, read back, delete, no external side effect)                                                                                                                                                    | `tests/api/admin/engine/sanity-read-sweep.spec.ts`, `tests/api/admin/flows/feature.spec.ts` (`ADMIN_LIFECYCLE`, set by the runner) |
-| **Admin UI**  | The login front door; every Admin screen mounts with its shell, no crash, no 5xx                                                                                                                                                                                                                                                                        | `tests/e2e-admin/sanity/admin-sanity.spec.ts`, `admin-login.spec.ts`                                                               |
+| Stage         | What runs                                                                                                                                                                                                                                                                                                                                               | Where it comes from                                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **KPost API** | Every live-safe read endpoint of every module at the SMOKE profile (status, envelope, schema, content type, refusal without a token); one core write flow per module (send/recall, compose, place a call, add a contact, create a group, edit profile, toggle settings, diary write, booking search, presigned upload, dashboard, login); the API smoke | `tests/kpost-api/sanity/read-sweep.spec.ts` and `tests/kmail-api/sanity/read-sweep.spec.ts` (derived from `productionSafe`), `@sanity` on each module's `feature.spec.ts` |
+| **KPost UI**  | Every screen in the registry loads cleanly in its own session (personal, business, public); each module's curated `@sanity` UI tests; the UI smoke (incl. Katchup + KMail send)                                                                                                                                                                         | `tests/kpost-ui/sanity/sanity-screens.spec.ts` (derived from `src/ui/screens.ts`), `@sanity` on the module specs                                                          |
+| **Admin API** | Every live-safe Admin / HR-Setup read at the SMOKE profile; the core write flow (workplace tier → variable → location, HR tier, employee record: create, read back, delete, no external side effect)                                                                                                                                                    | `tests/admin-api/engine/sanity-read-sweep.spec.ts`, `tests/admin-api/flows/feature.spec.ts` (`ADMIN_LIFECYCLE`, set by the runner)                                        |
+| **Admin UI**  | The login front door; every Admin screen mounts with its shell, no crash, no 5xx                                                                                                                                                                                                                                                                        | `tests/admin-ui/sanity/admin-sanity.spec.ts`, `admin-login.spec.ts`                                                                                                       |
 
 Selection is derived wherever it can be: a new live-safe endpoint or a new screen joins sanity with no
 spec change; a paused one (KDoc/KOS) leaves it. KMail API sanity follows the KMail auth gate (skips with
@@ -97,7 +98,7 @@ counts. Regression keeps the strict time budgets.
 **Deliberately without an API write in sanity: User Management (business).** All 8 of its writes (add
 member, terminate, reset password, hold/release, backup admin, company, bank, role) are `sideEffect:
 'global'`: they create, end or change real business accounts. The production guard refuses every
-`global` write on this environment and no flag unlocks it (`tests/api/kpost/admin/member-lifecycle.spec.ts`
+`global` write on this environment and no flag unlocks it (`tests/kpost-api/admin/member-lifecycle.spec.ts`
 is written and stays skipped). Its API sanity is the reads; its write paths are covered on screen
 (`usermanagement.spec.ts`).
 

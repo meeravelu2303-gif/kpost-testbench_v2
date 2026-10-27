@@ -18,7 +18,7 @@ import { expect, test } from '@fixtures';
  * Fails if a screen would route a bug to a component that does not exist in KPost UI.
  */
 
-/** The interaction flows that exist today (spec files under tests/e2e), for the ledger. */
+/** The interaction flows that exist today (spec files under tests/kpost-ui), for the ledger. */
 const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
   {
     flow: 'Navigation',

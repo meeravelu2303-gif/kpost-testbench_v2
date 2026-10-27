@@ -2,7 +2,7 @@
 
 One row per module: the module's main user action is done **on the real screen**, the request the screen
 sends and the server's answer are captured, and the **MySQL row** (KPOST_QA) must hold what was done. Each test
-carries a `cross-layer` annotation. Helpers: `tests/e2e/support/cross-layer.ts` (`rowWhen` polls a row,
+carries a `cross-layer` annotation. Helpers: `tests/kpost-ui/support/cross-layer.ts` (`rowWhen` polls a row,
 `postAsPage` calls the API with the page's own session, `storedUtcMs` reads zone-less DATETIME as UTC).
 
 Rule learned on 2026-10-20: inside a UI test, never call `endpoints` as the browser's own account. KPost keeps one

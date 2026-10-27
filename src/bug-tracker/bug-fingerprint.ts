@@ -63,6 +63,23 @@ export function uiSystemicFingerprint(input: { prefix: string; causeKey: string 
   return `${input.prefix}-${digest(key)}`;
 }
 
+/**
+ * The UI test folders were renamed per product on 2026-10-27; every UI bug already in Bugzilla was
+ * fingerprinted with the old folder, so the old name is hashed to keep each bug's tag unchanged.
+ */
+const UI_FINGERPRINT_FOLDERS: readonly [string, string][] = [
+  ['tests/kpost-ui/', 'tests/e2e/'],
+  ['tests/admin-ui/', 'tests/e2e-admin/'],
+];
+
+/** The spec path as it is hashed into a UI fingerprint. */
+export function uiFingerprintPath(file: string): string {
+  const normalized = file.replace(/\\/g, '/');
+  for (const [current, hashedAs] of UI_FINGERPRINT_FOLDERS)
+    if (normalized.startsWith(current)) return hashedAs + normalized.slice(current.length);
+  return normalized;
+}
+
 /** UI defect identity: spec + title + first error line; no browser, so one ticket covers all. */
 export function uiFingerprint(input: {
   prefix: string;
@@ -70,6 +87,6 @@ export function uiFingerprint(input: {
   title: string;
   message: string;
 }): string {
-  const key = `ui|${input.file}|${input.title}|${normalizeForFingerprint(input.message)}`;
+  const key = `ui|${uiFingerprintPath(input.file)}|${input.title}|${normalizeForFingerprint(input.message)}`;
   return `${input.prefix}-${digest(key)}`;
 }

@@ -1,7 +1,7 @@
 import { TAGS } from '@config/constants';
 import { expect, test } from '@fixtures';
-import { ADMIN_API_SMOKE } from './smoke-checks';
-import { expectSmokeRead } from './smoke-read';
+import { ADMIN_API_SMOKE } from '../../support/smoke/smoke-checks';
+import { expectSmokeRead } from '../../support/smoke/smoke-read';
 
 /**
  * ADMIN API SMOKE — the Admin / HR-Setup service on the Admin test box is up and serves the company

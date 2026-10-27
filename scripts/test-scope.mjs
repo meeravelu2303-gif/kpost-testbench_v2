@@ -1,10 +1,11 @@
 // The single "in-scope run-level test" filter, shared by lint:tags and run-level.mjs so they agree.
-// Admin and @framework self-tests are out of scope. Paths are relative to ./tests ("e2e/x.spec.ts").
+// Admin and @framework self-tests are out of scope. Paths are relative to ./tests ("kpost-ui/x.spec.ts").
 
 const norm = (f) => String(f).replace(/\\/g, '/');
 
-/** Admin (out of scope) by path: tests/e2e-admin, any /admin/ dir, or an `admin-`/`admin.` spec. */
-export const isAdminPath = (file) => /e2e-admin|\/admin\/|(^|\/)admin[-.]/.test(norm(file));
+/** Admin (out of scope) by path: admin-api/, admin-ui/, any /admin/ dir, or an `admin-`/`admin.` spec. */
+export const isAdminPath = (file) =>
+  /(^|\/)admin-(api|ui)\/|\/admin\/|(^|\/)admin[-.]/.test(norm(file));
 
 /** Admin by tag: @admin*, or the admin-only area tags that ride shared generators. */
 export const isAdminTags = (tags) =>
@@ -16,8 +17,8 @@ export const isMetaPath = (file) => /\.setup\.ts$|(^|\/)framework\//.test(norm(f
 /** Bench self-tests by tag: the API contract/coverage engine meta-tests. */
 export const isMetaTags = (tags) => tags.includes('@framework');
 
-/** 'ui' for the e2e suite, 'api' otherwise. */
-export const suiteOf = (file) => (/(^|\/)e2e\//.test(norm(file)) ? 'ui' : 'api');
+/** 'ui' for the two UI products, 'api' otherwise. */
+export const suiteOf = (file) => (/(^|\/)(kpost|admin)-ui\//.test(norm(file)) ? 'ui' : 'api');
 
 /** Normalise Playwright's `tags` (it drops the leading @) and de-dupe. */
 export const normalizeTags = (tags) => [

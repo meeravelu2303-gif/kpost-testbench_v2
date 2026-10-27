@@ -1,13 +1,12 @@
 import { TAGS } from '@config/constants';
 import { expect, test } from '@fixtures';
-import { API_SMOKE } from './smoke-checks';
-import { expectSmokeRead } from './smoke-read';
+import { API_SMOKE } from '../../support/smoke/smoke-checks';
+import { expectSmokeRead } from '../../support/smoke/smoke-read';
 
-/**
- * API smoke, the build-acceptance gate: every in-scope module's service is up and serves our own data,
- * read-only. Runs before the UI smoke. The checks are rows in smoke-checks.ts; one test per row.
- */
-for (const mod of API_SMOKE) {
+/** KPost API smoke: every KPost module's service is up and serves our own data, read-only. Rows: support/smoke/smoke-checks.ts. */
+const MODULES = API_SMOKE.filter((mod) => mod.tag !== TAGS.kmail);
+
+for (const mod of MODULES) {
   test.describe(
     `SMOKE · API · ${mod.name}`,
     { tag: [TAGS.api, mod.tag, TAGS.smoke, TAGS.sanity, TAGS.regression] },

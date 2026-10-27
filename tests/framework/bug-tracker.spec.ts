@@ -482,7 +482,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     const failures = ['chromium', 'firefox', 'webkit'].map((browser) =>
       candidateFromUiFailure(
         {
-          file: 'tests/e2e/home/home.spec.ts',
+          file: 'tests/kpost-ui/home/home.spec.ts',
           title: 'loads with the hero heading',
           message: 'expected heading to be visible',
           fullMessage: 'expected heading to be visible',
@@ -506,7 +506,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
   test('a UI failure that lost its login session is rejected (environmental, not a screen bug)', () => {
     const lost = candidateFromUiFailure(
       {
-        file: 'tests/e2e/profile/profile-settings-breakage.spec.ts',
+        file: 'tests/kpost-ui/profile/profile-settings-breakage.spec.ts',
         title: 'the Profile screen and all its sections load without a crash or broken asset',
         message: 'Error: Profile mounted\nexpect(locator).toBeVisible() failed',
         fullMessage: 'Error: Profile mounted\nexpect(locator).toBeVisible() failed',
@@ -528,7 +528,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
   test('a UI bug names the API calls that failed during the screen failure (contract drift)', () => {
     const ui = candidateFromUiFailure(
       {
-        file: 'tests/e2e/contacts/contacts.spec.ts',
+        file: 'tests/kpost-ui/contacts/contacts.spec.ts',
         title: 'the Katchup contact rail lists contacts and is searchable',
         message: 'Error: a known contact is listed\nexpect(locator).toBeVisible() failed',
         fullMessage: 'Error: a known contact is listed',
@@ -599,7 +599,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
   test('a UI ticket is application-level: no internal repo path or test command', () => {
     const ui = candidateFromUiFailure(
       {
-        file: 'tests/e2e/kmail/kmail.spec.ts',
+        file: 'tests/kpost-ui/kmail/kmail.spec.ts',
         title: 'the KMail screen loads for a signed-in user',
         message: 'expected the compose button to be visible',
         fullMessage: 'expected the compose button to be visible',
@@ -615,7 +615,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     const desc = buildDescription(ui);
 
     // The developer has the app, not the bench: no internal file path, run command or repo name.
-    expect(desc, 'no internal test file path').not.toContain('tests/e2e');
+    expect(desc, 'no internal test file path').not.toContain('tests/kpost-ui');
     expect(desc, 'no internal test command').not.toContain('npx playwright');
     expect(desc, 'no internal repo name').not.toContain('KPOST_REACTJS_2023_V1');
     expect(desc, 'no repository field at all').not.toContain('"repository"');

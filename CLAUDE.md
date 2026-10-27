@@ -20,7 +20,7 @@ defects in it and files them to Bugzilla, routed to the developer who owns the m
 | KPost Admin      | `admin-api` | Karan S (karans@kpost.in)                | `ADMIN_API_BASE_URL` (http://192.168.11.11:9595, MongoDB same IP)       |
 | KMail API        | `kmail-api` | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
 | KPost UI         | `kpost-ui`  | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                        |
-| KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/e2e-admin`      |
+| KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/admin-ui`       |
 
 **The target is the TEST deployment only** — `test.kpostindia.com`, `testingapi`, `testkmail`, the Admin
 test box. Never `account.kpostindia.com`, `devapi2`, `kmail5` or `adminmodule.kpostindia.com`; those
@@ -83,12 +83,15 @@ src/database/           MySQL / disabled adapters, per-suite pool, repositories,
 src/bug-tracker/        Bugzilla client · fingerprint · candidate · validity gate · filer · verify-resolve · bug-builder
 src/reporting/          bugzilla-reporter (the filing pipeline) · run-summary · bug-report
 src/ui/                 screens registry (PAUSED_SCREENS), failure-diagnostics
-tests/api/<product>/    contract.spec.ts (the engine over every endpoint) + specs; kpost/ by module (+ security/);
-                        admin/ by test kind: engine/ flows/ validation/ security/ performance/ maintenance/ support/
-tests/e2e/<module>/     UI specs, one folder per module tag: auth home katchup kall kmail contacts group profile
-                        settings user-management verticals platform cross-layer (+ journeys/ smoke/ sanity/ support/)
-tests/e2e-admin/<area>/ Admin UI specs by menu area: auth screens admin-setup human-resources cross-layer
-                        (+ smoke/ sanity/ support/) · tests/framework/   bench self-tests
+tests/ — one folder per Bugzilla product, each with its own smoke/ and sanity/:
+  kpost-api/            KPost API: one folder per module (+ security/); feature.spec.ts = the module's lifecycle flow
+  kmail-api/            KMail API: contract.spec.ts (the engine over every endpoint) + workflow/security specs
+  admin-api/            KPost Admin: by test kind: engine/ flows/ validation/ security/ performance/ maintenance/ support/
+  kpost-ui/<module>/    KPost UI: auth home katchup kall kmail contacts group profile settings user-management
+                        verticals platform cross-layer (+ journeys/ support/)
+  admin-ui/<area>/      KPost Admin UI by menu area: auth screens admin-setup human-resources cross-layer (+ support/)
+  setup/ · framework/ · support/   logins that save sessions · bench self-tests · helpers shared by products
+  UI bug tags are hashed from the pre-2026-10-27 folder names (uiFingerprintPath), so a move keeps each bug's tag.
 contracts/, openapi/    GENERATED from the Excel workbook. Never hand-edit
 docs/                   guides/ (how to run) · reference/ (what the bench is + the decision log) · proposals/ · modules/ · ui/ · scope/
                         · generated/ (written by `framework`; never hand-edit) · api-specs/ (the KPost workbook
@@ -213,7 +216,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
   substring match on the whiteboard (`[browser:chromium,firefox]` counts for both).
 - **A check that couldn't run says SKIPPED with a reason**, never PASSED. A collapsed run is loud, never clean.
 - **Find every bug in one pass; stop only on a blocker** (owner, 2026-10-26). A failed step must not hide the
-  steps after it: flows use `stage()` (`tests/e2e-admin/support/admin-workflow.ts`) or `expect.soft`, and only
+  steps after it: flows use `stage()` (`tests/admin-ui/support/admin-workflow.ts`) or `expect.soft`, and only
   a step the rest cannot run without (the record was never created) is `{ blocker: true }`. Test both
   directions: bad input refused AND the screen's valid input (blank optional fields included) accepted, on save
   and update. Read a controller's save/update/delete rules together before testing it.

@@ -183,7 +183,7 @@ test.describe(
 
           // The thumbnail starts as a data: placeholder and swaps in the real image when
           // downloadThumbnail answers (10+ s, #1364), so the source is polled. The byte-identical
-          // server round-trip is asserted in tests/api/kpost/katchup/attachment-integrity.spec.ts.
+          // server round-trip is asserted in tests/kpost-api/katchup/attachment-integrity.spec.ts.
           const readRendered = async (): Promise<{ src: string; got: Buffer }> => {
             const src = (await thumb.getAttribute('src')) ?? '';
             if (!src) return { src, got: Buffer.alloc(0) };

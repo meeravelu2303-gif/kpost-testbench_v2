@@ -487,11 +487,9 @@ function humanizeUiFailure(message: string): {
   return { classification: 'UI Test Failure', actual: message };
 }
 
-/**
- * UI product from the spec path: `tests/e2e-admin/` is the Admin UI, everything else the KPost UI.
- */
+/** UI product from the spec path: `tests/admin-ui/` is the Admin UI, everything else the KPost UI. */
 export function uiSuiteForFile(file: string): 'kpost-ui' | 'admin-ui' {
-  return /(^|[\\/])tests[\\/]e2e-admin[\\/]/.test(file) ? 'admin-ui' : 'kpost-ui';
+  return /(^|[\\/])tests[\\/]admin-ui[\\/]/.test(file) ? 'admin-ui' : 'kpost-ui';
 }
 
 /** Turns a browser test failure into a candidate for the UI module and its developer. */

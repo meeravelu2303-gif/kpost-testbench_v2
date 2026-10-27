@@ -3,7 +3,30 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — Comments cut to what the code needs; a README per main folder
+### 2026-10-27 (latest) — tests/ reorganised: one folder per Bugzilla product
+
+Owner: "five products in one bench; every product's tests in a clear structure, not mixed".
+
+- **New layout:** `tests/kpost-api/` (was `tests/api/kpost`), `tests/kmail-api/` (`tests/api/kmail`),
+  `tests/admin-api/` (`tests/api/admin`), `tests/kpost-ui/` (`tests/e2e`), `tests/admin-ui/`
+  (`tests/e2e-admin`); `tests/setup/`, `tests/framework/`, and `tests/support/` for helpers shared by
+  products. Each product has its own `smoke/` and `sanity/`: the mixed KPost+KMail API smoke and sanity
+  sweep were split by product (same tests, same titles), and the Admin smoke/sanity moved into
+  `admin-api/`. `tests/api/` no longer exists.
+- **Bugzilla tags unchanged:** a UI bug's tag hashes its spec path, so `uiFingerprintPath`
+  (`src/bug-tracker/bug-fingerprint.ts`) hashes the old folder name for a spec under the new one.
+  `uiSuiteForFile` now recognises `tests/admin-ui/`. Self-tested in `ui-fingerprint-path.spec.ts`.
+- **Proof (all offline):** `playwright test --list` before and after: the same 11,901 product tests (by
+  project, mapped file and full title), and all 643 UI (file, title) identities identical once mapped,
+  so every open UI bug keeps its tag. Each product command selects exactly the same tests as before
+  (KPost API 5,187 · KMail API 1,717 · Admin API 297 · KPost UI 1,775 / 595 per browser · Admin UI
+  50). KMail and Admin now list their folders explicitly so their new `smoke/`/`sanity/` stay out of
+  the product run, as before. `check`, `framework` (339) and `lint:tags` pass.
+- Updated: `playwright.config.ts` (the `api` project matches the three `*-api/` folders), the product
+  commands, `test-scope.mjs`/`rtm-lib.mjs`/`lint-tags.mjs` path patterns, three self-tests, and every doc
+  and comment that named a folder.
+
+### 2026-10-27 — Comments cut to what the code needs; a README per main folder
 
 Owner: "keep the valid short comments only … whoever sees the folder must understand the files". Chose:
 remove history and shorten long headers.
