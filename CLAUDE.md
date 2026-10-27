@@ -2,11 +2,12 @@
 
 Read this first. It is the map and the rulebook; the detail lives in `docs/`:
 
-- `docs/reference/bench-reference.md`: full product, architecture, pipeline, contracts, plan and conventions
-  (the original long sections, verbatim; "§6", "§8" in older notes refer to it)
+- `docs/guides/commands.md`: every command, one section per product
+- `docs/guides/bug-filing.md` (the filing pipeline) · `docs/guides/validation-framework.md` (the engine) ·
+  `docs/guides/run-levels.md` (smoke/sanity/regression) · `docs/guides/api-contracts.md` (workbook → contracts)
+- `docs/reference/kpost-product.md`: what KPOST is, its flow and architecture risk
 - `docs/reference/decision-log.md`: every decision and incident, newest first. **After changing a flow, add an entry at the top.**
-- `docs/reference/production-readiness-plan.md`: the measured state of the bench, the phased plan to production grade, and its scoreboard
-- `docs/guides/commands.md`: every npm script · `docs/guides/runbook.md` · `docs/guides/bug-filing.md` · `docs/guides/validation-framework.md`
+  ("§6", "§8" in older entries refer to a long reference doc removed on 2026-10-27; it is in git history.)
 
 ## 1. What this bench tests
 
@@ -127,10 +128,12 @@ non-defects). If a WILL CREATE item is not a real bug, record it in `src/bug-tra
 every run, auditably. When the plan looks right, run the `:file` command. (The dry preview now shows the
 SAME reopen/comment/close decisions the live run will make — it no longer mislabels a reopen as would-file.)
 
-Also: `kpost:full:verify` (status pass only: closes verified fixes, dates every open bug, files nothing),
-`ui:chromium:file` / `ui:firefox:file` / `ui:webkit:file` (one browser per run), `framework` (bench self-tests),
-`check` (typecheck + lint + format; must pass before anything is "done"). `cross-env` works only via `npm run`;
-in a shell, set env vars natively.
+Also: `product:kpost-api:verify` (status pass only: closes verified fixes, dates every open bug, files
+nothing), `product:kpost-ui:chromium:file` / `:firefox:file` / `:webkit:file` (one browser per run),
+`framework` (bench self-tests), `check` (typecheck + lint + format; must pass before anything is "done").
+`product:all` runs every product even when one finds failures. Each run moves the previous `REPORT.*` to
+`reports/history/` (last 10 kept); a `framework`-only run never touches it. `cross-env` works only via
+`npm run`; in a shell, set env vars natively.
 
 What one `*:file` run does, in order (`src/reporting/bugzilla-reporter.ts`):
 
@@ -147,13 +150,14 @@ tests run ─► candidates built (API reports, UI failures, a11y) ─► merge 
 ```
 
 API bugs re-verify by their `(endpoint, validator)` pair; UI bugs by their originating test title, only on
-the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/reference/bench-reference.md` §6.
+the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bug-filing.md`.
 
 ## 5. Running safely: hard rules
 
 1. **Never run Playwright while a live run is in progress**, not even `--list` or `framework`. Check
    `Get-CimInstance Win32_Process` first (the bash PID doesn't map to the Windows PID).
-2. **Back up `reports/REPORT.json`/`.md` before any other Playwright command**: every run overwrites them.
+2. **The previous report is archived automatically**: each run moves `reports/REPORT.*` into
+   `reports/history/` (10 kept) before writing; run-level reports keep their last 3 runs. Nothing to back up by hand.
 3. **Never edit source files while a run is reading them** (one mid-run delete auto-filed 46 false bugs).
 4. **Run logs and ad-hoc output go to the scratchpad, never the repo root.** Any extra Playwright output
    folder must match `/test-results*/` or `/playwright-report*/` (gitignored). Traces contain bearer tokens and

@@ -4,7 +4,7 @@ Per the 2026-10-02 scope-rebuild directive: an endpoint is only listed here when
 caller was **proven** (exhaustive grep across `KPOST_REACTJS_2023_V1/src/` outside the defining
 file, or an explicit "legacy"/dead-code marker in the source itself) — never because the test
 bench simply doesn't have a test for it yet. This file is a byproduct of the frontend-call-tracing
-agent dispatched from the 2026-10-02 test-bench plan (removed 2026-10-26; in git history) (archived) §24, cross-referencing every exported
+agent dispatched from the 2026-10-02 test-bench plan (since removed; in git history), cross-referencing every exported
 function in every `src/Services/*.js` file against every other file in the frontend repo.
 
 This is a **first pass**, covering what that trace found. It does not yet include backend
@@ -47,6 +47,6 @@ the backend side, not the frontend side, and are out of scope for this file unti
 
 - **KPoster's ~18 real REST routes** (`bootstrap`, `profiles/*`, `posts/*`, `events`, `reports`, `notifications/read`, `analytics`, `attachments`) — the frontend's own default build (`KPOSTER_DEMO = true` unless `REACT_APP_KPOSTER_MODE=api`) never calls any of them; it runs against a local IndexedDB demo store instead. This is **not** "unused" in the usual sense — the code is real and would be called under a different build config. Whether the actual deployed, real-world build sets `REACT_APP_KPOSTER_MODE=api` is a deployment fact this session cannot read from source. **DEPLOYMENT CONFIGURATION UNKNOWN** — needs the real deployed `REACT_APP_KPOSTER_MODE` value confirmed before these routes can be correctly classified either way; not guessed, not silently excluded, not counted as tested or as unused.
 
-## TAWallet — confirmed frontend-active, NOT unused (see `docs/scope/blocked-endpoints-rationale.md` / active scope instead)
+## TAWallet — confirmed frontend-active, NOT unused (see `docs/generated/blocked-endpoints.md` / active scope instead)
 
 Per the 2026-10-02 directive (§16), traced in full. `taWallet/createHash` and `taWallet/fetchTransactionDetailsByOrderId` are confirmed frontend-active (`KBook.js:1036-1096`) and safe to test live (hash generation / read-only lookup, no real money movement) — these belong in active test-bench scope, not here or in `docs/scope/blocked-endpoints-rationale.md`. The real-money surface is the live auto-submitting HTML form at `KBook.js:3161-3519` (`action="https://api.tapay.in/v2/paymentrequest"`, a native browser form POST, not a fetch call — distinct from the two already-dead `getpaymentgatewayUI`/`redirectui` functions above, same host) and `taWallet/paymentRequest1` (the settlement callback) — both documented in `docs/scope/blocked-endpoints-rationale.md` under TAWallet.

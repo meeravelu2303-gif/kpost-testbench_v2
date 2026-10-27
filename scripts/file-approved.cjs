@@ -15,8 +15,8 @@
  * its `existingId` (status REOPENED, resolution cleared) and adds a comment with the evidence;
  * it refuses if that id is not actually resolved.
  */
-require('D:/TEST-BENCH-AUTOMATIONS/kpost-testbench_v2/node_modules/dotenv').config({
-  path: 'D:/TEST-BENCH-AUTOMATIONS/kpost-testbench_v2/.env',
+require(require('node:path').join(__dirname, '..', 'node_modules', 'dotenv')).config({
+  path: require('node:path').join(__dirname, '..', '.env'),
   quiet: true,
 });
 const fs = require('fs');

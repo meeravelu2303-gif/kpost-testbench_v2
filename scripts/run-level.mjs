@@ -15,7 +15,7 @@
 //   - workers is capped at 2 by the config; this runner defaults it to 1.
 //   - Admin joins SANITY and SMOKE (`@admin` + the level tag), always in its own stages; the KPost
 //     smoke gate and regression never select it, so an unreachable Admin box blocks neither.
-//   - Runs exactly like the module scripts (`kpost`, `kmail`, `ui:chromium`): QA test accounts only
+//   - Runs exactly like the module scripts (`product:kpost-api`, `product:kmail-api`, `product:kpost-ui:chromium`): QA test accounts only
 //     (QATEST_ONLY), every module's write/lifecycle flow switched on, and paused KDoc (@kos) excluded —
 //     so a run level measures the same suite the team runs day to day, on accounts no developer uses.
 //   - Live-host guard: every level refuses to start unless every target host is a TEST deployment.
@@ -36,7 +36,7 @@ dotenv.config({
   quiet: true,
 });
 
-/** The flags the module scripts set (package.json `kpost` + `kmail` + `ui:chromium`). */
+/** The flags the module scripts set (package.json `product:kpost-api` + `product:kmail-api` + `product:kpost-ui:chromium`). */
 const RUN_FLAGS = {
   QATEST_ONLY: 'true',
   CONCURRENCY_PROBES: 'false',
@@ -86,13 +86,10 @@ const TEST_HOSTS = new Set([
   'testkmail.kpostindia.com',
   // Admin test deployment (CLAUDE.md §1): the API test box and the Admin UI. The live counterpart
   // (adminmodule.kpostindia.com) is deliberately absent, so pointing at it is refused.
-  '192.168.0.38',
-  // The Admin API test box's new address (owner, 2026-10-23).
-  '192.168.10.38',
-  // The Admin API test box's address from 2026-10-24 (owner).
-  '192.168.10.4',
-  // The Admin UI test build on the internal network (owner, 2026-10-22).
-  '192.168.1.170',
+  // Current addresses (owner, 2026-10-26): the Admin API + its MongoDB, and the Admin UI test build.
+  // Retired addresses are removed on purpose: an internal IP can be reassigned to another machine.
+  '192.168.11.11',
+  '192.168.10.22',
   'kpostadmin.kpostindia.com',
   'localhost',
   '127.0.0.1',
@@ -219,11 +216,28 @@ function reportThrottle() {
   return hits;
 }
 
+/**
+ * Keeps the newest KEEP_RUNS timestamped runs of one level+suite. Each run holds a full HTML report
+ * with traces and videos (tens of MB); the bugs themselves live in Bugzilla, so old runs are noise.
+ */
+const KEEP_RUNS = 3;
+function pruneRunDirs(suiteDir) {
+  const runs = fs
+    .readdirSync(suiteDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort()
+    .reverse();
+  for (const old of runs.slice(KEEP_RUNS))
+    fs.rmSync(path.join(suiteDir, old), { recursive: true, force: true });
+}
+
 /** Build and run one Playwright invocation; returns the exit code. */
 function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
   const outDir = path.join(ROOT, 'reports', level, suite, stamp);
   fs.mkdirSync(outDir, { recursive: true });
   RUN_DIRS.add(outDir);
+  pruneRunDirs(path.dirname(outDir));
   const args = ['playwright', 'test', `--project=${project}`, ...(paths || []), '--grep', grep];
   // Paused modules are excluded from every level, whatever the caller's invert.
   args.push('--grep-invert', grepInvert ? `${grepInvert}|${PAUSED_TAGS}` : PAUSED_TAGS);

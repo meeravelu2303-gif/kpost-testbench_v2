@@ -81,7 +81,7 @@ contracts/ openapi/               # GENERATED from the workbook (and the Admin s
 tests/api · tests/framework · tests/e2e · tests/e2e-admin · tests/setup
 ```
 
-`tests/` is split by _kind_ of test (api, framework, e2e). Smoke, regression, security and full are **validation profiles**, not folders. This way one spec file per module area serves every profile, and nothing is duplicated across `smoke/` and `regression/` folders.
+`tests/` is split by _kind_ of test (api, framework, e2e). Smoke, regression, security and full are **validation profiles**; the small `smoke/` and `sanity/` folders hold only the run-level entry specs (`docs/guides/run-levels.md`). This way one spec file per module area serves every profile, and nothing is duplicated across `smoke/` and `regression/` folders.
 
 ## 2. What each folder is for
 
@@ -227,7 +227,7 @@ export const validationRegistry = new ValidationRegistry().register(
   headersValidator,
   responseStructureValidator,
   responseSchemaValidator,
-  // … 44 validators …
+  // … every validator (50 today) …
   sensitiveDataValidator,
   commonErrorValidator,
 );
@@ -604,13 +604,13 @@ Everything else still runs. The report shows the disabled ones as `SKIPPED — d
 
 ## 20. Commands
 
-The complete, canonical list is in **[`docs/guides/commands.md`](commands.md)** — one command per surface
-(`kpost` / `kmail` / `admin` / `ui` / `all`, each with a `:file` twin). The most common:
+The complete, canonical list is in **[`docs/guides/commands.md`](commands.md)** — one section per product,
+each command with a `:file` twin. The most common:
 
 ```bash
-npm run kpost            # KPost API — all test types on the test DB + write flows (files nothing)
-npm run kpost:file       # same, and file valid bugs
-npm run kmail            # KMail API      npm run admin   # Admin API      npm run ui   # UI e2e
+npm run product:kpost-api        # KPost API: every test type on the test DB + write flows (files nothing)
+npm run product:kpost-api:file   # same, and file valid bugs
+npm run product:kmail-api        # also product:kpost-admin, product:kpost-ui, product:kpost-admin-ui
 npm run framework        # framework self-tests (no host or credentials needed)
 
 # A specific validation profile / environment / subset (the profiles still exist as an axis):

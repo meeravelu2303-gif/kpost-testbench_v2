@@ -14,6 +14,7 @@ import {
   type ProofFile,
 } from '../bug-tracker/bug-candidate';
 import { AXE_DETAILS_ATTACHMENT, AXE_JSON_ATTACHMENT } from '../ui/accessibility-evidence';
+import { archivePreviousReport } from './report-archive';
 import {
   FAILURE_DIAGNOSIS_ATTACHMENT,
   FAILURE_SIGNALS_ATTACHMENT,
@@ -360,8 +361,15 @@ export default class BugzillaReporter implements Reporter {
       },
     };
     const markdown = `${renderRunSummaryMarkdown(runSummary)}\n${buildBugReportMarkdown(reportInput)}`;
-    this.writeReport('REPORT.json', JSON.stringify(combined, null, 2));
-    this.writeReport('REPORT.md', markdown);
+    // A bench self-test run tests no product: it must not replace the last product run's report,
+    // which `report:filing` and the filing scripts read.
+    const frameworkOnly =
+      tests.length > 0 && tests.every((test) => test.parent.project()?.name === 'framework');
+    if (!frameworkOnly) {
+      archivePreviousReport(path.join(process.cwd(), 'reports'));
+      this.writeReport('REPORT.json', JSON.stringify(combined, null, 2));
+      this.writeReport('REPORT.md', markdown);
+    }
     /*
      * Execution health first, then the defects: "what ran" before "what is broken". A bug count
      * read without the coverage that produced it is unanchored — 4 defects out of 5 checks and

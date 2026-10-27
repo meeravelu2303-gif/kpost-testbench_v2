@@ -23,7 +23,7 @@ import { expect, test } from '@fixtures';
  *  - `OTP_TEST_GATEWAY=true` + `TEST_DB_MODE=true` — the same pair the API-layer signup lifecycle
  *    uses, because the mobile OTP bypass code (`QA_BYPASS_OTP`) only ever validates there. On this
  *    environment `.env` sets `OTP_TEST_GATEWAY=true` persistently; `signup-domain.spec.ts` still
- *    notes real e-mail delivery is live here, so this never runs on a default `npm run ui`.
+ *    notes real e-mail delivery is live here, so this never runs on a default `npm run product:kpost-ui`.
  *
  * ## Identity: a dedicated UI slot, not the API layer's
  *

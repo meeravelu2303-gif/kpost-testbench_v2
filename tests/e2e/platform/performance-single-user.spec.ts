@@ -5,7 +5,7 @@ import { settleFrames } from '../support/settle';
 
 /**
  * PERFORMANCE — single user (FRD row 25): a page-load-time sanity budget for the core screens, one
- * real navigation per screen. Run with `npm run perf:single`.
+ * real navigation per screen. Run with `npm run product:kpost-ui:perf`.
  *
  * ## Deliberately low-impact
  *

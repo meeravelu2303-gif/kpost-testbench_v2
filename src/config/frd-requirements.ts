@@ -26,7 +26,7 @@ export const FR_IDS: readonly string[] = [
   ...range('FR-KD', 6), // KDirectory
 ];
 
-/** Non-functional ids the validators already map onto (docs/reference/bench-reference.md §4). */
+/** Non-functional ids the validators already map onto (docs/reference/requirements-frd.md). */
 export const NFR_IDS: readonly string[] = [
   'NFR-SEC01',
   'NFR-SEC02',

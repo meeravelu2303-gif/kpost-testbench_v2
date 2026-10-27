@@ -15,8 +15,8 @@
  * (all statuses) — if ANY ticket already carries the tag, nothing is created and the match is shown.
  * Only entries whose decision is `needs-review` in the report are eligible.
  */
-require('D:/TEST-BENCH-AUTOMATIONS/kpost-testbench_v2/node_modules/dotenv').config({
-  path: 'D:/TEST-BENCH-AUTOMATIONS/kpost-testbench_v2/.env',
+require(require('node:path').join(__dirname, '..', 'node_modules', 'dotenv')).config({
+  path: require('node:path').join(__dirname, '..', '.env'),
   quiet: true,
 });
 const fs = require('fs');

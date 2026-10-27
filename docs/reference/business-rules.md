@@ -12,8 +12,8 @@ any finding (product-scoped dedupe, validity gate, routed to the module develope
 files a false bug.
 
 **Status legend:** ✅ verified against the response · 🟡 partial (only "accepted", or UI-only) · ⬜ to
-do · ⛔ out of scope (OTP-gated signup / mobile-only device features). Guard:
-`tests/framework/business-rules-coverage.spec.ts` fails if a rule here is unmapped.
+do · ⛔ out of scope (OTP-gated signup / mobile-only device features). This table is read by
+`npm run lint:tags` (`scripts/rtm-lib.mjs`) into the requirements traceability matrix, `reports/rtm.xlsx`.
 
 ---
 

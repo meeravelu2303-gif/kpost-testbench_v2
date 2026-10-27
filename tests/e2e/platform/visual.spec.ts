@@ -9,9 +9,9 @@ import { skipIfSignedOut } from '../support/session';
  * unintended layout/style change (a broken CSS bundle, a shifted component, a blank region) is
  * caught even when the DOM checks pass.
  *
- * It is GATED behind `VISUAL_REGRESSION=true` and is NOT in the default `npm run ui`, because it
- * needs baselines: run `npm run ui:visual:update` ONCE to capture them (per browser), then
- * `npm run ui:visual` compares. It is NOT in `UI_FILING_SPECS` — a visual diff is a human-review
+ * It is GATED behind `VISUAL_REGRESSION=true` and is NOT in the default `npm run product:kpost-ui`, because it
+ * needs baselines: run `npm run product:kpost-ui:visual:update` ONCE to capture them (per browser), then
+ * `npm run product:kpost-ui:visual` compares. It is NOT in `UI_FILING_SPECS` — a visual diff is a human-review
  * signal (fonts/anti-aliasing differ across environments), not an auto-filed defect. A generous
  * `maxDiffPixelRatio` + disabled animations keep it from flapping on trivial rendering noise.
  */
@@ -24,7 +24,7 @@ test.describe(
   () => {
     test.skip(
       process.env.VISUAL_REGRESSION !== 'true',
-      'visual regression is opt-in: run `npm run ui:visual:update` to baseline, then `npm run ui:visual`',
+      'visual regression is opt-in: run `npm run product:kpost-ui:visual:update` to baseline, then `npm run product:kpost-ui:visual`',
     );
     test.skip(
       !testData.kpostId || testData.kpostId.includes('qa.bench'),

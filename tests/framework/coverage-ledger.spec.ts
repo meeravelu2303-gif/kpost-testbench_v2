@@ -15,7 +15,7 @@ import { expect, test } from '@fixtures';
  * in exactly one bucket and every module carries an explicit scope decision.
  *
  * Generated from the registry + the generated contracts, never hand-kept — a hand-written coverage
- * list of 337 endpoints is wrong within a day and then lies. Run `npm run test:framework`.
+ * list of 337 endpoints is wrong within a day and then lies. Run `npm run framework`.
  */
 
 /** KMail spreads across many URL prefixes; it is one module (its own suite, host and owner). */
@@ -209,7 +209,7 @@ test.describe('coverage ledger @framework', () => {
       '# Coverage ledger — every endpoint, every screen',
       '',
       '**GENERATED — do not edit.** Written by `tests/framework/coverage-ledger.spec.ts`',
-      '(`npm run test:framework`). It reconciles the registry against the generated contracts, so it',
+      '(`npm run framework`). It reconciles the registry against the generated contracts, so it',
       'cannot drift from what is actually tested.',
       '',
       '## API — endpoints',

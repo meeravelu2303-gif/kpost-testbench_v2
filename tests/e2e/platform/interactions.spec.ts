@@ -22,7 +22,7 @@ import { skipIfSignedOut } from '../support/session';
  *
  * These are selector-INDEPENDENT signals: every interaction is best-effort (a missing control is
  * skipped, never failed), so a tuning gap can never file a false bug — only a real crash / freeze
- * does. Runs on Chromium, Firefox and WebKit (via `npm run ui`), so a browser-specific freeze/crash
+ * does. Runs on Chromium, Firefox and WebKit (via `npm run product:kpost-ui`), so a browser-specific freeze/crash
  * is caught and the ticket names the browser. Read-only: it types, scrolls and opens, never writes.
  */
 

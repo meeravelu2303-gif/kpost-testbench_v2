@@ -1,7 +1,7 @@
 # UI coverage ledger — every screen, every check
 
 **GENERATED — do not edit.** Written by `tests/framework/ui-coverage.spec.ts`
-(`npm run test:framework`). It reconciles the screen registry, the UI check catalogue and the
+(`npm run framework`). It reconciles the screen registry, the UI check catalogue and the
 interaction flows, and fails the build if a screen would route a bug to a non-existent component.
 
 ## Screens

@@ -1,11 +1,10 @@
 # Skip ledger — every skip reason in the suite, classified
 
 **GENERATED — do not edit.** Written by `tests/framework/skip-ledger.spec.ts`
-(`npm run test:framework`). Edit the specs, not this file.
+(`npm run framework`). Edit the specs, not this file.
 
 A skip is honest only when its reason says what kind of skip it is. Five classes a skip may
 be in, one it should not stay in (no reason string), and one that fails the build (unclassified).
-The plan: `docs/reference/production-readiness-plan.md`, Phase 1.
 
 | Class | Sites | Spec files |
 | ----- | ----: | ---------: |
@@ -20,7 +19,7 @@ The plan: `docs/reference/production-readiness-plan.md`, Phase 1.
 
 ## The last run, by the engine’s own skip classes
 
-Run `run-aae4ce8f-efcf-49c7-9485-06abce800650` at 2026-10-27T05:18:26.412Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
+Run `run-4a380d12-4bfc-4ea1-a787-93810b1f5541` at 2026-10-27T05:24:29.756Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
 
 | Engine skip class | Checks | Meaning |
 | ----------------- | -----: | ------- |
@@ -166,7 +165,7 @@ _None._
 | 1 | needs at least two configured accounts | `tests/framework/kmail-flags.spec.ts:156` |
 | 1 | no finding supplied — pass --bug=<file.json> (see the usage block above) | `tests/framework/manual-bug.spec.ts:148` |
 | 1 | needs BUGZILLA_URL and BUGZILLA_API_KEY | `tests/framework/ownership.spec.ts:279` |
-| 1 | no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first | `tests/framework/_diff-accounts.local.spec.ts:12` |
+| 1 | no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first | `tests/framework/_diff-accounts.local.spec.ts:18` |
 
 ## Owner decision — gated flows, pauses and safety choices (204)
 
@@ -201,7 +200,7 @@ _None._
 | 2 | creates a real scheduled call; set KALL_UI_LIFECYCLE=true | `tests/e2e/cross-layer/cross-layer-flows.spec.ts:412`, `tests/e2e/kall/kall-features.spec.ts:110` |
 | 2 | only meaningful when TEST_ENV=production | `tests/framework/live-safety.spec.ts:573`, `tests/framework/live-safety.spec.ts:606` |
 | 1 | one-time setup: set ADMIN_CREATE_STAFF=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/api/admin/maintenance/setup-staff-employee.spec.ts:33` |
-| 1 | PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND requires explicit authorization even on a future non-production environment, given it compares real credential material — see docs/scope/blocked-endpoints-rationale.md | `tests/api/kmail/credential-disclosure.spec.ts:75` |
+| 1 | PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND requires explicit authorization even on a future non-production environment, given it compares real credential material — see docs/generated/blocked-endpoints.md | `tests/api/kmail/credential-disclosure.spec.ts:75` |
 | 1 | sends real mail; set KMAIL_LIFECYCLE=true | `tests/api/kmail/feature.spec.ts:91` |
 | 1 | sends real KMail between our accounts; set KMAIL_LIFECYCLE=true | `tests/api/kmail/mail-semantics-workflow.spec.ts:48` |
 | 1 | writes real KMail data; set KMAIL_LIFECYCLE=true | `tests/api/kmail/manage-workflow.spec.ts:46` |
@@ -209,7 +208,7 @@ _None._
 | 1 | sends real KMail between our two accounts; set KMAIL_LIFECYCLE=true | `tests/api/kmail/reply-forward-workflow.spec.ts:59` |
 | 1 | writes real KMail settings; set KMAIL_LIFECYCLE=true | `tests/api/kmail/signature-letterhead-workflow.spec.ts:37` |
 | 1 | sends real mail on a LIVE mail server; set KMAIL_LIFECYCLE=true to run | `tests/api/kmail/workflow-db.spec.ts:51` |
-| 1 | PERMANENT on this environment: addingUserByAdmin/createOrRemoveBackupAdmin/resetPassword/ terminateUser are all sideEffect:"global", which production-guard.ts refuses unconditionally on TEST_ENV=production — needs a non-production environment, not a flag (see docs/scope/blocked-endpoints-rationale.md) | `tests/api/kpost/admin/member-lifecycle.spec.ts:77` |
+| 1 | PERMANENT on this environment: addingUserByAdmin/createOrRemoveBackupAdmin/resetPassword/ terminateUser are all sideEffect:"global", which production-guard.ts refuses unconditionally on TEST_ENV=production — needs a non-production environment, not a flag (see docs/generated/blocked-endpoints.md) | `tests/api/kpost/admin/member-lifecycle.spec.ts:77` |
 | 1 | S3 attachment lifecycle; set AWS_LIFECYCLE=true | `tests/api/kpost/aws/feature.spec.ts:41` |
 | 1 | testingapi answers 404 "No matching endpoint for this request" for POST saveUnsubscriberDetails, live-verified 2026-09-24. Not run standalone (a 404 there reads  | `tests/api/kpost/common/common-gaps.spec.ts:28` |
 | 1 | sideEffect:'global', never cleared for live under any flag — the endpoint's own definition warns a wrong value here is a production incident. Never run for real; the off-live negative probes are the only thing that touches it. | `tests/api/kpost/common/common-gaps.spec.ts:38` |
@@ -272,7 +271,7 @@ _None._
 | 1 | drives real uploads + sends; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup/katchup-attach-repeat-e2e.spec.ts:40` |
 | 1 | drives a real presigned upload + send; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup/katchup-attach-send-e2e.spec.ts:21` |
 | 1 | sends real messages; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup/katchup-content-correctness.spec.ts:68` |
-| 1 | writes real messages; set KATCHUP_UI_LIFECYCLE=true (npm run ui does) | `tests/e2e/katchup/katchup-continuous.spec.ts:28` |
+| 1 | writes real messages; set KATCHUP_UI_LIFECYCLE=true (npm run product:kpost-ui does) | `tests/e2e/katchup/katchup-continuous.spec.ts:28` |
 | 1 | types into a real composer; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup/katchup-draft-persistence.spec.ts:35` |
 | 1 | drives the composer/send; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup/katchup-functional.spec.ts:67` |
 | 1 | creates a real group and sends a real message; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/katchup/katchup-group-receipts-e2e.spec.ts:81` |
@@ -286,7 +285,7 @@ _None._
 | 1 | changes KMail settings; set SETTINGS_UI_LIFECYCLE=true | `tests/e2e/kmail/kmail-settings-e2e.spec.ts:29` |
 | 1 | needs auth2.setup.ts to log STORAGE_STATE_2 in as a real 2nd account; set KATCHUP_UI_LIFECYCLE=true | `tests/e2e/kmail/kmail-stored-xss-render.spec.ts:55` |
 | 1 | measures real page loads on the shared server; set PERF_SINGLE_USER=true | `tests/e2e/platform/performance-single-user.spec.ts:43` |
-| 1 | visual regression is opt-in: run `npm run ui:visual:update` to baseline, then `npm run ui:visual` | `tests/e2e/platform/visual.spec.ts:25` |
+| 1 | visual regression is opt-in: run `npm run product:kpost-ui:visual:update` to baseline, then `npm run product:kpost-ui:visual` | `tests/e2e/platform/visual.spec.ts:25` |
 | 1 | writes a profile record; set PROFILE_UI_LIFECYCLE=true | `tests/e2e/profile/profile-actions.spec.ts:63` |
 | 1 | the mobile field is read-only in this editor by design — a verified number changes through its own OTP flow, not this form | `tests/e2e/profile/profile-functional.spec.ts:237` |
 | 1 | qa.business needs the BUSINESS_S session (BUSINESS_UI_LIFECYCLE=true, QA_BUSINESS_S_KPOST_ID) | `tests/e2e/sanity/sanity-screens.spec.ts:106` |

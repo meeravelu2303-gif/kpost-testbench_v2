@@ -26,7 +26,7 @@ KPost is one product built from modules that are maintained in **separate reposi
 | Suite       | Module                | Repository              | Bugzilla product | Ticket goes to                               |
 | ----------- | --------------------- | ----------------------- | ---------------- | -------------------------------------------- |
 | `kpost-api` | KPost core API        | KPOST webservice        | `KPost API`      | **Jaganathan Murthy** (jagan@kpost.in)       |
-| `admin-api` | Admin module API      | admin-module (own repo) | `KPost Admin`    | **Jaganathan Murthy** (jagan@kpost.in)       |
+| `admin-api` | Admin module API      | admin-module (own repo) | `KPost Admin`    | **Karan S** (karans@kpost.in)                |
 | `kmail-api` | KMail module API      | kmail (own repo)        | `KMail API`      | **Jitendra Kumar** (jitendra@kpost.in)       |
 | `kpost-ui`  | KPost React front end | KPOST_REACTJS_2023_V1   | `KPost UI`       | **Ayyappan Ashok** (ayyappan@kpostindia.com) |
 | `admin-ui`  | Admin/HR-Setup SPA    | Admin_Module frontend   | `KPost Admin UI` | **Ayyappan Ashok** (ayyappan@kpostindia.com) |
@@ -181,11 +181,11 @@ It refuses to create when ANY ticket already carries the tag (and tells you to r
 finding is a regression), and only accepts entries the report holds as `needs-review`.
 
 ```bash
-BUGZILLA_MAX_FILE=5 npm run kpost:file   # stage a rollout
+BUGZILLA_MAX_FILE=5 npm run product:kpost-api:file   # stage a rollout
 
-npm run kpost      # one module at a time
-npm run admin
-npm run kmail
+npm run product:kpost-api      # one product at a time
+npm run product:kpost-admin
+npm run product:kmail-api
 ```
 
 Every run writes `reports/REPORT.json` — its `bugs` object holds the accepted and rejected candidates (with reasons) and, when filing ran, what happened to each (including the assignee). The human-readable form is Part 2 of `reports/REPORT.md`.
@@ -218,7 +218,7 @@ Two instance facts worth knowing:
 ## 10. Operating it
 
 - **Start in dry run.** Read `reports/REPORT.json`, confirm the tickets and their owners, then lift the flag — ideally with `BUGZILLA_MAX_FILE=5` first.
-- **Prove dedupe on your own instance:** run `npm run kpost:file` twice. The second run must report `commented`, never `created`.
+- **Prove dedupe on your own instance:** run `npm run product:kpost-api:file` twice. The second run must report `commented`, never `created`.
 - **To stop filing immediately:** unset `BUGZILLA_API_KEY`, or set `BUGZILLA_DRY_RUN=true`.
 - **Rotate the API key** if it has ever been pasted into a chat, ticket or log.
 - **A ticket that is not a defect:** resolve it `INVALID` (or `WONTFIX`). The bench never re-files it.

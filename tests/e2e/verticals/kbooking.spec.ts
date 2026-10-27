@@ -7,7 +7,7 @@ import { pickReactSelect } from '../support/react-select';
  * (`Services/KBooking.js`): city search, trip listing, `BlockTickets`, `GenerateOrderID`,
  * `verifySignature` (a payment-gateway signature check), `BookTicket`, `CancelTicket`.
  *
- * HARD SAFETY BOUNDARY (confirmed in `docs/ui/frontend-module-map.md`): this is money-moving, the same
+ * HARD SAFETY BOUNDARY (confirmed in `docs/ui/ui-screens.md`): this is money-moving, the same
  * class of feature this bench already refuses to automate for OTP/SMS. No test here may reach
  * `BlockTickets`/`GenerateOrderID`/`verifySignature`/`BookTicket`/`CancelTicket` or the payment-gateway
  * UI. The boundary in the UI is the per-trip "Show seats" link — this suite NEVER clicks it. Safe

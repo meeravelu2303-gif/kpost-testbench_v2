@@ -15,7 +15,7 @@ import { expect, test } from '@fixtures';
  * reason visible, puts it in one of four classes, and **fails the build on a reason it cannot
  * classify**, so a new skip has to say honestly which kind it is.
  *
- * ## The classes (`docs/reference/production-readiness-plan.md`, Phase 1)
+ * ## The classes
  *
  *  - `provision`      needs an account, a database connection, a host or a secret the machine lacks
  *  - `owner-decision` gated behind a `*_LIFECYCLE` flag, a pause, or a safety choice the owner made
@@ -201,11 +201,10 @@ test.describe('skip ledger', () => {
       '# Skip ledger — every skip reason in the suite, classified',
       '',
       '**GENERATED — do not edit.** Written by `tests/framework/skip-ledger.spec.ts`',
-      '(`npm run test:framework`). Edit the specs, not this file.',
+      '(`npm run framework`). Edit the specs, not this file.',
       '',
       'A skip is honest only when its reason says what kind of skip it is. Five classes a skip may',
       'be in, one it should not stay in (no reason string), and one that fails the build (unclassified).',
-      'The plan: `docs/reference/production-readiness-plan.md`, Phase 1.',
       '',
       '| Class | Sites | Spec files |',
       '| ----- | ----: | ---------: |',

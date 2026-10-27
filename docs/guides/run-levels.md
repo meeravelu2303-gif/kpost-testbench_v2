@@ -76,12 +76,12 @@ is open.
 `npm run test:sanity` (no arguments) runs four stages, Chromium only, dry-run, and keeps going after a
 failing stage so one run names every broken area:
 
-| Stage         | What runs                                                                                                                                                                                                                                                                                                                                               | Where it comes from                                                                                                   |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **KPost API** | Every live-safe read endpoint of every module at the SMOKE profile (status, envelope, schema, content type, refusal without a token); one core write flow per module (send/recall, compose, place a call, add a contact, create a group, edit profile, toggle settings, diary write, booking search, presigned upload, dashboard, login); the API smoke | `tests/api/sanity/read-sweep.spec.ts` (derived from `productionSafe`), `@sanity` on each module's `feature.spec.ts`   |
-| **KPost UI**  | Every screen in the registry loads cleanly in its own session (personal, business, public); each module's curated `@sanity` UI tests; the UI smoke (incl. Katchup + KMail send)                                                                                                                                                                         | `tests/e2e/sanity/sanity-screens.spec.ts` (derived from `src/ui/screens.ts`), `@sanity` on the module specs           |
-| **Admin API** | Every live-safe Admin / HR-Setup read at the SMOKE profile; the core write flow (workplace tier → variable → location, HR tier, employee record: create, read back, delete, no external side effect)                                                                                                                                                    | `tests/api/admin/sanity-read-sweep.spec.ts`, `tests/api/admin/feature.spec.ts` (`ADMIN_LIFECYCLE`, set by the runner) |
-| **Admin UI**  | The login front door; every Admin screen mounts with its shell, no crash, no 5xx                                                                                                                                                                                                                                                                        | `tests/e2e-admin/sanity/admin-sanity.spec.ts`, `admin-login.spec.ts`                                                  |
+| Stage         | What runs                                                                                                                                                                                                                                                                                                                                               | Where it comes from                                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **KPost API** | Every live-safe read endpoint of every module at the SMOKE profile (status, envelope, schema, content type, refusal without a token); one core write flow per module (send/recall, compose, place a call, add a contact, create a group, edit profile, toggle settings, diary write, booking search, presigned upload, dashboard, login); the API smoke | `tests/api/sanity/read-sweep.spec.ts` (derived from `productionSafe`), `@sanity` on each module's `feature.spec.ts`                |
+| **KPost UI**  | Every screen in the registry loads cleanly in its own session (personal, business, public); each module's curated `@sanity` UI tests; the UI smoke (incl. Katchup + KMail send)                                                                                                                                                                         | `tests/e2e/sanity/sanity-screens.spec.ts` (derived from `src/ui/screens.ts`), `@sanity` on the module specs                        |
+| **Admin API** | Every live-safe Admin / HR-Setup read at the SMOKE profile; the core write flow (workplace tier → variable → location, HR tier, employee record: create, read back, delete, no external side effect)                                                                                                                                                    | `tests/api/admin/engine/sanity-read-sweep.spec.ts`, `tests/api/admin/flows/feature.spec.ts` (`ADMIN_LIFECYCLE`, set by the runner) |
+| **Admin UI**  | The login front door; every Admin screen mounts with its shell, no crash, no 5xx                                                                                                                                                                                                                                                                        | `tests/e2e-admin/sanity/admin-sanity.spec.ts`, `admin-login.spec.ts`                                                               |
 
 Selection is derived wherever it can be: a new live-safe endpoint or a new screen joins sanity with no
 spec change; a paused one (KDoc/KOS) leaves it. KMail API sanity follows the KMail auth gate (skips with
@@ -183,13 +183,13 @@ The KPost bench is **one low-capacity shared server**. Enforced in `playwright.c
 **Live-host guard:** every level refuses to start unless each target (`BASE_URL`, `API_BASE_URL`,
 `KPOST_API_BASE_URL`, `KMAIL_API_BASE_URL`, `ADMIN_API_BASE_URL`, `ADMIN_UI_BASE_URL`, read from `.env`
 like the config does) is a test deployment host — `test.kpostindia.com`, `testingapi.kpostindia.com`,
-`testkmail.kpostindia.com`, the Admin test box `192.168.0.38`, the Admin UI test build `192.168.1.170`, `kpostadmin.kpostindia.com` (or
+`testkmail.kpostindia.com`, the Admin API test box `192.168.11.11`, the Admin UI test build `192.168.10.22`, `kpostadmin.kpostindia.com` (or
 localhost). `adminmodule.kpostindia.com` (the live Admin) is refused. There is no override. (`TEST_ENV=production` in `.env` is the bench's safety _mode_ while
 pointing at the test hosts, so the guard checks the hosts, not that label.) `@destructive` tests never
 run in smoke/sanity, and run in regression only when `ALLOW_DESTRUCTIVE_TESTS=true`.
 
 **Same suite as the module scripts:** every level runs on the QA test accounts only (`QATEST_ONLY=true`),
-with every module's write/lifecycle flow switched on (the flags `kpost`, `kmail` and `ui:chromium` set),
+with every module's write/lifecycle flow switched on (the flags `product:kpost-api`, `product:kmail-api` and `product:kpost-ui:chromium` set),
 and always excludes paused modules (`@kos` — KDoc/KOS). Without this, the gated write flows would
 silently skip and the run would use developer-shared accounts.
 
@@ -226,25 +226,5 @@ The hosted **Quality gate** workflow (`.github/workflows/playwright.yml`) runs s
 (`npm run check`) **and `npm run lint:tags`** — `lint:tags` lists tests via `playwright --list` with no
 server contact and no live credentials, so it is safe on a hosted runner.
 
-Live test suites **do not run in hosted CI** (shared-server safety). Run them from the QA machine. A
-ready-to-use **self-hosted** stage, gated smoke → regression:
-
-```yaml
-# .github/workflows/qa-machine.yml — run on a self-hosted runner on the QA machine, manually or nightly
-name: QA run levels
-on: { workflow_dispatch: {}, schedule: [{ cron: '0 2 * * *' }] }
-jobs:
-  smoke:
-    runs-on: [self-hosted, qa-machine]
-    steps:
-      - uses: actions/checkout@v7
-      - run: npm ci
-      - run: npm run test:smoke
-  regression:
-    needs: smoke # regression only starts if smoke passed
-    runs-on: [self-hosted, qa-machine]
-    steps:
-      - uses: actions/checkout@v7
-      - run: npm ci
-      - run: npm run test:regression
-```
+Live test suites **do not run in CI** (shared-server safety): they are started by hand from the QA
+machine, and nothing runs on a schedule (owner decision).

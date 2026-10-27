@@ -134,7 +134,7 @@ export function destructiveBlockReason(
   const isOtpFlow = Boolean(endpoint.otpDependent) || looksLikeSmsSender;
   /*
    * A few `otpDependent` writes would destroy the RUNNING session — deactivate our own account, or
-   * displace it by re-designating the primary device. Blind engine fuzzing of those on `kpost:deep`
+   * displace it by re-designating the primary device. Blind engine fuzzing of those on `product:kpost-api`
    * would break the run (every later login fails) and, for deactivate, take the QA account offline.
    * So they stay blocked even on the test gateway; a deliberate lifecycle on a throwaway account is
    * the right way to exercise them, not the fuzzer. (Secondary-device + registration are fine.)

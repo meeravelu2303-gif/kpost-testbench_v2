@@ -19,7 +19,7 @@ import { expect, test } from '@fixtures';
  * endpoint that has since been cleared, or the reverse, which is worse.
  *
  * It is a test rather than a script so it can import the registry through the same path aliases the
- * bench uses, and so it fails if the reasons stop making sense. Run `npm run test:framework`.
+ * bench uses, and so it fails if the reasons stop making sense. Run `npm run framework`.
  */
 
 /** Why an endpoint does not run on live, in the order the reasons take effect. */
@@ -165,7 +165,7 @@ test.describe('live endpoint coverage @framework', () => {
       '# Live endpoints — what we can and cannot test',
       '',
       '**GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`',
-      '(`npm run test:framework`). Edit the endpoint definitions, not this file.',
+      '(`npm run framework`). Edit the endpoint definitions, not this file.',
       '',
       `Target: the test environment (\`${new URL(env.KPOST_API_BASE_URL ?? env.API_BASE_URL ?? 'http://unset.invalid').host}\`, from \`KPOST_API_BASE_URL\`). Scope: PERSONAL accounts plus the`,
       'BUSINESS_S/M/L company accounts (company reads + user-management now run on live).',
@@ -262,7 +262,7 @@ test.describe('live endpoint coverage @framework', () => {
       '',
       `**${offLive.length} of ${all.length}** registered endpoints are **not driven against the live app**.`,
       `The rest ARE tested on live: **${runs.length}** on the default run + **${coveredCount}** via the`,
-      'gated self-cleaning lifecycle flows (`npm run kpost:file`). This file lists ONLY the not-tested.',
+      'gated self-cleaning lifecycle flows (`npm run product:kpost-api:file`). This file lists ONLY the not-tested.',
       '',
       'They are not silent gaps — each is refused for a permanent constraint or a deliberate safety',
       'choice, and every one is still contract-validated OFF live.',

@@ -7,8 +7,7 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 
 | Document                                                    | What it is                                                                                              |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| [`commands.md`](guides/commands.md)                         | Every npm command, one per Bugzilla product, each with its `:file` variant. The canonical list.         |
-| [`runbook.md`](guides/runbook.md)                           | The order of operations for a complete, safe run: preflight → self-test → dry run → file → read.        |
+| [`commands.md`](guides/commands.md)                         | Every command, one section per product (preview and file), plus before/after a run.                     |
 | [`bug-filing.md`](guides/bug-filing.md)                     | How a failure becomes a Bugzilla ticket: ownership, validity gates, dedupe, the ticket format.          |
 | [`validation-framework.md`](guides/validation-framework.md) | The engine: define an endpoint once, every applicable validator runs. How to add an endpoint/validator. |
 | [`api-contracts.md`](guides/api-contracts.md)               | The Excel workbook → contracts → OpenAPI pipeline, and what to do after a new dump.                     |
@@ -16,16 +15,13 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 
 ## `reference/` — what the bench is and what it tests against
 
-| Document                                                                 | What it is                                                                                                   |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| [`bench-reference.md`](reference/bench-reference.md)                     | The full detail: the product, architecture, pipeline spec, contracts, conventions (§ numbers kept).          |
-| [`business-rules.md`](reference/business-rules.md)                       | The catalogue of product rules the bench asserts, with status and the spec that proves each.                 |
-| [`requirements-frd.md`](reference/requirements-frd.md)                   | The FR → test map against the six per-module FRDs: covered, gap, out of scope.                               |
-| [`decision-log.md`](reference/decision-log.md)                           | Every decision and incident, newest first. **Add an entry at the top after changing a flow.**                |
-| [`production-readiness-plan.md`](reference/production-readiness-plan.md) | Where the bench stands (measured), what production grade means here, and the phased plan with exit criteria. |
-| [`coverage-gaps.md`](reference/coverage-gaps.md)                         | Requirements against the in-scope run-level suite: what is covered and what is still a gap.                  |
-| [`cross-layer-matrix.md`](reference/cross-layer-matrix.md)               | Which cross-layer flow (UI write → API/DB read) proves which module.                                         |
-| `kpost-test-bench-overview.docx`                                         | A Word overview of the bench for readers outside the team.                                                   |
+| Document                                                   | What it is                                                                                    |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [`kpost-product.md`](reference/kpost-product.md)           | What KPOST is, the application flow the bench exercises, and its architecture risk.           |
+| [`business-rules.md`](reference/business-rules.md)         | The catalogue of product rules the bench asserts, with status and the spec that proves each.  |
+| [`requirements-frd.md`](reference/requirements-frd.md)     | The FR → test map against the six per-module FRDs: covered, gap, out of scope.                |
+| [`decision-log.md`](reference/decision-log.md)             | Every decision and incident, newest first. **Add an entry at the top after changing a flow.** |
+| [`cross-layer-matrix.md`](reference/cross-layer-matrix.md) | Which cross-layer flow (UI write → API/DB read) proves which module.                          |
 
 ## `proposals/` — suggested changes, not applied
 
@@ -45,18 +41,15 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 
 ## `ui/` — front-end maps the e2e specs are built from
 
-| Document                                              | What it is                                                                          |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [`ui-screens.md`](ui/ui-screens.md)                   | Every screen's stable selectors at load and its control → action → API wiring.      |
-| [`ui-build-plan.md`](ui/ui-build-plan.md)             | Per-module selectors, approach, FR traceability and current status.                 |
-| [`frontend-module-map.md`](ui/frontend-module-map.md) | How the React app boots, its route map and module inventory; the KBooking boundary. |
+| Document                            | What it is                                                                                                           |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [`ui-screens.md`](ui/ui-screens.md) | Every screen's selectors and control → API wiring; the app's route map, module inventory and the K-Booking boundary. |
 
-## `scope/` — why an endpoint is not tested (hand-written, evidence-based)
+## `scope/` — why an endpoint is not tested (the blocked list itself is generated: `generated/blocked-endpoints.md`)
 
-| Document                                                                 | What it is                                                                        |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| [`blocked-endpoints-rationale.md`](scope/blocked-endpoints-rationale.md) | Every endpoint that genuinely cannot run today, with its reason and unblock path. |
-| [`unused-endpoints.md`](scope/unused-endpoints.md)                       | Endpoints proven to have no caller in the front end.                              |
+| Document                                           | What it is                                           |
+| -------------------------------------------------- | ---------------------------------------------------- |
+| [`unused-endpoints.md`](scope/unused-endpoints.md) | Endpoints proven to have no caller in the front end. |
 
 ## `generated/` — written by `npm run framework`, never hand-edited
 

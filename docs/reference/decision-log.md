@@ -3,7 +3,43 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — `postman/` removed
+### 2026-10-27 (latest) — Commands per product, report retention, stale docs removed
+
+Owner: "clear structure, proper run commands for each product, remove the legacy documents, no duplicate
+files, no large unwanted data; bugs must file automatically, valid and without duplicates".
+
+- **Commands: 97 → 55, named by product.** Every run is `product:<kpost-api|kmail-api|kpost-admin|kpost-ui|
+kpost-admin-ui|all>` plus `:file`; KPost UI adds one-browser variants and four special checks
+  (`:visual`, `:monitor`, `:perf`, `:session-check`), KPost API adds `:verify`. Removed the older aliases
+  and subsets (`kpost`, `kpost:deep`, `kmail:security`, `db`, `all`, `resolve`, `ui:signup` …): each was a
+  subset of a product run. The 17 product commands were checked flag-for-flag against the scripts they
+  replace. `docs/guides/commands.md` is rewritten as one section per product.
+- **`product:all` ran only the first product.** It chained runs with `&&`, and Playwright exits 1 when a
+  test fails, so a run that found bugs ended the chain. `scripts/run-products.mjs` now runs all five
+  whatever each returns.
+- **Reports: 402 MB of local run output.** The reporter now moves the previous `REPORT.*` into
+  `reports/history/` (named by `BENCH_PRODUCT`, 10 kept) instead of overwriting it, and a framework-only
+  run no longer replaces the product report. Run levels keep their last 3 runs per suite. The 20 ad-hoc
+  `REPORT-before-*`/dated copies were deleted, and preflight's unbounded backup removed. Bugzilla is
+  the permanent record. Self-tested in `tests/framework/report-archive.spec.ts`.
+- **Run levels refused the current Admin hosts.** `scripts/run-level.mjs`'s allowlist still held the
+  retired 192.168.0.38/10.38/10.4/1.170 and lacked 192.168.11.11 and 192.168.10.22, so `test:smoke`,
+  `test:sanity` and `test:regression` would print BLOCKED. Fixed; retired IPs removed.
+- **Legacy removed:** `token:capture`/`kpost:expired` and their 3 scripts (the bench now picks an expired
+  token from `.auth/token-history.json` itself); the one-line `admin.api.ts`/`kmail.api.ts` re-exports;
+  the hardcoded `D:/` paths in `file-approved.cjs`/`file-reviewed.cjs`. The account snapshot moved from
+  the repo root into `reports/`.
+- **Docs: 34 → 26** (an audit of every doc against the repo). Deleted as stale or duplicated:
+  `reference/bench-reference.md` (sections 1–3 kept as `reference/kpost-product.md`; the rest
+  duplicated CLAUDE.md and the guides, with an old owner and plan), `production-readiness-plan.md` and
+  `ui/ui-build-plan.md` (finished dated plans), `coverage-gaps.md` (superseded by the RTM), the
+  `.docx` overview (stale counts and owner), `scope/blocked-endpoints-rationale.md` (superseded by
+  `generated/blocked-endpoints.md`), `guides/runbook.md` (folded into `commands.md`).
+  `ui/frontend-module-map.md` merged into `ui/ui-screens.md`. Fixed: the Admin owner (Karan S, not
+  Jaganathan) in README, bug-filing and admin-flow; stale Admin hosts and company ids; the nightly-cron
+  example (runs are manual); the validator count; a false claim of a business-rules guard spec.
+
+### 2026-10-27 — `postman/` removed
 
 The Admin collection (committed 2026-10-26) was a hand-off for reproducing #13215 (Admin refused a valid token) and
 #13237 (role-posting Assign) outside the bench. Nothing in the bench read it, both bugs are fixed (Save → Assign

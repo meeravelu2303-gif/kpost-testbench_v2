@@ -1,7 +1,7 @@
 # Component routing — every endpoint → its Bugzilla component
 
 **GENERATED — do not edit.** Written by `tests/framework/component-routing.spec.ts`
-(`npm run test:framework`). It resolves `componentFor` for every registered endpoint and checks
+(`npm run framework`). It resolves `componentFor` for every registered endpoint and checks
 each target exists in the live product, so tickets can never route to a non-existent component.
 
 ## KPost Admin (38 endpoints)

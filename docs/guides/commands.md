@@ -1,148 +1,130 @@
-# Commands — the one place for every command
+# Commands
 
-Run everything from the repo root (`D:\TEST-BENCH-AUTOMATIONS\kpost-testbench_v2`) in **PowerShell**,
-always through `npm run` (`cross-env` only resolves inside `npm run`; in a shell, set env vars natively).
+Run from the repo root in PowerShell. Every product has two commands:
 
-Every command comes in two forms:
+- **Preview:** runs every test and writes `reports/REPORT.md`. Files nothing.
+- **File:** the same run, then files the valid new bugs to Bugzilla, reopens fixed bugs that came back,
+  closes the bugs it verified fixed, and adds a dated note to every other open bug of that product.
 
-- **`npm run <name>`** — runs the tests, writes the report, **files nothing** (`BUGZILLA_DRY_RUN=true`).
-- **`npm run <name>:file`** — same run, then **files valid, non-duplicate bugs** to Bugzilla, closes the ones
-  it verified fixed, and puts a dated note on every other open bug of that product.
+Run the preview, read the plan with `npm run report:filing`, then run the file command. Never start a
+run while another one is in progress.
 
-Run the plain command first, read `reports/REPORT.md`, then run `:file`. Filing cannot be undone.
+## KPost API
 
-**Before any command:** make sure no other run is in progress (never run Playwright during a live run),
-and copy `reports/REPORT.json`/`.md` aside if the last run's report still matters — every run overwrites
-them. Give the server a 25–40 min cool-down between long runs. Full rules: `CLAUDE.md` §5.
+```powershell
+npm run product:kpost-api
+npm run product:kpost-api:file
+npm run product:kpost-api:verify      # re-check open bugs only: closes fixed ones, files nothing new
+```
+
+## KMail API
+
+```powershell
+npm run product:kmail-api
+npm run product:kmail-api:file
+```
+
+## KPost Admin API
+
+```powershell
+npm run product:kpost-admin
+npm run product:kpost-admin:file
+```
+
+## KPost UI
+
+```powershell
+npm run product:kpost-ui              # Chromium, Firefox and WebKit in one run
+npm run product:kpost-ui:file
+
+npm run product:kpost-ui:chromium:file    # one browser per run (preferred: 25-40 min cool-down between)
+npm run product:kpost-ui:firefox:file
+npm run product:kpost-ui:webkit:file
+```
+
+Each browser also has a preview: `product:kpost-ui:chromium`, `:firefox`, `:webkit`.
+
+Special checks (preview only):
+
+```powershell
+npm run product:kpost-ui:visual           # screenshot comparison (product:kpost-ui:visual:update refreshes the baselines)
+npm run product:kpost-ui:monitor          # the hosts and pages answer
+npm run product:kpost-ui:perf             # page load times, one user
+npm run product:kpost-ui:session-check    # a logged-out session is really ended
+```
+
+## KPost Admin UI
+
+```powershell
+npm run product:kpost-admin-ui
+npm run product:kpost-admin-ui:file
+```
+
+## All products
+
+```powershell
+npm run product:all          # the five previews, one after another
+npm run product:all:file     # the five file runs, one after another
+```
+
+Each product runs even if the one before it found failures.
 
 ---
 
-## 1. One command per Bugzilla product — the standard flow
+## Before a run
 
-| Product            | Run (files nothing)              | File the bugs                         | Runs                             |
-| ------------------ | -------------------------------- | ------------------------------------- | -------------------------------- |
-| **KPost API**      | `npm run product:kpost-api`      | `npm run product:kpost-api:file`      | `kpost:full` / `kpost:full:file` |
-| **KMail API**      | `npm run product:kmail-api`      | `npm run product:kmail-api:file`      | `kmail:full` / `kmail:full:file` |
-| **KPost Admin**    | `npm run product:kpost-admin`    | `npm run product:kpost-admin:file`    | `admin:full` / `admin:full:file` |
-| **KPost UI**       | `npm run product:kpost-ui`       | `npm run product:kpost-ui:file`       | `ui` / `ui:file`                 |
-| **KPost Admin UI** | `npm run product:kpost-admin-ui` | `npm run product:kpost-admin-ui:file` | `ui:admin` / `ui:admin:file`     |
-| **Everything**     | `npm run product:all`            | `npm run product:all:file`            | all five above, in order         |
+```powershell
+npm run preflight            # .env complete, hosts and Bugzilla answer, no other run in progress
+npm run check                # typecheck + lint + format
+npm run framework            # the bench's self-tests (safety guards, filing gates)
+```
 
-What each one does:
+## After a run
 
-- **`kpost:full`** — every KPost API endpoint, `VALIDATION_PROFILE=FULL` (every test type, security
-  included), `WRITE_FUZZ` (fuzz/attack probes on writes too), destructive tests, the OTP test gateway, and the
-  self-cleaning **write lifecycle flows** (Katchup, Kall, Profile, Contacts, Group, Settings, KDiary, AWS) on
-  the disposable `testingapi` test DB. **KDoc/KOS is excluded** (paused: KOS dir left out + `--grep-invert @kos`).
-- **`kmail:full`** — every KMail API endpoint, same FULL + write-fuzz + destructive tier, plus the
-  compose/draft/settings lifecycle.
-- **`admin:full`** — every Admin API endpoint (the owner's PDF list), FULL + write-fuzz + destructive, plus
-  the org-build lifecycle. The Admin **database** is live and stays read-only in code whatever the flags.
-- **`ui`** — the KPost UI on Chromium, Firefox and WebKit (KDoc screens excluded); files to **KPost UI**.
-  **`ui:admin`** — the Admin/HR-Setup SPA (`tests/e2e-admin`, the `admin-ui` project); files to
-  **KPost Admin UI**. `ui:all` runs both. `ui` runs four layers on every screen:
-  1. **static screen sweep** — crash, broken asset, render budget, responsive layout, a11y, raw `undefined`/`NaN`
-     (split into 3 paced batch files to stay under the server's rate limiter);
-  2. **interaction sweep** — search, scroll, open a conversation, and a **hang detector**;
-  3. **systematic crawl** — clicks **every control** (write actions included, since the target is the test
-     app) and **fuzzes every input**; it only refuses controls that would log out or delete the account;
-  4. **targeted scenarios** — e.g. continuous-send (five messages in one session, no refresh).
+```powershell
+npm run report:filing        # the filing plan in plain English: create / reopen / comment / close / needs review
+npm run bug:file-reviewed    # file the NEEDS YOUR REVIEW items you approved
+npm run report               # open the Playwright HTML report
+```
 
-  Each UI bug records its browser (`[browser:…]` whiteboard + "Browsers affected"). The crawl leaves test data
-  behind — **reset the test DB periodically.**
+Results: `reports/REPORT.md` (and `REPORT.json`). The previous ten runs are in `reports/history/`.
 
-## 2. Narrower runs
+## Filing a bug by hand
 
-| Purpose                                                  | Run (files nothing)                         | File / write                                                      |
-| -------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------- |
-| KPost API, FULL profile but no write-fuzz/destructive    | `npm run kpost`                             | `npm run kpost:file`                                              |
-| KMail API, all test types + lifecycle                    | `npm run kmail`                             | `npm run kmail:file`                                              |
-| Admin API, all test types + lifecycle                    | `npm run admin`                             | `npm run admin:file`                                              |
-| KPost UI, all 3 browsers                                 | `npm run ui`                                | `npm run ui:file`                                                 |
-| **KPost UI, one browser per run** (preferred for filing) | —                                           | `npm run ui:chromium:file` · `ui:firefox:file` · `ui:webkit:file` |
-| Admin UI only                                            | `npm run ui:admin`                          | `npm run ui:admin:file`                                           |
-| Signup → login UI lifecycle (Chromium)                   | `npm run ui:signup`                         | `npm run ui:signup:file`                                          |
-| Every `@database` check (API + Chromium)                 | `npm run db`                                | `npm run db:file`                                                 |
-| Security-focused subset (FULL already includes it)       | `npm run kpost:security` · `kmail:security` | `npm run kpost:security:file`                                     |
-| Visual snapshots (3 browsers) / refresh baselines        | `npm run ui:visual`                         | `npm run ui:visual:update`                                        |
-| Old chained runs (`kpost`→`kmail`→`admin`→`ui`)          | `npm run all`                               | `npm run all:file`                                                |
+```powershell
+npm run bug:dupe-check       # always first
+npm run bug:preview
+npm run bug:file
+npm run bug:file-approved -- <KP-id>   # file one finding from the last preview, by its id (add --live)
+```
 
-Run WebKit in small file batches (`npx playwright test --project=webkit <files>`) — a long single WebKit run
-can hang; kill a hung run with PowerShell `Stop-Process` on the real node PID.
+## Quick health checks (file nothing)
 
-## 3. Deep write-fuzzing tier
+```powershell
+npm run test:smoke           # also test:smoke:api, test:smoke:ui
+npm run test:sanity
+npm run test:regression      # also test:regression:api, test:regression:ui
+```
 
-The `:deep` commands run the fuzz/attack matrix **on write endpoints**. They persist junk, so they are for the
-throwaway test DBs only (`kpost:full` / `kmail:full` / `admin:full` already include the same write-fuzz):
+## After a new API workbook or Admin deploy
 
-| Run (files nothing)  | File the bugs             |
-| -------------------- | ------------------------- |
-| `npm run kpost:deep` | `npm run kpost:deep:file` |
-| `npm run kmail:deep` | `npm run kmail:deep:file` |
-| `npm run admin:deep` | `npm run admin:deep:file` |
+```powershell
+npm run contract:excel       # rebuild contracts/ and openapi/ from docs/api-specs/KPOST API (N).xlsx
+npm run contract:coverage    # prove no workbook endpoint was lost
+npm run contract:admin       # refresh the Admin contract from the live Admin server + the PDF payloads
+```
 
-`npm run admin:local-fuzz` — write-fuzz the Admin contract suite (`tests/api/admin/contract.spec.ts`) against a local/test Admin only.
+## One-time setup
 
-**Reset/reseed the test DB after a deep run** and after a full `npm run ui`.
+```powershell
+npm install
+npm run install:browsers
+npm run accounts:verify      # the QA accounts exist and match .env
+```
 
-## 4. Re-check existing bugs only (file nothing new)
+Developer tools: `npm run lint:fix`, `format`, `lint:tags`, `codegen`, `accounts:provision`,
+`contract:admin:pdf`.
 
-| Command                     | What it does                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------- |
-| `npm run kpost:full:verify` | the full KPost API sweep in resolve-only mode: closes verified fixes, dates every other open bug. |
-| `npm run resolve`           | lighter: every `@kpost-api` check, resolve-only.                                                  |
-
-For a quick targeted re-test of a few bugs, grep their endpoint ids (`--grep "\[endpoint-id\]"`) — but
-flow-triggered bugs (`flow.server-error`) and business rules inside `feature.spec.ts` need their lifecycle
-spec run with its `*_LIFECYCLE` flag instead.
-
-## 5. After any run — where the results are
-
-| File                      | What it is                                                                                                                                                                                        |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`reports/REPORT.md`**   | **Part 1** execution health (pass/fail/skip by module + UI). **Part 2** the bug report: filed / commented / reopened / needs-review / auto-resolved, and every finding NOT filed with its reason. |
-| **`reports/REPORT.json`** | The same, structured. Feeds the CI quality gate.                                                                                                                                                  |
-
-`npm run report:summary` prints `REPORT.md`; `npm run report` opens the Playwright HTML report.
-Traces, screenshots and videos land in `test-results*/` and `playwright-report*/` — gitignored, because traces
-contain tokens and passwords. **Never commit them, and never write run logs into the repo** (use a temp folder).
-
-## 6. Bugzilla and accounts utilities
-
-| Command                            | What it does                                                                                                                                                                                        |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run preflight`                | **run before any live run:** proves `.env` is complete, no other Playwright run is in progress, the hosts and Bugzilla answer, and backs up `reports/REPORT.*`. Exits non-zero on any hard failure. |
-| `npm run bugzilla:dupe-check`      | the mandatory duplicate check before filing anything by hand.                                                                                                                                       |
-| `npm run bug:preview` / `bug:file` | preview / file a hand-authored ticket (`tests/framework/manual-bug.spec.ts`).                                                                                                                       |
-| `npm run accounts:verify`          | reconcile the QA account registry against the KPOST_QA database.                                                                                                                                    |
-| `npm run accounts:provision`       | create the bench's `qatest_*` accounts on the KPOST_QA test database.                                                                                                                               |
-| `npm run token:capture`            | capture a real access token now, to use later as `EXPIRED_TOKEN`.                                                                                                                                   |
-| `npm run kpost:expired`            | the KPost pass with an aged (expired) token, cross-platform.                                                                                                                                        |
-
-## 7. Development utilities
-
-| Command                                         | What it does                                                                                                 |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `npm run check`                                 | typecheck + lint + format — must be clean before anything is "done".                                         |
-| `npm run lint:fix` / `format` / `format:check`  | fix lint, apply / check Prettier.                                                                            |
-| `npm run lint:debt`                             | the full warning list the gate does not print (fixed-time waits, forced clicks, hook order) — the burn-down. |
-| `npm run framework`                             | the bench's own self-tests, dry-run (safety, coverage, routing, payload guards).                             |
-| `npm run test:framework`                        | the same project without the dry-run flag.                                                                   |
-| `npm run test` / `test:headed`                  | plain Playwright run, every project, no flags / with a visible browser. Prefer a named command above.        |
-| `npm run codegen`                               | record UI selectors.                                                                                         |
-| `npm run install:browsers`                      | install the Playwright browsers (one-time).                                                                  |
-| `npm run accounts:provision`                    | create the `qatestN` accounts: no flag = status; `--send` then `--finish --from-db` (see the script header). |
-| `npm run contract:excel`                        | regenerate the KPost/KMail contracts from the workbook.                                                      |
-| `npm run contract:admin` / `contract:admin:pdf` | regenerate the Admin contract / apply the owner's PDF payloads.                                              |
-| `npm run contract:coverage`                     | audit that every workbook endpoint reached the contracts.                                                    |
-
-## 8. Safety — true on every command, cannot be switched off
-
-- **KPost/KMail** target the disposable test DB (`testingapi.kpostindia.com`, `.env`); the **Admin DB is live**
-  and refused any write in code.
-- **No OTP/SMS/email** reaches a real person — hard kill-switch; `OTP_TEST_GATEWAY` only lifts it for
-  `otpDependent` endpoints on the genuine test gateway.
-- **No request names a record outside our QA accounts** — the QA-identifier guard refuses it before sending.
-- **`external` / `global` writes** (real SMS/email, account provisioning, another user's password, app
-  version) stay blocked; no flag unlocks them.
-- **KDoc/KOS is excluded** from every command until the owner un-pauses it.
+Safety rules that hold on every command (test hosts only, no real SMS/OTP, no request naming a record
+outside the QA accounts, the Admin database read-only, KDoc/KOS and concurrency excluded) are in
+`CLAUDE.md` §1 and §5.

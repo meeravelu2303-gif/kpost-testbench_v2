@@ -9,7 +9,7 @@ import { expect, test } from '@fixtures';
 
 /**
  * FRD traceability — the answer to "does every `requirements` tag name a real FR, and how far has the
- * migration to the six per-module FRDs (docs/reference/bench-reference.md §4, docs/reference/decision-log.md) got?".
+ * migration to the six per-module FRDs (docs/reference/requirements-frd.md, docs/reference/decision-log.md) got?".
  *
  * (1) Every requirement id on every registered endpoint must be a known id — a current `FR-xx-NNN`,
  *     an NFR, or a still-pending legacy id (`LEGACY_REQUIREMENTS`). An unknown id fails the build, so

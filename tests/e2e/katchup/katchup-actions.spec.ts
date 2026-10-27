@@ -10,7 +10,7 @@ import {
 
 /**
  * Katchup **sender message actions** — the post-send control set that is KPost's reason to exist
- * (docs/reference/bench-reference.md §1: "Rich post-send control"). The sender's bell menu (the `NotificationsNoneIcon` on a
+ * (docs/reference/kpost-product.md: "Rich post-send control"). The sender's bell menu (the `NotificationsNoneIcon` on a
  * message the caller sent) offers **Edit / Recall / Note / Reminder / Transfer / Forward /
  * Forward-with-thread / Copy / Save / Delete** — the `bellIconContent` array in the frontend
  * `Katchup/bubble/KatchupMessage/KatchupMessage.js` (recipient actions live in `replyIconContent`,

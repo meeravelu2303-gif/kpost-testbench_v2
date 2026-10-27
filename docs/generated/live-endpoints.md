@@ -1,7 +1,7 @@
 # Live endpoints — what we can and cannot test
 
 **GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`
-(`npm run test:framework`). Edit the endpoint definitions, not this file.
+(`npm run framework`). Edit the endpoint definitions, not this file.
 
 Target: the test environment (`testingapi.kpostindia.com`, from `KPOST_API_BASE_URL`). Scope: PERSONAL accounts plus the
 BUSINESS_S/M/L company accounts (company reads + user-management now run on live).

@@ -6,7 +6,7 @@ import { settleFrames } from '../support/settle';
 
 /**
  * MONITORING SMOKE (FRD row 5, "Production monitoring") — a shallow, **read-only** health check meant
- * to be run on a SCHEDULE to catch an outage early, run with `npm run monitor`.
+ * to be run on a SCHEDULE to catch an outage early, run with `npm run product:kpost-ui:monitor`.
  *
  * ## Why this targets the TEST deployment, not production
  *
@@ -28,10 +28,10 @@ import { settleFrames } from '../support/settle';
  *
  * This has no scheduler wired up (creating a cron / Windows Task on the host is a persistent,
  * outward change left to the operator). To run it every 15 minutes, point Task Scheduler (Windows) or
- * cron at `npm run monitor` from the repo root. Keep the cadence modest — the server is shared and
+ * cron at `npm run product:kpost-ui:monitor` from the repo root. Keep the cadence modest — the server is shared and
  * low-capacity (see the perf safety protocol).
  */
-// Selected by PATH (`npm run monitor`), not by the `@smoke` tag, so it deliberately does NOT carry
+// Selected by PATH (`npm run product:kpost-ui:monitor`), not by the `@smoke` tag, so it deliberately does NOT carry
 // `@smoke` (that tag has a per-module budget the scheduled monitor should not eat into).
 test.describe(
   'KPost · monitoring smoke (scheduled health)',

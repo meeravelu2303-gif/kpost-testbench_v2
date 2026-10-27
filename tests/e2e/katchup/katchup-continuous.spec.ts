@@ -18,7 +18,7 @@ import { skipIfSignedOut } from '../support/session';
  *   - no send API call failed (`failedUserActions`) and the page did not crash or freeze.
  *
  * Gated behind `KATCHUP_UI_LIFECYCLE=true` (it writes real messages, then self-cleans), so it runs
- * under `npm run ui` but never on a default run. Runs on all three browsers, so a browser-specific
+ * under `npm run product:kpost-ui` but never on a default run. Runs on all three browsers, so a browser-specific
  * "must refresh to send again" is caught and the ticket names the browser.
  */
 test.describe(
@@ -27,7 +27,7 @@ test.describe(
   () => {
     test.skip(
       process.env.KATCHUP_UI_LIFECYCLE !== 'true',
-      'writes real messages; set KATCHUP_UI_LIFECYCLE=true (npm run ui does)',
+      'writes real messages; set KATCHUP_UI_LIFECYCLE=true (npm run product:kpost-ui does)',
     );
     test.skip(
       !testData.victimKpostId || testData.victimKpostId.includes('qa.bench'),

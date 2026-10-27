@@ -13,7 +13,7 @@ import { skipIfSignedOut } from '../support/session';
  * freeze, or a value rendered as raw `undefined`/`NaN`/`[object Object]`. It needs no per-feature
  * selectors — it exercises whatever is there — so it covers the app broadly and cannot go stale, and
  * its signals are unambiguous, so it files only REAL defects. Runs on Chromium, Firefox and WebKit
- * (`npm run ui`), so a browser-specific crash/freeze is caught and the ticket names the browser.
+ * (`npm run product:kpost-ui`), so a browser-specific crash/freeze is caught and the ticket names the browser.
  *
  * Safety: the crawler never clicks a destructive/committing control (send, delete, logout, confirm …)
  * and Escapes after every click — it opens/expands/views, never writes. See `ui-crawler.ts`.

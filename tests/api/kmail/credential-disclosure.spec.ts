@@ -41,7 +41,7 @@ import { expect, test } from '@fixtures';
  *
  * `kmail-credentials` is `sideEffect: 'global'` in its own definition (`manage.api.ts`), and
  * `src/validation-engine/production-guard.ts` refuses ANY `global` write on `TEST_ENV=production`
- * unconditionally, by deliberate design — the same wall documented in `docs/scope/blocked-endpoints-rationale.md` for the
+ * unconditionally, by deliberate design — the same wall documented in `docs/generated/blocked-endpoints.md` for the
  * admin company-admin writes. This test would throw `ProductionSafetyError` on this environment even
  * if the safety-classifier pause below were lifted. Both blockers are real and independent; lifting
  * one does not lift the other.
@@ -71,12 +71,12 @@ test.describe(
     // production-guard.ts refuses unconditionally on TEST_ENV=production — KMAIL_LIFECYCLE cannot
     // change that. Independently, this session's own safety classifier also refused the one attempt
     // to run this. Both blockers are real; stays test.skip'd rather than left to fail with
-    // ProductionSafetyError every run. See docs/scope/blocked-endpoints-rationale.md.
+    // ProductionSafetyError every run. See docs/generated/blocked-endpoints.md.
     test.skip(
       true,
       'PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND ' +
         'requires explicit authorization even on a future non-production environment, given it ' +
-        'compares real credential material — see docs/scope/blocked-endpoints-rationale.md',
+        'compares real credential material — see docs/generated/blocked-endpoints.md',
     );
 
     test("baseline: the endpoint accepts A's own kpostID with the shared default password", async ({

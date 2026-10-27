@@ -7,8 +7,8 @@
  * from the last run about to be overwritten. This proves each prerequisite up front and exits
  * non-zero on a hard failure, so the run that follows can be trusted to have started clean.
  *
- * Read-only except for one thing: it copies `reports/REPORT.{json,md}` aside before they are
- * overwritten. It never prints a secret — key NAMES only.
+ * Read-only. (The previous `reports/REPORT.*` is archived to `reports/history/` by the reporter
+ * itself at the start of the next run.) It never prints a secret — key NAMES only.
  */
 'use strict';
 
@@ -217,22 +217,6 @@ async function bugzilla() {
   }
 }
 
-// 6. Keep the last report: every run overwrites reports/REPORT.*.
-function backupReports() {
-  const dir = path.join(ROOT, 'reports');
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const copied = [];
-  for (const ext of ['json', 'md']) {
-    const src = path.join(dir, `REPORT.${ext}`);
-    if (!fs.existsSync(src)) continue;
-    const dest = path.join(dir, `REPORT-before-${stamp}.${ext}`);
-    fs.copyFileSync(src, dest);
-    copied.push(path.basename(dest));
-  }
-  if (copied.length) ok('previous report backed up', copied.join(', '));
-  else ok('no previous report to back up');
-}
-
 (async () => {
   await probe('KPost API host', env('KPOST_API_BASE_URL'));
   await probe('KMail API host', env('KMAIL_API_BASE_URL'));
@@ -241,7 +225,6 @@ function backupReports() {
   await probe('Admin UI host', env('ADMIN_UI_BASE_URL'), { hard: false });
   await probeDatabase();
   await bugzilla();
-  if (!results.some((r) => r.level === 'fail')) backupReports();
 
   const width = Math.max(...results.map((r) => r.what.length));
   console.log('\nPREFLIGHT — KPost test bench\n');

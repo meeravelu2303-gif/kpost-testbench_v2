@@ -3,7 +3,13 @@ import path from 'node:path';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
 
-const SNAPSHOT_PATH = path.join(__dirname, '..', '..', '.kpost-accounts-snapshot.local.json');
+const SNAPSHOT_PATH = path.join(
+  __dirname,
+  '..',
+  '..',
+  'reports',
+  'kpost-accounts-snapshot.local.json',
+);
 
 test.describe('probe: diff accounts against the pre-run snapshot and log anything new', () => {
   test('diff and record', async ({ databases }) => {

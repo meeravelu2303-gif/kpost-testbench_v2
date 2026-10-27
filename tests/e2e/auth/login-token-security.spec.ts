@@ -97,7 +97,7 @@ test.describe(
  * This logs the shared QA account OUT, which invalidates the saved `.auth/user.json` session every
  * other UI spec logs in with. So it must NOT ride along on a normal `ui` run (which sets
  * LOGIN_UI_LIFECYCLE). It is gated behind its own `SESSION_INVALIDATION_CHECK=true` flag and run in
- * isolation via `npm run test:session-invalidation`. RE-RUN `setup` afterwards to restore the saved
+ * isolation via `npm run product:kpost-ui:session-check`. RE-RUN `setup` afterwards to restore the saved
  * session for the rest of the suite.
  */
 test.describe(

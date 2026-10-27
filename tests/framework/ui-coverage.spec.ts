@@ -144,7 +144,7 @@ const INTERACTION_FLOWS: Array<{ flow: string; spec: string; note: string }> = [
 
 /**
  * The deep write flows still to build (need the gated-write approval + live tuning). Selectors are
- * mined in `docs/ui/ui-build-plan.md` (the original flow plan is archived as
+ * mined in `docs/ui/ui-screens.md` (the original flow plan is archived as
  * the 2026-09-28 UI write-flows plan (removed 2026-10-26; in git history)); each has a green API lifecycle.
  */
 const PLANNED_FLOWS = [
@@ -183,7 +183,7 @@ test.describe('UI coverage ledger @framework', () => {
       '# UI coverage ledger — every screen, every check',
       '',
       '**GENERATED — do not edit.** Written by `tests/framework/ui-coverage.spec.ts`',
-      '(`npm run test:framework`). It reconciles the screen registry, the UI check catalogue and the',
+      '(`npm run framework`). It reconciles the screen registry, the UI check catalogue and the',
       'interaction flows, and fails the build if a screen would route a bug to a non-existent component.',
       '',
       '## Screens',

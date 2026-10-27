@@ -1,5 +1,5 @@
 import { ApiRegistry } from '../registry/api-registry';
-import { adminApis } from './admin.api';
+import { adminApis } from './admin';
 import { adminUserManagementApis } from './kpost/admin/user-management.api';
 import { commonApis } from './kpost/common/index';
 import { groupApis } from './kpost/group/index';
@@ -14,7 +14,7 @@ import { dashboardApis } from './kpost/dashboard/index';
 import { kbookingApis } from './kpost/kbooking/index';
 import { profileApis } from './kpost/profile/index';
 import { signupLoginApis } from './kpost/signup-login/index';
-import { kmailApis } from './kmail.api';
+import { kmailApis } from './kmail';
 
 /**
  * Every endpoint under test, across all KPost modules.

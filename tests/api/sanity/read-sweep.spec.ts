@@ -12,7 +12,7 @@ import { profileApis } from '@api/definitions/kpost/profile/index';
 import { settingsApis } from '@api/definitions/kpost/settings/index';
 import { signupLoginApis } from '@api/definitions/kpost/signup-login/index';
 import { adminUserManagementApis } from '@api/definitions/kpost/admin/user-management.api';
-import { kmailApis } from '@api/definitions/kmail.api';
+import { kmailApis } from '@api/definitions/kmail';
 import { TAGS } from '@config/constants';
 import { describeEndpointCases } from '@engine/endpoint-cases';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';

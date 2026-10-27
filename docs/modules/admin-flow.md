@@ -15,12 +15,12 @@ walkthrough (2026-09-15) + the live signup/user-management screens + the live Ad
 There are two distinct "admin" things, and they are separate hosts, separate products, reached by
 different tiers:
 
-| Surface                     | Who reaches it                           | Where                                                                                                                                                                           | Bench product                                                            |
-| --------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| **In-app User Management**  | **BUSINESS_S** admin                     | `test.kpostindia.com/usermanagement` (inside the KPost app; `BASE_URL`)                                                                                                         | core `kpost-api` (`/admin/*` etc. on `testingapi`, `KPOST_API_BASE_URL`) |
-| **Admin / HR Setup module** | **BUSINESS_M** and **BUSINESS_L** admins | opens a NEW TAB → **UI `kpostadmin.kpostindia.com` (`ADMIN_UI_BASE_URL`)**, **API `ADMIN_API_BASE_URL`** (the Admin test box; the live service is `adminmodule.kpostindia.com`) | **`admin-api`** (this doc / `docs/api-specs/`)                           |
+| Surface                     | Who reaches it                           | Where                                                                                                                                                                       | Bench product                                                            |
+| --------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **In-app User Management**  | **BUSINESS_S** admin                     | `test.kpostindia.com/usermanagement` (inside the KPost app; `BASE_URL`)                                                                                                     | core `kpost-api` (`/admin/*` etc. on `testingapi`, `KPOST_API_BASE_URL`) |
+| **Admin / HR Setup module** | **BUSINESS_M** and **BUSINESS_L** admins | opens a NEW TAB → **UI `ADMIN_UI_BASE_URL` (the Admin UI test build)**, **API `ADMIN_API_BASE_URL`** (the Admin test box; the live service is `adminmodule.kpostindia.com`) | **`admin-api`** (this doc / `docs/api-specs/`)                           |
 
-So `admin-api` (the 35 endpoints just converted) is the **BUSINESS_M/L** Admin/HR-Setup module. The
+So `admin-api` (the 38 endpoints of the owner's PDF list) is the **BUSINESS_M/L** Admin/HR-Setup module. The
 BUSINESS_S "add users" flow is a **different** surface on the core app, not this one.
 
 ---
@@ -60,7 +60,7 @@ Developer, Web Developer.)
 ## 4. BUSINESS_M / BUSINESS_L — the Admin / HR Setup module
 
 The M/L admin has an **"Admin / HR Setup"** nav item; clicking it **opens a new tab** at
-`https://kpostadmin.kpostindia.com/` (API `https://adminmodule.kpostindia.com`). Company users are
+the Admin UI (test build `ADMIN_UI_BASE_URL`, today `http://192.168.10.22:3001`; API `ADMIN_API_BASE_URL`, today `http://192.168.11.11:9595`. The live counterparts `kpostadmin`/`adminmodule.kpostindia.com` are never targeted). Company users are
 built here through a **strict ordered sequence** — each step depends on the previous:
 
 | #   | Step (UI module)                                           | What you do                                                                                                                                                               | Bench endpoints (`admin-api`)                                                                                                                                                             |
@@ -100,25 +100,21 @@ drive the full Admin/HR-Setup create sequence end-to-end and self-clean.
 
 ## 6. Auth & ids — ANSWERED by the owner (2026-09-15)
 
-1. **Auth for `adminmodule.kpostindia.com`: the SAME KPost login token.** SSO — the token minted by the
+1. **Auth for the Admin API: the SAME KPost login token.** SSO — the token minted by the
    business admin's KPost login works unchanged on the admin module; there is **no separate admin login**.
    **Verified on live (2026-09-15):** all three business admins log in via plain **`userLogin`** (not
    `adminUserLogin`, which answers 403 for these accounts), and the token carries `companyID` + `role:
-admin`. That Bearer token authenticates every `admin-api` call. Discovered company ids:
-   **S = 1066, M = 1067, L = 1075** (in `.env` as `QA_BUSINESS_{S,M,L}_COMPANY_ID`).
+admin`. That Bearer token authenticates every `admin-api` call. The QA test companies are
+   **242 (BUSINESS_M) and 1034 (BUSINESS_S)** (in `.env` as `QA_BUSINESS_{M,S}_COMPANY_ID`).
 
    **FINDING — auth is not enforced on a missing/malformed token.** The admin `AuthenticationFilter`
    only rejects a token that is present-but-invalid (401); a request with **no** `Authorization` header,
    an empty token, or a non-Bearer scheme passes through unauthenticated and the endpoint answers **200**
    (or 500). Confirmed on live and in the backend source. Filed as CRITICAL to KPost Admin.
 
-2. **`companyId` comes from the TOKEN, not a hand-entered value.** The JWT carries the admin's own
-   `companyID`; payloads use it. Two consequences: (a) the token provider/definition reads `companyID`
-   from the decoded token and fills the payload's `companyId` with it, so a request always targets the
-   caller's OWN company; (b) the QA-identifier guard must **allow a `companyId` that equals the
-   authenticated principal's own token `companyID`** (a caller cannot reach another tenant with its own
-   id). Discover each company's numeric id on the first login (decode the token) and record it as
-   `QA_BUSINESS_{S,M,L}_COMPANY_ID` in `.env` for the guard allowlist.
+2. **`companyId` comes from the TOKEN, and payloads never send it.** The backend reads the caller's
+   `companyID` from the JWT (`companyIdFromToken`), so a request always targets the caller's own company.
+   Only the security specs send a FOREIGN `companyId`, on purpose, to prove it is ignored.
 
 **Still to verify at first live read (not blockers):**
 
@@ -135,10 +131,10 @@ admin`. That Bearer token authenticates every `admin-api` call. Discovered compa
 
 1. **Convert (done):** `admin-api` OpenAPI/contract generated from the live Admin api-docs (`npm run contract:admin`; the old Admin_module.xlsx was removed 2026-10-26).
 2. **Register:** `admin-api` endpoint definitions + suite (`defineAdminEndpoint`), host
-   `adminmodule.kpostindia.com`, auth per §6.1. Reads = `productionSafe`; writes = gated lifecycle.
+   `ADMIN_API_BASE_URL`, auth per §6.1. Reads = `productionSafe`; writes = gated lifecycle.
 3. **Live reads:** the `get*` endpoints on the BUSINESS_M/S companies (contract validators).
 4. **Write lifecycle** (gated `ADMIN_LIFECYCLE=true`, self-cleaning) on BUSINESS_M: run the full §4
    sequence — workplace tier→variable→location, HR tier→variable, role posting, employee, assign role —
    then delete in reverse. Proves the whole org-setup flow.
-5. **UI:** the Admin/HR Setup screens at `kpostadmin.kpostindia.com` (screen render + the check sweep +
-   the create flows, gated). Routes to Bugzilla **KPost Admin → Jaganathan** (UI → Ayyappan for UI bugs).
+5. **UI:** the Admin/HR Setup screens at `ADMIN_UI_BASE_URL` (screen render + the check sweep +
+   the create flows, gated). Routes to Bugzilla **KPost Admin → Karan S** (UI → Ayyappan for UI bugs).

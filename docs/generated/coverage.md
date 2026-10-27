@@ -1,7 +1,7 @@
 # Coverage ledger — every endpoint, every screen
 
 **GENERATED — do not edit.** Written by `tests/framework/coverage-ledger.spec.ts`
-(`npm run test:framework`). It reconciles the registry against the generated contracts, so it
+(`npm run framework`). It reconciles the registry against the generated contracts, so it
 cannot drift from what is actually tested.
 
 ## API — endpoints
