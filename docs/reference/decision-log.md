@@ -3,7 +3,37 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — Bug-tracker files in one folder per layer
+### 2026-10-27 (latest) — Aligned with the BUGZILLA-UI tracker's workflow; the bench is the re-test
+
+Owner: "analyse the Bugzilla UI project completely, understand the full flow and features, then make sure the
+bench has the correct bug-tracker setup". BUGZILLA-UI (backend lib/routes, frontend, ops/bugzilla setup
+scripts, reports) and the live Bugzilla (`/field/bug`) were mapped. Most of it already matched: tags, the
+description labels, comment prefixes the export collapses, severity/priority pairs, attachment types,
+assignee = the component default. What did not match, and what changed:
+
+- **The workflow.** VERIFIED was renamed CLOSED (2026-10-23). RESOLVED = "ready for re-test", CLOSED = "re-test
+  passed"; PENDING_APPROVAL (PM decides), AWAITING_REQUIREMENT and IN_REVIEW (team-lead review) are open but
+  wait on a person, and every move out of them needs a comment. The owner chose "the bench is the re-test":
+  a passing check now closes as **CLOSED** (an open bug RESOLVED/FIXED with the note, then CLOSED; neither
+  step needs a second comment), the RESOLVED/FIXED queue developers leave is re-tested too (432 bench bugs
+  in it on 2026-10-27; a pass closes, a failure was already reopened, anything else is left alone without
+  a note), and a passing bug in a waiting status keeps its status with a note saying so
+  (`WAITING_ON_A_PERSON`, listed by `report:filing`).
+- **DELETED** (the tracker's soft delete) joins the never-refile set: the bench reopened it before.
+- **Reopen is REOPENED or nothing:** the CONFIRMED fallback is gone (owner rule 2026-10-22); REOPENED is
+  allowed from RESOLVED and CLOSED.
+- **Platform-wide bugs** list their endpoints as `Affected endpoints (N), observed by M test case(s)` +
+  `- METHOD /path (Module) xN`, the only form the tracker's "Affected scope" card and table rows read
+  (`BugCandidate.affectedScope`); verify-resolve reads both forms.
+- **A person's report edit wins:** the tracker shows the newest `[report-revision]` comment as the
+  description, so `currentDescription` (was `firstComment`) reads that.
+- Not changed, by owner rules: the dated note on every open bug every full run, although each one resets
+  the daily report's "Waiting (days)" and emails the bug's people.
+- Verified: `check`; `framework` 367 (new `tracker-workflow.spec.ts`, DELETED and REOPENED-only tests);
+  a live dry run of one endpoint re-tested the 432 RESOLVED/FIXED bench bugs: 1 would close (#409,
+  whose only endpoint passed), the rest were not exercised by that run. Nothing was written.
+
+### 2026-10-27 — Bug-tracker files in one folder per layer
 
 Owner: "create a bug tracker folder, move the related bug tracker files under it, neat, don't mix anywhere";
 chose "one bug-tracker folder per layer" over one top-level folder (which would break the src/scripts/tests

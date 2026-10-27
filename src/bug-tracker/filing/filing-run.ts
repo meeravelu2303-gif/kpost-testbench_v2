@@ -18,7 +18,7 @@ import {
   uiTitleMatches,
   type ResolveDecision,
 } from '../status/verify-resolve';
-import type { BugzillaConfig } from '../../config/bugzilla.config';
+import { WAITING_ON_A_PERSON, type BugzillaConfig } from '../../config/bugzilla.config';
 import { env } from '../../config/env';
 import { suiteFor } from '../../config/ownership.config';
 import type { Logger } from '../../utils/logger';
@@ -162,6 +162,9 @@ export async function runFiling(
 /** Decision reason for a bug with no bench tag — a manual/security finding, never auto-closed. */
 export const HAND_FILED = 'hand-filed';
 
+/** Reason prefix: the check passed, but the bug waits on a person (WAITING_ON_A_PERSON). */
+const WAITING = 'check passes, but the bug is ';
+
 /** KDoc/KOS/KWord is paused by owner order: its open bugs only get a dated "paused" note. */
 function isPausedModule(bug: BugSummary, decision: ResolveDecision): boolean {
   return (
@@ -245,6 +248,20 @@ async function statusPass(
   const benchTag = new RegExp(`\\[${config.tagPrefix}-[0-9A-F]{6}\\]`, 'i');
   const proof = new Map(input.uiProof);
 
+  /** Whether this run verified the bug fixed: its own check ran again and passed cleanly. */
+  const classify = async (bug: BugSummary, product: string): Promise<ResolveDecision> => {
+    if (!benchTag.test(bug.summary))
+      return { action: 'keep', reason: HAND_FILED, validator: 'manual', systemic: false };
+    if (uiProducts.has(product)) return classifyUiResolve(bug, uiIndex, reproduced);
+    // A platform-wide ticket is verified against its own endpoints, read from its description.
+    let affected: string[] | undefined;
+    if (/platform-wide/i.test(bug.summary)) {
+      const description = await client.currentDescription(bug.id);
+      if (description) affected = parseAffectedEndpoints(description);
+    }
+    return classifyResolve(bug, index, reproduced, affected);
+  };
+
   for (const product of products) {
     const found = await client.openBugs(product);
     if ('error' in found) {
@@ -254,22 +271,19 @@ async function statusPass(
     for (const bug of found.bugs) {
       summary.checked += 1;
       const touched = touchedByFiler.has(bug.id);
-      let decision: ResolveDecision;
+      let decision = await classify(bug, product);
       let proofNote: string | undefined;
-      if (!benchTag.test(bug.summary)) {
-        decision = { action: 'keep', reason: HAND_FILED, validator: 'manual', systemic: false };
-      } else if (uiProducts.has(product)) {
-        decision = classifyUiResolve(bug, uiIndex, reproduced);
-        if (decision.action === 'keep' && /still failed/i.test(decision.reason) && !dryRun)
-          proofNote = await attachDatedProof(client, bug, proof, run.at);
-      } else {
-        // A platform-wide ticket is verified against its own endpoints, read from its description.
-        let affected: string[] | undefined;
-        if (/platform-wide/i.test(bug.summary)) {
-          const description = await client.firstComment(bug.id);
-          if (description) affected = parseAffectedEndpoints(description);
-        }
-        decision = classifyResolve(bug, index, reproduced, affected);
+      if (
+        uiProducts.has(product) &&
+        decision.action === 'keep' &&
+        /still failed/i.test(decision.reason) &&
+        !dryRun
+      )
+        proofNote = await attachDatedProof(client, bug, proof, run.at);
+      // A person's decision is pending: a passing check is reported, never acted on.
+      const waitingOn = WAITING_ON_A_PERSON.get(bug.status ?? '');
+      if (decision.action === 'resolve' && waitingOn) {
+        decision = { ...decision, action: 'keep', reason: `${WAITING}${bug.status}: ${waitingOn}` };
       }
       // A paused module's bugs wait for testing to resume; they are nobody's re-check yet.
       const why = isPausedModule(bug, decision) ? undefined : handCheckReason(decision);
@@ -283,6 +297,20 @@ async function statusPass(
         });
       }
       await applyDecision(client, bug, decision, summary, dryRun, touched, log, run, proofNote);
+    }
+
+    // The tracker's "Ready for re-test" queue: the bench is the re-test. A pass closes the bug; a
+    // failure was already reopened by the filer; anything else waits for a person, without a note.
+    const retest = await client.awaitingRetest(product);
+    if ('error' in retest) {
+      log.warn(`auto-resolve: could not list ${product} bugs awaiting re-test — ${retest.error}`);
+      continue;
+    }
+    for (const bug of retest.bugs.filter((b) => benchTag.test(b.summary))) {
+      summary.retested = (summary.retested ?? 0) + 1;
+      const decision = await classify(bug, product);
+      if (decision.action === 'resolve')
+        await applyDecision(client, bug, decision, summary, dryRun, false, log, run);
     }
   }
   return summary;
@@ -302,7 +330,13 @@ async function applyDecision(
 ): Promise<void> {
   if (decision.action !== 'resolve') {
     summary.keptOpen += 1;
-    if (/still fail|fails somewhere|reproduced/i.test(decision.reason))
+    if (decision.reason.startsWith(WAITING)) {
+      (summary.waitingOnPerson ??= []).push({
+        bugId: bug.id,
+        status: bug.status ?? '',
+        summary: bug.summary,
+      });
+    } else if (/still fail|fails somewhere|reproduced/i.test(decision.reason))
       summary.confirmedFailing += 1;
     else summary.notVerified += 1;
     if (touchedByFiler || dryRun) {
@@ -315,16 +349,22 @@ async function applyDecision(
     else summary.touched += 1;
     return;
   }
+  const entry = {
+    bugId: bug.id,
+    reason: decision.reason,
+    summary: bug.summary,
+    from: bug.status ?? '',
+  };
   if (dryRun) {
-    summary.resolved.push({ bugId: bug.id, reason: decision.reason, summary: bug.summary });
+    summary.resolved.push(entry);
     return;
   }
-  const res = await client.resolveFixed(bug.id, plainStatusComment(bug, decision, undefined, run));
+  const res = await client.closeVerified(bug, plainStatusComment(bug, decision, undefined, run));
   if ('error' in res) {
     summary.failed += 1;
     log.warn(`auto-resolve: bug ${bug.id} not updated — ${res.error}`);
   } else {
-    summary.resolved.push({ bugId: bug.id, reason: decision.reason, summary: bug.summary });
+    summary.resolved.push(entry);
   }
 }
 
@@ -400,9 +440,18 @@ export function plainStatusComment(
 
   if (decision.action === 'resolve') {
     return (
-      `${head}Result: FIXED. The automated check for this exact problem ran again and passed, so this ` +
-      `bug has been marked RESOLVED/FIXED.\n` +
+      `${head}Result: VERIFIED FIXED. The automated check for this exact problem ran again and passed, ` +
+      `so the re-test passed and this bug is closed (CLOSED).\n` +
       `Bottom line: no action needed. If the problem comes back, the next run reopens this ticket automatically.`
+    );
+  }
+  if (r.startsWith(WAITING)) {
+    const status = (bug.status ?? '').replace(/_/g, ' ');
+    const waitingOn = WAITING_ON_A_PERSON.get(bug.status ?? '') ?? 'waiting for a person';
+    return (
+      `${head}Result: THE CHECK NOW PASSES. The automated check for this exact problem ran again and ` +
+      `passed. The bug is ${status} (${waitingOn}), so the bench leaves its status to that person.\n` +
+      `Bottom line: once that decision is made, the next run closes it if the check still passes.`
     );
   }
   if (isPausedModule(bug, decision)) {

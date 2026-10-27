@@ -24,7 +24,8 @@ function loadEnv() {
   return out;
 }
 
-const JUDGED_NOT_A_DEFECT = new Set(['INVALID', 'WONTFIX', 'WORKSFORME', 'DUPLICATE']);
+// Same set as src/config/bugzilla.config.ts; DELETED is the tracker's soft delete.
+const JUDGED_NOT_A_DEFECT = new Set(['INVALID', 'WONTFIX', 'WORKSFORME', 'DUPLICATE', 'DELETED']);
 
 async function main() {
   const [product, component, ...keywords] = process.argv.slice(2);

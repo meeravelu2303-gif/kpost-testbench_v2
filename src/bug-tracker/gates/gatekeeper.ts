@@ -1,3 +1,4 @@
+import { JUDGED_NOT_A_DEFECT } from '@config/bugzilla.config';
 import type { BugCandidate } from '../findings/bug-candidate';
 import type { BugzillaClient } from '../bugzilla/bugzilla-client';
 import { candidateRejection } from './validity-gate';
@@ -16,9 +17,6 @@ export interface GateVerdict {
   /** For DUPLICATE / JUDGED_NOT_DEFECT: the bug that already covers it. */
   existingId?: number;
 }
-
-/** Resolutions a human sets to say "this is not a defect". Never re-filed, never re-opened by a bot. */
-const JUDGED_NOT_A_DEFECT = new Set(['INVALID', 'WONTFIX', 'WORKSFORME', 'DUPLICATE']);
 
 /**
  * Stage 1: the ticket is actionable (a real defect with no expected/actual still cannot be worked).

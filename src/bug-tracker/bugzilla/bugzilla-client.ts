@@ -20,6 +20,8 @@ export interface BugSummary {
   id: number;
   summary: string;
   is_open: boolean;
+  /** CONFIRMED, IN_PROGRESS, IN_REVIEW, PENDING_APPROVAL, REOPENED, RESOLVED, CLOSED, … */
+  status?: string;
   resolution?: string;
   whiteboard?: string;
   component?: string;
@@ -32,7 +34,10 @@ export interface ProductMetadata {
   versions: Set<string>;
 }
 
-const BUG_FIELDS = 'id,summary,is_open,resolution,whiteboard,component,product';
+const BUG_FIELDS = 'id,summary,is_open,status,resolution,whiteboard,component,product';
+
+/** The BUGZILLA-UI tracker's edit marker: the newest such comment replaces the description. */
+const REPORT_REVISION = '[report-revision]';
 const GET_RETRIES = 2;
 const RETRY_DELAY_MS = 500;
 
@@ -131,32 +136,41 @@ export class BugzillaClient {
   }
 
   /**
-   * Reopens a resolved bug with a comment. Status REOPENED (the tracker counts "fixes that didn't
-   * hold"), falling back to CONFIRMED where REOPENED does not exist.
+   * Reopens a RESOLVED or CLOSED bug as REOPENED, with the comment the workflow requires. Never
+   * CONFIRMED (owner, 2026-10-22): the tracker counts REOPENED as "fixes that didn't hold".
    */
   async reopen(bugId: number, comment: string): Promise<{ ok: true } | { error: string }> {
-    const reopen = (status: string) =>
-      this.call('PUT', `/bug/${bugId}`, { status, resolution: '', comment: { body: comment } });
-    const result = await reopen('REOPENED');
-    if (result.ok) return { ok: true };
-    const fallback = await reopen('CONFIRMED');
-    if (fallback.ok) {
-      this.log.warn(
-        `bug ${bugId}: REOPENED was refused (${describeFailure(result)}); reopened as CONFIRMED`,
-      );
-      return { ok: true };
-    }
-    return { error: describeFailure(result) };
-  }
-
-  /** Marks a bug RESOLVED/FIXED, recording why (the run that verified the fix). */
-  async resolveFixed(bugId: number, comment: string): Promise<{ ok: true } | { error: string }> {
     const result = await this.call('PUT', `/bug/${bugId}`, {
-      status: 'RESOLVED',
-      resolution: 'FIXED',
+      status: 'REOPENED',
+      resolution: '',
       comment: { body: comment },
     });
     return result.ok ? { ok: true } : { error: describeFailure(result) };
+  }
+
+  /**
+   * Closes a bug whose re-test passed: CLOSED is the tracker's "QA re-tested and it passed". An
+   * open bug goes RESOLVED/FIXED (with the comment) first, as the workflow has no open → CLOSED.
+   */
+  async closeVerified(bug: BugSummary, comment: string): Promise<{ ok: true } | { error: string }> {
+    if (bug.status !== 'RESOLVED') {
+      const resolved = await this.call('PUT', `/bug/${bug.id}`, {
+        status: 'RESOLVED',
+        resolution: 'FIXED',
+        comment: { body: comment },
+      });
+      if (!resolved.ok) return { error: describeFailure(resolved) };
+      // RESOLVED → CLOSED needs no comment, so the verification note is not posted twice.
+      const closed = await this.call('PUT', `/bug/${bug.id}`, { status: 'CLOSED' });
+      return closed.ok
+        ? { ok: true }
+        : { error: `resolved FIXED but not closed: ${describeFailure(closed)}` };
+    }
+    const closed = await this.call('PUT', `/bug/${bug.id}`, {
+      status: 'CLOSED',
+      comment: { body: comment },
+    });
+    return closed.ok ? { ok: true } : { error: describeFailure(closed) };
   }
 
   /** Marks a bug RESOLVED/INVALID with a reason; the filer then never re-files it. */
@@ -177,6 +191,16 @@ export class BugzillaClient {
     );
     if (!result.ok) return { error: describeFailure(result) };
     return { bugs: readBugs(result.json).filter((bug) => bug.is_open) };
+  }
+
+  /** Bugs a developer marked RESOLVED/FIXED: the tracker's "Ready for re-test" queue. */
+  async awaitingRetest(product: string): Promise<{ bugs: BugSummary[] } | { error: string }> {
+    const result = await this.call(
+      'GET',
+      `/bug?product=${encodeURIComponent(product)}&status=RESOLVED&resolution=FIXED&include_fields=${BUG_FIELDS}&limit=0`,
+    );
+    if (!result.ok) return { error: describeFailure(result) };
+    return { bugs: readBugs(result.json).filter((bug) => bug.status === 'RESOLVED') };
   }
 
   /**
@@ -255,13 +279,21 @@ export class BugzillaClient {
       );
   }
 
-  /** A bug's first comment (its description) — used to read a systemic ticket's affected-endpoint list. */
-  async firstComment(bugId: number): Promise<string | undefined> {
-    const result = await this.call('GET', `/bug/${bugId}/comment`);
-    if (!result.ok || !result.json) return undefined;
-    const bugs = (result.json as { bugs?: Record<string, { comments?: { text?: string }[] }> })
-      .bugs;
-    return bugs?.[String(bugId)]?.comments?.[0]?.text;
+  /**
+   * A bug's description as the tracker shows it: the newest `[report-revision]` comment (its first
+   * line dropped) when a person edited the report, else comment #0. Used to read a systemic
+   * ticket's affected-endpoint list.
+   */
+  async currentDescription(bugId: number): Promise<string | undefined> {
+    const texts = await this.commentTexts(bugId);
+    const revision = [...texts].reverse().find((t) => t.startsWith(REPORT_REVISION));
+    if (!revision) return texts[0];
+    return revision
+      .split('\n')
+      .slice(1)
+      .join('\n')
+      .replace(/^The bug report was edited\.[^\n]*\n/, '')
+      .trim();
   }
 
   /** Every comment body on a bug, oldest first (used to count prior reopens). */
@@ -374,6 +406,7 @@ function readBugs(json: unknown): BugSummary[] {
     id: typeof bug.id === 'number' ? bug.id : Number.NaN,
     summary: str(bug.summary) ?? '',
     is_open: bug.is_open === true,
+    status: str(bug.status),
     resolution: str(bug.resolution),
     whiteboard: str(bug.whiteboard),
     component: str(bug.component),

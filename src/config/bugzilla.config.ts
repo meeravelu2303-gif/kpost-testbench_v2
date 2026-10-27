@@ -114,8 +114,27 @@ export function readBugzillaConfig(): BugzillaConfig {
   };
 }
 
-/** Resolutions that mean a human judged this NOT a defect. Never re-file one of these. */
-export const JUDGED_NOT_A_DEFECT = new Set(['INVALID', 'WONTFIX', 'WORKSFORME', 'DUPLICATE']);
+/**
+ * Resolutions that mean a person decided this bug is done with: never re-file or reopen one.
+ * DELETED is the BUGZILLA-UI tracker's soft delete (ops/bugzilla/setup-soft-delete.pl).
+ */
+export const JUDGED_NOT_A_DEFECT = new Set([
+  'INVALID',
+  'WONTFIX',
+  'WORKSFORME',
+  'DUPLICATE',
+  'DELETED',
+]);
+
+/**
+ * Open statuses where a person's decision is pending (the tracker's ops/bugzilla/setup-*.pl). A
+ * passing check never moves a bug out of one; it only says so in the dated note.
+ */
+export const WAITING_ON_A_PERSON: ReadonlyMap<string, string> = new Map([
+  ['PENDING_APPROVAL', 'waiting for the project manager to decide whether this is wanted'],
+  ['AWAITING_REQUIREMENT', 'waiting for a requirement document'],
+  ['IN_REVIEW', 'waiting for the team lead to review the fix'],
+]);
 
 /** Bugzilla limits: summary column and comment/description body. */
 export const BUGZILLA_LIMITS = { summary: 255, comment: 65_535, snippet: 20_000 } as const;

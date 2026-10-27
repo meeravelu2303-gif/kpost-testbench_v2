@@ -195,7 +195,18 @@ export function buildDescription(candidate: BugCandidate): string {
       ...candidate.failedApiCalls.map((call) => `  - ${call}`),
     );
   }
-  if (candidate.affectedEndpoints && candidate.affectedEndpoints.length > 1) {
+  const scope = candidate.affectedScope ?? [];
+  if (scope.length > 1) {
+    // The tracker's "Affected scope" card reads exactly this header and `- METHOD /path (Module) xN`.
+    const seen = scope.reduce((sum, s) => sum + s.count, 0);
+    lines.push(
+      '',
+      `Affected endpoints (${scope.length}), observed by ${seen} test case(s) — one shared fix resolves all of them:`,
+      ...scope.map(
+        (s) => `  - ${s.endpoint} (${s.module.replace(/[()]/g, '') || 'unknown'}) x${s.count}`,
+      ),
+    );
+  } else if (candidate.affectedEndpoints && candidate.affectedEndpoints.length > 1) {
     lines.push(
       '',
       `Affects ${candidate.affectedEndpoints.length} endpoints — one shared fix resolves all of them:`,

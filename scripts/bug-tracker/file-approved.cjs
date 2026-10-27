@@ -109,7 +109,7 @@ async function main() {
         (b.status || '').toUpperCase() !== 'VERIFIED' &&
         (b.status || '').toUpperCase() !== 'CLOSED'
       ) {
-        // Already open: nothing to reopen (Bugzilla allows REOPENED only from RESOLVED/VERIFIED).
+        // Already open: nothing to reopen (REOPENED is allowed only from RESOLVED/CLOSED; CLOSED was VERIFIED).
         console.log(`  #${existingId} is ${b.status} (already open) — not reopened.\n`);
         continue;
       }

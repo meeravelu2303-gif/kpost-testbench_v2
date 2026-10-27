@@ -75,10 +75,19 @@ console.log(
 if (Array.isArray(closedList) && closedList.length) {
   closedList.forEach((c) =>
     console.log(
-      `    #${c.bugId || c.id || '?'} ${(c.summary || c.reason || '').toString().slice(0, 100)}`,
+      `    #${c.bugId || c.id || '?'} ${c.from ? `(was ${c.from}) ` : ''}${(c.summary || c.reason || '').toString().slice(0, 100)}`,
     ),
   );
+  console.log('    These become CLOSED: the re-test passed.');
 } else console.log('    (none — or see REPORT.json bugs.resolved)');
+
+const waiting = resolved.waitingOnPerson;
+if (Array.isArray(waiting) && waiting.length) {
+  console.log(H(`CHECK PASSES, WAITING ON A PERSON — status left alone (${waiting.length})`));
+  waiting.forEach((w) =>
+    console.log(`    #${w.bugId} ${w.status}  ${(w.summary || '').slice(0, 100)}`),
+  );
+}
 
 // Open bugs no run can close; a report written before this list existed has no `byHand`.
 const byHand = resolved.byHand;

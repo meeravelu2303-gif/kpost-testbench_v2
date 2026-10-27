@@ -333,7 +333,9 @@ const ENDPOINT_RE = /\]\s*(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+?):/i;
  */
 export function parseAffectedEndpoints(description: string): string[] {
   const eps = new Set<string>();
-  for (const m of description.matchAll(/^\s*-\s+(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+)\s*$/gim)) {
+  // `  - POST /v2/x`, or the tracker's grouping row `  - POST /v2/x (Module) x3`.
+  const row = /^\s*[-•]\s+(GET|POST|PUT|DELETE|PATCH)\s+(\/\S+)(?:\s+\([^)]*\)\s+x\d+)?\s*$/gim;
+  for (const m of description.matchAll(row)) {
     eps.add(`${m[1]} ${m[2]}`);
   }
   const rep = description.match(

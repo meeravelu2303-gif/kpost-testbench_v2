@@ -831,6 +831,25 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     ).toBe(false);
   });
 
+  test('a bug the tracker soft-deleted (RESOLVED/DELETED) is never re-filed or reopened', async () => {
+    const calls = stubBugzilla([
+      {
+        id: 18,
+        summary: '[KPV2-ABC123] POST /users: expected 400/422, got 500',
+        is_open: false,
+        resolution: 'DELETED',
+      },
+    ]);
+    const outcome = await filer().file([candidate()]);
+
+    expect(outcome.counts['judged-skip']).toBe(1);
+    expect(calls.some((c) => c.method === 'POST' && /\/bug\?/.test(c.url))).toBe(false);
+    expect(
+      calls.some((c) => c.method === 'PUT'),
+      'and the deleted bug stays deleted',
+    ).toBe(false);
+  });
+
   test('a defect that comes back after a fix reopens the original ticket', async () => {
     const calls = stubBugzilla([
       {
@@ -853,7 +872,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     });
   });
 
-  test('an instance without the REOPENED status reopens as CONFIRMED instead', async () => {
+  test('a refused REOPENED is reported, never silently turned into CONFIRMED', async () => {
     const client = new BugzillaClient(config, createLogger('test'));
     const statuses: string[] = [];
     globalThis.fetch = ((_url: string, init?: { body?: string }) => {
@@ -874,11 +893,11 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
       } as unknown as Response);
     }) as unknown as typeof fetch;
 
-    expect(await client.reopen(9, 'still broken')).toEqual({ ok: true });
-    expect(statuses, 'REOPENED first, then the CONFIRMED fallback').toEqual([
-      'REOPENED',
-      'CONFIRMED',
-    ]);
+    // Owner, 2026-10-22: a reopen is REOPENED or nothing; CONFIRMED would hide that the fix failed.
+    expect(await client.reopen(9, 'still broken')).toEqual({
+      error: 'There is no status named REOPENED',
+    });
+    expect(statuses).toEqual(['REOPENED']);
   });
 
   test('a flow-triggered server error never reopens a FIXED ticket: it waits for a live replay', async () => {

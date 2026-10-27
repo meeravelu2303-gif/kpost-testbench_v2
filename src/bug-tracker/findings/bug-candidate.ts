@@ -161,6 +161,8 @@ export interface BugCandidate {
   systemic?: boolean;
   /** For a systemic defect: every endpoint the same fault was observed on, listed in the ticket. */
   affectedEndpoints?: string[];
+  /** The same endpoints with their module and sighting count, for the tracker's "Affected scope". */
+  affectedScope?: { endpoint: string; module: string; count: number }[];
   /**
    * Why a brand-new candidate is held for human review instead of auto-filed (create path only).
    */
@@ -372,6 +374,9 @@ function fromValidationResult(
     observedAt: result.timestamp,
     systemic,
     affectedEndpoints: systemic ? [result.endpoint] : undefined,
+    affectedScope: systemic
+      ? [{ endpoint: result.endpoint, module: componentFor(suite, report.tags), count: 1 }]
+      : undefined,
     evidence: maskSensitive({
       module: suite.label,
       validator: result.validatorName,
@@ -705,6 +710,7 @@ export function mergeCandidates(candidates: readonly BugCandidate[]): BugCandida
         affectedEndpoints: candidate.affectedEndpoints
           ? [...candidate.affectedEndpoints]
           : undefined,
+        affectedScope: candidate.affectedScope?.map((s) => ({ ...s })),
       });
       continue;
     }
@@ -723,6 +729,12 @@ export function mergeCandidates(candidates: readonly BugCandidate[]): BugCandida
       ]);
       existing.affectedEndpoints = [...endpoints].sort();
     }
+    for (const seen of candidate.affectedScope ?? []) {
+      const row = existing.affectedScope?.find((s) => s.endpoint === seen.endpoint);
+      if (row) row.count += seen.count;
+      else (existing.affectedScope ??= []).push({ ...seen });
+    }
+    existing.affectedScope?.sort((a, b) => a.endpoint.localeCompare(b.endpoint));
   }
   return [...merged.values()];
 }

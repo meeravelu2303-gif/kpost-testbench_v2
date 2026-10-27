@@ -158,13 +158,22 @@ What one `*:file` run does, in order (`src/bug-tracker/filing/bugzilla-reporter.
 tests run ─► candidates built (API reports, UI failures, a11y) ─► merge + collapseCountVariants + consolidateCascades
   ─► validity gate (rejects transient/infra/env noise, 429, gateway 5xx, bench faults, NS_ERROR_*/net::ERR_*)
   ─► run sanity gate (blocks ALL filing if the run collapsed, was interrupted or ran zero tests)
-  ─► dedupe vs live Bugzilla: open → comment · INVALID/WONTFIX/DUPLICATE → never refile · FIXED-but-back → reopen
-     (same tag or same fault via reopenByFault) · uncertain brand-new → needs-review (held back) · search failed → file nothing
+  ─► dedupe vs live Bugzilla: open → comment · INVALID/WONTFIX/WORKSFORME/DUPLICATE/DELETED → never refile ·
+     FIXED or CLOSED but back → REOPENED (same tag or same fault via reopenByFault; never CONFIRMED) ·
+     uncertain brand-new → needs-review (held back) · search failed → file nothing
   ─► file (with curl, proof: screenshot / video / trace / diagnosis / a11y details)
-  ─► status pass over EVERY open bug of the product: close if its own check passed cleanly this run,
-     otherwise a dated plain-English note (STILL BROKEN / NOT RE-CHECKED + why / KDoc paused)
+  ─► status pass, the bench being QA's re-test: every open bug, plus the RESOLVED/FIXED "ready for re-test"
+     queue. Its own check passed cleanly → CLOSED (open bugs go RESOLVED/FIXED first). Otherwise an open
+     bug gets a dated plain-English note (STILL BROKEN / NOT RE-CHECKED + why / KDoc paused); a RESOLVED
+     one is left alone. PENDING_APPROVAL / AWAITING_REQUIREMENT / IN_REVIEW wait on a person: a pass is
+     only noted, never acted on (WAITING_ON_A_PERSON)
   ─► reports/REPORT.md + REPORT.json
 ```
+
+**The tracker's workflow** (BUGZILLA-UI, `ops/bugzilla/setup-*.pl`): CONFIRMED / IN_PROGRESS → (IN_REVIEW: team
+lead reviews the fix) → RESOLVED = "ready for re-test" → CLOSED = "re-test passed" (VERIFIED was renamed CLOSED on
+2026-10-23); a failed re-test → REOPENED. PENDING_APPROVAL = the PM decides whether it is wanted;
+AWAITING_REQUIREMENT = blocked on a requirement document. Resolution DELETED is the tracker's soft delete.
 
 API bugs re-verify by their `(endpoint, validator)` pair; UI bugs by their originating test title, only on
 the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bug-filing.md`.
@@ -212,7 +221,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
   That comment is the only thing developers read (BUGZILLA-UI Excel "Comments (newest first)" column), so
   write it as if they've never seen the ticket.
 - **Post-deploy flow:** when the owner names bugs to mark fixed, wait for explicit "deploy done", then live-verify
-  each one: FIXED with what was checked, or left open with what still failed. Never close on request alone.
+  each one: CLOSED with what was checked, or REOPENED / left open with what still failed. Never close on request alone.
 - **Hand-filed bugs** (no `[KP-xxxxxx]` tag) are never auto-closed; they need a by-hand re-check.
 
 ## 7. Verification discipline: lessons that cost real time

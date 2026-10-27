@@ -29,7 +29,12 @@ export interface BugReportInput {
 
 /** Result of the auto-resolve pass: bugs closed because this run verified them fixed. */
 export interface ResolveSummary {
-  resolved: { bugId: number; reason: string; summary: string }[];
+  /** Bugs closed (CLOSED) because their re-test passed; `from` is the status they were in. */
+  resolved: { bugId: number; reason: string; summary: string; from?: string }[];
+  /** Bugs a developer marked RESOLVED/FIXED that this run re-tested. */
+  retested?: number;
+  /** Open bugs whose check passed but which wait on a person (PENDING_APPROVAL, IN_REVIEW, …). */
+  waitingOnPerson?: { bugId: number; status: string; summary: string }[];
   keptOpen: number;
   checked: number;
   failed: number;
@@ -283,12 +288,13 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
   // 3b. Auto-resolved — bugs this run verified fixed (closed, or would-close on a preview).
   if (input.resolved) {
     const r = input.resolved;
-    const verb = r.dryRun ? 'WOULD be closed' : 'were verified fixed and marked **RESOLVED/FIXED**';
+    const verb = r.dryRun ? 'WOULD be closed (CLOSED)' : 'were verified fixed and **CLOSED**';
     lines.push(
       `## 3b. Auto-resolved (verified fixed)${r.dryRun ? ' — PREVIEW' : ''}`,
       '',
-      `Checked **${r.checked}** open bench-filed bugs against this host (API by endpoint+validator, ` +
-        `UI by its originating test); **${r.resolved.length}** ${verb} (ran again and passed cleanly). ` +
+      `Checked **${r.checked}** open bugs and re-tested **${r.retested ?? 0}** bugs developers marked ` +
+        `RESOLVED/FIXED, against this host (API by endpoint+validator, UI by its originating test); ` +
+        `**${r.resolved.length}** ${verb} (ran again and passed cleanly). ` +
         `Of the **${r.keptOpen}** that stayed open: ` +
         `**${r.confirmedFailing}** are CONFIRMED still failing on this host, and **${r.notVerified}** were ` +
         `NOT exercised this run (a write/OTP endpoint, or a UI test that didn't run this pass) so they ` +
@@ -300,14 +306,28 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
     );
     if (r.resolved.length) {
       lines.push(
-        '| Bug | Why it was closed |',
-        '| --- | ----------------- |',
+        '| Bug | Was | Why it was closed |',
+        '| --- | --- | ----------------- |',
         ...r.resolved
           .slice(0, 100)
-          .map((x) => `| #${x.bugId} | ${x.reason.replace(/\|/g, '\\|')} |`),
+          .map((x) => `| #${x.bugId} | ${x.from || '?'} | ${x.reason.replace(/\|/g, '\\|')} |`),
         '',
       );
       if (r.resolved.length > 100) lines.push(`…and ${r.resolved.length - 100} more.`, '');
+    }
+    if (r.waitingOnPerson?.length) {
+      lines.push(
+        `### Check passes, waiting on a person (${r.waitingOnPerson.length})`,
+        '',
+        'Their check passed, but a person decides next, so the bench left the status alone.',
+        '',
+        '| Bug | Status | Bug title |',
+        '| --- | ------ | --------- |',
+        ...r.waitingOnPerson.map(
+          (x) => `| #${x.bugId} | ${x.status} | ${x.summary.slice(0, 110).replace(/\|/g, '\\|')} |`,
+        ),
+        '',
+      );
     }
     if (r.byHand?.length) {
       lines.push(

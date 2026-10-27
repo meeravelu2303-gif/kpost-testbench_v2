@@ -123,7 +123,8 @@ The id is carried as `[KP-XXXXXX]` in the summary, and every run searches for it
 | ----------------------------------------------------- | ------------------------------- | ------------------------------------------------------------- |
 | An **open** ticket                                    | Comment "reproduced"            | The team already tracks it                                    |
 | Resolved `INVALID`/`WONTFIX`/`WORKSFORME`/`DUPLICATE` | **Skip forever**                | A human judged it; re-filing overrides that judgement nightly |
-| Resolved otherwise (e.g. `FIXED`)                     | **Reopen** the original         | A regression belongs on its ticket                            |
+| Resolved `DELETED` (the tracker's soft delete)        | **Skip forever**                | A person removed it; the bench never brings it back           |
+| `FIXED`, or `CLOSED` (re-test passed), and it is back | **Reopen** it as `REOPENED`     | A regression belongs on its ticket; never `CONFIRMED`         |
 | An untagged **open** ticket for the same fault        | Comment + tag it                | Adopts tickets filed by a human or the previous bench         |
 | Nothing                                               | Create, assign, attach evidence | Genuinely new                                                 |
 | **The search failed**                                 | File nothing                    | A transient error must never mint a duplicate                 |
@@ -266,4 +267,11 @@ Two instance facts worth knowing:
   reopens the same id). BOLA/ownership and other business-rule exploit tickets classify as
   non-verifiable and are NEVER auto-closed; they stay open for a by-hand exploit replay, and
   `report:filing` lists them under RE-CHECK BY HAND (§7).
+- **The bench is QA's re-test** (owner, 2026-10-27), following the BUGZILLA-UI tracker's workflow: a
+  passing check closes the bug as `CLOSED` ("re-test passed"; an open bug goes `RESOLVED/FIXED` with
+  the note, then `CLOSED`). It also re-tests the `RESOLVED/FIXED` "ready for re-test" queue developers
+  leave: a pass closes it, a failure reopens it, anything else leaves it for a person, without a note.
+  Bugs in `PENDING_APPROVAL`, `AWAITING_REQUIREMENT` or `IN_REVIEW` wait on a person (PM decision,
+  requirement document, team-lead review): a pass is only noted, and listed in `report:filing` under
+  CHECK PASSES, WAITING ON A PERSON.
 - **Ownership changes** (a developer hands a module over): edit `ownership.config.ts`, and update the component defaults in Bugzilla. The drift test fails until both agree.
