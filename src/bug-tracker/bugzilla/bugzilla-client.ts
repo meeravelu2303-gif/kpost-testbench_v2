@@ -255,11 +255,17 @@ export class BugzillaClient {
   }
 
   /** Appends the dedupe tag to an adopted ticket's whiteboard so later runs find it by tag. */
-  async appendWhiteboard(bugId: number, existing: string, tag: string): Promise<void> {
-    if (existing.includes(tag)) return;
+  async appendWhiteboard(
+    bugId: number,
+    existing: string,
+    tag: string,
+  ): Promise<{ ok: true } | { error: string }> {
+    if (existing.includes(tag)) return { ok: true };
     const whiteboard = `${existing} [${tag}]`.trim();
     const result = await this.call('PUT', `/bug/${bugId}`, { whiteboard });
-    if (!result.ok) this.log.warn(`could not tag bug ${bugId}: ${describeFailure(result)}`);
+    if (result.ok) return { ok: true };
+    this.log.warn(`could not tag bug ${bugId}: ${describeFailure(result)}`);
+    return { error: describeFailure(result) };
   }
 
   async attach(

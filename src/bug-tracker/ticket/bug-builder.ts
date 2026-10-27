@@ -301,18 +301,6 @@ export function buildEvidenceAttachment(candidate: BugCandidate): string {
     .join('\n');
 }
 
-export function buildReproducedComment(candidate: BugCandidate): string {
-  return (
-    `Reproduced by kpost-testbench_v2 on ${candidate.observedAt} ` +
-    `(${candidate.environment}, build ${candidate.build}, run ${candidate.testRunId}).\n` +
-    `Host: ${candidate.baseURL}\n` +
-    `Check: ${candidate.classification}. Observed ${candidate.occurrences} time(s) this run.` +
-    (candidate.correlationId ? `\nCorrelation ID: ${candidate.correlationId}` : '') +
-    // A current reproduction against the host actually tested.
-    (candidate.curl ? `\n\ncurl (current host):\n${candidate.curl}` : '')
-  ).slice(0, BUGZILLA_LIMITS.comment);
-}
-
 /**
  * The reopen comment; from the second reopen (`priorReopens`) on, it calls out the repeated cycle.
  */
@@ -334,14 +322,5 @@ export function buildReopenComment(
     (candidate.correlationId ? `\nCorrelation ID: ${candidate.correlationId}` : '') +
     (candidate.curl ? `\n\ncurl (current host):\n${candidate.curl}` : '') +
     cycleNote
-  ).slice(0, BUGZILLA_LIMITS.comment);
-}
-
-export function buildAdoptionComment(candidate: BugCandidate): string {
-  return (
-    `kpost-testbench_v2 observed this same fault on ${candidate.observedAt} ` +
-    `(${candidate.environment}, build ${candidate.build}).\n` +
-    `Tagged [${candidate.id}] so future automated runs update this ticket instead of filing a duplicate.\n` +
-    `Check: ${candidate.classification}.`
   ).slice(0, BUGZILLA_LIMITS.comment);
 }

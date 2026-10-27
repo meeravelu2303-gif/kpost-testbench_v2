@@ -58,10 +58,10 @@ CANDIDATE GATE ..... does each finding's own evidence support its claim?
 Merge .............. same fault on 3 browsers / 5 tests = ONE candidate
    ▼
 Filer .............. live Bugzilla search per candidate, then:
-                       open ticket        → comment
+                       open ticket        → left as is (no comment)
                        INVALID/WONTFIX/…  → skip forever
                        FIXED but back     → reopen
-                       untagged match     → comment + adopt
+                       untagged match     → tag it (no comment)
                        nothing found      → create, assign, attach evidence
                        search failed      → file nothing
    ▼
@@ -121,11 +121,11 @@ The id is carried as `[KP-XXXXXX]` in the summary, and every run searches for it
 
 | Found                                                 | Action                          | Why                                                           |
 | ----------------------------------------------------- | ------------------------------- | ------------------------------------------------------------- |
-| An **open** ticket                                    | Comment "reproduced"            | The team already tracks it                                    |
+| An **open** ticket                                    | **Leave it as it is**           | Already tracked and still broken: no comment (owner, 27 Oct)  |
 | Resolved `INVALID`/`WONTFIX`/`WORKSFORME`/`DUPLICATE` | **Skip forever**                | A human judged it; re-filing overrides that judgement nightly |
 | Resolved `DELETED` (the tracker's soft delete)        | **Skip forever**                | A person removed it; the bench never brings it back           |
 | `FIXED`, or `CLOSED` (re-test passed), and it is back | **Reopen** it as `REOPENED`     | A regression belongs on its ticket; never `CONFIRMED`         |
-| An untagged **open** ticket for the same fault        | Comment + tag it                | Adopts tickets filed by a human or the previous bench         |
+| An untagged **open** ticket for the same fault        | Add the tag, no comment         | Adopts tickets filed by a human or the previous bench         |
 | Nothing                                               | Create, assign, attach evidence | Genuinely new                                                 |
 | **The search failed**                                 | File nothing                    | A transient error must never mint a duplicate                 |
 
@@ -200,7 +200,7 @@ command), or already applied.
 - its title names no single endpoint/test, or no check the bench can recognise.
 
 Re-run each one's steps by hand and close it in Bugzilla yourself. KDoc/KWord bugs are not listed (that
-module is paused; they get a dated "paused" note). A bug whose check merely did not run this time is
+module is paused). A bug whose check merely did not run this time is
 not listed either: a later run closes it. The same list is in REPORT.md under "Re-check by hand".
 
 The checkpoint (step 2) exists because some false positives are SEMANTIC — only a human knows
@@ -258,7 +258,7 @@ Two instance facts worth knowing:
 ## 10. Operating it
 
 - **Start in dry run.** Read `reports/REPORT.json`, confirm the tickets and their owners, then lift the flag — ideally with `BUGZILLA_MAX_FILE=5` first.
-- **Prove dedupe on your own instance:** run `npm run product:kpost-api:file` twice. The second run must report `commented`, never `created`.
+- **Prove dedupe on your own instance:** run `npm run product:kpost-api:file` twice. The second run must report `still-open`, never `created`.
 - **To stop filing immediately:** unset `BUGZILLA_API_KEY`, or set `BUGZILLA_DRY_RUN=true`.
 - **Rotate the API key** if it has ever been pasted into a chat, ticket or log.
 - **A ticket that is not a defect:** resolve it `INVALID` (or `WONTFIX`). The bench never re-files it.

@@ -4,12 +4,10 @@ import { JUDGED_NOT_A_DEFECT, type BugzillaConfig } from '@config/bugzilla.confi
 import { SUITES, suiteFor } from '@config/ownership.config';
 import type { Logger } from '@utils/logger';
 import {
-  buildAdoptionComment,
   buildBugFields,
   buildDescription,
   buildEvidenceAttachment,
   buildReopenComment,
-  buildReproducedComment,
   buildSummary,
   sameFault,
   summaryPhrase,
@@ -33,7 +31,7 @@ const MAX_PROOF_BYTES = MAX_PROOF_MB * 1024 * 1024;
 
 export type FilingDecision =
   | 'created'
-  | 'commented'
+  | 'still-open'
   | 'reopened'
   | 'adopted'
   | 'judged-skip'
@@ -65,7 +63,7 @@ export interface FilingOutcome {
 
 const emptyCounts = (): Record<FilingDecision, number> => ({
   created: 0,
-  commented: 0,
+  'still-open': 0,
   reopened: 0,
   adopted: 0,
   'judged-skip': 0,
@@ -215,8 +213,8 @@ export class BugzillaFiler {
       });
     }
     if (this.openTags.has(tag)) {
-      return this.entry(candidate, 'commented', {
-        reason: 'existing ticket (same tag) — would comment',
+      return this.entry(candidate, 'still-open', {
+        reason: 'already open (same tag) — left as is, no comment',
       });
     }
     // An exact-tag match to a FIXED bug is reopened on the live path, so preview it the same way.
@@ -313,13 +311,13 @@ export class BugzillaFiler {
       (bug) => bug.product === undefined || bug.product === candidate.product,
     );
 
+    // Open and still broken: the bug already says so. No comment, no new proof (owner, 2026-10-27).
     const open = bugs.find((bug) => bug.is_open);
     if (open) {
-      const result = await this.client.addComment(open.id, buildReproducedComment(candidate));
-      if (!('error' in result)) await this.attachProof(open.id, candidate);
-      return 'error' in result
-        ? this.entry(candidate, 'failed', { reason: result.error, bugId: open.id })
-        : this.entry(candidate, 'commented', { bugId: open.id });
+      return this.entry(candidate, 'still-open', {
+        bugId: open.id,
+        reason: 'already open — left as is, no comment',
+      });
     }
 
     const judged = bugs.find((bug) =>
@@ -411,16 +409,21 @@ export class BugzillaFiler {
     }
   }
 
-  /** Comments on the open bug for the same (endpoint, validator) under a shifted tag; tags it. */
+  /**
+   * Tags the open bug for the same (endpoint, validator) under a shifted fingerprint, so later runs
+   * find it. Open and still broken, so no comment and no proof.
+   */
   private async adoptByFault(candidate: BugCandidate): Promise<FilingEntry | undefined> {
     const match = this.matchFault(candidate);
     if (!match) return undefined;
     this.faultUsed.add(match.id);
-    const comment = await this.client.addComment(match.id, buildReproducedComment(candidate));
-    if ('error' in comment)
-      return this.entry(candidate, 'failed', { reason: comment.error, bugId: match.id });
-    await this.client.appendWhiteboard(match.id, match.whiteboard ?? '', candidate.id);
-    await this.attachProof(match.id, candidate);
+    const tagged = await this.client.appendWhiteboard(
+      match.id,
+      match.whiteboard ?? '',
+      candidate.id,
+    );
+    if ('error' in tagged)
+      return this.entry(candidate, 'failed', { reason: tagged.error, bugId: match.id });
     return this.entry(candidate, 'adopted', {
       bugId: match.id,
       reason: 'same (endpoint, validator) fault under a shifted fingerprint',
@@ -456,7 +459,7 @@ export class BugzillaFiler {
     });
   }
 
-  /** Adopts an open untagged ticket that already describes the same fault: comment and tag it. */
+  /** Adopts an open untagged ticket that already describes the same fault: tags it, no comment. */
   private async adoptExisting(candidate: BugCandidate): Promise<FilingEntry | undefined> {
     const phrase = summaryPhrase(candidate);
     if (phrase.length < 20) return undefined;
@@ -471,10 +474,13 @@ export class BugzillaFiler {
     const match = found.bugs.find((bug) => sameFault(bug.summary, buildSummary(candidate)));
     if (!match) return undefined;
 
-    const comment = await this.client.addComment(match.id, buildAdoptionComment(candidate));
-    if ('error' in comment)
-      return this.entry(candidate, 'failed', { reason: comment.error, bugId: match.id });
-    await this.client.appendWhiteboard(match.id, match.whiteboard ?? '', candidate.id);
+    const tagged = await this.client.appendWhiteboard(
+      match.id,
+      match.whiteboard ?? '',
+      candidate.id,
+    );
+    if ('error' in tagged)
+      return this.entry(candidate, 'failed', { reason: tagged.error, bugId: match.id });
     return this.entry(candidate, 'adopted', {
       bugId: match.id,
       reason: 'an open ticket already describes this fault',

@@ -73,8 +73,6 @@ export default class BugzillaReporter implements Reporter {
   private readonly config = readBugzillaConfig();
   private readonly log = createLogger('bugzilla');
   private readonly validationReports: ValidationReport[] = [];
-  /** This run's failure screenshots, by `project::test title` — attached as dated proof. */
-  private readonly uiProof = new Map<string, ProofFile[]>();
   /** `project::title` of UI tests whose every failure was environmental (see uiTestRecords). */
   private readonly uiEnvironmentalOnly = new Set<string>();
   private suite: Suite | undefined;
@@ -143,7 +141,6 @@ export default class BugzillaReporter implements Reporter {
       validationReports: this.validationReports,
       uiRecords,
       uiEnvironmentalOnly: [...this.uiEnvironmentalOnly],
-      uiProof: [...this.uiProof],
     };
     // A framework-only run tests no product: it must not replace the last product run's report or plan.
     const productRun = !(
@@ -170,8 +167,6 @@ export default class BugzillaReporter implements Reporter {
           ENVIRONMENTAL_UI_OR_API_FAILURE.test(stripAnsi(attempt.error?.message ?? '')),
         );
       if (envOnly) this.uiEnvironmentalOnly.add(`${project}::${test.title}`);
-      else if (failure)
-        this.uiProof.set(`${project}::${test.title}`, proofFrom(failure.attachments, project));
       records.push({
         project,
         spec: path.basename(test.location.file),

@@ -9,7 +9,7 @@ in the order a finding passes through them. How the whole flow works: `docs/guid
 | `gates/`    | 2. Invalid findings are dropped: bench faults, timeouts, 429s, judged false positives. | `validity-gate.ts`, `known-false-positives.ts`, `gatekeeper.ts` |
 | `ticket/`   | 3. The bug text: Summary, Steps, Expected, Actual, How to fix, curl.                   | `bug-builder.ts`, `guidance.ts`, `curl.ts`                      |
 | `bugzilla/` | 4. Talks to Bugzilla: duplicate search, then create / comment / reopen / skip.         | `bugzilla-client.ts`, `bugzilla-filer.ts`                       |
-| `status/`   | 5. Re-checks every open bug: close it if fixed, else a dated note.                     | `verify-resolve.ts`                                             |
+| `status/`   | 5. Re-tests open and RESOLVED bugs: CLOSED if fixed, else left as is (no comment).     | `verify-resolve.ts`                                             |
 | `filing/`   | 6. Runs steps 1-5 at the end of a run (or `bug:apply`) and writes `reports/REPORT.*`.  | `bugzilla-reporter.ts`, `filing-run.ts`, `bug-report.ts`        |
 
 Where to change what:

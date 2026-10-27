@@ -139,7 +139,7 @@ comment/close. It refuses a plan older than 24 h, from a run that failed the run
 `product:*` command), or already applied.
 The `:file` command remains the one-step alternative (run and file together).
 
-Also: `product:kpost-api:verify` (status pass only: closes verified fixes, dates every open bug, files
+Also: `product:kpost-api:verify` (status pass only: closes verified fixes, files
 nothing), `product:kpost-ui:chromium:file` / `:firefox:file` / `:webkit:file` (one browser per run),
 `framework` (bench self-tests), `check` (typecheck + lint + format; must pass before anything is "done").
 `product:all` runs every product even when one finds failures. Each run moves the previous `REPORT.*` to
@@ -163,10 +163,10 @@ tests run ─► candidates built (API reports, UI failures, a11y) ─► merge 
      uncertain brand-new → needs-review (held back) · search failed → file nothing
   ─► file (with curl, proof: screenshot / video / trace / diagnosis / a11y details)
   ─► status pass, the bench being QA's re-test: every open bug, plus the RESOLVED/FIXED "ready for re-test"
-     queue. Its own check passed cleanly → CLOSED (open bugs go RESOLVED/FIXED first). Otherwise an open
-     bug gets a dated plain-English note (STILL BROKEN / NOT RE-CHECKED + why / KDoc paused); a RESOLVED
-     one is left alone. PENDING_APPROVAL / AWAITING_REQUIREMENT / IN_REVIEW wait on a person: a pass is
-     only noted, never acted on (WAITING_ON_A_PERSON)
+     queue. Its own check passed cleanly → CLOSED (open bugs go RESOLVED/FIXED first). Otherwise the bug
+     is left exactly as it is, with no comment (open and still broken, or not re-checked). PENDING_APPROVAL /
+     AWAITING_REQUIREMENT / IN_REVIEW wait on a person: a pass gets one "the check now passes" note, posted
+     once, and the status is never changed (WAITING_ON_A_PERSON)
   ─► reports/REPORT.md + REPORT.json
 ```
 
@@ -217,9 +217,12 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
 - **One root cause = one bug**, naming its blast radius (count + affected tests/endpoints/screens). A shared
   background component failing on every screen is one systemic ticket (`uiSystemicFingerprint`).
 - **API status-code drift vs a stale frontend** is its own bug class: file both halves.
-- **Every open bug gets a dated, self-contained, plain-English comment on every full run**, filed or not.
-  That comment is the only thing developers read (BUGZILLA-UI Excel "Comments (newest first)" column), so
-  write it as if they've never seen the ticket.
+- **Comment only when the status changes** (owner, 2026-10-27; replaces "a dated note on every open bug every
+  run", which reset the tracker's "Waiting (days)" and emailed every bug's people each run). Open and still
+  broken → no comment, no new proof, bug left as it is. Developer marked it RESOLVED/FIXED and it still fails →
+  REOPENED with a comment and proof. Check passes → CLOSED with a comment. Every comment the bench writes is
+  dated, self-contained and plain English: developers read only the newest one (BUGZILLA-UI export
+  "Comments (newest first)").
 - **Post-deploy flow:** when the owner names bugs to mark fixed, wait for explicit "deploy done", then live-verify
   each one: CLOSED with what was checked, or REOPENED / left open with what still failed. Never close on request alone.
 - **Hand-filed bugs** (no `[KP-xxxxxx]` tag) are never auto-closed; they need a by-hand re-check.

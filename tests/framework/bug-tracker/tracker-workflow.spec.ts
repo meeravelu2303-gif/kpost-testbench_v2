@@ -56,7 +56,6 @@ const input = (results: ValidationResult[]): FilingInput => ({
   validationReports: [{ suite: 'kpost-api', results } as unknown as ValidationReport],
   uiRecords: [],
   uiEnvironmentalOnly: [],
-  uiProof: [],
 });
 
 interface Bug {
@@ -75,17 +74,21 @@ const bug = (id: number, endpoint: string, status: string, resolution = ''): Bug
 });
 
 /** A fake Bugzilla: open bugs, the RESOLVED/FIXED queue, and a record of every write. */
-function stub(open: Bug[], awaitingRetest: Bug[]) {
+function stub(open: Bug[], awaitingRetest: Bug[], comments: Record<number, string[]> = {}) {
   const writes: { method: string; path: string; body: Record<string, unknown> }[] = [];
   const real = globalThis.fetch;
   globalThis.fetch = ((url: string | URL, init?: RequestInit) => {
     const u = String(url);
     const method = init?.method ?? 'GET';
     const path = u.replace(config.url, '').split('?')[0]!;
+    const thread = /^\/bug\/(\d+)\/comment$/.exec(path);
     let body: unknown = {};
     if (method === 'GET' && u.includes('resolution=---')) body = { bugs: open };
     else if (method === 'GET' && u.includes('status=RESOLVED')) body = { bugs: awaitingRetest };
-    else if (method !== 'GET') {
+    else if (method === 'GET' && thread) {
+      const id = Number(thread[1]);
+      body = { bugs: { [id]: { comments: (comments[id] ?? []).map((text) => ({ text })) } } };
+    } else if (method !== 'GET') {
       const sent = typeof init?.body === 'string' ? init.body : '{}';
       writes.push({ method, path, body: JSON.parse(sent) as Record<string, unknown> });
     }
@@ -94,7 +97,45 @@ function stub(open: Bug[], awaitingRetest: Bug[]) {
   return { writes, restore: () => (globalThis.fetch = real) };
 }
 
+const failed = (endpoint: string): ValidationResult => ({
+  ...passed(endpoint),
+  status: 'FAILED',
+  message: 'expected 400, got 500',
+});
+
 test.describe('the tracker workflow @framework', () => {
+  test('an open bug that is still broken, not re-checked or hand-filed gets nothing at all', async () => {
+    const { writes, restore } = stub(
+      [
+        bug(401, 'POST /v2/d', 'CONFIRMED'),
+        bug(402, 'POST /v2/not-run', 'IN_PROGRESS'),
+        { ...bug(403, 'POST /v2/d', 'REOPENED'), summary: '[KP-HANDFILED] POST /v2/d: by hand' },
+      ],
+      [],
+    );
+    try {
+      const result = await runFiling(input([failed('POST /v2/d')]), config, log);
+      // Owner, 2026-10-27: open and still broken → no comment, keep it as it is.
+      expect(writes).toEqual([]);
+      expect(result.resolved?.confirmedFailing).toBe(1);
+      expect(result.resolved?.byHand?.map((b) => b.bugId)).toEqual([403]);
+    } finally {
+      restore();
+    }
+  });
+
+  test('the "check now passes" note on a bug that waits on a person is posted only once', async () => {
+    const { writes, restore } = stub([bug(501, 'POST /v2/e', 'PENDING_APPROVAL')], [], {
+      501: ['Re-checked by the automated test bench on …\n\nResult: THE CHECK NOW PASSES. …'],
+    });
+    try {
+      await runFiling(input([passed('POST /v2/e')]), config, log);
+      expect(writes, 'already said on an earlier run').toEqual([]);
+    } finally {
+      restore();
+    }
+  });
+
   test('a passing open bug is closed as CLOSED: RESOLVED/FIXED with the note, then CLOSED', async () => {
     const { writes, restore } = stub([bug(101, 'POST /v2/a', 'IN_PROGRESS')], []);
     try {

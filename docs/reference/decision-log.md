@@ -3,7 +3,26 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — Aligned with the BUGZILLA-UI tracker's workflow; the bench is the re-test
+### 2026-10-27 (latest) — No comment on an open bug that is still broken
+
+Owner: "when the bug has open status and is still broken, don't add any comment, just keep it; when the
+developers update the open bug as RESOLVED/FIXED, that time reopen it with a comment". This replaces the
+rule "every open bug gets a dated note every full run" (about 91 notes and emails per KPost UI filing, and
+each one reset the tracker's "Waiting (days)").
+
+- **Filer:** an open bug with the same tag is now `still-open` (was `commented`): no comment, no proof.
+  An open bug matched by fault (shifted tag) or an untagged hand-filed one only gets the tag added to its
+  whiteboard, so later runs find it. Reopening a RESOLVED/FIXED or CLOSED bug is unchanged: REOPENED,
+  with the comment and proof.
+- **Status pass:** still broken, not re-checked, hand-filed, KDoc paused → no comment, no dated proof
+  upload (`attachDatedProof` and `FilingInput.uiProof` removed). A pass still closes as CLOSED with its
+  note. The one remaining note on an open bug is "the check now passes" on a bug waiting on a person,
+  posted once (a later run sees it and stays quiet).
+- `report:filing` shows STILL BROKEN — already open, left as is; and WILL TAG for adoptions.
+- Verified: `check`; `framework`; new tests pin "open and still broken → no write at all" and "the
+  waiting note is posted once".
+
+### 2026-10-27 — Aligned with the BUGZILLA-UI tracker's workflow; the bench is the re-test
 
 Owner: "analyse the Bugzilla UI project completely, understand the full flow and features, then make sure the
 bench has the correct bug-tracker setup". BUGZILLA-UI (backend lib/routes, frontend, ops/bugzilla setup

@@ -447,7 +447,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
       ],
       counts: {
         created: 1,
-        commented: 0,
+        'still-open': 0,
         reopened: 0,
         adopted: 0,
         'judged-skip': 0,
@@ -649,7 +649,7 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     ).toBe(true);
   });
 
-  test('build-independent dedup: a shifted-tag fault comments on the existing bug, no duplicate', async () => {
+  test('build-independent dedup: a shifted-tag fault tags the existing bug, no duplicate, no comment', async () => {
     // An existing open bug for POST /v2/common/pinCode + null-value, filed against the OLD build.
     const calls = stubBugzilla([
       {
@@ -673,7 +673,10 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(outcome.counts.created, 'no duplicate is created across the build change').toBe(0);
     expect(outcome.counts.adopted, 'it adopts the existing ticket').toBe(1);
     expect(outcome.entries[0]?.bugId).toBe(50);
-    expect(calls.some((c) => c.url.includes('/bug/50/comment'))).toBe(true);
+    // Open and still broken: only the new tag is added, so later runs find it by tag.
+    expect(calls.some((c) => c.url.includes('/bug/50/comment'))).toBe(false);
+    const tagged = calls.find((c) => c.method === 'PUT' && c.url.includes('/bug/50'));
+    expect((tagged?.body as { whiteboard?: string })?.whiteboard).toContain('[KPV2-0BC222]');
   });
 
   test('build-independent dedup: a genuinely new (endpoint,validator) still files', async () => {
@@ -729,9 +732,17 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     const shot = path.join(dir, 'shot.png');
     writeFileSync(shot, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 
-    // The ticket is OPEN and already carries this proof file from a previous run.
+    // The ticket was FIXED, so it is reopened, and it already carries this proof file.
     const calls = stubBugzilla(
-      [{ id: 7, summary: '[KP-UIPROOF] the profile screen', is_open: true, product: 'KPost UI' }],
+      [
+        {
+          id: 7,
+          summary: '[KP-UIPROOF] the profile screen',
+          is_open: false,
+          resolution: 'FIXED',
+          product: 'KPost UI',
+        },
+      ],
       { existingAttachments: ['KP-UIPROOF-screenshot-chromium-.png'] },
     );
     await filer().file([
@@ -754,20 +765,21 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     );
     expect(imageUploads, 'the already-attached screenshot is not uploaded again').toHaveLength(0);
     expect(
-      calls.some((c) => c.url.includes('/comment')),
-      'it still comments',
+      calls.some((c) => c.method === 'PUT' && /\/bug\/7\?/.test(c.url)),
+      'it is still reopened',
     ).toBe(true);
   });
 
-  test('re-running comments on the open ticket instead of duplicating it', async () => {
+  test('a re-run leaves an open, still-broken ticket as it is: no duplicate, no comment', async () => {
     const calls = stubBugzilla([
       { id: 7, summary: '[KPV2-ABC123] POST /users: expected 400/422, got 500', is_open: true },
     ]);
     const outcome = await filer().file([candidate()]);
 
-    expect(outcome.counts.commented).toBe(1);
+    expect(outcome.counts['still-open']).toBe(1);
     expect(outcome.counts.created, 'a second run must never create a duplicate').toBe(0);
-    expect(calls.some((c) => c.url.includes('/comment'))).toBe(true);
+    // Owner, 2026-10-27: an open bug that is still broken gets nothing, not even new proof.
+    expect(calls.some((c) => c.method !== 'GET')).toBe(false);
   });
 
   test('the same tag on a SIBLING product is not matched — the finding files in its own product', async () => {
@@ -791,12 +803,12 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
       }),
     ]);
 
-    expect(outcome.counts.commented, 'must NOT comment on the sibling-product ticket').toBe(0);
+    expect(outcome.counts['still-open'], 'must NOT match the sibling-product ticket').toBe(0);
     expect(outcome.counts.created, 'files its own ticket in its own product').toBe(1);
     expect(calls.some((c) => c.url.includes('/comment'))).toBe(false);
   });
 
-  test('the same tag in the SAME product still comments (no duplicate)', async () => {
+  test('the same tag in the SAME product is the same bug (no duplicate, no comment)', async () => {
     const calls = stubBugzilla([
       {
         id: 10,
@@ -807,9 +819,9 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     ]);
     const outcome = await filer().file([candidate({ product: 'KPost API' })]);
 
-    expect(outcome.counts.commented, 'same product, same tag → comment').toBe(1);
+    expect(outcome.counts['still-open'], 'same product, same tag → the same bug').toBe(1);
     expect(outcome.counts.created).toBe(0);
-    expect(calls.some((c) => c.url.includes('/comment'))).toBe(true);
+    expect(calls.some((c) => c.url.includes('/comment'))).toBe(false);
   });
 
   test('a ticket a human closed as INVALID is never re-filed', async () => {
@@ -916,13 +928,13 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(held.counts.created).toBe(0);
   });
 
-  test('a flow-triggered server error on an OPEN ticket still just comments', async () => {
+  test('a flow-triggered server error on an OPEN ticket leaves it as it is', async () => {
     stubBugzilla([
       { id: 9, summary: '[KPV2-ABC123] POST /users: write flow received HTTP 500', is_open: true },
     ]);
     const commented = await filer().file([candidate({ classification: 'flow.server-error' })]);
 
-    expect(commented.counts.commented).toBe(1);
+    expect(commented.counts['still-open']).toBe(1);
     expect(commented.counts['needs-review']).toBe(0);
   });
 
@@ -1068,12 +1080,12 @@ test.describe('Bug filing', { tag: '@framework' }, () => {
     expect(newRun.entries[0]?.decision).toBe('needs-review');
     expect(freshCalls.some((c) => c.method === 'POST' && /\/bug\?/.test(c.url))).toBe(false);
 
-    // Already tracked (open ticket with the same tag): comment, never held.
+    // Already tracked (open ticket with the same tag): left as is, never held.
     stubBugzilla([
       { id: 700, summary: '[KP-AGG003] POST /ep: error responses failed', is_open: true },
     ]);
     const reRun = await filer().file([aggregate!]);
-    expect(reRun.entries[0]?.decision).toBe('commented');
+    expect(reRun.entries[0]?.decision).toBe('still-open');
   });
 
   test('a partially-fixed fault maps back to its FIXED ticket (reopen, not re-file)', () => {

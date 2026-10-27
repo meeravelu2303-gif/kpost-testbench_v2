@@ -41,9 +41,7 @@ export interface ResolveSummary {
   /** Kept-open bugs whose check ran here and still failed (`notVerified`: it did not run). */
   confirmedFailing: number;
   notVerified: number;
-  /**
-   * Kept-open bugs that got a dated status note this run (or already had one from the filing pass).
-   */
+  /** "The check now passes" notes posted to bugs waiting on a person (the only note an open bug gets). */
   touched: number;
   /**
    * Open bugs no run can ever close (hand-filed, speed, or no single check matches them): a person
@@ -68,7 +66,7 @@ const OWNER_BY_PRODUCT = new Map(
 );
 
 /** Decisions that mean a Bugzilla ticket now exists (or would, on a dry run). */
-const TICKETED = new Set(['created', 'commented', 'reopened', 'adopted', 'would-file']);
+const TICKETED = new Set(['created', 'still-open', 'reopened', 'adopted', 'would-file']);
 
 interface RunTotals {
   endpoints: number;
@@ -164,7 +162,7 @@ function headline(input: BugReportInput): string {
   const n = input.outcome.dryRun ? c['would-file'] : c.created;
   return (
     `${t.endpoints} endpoints, ${t.validations} checks (${t.passed} passed / ${t.failed} failed) → ` +
-    `${valid} valid defects → ${verb} ${n}, commented ${c.commented}, reopened ${c.reopened}, ` +
+    `${valid} valid defects → ${verb} ${n}, already open ${c['still-open']}, reopened ${c.reopened}, ` +
     `${input.rejected.length} rejected as invalid`
   );
 }
@@ -274,7 +272,7 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
       ? 'DRY RUN — nothing was written to Bugzilla'
       : 'Filed to Bugzilla';
     lines.push(
-      `**${mode}.** created ${c.created}, commented (already open) ${c.commented}, reopened ${c.reopened}, ` +
+      `**${mode}.** created ${c.created}, already open (left as is) ${c['still-open']}, reopened ${c.reopened}, ` +
         `adopted ${c.adopted}, judged-not-a-defect ${c['judged-skip']}, needs manual review ${c['needs-review']}, ` +
         `failed ${c.failed}` +
         (input.outcome.dryRun ? `, would-file ${c['would-file']}` : '') +
@@ -300,7 +298,10 @@ export function buildBugReportMarkdown(input: BugReportInput): string {
         `NOT exercised this run (a write/OTP endpoint, or a UI test that didn't run this pass) so they ` +
         `are unverified on this host` +
         (r.failed ? `; ${r.failed} could not be updated` : '') +
-        `. **${r.touched}** of those kept-open bugs got a fresh dated status comment this run.` +
+        `. Open bugs that are still broken or not re-checked are left as they are, with no comment` +
+        (r.touched
+          ? `; **${r.touched}** "the check now passes" note(s) went to bugs waiting on a person.`
+          : '.') +
         `${r.dryRun ? ' Run the non-dry filing command to apply these.' : ' A later run reopens any that recur.'}`,
       '',
     );

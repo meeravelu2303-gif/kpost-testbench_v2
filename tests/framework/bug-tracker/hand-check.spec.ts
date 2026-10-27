@@ -78,7 +78,6 @@ test.describe('re-check by hand list @framework', () => {
         validationReports: [{ suite: 'kpost-api', results: [] } as unknown as ValidationReport],
         uiRecords: [],
         uiEnvironmentalOnly: [],
-        uiProof: [],
       };
       const config = {
         ...readBugzillaConfig(),

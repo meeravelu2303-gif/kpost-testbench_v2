@@ -35,7 +35,6 @@ test.describe('bug:apply plan gate @framework', () => {
     validationReports: [],
     uiRecords: [],
     uiEnvironmentalOnly: [],
-    uiProof: [],
     ...over,
   });
   const refusal = (input: FilingInput, at = now): string => {

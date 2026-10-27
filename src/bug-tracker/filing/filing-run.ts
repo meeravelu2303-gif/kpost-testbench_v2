@@ -1,11 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { FullResult } from '@playwright/test/reporter';
-import {
-  holdAggregatesForReview,
-  type BugCandidate,
-  type ProofFile,
-} from '../findings/bug-candidate';
+import { holdAggregatesForReview, type BugCandidate } from '../findings/bug-candidate';
 import { BugzillaClient, type BugSummary } from '../bugzilla/bugzilla-client';
 import { BugzillaFiler, type FilingOutcome } from '../bugzilla/bugzilla-filer';
 import { applyValidityGate, type GateOutcome, type RunValidity } from '../gates/validity-gate';
@@ -15,7 +11,6 @@ import {
   classifyResolve,
   classifyUiResolve,
   parseAffectedEndpoints,
-  uiTitleMatches,
   type ResolveDecision,
 } from '../status/verify-resolve';
 import { WAITING_ON_A_PERSON, type BugzillaConfig } from '../../config/bugzilla.config';
@@ -61,8 +56,6 @@ export interface FilingInput {
   uiRecords: UiTestRecord[];
   /** `project::title` of UI tests whose every failure was environmental: not run, for the status pass. */
   uiEnvironmentalOnly: string[];
-  /** This run's failure proof per `project::title`, attached to bugs that failed again. */
-  uiProof: [string, ProofFile[]][];
   /** Set by `bug:apply` once the plan has been filed, so it can never be applied twice. */
   appliedAt?: string;
 }
@@ -135,7 +128,7 @@ export async function runFiling(
     const touchedByFiler = new Set(
       (outcome?.entries ?? [])
         .filter(
-          (e) => e.bugId && ['commented', 'reopened', 'adopted', 'created'].includes(e.decision),
+          (e) => e.bugId && ['still-open', 'reopened', 'adopted', 'created'].includes(e.decision),
         )
         .map((e) => e.bugId as number),
     );
@@ -164,6 +157,9 @@ export const HAND_FILED = 'hand-filed';
 
 /** Reason prefix: the check passed, but the bug waits on a person (WAITING_ON_A_PERSON). */
 const WAITING = 'check passes, but the bug is ';
+
+/** The one note an open bug can get, so a later run sees it was already said. */
+const PASSES_NOTE = 'THE CHECK NOW PASSES.';
 
 /** KDoc/KOS/KWord is paused by owner order: its open bugs only get a dated "paused" note. */
 function isPausedModule(bug: BugSummary, decision: ResolveDecision): boolean {
@@ -246,7 +242,6 @@ async function statusPass(
   const products = new Set(input.validationReports.map((r) => suiteFor(r.suite).bugzilla.product));
   for (const product of uiProducts) products.add(product);
   const benchTag = new RegExp(`\\[${config.tagPrefix}-[0-9A-F]{6}\\]`, 'i');
-  const proof = new Map(input.uiProof);
 
   /** Whether this run verified the bug fixed: its own check ran again and passed cleanly. */
   const classify = async (bug: BugSummary, product: string): Promise<ResolveDecision> => {
@@ -272,14 +267,6 @@ async function statusPass(
       summary.checked += 1;
       const touched = touchedByFiler.has(bug.id);
       let decision = await classify(bug, product);
-      let proofNote: string | undefined;
-      if (
-        uiProducts.has(product) &&
-        decision.action === 'keep' &&
-        /still failed/i.test(decision.reason) &&
-        !dryRun
-      )
-        proofNote = await attachDatedProof(client, bug, proof, run.at);
       // A person's decision is pending: a passing check is reported, never acted on.
       const waitingOn = WAITING_ON_A_PERSON.get(bug.status ?? '');
       if (decision.action === 'resolve' && waitingOn) {
@@ -296,7 +283,7 @@ async function statusPass(
           why,
         });
       }
-      await applyDecision(client, bug, decision, summary, dryRun, touched, log, run, proofNote);
+      await applyDecision(client, bug, decision, summary, dryRun, touched, log, run);
     }
 
     // The tracker's "Ready for re-test" queue: the bench is the re-test. A pass closes the bug; a
@@ -316,7 +303,11 @@ async function statusPass(
   return summary;
 }
 
-/** One decision, one bug: close it, or give it its dated note (once per run). */
+/**
+ * One decision, one bug: close it, or leave it. An open bug that is still broken, or was not
+ * re-checked, gets no comment (owner, 2026-10-27); the only note is "the check now passes" on a bug
+ * that waits on a person, posted once.
+ */
 async function applyDecision(
   client: BugzillaClient,
   bug: BugSummary,
@@ -326,7 +317,6 @@ async function applyDecision(
   touchedByFiler: boolean,
   log: Logger,
   run: CheckedRun,
-  proofNote?: string,
 ): Promise<void> {
   if (decision.action !== 'resolve') {
     summary.keptOpen += 1;
@@ -339,11 +329,14 @@ async function applyDecision(
     } else if (/still fail|fails somewhere|reproduced/i.test(decision.reason))
       summary.confirmedFailing += 1;
     else summary.notVerified += 1;
-    if (touchedByFiler || dryRun) {
+    if (!decision.reason.startsWith(WAITING) || touchedByFiler) return;
+    const said = (await client.commentTexts(bug.id)).some((text) => text.includes(PASSES_NOTE));
+    if (said) return;
+    if (dryRun) {
       summary.touched += 1;
       return;
     }
-    const res = await client.addComment(bug.id, plainStatusComment(bug, decision, proofNote, run));
+    const res = await client.addComment(bug.id, plainStatusComment(bug, decision, undefined, run));
     if ('error' in res)
       log.warn(`auto-resolve: bug ${bug.id} status comment failed — ${res.error}`);
     else summary.touched += 1;
@@ -366,58 +359,6 @@ async function applyDecision(
   } else {
     summary.resolved.push(entry);
   }
-}
-
-/**
- * Attaches the run's failure screenshot and diagnosis to a UI bug that failed again, named by date and
- * browser so a same-day re-run does not upload twice. Returns a note for the comment.
- */
-async function attachDatedProof(
-  client: BugzillaClient,
-  bug: BugSummary,
-  proofByTest: ReadonlyMap<string, ProofFile[]>,
-  checkedAt: string,
-): Promise<string | undefined> {
-  const title = bug.summary.replace(/^\[[^\]]+]\s*/, '').trim();
-  const day = checkedAt.slice(0, 10);
-  const existing = await client.attachmentNames(bug.id);
-  const attached: string[] = [];
-  const upload = async (fileName: string, file: ProofFile, summary: string): Promise<void> => {
-    if (existing.has(fileName)) {
-      attached.push(fileName);
-      return;
-    }
-    let data: Buffer;
-    try {
-      data = readFileSync(file.path);
-    } catch {
-      return; // the proof file is gone (a later run cleared test-results); the note says nothing
-    }
-    if (await client.attachFile(bug.id, { fileName, summary, data, contentType: file.contentType }))
-      attached.push(fileName);
-  };
-  for (const [key, proof] of proofByTest) {
-    const split = key.indexOf('::');
-    const project = key.slice(0, split);
-    if (!uiTitleMatches(title, key.slice(split + 2))) continue;
-    const shot = proof.find((p) => p.contentType.startsWith('image/'));
-    if (shot)
-      await upload(
-        `proof-${day}-${project}-bug${bug.id}${path.extname(shot.path) || '.png'}`,
-        shot,
-        `Proof ${day} (${project}): the screen test failed again in this run — screenshot of the failure`,
-      );
-    const diagnosis = proof.find((p) => p.label.startsWith('Failure diagnosis'));
-    if (diagnosis)
-      await upload(
-        `diagnosis-${day}-${project}-bug${bug.id}.txt`,
-        diagnosis,
-        `Failure diagnosis ${day} (${project}): error stack, the steps before the failure, console errors and failed requests`,
-      );
-  }
-  return attached.length
-    ? `Proof: this run's failure evidence is attached to this bug (${attached.join(', ')}).`
-    : undefined;
 }
 
 /**
@@ -449,7 +390,7 @@ export function plainStatusComment(
     const status = (bug.status ?? '').replace(/_/g, ' ');
     const waitingOn = WAITING_ON_A_PERSON.get(bug.status ?? '') ?? 'waiting for a person';
     return (
-      `${head}Result: THE CHECK NOW PASSES. The automated check for this exact problem ran again and ` +
+      `${head}Result: ${PASSES_NOTE} The automated check for this exact problem ran again and ` +
       `passed. The bug is ${status} (${waitingOn}), so the bench leaves its status to that person.\n` +
       `Bottom line: once that decision is made, the next run closes it if the check still passes.`
     );

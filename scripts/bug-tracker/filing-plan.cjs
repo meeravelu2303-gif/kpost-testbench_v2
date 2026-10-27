@@ -30,7 +30,8 @@ const line = (e) =>
 
 const willCreate = [...by('would-file'), ...by('created')];
 const willReopen = [...by('reopened')];
-const willComment = [...by('commented')];
+// 'commented' is the same decision in reports written before 2026-10-27, when open bugs got a note.
+const stillOpen = [...by('still-open'), ...by('commented')];
 const willAdopt = [...by('adopted')];
 const needsReview = [...by('needs-review')];
 const skipped = [...by('judged-skip')];
@@ -63,11 +64,16 @@ console.log(H(`WILL REOPEN — regressions of resolved bugs (${willReopen.length
 if (willReopen.length) willReopen.forEach((e) => console.log(line(e)));
 else console.log('    (none)');
 
-console.log(
-  H(`WILL COMMENT — existing open bugs re-confirmed (${willComment.length + willAdopt.length})`),
-);
-[...willComment, ...willAdopt].forEach((e) => console.log(line(e)));
-if (!willComment.length && !willAdopt.length) console.log('    (none)');
+console.log(H(`STILL BROKEN — already open, left as is, no comment (${stillOpen.length})`));
+stillOpen.forEach((e) => console.log(line(e)));
+if (!stillOpen.length) console.log('    (none)');
+
+if (willAdopt.length) {
+  console.log(
+    H(`WILL TAG — an open bug already describes it; tag added, no comment (${willAdopt.length})`),
+  );
+  willAdopt.forEach((e) => console.log(line(e)));
+}
 
 console.log(
   H(`WILL CLOSE — verified fixed this run (${Array.isArray(closedList) ? closedList.length : 0})`),
