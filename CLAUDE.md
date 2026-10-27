@@ -32,7 +32,12 @@ Owners are declared once in `src/config/ownership.config.ts`; a framework test f
 payload or a rule; the live server may be newer than the copy (verify live before filing):**
 `KPOST_REACTJS_2023_V1` (the React front end, `src/components/*`, `src/Services/*`), `KPOST_V5.0`
 (KPost backend, Java/Spring), `Kpost_Kmail_5.0` (KMail backend), `Admin_Module` (Admin backend),
-`ADMIN_HR_MODULES_25` (Admin/HR-Setup front end). FRDs: `D:\Kpost Documents`.
+`ADMIN_HR_MODULES_25` (Admin/HR-Setup front end), `kpost5_flutter` (the Android/iOS app, branch `Test_ENV`).
+FRDs: `D:\Kpost Documents`.
+
+**Mobile app (decided 2026-10-27, not built yet):** Patrol plus open-source helpers only, Android on this PC,
+iOS later on a Mac. Design, coverage and the developer blockers (live Razorpay key, live hosts in the test
+build): `docs/proposals/mobile-testing.md`.
 
 Modules: Signup & Login, Katchup (chat with a Subject on every message), Group, Kall, KMail, KDirectory,
 Profile, Contacts, Settings, KDiary, KBooking, Admin/HR-Setup. Requirement ids `FR-xx-NNN` come from the

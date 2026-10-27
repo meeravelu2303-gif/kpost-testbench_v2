@@ -25,9 +25,10 @@ One line per document. Start with [`CLAUDE.md`](../CLAUDE.md) (the map and the r
 
 ## `proposals/` — suggested changes, not applied
 
-| Document                                     | What it is                                                                         |
-| -------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [`frd-updates.md`](proposals/frd-updates.md) | New FRD requirements for features the tests exercise but the per-module FRD lacks. |
+| Document                                           | What it is                                                                                                                                   |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`frd-updates.md`](proposals/frd-updates.md)       | New FRD requirements for features the tests exercise but the per-module FRD lacks.                                                           |
+| [`mobile-testing.md`](proposals/mobile-testing.md) | The KPost Flutter mobile app: Patrol and the open-source tools around it, coverage, blockers, order of work (decided 2026-10-27, not built). |
 
 ## `modules/` — per-module analyses the API specs were built from
 

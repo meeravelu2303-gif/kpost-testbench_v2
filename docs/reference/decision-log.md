@@ -3,7 +3,32 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — Only a real blocker may stop a test
+### 2026-10-27 (latest) — Mobile app testing: Patrol, open-source tools only
+
+Owner: "which testing tool is better for that mobile application … I need full open source not paid one …
+it must support all tests properly and with production-grade coverage". The KPost mobile app is Flutter
+(`D:\KPOST_PROJECTS\kpost5_flutter`, `Test_ENV`, Android + iOS), which Playwright cannot drive. Design in
+`docs/proposals/mobile-testing.md`; nothing is built yet.
+
+- **Patrol is the main tool.** The app has 961 tappable widgets but 22 keys and 4 semantics labels, and many
+  native parts (permissions, pickers, web views, push, CallKit, Agora/Jitsi). Patrol finds Flutter widgets by
+  text, type or icon (no keys needed) AND drives native screens. Rejected: Appium (slower, flakier, same test
+  build), Maestro as main (sees only labelled widgets), `integration_test` alone (stops at native pop-ups),
+  Espresso/XCUITest, Detox.
+- **Helpers for what Patrol cannot do:** adb + emulator (kill/reopen, upgrade, fingerprint, SMS, camera,
+  speed), KPost API calls inside the test as the second user, Flutter accessibility checks, MobSF +
+  mitmproxy (security), Maestro CLI for a smoke test of the signed store build, DeviceFarmer/scrcpy for real
+  phones later. All open source; Firebase Test Lab, BrowserStack and Crashlytics dropped (paid or closed).
+- **Google Play emulator images** (free, closed): push, SMS autofill, ML Kit, maps, speech and location need
+  Play Services. The test tools themselves stay open source.
+- **Android now, on this PC; iOS later, on a Mac** (Apple's Xcode runs only on macOS; a macOS VM here would
+  break Apple's license). The same Patrol tests run on both.
+- **Blockers for the developers first** (source review, not yet live-verified): payments use the live
+  Razorpay key; KMail thumbnails, the signup captcha and K-AI call live hosts; the app trusts any HTTPS
+  certificate (`main.dart`). Payments, signup and KMail images wait until the first two are fixed.
+- Mobile uses its own qatest accounts (one session per account); the developers' repo is not edited.
+
+### 2026-10-27 — Only a real blocker may stop a test
 
 Owner: "sometimes unrelated tests also did not run and find the bugs … when we have the blocker bug, until
 that one bug is fixed, only then is it acceptable that other tests wait". Evidence: Bugzilla showed bugs on
