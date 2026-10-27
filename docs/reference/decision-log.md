@@ -3,7 +3,13 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — The Excel-gap and OTP reports removed; the OTP check reads the contracts
+### 2026-10-27 (latest) — `postman/` removed
+
+The Admin collection (committed 2026-10-26) was a hand-off for reproducing #13215 (Admin refused a valid token) and
+#13237 (role-posting Assign) outside the bench. Nothing in the bench read it, both bugs are fixed (Save → Assign
+created the staff employee this week), and it still pointed at the old 192.168.10.4 host. In git history if needed.
+
+### 2026-10-27 — The Excel-gap and OTP reports removed; the OTP check reads the contracts
 
 Owner: the gap and OTP lists were temporary references, not needed. Removed `excel-gaps.csv/.md`,
 `otp-dependent-endpoints.md`, their scripts (`excel-gap-report.cjs`, `otp-dependency-report.cjs`) and the
