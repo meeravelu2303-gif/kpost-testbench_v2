@@ -1,7 +1,7 @@
 # Excel gaps — what to confirm or fill in the workbook
 
 Generated from the parsed contracts. 231 rows need attention; open
-`contracts/excel-gaps.csv` in Excel for the full list — it has **Tab**, **Row** and **FillCell**,
+`docs/generated/excel-gaps.csv` in Excel for the full list — it has **Tab**, **Row** and **FillCell**,
 so every line names the cell it is talking about.
 
 ## How the HTTP method is decided now

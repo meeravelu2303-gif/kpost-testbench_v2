@@ -1,6 +1,10 @@
 import { katchupApis, uncoveredKatchupPaths } from '@api/definitions/kpost/katchup/index';
 import { workbookContract } from '@api/contract/workbook-contract';
-import { KATCHUP_MESSAGE_TYPE, KATCHUP_SHARE_TYPE, KATCHUP_STATUS } from '@api/contract/kpost-types';
+import {
+  KATCHUP_MESSAGE_TYPE,
+  KATCHUP_SHARE_TYPE,
+  KATCHUP_STATUS,
+} from '@api/contract/kpost-types';
 import { plannedCases } from '@engine/endpoint-cases';
 import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';

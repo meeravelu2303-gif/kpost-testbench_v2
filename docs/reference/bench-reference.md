@@ -487,7 +487,7 @@ Types: 13 enum groups → `contracts/kpost-types.json`, exposed typed via
 ### Blocked on the repo owner
 
 Methods are settled — **nothing needs a method decision**. 337 endpoints are usable. What remains
-is genuinely missing data, all of it in `contracts/excel-gaps.csv`, one row per item, with
+is genuinely missing data, all of it in `docs/generated/excel-gaps.csv`, one row per item, with
 **FillCell** naming the cell:
 
 1. **185 endpoints have no sample response, or no payload where the Method column says POST (P2).**
@@ -500,7 +500,7 @@ is genuinely missing data, all of it in `contracts/excel-gaps.csv`, one row per 
 4. **Credentials per environment** (`AUTH_PRINCIPALS`, `TEST_COMPANY_ID`) — without them every real
    endpoint answers 401 and the bench would report a credential problem as an API defect.
 5. **Status codes and a public/token flag** in the workbook (not per-row in the gap CSV; see
-   `contracts/excel-gaps.md`, section "not per-row").
+   `docs/generated/excel-gaps.md`, section "not per-row").
 
 After any new dump: `npm run contract:excel` (no path needed — it takes the newest workbook in the
 repo) → `npm run contract:coverage` → `npm run contract:gaps`.

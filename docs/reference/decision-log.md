@@ -3,7 +3,23 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-26 (latest) — Repository clean-up: unused files removed, docs and Admin API tests reorganised
+### 2026-10-27 (latest) — Workbook reports moved to `docs/generated/`; openapi verified against the Excel
+
+Owner asked whether the openapi files match the Excel, and why `contracts/` is needed. A fresh `contract:excel` on
+`KPOST API (6).xlsx` reproduced `openapi/kpost-api` (266 operations) and `kmail-api` (71) byte for byte. Every
+workbook path is either in openapi, one of the 44 excluded rows in `_conversion-report.json`, or an old name in a
+notes column whose URL column has the current endpoint. The Excel stays: it carries what openapi does not (the Types
+tab → `kpost-types.json`, excluded rows, notes) and `contract:excel`/`contract:coverage` read it.
+
+- `contracts/` now holds only converter output and inputs: the two `*.contract.json` (every row, read by
+  `contract:coverage`/`gaps`/`otp`), `kpost-types.json` (imported at runtime), `admin-api.source.json` (offline
+  cache for `contract:admin`) and the gitignored `_*.json` intermediates.
+- `excel-gaps.csv`/`.md` and `otp-dependent-endpoints.md` are reports a person reads, so they moved to
+  `docs/generated/`; the two scripts, `live-safety.spec.ts` and every comment that cited them follow.
+- `contract:admin` refresh not done: 192.168.11.11 (9595 and 27017) was unreachable on 2026-10-27, and the script's
+  cache fallback would only relabel the 2026-09-15 copy with the new host, so that change was reverted.
+
+### 2026-10-26 — Repository clean-up: unused files removed, docs and Admin API tests reorganised
 
 Owner: "production grade folder structure … remove unused and duplicate files". Audit first (import graph from
 every entry point, script references, content hashes): 680 of 688 code files reachable, no duplicates.
@@ -30,7 +46,7 @@ Owner: "cover response schemas, XSS on updates, oversized payloads".
 - **Response schemas** (`src/api/definitions/admin/response-schemas.ts`), from the backend classes at 829331d:
   types only (fields optional + nullable; envelope and record `id` required; unknown keys allowed), each
   route's `value` shaped as its controller returns it. Wired in `defineAdminEndpoint` (`config.responseSchema
-  ?? ADMIN_RESPONSE_SCHEMAS[id]`). **All 38 pass live.** The HR reporting hierarchy returns ONE record (its
+?? ADMIN_RESPONSE_SCHEMAS[id]`). **All 38 pass live.** The HR reporting hierarchy returns ONE record (its
   workplace twin a list) — my schema was wrong, corrected. The suspended list (empty → 400, #320) is
   schema-checked inside the role-posting lifecycle, where it is non-empty.
 - **New `tests/api/admin/input-hardening.spec.ts`** (6 record types; role postings excluded: their text goes

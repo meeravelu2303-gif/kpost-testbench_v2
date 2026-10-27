@@ -16,7 +16,7 @@ defects in it and files them to Bugzilla, routed to the developer who owns the m
 | Bugzilla product | Suite       | Owner                                    | Host (from `.env`)                                                      |
 | ---------------- | ----------- | ---------------------------------------- | ----------------------------------------------------------------------- |
 | KPost API        | `kpost-api` | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (testingapi.kpostindia.com)                        |
-| KPost Admin      | `admin-api` | Karan S (karans@kpost.in)                | `ADMIN_API_BASE_URL` (http://192.168.11.11:9595, MongoDB same IP)      |
+| KPost Admin      | `admin-api` | Karan S (karans@kpost.in)                | `ADMIN_API_BASE_URL` (http://192.168.11.11:9595, MongoDB same IP)       |
 | KMail API        | `kmail-api` | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
 | KPost UI         | `kpost-ui`  | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                        |
 | KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/e2e-admin`      |

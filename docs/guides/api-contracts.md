@@ -34,9 +34,9 @@ scripts/otp-dependency-report.cjs  the OTP-dependency report
         ├── contracts/kpost-api.contract.json      every KPost row, usable or not, with reasons
         ├── contracts/kmail-api.contract.json      every KMail row, same shape
         ├── contracts/kpost-types.json             the Types tab (13 enum groups)
-        ├── contracts/excel-gaps.csv               one row per gap, opens in Excel
-        ├── contracts/excel-gaps.md                the same, summarised
-        ├── contracts/otp-dependent-endpoints.md   every endpoint that sends, consumes or requires an OTP
+        ├── docs/generated/excel-gaps.csv     one row per gap, opens in Excel
+        ├── docs/generated/excel-gaps.md      the same, summarised
+        ├── docs/generated/otp-dependent-endpoints.md  every endpoint that sends, consumes or requires an OTP
         ├── openapi/kpost-api.openapi.json         ONLY the usable KPost rows
         ├── openapi/kmail-api.openapi.json         ONLY the usable KMail rows
         │
@@ -179,7 +179,7 @@ run with `layout changed on tab "<name>" — refusing to convert`, naming the co
 alternative — reading the wrong cells and producing a plausible-looking contract — is far worse than
 a failed run.
 
-`contracts/excel-gaps.csv` carries a **FillCell** column naming the exact destination cell for every
+`docs/generated/excel-gaps.csv` carries a **FillCell** column naming the exact destination cell for every
 row that needs a method decision (`KatchupAPI!Q7`), taken from the same conversion report, so the
 list and the converter can never disagree about where the method belongs.
 

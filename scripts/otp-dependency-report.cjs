@@ -22,7 +22,7 @@
  * matters most here: those endpoints look clean in the contract and fail on live anyway.
  *
  * Usage:  node scripts/otp-dependency-report.cjs
- * Writes: contracts/otp-dependent-endpoints.md — the single reference, human-readable.
+ * Writes: docs/generated/otp-dependent-endpoints.md — the single reference, human-readable.
  *         A framework test parses its tables to confirm every endpoint here carries an
  *         `otpDependent` flag, so the report and the definitions cannot drift apart.
  */
@@ -33,6 +33,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const CONTRACTS = path.join(ROOT, 'contracts');
+const GENERATED = path.join(ROOT, 'docs', 'generated');
 const PRODUCTS = ['kpost-api', 'kmail-api'];
 
 const OTP_KEY = /otp/i;
@@ -360,7 +361,7 @@ function main() {
     .filter((line) => line !== null)
     .join('\n');
 
-  fs.writeFileSync(path.join(CONTRACTS, 'otp-dependent-endpoints.md'), `${md}\n`);
+  fs.writeFileSync(path.join(GENERATED, 'otp-dependent-endpoints.md'), `${md}\n`);
 
   console.log('OTP dependency report');
   for (const category of ORDER) {
@@ -371,7 +372,7 @@ function main() {
     console.log('\n  WARNING: curated entries no longer in the contract:');
     for (const entry of missing) console.log(`    ${entry.method} ${entry.path}`);
   }
-  console.log('\n  contracts/otp-dependent-endpoints.md');
+  console.log('\n  docs/generated/otp-dependent-endpoints.md');
 }
 
 main();

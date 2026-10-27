@@ -7,8 +7,8 @@
  *
  * Reads the parsed contracts (not the .xlsx), so it re-runs in a second after every new dump:
  *
- *   contracts/excel-gaps.csv   one row per endpoint, with Tab + Row to find the cell. Opens in Excel.
- *   contracts/excel-gaps.md    the same thing summarised, to read or paste into a message.
+ *   docs/generated/excel-gaps.csv   one row per endpoint, with Tab + Row to find the cell. Opens in Excel.
+ *   docs/generated/excel-gaps.md    the same thing summarised, to read or paste into a message.
  *
  * ## What this list is for
  *
@@ -28,6 +28,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const CONTRACTS = path.join(ROOT, 'contracts');
+const GENERATED = path.join(ROOT, 'docs', 'generated');
 
 const files = ['kpost-api.contract.json', 'kmail-api.contract.json'];
 const missing = files.filter((f) => !fs.existsSync(path.join(CONTRACTS, f)));
@@ -210,11 +211,11 @@ const csv =
 const lockedWrites = [];
 function write(file, contents) {
   try {
-    fs.writeFileSync(path.join(CONTRACTS, file), contents);
+    fs.writeFileSync(path.join(GENERATED, file), contents);
   } catch (error) {
     if (error.code !== 'EBUSY' && error.code !== 'EPERM') throw error;
     const alternative = file.replace(/(.[^.]+)$/, '.new$1');
-    fs.writeFileSync(path.join(CONTRACTS, alternative), contents);
+    fs.writeFileSync(path.join(GENERATED, alternative), contents);
     lockedWrites.push({ file, alternative });
   }
 }
@@ -250,7 +251,7 @@ const md = [
   '# Excel gaps — what to confirm or fill in the workbook',
   '',
   `Generated from the parsed contracts. ${rows.length} rows need attention; open`,
-  '`contracts/excel-gaps.csv` in Excel for the full list — it has **Tab**, **Row** and **FillCell**,',
+  '`docs/generated/excel-gaps.csv` in Excel for the full list — it has **Tab**, **Row** and **FillCell**,',
   'so every line names the cell it is talking about.',
   '',
   '## How the HTTP method is decided now',
@@ -391,7 +392,7 @@ console.log('\nby product:');
 for (const product of ['kpost-api', 'kmail-api']) {
   console.log(`  ${product.padEnd(12)} ${count((r) => r.Product === product)}`);
 }
-console.log('\nwritten: contracts/excel-gaps.csv, contracts/excel-gaps.md');
+console.log('\nwritten: docs/generated/excel-gaps.csv, docs/generated/excel-gaps.md');
 
 for (const { file, alternative } of lockedWrites) {
   console.log(

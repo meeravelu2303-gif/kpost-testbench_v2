@@ -224,7 +224,7 @@ export interface EndpointDefinition {
    *   `requires`  needs an OTP validated in an earlier step, though its own payload shows none
    *
    * The authoritative list is generated: `npm run contract:otp` writes
-   * `contracts/otp-dependent-endpoints.md`, and a framework test reconciles these flags against
+   * `docs/generated/otp-dependent-endpoints.md`, and a framework test reconciles these flags against
    * it, so an endpoint cannot quietly lose its flag when a workbook dump changes.
    */
   otpDependent?: 'sends' | 'consumes' | 'requires';

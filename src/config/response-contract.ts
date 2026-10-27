@@ -38,7 +38,7 @@ import { apiConfig, errorEnvelopeSchema, successEnvelopeSchema } from './api.con
  * ## What is deliberately absent
  *
  * `error` is **undefined** for KPost: the workbook documents no error response at all — no 400,
- * 401, 404 or 409 sample anywhere (see `contracts/excel-gaps.md`, "not per-row"). A validator that
+ * 401, 404 or 409 sample anywhere (see `docs/generated/excel-gaps.md`, "not per-row"). A validator that
  * cannot know the contract must say so, so error-format validation SKIPS with that reason instead
  * of inventing a shape and passing. Status codes on error responses are still asserted; only their
  * body shape is unknown.
