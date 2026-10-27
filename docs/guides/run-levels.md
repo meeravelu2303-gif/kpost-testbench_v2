@@ -20,7 +20,8 @@ drives them, lints the tags first, and never files bugs.
 Smoke ⊆ sanity ⊆ regression: every stable test carries `@regression`; smoke and sanity tests carry it
 too, because they are subsets of it. Two deliberate exceptions: **sweep** tests (`@sanity-sweep`) are a
 cheap SMOKE-profile projection of what regression already runs in depth, so they carry `@sanity` without
-`@regression`; and **Admin** tests carry `@admin` with `@sanity` and/or `@smoke`, never `@regression`.
+`@regression`; and **Admin** tests carry `@admin` with `@sanity` and/or `@smoke`, never `@regression`
+(Admin's regression is its folders, §3).
 
 ## 2a. What smoke covers
 
@@ -179,8 +180,10 @@ npm run test:sanity:kpost-api -- --bug 1267         # one bug's tests: @bug-1267
 npm run test:smoke                    # every product in order, one verdict each (same for sanity, regression)
 ```
 
-Admin tests carry `@smoke`/`@sanity`, never `@regression`: `test:regression:kpost-admin` and
-`:kpost-admin-ui` run the smoke and point to the full check, `product:kpost-admin` / `product:kpost-admin-ui`.
+Admin tests carry `@smoke`/`@sanity`, never `@regression`, so Admin's regression is chosen by folder
+(`regressionPaths` in `scripts/run-level.mjs`): `test:regression:kpost-admin` runs the Admin API product set
+without `maintenance/` (one-time setup), and `test:regression:kpost-admin-ui` runs every Admin UI test. Role
+posting stays off in every level (it creates real accounts); `product:kpost-admin` turns it on.
 
 Every level **lints tags first** and runs with `BUGZILLA_DRY_RUN=true` — **no run level files bugs**.
 Real filing stays in the reviewed workflow (`npm run report:filing`, `bug:file-reviewed`,

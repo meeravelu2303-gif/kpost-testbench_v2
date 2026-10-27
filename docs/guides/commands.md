@@ -60,7 +60,7 @@ npm run product:kpost-admin
 npm run product:kpost-admin:file
 ```
 
-Quick checks after a deploy (file nothing; checks the KPost login first; Admin has no regression set, so regression is its smoke):
+Quick checks after a deploy (file nothing; checks the KPost login first; regression runs the Admin test folders, role posting off):
 
 ```powershell
 npm run test:smoke:kpost-admin

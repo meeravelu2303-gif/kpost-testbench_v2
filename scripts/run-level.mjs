@@ -121,7 +121,17 @@ const PRODUCTS = {
     paths: ['tests/admin-api/'],
     hosts: ['ADMIN_API_BASE_URL', 'KPOST_API_BASE_URL'],
     needs: ['kpost-login'],
-    noRegression: 'product:kpost-admin',
+    // Admin tests carry no @regression tag (they sit outside the KPost tag scope), so regression is
+    // chosen by folder: the product run's set without maintenance/ (one-time setup).
+    regressionPaths: [
+      'tests/admin-api/contract.spec.ts',
+      'tests/admin-api/engine',
+      'tests/admin-api/flows',
+      'tests/admin-api/performance',
+      'tests/admin-api/security',
+      'tests/admin-api/validation',
+      'tests/admin-api/sanity',
+    ],
   },
   'kpost-ui': {
     name: 'KPost UI',
@@ -136,7 +146,8 @@ const PRODUCTS = {
     paths: [],
     hosts: ['ADMIN_UI_BASE_URL', 'ADMIN_API_BASE_URL', 'KPOST_API_BASE_URL'],
     needs: ['kpost-login', 'kpost-admin'],
-    noRegression: 'product:kpost-admin-ui',
+    // Every Admin UI test, as in its product run (no @regression tag, like the Admin API).
+    regressionPaths: ['tests/admin-ui/'],
   },
 };
 /** Dependency checks: a product's smoke, or just the KPost login smoke. */
@@ -272,7 +283,9 @@ function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
   fs.mkdirSync(outDir, { recursive: true });
   RUN_DIRS.add(outDir);
   pruneRunDirs(path.dirname(outDir));
-  const args = ['playwright', 'test', `--project=${project}`, ...(paths || []), '--grep', grep];
+  // No grep = every test under `paths` (a level chosen by folder, not by tag).
+  const args = ['playwright', 'test', `--project=${project}`, ...(paths || [])];
+  if (grep) args.push('--grep', grep);
   // Paused modules are excluded from every level, whatever the caller's invert.
   args.push('--grep-invert', grepInvert ? `${grepInvert}|${PAUSED_TAGS}` : PAUSED_TAGS);
   // Replaces the config's Bugzilla reporter, so no run level can file a bug.
@@ -289,7 +302,7 @@ function runPlaywright({ label, suite, project, grep, grepInvert, paths }) {
     PLAYWRIGHT_JSON_OUTPUT_NAME: path.join(outDir, 'report.json'),
   };
   console.log(
-    `\n▶ ${label}  [project=${project}  grep=${grep}${grepInvert ? `  invert=${grepInvert}` : ''}]`,
+    `\n▶ ${label}  [project=${project}  ${grep ? `grep=${grep}` : `paths=${paths.join(' ')}`}${grepInvert ? `  invert=${grepInvert}` : ''}]`,
   );
   console.log(`  report: ${path.relative(ROOT, outDir)}  (dry-run: no bugs filed)`);
   // Quote every arg so grep metacharacters (| ( ) . *) reach Playwright, not the shell.
@@ -418,16 +431,14 @@ async function runProduct(productId) {
         : ['@sanity'];
     const scope = bugArg ? `bug #${bugArg}` : (moduleArg ?? 'all modules');
     code = runStage(`SANITY · ${product.name} · ${scope}`, productId, tags, SMOKE_INVERT);
-  } else if (product.noRegression) {
-    // Admin tests carry @smoke/@sanity, never @regression: their full check is the product run.
-    console.log(
-      `  ${product.name} has no @regression tests by design; its full check is \`npm run ${product.noRegression}\`.`,
-    );
-    return {
-      productId,
-      verdict: 'pass',
-      reason: `smoke only; full check: npm run ${product.noRegression}`,
-    };
+  } else if (product.regressionPaths) {
+    code = runPlaywright({
+      label: `REGRESSION · ${product.name}`,
+      suite: productId,
+      project: product.project,
+      paths: product.regressionPaths,
+      grepInvert: regressionInvert(),
+    });
   } else {
     code = runStage(`REGRESSION · ${product.name}`, productId, ['@regression'], regressionInvert());
   }

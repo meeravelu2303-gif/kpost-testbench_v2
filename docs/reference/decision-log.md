@@ -3,7 +3,25 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — No comment on an open bug that is still broken
+### 2026-10-27 (latest) — KMail grouped by test kind; every product has smoke, sanity and regression
+
+Owner: "perfect folder structure … smoke, sanity and regression should run separately for each of the five
+products".
+
+- **KMail API** had 17 specs loose in one folder. It now follows Admin API's by-kind layout:
+  `contract.spec.ts`, `engine/` (read, coverage), `flows/` (feature + the workflow specs + attachment
+  integrity), `security/` (the IDOR specs, credential disclosure, auth-regression). `product:kmail-api` lists
+  those folders (was a top-level file pattern). Proof: `--list` before and after, by full title: all 2,767,
+  product 2,148, smoke 3, sanity 620, regression 2,145, each identical. API bug tags do not use the path.
+- **Admin regression:** Admin tests carry no `@regression` (outside the KPost tag scope), so
+  `test:regression:kpost-admin` and `:kpost-admin-ui` only re-ran smoke. They now run by folder
+  (`regressionPaths`): the Admin API product set without `maintenance/` (295 tests; the product run has 297),
+  and every Admin UI test (50). Role posting stays off in run levels.
+- Per product today (smoke / sanity / regression): KPost API 23 / 1,868 / 5,132 · KMail API 3 / 620 / 1,714 ·
+  KPost Admin 5 / 226 / 295 · KPost UI 24 / 96 / 574 (per browser) · KPost Admin UI 7 / 16 / 50.
+- Verified: `check`, `lint:tags`, `framework` 369.
+
+### 2026-10-27 — No comment on an open bug that is still broken
 
 Owner: "when the bug has open status and is still broken, don't add any comment, just keep it; when the
 developers update the open bug as RESOLVED/FIXED, that time reopen it with a comment". This replaces the

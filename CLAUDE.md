@@ -88,7 +88,8 @@ src/reporting/          run-summary · report archive · report formatting
 src/ui/                 screens registry (PAUSED_SCREENS), failure-diagnostics
 tests/ — one folder per Bugzilla product, each with its own smoke/ and sanity/:
   kpost-api/            KPost API: one folder per module (+ security/); feature.spec.ts = the module's lifecycle flow
-  kmail-api/            KMail API: contract.spec.ts (the engine over every endpoint) + workflow/security specs
+  kmail-api/            KMail API: contract.spec.ts (the engine over every endpoint), by test kind like admin-api:
+                        engine/ (reads, definition coverage) flows/ (feature flow + workflows) security/ (IDOR, auth)
   admin-api/            KPost Admin: by test kind: engine/ flows/ validation/ security/ performance/ maintenance/ support/
   kpost-ui/<module>/    KPost UI: auth home katchup kall kmail contacts group profile settings user-management
                         verticals platform cross-layer (+ journeys/ support/)

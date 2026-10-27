@@ -3,7 +3,7 @@ import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
 import { mailShape } from '@api/definitions/kmail/send.api';
 import { FILES, uniqueName } from '@fixtures/files';
 import { expect, test } from '@fixtures';
-import { deleteUploaded, uploadFile } from '../support/attachments';
+import { deleteUploaded, uploadFile } from '../../support/attachments';
 
 /**
  * KMail attachment integrity: the recipient downloads exactly the bytes the sender uploaded (length
