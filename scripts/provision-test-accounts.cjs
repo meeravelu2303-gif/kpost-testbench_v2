@@ -12,12 +12,17 @@
  * Add `--only=qatest1,qatest2` to limit either phase. The e-mail codes expire after about 10 minutes,
  * so run phase 2 soon after phase 1. Needs QATEST_OTP_MAILBOX_TEMPLATE (no default) and
  * QATEST_SHARED_PASSWORD.
+ *
+ * Each server has its own database, so "provisioned" is per host (`provisionedOn`); the old
+ * `provisioned: true` meant testingapi. A server that sends real SMS stores a random mobile code:
+ * `--send --from-db` reads it from the database instead of the QA_BYPASS_OTP code.
  */
 require('dotenv').config({ path: '.env', quiet: true });
 
 const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
+const { URL } = require('node:url');
 
 const REGISTRY = path.join(__dirname, '..', 'src', 'fixtures', 'test-accounts.json');
 const BASE = String(process.env.KPOST_API_BASE_URL || '').replace(/\/$/, '');
@@ -66,6 +71,14 @@ async function post(pathname, body) {
   return { code, body: parsed, message: String(parsed.message || text).slice(0, 120) };
 }
 
+const HOST = BASE ? new URL(BASE).host : '';
+/** Created on this server? Legacy `provisioned: true` entries were made on testingapi. */
+const provisionedHere = (account) =>
+  Boolean(
+    (account.provisionedOn && account.provisionedOn[HOST]) ||
+    (account.provisioned && HOST === 'testingapi.kpostindia.com'),
+  );
+
 const idOf = (account) => process.env[account.kpostIdEnv];
 const mailOf = (account) => MAILBOX.replace('{id}', account.id);
 
@@ -98,7 +111,15 @@ async function canLogIn(account) {
   return Boolean(login.body && login.body.accessToken);
 }
 
+/** Latest stored code: the e-mail one by address, or the mobile one by number. */
 async function emailCodeFromDb(email) {
+  return codeFromDb('TBL_KPOST_EMAIL_OTP_VALIDATION', 'email', email);
+}
+async function mobileCodeFromDb(mobile) {
+  return codeFromDb('TBL_KPOST_OTP_VALIDATION', 'mobile_number', mobile);
+}
+
+async function codeFromDb(table, column, value) {
   // Only works when the DB host allows this machine's IP.
   const mysql = require('mysql2/promise');
   const [host, hostPort] = String(process.env.DB_HOST).split(':');
@@ -108,14 +129,19 @@ async function emailCodeFromDb(email) {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    ssl: { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' },
+    // A LAN server without TLS answers plain; only ask for TLS when the env says the host has it.
+    ssl:
+      process.env.DB_SSL === 'false'
+        ? undefined
+        : { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' },
     connectTimeout: 8000,
     connectionLimit: 1,
   });
   try {
+    // Table and column are the two constants above, never input.
     const [rows] = await pool.query(
-      'SELECT `otp` FROM `TBL_KPOST_EMAIL_OTP_VALIDATION` WHERE `email` = ? ORDER BY `id` DESC LIMIT 1',
-      [email],
+      `SELECT \`otp\` FROM \`${table}\` WHERE \`${column}\` = ? ORDER BY \`id\` DESC LIMIT 1`,
+      [value],
     );
     return rows[0] && String(rows[0].otp);
   } finally {
@@ -132,8 +158,10 @@ async function send(account) {
     requestType: 'signup',
   });
   if (sent.code !== 200) return `sendOTP -> ${sent.code} ${sent.message}`;
+  const mobileCode = flag('--from-db') ? await mobileCodeFromDb(account.mobile) : BYPASS;
+  if (!mobileCode) return 'no mobile code stored for this number';
   const validated = await post('/v2/common/validateOTP/', {
-    otp: BYPASS,
+    otp: mobileCode,
     countryID: COUNTRY,
     mobileNumber: account.mobile,
   });
@@ -176,7 +204,7 @@ async function finish(account, code) {
   const registry = JSON.parse(fs.readFileSync(REGISTRY, 'utf8'));
   const wanted = ONLY ? new Set(ONLY.split(',')) : undefined;
   const targets = registry.accounts.filter(
-    (a) => a.mobile && !a.provisioned && (!wanted || wanted.has(a.id)),
+    (a) => a.mobile && !provisionedHere(a) && (!wanted || wanted.has(a.id)),
   );
   if (!targets.length) {
     console.log('Nothing to do: every account with a reserved mobile is provisioned.');
@@ -216,8 +244,7 @@ async function finish(account, code) {
       result = result || (code ? await finish(account, code) : 'no code supplied');
       if (result === 'created') {
         const entry = registry.accounts.find((a) => a.id === account.id);
-        entry.provisioned = true;
-        entry.provisionedAt = new Date().toISOString();
+        entry.provisionedOn = { ...entry.provisionedOn, [HOST]: new Date().toISOString() };
         fs.writeFileSync(REGISTRY, `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
         created += 1;
       }

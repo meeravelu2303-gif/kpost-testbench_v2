@@ -3,7 +3,22 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — KPost API on the QA backend; regression = the full product run
+### 2026-10-27 (latest) — qatest1-6 created on the QA backend
+
+The first smoke on `192.168.0.100:8989` failed 19 of 23: every login answered 401 because the server has its
+own database (`192.168.0.100:3306/kpost`) and `qatest1-6` did not exist there (`kpostIdExist`: "Available").
+The other configured accounts (business M/S/L, the personal QA set) were already there.
+
+- Created all six with `scripts/provision-test-accounts.cjs` (the real signup flow), each logged in before
+  being recorded. The developers had turned on the mobile OTP bypass (stored code `123456`, no SMS: checked
+  on qatest1 first); the e-mail code is real and was read from the database. Each account's e-mail is its own
+  id (`QATEST_OTP_MAILBOX_TEMPLATE={id}@kpostindia.com`, owner: personal accounts are `@kpostindia.com`,
+  business ones `@kpost.in`).
+- The script now records provisioning per server (`provisionedOn.<host>` in `test-accounts.json`; the old
+  `provisioned: true` meant testingapi) and, with `--send --from-db`, reads the mobile code from the
+  database when a server sends real SMS.
+
+### 2026-10-27 — KPost API on the QA backend; regression = the full product run
 
 Owner: "I have changed KPOST_API_BASE_URL=http://192.168.0.100:8989/ … after we will test that url only …
 make sure we have complete smoke, sanity and regression for the KPost API". The server is the
