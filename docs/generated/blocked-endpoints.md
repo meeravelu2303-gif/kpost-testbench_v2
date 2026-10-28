@@ -93,8 +93,8 @@ choice, and every one is still contract-validated OFF live.
 
 | Method | Path | Why not tested on live |
 | ------ | ---- | ---------------------- |
-| `POST` | `/testkmail/v2/common/saveUnsubscriberDetails` | persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle |
-| `POST` | `/testkmail/v2/sentMail/getMailCredentials/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/common/saveUnsubscriberDetails` | persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle |
+| `POST` | `/v2/sentMail/getMailCredentials/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 
 ### other (2)
 

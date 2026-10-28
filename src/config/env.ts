@@ -36,8 +36,9 @@ const EnvSchema = z.object({
   KMAIL_API_BASE_URL: z.url().optional(),
   /**
    * Path prefix for every KMail request (Playwright drops a base-URL path); must match the host.
+   * Unset, it follows `KMAIL_API_BASE_URL` (`kmailPathPrefix` below).
    */
-  KMAIL_PATH_PREFIX: z.string().default('/testkmail/v2'),
+  KMAIL_PATH_PREFIX: z.string().optional(),
 
   APP_USERNAME: z.string().optional(),
   APP_PASSWORD: z.string().optional(),
@@ -195,12 +196,24 @@ export function parseMysqlHost(
   return { host: host || undefined, port: embedded ?? port };
 }
 
+/**
+ * KMail's path prefix: testkmail sits behind a gateway at `/testkmail/v2`; a KMail server reached
+ * directly (e.g. `http://192.168.0.100:9081`) serves its controllers at `/v2`. With the old fixed
+ * default, a direct server answered 404 to every request.
+ */
+export function kmailPathPrefix(explicit: string | undefined, baseUrl: string | undefined): string {
+  if (explicit) return explicit;
+  if (!baseUrl) return '/testkmail/v2';
+  return new URL(baseUrl).hostname === 'testkmail.kpostindia.com' ? '/testkmail/v2' : '/v2';
+}
+
 const kpostDb = parseMysqlHost(data.DB_HOST, data.DB_PORT, 'DB_HOST');
 const adminDb = parseMysqlHost(data.ADMIN_DB_HOST, data.ADMIN_DB_PORT, 'ADMIN_DB_HOST');
 
 export const env = Object.freeze({
   ...data,
   API_BASE_URL: data.API_BASE_URL ?? data.BASE_URL,
+  KMAIL_PATH_PREFIX: kmailPathPrefix(data.KMAIL_PATH_PREFIX, data.KMAIL_API_BASE_URL),
   IS_PRODUCTION: data.TEST_ENV === 'production',
   BUILD_ID: data.BUILD_ID ?? data.GITHUB_RUN_NUMBER ?? 'local',
   // Normalized above, so everything downstream sees a host a driver can actually resolve.

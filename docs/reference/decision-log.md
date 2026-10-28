@@ -3,7 +3,21 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-27 (latest) — qatest1-6 created on the QA backend
+### 2026-10-28 (latest) — KMail path prefix follows the KMail host
+
+Owner pointed `KMAIL_API_BASE_URL` at the QA KMail backend `http://192.168.0.100:9081`; the run still "called
+testkmail". The host was right, but `KMAIL_PATH_PREFIX` defaulted to `/testkmail/v2`, the testkmail
+gateway's prefix, so every request went to `/testkmail/v2/...` and the direct server answered 404. Its
+controllers sit at `/v2/...` (`Kpost_Kmail_5.0`, `server.port=9081`, no context path; verified live with a
+qatest1 token: `/testkmail/v2/kmailSetting/getMailSignature` → 404, `/v2/...` → the controller).
+
+- Unset, the prefix now follows the host (`kmailPathPrefix` in `src/config/env.ts`): `/testkmail/v2` on
+  `testkmail.kpostindia.com`, `/v2` anywhere else; an explicit `KMAIL_PATH_PREFIX` still wins. `.env.example`
+  no longer sets it. Self-test: `tests/framework/kmail-path-prefix.spec.ts`.
+- The interrupted KMail run of 07:27 (528 checks on 6 endpoints, 11 failed) hit only 404s; its saved plan is
+  invalid and must not be applied. The QA KMail accepts tokens from the QA KPost backend.
+
+### 2026-10-27 — qatest1-6 created on the QA backend
 
 The first smoke on `192.168.0.100:8989` failed 19 of 23: every login answered 401 because the server has its
 own database (`192.168.0.100:3306/kpost`) and `qatest1-6` did not exist there (`kpostIdExist`: "Available").
