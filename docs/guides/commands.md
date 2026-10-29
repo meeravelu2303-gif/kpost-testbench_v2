@@ -11,6 +11,25 @@ npm run report:filing          # 2. read the plan: create / reopen / comment / c
 npm run bug:apply              # 3. file that plan to Bugzilla, without running the tests again
 ```
 
+The same three steps for every product: swap step 1 for `product:kmail-api`, `product:kpost-admin` or
+`product:kpost-admin-ui`. The KPost UI runs them once per browser, with a 25-40 min cool-down between:
+
+```powershell
+npm run product:kpost-ui:chromium   # Chromium: run, read, file
+npm run report:filing
+npm run bug:apply
+                                    # cool-down 25-40 min
+npm run product:kpost-ui:firefox    # Firefox: run, read, file
+npm run report:filing
+npm run bug:apply
+                                    # cool-down 25-40 min
+npm run product:kpost-ui:webkit     # WebKit: run, read, file
+npm run report:filing
+npm run bug:apply
+```
+
+Read each plan before applying it, and apply it before the next run: every preview replaces the saved plan.
+
 `bug:apply` uses the same filing step as a `:file` run, with the same strict gates: the validity gate,
 a live duplicate search in Bugzilla for every finding, never refiling a bug closed INVALID / WONTFIX /
 DUPLICATE, reopening a fixed bug that came back, and holding uncertain findings for review. It
@@ -80,6 +99,19 @@ npm run product:kpost-ui:webkit:file
 ```
 
 Each browser also has a preview: `product:kpost-ui:chromium`, `:firefox`, `:webkit`.
+
+**The routine, one browser at a time** (the same three steps as the API products, once per browser):
+
+```powershell
+npm run product:kpost-ui:chromium     # 1. run every UI test in Chromium (files nothing; saves what it found)
+npm run report:filing                 # 2. read the plan
+npm run bug:apply                     # 3. file it
+# cool-down 25-40 min, then the same three steps with :firefox, then with :webkit
+```
+
+Apply each browser's plan before starting the next browser: every preview replaces the saved plan. A
+bug tagged for several browsers is closed only once it is clean on all of them, so a Chromium-only run
+never closes a bug that Firefox or WebKit still has to re-check.
 
 Special checks (preview only):
 
