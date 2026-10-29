@@ -5,7 +5,11 @@ import type { EndpointDefinition } from '@api/registry/endpoint-definition';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { ROOT_DIR } from '@config/constants';
 import { env } from '@config/env';
-import { destructiveBlockReason, type GuardedEndpoint } from '@engine/production-guard';
+import {
+  destructiveBlockReason,
+  THROWAWAY_ACCOUNT_ID,
+  type GuardedEndpoint,
+} from '@engine/production-guard';
 import {
   PRODUCTION_BLOCKED_VALIDATORS,
   PRODUCTION_SAFE_VALIDATORS,
@@ -688,5 +692,103 @@ test.describe('live-application safety @framework', () => {
       otpDependent: 'sends',
     };
     expect(destructiveBlockReason(signupOtp, gateway), 'signup OTP still opens').toBeUndefined();
+  });
+
+  test('the device and deactivation OTP senders stay blocked even on the OTP test gateway (they ignore the bypass)', () => {
+    const gateway = {
+      isProduction: true,
+      allowDestructive: true,
+      otpTestGateway: true,
+      testDbMode: true,
+      // Unlike forgot-password, these text the ACCOUNT's own phone: naming nobody is not possible.
+      noSmsRecipient: true,
+    };
+    for (const label of [
+      'GET /v2/profile/sendPrimaryDeviceOtp/',
+      'GET /v2/profile/sendPrimaryOrSecondaryDeviceOtp/{requestType}',
+      'GET /v2/profile/sendAccountDeactivationOtp/',
+    ]) {
+      const sender: GuardedEndpoint = {
+        label,
+        destructive: true,
+        sideEffect: 'external',
+        otpDependent: 'sends',
+      };
+      // The deactivation sender is already refused as a session-ender; the device senders by this rule.
+      expect(
+        destructiveBlockReason(sender, gateway),
+        `${label}: the bypass does not cover it`,
+      ).toMatch(
+        /deactivation/i.test(label)
+          ? /BLOCKED/
+          : /texts the account's real phone even on the test gateway/,
+      );
+    }
+    // common/sendOTP honours the bypass, so flows mint the same OTP types through it.
+    const commonOtp: GuardedEndpoint = {
+      label: 'POST /v2/common/sendOTP/',
+      destructive: true,
+      sideEffect: 'external',
+      otpDependent: 'sends',
+    };
+    expect(
+      destructiveBlockReason(commonOtp, gateway),
+      'common/sendOTP still opens',
+    ).toBeUndefined();
+  });
+
+  test('a throwaway account opens session-ending actions on the gateway, never a real-SMS sender', () => {
+    const gateway = {
+      isProduction: true,
+      allowDestructive: true,
+      otpTestGateway: true,
+      testDbMode: true,
+    };
+    const deactivate: GuardedEndpoint = {
+      label: 'POST /v2/profile/deactivateAccount/',
+      destructive: true,
+      sideEffect: 'global',
+      otpDependent: 'requires',
+    };
+    const changePassword: GuardedEndpoint = {
+      label: 'POST /v2/profile/changePassword',
+      destructive: true,
+      sideEffect: 'global',
+    };
+    expect(
+      destructiveBlockReason(deactivate, gateway),
+      'qatest1 can never be deactivated',
+    ).toBeDefined();
+    expect(
+      destructiveBlockReason(changePassword, gateway),
+      'nor its password changed',
+    ).toBeDefined();
+    for (const action of [deactivate, changePassword])
+      expect(
+        destructiveBlockReason(action, { ...gateway, throwawayAccount: true }),
+        `${action.label} runs on the throwaway account`,
+      ).toBeUndefined();
+    // Without the OTP test gateway on the test DB the flag opens nothing.
+    expect(
+      destructiveBlockReason(deactivate, {
+        ...gateway,
+        otpTestGateway: false,
+        throwawayAccount: true,
+      }),
+    ).toBeDefined();
+    // The real-SMS senders stay blocked even for a throwaway account.
+    expect(
+      destructiveBlockReason(
+        {
+          label: 'GET /v2/profile/sendPrimaryDeviceOtp/',
+          destructive: true,
+          sideEffect: 'external',
+          otpDependent: 'sends',
+        },
+        { ...gateway, throwawayAccount: true },
+      ),
+    ).toMatch(/real phone/);
+    expect(THROWAWAY_ACCOUNT_ID.test('apiflowkpost3@kpostindia.com')).toBe(true);
+    expect(THROWAWAY_ACCOUNT_ID.test('qatest1@kpostindia.com')).toBe(false);
   });
 });

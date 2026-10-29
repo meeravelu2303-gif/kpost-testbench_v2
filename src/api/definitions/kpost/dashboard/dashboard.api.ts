@@ -1,4 +1,5 @@
-import { body } from '../kpost-endpoint';
+import { typesOnlySchema } from '@api/schema/sample-schema';
+import { body, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 import { defineKpostEndpoint, type KpostEndpointConfig } from '../kpost-endpoint';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
 
@@ -13,6 +14,25 @@ function defineDashboardEndpoint(config: KpostEndpointConfig): EndpointDefinitio
     tags: ['dashboard', ...(config.tags ?? [])],
   });
 }
+
+export const dashboardKallHistoryApi = defineUndocumentedKpostEndpoint({
+  id: 'dashboard-kall-history',
+  authentication: { required: true },
+  method: 'POST',
+  path: '/v2/dashboard/kallDashboard',
+  summary:
+    'The caller’s call history from the dashboard service (older twin of /v2/kall/kallDashboard)',
+  tags: ['dashboard', 'dashboard-read', 'kall'],
+  destructive: false,
+  // Reads only our own calls up to "now"; the workbook row is retired as superseded.
+  productionSafe: true,
+  request: body(() => ({ serverTime: Date.now() })),
+  requestSchema: typesOnlySchema({ serverTime: 0 }),
+  evidence:
+    'DashboardControllerV2.java:97 kallDashboard (receiver = token kpostID; kallStartTime <= serverTime); ' +
+    'workbook KatchupAPI row 23 /v2/dashboard/kallDashboard/ marked superseded; no client calls this path',
+  note: 'reads the legacy TBL_KPOST_KALL_TRACKERS, so it may stay empty for calls made through KallControllerV3',
+});
 
 export const homeDashboardMsgsApi = defineDashboardEndpoint({
   id: 'dashboard-home-msgs',
@@ -51,6 +71,7 @@ export const homeDashboardNewMsgsApi = defineDashboardEndpoint({
 });
 
 export const dashboardApis = [
+  dashboardKallHistoryApi,
   homeDashboardMsgsApi,
   katchupDashboardMsgApi,
   homeDashboardNewMsgsApi,

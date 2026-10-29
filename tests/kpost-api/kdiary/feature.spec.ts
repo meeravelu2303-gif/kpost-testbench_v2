@@ -184,6 +184,23 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
               'edit-report',
             );
             expect.soft(edited.status, 'edit-report status').toBeLessThan(300);
+
+            // Today's report can be deleted the same day; afterwards there is no report for today.
+            const removed = await write(
+              endpoints,
+              'kdiary-delete-report',
+              { id: reportId },
+              'delete-report',
+            );
+            expect.soft(removed.status, 'deleteReport removes our own report of today').toBe(200);
+            const after = await endpoints
+              .sendTo(
+                'kdiary-today-report',
+                {},
+                { label: 'kdiary:report-after-delete', auth: { principal: A } },
+              )
+              .catch(() => undefined);
+            expect.soft(after?.status, 'and no report for today is left (404)').toBe(404);
           }
 
           // Deleted here (not by the sweep) so the row's post-delete state can be checked.

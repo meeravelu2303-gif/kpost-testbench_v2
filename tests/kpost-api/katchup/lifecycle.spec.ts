@@ -115,6 +115,20 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
       { label: 'katchup-lifecycle:delete', allowLiveWrite: true },
     );
     expect(exchange.status, 'delete succeeds — the message is cleaned up').toBeLessThan(300);
+
+    // The app's "was it deleted?" check answers with exactly that id once we deleted our own message.
+    const deleted = await endpoints.sendTo(
+      'katchup-deleted-message-ids',
+      { pathParams: { lastMsgID: msgID! } },
+      { label: 'katchup-lifecycle:deleted-ids', allowLiveRead: true, ownedIdentifiers: [msgID!] },
+    );
+    expect
+      .soft(deleted.status, 'getDeletedKatchupMsgIds answers for our deleted message')
+      .toBe(200);
+    const ids = deleted.json();
+    expect
+      .soft(ids.ok ? (ids.value as { data?: unknown }).data : undefined, 'and names that msgID')
+      .toEqual([msgID]);
   });
 
   // Independent of the msgID chain: it sends its own message.

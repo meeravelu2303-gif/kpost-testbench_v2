@@ -12,6 +12,7 @@ import { kosApis } from './kpost/kos/index';
 import { awsApis } from './kpost/aws/index';
 import { dashboardApis } from './kpost/dashboard/index';
 import { kbookingApis } from './kpost/kbooking/index';
+import { knewsApis } from './kpost/knews/index';
 import { profileApis } from './kpost/profile/index';
 import { signupLoginApis } from './kpost/signup-login/index';
 import { kmailApis } from './kmail';
@@ -47,6 +48,8 @@ export const apiRegistry = new ApiRegistry().register(
   ...dashboardApis,
   // KPost KBooking - RedBus bus search/booking (non-payment surface).
   ...kbookingApis,
+  // KPost KNews - news reference data, the caller's news settings and the article feed.
+  ...knewsApis,
   // Admin module — Karan S. Loaded from its own spec when ADMIN_API_BASE_URL is set.
   ...adminApis,
   // KMail module — Jitendra Kumar. Loaded from its own spec when KMAIL_API_BASE_URL is set.

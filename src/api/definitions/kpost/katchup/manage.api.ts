@@ -180,6 +180,45 @@ export const forwardBacktrackApi = defineKatchupEndpoint({
   note: 'needs a real forwarded msgID',
 });
 
+export const changeCaptionApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-change-caption',
+  authentication: { required: true },
+  method: 'POST',
+  path: '/v2/katchup/changeCaption',
+  summary: 'Rewrite messages’ attachment details as captions (a one-off data migration)',
+  tags: ['katchup', ...MANAGE_TAGS, 'maintenance', 'security'],
+  // Rewrites ANY user's messages by id, with no ownership check and no undo: never driven.
+  destructive: true,
+  sideEffect: 'global',
+  request: body(() => ({ referenceMessageIDList: [] })),
+  requestSchema: typesOnlySchema({ referenceMessageIDList: [] }),
+  evidence:
+    'KatchupControllerV2.java:1568-1599 captionChange; KatchupServiceImpl.java:2279-2296 rewrites ' +
+    'referenceMessage for every id given; no client calls it',
+  note:
+    'security defect candidate: any logged-in user can rewrite anyone’s message (no participant ' +
+    'check) — verify live on our own message only before filing',
+});
+
+export const patchWorkForGroupApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-patch-work-for-group',
+  authentication: { required: true },
+  method: 'POST',
+  path: '/v2/katchup/patchWorkForGroup',
+  summary: 'Rebuild group messages’ receiver lists (a maintenance job for info@kpost.in only)',
+  tags: ['katchup', ...MANAGE_TAGS, 'maintenance', 'security'],
+  // Our QA user must be refused before anything runs; the empty list could write nothing anyway.
+  destructive: false,
+  productionSafe: true,
+  expectedStatus: [403],
+  request: body(() => ({ msgIDs: [] })),
+  requestSchema: typesOnlySchema({ msgIDs: [] }),
+  evidence:
+    'KatchupControllerV2.java:2417-2446: kpostID must equal KPOSTConstants info@kpost.in, checked ' +
+    'before validation; anyone else gets 403',
+  note: 'the happy path for a regular user is the refusal: a 200 would mean anyone can run the repair job',
+});
+
 export const katchupManageApis = [
   recallMessageApi,
   legacyRecallMessageApi,
@@ -191,4 +230,6 @@ export const katchupManageApis = [
   forwardMessageApi,
   forwardMultipleApi,
   forwardBacktrackApi,
+  changeCaptionApi,
+  patchWorkForGroupApi,
 ];

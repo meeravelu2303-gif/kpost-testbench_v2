@@ -119,6 +119,15 @@ test.describe(
         expect(dl.status, 'download succeeds').toBe(200);
         expect(dl.bodyText, 'the exact uploaded bytes are served back').toBe(content);
 
+        // The older inline-download route must serve the same attachment to its sender.
+        const old = await endpoints.sendTo(
+          'katchup-old-download',
+          { pathParams: { uuid: uuid ?? '' } },
+          { label: 'presigned:old-download', auth: { principal: A }, allowLiveRead: true },
+        );
+        expect.soft(old.status, 'oldDownload serves our own attachment').toBe(200);
+        expect.soft(old.bodyText, 'with the exact uploaded bytes').toBe(content);
+
         // Known defect #617: Content-Type is always image/jpeg. A 2xx finding, so recorded explicitly.
         const contentType = dl.headers?.['content-type'];
         if (contentType !== 'text/plain') {

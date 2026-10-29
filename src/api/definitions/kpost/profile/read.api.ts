@@ -201,7 +201,39 @@ export const getUserProfileApi = defineUndocumentedProfileEndpoint({
   responseSchema: typesOnlySchema({ data: {}, urlPath: '', status: 'SUCCESS', statusCode: 200 }),
 });
 
+export const designationOrProfessionApi = defineUndocumentedProfileEndpoint({
+  id: 'profile-designation-or-profession',
+  method: 'POST',
+  path: '/v2/profile/getDesignationOrProfession',
+  summary: 'Profession names, or one profession’s designations (profile edit form)',
+  tags: [...READ_TAGS, 'profession'],
+  destructive: false,
+  // Reference data; names nobody.
+  productionSafe: true,
+  request: body(() => ({ requestType: 'profession' })),
+  requestSchema: typesOnlySchema({ requestType: 'profession' }),
+  evidence:
+    'UserProfileControllerV2.java:463; UserProfileDaoImpl.java:914-939 ("profession" → distinct names, ' +
+    '"designation" + professionName → its designations); no client calls it',
+  note: 'success carries no statusCode; an unknown profession or requestType answers 500 — verify before filing',
+});
+
+export const storageDetailsApi = defineUndocumentedProfileEndpoint({
+  id: 'profile-storage-details',
+  method: 'GET',
+  path: '/v2/profile/getStorageDetails',
+  summary: 'How much Katchup and Kall data the caller stores',
+  tags: [...READ_TAGS, 'storage'],
+  // Reads only our own totals; a bare {katchupDataSize, kallDataSize} map, no envelope.
+  productionSafe: true,
+  envelope: false,
+  evidence:
+    'UserProfileControllerV2.java:1707; UserProfileServiceImpl.java:522-528 (two SUMs, no envelope)',
+});
+
 export const profileReadApis = [
+  designationOrProfessionApi,
+  storageDetailsApi,
   fetchUserDetailsApi,
   getUserProfileApi,
   userProfileByKpostIdApi,

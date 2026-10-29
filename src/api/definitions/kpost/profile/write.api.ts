@@ -206,7 +206,64 @@ export const deleteOtherActivityApi = defineUndocumentedProfileEndpoint({
   note: 'needs a real activityID',
 });
 
+export const setProfilePrivacyApi = defineUndocumentedProfileEndpoint({
+  id: 'profile-set-profile-privacy',
+  method: 'POST',
+  path: '/v2/profile/setProfilePrivacy',
+  summary: 'Make the caller’s profile public (0) or private (1) in search',
+  tags: [...WRITE_TAGS, 'privacy'],
+  // Our own profile only (kpostID from the token); 0 = public, the QA accounts' setting.
+  destructive: true,
+  sideEffect: 'data',
+  request: body(() => ({ privacyStatus: 0 })),
+  requestSchema: z.object({ privacyStatus: z.number().int() }),
+  evidence:
+    'UserProfileControllerV2.java:254 setProfilePrivacy; UserProfileDaoImpl.java:406-425 updates ' +
+    'TBL_KPOST_USER_PROFILE.privacy_status for the token’s kpostID; no client calls it (the web ' +
+    'uses updatePrivacySettingDetails)',
+  note: 'any integer is accepted (no 0/1 check) — a validation finding if the fuzz shows it',
+});
+
+export const kmailPasswordPatchWorkApi = defineUndocumentedProfileEndpoint({
+  id: 'profile-kmail-password-patch-work',
+  method: 'POST',
+  path: '/v2/profile/kmailPasswordPatchWork',
+  summary: 'Reset KMail passwords for listed accounts (a one-off job for two named staff only)',
+  tags: [...WRITE_TAGS, 'maintenance', 'security'],
+  // Our QA user must be refused before the body is read; the empty list could change nothing.
+  destructive: false,
+  productionSafe: true,
+  expectedStatus: [403],
+  request: body(() => ({ kpostIDs: [] })),
+  requestSchema: z.object({ kpostIDs: z.array(z.string()) }),
+  evidence:
+    'UserProfileControllerV2.java:1912-1925: only manohar@kpost.in / baskar1992@kpost.in pass, ' +
+    'everyone else gets 403 before the body is read; UserProfileServiceImpl.java:828-841 overwrites ' +
+    'each listed user’s KMail password',
+  note: 'the happy path for a regular user is the refusal: a 200 would mean anyone can reset KMail passwords',
+});
+
+export const changeOrForgotAccessCodeApi = defineUndocumentedProfileEndpoint({
+  id: 'profile-change-or-forgot-access-code',
+  method: 'POST',
+  path: '/v2/profile/changeOrForgotAccessCode',
+  summary: 'Change the caller’s access code (needs the login password)',
+  tags: [...WRITE_TAGS, 'access-code', 'security'],
+  // Changes the account's own access code: driven only on a throwaway account, never on qatest1.
+  destructive: true,
+  sideEffect: 'global',
+  request: body(() => ({ accessCode: '1234', currentPassword: testData.password })),
+  requestSchema: z.object({ accessCode: z.string(), currentPassword: z.string() }),
+  evidence:
+    'UserProfileControllerV2.java:1011 changeAccessCode; UserProfileDaoImpl.java:842-877 checks ' +
+    'currentPassword (the LOGIN password) and overwrites User.access_code; no client calls it',
+  note: 'run by tests/kpost-api/profile/throwaway-account.spec.ts on a fresh account each run',
+});
+
 export const profileWriteApis = [
+  setProfilePrivacyApi,
+  kmailPasswordPatchWorkApi,
+  changeOrForgotAccessCodeApi,
   updateAboutApi,
   updateDesignationApi,
   updateBasicApi,

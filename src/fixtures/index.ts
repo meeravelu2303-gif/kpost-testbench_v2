@@ -14,6 +14,7 @@ import { HomePage } from '@pages/HomePage';
 import { LoginPage } from '@pages/LoginPage';
 import { SettingsPage } from '@pages/SettingsPage';
 import { SignupPage } from '@pages/SignupPage';
+import { FLOW_CALLS_ANNOTATION } from '@reporting/happy-path';
 import { attachValidationReport } from '@reporting/report-attachment';
 import { startRecording, writeDiagnosisIfFailed } from '@ui/failure-diagnostics';
 import { businessRuleRegistry } from '@rules/index';
@@ -84,6 +85,12 @@ export const test = base.extend<TestFixtures>({
       shareBrowserSessions: ['chromium', 'firefox', 'webkit'].includes(testInfo.project.name),
     });
     await use(executor);
+    // For the happy-path report: which endpoints this flow drove, and whether each answered as expected.
+    if (executor.flowCalls.size)
+      testInfo.annotations.push({
+        type: FLOW_CALLS_ANNOTATION,
+        description: JSON.stringify([...executor.flowCalls]),
+      });
     // File any server error a gated flow hit and any confirmed business-rule violation.
     for (const report of [
       ...flowFindingReports(executor.flowFindings),

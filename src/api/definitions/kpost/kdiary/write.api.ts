@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { typesOnlySchema } from '@api/schema/sample-schema';
-import { body } from '../kpost-endpoint';
+import { body, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 import { defineKdiaryEndpoint } from './kdiary-endpoint';
 
 /**
@@ -144,6 +144,23 @@ export const editReportApi = defineKdiaryEndpoint({
   note: 'needs the REPORT id (not eventID) from saveReport/getTodayReport; field is `taskReport`',
 });
 
+export const deleteReportApi = defineUndocumentedKpostEndpoint({
+  id: 'kdiary-delete-report',
+  authentication: { required: true },
+  method: 'POST',
+  path: '/dairySchedule/deleteReport',
+  summary: 'Delete the caller’s own diary report (only on the day it was written)',
+  tags: ['kdiary', ...WRITE_TAGS, 'report', 'needs-id'],
+  // Our own report id from saveReport/getTodayReport: the KDiary lifecycle deletes the one it saved.
+  destructive: true,
+  sideEffect: 'data',
+  request: body(() => ({ id: 0 })),
+  requestSchema: typesOnlySchema({ id: 0 }),
+  evidence:
+    'KdiaryScheduleController.java:478-499; KdiaryScheduleServiceImpl.java:505-526 (findByIdAndCreatedBy: ' +
+    'another user’s id → 404; a report from an earlier day → 403)',
+});
+
 export const kdiaryWriteApis = [
   createEventApi,
   createScheduleApi,
@@ -154,4 +171,5 @@ export const kdiaryWriteApis = [
   updateRemarksApi,
   saveReportApi,
   editReportApi,
+  deleteReportApi,
 ];

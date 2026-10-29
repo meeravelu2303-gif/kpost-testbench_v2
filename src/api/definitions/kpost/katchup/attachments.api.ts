@@ -1,5 +1,5 @@
-import { pathParamSchema } from '@api/schema/sample-schema';
-import { body, pathParams } from '../kpost-endpoint';
+import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
+import { body, defineUndocumentedKpostEndpoint, pathParams } from '../kpost-endpoint';
 import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
@@ -92,7 +92,64 @@ export const generateThumbnailApi = defineKatchupEndpoint({
   note: 'confirmed working live 2026-09-26 with a real attachment uuid',
 });
 
+export const oldDownloadApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-old-download',
+  authentication: { required: true },
+  method: 'GET',
+  path: '/v2/katchup/oldDownload/{uuid}',
+  summary: 'Download an attachment by uuid (the older inline-download route)',
+  tags: ['katchup', ...ATTACH_TAGS],
+  envelope: false,
+  contentType: 'application/octet-stream',
+  // A real uuid comes from presigned-attachment-workflow.spec.ts; standalone it is the not-found path.
+  request: pathParams(() => ({ uuid: ABSENT_UUID })),
+  pathParamsSchema: pathParamSchema('uuid'),
+  evidence:
+    'KatchupControllerV2.java:1037 downloadFile; KatchupServiceImpl.java:1404-1425 serves it only to ' +
+    'the sender, receiver or a group member of a visible message (else 404 "Attachment not found")',
+});
+
+export const uploadMultipartFilesApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-upload-multipart-files',
+  authentication: { required: true },
+  method: 'POST',
+  path: '/v2/katchup/uploadMultipartFiles/',
+  summary: 'Upload files for a Katchup message (multipart)',
+  tags: ['katchup', 'katchup-attachment'],
+  // Each call leaves a TBL_KPOST_KATCHUP_ATTACHMENT row nothing can delete (CLAUDE.md §5 rule 8).
+  destructive: true,
+  sideEffect: 'global',
+  evidence: 'KatchupControllerV2.java:851 uploadMultipartFileAWS (files[] multipart)',
+  note:
+    'never driven: every call leaves an undeletable attachment row, and the S3 upload is commented ' +
+    'out, so it reports success without storing the file (KatchupServiceImpl.java:1346-1363) — a ' +
+    'defect candidate to verify live; no client calls it',
+});
+
+export const voiceTranslateApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-voice-translate',
+  authentication: { required: true },
+  method: 'POST',
+  path: '/v2/voice/translate',
+  summary: 'Transcribe a voice-message attachment to text (calls OpenAI Whisper)',
+  tags: ['katchup', 'katchup-attachment', 'voice', 'security'],
+  // Every call is a paid OpenAI request, so never driven without the owner's go-ahead.
+  destructive: true,
+  sideEffect: 'external',
+  request: body(() => ({ uuid: ABSENT_UUID })),
+  requestSchema: typesOnlySchema({ uuid: ABSENT_UUID }),
+  evidence:
+    'VoiceController.java:34 translateVoice → SpeechServiceImpl.java:23-49 (api.openai.com whisper-1); ' +
+    'React VoiceMessagePlayer.js:261 and KatchupMessage.js:3815,5958 (hardcoded to the live devapi2 host)',
+  note:
+    'blocked: a paid external call per request; also a defect candidate — the handler never checks the ' +
+    'caller, so any user can transcribe anyone’s attachment by uuid (verify live with an owner control)',
+});
+
 export const katchupAttachmentApis = [
+  voiceTranslateApi,
+  oldDownloadApi,
+  uploadMultipartFilesApi,
   downloadApi,
   downloadAttachmentApi,
   downloadFromS3Api,

@@ -9,13 +9,13 @@ A clear per-reason list of what stays blocked is in `docs/generated/blocked-endp
 
 | | Count |
 | - | ----: |
-| **Runs on live** | **124** |
-| Blocked | 239 |
-| Total registered | 363 |
+| **Runs on live** | **144** |
+| Blocked | 257 |
+| Total registered | 401 |
 
 ---
 
-## Runs on live — 124
+## Runs on live — 144
 
 Every one is read-only, needs no company, and uses identifiers that are set in `.env`.
 Reaching this list requires `productionSafe: true` on the definition, which is a claim a
@@ -35,14 +35,18 @@ reviewer can check against the comment beside it.
 | `POST` | `/rolePosting/getSuspendOrTerminateEmployee` | Admin |
 | `POST` | `/v2/aws/checkAttachmentS3/` | AWS |
 | `POST` | `/v2/aws/generate-presigned-url` | AWS |
+| `GET` | `/crypto/public-key` | common |
 | `GET` | `/v2/common/countries` | common |
+| `POST` | `/v2/common/country` | common |
 | `POST` | `/v2/common/domain/` | common |
 | `GET` | `/v2/common/downloadProfileImage/{kpostID}` | common |
 | `POST` | `/v2/common/generateDomainAndUniqueName` | common |
 | `POST` | `/v2/common/getCitiesByRegionId/` | common |
 | `POST` | `/v2/common/getDesignation/` | common |
+| `POST` | `/v2/common/getDesignationByProfessionId` | common |
 | `GET` | `/v2/common/getFlutterAppVersion/` | common |
 | `POST` | `/v2/common/getKpostIdUsingModule` | common |
+| `GET` | `/v2/common/getProfession` | common |
 | `GET` | `/v2/common/getStates/` | common |
 | `POST` | `/v2/common/getTotalCountByDate` | common |
 | `POST` | `/v2/common/getUserDetailsByMobNo` | common |
@@ -61,6 +65,7 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/common/getCompanyDetailsByAdmin` | common · company |
 | `POST` | `/v2/common/getCompanyDetailsByMobileNoAndproductId` | common · company |
 | `GET` | `/v2/common/getCompanyNameExistOnKpostAndKsmacc/{companyName}` | common · company |
+| `POST` | `/v2/common/isCompanyNameExist` | common · company |
 | `GET` | `/v2/common/frequentKmailContact/` | Contacts |
 | `POST` | `/v2/common/knownPostBoxContacts/` | Contacts |
 | `GET` | `/v2/common/miscellaneousContacts/` | Contacts |
@@ -72,6 +77,7 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/contacts/myGroups/` | Contacts |
 | `POST` | `/v2/contacts/myUnknownGroups/` | Contacts |
 | `POST` | `/v2/contacts/myUnknownKatchupContacts/` | Contacts |
+| `POST` | `/v2/dashboard/kallDashboard` | Kall |
 | `POST` | `/v2/kall/contactInfo/` | Kall |
 | `POST` | `/v2/kall/fetchScheduledRepeatKall` | Kall |
 | `GET` | `/v2/kall/frequentKallContacts` | Kall |
@@ -79,13 +85,16 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/kall/kallInfo` | Kall |
 | `GET` | `/v2/kall/todayKoolKall/` | Kall |
 | `POST` | `/v2/aws/katchup/generate-presigned-url` | Katchup |
+| `GET` | `/v2/katchup/fetchReportMsgs` | Katchup |
 | `POST` | `/v2/katchup/filterKatchUpMessage/` | Katchup |
 | `GET` | `/v2/katchup/frequentlyAccessContacts` | Katchup |
 | `GET` | `/v2/katchup/getAllReportMsg` | Katchup |
 | `GET` | `/v2/katchup/getUnopenedMessagesAndKmailsTotalCount/` | Katchup |
 | `GET` | `/v2/katchup/getUnopenedMessagesCount/` | Katchup |
 | `POST` | `/v2/katchup/katchupMessagesForSelectedContactID/` | Katchup |
+| `POST` | `/v2/katchup/katchupSearch` | Katchup |
 | `POST` | `/v2/katchup/messageCountBetweenSenderAndReceiver/` | Katchup |
+| `POST` | `/v2/katchup/patchWorkForGroup` | Katchup |
 | `POST` | `/v2/katchup/searchKatchUpMessage/` | Katchup |
 | `POST` | `/v2/katchup/searchKatchUpMessageSubject` | Katchup |
 | `GET` | `/dairySchedule/getEvents` | KDiary |
@@ -112,6 +121,7 @@ reviewer can check against the comment beside it.
 | `POST` | `/v2/translator/translation/` | KMail |
 | `GET` | `/ai/sessions` | KOS |
 | `GET` | `/kword/documentsType` | KOS |
+| `POST` | `/v2/signupLogin/fetchPersonalUserDetails` | Login & session |
 | `POST` | `/v2/signupLogin/fetchUserDetails/` | Login & session |
 | `GET` | `/v2/signupLogin/getActiveSession` | Login & session |
 | `POST` | `/v2/signupLogin/getLoginHistory` | Login & session |
@@ -123,21 +133,30 @@ reviewer can check against the comment beside it.
 | `POST` | `/redbus/availabletrips/` | other |
 | `GET` | `/redbus/citysuggestion/{query}` | other |
 | `POST` | `/redbus/destinations/` | other |
+| `GET` | `/v1/news` | other |
+| `GET` | `/v1/news/feeds/status` | other |
 | `POST` | `/v2/dashboard/homeDashboardMsgs/` | other |
 | `POST` | `/v2/dashboard/katchupDashboardMsg/` | other |
+| `GET` | `/v2/knews/getAllCategories/` | other |
+| `GET` | `/v2/knews/getAllNewsSource/` | other |
+| `POST` | `/v2/knews/getPublicationByLanguageId/` | other |
+| `POST` | `/v2/knews/getSubCategoriesByCategoryId/` | other |
 | `POST` | `/v2/profile/advancedSearch/` | Profile |
 | `POST` | `/v2/profile/autoSearchWithName/` | Profile |
 | `GET` | `/v2/profile/downloadCoverImage/{kpostID}` | Profile |
 | `GET` | `/v2/profile/downloadFullProfileImage/{kpostID}` | Profile |
 | `GET` | `/v2/profile/downloadProfileImage/{kpostID}` | Profile |
 | `GET` | `/v2/profile/fetchUserDetails/` | Profile |
+| `POST` | `/v2/profile/getDesignationOrProfession` | Profile |
 | `POST` | `/v2/profile/getDigitalCard/` | Profile |
 | `GET` | `/v2/profile/getlanguages/` | Profile |
 | `GET` | `/v2/profile/getSignatureImage` | Profile |
+| `GET` | `/v2/profile/getStorageDetails` | Profile |
 | `POST` | `/v2/profile/getUserBasicDetailsUsingKpostID` | Profile |
 | `GET` | `/v2/profile/getUserProfile/` | Profile |
 | `POST` | `/v2/profile/getUserProfileUsingKpostID/` | Profile |
 | `GET` | `/v2/profile/isDevicePrimaryOrNot/` | Profile |
+| `POST` | `/v2/profile/kmailPasswordPatchWork` | Profile |
 | `GET` | `/generalSetting/getAllNotification` | Settings |
 | `GET` | `/generalSetting/getPersonalize` | Settings |
 | `GET` | `/v2/common/getInstantReply/` | Settings |
@@ -147,10 +166,11 @@ reviewer can check against the comment beside it.
 | `GET` | `/v2/kmailSetting/getLetterHeadTemplate` | Settings |
 | `GET` | `/v2/kmailSetting/getMailCountDaysLimit` | Settings |
 | `GET` | `/v2/kmailSetting/getMailSignature` | Settings |
+| `GET` | `/v2/knews/getKnewsSettings/` | Settings |
 
 ---
 
-## Blocked on live — 239
+## Blocked on live — 257
 
 Not failures — these are refused before a request is sent, each for a stated reason.
 
@@ -184,6 +204,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/rolePosting/suspendOrTerminateEmployee` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/rolePosting/update` | Admin | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/workplaceHierarchy/getWorkPlaceHierarchy` | Admin | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/v2/aws/checkAttachmenS3/{uuid}` | AWS | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/aws/deleteAttachmentFromS3/{uuid}` | AWS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/common/forgotPasswordOTPOrSentKpostIDSms` | common | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
 | `POST` | `/v2/common/forgotPasswordUpdate` | common | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
@@ -194,6 +215,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/common/validateMailOTP/` | common | OFF-LIVE (OTP): needs a real OTP in its payload; live has no bypass |
 | `POST` | `/v2/common/validateOTP/` | common | OFF-LIVE (OTP): needs a real OTP in its payload; live has no bypass |
 | `POST` | `/admin/addingUserByAdmin/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/addingUserForReallocateByAdmin` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/createOrRemoveBackupAdmin/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/holdOrRelease/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/removeCompanyLogo` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
@@ -229,6 +251,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/kall/cancelScheduleKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kall/removeMemberKatchupKall` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kall/setKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `GET` | `/v2/firebase/notificationForKall` | Kall | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/v2/kall/clearKallBykallIds` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/v2/kall/clearKallHistory` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/kall/endIndividualKall/` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -244,6 +267,8 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/kall/updateKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/kall/updateSenderAndReceiverKallStatus` | Kall | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/katchup/recallMessage` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/common/sendMessage` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/changeCaption` | Katchup | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/katchup/deleteKatchUpMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/v2/katchup/download/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/katchup/downloadAttachment/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -255,6 +280,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/katchup/forwardMessageBacktrackByMsgID` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/generateThumbnailUsingUUID` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/getBulkMessageInfo/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/v2/katchup/getDeletedKatchupMsgIds/{lastMsgID}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/katchup/getKatchupMessagesSubject/{id}` | Katchup | OFF-LIVE: route not deployed on this test build (confirmed 404 — needs the dev to confirm deployment, not a business-account gap) |
 | `POST` | `/v2/katchup/getMessagesByReferenceMessageList` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/getReadStatusGroupMessage/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -264,6 +290,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/katchup/getSharedMessageInfo/` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/markOrUnmarkImportantMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `GET` | `/v2/katchup/mediaStreaming/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `GET` | `/v2/katchup/oldDownload/{uuid}` | Katchup | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/katchup/recallMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/reportAbuse` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/saveKatchupMessages/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -272,10 +299,13 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/katchup/sendKatchupMsgMultiPart/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/sendMessage/` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/katchup/sendMessageForForwardSelectedAttachment` | Katchup | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/katchup/uploadMultipartFiles/` | Katchup | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/voice/translate` | Katchup | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/dairySchedule/addparticipants` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/createEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/createSchedule` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/deleteEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/dairySchedule/deleteReport` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/editReport` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/editScheduleEvent` | KDiary | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/dairySchedule/getEventDate` | KDiary | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
@@ -330,18 +360,24 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/kword/share` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kword/update` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/kword/updateJobId` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/signupLoginForMediumAndLarge/addingUserByAdmin` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/signupLoginForMediumAndLarge/adminUserLogin` | Login & session | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/signupLogin/adminRegistration/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `POST` | `/v2/signupLogin/generateJWTokens/` | Login & session | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/signupLogin/setAccessCode` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/signupLogin/signup/` | Login & session | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `GET` | `/v2/signupLogin/userLogoutFromAllDevices/` | Login & session | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `PUT` | `/admin/news/feeds/{feedId}/disable` | other | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `PUT` | `/admin/news/feeds/{feedId}/enable` | other | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/news/feeds/sync` | other | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/redbus/blockTicket/{kpostId}` | other | OFF-LIVE (WRITTEN, execution blocked): no env flag actually gates this (KBOOKING_LIFECYCLE is referenced only in comments) — unconditionally test.skip'd pending explicit owner authorization, not driven by any lifecycle flow |
 | `POST` | `/redbus/boardingPoint/` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/redbus/tripdetails/` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/redbus/tripdetailsV2/` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/redbus/updatecitylist` | other | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `GET` | `/v1/news/feeds/{feedId}/articles` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/dashboard/homeDashboardNewMsgs` | other | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
+| `POST` | `/v2/profile/changeOrForgotAccessCode` | Profile | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/profile/changePassword` | Profile | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/v2/profile/convertBase64ToImage` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/profile/deactivateAccount/` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
@@ -363,6 +399,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `GET` | `/v2/profile/sendPrimaryOrSecondaryDeviceOtp/{requestType}` | Profile | OFF-LIVE (OTP): sends a real OTP by SMS/email to a real recipient |
 | `POST` | `/v2/profile/setDeviceAsPrimary/` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
 | `POST` | `/v2/profile/setDeviceAsSecondary` | Profile | OFF-LIVE (OTP): needs an OTP validated in an earlier step; live has no bypass |
+| `POST` | `/v2/profile/setProfilePrivacy` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/profile/shareUserDetails` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/profile/updateAboutYourself/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/profile/updateBasicInformation/` | Profile | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
@@ -395,6 +432,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/kmailSetting/saveOrUpdateMailSignatureTemplateId` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/kmailSetting/setLetterHead` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/kmailSetting/updateMailCountDaysLimit` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
+| `POST` | `/v2/knews/updateKnewsSettings/` | Settings | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 
 ---
 

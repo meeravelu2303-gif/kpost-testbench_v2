@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { typesOnlySchema } from '@api/schema/sample-schema';
-import { body, defineKpostEndpoint } from '../kpost-endpoint';
+import { body, defineKpostEndpoint, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 
 /**
  * Registration and the signup form's pre-submit checks. The writes run only on the OTP test gateway
@@ -180,10 +180,30 @@ export const kpostIdSuggestionApi = defineKpostEndpoint({
   })),
 });
 
+export const businessAddingUserPublicApi = defineUndocumentedKpostEndpoint({
+  id: 'signup-login-business-adding-user-public',
+  method: 'POST',
+  path: '/signupLoginForMediumAndLarge/addingUserByAdmin',
+  summary: 'Create a member account in a medium/large company (no login required)',
+  tags: ['signup-login', 'signup', 'user-management', 'security'],
+  authentication: { required: false },
+  // Public account creation in ANY company from the body: never driven with a full body.
+  destructive: true,
+  sideEffect: 'global',
+  evidence:
+    'SignUpLoginForMediumAndLargeController.java:73-92 (public: SecurityConfiguration:71; the admin ' +
+    'check is commented out at :79); EmployeeDetailsEntityToRegistrationRO.java:25-73; no client calls it',
+  note:
+    'security defect candidate: an unauthenticated account-creation endpoint. In this source it always ' +
+    '500s (the mapper never sets kpostID), but the live server may be newer — prove "no login gate" with ' +
+    'the zero-write probe (no token, unparseable body) before filing',
+});
+
 export const signupApis = [
   signupApi,
   signupGetApi,
   adminRegistrationApi,
   kpostIdExistApi,
   kpostIdSuggestionApi,
+  businessAddingUserPublicApi,
 ];

@@ -14,13 +14,25 @@ import { deepMerge, getPath } from '@utils/json';
 import type { Logger } from '@utils/logger';
 import { maskString } from '@utils/masking';
 import { type BusinessRuleFinding, type FlowFinding, isServerError } from './flow-finding';
-import { destructiveBlockReason, ProductionSafetyError } from './production-guard';
+import {
+  destructiveBlockReason,
+  ProductionSafetyError,
+  THROWAWAY_ACCOUNT_ID,
+} from './production-guard';
 import { assertQaOwnedIdentifiers } from './qa-identifier-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
 import { oldestExpiredToken, recordToken } from './token-history';
 
 /** How a request authenticates: as a role, as a specific principal, or with a raw header. */
 export type AuthMode = { role: Role } | { principal: Principal } | { header: string | undefined };
+
+/** One endpoint a flow called: its route, the last status recorded, and whether one was expected. */
+export interface FlowCall {
+  suite: string;
+  route: string;
+  status: number;
+  ok: boolean;
+}
 
 export interface SendOptions {
   /** Identifies the exchange in logs and reports, e.g. `authentication.missing-token`. */
@@ -40,6 +52,11 @@ export interface SendOptions {
   allowLiveRead?: boolean;
   /** The request names a non-existent account/mobile, so an SMS sender texts nobody. */
   noSmsRecipient?: boolean;
+  /**
+   * The throwaway account (`apiflowkpost<N>@kpostindia.com`) this call acts on, created by the same
+   * flow; the call must sign in as it. Opens session-ending and global actions on the test gateway.
+   */
+  throwawayAccount?: string;
   /**
    * Exact identifier values this call's own flow just minted, trusted by the QA-identifier guard
    * for this request only. Set by a lifecycle spec from its own write's response, never by the
@@ -130,6 +147,7 @@ export class EndpointExecutor {
       allowLiveWrite: options.allowLiveWrite,
       allowLiveRead: options.allowLiveRead,
       noSmsRecipient: options.noSmsRecipient,
+      throwawayAccount: this.throwawayCall(endpoint, options),
       // Deep write-fuzz on a disposable test DB (both required); opens only `data` writes.
       writeFuzz: env.WRITE_FUZZ,
       testDbMode: env.TEST_DB_MODE,
@@ -173,9 +191,50 @@ export class EndpointExecutor {
     return exchange;
   }
 
+  /**
+   * Every endpoint a flow called through `sendTo`, and whether any of its answers had an expected
+   * status. Attached to the test by the `endpoints` fixture, so the happy-path report can credit an
+   * endpoint a passing flow drove successfully (signup, OTP chains, device flows).
+   */
+  readonly flowCalls = new Map<string, FlowCall>();
+
+  /**
+   * True when `options.throwawayAccount` names a throwaway account and the call signs in as exactly
+   * that account (a public endpoint names it in its body instead). Anything else is a bench fault,
+   * so it throws rather than quietly running as someone else.
+   */
+  private throwawayCall(endpoint: ResolvedEndpoint, options: SendOptions): boolean {
+    const id = options.throwawayAccount;
+    if (id === undefined) return false;
+    if (!THROWAWAY_ACCOUNT_ID.test(id))
+      throw new Error(`throwawayAccount "${id}" is not a throwaway account id`);
+    const signedInAs =
+      options.auth && 'principal' in options.auth ? options.auth.principal.username : undefined;
+    if (endpoint.authentication.required && signedInAs !== id)
+      throw new Error(
+        `${endpoint.label}: a throwaway call must sign in as ${id}, not ${signedInAs ?? 'the default account'}`,
+      );
+    return true;
+  }
+
   /** Sends a literal request to a registered endpoint (no request factory involved). */
-  sendTo(endpointId: string, spec: RequestSpec, options: SendOptions): Promise<ApiResponseWrapper> {
-    return this.send(resolveEndpoint(this.apiRegistry.get(endpointId)), spec, options);
+  async sendTo(
+    endpointId: string,
+    spec: RequestSpec,
+    options: SendOptions,
+  ): Promise<ApiResponseWrapper> {
+    const endpoint = resolveEndpoint(this.apiRegistry.get(endpointId));
+    const exchange = await this.send(endpoint, spec, options);
+    const ok = endpoint.expectedStatus.includes(exchange.status);
+    const seen = this.flowCalls.get(endpointId);
+    if (!seen || (ok && !seen.ok))
+      this.flowCalls.set(endpointId, {
+        suite: endpoint.suite.id,
+        route: `${options.method ?? endpoint.method} ${endpoint.path}`,
+        status: exchange.status,
+        ok,
+      });
+    return exchange;
   }
 
   /** A principal for `role` from the auth profile. */
@@ -258,6 +317,10 @@ export class EndpointExecutor {
       const exchange = await this.send(endpoint, profile.loginRequest(principal), {
         label: 'setup:login',
         auth: { header: undefined },
+        // A throwaway account a flow created this run is ours, though no QA_* value names it.
+        ...(THROWAWAY_ACCOUNT_ID.test(principal.username) && {
+          ownedIdentifiers: [principal.username],
+        }),
       });
       const parsed = exchange.json();
       const token = parsed.ok ? getPath(parsed.value, profile.tokenPath) : undefined;

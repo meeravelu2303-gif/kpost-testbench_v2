@@ -120,7 +120,10 @@ Key flags (defaults in `src/config/env.ts`): `BUGZILLA_DRY_RUN` (true), `BUGZILL
 `WRITE_FUZZ` (fuzz writes; needs TEST_DB_MODE), `ALLOW_DESTRUCTIVE_TESTS`, `OTP_TEST_GATEWAY` (123456
 validates; only on a genuine test gateway), `*_LIFECYCLE` (gated feature flows), `DB_ALLOW_WRITES`.
 Always armed regardless of flags: the QA-identifier guard (no request may name a record we don't own),
-the OTP/SMS kill-switch, and `sideEffect: 'global'`/`external` blocks.
+the OTP/SMS kill-switch, and `sideEffect: 'global'`/`external` blocks. Forgot-password and the profile's
+device/deactivation OTP senders text a real phone even with the OTP bypass, so they stay blocked; account
+actions that would damage a QA account (devices, password, access code, deactivate) run only on a throwaway
+`apiflowkpost<N>` account (`tests/kpost-api/profile/throwaway-account.spec.ts`), deleted afterwards.
 
 ## 4. The run → Bugzilla flow (one command per product)
 

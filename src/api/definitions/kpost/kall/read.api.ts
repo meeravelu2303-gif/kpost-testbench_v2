@@ -1,6 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { typesOnlySchema } from '@api/schema/sample-schema';
-import { body } from '../kpost-endpoint';
+import { body, defineUndocumentedKpostEndpoint, queryParams } from '../kpost-endpoint';
 import { defineKallEndpoint } from './kall-endpoint';
 
 /**
@@ -108,7 +108,24 @@ export const getKallStatusUsingKallIdApi = defineKallEndpoint({
   note: 'needs a real kallID',
 });
 
+export const firebaseKallNotificationApi = defineUndocumentedKpostEndpoint({
+  id: 'kall-firebase-notification-test',
+  authentication: { required: true },
+  method: 'GET',
+  path: '/v2/firebase/notificationForKall',
+  summary: 'Send a test incoming-call push to a user (a debug route left in the build)',
+  tags: ['kall', 'kall-read', 'notification', 'security'],
+  // Sends a real call push to every device of ANY receiver, with no check on who that is: never driven.
+  destructive: true,
+  sideEffect: 'external',
+  request: queryParams(() => ({ receiver: testData.victimKpostId })),
+  evidence:
+    'FireBaseTestController.java:34 → FireBaseServiceImpl.java:568-606 (FCM call push to the receiver); no client calls it',
+  note: 'security defect candidate: a debug controller in the QA build lets any user ring anyone’s phone — verify live with QA accounts only',
+});
+
 export const kallReadApis = [
+  firebaseKallNotificationApi,
   kallDashboardApi,
   todayKoolKallApi,
   frequentKallContactsApi,

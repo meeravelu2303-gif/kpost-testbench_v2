@@ -4,6 +4,11 @@ From a full read of the backend (`D:\KPOST_PROJECTS\KPOST_V5.0`, branch `kpostV5
 the bench's test lists, 2026-10-27. Proposals only: each needs a payload from the real client or the
 workbook before it can be registered (CLAUDE.md §8: never invent a contract).
 
+> **Update 2026-10-29:** sections 1 (all but `addMembersToKall`, retired, and `getKmailDashboardMsg`, which
+> proxies to live kmail5) and the KNews part of 3 are now defined and tested; see the decision log of that
+> date. Still open: section 2 (V1, owner said V2 only), the KBooking writes and payments in 3 (owner and
+> developers), and the shared company writes on QA companies 242/1034.
+
 ## Totals
 
 | Group                                                                      | Backend endpoints | Tested (product run = regression) |

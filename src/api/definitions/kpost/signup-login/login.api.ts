@@ -1,7 +1,7 @@
 import { AUTH_PROFILES, KPOST_DEVICE_IDENTITY } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { typesOnlySchema } from '@api/schema/sample-schema';
-import { body, defineKpostEndpoint } from '../kpost-endpoint';
+import { body, defineKpostEndpoint, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 
 /** A representative login body, for deriving a types-only schema (injection targets `kpostID`). */
 const loginSampleBody = AUTH_PROFILES.kpost.loginRequest(AUTH_PROFILES.kpost.principals[0]!)
@@ -184,7 +184,31 @@ export const fetchUserDetailsApi = defineKpostEndpoint({
   request: body(() => ({ kpostID: testData.kpostId, countryID: testData.countryId })),
 });
 
+export const fetchPersonalUserDetailsApi = defineUndocumentedKpostEndpoint({
+  id: 'signup-login-fetch-personal-user-details',
+  // Live: a public lookup of OUR own account (the QA identifier guard checks it).
+  productionSafe: true,
+  method: 'POST',
+  path: '/v2/signupLogin/fetchPersonalUserDetails',
+  summary: 'Name, designation and type of an active personal account, by KPost ID or mobile',
+  tags: ['signup-login', 'signup', 'enumeration-surface', 'security'],
+  authentication: { required: false },
+  destructive: false,
+  request: body(() => ({ kpostID: testData.kpostId, countryID: String(testData.countryId) })),
+  requestSchema: typesOnlySchema({
+    kpostID: testData.kpostId,
+    countryID: String(testData.countryId),
+  }),
+  evidence:
+    'SignUpLoginControllerV2.java:405 (public under /v2/signupLogin/**); SignUpLoginDaoImpl.java:774-784 ' +
+    'matches kpostID OR mobileNumber; no client calls it',
+  note:
+    'security defect candidate: no token, and the "kpostID" may be a mobile number, so anyone can look ' +
+    'up a person by phone; an unknown user answers 500, not 404 (getSingleResult) — verify live',
+});
+
 export const loginApis = [
+  fetchPersonalUserDetailsApi,
   fetchUserDetailsApi,
   userLoginApi,
   adminUserLoginApi,

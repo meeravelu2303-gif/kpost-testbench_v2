@@ -3,7 +3,63 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-28 (latest) — KMail path prefix follows the KMail host
+### 2026-10-29 (latest) — KPost API happy path: 38 more endpoints, a throwaway account, and an SMS leak closed
+
+Owner: "2. Possible now, just not built yet — yes cover these." Read from the backend, React and Flutter
+sources (four read-only research passes), then checked live on the QA backend `192.168.0.100:8989`.
+
+- **Incident, closed:** the profile's device and deactivation OTP senders (`sendPrimaryDeviceOtp`,
+  `sendPrimaryOrSecondaryDeviceOtp`, `sendAccountDeactivationOtp`) ignore the OTP bypass and always call the
+  SMS gateway for the account's own mobile (`UserProfileServiceImpl.java:360-410`), yet the guard let them run
+  under `OTP_TEST_GATEWAY` + `TEST_DB_MODE`: product runs could text qatest1's number (3 per type per day).
+  `production-guard.ts` now blocks them like forgot-password; flows mint the same OTP types SMS-free through
+  `common/sendOTP`, which honours the bypass.
+- **38 new endpoint definitions** (undocumented ones via `defineUndocumentedKpostEndpoint` with source evidence),
+  a new KNews module (`src/api/definitions/kpost/knews/`, `tests/kpost-api/knews/`, added to the product command
+  and run levels). On the first live check 20 passed, 4 failed and reproduced alone (real defects:
+  `katchupSearch` 22 s, `getStorageDetails` 13 s and `kallDataSize:null`, `fetchReportMsgs` 500, `/v1/news` 500),
+  and 14 stay blocked on purpose: `changeCaption` (rewrites anyone's messages), `uploadMultipartFiles`
+  (undeletable rows), `voice/translate` (a paid OpenAI call), `firebase/notificationForKall` (rings anyone),
+  the three `/admin/news/*` (every user's feed), `addingUserForReallocateByAdmin`, and the public
+  `signupLoginForMediumAndLarge/addingUserByAdmin`. `patchWorkForGroup` and `kmailPasswordPatchWork` are tested
+  as "our user is refused (403)". `/v2/dashboard/getKmailDashboardMsg` is not defined: it proxies to live kmail5.
+- **Needs-id endpoints driven inside their flows:** `getDeletedKatchupMsgIds` (Katchup lifecycle, after the
+  delete), `oldDownload` (presigned-attachment workflow), `checkAttachmenS3` GET (AWS flow, 417 right after
+  presign), `deleteReport` (KDiary flow), KNews settings save → read back → restore. All passed live.
+- **Flows now count in the happy-path report:** `sendTo` records each endpoint a flow drove and whether the
+  answer had an expected status (`api-calls` annotation); a passing flow credits those endpoints of its own
+  product. The report also lists every passed endpoint (collapsed).
+- **Throwaway account** (`tests/kpost-api/profile/throwaway-account.spec.ts`): signs up
+  `apiflowkpost<N>@kpostindia.com` (mobile `90000006NN`), sets and updates the primary and secondary device,
+  changes the access code (both routes) and the password, deactivates (login then 403), and deletes the
+  account's rows in the end, whatever happened (audit log left alone; it is not indexed by account). A new guard
+  permission, `throwawayAccount`, opens session-ending actions only on the OTP test gateway with the test DB,
+  only for an id matching `THROWAWAY_ACCOUNT_ID`, only when the call signs in as that account (the executor
+  checks), and never for a real-SMS sender. Live: 13 endpoints proven, no SMS, nothing left in the DB. The first
+  attempt failed (the automatic login named an id no QA_* value lists) and its clean-up timed out on the audit
+  table, leaving `apiflowkpost1` behind; it was deleted by hand and both causes fixed.
+- **Not done yet:** the shared company writes on QA companies 242/1034 (user management, company details) need
+  a guard path for `global` admin writes with undo; payments, KBooking writes and forgot-password wait on the
+  developers.
+
+### 2026-10-29 — Happy-path report after every product run
+
+Owner: "is the functional / happy path covered 100%?" The run reports kept totals only (179 KPost API endpoints
+driven, 88.6% of checks passed), so no one could say which endpoint's normal request ran or passed.
+
+- Every `product:*` run now writes `reports/happy-path/<product>.md` and prints one line: per endpoint, its
+  `response.status-code` check (the endpoint's own request, its expected status) ✅ passed / ❌ failed /
+  ⛔ blocked with a plain reason (real OTP/SMS, shared-environment write, a record an earlier step did not
+  create …) / ➖ not run. Built in the Bugzilla reporter from the run's own tests (`src/reporting/happy-path.ts`),
+  written before filing, never on `--list`. Endpoints with no engine test are outside it (the backend gap list
+  covers them). Self-test `tests/framework/happy-path.spec.ts`; checked on a real 4-endpoint run, then the
+  saved report and plan were restored.
+- OTP endpoints (next): under the product flags (`OTP_TEST_GATEWAY` + `TEST_DB_MODE`) the guard already lets
+  the OTP endpoints run; it still blocks, on purpose, the three that would end the bench's own session
+  (deactivate, set/update primary device) and forgot-password (texts a real phone even with the bypass).
+  The first full run's happy-path report shows which of the rest actually pass.
+
+### 2026-10-28 — KMail path prefix follows the KMail host
 
 Owner pointed `KMAIL_API_BASE_URL` at the QA KMail backend `http://192.168.0.100:9081`; the run still "called
 testkmail". The host was right, but `KMAIL_PATH_PREFIX` defaulted to `/testkmail/v2`, the testkmail

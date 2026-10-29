@@ -1,7 +1,12 @@
 import { testData } from '@config/test-data.config';
 import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
-import { body, defineKpostEndpoint, pathParams } from '../kpost-endpoint';
+import {
+  body,
+  defineKpostEndpoint,
+  defineUndocumentedKpostEndpoint,
+  pathParams,
+} from '../kpost-endpoint';
 
 /**
  * KPost core business-admin / User Management ops (`/admin/*`), not the separate Admin/HR-Setup
@@ -232,5 +237,24 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     request: body(() => ({ kpostID: testData.businessMUser1KpostId, companyID: companyId() })),
     destructive: true,
     sideEffect: 'global',
+  }),
+  defineUndocumentedKpostEndpoint({
+    id: 'admin-adding-user-for-reallocate',
+    method: 'POST',
+    path: '/admin/addingUserForReallocateByAdmin',
+    summary: 'Re-add a terminated member to the company (reallocate)',
+    tags: ['company', 'common-company', 'user-management'],
+    authentication: asBusinessAdmin,
+    // Creates or revives an account with a password nobody receives, rewrites that contact in every
+    // user's address book and messages the whole company: never driven.
+    destructive: true,
+    sideEffect: 'global',
+    evidence:
+      'AdminController.java:70-91 (no @Valid); SignUpLoginServiceImpl.java:2155-2238 (company admin of ' +
+      'the body companyID; entity dereferenced unchecked); no client calls it (the web reallocates via ' +
+      'addingUserByAdmin requestType "reallocate", UserManagement.js:331-361)',
+    note:
+      'defect candidates to verify live: the React-shaped body 500s (entity is null), and the success ' +
+      'response returns the User entity without blanking the password hash',
   }),
 ];

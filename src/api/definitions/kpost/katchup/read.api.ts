@@ -250,6 +250,60 @@ export const messagesByReferenceApi = defineKatchupEndpoint({
   note: 'needs a real reference message list; a plain sent msgID gets a clean 404, not yet confirmed positive',
 });
 
+export const globalSearchApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-global-search',
+  authentication: { required: true },
+  method: 'POST',
+  path: '/v2/katchup/katchupSearch',
+  summary: "Header search over the caller's own messages and attachment names",
+  tags: ['katchup', ...READ_TAGS, 'search'],
+  destructive: false,
+  // Searches only our own messages (sender or receiver = caller) for a harmless term.
+  productionSafe: true,
+  // 404 "No Data Found" is the empty answer: no message of ours matched in the last three months.
+  expectedStatus: [200, 404],
+  request: body(() => ({ keyWord: 'qa bench' })),
+  requestSchema: typesOnlySchema({ keyWord: 'qa bench' }),
+  evidence:
+    'Header.js:2745-2773 (sends {keyWord} once the trimmed text has 2+ characters); ' +
+    'KatchupControllerV2.java:1987 searchMessages reads only keyWord (blank → 400)',
+  note:
+    'the web app posts it to a hardcoded http://192.168.0.38:8989 (Header.js:240-241); fromDate/toDate ' +
+    'are ignored and toDate is midnight today, so a message sent today may not be found ' +
+    '(KatchupServiceImpl.java:2724-2727) — verify live before filing either',
+});
+
+export const reportReasonsApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-report-reasons',
+  authentication: { required: true },
+  method: 'GET',
+  path: '/v2/katchup/fetchReportMsgs',
+  summary: 'The list of reasons a message can be reported for',
+  tags: ['katchup', ...READ_TAGS, 'report'],
+  destructive: false,
+  // Reference data (TBL_KPOST_REPORT_REASON); names nobody.
+  productionSafe: true,
+  evidence:
+    'KatchupControllerV2.java:2175 fetchReportMsgs → KatchupDaoImpl.java:990-993 (select all ReportReason)',
+});
+
+export const deletedMessageIdsApi = defineUndocumentedKpostEndpoint({
+  id: 'katchup-deleted-message-ids',
+  authentication: { required: true },
+  method: 'GET',
+  path: '/v2/katchup/getDeletedKatchupMsgIds/{lastMsgID}',
+  summary:
+    'Whether a message the caller sent or received was deleted by them (answers [id] or 404)',
+  tags: ['katchup', ...READ_TAGS, 'needs-message-id'],
+  destructive: false,
+  // Keyed by a real message id: the Katchup lifecycle asks it right after deleting its own message.
+  request: pathParams(() => ({ lastMsgID: 0 })),
+  pathParamsSchema: pathParamSchema('lastMsgID'),
+  evidence:
+    'KatchupControllerV2.java:2056-2083; KatchupRepository.java:81-83 returns the id only when that ' +
+    'exact message was deleted by the caller (not "every deletion since")',
+});
+
 export const katchupReadApis = [
   unopenedCountApi,
   unopenedTotalCountApi,
@@ -268,4 +322,7 @@ export const katchupReadApis = [
   referenceDetailsApi,
   referenceMessagesDetailsApi,
   messagesByReferenceApi,
+  globalSearchApi,
+  reportReasonsApi,
+  deletedMessageIdsApi,
 ];

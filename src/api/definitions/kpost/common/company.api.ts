@@ -160,7 +160,25 @@ export const downloadProfileImagePublicApi = defineUndocumentedKpostEndpoint({
     '@GetMapping("downloadProfileImage/{kpostID}"), public per SecurityConfiguration /v2/common/**',
 });
 
+export const isCompanyNameExistApi = defineUndocumentedKpostEndpoint({
+  id: 'common-is-company-name-exist',
+  // Live: an existence check, asked with a company name nobody uses.
+  productionSafe: true,
+  method: 'POST',
+  path: '/v2/common/isCompanyNameExist',
+  summary: 'Whether a company name is already registered (business signup)',
+  tags: [...COMPANY_TAGS, 'enumeration-surface'],
+  destructive: false,
+  request: body(() => ({ companyName: testData.companyNameAbsent })),
+  requestSchema: typesOnlySchema({ companyName: testData.companyNameAbsent }),
+  evidence:
+    'CommonControllerV2.java:1532 (companyName required, else 400; exact match on ' +
+    'AdminRegistration.companyName; taken → 409); no client calls it (the web uses ' +
+    'getCompanyNameExistOnKpostAndKsmacc)',
+});
+
 export const companyApis = [
+  isCompanyNameExistApi,
   companyDetailsApi,
   downloadProfileImagePublicApi,
   companyDetailsByAdminApi,

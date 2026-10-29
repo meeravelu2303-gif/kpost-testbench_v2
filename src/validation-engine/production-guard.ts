@@ -24,7 +24,17 @@ export interface SafetyFlags {
   adminLifecycle?: boolean;
   /** Per-call authorization of one live `global` admin write; also needs `adminLifecycle`. */
   allowGlobalLifecycle?: boolean;
+  /**
+   * The call acts on a throwaway account its own flow created this run, signed in as that account
+   * (the executor checks both). With the OTP test gateway on the test DB, it may run what would end
+   * or damage a real account — device changes, password and access-code changes, deactivation.
+   * Never a real-SMS sender: those rules come first.
+   */
+  throwawayAccount?: boolean;
 }
+
+/** The only accounts `throwawayAccount` may name: created and deleted by one flow run. */
+export const THROWAWAY_ACCOUNT_ID = /^apiflowkpost\d{1,2}@kpostindia\.com$/;
 
 /**
  * How far outside the test's own data an endpoint reaches: `data` (records the tests own, the
@@ -81,8 +91,11 @@ export function destructiveBlockReason(
       endpoint.label,
     );
   // The test-gateway unlock needs both `otpTestGateway` and `testDbMode`, and opens OTP flows only.
+  const onTestGateway = flags.otpTestGateway === true && flags.testDbMode === true;
+  // Ending a session or deactivating is fine on a throwaway account the flow itself created.
+  const throwawayAuthorized = onTestGateway && flags.throwawayAccount === true;
   const otpTestAuthorized =
-    flags.otpTestGateway === true && flags.testDbMode === true && isOtpFlow && !isSessionDestroyer;
+    onTestGateway && isOtpFlow && (!isSessionDestroyer || throwawayAuthorized);
 
   if (
     (endpoint.otpDependent || endpoint.sideEffect === 'external' || looksLikeSmsSender) &&
@@ -101,6 +114,22 @@ export function destructiveBlockReason(
   ) {
     return `${endpoint.label}: texts a real phone even on the test gateway (forgotPassword ignores the OTP bypass) — BLOCKED; the one forgot-password SMS per run belongs to the browser lifecycle test`;
   }
+  /*
+   * The profile's device and deactivation OTP senders also ignore the bypass: each mints a random code
+   * and calls the SMS gateway for the account's own mobile (UserProfileServiceImpl.java:360-410,
+   * SignUpLoginServiceImpl.java:1003-1039). Flows get the same OTP type SMS-free through
+   * common/sendOTP, which honours the bypass.
+   */
+  if (
+    /sendPrimaryDeviceOtp|sendPrimaryOrSecondaryDeviceOtp|sendAccountDeactivationOtp/i.test(
+      endpoint.label,
+    ) &&
+    endpoint.otpDependent === 'sends'
+  ) {
+    return `${endpoint.label}: texts the account's real phone even on the test gateway (the device and deactivation OTP senders ignore the OTP bypass) — BLOCKED; flows use common/sendOTP with the same OTP type instead`;
+  }
+  // After every real-SMS rule: the throwaway account's own calls may run whatever they need.
+  if (throwawayAuthorized) return undefined;
   /*
    * Live default deny: blocked unless `productionSafe: true`, since a delete on a real record is
    * irreversible. An allowlist, because a blocklist admits every endpoint nobody has thought about.

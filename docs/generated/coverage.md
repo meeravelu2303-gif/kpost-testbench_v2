@@ -9,8 +9,8 @@ cannot drift from what is actually tested.
 | | Count |
 | - | ----: |
 | Documented (workbook, usable) | 446 |
-| **Registered & tested** | **358** |
-| — of those, run on live | 124 |
+| **Registered & tested** | **364** |
+| — of those, run on live | 129 |
 | In "built" modules | 431 |
 
 | Module | Documented | Tested | Live | Status | Note |
@@ -33,7 +33,7 @@ cannot drift from what is actually tested.
 | `dashboard` | 3 | 3 | 2 | built | home recent-messages panel |
 | `other` | 1 | 0 | 0 | backlog | unprefixed paths — review individually |
 | `signuploginformediumandlarge` | 1 | 1 | 0 | needs-business | business-tier admin login |
-| `knews` | 6 | 0 | 0 | external | external RSS feeds, not the KPost API |
+| `knews` | 6 | 6 | 5 | external | external RSS feeds, not the KPost API |
 | `kpresentation` | 4 | 0 | 0 | out-of-scope | KDOC — out of scope per BRD §4.2 |
 | `ecommerce` | 2 | 0 | 0 | out-of-scope | third-party commerce; confirm scope with owner |
 | `metadee` | 1 | 0 | 0 | out-of-scope | third-party; confirm scope with owner |
@@ -120,15 +120,6 @@ cannot drift from what is actually tested.
 **`other`** (1) — backlog
 
 - `/delete?presentationId={presentationId}`
-
-**`knews`** (6) — external
-
-- `/v2/knews/getAllCategories/`
-- `/v2/knews/getAllNewsSource/`
-- `/v2/knews/getKnewsSettings/`
-- `/v2/knews/getPublicationByLanguageId/`
-- `/v2/knews/getSubCategoriesByCategoryId/`
-- `/v2/knews/updateKnewsSettings/`
 
 **`kpresentation`** (4) — out-of-scope
 

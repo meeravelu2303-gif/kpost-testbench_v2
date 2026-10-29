@@ -118,6 +118,7 @@ const PRODUCTS = {
       'tests/kpost-api/katchup',
       'tests/kpost-api/kbooking',
       'tests/kpost-api/kdiary',
+      'tests/kpost-api/knews',
       'tests/kpost-api/profile',
       'tests/kpost-api/sanity',
       'tests/kpost-api/security',

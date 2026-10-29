@@ -176,6 +176,10 @@ npm run report               # open the Playwright HTML report
 
 Results: `reports/REPORT.md` (and `REPORT.json`). The previous ten runs are in `reports/history/`.
 
+Happy-path coverage: `reports/happy-path/<product>.md` (`kpost-api`, `kmail-api`, `kpost-admin`), written by
+every `product:*` run: each endpoint's normal request ✅ passed / ❌ failed / ⛔ blocked (with the reason) / ➖ not
+run, and the percentage. The run also prints it in one line (`[bugzilla] happy path: …`).
+
 ## Filing a bug by hand
 
 ```powershell

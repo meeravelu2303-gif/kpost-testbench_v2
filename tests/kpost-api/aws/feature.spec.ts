@@ -58,6 +58,24 @@ test.describe('KPost AWS · feature flow', { tag: ['@api', '@platform', '@regres
       expect.soft(uuid, 'the generator mints a uuid').toBeTruthy();
 
       if (uuid) {
+        // The GET check on the key we just presigned: nothing is uploaded yet, so 417 (placeholder only).
+        const checked = await endpoints.sendTo(
+          'aws-check-attachment-get',
+          { pathParams: { uuid } },
+          {
+            label: 'aws:check-get',
+            auth: { principal: A },
+            allowLiveRead: true,
+            ownedIdentifiers: [uuid],
+          },
+        );
+        expect
+          .soft(
+            checked.status,
+            'checkAttachmenS3 knows our freshly presigned uuid (417: not uploaded yet)',
+          )
+          .toBe(417);
+
         // Delete the presigned key we just reserved (and the S3 object, if any).
         const deleted = await run(
           endpoints,

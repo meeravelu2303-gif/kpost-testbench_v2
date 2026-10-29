@@ -1,5 +1,5 @@
 import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
-import { body, pathParams } from '../kpost-endpoint';
+import { body, defineUndocumentedKpostEndpoint, pathParams } from '../kpost-endpoint';
 import { defineKpostEndpoint, type KpostEndpointConfig } from '../kpost-endpoint';
 import type { EndpointDefinition } from '../../../registry/endpoint-definition';
 
@@ -70,9 +70,29 @@ export const deleteAttachmentApi = defineAwsEndpoint({
   note: 'a GET that deletes; needs a real owned uuid',
 });
 
+export const checkAttachmentGetApi = defineUndocumentedKpostEndpoint({
+  id: 'aws-check-attachment-get',
+  authentication: { required: true },
+  method: 'GET',
+  path: '/v2/aws/checkAttachmenS3/{uuid}',
+  summary:
+    'Whether an uploaded KMail attachment reached S3 (GET form; the path is spelt "Attachmen")',
+  tags: ['aws', 'needs-attachment'],
+  // Needs a uuid the caller presigned: the AWS lifecycle asks it right after its own presign.
+  request: pathParams(() => ({ uuid: '00000000-0000-4000-8000-000000000000' })),
+  pathParamsSchema: pathParamSchema('uuid'),
+  // 417 = presigned but nothing uploaded yet (the 0-byte placeholder): the honest answer straight after a presign.
+  expectedStatus: [200, 417],
+  evidence:
+    'PresignedURLController.java:197-235 (200 uploaded, 406 not the caller’s uuid, 417 placeholder only, ' +
+    '404 no object); the POST form is aws-check-attachment',
+  note: 'no response carries statusCode, and the catch-all 500 has an empty {} body — verify before filing',
+});
+
 export const awsApis = [
   generatePresignedApi,
   katchupPresignedApi,
   checkAttachmentApi,
   deleteAttachmentApi,
+  checkAttachmentGetApi,
 ];

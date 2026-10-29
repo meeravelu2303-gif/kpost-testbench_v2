@@ -1,4 +1,4 @@
-﻿import { readFileSync, statSync } from 'node:fs';
+﻿import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { FullResult, Reporter, Suite, TestCase, TestResult } from '@playwright/test/reporter';
 import {
@@ -21,11 +21,19 @@ import {
 } from '../../ui/failure-diagnostics';
 import { assessRunValidity, ENVIRONMENTAL_UI_OR_API_FAILURE } from '../gates/validity-gate';
 import { readBugzillaConfig } from '../../config/bugzilla.config';
-import { suiteFor } from '../../config/ownership.config';
+import { suiteFor, type SuiteId } from '../../config/ownership.config';
 import { env } from '../../config/env';
 import { createLogger } from '../../utils/logger';
 import type { ValidationReport } from '../../validation-engine/validation-result';
 import { VALIDATION_REPORT_ATTACHMENT } from '../../reporting/report-attachment';
+import {
+  buildHappyPath,
+  FLOW_CALLS_ANNOTATION,
+  flowCreditsFrom,
+  happyPathHeadline,
+  happyPathMarkdown,
+  isHappyPathTitle,
+} from '../../reporting/happy-path';
 import type { UiTestRecord } from '../../reporting/run-summary';
 
 /**
@@ -35,6 +43,12 @@ import type { UiTestRecord } from '../../reporting/run-summary';
  */
 const BROWSER_PROJECTS = new Set(['chromium', 'firefox', 'webkit']);
 const LOG = '[bugzilla]';
+/** The API suite (and so the host) behind each `BENCH_PRODUCT` that runs the engine. */
+const HAPPY_PATH_SUITE: Readonly<Record<string, SuiteId>> = {
+  'kpost-api': 'kpost-api',
+  'kmail-api': 'kmail-api',
+  'kpost-admin': 'admin-api',
+};
 
 /**
  * The UI specs allowed to file bugs: only those whose signals are selector-independent (crashes,
@@ -151,8 +165,59 @@ export default class BugzillaReporter implements Reporter {
     );
     // A preview saves what it found, so `npm run bug:apply` can file it without running the tests again.
     if (productRun && this.config.dryRun) saveFilingInput(input, this.log);
+    // Written before filing, so a Bugzilla outage cannot lose the coverage picture.
+    if (productRun) this.writeHappyPath(tests, input);
     const filing = await runFiling(input, this.config, this.log);
     writeRunReport(input, filing, this.log, { write: productRun });
+  }
+
+  /** `reports/happy-path/<product>.md`: did each endpoint's normal request run and pass? */
+  private writeHappyPath(tests: readonly TestCase[], input: FilingInput): void {
+    const suite = HAPPY_PATH_SUITE[input.product];
+    if (!suite) return;
+    // A flow that passed proves the endpoints it drove with an expected answer.
+    const credits = tests
+      .filter((test) => test.outcome() === 'expected' || test.outcome() === 'flaky')
+      .flatMap((test) => {
+        const last = test.results[test.results.length - 1];
+        const calls = [...(last?.annotations ?? []), ...test.annotations].find(
+          (a) => a.type === FLOW_CALLS_ANNOTATION,
+        );
+        return flowCreditsFrom(calls?.description, suite);
+      });
+    const happy = tests
+      .filter((test) => isHappyPathTitle(test.title))
+      .map((test) => {
+        const last = test.results[test.results.length - 1];
+        const skip = [...(last?.annotations ?? []), ...test.annotations].find(
+          (a) => a.type === 'skip',
+        );
+        return {
+          describe: test.parent.title,
+          outcome: test.outcome(),
+          ran: test.results.length > 0,
+          skipReason: skip?.description,
+          error: last?.error?.message,
+        };
+      });
+    const summary = buildHappyPath(happy, credits);
+    if (!summary.rows.length) return;
+    try {
+      const dir = path.join(process.cwd(), 'reports', 'happy-path');
+      mkdirSync(dir, { recursive: true });
+      const file = path.join(dir, `${input.product}.md`);
+      const markdown = happyPathMarkdown(input.product, summary, {
+        generatedAt: input.checkedAt,
+        baseUrl: suiteFor(suite).baseUrl,
+        testRunId: input.testRunId,
+      });
+      writeFileSync(file, markdown, 'utf8');
+      console.log(`${LOG} ${happyPathHeadline(summary)} → ${path.relative(process.cwd(), file)}`);
+    } catch (error) {
+      console.log(
+        `${LOG} happy-path report not written — ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /** Every browser (UI) test's outcome, for the execution-health section of the report. */

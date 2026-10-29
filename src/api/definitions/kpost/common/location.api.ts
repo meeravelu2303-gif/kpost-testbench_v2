@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
-import { body, defineKpostEndpoint } from '../kpost-endpoint';
+import { typesOnlySchema } from '@api/schema/sample-schema';
+import { body, defineKpostEndpoint, defineUndocumentedKpostEndpoint } from '../kpost-endpoint';
 
 /** Public, read-only reference data for address forms: countries, states, cities, postcodes. */
 const LOCATION_TAGS = ['common', 'common-reference', 'location'] as const;
@@ -85,6 +86,49 @@ export const designationApi = defineKpostEndpoint({
   request: body(() => ({ designation: 'soft' })),
 });
 
+export const countryApi = defineUndocumentedKpostEndpoint({
+  id: 'common-country',
+  // Live: reference data; one country by id. No identifier of a person.
+  productionSafe: true,
+  method: 'POST',
+  path: '/v2/common/country',
+  summary: 'One country by id, code or name',
+  tags: LOCATION_TAGS,
+  destructive: false,
+  request: body(() => ({ countryID: testData.countryId })),
+  requestSchema: typesOnlySchema({ countryID: testData.countryId }),
+  evidence:
+    'CommonControllerV2.java:364 country (countryID, then countryCode, then LIKE countryName; one ' +
+    'is required, else 400); no client calls it',
+  note: 'a broad name match uses getSingleResult and 500s (CommonDaoImpl.java:63-88) — verify before filing',
+});
+
+export const professionsApi = defineUndocumentedKpostEndpoint({
+  id: 'common-professions',
+  productionSafe: true,
+  method: 'GET',
+  path: '/v2/common/getProfession',
+  summary: 'List professions (signup reference data)',
+  tags: [...LOCATION_TAGS.filter((t) => t !== 'location'), 'profession'],
+  evidence:
+    'CommonControllerV2.java:398 getProfession → professionRepository.findAll(); no client calls it',
+});
+
+export const designationsByProfessionApi = defineUndocumentedKpostEndpoint({
+  id: 'common-designations-by-profession',
+  productionSafe: true,
+  method: 'POST',
+  path: '/v2/common/getDesignationByProfessionId',
+  summary: 'Designations for one profession',
+  tags: [...LOCATION_TAGS.filter((t) => t !== 'location'), 'profession'],
+  destructive: false,
+  request: body(() => ({ profession: { professionID: 1 } })),
+  requestSchema: typesOnlySchema({ profession: { professionID: 1 } }),
+  evidence:
+    'CommonControllerV2.java:428 (profession.professionID > 0, else 400); an unknown id answers 200 ' +
+    'with [] because the 404 branch is unreachable (CommonDaoImpl.java:129-137)',
+});
+
 export const locationApis = [
   countriesApi,
   statesApi,
@@ -93,4 +137,7 @@ export const locationApis = [
   postalPinCodeApi,
   languagesApi,
   designationApi,
+  countryApi,
+  professionsApi,
+  designationsByProfessionApi,
 ];
