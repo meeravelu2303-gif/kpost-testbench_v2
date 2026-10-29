@@ -1,7 +1,25 @@
-# Mobile app testing (KPost Flutter app) — decided, not built yet
+# Mobile app testing (KPost Flutter app) — being built
 
-Decided with the owner on 2026-10-27. Nothing here runs yet; this is the agreed design and the order of work.
-The decision-log entry of the same date records why.
+Decided with the owner on 2026-10-27; building started 2026-10-29. The decision-log entries of those dates
+record why. Commands: `docs/guides/commands.md`, "KPost Mobile".
+
+**Where it stands (2026-10-29):**
+
+- Done: the accounts (qatest7 on the phone, qatest8 the second user; created on the QA backend, in the
+  registry); `scripts/mobile/setup-tools.ps1` (the installs, checked against Google's live indexes: Flutter
+  3.47.8 stable, Android 16 Google Play image); `scripts/mobile/prepare-app.mjs` (the bench's copy of Test_ENV,
+  patched and verified); `scripts/mobile/run.mjs`; three Patrol tests, written from the app source and not
+  yet run: `login_test` (ID + password → Home), `access_code_test` (Settings → General Settings → Change
+  Access Code, then unlock with it), `katchup_test` (qatest8 sends over the API; the phone finds it by Subject,
+  replies with its own Subject; the reply is read back on the server; both deleted by their senders).
+- Waiting on the night: `npm run mobile:setup` and the Hypervisor Platform restart (this PC serves the office
+  Bugzilla), then the first build and run.
+- **The app copy calls the owner's QA backend** (`192.168.0.100:8989/v2/` and `:9081/v2/`, owner's choice
+  2026-10-29). Test_ENV `c9aa9d4c2` (2026-10-27) had those hosts without `/v2/` (login 401); the developer
+  fixed it in `1145282ff` the same afternoon, before the bug was filed, so the copy now matches Test_ENV.
+- **Bugs go to Bugzilla product `Kpost Mobile Application`**, owner Manohar (`manohar@kpost.in`), 13
+  components (Auth, Katchup, Kall, KMail, Contacts, Group, Profile, Settings, KDiary, KBooking, Notifications &
+  Calls, Security, General). Suite `kpost-mobile` in `src/config/ownership.config.ts`.
 
 ## The app
 
@@ -85,8 +103,11 @@ Until 1 and 2 are fixed, mobile tests skip payments, signup and KMail images.
 
 ## Rules carried over from the bench
 
-- Test servers only (`testingapi`, `testkmail`); QA accounts only. **Mobile gets its own qatest accounts**:
-  one session per account, so a phone login signs out the Playwright runs.
+- The QA backend only (`prepare-app.mjs` refuses any other host and any live host left in the app's code);
+  QA accounts only. **Mobile has its own accounts, qatest7 and qatest8**: one session per account, so a
+  phone login would sign out a Playwright run using the same account.
+- The first sign-in shows a "set this device as primary" sheet: tests dismiss it. Tapping its Send OTP would
+  text the account's mobile number for real (the device OTP ignores the bypass).
 - One wrong-password attempt per account per run; OTP only on the test gateway; one forgot-password SMS per run.
 - A finding counts only when it reproduces alone; bugs use the same layout and dedupe as every product.
 - The developers' repo is not edited. The bench keeps the Patrol tests and builds a throwaway copy of the

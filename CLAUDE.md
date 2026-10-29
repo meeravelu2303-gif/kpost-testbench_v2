@@ -14,13 +14,14 @@ Read this first. It is the map and the rulebook; the detail lives in `docs/`:
 KPOST is a unified communications platform (chat, calling, mail under one login). The bench finds real
 defects in it and files them to Bugzilla, routed to the developer who owns the module.
 
-| Bugzilla product | Suite       | Owner                                    | Host (from `.env`)                                                      |
-| ---------------- | ----------- | ---------------------------------------- | ----------------------------------------------------------------------- |
-| KPost API        | `kpost-api` | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (http://192.168.0.100:8989, the QA backend)        |
-| KPost Admin      | `admin-api` | Karan S (karans@kpost.in)                | `ADMIN_API_BASE_URL` (http://192.168.11.11:9595, MongoDB same IP)       |
-| KMail API        | `kmail-api` | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
-| KPost UI         | `kpost-ui`  | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                        |
-| KPost Admin UI   | `admin-ui`  | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/admin-ui`       |
+| Bugzilla product         | Suite          | Owner                                    | Host (from `.env`)                                                      |
+| ------------------------ | -------------- | ---------------------------------------- | ----------------------------------------------------------------------- |
+| KPost API                | `kpost-api`    | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (http://192.168.0.100:8989, the QA backend)        |
+| KPost Admin              | `admin-api`    | Karan S (karans@kpost.in)                | `ADMIN_API_BASE_URL` (http://192.168.11.11:9595, MongoDB same IP)       |
+| KMail API                | `kmail-api`    | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
+| KPost UI                 | `kpost-ui`     | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                        |
+| KPost Admin UI           | `admin-ui`     | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/admin-ui`       |
+| Kpost Mobile Application | `kpost-mobile` | Manohar (manohar@kpost.in)               | the app copy calls `KPOST_API_BASE_URL`/v2; `mobile/patrol_test`        |
 
 **The target is the TEST deployment only** — `test.kpostindia.com`, `testingapi`, `testkmail`, the Admin
 test box, and (since 2026-10-27, the owner's choice for every KPost API run) the KPost API QA backend
@@ -36,9 +37,11 @@ payload or a rule; the live server may be newer than the copy (verify live befor
 `ADMIN_HR_MODULES_25` (Admin/HR-Setup front end), `kpost5_flutter` (the Android/iOS app, branch `Test_ENV`).
 FRDs: `D:\Kpost Documents`.
 
-**Mobile app (decided 2026-10-27, not built yet):** Patrol plus open-source helpers only, Android on this PC,
-iOS later on a Mac. Design, coverage and the developer blockers (live Razorpay key, live hosts in the test
-build): `docs/proposals/mobile-testing.md`.
+**Mobile app (decided 2026-10-27, being built since 2026-10-29):** Patrol plus open-source helpers only, Android
+on this PC, iOS later on a Mac. Phone account qatest7, second user qatest8 (no Playwright run uses them).
+`mobile/patrol_test/` (Dart) runs on the bench's patched copy of Test_ENV in `mobile/.app` (gitignored, QA
+backend only): `npm run mobile:setup` (installs; after office hours) → `mobile:prepare` → `mobile:test`. Design,
+coverage and the developer blockers: `docs/proposals/mobile-testing.md`.
 
 Modules: Signup & Login, Katchup (chat with a Subject on every message), Group, Kall, KMail, KDirectory,
 Profile, Contacts, Settings, KDiary, KBooking, Admin/HR-Setup. Requirement ids `FR-xx-NNN` come from the
@@ -102,6 +105,7 @@ tests/ — one folder per Bugzilla product, each with its own smoke/ and sanity/
   admin-ui/<area>/      KPost Admin UI by menu area: auth screens admin-setup human-resources cross-layer (+ support/)
   setup/ · framework/ · support/   logins that save sessions · bench self-tests · helpers shared by products
   UI bug tags are hashed from the pre-2026-10-27 folder names (uiFingerprintPath), so a move keeps each bug's tag.
+mobile/patrol_test/     KPost Mobile: the Patrol (Dart) tests; mobile/.app = the app copy they run in (generated, gitignored)
 contracts/, openapi/    GENERATED from the Excel workbook. Never hand-edit
 docs/                   guides/ (how to run) · reference/ (what the bench is + the decision log) · proposals/ · modules/ · ui/ · scope/
                         · generated/ (written by `framework`; never hand-edit) · api-specs/ (the KPost workbook

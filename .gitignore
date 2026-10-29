@@ -10,6 +10,10 @@ node_modules/
 /reports/
 /junit-report/
 
+# The bench's copy of the Flutter app (scripts/mobile/prepare-app.mjs): the developers' code, its
+# build output, and the run's account defines file. Never committed here.
+/mobile/.app/
+
 # Saved auth sessions (contain live cookies/tokens)
 /.auth/
 

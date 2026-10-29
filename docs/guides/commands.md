@@ -145,6 +145,23 @@ npm run test:sanity:kpost-admin-ui      # add -- --module <name> or -- --bug <id
 npm run test:regression:kpost-admin-ui
 ```
 
+## KPost Mobile (Android, Patrol): being built, files nothing yet
+
+Design and order of work: `docs/proposals/mobile-testing.md`. The phone signs in as qatest7 and qatest8 is
+the second user; no Playwright run uses either, so they never sign each other out.
+
+```powershell
+npm run mobile:setup     # once, AFTER office hours, as Administrator: Flutter, Android SDK, emulator,
+                         # Patrol CLI, Hypervisor Platform. Never restarts; says when a restart is needed
+npm run mobile:prepare   # the bench's copy of the Test_ENV app in mobile/.app, pointed at the QA backend,
+                         # Patrol added. Re-run after the developers push to Test_ENV
+emulator -avd kpost_api36   # start the phone (its own window)
+npm run mobile:test      # every test in mobile/patrol_test, with a video; -- --target login_test.dart for one
+```
+
+`mobile:setup` refuses to run 09:00-19:00 on weekdays (this PC serves the office Bugzilla); add
+`-- -OfficeHoursOk` only when nobody needs Bugzilla. `mobile:test` needs `QATEST7_ACCESS_CODE` in `.env`.
+
 ## All products
 
 ```powershell

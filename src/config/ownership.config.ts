@@ -7,7 +7,14 @@ import { env } from './env';
  * Single source of truth; a framework test fails when it drifts from live Bugzilla.
  */
 
-export const SUITE_IDS = ['kpost-api', 'admin-api', 'kmail-api', 'kpost-ui', 'admin-ui'] as const;
+export const SUITE_IDS = [
+  'kpost-api',
+  'admin-api',
+  'kmail-api',
+  'kpost-ui',
+  'admin-ui',
+  'kpost-mobile',
+] as const;
 export type SuiteId = (typeof SUITE_IDS)[number];
 
 export interface SuiteOwnership {
@@ -160,6 +167,33 @@ const UI_COMPONENT_BY_SCREEN: Record<string, string> = {
   'kall-window': 'Kall',
 };
 
+/**
+ * Phone (Patrol) test areas → components of the `Kpost Mobile Application` product, every one
+ * assigned to Manohar (components created 2026-10-29). Keys are the test file's area.
+ */
+const MOBILE_COMPONENT_BY_SCREEN: Record<string, string> = {
+  login: 'Auth',
+  signup: 'Auth',
+  auth: 'Auth',
+  'access-code': 'Auth',
+  katchup: 'Katchup',
+  kall: 'Kall',
+  kmail: 'KMail',
+  contacts: 'Contacts',
+  group: 'Group',
+  groups: 'Group',
+  profile: 'Profile',
+  settings: 'Settings',
+  kdiary: 'KDiary',
+  kbooking: 'KBooking',
+  notifications: 'Notifications & Calls',
+  'incoming-call': 'Notifications & Calls',
+  push: 'Notifications & Calls',
+  security: 'Security',
+  home: 'General',
+  general: 'General',
+};
+
 export const SUITES: Record<SuiteId, SuiteOwnership> = {
   'kpost-api': {
     id: 'kpost-api',
@@ -237,6 +271,21 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
     },
     // The fallback is only for type completeness; the Admin UI command needs ADMIN_UI_BASE_URL.
     baseUrl: env.ADMIN_UI_BASE_URL ?? env.BASE_URL,
+  },
+  'kpost-mobile': {
+    id: 'kpost-mobile',
+    label: 'KPost Flutter app (Android; iOS later)',
+    kind: 'ui',
+    repository: 'kpost5_flutter, branch Test_ENV',
+    owner: { name: 'Manohar', email: 'manohar@kpost.in' },
+    bugzilla: {
+      product: 'Kpost Mobile Application',
+      version: '1.0',
+      fallbackComponent: 'General',
+      componentByTag: MOBILE_COMPONENT_BY_SCREEN,
+    },
+    // The app has no URL of its own; the bench's app copy calls the KPost API.
+    baseUrl: env.KPOST_API_BASE_URL ?? env.API_BASE_URL,
   },
 };
 
@@ -397,4 +446,5 @@ export const KNOWN_COMPONENTS: Partial<Record<SuiteId, Set<string>>> = {
     'WriteMail',
   ]),
   'admin-ui': new Set(['General', 'User Management']),
+  'kpost-mobile': new Set(Object.values(MOBILE_COMPONENT_BY_SCREEN)),
 };

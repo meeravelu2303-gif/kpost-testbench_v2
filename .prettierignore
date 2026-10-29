@@ -5,6 +5,7 @@ blob-report/
 .auth/
 reports/
 junit-report/
+mobile/.app/
 
 # Generated from the Excel workbook by scripts/excel-to-contract.cjs — reformatting them by hand
 # would only be undone by the next run.

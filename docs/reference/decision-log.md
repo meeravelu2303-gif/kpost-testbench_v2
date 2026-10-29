@@ -3,7 +3,53 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-29 (latest) — Authorization (negative) checks: switched on where they fit, cross-user gaps closed
+### 2026-10-29 (latest) — Mobile (Patrol): building started; installs wait for the night
+
+Owner: "can we start the mobile process now?" (15:20, office hours). The installs (several GB) and the Hypervisor
+Platform restart would disturb the office Bugzilla this PC serves, so they are one script for tonight
+(`npm run mobile:setup`: refuses 09:00-19:00 on weekdays, never restarts by itself). Everything else is built:
+
+- **Backend: the owner's QA backend** (owner's choice today, over testingapi as shipped). Test_ENV commit
+  `c9aa9d4c2` (2026-10-27, "URL Updated") already points at `192.168.0.100:8989` / `:9081`, but without
+  `/v2/`, and the QA backend refuses every unprefixed path with 401 "Authentication required", login included
+  (replayed today: `/signupLogin/userLogin/` 401, `/v2/signupLogin/userLogin/` 400 "kpostID and password are
+  required"). The app's Dio client adds no prefix, so that build cannot sign in. The bench's copy uses `/v2/`;
+  to tell the Flutter developer (no Bugzilla product for the app yet, so not filed).
+- **The developers' repo is never written.** `scripts/mobile/prepare-app.mjs` clones Test_ENV into `mobile/.app`
+  (gitignored; `core.autocrlf=false` so the files stay byte-identical), patches the base URLs to `.env`'s QA
+  hosts (refusing any other host), refuses the copy if `devapi2` / `kmail5` / `adminmodule` / `testingapi`
+  are left in uncommented app code, and adds Patrol 4.10 (dev dependency, pubspec section, Groovy runner,
+  MainActivityTest). Every patch must match exactly once or the script stops.
+- **Accounts:** qatest7 (the phone) and qatest8 (the second user, over the API), created on the QA backend
+  through the signup API (bypass OTP 123456 confirmed in `TBL_KPOST_OTP_VALIDATION` first, so no SMS), and
+  recorded in the registry. They are mapped to no Playwright role, so a phone sign-in never kicks a run's
+  session. Their mobile numbers, `9000000507` / `9000000508`, are placeholders in a range the bench does not use
+  elsewhere: a device OTP would text whoever holds them, so the tests always answer "Set as Primary Device"
+  with No. `QATEST7_ACCESS_CODE` (4 digits, the app's PIN length) is generated into `.env`.
+- **First test:** `mobile/patrol_test/login_test.dart`, sign-in with KPost ID and password to Home, driven
+  by English texts (the flow has no widget keys). The order of steps and the popups were mapped from source:
+  the country must be chosen before the ID field is editable, the password field drops `.`, `-`, `,` and spaces
+  (the shared password fits), the first login does not force an access code, and Home queues a showcase tour,
+  a profession sheet and the primary-device sheet in no fixed order. Not run yet: needs tonight's installs.
+- `scripts/mobile/run.mjs` passes the account values through a defines file in the copy, deleted after the run
+  (never on a command line), and records a video.
+- **Bugzilla product (owner created it today): `Kpost Mobile Application`**, version 1.0, owner Manohar
+  (`manohar@kpost.in`; his tracker e-mail is off, so he is not notified). It came with one component, Auth; on
+  the owner's go-ahead the bench added Katchup, Kall, KMail, Contacts, Group, Profile, Settings, KDiary, KBooking,
+  Notifications & Calls, Security and General, all defaulting to Manohar. Routed as suite `kpost-mobile` in
+  `ownership.config.ts` (test area → component, unknown → General); the live owner check covers it.
+- The `/v2` defect above was written as a hand-filed bug for Manohar (`KPM-TESTENV-BASEURL-NO-V2`, Auth,
+  critical), duplicate-checked and previewed, and **not filed**: before the owner approved it, Test_ENV commit
+  `1145282ff` ("V2 Updated", 16:16, JG_BALAJI) added `/v2/` to all three base URLs. The bench's copy now differs
+  from Test_ENV only by one reformatted line (its K-AI URL patch was aligned to `/v2/` too).
+- Two more phone tests, written before the first run: `access_code_test.dart` and `katchup_test.dart`, with
+  `support/peer_api.dart` (a QA account over the API). Replayed live first: qatest8 can message qatest7 without
+  being contacts, and the Flutter app's own send body (`groupFlag` a JSON boolean, Quill-delta text) is accepted
+  by the QA backend (200), so the bench note "a boolean gets 400" does not hold for the app's full body here.
+  The backend emits no socket event for an API-sent message, so the second user sends before the phone opens
+  Katchup. The phone's account signs in over the API only in cleanup, after the phone is done.
+
+### 2026-10-29 — Authorization (negative) checks: switched on where they fit, cross-user gaps closed
 
 Owner: "is negative testing complete?" The last full run had **0 of 3,965 authorization checks run**: the engine
 runs role / permission / forbidden / cross-tenant / privilege-escalation only for a definition that declares

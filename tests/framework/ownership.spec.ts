@@ -69,6 +69,16 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
     expect(SUITES['kmail-api'].owner.email).toBe('jitendra@kpost.in');
     expect(SUITES['kpost-ui'].bugzilla.product).toBe('KPost UI');
     expect(SUITES['kpost-ui'].owner.email).toBe('ayyappan@kpostindia.com');
+    expect(SUITES['kpost-mobile'].bugzilla.product).toBe('Kpost Mobile Application');
+    expect(SUITES['kpost-mobile'].owner.email).toBe('manohar@kpost.in');
+  });
+
+  test('a phone test routes to its module component, an unknown area to General', () => {
+    const mobile = suiteFor('kpost-mobile');
+    expect(componentFor(mobile, ['login'])).toBe('Auth');
+    expect(componentFor(mobile, ['katchup'])).toBe('Katchup');
+    expect(componentFor(mobile, ['incoming-call'])).toBe('Notifications & Calls');
+    expect(componentFor(mobile, ['nonexistent-area'])).toBe('General');
   });
 
   test('a defect carries its module all the way to the ticket', () => {

@@ -13,6 +13,7 @@ export default defineConfig(
       '.auth/',
       'reports/',
       'junit-report/',
+      'mobile/.app/',
     ],
   },
   js.configs.recommended,

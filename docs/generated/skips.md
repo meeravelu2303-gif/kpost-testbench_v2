@@ -10,16 +10,16 @@ be in, one it should not stay in (no reason string), and one that fails the buil
 | ----- | ----: | ---------: |
 | Retune | 0 | 0 |
 | Blocked by a defect | 48 | 27 |
-| Provision | 331 | 233 |
-| Owner decision | 205 | 148 |
-| Live condition | 113 | 51 |
+| Provision | 332 | 234 |
+| Owner decision | 211 | 152 |
+| Live condition | 114 | 52 |
 | No reason string | 0 | 0 |
 | Unclassified | 0 | 0 |
-| **Total** | **697** | **277** |
+| **Total** | **705** | **280** |
 
 ## The last run, by the engine’s own skip classes
 
-Run `run-d62a9189-9c0a-47e4-aa41-0d1c78087ee9` at 2026-10-27T10:40:42.141Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
+Run `run-b377a5a9-ac32-4067-8ec8-e4b4f63fa1db` at 2026-10-29T04:47:21.929Z: 0 checks, 0 applicable ran (0% passed), 0 skipped:
 
 | Engine skip class | Checks | Meaning |
 | ----------------- | -----: | ------- |
@@ -43,11 +43,11 @@ _None._
 | 3 | send did not return a msgID (replied …) | `tests/kpost-api/security/katchup-idor-regression-2026-10-03.spec.ts:44`, `tests/kpost-api/security/katchup-idor-regression-2026-10-03.spec.ts:169`, `tests/kpost-api/security/katchup-idor-regression-2026-10-03.spec.ts:253` |
 | 3 | group-create did not return a groupKpostID (replied …) | `tests/kpost-api/security/katchup-idor-regression-2026-10-03.spec.ts:329`, `tests/kpost-api/security/katchup-idor-regression-2026-10-03.spec.ts:426`, `tests/kpost-api/security/katchup-object-authorization.spec.ts:224` |
 | 2 | kmail-post-mail did not return a kmailID (…) | `tests/kmail-api/security/content-idor.spec.ts:64`, `tests/kmail-api/security/copies-info-idor.spec.ts:67` |
-| 2 | BLOCKED: needs the msgID from "a message sends" | `tests/kpost-api/katchup/lifecycle.spec.ts:100`, `tests/kpost-api/katchup/lifecycle.spec.ts:111` |
+| 2 | BLOCKED: needs the msgID from "a message sends" | `tests/kpost-api/katchup/lifecycle.spec.ts:101`, `tests/kpost-api/katchup/lifecycle.spec.ts:112` |
 | 2 | BLOCKED: needs the message from "send" | `tests/kpost-api/katchup/workflow-db.spec.ts:94`, `tests/kpost-api/katchup/workflow-db.spec.ts:168` |
 | 2 | sendMessage did not return a msgID to attack (send replied …) — activates automatically once one is issued | `tests/kpost-api/security/katchup-object-authorization.spec.ts:50`, `tests/kpost-api/security/katchup-object-authorization.spec.ts:122` |
-| 1 | BLOCKED: needs the record from "1 create" | `tests/framework/run-continuity.spec.ts:97` |
-| 1 | BLOCKED: needs never the record from a step that failed | `tests/framework/run-continuity.spec.ts:99` |
+| 1 | BLOCKED: needs the record from "1 create" | `tests/framework/run-continuity.spec.ts:100` |
+| 1 | BLOCKED: needs never the record from a step that failed | `tests/framework/run-continuity.spec.ts:102` |
 | 1 | API open call returns an empty record (kmailID 0) — the intermittent empty-record fault #1348, seen in the browser too on 2026-10-22; parked until it is fixed | `tests/kmail-api/flows/mail-semantics-workflow.spec.ts:218` |
 | 1 | Dev-confirmed 2026-09-26: this route is not in use — intentionally unavailable on this build, not a deployment gap. testkmail answers a plain Spring 404 "Not Found" for POST /draft/draftMailMultiPart, consistent with that. Not exercised, by design. | `tests/kmail-api/flows/manage-workflow.spec.ts:204` |
 | 1 | Dev-confirmed 2026-09-26: letterhead id "1" IS the shared system default — "other[s] are should be added by user for their own customization." This matches the evidence already on file (getLetterHead marks id 1 `"default":"Y"` at a generic S3 path). So deleting id 1 is confirmed unsafe, exactly as suspected — not a remaining open question. What blocks a live test now is narrower: the KMail OpenAPI contract and workbook register only get-all/get-current/get-template/set-active-by-id/delete-by-id for letterheads — no create/save/upload route a user would call to add their own, so this bench has no way to create a personal letterhead to safely delete instead. Needs the dev to name which endpoint the "add your own" flow actually calls (not documented in the KMAILAPI workbook) before this can be tested end to end; not worked around by deleting the shared default. | `tests/kmail-api/flows/manage-workflow.spec.ts:288` |
@@ -72,12 +72,12 @@ _None._
 | 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a composer-control finding | `tests/kpost-ui/kmail/kmail-composer-controls.spec.ts:30` |
 | 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a compose-fuzz finding | `tests/kpost-ui/kmail/kmail-security.spec.ts:58` |
 
-## Provision — an account, connection, host or secret this machine lacks (331)
+## Provision — an account, connection, host or secret this machine lacks (332)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
 | 85 | qa.bench needs a real live account (QA_KPOST_ID) | `tests/kpost-ui/auth/login-session.spec.ts:14`, `tests/kpost-ui/auth/login-session.spec.ts:80`, `tests/kpost-ui/auth/login-token-security.spec.ts:16`, `tests/kpost-ui/auth/login-token-security.spec.ts:91` +81 more |
-| 33 | needs the KPOST_QA connection | `tests/framework/_diff-accounts.local.spec.ts:17`, `tests/framework/_snapshot-accounts.local.spec.ts:16`, `tests/kmail-api/flows/workflow-db.spec.ts:105`, `tests/kmail-api/flows/workflow-db.spec.ts:136` +29 more |
+| 33 | needs the KPOST_QA connection | `tests/framework/_diff-accounts.local.spec.ts:23`, `tests/framework/_snapshot-accounts.local.spec.ts:22`, `tests/kmail-api/flows/workflow-db.spec.ts:105`, `tests/kmail-api/flows/workflow-db.spec.ts:136` +29 more |
 | 25 | qa.bench needs both QA accounts | `tests/kpost-ui/contacts/contacts.spec.ts:61`, `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:47`, `tests/kpost-ui/group/group-exit-e2e.spec.ts:95`, `tests/kpost-ui/group/group-security.spec.ts:18` +21 more |
 | 19 | (no reason string) kmailAuthGate() !== undefined, kmailAuthGate() ?? '' | `tests/kmail-api/contract.spec.ts:8`, `tests/kmail-api/engine/coverage.spec.ts:16`, `tests/kmail-api/engine/read.spec.ts:12`, `tests/kmail-api/flows/attachment-integrity.spec.ts:29` +15 more |
 | 9 | account registry says which role is missing (requireAll) | `tests/kmail-api/flows/workflow-db.spec.ts:36`, `tests/kpost-api/contacts/contacts-workflow.spec.ts:21`, `tests/kpost-api/contacts/contacts-workflow.spec.ts:159`, `tests/kpost-api/profile/profile-workflow.spec.ts:19` +5 more |
@@ -119,14 +119,15 @@ _None._
 | 1 | no finding supplied — pass --bug=<file.json> (see the usage block above) | `tests/framework/bug-tracker/manual-bug.spec.ts:125` |
 | 1 | no local .env on this machine (fresh checkout / CI) | `tests/framework/env-template.spec.ts:62` |
 | 1 | needs at least two configured accounts | `tests/framework/kmail-flags.spec.ts:128` |
-| 1 | needs BUGZILLA_URL and BUGZILLA_API_KEY | `tests/framework/ownership.spec.ts:279` |
-| 1 | no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first | `tests/framework/_diff-accounts.local.spec.ts:18` |
+| 1 | needs BUGZILLA_URL and BUGZILLA_API_KEY | `tests/framework/ownership.spec.ts:289` |
+| 1 | no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first | `tests/framework/_diff-accounts.local.spec.ts:24` |
 | 1 | needs three QA accounts | `tests/kmail-api/flows/mail-semantics-workflow.spec.ts:46` |
 | 1 | needs four distinct QA principals configured (QA_* accounts) | `tests/kmail-api/security/copies-info-idor.spec.ts:28` |
 | 1 | needs the KPOST_QA connection to resolve the real membership id | `tests/kpost-api/group/feature.spec.ts:310` |
 | 1 | needs the KPOST_QA database to see read_time | `tests/kpost-api/katchup/offline-delivery.spec.ts:76` |
 | 1 | needs the KPOST_QA connection (DB_HOST/DB_NAME) to prove the account exists | `tests/kpost-api/profile/directory-lookup.spec.ts:20` |
 | 1 | set QA_COMPANY_NAME to a real company name to unblock this | `tests/kpost-api/profile/feature.spec.ts:335` |
+| 1 | needs the KPOST_QA database to pick the id and remove the account | `tests/kpost-api/profile/throwaway-account.spec.ts:63` |
 | 1 | qa.p5 needs a real QA_PERSONAL_5_KPOST_ID account not already in the attacker's contacts | `tests/kpost-api/security/kall-object-authorization.spec.ts:524` |
 | 1 | needs a KPost principal | `tests/kpost-api/security/katchup-filter-messageby-leak-guard-2026-10-12.spec.ts:17` |
 | 1 | needs the personal-5 and victim principals | `tests/kpost-api/security/katchup-object-authorization.spec.ts:180` |
@@ -173,7 +174,7 @@ _None._
 | 1 | qa.p5 needs the spare QA account (QA_PERSONAL_5_KPOST_ID) | `tests/kpost-ui/smoke/auth.smoke.spec.ts:18` |
 | 1 | needs the group-creator QA account (personal-3) | `tests/kpost-ui/smoke/group.smoke.spec.ts:18` |
 
-## Owner decision — gated flows, pauses and safety choices (205)
+## Owner decision — gated flows, pauses and safety choices (211)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -197,8 +198,8 @@ _None._
 | 3 | edits a profile field; set PROFILE_UI_LIFECYCLE=true | `tests/kpost-ui/profile/profile-edit.spec.ts:15`, `tests/kpost-ui/profile/profile-functional.spec.ts:47`, `tests/kpost-ui/profile/profile-security.spec.ts:17` |
 | 2 | writes real org structure; set ADMIN_LIFECYCLE=true | `tests/admin-api/flows/feature.spec.ts:59`, `tests/admin-api/validation/write-fuzz-workflow.spec.ts:208` |
 | 2 | creates real KPost (testingapi) + KSMACC accounts for the QA company; set ADMIN_LIFECYCLE=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/admin-api/flows/role-posting-lifecycle.spec.ts:114`, `tests/admin-api/flows/role-posting-lifecycle.spec.ts:512` |
-| 2 | only meaningful when TEST_ENV=production | `tests/framework/live-safety.spec.ts:509`, `tests/framework/live-safety.spec.ts:534` |
-| 2 | writes a real message; set KATCHUP_LIFECYCLE=true to run (owner sign-off, flow doc Q4) | `tests/kpost-api/katchup/lifecycle.spec.ts:15`, `tests/kpost-api/katchup/workflow-db.spec.ts:21` |
+| 2 | only meaningful when TEST_ENV=production | `tests/framework/live-safety.spec.ts:513`, `tests/framework/live-safety.spec.ts:538` |
+| 2 | writes a real message; set KATCHUP_LIFECYCLE=true to run (owner sign-off, flow doc Q4) | `tests/kpost-api/katchup/lifecycle.spec.ts:16`, `tests/kpost-api/katchup/workflow-db.spec.ts:21` |
 | 2 | creates a real diary event; set KDIARY_LIFECYCLE=true | `tests/kpost-api/kdiary/kdiary-reads-workflow.spec.ts:26`, `tests/kpost-api/security/kdiary-object-authorization.spec.ts:36` |
 | 2 | creates a real, permanent company; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:16`, `tests/kpost-ui/auth/signup-business.spec.ts:294` |
 | 2 | drives a real mobile OTP to reach this step; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:203`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:235` |
@@ -208,6 +209,8 @@ _None._
 | 1 | one-time setup: set ADMIN_CREATE_STAFF=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/admin-api/maintenance/setup-staff-employee.spec.ts:27` |
 | 1 | opt-in: this writes to Bugzilla — run `npm run bug:apply` after a product preview | `tests/framework/bug-tracker/apply-filing-plan.spec.ts:19` |
 | 1 | manual probe — set CLEANUP_PLAN=true to list orphaned QA records on the primary account, CLEANUP_EXECUTE=true to delete them | `tests/framework/_cleanup-orphaned-records.local.spec.ts:14` |
+| 1 | manual probe — set ACCOUNT_DIFF=true right after a deep write-fuzz run | `tests/framework/_diff-accounts.local.spec.ts:18` |
+| 1 | manual probe — set ACCOUNT_DIFF=true right before a deep write-fuzz run | `tests/framework/_snapshot-accounts.local.spec.ts:17` |
 | 1 | sends real mail; set KMAIL_LIFECYCLE=true | `tests/kmail-api/flows/feature.spec.ts:84` |
 | 1 | sends real KMail between our accounts; set KMAIL_LIFECYCLE=true | `tests/kmail-api/flows/mail-semantics-workflow.spec.ts:42` |
 | 1 | writes real KMail data; set KMAIL_LIFECYCLE=true | `tests/kmail-api/flows/manage-workflow.spec.ts:39` |
@@ -237,7 +240,7 @@ _None._
 | 1 | sends a real message to get an id to test with; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/katchup/shared-reference-workflow.spec.ts:18` |
 | 1 | sends a real message between our two accounts; set KATCHUP_LIFECYCLE=true (owner sign-off) | `tests/kpost-api/katchup/unread-count-clears-on-read.spec.ts:32` |
 | 1 | real third-party seat hold, unconfirmed sandbox — needs explicit authorization | `tests/kpost-api/kbooking/feature.spec.ts:148` |
-| 1 | writes real diary events; set KDIARY_LIFECYCLE=true | `tests/kpost-api/kdiary/feature.spec.ts:64` |
+| 1 | writes real diary events; set KDIARY_LIFECYCLE=true | `tests/kpost-api/kdiary/feature.spec.ts:66` |
 | 1 | creates a real diary event and report; set KDIARY_LIFECYCLE=true | `tests/kpost-api/kdiary/kdiary-reads-workflow.spec.ts:96` |
 | 1 | writes real KWord docs; set KOS_LIFECYCLE=true | `tests/kpost-api/kos/feature.spec.ts:47` |
 | 1 | metered AI calls; set KOS_AI_LIVE=true to run | `tests/kpost-api/kos/feature.spec.ts:176` |
@@ -252,6 +255,10 @@ _None._
 | 1 | updateDeviceAsSecondary matches the isSessionDestroyer pattern for the same reason as the others above. | `tests/kpost-api/profile/device-workflow.spec.ts:87` |
 | 1 | changePassword is sideEffect:'global', never cleared for live under any flag. Running it would change the credential every other suite/test logs in with mid-run — a self-inflicted lockout, not a defect to find. The documented sample is also missing a distinct newPassword field from confirmPassword, which the null/required negative probes already exercise off-live. | `tests/kpost-api/profile/device-workflow.spec.ts:96` |
 | 1 | writes real profile data; set PROFILE_LIFECYCLE=true to run | `tests/kpost-api/profile/feature.spec.ts:50` |
+| 1 | runs only on a confirmed OTP test gateway: OTP_TEST_GATEWAY=true + TEST_DB_MODE=true | `tests/kpost-api/profile/throwaway-account.spec.ts:48` |
+| 1 | the account is deleted from the test DB afterwards; set DB_ALLOW_WRITES=true | `tests/kpost-api/profile/throwaway-account.spec.ts:52` |
+| 1 | writes a message; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/security/cross-user-gaps.spec.ts:46` |
+| 1 | presigns an S3 key; set AWS_LIFECYCLE=true | `tests/kpost-api/security/cross-user-gaps.spec.ts:150` |
 | 1 | schedules a real call; set KALL_LIFECYCLE=true | `tests/kpost-api/security/kall-legacy-writes-regression-2026-10-07.spec.ts:20` |
 | 1 | places a real call; set KALL_LIFECYCLE=true | `tests/kpost-api/security/kall-object-authorization.spec.ts:27` |
 | 1 | sends real messages / creates real groups; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/security/katchup-idor-regression-2026-10-03.spec.ts:21` |
@@ -306,7 +313,7 @@ _None._
 | 1 | creates a real diary schedule; set KDIARY_UI_LIFECYCLE=true | `tests/kpost-ui/verticals/kdiary-e2e.spec.ts:17` |
 | 1 | creates and deletes a real document; set KOS_UI_LIFECYCLE=true | `tests/kpost-ui/verticals/kword.spec.ts:65` |
 
-## Live condition — the application had nothing to test this run (113)
+## Live condition — the application had nothing to test this run (114)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -339,6 +346,7 @@ _None._
 | 1 | no reachable destination returned for this source city right now | `tests/kpost-api/kbooking/feature.spec.ts:64` |
 | 1 | no trips running on the first six real routes 14 days out right now — nothing to chain tripdetails to | `tests/kpost-api/kbooking/feature.spec.ts:85` |
 | 1 | the trip lists no boarding point right now — nothing to look up | `tests/kpost-api/kbooking/feature.spec.ts:123` |
+| 1 | no news feed on this target to read (the server has no KNews feeds configured) | `tests/kpost-api/knews/knews-workflow.spec.ts:69` |
 | 1 | no deactivated accounts on this target to check against | `tests/kpost-api/profile/directory-lookup.spec.ts:138` |
 | 1 | no route answered the outsider right now (timeouts) — the IDOR question was not checked this run | `tests/kpost-api/security/katchup-attachment-idor.spec.ts:134` |
 | 1 | image upload failed (replied …) | `tests/kpost-api/security/katchup-idor-regression-2026-10-03.spec.ts:352` |
