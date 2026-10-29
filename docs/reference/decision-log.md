@@ -3,7 +3,34 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-29 (latest) — KPost API happy path: 38 more endpoints, a throwaway account, and an SMS leak closed
+### 2026-10-29 (latest) — Authorization (negative) checks: switched on where they fit, cross-user gaps closed
+
+Owner: "is negative testing complete?" The last full run had **0 of 3,965 authorization checks run**: the engine
+runs role / permission / forbidden / cross-tenant / privilege-escalation only for a definition that declares
+`authorization`, and no KPost definition did (the KPost builders did not even pass the field through).
+
+- **Not "declare it everywhere":** most KPost endpoints take the user from the token, so another user's token
+  rightly reads its own data; a cross-tenant check there would file false bugs. `tenantScoped` is declared only
+  where the request NAMES the owner's record. The 13 core `/admin/*` definitions now declare
+  `roles: ['COMPANY_ADMIN']`, 12 of them `tenantScoped` (they name companyID 242). Live: a personal user is
+  refused on all four reads; company 1034's admin is refused on userManagementDetails and
+  getBankAndCompanyDetails, but **gets company 242's KPost-ID and display-name suggestions** (200, 3/3, owner
+  control identical) — a low-severity cross-company leak of company-name parts.
+- **Validator fixes:** the role and cross-tenant checks now take the endpoint's own `principalKey` as the owner
+  (`ownerPrincipal`), not the first COMPANY_ADMIN (an unset placeholder account). `authorization.forbidden`
+  demanded an error code KPost never sends ("error code undefined" on every refusal — a false finding); like
+  `common.api-error`, it now judges a code only when the response contract has an error-code field.
+- **Hand-written cross-user checks** (owner control in each), recorded as findings when violated:
+  `tests/kpost-api/security/cross-user-gaps.spec.ts` — the public `common/sendMessage` **delivers a message as
+  qatest1 with no token (200; confirmed, filed via the normal plan)**; the KNews settings body `kpostId` is ignored
+  (passed); the AWS uuid check refuses a stranger (406, passed). In the flows: KDiary `deleteReport` refuses a
+  stranger (404, passed), `getDeletedKatchupMsgIds` refuses an outsider (404, passed). `changeCaption` is not
+  probed: it is `global` (rewrites anyone's message) and the guard refuses it — it needs the owner's go-ahead.
+- Incident: a hand replay of the two business logins sent no password (`QA_BUSINESS_PASSWORD` is unset; under
+  `QATEST_ONLY` business logins use the original `QA_PASSWORD`), one failed attempt each, followed by a good
+  login each (CLAUDE.md §5 rule 7).
+
+### 2026-10-29 — KPost API happy path: 38 more endpoints, a throwaway account, and an SMS leak closed
 
 Owner: "2. Possible now, just not built yet — yes cover these." Read from the backend, React and Flutter
 sources (four read-only research passes), then checked live on the QA backend `192.168.0.100:8989`.

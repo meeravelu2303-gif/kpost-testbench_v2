@@ -2,7 +2,7 @@ import { runProbes, type ProbeCase } from '@engine/probe';
 import { PROFILE_SETS } from '@engine/validation-policy';
 import { defineValidator } from '@engine/validator';
 import { outcome } from '@engine/validation-result';
-import { requiresRoleCheck } from './support';
+import { ownerPrincipal, requiresRoleCheck } from './support';
 
 export const roleValidator = defineValidator({
   name: 'authorization.role',
@@ -16,7 +16,7 @@ export const roleValidator = defineValidator({
   check: async (context) => {
     const cases: ProbeCase[] = [];
     for (const role of context.endpoint.authorization.roles) {
-      const principal = context.principal(role);
+      const principal = ownerPrincipal(context, role);
       if (!principal) continue;
       cases.push({
         name: role,

@@ -14,6 +14,8 @@ import { scheduleShape } from '@api/definitions/kpost/kdiary/write.api';
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
+/** An unrelated account, for the ownership checks. */
+const STRANGER: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'victim')!;
 
 function extractId(bodyObj: Record<string, unknown>): number | undefined {
   const data = bodyObj.data;
@@ -184,6 +186,30 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
               'edit-report',
             );
             expect.soft(edited.status, 'edit-report status').toBeLessThan(300);
+
+            // Ownership: an unrelated account cannot delete our report (404); our own delete below
+            // is the control that the same call works for the owner.
+            const foreign = await endpoints.sendTo(
+              'kdiary-delete-report',
+              { body: { id: reportId } },
+              {
+                label: 'kdiary:delete-report-stranger',
+                auth: { principal: STRANGER },
+                allowLiveWrite: true,
+                ownedIdentifiers: [reportId],
+              },
+            );
+            if (foreign.status < 300)
+              endpoints.recordBusinessRuleViolation({
+                endpointId: 'kdiary-delete-report',
+                ruleId: 'KPV2-KDIARY-REPORT-IDOR',
+                rule: 'deleteReport must delete only a report the logged-in user wrote.',
+                expected: 'HTTP 404 for an unrelated account',
+                actual: `HTTP ${foreign.status}: ${STRANGER.username} deleted ${A.username}'s report ${reportId}`,
+                request: { body: { id: reportId } },
+                correlationId: foreign.correlationId,
+              });
+            expect.soft(foreign.status, 'a stranger cannot delete our diary report').toBe(404);
 
             // Today's report can be deleted the same day; afterwards there is no report for today.
             const removed = await write(

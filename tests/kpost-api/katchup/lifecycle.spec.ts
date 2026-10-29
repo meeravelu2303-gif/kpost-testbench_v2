@@ -1,3 +1,4 @@
+import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { env } from '@config/env';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
@@ -129,6 +130,32 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
     expect
       .soft(ids.ok ? (ids.value as { data?: unknown }).data : undefined, 'and names that msgID')
       .toEqual([msgID]);
+
+    // Ownership: an account that was never part of the conversation gets no answer about it.
+    const outsider = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal-3');
+    if (outsider) {
+      const foreign = await endpoints.sendTo(
+        'katchup-deleted-message-ids',
+        { pathParams: { lastMsgID: msgID! } },
+        {
+          label: 'katchup-lifecycle:deleted-ids-outsider',
+          auth: { principal: outsider },
+          allowLiveRead: true,
+          ownedIdentifiers: [msgID!],
+        },
+      );
+      if (foreign.status < 300)
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'katchup-deleted-message-ids',
+          ruleId: 'KPV2-DELETED-IDS-DISCLOSURE',
+          rule: 'getDeletedKatchupMsgIds must answer only about messages the caller sent or received.',
+          expected: 'HTTP 404 for an account outside the conversation',
+          actual: `HTTP ${foreign.status}: ${outsider.username} was told about msgID ${msgID}`,
+          request: { pathParams: { lastMsgID: msgID! } },
+          correlationId: foreign.correlationId,
+        });
+      expect.soft(foreign.status, 'an outsider is not told about our deleted message').toBe(404);
+    }
   });
 
   // Independent of the msgID chain: it sends its own message.

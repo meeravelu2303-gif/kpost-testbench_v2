@@ -22,6 +22,11 @@ const asBusinessAdmin = {
 } as const;
 const companyId = (): string => String(testData.businessMCompanyId);
 
+/** /admin/** needs the admin role (SecurityConfiguration:81): a personal user must be refused. */
+const companyAdminOnly = { roles: ['COMPANY_ADMIN'] } as const;
+/** The request names company 242: the admin of company 1034 must be refused too (owner control: 242's own call). */
+const companyScoped = { roles: ['COMPANY_ADMIN'], tenantScoped: true } as const;
+
 export const adminUserManagementApis: EndpointDefinition[] = [
   // ---- reads (live on our own company) ------------------------------------------------------
   defineKpostEndpoint({
@@ -31,6 +36,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: "List a company's members (User Management)",
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: pathParams(() => ({ companyID: companyId() })),
     pathParamsSchema: pathParamSchema('companyID'),
     destructive: false,
@@ -43,6 +49,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: "Read a company's bank + company details",
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: pathParams(() => ({ companyID: companyId() })),
     pathParamsSchema: pathParamSchema('companyID'),
     // Types-only, from a captured live body (the workbook documents no response).
@@ -70,6 +77,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Suggest a KPost ID for a new member (no persistence)',
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     // `companyName` uses the allowlisted QA value; a suggestion persists nothing.
     request: body(() => ({
       designation: 'QA Tester',
@@ -94,6 +102,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Suggest a display name for a new member (no persistence)',
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: body(() => ({
       companyID: companyId(),
       designation: 'QA Tester',
@@ -119,6 +128,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Create a company member (provisions a real KPost account — external side effect)',
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: body(() => ({
       companyID: companyId(),
       firstName: 'QA',
@@ -152,6 +162,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Terminate a company member (permanent — cannot be undone)',
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: body(() => ({ kpostID: testData.businessMUser1KpostId, companyID: companyId() })),
     destructive: true,
     sideEffect: 'global',
@@ -163,6 +174,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: "Reset a member's password (changes their credential)",
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,
+    authorization: companyAdminOnly,
     request: body(() => ({
       kpostID: testData.businessMUser1KpostId,
       countryID: testData.countryId,
@@ -179,6 +191,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Hold or release a company member',
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: body(() => ({ kpostID: testData.businessMUser1KpostId, companyID: companyId() })),
     destructive: true,
     sideEffect: 'global',
@@ -190,6 +203,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Make or remove a backup admin',
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: body(() => ({
       kpostID: testData.businessMUser1KpostId,
       isBackUpAdmin: true,
@@ -208,6 +222,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Update the company details (shared state)',
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: body(() => ({ companyID: companyId() })),
     destructive: true,
     sideEffect: 'global',
@@ -222,6 +237,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Update the company bank account (shared state)',
     tags: ['company', 'common-company'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: body(() => ({ companyID: companyId() })),
     destructive: true,
     sideEffect: 'global',
@@ -234,6 +250,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: "Update a member's role (shared state)",
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     request: body(() => ({ kpostID: testData.businessMUser1KpostId, companyID: companyId() })),
     destructive: true,
     sideEffect: 'global',
@@ -245,6 +262,7 @@ export const adminUserManagementApis: EndpointDefinition[] = [
     summary: 'Re-add a terminated member to the company (reallocate)',
     tags: ['company', 'common-company', 'user-management'],
     authentication: asBusinessAdmin,
+    authorization: companyScoped,
     // Creates or revives an account with a password nobody receives, rewrites that contact in every
     // user's address book and messages the whole company: never driven.
     destructive: true,

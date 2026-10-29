@@ -3,6 +3,7 @@ import { runProbes, type ProbeCase } from '@engine/probe';
 import { PROFILE_SETS } from '@engine/validation-policy';
 import { defineValidator } from '@engine/validator';
 import { outcome } from '@engine/validation-result';
+import { ownerPrincipal } from './support';
 
 /** A tenant-bound principal must not reach another tenant's resources (IDOR / BOLA). */
 export const crossResourceAccessValidator = defineValidator({
@@ -18,7 +19,7 @@ export const crossResourceAccessValidator = defineValidator({
   check: async (context) => {
     const cases: ProbeCase[] = [];
     for (const role of context.endpoint.authorization.roles) {
-      const owner = context.principal(role);
+      const owner = ownerPrincipal(context, role);
       const foreign = owner?.tenantId
         ? context.principal(role, { foreignTenantOf: owner.tenantId })
         : undefined;

@@ -47,6 +47,13 @@ export interface KpostEndpointConfig {
   request?: RequestFactory;
   /** Public endpoints need no token. Default for this module: no authentication required. */
   authentication?: EndpointDefinition['authentication'];
+  /**
+   * Who may call it, and whether its data belongs to one company: turns on the role, permission and
+   * cross-tenant checks. Declare `tenantScoped` only when the request NAMES the owner's record (a
+   * companyID, a message id): most KPost endpoints take the user from the token, so another user's
+   * token rightly reads its own data.
+   */
+  authorization?: EndpointDefinition['authorization'];
   /** Overrides the contract's default status when an endpoint legitimately differs. */
   expectedStatus?: readonly number[];
   /** Non-JSON responses (a logo download) - switches off envelope and JSON-shaped checks. */
@@ -99,6 +106,7 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     requirements: config.requirements,
     // The common module is public: these endpoints are called before anyone has a token.
     authentication: config.authentication ?? { required: false },
+    authorization: config.authorization,
     expectedStatus: config.expectedStatus,
     envelope: config.envelope,
     contentType: config.contentType,
@@ -150,6 +158,7 @@ export function defineUndocumentedKpostEndpoint(
     tags: ['kpost-api', 'undocumented-contract', ...(config.tags ?? [])],
     requirements: config.requirements,
     authentication: config.authentication ?? { required: false },
+    authorization: config.authorization,
     expectedStatus: config.expectedStatus,
     envelope: config.envelope,
     contentType: config.contentType,

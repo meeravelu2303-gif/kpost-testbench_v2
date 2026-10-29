@@ -17,13 +17,16 @@ export const forbiddenValidator = defineValidator({
   dependsOn: ['authorization.permission'],
   appliesTo: requiresRoleCheck,
   check: (context) => {
-    const expectedCode = apiConfig.errorCodeByStatus[403];
+    // An API without an error-code field (KPost) is judged on "no resource data" only, as in
+    // common.api-error: asserting a code it never promised would fail every refusal.
+    const codeField = context.endpoint.contract.errorCodeField;
+    const expectedCode = codeField ? apiConfig.errorCodeByStatus[403] : undefined;
     const checks: CheckDetail[] = context.exchanges
       .filter((exchange) => exchange.label.startsWith('authorization.permission:'))
       .map((exchange) => {
         const parsed = exchange.json();
         const data = parsed.ok ? getPath(parsed.value, 'data') : undefined;
-        const code = parsed.ok ? getPath(parsed.value, 'code') : undefined;
+        const code = codeField && parsed.ok ? getPath(parsed.value, codeField) : undefined;
         const problems = [
           data !== undefined && data !== null ? 'response contains resource data' : '',
           exchange.status === 403 && code !== expectedCode

@@ -1,5 +1,6 @@
 import { judgedCheckReason } from '../../../src/bug-tracker/gates/known-false-positives';
 import { expect, test } from '@fixtures';
+import { forbiddenValidator } from '@validators/authorization/forbidden.validator';
 import { idValidator } from '@validators/common/id.validator';
 import { urlValidator } from '@validators/common/url.validator';
 import { fakeContext, fixtureEndpoint, verdict } from './support/validator-harness';
@@ -74,5 +75,41 @@ test.describe('judged findings · validators and sanity', { tag: '@framework' },
       judgedCheckReason(path, 'common.id', []),
       'nothing failed → nothing to judge',
     ).toBeUndefined();
+  });
+
+  test('authorization.forbidden: KPost has no error-code field, so a clean 403 passes; leaked data still fails', async () => {
+    const endpoint = (responseContract: 'kpost' | 'standard') =>
+      fixtureEndpoint({
+        responseContract,
+        authentication: { required: true },
+        authorization: { roles: ['COMPANY_ADMIN'] },
+      });
+    // The permission probe a personal user sent, as the engine labels it.
+    const refusedWith = async (responseContract: 'kpost' | 'standard', body: unknown) => {
+      const context = fakeContext({
+        endpoint: endpoint(responseContract),
+        server: () => ({ status: 403, body }),
+      });
+      await context.send({}, { label: 'authorization.permission:USER' });
+      return verdict(forbiddenValidator, context);
+    };
+    const springRefusal = {
+      timestamp: '2026-10-29',
+      status: 403,
+      error: 'Forbidden',
+      path: '/admin/x',
+    };
+    expect(
+      (await refusedWith('kpost', springRefusal)).status,
+      'a clean KPost 403 is no finding',
+    ).toBe('PASSED');
+    expect(
+      (await refusedWith('kpost', { status: 'FAILURE', data: { companyID: 242 } })).status,
+      'a refusal that still carries the record is',
+    ).toBe('FAILED');
+    expect(
+      (await refusedWith('standard', springRefusal)).status,
+      'an API that promises error codes is still held to them',
+    ).toBe('FAILED');
   });
 });
