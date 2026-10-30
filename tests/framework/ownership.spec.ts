@@ -81,6 +81,17 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
     expect(componentFor(mobile, ['nonexistent-area'])).toBe('General');
   });
 
+  test('an undocumented KPost endpoint routes by its module, not the fallback', () => {
+    // defineUndocumentedKpostEndpoint puts `undocumented-contract` before the module tag.
+    const kpost = suiteFor('kpost-api');
+    const undocumented = (module: string) => ['kpost-api', 'undocumented-contract', module];
+    expect(componentFor(kpost, undocumented('katchup'))).toBe('Katchup Messaging V2');
+    expect(componentFor(kpost, undocumented('knews'))).toBe('Knews');
+    expect(componentFor(kpost, ['kpost-api', 'kbooking', 'redbus'])).toBe(
+      'Integration - RedBus Bus Booking',
+    );
+  });
+
   test('a defect carries its module all the way to the ticket', () => {
     const config = readBugzillaConfig();
 

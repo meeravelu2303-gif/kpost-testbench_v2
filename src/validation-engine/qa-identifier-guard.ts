@@ -57,6 +57,8 @@ const NOT_A_RESOURCE = new Set(
     'referencemessageidlist',
     'sharedmessagedetails',
     'groupkpostname',
+    // An enquiry's preferred call-back time ("10:00 AM"); matches "contact" but names no one.
+    'timetocontact',
     // Display names and counts a user types, not resource ids.
     'groupname',
     'contactname',

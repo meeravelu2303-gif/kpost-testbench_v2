@@ -109,6 +109,11 @@ const saveEducation = (path: string, id: string, payload: Record<string, unknown
     request: body(() => payload),
   });
 
+/*
+ * Every field the Education screen sends (Settings/Education/Education.js). A record missing one
+ * blocks every later save on that screen ("Please fill all fields before Save"), and the engine's
+ * records are not deleted, so they must be complete.
+ */
 export const saveCollegeApi = saveEducation(
   '/v2/profile/saveOrUpdateCollegeDetails/',
   'profile-save-college',
@@ -117,9 +122,13 @@ export const saveCollegeApi = saveEducation(
       {
         collegeID: '',
         collegeName: 'QA Bench College',
-        degree: 'QA',
-        fromYear: '2010',
-        toYear: '2014',
+        degree: 'B.E',
+        course: 'QA',
+        field: 'Engineering',
+        yearFrom: '2010',
+        yearTo: '2014',
+        logoPath: null,
+        attachmentPath: [],
       },
     ],
   },
@@ -128,7 +137,20 @@ export const saveCollegeApi = saveEducation(
 export const saveSchoolApi = saveEducation(
   '/v2/profile/saveOrUpdateSchoolDetails/',
   'profile-save-school',
-  { schoolDetails: [{ schoolID: '', schoolName: 'QA Bench School', standard: '10' }] },
+  {
+    schoolDetails: [
+      {
+        schoolID: '',
+        schoolName: 'QA Bench School',
+        standard: '10',
+        course: 'Science',
+        yearFrom: '2008',
+        yearTo: '2010',
+        logoPath: null,
+        attachmentPath: [],
+      },
+    ],
+  },
 );
 
 export const saveUniversityApi = saveEducation(
@@ -136,7 +158,17 @@ export const saveUniversityApi = saveEducation(
   'profile-save-university',
   {
     universityDetails: [
-      { universityID: '', universityName: 'QA Bench University', degree: 'Masters' },
+      {
+        universityID: '',
+        universityName: 'QA Bench University',
+        degree: 'Masters',
+        course: 'QA',
+        field: 'Engineering',
+        yearFrom: '2014',
+        yearTo: '2016',
+        logoPath: null,
+        attachmentPath: [],
+      },
     ],
   },
 );

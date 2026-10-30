@@ -122,19 +122,41 @@ if ($missing) { [Environment]::SetEnvironmentVariable('Path', (($userPath + $mis
 $env:Path = (($env:Path -split ';') + $wanted | Select-Object -Unique) -join ';'
 Done "ANDROID_HOME=$sdk; PATH has Flutter, the SDK tools and the Pub cache"
 
+# A .bat started straight from PowerShell gets its arguments through cmd.exe, which splits them at
+# ';' ("platforms;android-36" arrives as two names). A written-out .cmd keeps cmd's own quoting.
+function Invoke-Cmd($line) {
+  $file = Join-Path $env:TEMP "kpost-mobile-setup-$PID.cmd"
+  Set-Content -Path $file -Value "@echo off`r`n$line" -Encoding ASCII
+  try {
+    & cmd.exe /d /c $file
+    if ($LASTEXITCODE -ne 0) { throw "failed: $line" }
+  } finally {
+    Remove-Item $file -ErrorAction SilentlyContinue
+  }
+}
+
 # ---- 4. SDK packages: what the app builds against, plus one Google Play emulator image
 Step 'Android SDK packages'
-if ($AcceptAndroidLicenses) {
-  1..40 | ForEach-Object { 'y' } | & $sdkmanager --licenses | Out-Null
-  Done 'licenses accepted (-AcceptAndroidLicenses)'
-} else {
-  & $sdkmanager --licenses # interactive: read and answer each one
-}
 $packages = @(
   'platform-tools', 'emulator', "platforms;android-$ApiLevel", "build-tools;$ApiLevel.0.0", "ndk;$Ndk", $Image
 )
-& $sdkmanager --install @packages
-if ($LASTEXITCODE -ne 0) { throw 'sdkmanager failed (see above).' }
+$androidCli = Join-Path $sdk 'cmdline-tools\latest\bin\android.exe'
+if (Test-Path $androidCli) {
+  # Tools 23+ hand sdkmanager over to the Android CLI: package names use '/', no licence step.
+  & $androidCli --no-metrics sdk install @($packages | ForEach-Object { $_ -replace ';', '/' })
+  if ($LASTEXITCODE -ne 0) { throw 'android sdk install failed (see above).' }
+} else {
+  if ($AcceptAndroidLicenses) {
+    Invoke-Cmd "(for /l %%i in (1,1,40) do @echo y) | `"$sdkmanager`" --licenses >nul"
+    Done 'licenses accepted (-AcceptAndroidLicenses)'
+  } else {
+    Invoke-Cmd "`"$sdkmanager`" --licenses" # interactive: read and answer each one
+  }
+  Invoke-Cmd ("`"$sdkmanager`" --install " + (($packages | ForEach-Object { "`"$_`"" }) -join ' '))
+}
+# A tool that skips a name it does not know can still exit 0, so check each package is on disk.
+$absent = $packages | Where-Object { -not (Test-Path (Join-Path $sdk ($_ -replace ';', '\'))) }
+if ($absent) { throw "not installed: $($absent -join ', ')" }
 Done ($packages -join ', ')
 
 # ---- 5. The emulator (a Pixel-sized phone; Google Play image, because push, SMS autofill, ML Kit,
@@ -145,8 +167,10 @@ $existing = & $avdmanager list avd -c
 if ($existing -contains $Avd) {
   Done 'already created'
 } else {
-  'no' | & $avdmanager create avd --name $Avd --package $Image --device 'pixel_7'
+  # "no": no custom hardware profile.
+  Invoke-Cmd "echo no| `"$avdmanager`" create avd --name $Avd --package `"$Image`" --device pixel_7"
   $config = Join-Path $env:USERPROFILE ".android\avd\$Avd.avd\config.ini"
+  if (-not (Test-Path $config)) { throw "the emulator $Avd was not created (see above)." }
   Add-Content $config "hw.ramSize=4096`ndisk.dataPartition.size=8G`nhw.keyboard=yes"
   Done "created ($config)"
 }

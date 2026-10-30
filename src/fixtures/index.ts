@@ -148,7 +148,15 @@ export const test = base.extend<TestFixtures>({
             type: 'redirected to test API',
             description: `${req.method()} ${url.origin}${url.pathname} → ${testApi.origin}`,
           });
-          await route.continue({ url: target });
+          if (testApi.protocol === url.protocol) {
+            await route.continue({ url: target });
+            return;
+          }
+          // route.continue cannot change the protocol (the live host is https, a QA API may be
+          // http), so the request is sent to the test API here and its answer handed to the page.
+          const response = await route.fetch({ url: target }).catch(() => undefined);
+          if (response) await route.fulfill({ response });
+          else await route.abort('connectionfailed');
           return;
         }
         testInfo.annotations.push({

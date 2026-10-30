@@ -72,6 +72,9 @@ const KPOST_COMPONENT_BY_TAG: Record<string, string> = {
   profile: 'User Profile V2',
   settings: 'General Settings',
   kdiary: 'Kdiary - Schedules, Events & Reports',
+  knews: 'Knews',
+  kbooking: 'Integration - RedBus Bus Booking',
+  redbus: 'Integration - RedBus Bus Booking',
   aws: 'Integration - AWS S3 Pre-signed URLs',
   kos: 'KWord Documents',
   kword: 'KWord Documents',
@@ -299,8 +302,17 @@ export function apiSuites(): SuiteOwnership[] {
   return Object.values(SUITES).filter((suite) => suite.kind === 'api');
 }
 
-/** Generic suite-level tags every factory prepends; component routing skips them. */
-const SUITE_LEVEL_TAGS = new Set<string>(['kpost-api', 'admin-api', 'kmail-api', 'kmail']);
+/**
+ * Generic tags a factory prepends before the module tag; component routing skips them.
+ * `undocumented-contract` (defineUndocumentedKpostEndpoint) is a classification, not a module.
+ */
+const SUITE_LEVEL_TAGS = new Set<string>([
+  'kpost-api',
+  'admin-api',
+  'kmail-api',
+  'kmail',
+  'undocumented-contract',
+]);
 
 /** The Bugzilla component for a defect, from the endpoint's tags (or a UI screen name). */
 export function componentFor(suite: SuiteOwnership, tags: readonly string[]): string {

@@ -3,7 +3,93 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-29 (latest) — Mobile (Patrol): building started; installs wait for the night
+### 2026-10-30 (latest) — Web happy path: five new UI specs; KMail on the QA server refuses every login
+
+Owner: "cover completely functional / happy path". Five specs cover about 45 web actions that had no or only a
+partial test: `kall/kool-kall-lifecycle-e2e`, `group/group-admin-e2e`, `contacts/contacts-actions-e2e`,
+`profile/profile-sections-save-e2e`, `kmail/kmail-more-actions-e2e` (each gated by its `*_UI_LIFECYCLE` flag;
+`checkboxFor` moved to `tests/kpost-ui/support/pickers.ts`). Run alone in Chromium against the QA host:
+
+- **Pass:** contacts (4), group admin (3), profile (4 of 5), the Kool Kall host's edit / add participant / cancel.
+- **Bench mistakes fixed:** Kool Kall's title is read-only when editing (by design), so Edit moves the end
+  time; the invitee tests need qatest2's browser session, which setup signs in only with
+  `KATCHUP_UI_LIFECYCLE`, so they require it; KMail's draft menu is `.writeMailDateChipMore` (the first
+  three-dot icon on the page is the contact list's).
+- **The API tests polluted qatest1's profile:** incomplete "QA Bench" school/college/university records (the
+  Education screen then refuses every save) and fuzz values (gender "-", designation `javascript:alert(1)`).
+  The engine now saves complete records in the web app's shape (the college body also had `fromYear`/`toYear`
+  for `yearFrom`/`yearTo`), and the profile UI spec removes bench "QA…" records and resets the basic details
+  before each test, as the browser's account (no sign-out).
+- **Clipboard:** browsers give no clipboard on an http page, so on the QA host the Kool Kall test reads the
+  link shown in the dialog and checks Copy only on https.
+- **Real defects** (previews written, filing waits for the owner):
+  - KMail (9081) answers 401 "UNAUTHORIZED USER" to every fresh login, web and API: its session check does not
+    find the session KPost wrote (the row is in 192.168.0.100/kpost; the KMail source reads
+    3.111.128.198/KPOST_QA). Every KMail screen fails; the six KMail UI tests are blocked on it.
+  - Kool Kall Accept / Decline: 404 "Kall not found" (KallControllerV3 never sets the receiver from the token);
+    the same fault as #13206 (RESOLVED/FIXED), so #13206 is to be REOPENED, not refiled.
+  - The Kool Kall meeting link is hardcoded to `https://account.kpostindia.com/koolkall/…` on every deployment.
+  - Basic Information: a user saved as "Female" (as the phone app saves it) shows no gender and cannot save
+    (options are "Male" / "female" / "other", matched case-sensitively); a saved Other Email ID shows the old
+    value on reopening (not written back to the login-time copy the form reads).
+  - The web app calls the live API (`devapi2.kpostindia.com`) from 28 hardcoded places (avatars, voice
+    translate, KBooking payments, AI assist); seen live in the voice-call journey.
+- **The bench's live-host redirect broke on the QA host:** `route.continue({url})` cannot switch https to
+  http, so every page request to devapi2 failed ("New URL must have same protocol"; the 3 voice-call failures
+  of the 2026-10-29 morning run). A protocol change is now fetched from the test API and fulfilled
+  (`src/fixtures/index.ts`). The voice-call journey now runs; its remaining failures are #13206 (callee stays
+  "On Another Call") and #1680.
+- The morning run's 13 signup failures do not reproduce alone (sign-up → login → account removed passes).
+
+### 2026-10-29 — KPost API happy path: the 14 failures sorted into bench faults and real defects
+
+Owner: "cover completely functional / happy path". The 17:06 `product:kpost-api` preview (QA backend) passed
+219/268 endpoints' happy path (82%); 14 failed, 35 blocked. Each failure was re-run alone, then replayed with
+the real clients' bodies (web app source, phone app source) on qatest5/qatest6, which have no saved browser
+session, so the replays signed no one out.
+
+- **Bench faults, fixed:**
+  - **Forward** sent a minimal body; the web app (ForwardFooter.js) sends the source message as a JSON string
+    in `referenceMessage`. The flows now use that body (`forward()` in the Katchup feature spec, revealed/hidden,
+    single/thread) and check that a hidden forward blanks the original sender. The source string is passed to
+    the QA-identifier guard as `ownedIdentifiers` (it cannot read ids inside a string).
+  - **Mark-important** failed only because the same test's save step failed; it is its own test now, with
+    the web body `{msgID}`.
+  - **Save** sent `groupKpostID` where the web app sends `receiver`. Save keeps the selected messages and hides
+    every other message of the conversation from the saver, so it now runs as personal-5 (qatest5) with
+    personal-4, whose view nothing else reads, and checks both rows in the DB.
+  - **The contacts flow deleted qatest2 from qatest1's address book** every run (its add answered "already in
+    your contact list", then its cleanup deleted the contact), which the browser tests need. The add and
+    add-multiple flows now record the row first and put it back unchanged; the block test keeps a block that
+    was there before.
+  - **The profile flow's city** was `QA-<digits>`; the server now allows only letters, spaces, `.`, `-` and `'`
+    in a city (correct), so the marker is spelled in letters.
+  - **uploadProfileAttachments** needs a `requestType` (College / School / University / Experience); the bench
+    sent none. It also fails on the bench's 1x1 PNG at the thumbnail step (a normal PNG uploads), so the tiny
+    JPEG is sent.
+  - **adminRegistration** re-sends the fixed QA business sign-up account, so 409 "company already exists" is
+    correct after the first run (developer on #13272); `expectedStatus: [200, 409]`. This stops a false REOPEN
+    of #13272.
+  - **The forgot-password API flow** failed on the guard's own refusal (its sender texts a real phone); it now
+    skips as BLOCKED.
+  - **saveEnquiryDetails** was refused by the QA-identifier guard: `timeToContact` ("10:00 AM") matched
+    "contact". Exempted.
+  - **Component routing:** an undocumented endpoint's first tag is `undocumented-contract`, which routing read as
+    the module, so fetchReportMsgs, /v1/news, patchWorkForGroup and others fell to `kpost-webservice-application`.
+    It is now skipped like a suite tag, and `knews` → Knews, `kbooking`/`redbus` → Integration - RedBus Bus Booking.
+- **Real defects** (verified alone and by hand; previews written, filing waits for the owner):
+  - reportAbuse refuses the documented `reportID` (workbook, phone app) and accepts only `reportCode`.
+  - fetchReportMsgs 500: `TBL_KPOST_REPORT_REASON` is missing in the QA database.
+  - /v1/news 500: `TBL_KPOST_NEWS_ARTICLE` is missing in the QA database.
+  - An incomplete forward still crashes with 500 (#611, RESOLVED/FIXED): the next run reopens it with proof.
+  - The notification toggles answer 400 once a user has a settings row (none of the three service methods is
+    `@Transactional`, and each runs an `@Modifying` UPDATE); already open as #835-837 and #13275-13277.
+- Still open as happy-path gaps: forward-selected-attachment (needs a message with an attachment) and
+  katchupSearch on qatest1 (over 10 s; 4.3 s on qatest5).
+- Lesson: `duplicate-check.cjs` with a component name that does not exist ("Katchup" instead of "Katchup
+  Messaging V2") reports "No matches" for everything. Use the real component names.
+
+### 2026-10-29 — Mobile (Patrol): building started; installs wait for the night
 
 Owner: "can we start the mobile process now?" (15:20, office hours). The installs (several GB) and the Hypervisor
 Platform restart would disturb the office Bugzilla this PC serves, so they are one script for tonight

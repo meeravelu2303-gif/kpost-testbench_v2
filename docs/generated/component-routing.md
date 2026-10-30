@@ -200,20 +200,21 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 | Component | Endpoints |
 | --------- | --------: |
-| kpost-webservice-application | 51 |
-| User Profile V2 | 45 |
-| Katchup Messaging V2 | 36 |
-| Common Reference Data & Utilities V2 | 23 |
+| User Profile V2 | 52 |
+| Katchup Messaging V2 | 46 |
+| Common Reference Data & Utilities V2 | 25 |
+| Kall (Voice/Video) V2 - current | 24 |
 | Company Administration | 21 |
+| KWord Documents | 21 |
 | Authentication V2 | 20 |
-| Kall (Voice/Video) V2 - current | 20 |
-| KWord Documents | 18 |
 | Contacts Directory V2 | 16 |
-| Kdiary - Schedules, Events & Reports | 14 |
-| Groups V2 | 11 |
+| Kdiary - Schedules, Events & Reports | 15 |
+| Groups V2 | 13 |
+| Knews | 12 |
+| Integration - RedBus Bus Booking | 8 |
 | General Settings | 7 |
-| Integration - AWS S3 Pre-signed URLs | 4 |
-| Dashboard V2 | 3 |
+| Integration - AWS S3 Pre-signed URLs | 5 |
+| Dashboard V2 | 4 |
 | Authentication - Medium & Large Enterprise | 2 |
 
 ### KPost API — endpoint → component
@@ -254,6 +255,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `common-designation`
 - `common-designations-by-profession`
 - `common-domain`
+- `common-download-profile-image`
 - `common-flutter-app-version`
 - `common-generate-domain-and-unique-name`
 - `common-kpost-id-using-module`
@@ -265,6 +267,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `common-postal-pincode`
 - `common-professions`
 - `common-save-enquiry-details`
+- `common-send-message`
 - `common-states`
 - `common-total-count-by-date`
 - `common-unique-name-exist`
@@ -319,6 +322,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `dashboard-home-msgs`
 - `dashboard-home-new-msgs`
+- `dashboard-kall-history`
 - `dashboard-katchup-msg`
 
 **General Settings**
@@ -337,20 +341,34 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `group-admin-access`
 - `group-create`
 - `group-delete`
+- `group-details-by-id`
 - `group-download-full-image`
 - `group-download-image`
 - `group-edit-name`
 - `group-leave`
 - `group-remove-image`
 - `group-remove-member`
+- `group-remove-member-v1-legacy`
 - `group-update-image`
 
 **Integration - AWS S3 Pre-signed URLs**
 
 - `aws-check-attachment`
+- `aws-check-attachment-get`
 - `aws-delete-attachment`
 - `aws-generate-presigned`
 - `aws-katchup-presigned`
+
+**Integration - RedBus Bus Booking**
+
+- `kbooking-available-trips`
+- `kbooking-block-ticket`
+- `kbooking-boarding-point`
+- `kbooking-city-suggestion`
+- `kbooking-destinations`
+- `kbooking-trip-details`
+- `kbooking-trip-details-v2`
+- `kbooking-update-city-list`
 
 **KWord Documents**
 
@@ -359,10 +377,12 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `kos-ai-chat`
 - `kos-ai-messages`
 - `kos-ai-sessions`
+- `kos-change-document-access`
 - `kos-convert-to-kad`
 - `kos-create-doc`
 - `kos-delete-doc`
 - `kos-delete-heading`
+- `kos-documents-type`
 - `kos-exit-doc`
 - `kos-get-document`
 - `kos-join-doc`
@@ -372,6 +392,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `kos-save-content`
 - `kos-share-doc`
 - `kos-update-doc`
+- `kos-update-job-id`
 
 **Kall (Voice/Video) V2 - current**
 
@@ -382,12 +403,16 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `kall-end-individual`
 - `kall-end-kool`
 - `kall-fetch-scheduled-repeat`
+- `kall-firebase-notification-test`
 - `kall-frequent-contacts`
 - `kall-get-status`
 - `kall-get-status-by-id`
 - `kall-info`
 - `kall-initiate`
 - `kall-join-schedule`
+- `kall-legacy-cancel-schedule`
+- `kall-legacy-remove-member`
+- `kall-legacy-set-status`
 - `kall-modify-members`
 - `kall-reschedule`
 - `kall-scheduled`
@@ -400,8 +425,10 @@ each target exists in the live product, so tickets can never route to a non-exis
 
 - `katchup-all-report-msg`
 - `katchup-bulk-message-info`
+- `katchup-change-caption`
 - `katchup-conversation`
 - `katchup-delete-message`
+- `katchup-deleted-message-ids`
 - `katchup-download`
 - `katchup-download-attachment`
 - `katchup-download-from-s3`
@@ -413,15 +440,21 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `katchup-forward-multiple`
 - `katchup-frequent-contacts`
 - `katchup-generate-thumbnail`
+- `katchup-global-search`
+- `katchup-legacy-recall-message`
 - `katchup-mark-important`
 - `katchup-media-streaming`
 - `katchup-message-count`
 - `katchup-messages-by-reference`
 - `katchup-messages-subject`
+- `katchup-old-download`
+- `katchup-patch-work-for-group`
 - `katchup-read-status-group`
 - `katchup-recall-message`
 - `katchup-reference-details`
+- `katchup-reference-messages-details`
 - `katchup-report-abuse`
+- `katchup-report-reasons`
 - `katchup-save-messages`
 - `katchup-search-message`
 - `katchup-search-subject`
@@ -434,6 +467,8 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `katchup-shared-message-info`
 - `katchup-unopened-count`
 - `katchup-unopened-total-count`
+- `katchup-upload-multipart-files`
+- `katchup-voice-translate`
 
 **Kdiary - Schedules, Events & Reports**
 
@@ -441,6 +476,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `kdiary-create-event`
 - `kdiary-create-schedule`
 - `kdiary-delete-event`
+- `kdiary-delete-report`
 - `kdiary-edit-report`
 - `kdiary-edit-schedule-event`
 - `kdiary-get-event-date`
@@ -452,17 +488,35 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `kdiary-update-event`
 - `kdiary-update-remarks`
 
+**Knews**
+
+- `knews-admin-feed-disable`
+- `knews-admin-feed-enable`
+- `knews-admin-feed-sync`
+- `knews-categories`
+- `knews-feed-articles`
+- `knews-feed-status`
+- `knews-get-settings`
+- `knews-news-feed`
+- `knews-publications`
+- `knews-sources`
+- `knews-sub-categories`
+- `knews-update-settings`
+
 **User Profile V2**
 
 - `profile-advanced-search`
 - `profile-auto-search`
+- `profile-change-or-forgot-access-code`
 - `profile-change-password`
 - `profile-convert-base64`
 - `profile-deactivate-account`
 - `profile-delete-college`
 - `profile-delete-experience`
+- `profile-delete-other-activity`
 - `profile-delete-school`
 - `profile-delete-university`
+- `profile-designation-or-profession`
 - `profile-digital-card`
 - `profile-download-cover`
 - `profile-download-full-image`
@@ -471,7 +525,9 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `profile-forgot-password-or-kpostid`
 - `profile-get-languages`
 - `profile-get-signature`
+- `profile-get-user-profile`
 - `profile-is-device-primary`
+- `profile-kmail-password-patch-work`
 - `profile-remove-cover`
 - `profile-remove-image`
 - `profile-save-college`
@@ -484,7 +540,9 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `profile-send-primary-device-otp`
 - `profile-set-device-primary`
 - `profile-set-device-secondary`
+- `profile-set-profile-privacy`
 - `profile-share-user-details`
+- `profile-storage-details`
 - `profile-update-about`
 - `profile-update-basic`
 - `profile-update-contact`
@@ -500,112 +558,7 @@ each target exists in the live product, so tickets can never route to a non-exis
 - `profile-user-basic-by-kpostid`
 - `profile-user-profile-by-kpostid`
 
-**kpost-webservice-application**
-
-- `aws-check-attachment-get`
-- `common-download-profile-image`
-- `common-send-message`
-- `dashboard-kall-history`
-- `group-details-by-id`
-- `group-remove-member-v1-legacy`
-- `kall-firebase-notification-test`
-- `kall-legacy-cancel-schedule`
-- `kall-legacy-remove-member`
-- `kall-legacy-set-status`
-- `katchup-change-caption`
-- `katchup-deleted-message-ids`
-- `katchup-global-search`
-- `katchup-legacy-recall-message`
-- `katchup-old-download`
-- `katchup-patch-work-for-group`
-- `katchup-reference-messages-details`
-- `katchup-report-reasons`
-- `katchup-upload-multipart-files`
-- `katchup-voice-translate`
-- `kbooking-available-trips`
-- `kbooking-block-ticket`
-- `kbooking-boarding-point`
-- `kbooking-city-suggestion`
-- `kbooking-destinations`
-- `kbooking-trip-details`
-- `kbooking-trip-details-v2`
-- `kbooking-update-city-list`
-- `kdiary-delete-report`
-- `knews-admin-feed-disable`
-- `knews-admin-feed-enable`
-- `knews-admin-feed-sync`
-- `knews-categories`
-- `knews-feed-articles`
-- `knews-feed-status`
-- `knews-get-settings`
-- `knews-news-feed`
-- `knews-publications`
-- `knews-sources`
-- `knews-sub-categories`
-- `knews-update-settings`
-- `kos-change-document-access`
-- `kos-documents-type`
-- `kos-update-job-id`
-- `profile-change-or-forgot-access-code`
-- `profile-delete-other-activity`
-- `profile-designation-or-profession`
-- `profile-get-user-profile`
-- `profile-kmail-password-patch-work`
-- `profile-set-profile-privacy`
-- `profile-storage-details`
-
 ## On the catch-all component (review — a built module here is a routing gap)
 
-- kpost-api · common-download-profile-image (kpost-api,undocumented-contract,common,profile-image,binary)
-- kpost-api · common-send-message (kpost-api,undocumented-contract,common,katchup,katchup-send,security)
-- kpost-api · katchup-reference-messages-details (kpost-api,undocumented-contract,katchup,katchup-read,thread,needs-message-id,security)
-- kpost-api · katchup-global-search (kpost-api,undocumented-contract,katchup,katchup-read,search)
-- kpost-api · katchup-report-reasons (kpost-api,undocumented-contract,katchup,katchup-read,report)
-- kpost-api · katchup-deleted-message-ids (kpost-api,undocumented-contract,katchup,katchup-read,needs-message-id)
-- kpost-api · katchup-legacy-recall-message (kpost-api,undocumented-contract,katchup,katchup-manage,legacy,needs-message-id)
-- kpost-api · katchup-change-caption (kpost-api,undocumented-contract,katchup,katchup-manage,maintenance,security)
-- kpost-api · katchup-patch-work-for-group (kpost-api,undocumented-contract,katchup,katchup-manage,maintenance,security)
-- kpost-api · katchup-voice-translate (kpost-api,undocumented-contract,katchup,katchup-attachment,voice,security)
-- kpost-api · katchup-old-download (kpost-api,undocumented-contract,katchup,katchup-attachment,binary,needs-attachment)
-- kpost-api · katchup-upload-multipart-files (kpost-api,undocumented-contract,katchup,katchup-attachment)
-- kpost-api · group-remove-member-v1-legacy (kpost-api,undocumented-contract,group,group-manage,legacy,security)
-- kpost-api · group-details-by-id (kpost-api,undocumented-contract,group,group-read,needs-group)
-- kpost-api · kall-firebase-notification-test (kpost-api,undocumented-contract,kall,kall-read,notification,security)
-- kpost-api · kall-legacy-set-status (kpost-api,undocumented-contract,kall,kall-legacy,needs-id)
-- kpost-api · kall-legacy-cancel-schedule (kpost-api,undocumented-contract,kall,kall-legacy,needs-id)
-- kpost-api · kall-legacy-remove-member (kpost-api,undocumented-contract,kall,kall-legacy,needs-id)
-- kpost-api · kdiary-delete-report (kpost-api,undocumented-contract,kdiary,kdiary-write,report,needs-id)
-- kpost-api · kos-documents-type (kpost-api,undocumented-contract,kos,kos-read,kword)
-- kpost-api · kos-change-document-access (kpost-api,undocumented-contract,kos,kos-write,kword,share)
-- kpost-api · kos-update-job-id (kpost-api,undocumented-contract,kos,kos-write,kword)
-- kpost-api · aws-check-attachment-get (kpost-api,undocumented-contract,aws,needs-attachment)
-- kpost-api · profile-designation-or-profession (kpost-api,undocumented-contract,profile,profile-read,profession)
-- kpost-api · profile-storage-details (kpost-api,undocumented-contract,profile,profile-read,storage)
-- kpost-api · profile-get-user-profile (kpost-api,undocumented-contract,profile,profile-read,pii)
-- kpost-api · profile-set-profile-privacy (kpost-api,undocumented-contract,profile,profile-write,privacy)
-- kpost-api · profile-kmail-password-patch-work (kpost-api,undocumented-contract,profile,profile-write,maintenance,security)
-- kpost-api · profile-change-or-forgot-access-code (kpost-api,undocumented-contract,profile,profile-write,access-code,security)
-- kpost-api · profile-delete-other-activity (kpost-api,undocumented-contract,profile,profile-write,education,needs-record-id)
-- kpost-api · dashboard-kall-history (kpost-api,undocumented-contract,dashboard,dashboard-read,kall)
-- kpost-api · kbooking-city-suggestion (kpost-api,kbooking,redbus,kbooking-read)
-- kpost-api · kbooking-destinations (kpost-api,kbooking,redbus,kbooking-read)
-- kpost-api · kbooking-available-trips (kpost-api,kbooking,redbus,kbooking-read)
-- kpost-api · kbooking-trip-details (kpost-api,kbooking,redbus,needs-id)
-- kpost-api · kbooking-boarding-point (kpost-api,kbooking,redbus,needs-id)
-- kpost-api · kbooking-trip-details-v2 (kpost-api,kbooking,redbus,needs-id)
-- kpost-api · kbooking-update-city-list (kpost-api,kbooking,redbus,privileged-write)
-- kpost-api · kbooking-block-ticket (kpost-api,kbooking,redbus,needs-id,critical)
-- kpost-api · knews-categories (kpost-api,knews)
-- kpost-api · knews-sub-categories (kpost-api,knews)
-- kpost-api · knews-publications (kpost-api,knews)
-- kpost-api · knews-sources (kpost-api,knews)
-- kpost-api · knews-update-settings (kpost-api,knews,settings)
-- kpost-api · knews-get-settings (kpost-api,knews,settings)
-- kpost-api · knews-news-feed (kpost-api,undocumented-contract,knews)
-- kpost-api · knews-feed-status (kpost-api,undocumented-contract,knews)
-- kpost-api · knews-feed-articles (kpost-api,undocumented-contract,knews,needs-id)
-- kpost-api · knews-admin-feed-sync (kpost-api,undocumented-contract,knews,admin,needs-id)
-- kpost-api · knews-admin-feed-enable (kpost-api,undocumented-contract,knews,admin,needs-id)
-- kpost-api · knews-admin-feed-disable (kpost-api,undocumented-contract,knews,admin,needs-id)
 - kmail-api · kmail-save-unsubscriber (kmail-api,kmail,public-write)
 

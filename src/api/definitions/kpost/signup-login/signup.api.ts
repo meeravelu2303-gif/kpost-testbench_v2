@@ -85,6 +85,9 @@ export const adminRegistrationApi = defineKpostEndpoint({
   // Creates a whole company per run; `global` because companies accumulate and use up unique names.
   destructive: true,
   sideEffect: 'global',
+  // The body is the fixed QA business sign-up account, so every run after the first re-registers
+  // it: 409 "company already exists" is then the right answer (developer, #13272, 2026-10-28).
+  expectedStatus: [200, 409],
   request: body(() => ({
     kpostID: testData.businessSignupKpostId,
     companyName: testData.businessSignupCompanyName,

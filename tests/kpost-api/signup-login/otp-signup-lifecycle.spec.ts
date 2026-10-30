@@ -1,4 +1,5 @@
 import { testData } from '@config/test-data.config';
+import { ProductionSafetyError } from '@engine/production-guard';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
 
@@ -386,11 +387,23 @@ test.describe(
         'set QA_FORGOT_PASSWORD_KPOST_ID to a spare account whose password may be rewritten; ' +
           'unset, this flow has no safe target',
       );
-      const sendReset = await endpoints.sendTo(
-        'common-forgot-password-otp',
-        { body: { kpostID: testData.forgotPasswordKpostId, requestType: 'password' } },
-        { label: 'feature:otp:forgot-send' },
-      );
+      // The forgot-password sender texts a real phone even on the test gateway; the guard keeps the
+      // one SMS a run may send for the browser lifecycle test, so here the flow is BLOCKED, not failed.
+      const sendReset = await endpoints
+        .sendTo(
+          'common-forgot-password-otp',
+          { body: { kpostID: testData.forgotPasswordKpostId, requestType: 'password' } },
+          { label: 'feature:otp:forgot-send' },
+        )
+        .catch((error: unknown) => {
+          if (error instanceof ProductionSafetyError)
+            test.skip(
+              true,
+              'BLOCKED: the forgot-password sender sends a real SMS even on the test gateway; ' +
+                'the one SMS a run may send belongs to the browser test',
+            );
+          throw error;
+        });
       expect.soft(sendReset.status, 'forgot-password OTP send accepted').toBeLessThan(500);
 
       const validate = await endpoints.sendTo(

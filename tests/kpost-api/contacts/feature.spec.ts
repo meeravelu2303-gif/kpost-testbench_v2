@@ -29,16 +29,56 @@ async function write(
   return ex.status;
 }
 
-/** Read myContacts and report whether our second account appears (best-effort). */
-async function contactPresent(endpoints: EndpointExecutor): Promise<boolean> {
+interface ContactRow {
+  contactID?: string;
+  firstName?: string;
+  lastName?: string;
+  referenceName?: string;
+  userType?: string;
+  isBlocked?: boolean;
+  deleteStatus?: boolean;
+}
+
+/** Our second account's live row in the address book, or undefined (best-effort read). */
+async function contactRow(endpoints: EndpointExecutor): Promise<ContactRow | undefined> {
   const ex = await endpoints
     .sendTo(
       'contacts-my-contacts',
       { body: { lastfetchDate: null } },
       { label: 'contacts:verify', auth: { principal: A } },
     )
-    .catch(() => ({ bodyText: '' }) as never);
-  return (ex.bodyText ?? '').toLowerCase().includes(contactId.toLowerCase());
+    .catch(() => undefined);
+  const parsed = ex?.json();
+  const rows = ((parsed?.ok ? parsed.value : {}) as { contacts_added?: ContactRow[] })
+    .contacts_added;
+  return (rows ?? []).find(
+    (row) => row.contactID?.toLowerCase() === contactId.toLowerCase() && row.deleteStatus !== true,
+  );
+}
+
+/**
+ * Leaves the address book as it was: the flow's entry is deleted and, when the person was already a
+ * contact (the browser tests need qatest2 there), their original entry is added back unchanged.
+ */
+async function restore(endpoints: EndpointExecutor, original?: ContactRow): Promise<void> {
+  await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
+    () => undefined,
+  );
+  if (!original) return;
+  await write(
+    endpoints,
+    'contacts-add',
+    {
+      contactID: contactId,
+      firstName: original.firstName ?? '',
+      lastName: original.lastName ?? '',
+      referenceName: original.referenceName ?? '',
+      userType: original.userType ?? 'PERSONAL',
+    },
+    'restore',
+  ).catch(() => undefined);
+  if (original.isBlocked)
+    await write(endpoints, 'contacts-block', { contactID: contactId, isBlocked: true }, 'restore');
 }
 
 test.describe(
@@ -55,7 +95,11 @@ test.describe(
       'add → verify → reference → delete, restoring the address book @api @contacts',
       { tag: '@sanity' },
       async ({ endpoints }) => {
+        const original = await contactRow(endpoints);
         try {
+          // Already a contact: remove it first, so the add below is a real add (restored after).
+          if (original)
+            await write(endpoints, 'contacts-delete', { contactID: contactId }, 'setup');
           const added = await write(
             endpoints,
             'contacts-add',
@@ -63,11 +107,9 @@ test.describe(
             'add',
           );
           expect.soft(added, 'adding a contact is accepted').toBeLessThan(300);
-
-          // Eventual consistency: assert presence only when it has surfaced.
-          if (await contactPresent(endpoints)) {
-            expect.soft(true, 'the contact appears in myContacts').toBe(true);
-          }
+          // The server names the contact from their profile (the web app sends that name too).
+          const listed = await contactRow(endpoints);
+          expect.soft(listed, 'the contact appears in myContacts').toBeTruthy();
 
           const ref = await write(
             endpoints,
@@ -77,9 +119,7 @@ test.describe(
           );
           expect.soft(ref, 'adding a reference is accepted').toBeLessThan(300);
         } finally {
-          await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
-            () => undefined,
-          );
+          await restore(endpoints, original);
         }
       },
     );
@@ -87,6 +127,7 @@ test.describe(
     test('block → verify → unblock (single and bulk), restoring the state @api @contacts', async ({
       endpoints,
     }) => {
+      const wasBlocked = (await contactRow(endpoints))?.isBlocked === true;
       try {
         const blocked = await write(
           endpoints,
@@ -104,27 +145,31 @@ test.describe(
         );
         expect.soft(bulk, 'bulk block is accepted').toBeLessThan(300);
       } finally {
-        // Restore: unblock both ways so the contact is left unblocked.
-        await write(
-          endpoints,
-          'contacts-block',
-          { contactID: contactId, isBlocked: false },
-          'unblock',
-        ).catch(() => undefined);
-        await write(
-          endpoints,
-          'contacts-block-multiple',
-          { contactIDs: [contactId], isBlocked: false },
-          'unblock-multiple',
-        ).catch(() => undefined);
+        // Restore: unblock both ways, unless the contact was blocked before the test.
+        if (!wasBlocked) {
+          await write(
+            endpoints,
+            'contacts-block',
+            { contactID: contactId, isBlocked: false },
+            'unblock',
+          ).catch(() => undefined);
+          await write(
+            endpoints,
+            'contacts-block-multiple',
+            { contactIDs: [contactId], isBlocked: false },
+            'unblock-multiple',
+          ).catch(() => undefined);
+        }
       }
     });
 
     test('add-multiple, import-phone and update-invite, all on our own data @api @contacts', async ({
       endpoints,
     }) => {
-      // Only our own account and number; cleaned up by deleting the added contact.
+      // Only our own account and number; the address book is put back as it was afterwards.
+      const original = await contactRow(endpoints);
       try {
+        if (original) await write(endpoints, 'contacts-delete', { contactID: contactId }, 'setup');
         const multi = await write(
           endpoints,
           'contacts-add-multiple',
@@ -157,9 +202,7 @@ test.describe(
         );
         expect.soft(invite, 'updateInviteStatus (own number) returns a status').toBeLessThan(600);
       } finally {
-        await write(endpoints, 'contacts-delete', { contactID: contactId }, 'delete').catch(
-          () => undefined,
-        );
+        await restore(endpoints, original);
       }
     });
   },

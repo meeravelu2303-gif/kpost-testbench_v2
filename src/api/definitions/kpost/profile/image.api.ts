@@ -43,6 +43,8 @@ const imageUpload = (
     mimeType: 'image/png',
     base64: PNG_1X1,
   },
+  /** Other form fields the route requires. */
+  fields: Record<string, string> = {},
 ) =>
   defineProfileEndpoint({
     id,
@@ -60,6 +62,7 @@ const imageUpload = (
           buffer: Buffer.from(image.base64, 'base64'),
         },
         text: JSON.stringify({ kpostID: testData.kpostId }),
+        ...fields,
       },
     }),
   });
@@ -84,6 +87,10 @@ export const uploadAttachmentsApi = imageUpload(
   "Upload attachments to the caller's profile",
   // This route's multipart field is `files` (plural), unlike its siblings.
   'files',
+  // The thumbnail step fails on a 1x1 PNG (a normal PNG uploads), so the tiny JPEG is sent.
+  { name: 'qa-bench.jpg', mimeType: 'image/jpeg', base64: JPEG_1X1 },
+  // Required: the section the attachment belongs to (College, School, University or Experience).
+  { requestType: 'Experience' },
 );
 
 export const uploadImageToS3Api = imageUpload(

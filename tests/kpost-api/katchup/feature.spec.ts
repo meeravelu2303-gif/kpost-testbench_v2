@@ -106,6 +106,77 @@ async function cleanup(endpoints: EndpointExecutor, as: Principal, msgID?: numbe
     .catch(() => undefined);
 }
 
+/**
+ * Forward `source` (the row a send returned) to `to` with the web app's body (ForwardFooter.js):
+ * the source travels as a JSON string in `referenceMessage`, its sender and receiver blanked when
+ * the forward hides them (16, 21). Returns the forward's status, its new msgIDs and the row.
+ */
+async function forward(
+  endpoints: EndpointExecutor,
+  as: Principal,
+  source: Record<string, unknown>,
+  type: number,
+  to: string[],
+): Promise<{ status: number; msgIDs: number[]; row?: Record<string, unknown> }> {
+  const hidden = type === 16 || type === 21;
+  const reference = JSON.stringify({
+    receiver: hidden ? '' : source.receiver,
+    sender: hidden ? '' : source.sender,
+    senderName: hidden ? '' : source.senderName,
+    receiverName: hidden ? '' : source.receiverName,
+    msgID: source.msgID,
+    actualMessage: source.actualMessage,
+    attachmentCaption: source.attachmentCaption ?? source.attachmentCaptionDetails,
+    messageTime: source.messageTime,
+    readTime: source.readTime,
+    referenceMessage: source.referenceMessage,
+    serverTime: source.serverTime,
+    selectedMembers: source.selectedMembers,
+    messageType: source.sharedType ? source.sharedType : source.messageType,
+    sharedMessageDetails: source.sharedMessageDetails,
+    isVoiceMessage: source.isVoiceMessage,
+  });
+  const exchange = await endpoints.sendTo(
+    'katchup-forward-message-new',
+    {
+      body: {
+        receiver: '',
+        messageType: type,
+        subject: source.subject,
+        actualMessage: JSON.stringify([{ insert: 'QA bench forward\n' }]),
+        attachmentCaption: '[]',
+        status: '0',
+        sessionID: 'Web-Reactjs',
+        referenceMessage: reference,
+        groupFlag: false,
+        forwardReceiverList: to,
+        groupForwardList: [],
+        groupmemberList: [],
+        sharedMessageDetails: null,
+        sharedType: type,
+        temporaryMsgID: 8989,
+        uuid: [],
+        referenceMessageIDList: null,
+      },
+    },
+    {
+      label: `feature:forward:${type}`,
+      auth: { principal: as },
+      allowLiveWrite: true,
+      // The source row we just sent, as a string: the guard cannot read ids inside it.
+      ownedIdentifiers: [reference],
+    },
+  );
+  const parsed = exchange.json();
+  const data = ((parsed.ok ? parsed.value : {}) as { data?: unknown }).data;
+  const rows = (Array.isArray(data) ? data : []) as Record<string, unknown>[];
+  return {
+    status: exchange.status,
+    msgIDs: rows.map((r) => r.msgID).filter((id): id is number => typeof id === 'number'),
+    row: rows[0],
+  };
+}
+
 test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@regression'] }, () => {
   test.describe.configure({ mode: 'default' });
   test.skip(
@@ -483,28 +554,50 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
   }) => {
     const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to forward' });
     expect(seed.msgID, 'seed created').toBeTruthy();
+    const created: number[] = [];
+    try {
+      const fwd = await forward(
+        endpoints,
+        A,
+        firstRow(seed.body)!,
+        KATCHUP_MESSAGE_TYPE.forwardMessageReveal!,
+        [C.username],
+      );
+      created.push(...fwd.msgIDs);
+      expect.soft(fwd.status, 'the web app’s forward is accepted').toBe(200);
+      expect.soft(fwd.row?.receiver, 'the forward goes to the person picked').toBe(C.username);
+      const seen = await conversation(endpoints, C, A.username);
+      expect
+        .soft(seen.text, 'the recipient finds the forward in their conversation with the sender')
+        .toContain(String(fwd.msgIDs[0]));
 
-    // Forward shape from the client (ForwardFooter.js): forwardReceiverList + referenceMessageIDList.
-    const fwd = await endpoints.sendTo(
-      'katchup-forward-message-new',
-      {
-        body: {
-          messageType: KATCHUP_MESSAGE_TYPE.forwardMessageReveal,
-          subject: 'QA forward',
-          actualMessage: 'QA to forward',
-          referenceMessage: null,
-          forwardReceiverList: [C.username],
-          groupForwardList: [],
-          temporaryMsgID: 8989,
-          referenceMessageIDList: [seed.msgID],
+      // An incomplete forward (no source object, the case #611 was about) is refused, never a 5xx.
+      const incomplete = await endpoints.sendTo(
+        'katchup-forward-message-new',
+        {
+          body: {
+            messageType: KATCHUP_MESSAGE_TYPE.forwardMessageReveal,
+            subject: 'QA forward',
+            actualMessage: 'QA to forward',
+            referenceMessage: null,
+            forwardReceiverList: [C.username],
+            groupForwardList: [],
+            temporaryMsgID: 8989,
+            referenceMessageIDList: [seed.msgID],
+          },
         },
-      },
-      { label: 'feature:forward', auth: { principal: A }, allowLiveWrite: true },
-    );
-    // This minimal payload 400s (a full forward needs the source `referenceMessage` object), so
-    // only "no 5xx" is asserted.
-    expect.soft(fwd.status, 'forward validates without crashing (no 5xx)').toBeLessThan(500);
-    await cleanup(endpoints, A, seed.msgID);
+        { label: 'feature:forward-incomplete', auth: { principal: A }, allowLiveWrite: true },
+      );
+      const accepted = incomplete.json();
+      const extra = firstRow((accepted.ok ? accepted.value : {}) as Record<string, unknown>);
+      if (typeof extra?.msgID === 'number') created.push(extra.msgID);
+      expect
+        .soft(incomplete.status, 'an incomplete forward is refused without crashing (no 5xx)')
+        .toBeLessThan(500);
+    } finally {
+      for (const msgID of created) await cleanup(endpoints, A, msgID);
+      await cleanup(endpoints, A, seed.msgID);
+    }
   });
 
   test(
@@ -518,7 +611,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       ],
     },
     async ({ endpoints }) => {
-      // Hidden/Revealed × single/with-thread forwards; as above, each is asserted as "no 5xx".
+      // Hidden/Revealed × single/with-thread, each with the web app's forward body.
       const T = KATCHUP_MESSAGE_TYPE as Record<string, number>;
       const seed = await send(endpoints, A, {
         receiver: B.username,
@@ -532,52 +625,95 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
         ['forward-with-thread hidden (FR-KU-037)', T.forwardMultipleThreadHidden!],
         ['forward-with-thread revealed (FR-KU-038)', T.forwardMultipleThreadReveal!],
       ];
-      for (const [label, type] of variants) {
-        const fwd = await endpoints.sendTo(
-          'katchup-forward-message-new',
-          {
-            body: {
-              messageType: type,
-              subject: 'QA forward',
-              actualMessage: 'QA fwd variants',
-              referenceMessage: null,
-              forwardReceiverList: [C.username],
-              groupForwardList: [],
-              temporaryMsgID: 8989,
-              referenceMessageIDList: [seed.msgID],
-            },
-          },
-          { label: `feature:fwd:${type}`, auth: { principal: A }, allowLiveWrite: true },
-        );
-        expect.soft(fwd.status, `${label} validates without crashing (no 5xx)`).toBeLessThan(500);
+      const created: number[] = [];
+      try {
+        for (const [label, type] of variants) {
+          const fwd = await forward(endpoints, A, firstRow(seed.body)!, type, [C.username]);
+          created.push(...fwd.msgIDs);
+          expect.soft(fwd.status, `${label} is accepted`).toBe(200);
+          expect.soft(fwd.row?.messageType, `${label} is stored as type ${type}`).toBe(type);
+          if (type === T.forwardMessageHidden || type === T.forwardMultipleThreadHidden) {
+            // The recipient must not learn who wrote the original.
+            const raw = fwd.row?.referenceMessage;
+            let source: { sender?: string } = {};
+            try {
+              source = (typeof raw === 'string' ? JSON.parse(raw) : (raw ?? {})) as typeof source;
+            } catch {
+              source = {};
+            }
+            expect.soft(source.sender ?? '', `${label} hides the original sender`).toBe('');
+          }
+        }
+      } finally {
+        for (const msgID of created) await cleanup(endpoints, A, msgID);
+        await cleanup(endpoints, A, seed.msgID);
       }
-      await cleanup(endpoints, A, seed.msgID);
     },
   );
 
   test(
-    'save and mark-important act on a message (FR-K18) @api @katchup @database',
+    'save keeps the selected message and removes the rest of the conversation from the saver’s view (FR-K18) @api @katchup @database',
     { annotation: [{ type: 'requirement-partial', description: 'FR-KU-040' }] },
     async ({ endpoints, databases }) => {
-      const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to save' });
+      /*
+       * Save hides every OTHER message of the conversation from the saver ("Only the selected
+       * message will be saved, the rest will be deleted"), so the saver is personal-5, whose view
+       * of its conversation with personal-4 nothing else reads.
+       */
+      const saver = principal('personal-5');
+      const peer = D;
+      const keep = await send(endpoints, saver, {
+        receiver: peer.username,
+        actualMessage: 'QA keep',
+      });
+      const drop = await send(endpoints, saver, {
+        receiver: peer.username,
+        actualMessage: 'QA drop',
+      });
+      expect(keep.msgID && drop.msgID, 'two messages created').toBeTruthy();
+      try {
+        // The web app's body (KatchupMessage.js): msgIDs, a boolean groupFlag and the receiver.
+        const saved = await endpoints.sendTo(
+          'katchup-save-messages',
+          { body: { msgIDs: [keep.msgID], groupFlag: false, receiver: peer.username } },
+          { label: 'feature:save', auth: { principal: saver }, allowLiveWrite: true },
+        );
+        expect
+          .soft(saved.status, `save accepted (body: ${saved.bodyText?.slice(0, 200)})`)
+          .toBe(200);
+
+        const database = databases.for('kpost-api');
+        if (database.enabled && keep.msgID && drop.msgID) {
+          const repo = new KpostRepository(database);
+          const on = (value: unknown) => value === 1 || value === true || String(value) === '1';
+          const kept = await repo.katchupMessage(keep.msgID);
+          const dropped = await repo.katchupMessage(drop.msgID);
+          expect.soft(on(kept?.deleted_by_sender), 'the selected message stays').toBe(false);
+          expect
+            .soft(on(dropped?.deleted_by_sender), 'the other message leaves the saver’s view')
+            .toBe(true);
+        }
+      } finally {
+        await cleanup(endpoints, saver, keep.msgID);
+        await cleanup(endpoints, saver, drop.msgID);
+      }
+    },
+  );
+
+  test(
+    'mark-important flags a message (FR-K18) @api @katchup @database',
+    { annotation: [{ type: 'requirement-partial', description: 'FR-KU-040' }] },
+    async ({ endpoints, databases }) => {
+      const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to star' });
       expect(seed.msgID, 'seed created').toBeTruthy();
 
-      const saved = await endpoints.sendTo(
-        'katchup-save-messages',
-        // groupFlag is a STRING here too (see send.api.ts); a real boolean 400s.
-        { body: { groupKpostID: B.username, msgIDs: [seed.msgID], groupFlag: 'false' } },
-        { label: 'feature:save', auth: { principal: A }, allowLiveWrite: true },
-      );
-      expect
-        .soft(saved.status, `save accepted (body: ${saved.bodyText?.slice(0, 200)})`)
-        .toBeLessThan(300);
-
+      // The web app sends only the msgID (KatchupMessage.js handleStarMsg).
       const marked = await endpoints.sendTo(
         'katchup-mark-important',
-        { body: { msgID: seed.msgID, groupFlag: false } },
+        { body: { msgID: seed.msgID } },
         { label: 'feature:mark', auth: { principal: A }, allowLiveWrite: true },
       );
-      expect.soft(marked.status, 'mark-important accepted').toBeLessThan(300);
+      expect.soft(marked.status, 'mark-important accepted').toBe(200);
 
       // The response answers success regardless, so the DB row is the judge.
       const database = databases.for('kpost-api');
@@ -722,13 +858,18 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       }
 
       // Forward variants — reference the seed message / our own second account.
-      let forwardedMsgID: number | undefined;
+      const forwarded = seed.msgID
+        ? await forward(
+            endpoints,
+            A,
+            firstRow(seed.body)!,
+            KATCHUP_MESSAGE_TYPE.forwardMessageReveal!,
+            [B.username],
+          )
+        : undefined;
+      created.push(...(forwarded?.msgIDs ?? []));
+      const forwardedMsgID = forwarded?.msgIDs[0];
       for (const [id, bodyObj, label] of [
-        [
-          'katchup-forward-message-new',
-          { msgID: seed.msgID ?? 0, groupFlag: false },
-          'forward-new',
-        ],
         [
           'katchup-forward-multiple',
           { forwardReceiverList: [B.username], groupForwardList: [] },
@@ -742,7 +883,6 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       ] as Array<[string, Record<string, unknown>, string]>) {
         const result = await drive(id, bodyObj, label);
         expect.soft(result.status, `${label} returns a status`).toBeLessThan(600);
-        if (id === 'katchup-forward-message-new' && result.msgID) forwardedMsgID = result.msgID;
       }
 
       // Backtrack is fed the forwarded message's own msgID (not the seed); a read, so allowLiveRead.
@@ -756,7 +896,6 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
           .soft(backtrack.status, 'forwardMessageBacktrackByMsgID traces a real forwarded message')
           .toBeLessThan(500);
       } else {
-        // Known defect #611: forward-message-new returns no msgID, so backtrack cannot run.
         expect
           .soft(forwardedMsgID, 'forward-message-new returned a real msgID to backtrack from')
           .toBeTruthy();

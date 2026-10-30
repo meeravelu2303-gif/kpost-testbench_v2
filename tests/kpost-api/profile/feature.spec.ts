@@ -120,7 +120,8 @@ test.describe(
     }) => {
       // No read endpoint returns gender/dateOfBirth, so knownLanguages marks the basic update.
       const before = await fetchProfile(endpoints);
-      const marker = `QA-${Date.now()}`;
+      // A city may hold only letters, spaces, '.', '-' or "'", so the run's timestamp is spelled in letters.
+      const marker = `QA ${String(Date.now()).replace(/\d/g, (d) => 'abcdefghij'[Number(d)]!)}`;
 
       const basic = await write(
         endpoints,

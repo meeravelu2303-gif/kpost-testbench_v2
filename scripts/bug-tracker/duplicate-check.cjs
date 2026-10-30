@@ -44,6 +44,21 @@ async function main() {
     process.exit(2);
   }
 
+  // A misspelt product or component matches nothing, which would read as "clear to file".
+  const known = await fetch(
+    `${url}/product?${new URLSearchParams({ names: product, include_fields: 'components.name', api_key: apiKey })}`,
+  ).then((res) => res.json());
+  const components = (known.products?.[0]?.components || []).map((c) => c.name);
+  if (!components.includes(component)) {
+    console.error(
+      `"${component}" is not a component of "${product}"` +
+        (components.length
+          ? `; its components are: ${components.join(', ')}`
+          : ' (no such product)'),
+    );
+    process.exit(2);
+  }
+
   console.log(
     `Checking for existing bugs in "${product}" / "${component}" matching: ${keywords.join(', ')}\n`,
   );
