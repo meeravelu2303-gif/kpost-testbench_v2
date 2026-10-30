@@ -1,4 +1,6 @@
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { testData } from '@config/test-data.config';
+import type { ContractSchema } from '../../schema/contract-schema';
 import { body, pathParams } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint, defineUndocumentedKmailEndpoint } from './kmail-endpoint';
 
@@ -135,6 +137,8 @@ const contactRead = (
     productionSafe: opts.productionSafe ?? true,
     expectedStatus: opts.expectedStatus,
     request: body(() => bodyObj),
+    // Used only where the workbook documents no body (defineKmailEndpoint).
+    requestSchema: typesOnlySchema(bodyObj),
     note: opts.note,
     performance: opts.timeoutMs ? { timeoutMs: opts.timeoutMs } : undefined,
     skipValidators: opts.skipValidators,
@@ -298,7 +302,7 @@ const idRead = (
   request: ReturnType<typeof body>,
   note: string,
   tags: string[] = [],
-  opts: { authentication?: { required: boolean } } = {},
+  opts: { authentication?: { required: boolean }; requestSchema?: ContractSchema } = {},
 ) =>
   defineKmailEndpoint({
     id,
@@ -307,6 +311,7 @@ const idRead = (
     summary,
     tags: [...R, 'needs-id', ...tags],
     request,
+    requestSchema: opts.requestSchema,
     note,
     authentication: opts.authentication,
   });
@@ -402,6 +407,14 @@ export const draftContentApi = idRead(
   'needs a real draftKmailID',
   ['draft'],
 );
+/** The live client's sentAndInboxMailContent body (a real kmailID comes from the lifecycle). */
+const mailContentBody = () => ({
+  kmailID: 0,
+  kmailNumber: 0,
+  kmailType: 'Received',
+  selectedContact: testData.victimKpostId,
+  groupFlag: false,
+});
 export const mailContentApi = idRead(
   'kmail-mail-content',
   'POST',
@@ -409,15 +422,10 @@ export const mailContentApi = idRead(
   'Sent/inbox mail content',
   // The full live-client body; the backend dereferences `selectedContact` unguarded, so omitting it
   // 500s.
-  body(() => ({
-    kmailID: 0,
-    kmailNumber: 0,
-    kmailType: 'Received',
-    selectedContact: testData.victimKpostId,
-    groupFlag: false,
-  })),
+  body(() => mailContentBody()),
   'needs a real kmailID; full row shape avoids the backend selectedContact NPE',
   ['content'],
+  { requestSchema: typesOnlySchema(mailContentBody()) },
 );
 
 // Settings > Data Storage — the KMail storage used. Real but not in the workbook contract.

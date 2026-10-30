@@ -2,7 +2,14 @@ import type { Locator, Page, Response } from '@playwright/test';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { expect, test } from '@fixtures';
-import { createQaGroup, deleteQaGroup, GROUP_CREATOR, type QaGroup } from '../support/groups';
+import {
+  createQaGroup,
+  deleteQaGroup,
+  GROUP_CREATOR,
+  groupMenuItem,
+  openGroupInfo,
+  type QaGroup,
+} from '../support/groups';
 import { EDITOR, openGroupConversation } from '../support/katchup';
 import { retryOrSkip } from '../../support/live-condition';
 
@@ -22,22 +29,6 @@ const PNG_1X1 = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AL+6ZlWAAAAAElFTkSuQmCC',
   'base64',
 );
-
-async function openGroupInfo(page: Page, group: QaGroup): Promise<Locator> {
-  const opened = await openGroupConversation(page, group.groupKpostID);
-  retryOrSkip(!opened, 'the new group was not listed in Katchup right now (four reloads)');
-  await page.locator('#ChatTop .background-color-katchup .line_height').first().click();
-  const panel = page.locator('#ChatTop .comm_back').first();
-  await expect(panel.getByText(/Katchup Group Info/i), 'Group Info opens').toBeVisible({
-    timeout: 15_000,
-  });
-  return panel;
-}
-
-async function menuItem(page: Page, panel: Locator, item: string): Promise<void> {
-  await panel.locator('.icon-KP_144---More-Vertical').first().click();
-  await page.locator('.back_three_color').getByText(item, { exact: true }).first().click();
-}
 
 async function answerTo(page: Page, path: string, act: () => Promise<void>): Promise<Response> {
   const answer = page.waitForResponse(
@@ -82,7 +73,7 @@ test.describe(
         const panel = await openGroupInfo(page, group);
 
         await test.step('Edit Group › Group Name › Change (editGroupName)', async () => {
-          await menuItem(page, panel, 'Edit Group');
+          await groupMenuItem(page, panel, 'Edit Group');
           const edit = dialog(page, 'Edit Group');
           await edit.getByLabel('Group Name').fill(renamed);
           const saved = await answerTo(page, '/group/editGroupName', () =>
@@ -97,7 +88,7 @@ test.describe(
         });
 
         await test.step('Edit Group › photo › Image Cropper › Done (updateGroupProfileImage)', async () => {
-          await menuItem(page, panel, 'Edit Group');
+          await groupMenuItem(page, panel, 'Edit Group');
           await page.locator('#ImgInput').setInputFiles({
             name: 'qa-group.png',
             mimeType: 'image/png',
@@ -130,7 +121,7 @@ test.describe(
         const added = ADDED!.username;
 
         await test.step('Add Members › pick the new person › Done (addUserToGroup)', async () => {
-          await menuItem(page, panel, 'Add Members');
+          await groupMenuItem(page, panel, 'Add Members');
           const picker = dialog(page, 'Add Members');
           await picker.getByRole('searchbox').first().fill(added.split('@')[0]!);
           const row = picker
@@ -153,7 +144,7 @@ test.describe(
         });
 
         await test.step('Add Admin › Add on their row (addOrRemoveAdminAccess Y)', async () => {
-          await menuItem(page, panel, 'Add Admin');
+          await groupMenuItem(page, panel, 'Add Admin');
           const list = page.locator('#ChatTop .comm_back').filter({ hasText: 'Add Admin Member' });
           const row = list
             .locator('.contactBar_Dropdown')
@@ -167,7 +158,7 @@ test.describe(
         });
 
         await test.step('Remove Admin › Remove › Confirm (addOrRemoveAdminAccess N)', async () => {
-          await menuItem(page, panel, 'Remove Admin');
+          await groupMenuItem(page, panel, 'Remove Admin');
           const list = page
             .locator('#ChatTop .comm_back')
             .filter({ hasText: 'Remove Admin Member' });
@@ -185,7 +176,7 @@ test.describe(
         });
 
         await test.step('Remove Members › tick › Remove › Confirm (removeGroupMember)', async () => {
-          await menuItem(page, panel, 'Remove Members');
+          await groupMenuItem(page, panel, 'Remove Members');
           const list = page
             .locator('#ChatTop .comm_back')
             .filter({ hasText: 'Remove Group Members' });

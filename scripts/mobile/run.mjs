@@ -2,8 +2,10 @@
 // app copy that `npm run mobile:prepare` built (docs/proposals/mobile-testing.md). Never files bugs.
 //
 //   npm run mobile:test                                    every test
-//   npm run mobile:test -- --target login_test.dart        one file
+//   npm run mobile:test -- --target auth/login_test.dart   one file (tests live in <module>/<flow>_test.dart)
 //   npm run mobile:test -- --device emulator-5554          a chosen device
+//   npm run mobile:test -- --video                         record video on a phone too
+//   npm run mobile:test -- --max-minutes 45                stop a hung run later (default 30)
 //
 // The phone signs in as qatest7 (no Playwright run uses it, so neither kicks the other's session) and
 // qatest8 is the second user, driven over the API from inside the test. Account values reach the test
@@ -22,6 +24,7 @@ const COPY = path.join(ROOT, 'mobile', '.app');
 const APP = path.join(COPY, 'kpost');
 const TESTS = path.join(ROOT, 'mobile', 'patrol_test');
 const QA_HOSTS = new Set(['192.168.0.100']);
+const ANDROID_PACKAGE = 'com.kpost.kpost5_flutter';
 
 const args = process.argv.slice(2);
 const option = (name) => {
@@ -92,12 +95,16 @@ fs.writeFileSync(
 
 const target = option('--target');
 const device = option('--device') ?? devices[0];
+// Video works on emulators; on a phone it depends on the maker (the realme C55 refuses to start it).
+const video = device.startsWith('emulator-') || args.includes('--video');
+// A hung run (Patrol can wait for ever after a failure) is stopped after this many minutes.
+const maxMinutes = Number(option('--max-minutes') ?? 30);
 const patrolArgs = [
   'test',
   `--dart-define-from-file=${definesFile}`,
   '--device',
   device,
-  '--record-video',
+  ...(video ? ['--record-video'] : []),
   ...(target ? ['--target', path.join('patrol_test', target)] : []),
 ];
 console.log(`mobile:test: ${stamp.branch} @ ${stamp.commit} on ${device}, KPost ${stamp.kpost}`);
@@ -139,10 +146,18 @@ try {
     stdio: 'inherit',
     shell: process.platform === 'win32',
   });
+  const watchdog = setTimeout(() => {
+    console.error(`mobile:test: still running after ${maxMinutes} min: stopped (--max-minutes)`);
+    // The whole tree: patrol starts Gradle and adb, which outlive a killed parent on Windows.
+    if (process.platform === 'win32') run('taskkill', ['/pid', String(child.pid), '/T', '/F']);
+    else child.kill('SIGKILL');
+    run('adb', ['-s', device, 'shell', 'am', 'force-stop', ANDROID_PACKAGE]);
+  }, maxMinutes * 60_000);
   process.exitCode = await new Promise((resolve) => {
     child.on('exit', (code) => resolve(code ?? 1));
     child.on('error', () => resolve(1));
   });
+  clearTimeout(watchdog);
 } finally {
   closeTunnel();
   fs.rmSync(definesFile, { force: true });

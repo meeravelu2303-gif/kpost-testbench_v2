@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { VALIDATION_PROFILES, type ValidationProfile } from '@config/constants';
+import { GUARD_REFUSED } from './probe';
+import { ProductionSafetyError } from './production-guard';
 import type { ValidationContext } from './validation-context';
 import type { ValidationToggle } from './validation-policy';
 import type {
@@ -114,11 +116,15 @@ export function defineValidator<TContext extends ValidationContext = ValidationC
         result = await spec.check(context);
       } catch (error) {
         const { name, message } = error as Error;
-        result = {
-          status: 'FAILED',
-          message: `validator error: ${message}`,
-          error: { name, message },
-        };
+        result =
+          // The bench's own safety guard refused the request, so nothing was checked.
+          error instanceof ProductionSafetyError
+            ? { status: 'SKIPPED', message: GUARD_REFUSED }
+            : {
+                status: 'FAILED',
+                message: `validator error: ${message}`,
+                error: { name, message },
+              };
       }
       return buildResult(spec, context, result, Math.round(performance.now() - started));
     },

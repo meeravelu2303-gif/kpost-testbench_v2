@@ -2,8 +2,13 @@ import { apiConfig } from '@config/api.config';
 import type { HttpMethod, RequestSpec } from '@api/client/request-builder';
 import type { ApiResponseWrapper } from '@api/client/response-wrapper';
 import type { AuthMode } from './endpoint-executor';
+import { ProductionSafetyError } from './production-guard';
 import type { ValidationContext } from './validation-context';
 import { fromChecks, type CheckDetail, type ValidationOutcome } from './validation-result';
+
+/** The reason for a check the bench's own safety guard would not send (classified `deliberate`). */
+export const GUARD_REFUSED =
+  'not sent: the safety guard refused it (it names a record the bench does not own on live)';
 
 /** One extra request a validator sends, with the status it expects back. */
 export interface ProbeCase {
@@ -36,12 +41,27 @@ export async function runProbes(
 ): Promise<ValidationOutcome> {
   const checks: CheckDetail[] = [];
   for (const probe of cases) {
-    const exchange = await context.send(probe.spec, {
-      label: `${labelPrefix}:${probe.name}`,
-      auth: probe.auth,
-      method: probe.method,
-      contentType: probe.contentType,
-    });
+    let exchange: ApiResponseWrapper;
+    try {
+      exchange = await context.send(probe.spec, {
+        label: `${labelPrefix}:${probe.name}`,
+        auth: probe.auth,
+        method: probe.method,
+        contentType: probe.contentType,
+      });
+    } catch (error) {
+      // A probe the safety guard refuses (e.g. attack text in an identifier field on live) was
+      // never sent: SKIPPED with the reason, and the remaining probes still run.
+      if (!(error instanceof ProductionSafetyError)) throw error;
+      checks.push({
+        name: probe.name,
+        status: 'SKIPPED',
+        expected: probe.expectedStatus ?? 'any status < 500',
+        actual: 'not sent',
+        message: GUARD_REFUSED,
+      });
+      continue;
+    }
     const statusOk = statusMatches(exchange.status, probe.expectedStatus);
     const problem = statusOk ? probe.assert?.(exchange) : exchange.transportError?.message;
     // A 429 is our own load, so the probe is SKIPPED, unless 429 is the expected status.

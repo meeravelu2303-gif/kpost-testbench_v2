@@ -3,6 +3,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
+import { openDigitalCard } from '../support/contacts';
 import { gotoKatchup } from '../support/katchup';
 
 /**
@@ -68,25 +69,6 @@ async function removeContact(endpoints: EndpointExecutor): Promise<void> {
     .catch(() => undefined);
 }
 
-/** Katchup contact rail → the person's avatar → their Digital Card. */
-async function openDigitalCard(page: Page): Promise<Locator> {
-  await gotoKatchup(page);
-  const search = page.getByRole('searchbox').first();
-  await search.fill('qatest4').catch(() => undefined);
-  const row = page
-    .locator('.contactBar_Dropdown')
-    .filter({ hasText: /qatest4/i })
-    .first();
-  const card = page.locator('.DC-modal-40w').first();
-  const opened = page.waitForResponse((r) => r.url().includes('/profile/getDigitalCard'), {
-    timeout: 30_000,
-  });
-  await row.locator('.sb-avatar').first().click();
-  await opened;
-  await expect(card, "the person's Digital Card opens").toBeVisible({ timeout: 15_000 });
-  return card;
-}
-
 test.describe(
   'KPost Contacts · Digital Card and contact actions on screen @ui',
   { tag: ['@ui', '@contacts', '@regression'] },
@@ -104,7 +86,7 @@ test.describe(
     }) => {
       await ensureContact(endpoints);
       try {
-        const card = await openDigitalCard(page);
+        const card = await openDigitalCard(page, 'qatest4');
         const reference = `QA Ref ${Date.now()}`;
         await card
           .locator('button.dc-specialty-chip')
@@ -137,7 +119,7 @@ test.describe(
       await ensureContact(endpoints);
       try {
         await test.step('Block Contact › Block', async () => {
-          const card = await openDigitalCard(page);
+          const card = await openDigitalCard(page, 'qatest4');
           await card.getByRole('button', { name: 'Block Contact' }).click();
           const confirm = dialog(page, 'Block Contact');
           const blocked = await answerTo(page, '/contacts/blockOrUnBlockContact', () =>
@@ -179,7 +161,7 @@ test.describe(
     test('a contact is deleted from their Digital Card', async ({ page, endpoints }) => {
       await ensureContact(endpoints);
       try {
-        const card = await openDigitalCard(page);
+        const card = await openDigitalCard(page, 'qatest4');
         await card.getByRole('button', { name: 'Delete Contact' }).click();
         const confirm = dialog(page, 'Delete Contact');
         const deleted = await answerTo(page, '/contacts/deleteContact', () =>

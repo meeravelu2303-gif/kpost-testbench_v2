@@ -7,9 +7,9 @@ import 'package:kpost5_2023/katchup/views/screens/katchup_screens/katchup_dashbo
 import 'package:kpost5_2023/katchup/views/widgets/quil_editor_wrapper.dart';
 import 'package:patrol/patrol.dart';
 
-import 'support/bench.dart';
-import 'support/first_run.dart';
-import 'support/peer_api.dart';
+import '../support/bench.dart';
+import '../support/first_run.dart';
+import '../support/peer_api.dart';
 
 /// Katchup on the phone, with a real second user: qatest8 sends a message over the API, the phone
 /// finds it by its Subject, opens the chat, and replies with its own Subject and text; the reply is

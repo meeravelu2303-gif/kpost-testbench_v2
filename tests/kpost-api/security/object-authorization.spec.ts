@@ -204,10 +204,25 @@ test.describe(
           .not.toBe('HACKED BY QA BENCH');
       } finally {
         // Remove the throwaway group whatever happened, so a vulnerability does not leave litter.
+        // deleteGroup refuses while anyone but the admin remains, so the member goes first.
         if (groupID) {
-          await as(endpoints, owner!, 'group-delete', { groupID, groupKpostID }, 'cleanup').catch(
-            () => undefined,
+          await as(
+            endpoints,
+            owner!,
+            'group-remove-member',
+            { memberKpostIdList: [testData.victimKpostId], groupID, groupKpostID },
+            'cleanup-remove',
           );
+          const deleted = await as(
+            endpoints,
+            owner!,
+            'group-delete',
+            { groupID, groupKpostID },
+            'cleanup',
+          );
+          expect
+            .soft(deleted.status, 'the throwaway group is deleted (nothing left behind)')
+            .toBe(200);
         }
       }
     });

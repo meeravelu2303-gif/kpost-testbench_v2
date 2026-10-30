@@ -1,3 +1,4 @@
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { testData } from '@config/test-data.config';
 import { body } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint, defineUndocumentedKmailEndpoint } from './kmail-endpoint';
@@ -40,6 +41,7 @@ export const clearStatusApi = defineKmailEndpoint({
   tags: [...M, 'status'],
   destructive: true,
   request: body(() => ({ selectedContact: testData.victimKpostId, kmailStatusFlag: 0 })),
+  requestSchema: typesOnlySchema({ selectedContact: testData.victimKpostId, kmailStatusFlag: 0 }),
   note: 'kmailStatusFlag required to avoid a 500 crash, but no value satisfies REPLY_NOT_SENT — contract still Unknown/Requires Clarification',
 });
 
@@ -51,6 +53,7 @@ export const clearAllStatusApi = defineKmailEndpoint({
   tags: [...M, 'status'],
   destructive: true,
   request: body(() => ({ kmailStatusFlag: 0 })),
+  requestSchema: typesOnlySchema({ kmailStatusFlag: 0 }),
   note: 'same Unknown/Requires Clarification contract as kmail-clear-status',
 });
 
@@ -62,6 +65,7 @@ export const convertPdfApi = defineKmailEndpoint({
   tags: [...M],
   destructive: true,
   request: body(() => ({ kmailID: 0 })),
+  requestSchema: typesOnlySchema({ kmailID: 0 }),
   note: 'needs a real kmailID',
 });
 
@@ -126,6 +130,14 @@ export const mailCredentialsApi = defineKmailEndpoint({
   note: 'sensitive: returns credentials; not driven on live',
 });
 
+/** The unsubscribe body (sender, receiver, reason, createdBy). */
+const unsubscriberBody = () => ({
+  sender: testData.kpostId,
+  receiver: testData.victimKpostId,
+  reason: 'QA bench — safe to ignore',
+  createdBy: testData.kpostId,
+});
+
 /*
  * The e-mail-footer unsubscribe: documented under KPost's /v2/common but served by KMail, so it
  * maps to that row via `contractPath`. A public write with no undo, so it is never written on live.
@@ -143,12 +155,8 @@ export const saveUnsubscriberApi = {
     destructive: true,
     sideEffect: 'data',
     note: 'public write with no delete path; never written on live',
-    request: body(() => ({
-      sender: testData.kpostId,
-      receiver: testData.victimKpostId,
-      reason: 'QA bench — safe to ignore',
-      createdBy: testData.kpostId,
-    })),
+    request: body(() => unsubscriberBody()),
+    requestSchema: typesOnlySchema(unsubscriberBody()),
   }),
   contractPath: '/v2/common/saveUnsubscriberDetails',
 };

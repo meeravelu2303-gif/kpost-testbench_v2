@@ -2,6 +2,9 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
+import { retryOrSkip } from '../../support/live-condition';
+import { openGroupConversation } from './katchup';
 
 /**
  * Group fixtures for UI specs, through the API. The group is created by `personal-3`, never the
@@ -117,4 +120,22 @@ export async function deleteQaGroup(
     { groupID: group.groupID, groupKpostID: group.groupKpostID },
     'cleanup-delete',
   ).catch(() => undefined);
+}
+
+/** Opens the group's conversation in Katchup, then its Group Info panel (header → Katchup Group Info). */
+export async function openGroupInfo(page: Page, group: QaGroup): Promise<Locator> {
+  const opened = await openGroupConversation(page, group.groupKpostID);
+  retryOrSkip(!opened, 'the new group was not listed in Katchup right now (four reloads)');
+  await page.locator('#ChatTop .background-color-katchup .line_height').first().click();
+  const panel = page.locator('#ChatTop .comm_back').first();
+  await expect(panel.getByText(/Katchup Group Info/i), 'Group Info opens').toBeVisible({
+    timeout: 15_000,
+  });
+  return panel;
+}
+
+/** Group Info's three-dot menu → `item` (Edit Group, Add Members, Add Admin, Remove Admin, …). */
+export async function groupMenuItem(page: Page, panel: Locator, item: string): Promise<void> {
+  await panel.locator('.icon-KP_144---More-Vertical').first().click();
+  await page.locator('.back_three_color').getByText(item, { exact: true }).first().click();
 }

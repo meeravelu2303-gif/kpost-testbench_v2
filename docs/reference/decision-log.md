@@ -3,7 +3,50 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-30 (latest) — Mobile: first Patrol runs on a real phone; sign-in blocked by #13326
+### 2026-10-30 (latest) — Web validation for Contacts, KDiary, KBooking, User Management; guard-refused probes skip
+
+- **New `-validation` specs**, each blocking its save request at the network so nothing is written:
+  `contacts/contacts-validation` (Add Ref from qatest2's conversation header: empty disabled, blank
+  refused, real reference sent), `verticals/kdiary-validation` (required fields, blank title, end before
+  start, complete schedule sent), `verticals/kbooking-validation` (no cities, no arrival city, past date,
+  valid search sent; the redbus search is never let through), `user-management/usermanagement-validation`
+  (bad, too long, duplicate and invalid secondary mobile, complete member sent). The live web build is newer
+  than the local source copy: it already enforces KDiary's description and end-time rules and both
+  secondary-mobile rules, which the copy lacks, so those pass.
+- **Found, reproduced alone, duplicate-checked (new):** KBooking sends a search for a past date to redbus
+  with no message (`travelDate` yesterday). Profile › Basic Information shows "Year must be between 1900 and
+  2008" for an under-18 date of birth but Update still sends the save (the server then refuses it). Both
+  file through the next KPost UI preview.
+- **Test data:** qatest4 is soft-deleted from qatest1's contacts (`delete_status=1`) by the Contacts e2e
+  cleanup, so read-only Contacts specs use qatest2; qatest5 is blocked in qatest1's book.
+- **Engine:** a probe the safety guard refuses (attack text in an identifier field on live) used to throw
+  out of the whole validator as "validator error", so that endpoint's other fields went unprobed (dozens of
+  XSS/injection/data-type checks per run). `runProbes` now records just that probe as SKIPPED ("the safety
+  guard refused it", classified deliberate) and goes on; `defineValidator` does the same for a direct
+  refusal. Self-test: `tests/framework/validators/guard-refused-probes.spec.ts`.
+- `openDigitalCard` moved from `contacts-actions-e2e.spec.ts` to `support/contacts.ts`.
+
+### 2026-10-30 — Group access control: Edit Group is not admin-only on the server
+
+- **New spec** `tests/kpost-api/security/group-object-authorization.spec.ts` (owner qatest3, plain member
+  qatest4, outsider qatest5; qatest2 is only a passive member and never logs in). Each test makes its own
+  group, judges by the DB row, and runs the owner's identical call as the control. Rules come from the
+  source and FR-GM-007..013: add, remove, promote, rename, photo and delete are admin-only, and the web shows
+  Edit Group to admins only.
+- **Found live, 2/2 (with retry):** a plain member can rename the group, set its photo and remove it; a
+  member the admin already removed can still rename it and set its photo. The cause is in the source:
+  `GroupRepository.editGroupName` and `GroupServiceDaoImpl.updateGroupProfileImage` check only that a
+  membership row exists, not `admin_access='Y' AND removed_flag=0`. One rule id per endpoint
+  (`GROUP-AUTHZ-{edit-name,set-photo,remove-photo}-not-admin-only`), shared by the member and removed-member
+  cases. Duplicate-checked (Groups V2, General, Home): new. They file through the next KPost API preview.
+- **Refused correctly:** a plain member adding or removing members, making themselves admin, or deleting
+  the group; an outsider joining or changing the photo.
+- **Bench fix:** `object-authorization.spec.ts` never deleted its group (deleteGroup refuses while a member
+  remains), so each run left an active "QA IDOR Group"; the member is now removed first and the delete is
+  asserted. Not fixed here: about 300 active "QA Bench Group" groups owned by qatest1 are left behind
+  (`QA_GROUP_CLEANUP=true` removes them).
+
+### 2026-10-30 — Mobile: first Patrol runs on a real phone; sign-in blocked by #13326
 
 - **No emulator on this PC:** Windows Server 2022 RTM (build 20348.1) has a hypervisor interface too old for
   emulator 37 on the i7-14700F ("WHPX: Failed to setup partition"). Owner's choice: a real phone, a realme C55

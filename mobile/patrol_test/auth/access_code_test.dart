@@ -6,8 +6,8 @@ import 'package:kpost_common/auth/views/widgets/access_code_ui/otp_verification_
 import 'package:patrol/patrol.dart';
 import 'package:pinput/pinput.dart';
 
-import 'support/bench.dart';
-import 'support/first_run.dart';
+import '../support/bench.dart';
+import '../support/first_run.dart';
 
 /// Signup & Login on the phone: the access code. Signed in with the password, the user sets the
 /// 4-digit code from Settings → General Settings → Change Access Code (password first, then the code

@@ -136,7 +136,9 @@ export type SkipClass =
 
 export function classifySkip(reason: string): SkipClass {
   const r = reason.toLowerCase();
-  if (/skipvalidators|disabled for this endpoint/.test(r)) return 'deliberate';
+  if (/skipvalidators|disabled for this endpoint|the safety guard refused it/.test(r)) {
+    return 'deliberate';
+  }
   if (
     /prerequisite .* did not pass|the primary request answered \d|answered 404: the route is unknown/.test(
       r,

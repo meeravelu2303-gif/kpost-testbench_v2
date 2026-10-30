@@ -137,6 +137,61 @@ class ApiUser {
     );
   }
 
+  /// The contact IDs in this account's address book (deleted ones left out).
+  Future<Set<String>> contactIds() async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      'contacts/myContacts/',
+      data: {'lastfetchDate': null},
+    );
+    final rows = response.data?['contacts_added'];
+    return {
+      for (final row in rows is List ? rows : const [])
+        if (row is Map && row['deleteStatus'] != true) '${row['contactID']}'.toLowerCase(),
+    };
+  }
+
+  /// Removes [contactId] from this account's address book (cleanup; failures are ignored).
+  Future<void> deleteContact(String contactId) async {
+    await _dio.post<Object>('contacts/deleteContact/', data: {'contactID': contactId});
+  }
+
+  /// This account's "About" text, as the profile returns it ('' when none).
+  Future<String> about() async {
+    final response = await _dio.get<Map<String, dynamic>>('profile/getUserProfile/');
+    final data = response.data?['data'];
+    final profile = (data is List && data.isNotEmpty ? data.first : data) as Map?;
+    final userProfile = profile?['userProfile'];
+    return userProfile is Map ? '${userProfile['aboutYourself'] ?? ''}' : '';
+  }
+
+  /// Sets this account's "About" text (used to put the original back).
+  Future<void> setAbout(String text) async {
+    await _dio.post<Object>('profile/updateAboutYourself/', data: {'aboutYourself': text});
+  }
+
+  /// The kallIDs of today's Kool Kalls whose subject is [subject].
+  Future<List<int>> todaysKoolKalls(String subject) async {
+    final response = await _dio.get<Object>('kall/todayKoolKall/');
+    final ids = <int>[];
+    void collect(Object? node) {
+      if (node is Map) {
+        if (node['subject'] == subject && node['kallID'] is int) ids.add(node['kallID'] as int);
+        node.values.forEach(collect);
+      } else if (node is List) {
+        node.forEach(collect);
+      }
+    }
+
+    collect(response.data);
+    return ids.toSet().toList();
+  }
+
+  /// Ends a Kool Kall this account organised (cleanup; failures are ignored).
+  Future<void> endKoolKall(int kallId) async {
+    // `kallID` alone: sending `id` too makes endKoolKall answer 500.
+    await _dio.post<Object>('kall/endKoolKall', data: {'kallID': kallId});
+  }
+
   static String _sessionId() {
     final random = Random.secure();
     return List.generate(16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();

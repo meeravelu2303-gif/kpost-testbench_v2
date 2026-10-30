@@ -105,7 +105,11 @@ tests/ — one folder per Bugzilla product, each with its own smoke/ and sanity/
   admin-ui/<area>/      KPost Admin UI by menu area: auth screens admin-setup human-resources cross-layer (+ support/)
   setup/ · framework/ · support/   logins that save sessions · bench self-tests · helpers shared by products
   UI bug tags are hashed from the pre-2026-10-27 folder names (uiFingerprintPath), so a move keeps each bug's tag.
-mobile/patrol_test/     KPost Mobile: the Patrol (Dart) tests; mobile/.app = the app copy they run in (generated, gitignored)
+  UI file names: <module>/<module>-<area>.spec.ts, the suffix saying the kind of test: -e2e (multi-step flow
+  that writes data), -validation (invalid input refused AND valid input accepted), -api-handling (server
+  errors shown to the user), -security, -accessibility. Shared helpers go in support/, never in a spec.
+mobile/patrol_test/     KPost Mobile: <module>/<flow>_test.dart (auth/, katchup/, …) + support/; mobile/.app = the
+                        app copy they run in (generated, gitignored)
 contracts/, openapi/    GENERATED from the Excel workbook. Never hand-edit
 docs/                   guides/ (how to run) · reference/ (what the bench is + the decision log) · proposals/ · modules/ · ui/ · scope/
                         · generated/ (written by `framework`; never hand-edit) · api-specs/ (the KPost workbook

@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import { parkPointerAwayFromSideMenu } from './katchup';
+import { gotoKatchup, parkPointerAwayFromSideMenu } from './katchup';
 
 /**
  * Shared Contacts steps (Katchup's Contacts tab, the Add-contact → KDirectory wizard, Create Group),
@@ -111,4 +111,26 @@ export async function openCreateGroup(page: Page): Promise<Locator | null> {
   const modal = page.getByRole('dialog').filter({ hasText: /Create New Group/i });
   const opened = await modal.isVisible({ timeout: 15_000 }).catch(() => false);
   return opened ? modal : null;
+}
+
+/** Katchup's contact rail → the person's avatar → their Digital Card (`name` as the rail shows it). */
+export async function openDigitalCard(page: Page, name: string): Promise<Locator> {
+  await gotoKatchup(page);
+  await page
+    .getByRole('searchbox')
+    .first()
+    .fill(name)
+    .catch(() => undefined);
+  const row = page
+    .locator('.contactBar_Dropdown')
+    .filter({ hasText: new RegExp(name, 'i') })
+    .first();
+  const card = page.locator('.DC-modal-40w').first();
+  const opened = page.waitForResponse((r) => r.url().includes('/profile/getDigitalCard'), {
+    timeout: 30_000,
+  });
+  await row.locator('.sb-avatar').first().click();
+  await opened;
+  await expect(card, `${name}'s Digital Card opens`).toBeVisible({ timeout: 15_000 });
+  return card;
 }

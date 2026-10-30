@@ -1,3 +1,4 @@
+import { typesOnlySchema } from '@api/schema/sample-schema';
 import { KMAIL_TYPE } from '@api/contract/kpost-types';
 import { body } from '../kpost/kpost-endpoint';
 import { defineKmailEndpoint } from './kmail-endpoint';
@@ -15,6 +16,7 @@ export const draftMailApi = defineKmailEndpoint({
   tags: [...DRAFT_TAGS],
   destructive: true,
   request: body(() => mailShape({ kmailType: KMAIL_TYPE.draft })),
+  requestSchema: typesOnlySchema(mailShape({ kmailType: KMAIL_TYPE.draft })),
   note: 'workbook documents no body; reuses the compose shape with kmailType Draft',
 });
 

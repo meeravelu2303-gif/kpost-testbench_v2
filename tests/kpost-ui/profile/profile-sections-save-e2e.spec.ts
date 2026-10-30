@@ -2,6 +2,7 @@ import type { Locator, Page, Response } from '@playwright/test';
 import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
+import { openProfileSection } from '../support/profile';
 import { pickReactSelect } from '../support/react-select';
 
 /**
@@ -12,24 +13,6 @@ import { pickReactSelect } from '../support/react-select';
  * twice, a desktop and a hidden mobile copy, so everything is scoped to the desktop panel).
  * Gated behind PROFILE_UI_LIFECYCLE=true: it writes to the signed-in QA account's profile.
  */
-
-const PANEL = '.col-md-9.settings-theme-content-panel';
-
-async function openSection(page: Page, section: string): Promise<Locator> {
-  await page.goto('/settings', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-  await page
-    .locator('.loader-overlay')
-    .waitFor({ state: 'hidden', timeout: 30_000 })
-    .catch(() => undefined);
-  const menu = page.locator('.col-md-3.settings-theme-nav-panel');
-  const item = menu.getByText(section, { exact: true }).first();
-  // The menu is an accordion: open "Profile Creation" only if its children are hidden.
-  if (!(await item.isVisible().catch(() => false))) {
-    await menu.getByText('Profile Creation', { exact: true }).first().click({ timeout: 15_000 });
-  }
-  await item.click({ timeout: 15_000 });
-  return page.locator(PANEL).first();
-}
 
 /** Runs `act` and returns the first POST answer whose URL contains `path`. */
 async function answerTo(page: Page, path: string, act: () => Promise<void>): Promise<Response> {
@@ -192,7 +175,7 @@ test.describe(
     test('Basic Information: a new Other Email ID saves, then the original is put back', async ({
       page,
     }) => {
-      const panel = await openSection(page, 'Basic Information');
+      const panel = await openProfileSection(page, 'Basic Information');
       const email = panel.getByPlaceholder('Enter Email ID').first();
       await expect(email, 'the Basic Information form renders').toBeVisible({ timeout: 20_000 });
       const original = await email.inputValue();
@@ -212,12 +195,12 @@ test.describe(
           marker,
         );
         expect((await envelope(saved)).status, 'the server saves it').toBe('SUCCESS');
-        const reopened = await openSection(page, 'Basic Information');
+        const reopened = await openProfileSection(page, 'Basic Information');
         await expect
           .soft(reopened.getByPlaceholder('Enter Email ID').first(), 'it is shown after reopening')
           .toHaveValue(marker, { timeout: 20_000 });
       } finally {
-        const back = await openSection(page, 'Basic Information');
+        const back = await openProfileSection(page, 'Basic Information');
         await pickGenderIfEmpty(page, back);
         await back.getByPlaceholder('Enter Email ID').first().fill(original);
         await answerTo(page, '/profile/updateBasicInformation', () =>
@@ -232,7 +215,7 @@ test.describe(
     test('Contact Information: a new Landline Number saves, then the original is put back', async ({
       page,
     }) => {
-      const panel = await openSection(page, 'Contact Information');
+      const panel = await openProfileSection(page, 'Contact Information');
       const landline = panel.getByPlaceholder('Enter Landline Number').first();
       await expect(landline, 'the Contact Information form renders').toBeVisible({
         timeout: 20_000,
@@ -260,7 +243,7 @@ test.describe(
         );
         expect((await envelope(saved)).status, 'the server saves it').toBe('SUCCESS');
       } finally {
-        const back = await openSection(page, 'Contact Information');
+        const back = await openProfileSection(page, 'Contact Information');
         await back.getByPlaceholder('Enter Landline Number').first().fill(original);
         await answerTo(page, '/profile/updateContactInformation', () =>
           back
@@ -275,7 +258,7 @@ test.describe(
       page,
     }) => {
       const company = `QA Bench Co ${Date.now()}`;
-      const panel = await openSection(page, 'Experience');
+      const panel = await openProfileSection(page, 'Experience');
       await expect(
         panel.locator('.pc-entry-card').first(),
         'the Experience list renders',
@@ -297,7 +280,7 @@ test.describe(
       );
       expect((await envelope(saved)).status, 'the server saves the entry').toBe('SUCCESS');
 
-      const reopened = await openSection(page, 'Experience');
+      const reopened = await openProfileSection(page, 'Experience');
       await expect(reopened.locator('.pc-entry-card').first()).toBeVisible({ timeout: 20_000 });
       const stored = await cardWith(reopened, 'Enter Company Name', company);
       expect(stored, 'the saved entry is listed after reopening').not.toBeNull();
@@ -306,7 +289,7 @@ test.describe(
         stored!.getByRole('button', { name: 'Delete' }).first().click(),
       );
       expect((await envelope(deleted)).status, 'the server deletes it').toBe('SUCCESS');
-      const after = await openSection(page, 'Experience');
+      const after = await openProfileSection(page, 'Experience');
       await expect(after.locator('.pc-entry-card').first()).toBeVisible({ timeout: 20_000 });
       expect(await cardWith(after, 'Enter Company Name', company), 'and it is gone').toBeNull();
     });
@@ -315,7 +298,7 @@ test.describe(
       page,
     }) => {
       const school = `QA Bench School ${Date.now()}`;
-      const panel = await openSection(page, 'Education');
+      const panel = await openProfileSection(page, 'Education');
       await panel
         .getByRole('button', { name: /^School$/ })
         .first()
@@ -334,7 +317,7 @@ test.describe(
       );
       expect((await envelope(saved)).status, 'the server saves the school').toBe('SUCCESS');
 
-      const reopened = await openSection(page, 'Education');
+      const reopened = await openProfileSection(page, 'Education');
       await reopened
         .getByRole('button', { name: /^School$/ })
         .first()
@@ -358,7 +341,7 @@ test.describe(
       page,
     }) => {
       const title = `QA Bench activity ${Date.now()}`;
-      const panel = await openSection(page, 'Other Activities');
+      const panel = await openProfileSection(page, 'Other Activities');
       const card = await newCard(panel, /Add New Other Activity/i, 'Enter your Title Name');
       await card.getByPlaceholder('Enter your Title Name').fill(title);
       await card.locator('textarea.pc-about-area').fill('QA bench entry, removed by the test');
@@ -370,7 +353,7 @@ test.describe(
       );
       expect((await envelope(saved)).status, 'the server saves the activity').toBe('SUCCESS');
 
-      const reopened = await openSection(page, 'Other Activities');
+      const reopened = await openProfileSection(page, 'Other Activities');
       await expect(reopened.locator('.pc-entry-card').first()).toBeVisible({ timeout: 20_000 });
       const stored = await cardWith(reopened, 'Enter your Title Name', title);
       expect(stored, 'the saved activity is listed after reopening').not.toBeNull();

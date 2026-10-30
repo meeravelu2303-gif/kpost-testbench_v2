@@ -37,7 +37,9 @@ export function defineKmailEndpoint(config: KpostEndpointConfig): EndpointDefini
     envelope: config.envelope,
     contentType: config.contentType,
     request: config.request,
-    requestSchema: contract.requestSchema,
+    // The workbook wins; the definition's schema (typed from the live client's body) fills in only
+    // where the workbook row documents no body, so negative request cases can still be generated.
+    requestSchema: contract.requestSchema ?? config.requestSchema,
     responseSchema: contract.responseSchema,
     destructive: config.destructive,
     sideEffect: config.sideEffect,
