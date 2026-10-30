@@ -3,7 +3,31 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-30 (latest) — Web happy path: five new UI specs; KMail on the QA server refuses every login
+### 2026-10-30 (latest) — Mobile: first Patrol runs on a real phone; sign-in blocked by #13326
+
+- **No emulator on this PC:** Windows Server 2022 RTM (build 20348.1) has a hypervisor interface too old for
+  emulator 37 on the i7-14700F ("WHPX: Failed to setup partition"). Owner's choice: a real phone, a realme C55
+  (RMX3710, Android 15), over Wi-Fi debugging (its USB cable carried no data): paired once, then
+  `adb tcpip 5555` → `adb connect 192.168.10.237:5555`; `svc power stayon true` keeps it awake on charge.
+  The phone is on 192.168.10.x, the PC on 192.168.0.x: pairing needs IP:port typed by hand (discovery does not
+  cross subnets) and the link can drop for a moment.
+- **Toolchain:** Flutter pinned to **3.41.9** (`setup-tools.ps1 -FlutterVersion`): 3.47 rejects the app's
+  own code (stricter Dart promotion), 3.44 its font_awesome/quill/fleather versions. The copy sets
+  `skipDependencyChecks=true` (Flutter's AGP gate vs the app's AGP 8.9.1). AGP 8.9's own SDK downloader hangs
+  on the v4 SDK index (NDK 27, android-33), so setup now installs every SDK part the plugins need, through the
+  new Android CLI (cmdline-tools 23 replaced sdkmanager; package names use `/`). After switching Flutter,
+  re-activate patrol_cli and run `flutter precache` once.
+- **Network:** the phone's Wi-Fi could reach 9081 but not 8989 on the QA backend; the splash then waits
+  forever on the country list (the app has no request timeout). `mobile:prepare -- --tunnel` relays both ports
+  through this PC (adb reverse + a TCP relay in `run.mjs`); the API machine's firewall was then opened for
+  8989, so the plain copy works and the tunnel stays as a fallback.
+- **Tests:** the intro (Skip) shows only on a first launch (realme keeps the app's data between runs), so it
+  is optional; `printLogs: true` shows each step. The run then stops at sign-in: before login the app sends
+  `Authorization: "Bearer "` (empty) and the QA backend answers 401 → "Your session has expired". Filed
+  **#13326** (Manohar, Kpost Mobile Application / Auth, blocker), 3/3 with a screenshot; the copy is not
+  patched around it (owner: "the correct proper way"). Open: a failed test takes ~25 min to end.
+
+### 2026-10-30 — Web happy path: five new UI specs; KMail on the QA server refuses every login
 
 Owner: "cover completely functional / happy path". Five specs cover about 45 web actions that had no or only a
 partial test: `kall/kool-kall-lifecycle-e2e`, `group/group-admin-e2e`, `contacts/contacts-actions-e2e`,

@@ -8,8 +8,9 @@
 // The phone signs in as qatest7 (no Playwright run uses it, so neither kicks the other's session) and
 // qatest8 is the second user, driven over the API from inside the test. Account values reach the test
 // through a defines file in the gitignored copy, deleted after the run, never on a command line.
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -44,8 +45,16 @@ const run = (command, commandArgs, options = {}) =>
 const stampFile = path.join(COPY, 'BENCH_SOURCE.json');
 if (!fs.existsSync(stampFile)) fail('no app copy yet: run `npm run mobile:prepare` first');
 const stamp = JSON.parse(fs.readFileSync(stampFile, 'utf8'));
+// A --tunnel copy calls 127.0.0.1:<port>, relayed below to the QA origin named in tunnelTo.
+const tunnelTo = stamp.tunnelTo ?? {};
+for (const origin of Object.values(tunnelTo)) {
+  if (!QA_HOSTS.has(new URL(origin).hostname))
+    fail(`the tunnel leads to ${origin}; re-run mobile:prepare`);
+}
 for (const url of [stamp.kpost, stamp.kmail]) {
-  if (!QA_HOSTS.has(new URL(url).hostname)) fail(`the copy calls ${url}; re-run mobile:prepare`);
+  const { hostname, port } = new URL(url);
+  const tunnelled = hostname === '127.0.0.1' && tunnelTo[port];
+  if (!QA_HOSTS.has(hostname) && !tunnelled) fail(`the copy calls ${url}; re-run mobile:prepare`);
 }
 if (run('patrol', ['--version']).status !== 0) {
   fail(
@@ -92,9 +101,49 @@ const patrolArgs = [
   ...(target ? ['--target', path.join('patrol_test', target)] : []),
 ];
 console.log(`mobile:test: ${stamp.branch} @ ${stamp.commit} on ${device}, KPost ${stamp.kpost}`);
+
+/** For a --tunnel copy: phone 127.0.0.1:<port> → (adb reverse) this PC 127.0.0.1:<port> → the QA origin. */
+async function openTunnel() {
+  const relays = [];
+  for (const [port, origin] of Object.entries(tunnelTo)) {
+    const target = new URL(origin);
+    const server = net.createServer((phone) => {
+      const qa = net.connect(Number(target.port || port), target.hostname);
+      phone.pipe(qa).pipe(phone);
+      phone.on('error', () => qa.destroy());
+      qa.on('error', () => phone.destroy());
+    });
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(Number(port), '127.0.0.1', resolve);
+    });
+    relays.push(server);
+    if (run('adb', ['-s', device, 'reverse', `tcp:${port}`, `tcp:${port}`]).status !== 0) {
+      fail(`adb reverse tcp:${port} failed on ${device}`);
+    }
+    console.log(`mobile:test: phone 127.0.0.1:${port} → this PC → ${origin}`);
+  }
+  return () => {
+    for (const port of Object.keys(tunnelTo)) {
+      run('adb', ['-s', device, 'reverse', '--remove', `tcp:${port}`]);
+    }
+    for (const server of relays) server.close();
+  };
+}
+
+// Patrol runs asynchronously so the tunnel's relays keep serving while it does.
+const closeTunnel = await openTunnel();
 try {
-  const result = run('patrol', patrolArgs, { cwd: APP, stdio: 'inherit' });
-  process.exitCode = result.status ?? 1;
+  const child = spawn('patrol', patrolArgs, {
+    cwd: APP,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+  process.exitCode = await new Promise((resolve) => {
+    child.on('exit', (code) => resolve(code ?? 1));
+    child.on('error', () => resolve(1));
+  });
 } finally {
+  closeTunnel();
   fs.rmSync(definesFile, { force: true });
 }

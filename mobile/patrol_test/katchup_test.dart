@@ -59,7 +59,8 @@ void main() {
         matching: find.byType(QuillEditor),
       ));
       await $.pump();
-      await $.tester.testTextInput.enterText(outText);
+      // enterText returns void on some Flutter versions and a Future on others; pump either way.
+      $.tester.testTextInput.enterText(outText);
       await $.pump();
       expect(find.textContaining(outText, findRichText: true), findsWidgets,
           reason: 'the reply text is in the editor');

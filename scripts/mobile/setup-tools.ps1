@@ -16,7 +16,9 @@ param(
   [string]$Root = 'D:\mobile-tools',
   # The developers pin no Flutter version; default is the current stable. Pass e.g. 3.41.6 when the
   # app does not build on the newest one (delete D:\mobile-tools\flutter first).
-  [string]$FlutterVersion = '',
+  # The app's Test_ENV builds with 3.41 (Dart 3.11): 3.44 rejects its font_awesome/quill/fleather
+  # versions and 3.47's Dart rejects its own code. Empty = the newest stable.
+  [string]$FlutterVersion = '3.41.9',
   [switch]$AcceptAndroidLicenses,
   [switch]$OfficeHoursOk
 )
@@ -138,7 +140,11 @@ function Invoke-Cmd($line) {
 # ---- 4. SDK packages: what the app builds against, plus one Google Play emulator image
 Step 'Android SDK packages'
 $packages = @(
-  'platform-tools', 'emulator', "platforms;android-$ApiLevel", "build-tools;$ApiLevel.0.0", "ndk;$Ndk", $Image
+  'platform-tools', 'emulator', "platforms;android-$ApiLevel", "build-tools;$ApiLevel.0.0", "ndk;$Ndk", $Image,
+  # What the app's plugins compile against. The build would download each itself, but AGP 8.9's
+  # downloader stalls on the newer SDK index (v4): it hung on the NDK and on android-33.
+  'ndk;27.0.12077973', 'platforms;android-31', 'platforms;android-33', 'platforms;android-34',
+  'platforms;android-35', 'build-tools;34.0.0', 'build-tools;35.0.0', 'cmake;3.22.1'
 )
 $androidCli = Join-Path $sdk 'cmdline-tools\latest\bin\android.exe'
 if (Test-Path $androidCli) {

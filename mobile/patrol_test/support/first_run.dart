@@ -46,9 +46,18 @@ Future<void> allowStartupPermissions(PatrolIntegrationTester $) async {
   }
 }
 
-/// Intro slides → Skip; welcome → Login (SignUp would start the sign-up path instead).
+/// Intro slides → Skip; welcome → Login (SignUp would start the sign-up path instead). The intro shows
+/// only on the very first launch: a phone where the app's data survived (realme keeps it between
+/// runs) opens straight on the welcome screen, so Skip is tapped only if it appears first.
 Future<void> passIntroToSignIn(PatrolIntegrationTester $) async {
-  await $('Skip').tap();
+  for (var second = 0; second < 30; second++) {
+    if ($('Skip').exists) {
+      await $('Skip').tap();
+      break;
+    }
+    if ($('Login').exists) break;
+    await $.pump(const Duration(seconds: 1));
+  }
   await $('Login').tap();
 }
 

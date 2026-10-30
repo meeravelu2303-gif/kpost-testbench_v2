@@ -7,7 +7,12 @@
 //   - the bench's tests (mobile/patrol_test) are copied in.
 //
 //   npm run mobile:prepare
+//   npm run mobile:prepare -- --tunnel     the phone reaches the QA backend through this PC (see below)
 //   node scripts/mobile/prepare-app.mjs --source D:/KPOST_PROJECTS/kpost5_flutter
+//
+// --tunnel: a phone on a network that cannot reach a QA port (the office Wi-Fi is refused on 8989) calls
+// 127.0.0.1:<port> instead; `npm run mobile:test` relays each port through this PC (adb reverse + a TCP
+// relay to the same QA host and port), so the app still talks only to the QA backend.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -101,8 +106,18 @@ const commit = git('-C', COPY, 'log', '-1', '--format=%h %ad %s', '--date=short'
 // Test_ENV has used these values itself since 1145282ff (2026-10-29); the patches keep the copy on
 // .env's QA hosts if the branch moves again. Each pattern is anchored to the start of the line, so
 // the commented-out live URL above it is left.
-const kpost = qaBase('KPOST_API_BASE_URL');
-const kmail = `${qaBase('KMAIL_API_BASE_URL')}${process.env.KMAIL_PATH_PREFIX || '/v2'}`;
+const TUNNEL = args.includes('--tunnel');
+/** The address the app calls for a QA origin: the origin itself, or 127.0.0.1 on its port (--tunnel). */
+const tunnelTo = {};
+const reach = (origin) => {
+  if (!TUNNEL) return origin;
+  const url = new URL(origin);
+  const port = url.port || (url.protocol === 'https:' ? '443' : '80');
+  tunnelTo[port] = origin;
+  return `${url.protocol}//127.0.0.1:${port}`;
+};
+const kpost = reach(qaBase('KPOST_API_BASE_URL'));
+const kmail = `${reach(qaBase('KMAIL_API_BASE_URL'))}${process.env.KMAIL_PATH_PREFIX || '/v2'}`;
 const urls = path.join(APP, 'lib', 'app_common', 'constants', 'api_url_constants.dart');
 const strings = path.join(APP, 'lib', 'app_common', 'constants', 'string_constant.dart');
 replaceOnce(
@@ -240,6 +255,17 @@ public class MainActivityTest {
   'utf8',
 );
 
+/*
+ * Flutter 3.47 refuses Android Gradle Plugin versions below 8.11.1; Test_ENV is on 8.9.1 (the app
+ * needs Flutter >=3.41). Skip that version gate in the copy rather than change the developers' AGP:
+ * `skipDependencyChecks` is the Gradle property behind --android-skip-build-dependency-validation.
+ */
+fs.appendFileSync(
+  path.join(APP, 'android', 'gradle.properties'),
+  "\n# Added by the test bench: Flutter 3.47 vs the app's AGP 8.9.1 (see prepare-app.mjs).\nskipDependencyChecks=true\n",
+  'utf8',
+);
+
 // ---- 5. The bench's tests
 fs.cpSync(TESTS, path.join(APP, 'patrol_test'), { recursive: true });
 
@@ -249,6 +275,8 @@ const stamp = {
   commit,
   kpost: `${kpost}/v2/`,
   kmail: `${kmail}/`,
+  // --tunnel: phone port → the QA origin mobile:test relays it to.
+  ...(TUNNEL && { tunnelTo }),
   preparedAt: new Date().toISOString(),
 };
 fs.writeFileSync(
@@ -259,4 +287,5 @@ fs.writeFileSync(
 console.log(`mobile:prepare: ${path.relative(ROOT, APP)} ready`);
 console.log(`  ${BRANCH} @ ${commit}`);
 console.log(`  KPost ${stamp.kpost} · KMail ${stamp.kmail}`);
+if (TUNNEL) console.log(`  tunnelled through this PC to ${Object.values(tunnelTo).join(', ')}`);
 console.log('  next: npm run mobile:test (emulator running)');

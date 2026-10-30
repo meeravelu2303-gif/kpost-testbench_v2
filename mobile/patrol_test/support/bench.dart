@@ -5,6 +5,8 @@ import 'package:patrol/patrol.dart';
 const benchConfig = PatrolTesterConfig(
   existsTimeout: Duration(seconds: 30),
   visibleTimeout: Duration(seconds: 30),
+  // Every tap and wait in the run's output, so a failure shows the step it stopped at.
+  printLogs: true,
 );
 
 /// What the bench passes into a phone run (scripts/mobile/run.mjs, through --dart-define-from-file).
