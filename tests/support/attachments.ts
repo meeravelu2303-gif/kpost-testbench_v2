@@ -1,5 +1,6 @@
 import type { Principal } from '@config/auth.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { assertUploadAllowed } from '@engine/upload-guard';
 import { sha256, type SampleFile } from '@fixtures/files';
 import { expect } from '@fixtures';
 
@@ -66,6 +67,7 @@ export async function uploadFile(
 ): Promise<Uploaded> {
   const bytes = file.bytes();
   const fileName = options.name ?? file.fileName;
+  assertUploadAllowed(bytes.length, `S3 (${fileName})`);
   const reply = await presign(endpoints, as, file, options);
   expect(reply.status, `${options.route} presign for ${fileName} succeeds`).toBeLessThan(300);
   const url = presignedUrlOf(reply.bodyText);

@@ -11,10 +11,7 @@ import 'bench.dart';
 /// Every test starts here (Patrol clears the app's data before each one).
 Future<void> signInWithPassword(PatrolIntegrationTester $) async {
   Bench.requireConfig();
-  // Not awaited: main() waits for the notification permission dialog before it calls runApp.
-  unawaited(app.main());
-  await allowStartupPermissions($);
-  await passIntroToSignIn($);
+  await startFreshApp($);
 
   // Step A: the KPost ID field stays read-only until a country is chosen.
   await $('Select your Country').tap();
@@ -29,6 +26,14 @@ Future<void> signInWithPassword(PatrolIntegrationTester $) async {
 
   await waitForHome($);
   await dismissHomePopups($);
+}
+
+/// A fresh install started and taken to the sign-in screen (country not chosen yet).
+Future<void> startFreshApp(PatrolIntegrationTester $) async {
+  // Not awaited: main() waits for the notification permission dialog before it calls runApp.
+  unawaited(app.main());
+  await allowStartupPermissions($);
+  await passIntroToSignIn($);
 }
 
 /// What a fresh install shows before and after sign-in, handled the same way in every test.

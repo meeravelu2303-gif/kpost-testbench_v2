@@ -111,5 +111,65 @@ test.describe(
       expect(sent[0]?.sourceCityID, 'with a departure city').toBeTruthy();
       expect(sent[0]?.destinationCityID, 'and an arrival city').toBeTruthy();
     });
+    test('a day with no buses is reported as "Date not found."', async ({ page }) => {
+      // The redbus answer for a day it has nothing for (KBook.js: FAILURE with no value).
+      await page.route(AVAILABLE_TRIPS, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'FAILURE', statusCode: 400, value: null }),
+        }),
+      );
+      const form = await openSearch(page);
+      await pickReactSelect(form.from, 'Delhi');
+      await pickReactSelect(form.to, 'Jaipur');
+      await form.date.fill(localDay(1));
+      await form.search.click();
+      await expect(
+        toast(page, 'Date not found.'),
+        'the user is told there is nothing that day',
+      ).toBeVisible({
+        timeout: 10_000,
+      });
+    });
+
+    test('a boarding point cannot be picked before a seat', async ({ page }) => {
+      // A real search and seat map (reads only); nothing is blocked or booked.
+      const form = await openSearch(page);
+      await pickReactSelect(form.from, 'Delhi');
+      await pickReactSelect(form.to, 'Jaipur');
+      await form.date.fill(localDay(2));
+      const trips = page.waitForResponse((r) => r.url().includes('/redbus/availabletrips/'), {
+        timeout: 30_000,
+      });
+      await form.search.click();
+      await trips;
+      const showSeats = page
+        .locator('div.text-primary, .cardbutton1')
+        .filter({ hasText: /Show seats/i });
+      test.skip(
+        !(await showSeats
+          .first()
+          .isVisible({ timeout: 15_000 })
+          .catch(() => false)),
+        'redbus has no bus with a seat map for that day right now (a live condition)',
+      );
+      await showSeats.first().click();
+      const dialog = page
+        .getByRole('dialog')
+        .filter({ hasText: /Trip Details/i })
+        .last();
+      await expect(dialog, 'the seat map opens').toBeVisible({ timeout: 30_000 });
+      await dialog
+        .getByText(/^Boarding Point$/)
+        .first()
+        .click()
+        .catch(() => undefined);
+      await dialog.locator('input.custom-radio').first().check({ force: true });
+      await expect(
+        toast(page, 'Please seat seats before selecting the boarding point'),
+        'the user is told to pick a seat first',
+      ).toBeVisible({ timeout: 10_000 });
+    });
   },
 );

@@ -6,6 +6,7 @@ import { TokenProvider } from '@api/client/token-provider';
 import { browserSessionToken } from '@api/client/browser-session-token';
 import type { ApiRegistry } from '@api/registry/api-registry';
 import type { RequestFactoryHelpers } from '@api/registry/endpoint-definition';
+import { formatIssues, validateSchema } from '@api/schema/contract-schema';
 import { authProfileFor, principalForRole, type AuthProfile } from '@config/auth-profile';
 import { authConfig, type Principal, type Role } from '@config/auth.config';
 import { env } from '@config/env';
@@ -33,6 +34,12 @@ export interface FlowCall {
   route: string;
   status: number;
   ok: boolean;
+  /**
+   * The response schema checked on this flow's successful answer: `matched`, or the first
+   * violations. Absent when the endpoint has no schema or no answer was a success. Recorded only,
+   * never filed: it is how a source-derived schema is compared on the real ids only a flow has.
+   */
+  schema?: string;
 }
 
 export interface SendOptions {
@@ -72,6 +79,26 @@ export interface SendOptions {
 }
 
 const MAX_ERROR_BODY_CHARS = 300;
+
+/** A successful flow answer checked against the endpoint's response schema (whole body or payload). */
+function flowSchemaCheck(
+  endpoint: ResolvedEndpoint,
+  exchange: ApiResponseWrapper,
+): string | undefined {
+  if (!endpoint.responseSchema || !endpoint.envelope) return undefined;
+  const parsed = exchange.json();
+  if (!parsed.ok) return undefined;
+  // An allowed FAILURE answer is no success to compare (a schema would pass it vacuously).
+  const status = getPath(parsed.value, 'status');
+  if (typeof status === 'string' && /^(failure|error)$/i.test(status)) return undefined;
+  const { contract } = endpoint;
+  const value =
+    contract.schemaTarget === 'data' && contract.dataKey
+      ? getPath(parsed.value, contract.dataKey)
+      : parsed.value;
+  const issues = validateSchema(endpoint.responseSchema, value);
+  return issues.length ? `mismatch: ${formatIssues(issues, 3)}` : 'matched';
+}
 
 /** Executes registered endpoints: builds requests, attaches credentials, enforces prod safety. */
 export class EndpointExecutor {
@@ -241,12 +268,14 @@ export class EndpointExecutor {
     const exchange = await this.send(endpoint, spec, options);
     const ok = endpoint.expectedStatus.includes(exchange.status);
     const seen = this.flowCalls.get(endpointId);
-    if (!seen || (ok && !seen.ok))
+    const schema = ok ? flowSchemaCheck(endpoint, exchange) : undefined;
+    if (!seen || (ok && !seen.ok) || (schema && !seen.schema))
       this.flowCalls.set(endpointId, {
         suite: endpoint.suite.id,
         route: `${options.method ?? endpoint.method} ${endpoint.path}`,
         status: exchange.status,
         ok,
+        ...(schema ? { schema } : {}),
       });
     return exchange;
   }

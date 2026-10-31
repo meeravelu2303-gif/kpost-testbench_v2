@@ -175,9 +175,11 @@ export default class BugzillaReporter implements Reporter {
   private writeHappyPath(tests: readonly TestCase[], input: FilingInput): void {
     const suite = HAPPY_PATH_SUITE[input.product];
     if (!suite) return;
-    // A flow that passed proves the endpoints it drove with an expected answer.
+    // Each call a flow made that got the endpoint's documented answer proves that endpoint's happy
+    // path, even when the flow failed later on a bug it records (a reallocate 409, an IDOR): that
+    // failure is filed on its own, and the call that worked still worked.
     const credits = tests
-      .filter((test) => test.outcome() === 'expected' || test.outcome() === 'flaky')
+      .filter((test) => test.results.length > 0)
       .flatMap((test) => {
         const last = test.results[test.results.length - 1];
         const calls = [...(last?.annotations ?? []), ...test.annotations].find(

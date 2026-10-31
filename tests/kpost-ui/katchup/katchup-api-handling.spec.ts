@@ -159,5 +159,40 @@ test.describe(
         'a failed thread-load must tell the user, not silently render an empty conversation',
       ).toBe(true);
     });
+
+    test('a conversation with no messages says so @ui', async ({ page }) => {
+      // The server's answer for an empty conversation (KatchupMessage.js fetchMoreMessage).
+      await page.route(THREAD, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'SUCCESS', statusCode: 200, data: [] }),
+        }),
+      );
+      await openConversation(page, testData.victimKpostId);
+      await expect(
+        page.locator('.Toastify__toast').filter({ hasText: 'No more messages available' }).first(),
+        'the user is told there are no messages',
+      ).toBeVisible({ timeout: 10_000 });
+    });
+
+    test('a Recents list that fails to load says so @ui', async ({ page }) => {
+      // components/RecentMessage.js recentMessageAsync: a failed dashboard load is reported.
+      await page.route('**/dashboard/katchupDashboardMsg/**', (route) =>
+        route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'FAILURE', statusCode: 500, message: '' }),
+        }),
+      );
+      await page.goto('/katchup', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await expect(
+        page
+          .locator('.Toastify__toast')
+          .filter({ hasText: 'Could not load recent messages. Please try again.' })
+          .first(),
+        'the user is told the list could not load',
+      ).toBeVisible({ timeout: 15_000 });
+    });
   },
 );

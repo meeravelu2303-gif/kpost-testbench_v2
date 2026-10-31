@@ -8,6 +8,7 @@ import { DatabasePool } from '@database/database-pool';
 import { databaseValidationRegistry } from '@database/validations/index';
 import { EndpointExecutor } from '@engine/endpoint-executor';
 import { businessRuleFindingReports, flowFindingReports } from '@engine/flow-finding';
+import { uploadRefusal } from '@engine/upload-guard';
 import { ValidationEngine, type ValidationEngineDeps } from '@engine/validation-engine';
 import { AdminPage } from '@pages/AdminPage';
 import { HomePage } from '@pages/HomePage';
@@ -22,6 +23,10 @@ import { newCorrelationId } from '@utils/correlation';
 import { createLogger, type Logger } from '@utils/logger';
 import { loginBlockedReason } from './login-gate';
 import { validationRegistry } from '@validators/index';
+
+/** Browser requests that can carry a file to S3: S3 itself and the API's upload routes. */
+const UPLOAD_URL =
+  /amazonaws\.com|upload|attachment|image|multipart|presign|base64|postMail|draftMail|sendMessage/i;
 
 interface TestFixtures {
   /** Skips (BLOCKED) a test whose saved session is from a login that failed this run. */
@@ -163,6 +168,24 @@ export const test = base.extend<TestFixtures>({
           type: 'blocked live request',
           description: `${req.method()} ${url.origin}${url.pathname}`,
         });
+        await route.abort('blockedbyclient');
+      },
+    );
+    // Uploads land in the live S3 bucket: a browser upload over UPLOAD_MAX_BYTES never leaves.
+    // Registered after the live-host route, so it runs first and falls back to it.
+    await page.context().route(
+      (url) => UPLOAD_URL.test(url.href),
+      async (route) => {
+        const req = route.request();
+        const refusal =
+          req.method() === 'GET'
+            ? undefined
+            : uploadRefusal(
+                req.postDataBuffer()?.length ?? 0,
+                `${req.method()} ${new URL(req.url()).pathname}`,
+              );
+        if (!refusal) return route.fallback();
+        testInfo.annotations.push({ type: 'blocked upload', description: refusal });
         await route.abort('blockedbyclient');
       },
     );

@@ -99,6 +99,8 @@ export interface EndpointDefinition {
 
   /** Schema of the response payload (`data` inside the envelope, or the whole body). */
   responseSchema?: ContractSchema;
+  /** Where `responseSchema` was read when the workbook has none (a backend controller method). */
+  responseSchemaSource?: string;
   pagination?: boolean;
   headers?: { required?: readonly string[] };
 

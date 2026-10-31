@@ -1,0 +1,4072 @@
+{
+  "suite": "kmail-api",
+  "derivedFrom": "D:\\KPOST_PROJECTS\\Kpost_Kmail_5.0, Spring Boot 2.7.5 with a plain ObjectMapper (S3Config.java:40-47): nulls included, dates epoch millis",
+  "derivedOn": "2026-10-31",
+  "endpoints": {
+    "kmail-all-letterhead": {
+      "handler": "KmailSettingController.java:257 getAllLetterHead",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "headerUrl": {
+              "type": ["string", "null"]
+            },
+            "footerUrl": {
+              "type": ["string", "null"]
+            }
+          },
+          "required": ["id"]
+        }
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "list empty (no global letterheads and none of the user's) or exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "KmailSettingController.java:260-282",
+        "KmailSettingServiceImpl.java:141-182: global LetterHead rows (id String.valueOf) + the user's non-numeric-id entries",
+        "LetterHeadResponseObject.java:5-9 three String fields"
+      ],
+      "notes": "\"No letterheads\" is reported as HTTP 500 FAILURE, not an empty list."
+    },
+    "kmail-all-mail-count": {
+      "handler": "CommonMailController.java:1087 getAllMailCount",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "object",
+        "properties": {
+          "allCount": {
+            "type": ["integer", "null"]
+          },
+          "unopenedCount": {
+            "type": ["integer", "null"]
+          }
+        },
+        "required": ["allCount", "unopenedCount"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "repository throws",
+          "keys": ["status", "errorCode", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "CommonMailController.java:1088-1116",
+        "CommonMailServiceImpl.java:2086-2105 always puts both keys (map never empty -> never the 500 FAILURE else-branch)",
+        "KmailMasterRepository.java:501-514 COUNT queries returning Long"
+      ],
+      "notes": "Validation groups Default + GetAllMailCountValidation: selectedContact @NotBlank and groupFlag not null -> 400 Spring body. groupFlag=true counts mails of ANY group id given (no membership check on the total)."
+    },
+    "kmail-bulk-dashboard": {
+      "handler": "CommonMailController.java:138 getBulkKmailDashboardMsg",
+      "payloadKey": null,
+      "envelopeKeys": [
+        "status",
+        "statusCode",
+        "urlPath",
+        "kmail",
+        "firstKmailID",
+        "lastKmailID",
+        "kmailID"
+      ],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "getBulkKmailDashboardMsg"
+          },
+          "kmail": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kmailID": {
+                  "type": "integer"
+                },
+                "kmailType": {
+                  "type": "integer"
+                },
+                "kmailSubject": {
+                  "type": ["string", "null"],
+                  "description": "getter decrypts with KpostEncryption; falls back to the stored (encrypted) value on error"
+                },
+                "kmailSendDate": {
+                  "type": ["integer", "null"],
+                  "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                },
+                "kmailSendDateAsLong": {
+                  "type": "integer"
+                },
+                "priority": {
+                  "type": "integer"
+                },
+                "mailServerReferenceID": {
+                  "type": ["string", "null"]
+                },
+                "referenceKmailID": {
+                  "type": ["array", "null"],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "senderLatitde": {
+                  "type": ["string", "null"]
+                },
+                "senderLongitude": {
+                  "type": ["string", "null"]
+                },
+                "note": {
+                  "type": ["string", "null"]
+                },
+                "attachmentFlag": {
+                  "type": "integer"
+                },
+                "bulkMailId": {
+                  "type": "integer"
+                },
+                "attachmentPath": {
+                  "type": ["array", "null"],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "fileName": {
+                        "type": ["string", "null"]
+                      },
+                      "caption": {
+                        "type": ["string", "null"]
+                      },
+                      "fileSize": {
+                        "type": ["string", "null"]
+                      },
+                      "uuid": {
+                        "type": ["string", "null"]
+                      }
+                    },
+                    "required": []
+                  }
+                },
+                "kmailTransactionList": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "transactionID": {
+                        "type": "integer"
+                      },
+                      "receiver": {
+                        "type": ["string", "null"]
+                      },
+                      "receiverType": {
+                        "type": "integer"
+                      },
+                      "kmailNumber": {
+                        "type": "integer"
+                      },
+                      "deliveryStatus": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "readStatus": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "replyStatus": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "deleteBySender": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "deleteByReceiver": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "letterReadTime": {
+                        "type": ["integer", "null"],
+                        "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                      },
+                      "letterReadTimeAsLong": {
+                        "type": "integer"
+                      },
+                      "letterReplyTime": {
+                        "type": ["integer", "null"],
+                        "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                      },
+                      "letterReplyTimeAsLong": {
+                        "type": "integer"
+                      },
+                      "sender": {
+                        "type": ["string", "null"]
+                      },
+                      "groupFlag": {
+                        "type": "boolean"
+                      },
+                      "selectedMembers": {
+                        "type": ["string", "null"]
+                      },
+                      "replyNotRquiredBySender": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "replyNotRquiredByReceiver": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "sentMailNotOpened": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "groupReceiverList": {
+                        "type": ["string", "null"],
+                        "description": "raw JSON string (array of {receiver,readStatus,...}), not parsed"
+                      },
+                      "markedBySender": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "markedByReceiver": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "recall": {
+                        "type": "string",
+                        "maxLength": 1,
+                        "description": "primitive char; \"\\u0000\" when unset"
+                      },
+                      "senderName": {
+                        "type": ["string", "null"]
+                      },
+                      "receiverName": {
+                        "type": ["string", "null"]
+                      },
+                      "senderUniqueMailID": {
+                        "type": ["string", "null"]
+                      },
+                      "receiverUniqueMailID": {
+                        "type": ["string", "null"]
+                      },
+                      "blockedContact": {
+                        "type": "boolean"
+                      },
+                      "displayReceiverType": {
+                        "type": "string",
+                        "enum": ["Addressed To", "Copy To", "Confidential Copy To", ""]
+                      }
+                    },
+                    "required": [
+                      "transactionID",
+                      "receiverType",
+                      "kmailNumber",
+                      "deliveryStatus",
+                      "readStatus",
+                      "replyStatus",
+                      "deleteBySender",
+                      "deleteByReceiver",
+                      "letterReadTimeAsLong",
+                      "letterReplyTimeAsLong",
+                      "groupFlag",
+                      "replyNotRquiredBySender",
+                      "replyNotRquiredByReceiver",
+                      "sentMailNotOpened",
+                      "markedBySender",
+                      "markedByReceiver",
+                      "recall",
+                      "blockedContact",
+                      "displayReceiverType"
+                    ]
+                  }
+                },
+                "displayKmailType": {
+                  "type": ["string", "null"],
+                  "enum": [
+                    "New",
+                    "Reply",
+                    "Forward",
+                    "Reminder",
+                    "Edited",
+                    "Note",
+                    "Comment",
+                    "Clarification",
+                    null
+                  ]
+                },
+                "selectedKmailType": {
+                  "type": ["string", "null"],
+                  "enum": [
+                    "Sent",
+                    "Sent Copy",
+                    "Sent Confidential Copy",
+                    "Received",
+                    "Received Copy",
+                    "Received Confidential Copy",
+                    null
+                  ]
+                },
+                "mailDeliveryStatus": {
+                  "type": ["string", "null"]
+                },
+                "sender": {
+                  "type": ["string", "null"]
+                },
+                "kmailNumber": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kmailID",
+                "kmailType",
+                "kmailSendDateAsLong",
+                "priority",
+                "attachmentFlag",
+                "bulkMailId",
+                "kmailTransactionList",
+                "kmailNumber"
+              ]
+            }
+          },
+          "firstKmailID": {
+            "type": "integer"
+          },
+          "lastKmailID": {
+            "type": "integer"
+          },
+          "kmailID": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "statusCode",
+          "urlPath",
+          "kmail",
+          "firstKmailID",
+          "lastKmailID",
+          "kmailID"
+        ]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "neither firstKmailID nor lastKmailID sent",
+          "keys": ["status", "statusCode", "message", "urlPath"]
+        },
+        {
+          "httpStatus": 200,
+          "statusCode": null,
+          "status": "SUCCESS",
+          "when": "no mails: message \"No Data Found\", NO statusCode and no kmail key",
+          "keys": ["status", "message", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "service swallowed an exception and returned null (NPE on size())",
+          "keys": ["status", "data", "statusCode", "urlPath"]
+        }
+      ],
+      "confidence": "medium",
+      "liveCheck": "not-run: POST /v2/common/getBulkKmailDashboardMsg is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-def",
+      "evidence": ["CommonMailController.java:145-191", "CommonMailServiceImpl.java:1999-2083"],
+      "notes": "The controller rejects a body without firstKmailID/lastKmailID, so the service's kmailID/selectedDate/\"all\" branches are unreachable. The service returns the UNFILTERED list (resultList with the confidential-copy filtering is built and discarded, line 2082), so receiverType 3 (BCC) transactions of other users are exposed. The lastKmailID branch looks up getKmailID() instead of lastKmailID. On 500 the error text is under \"data\"."
+    },
+    "kmail-bulk-status": {
+      "handler": "SentMailController.java:237 getBulkMailStatus",
+      "payloadKey": null,
+      "envelopeKeys": [
+        "status",
+        "message",
+        "statusCode",
+        "totalCount",
+        "sentCount",
+        "failedCount",
+        "completedAt",
+        "mailResponses",
+        "urlPath"
+      ],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "Bulk mail completed"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "getBulkMailStatus"
+          },
+          "totalCount": {
+            "type": "integer"
+          },
+          "sentCount": {
+            "type": "integer"
+          },
+          "failedCount": {
+            "type": "integer"
+          },
+          "completedAt": {
+            "type": ["integer", "null"],
+            "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+          },
+          "mailResponses": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "properties": {
+                "kmailID": {
+                  "type": "integer"
+                },
+                "toAddress": {
+                  "type": ["string", "null"]
+                },
+                "fromAddress": {
+                  "type": ["string", "null"]
+                },
+                "deliveryStatus": {
+                  "type": ["string", "null"]
+                },
+                "senderUniqueMailID": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": []
+            }
+          }
+        },
+        "required": [
+          "status",
+          "message",
+          "statusCode",
+          "urlPath",
+          "totalCount",
+          "sentCount",
+          "failedCount"
+        ]
+      },
+      "failures": [
+        {
+          "httpStatus": 202,
+          "statusCode": 202,
+          "status": "PROCESSING",
+          "when": "still sending: keys status, message, total, statusCode (no urlPath)",
+          "keys": ["status", "message", "total", "statusCode"]
+        },
+        {
+          "httpStatus": 404,
+          "statusCode": 404,
+          "status": "FAILURE",
+          "when": "no record for fromAddress (never sent, already read once, or the async job has not registered yet)",
+          "keys": ["status", "message", "statusCode"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": null,
+          "status": null,
+          "when": "result status null",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: GET /v2/sentMail/bulkMail/status/{fromAddress} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoi",
+      "evidence": [
+        "SentMailController.java:237-240 no ownership check, path value used as is",
+        "SentMailServiceImpl.java:2796-2830",
+        "SentMailServiceImpl.java:2900-2930 COMPLETED / FAILED results",
+        "KPOSTConstants.java:226 TOTAL=\"total\""
+      ],
+      "notes": "IDOR: any logged-in user can read (and, by reading, DELETE - bulkMailResultStore.remove) another sender's bulk-mail result by putting their address in the path. A FAILED background job is still reported as SUCCESS \"Bulk mail completed\". Result is one-shot: the second read gives 404. In-memory store: lost on restart and not shared between instances. Processing key is \"total\", completed key is \"totalCount\"."
+    },
+    "kmail-clear-all-status": {
+      "handler": "CommonMailController.java:1014 clearStatusOfAllKmailsContacts",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath", "valueFor"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "message": {
+            "const": "All Mails Cleared"
+          },
+          "urlPath": {
+            "const": "/clearStatusOfAllKmailsContacts/"
+          },
+          "valueFor": {
+            "enum": ["SENT_MAILS_NOT_OPENED", "REPLY_NOT_RECEIVED", "REPLY_NOT_SENT"]
+          }
+        },
+        "required": ["status", "statusCode", "message", "urlPath", "valueFor"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": "FAILURE",
+          "when": "\"unable to clear Mails\" or selectMailType not A/a (\"Parameter Invalid\"); no statusCode key",
+          "keys": ["status", "message", "urlPath", "valueFor"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": null,
+          "when": "exception: no status key",
+          "keys": ["statusCode", "message", "urlPath"]
+        },
+        {
+          "httpStatus": 200,
+          "statusCode": null,
+          "status": null,
+          "when": "kmailStatusFlag not 0/1/2 -> HTTP 200 EMPTY body",
+          "keys": []
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "kmailStatusFlag null (StatusOfKmailsContactsValidation) or unparseable body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": ["CommonMailController.java:1014-1036", "CommonMailServiceImpl.java:1898-1976"],
+      "notes": "Only \"A\" (case-insensitive) is accepted. Clears that state for ALL contacts of the caller."
+    },
+    "kmail-clear-status": {
+      "handler": "CommonMailController.java:989 clearstatusOfKmailsContacts",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath", "valueFor"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "message": {
+            "enum": ["All Mails Cleared", "Selected Mails Cleared"]
+          },
+          "urlPath": {
+            "const": "/clearStatusOfKmailsContacts/"
+          },
+          "valueFor": {
+            "enum": ["SENT_MAILS_NOT_OPENED", "REPLY_NOT_RECEIVED", "REPLY_NOT_SENT"]
+          }
+        },
+        "required": ["status", "statusCode", "message", "urlPath", "valueFor"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": "FAILURE",
+          "when": "\"Unable To Clear Mails\" or \"Parameter Invalid\" (valueFor always \"REPLY_NOT_SENT\" there); no statusCode key",
+          "keys": ["status", "message", "urlPath", "valueFor"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": null,
+          "when": "exception: no status key, message \"Internal Sever Error\"",
+          "keys": ["statusCode", "message", "urlPath"]
+        },
+        {
+          "httpStatus": 200,
+          "statusCode": null,
+          "status": null,
+          "when": "kmailStatusFlag not 0/1/2 -> service returns null -> HTTP 200 EMPTY body",
+          "keys": []
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "CommonMailController.java:989-1012 @Validated(Default, StatusOfKmailsContactsValidation, MailTypeValidation)",
+        "CommonMailServiceImpl.java:1728-1867",
+        "KmailCommonRequestObject.java:33-61 selectedContact @NotBlank (Default), kmailStatusFlag @NotNull, selectMailType must be A or S",
+        "KPOSTConstants.java:114-116 flags 0/1/2"
+      ],
+      "notes": "selectMailType \"S\" can never succeed: Default group forces selectedContact non-blank, but the S branch requires selectedContact empty -> always 400 \"Parameter Invalid\". Only \"A\" (all mails with one contact) works. A clear that matches nothing may still be SUCCESS depending on the DAO."
+    },
+    "kmail-convert-pdf": {
+      "handler": "CommonMailController.java:742 convertMailAsPDF",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "urlPath", "attachment", "uploadFile"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "success"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "convertLetter"
+          },
+          "attachment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "uploadFile": {
+            "type": "string"
+          }
+        },
+        "required": ["status", "statusCode", "urlPath", "attachment", "uploadFile"]
+      },
+      "failures": [
+        {
+          "httpStatus": 200,
+          "statusCode": null,
+          "status": null,
+          "when": "PDF build/S3 upload failed inside the try: HTTP 200 with body {} (exception swallowed)",
+          "keys": []
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": null,
+          "status": null,
+          "when": "fromAddress/toAddress/kmailSubject missing or sender not found (NPE outside the try); handler has no try/catch",
+          "keys": ["timestamp", "status", "error", "path"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "CommonMailController.java:742-748 always HttpStatus.OK, no try/catch",
+        "CommonMailServiceImpl.java:1273-1402",
+        "S3ServiceImpl.java:39-84 result map (lowercase \"success\")"
+      ],
+      "notes": "status is lowercase \"success\" (not SUCCESS) and urlPath is \"convertLetter\". Paths are S3 keys <kpostID>/Kmail/<date>/<subject>_<millis>.pdf. kpostID/fromAddress come from the BODY, not the token: a caller can render a PDF into another user's S3 folder (public-read ACL). An empty {} with HTTP 200 means failure."
+    },
+    "kmail-copies-info": {
+      "handler": "ReadKmailController.java:278 getCopiesInfo",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "object",
+        "properties": {
+          "To Address": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kpostID": {
+                  "type": ["string", "null"]
+                },
+                "readTime": {
+                  "type": ["integer", "null"],
+                  "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                }
+              },
+              "required": []
+            }
+          },
+          "Copy To": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kpostID": {
+                  "type": ["string", "null"]
+                },
+                "readTime": {
+                  "type": ["integer", "null"],
+                  "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                }
+              },
+              "required": []
+            }
+          },
+          "Confidential Copy To": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kpostID": {
+                  "type": ["string", "null"]
+                },
+                "readTime": {
+                  "type": ["integer", "null"],
+                  "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                }
+              },
+              "required": []
+            }
+          }
+        },
+        "required": ["To Address", "Copy To", "Confidential Copy To"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "kmailID path segment not a number (MethodArgumentTypeMismatchException)",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: GET /v2/readMail/getCopiesInfo/{kmailID} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-def",
+      "evidence": [
+        "ReadKmailController.java:279-305",
+        "ReadKmailServiceImpl.java:1356-1405 map always has the three keys",
+        "CopyInfoResponse.java:7-8 kpostID String, readTime Timestamp"
+      ],
+      "notes": "Keys contain spaces. Always SUCCESS: an unknown kmailID or a non-party gets three empty lists (never 404/403). Only the sender sees \"Confidential Copy To\"; a BCC recipient sees only himself there."
+    },
+    "kmail-count-days-limit": {
+      "handler": "KmailSettingController.java:681 getMailCountDaysLimit",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "object",
+        "properties": {
+          "countDaysLimit": {
+            "type": "integer"
+          },
+          "Options": {
+            "type": "array",
+            "items": {
+              "enum": [45, 60, 90, 120]
+            },
+            "minItems": 4,
+            "maxItems": 4
+          }
+        },
+        "required": ["countDaysLimit", "Options"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no settings row (NPE)",
+          "keys": ["status", "statusCode", "urlPath"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "KmailSettingController.java:685-707",
+        "KmailSettingServiceImpl.java:695-698 Map.of(\"countDaysLimit\", int, \"Options\", List.of(45,60,90,120))",
+        "UsersKmailSetting.java:54 int countDaysLimit"
+      ],
+      "notes": "Key \"Options\" is capitalised. countDaysLimit is a primitive int (0 when the column was never set)."
+    },
+    "kmail-count-days-limit-update": {
+      "handler": "KmailSettingController.java:645 updateMailCountDaysLimit",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "Mail Count Days Limit Successfully Updated"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "updateMailCountDaysLimit"
+          }
+        },
+        "required": ["status", "message", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "countDaysLimit missing or not a JSON number (no message key)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "update hit 0 rows (no settings row) or exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": ["KmailSettingController.java:645-679", "KmailSettingServiceImpl.java:683-692"],
+      "notes": "Any number is accepted (negative, 0, 99999, 1.9 truncated to 1): the Options list [45,60,90,120] returned by getMailCountDaysLimit is not enforced."
+    },
+    "kmail-delete-instant-reply": {
+      "handler": "KmailSettingController.java:118 deleteCustomizedInstantReply",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "Delete Instant Relpy Successfully"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "deleteCustomizedInstantReply"
+          }
+        },
+        "required": ["status", "message", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "id not found (or no settings row): message is always \"Invalid KpostID\"",
+          "keys": ["status", "message", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "id blank (DeleteInstantReplyValidation) or unparseable body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:118-149",
+        "CommonDaoImpl.java:389-420 returns \" Invalid ID\" when not found"
+      ],
+      "notes": "An unknown id is reported as \"Invalid KpostID\" (misleading message)."
+    },
+    "kmail-delete-letterhead": {
+      "handler": "KmailSettingController.java:341 deleteLetterHead",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "LetterHead Deleted Successfully"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "deleteLetterHead"
+          }
+        },
+        "required": ["status", "message", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "id missing/empty, or no settings row (no message key)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "user has no letterhead array (NPE) or other exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:341-376",
+        "CommonDaoImpl.java:717-736 removes matching ids and always merges -> SUCCESS"
+      ],
+      "notes": "Deleting an id that does not exist still returns SUCCESS (no not-found check). Removing inside a forward loop can skip an adjacent duplicate."
+    },
+    "kmail-delete-od-contact": {
+      "handler": "CommonMailController.java:867 deleteOtherDomainContact",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "deleteOtherDomainContact"
+          }
+        },
+        "required": ["status", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "no row deleted (contact not found for the caller)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "exception (\"unable to delete\")",
+          "keys": ["status", "errorCode", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "contactEmailID blank (DeleteOtherDomainContactValidation) or unknown JSON key",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "CommonMailController.java:867-895",
+        "CommonMailServiceImpl.java:1670-1677",
+        "KmailOtherDomainContacts.java:39-40"
+      ],
+      "notes": "kpostID is taken from the token, so scoped to the caller. No data returned."
+    },
+    "kmail-delete-saluation": {
+      "handler": "KmailSettingController.java:192 deleteCustomizedInstantReply (overload, deletes a salutation)",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "Delete Saluation Successfully"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "deleteCustomizedSaluation"
+          }
+        },
+        "required": ["status", "message", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "saluationID not found: message \"Invalid KpostID\"",
+          "keys": ["status", "message", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "saluationID blank (DeleteSaluationValidation) or unparseable body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": ["KmailSettingController.java:192-224", "CommonDaoImpl.java:581-619"],
+      "notes": "Unknown id -> misleading \"Invalid KpostID\"."
+    },
+    "kmail-details-by-id": {
+      "handler": "ReadKmailController.java:232 getKmailDetailsUsingKmailID",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "kmailID": {
+              "type": "integer"
+            },
+            "kmailType": {
+              "type": "integer"
+            },
+            "kmailSubject": {
+              "type": ["string", "null"],
+              "description": "getter decrypts with KpostEncryption; falls back to the stored (encrypted) value on error"
+            },
+            "kmailSendDate": {
+              "type": ["integer", "null"],
+              "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+            },
+            "kmailSendDateAsLong": {
+              "type": "integer"
+            },
+            "priority": {
+              "type": "integer"
+            },
+            "mailServerReferenceID": {
+              "type": ["string", "null"]
+            },
+            "referenceKmailID": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "senderLatitde": {
+              "type": ["string", "null"]
+            },
+            "senderLongitude": {
+              "type": ["string", "null"]
+            },
+            "note": {
+              "type": ["string", "null"]
+            },
+            "attachmentFlag": {
+              "type": "integer"
+            },
+            "bulkMailId": {
+              "type": "integer"
+            },
+            "attachmentPath": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fileName": {
+                    "type": ["string", "null"]
+                  },
+                  "caption": {
+                    "type": ["string", "null"]
+                  },
+                  "fileSize": {
+                    "type": ["string", "null"]
+                  },
+                  "uuid": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": []
+              }
+            },
+            "kmailTransactionList": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "transactionID": {
+                    "type": "integer"
+                  },
+                  "receiver": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverType": {
+                    "type": "integer"
+                  },
+                  "kmailNumber": {
+                    "type": "integer"
+                  },
+                  "deliveryStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "readStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "replyStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "deleteBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "deleteByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "letterReadTime": {
+                    "type": ["integer", "null"],
+                    "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                  },
+                  "letterReadTimeAsLong": {
+                    "type": "integer"
+                  },
+                  "letterReplyTime": {
+                    "type": ["integer", "null"],
+                    "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                  },
+                  "letterReplyTimeAsLong": {
+                    "type": "integer"
+                  },
+                  "sender": {
+                    "type": ["string", "null"]
+                  },
+                  "groupFlag": {
+                    "type": "boolean"
+                  },
+                  "selectedMembers": {
+                    "type": ["string", "null"]
+                  },
+                  "replyNotRquiredBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "replyNotRquiredByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "sentMailNotOpened": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "groupReceiverList": {
+                    "type": ["string", "null"],
+                    "description": "raw JSON string (array of {receiver,readStatus,...}), not parsed"
+                  },
+                  "markedBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "markedByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "recall": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "senderName": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverName": {
+                    "type": ["string", "null"]
+                  },
+                  "senderUniqueMailID": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverUniqueMailID": {
+                    "type": ["string", "null"]
+                  },
+                  "blockedContact": {
+                    "type": "boolean"
+                  },
+                  "displayReceiverType": {
+                    "type": "string",
+                    "enum": ["Addressed To", "Copy To", "Confidential Copy To", ""]
+                  }
+                },
+                "required": [
+                  "transactionID",
+                  "receiverType",
+                  "kmailNumber",
+                  "deliveryStatus",
+                  "readStatus",
+                  "replyStatus",
+                  "deleteBySender",
+                  "deleteByReceiver",
+                  "letterReadTimeAsLong",
+                  "letterReplyTimeAsLong",
+                  "groupFlag",
+                  "replyNotRquiredBySender",
+                  "replyNotRquiredByReceiver",
+                  "sentMailNotOpened",
+                  "markedBySender",
+                  "markedByReceiver",
+                  "recall",
+                  "blockedContact",
+                  "displayReceiverType"
+                ]
+              }
+            },
+            "displayKmailType": {
+              "type": ["string", "null"],
+              "enum": [
+                "New",
+                "Reply",
+                "Forward",
+                "Reminder",
+                "Edited",
+                "Note",
+                "Comment",
+                "Clarification",
+                null
+              ]
+            },
+            "selectedKmailType": {
+              "type": ["string", "null"],
+              "enum": [
+                "Sent",
+                "Sent Copy",
+                "Sent Confidential Copy",
+                "Received",
+                "Received Copy",
+                "Received Confidential Copy",
+                null
+              ]
+            },
+            "mailDeliveryStatus": {
+              "type": ["string", "null"]
+            },
+            "sender": {
+              "type": ["string", "null"]
+            },
+            "kmailNumber": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kmailID",
+            "kmailType",
+            "kmailSendDateAsLong",
+            "priority",
+            "attachmentFlag",
+            "bulkMailId",
+            "kmailTransactionList",
+            "kmailNumber"
+          ]
+        }
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "none found, or caller not a party (no 403/404 is used)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "kmailIDs missing/empty (GetKmailDetailsValidation) or unparseable body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: prerequisite response.status-code did not pass: expected 200, got 400",
+      "evidence": [
+        "ReadKmailController.java:241-266 authorization loop",
+        "ReadKmailServiceImpl.java:1351-1353 findByKmailIDIn",
+        "ReadMailRequestObject.java:55-56"
+      ],
+      "notes": "Authorization is \"ANY one of the requested mails involves the caller OR is a Forward (kmailType 2)\"; then ALL requested mails are returned. Mixing one own (or any forwarded) id with foreign ids returns the foreign mails (IDOR). Transactions are raw, including other users' confidential-copy rows. Transient fields (displayKmailType, selectedKmailType, sender, mailDeliveryStatus) are null, kmailNumber 0. Unauthorized = HTTP 500 FAILURE."
+    },
+    "kmail-digital-signature": {
+      "handler": "KmailSettingController.java:55 getDigitalSignature",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "object",
+        "properties": {
+          "kpostID": {
+            "type": "string"
+          },
+          "basicSignature": {
+            "type": ["string", "null"]
+          },
+          "signatureImage": {
+            "type": ["string", "null"]
+          },
+          "kmailLastSyncDate": {
+            "type": ["integer", "null"],
+            "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+          },
+          "notificationForMail": {
+            "type": "string",
+            "maxLength": 1,
+            "description": "primitive char; \"\\u0000\" when unset"
+          },
+          "settingInfo": {
+            "type": ["string", "null"]
+          },
+          "mailCount": {
+            "type": "integer"
+          },
+          "countDaysLimit": {
+            "type": "integer"
+          },
+          "createdBy": {
+            "type": ["string", "null"]
+          },
+          "createdDate": {
+            "type": ["integer", "null"],
+            "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+          },
+          "modifiedBy": {
+            "type": ["string", "null"]
+          },
+          "modifiedDate": {
+            "type": ["integer", "null"],
+            "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+          },
+          "customizedInstantReply": {
+            "type": ["string", "null"],
+            "description": "raw JSON string [{id,instantReply}]"
+          },
+          "customizedSaluation": {
+            "type": ["string", "null"],
+            "description": "raw JSON string [{saluationID,saluation}]"
+          },
+          "mailSignature": {
+            "type": ["object", "null"],
+            "additionalProperties": {}
+          },
+          "letterHead": {
+            "type": ["object", "null"],
+            "properties": {
+              "empty": {
+                "type": "boolean"
+              }
+            },
+            "description": "org.json.JSONArray serialized by plain Jackson as a bean: only {\"empty\":<bool>}; the letterhead entries are LOST"
+          }
+        },
+        "required": ["kpostID", "notificationForMail", "mailCount", "countDaysLimit"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no settings row: findById().get() throws NoSuchElementException",
+          "keys": ["status", "statusCode", "data", "urlPath"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "KmailSettingController.java:62-81",
+        "KmailSettingServiceImpl.java:65-67 findById(kpostID).get()",
+        "UsersKmailSetting.java:31-80 fields (Timestamp, char, JSONArray letterHead, JsonConverter Map mailSignature)"
+      ],
+      "notes": "Returns the whole settings entity. letterHead is an org.json.JSONArray and serializes as {\"empty\":false} (entries lost). customizedInstantReply/customizedSaluation are raw JSON strings. On failure the error TEXT \"There is no Messages in this Folder\" is put under \"data\" (ERROR_VALUE=\"data\")."
+    },
+    "kmail-download-attachment": {
+      "handler": "ReadKmailController.java:365 download",
+      "payloadKey": "body",
+      "envelopeKeys": [],
+      "successStatus": 200,
+      "dataSchema": {
+        "description": "raw bytes, Content-Type application/octet-stream, Content-Disposition form-data; name=\"attachment\"; filename=\"<S3 key>\""
+      },
+      "failures": [
+        {
+          "httpStatus": 404,
+          "statusCode": null,
+          "status": null,
+          "when": "uuid unknown (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 403,
+          "statusCode": null,
+          "status": null,
+          "when": "no access (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": null,
+          "status": null,
+          "when": "attachment marked deleted or S3 IOException (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 200,
+          "statusCode": null,
+          "status": null,
+          "when": "S3 helper threw and returned null -> HTTP 200 with EMPTY body",
+          "keys": []
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: GET /v2/readMail/download/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definition.",
+      "evidence": [
+        "ReadKmailController.java:365-380",
+        "ReadKmailServiceImpl.java:1549-1567",
+        "AWSs3ClientServiceImpl.java:751-773"
+      ],
+      "notes": "Not JSON. Original file name is NOT returned; the filename is the S3 key."
+    },
+    "kmail-download-od-attachment": {
+      "handler": "ReadKmailController.java:308 downloadODAttachment",
+      "payloadKey": "body",
+      "envelopeKeys": [],
+      "successStatus": 200,
+      "dataSchema": {
+        "description": "raw bytes; from the mail server: Content-Disposition attachment; filename=\"<name>\" and the part's Content-Type; for a KPost-domain sender it delegates to download(uuid) (application/octet-stream)"
+      },
+      "failures": [
+        {
+          "httpStatus": 403,
+          "statusCode": null,
+          "status": null,
+          "when": "caller not sender/receiver/group member of kmailID (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": null,
+          "status": null,
+          "when": "attachment not found on the mail server or any exception (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "@Valid: kmailType blank or referenceMails empty (ReadMailRequestObject Default group) or unparseable body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "medium",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "ReadKmailController.java:308-347",
+        "ReadKmailServiceImpl.java:1408-1504,1517-1546",
+        "KPOSTMailConstants.java:1326-1349 getMailAttachment headers"
+      ],
+      "notes": "Not JSON. @Valid on ReadMailRequestObject means the client MUST send a non-blank kmailType and a non-empty referenceMails list even for a download, or it gets the Spring 400 body."
+    },
+    "kmail-download-thumbnail": {
+      "handler": "ReadKmailController.java:349 downloadThumbnail",
+      "payloadKey": "body",
+      "envelopeKeys": [],
+      "successStatus": 200,
+      "dataSchema": {
+        "description": "raw bytes, Content-Type application/octet-stream, Content-Disposition form-data; name=\"attachment\"; filename=\"<S3 key of the thumbnail>\""
+      },
+      "failures": [
+        {
+          "httpStatus": 404,
+          "statusCode": null,
+          "status": null,
+          "when": "uuid unknown (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 403,
+          "statusCode": null,
+          "status": null,
+          "when": "caller is neither the uploader nor a party to a mail carrying it (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": null,
+          "status": null,
+          "when": "attachment deleted, no thumbnail path, or S3 read IOException (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 200,
+          "statusCode": null,
+          "status": null,
+          "when": "S3 helper threw (e.g. NPE) and returned null -> HTTP 200 with EMPTY body",
+          "keys": []
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: GET /v2/readMail/downloadThumbnail/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-de",
+      "evidence": [
+        "ReadKmailController.java:349-363",
+        "ReadKmailServiceImpl.java:1549-1567 checkAttachmentAccess",
+        "AWSs3ClientServiceImpl.java:566-611,751-773 fileDownloadFromS3 / multiPartfileDownload"
+      ],
+      "notes": "Not JSON. Requires auth now (removed from permitAll). Content-Disposition filename is the full S3 key (includes the owner's kpostID folder). \"Thumbnail not Available\" is built but never returned (AWSs3ClientServiceImpl.java:762)."
+    },
+    "kmail-draft-multipart": {
+      "handler": "DraftMailController.java:102 draftMailMultiPart",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "object",
+        "properties": {
+          "kmailID": {
+            "type": "integer"
+          },
+          "fromAddress": {
+            "type": ["string", "null"]
+          },
+          "toAddress": {
+            "type": ["string", "null"]
+          },
+          "mailDeliveryStatus": {
+            "const": "SUCCESS"
+          },
+          "senderUniqueMailID": {
+            "type": "string",
+            "description": "the draft mail id (draftMailID)"
+          }
+        },
+        "required": ["kmailID", "mailDeliveryStatus", "senderUniqueMailID"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "draft not saved (\"Unable to save draft mail\") or the \"text\" part is not valid JSON (\"Draft Letters save exception occured\")",
+          "keys": ["status", "statusCode", "message", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "multipart request without the \"text\" part (MissingServletRequestParameterException)",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "medium",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "DraftMailController.java:102-140 mapping is \"/draftMailMultiPart/\" (trailing slash)",
+        "KmailDraftServiceImpl.java:213-250"
+      ],
+      "notes": "Mapping has a TRAILING SLASH: with ANT_PATH_MATCHER /v2/draft/draftMailMultiPart (no slash) does not match -> 404 on a server built from this copy; call /v2/draft/draftMailMultiPart/. Body is multipart (text=<JSON SentMailRequestObject>, files[] optional). Uploaded files are pushed to S3 but NOT attached to the draft (the attachment loop is commented out). The \"text\" JSON is parsed with a plain ObjectMapper, so unknown keys -> 500 here (not 400)."
+    },
+    "kmail-edit-od-contact": {
+      "handler": "CommonMailController.java:838 editOtherDomainContactsDetails",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "editOtherDomainContactsDetails"
+          }
+        },
+        "required": ["status", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "only on an exception escaping the service (practically unreachable)",
+          "keys": ["status", "errorCode", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "CommonMailController.java:845-850 tests !result.isEmpty()",
+        "CommonMailServiceImpl.java:1651-1667 returns \"SUCCESS\" or \"FAILURE\" - both non-empty"
+      ],
+      "notes": "Always SUCCESS 200, even when no row matched (service returned \"FAILURE\"): the controller checks isEmpty() instead of SUCCESS.equals(). A real defect: an edit of a non-existent contact reports success."
+    },
+    "kmail-group-read-status": {
+      "handler": "CommonMailController.java:1038 kmailGroupReadStatus",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": ["string", "null"],
+          "description": "raw group_receiver_list JSON string of one transaction row (array of {receiver,readStatus,replyStatus,replyTime,readTime,sender})"
+        }
+      },
+      "failures": [
+        {
+          "httpStatus": 404,
+          "statusCode": null,
+          "status": "FAILURE",
+          "when": "no transaction rows for kmailID: message \"Data not found\", no statusCode",
+          "keys": ["status", "message", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": null,
+          "when": "exception: no status key",
+          "keys": ["statusCode", "message", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "evidence": [
+        "CommonMailController.java:1038-1056",
+        "CommonMailServiceImpl.java:1870-1895",
+        "KmailMasterRepository.java:489-490 native select group_receiver_list ... where kmail_id=:kmailID"
+      ],
+      "notes": "data items are JSON-in-a-string (parse twice); null for non-group rows. No check that the caller belongs to the mail/group: any kmailID returns its group read receipts (IDOR candidate)."
+    },
+    "kmail-important-mails": {
+      "handler": "CommonMailController.java:604 getAllImportantMails",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "urlPath", "data (only when non-empty)"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "kmailID": {
+              "type": "integer"
+            },
+            "kmailType": {
+              "type": "integer"
+            },
+            "kmailSubject": {
+              "type": ["string", "null"],
+              "description": "getter decrypts with KpostEncryption; falls back to the stored (encrypted) value on error"
+            },
+            "kmailSendDate": {
+              "type": ["integer", "null"],
+              "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+            },
+            "kmailSendDateAsLong": {
+              "type": "integer"
+            },
+            "priority": {
+              "type": "integer"
+            },
+            "mailServerReferenceID": {
+              "type": ["string", "null"]
+            },
+            "referenceKmailID": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "senderLatitde": {
+              "type": ["string", "null"]
+            },
+            "senderLongitude": {
+              "type": ["string", "null"]
+            },
+            "note": {
+              "type": ["string", "null"]
+            },
+            "attachmentFlag": {
+              "type": "integer"
+            },
+            "bulkMailId": {
+              "type": "integer"
+            },
+            "attachmentPath": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fileName": {
+                    "type": ["string", "null"]
+                  },
+                  "caption": {
+                    "type": ["string", "null"]
+                  },
+                  "fileSize": {
+                    "type": ["string", "null"]
+                  },
+                  "uuid": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": []
+              }
+            },
+            "kmailTransactionList": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "transactionID": {
+                    "type": "integer"
+                  },
+                  "receiver": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverType": {
+                    "type": "integer"
+                  },
+                  "kmailNumber": {
+                    "type": "integer"
+                  },
+                  "deliveryStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "readStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "replyStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "deleteBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "deleteByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "letterReadTime": {
+                    "type": ["integer", "null"],
+                    "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                  },
+                  "letterReadTimeAsLong": {
+                    "type": "integer"
+                  },
+                  "letterReplyTime": {
+                    "type": ["integer", "null"],
+                    "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                  },
+                  "letterReplyTimeAsLong": {
+                    "type": "integer"
+                  },
+                  "sender": {
+                    "type": ["string", "null"]
+                  },
+                  "groupFlag": {
+                    "type": "boolean"
+                  },
+                  "selectedMembers": {
+                    "type": ["string", "null"]
+                  },
+                  "replyNotRquiredBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "replyNotRquiredByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "sentMailNotOpened": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "groupReceiverList": {
+                    "type": ["string", "null"],
+                    "description": "raw JSON string (array of {receiver,readStatus,...}), not parsed"
+                  },
+                  "markedBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "markedByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "recall": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "senderName": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverName": {
+                    "type": ["string", "null"]
+                  },
+                  "senderUniqueMailID": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverUniqueMailID": {
+                    "type": ["string", "null"]
+                  },
+                  "blockedContact": {
+                    "type": "boolean"
+                  },
+                  "displayReceiverType": {
+                    "type": "string",
+                    "enum": ["Addressed To", "Copy To", "Confidential Copy To", ""]
+                  }
+                },
+                "required": [
+                  "transactionID",
+                  "receiverType",
+                  "kmailNumber",
+                  "deliveryStatus",
+                  "readStatus",
+                  "replyStatus",
+                  "deleteBySender",
+                  "deleteByReceiver",
+                  "letterReadTimeAsLong",
+                  "letterReplyTimeAsLong",
+                  "groupFlag",
+                  "replyNotRquiredBySender",
+                  "replyNotRquiredByReceiver",
+                  "sentMailNotOpened",
+                  "markedBySender",
+                  "markedByReceiver",
+                  "recall",
+                  "blockedContact",
+                  "displayReceiverType"
+                ]
+              }
+            },
+            "displayKmailType": {
+              "type": ["string", "null"],
+              "enum": [
+                "New",
+                "Reply",
+                "Forward",
+                "Reminder",
+                "Edited",
+                "Note",
+                "Comment",
+                "Clarification",
+                null
+              ]
+            },
+            "selectedKmailType": {
+              "type": ["string", "null"],
+              "enum": [
+                "Sent",
+                "Sent Copy",
+                "Sent Confidential Copy",
+                "Received",
+                "Received Copy",
+                "Received Confidential Copy",
+                null
+              ]
+            },
+            "mailDeliveryStatus": {
+              "type": ["string", "null"]
+            },
+            "sender": {
+              "type": ["string", "null"]
+            },
+            "kmailNumber": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kmailID",
+            "kmailType",
+            "kmailSendDateAsLong",
+            "priority",
+            "attachmentFlag",
+            "bulkMailId",
+            "kmailTransactionList",
+            "kmailNumber"
+          ]
+        }
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "service throws",
+          "keys": ["status", "errorCode", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "medium",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "CommonMailController.java:611-631 empty result -> SUCCESS 200 WITHOUT a data key",
+        "CommonMailServiceImpl.java:1052-1110 Set<KmailMaster>, sets displayKmailType/sender/kmailNumber/selectedKmailType",
+        "KmailMaster.java:41-330, KmailTransaction.java:40-390"
+      ],
+      "notes": "@Valid: selectedContact is @NotBlank (KmailCommonRequestObject.java:33) -> 400 Spring body when missing. \"No important mails\" = SUCCESS with no \"data\" key. Each mail carries its full kmailTransactionList (receiverType 3 = confidential copy rows are not filtered here)."
+    },
+    "kmail-kloud-used-data": {
+      "handler": "KmailDataController.java:34 postMail",
+      "payloadKey": "data",
+      "envelopeKeys": ["data"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "object",
+        "properties": {
+          "kpostID": {
+            "type": ["string", "null"]
+          },
+          "inboxSize": {
+            "type": ["string", "null"]
+          },
+          "inboxMailCount": {
+            "type": "integer"
+          },
+          "sentSize": {
+            "type": ["string", "null"]
+          },
+          "sentCount": {
+            "type": "integer"
+          },
+          "draftSize": {
+            "type": ["string", "null"]
+          },
+          "draftCount": {
+            "type": "integer"
+          },
+          "trashSize": {
+            "type": ["string", "null"]
+          },
+          "trashCount": {
+            "type": "integer"
+          },
+          "katchupMsgSize": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["inboxMailCount", "sentCount", "draftCount", "trashCount"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": null,
+          "status": "FAILURE",
+          "when": "service throws (e.g. no kpostID attribute)",
+          "keys": ["status", "message"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "KmailDataController.java:36-46 success map has ONLY \"data\"; failure has status+message, no statusCode/urlPath",
+        "KmailDataResponse.java:13-31 fields",
+        "KmailDataServiceImpl.java:90-113 returns cached value or new KmailDataResponse() when the IMAP load fails"
+      ],
+      "notes": "Success body has no status/statusCode/urlPath - only {\"data\":{...}}. When the mail-server load fails the data is an all-null/zero object (kpostID null) with HTTP 200, cached per user. Sizes are pre-formatted strings."
+    },
+    "kmail-known-postbox-contacts": {
+      "handler": "CommonMailController.java:897 getAllKnownPostBoxContacts",
+      "payloadKey": null,
+      "envelopeKeys": [
+        "status",
+        "statusCode",
+        "urlPath",
+        "otherDomainContacts_added",
+        "otherDomainContacts_updated",
+        "lastFetchDate"
+      ],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "enum": ["postBoxContacts", "myContacts"]
+          },
+          "otherDomainContacts_added": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "kpostID": {
+                  "type": ["string", "null"]
+                },
+                "contactEmailID": {
+                  "type": ["string", "null"]
+                },
+                "contactName": {
+                  "type": ["string", "null"]
+                },
+                "referenceName": {
+                  "type": ["string", "null"]
+                },
+                "blockedContactFlag": {
+                  "type": "boolean"
+                },
+                "deleteStatus": {
+                  "type": ["boolean", "null"]
+                },
+                "subscribe": {
+                  "type": "boolean"
+                },
+                "createdBy": {
+                  "type": ["string", "null"]
+                },
+                "createdDate": {
+                  "type": ["integer", "null"],
+                  "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                },
+                "modifiedBy": {
+                  "type": ["string", "null"]
+                },
+                "modifiedDate": {
+                  "type": ["integer", "null"],
+                  "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                }
+              },
+              "required": ["id", "blockedContactFlag", "subscribe"]
+            }
+          },
+          "otherDomainContacts_updated": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "kpostID": {
+                  "type": ["string", "null"]
+                },
+                "contactEmailID": {
+                  "type": ["string", "null"]
+                },
+                "contactName": {
+                  "type": ["string", "null"]
+                },
+                "referenceName": {
+                  "type": ["string", "null"]
+                },
+                "blockedContactFlag": {
+                  "type": "boolean"
+                },
+                "deleteStatus": {
+                  "type": ["boolean", "null"]
+                },
+                "subscribe": {
+                  "type": "boolean"
+                },
+                "createdBy": {
+                  "type": ["string", "null"]
+                },
+                "createdDate": {
+                  "type": ["integer", "null"],
+                  "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                },
+                "modifiedBy": {
+                  "type": ["string", "null"]
+                },
+                "modifiedDate": {
+                  "type": ["integer", "null"],
+                  "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                }
+              },
+              "required": ["id", "blockedContactFlag", "subscribe"]
+            }
+          },
+          "lastFetchDate": {
+            "type": "integer",
+            "description": "server time (Timestamp -> epoch millis) to send back as lastFetchTime"
+          }
+        },
+        "required": [
+          "status",
+          "statusCode",
+          "urlPath",
+          "otherDomainContacts_added",
+          "otherDomainContacts_updated",
+          "lastFetchDate"
+        ]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": null,
+          "status": null,
+          "when": "repository error (handler has no try/catch)",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "CommonMailController.java:897-969 both branches SUCCESS 200; urlPath \"postBoxContacts\" when something changed, \"myContacts\" when nothing",
+        "KmailOtherDomainContacts.java:33-67 fields",
+        "KmailCommonRequestObjectV2.java:10 lastFetchTime uses StrictTimestampDeserializer"
+      ],
+      "notes": "Deleted contacts are fetched but never returned (otherDomainContacts_deleted is commented out). Missing lastFetchTime = full list since epoch."
+    },
+    "kmail-letterhead": {
+      "handler": "KmailSettingController.java:313 getLetterHead",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": ["string", "integer"]
+          },
+          "headerUrl": {
+            "type": ["string", "null"]
+          },
+          "footerUrl": {
+            "type": ["string", "null"]
+          },
+          "default": {
+            "const": "Y"
+          }
+        },
+        "description": "the user's default letterhead (JSONObject.toMap()), or {} when none is set"
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "exception building the response",
+          "keys": ["status", "statusCode", "urlPath"]
+        }
+      ],
+      "confidence": "medium",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "KmailSettingController.java:317-330 both branches SUCCESS 200 (empty map when null)",
+        "CommonDaoImpl.java:697-714 returns the letterHead entry that has \"default\"",
+        "CommonDaoImpl.java:622-694 setLetterHead stores id/headerUrl/footerUrl/default:\"Y\""
+      ],
+      "notes": "data is {} when no default is set (still SUCCESS). id is a string for entries copied from the global table; an entry stored on first set keeps the raw request id (could be a number)."
+    },
+    "kmail-letterhead-template": {
+      "handler": "KmailSettingController.java:557 getLetterHeadTemplate",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "templateName": {
+              "type": ["string", "null"]
+            },
+            "htmlContent": {
+              "type": ["string", "null"]
+            },
+            "logoLinks": {
+              "type": ["object", "null"],
+              "additionalProperties": {}
+            },
+            "createdDate": {
+              "type": ["integer", "null"],
+              "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+            }
+          },
+          "required": ["id"]
+        }
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "template table empty or exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "KmailSettingController.java:561-582",
+        "KmailSettingServiceImpl.java:497-499 findAll()",
+        "LetterHeadTemplate.java:23-37 fields"
+      ],
+      "notes": "Global list, not per user. htmlContent can be large."
+    },
+    "kmail-mail-signature": {
+      "handler": "KmailSettingController.java:528 getMailSignature",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": {},
+        "properties": {
+          "personalData": {
+            "type": "object",
+            "properties": {
+              "firstName": {},
+              "lastName": {},
+              "designation": {},
+              "emailId": {},
+              "mobileNumber": {},
+              "alternateMobile": {}
+            },
+            "required": []
+          },
+          "companyData": {
+            "type": "object",
+            "properties": {
+              "companyName": {},
+              "website": {},
+              "addressLine1": {},
+              "addressLine2": {}
+            },
+            "description": "blank values are dropped on read"
+          },
+          "graphics": {
+            "type": "object",
+            "properties": {
+              "photoUrl": {},
+              "bannerUrl": {},
+              "bannerLinkingTo": {}
+            },
+            "description": "blank values are dropped on read"
+          },
+          "style": {
+            "type": "object",
+            "properties": {
+              "color": {},
+              "fontStyle": {},
+              "firstFontColor": {},
+              "secondFontColor": {},
+              "thirdFontColor": {}
+            }
+          },
+          "socialMedialink": {
+            "type": "object",
+            "properties": {
+              "twitter": {},
+              "facebook": {},
+              "instagram": {},
+              "linkedIn": {},
+              "youTube": {}
+            },
+            "required": []
+          },
+          "templateID": {
+            "description": "present when the id is not a positive number or the template was not found"
+          },
+          "templateDetails": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "templateName": {
+                "type": ["string", "null"]
+              },
+              "htmlContent": {
+                "type": ["string", "null"]
+              },
+              "logoLinks": {
+                "type": ["object", "null"],
+                "additionalProperties": {}
+              },
+              "createdDate": {
+                "type": ["integer", "null"],
+                "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+              }
+            },
+            "required": ["id"]
+          }
+        }
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no signature stored yet (empty map) or exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        }
+      ],
+      "confidence": "medium",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "KmailSettingController.java:532-554",
+        "KmailSettingServiceImpl.java:395-494 copies the stored JSON map, swaps templateID for templateDetails, strips blank graphics/companyData",
+        "KmailSettingServiceImpl.java:216-353,567-601 key names written by the save endpoints"
+      ],
+      "notes": "Map with dynamic keys from stored JSON (values are whatever the client saved: not type-checked). A user who never saved a signature gets HTTP 500 FAILURE. style keys differ by writer: saveOrUpdateMailSignatureStyle writes color/fontStyle, saveOrUpdateMailSignature writes first/second/thirdFontColor/fontStyle."
+    },
+    "kmail-media-streaming": {
+      "handler": "ReadKmailController.java:401 streamUrl",
+      "payloadKey": "body",
+      "envelopeKeys": [],
+      "successStatus": 303,
+      "dataSchema": {
+        "description": "empty body; Location header = S3 pre-signed GET URL valid 1 hour"
+      },
+      "failures": [
+        {
+          "httpStatus": 404,
+          "statusCode": null,
+          "status": null,
+          "when": "uuid unknown, or any exception (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 403,
+          "statusCode": null,
+          "status": null,
+          "when": "no access to the attachment (empty body)",
+          "keys": []
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": null,
+          "status": null,
+          "when": "pre-signing failed (empty body)",
+          "keys": []
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: GET /v2/readMail/mediaStreaming/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-defin",
+      "evidence": [
+        "ReadKmailController.java:401-446",
+        "AWSs3ClientServiceImpl.java:776-789 returns 303 SEE_OTHER with Location"
+      ],
+      "notes": "A redirect, not a stream: an HTTP client that follows redirects will fetch from S3 (that response has no Authorization header). The handler's own 401 for a missing Authorization header is unreachable (the security entry point answers first)."
+    },
+    "kmail-post-bulk": {
+      "handler": "SentMailController.java:217 postBulkMail",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 202,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "Bulk PostMail Send SuccessFully"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "postBulkMail"
+          }
+        },
+        "required": ["status", "message", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "a receiver equals the sender (\"Receiver Cannot be same as sender\")",
+          "keys": ["status", "message", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "content over 200 KB (IllegalArgumentException text in message) or other exception (e.g. toAddressList null -> NPE, message null)",
+          "keys": ["status", "message", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "SentMailController.java:217-235",
+        "SentMailServiceImpl.java:2744-2793 returns HttpStatus.ACCEPTED with statusCode 200"
+      ],
+      "notes": "HTTP 202 but body statusCode 200. Accepted means only queued: invalid addresses are silently dropped, sending happens in the background; poll kmail-bulk-status (which may 404 for a moment because the PROCESSING record is written inside the async task). The 500 message carries the raw exception message."
+    },
+    "kmail-post-mail": {
+      "handler": "SentMailController.java:64 postMail",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "kmailID": {
+              "type": "integer"
+            },
+            "fromAddress": {
+              "type": ["string", "null"]
+            },
+            "toAddress": {
+              "type": ["string", "null"]
+            },
+            "mailDeliveryStatus": {
+              "type": ["string", "null"],
+              "description": "\"SUCCESS\"/\"FAILURE\" per recipient (SentMailRequestObject.status default \"FAILURE\")"
+            },
+            "senderUniqueMailID": {
+              "type": ["string", "null"]
+            }
+          },
+          "required": ["kmailID"]
+        }
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "more than one To address; duplicate ids across To/Copy/Confidential; blocked contact; sender not a member of the group",
+          "keys": ["status", "statusCode", "message", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no result rows or exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "PostMailValidation: kmailSubject/kmailContent/selectedMembers blank, no recipient (@RequiredMailRecipient), unknown JSON key, or fromAddress not a string (StrictStringDeserializer)",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "SentMailController.java:64-82",
+        "SentMailServiceImpl.java:253-489",
+        "SentMailResponseObject.java:15-60 (getter getSenderUniqueMailID)",
+        "SentMailRequestObject.java:37-107 validation"
+      ],
+      "notes": "HTTP 200 SUCCESS is returned even when delivery failed: check data[i].mailDeliveryStatus (\"SUCCESS\"/\"FAILURE\"). Forward (kmailType 2/10) returns one item per forwardList address. fromAddress is forced to the token user."
+    },
+    "kmail-postbox-contacts": {
+      "handler": "not found in the source",
+      "payloadKey": null,
+      "envelopeKeys": [],
+      "confidence": "low",
+      "liveCheck": "not-run: no handler in the source copy",
+      "evidence": [],
+      "notes": "No mapping for /v2/common/postBoxContacts in the source: the handler was renamed to @PostMapping(\"unusedpostBoxContacts\") (CommonMailController.java:223, method getAllMyPostBoxContacts; it still writes urlPath \"postBoxContacts\"). Expect 404 (Spring default body) from a server built from this copy; knownPostBoxContacts is the live replacement. If the live server answers, it is newer than this copy."
+    },
+    "kmail-reference-content": {
+      "handler": "ReadKmailController.java:72 readReferenceMailContent",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "kmailID": {
+              "type": "integer"
+            },
+            "groupFlag": {
+              "type": "boolean"
+            },
+            "mailContent": {
+              "type": ["string", "null"]
+            },
+            "originalMailContent": {
+              "type": ["string", "null"]
+            },
+            "attachmentName": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "originalAttachmentName": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "originalAttachmentPath": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fileName": {
+                    "type": ["string", "null"]
+                  },
+                  "caption": {
+                    "type": ["string", "null"]
+                  },
+                  "fileSize": {
+                    "type": ["string", "null"]
+                  },
+                  "uuid": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": []
+              }
+            },
+            "referenceKmail": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kmailID": {
+                    "type": "integer"
+                  },
+                  "kmailType": {
+                    "type": "integer"
+                  },
+                  "kmailSubject": {
+                    "type": ["string", "null"],
+                    "description": "getter decrypts with KpostEncryption; falls back to the stored (encrypted) value on error"
+                  },
+                  "kmailSendDate": {
+                    "type": ["integer", "null"],
+                    "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                  },
+                  "kmailSendDateAsLong": {
+                    "type": "integer"
+                  },
+                  "priority": {
+                    "type": "integer"
+                  },
+                  "mailServerReferenceID": {
+                    "type": ["string", "null"]
+                  },
+                  "referenceKmailID": {
+                    "type": ["array", "null"],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "senderLatitde": {
+                    "type": ["string", "null"]
+                  },
+                  "senderLongitude": {
+                    "type": ["string", "null"]
+                  },
+                  "note": {
+                    "type": ["string", "null"]
+                  },
+                  "attachmentFlag": {
+                    "type": "integer"
+                  },
+                  "bulkMailId": {
+                    "type": "integer"
+                  },
+                  "attachmentPath": {
+                    "type": ["array", "null"],
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "fileName": {
+                          "type": ["string", "null"]
+                        },
+                        "caption": {
+                          "type": ["string", "null"]
+                        },
+                        "fileSize": {
+                          "type": ["string", "null"]
+                        },
+                        "uuid": {
+                          "type": ["string", "null"]
+                        }
+                      },
+                      "required": []
+                    }
+                  },
+                  "kmailTransactionList": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "transactionID": {
+                          "type": "integer"
+                        },
+                        "receiver": {
+                          "type": ["string", "null"]
+                        },
+                        "receiverType": {
+                          "type": "integer"
+                        },
+                        "kmailNumber": {
+                          "type": "integer"
+                        },
+                        "deliveryStatus": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "readStatus": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "replyStatus": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "deleteBySender": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "deleteByReceiver": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "letterReadTime": {
+                          "type": ["integer", "null"],
+                          "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                        },
+                        "letterReadTimeAsLong": {
+                          "type": "integer"
+                        },
+                        "letterReplyTime": {
+                          "type": ["integer", "null"],
+                          "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                        },
+                        "letterReplyTimeAsLong": {
+                          "type": "integer"
+                        },
+                        "sender": {
+                          "type": ["string", "null"]
+                        },
+                        "groupFlag": {
+                          "type": "boolean"
+                        },
+                        "selectedMembers": {
+                          "type": ["string", "null"]
+                        },
+                        "replyNotRquiredBySender": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "replyNotRquiredByReceiver": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "sentMailNotOpened": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "groupReceiverList": {
+                          "type": ["string", "null"],
+                          "description": "raw JSON string (array of {receiver,readStatus,...}), not parsed"
+                        },
+                        "markedBySender": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "markedByReceiver": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "recall": {
+                          "type": "string",
+                          "maxLength": 1,
+                          "description": "primitive char; \"\\u0000\" when unset"
+                        },
+                        "senderName": {
+                          "type": ["string", "null"]
+                        },
+                        "receiverName": {
+                          "type": ["string", "null"]
+                        },
+                        "senderUniqueMailID": {
+                          "type": ["string", "null"]
+                        },
+                        "receiverUniqueMailID": {
+                          "type": ["string", "null"]
+                        },
+                        "blockedContact": {
+                          "type": "boolean"
+                        },
+                        "displayReceiverType": {
+                          "type": "string",
+                          "enum": ["Addressed To", "Copy To", "Confidential Copy To", ""]
+                        }
+                      },
+                      "required": [
+                        "transactionID",
+                        "receiverType",
+                        "kmailNumber",
+                        "deliveryStatus",
+                        "readStatus",
+                        "replyStatus",
+                        "deleteBySender",
+                        "deleteByReceiver",
+                        "letterReadTimeAsLong",
+                        "letterReplyTimeAsLong",
+                        "groupFlag",
+                        "replyNotRquiredBySender",
+                        "replyNotRquiredByReceiver",
+                        "sentMailNotOpened",
+                        "markedBySender",
+                        "markedByReceiver",
+                        "recall",
+                        "blockedContact",
+                        "displayReceiverType"
+                      ]
+                    }
+                  },
+                  "displayKmailType": {
+                    "type": ["string", "null"],
+                    "enum": [
+                      "New",
+                      "Reply",
+                      "Forward",
+                      "Reminder",
+                      "Edited",
+                      "Note",
+                      "Comment",
+                      "Clarification",
+                      null
+                    ]
+                  },
+                  "selectedKmailType": {
+                    "type": ["string", "null"],
+                    "enum": [
+                      "Sent",
+                      "Sent Copy",
+                      "Sent Confidential Copy",
+                      "Received",
+                      "Received Copy",
+                      "Received Confidential Copy",
+                      null
+                    ]
+                  },
+                  "mailDeliveryStatus": {
+                    "type": ["string", "null"]
+                  },
+                  "sender": {
+                    "type": ["string", "null"]
+                  },
+                  "kmailNumber": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "kmailID",
+                  "kmailType",
+                  "kmailSendDateAsLong",
+                  "priority",
+                  "attachmentFlag",
+                  "bulkMailId",
+                  "kmailTransactionList",
+                  "kmailNumber"
+                ]
+              }
+            },
+            "attachmentPath": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fileName": {
+                    "type": ["string", "null"]
+                  },
+                  "caption": {
+                    "type": ["string", "null"]
+                  },
+                  "fileSize": {
+                    "type": ["string", "null"]
+                  },
+                  "uuid": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": []
+              }
+            },
+            "kmailTransactionList": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "transactionID": {
+                    "type": "integer"
+                  },
+                  "receiver": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverType": {
+                    "type": "integer"
+                  },
+                  "kmailNumber": {
+                    "type": "integer"
+                  },
+                  "deliveryStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "readStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "replyStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "deleteBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "deleteByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "letterReadTime": {
+                    "type": ["integer", "null"],
+                    "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                  },
+                  "letterReadTimeAsLong": {
+                    "type": "integer"
+                  },
+                  "letterReplyTime": {
+                    "type": ["integer", "null"],
+                    "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                  },
+                  "letterReplyTimeAsLong": {
+                    "type": "integer"
+                  },
+                  "sender": {
+                    "type": ["string", "null"]
+                  },
+                  "groupFlag": {
+                    "type": "boolean"
+                  },
+                  "selectedMembers": {
+                    "type": ["string", "null"]
+                  },
+                  "replyNotRquiredBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "replyNotRquiredByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "sentMailNotOpened": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "groupReceiverList": {
+                    "type": ["string", "null"],
+                    "description": "raw JSON string (array of {receiver,readStatus,...}), not parsed"
+                  },
+                  "markedBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "markedByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "recall": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "senderName": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverName": {
+                    "type": ["string", "null"]
+                  },
+                  "senderUniqueMailID": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverUniqueMailID": {
+                    "type": ["string", "null"]
+                  },
+                  "blockedContact": {
+                    "type": "boolean"
+                  },
+                  "displayReceiverType": {
+                    "type": "string",
+                    "enum": ["Addressed To", "Copy To", "Confidential Copy To", ""]
+                  }
+                },
+                "required": [
+                  "transactionID",
+                  "receiverType",
+                  "kmailNumber",
+                  "deliveryStatus",
+                  "readStatus",
+                  "replyStatus",
+                  "deleteBySender",
+                  "deleteByReceiver",
+                  "letterReadTimeAsLong",
+                  "letterReplyTimeAsLong",
+                  "groupFlag",
+                  "replyNotRquiredBySender",
+                  "replyNotRquiredByReceiver",
+                  "sentMailNotOpened",
+                  "markedBySender",
+                  "markedByReceiver",
+                  "recall",
+                  "blockedContact",
+                  "displayReceiverType"
+                ]
+              }
+            }
+          },
+          "required": ["kmailID", "groupFlag"]
+        }
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "service caught an exception before adding the result (list empty)",
+          "keys": ["status", "statusCode", "urlPath"]
+        }
+      ],
+      "confidence": "medium",
+      "liveCheck": "not-run: POST /v2/readMail/referenceMailContent/ is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-defi",
+      "evidence": [
+        "ReadKmailController.java:72-110",
+        "ReadKmailServiceImpl.java:138-343 (resultList.add is OUTSIDE the loop: exactly one element)",
+        "ReadContentResponseObject.java:24-150",
+        "ReadMailRequestObject.java:36-46 @NotBlank kmailType, @NotEmpty referenceMails"
+      ],
+      "notes": "@Valid requires kmailType and referenceMails, so the handler's own 400 envelope (referenceMails empty) is unreachable - you get the Spring 400 body. Only the LAST reference mail is returned however many ids are sent; unknown ids still give SUCCESS with a dummy element (kmailID 0, mailContent \"\"). No check that the caller is a party to the referenced mails (IDOR candidate: content of any kmailID). mailContent may be HTML."
+    },
+    "kmail-save-saluation": {
+      "handler": "KmailSettingController.java:151 saveOrUpdateCustomizedSaluations",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "Saluation Saved Successfully"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "saveOrUpdateCustomizedSalutations"
+          }
+        },
+        "required": ["status", "message", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "saluation blank (\"Salutation name is required\")",
+          "keys": ["status", "message", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no settings row (\"Invalid KpostID\")",
+          "keys": ["status", "message", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": ["KmailSettingController.java:151-190", "CommonDaoImpl.java:524-578"],
+      "notes": "urlPath spelled \"saveOrUpdateCustomizedSalutations\" (differs from the request path). A JSON error inside the DAO returns FAILURE and is therefore reported as 400 \"Salutation name is required\". New id not returned."
+    },
+    "kmail-save-unsubscriber": {
+      "handler": "CommonMailController.java:1058 saveUnscriberDetails",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "sender": {
+            "type": ["string", "null"]
+          },
+          "receiver": {
+            "type": ["string", "null"]
+          },
+          "reason": {
+            "type": ["string", "null"]
+          },
+          "createdBy": {
+            "type": ["string", "null"]
+          },
+          "createdDate": {
+            "type": "integer"
+          },
+          "modifiedBy": {
+            "type": ["string", "null"]
+          },
+          "modifiedDate": {
+            "type": ["integer", "null"],
+            "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+          }
+        },
+        "required": ["id", "createdDate"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "exception while saving",
+          "keys": ["status", "errorCode", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "CommonMailController.java:1058-1085",
+        "CommonMailServiceImpl.java:1979-1996 also upserts a KmailOtherDomainContacts row (kpostID=sender, contact=receiver, subscribe=true)",
+        "KmailUnsubscriber.java:19-40",
+        "SecurityConfiguration.java:126-127 permitAll"
+      ],
+      "notes": "UNAUTHENTICATED (permitAll) and sender/receiver come from the body with no validation: anyone can create unsubscribe rows and other-domain contacts for any KPost user, and repeat it (a new row per call). Echoes the saved entity. urlPath is misspelled \"saveUnscriberDetails\". Writes with no delete path: do not fuzz on a live system."
+    },
+    "kmail-selected-contact-mails": {
+      "handler": "CommonMailController.java:296 selectedContactMails",
+      "payloadKey": "data",
+      "envelopeKeys": ["status", "statusCode", "firstKmailID", "lastKmailID", "data", "urlPath"],
+      "successStatus": 200,
+      "dataSchema": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "kmailID": {
+              "type": "integer"
+            },
+            "kmailType": {
+              "type": "integer"
+            },
+            "kmailSubject": {
+              "type": ["string", "null"],
+              "description": "getter decrypts with KpostEncryption; falls back to the stored (encrypted) value on error"
+            },
+            "kmailSendDate": {
+              "type": ["integer", "null"],
+              "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+            },
+            "kmailSendDateAsLong": {
+              "type": "integer"
+            },
+            "priority": {
+              "type": "integer"
+            },
+            "mailServerReferenceID": {
+              "type": ["string", "null"]
+            },
+            "referenceKmailID": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "senderLatitde": {
+              "type": ["string", "null"]
+            },
+            "senderLongitude": {
+              "type": ["string", "null"]
+            },
+            "note": {
+              "type": ["string", "null"]
+            },
+            "attachmentFlag": {
+              "type": "integer"
+            },
+            "bulkMailId": {
+              "type": "integer"
+            },
+            "attachmentPath": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fileName": {
+                    "type": ["string", "null"]
+                  },
+                  "caption": {
+                    "type": ["string", "null"]
+                  },
+                  "fileSize": {
+                    "type": ["string", "null"]
+                  },
+                  "uuid": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": []
+              }
+            },
+            "kmailTransactionList": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "transactionID": {
+                    "type": "integer"
+                  },
+                  "receiver": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverType": {
+                    "type": "integer"
+                  },
+                  "kmailNumber": {
+                    "type": "integer"
+                  },
+                  "deliveryStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "readStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "replyStatus": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "deleteBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "deleteByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "letterReadTime": {
+                    "type": ["integer", "null"],
+                    "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                  },
+                  "letterReadTimeAsLong": {
+                    "type": "integer"
+                  },
+                  "letterReplyTime": {
+                    "type": ["integer", "null"],
+                    "description": "java.sql.Timestamp -> epoch millis (plain ObjectMapper, WRITE_DATES_AS_TIMESTAMPS=true)"
+                  },
+                  "letterReplyTimeAsLong": {
+                    "type": "integer"
+                  },
+                  "sender": {
+                    "type": ["string", "null"]
+                  },
+                  "groupFlag": {
+                    "type": "boolean"
+                  },
+                  "selectedMembers": {
+                    "type": ["string", "null"]
+                  },
+                  "replyNotRquiredBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "replyNotRquiredByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "sentMailNotOpened": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "groupReceiverList": {
+                    "type": ["string", "null"],
+                    "description": "raw JSON string (array of {receiver,readStatus,...}), not parsed"
+                  },
+                  "markedBySender": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "markedByReceiver": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "recall": {
+                    "type": "string",
+                    "maxLength": 1,
+                    "description": "primitive char; \"\\u0000\" when unset"
+                  },
+                  "senderName": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverName": {
+                    "type": ["string", "null"]
+                  },
+                  "senderUniqueMailID": {
+                    "type": ["string", "null"]
+                  },
+                  "receiverUniqueMailID": {
+                    "type": ["string", "null"]
+                  },
+                  "blockedContact": {
+                    "type": "boolean"
+                  },
+                  "displayReceiverType": {
+                    "type": "string",
+                    "enum": ["Addressed To", "Copy To", "Confidential Copy To", ""]
+                  }
+                },
+                "required": [
+                  "transactionID",
+                  "receiverType",
+                  "kmailNumber",
+                  "deliveryStatus",
+                  "readStatus",
+                  "replyStatus",
+                  "deleteBySender",
+                  "deleteByReceiver",
+                  "letterReadTimeAsLong",
+                  "letterReplyTimeAsLong",
+                  "groupFlag",
+                  "replyNotRquiredBySender",
+                  "replyNotRquiredByReceiver",
+                  "sentMailNotOpened",
+                  "markedBySender",
+                  "markedByReceiver",
+                  "recall",
+                  "blockedContact",
+                  "displayReceiverType"
+                ]
+              }
+            },
+            "displayKmailType": {
+              "type": ["string", "null"],
+              "enum": [
+                "New",
+                "Reply",
+                "Forward",
+                "Reminder",
+                "Edited",
+                "Note",
+                "Comment",
+                "Clarification",
+                null
+              ]
+            },
+            "selectedKmailType": {
+              "type": ["string", "null"],
+              "enum": [
+                "Sent",
+                "Sent Copy",
+                "Sent Confidential Copy",
+                "Received",
+                "Received Copy",
+                "Received Confidential Copy",
+                null
+              ]
+            },
+            "mailDeliveryStatus": {
+              "type": ["string", "null"]
+            },
+            "sender": {
+              "type": ["string", "null"]
+            },
+            "kmailNumber": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kmailID",
+            "kmailType",
+            "kmailSendDateAsLong",
+            "priority",
+            "attachmentFlag",
+            "bulkMailId",
+            "kmailTransactionList",
+            "kmailNumber"
+          ]
+        }
+      },
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "firstKmailID": {
+            "type": "integer"
+          },
+          "lastKmailID": {
+            "type": "integer"
+          }
+        },
+        "required": ["firstKmailID", "lastKmailID"]
+      },
+      "failures": [
+        {
+          "httpStatus": 200,
+          "statusCode": 200,
+          "status": "SUCCESS",
+          "when": "no mails: errorCode \"There is no Mails\", no data key",
+          "keys": ["status", "statusCode", "errorCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "exception (e.g. selectedContact missing/without \"@\" -> substring NPE)",
+          "keys": ["status", "errorCode", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "medium",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "CommonMailController.java:303-327",
+        "CommonMailServiceImpl.java:395-470 repository lists + BCC trimming per mail"
+      ],
+      "notes": "data plus two extra top-level keys firstKmailID/lastKmailID. Body is NOT validated (no @Valid) although selectedContact is @NotBlank on the class."
+    },
+    "kmail-set-instant-reply": {
+      "handler": "KmailSettingController.java:85 saveOrUpdateCustomizedInstantReply",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "Instant Relpy Saved Successfully"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "saveOrUpdateCustomizedInstantReply"
+          }
+        },
+        "required": ["status", "message", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no settings row (\"Invalid KpostID\") or JSON error",
+          "keys": ["status", "message", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "uncaught exception (no message key)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:85-116",
+        "CommonDaoImpl.java:339-386 appends {id: uuid, instantReply} or updates by id"
+      ],
+      "notes": "The new id is not returned (read it via common/getInstantReply). No validation: a blank/null instantReply is stored. An unknown id creates a new entry with a fresh UUID. Message typo \"Relpy\"."
+    },
+    "kmail-set-letterhead": {
+      "handler": "KmailSettingController.java:285 setLetterHead",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "LetterHead Set Successfully"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "urlPath": {
+            "const": "setLetterHead"
+          }
+        },
+        "required": ["status", "message", "statusCode", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 400,
+          "statusCode": 400,
+          "status": "FAILURE",
+          "when": "id missing, numeric id not in the global table, no settings row, or update hit 0 rows (no message key)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "exception",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": ["KmailSettingController.java:285-311", "CommonDaoImpl.java:622-694"],
+      "notes": "Body is a free Map: {\"id\": ...} (+ headerUrl/footerUrl used only when the user has no letterheads yet; then any id/URL is stored unchecked). Failure bodies carry no message."
+    },
+    "kmail-sig-company": {
+      "handler": "KmailSettingController.java:408 saveOrUpdateMailSignatureCompanyData",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "message": {
+            "const": "Company Data Successfully Updated"
+          },
+          "urlPath": {
+            "const": "saveOrUpdateMailSignatureCompanyData"
+          }
+        },
+        "required": ["status", "statusCode", "message", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no TBL_KPOST_USERS_KMAIL_SETTINGS row for the caller, or the save throws (service returns FAILURE)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:408 handler",
+        "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
+      ],
+      "notes": "No payload returned. No input validation: any value (or none) is stored; missing keys are stored as \"\". Body is Map<String,Object> so unknown keys are accepted here."
+    },
+    "kmail-sig-full": {
+      "handler": "KmailSettingController.java:615 saveOrUpdateMailSignature",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "message": {
+            "const": "Mail Signature Successfully Updated"
+          },
+          "urlPath": {
+            "const": "saveOrUpdateMailSignature"
+          }
+        },
+        "required": ["status", "statusCode", "message", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no TBL_KPOST_USERS_KMAIL_SETTINGS row for the caller, or the save throws (service returns FAILURE)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:615 handler",
+        "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
+      ],
+      "notes": "Expects nested objects personalData/companyData/graphics/style/socialMedialink; a missing section is stored with \"\" values (KmailSettingServiceImpl.java:531-611). No payload returned; no validation."
+    },
+    "kmail-sig-graphics": {
+      "handler": "KmailSettingController.java:438 saveOrUpdateMailSignatureGraphics",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "message": {
+            "const": "Graphics Successfully Updated"
+          },
+          "urlPath": {
+            "const": "saveOrUpdateMailSignatureGraphics"
+          }
+        },
+        "required": ["status", "statusCode", "message", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no TBL_KPOST_USERS_KMAIL_SETTINGS row for the caller, or the save throws (service returns FAILURE)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:438 handler",
+        "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
+      ],
+      "notes": "No payload returned. No input validation: any value (or none) is stored; missing keys are stored as \"\". Body is Map<String,Object> so unknown keys are accepted here."
+    },
+    "kmail-sig-personal": {
+      "handler": "KmailSettingController.java:378 saveOrUpdateMailSignaturePersonalData",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "message": {
+            "const": "Personal Data Successfully Updated"
+          },
+          "urlPath": {
+            "const": "saveOrUpdateMailSignaturePersonalData"
+          }
+        },
+        "required": ["status", "statusCode", "message", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no TBL_KPOST_USERS_KMAIL_SETTINGS row for the caller, or the save throws (service returns FAILURE)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:378 handler",
+        "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
+      ],
+      "notes": "No payload returned. No input validation: any value (or none) is stored; missing keys are stored as \"\". Body is Map<String,Object> so unknown keys are accepted here."
+    },
+    "kmail-sig-social": {
+      "handler": "KmailSettingController.java:498 saveOrUpdateMailSignatureSocialMediaLink",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "message": {
+            "const": "Social Media Link Successfully Updated"
+          },
+          "urlPath": {
+            "const": "saveOrUpdateMailSignatureSocialMediaLink"
+          }
+        },
+        "required": ["status", "statusCode", "message", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no TBL_KPOST_USERS_KMAIL_SETTINGS row for the caller, or the save throws (service returns FAILURE)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:498 handler",
+        "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
+      ],
+      "notes": "No payload returned. No input validation: any value (or none) is stored; missing keys are stored as \"\". Body is Map<String,Object> so unknown keys are accepted here."
+    },
+    "kmail-sig-style": {
+      "handler": "KmailSettingController.java:468 saveOrUpdateMailSignatureStyle",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "message": {
+            "const": "Style Successfully Updated"
+          },
+          "urlPath": {
+            "const": "saveOrUpdateMailSignatureStyle"
+          }
+        },
+        "required": ["status", "statusCode", "message", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no TBL_KPOST_USERS_KMAIL_SETTINGS row for the caller, or the save throws (service returns FAILURE)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:468 handler",
+        "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
+      ],
+      "notes": "No payload returned. No input validation: any value (or none) is stored; missing keys are stored as \"\". Body is Map<String,Object> so unknown keys are accepted here."
+    },
+    "kmail-sig-template": {
+      "handler": "KmailSettingController.java:585 saveOrUpdateMailSignatureTemplateId",
+      "payloadKey": null,
+      "envelopeKeys": ["status", "statusCode", "message", "urlPath"],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "const": 200
+          },
+          "message": {
+            "const": "TemplateID Successfully Updated"
+          },
+          "urlPath": {
+            "const": "saveOrUpdateMailSignatureTemplateId"
+          }
+        },
+        "required": ["status", "statusCode", "message", "urlPath"]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no TBL_KPOST_USERS_KMAIL_SETTINGS row for the caller, or the save throws (service returns FAILURE)",
+          "keys": ["status", "statusCode", "urlPath"]
+        },
+        {
+          "httpStatus": 400,
+          "statusCode": null,
+          "status": null,
+          "when": "body unparseable / unknown JSON property (plain ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES=true) / bean-validation failure; no @ControllerAdvice -> Spring /error body",
+          "keys": ["timestamp", "status", "error", "path"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "evidence": [
+        "KmailSettingController.java:585 handler",
+        "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
+      ],
+      "notes": "Stores requestMap.get(\"templateID\") unchecked (null when absent, any type). getMailSignature only expands it to templateDetails when it is a positive number of an existing template. No payload returned."
+    },
+    "kmail-status-total-count": {
+      "handler": "CommonMailController.java:971 statusOfKmailsContactsTotalCount",
+      "payloadKey": null,
+      "envelopeKeys": [
+        "status",
+        "statusCode",
+        "urlPath",
+        "SENT_MAILS_NOT_OPENED",
+        "REPLY_NOT_RECEIVED",
+        "REPLY_NOT_SENT"
+      ],
+      "successStatus": 200,
+      "topLevel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "statusCode": {
+            "enum": [200, 204]
+          },
+          "urlPath": {
+            "const": "/statusOfKmailsContactsTotalCount/"
+          },
+          "SENT_MAILS_NOT_OPENED": {
+            "type": ["integer", "string"],
+            "description": "BigInteger count, or \"No Content\" when the DAO returned null"
+          },
+          "REPLY_NOT_RECEIVED": {
+            "type": ["integer", "string"]
+          },
+          "REPLY_NOT_SENT": {
+            "type": ["integer", "string"]
+          }
+        },
+        "required": [
+          "statusCode",
+          "urlPath",
+          "SENT_MAILS_NOT_OPENED",
+          "REPLY_NOT_RECEIVED",
+          "REPLY_NOT_SENT"
+        ]
+      },
+      "failures": [
+        {
+          "httpStatus": 500,
+          "statusCode": 500,
+          "status": "FAILURE",
+          "when": "no UsersKmailSetting row (NPE on getCountDaysLimit) or DAO error",
+          "keys": ["status", "errorCode", "statusCode", "urlPath"]
+        }
+      ],
+      "confidence": "high",
+      "liveCheck": "matched 2026-10-31",
+      "evidence": [
+        "CommonMailController.java:971-987 returns the service map as the whole body",
+        "CommonMailServiceImpl.java:1695-1725 populateResult writes counts as top-level keys",
+        "CommonDaoImpl.java:123 BigInteger counts"
+      ],
+      "notes": "Counts are top-level keys, not under data. \"status\" is only written when a count is non-null; the 204 branch writes no status, so a null count can yield statusCode 204 inside HTTP 200."
+    }
+  }
+}

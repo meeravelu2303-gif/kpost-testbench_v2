@@ -76,5 +76,99 @@ test.describe(
         `a valid 6-digit pincode (${testData.pinCode}) must open the area-confirm modal`,
       ).toBe(true);
     });
+
+    test('a well-formed pincode that does not exist is refused with "Invalid postal pincode" @ui', async ({
+      signupPage,
+      page,
+    }) => {
+      await signupPage.goto();
+      await signupPage.chooseAccountType('Personal');
+      await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
+      const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the randomly generated mobile number happened to already be registered — re-run',
+      );
+      const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
+      test.skip(
+        otpEntryOutcome === 'invalid',
+        'the OTP box rejected the bypass code this run; re-run',
+      );
+      await signupPage.fillPersonalIdentityNoPincode({
+        firstName: 'QA',
+        lastName: 'Pincode',
+        gender: 'Male',
+        dobDay: 15,
+        dobMonth: 'January',
+        dobYear: 1990,
+      });
+      // Six digits, so the lookup runs (after its 500 ms pause); no Indian post office has it.
+      await signupPage.typePostalPincode('000000');
+      await expect(
+        page.locator('.Toastify__toast').filter({ hasText: 'Invalid postal pincode' }).first(),
+        'the user is told the pincode does not exist',
+      ).toBeVisible({ timeout: 10_000 });
+      expect(
+        await signupPage.isPincodeDetailsModalVisible(2_000),
+        'no area is offered for it',
+      ).toBe(false);
+      // Refused either way: Continue stays off, or Continue does not reach the KPOST ID step.
+      const next = page.getByRole('button', { name: /^Continue$/i });
+      if (await next.isEnabled()) {
+        await next.click();
+        await expect(
+          page.getByPlaceholder('Enter Preferred KPOST ID').first(),
+          'signup does not advance with a pincode it reported invalid',
+        ).toBeHidden({ timeout: 8_000 });
+      }
+    });
+
+    test('a letter typed into an OTP box is refused: numbers only @ui', async ({
+      signupPage,
+      page,
+    }) => {
+      await signupPage.goto();
+      await signupPage.chooseAccountType('Personal');
+      await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
+      const otpOutcome = await signupPage.requestMobileOtp(freshMobile());
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the randomly generated mobile number happened to already be registered — re-run',
+      );
+      // PersonalSignup.js: each OTP box (#input_0..5) takes one digit; anything else is refused.
+      const first = page.locator('#input_0').first();
+      await expect(first, 'the OTP boxes are shown').toBeVisible({ timeout: 15_000 });
+      await first.click();
+      await page.keyboard.type('a');
+      await expect(
+        page
+          .locator('.Toastify__toast')
+          .filter({ hasText: 'Only numbers are allowed — no letters or special characters!' })
+          .first(),
+        'the user is told only numbers are allowed',
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(first, 'the letter is not kept').not.toHaveValue('a');
+    });
+
+    test('a letter typed into Date of Birth is refused: the calendar only @ui', async ({
+      signupPage,
+      page,
+    }) => {
+      await signupPage.goto();
+      await signupPage.chooseAccountType('Personal');
+      await signupPage.selectCountryLanguageDomain('India', 'English', domainFor('PERSONAL'));
+      // DateSelect.js: any character other than digits, "/" and "-" is removed with a message.
+      const dob = page.getByPlaceholder('Select Date of Birth').first();
+      await dob.click();
+      await page.keyboard.type('a');
+      await expect(
+        page
+          .locator('.Toastify__toast')
+          .filter({ hasText: 'Please select the date using the calendar only' })
+          .first(),
+        'the user is told to use the calendar',
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(dob, 'the letter is not kept').not.toHaveValue(/a/);
+    });
   },
 );

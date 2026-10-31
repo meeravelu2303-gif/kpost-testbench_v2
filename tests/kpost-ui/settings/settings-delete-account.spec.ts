@@ -56,5 +56,44 @@ test.describe(
         'reason selection alone (never clicking Confirm) must never reach the account-deactivation API',
       ).toBe(false);
     });
+
+    test('a deactivation code that cannot be sent tells the user to contact the admin team @ui', async ({
+      page,
+      settingsPage,
+    }) => {
+      // Confirm sends a real deactivation OTP to the account's phone, so EVERY deactivation call is
+      // answered in the browser (the server's failure shape) and never leaves it. Registered before the
+      // page loads; the count proves the request was caught.
+      let answeredLocally = 0;
+      await page.route(/deactivat/i, (route) => {
+        answeredLocally += 1;
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'FAILURE', statusCode: 400, message: '' }),
+        });
+      });
+      await settingsPage.goto();
+      await settingsPage.openPanel('My Account', 'Delete My Account');
+      await page
+        .getByText(/I don.t want to use anymore/i)
+        .first()
+        .click();
+      await page
+        .getByRole('button', { name: /^Confirm$/i })
+        .first()
+        .click();
+      await expect(
+        page
+          .locator('.Toastify__toast')
+          .filter({ hasText: 'Please contact the Admin Team..' })
+          .first(),
+        'the user is told to contact the admin team',
+      ).toBeVisible({ timeout: 10_000 });
+      expect(
+        answeredLocally,
+        'the deactivation request was answered in the browser',
+      ).toBeGreaterThan(0);
+    });
   },
 );

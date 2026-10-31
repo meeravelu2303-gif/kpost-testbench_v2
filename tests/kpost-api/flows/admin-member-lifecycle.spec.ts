@@ -2,9 +2,11 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { domainFrom, throwawayMobile } from '../../support/company-member';
 
 /**
- * Admin throwaway-member lifecycle: mint a member with addingUserByAdmin, toggle backup-admin, reset its
+ * Admin throwaway-member lifecycle: mint a member with addingUserByAdmin, toggle backup-admin, hold
+ * and release it, set and restore its role, reset its
  * terminate it in `finally`. Payload and kpostID domain rule follow UserManagement.js. These are
  * shared-state (`global`) writes, so each call is authorized on its own and only on the QA test
  * server (GLOBAL_LIFECYCLE + TEST_DB_MODE). resetPassword texts the member's real mobile, so it is
@@ -18,17 +20,6 @@ interface AdminProfile {
   countryID?: number;
   countryCode?: string;
   userProfile?: { country?: string; state?: string; companyName?: string };
-}
-
-/** `admin.contactID.replace(/^[^.]*\./, '')` — strip up to and including the admin's own first `.`. */
-function domainFrom(adminKpostId: string): string {
-  return adminKpostId.includes('@') ? adminKpostId.replace(/^[^.]*\./, '') : adminKpostId;
-}
-
-/** A 10-digit Indian mobile, [6-9]-led, deliberately NOT in this bench's `9000000xxx` sentinel family. */
-function throwawayMobile(): string {
-  const suffix = String(Date.now()).slice(-6);
-  return `98${suffix}0`.padEnd(10, '1').slice(0, 10);
 }
 
 test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
@@ -130,6 +121,67 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
         )
         .toBeLessThan(300);
 
+      // --- hold, then release (KSMACC User Management: activeStatus "No" holds, "yes" releases) ----
+      const db = databases.for('kpost-api');
+      const statusOf = async () =>
+        db.enabled
+          ? (
+              await db.findOne<{ active_status: string }>({
+                table: 'TBL_KPOST_USER_MASTER',
+                where: { kpost_id: kpostID },
+              })
+            )?.active_status
+          : undefined;
+      for (const [activeStatus, label] of [
+        ['No', 'hold'],
+        ['yes', 'release'],
+      ] as const) {
+        const toggled = await endpoints.sendTo(
+          'admin-hold-or-release',
+          { body: { kpostID, activeStatus, companyID } },
+          {
+            label: `admin-lifecycle:${label}`,
+            auth: { principal: ADMIN },
+            allowGlobalLifecycle: true,
+            ownedIdentifiers: owned,
+          },
+        );
+        expect.soft(toggled.status, `holdOrRelease (${label}) succeeds on the member`).toBe(200);
+        if (db.enabled) {
+          expect
+            .soft(await statusOf(), `the member is stored as ${activeStatus}`)
+            .toBe(activeStatus);
+        }
+      }
+
+      // --- set a role, then put the original (null) back --------------------------------------
+      const roleOf = async () =>
+        db.enabled
+          ? (
+              await db.findOne<{ role: string | null }>({
+                table: 'TBL_KPOST_USER_PROFILE',
+                where: { kpost_id: kpostID },
+              })
+            )?.role
+          : undefined;
+      for (const [role, label] of [
+        ['QA Bench Role', 'role-set'],
+        [null, 'role-restore'],
+      ] as const) {
+        const changed = await endpoints.sendTo(
+          'admin-update-role',
+          { body: { kpostID, role, companyID } },
+          {
+            label: `admin-lifecycle:${label}`,
+            auth: { principal: ADMIN },
+            allowGlobalLifecycle: true,
+            ownedIdentifiers: owned,
+          },
+        );
+        expect.soft(changed.status, `updateRole (${label}) succeeds on the member`).toBe(200);
+        if (db.enabled) expect.soft(await roleOf(), `the stored role is ${role}`).toBe(role);
+      }
+
       // --- resetPassword texts the member's real mobile: the SMS kill-switch must refuse it ------
       await expect(
         endpoints.sendTo(
@@ -191,7 +243,6 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
       expect
         .soft(reallocated.status, 'the web’s reallocate gives the channel to a new person')
         .toBe(200);
-      const db = databases.for('kpost-api');
       if (db.enabled) {
         const row = await db.findOne<{ active_status: string; mobile_number: unknown }>({
           table: 'TBL_KPOST_USER_MASTER',

@@ -117,6 +117,16 @@ const EnvSchema = z.object({
   CONCURRENCY_PROBES: z.stringbool().default(true),
 
   VALIDATION_PROFILE: z.enum(VALIDATION_PROFILES).default('REGRESSION'),
+  /**
+   * Also apply the backend-source response schemas no live response has confirmed yet
+   * (`src/api/contract/source-contract.ts`), to trial them. Never set it on a filing run.
+   */
+  SOURCE_CONTRACT_TRIAL: z.stringbool().default(false),
+  /**
+   * Largest file the bench may upload: uploads land in the live AWS S3 bucket (owner, 2026-10-31).
+   * 64 KB covers the signature image's 10-50 KB rule; see src/validation-engine/upload-guard.ts.
+   */
+  UPLOAD_MAX_BYTES: z.coerce.number().int().positive().default(65_536),
   ALLOW_DESTRUCTIVE_TESTS: z.stringbool().default(false),
   /** The target is a disposable test DB, so the full validator matrix may run on read endpoints. */
   TEST_DB_MODE: z.stringbool().default(false),

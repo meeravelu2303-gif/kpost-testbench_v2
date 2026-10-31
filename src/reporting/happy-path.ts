@@ -4,7 +4,7 @@
  * `response.status-code` test is the happy path (the endpoint's own request, its expected status).
  * A blocked endpoint still has that test, skipped with the guard's reason, so a run's tests alone
  * say what was and was not covered. Some endpoints can only be driven inside a flow (signup, the
- * OTP chains, device changes); a passing flow that got an expected answer from one counts too.
+ * OTP chains, device changes); a flow call that got an expected answer from one counts too.
  */
 
 /** The check that sends the endpoint's normal request and judges its status. */
@@ -13,7 +13,7 @@ export const HAPPY_PATH_CHECK = 'response.status-code';
 /** Test annotation listing the endpoints a flow drove (`[[id, FlowCall], …]`, from `sendTo`). */
 export const FLOW_CALLS_ANNOTATION = 'api-calls';
 
-/** An endpoint a passing flow drove with an expected answer. */
+/** An endpoint a flow drove with an expected answer. */
 export interface FlowCredit {
   endpointId: string;
   /** `METHOD /path`. */
@@ -21,7 +21,7 @@ export interface FlowCredit {
 }
 
 /**
- * The endpoints of `suite` a passing flow test proved, from its `api-calls` annotation (bad JSON →
+ * The endpoints of `suite` a flow test proved, from its `api-calls` annotation (bad JSON →
  * none). Another product's endpoints a flow touched (the KPost login before KMail) are left out.
  */
 export function flowCreditsFrom(annotation: string | undefined, suite: string): FlowCredit[] {
@@ -183,7 +183,7 @@ export function happyPathMarkdown(
       ` at ${meta.generatedAt}${meta.baseUrl ? ` against ${meta.baseUrl}` : ''}.`,
     '',
     "The happy path is each endpoint's normal request with its expected answer: the engine's " +
-      `\`${HAPPY_PATH_CHECK}\` check, or a passing flow that drove the endpoint and got an expected ` +
+      `\`${HAPPY_PATH_CHECK}\` check, or a flow call that drove the endpoint and got an expected ` +
       'answer (signup, OTP chains, device changes). Endpoints no test drives are not in this file: see ' +
       '`docs/proposals/kpost-api-backend-gaps.md`.',
     '',

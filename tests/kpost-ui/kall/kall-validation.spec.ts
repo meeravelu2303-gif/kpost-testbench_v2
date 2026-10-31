@@ -308,5 +308,53 @@ test.describe(
         if (!before?.is_blocked) await block(false, 'restore');
       }
     });
+    test('a call history that fails to load is reported', async ({ page }) => {
+      // KallHistory.js: when kall/kallInfo fails, the history pane says so instead of staying blank.
+      await page.route('**/kall/kallInfo**', (route) => route.abort());
+      await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await page.getByRole('tab', { name: 'Contacts' }).first().click({ timeout: 15_000 });
+      await page
+        .getByRole('searchbox')
+        .last()
+        .fill('qatest2')
+        .catch(() => undefined);
+      await page
+        .locator('.contactBar_Dropdown')
+        .filter({ hasText: /Qatest2/i })
+        .first()
+        .getByText(/^qatest2 bench$/i)
+        .first()
+        .click({ timeout: 15_000 });
+      await expect(
+        page
+          .locator('.Toastify__toast')
+          .filter({ hasText: 'No Call History found for this Contact' })
+          .first(),
+        'the user is told the history could not be loaded',
+      ).toBeVisible({ timeout: 15_000 });
+    });
+
+    test('a meeting whose end time has passed cannot be opened', async ({ page, endpoints }) => {
+      test.skip(
+        process.env.KALL_UI_LIFECYCLE !== 'true',
+        'schedules a real meeting (ended afterwards); set KALL_UI_LIFECYCLE=true',
+      );
+      const subject = `QA ended meeting ${Date.now()}`;
+      let kallID: number | undefined;
+      try {
+        // Three hours ahead on the server; the browser's clock is then moved four hours on, so to
+        // the screen (which compares with the browser clock) the meeting is already over.
+        kallID = await scheduleMeeting(endpoints, subject, 3 * 3_600_000, [testData.victimKpostId]);
+        await page.clock.install({ time: new Date(Date.now() + 4 * 3_600_000) });
+        await gotoKoolKall(page);
+        await page.getByText(subject).first().click({ timeout: 30_000 });
+        await expect(
+          page.locator('.Toastify__toast').filter({ hasText: 'Meeting Has Ended' }).first(),
+          'the user is told the meeting has ended',
+        ).toBeVisible({ timeout: 10_000 });
+      } finally {
+        await endMeeting(endpoints, [kallID]);
+      }
+    });
   },
 );

@@ -120,6 +120,48 @@ test.describe(
       ).toBeVisible({ timeout: 10_000 });
     });
 
+    test('Forward with Thread with nothing ticked is refused', async ({ page }) => {
+      await openSelectMode(page);
+      await clickFooter(page, 'div.icon-KP_230_Forward-with-Thread');
+      await expect(
+        toast(page, 'Please select atleast one message'),
+        'the user is told to tick a message',
+      ).toBeVisible({ timeout: 10_000 });
+    });
+
+    test('Forward with Thread with two messages ticked is refused', async ({ page }) => {
+      await openSelectMode(page);
+      await tick(page, 2);
+      await clickFooter(page, 'div.icon-KP_230_Forward-with-Thread');
+      await expect(
+        toast(page, 'Please select only one message to forward'),
+        'a thread forward takes one message',
+      ).toBeVisible({ timeout: 10_000 });
+    });
+
+    test('Forward with more than five messages ticked is refused', async ({ page }) => {
+      await openSelectMode(page);
+      // Select All ticks every loaded message; the counter reads "Selected Messages: N / 5".
+      await page.locator('input.selectAllCheck').first().check();
+      const counter = page.getByRole('status').filter({ hasText: /Selected Messages/i });
+      const selected = Number(
+        /(\d+)\s*\/\s*5/.exec((await counter.innerText().catch(() => '')) ?? '')?.[1] ?? 0,
+      );
+      test.skip(
+        selected <= 5,
+        'needs provisioned conversation with more than five loaded messages',
+      );
+      await clickFooter(page, '.icon-KP_119-Forward');
+      await expect(
+        toast(page, 'Only up to 5 messages can be forwarded at a time'),
+        'the user is told the limit',
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.getByRole('dialog').filter({ hasText: 'Forward To' }),
+        'and no recipient picker opens',
+      ).toBeHidden({ timeout: 3_000 });
+    });
+
     test('Forward with nothing ticked opens no recipient picker', async ({ page }) => {
       await openSelectMode(page);
       await clickFooter(page, '.icon-KP_119-Forward');

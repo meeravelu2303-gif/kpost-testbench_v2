@@ -3,7 +3,12 @@ import { STORAGE_STATE_BUSINESS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { pickReactSelect } from '../support/react-select';
-import { chooseDesignation, MOBILE_FIELD, openAddMemberForm } from '../support/usermanagement';
+import {
+  chooseDesignation,
+  MOBILE_FIELD,
+  openAddChannelsChooser,
+  openAddMemberForm,
+} from '../support/usermanagement';
 
 /**
  * BUSINESS_S User Management › Add Manually refuses a bad mobile number (UserManagement.js
@@ -140,6 +145,35 @@ test.describe(
         .toBe(1);
       expect(sent[0]?.mobileNumber, 'with the mobile as typed').toBe(mobile);
       expect(sent[0]?.gender, 'and the gender chosen').toBe('male');
+    });
+    test('a bulk-upload sheet with a bad row is refused before anything is added', async ({
+      page,
+    }) => {
+      // Nothing may create a member: every adding call is stopped at the network and counted.
+      let adds = 0;
+      await page.route(/addingUserByAdmin|addingUserToChannel|bulkUpload/i, (route) => {
+        adds += 1;
+        return route.abort();
+      });
+      await openAddChannelsChooser(page);
+      await page
+        .getByText(/Bulk-?Upload MS Excel File From Web Application/i)
+        .first()
+        .click();
+      // UserManagement.js handleExcelUpload reads the first sheet; SheetJS also reads CSV text, so a
+      // two-line sheet is enough. The row's mobile (12345) fails ^[6-9]\d{9}$.
+      await page.locator('#ExcelInput').setInputFiles({
+        name: 'qa-bench-members.xls',
+        mimeType: 'application/vnd.ms-excel',
+        buffer: Buffer.from(
+          ['FirstName,LastName,Designation,MobileNumber', 'QA,Bench,Manager,12345', ''].join('\n'),
+        ),
+      });
+      await expect(
+        page.locator('.Toastify__toast').filter({ hasText: 'Excel has validation errors' }).first(),
+        'the user is told the sheet has errors',
+      ).toBeVisible({ timeout: 10_000 });
+      expect(adds, 'no member was added').toBe(0);
     });
   },
 );

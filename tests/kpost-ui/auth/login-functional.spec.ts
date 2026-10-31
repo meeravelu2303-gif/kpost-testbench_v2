@@ -135,6 +135,26 @@ test.describe(
       ).toBe(true);
     });
 
+    test('a user lookup that gets no answer is reported, and the password step does not open', async ({
+      loginPage,
+      page,
+    }) => {
+      // Login.js handleSubmit: no response from fetchUserDetails → "Enter a Valid KpostID / Mobile
+      // Number" (an unknown id gets the server's own "doesn't exist" message instead).
+      await page.route('**/signupLogin/fetchUserDetails/**', (route) => route.abort());
+      await loginPage.goto();
+      await loginPage.expectLoaded();
+      await loginPage.enterLoginId(testData.kpostId);
+      await expect(
+        page
+          .locator('.Toastify__toast')
+          .filter({ hasText: 'Enter a Valid KpostID / Mobile Number' })
+          .first(),
+        'the user is told the id could not be checked',
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(loginPage.passwordInput, 'the password step does not open').toBeHidden();
+    });
+
     test('a server error does not leave the screen stuck', async ({ loginPage, page }) => {
       await page.route('**/userLogin**', async (route) => {
         await route.fulfill({

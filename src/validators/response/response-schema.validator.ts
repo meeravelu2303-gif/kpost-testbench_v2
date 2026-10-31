@@ -23,8 +23,11 @@ export const responseSchemaValidator = defineValidator({
     const data = responseData(context);
     if (!data.ok || !context.endpoint.responseSchema) return outcome.skipped('no response payload');
     const issues = validateSchema(context.endpoint.responseSchema, data.value);
+    // A schema read from the backend code says where, so the developer can check the method.
+    const source = context.endpoint.definition.responseSchemaSource;
+    const from = source ? ` (schema from the ${source})` : '';
     return issues.length
-      ? outcome.failed(`${issues.length} schema violation(s): ${formatIssues(issues)}`, {
+      ? outcome.failed(`${issues.length} schema violation(s)${from}: ${formatIssues(issues)}`, {
           expected: 'matches response schema',
           actual: issues,
         })

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { expect, type APIRequestContext, type APIResponse } from '@playwright/test';
 import type { z } from 'zod';
+import { assertUploadAllowed, multipartBytes } from '@engine/upload-guard';
 import type { Logger } from '@utils/logger';
 import type { ApiRequest, HttpMethod } from './request-builder';
 import { ApiResponseWrapper } from './response-wrapper';
@@ -32,6 +33,12 @@ export class ApiClient {
     // A raw body replaces any multipart parts, or a malformed-body probe would send the valid
     // upload.
     const sendMultipart = apiRequest.multipart !== undefined && apiRequest.rawBody === undefined;
+    // Uploads land in the live S3 bucket: only small files are ever sent.
+    if (sendMultipart)
+      assertUploadAllowed(
+        multipartBytes(apiRequest.multipart),
+        `${apiRequest.method} ${apiRequest.url}`,
+      );
     const headers =
       apiRequest.multipart !== undefined && !sendMultipart
         ? { 'Content-Type': 'application/json', ...apiRequest.headers }

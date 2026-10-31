@@ -361,7 +361,7 @@ file is the example: with null markers the backend 500s, which would read as a f
 
 ## 12. Example test using the generic engine
 
-[`tests/kpost-api/dashboard/read.spec.ts`](../../tests/kpost-api/dashboard/read.spec.ts). This is the entire file:
+[`tests/kpost-api/engine/dashboard-reads.spec.ts`](../../tests/kpost-api/engine/dashboard-reads.spec.ts). This is the entire file:
 
 ```ts
 import { describeEndpointCases } from '@engine/endpoint-cases';
@@ -393,7 +393,7 @@ test('dashboard under the security profile', async ({ validationEngine }) => {
 
 KPost's business rules are asserted in the module feature specs, because a real rule needs state
 the generic sweep cannot set up (a second account, a created record, a prior step). The pattern,
-from [`tests/kpost-api/kall/feature.spec.ts`](../../tests/kpost-api/kall/feature.spec.ts):
+from [`tests/kpost-api/flows/kall-feature.spec.ts`](../../tests/kpost-api/flows/kall-feature.spec.ts):
 
 ```ts
 const repeat = await endpoints.sendTo(

@@ -106,25 +106,16 @@ const PRODUCTS = {
   'kpost-api': {
     name: 'KPost API',
     project: 'api',
-    // Every folder but concurrency/ (excluded by the owner) and kos/ (paused).
+    // Every folder but concurrency/ (excluded by the owner) and kos/ (paused): one per test kind.
     paths: [
-      'tests/kpost-api/admin',
-      'tests/kpost-api/aws',
-      'tests/kpost-api/common',
-      'tests/kpost-api/contacts',
-      'tests/kpost-api/dashboard',
-      'tests/kpost-api/group',
-      'tests/kpost-api/kall',
-      'tests/kpost-api/katchup',
-      'tests/kpost-api/kbooking',
-      'tests/kpost-api/kdiary',
-      'tests/kpost-api/knews',
-      'tests/kpost-api/profile',
+      'tests/kpost-api/coverage',
+      'tests/kpost-api/engine',
+      'tests/kpost-api/flows',
+      'tests/kpost-api/maintenance',
       'tests/kpost-api/sanity',
       'tests/kpost-api/security',
-      'tests/kpost-api/settings',
-      'tests/kpost-api/signup-login',
       'tests/kpost-api/smoke',
+      'tests/kpost-api/validation',
     ],
     hosts: ['KPOST_API_BASE_URL'],
     needs: [],
@@ -155,7 +146,6 @@ const PRODUCTS = {
     // Admin tests carry no @regression tag (they sit outside the KPost tag scope), so regression is
     // chosen by folder: the product run's set without maintenance/ (one-time setup).
     regressionPaths: [
-      'tests/admin-api/contract.spec.ts',
       'tests/admin-api/engine',
       'tests/admin-api/flows',
       'tests/admin-api/performance',

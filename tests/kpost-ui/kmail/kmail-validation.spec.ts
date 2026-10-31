@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { waitLoaded } from '../journeys/support/journey';
@@ -146,6 +147,144 @@ test.describe(
         'the user is told why',
       ).toBeVisible({ timeout: 10_000 });
       await expect(field, 'the special characters are dropped').toHaveValue('DearSir');
+    });
+
+    test('Save Draft with nothing written is refused', async ({ page }) => {
+      await openCompose(page);
+      const drafted = countRequests(page, '/draft/draftMail');
+      // Nothing typed anywhere: typing and deleting in the body would leave "<p><br></p>".
+      await page.locator('.icon-KP_95-Write-Mail-Temp').first().click();
+      await expect(
+        toast(page, 'To or Subject or Mail Content Field cannot be empty'),
+        'the user is told there is nothing to save',
+      ).toBeVisible({ timeout: 10_000 });
+      expect(drafted(), 'no empty draft reaches the server').toBe(0);
+    });
+
+    test('Add copies refuses an outside address that is not an e-mail', async ({ page }) => {
+      // Nothing may store it as an outside contact.
+      await page.route(/addOtherDomainContacts/i, (route) => route.abort());
+      const form = await openCompose(page);
+      // Add copies opens only once To holds a valid recipient (WriteMailPage.js isInputValid).
+      await chooseRecipient(page, form.to, testData.victimKpostId);
+      await page
+        .getByText(/^Add copies$/)
+        .first()
+        .click();
+      const field = page.getByPlaceholder('Enter Other Domain Mail').first();
+      await expect(field, 'the outside-address field is offered').toBeVisible({ timeout: 10_000 });
+      await field.fill('not-an-email');
+      await page.locator('.cc-add-button').first().click();
+      await expect(toast(page, 'Invalid email address'), 'the user is told why').toBeVisible({
+        timeout: 10_000,
+      });
+    });
+
+    test('Forward with more than ten mails selected is refused', async ({ page }) => {
+      await page.route(/forward/i, (route) => route.abort());
+      await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await waitLoaded(page);
+      await page
+        .getByText(/^qatest3 bench$/i)
+        .filter({ visible: true })
+        .first()
+        .click({ timeout: 20_000 });
+      await page
+        .locator('.icon-KP_59-More-Lined.icon-font-kmail')
+        .first()
+        .click({ timeout: 15_000 });
+      await page.locator('input.selectAllCheck').first().check();
+      const ticked = await page.locator('.abMail_CheckBox input[type=checkbox]:checked').count();
+      test.skip(ticked <= 10, 'needs provisioned conversation with more than ten loaded mails');
+      await page.locator('.icon-KP_119-Forward').last().click();
+      await expect(
+        toast(page, 'Only up to 10 messages should be able to be forward'),
+        'the user is told the limit',
+      ).toBeVisible({ timeout: 10_000 });
+    });
+
+    test('Copy with more than one mail selected is refused', async ({ page }) => {
+      await page.goto('/kmail', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      await waitLoaded(page);
+      // The conversation with the 3rd QA account holds many mails (qatest3 mails qatest1 in other specs).
+      await page
+        // The name is lower case in the page and capitalised by CSS.
+        .getByText(/^qatest3 bench$/i)
+        .filter({ visible: true })
+        .first()
+        .click({ timeout: 20_000 });
+      await page
+        .locator('.icon-KP_59-More-Lined.icon-font-kmail')
+        .first()
+        .click({ timeout: 15_000 });
+      await page.locator('input.selectAllCheck').first().check();
+      await page.locator('.icon-KP_44-Copy').last().click();
+      await expect(
+        toast(page, 'Only one mail can be selected at a time.'),
+        'the user is told only one mail can be copied',
+      ).toBeVisible({ timeout: 10_000 });
+    });
+
+    test('Edit and Delete of a salutation need one chosen in the box', async ({
+      page,
+      endpoints,
+    }) => {
+      const me = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal');
+      test.skip(!me, 'needs provisioned browser account principal');
+      // A custom salutation of this run (only custom ones offer Edit / Delete), removed afterwards.
+      const marker = `QA Sal ${Date.now()}`;
+      const as = { auth: { principal: me! }, allowLiveWrite: true };
+      const saved = await endpoints.sendTo(
+        'kmail-save-saluation',
+        { body: { saluationID: '', saluation: marker } },
+        { label: 'kmail-validation:sal-save', ...as },
+      );
+      expect(saved.status, 'the custom salutation is saved (setup)').toBeLessThan(300);
+      try {
+        // Nothing the screen does may change salutations on the server.
+        await page.route(/saveOrUpdateCustomizedSaluations|deleteCustomizedSaluation/i, (route) =>
+          route.abort(),
+        );
+        await openCompose(page);
+        const box = page.getByPlaceholder('Select Salutation').first();
+        await box.click();
+        await box.fill(marker);
+        await page.getByText(marker, { exact: true }).last().click({ timeout: 10_000 });
+        // Then the box is emptied: Edit and Delete now have no salutation to act on.
+        await box.fill('');
+        for (const [action, rule] of [
+          ['Edit', 'Before Edit Please Select the Salutation'],
+          ['Delete', 'Before Delete Please Select the Saluation'],
+        ] as const) {
+          await page.locator('.pluscircle svg').first().click();
+          await page
+            .locator('.optionstyle')
+            .filter({ hasText: new RegExp(`^\\s*${action}\\s*$`) })
+            .first()
+            .click();
+          await expect(toast(page, rule), `${action} is refused: ${rule}`).toBeVisible({
+            timeout: 10_000,
+          });
+        }
+      } finally {
+        const list = await endpoints.sendTo(
+          'kmail-saluations',
+          {},
+          { label: 'kmail-validation:sal-list', auth: { principal: me! } },
+        );
+        const entry = (
+          JSON.parse(list.bodyText || '{}') as {
+            data?: Array<{ saluationID: string; saluation: string }>;
+          }
+        ).data?.find((s) => s.saluation === marker);
+        if (entry) {
+          await endpoints.sendTo(
+            'kmail-delete-saluation',
+            { body: { saluationID: entry.saluationID } },
+            { label: 'kmail-validation:sal-delete', ...as },
+          );
+        }
+      }
     });
 
     test('bulk mail refuses an Excel file with no e-mail ids', async ({ page }) => {

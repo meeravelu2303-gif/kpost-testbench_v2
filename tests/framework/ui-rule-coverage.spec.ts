@@ -41,6 +41,110 @@ const NOT_TESTABLE: Array<[RegExp, string]> = [
   ],
 ];
 
+/**
+ * Source files the app never shows, with the reason (read from the React source, 2026-10-31). Their
+ * messages are not rules a user can meet.
+ */
+const NEVER_SHOWN: Array<[RegExp, string]> = [
+  [
+    /^Katchup\/classic\//,
+    'the Classic chat style is disabled ("temporarily unavailable", Personalize.js)',
+  ],
+  [
+    /^Katchup\/bubble\/(ContactList|RecentMessage|Diary|Contact|Recent|KKatch)\/|^Katchup\/bubble\/Katchup\.js$/,
+    'never imported: the page mounts the components/ copy',
+  ],
+  [
+    /^Katchup\/components\/KatchupMessage\//,
+    'never imported: Katchup.js mounts the bubble (or disabled classic) copy',
+  ],
+  [
+    /^Kmail\/components\/KmailContactList\//,
+    'never imported: KMail Contacts uses Katchup ContactList',
+  ],
+  [/^Kall\/components\/KallContact\//, 'never imported: Kall Contacts uses Katchup ContactList'],
+  [/^auth\/Register\.js$/, 'not routed: /signup renders MainSignup'],
+  [
+    /^Kdirectory\/components\/KdirectoryModal\//,
+    'the modal’s show prop is commented out, so it never opens',
+  ],
+];
+
+/**
+ * Live code no user can reach on that screen, with the reason (each read from the source). Keyed by
+ * screen and the message's start, so the same text elsewhere still counts.
+ */
+const UNREACHABLE: Array<[string, RegExp, string]> = [
+  ['Katchup/forwardFooter', /^Enter Your Message/, 'its only callers are commented out'],
+  [
+    'Katchup/forwardFooter',
+    /^Please select atleast one contact/,
+    'Send is disabled until a contact is picked',
+  ],
+  [
+    'Katchup/KatchupMessage',
+    /^Single Admin Cannot Exit/,
+    'an earlier return ("Group admins cannot exit") always wins, and Exit is hidden for admins',
+  ],
+  [
+    'Katchup/KatchupMessage',
+    /^Your message is Block/,
+    'the bell menu is not rendered for that message type',
+  ],
+  [
+    'Katchup/KatchupMessage',
+    /^Error!, Please Try Again After Some Time/,
+    'the delete service swallows errors, so this catch never runs',
+  ],
+  [
+    'Katchup/MessageBox',
+    /^Can not able to select more than one message/,
+    'the checkbox is disabled under the same condition',
+  ],
+  [
+    'Katchup/MultipleContact',
+    /^Access Deneid|^Access Denied/,
+    'removed groups are filtered out of the list and their checkbox is disabled',
+  ],
+  [
+    'Katchup/ContactList',
+    /^Please enter a group name/,
+    'Create is disabled while the name is empty',
+  ],
+  [
+    'Katchup/ContactList',
+    /^Please select at least one group member/,
+    'Create only appears once a member is added',
+  ],
+  [
+    'Katchup/ContactList',
+    /^Already this contact is saved/,
+    'other-domain rows are not listed in Katchup Contacts',
+  ],
+  ['Katchup/DigitalCard', /^No image available/, 'the photo button always has an image address'],
+  [
+    'common/ComposeAssist',
+    /^Add a few words for K-AI/,
+    'every caller opens straight in Generate, where this check does not run',
+  ],
+  ['auth', /^Passwords do not match/, 'Submit stays disabled until the two passwords match'],
+  [
+    'Kmail/MailFooter',
+    /^Mail could not be sent/,
+    'only a client-side exception reaches it; a failed send shows the server’s own message',
+  ],
+  [
+    'Kall/KallPage',
+    /^You have received new kool kall/,
+    'a live push from another user’s browser creating the meeting (socket)',
+  ],
+  [
+    'K-Booking',
+    /^Error: Payment details could not be retrieved/,
+    'comes after the ticket is blocked for payment, which the bench never does',
+  ],
+];
+
 /** Raised when the server fails: covered by forcing the call to fail (the -api-handling specs). */
 const SERVER_FAILURE =
   /unable to|failed|failure|went wrong|some ?error|error occur|api error|processing error|unexpected error|not available|cannot be recalled|error (from|while|in|loading|checking|sending)/i;
@@ -88,17 +192,25 @@ test.describe('web input-rule coverage ledger', { tag: '@framework' }, () => {
     for (const file of files(FRONTEND, (p) => p.endsWith('.js') && !p.includes('.test.'))) {
       const rel = path.relative(FRONTEND, file).split(path.sep).join('/');
       if (rel.startsWith('KOS/')) continue; // KDoc/KOS is out of scope (owner directive).
+      if (NEVER_SHOWN.some(([re]) => re.test(rel))) continue;
       // The bubble, classic and components variants are one screen.
       const screen = path
         .dirname(rel)
         .replace(/^(Katchup|Kmail|Kall)\/(bubble|classic|components)\//, '$1/');
-      const source = fs.readFileSync(file, 'utf8');
+      // Commented-out code raises nothing: drop block comments and whole commented lines.
+      const source = fs
+        .readFileSync(file, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
       for (const match of source.matchAll(RULE)) {
         const message = (match[3] ?? '').trim();
         if (/\$\{|^http|success|^\w+$/i.test(message)) continue;
         const key = `${screen}|${norm(message)}`;
         if (rows.has(key)) continue;
-        const excluded = NOT_TESTABLE.find(([re]) => re.test(message));
+        const dead = UNREACHABLE.find(([s, re]) => s === screen && re.test(message));
+        const excluded = dead
+          ? ([dead[1], `unreachable: ${dead[2]}`] as const)
+          : NOT_TESTABLE.find(([re]) => re.test(message));
         rows.set(key, {
           screen,
           message,

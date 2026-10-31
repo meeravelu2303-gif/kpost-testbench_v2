@@ -114,7 +114,7 @@ counts. Regression keeps the strict time budgets.
 **Deliberately without an API write in sanity: User Management (business).** All 8 of its writes (add
 member, terminate, reset password, hold/release, backup admin, company, bank, role) are `sideEffect:
 'global'`: they create, end or change real business accounts. The production guard refuses every
-`global` write on this environment and no flag unlocks it (`tests/kpost-api/admin/member-lifecycle.spec.ts`
+`global` write on this environment and no flag unlocks it (`tests/kpost-api/flows/admin-member-lifecycle.spec.ts`
 is written and stays skipped). Its API sanity is the reads; its write paths are covered on screen
 (`usermanagement.spec.ts`).
 

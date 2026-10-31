@@ -1,6 +1,7 @@
 import type { SideEffect } from '@engine/production-guard';
 import type { ValidationToggles } from '@engine/validation-policy';
 import type { HttpMethod, RequestSpec } from '../../client/request-builder';
+import { sourceResponseSchema } from '../../contract/source-contract';
 import { workbookContract } from '../../contract/workbook-contract';
 import type { ContractSchema } from '../../schema/contract-schema';
 import type { EndpointDefinition, RequestFactory } from '../../registry/endpoint-definition';
@@ -90,6 +91,11 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     config.contractMethod ?? config.method,
     config.contractPath ?? config.path,
   );
+  // The backend source fills in only where the workbook documents no response.
+  const fromSource =
+    config.responseSchema || contract.responseSchema
+      ? undefined
+      : sourceResponseSchema('kpost-api', config.id);
 
   return {
     id: config.id,
@@ -114,7 +120,8 @@ export function defineKpostEndpoint(config: KpostEndpointConfig): EndpointDefini
     requestSchema: config.requestSchema ?? contract.requestSchema,
     pathParamsSchema: config.pathParamsSchema,
     querySchema: config.querySchema,
-    responseSchema: config.responseSchema ?? contract.responseSchema,
+    responseSchema: config.responseSchema ?? contract.responseSchema ?? fromSource?.schema,
+    responseSchemaSource: fromSource?.source,
     destructive: config.destructive,
     sideEffect: config.sideEffect,
     productionSafe: config.productionSafe,
@@ -147,6 +154,9 @@ export interface UndocumentedKpostEndpointConfig extends Omit<
 export function defineUndocumentedKpostEndpoint(
   config: UndocumentedKpostEndpointConfig,
 ): EndpointDefinition {
+  const fromSource = config.responseSchema
+    ? undefined
+    : sourceResponseSchema('kpost-api', config.id);
   return {
     id: config.id,
     method: config.method,
@@ -164,7 +174,8 @@ export function defineUndocumentedKpostEndpoint(
     contentType: config.contentType,
     request: config.request,
     requestSchema: config.requestSchema,
-    responseSchema: config.responseSchema,
+    responseSchema: config.responseSchema ?? fromSource?.schema,
+    responseSchemaSource: fromSource?.source,
     pathParamsSchema: config.pathParamsSchema,
     querySchema: config.querySchema,
     destructive: config.destructive,

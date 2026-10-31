@@ -1,4 +1,5 @@
 import { env } from '@config/env';
+import { sourceResponseSchema } from '../../contract/source-contract';
 import { workbookContract } from '../../contract/workbook-contract';
 import type { EndpointDefinition } from '../../registry/endpoint-definition';
 import type { KpostEndpointConfig, UndocumentedKpostEndpointConfig } from '../kpost/kpost-endpoint';
@@ -17,6 +18,10 @@ export function defineKmailEndpoint(config: KpostEndpointConfig): EndpointDefini
     config.contractMethod ?? config.method,
     documentedPath,
   );
+  // The backend source fills in only where the workbook documents no response.
+  const fromSource = contract.responseSchema
+    ? undefined
+    : sourceResponseSchema('kmail-api', config.id);
 
   return {
     id: config.id,
@@ -40,7 +45,8 @@ export function defineKmailEndpoint(config: KpostEndpointConfig): EndpointDefini
     // The workbook wins; the definition's schema (typed from the live client's body) fills in only
     // where the workbook row documents no body, so negative request cases can still be generated.
     requestSchema: contract.requestSchema ?? config.requestSchema,
-    responseSchema: contract.responseSchema,
+    responseSchema: contract.responseSchema ?? fromSource?.schema,
+    responseSchemaSource: fromSource?.source,
     destructive: config.destructive,
     sideEffect: config.sideEffect,
     productionSafe: config.productionSafe,
@@ -62,6 +68,9 @@ export function defineKmailEndpoint(config: KpostEndpointConfig): EndpointDefini
 export function defineUndocumentedKmailEndpoint(
   config: UndocumentedKpostEndpointConfig,
 ): EndpointDefinition {
+  const fromSource = config.responseSchema
+    ? undefined
+    : sourceResponseSchema('kmail-api', config.id);
   return {
     id: config.id,
     method: config.method,
@@ -79,7 +88,8 @@ export function defineUndocumentedKmailEndpoint(
     contentType: config.contentType,
     request: config.request,
     requestSchema: config.requestSchema,
-    responseSchema: config.responseSchema,
+    responseSchema: config.responseSchema ?? fromSource?.schema,
+    responseSchemaSource: fromSource?.source,
     pathParamsSchema: config.pathParamsSchema,
     querySchema: config.querySchema,
     destructive: config.destructive,

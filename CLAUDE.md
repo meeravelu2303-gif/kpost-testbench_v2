@@ -96,10 +96,13 @@ src/bug-tracker/        failed test → Bugzilla bug, one folder per step: findi
 src/reporting/          run-summary · report archive · report formatting
 src/ui/                 screens registry (PAUSED_SCREENS), failure-diagnostics
 tests/ — one folder per Bugzilla product, each with its own smoke/ and sanity/:
-  kpost-api/            KPost API: one folder per module (+ security/); feature.spec.ts = the module's lifecycle flow
-  kmail-api/            KMail API: contract.spec.ts (the engine over every endpoint), by test kind like admin-api:
-                        engine/ (reads, definition coverage) flows/ (feature flow + workflows) security/ (IDOR, auth)
-  admin-api/            KPost Admin: by test kind: engine/ flows/ validation/ security/ performance/ maintenance/ support/
+  kpost-api/ kmail-api/ admin-api/   the three APIs share one layout by test kind (since 2026-10-31), files named
+                        <module>-<what>.spec.ts: engine/ (every endpoint × every validator: happy path + negative
+                        inputs + auth) · flows/ (happy-path lifecycles and workflows; <module>-feature.spec.ts =
+                        the module's lifecycle flow) · validation/ (negative business/input rules beyond the
+                        engine) · security/ (authz, IDOR, sessions) · coverage/ (no-HTTP: every documented
+                        endpoint defined) · maintenance/ (QA data cleanup) · performance/ (Admin) · support/.
+                        kpost-api keeps kos/ (KDoc, excluded) and concurrency/ (excluded) as folders.
   kpost-ui/<module>/    KPost UI: auth home katchup kall kmail contacts group profile settings user-management
                         verticals platform cross-layer (+ journeys/ support/)
   admin-ui/<area>/      KPost Admin UI by menu area: auth screens admin-setup human-resources cross-layer (+ support/)
@@ -130,10 +133,12 @@ validates; only on a genuine test gateway), `*_LIFECYCLE` (gated feature flows),
 `GLOBAL_LIFECYCLE` (QA test server only: a self-cleaning flow's shared-state write, each call opted in
 with `allowGlobalLifecycle`; never the engine, never SMS/e-mail, refused if any host is live).
 Always armed regardless of flags: the QA-identifier guard (no request may name a record we don't own),
-the OTP/SMS kill-switch, and `sideEffect: 'global'`/`external` blocks. Forgot-password and the profile's
+the OTP/SMS kill-switch, `sideEffect: 'global'`/`external` blocks, and the upload cap (uploads land in the
+LIVE AWS S3 bucket: no file over `UPLOAD_MAX_BYTES`, 64 KB, leaves the API client, a presigned PUT or the
+browser; `src/validation-engine/upload-guard.ts`; prove a size rule by stub or source, never a big file). Forgot-password and the profile's
 device/deactivation OTP senders text a real phone even with the OTP bypass, so they stay blocked; account
 actions that would damage a QA account (devices, password, access code, deactivate) run only on a throwaway
-`apiflowkpost<N>` account (`tests/kpost-api/profile/throwaway-account.spec.ts`), deleted afterwards.
+`apiflowkpost<N>` account (`tests/kpost-api/flows/profile-throwaway-account.spec.ts`), deleted afterwards.
 
 ## 4. The run → Bugzilla flow (one command per product)
 
@@ -258,7 +263,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
   with a known-good token before writing it into Bugzilla.
 - **Cross-tenant "fixed" needs an owner control**: the owner's identical call must succeed while the
   stranger's fails, or the 4xx proves nothing.
-- **Flow-triggered bugs (`flow.server-error`) and business rules inside `feature.spec.ts`** are not reachable
+- **Flow-triggered bugs (`flow.server-error`) and business rules inside `flows/<module>-feature.spec.ts`** are not reachable
   by `--grep "[endpoint-id]"`; re-test them by running the lifecycle flow with its `*_LIFECYCLE` flag.
 - **Test a matcher against real Bugzilla data**, not hand-written fixtures. Browser-filter counts use
   substring match on the whiteboard (`[browser:chromium,firefox]` counts for both).
@@ -282,6 +287,10 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
 
 - **The Excel workbook wins** (`docs/api-specs/KPOST API (N).xlsx`; the highest N is used).
   `npm run contract:excel` → `contract:coverage`. Never hand-edit `contracts/` or `openapi/`.
+- **Where the workbook documents no response, the backend source does** (since 2026-10-31):
+  `src/api/contract/source/<suite>.source.json`, one entry per endpoint read from its controller method
+  (cited), used only once a live QA success matched it (`liveCheck: matched <date>`). A failure body is
+  never checked against it. Trial unconfirmed ones with `SOURCE_CONTRACT_TRIAL=true` (never on a filing run).
 - **Only POST and GET exist.** Documented payload = POST, none = GET; every derived method records its source.
 - **Never invent a contract or a payload value.** Send what the real frontend sends; `payload-audit.spec.ts`
   enforces it. Admin save endpoints take a JSON array; update takes an object.

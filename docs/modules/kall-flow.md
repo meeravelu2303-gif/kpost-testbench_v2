@@ -11,7 +11,7 @@ Source of truth for the payloads: `D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1\src\S
 ## 1. The codes (owner-supplied; already in the workbook, verified to match)
 
 All four enum groups the owner gave match the workbook's Types tab exactly — nothing to add, only to
-pin (`tests/kpost-api/kall/coverage.spec.ts`).
+pin (`tests/kpost-api/coverage/kall.spec.ts`).
 
 **`kallStatus`** (sender & receiver)
 
@@ -82,7 +82,7 @@ Two PERSONAL accounts, so of 20 endpoints:
   `kallID`; the lifecycle creates one.
 - **12 writes gated** — every one is destructive and **none is `productionSafe`**. A call rings a
   device / notifies participants, and the clear endpoints delete the log. They are exercised only
-  through `tests/kpost-api/kall/feature.spec.ts`, gated behind **`KALL_LIFECYCLE=true`**, each write
+  through `tests/kpost-api/flows/kall-feature.spec.ts`, gated behind **`KALL_LIFECYCLE=true`**, each write
   carrying `allowLiveWrite: true` (the authorized-write control Katchup and Profile use), self-cleaning
   (a `finally` that calls `clearKallHistory` for both parties, so no failed step leaves an orphan).
 

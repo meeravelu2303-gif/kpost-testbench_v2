@@ -289,7 +289,7 @@ export const changeOrForgotAccessCodeApi = defineUndocumentedProfileEndpoint({
   evidence:
     'UserProfileControllerV2.java:1011 changeAccessCode; UserProfileDaoImpl.java:842-877 checks ' +
     'currentPassword (the LOGIN password) and overwrites User.access_code; no client calls it',
-  note: 'run by tests/kpost-api/profile/throwaway-account.spec.ts on a fresh account each run',
+  note: 'run by tests/kpost-api/flows/profile-throwaway-account.spec.ts on a fresh account each run',
 });
 
 export const profileWriteApis = [

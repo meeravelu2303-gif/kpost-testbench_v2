@@ -114,5 +114,47 @@ test.describe(
 
       expect(changeAttempts, 'nothing tried to change the password').toBe(0);
     });
+
+    test('Submit with a Confirm that differs is refused with "Passwords Does Not Match!" @ui', async ({
+      page,
+      settingsPage,
+    }) => {
+      let changeAttempts = 0;
+      await page.route('**/profile/changePassword**', (route) => {
+        changeAttempts += 1;
+        return route.abort();
+      });
+      await settingsPage.goto();
+      await settingsPage.openPanel('General Settings', 'Change Password');
+      await page
+        .getByPlaceholder(/Enter Your Old Password/i)
+        .first()
+        .fill(testData.password);
+      await page
+        .getByRole('button', { name: /^Continue$/i })
+        .first()
+        .click();
+      const newPassword = page.getByPlaceholder(/Enter Your New Password/i).first();
+      await expect(newPassword, 'the correct Old Password opens step 2').toBeVisible({
+        timeout: 10_000,
+      });
+      await newPassword.fill('QaBench!9x');
+      await page
+        .getByPlaceholder(/Enter Your Confirm Password/i)
+        .first()
+        .fill('QaBench!9y');
+      const submit = page.getByRole('button', { name: /^Submit$/i }).last();
+      // Refused either way the screen chooses: Submit stays off, or Submit names the rule.
+      if (await submit.isEnabled()) {
+        await submit.click();
+        await expect(
+          page.locator('.Toastify__toast').filter({ hasText: 'Passwords Does Not Match!' }).first(),
+          'the user is told the passwords differ',
+        ).toBeVisible({ timeout: 10_000 });
+      } else {
+        await expect(submit, 'Submit stays disabled while they differ').toBeDisabled();
+      }
+      expect(changeAttempts, 'nothing tried to change the password').toBe(0);
+    });
   },
 );

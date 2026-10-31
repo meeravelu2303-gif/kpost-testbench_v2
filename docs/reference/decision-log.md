@@ -3,7 +3,114 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-31 (latest) — KPost UI Chromium filed; new web build, fuzz pollution, hand triage
+### 2026-10-31 (latest) — Response contracts from the backend source, the S3 upload cap, one API folder layout
+
+Owner: "we have the application codes for all products so, first analyse the complete code … get the
+response documented and shapes everything … with perfect and neat folder and file structure". And:
+"we are using the live aws s3 bucket storage so that only we should test limited size files".
+
+- **Response contracts read from the code** (`src/api/contract/source-contract.ts`,
+  `src/api/contract/source/{kpost-api,kmail-api}.source.json`). This replaces the "208 endpoints have no
+  response schema: not a gap" note below.
+  - 191 endpoints the workbook leaves without a response (145 KPost, 46 KMail; KDoc excluded) were read
+    from their controller method. Each entry has the success schema, its failure answers, evidence
+    (file:line) and a confidence.
+  - Envelope facts from the code:
+    - KPost (Boot 2.7.2 defaults): nulls are included, dates are ISO strings, and the HTTP status
+      mirrors `statusCode`.
+    - KMail installs a plain ObjectMapper (`S3Config.java:40-47`): dates are epoch millis, and an
+      unknown request key gives a 400.
+  - **Adoption rule:** an entry becomes the endpoint's `responseSchema` only after a live QA success
+    matched it (`liveCheck: matched <date>`). This keeps "never invent a contract": the code and the
+    live server both agree.
+  - A body that says FAILURE/error is never checked against it; that belongs to `response.error-format`.
+  - Trial run on 2026-10-31: 66 matched (54 KPost, 12 KMail). The 11 apparent mismatches were all
+    allowed 4xx FAILURE bodies, which led to the FAILURE guard.
+  - Not yet confirmed: 40 got only a FAILURE from the engine's made-up ids, 26 are writes only the flows
+    drive, and the rest the engine never runs (SMS kill-switch, live-safety flags, id-keyed reads).
+  - `EndpointExecutor.sendTo` now records a schema check on every successful flow call (`FlowCall.schema`,
+    recorded only, never filed), so the flows can confirm those.
+  - The workbook still wins; the source fills in only where it is silent. Self-test:
+    `tests/framework/source-contracts.spec.ts`.
+- **Upload cap** (`src/validation-engine/upload-guard.ts`, `UPLOAD_MAX_BYTES` = 64 KB). Every upload
+  lands in the live S3 bucket, so no file over the cap is sent. The cap is checked in three places:
+  `ApiClient.execute` (multipart), `tests/support/attachments.ts` (presigned PUT), and the `page`
+  fixture (browser POST/PUT to S3 or an upload route is aborted). The largest file sent today is the
+  25 KB signature JPEG (that endpoint requires 10–50 KB). Size limits are proven by a browser stub or
+  read from the source, never by uploading a big file.
+- **One layout for the three APIs, by test kind.** 105 kpost-api specs moved from module folders into
+  `engine/ flows/ validation/ security/ coverage/ maintenance/`, named `<module>-<what>.spec.ts`
+  (e.g. `kall/feature.spec.ts` → `flows/kall-feature.spec.ts`, `contacts/read.spec.ts` →
+  `engine/contacts-reads.spec.ts`).
+  - KMail's `contract.spec.ts` joined `engine/` and its definition coverage moved to `coverage/`.
+    Admin's `contract.spec.ts` joined `engine/`.
+  - `kos/` and `concurrency/` stay folders, so their exclusion stays by folder.
+  - Product commands and `scripts/run-level.mjs` list the new folders. API bug tags hash the endpoint
+    and validator, not the file, so no tag changed.
+- **Leads from the code review, to replay live before any filing:**
+  - Data handed to anyone, or to any logged-in user: `shareUserDetails` (no token),
+    `getUserProfileUsingKpostID` (whole entity), `addingUserForReallocateByAdmin` (bcrypt hash),
+    `adminUserLogin` (access code in clear).
+  - Actions on someone else's behalf: `addingUserByAdmin` (no token, overwrites an account),
+    `/v2/common/sendMessage` (sender taken from the body), legacy recall (sender from the body).
+  - Missing ownership checks: `changeCaption`, `ai/chatResponse` session, KMail
+    `getKmailDetailsUsingKmailID` (BCC rows), and the `bulkMail/status` read-and-delete.
+  - Two possibly exposed APIs: S3 object names chosen by the client (overwrite risk) and the KMail
+    Spring Data REST repositories.
+
+### 2026-10-31 — Gap closure: APIs first, then screens (owner: "cover fully … apis then screens")
+
+- **Firefox run stopped** on the owner's word, to close gaps first.
+- **API happy path:**
+  - New flows:
+    - `admin/member-lifecycle` now holds/releases and sets/restores the role of its throwaway member.
+    - `admin/company-details-lifecycle` saves a changed PAN/GST and restores it exactly; the bank
+      half restores the column in the QA DB (it runs only when the DB client is writable).
+  - Happy-path crediting (`bugzilla-reporter.ts writeHappyPath`): every flow call that got the
+    endpoint's documented answer now counts, also in a flow that later fails on a filed bug. Before,
+    only passing flows counted, so endpoints driven by bug-recording flows showed as "blocked".
+- **API negatives:** `security/admin-write-authorization` checks that a personal user and another
+  company's admin are refused on backup-admin, role, hold and terminate of a 242 member (and on adding
+  one), with the member unchanged in the DB. All refused: no bug. Helper:
+  `tests/support/company-member.ts`.
+- **Not gaps (recorded so nobody re-opens them):**
+  - 208 endpoints have no response schema: the workbook documents none, and none is invented.
+  - The workbook documents no error envelope.
+  - Request schemas are missing only on uploads (multipart), KDoc (excluded) and three routes no
+    client calls (reallocate, the public add-member route, KNews sync).
+  - `postBoxContacts` is a dead route.
+- **Mobile:** `auth/login_negative_test.dart` (empty, unknown and wrong-password login) and
+  `auth/access_code_negative_test.dart` (mismatched codes, wrong code), analyzed clean in
+  `mobile/.app`. They run once #13326 is fixed.
+- **Web input-rule ledger made honest** (`ui-rule-coverage.spec.ts`):
+  - Commented-out code is ignored.
+  - Files the app never shows are skipped (`NEVER_SHOWN`: the classic chat style is disabled; the
+    unmounted bubble/components copies; `KmailContactList`; `KallContact`; `Register.js`;
+    `KdirectoryModal`).
+  - Live-but-unreachable rules are listed per screen with the reason (`UNREACHABLE`).
+  - Result: input rules 70 of 121 → **116 of 119**. Left: the public Digital Card photo, the ladies
+    seat (a live redbus seat map), and KMail "Single Admin Cannot Exit".
+- **New screen specs:**
+  - Katchup: compose (secret timer 00:00:00; a group with no other active member) and
+    attachment-only messages (Copy, Text-To-Speech, forward All/Without Attachments, the 5-group
+    limit).
+  - Copies (60 / 20, using made-up contacts that exist only in the browser).
+  - Select mode (thread forward, more than five).
+  - API-handling (empty conversation, Recents failure).
+  - KMail: Save Draft empty, salutation Edit/Delete, Copy with two, Add copies with an invalid
+    address, forwarding more than 10.
+  - Settings: password mismatch, Instant Reply refused, wallpaper, delete account when the code
+    cannot be sent. Every deactivation call is answered in the browser, so no SMS.
+  - Digital Card QR share with no recipient; KDiary participants.
+  - Signup pincode, date and OTP boxes; login lookup failure.
+  - User Management bulk upload; Kall history failure and ended meeting (browser clock moved on);
+    KDirectory pincode; KBooking "Date not found."
+- **Found and filed:** #13370 — Personal signup goes on to the KPOST ID step after "Invalid postal
+  pincode" (reproduced 2 of 2).
+- **Live server newer than the source:** "Admins cannot exit the group. Remove the members instead"
+  (leaveFromGroup). Specs remove members instead.
+
+### 2026-10-31 — KPost UI Chromium filed; new web build, fuzz pollution, hand triage
 
 - **Run:** `product:kpost-ui:chromium` (run-dfe2c798: 456 passed, 168 failed, 6.3 h). Only
   selector-independent specs auto-file (`UI_FILING_SPECS`), so every other failure was re-run alone

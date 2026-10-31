@@ -36,5 +36,31 @@ test.describe(
       await expect(add, 'a reply of spaces cannot be added').toBeDisabled();
       expect(await sendsWithin(page, SAVE, 2_000), 'nothing was sent').toBe(false);
     });
+
+    test('a reply the server refuses is reported, not shown as added', async ({
+      page,
+      settingsPage,
+    }) => {
+      // The server's own refusal shape (a FAILURE envelope); nothing reaches the real server.
+      await page.route(`**${SAVE}**`, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'FAILURE', statusCode: 400, message: '' }),
+        }),
+      );
+      await settingsPage.goto();
+      await settingsPage.openPanel('KMail Settings', 'Instant Reply');
+      await page.getByRole('button', { name: /^Add$/ }).first().click();
+      const dialog = page.locator('.modal-dialog', { hasText: 'Instant Reply Message' }).last();
+      await expect(dialog, 'the Instant Reply form opens').toBeVisible({ timeout: 15_000 });
+      const reply = `QA reply ${Date.now()}`;
+      await dialog.getByPlaceholder('Enter your Instant Reply Message').first().fill(reply);
+      await dialog.getByRole('button', { name: /^Add$/ }).first().click();
+      await expect(
+        page.locator('.Toastify__toast').filter({ hasText: 'Instant Reply was not Added' }).first(),
+        'the user is told the reply was not added',
+      ).toBeVisible({ timeout: 10_000 });
+    });
   },
 );
