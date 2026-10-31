@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import uiSpecRenames from './ui-spec-renames.json' with { type: 'json' };
 
 /**
  * Run-specific values (correlation ids, e-mails, UUIDs, ports, durations) replaced before hashing,
@@ -72,9 +73,16 @@ const UI_FINGERPRINT_FOLDERS: readonly [string, string][] = [
   ['tests/admin-ui/', 'tests/e2e-admin/'],
 ];
 
+/**
+ * UI specs renamed to `<module>-<area>-<kind>.spec.ts` on 2026-10-31: each new path maps to the path
+ * its bugs were hashed with (then the folder rename above applies), so no bug's tag changed.
+ */
+const UI_SPEC_RENAMES: Readonly<Record<string, string>> = uiSpecRenames;
+
 /** The spec path as it is hashed into a UI fingerprint. */
 export function uiFingerprintPath(file: string): string {
-  const normalized = file.replace(/\\/g, '/');
+  const relative = file.replace(/\\/g, '/');
+  const normalized = UI_SPEC_RENAMES[relative] ?? relative;
   for (const [current, hashedAs] of UI_FINGERPRINT_FOLDERS)
     if (normalized.startsWith(current)) return hashedAs + normalized.slice(current.length);
   return normalized;

@@ -121,7 +121,7 @@ test.describe(
       recordCreatedAccount({
         kpostId: fullKpostId,
         mobileNumber,
-        source: 'signup-login-lifecycle.spec.ts (UI)',
+        source: 'signup-login-e2e.spec.ts (UI)',
         note: 'Personal registration driven end-to-end through the signup screen',
       });
 

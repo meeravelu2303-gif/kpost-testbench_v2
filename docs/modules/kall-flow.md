@@ -11,7 +11,7 @@ Source of truth for the payloads: `D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1\src\S
 ## 1. The codes (owner-supplied; already in the workbook, verified to match)
 
 All four enum groups the owner gave match the workbook's Types tab exactly — nothing to add, only to
-pin (`tests/kpost-api/coverage/kall.spec.ts`).
+pin (`tests/kpost-api/coverage/kall-coverage.spec.ts`).
 
 **`kallStatus`** (sender & receiver)
 
@@ -111,7 +111,7 @@ cross-tenant target with a qualified key (`kpostID`/`companyID`/…), never a ba
 
 ## 6. The screen
 
-`/kall` → `<Kall />` (`MenuRoutes.js`). `tests/kpost-ui/kall/kall.spec.ts` checks the workspace shell
+`/kall` → `<Kall />` (`MenuRoutes.js`). `tests/kpost-ui/kall/kall-screens.spec.ts` checks the workspace shell
 (`.kall-layout-shell`), the call tabs (`.tabs-wrapper`) and the contact search ("Search Contacts")
 render for a logged-in user, across Chromium / Firefox / WebKit. Placing/scheduling a real call from
 the UI is not automated (it rings a device); that behaviour is the API lifecycle's job.

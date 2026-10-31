@@ -178,7 +178,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
     });
     expect(
       adminUi(
-        'tests/admin-ui/human-resources/admin-employee-management-pii.spec.ts',
+        'tests/admin-ui/human-resources/employee-management-pii-security.spec.ts',
         'Employee list masks PAN',
       ),
     ).toMatchObject({ product: 'KPost Admin UI', component: 'User Management' });

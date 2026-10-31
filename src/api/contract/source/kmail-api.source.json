@@ -797,7 +797,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/readMail/getCopiesInfo/{kmailID} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-def",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/feature.spec.ts)",
       "evidence": [
         "ReadKmailController.java:279-305",
         "ReadKmailServiceImpl.java:1356-1405 map always has the three keys",
@@ -892,7 +892,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/feature.spec.ts)",
       "evidence": ["KmailSettingController.java:645-679", "KmailSettingServiceImpl.java:683-692"],
       "notes": "Any number is accepted (negative, 0, 99999, 1.9 truncated to 1): the Options list [45,60,90,120] returned by getMailCountDaysLimit is not enforced."
     },
@@ -943,7 +943,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/feature.spec.ts)",
       "evidence": [
         "KmailSettingController.java:118-149",
         "CommonDaoImpl.java:389-420 returns \" Invalid ID\" when not found"
@@ -1048,7 +1048,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/manage-workflow.spec.ts)",
       "evidence": [
         "CommonMailController.java:867-895",
         "CommonMailServiceImpl.java:1670-1677",
@@ -1103,7 +1103,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/feature.spec.ts)",
       "evidence": ["KmailSettingController.java:192-224", "CommonDaoImpl.java:581-619"],
       "notes": "Unknown id -> misleading \"Invalid KpostID\"."
     },
@@ -1390,7 +1390,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: prerequisite response.status-code did not pass: expected 200, got 400",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/feature.spec.ts)",
       "evidence": [
         "ReadKmailController.java:241-266 authorization loop",
         "ReadKmailServiceImpl.java:1351-1353 findByKmailIDIn",
@@ -1711,7 +1711,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/manage-workflow.spec.ts)",
       "evidence": [
         "CommonMailController.java:845-850 tests !result.isEmpty()",
         "CommonMailServiceImpl.java:1651-1667 returns \"SUCCESS\" or \"FAILURE\" - both non-empty"
@@ -1755,7 +1755,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/feature.spec.ts)",
       "evidence": [
         "CommonMailController.java:1038-1056",
         "CommonMailServiceImpl.java:1870-1895",
@@ -2554,7 +2554,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/manage-workflow.spec.ts)",
       "evidence": [
         "SentMailController.java:217-235",
         "SentMailServiceImpl.java:2744-2793 returns HttpStatus.ACCEPTED with statusCode 200"
@@ -2616,7 +2616,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/attachment-integrity.spec.ts)",
       "evidence": [
         "SentMailController.java:64-82",
         "SentMailServiceImpl.java:253-489",
@@ -3198,7 +3198,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/feature.spec.ts)",
       "evidence": ["KmailSettingController.java:151-190", "CommonDaoImpl.java:524-578"],
       "notes": "urlPath spelled \"saveOrUpdateCustomizedSalutations\" (differs from the request path). A JSON error inside the DAO returns FAILURE and is therefore reported as 400 \"Salutation name is required\". New id not returned."
     },
@@ -3620,7 +3620,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/feature.spec.ts)",
       "evidence": [
         "KmailSettingController.java:85-116",
         "CommonDaoImpl.java:339-386 appends {id: uuid, instantReply} or updates by id"
@@ -3674,7 +3674,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/signature-letterhead-workflow.spec.ts)",
       "evidence": ["KmailSettingController.java:285-311", "CommonDaoImpl.java:622-694"],
       "notes": "Body is a free Map: {\"id\": ...} (+ headerUrl/footerUrl used only when the user has no letterheads yet; then any id/URL is stored unchecked). Failure bodies carry no message."
     },
@@ -3718,7 +3718,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/signature-letterhead-workflow.spec.ts)",
       "evidence": [
         "KmailSettingController.java:408 handler",
         "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
@@ -3765,7 +3765,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/signature-letterhead-workflow.spec.ts)",
       "evidence": [
         "KmailSettingController.java:615 handler",
         "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
@@ -3812,7 +3812,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/signature-letterhead-workflow.spec.ts)",
       "evidence": [
         "KmailSettingController.java:438 handler",
         "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
@@ -3859,7 +3859,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/feature.spec.ts)",
       "evidence": [
         "KmailSettingController.java:378 handler",
         "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
@@ -3906,7 +3906,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/signature-letterhead-workflow.spec.ts)",
       "evidence": [
         "KmailSettingController.java:498 handler",
         "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
@@ -3953,7 +3953,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/signature-letterhead-workflow.spec.ts)",
       "evidence": [
         "KmailSettingController.java:468 handler",
         "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"
@@ -4000,7 +4000,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-10-31 (in kmail-api/flows/signature-letterhead-workflow.spec.ts)",
       "evidence": [
         "KmailSettingController.java:585 handler",
         "KmailSettingServiceImpl.java:203-362/503-611 builds the map with getOrDefault(...,\"\") and returns SUCCESS/FAILURE"

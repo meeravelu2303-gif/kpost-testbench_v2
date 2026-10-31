@@ -56,31 +56,31 @@ const HAPPY_PATH_SUITE: Readonly<Record<string, SuiteId>> = {
  * report for triage.
  */
 const UI_FILING_SPECS = new Set([
-  'screens-batch1.spec.ts',
-  'screens-batch2.spec.ts',
-  'screens-batch3.spec.ts',
-  'navigation.spec.ts',
-  'shell.spec.ts',
-  'interactions.spec.ts',
-  'crawl.spec.ts',
+  'platform-batch1-screens.spec.ts',
+  'platform-batch2-screens.spec.ts',
+  'platform-batch3-screens.spec.ts',
+  'platform-navigation-functional.spec.ts',
+  'platform-shell-screens.spec.ts',
+  'platform-interactions-screens.spec.ts',
+  'platform-crawl-screens.spec.ts',
   // axe-a11y and visual regression are review-only, so not listed.
-  'keyboard-nav.spec.ts',
-  'network-resilience.spec.ts',
-  'profile-settings-breakage.spec.ts',
-  'contacts-breakage.spec.ts',
-  'chat-avatar-session.spec.ts',
+  'platform-keyboard-accessibility.spec.ts',
+  'platform-network-resilience.spec.ts',
+  'profile-settings-breakage-screens.spec.ts',
+  'contacts-breakage-screens.spec.ts',
+  'katchup-chat-avatar-session-functional.spec.ts',
   'signup-login-screens.spec.ts',
   // Admin UI health sweeps; the PII-masking spec stays review-only (a person must check it).
   'admin-screens.spec.ts',
-  'admin-subtabs-health.spec.ts',
+  'admin-subtabs-screens.spec.ts',
   'admin-dead-screens.spec.ts',
-  'admin-login.spec.ts',
+  'admin-login-functional.spec.ts',
   // Deterministic stubs of states the real server returns, so a failure is a code defect. Stubs of
   // shapes the server never returns (`home-resilience.spec.ts`) are not real bugs and are not
   // listed.
   'home-api-handling.spec.ts',
   'katchup-api-handling.spec.ts',
-  'katchup-write-handling.spec.ts',
+  'katchup-write-api-handling.spec.ts',
 ]);
 
 export default class BugzillaReporter implements Reporter {
@@ -304,7 +304,7 @@ export default class BugzillaReporter implements Reporter {
     for (const test of tests) {
       // The signed-out Signup/Login scan uses the same evidence shape.
       if (
-        !['accessibility-axe.spec.ts', 'signup-login-accessibility.spec.ts'].includes(
+        !['platform-axe-accessibility.spec.ts', 'signup-login-accessibility.spec.ts'].includes(
           path.basename(test.location.file),
         )
       )

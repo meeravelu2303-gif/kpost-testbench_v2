@@ -1,6 +1,6 @@
-import { requireAll } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
 import { flowState } from '../../support/flow-state';
+import { settingsCallerKpostId } from '../../support/settings-caller';
 
 /**
  * Personalization (font + theme): change, persist, read back, checked against
@@ -13,10 +13,11 @@ test.describe(
     // In order, but a failed step never skips the others.
     test.describe.configure({ mode: 'default' });
 
-    const accounts = requireAll('primary');
-    test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
+    // The row of the account the Settings endpoints sign in as.
+    const caller = settingsCallerKpostId();
+    test.skip(!caller, 'needs the account the Settings endpoints sign in as (QA_PERSONAL5)');
 
-    const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
+    const me = (): string => caller ?? '';
 
     /** The row as we found it (on disk, so a restore after a failed step still has it). */
     const flow = flowState<{ original: { font?: unknown; theme?: unknown } }>(
@@ -26,7 +27,7 @@ test.describe(
     test.afterAll(async ({ endpoints }) => {
       // Restore both font and theme to the captured values: the QA account is shared.
       const original = flow.get('original');
-      if (!accounts.ok || !original) return;
+      if (!caller || !original) return;
       const font = original.font as { 'Font Size'?: string; 'Font Style'?: string } | undefined;
       const theme = original.theme as
         | {

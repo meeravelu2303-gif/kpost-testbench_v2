@@ -1,6 +1,19 @@
 import { KpostRepository } from '@database/repositories/kpost.repository';
+import { notificationToggleBody } from '@api/definitions/kpost/settings/write.api';
 import { requireAll } from '@fixtures/test-accounts';
 import { expect, test } from '@fixtures';
+import { settingsCallerKpostId } from '../../support/settings-caller';
+
+/** A stored notification column (a JSON string or object) as an object; {} when unreadable. */
+function storedPreference(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object') return value as Record<string, unknown>;
+  try {
+    const parsed: unknown = typeof value === 'string' ? JSON.parse(value) : undefined;
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Notification preferences: toggle, persist, read back, asserted on the caller's
@@ -13,10 +26,11 @@ test.describe(
     // In order (each test makes its own data); a failed test never skips the next.
     test.describe.configure({ mode: 'default' });
 
-    const accounts = requireAll('primary');
-    test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
+    // The row of the account the Settings endpoints sign in as.
+    const caller = settingsCallerKpostId();
+    test.skip(!caller, 'needs the account the Settings endpoints sign in as (QA_PERSONAL5)');
 
-    const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
+    const me = (): string => caller ?? '';
 
     test('the caller has a settings row, keyed by their natural key', async ({ databases }) => {
       const database = databases.for('kpost-api');
@@ -66,17 +80,20 @@ for (const field of ['katchup', 'kmail', 'kall'] as const) {
     `KPost Settings · ${field} notification persistence @api @kpost-api @settings @database`,
     { tag: ['@api', '@settings', '@regression'] },
     () => {
-      const accounts = requireAll('primary');
-      test.skip(!accounts.ok, accounts.ok ? '' : accounts.reason);
-      const me = (): string => (accounts.ok ? (accounts.accounts[0]?.kpostId ?? '') : '');
+      // The row of the account the Settings endpoints sign in as.
+      const caller = settingsCallerKpostId();
+      test.skip(!caller, 'needs the account the Settings endpoints sign in as (QA_PERSONAL5)');
+      const me = (): string => caller ?? '';
+      /** The stored preference before the toggle, restored exactly afterwards. */
+      let original: Record<string, unknown> | undefined;
 
       test.afterAll(async ({ endpoints }) => {
         // Restore the preference: the QA account is shared.
-        if (!accounts.ok) return;
+        if (!caller || !original) return;
         await endpoints
           .sendTo(
             endpointId,
-            { body: { enable: 1 } },
+            { body: original },
             { label: `notifications-workflow:restore-${field}`, allowLiveWrite: true },
           )
           .catch(() => undefined);
@@ -95,10 +112,16 @@ for (const field of ['katchup', 'kmail', 'kall'] as const) {
         });
         expect(before, 'the caller has a settings row before toggling').toBeDefined();
 
+        // The web's own body (the four preferences), with Do Not Disturb flipped from what is stored.
+        original = { ...notificationToggleBody(), ...storedPreference(before?.[column]) };
+        const toggled = {
+          ...original,
+          'Do Not Disturb': original['Do Not Disturb'] === 'On' ? 'Off' : 'On',
+        };
         const exchange = await endpoints.sendTo(
           endpointId,
-          { body: { enable: 0 } },
-          { label: `notifications-workflow:disable-${field}`, allowLiveWrite: true },
+          { body: toggled },
+          { label: `notifications-workflow:toggle-${field}`, allowLiveWrite: true },
         );
         // Check the envelope: KPost can answer HTTP 200 carrying `statusCode: 500`.
         const parsed = exchange.json();
@@ -124,7 +147,7 @@ for (const field of ['katchup', 'kmail', 'kall'] as const) {
             rule: `${field}Notification must persist the toggled preference to TBL_KPOST_GENERAL_SETTINGS, not just report success.`,
             expected: `a changed value (was ${beforeJson})`,
             actual: `unchanged: ${afterJson}`,
-            request: { body: { enable: 0 } },
+            request: { body: toggled },
           });
         }
         expect

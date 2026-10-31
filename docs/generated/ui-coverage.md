@@ -43,9 +43,9 @@ Every screen inherits the **full check catalogue** below. Covered: **21** screen
 
 | Route | Spec |
 | ----- | ---- |
-| `/digital-card/:id` | `global-digital-card.spec.ts` |
-| `/koolkall/:id` | `global-kool-kall.spec.ts` |
-| `/profile-webview/:id` | `profile-webview.spec.ts` |
+| `/digital-card/:id` | `global-digital-card-functional.spec.ts` |
+| `/koolkall/:id` | `kall-global-kool-kall-functional.spec.ts` |
+| `/profile-webview/:id` | `profile-webview-security.spec.ts` |
 
 ## UI check catalogue — runs on every screen
 
@@ -65,30 +65,30 @@ Every screen inherits the **full check catalogue** below. Covered: **21** screen
 
 | Flow | Spec | What it drives |
 | ---- | ---- | -------------- |
-| Navigation | `navigation.spec.ts` | nav-rail icon → route, for every destination |
-| Login validation | `login.spec.ts` | empty id / unknown id / valid id advances / wrong password → inline error |
-| Login & session (deep) | `login-session.spec.ts` | session guard redirect · Forgot-Password modal (no OTP) · Sign-Up link · logout (gated) |
-| Screen shell | `shell.spec.ts` | header + nav rail on every screen |
-| Katchup compose | `katchup-compose.spec.ts` | open a chat → open composer → enter Subject (BR-K01) + message; gated send + recall (green) |
-| Katchup message actions | `katchup-actions.spec.ts` | sender bell menu → Delete · Edit (Edited marker, BR-K03) · Save · Copy, each self-cleaning (gated) |
-| Katchup sub-flow actions | `katchup-actions-more.spec.ts` | bell menu → Note · Reminder · Transfer · Forward · Forward-with-thread · Recall&Repost (entry wired, self-clean, gated) |
+| Navigation | `platform-navigation-functional.spec.ts` | nav-rail icon → route, for every destination |
+| Login validation | `login-screens.spec.ts` | empty id / unknown id / valid id advances / wrong password → inline error |
+| Login & session (deep) | `login-session-functional.spec.ts` | session guard redirect · Forgot-Password modal (no OTP) · Sign-Up link · logout (gated) |
+| Screen shell | `platform-shell-screens.spec.ts` | header + nav rail on every screen |
+| Katchup compose | `katchup-compose-e2e.spec.ts` | open a chat → open composer → enter Subject (BR-K01) + message; gated send + recall (green) |
+| Katchup message actions | `katchup-actions-e2e.spec.ts` | sender bell menu → Delete · Edit (Edited marker, BR-K03) · Save · Copy, each self-cleaning (gated) |
+| Katchup sub-flow actions | `katchup-actions-more-e2e.spec.ts` | bell menu → Note · Reminder · Transfer · Forward · Forward-with-thread · Recall&Repost (entry wired, self-clean, gated) |
 | Katchup attach-and-send | `katchup-attach-send-e2e.spec.ts` | compose → attach a real file → upload → send → thread renders the thumbnail (gated, self-clean) |
 | Katchup Note sub-flow (completion) | `katchup-note-subflow-e2e.spec.ts` | bell menu Note → composer opens pre-filled with reply context → type a note body → send (gated, self-clean) |
 | Katchup Transfer sub-flow (completion) | `katchup-transfer-subflow-e2e.spec.ts` | bell menu Transfer → Katchup recipient picker → select a contact → Done sends (gated, self-clean) |
 | Katchup Forward sub-flow (completion) | `katchup-forward-subflow-e2e.spec.ts` | bell menu Forward → recipient picker narrows to one contact → Done → final send button → forward actually sends (gated, self-clean) |
 | Katchup secret/confidential message | `katchup-secret-message-e2e.spec.ts` | composer → Secret message → Delete-as-per-Schedule → Done → the confidential message sends (gated, self-clean) |
-| Katchup search | `katchup-search.spec.ts` | type in the search box → the conversation list filters to the match (read-only, safe) |
-| Katchup two-session | `katchup-two-session.spec.ts` | account 1 sends → account 2 (own context) receives + Reply/Comment/Clarify + read receipt (gated, self-clean) |
-| Katchup Copy / Confidential / Bulk | `katchup-copies.spec.ts` | 3-account: visible Copy seen by TO · Confidential Copy hidden from TO (NFR-SEC02) · bulk to many (gated) |
-| KMail compose | `kmail-compose.spec.ts` | /writemail form renders (To/Subject/body, green) · compose → send (gated KMAIL_UI_LIFECYCLE) |
-| Kall features | `kall-features.spec.ts` | screen + tabs (green) · schedule a Kool Kall via CreateKallModal (gated KALL_UI_LIFECYCLE) |
-| Settings sections | `settings-sections.spec.ts` | nav groups + expand General Settings / Profile Creation to their items (read-only, green) |
-| Verticals features | `verticals-features.spec.ts` | KNews search · KDirectory · KCloud storage · KDoc/KOS tools · E-Commerce grid render (green) |
-| Contacts | `contacts.spec.ts` | contact rail lists + searchable · blocked-contacts screen (read-only) · block→unblock (gated, self-restoring) |
-| Group | `group.spec.ts` | create-group modal → Group Name + member → submit → delete (gated, self-cleaning) |
-| Profile edit | `profile-edit.spec.ts` | own profile → About section edit pencil → Update → verify → restore (gated, self-restoring) |
-| Profile actions | `profile-actions.spec.ts` | three-dot menu (Change Picture/Share/Logout) + About/Experience/Education sections (green) · Experience add (gated) |
-| Settings theme | `settings-theme.spec.ts` | Personalize → change KPost layout theme → Apply → verify active → restore original (gated, self-restoring) |
+| Katchup search | `katchup-search-functional.spec.ts` | type in the search box → the conversation list filters to the match (read-only, safe) |
+| Katchup two-session | `katchup-two-session-e2e.spec.ts` | account 1 sends → account 2 (own context) receives + Reply/Comment/Clarify + read receipt (gated, self-clean) |
+| Katchup Copy / Confidential / Bulk | `katchup-copies-e2e.spec.ts` | 3-account: visible Copy seen by TO · Confidential Copy hidden from TO (NFR-SEC02) · bulk to many (gated) |
+| KMail compose | `kmail-compose-e2e.spec.ts` | /writemail form renders (To/Subject/body, green) · compose → send (gated KMAIL_UI_LIFECYCLE) |
+| Kall features | `kall-features-functional.spec.ts` | screen + tabs (green) · schedule a Kool Kall via CreateKallModal (gated KALL_UI_LIFECYCLE) |
+| Settings sections | `settings-sections-screens.spec.ts` | nav groups + expand General Settings / Profile Creation to their items (read-only, green) |
+| Verticals features | `verticals-features-screens.spec.ts` | KNews search · KDirectory · KCloud storage · KDoc/KOS tools · E-Commerce grid render (green) |
+| Contacts | `contacts-screens.spec.ts` | contact rail lists + searchable · blocked-contacts screen (read-only) · block→unblock (gated, self-restoring) |
+| Group | `group-create-functional.spec.ts` | create-group modal → Group Name + member → submit → delete (gated, self-cleaning) |
+| Profile edit | `profile-edit-e2e.spec.ts` | own profile → About section edit pencil → Update → verify → restore (gated, self-restoring) |
+| Profile actions | `profile-actions-e2e.spec.ts` | three-dot menu (Change Picture/Share/Logout) + About/Experience/Education sections (green) · Experience add (gated) |
+| Settings theme | `settings-theme-e2e.spec.ts` | Personalize → change KPost layout theme → Apply → verify active → restore original (gated, self-restoring) |
 
 ## Deep write flows (planned — gated, need live tuning)
 

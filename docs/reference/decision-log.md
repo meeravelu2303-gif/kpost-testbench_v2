@@ -47,6 +47,32 @@ response documented and shapes everything … with perfect and neat folder and f
   - `kos/` and `concurrency/` stay folders, so their exclusion stays by folder.
   - Product commands and `scripts/run-level.mjs` list the new folders. API bug tags hash the endpoint
     and validator, not the file, so no tag changed.
+- **Flows confirmed 49 more source schemas.**
+  - The flows trial ran on the new folders, checking schemas only on success answers. 115 of 191 are now
+    adopted (83 KPost, 32 KMail), with 0 mismatches.
+  - The rest are not yet confirmed: the engine never runs them (SMS kill-switch, live-safety flags) or
+    no flow drives them.
+  - In the flow check, a FAILURE body is skipped: a schema would pass it vacuously.
+- **Every UI spec ends in its kind.** 119 kpost-ui/admin-ui files were renamed to
+  `<module>-<area>-<kind>.spec.ts` (e.g. `katchup/katchup-actions.spec.ts` →
+  `katchup/katchup-actions-e2e.spec.ts`, `platform/shell.spec.ts` → `platform/platform-shell-screens.spec.ts`).
+  - `src/bug-tracker/findings/ui-spec-renames.json` maps each new path to its old one, so no UI bug's
+    tag changed. Self-test: `ui-fingerprint-path.spec.ts`.
+  - Updated to the new names: `UI_FILING_SPECS`, the Katchup feature map, the coverage ledgers,
+    `package.json` and the docs.
+  - For distinct names: the API coverage specs became `coverage/<module>-coverage.spec.ts`, KNews became
+    `engine/knews-endpoints.spec.ts`, and KMail's became `coverage/kmail-api.spec.ts`.
+- **Two bench faults found by the trial, fixed:**
+  - The Settings flows read qatest1's row, but the Settings endpoints sign in as `personal-5`. Now
+    `tests/support/settings-caller.ts` gives the flows the endpoints' own caller.
+  - `settings-notifications-workflow` sent an invented `{enable: 0}` body. It now sends the web's
+    four-key body, flips Do Not Disturb, and restores the exact original.
+- **Filed #13372** (KDiary): a report written between 00:00 and 05:30 IST is "today's report"
+  (`getTodayReport`), but edit/delete refuse it with 403 "not created today". Their day is the UTC day;
+  the read's window falls on the server's IST day. Reproduced alone and replayed live.
+- **Notification setters (#13275-#13277, open, no comment):** a control on qatest6 showed the first
+  write to an account with no settings row succeeds and creates it; every write after that, even the
+  web's exact body, answers 400. The control's row was deleted again.
 - **Leads from the code review, to replay live before any filing:**
   - Data handed to anyone, or to any logged-in user: `shareUserDetails` (no token),
     `getUserProfileUsingKpostID` (whole entity), `addingUserForReallocateByAdmin` (bcrypt hash),

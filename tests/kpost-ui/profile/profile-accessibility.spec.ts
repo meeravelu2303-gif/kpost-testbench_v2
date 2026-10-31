@@ -9,7 +9,7 @@ import { writeFileSync } from 'node:fs';
 
 /**
  * axe-core WCAG scan of Profile's dynamic states (three-dot menu open, Share modal open), which the
- * per-screen sweep in accessibility-axe.spec.ts does not reach.
+ * per-screen sweep in platform-axe-accessibility.spec.ts does not reach.
  */
 test.describe(
   'KPost Profile · dynamic-state accessibility (axe-core WCAG)',

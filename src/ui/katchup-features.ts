@@ -35,7 +35,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['BR-K01', 'FR-K02'],
     category: 'compose',
     status: 'built',
-    spec: 'katchup-compose.spec.ts',
+    spec: 'katchup-compose-e2e.spec.ts',
   },
   {
     id: 'compose-body',
@@ -44,7 +44,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 0,
     category: 'compose',
     status: 'built',
-    spec: 'katchup-compose.spec.ts',
+    spec: 'katchup-compose-e2e.spec.ts',
   },
   {
     id: 'send-1to1',
@@ -53,7 +53,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 0,
     category: 'compose',
     status: 'built',
-    spec: 'katchup-compose.spec.ts',
+    spec: 'katchup-compose-e2e.spec.ts',
   },
   {
     id: 'attachments',
@@ -70,7 +70,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 14,
     category: 'compose',
     status: 'built',
-    spec: 'katchup-copies.spec.ts',
+    spec: 'katchup-copies-e2e.spec.ts',
   },
   {
     id: 'confidential-copy',
@@ -79,7 +79,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 14,
     category: 'compose',
     status: 'built',
-    spec: 'katchup-copies.spec.ts',
+    spec: 'katchup-copies-e2e.spec.ts',
   },
   {
     id: 'group-send',
@@ -89,7 +89,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     category: 'compose',
     status: 'needs-received',
     reason:
-      'the 3-account harness exists (create is `group.spec.ts`); group SEND + per-recipient receipts is the remaining multi-account flow to record',
+      'the 3-account harness exists (create is `group-create-functional.spec.ts`); group SEND + per-recipient receipts is the remaining multi-account flow to record',
   },
   {
     id: 'read-receipts',
@@ -97,7 +97,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['FR-K07', 'BR-X01'],
     category: 'compose',
     status: 'built',
-    spec: 'katchup-two-session.spec.ts',
+    spec: 'katchup-two-session-e2e.spec.ts',
   },
   {
     id: 'secret-message',
@@ -115,7 +115,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 19,
     category: 'compose',
     status: 'built',
-    spec: 'katchup-copies.spec.ts',
+    spec: 'katchup-copies-e2e.spec.ts',
   },
   {
     id: 'schedule-call',
@@ -154,7 +154,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 6,
     category: 'sender-action',
     status: 'built',
-    spec: 'katchup-actions.spec.ts',
+    spec: 'katchup-actions-e2e.spec.ts',
   },
   {
     id: 'recall',
@@ -163,7 +163,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 7,
     category: 'sender-action',
     status: 'built',
-    spec: 'katchup-compose.spec.ts',
+    spec: 'katchup-compose-e2e.spec.ts',
   },
   {
     id: 'recall-repost',
@@ -190,7 +190,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 3,
     category: 'sender-action',
     status: 'built',
-    spec: 'katchup-actions-more.spec.ts',
+    spec: 'katchup-actions-more-e2e.spec.ts',
   },
   {
     id: 'transfer',
@@ -215,7 +215,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['FR-K17'],
     category: 'sender-action',
     status: 'built',
-    spec: 'katchup-actions.spec.ts',
+    spec: 'katchup-actions-e2e.spec.ts',
   },
   {
     id: 'save',
@@ -223,7 +223,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['FR-K18'],
     category: 'sender-action',
     status: 'built',
-    spec: 'katchup-actions.spec.ts',
+    spec: 'katchup-actions-e2e.spec.ts',
   },
   {
     id: 'mark-important',
@@ -248,7 +248,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['FR-K20'],
     category: 'sender-action',
     status: 'built',
-    spec: 'katchup-actions.spec.ts',
+    spec: 'katchup-actions-e2e.spec.ts',
   },
   {
     id: 'print',
@@ -267,7 +267,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 1,
     category: 'recipient-action',
     status: 'built',
-    spec: 'katchup-two-session.spec.ts',
+    spec: 'katchup-two-session-e2e.spec.ts',
   },
   {
     id: 'comment',
@@ -276,7 +276,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 8,
     category: 'recipient-action',
     status: 'built',
-    spec: 'katchup-two-session.spec.ts',
+    spec: 'katchup-two-session-e2e.spec.ts',
   },
   {
     id: 'clarify',
@@ -285,7 +285,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     messageType: 9,
     category: 'recipient-action',
     status: 'built',
-    spec: 'katchup-two-session.spec.ts',
+    spec: 'katchup-two-session-e2e.spec.ts',
   },
   {
     id: 'report',
@@ -303,7 +303,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     category: 'recipient-action',
     status: 'needs-received',
     reason:
-      'the recipient More menu (`katchup-two-session.spec.ts` harness) — sub-flow needs recording',
+      'the recipient More menu (`katchup-two-session-e2e.spec.ts` harness) — sub-flow needs recording',
   },
 
   // ── Read / search / reference ───────────────────────────────────────────────────────────────────
@@ -313,7 +313,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['FR-K01'],
     category: 'read-search',
     status: 'built',
-    spec: 'katchup-search.spec.ts',
+    spec: 'katchup-search-functional.spec.ts',
   },
   {
     id: 'conversation-open',
@@ -321,7 +321,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['FR-K01'],
     category: 'read-search',
     status: 'built',
-    spec: 'katchup-compose.spec.ts',
+    spec: 'katchup-compose-e2e.spec.ts',
   },
   {
     id: 'unread-count',
@@ -337,7 +337,7 @@ export const KATCHUP_FEATURES: readonly KatchupFeature[] = [
     fr: ['FR-K16'],
     category: 'read-search',
     status: 'built',
-    spec: 'katchup-two-session.spec.ts',
+    spec: 'katchup-two-session-e2e.spec.ts',
   },
 ];
 

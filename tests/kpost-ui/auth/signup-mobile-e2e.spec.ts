@@ -82,7 +82,7 @@ test.describe(
       recordCreatedAccount({
         kpostId: fullKpostId,
         mobileNumber,
-        source: 'signup-mobile-lifecycle.spec.ts (UI, 480×900)',
+        source: 'signup-mobile-e2e.spec.ts (UI, 480×900)',
         note: 'Personal registration driven end-to-end at mobile viewport width',
       });
 

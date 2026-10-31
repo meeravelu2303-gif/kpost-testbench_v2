@@ -1,4 +1,6 @@
+import { existsSync } from 'node:fs';
 import { uiSuiteForFile } from '../../../src/bug-tracker/findings/bug-candidate';
+import uiSpecRenames from '../../../src/bug-tracker/findings/ui-spec-renames.json' with { type: 'json' };
 import {
   uiFingerprint,
   uiFingerprintPath,
@@ -35,6 +37,22 @@ test.describe('UI fingerprints survive the folder rename @framework', () => {
     expect(uiFingerprint({ ...failure, file: 'tests/kpost-ui/kmail/inbox.spec.ts' })).not.toBe(
       uiFingerprint({ ...failure, file: 'tests/kpost-ui/katchup/inbox.spec.ts' }),
     );
+  });
+
+  test('a spec renamed to its kind (2026-10-31) keeps the tag of its old name', () => {
+    expect(
+      uiFingerprint({ ...failure, file: 'tests/kpost-ui/katchup/katchup-actions-e2e.spec.ts' }),
+    ).toBe(uiFingerprint({ ...failure, file: 'tests/e2e/katchup/katchup-actions.spec.ts' }));
+    expect(uiFingerprintPath('tests\\admin-ui\\auth\\admin-login-functional.spec.ts')).toBe(
+      'tests/e2e-admin/auth/admin-login.spec.ts',
+    );
+  });
+
+  test('every renamed spec exists under its new name, and no old name is left', () => {
+    for (const [now, before] of Object.entries(uiSpecRenames)) {
+      expect(existsSync(now), `${now} exists`).toBe(true);
+      expect(existsSync(before), `${before} is gone`).toBe(false);
+    }
   });
 
   test('the Admin UI folder still routes to the KPost Admin UI product', () => {

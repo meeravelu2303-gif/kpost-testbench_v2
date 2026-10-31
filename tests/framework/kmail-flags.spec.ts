@@ -88,7 +88,7 @@ test.describe('test account registry @framework', () => {
   });
 
   test('the domain policy itself matches the product', () => {
-    // See signup-domain.spec.ts.
+    // See signup-domain-validation.spec.ts.
     expect(domainFor('PERSONAL')).toBe('kpostindia.com');
     for (const type of ['BUSINESS_S', 'BUSINESS_M', 'BUSINESS_L'] as const) {
       expect(domainFor(type), `${type} is a business type`).toBe('kpost.in');

@@ -74,7 +74,7 @@ test.describe(
       await settingsPage.goto();
       await settingsPage.openPanel('General Settings', 'Data Storage');
 
-      // The plan rows are now reachable only on /kcloud (kcloud.spec.ts); when they never appear here
+      // The plan rows are now reachable only on /kcloud (kcloud-functional.spec.ts); when they never appear here
       // it is recorded, not failed, since the dead "Buy" button is the test above's finding.
       await page.getByRole('button', { name: /^Buy$/i }).first().click();
       const rows = await page

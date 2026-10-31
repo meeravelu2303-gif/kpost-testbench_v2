@@ -91,16 +91,20 @@ const MODULE_SCOPE: Record<string, Scope> = {
 
 /** Routes from MenuRoutes.js → the e2e spec that covers the screen (or none yet). */
 const SCREENS: Array<{ route: string; spec: string | null; note: string }> = [
-  { route: '/login', spec: 'login.spec.ts', note: 'two-step login' },
-  { route: '/home', spec: 'home.spec.ts', note: 'landing + recent panel' },
-  { route: '(shell)', spec: 'shell.spec.ts', note: 'header + nav rail (all screens)' },
-  { route: '/katchup', spec: 'katchup.spec.ts', note: 'messaging' },
-  { route: '/kall', spec: 'kall.spec.ts', note: 'calling' },
-  { route: '/kmail', spec: 'kmail.spec.ts', note: 'email' },
-  { route: '/userprofile', spec: 'profile.spec.ts', note: 'profile + settings' },
+  { route: '/login', spec: 'login-screens.spec.ts', note: 'two-step login' },
+  { route: '/home', spec: 'home-screens.spec.ts', note: 'landing + recent panel' },
+  {
+    route: '(shell)',
+    spec: 'platform-shell-screens.spec.ts',
+    note: 'header + nav rail (all screens)',
+  },
+  { route: '/katchup', spec: 'katchup-screens.spec.ts', note: 'messaging' },
+  { route: '/kall', spec: 'kall-screens.spec.ts', note: 'calling' },
+  { route: '/kmail', spec: 'kmail-screens.spec.ts', note: 'email' },
+  { route: '/userprofile', spec: 'profile-screens.spec.ts', note: 'profile + settings' },
   {
     route: '/settings',
-    spec: 'settings-sections.spec.ts',
+    spec: 'settings-sections-screens.spec.ts',
     note: 'settings workspace + section nav',
   },
   { route: '/kdirectory', spec: null, note: 'out of scope per BRD §4.2' },
@@ -111,7 +115,7 @@ const SCREENS: Array<{ route: string; spec: string | null; note: string }> = [
   { route: '/kdoc', spec: null, note: 'KOS "Coming Soon" today' },
   {
     route: '/usermanagement',
-    spec: 'usermanagement.spec.ts',
+    spec: 'usermanagement-e2e.spec.ts',
     note: 'admin — BUSINESS_S account; also usermanagement-accessibility.spec.ts, usermanagement-security.spec.ts',
   },
 ];

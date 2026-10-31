@@ -355,7 +355,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /admin/updateBankAccountDetails is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definit",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/admin-company-details-lifecycle.spec.ts)",
       "evidence": [
         "AdminController.java:340-369",
         "SignUpLoginServiceImpl.java:1662 builds BankAccount JSON, updateBankDetails(kpostID from token), catch -> FAILURE"
@@ -422,7 +422,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /admin/updateCompanyDetails is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definition.",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/admin-company-details-lifecycle.spec.ts)",
       "evidence": [
         "AdminController.java:371-400",
         "SignUpLoginServiceImpl.java:1685 adminRegistrationRepository.updateCompanyDetails(kpostID from token, companyName, address1, address2, panNumber, gstNumber)",
@@ -491,7 +491,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /admin/updateRole is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definition.ts)",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/admin-member-lifecycle.spec.ts)",
       "evidence": [
         "AdminController.java:256-286",
         "SignUpLoginServiceImpl.java:1637 updateRole(user, caller)",
@@ -665,7 +665,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/aws-feature.spec.ts)",
       "evidence": [
         "integration/PresignedURLController.java:160-194 no statusCode key in any branch",
         "serviceimpl/integration/PreSignedURLServiceImpl.java:379-408 path looked up by (uuid, kpostID) in KMail then Katchup attachments, deleteObject, then marks the row deleted",
@@ -2845,7 +2845,7 @@
         }
       ],
       "confidence": "medium",
-      "liveCheck": "not-run: POST /v2/dashboard/homeDashboardNewMsgs is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-defi",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/dashboard-feature.spec.ts)",
       "evidence": [
         "DashboardControllerV2.java:157-180 forwards the DAO map, putIfAbsent statusCode 200/500, HTTP 200 only when status==SUCCESS",
         "DashboardDaoImpl.java:627-708 native query (\":serverTime\" only inside the firstMsgID clause, but setParameter(\"serverTime\") always runs), limit 20; result keys LastFetchDate, firstMsgID, lastMsgID, katchup, kmail, kall; no-data branch puts message \"No Data Found\"",
@@ -3081,7 +3081,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/group-feature.spec.ts)",
       "evidence": [
         "GroupControllerV2.java:581 @PostMapping(\"deleteGroup\"); :588-599 SUCCESS -> 200, FAILURE -> HTTP from the DAO statusCode, else 500 with the DAO map",
         "GroupServiceDaoImpl.java:250-338 deleteGroup builds every body: 200 messages, 404 null remarks, 400 branches, catch sets STATUS=ERROR (\"error\") + statusCode 500 without a message",
@@ -3339,7 +3339,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/group/getGroupDetailsUsingGroupKpostID/{groupKpostID} is not cleared for the live application (no productionSafe flag — see src/api/",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/group-feature.spec.ts)",
       "evidence": [
         "GroupControllerV2.java:557 @GetMapping(\"getGroupDetailsUsingGroupKpostID/{groupKpostID}\") returns the service ResponseEntity as-is",
         "GroupServiceImpl.java:729-765 member check 403; known_group or unknown_group key (never \"data\"); passCode nulled; 404 when neither found",
@@ -3837,7 +3837,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/kall-feature.spec.ts)",
       "evidence": [
         "KallControllerV3.java:987 @PostMapping(\"getKallStatus\"); :995-1002 400 validation; :1007-1017 SUCCESS puts \"kallStatus\" (String), urlPath \"getKallStatus\", statusCode 200",
         "KallServiceImplV3.java:988 getKallStatus -> KallMasterRepository.getKallStatus Optional<Integer> mapped by KallUtils.kallStatus",
@@ -4020,7 +4020,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/kall-feature.spec.ts)",
       "evidence": [
         "KallControllerV3.java:1086 @PostMapping(\"getKallStatusUsingKallID\"); :1090 kpostID from token; :1105-1113 data = modifyKallResponse(...) list",
         "KallServiceImplV3.java:995 findDistinctKallStatusById(kallID, kpostID)",
@@ -4467,7 +4467,7 @@
         }
       ],
       "confidence": "medium",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/kall-feature.spec.ts)",
       "evidence": [
         "KallControllerV3.java:517 @PostMapping(\"/modifyKallMembers\"); :526-533 kallID check; :545-552 intersection check; :560-565 data = List<KallMaster> from kallServiceV3.addMembersToKall (raw entities)",
         "KallServiceImplV3.java:388 addMembersToKall -> kallDaoV3.addMemberToKall",
@@ -4717,7 +4717,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/kall-feature.spec.ts)",
       "evidence": [
         "KallControllerV3.java:1044 @PostMapping(\"updateSenderAndReceiverKallStatus\"); :1051-1056 only statuses 2,3,4,9,10 are applied; :1057-1063 urlPath \"updateKallStatus\"",
         "KallControllerV3.java:1045-1083: kallDetails.setSender(...) is NEVER called here, unlike updateKallStatus (:357)",
@@ -4894,7 +4894,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/kall-feature.spec.ts)",
       "evidence": [
         "KallControllerV3.java:349 @PostMapping(\"updateKallStatus\"); :357 sender = token kpostID; :362-372 data = modifyKallResponse(list, receiver)",
         "KallServiceImplV3.java:286 updateKallStatus branches on kallStatus (1 connected, 4 decline, 2 cancel, else generic)",
@@ -5053,7 +5053,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/katchup/getDeletedKatchupMsgIds/{lastMsgID} is not cleared for the live application (no productionSafe flag — see src/api/registry/e",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/katchup-lifecycle.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:2062-2094 (urlPath \"/getDeletedKatchupMsgIds\" with a leading slash)",
         "KatchupRepository.java:81-83 native SELECT msg_id ... WHERE msg_id = :lastMsgID AND ((sender=:me AND deleted_by_sender) OR (receiver=:me AND deleted_by_receiver))"
@@ -5872,7 +5872,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/katchup-feature.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:1629-1736 returns katchupService.forwardKatchupMessage(...) unchanged",
         "KatchupServiceImpl.java:1774-1992 forwardKatchupMessage; success 1958-1965 data = modifyKatchupResponse, urlPath \"forwardKatchupMessage\"; 1878 group error says urlPath \"forwardKatchupMessageNew\"",
@@ -6112,7 +6112,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/validation/katchup-rules.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:2205-2289",
         "KatchupServiceImpl.java:2437-2634: type 15 forwards synchronously and collects each inner data list into resultList; type 16 runs CompletableFuture.runAsync and returns immediately with resultList still []",
@@ -6168,7 +6168,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/katchup-presigned-attachment-workflow.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:2463-2532 thumbnail generation started asynchronously (s3ClientService.callingAsyncThumbnailGenerationForVideoAndImage)"
       ],
@@ -6531,7 +6531,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/katchup/getKatchupMessagesSubject/{id} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoi",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/katchup-needs-id-workflow.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:1847-1864 non-empty list -> data; empty -> data [] plus message \"No messages found for the given data\" (still 200)",
         "KatchupRepository.java:33-37 native SELECT DISTINCT CONVERT(subject USING utf8mb4) ... subject IS NOT NULL UNION ... ORDER BY 1 -> List<String>, no nulls"
@@ -6847,7 +6847,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /v2/katchup/getReferenceMSGDetails/ is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-def",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/katchup-shared-reference-workflow.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:1531-1556 empty/null list -> 200 data [] + message \"No messages found for the given data\"; otherwise data list",
         "KatchupServiceImpl.java:2121-2194 returns null when sourceMsgID==0, referenceMessageIDList empty, or source message missing; filters referenced messages to ones the caller sent/received/was a group member of; for type 16/21 sources (or hidden reference chains) sender/receiver/senderName/receiverName are blanked to \"\"",
@@ -7947,7 +7947,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /v2/katchup/uploadMultipartFiles/ is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-defin",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/katchup-multipart-upload.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:851-868",
         "KatchupServiceImpl.java:1343-1388 creates KatchupAttachment with a random UUID and the caller's kpostID, saves it, returns uuid; the S3 upload code is commented out and \"files\" is never read"
@@ -10796,7 +10796,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /v2/profile/changeOrForgotAccessCode is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-de",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-throwaway-account.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:1011-1043",
         "UserProfileDaoImpl.java:842-882 changeAccessCode: PasswordHasher.matches(currentPassword, stored hash) then UPDATE accessCode"
@@ -10898,7 +10898,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /v2/profile/deactivateAccount/: sends a real OTP/SMS/e-mail — BLOCKED (SMS kill-switch); it may run only against a confirmed test gatew",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-throwaway-account.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:1339-1378",
         "SignUpLoginServiceImpl.java:984-1000 deactivateAccount (OTP gate, then UpdatePrimaryAndSecondaryDeviceAsNull, then deactivate)"
@@ -10944,7 +10944,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-feature.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:87-98 profileUpdateFailure: FAILURE -> 500, any other string -> 404 with that string as message",
         "UserProfileControllerV2.java:102-109 profileUpdateError -> 500",
@@ -10998,7 +10998,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-feature.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:87-98 profileUpdateFailure: FAILURE -> 500, any other string -> 404 with that string as message",
         "UserProfileControllerV2.java:102-109 profileUpdateError -> 500",
@@ -11052,7 +11052,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-feature.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:87-98 profileUpdateFailure: FAILURE -> 500, any other string -> 404 with that string as message",
         "UserProfileControllerV2.java:102-109 profileUpdateError -> 500",
@@ -11099,7 +11099,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-feature.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:87-98 profileUpdateFailure: FAILURE -> 500, any other string -> 404 with that string as message",
         "UserProfileControllerV2.java:102-109 profileUpdateError -> 500",
@@ -11146,7 +11146,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-feature.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:87-98 profileUpdateFailure: FAILURE -> 500, any other string -> 404 with that string as message",
         "UserProfileControllerV2.java:102-109 profileUpdateError -> 500",
@@ -11642,7 +11642,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-throwaway-account.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:1633-1664",
         "UserProfileServiceImpl.java:455-474",
@@ -11942,7 +11942,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /v2/profile/updateDeviceAsPrimary/: sends a real OTP/SMS/e-mail — BLOCKED (SMS kill-switch); it may run only against a confirmed test g",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-throwaway-account.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:1512-1551",
         "UserProfileServiceImpl.java:434-447 updateDeviceAsPrimary (OTP check via isMobileNumberValidOrNot, clears then sets primary)",
@@ -11989,7 +11989,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-10-31 (in kpost-api/flows/profile-throwaway-account.spec.ts)",
       "evidence": ["UserProfileControllerV2.java:1666-1705", "UserProfileServiceImpl.java:476-489"],
       "notes": "Same shape as updateDeviceAsPrimary."
     },

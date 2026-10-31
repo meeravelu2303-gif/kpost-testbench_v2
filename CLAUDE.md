@@ -107,10 +107,14 @@ tests/ — one folder per Bugzilla product, each with its own smoke/ and sanity/
                         verticals platform cross-layer (+ journeys/ support/)
   admin-ui/<area>/      KPost Admin UI by menu area: auth screens admin-setup human-resources cross-layer (+ support/)
   setup/ · framework/ · support/   logins that save sessions · bench self-tests · helpers shared by products
-  UI bug tags are hashed from the pre-2026-10-27 folder names (uiFingerprintPath), so a move keeps each bug's tag.
-  UI file names: <module>/<module>-<area>.spec.ts, the suffix saying the kind of test: -e2e (multi-step flow
-  that writes data), -validation (invalid input refused AND valid input accepted), -api-handling (server
-  errors shown to the user), -security, -accessibility. Shared helpers go in support/, never in a spec.
+  UI bug tags are hashed from the pre-2026-10-27 folder names and pre-2026-10-31 file names (uiFingerprintPath,
+  `src/bug-tracker/findings/ui-spec-renames.json`), so a move or rename keeps each bug's tag: add the old
+  path there when you rename a UI spec.
+  UI file names: <module>/<module>-<area>-<kind>.spec.ts, every file ending in its kind: -e2e (multi-step
+  flow that writes data), -functional (one screen's behaviour, read-only or local state), -screens
+  (render/health/layout sweeps), -validation (invalid input refused AND valid input accepted),
+  -api-handling (server errors shown to the user), -security, -accessibility, -resilience, -responsive,
+  -visual, -performance, -smoke. KOS/KDoc specs (excluded) keep their names. Shared helpers go in support/.
 mobile/patrol_test/     KPost Mobile: <module>/<flow>_test.dart (auth/, katchup/, …) + support/; mobile/.app = the
                         app copy they run in (generated, gitignored)
 contracts/, openapi/    GENERATED from the Excel workbook. Never hand-edit

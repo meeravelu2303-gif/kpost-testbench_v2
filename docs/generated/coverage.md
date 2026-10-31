@@ -143,21 +143,21 @@ Covered: **13 / 15** routes.
 
 | Route | e2e spec | Note |
 | ----- | -------- | ---- |
-| `/login` | `login.spec.ts` | two-step login |
-| `/home` | `home.spec.ts` | landing + recent panel |
-| `(shell)` | `shell.spec.ts` | header + nav rail (all screens) |
-| `/katchup` | `katchup.spec.ts` | messaging |
-| `/kall` | `kall.spec.ts` | calling |
-| `/kmail` | `kmail.spec.ts` | email |
-| `/userprofile` | `profile.spec.ts` | profile + settings |
-| `/settings` | `settings-sections.spec.ts` | settings workspace + section nav |
+| `/login` | `login-screens.spec.ts` | two-step login |
+| `/home` | `home-screens.spec.ts` | landing + recent panel |
+| `(shell)` | `platform-shell-screens.spec.ts` | header + nav rail (all screens) |
+| `/katchup` | `katchup-screens.spec.ts` | messaging |
+| `/kall` | `kall-screens.spec.ts` | calling |
+| `/kmail` | `kmail-screens.spec.ts` | email |
+| `/userprofile` | `profile-screens.spec.ts` | profile + settings |
+| `/settings` | `settings-sections-screens.spec.ts` | settings workspace + section nav |
 | `/kdirectory` | — | out of scope per BRD §4.2 |
 | `/kcloud` | `auxiliary.spec.ts` | smoke (no API) |
 | `/kbooking` | `auxiliary.spec.ts` | smoke (no API) |
 | `/knews` | `auxiliary.spec.ts` | smoke (external RSS) |
 | `/e-commerce` | `auxiliary.spec.ts` | smoke (third-party) |
 | `/kdoc` | — | KOS "Coming Soon" today |
-| `/usermanagement` | `usermanagement.spec.ts` | admin — BUSINESS_S account; also usermanagement-accessibility.spec.ts, usermanagement-security.spec.ts |
+| `/usermanagement` | `usermanagement-e2e.spec.ts` | admin — BUSINESS_S account; also usermanagement-accessibility.spec.ts, usermanagement-security.spec.ts |
 
 ## What "complete" is blocked on
 

@@ -189,7 +189,7 @@ const ALL_AUTHENTICATED_SCREENS: readonly ScreenDef[] = [
   },
 ];
 
-/** Screens that need the BUSINESS_S company-admin session (`screens-business.spec.ts`). */
+/** Screens that need the BUSINESS_S company-admin session (`platform-business-screens.spec.ts`). */
 const ALL_BUSINESS_SCREENS: readonly ScreenDef[] = [
   {
     route: '/usermanagement',
@@ -263,9 +263,9 @@ const notPaused = (screen: ScreenDef): boolean => !PAUSED_SCREENS.has(screen.scr
 /** PERSONAL-session screens — what the sweep batches, axe, crawl, visual and interaction specs drive. */
 export const AUTHENTICATED_SCREENS: readonly ScreenDef[] =
   ALL_AUTHENTICATED_SCREENS.filter(notPaused);
-/** BUSINESS_S-session screens — `screens-business.spec.ts`. */
+/** BUSINESS_S-session screens — `platform-business-screens.spec.ts`. */
 export const BUSINESS_SCREENS: readonly ScreenDef[] = ALL_BUSINESS_SCREENS.filter(notPaused);
-/** No-session screens — `screens-public.spec.ts`. */
+/** No-session screens — `platform-public-screens.spec.ts`. */
 export const PUBLIC_SCREENS: readonly ScreenDef[] = ALL_PUBLIC_SCREENS.filter(notPaused);
 /** Every screen the bench knows, for the coverage ledger. */
 export const ALL_SCREENS: readonly ScreenDef[] = [

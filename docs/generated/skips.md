@@ -66,39 +66,40 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 | 1 | the group send did not return a msgID (replied …) | `tests/kpost-api/security/katchup-object-authorization.spec.ts:246` |
 | 1 | createEvent did not return a usable eventID; cannot continue | `tests/kpost-api/security/kdiary-object-authorization.spec.ts:54` |
 | 1 | blocked by Bugzilla #499 (kword/create 500) — activates automatically once a docId is issued (create replied …) | `tests/kpost-api/security/kword-object-authorization.spec.ts:58` |
-| 1 | … is genuinely already registered — set a fresh QA_SIGNUP_UI_MOBILE the signup screen's mobile Verify step is broken (a repeat of #720): it misreports this free number as taken, so the OTP modal never opens | `tests/kpost-ui/auth/signup-login-lifecycle.spec.ts:75` |
-| 1 | invalid the OTP box just rejected the bypass code — likely test-infra noise (rate-limiting from concurrent heavy traffic on this host, see #721/INVALID), not a real defect; re-run once no other suite is hitting the same API host | `tests/kpost-ui/auth/signup-login-lifecycle.spec.ts:87` |
+| 1 | … is genuinely already registered — set a fresh QA_SIGNUP_UI_MOBILE the signup screen's mobile Verify step is broken (a repeat of #720): it misreports this free number as taken, so the OTP modal never opens | `tests/kpost-ui/auth/signup-login-e2e.spec.ts:75` |
+| 1 | invalid the OTP box just rejected the bypass code — likely test-infra noise (rate-limiting from concurrent heavy traffic on this host, see #721/INVALID), not a real defect; re-run once no other suite is hitting the same API host | `tests/kpost-ui/auth/signup-login-e2e.spec.ts:87` |
 | 1 | the message did not send (see Katchup send defects) — edit state not reachable | `tests/kpost-ui/katchup/katchup-functional.spec.ts:140` |
 | 1 | blocked by #1343 — group thread older-page request 500s on open | `tests/kpost-ui/katchup/katchup-group-receipts-e2e.spec.ts:89` |
-| 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a compose finding | `tests/kpost-ui/kmail/kmail-compose.spec.ts:16` |
-| 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a composer-control finding | `tests/kpost-ui/kmail/kmail-composer-controls.spec.ts:30` |
+| 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a compose finding | `tests/kpost-ui/kmail/kmail-compose-e2e.spec.ts:16` |
+| 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a composer-control finding | `tests/kpost-ui/kmail/kmail-composer-controls-functional.spec.ts:30` |
 | 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a compose-fuzz finding | `tests/kpost-ui/kmail/kmail-security.spec.ts:58` |
 
 ## Provision — an account, connection, host or secret this machine lacks (380)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
-| 86 | qa.bench needs a real live account (QA_KPOST_ID) | `tests/kpost-ui/auth/login-session.spec.ts:14`, `tests/kpost-ui/auth/login-session.spec.ts:80`, `tests/kpost-ui/auth/login-token-security.spec.ts:16`, `tests/kpost-ui/auth/login-token-security.spec.ts:91` +82 more |
+| 86 | qa.bench needs a real live account (QA_KPOST_ID) | `tests/kpost-ui/auth/login-screens.spec.ts:12`, `tests/kpost-ui/auth/login-session-functional.spec.ts:14`, `tests/kpost-ui/auth/login-session-functional.spec.ts:80`, `tests/kpost-ui/auth/login-token-security.spec.ts:16` +82 more |
 | 33 | needs the KPOST_QA connection | `tests/framework/_diff-accounts.local.spec.ts:23`, `tests/framework/_snapshot-accounts.local.spec.ts:22`, `tests/kmail-api/flows/workflow-db.spec.ts:105`, `tests/kmail-api/flows/workflow-db.spec.ts:136` +29 more |
-| 25 | qa.bench needs both QA accounts | `tests/kpost-ui/contacts/contacts.spec.ts:61`, `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:47`, `tests/kpost-ui/group/group-exit-e2e.spec.ts:95`, `tests/kpost-ui/group/group-security.spec.ts:18` +21 more |
-| 19 | (no reason string) kmailAuthGate() !== undefined, kmailAuthGate() ?? '' | `tests/kmail-api/coverage/kmail.spec.ts:16`, `tests/kmail-api/engine/contract.spec.ts:8`, `tests/kmail-api/engine/read.spec.ts:12`, `tests/kmail-api/flows/attachment-integrity.spec.ts:29` +15 more |
+| 25 | qa.bench needs both QA accounts | `tests/kpost-ui/contacts/contacts-screens.spec.ts:61`, `tests/kpost-ui/cross-layer/cross-layer-flows-e2e.spec.ts:47`, `tests/kpost-ui/group/group-exit-e2e.spec.ts:95`, `tests/kpost-ui/group/group-security.spec.ts:18` +21 more |
+| 19 | (no reason string) kmailAuthGate() !== undefined, kmailAuthGate() ?? '' | `tests/kmail-api/coverage/kmail-api.spec.ts:16`, `tests/kmail-api/engine/contract.spec.ts:8`, `tests/kmail-api/engine/read.spec.ts:12`, `tests/kmail-api/flows/attachment-integrity.spec.ts:29` +15 more |
 | 11 | needs the KPOST_QA connection to judge by the row | `tests/kmail-api/security/mutation-idor.spec.ts:36`, `tests/kpost-api/security/group-object-authorization.spec.ts:250`, `tests/kpost-api/security/group-object-authorization.spec.ts:464`, `tests/kpost-api/security/group-object-authorization.spec.ts:552` +7 more |
-| 9 | account registry says which role is missing (requireAll) | `tests/kmail-api/flows/workflow-db.spec.ts:36`, `tests/kpost-api/flows/contacts-workflow.spec.ts:21`, `tests/kpost-api/flows/contacts-workflow.spec.ts:159`, `tests/kpost-api/flows/profile-workflow.spec.ts:19` +5 more |
-| 9 | qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/kpost-ui/contacts/contacts.spec.ts:10`, `tests/kpost-ui/katchup/katchup-actions-more.spec.ts:34`, `tests/kpost-ui/katchup/katchup-actions.spec.ts:23`, `tests/kpost-ui/katchup/katchup-compose.spec.ts:32` +5 more |
-| 8 | qa.business needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID) | `tests/kpost-ui/platform/screens-business.spec.ts:21`, `tests/kpost-ui/settings/settings-business-bank-details.spec.ts:19`, `tests/kpost-ui/settings/settings-business-company-details.spec.ts:20`, `tests/kpost-ui/user-management/usermanagement-accessibility.spec.ts:32` +4 more |
+| 9 | qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/kpost-ui/contacts/contacts-screens.spec.ts:10`, `tests/kpost-ui/katchup/katchup-actions-e2e.spec.ts:23`, `tests/kpost-ui/katchup/katchup-actions-more-e2e.spec.ts:34`, `tests/kpost-ui/katchup/katchup-compose-e2e.spec.ts:32` +5 more |
+| 8 | qa.business needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID) | `tests/kpost-ui/platform/platform-business-screens.spec.ts:21`, `tests/kpost-ui/settings/settings-business-bank-details-e2e.spec.ts:19`, `tests/kpost-ui/settings/settings-business-company-details-e2e.spec.ts:20`, `tests/kpost-ui/user-management/usermanagement-accessibility.spec.ts:32` +4 more |
 | 7 | needs the 2nd QA account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/contacts/contacts-digitalcard-validation.spec.ts:21`, `tests/kpost-ui/kall/kall-validation.spec.ts:81`, `tests/kpost-ui/katchup/katchup-attachment-message-validation.spec.ts:101`, `tests/kpost-ui/katchup/katchup-compose-validation.spec.ts:19` +3 more |
 | 6 | qa.business.m needs the BUSINESS_M account of the QA testing company (QA_BUSINESS_M_KPOST_ID) | `tests/admin-api/engine/endpoint-matrix.spec.ts:345`, `tests/admin-api/maintenance/qa-leftovers-cleanup.spec.ts:40`, `tests/admin-api/performance/latency.spec.ts:149`, `tests/admin-api/validation/field-rules-sweep.spec.ts:325` +2 more |
-| 6 | qa.bench qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/kmail-api/flows/reply-forward-workflow.spec.ts:51`, `tests/kpost-api/flows/katchup-unread-count-clears-on-read.spec.ts:36`, `tests/kpost-ui/katchup/katchup-received-actions.spec.ts:78`, `tests/kpost-ui/katchup/katchup-two-session.spec.ts:44` +2 more |
+| 6 | qa.bench qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/kmail-api/flows/reply-forward-workflow.spec.ts:51`, `tests/kpost-api/flows/katchup-unread-count-clears-on-read.spec.ts:36`, `tests/kpost-ui/katchup/katchup-received-actions-e2e.spec.ts:78`, `tests/kpost-ui/katchup/katchup-two-session-e2e.spec.ts:44` +2 more |
+| 6 | account registry says which role is missing (requireAll) | `tests/kmail-api/flows/workflow-db.spec.ts:36`, `tests/kpost-api/flows/contacts-workflow.spec.ts:21`, `tests/kpost-api/flows/contacts-workflow.spec.ts:159`, `tests/kpost-api/flows/profile-workflow.spec.ts:19` +2 more |
 | 5 | qa.business.m needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID) | `tests/admin-api/flows/feature.spec.ts:63`, `tests/admin-api/flows/reads-workflow.spec.ts:16`, `tests/admin-api/security/cross-tenant-reads.spec.ts:16`, `tests/admin-api/security/probes.spec.ts:15` +1 more |
 | 5 | needs the KPOST_QA connection to assert persistence | `tests/kmail-api/flows/workflow-db.spec.ts:44`, `tests/kpost-api/flows/katchup-workflow-db.spec.ts:53`, `tests/kpost-api/flows/katchup-workflow-db.spec.ts:92`, `tests/kpost-api/flows/katchup-workflow-db.spec.ts:125` +1 more |
 | 5 | needs two distinct KPost principals | `tests/kpost-api/security/kall-legacy-writes-regression-2026-10-07.spec.ts:19`, `tests/kpost-api/security/kall-object-authorization.spec.ts:519`, `tests/kpost-api/security/katchup-legacy-recall-regression-2026-10-07.spec.ts:19`, `tests/kpost-api/security/katchup-object-authorization.spec.ts:23` +1 more |
-| 4 | qa.bench needs a real account (QA_KPOST_ID) | `tests/kpost-ui/platform/accessibility-axe.spec.ts:27`, `tests/kpost-ui/platform/keyboard-nav.spec.ts:19`, `tests/kpost-ui/platform/network-resilience.spec.ts:19`, `tests/kpost-ui/platform/visual.spec.ts:22` |
+| 4 | qa.bench needs a real account (QA_KPOST_ID) | `tests/kpost-ui/platform/platform-axe-accessibility.spec.ts:27`, `tests/kpost-ui/platform/platform-keyboard-accessibility.spec.ts:19`, `tests/kpost-ui/platform/platform-network-resilience.spec.ts:19`, `tests/kpost-ui/platform/platform-visual.spec.ts:22` |
 | 4 | qa.bench needs a real QA account (QA_KPOST_ID) | `tests/kpost-ui/profile/profile-validation.spec.ts:29`, `tests/kpost-ui/settings/settings-api-handling.spec.ts:37`, `tests/kpost-ui/settings/settings-personalize-validation.spec.ts:14`, `tests/kpost-ui/settings/settings-validation.spec.ts:17` |
 | 3 | not configured for this run: … | `tests/admin-api/smoke/admin-api.smoke.spec.ts:17`, `tests/kmail-api/smoke/kmail-api.smoke.spec.ts:15`, `tests/kpost-api/smoke/kpost-api.smoke.spec.ts:15` |
 | 3 | needs provisioned qatest_* accounts | `tests/kmail-api/flows/workflow-db.spec.ts:42`, `tests/kmail-api/flows/workflow-db.spec.ts:101`, `tests/kmail-api/flows/workflow-db.spec.ts:131` |
 | 3 | needs the primary account | `tests/kpost-api/flows/profile-workflow.spec.ts:54`, `tests/kpost-api/flows/profile-workflow.spec.ts:72`, `tests/kpost-api/flows/profile-workflow.spec.ts:117` |
+| 3 | needs the account the Settings endpoints sign in as (QA_PERSONAL5) | `tests/kpost-api/flows/settings-notifications-workflow.spec.ts:31`, `tests/kpost-api/flows/settings-notifications-workflow.spec.ts:85`, `tests/kpost-api/flows/settings-personalize-workflow.spec.ts:18` |
 | 3 | needs three distinct KPost principals | `tests/kpost-api/security/kall-object-authorization.spec.ts:26`, `tests/kpost-api/security/katchup-cross-account-idor-2026-10-12.spec.ts:35`, `tests/kpost-api/security/katchup-idor-regression-2026-10-03.spec.ts:20` |
-| 3 | qa.bench qa.p3 needs the primary, 2nd and personal-3 QA accounts | `tests/kpost-ui/group/group-info.spec.ts:65`, `tests/kpost-ui/group/group-member-profile-session.spec.ts:28`, `tests/kpost-ui/group/group-post-targeting.spec.ts:25` |
+| 3 | qa.bench qa.p3 needs the primary, 2nd and personal-3 QA accounts | `tests/kpost-ui/group/group-info-functional.spec.ts:65`, `tests/kpost-ui/group/group-member-profile-session-functional.spec.ts:28`, `tests/kpost-ui/group/group-post-targeting-e2e.spec.ts:25` |
 | 3 | needs both QA accounts, qatest1 and qatest3 | `tests/kpost-ui/kmail/kmail-browse-e2e.spec.ts:28`, `tests/kpost-ui/kmail/kmail-phone-e2e.spec.ts:24`, `tests/kpost-ui/kmail/kmail-status-e2e.spec.ts:32` |
 | 3 | needs the second QA account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/smoke/contacts.smoke.spec.ts:16`, `tests/kpost-ui/smoke/katchup.smoke.spec.ts:24`, `tests/kpost-ui/smoke/kmail.smoke.spec.ts:22` |
 | 2 | qa.business.m needs the BUSINESS_M account of the QA testing company (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID) | `tests/admin-api/flows/role-posting-lifecycle.spec.ts:122`, `tests/admin-api/flows/role-posting-lifecycle.spec.ts:516` |
@@ -108,9 +109,9 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 | 2 | needs the personal and personal-3 principals | `tests/kpost-api/security/kdiary-object-authorization.spec.ts:40`, `tests/kpost-api/security/profile-record-object-authorization.spec.ts:47` |
 | 2 | needs QA_PASSWORD | `tests/kpost-api/security/signup-login-session.spec.ts:59`, `tests/kpost-api/security/signup-login-session.spec.ts:106` |
 | 2 | no KPost principal configured | `tests/kpost-api/security/signup-login-session.spec.ts:68`, `tests/kpost-api/security/signup-login-session.spec.ts:109` |
-| 2 | qa.bench needs a real live account | `tests/kpost-ui/kall/kall-features.spec.ts:106`, `tests/kpost-ui/profile/profile-actions.spec.ts:61` |
-| 2 | qa.bench needs a live QA account | `tests/kpost-ui/kmail/kmail-api-handling.spec.ts:16`, `tests/kpost-ui/platform/app-hardcoded-host.spec.ts:17` |
-| 2 | needs a second QA account as the recipient | `tests/kpost-ui/kmail/kmail-composer-controls.spec.ts:257`, `tests/kpost-ui/kmail/kmail-composer-controls.spec.ts:299` |
+| 2 | qa.bench needs a real live account | `tests/kpost-ui/kall/kall-features-functional.spec.ts:106`, `tests/kpost-ui/profile/profile-actions-e2e.spec.ts:61` |
+| 2 | qa.bench needs a live QA account | `tests/kpost-ui/kmail/kmail-api-handling.spec.ts:16`, `tests/kpost-ui/platform/platform-hardcoded-host-security.spec.ts:17` |
+| 2 | needs a second QA account as the recipient | `tests/kpost-ui/kmail/kmail-composer-controls-functional.spec.ts:257`, `tests/kpost-ui/kmail/kmail-composer-controls-functional.spec.ts:299` |
 | 2 | needs a real QA account (QA_KPOST_ID) | `tests/kpost-ui/verticals/kdiary-participants-validation.spec.ts:26`, `tests/kpost-ui/verticals/kdirectory-validation.spec.ts:14` |
 | 1 | roleEmployeeMobile roleEmployeeEmail needs the reserved QA test-employee identity in .env (QA_ROLE_EMPLOYEE_MOBILE + QA_ROLE_EMPLOYEE_EMAIL) | `tests/admin-api/flows/role-posting-lifecycle.spec.ts:118` |
 | 1 | list delete maintenance only: set ADMIN_QA_CLEANUP=list (read-only) or ADMIN_QA_CLEANUP=delete | `tests/admin-api/maintenance/qa-leftovers-cleanup.spec.ts:36` |
@@ -118,8 +119,8 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 | 1 | roleEmployeeMobile roleEmployeeEmail needs ADMIN_ROLE_POSTING_LIVE=true and the reserved QA employee identity (QA_ROLE_EMPLOYEE_MOBILE/EMAIL) | `tests/admin-api/performance/latency.spec.ts:272` |
 | 1 | needs ADMIN_API_BASE_URL (the Admin test box) | `tests/admin-api/sanity/read-sweep.spec.ts:15` |
 | 1 | needs both BUSINESS_M and BUSINESS_S principals | `tests/admin-api/security/cross-tenant-reads.spec.ts:15` |
-| 1 | needs a configured admin host | `tests/admin-ui/auth/admin-login.spec.ts:11` |
-| 1 | ADMIN_MONGO_URI is not configured (read-only) — needed to judge the Admin document | `tests/admin-ui/cross-layer/admin-cross-layer.spec.ts:58` |
+| 1 | needs a configured admin host | `tests/admin-ui/auth/admin-login-functional.spec.ts:11` |
+| 1 | ADMIN_MONGO_URI is not configured (read-only) — needed to judge the Admin document | `tests/admin-ui/cross-layer/admin-cross-layer-e2e.spec.ts:58` |
 | 1 | "Add From Application" tab not reachable with this account\'s role value | `tests/admin-ui/screens/admin-dead-screens.spec.ts:46` |
 | 1 | an Admin connection has been configured | `tests/framework/admin-db-safety.spec.ts:69` |
 | 1 | no finding supplied — pass --bug=<file.json> (see the usage block above) | `tests/framework/bug-tracker/manual-bug.spec.ts:125` |
@@ -155,40 +156,40 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 | 1 | needs the KPOST_QA connection to judge by the row, not the reply | `tests/kpost-api/security/object-authorization.spec.ts:67` |
 | 1 | needs the 5th QA account (personal-5) | `tests/kpost-api/security/privileged-endpoints.spec.ts:63` |
 | 1 | the legacy reference account is absent from this target | `tests/kpost-api/validation/signup-login-domain-policy.spec.ts:134` |
-| 1 | set QA_LOGIN_MISMATCH_MOBILE to a registered India mobile to exercise the country/number mismatch | `tests/kpost-ui/auth/login-country-mobile-mismatch.spec.ts:15` |
-| 1 | no.such.user needs a real spare account — set QA_FORGOT_PASSWORD_KPOST_ID (never QA_KPOST_ID) | `tests/kpost-ui/auth/login-forgot-password-lifecycle.spec.ts:26` |
-| 1 | needs the KPOST_QA database (DB_ENABLED) to read the OTP that was sent | `tests/kpost-ui/auth/login-forgot-password-lifecycle.spec.ts:47` |
+| 1 | set QA_LOGIN_MISMATCH_MOBILE to a registered India mobile to exercise the country/number mismatch | `tests/kpost-ui/auth/login-country-mismatch-validation.spec.ts:15` |
+| 1 | no.such.user needs a real spare account — set QA_FORGOT_PASSWORD_KPOST_ID (never QA_KPOST_ID) | `tests/kpost-ui/auth/login-forgot-password-e2e.spec.ts:26` |
+| 1 | needs the KPOST_QA database (DB_ENABLED) to read the OTP that was sent | `tests/kpost-ui/auth/login-forgot-password-e2e.spec.ts:47` |
 | 1 | needs QA_KPOST_ID | `tests/kpost-ui/auth/login-functional.spec.ts:16` |
-| 1 | qa.bench needs a real, known KPOST ID to reach the password step | `tests/kpost-ui/auth/login-submit-locks-inputs.spec.ts:12` |
+| 1 | qa.bench needs a real, known KPOST ID to reach the password step | `tests/kpost-ui/auth/login-submit-locks-functional.spec.ts:12` |
 | 1 | needs the KPOST_QA database (DB_ENABLED) to pick the id and remove it | `tests/kpost-ui/auth/sanity-signup.spec.ts:58` |
-| 1 | already-exists … was reported as already registered — unexpected on the Business path per source, but handled defensively; set a fresh QA_SIGNUP_BUSINESS_UI_MOBILE | `tests/kpost-ui/auth/signup-business.spec.ts:318` |
-| 1 | taken "…" is already registered — set a fresh QA_SIGNUP_BUSINESS_COMPANY_NAME | `tests/kpost-ui/auth/signup-business.spec.ts:350` |
-| 1 | taken "…" is already taken — set a fresh QA_SIGNUP_BUSINESS_UNIQUE_NAME | `tests/kpost-ui/auth/signup-business.spec.ts:354` |
-| 1 | taken ….… is taken — set a fresh QA_SIGNUP_BUSINESS_DESIGNATION_ID or QA_SIGNUP_BUSINESS_UNIQUE_NAME | `tests/kpost-ui/auth/signup-business.spec.ts:361` |
-| 1 | taken … is taken under a different mobile than … — set a fresh QA_SIGNUP_UI_KPOST_ID_LOCAL | `tests/kpost-ui/auth/signup-login-lifecycle.spec.ts:107` |
-| 1 | already-exists … is already registered — set a fresh QA_SIGNUP_MOBILE_VIEWPORT_UI_MOBILE | `tests/kpost-ui/auth/signup-mobile-lifecycle.spec.ts:46` |
-| 1 | taken … is taken — set a fresh QA_SIGNUP_MOBILE_VIEWPORT_UI_KPOST_ID_LOCAL | `tests/kpost-ui/auth/signup-mobile-lifecycle.spec.ts:70` |
+| 1 | already-exists … was reported as already registered — unexpected on the Business path per source, but handled defensively; set a fresh QA_SIGNUP_BUSINESS_UI_MOBILE | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:318` |
+| 1 | taken "…" is already registered — set a fresh QA_SIGNUP_BUSINESS_COMPANY_NAME | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:350` |
+| 1 | taken "…" is already taken — set a fresh QA_SIGNUP_BUSINESS_UNIQUE_NAME | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:354` |
+| 1 | taken ….… is taken — set a fresh QA_SIGNUP_BUSINESS_DESIGNATION_ID or QA_SIGNUP_BUSINESS_UNIQUE_NAME | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:361` |
+| 1 | taken … is taken under a different mobile than … — set a fresh QA_SIGNUP_UI_KPOST_ID_LOCAL | `tests/kpost-ui/auth/signup-login-e2e.spec.ts:107` |
+| 1 | already-exists … is already registered — set a fresh QA_SIGNUP_MOBILE_VIEWPORT_UI_MOBILE | `tests/kpost-ui/auth/signup-mobile-e2e.spec.ts:46` |
+| 1 | taken … is taken — set a fresh QA_SIGNUP_MOBILE_VIEWPORT_UI_KPOST_ID_LOCAL | `tests/kpost-ui/auth/signup-mobile-e2e.spec.ts:70` |
 | 1 | qa.bench needs a real, already-registered live account (QA_KPOST_ID) as the known-taken value | `tests/kpost-ui/auth/signup-validation.spec.ts:245` |
 | 1 | needs the primary and personal-4 QA accounts | `tests/kpost-ui/contacts/contacts-actions-e2e.spec.ts:81` |
 | 1 | needs the 2nd QA account (QA_VICTIM_KPOST_ID) in the address book | `tests/kpost-ui/contacts/contacts-validation.spec.ts:45` |
-| 1 | needs the KPOST_QA connection (DB_HOST/DB_NAME) for the database half | `tests/kpost-ui/cross-layer/cross-layer-login.spec.ts:35` |
-| 1 | needs QA_PASSWORD to drive a real login | `tests/kpost-ui/cross-layer/cross-layer-login.spec.ts:39` |
+| 1 | needs the KPOST_QA connection (DB_HOST/DB_NAME) for the database half | `tests/kpost-ui/cross-layer/cross-layer-login-e2e.spec.ts:35` |
+| 1 | needs QA_PASSWORD to drive a real login | `tests/kpost-ui/cross-layer/cross-layer-login-e2e.spec.ts:39` |
 | 1 | needs the 1st, 2nd, 3rd and 4th QA accounts | `tests/kpost-ui/group/group-admin-e2e.spec.ts:60` |
 | 1 | needs the 1st and 2nd QA accounts | `tests/kpost-ui/group/group-admin-validation.spec.ts:115` |
-| 1 | qa.p4 needs a configured personal-4 account to add | `tests/kpost-ui/group/group-info.spec.ts:194` |
+| 1 | qa.bench needs both QA accounts (a group needs at least one other member) | `tests/kpost-ui/group/group-create-functional.spec.ts:16` |
+| 1 | qa.p4 needs a configured personal-4 account to add | `tests/kpost-ui/group/group-info-functional.spec.ts:194` |
 | 1 | needs the 2nd QA account | `tests/kpost-ui/group/group-validation.spec.ts:58` |
 | 1 | needs the 1st, 2nd and 3rd QA accounts | `tests/kpost-ui/group/group-validation.spec.ts:99` |
-| 1 | qa.bench needs both QA accounts (a group needs at least one other member) | `tests/kpost-ui/group/group.spec.ts:16` |
 | 1 | qa.business needs the BUSINESS_S company admin account (QA_BUSINESS_S_KPOST_ID) | `tests/kpost-ui/journeys/business-admin.spec.ts:19` |
 | 1 | the directory returned no one for QA_MOBILE_EXISTS right now (live condition) | `tests/kpost-ui/journeys/contacts.spec.ts:43` |
 | 1 | needs the KPOST_QA database to pick the identity and remove it | `tests/kpost-ui/journeys/first-use.spec.ts:79` |
 | 1 | needs the 2nd QA account in the browser account’s contacts (provision it) | `tests/kpost-ui/kall/kall-validation.spec.ts:244` |
-| 1 | qa.bench needs a real live account and a 2nd account to open a conversation with | `tests/kpost-ui/katchup/chat-avatar-session.spec.ts:26` |
 | 1 | needs provisioned membership of at least six groups | `tests/kpost-ui/katchup/katchup-attachment-message-validation.spec.ts:149` |
+| 1 | qa.bench needs a real live account and a 2nd account to open a conversation with | `tests/kpost-ui/katchup/katchup-chat-avatar-session-functional.spec.ts:26` |
 | 1 | needs provisioned qatest3 and the browser account | `tests/kpost-ui/katchup/katchup-compose-validation.spec.ts:47` |
-| 1 | qa.victim needs the 2nd QA account (QA_VICTIM_KPOST_ID) to open a conversation with | `tests/kpost-ui/katchup/katchup-composer-controls.spec.ts:18` |
-| 1 | qa.bench needs the second QA account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/katchup/katchup-continuous.spec.ts:22` |
-| 1 | needs 3 QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID, QA_PERSONAL_3_KPOST_ID) | `tests/kpost-ui/katchup/katchup-copies.spec.ts:30` |
+| 1 | qa.victim needs the 2nd QA account (QA_VICTIM_KPOST_ID) to open a conversation with | `tests/kpost-ui/katchup/katchup-composer-controls-functional.spec.ts:18` |
+| 1 | qa.bench needs the second QA account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/katchup/katchup-continuous-send-e2e.spec.ts:22` |
+| 1 | needs 3 QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID, QA_PERSONAL_3_KPOST_ID) | `tests/kpost-ui/katchup/katchup-copies-e2e.spec.ts:30` |
 | 1 | qa.bench qa.p3 needs all three QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID, a configured personal-3 account) | `tests/kpost-ui/katchup/katchup-group-receipts-e2e.spec.ts:66` |
 | 1 | qa.bench needs the primary QA account | `tests/kpost-ui/katchup/katchup-report-contact-e2e.spec.ts:17` |
 | 1 | needs provisioned conversation with more than five loaded messages | `tests/kpost-ui/katchup/katchup-select-validation.spec.ts:150` |
@@ -199,11 +200,11 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 | 1 | needs the 3rd QA account (QA_PERSONAL_3_KPOST_ID) | `tests/kpost-ui/kmail/kmail-validation.spec.ts:52` |
 | 1 | needs provisioned conversation with more than ten loaded mails | `tests/kpost-ui/kmail/kmail-validation.spec.ts:198` |
 | 1 | needs provisioned browser account principal | `tests/kpost-ui/kmail/kmail-validation.spec.ts:233` |
-| 1 | qa.bench the authenticated checks need a real live account (QA_KPOST_ID) | `tests/kpost-ui/platform/monitoring-smoke.spec.ts:50` |
-| 1 | qa.bench needs a live, logged-in QA account | `tests/kpost-ui/platform/performance-single-user.spec.ts:31` |
+| 1 | qa.bench the authenticated checks need a real live account (QA_KPOST_ID) | `tests/kpost-ui/platform/platform-monitoring-smoke.spec.ts:50` |
+| 1 | qa.bench needs a live, logged-in QA account | `tests/kpost-ui/platform/platform-page-load-performance.spec.ts:31` |
 | 1 | qa.bench needs a real QA account | `tests/kpost-ui/profile/profile-sections-save-e2e.spec.ts:167` |
-| 1 | needs a real live account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/profile/profile-webview.spec.ts:39` |
-| 1 | the Company Registration edit form was not showing right now (needs the BUSINESS_S session; path unverified since 2026-10-11) | `tests/kpost-ui/settings/settings-business-company-details.spec.ts:50` |
+| 1 | needs a real live account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/profile/profile-webview-security.spec.ts:39` |
+| 1 | the Company Registration edit form was not showing right now (needs the BUSINESS_S session; path unverified since 2026-10-11) | `tests/kpost-ui/settings/settings-business-company-details-e2e.spec.ts:50` |
 | 1 | qa.p5 needs the spare QA account (QA_PERSONAL_5_KPOST_ID) | `tests/kpost-ui/smoke/auth.smoke.spec.ts:18` |
 | 1 | needs the group-creator QA account (personal-3) | `tests/kpost-ui/smoke/group.smoke.spec.ts:18` |
 | 1 | needs the primary QA account (QA_KPOST_ID) | `tests/kpost-ui/verticals/kdiary-validation.spec.ts:82` |
@@ -212,34 +213,34 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
-| 12 | the mobile OTP bypass code only validates on the confirmed OTP test gateway | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:20`, `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:155`, `tests/kpost-ui/auth/signup-business.spec.ts:298`, `tests/kpost-ui/auth/signup-kpostid-length-validation.spec.ts:24` +8 more |
-| 9 | writes real messages; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-actions-more.spec.ts:30`, `tests/kpost-ui/katchup/katchup-actions.spec.ts:19`, `tests/kpost-ui/katchup/katchup-copies.spec.ts:26`, `tests/kpost-ui/katchup/katchup-forward-subflow-e2e.spec.ts:28` +5 more |
+| 12 | the mobile OTP bypass code only validates on the confirmed OTP test gateway | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:298`, `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:20`, `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:155`, `tests/kpost-ui/auth/signup-kpostid-length-validation.spec.ts:24` +8 more |
+| 9 | writes real messages; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-actions-e2e.spec.ts:19`, `tests/kpost-ui/katchup/katchup-actions-more-e2e.spec.ts:30`, `tests/kpost-ui/katchup/katchup-copies-e2e.spec.ts:26`, `tests/kpost-ui/katchup/katchup-forward-subflow-e2e.spec.ts:28` +5 more |
 | 7 | (no reason string) process.env.CONCURRENCY_LIFECYCLE !== 'true', DEFERRED_REASON | `tests/kpost-api/concurrency/scenarios.spec.ts:36`, `tests/kpost-api/concurrency/scenarios.spec.ts:71`, `tests/kpost-api/concurrency/scenarios.spec.ts:172`, `tests/kpost-api/concurrency/scenarios.spec.ts:216` +3 more |
-| 6 | creates and deletes a real group; set GROUP_UI_LIFECYCLE=true | `tests/kpost-ui/group/group-admin-e2e.spec.ts:56`, `tests/kpost-ui/group/group-admin-validation.spec.ts:111`, `tests/kpost-ui/group/group-info.spec.ts:61`, `tests/kpost-ui/group/group-member-profile-session.spec.ts:24` +2 more |
+| 6 | creates and deletes a real group; set GROUP_UI_LIFECYCLE=true | `tests/kpost-ui/group/group-admin-e2e.spec.ts:56`, `tests/kpost-ui/group/group-admin-validation.spec.ts:111`, `tests/kpost-ui/group/group-info-functional.spec.ts:61`, `tests/kpost-ui/group/group-member-profile-session-functional.spec.ts:24` +2 more |
 | 6 | sends real mails; set KMAIL_UI_LIFECYCLE=true | `tests/kpost-ui/kmail/kmail-actions-e2e.spec.ts:17`, `tests/kpost-ui/kmail/kmail-browse-e2e.spec.ts:24`, `tests/kpost-ui/kmail/kmail-features-e2e.spec.ts:26`, `tests/kpost-ui/kmail/kmail-more-actions-e2e.spec.ts:101` +2 more |
-| 6 | needs the BUSINESS_S admin session; set BUSINESS_UI_LIFECYCLE=true | `tests/kpost-ui/platform/screens-business.spec.ts:17`, `tests/kpost-ui/settings/settings-business-bank-details.spec.ts:15`, `tests/kpost-ui/user-management/usermanagement-accessibility.spec.ts:28`, `tests/kpost-ui/user-management/usermanagement-security.spec.ts:20` +2 more |
+| 6 | needs the BUSINESS_S admin session; set BUSINESS_UI_LIFECYCLE=true | `tests/kpost-ui/platform/platform-business-screens.spec.ts:17`, `tests/kpost-ui/settings/settings-business-bank-details-e2e.spec.ts:15`, `tests/kpost-ui/user-management/usermanagement-accessibility.spec.ts:28`, `tests/kpost-ui/user-management/usermanagement-e2e.spec.ts:22` +2 more |
 | 5 | writes to the QA company; set ADMIN_LIFECYCLE=true | `tests/admin-api/engine/endpoint-matrix.spec.ts:341`, `tests/admin-api/performance/latency.spec.ts:145`, `tests/admin-api/validation/field-rules-sweep.spec.ts:321`, `tests/admin-api/validation/input-hardening.spec.ts:168` +1 more |
-| 5 | (no reason string) process.env.SIGNUP_UI_LIFECYCLE !== 'true', 'drives the real signup screen (a mo | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:151`, `tests/kpost-ui/auth/signup-kpostid-length-validation.spec.ts:20`, `tests/kpost-ui/auth/signup-login-api-handling.spec.ts:23`, `tests/kpost-ui/auth/signup-pincode-validation.spec.ts:20` +1 more |
-| 5 | sends a real mail; set KMAIL_UI_LIFECYCLE=true | `tests/kpost-ui/kmail/kmail-compose.spec.ts:64`, `tests/kpost-ui/kmail/kmail-read-receipt-e2e.spec.ts:85`, `tests/kpost-ui/kmail/kmail-security.spec.ts:18`, `tests/kpost-ui/kmail/kmail-stored-xss-render.spec.ts:21` +1 more |
-| 4 | qa.business needs ADMIN_UI_LIFECYCLE=true, a configured admin host and BUSINESS_M account | `tests/admin-ui/human-resources/admin-employee-management-pii.spec.ts:14`, `tests/admin-ui/screens/admin-dead-screens.spec.ts:14`, `tests/admin-ui/screens/admin-screens.spec.ts:23`, `tests/admin-ui/screens/admin-subtabs-health.spec.ts:15` |
+| 5 | (no reason string) process.env.SIGNUP_UI_LIFECYCLE !== 'true', 'drives the real signup screen (a mo | `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:151`, `tests/kpost-ui/auth/signup-kpostid-length-validation.spec.ts:20`, `tests/kpost-ui/auth/signup-login-api-handling.spec.ts:23`, `tests/kpost-ui/auth/signup-pincode-validation.spec.ts:20` +1 more |
+| 5 | sends a real mail; set KMAIL_UI_LIFECYCLE=true | `tests/kpost-ui/kmail/kmail-compose-e2e.spec.ts:64`, `tests/kpost-ui/kmail/kmail-read-receipt-e2e.spec.ts:85`, `tests/kpost-ui/kmail/kmail-security.spec.ts:18`, `tests/kpost-ui/kmail/kmail-stored-xss-security.spec.ts:21` +1 more |
+| 4 | qa.business needs ADMIN_UI_LIFECYCLE=true, a configured admin host and BUSINESS_M account | `tests/admin-ui/human-resources/employee-management-pii-security.spec.ts:14`, `tests/admin-ui/screens/admin-dead-screens.spec.ts:14`, `tests/admin-ui/screens/admin-screens.spec.ts:23`, `tests/admin-ui/screens/admin-subtabs-screens.spec.ts:15` |
 | 4 | needs auth2.setup.ts for the 2nd account; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/kmail/kmail-actions-e2e.spec.ts:21`, `tests/kpost-ui/kmail/kmail-features-e2e.spec.ts:30`, `tests/kpost-ui/kmail/kmail-status-e2e.spec.ts:148`, `tests/kpost-ui/kmail/kmail-status-e2e.spec.ts:313` |
 | 3 | uploads a real file to S3 and sends a real mail; set KMAIL_LIFECYCLE=true and AWS_LIFECYCLE=true | `tests/kmail-api/flows/attachment-integrity.spec.ts:30`, `tests/kmail-api/security/attachment-delete-idor.spec.ts:24`, `tests/kmail-api/security/attachment-idor.spec.ts:25` |
 | 3 | sends a real mail; set KMAIL_LIFECYCLE=true | `tests/kmail-api/security/content-idor.spec.ts:24`, `tests/kmail-api/security/copies-info-idor.spec.ts:24`, `tests/kmail-api/security/mutation-idor.spec.ts:26` |
 | 3 | uploads a real file to S3 and sends a real message; set KATCHUP_LIFECYCLE=true and AWS_LIFECYCLE=true | `tests/kpost-api/flows/katchup-attachment-integrity.spec.ts:31`, `tests/kpost-api/flows/katchup-presigned-attachment-workflow.spec.ts:18`, `tests/kpost-api/security/katchup-attachment-idor.spec.ts:26` |
 | 3 | sends a real message; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/security/katchup-cross-account-idor-2026-10-12.spec.ts:36`, `tests/kpost-api/security/katchup-legacy-recall-regression-2026-10-07.spec.ts:20`, `tests/kpost-api/security/katchup-object-authorization.spec.ts:24` |
 | 3 | needs auth2.setup.ts to log the 2nd account in; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/group/group-exit-e2e.spec.ts:91`, `tests/kpost-ui/kmail/kmail-read-receipt-e2e.spec.ts:89`, `tests/kpost-ui/kmail/kmail-two-session-e2e.spec.ts:22` |
-| 3 | sends a real message; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-compose.spec.ts:65`, `tests/kpost-ui/katchup/katchup-digitalcard-share-e2e.spec.ts:18`, `tests/kpost-ui/katchup/katchup-secret-message-e2e.spec.ts:13` |
-| 3 | edits a profile field; set PROFILE_UI_LIFECYCLE=true | `tests/kpost-ui/profile/profile-edit.spec.ts:15`, `tests/kpost-ui/profile/profile-functional.spec.ts:47`, `tests/kpost-ui/profile/profile-security.spec.ts:17` |
+| 3 | sends a real message; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-compose-e2e.spec.ts:65`, `tests/kpost-ui/katchup/katchup-digitalcard-share-e2e.spec.ts:18`, `tests/kpost-ui/katchup/katchup-secret-message-e2e.spec.ts:13` |
+| 3 | edits a profile field; set PROFILE_UI_LIFECYCLE=true | `tests/kpost-ui/profile/profile-edit-e2e.spec.ts:15`, `tests/kpost-ui/profile/profile-functional.spec.ts:47`, `tests/kpost-ui/profile/profile-security.spec.ts:17` |
 | 2 | writes real org structure; set ADMIN_LIFECYCLE=true | `tests/admin-api/flows/feature.spec.ts:59`, `tests/admin-api/validation/write-fuzz-workflow.spec.ts:208` |
 | 2 | creates real KPost (testingapi) + KSMACC accounts for the QA company; set ADMIN_LIFECYCLE=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/admin-api/flows/role-posting-lifecycle.spec.ts:114`, `tests/admin-api/flows/role-posting-lifecycle.spec.ts:512` |
 | 2 | only meaningful when TEST_ENV=production | `tests/framework/live-safety.spec.ts:566`, `tests/framework/live-safety.spec.ts:591` |
 | 2 | writes a real message; set KATCHUP_LIFECYCLE=true to run (owner sign-off, flow doc Q4) | `tests/kpost-api/flows/katchup-lifecycle.spec.ts:16`, `tests/kpost-api/flows/katchup-workflow-db.spec.ts:21` |
 | 2 | creates a real diary event; set KDIARY_LIFECYCLE=true | `tests/kpost-api/flows/kdiary-reads-workflow.spec.ts:26`, `tests/kpost-api/security/kdiary-object-authorization.spec.ts:36` |
-| 2 | creates a real, permanent company; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:16`, `tests/kpost-ui/auth/signup-business.spec.ts:294` |
+| 2 | creates a real, permanent company; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:294`, `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:16` |
 | 2 | drives a real mobile OTP to reach this step; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:203`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:235` |
-| 2 | creates a real account and sends a real mail-OTP/e-mail; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/signup-login-lifecycle.spec.ts:22`, `tests/kpost-ui/auth/signup-mobile-lifecycle.spec.ts:22` |
-| 2 | creates a real group; set GROUP_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:269`, `tests/kpost-ui/group/group.spec.ts:12` |
-| 2 | creates a real scheduled call; set KALL_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:405`, `tests/kpost-ui/kall/kall-features.spec.ts:102` |
+| 2 | creates a real account and sends a real mail-OTP/e-mail; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/signup-login-e2e.spec.ts:22`, `tests/kpost-ui/auth/signup-mobile-e2e.spec.ts:22` |
+| 2 | creates a real group; set GROUP_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows-e2e.spec.ts:269`, `tests/kpost-ui/group/group-create-functional.spec.ts:12` |
+| 2 | creates a real scheduled call; set KALL_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows-e2e.spec.ts:405`, `tests/kpost-ui/kall/kall-features-functional.spec.ts:102` |
 | 1 | one-time setup: set ADMIN_CREATE_STAFF=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/admin-api/maintenance/setup-staff-employee.spec.ts:27` |
 | 1 | opt-in: this writes to Bugzilla — run `npm run bug:apply` after a product preview | `tests/framework/bug-tracker/apply-filing-plan.spec.ts:19` |
 | 1 | manual probe — set CLEANUP_PLAN=true to list orphaned QA records on the primary account, CLEANUP_EXECUTE=true to delete them | `tests/framework/_cleanup-orphaned-records.local.spec.ts:14` |
@@ -309,52 +310,52 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 | 1 | testingapi answers 404 "No matching endpoint for this request" for POST saveUnsubscriberDetails, live-verified 2026-09-24. Not run standalone (a 404 there reads  | `tests/kpost-api/validation/common-gaps.spec.ts:17` |
 | 1 | blocks a QA contact and tries a call and messages; set CONTACTS_LIFECYCLE and KALL_LIFECYCLE | `tests/kpost-api/validation/contacts-block-enforcement.spec.ts:64` |
 | 1 | sends real messages between the QA accounts; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/validation/katchup-rules.spec.ts:92` |
-| 1 | logs in and out repeatedly; set LOGIN_UI_LIFECYCLE=true | `tests/kpost-ui/auth/login-forgot-password-lifecycle.spec.ts:18` |
-| 1 | sends ONE real SMS to the spare account; set FORGOT_PASSWORD_SMS=true (the run levels do) | `tests/kpost-ui/auth/login-forgot-password-lifecycle.spec.ts:22` |
-| 1 | ends the session; set LOGIN_UI_LIFECYCLE=true | `tests/kpost-ui/auth/login-session.spec.ts:76` |
+| 1 | logs in and out repeatedly; set LOGIN_UI_LIFECYCLE=true | `tests/kpost-ui/auth/login-forgot-password-e2e.spec.ts:18` |
+| 1 | sends ONE real SMS to the spare account; set FORGOT_PASSWORD_SMS=true (the run levels do) | `tests/kpost-ui/auth/login-forgot-password-e2e.spec.ts:22` |
+| 1 | ends the session; set LOGIN_UI_LIFECYCLE=true | `tests/kpost-ui/auth/login-session-functional.spec.ts:76` |
 | 1 | logs the shared account out and invalidates the saved session; set SESSION_INVALIDATION_CHECK=true and run in isolation | `tests/kpost-ui/auth/login-token-security.spec.ts:87` |
 | 1 | creates (and removes) a real account; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/sanity-signup.spec.ts:24` |
 | 1 | the signup OTP is mocked only on the confirmed test gateway (OTP_TEST_GATEWAY + TEST_DB_MODE) | `tests/kpost-ui/auth/sanity-signup.spec.ts:28` |
 | 1 | the account is removed from KPOST_QA afterwards; set DB_ALLOW_WRITES=true | `tests/kpost-ui/auth/sanity-signup.spec.ts:32` |
-| 1 | needs the OTP test gateway; set OTP_TEST_GATEWAY=true TEST_DB_MODE=true | `tests/kpost-ui/auth/signup-business.spec.ts:114` |
-| 1 | drives a real mobile OTP to reach these screens; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/signup-screens-post-otp.spec.ts:47` |
+| 1 | needs the OTP test gateway; set OTP_TEST_GATEWAY=true TEST_DB_MODE=true | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:114` |
+| 1 | drives a real mobile OTP to reach these screens; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/auth/signup-post-otp-screens.spec.ts:47` |
 | 1 | changes real contacts; set CONTACTS_UI_LIFECYCLE=true | `tests/kpost-ui/contacts/contacts-actions-e2e.spec.ts:77` |
 | 1 | adds a real contact; set CONTACTS_UI_LIFECYCLE=true | `tests/kpost-ui/contacts/contacts-functional.spec.ts:173` |
-| 1 | blocks a real contact; set CONTACTS_UI_LIFECYCLE=true | `tests/kpost-ui/contacts/contacts.spec.ts:57` |
-| 1 | sends real messages and mails; set KATCHUP_UI_LIFECYCLE=true and KMAIL_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:43` |
+| 1 | blocks a real contact; set CONTACTS_UI_LIFECYCLE=true | `tests/kpost-ui/contacts/contacts-screens.spec.ts:57` |
+| 1 | sends real messages and mails; set KATCHUP_UI_LIFECYCLE=true and KMAIL_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows-e2e.spec.ts:43` |
 | 1 | creates real groups; set GROUP_UI_LIFECYCLE=true | `tests/kpost-ui/group/group-exit-e2e.spec.ts:87` |
-| 1 | Recents shows a load-error state, not an empty state — out of scope for this test | `tests/kpost-ui/home/home-recents-search-empty-state.spec.ts:29` |
+| 1 | Recents shows a load-error state, not an empty state — out of scope for this test | `tests/kpost-ui/home/home-recents-empty-state-functional.spec.ts:29` |
 | 1 | (no reason string) process.env.KALL_UI_LIFECYCLE !== 'true', 'schedules a real meeting to edit (end | `tests/kpost-ui/kall/kall-validation.spec.ts:173` |
 | 1 | (no reason string) process.env.KALL_UI_LIFECYCLE !== 'true', 'blocks a QA contact for the test (res | `tests/kpost-ui/kall/kall-validation.spec.ts:231` |
 | 1 | (no reason string) process.env.KALL_UI_LIFECYCLE !== 'true', 'schedules a real meeting (ended after | `tests/kpost-ui/kall/kall-validation.spec.ts:338` |
 | 1 | drives real uploads + sends; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-attach-repeat-e2e.spec.ts:23` |
 | 1 | drives a real presigned upload + send; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-attach-send-e2e.spec.ts:13` |
-| 1 | sends real messages; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-content-correctness.spec.ts:58` |
-| 1 | writes real messages; set KATCHUP_UI_LIFECYCLE=true (npm run product:kpost-ui does) | `tests/kpost-ui/katchup/katchup-continuous.spec.ts:18` |
-| 1 | types into a real composer; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-draft-persistence.spec.ts:22` |
+| 1 | sends real messages; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-content-correctness-e2e.spec.ts:58` |
+| 1 | writes real messages; set KATCHUP_UI_LIFECYCLE=true (npm run product:kpost-ui does) | `tests/kpost-ui/katchup/katchup-continuous-send-e2e.spec.ts:18` |
+| 1 | types into a real composer; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-draft-persistence-functional.spec.ts:22` |
 | 1 | drives the composer/send; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-functional.spec.ts:43` |
 | 1 | creates a real group and sends a real message; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-group-receipts-e2e.spec.ts:62` |
 | 1 | sends and forwards real messages; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-multi-forward-e2e.spec.ts:20` |
 | 1 | (no reason string) process.env.KATCHUP_UI_LIFECYCLE !== 'true', 'confirms a real report (and may bl | `tests/kpost-ui/katchup/katchup-report-contact-e2e.spec.ts:84` |
-| 1 | writes real messages between two accounts; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-two-session.spec.ts:40` |
-| 1 | sends a real message between two accounts; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-unread-badge-refresh.spec.ts:25` |
+| 1 | writes real messages between two accounts; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-two-session-e2e.spec.ts:40` |
+| 1 | sends a real message between two accounts; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/katchup/katchup-unread-badge-e2e.spec.ts:25` |
 | 1 | chromium reading the clipboard needs a permission Playwright grants only in Chromium (Chromium-only by design) | `tests/kpost-ui/kmail/kmail-actions-e2e.spec.ts:151` |
 | 1 | uploads a file and sends a real mail; set KMAIL_UI_LIFECYCLE=true | `tests/kpost-ui/kmail/kmail-attach-send-e2e.spec.ts:21` |
 | 1 | (no reason string) process.env.KATCHUP_UI_LIFECYCLE !== 'true', 'needs the 2nd account (auth2.setup | `tests/kpost-ui/kmail/kmail-browse-e2e.spec.ts:179` |
 | 1 | changes KMail settings; set SETTINGS_UI_LIFECYCLE=true | `tests/kpost-ui/kmail/kmail-settings-e2e.spec.ts:19` |
-| 1 | needs auth2.setup.ts to log STORAGE_STATE_2 in as a real 2nd account; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/kmail/kmail-stored-xss-render.spec.ts:25` |
-| 1 | measures real page loads on the shared server; set PERF_SINGLE_USER=true | `tests/kpost-ui/platform/performance-single-user.spec.ts:27` |
-| 1 | visual regression is opt-in: run `npm run product:kpost-ui:visual:update` to baseline, then `npm run product:kpost-ui:visual` | `tests/kpost-ui/platform/visual.spec.ts:18` |
-| 1 | writes a profile record; set PROFILE_UI_LIFECYCLE=true | `tests/kpost-ui/profile/profile-actions.spec.ts:57` |
+| 1 | needs auth2.setup.ts to log STORAGE_STATE_2 in as a real 2nd account; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/kmail/kmail-stored-xss-security.spec.ts:25` |
+| 1 | measures real page loads on the shared server; set PERF_SINGLE_USER=true | `tests/kpost-ui/platform/platform-page-load-performance.spec.ts:27` |
+| 1 | visual regression is opt-in: run `npm run product:kpost-ui:visual:update` to baseline, then `npm run product:kpost-ui:visual` | `tests/kpost-ui/platform/platform-visual.spec.ts:18` |
+| 1 | writes a profile record; set PROFILE_UI_LIFECYCLE=true | `tests/kpost-ui/profile/profile-actions-e2e.spec.ts:57` |
 | 1 | the mobile field is read-only in this editor by design — a verified number changes through its own OTP flow, not this form | `tests/kpost-ui/profile/profile-functional.spec.ts:188` |
 | 1 | writes to the QA profile; set PROFILE_UI_LIFECYCLE=true | `tests/kpost-ui/profile/profile-sections-save-e2e.spec.ts:163` |
 | 1 | qa.business needs the BUSINESS_S session (BUSINESS_UI_LIFECYCLE=true, QA_BUSINESS_S_KPOST_ID) | `tests/kpost-ui/sanity/sanity-screens.spec.ts:100` |
-| 1 | writes real company registration details; set BUSINESS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-business-company-details.spec.ts:16` |
-| 1 | toggles a real privacy setting; set SETTINGS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-digital-card.spec.ts:33` |
+| 1 | writes real company registration details; set BUSINESS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-business-company-details-e2e.spec.ts:16` |
+| 1 | toggles a real privacy setting; set SETTINGS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-digital-card-e2e.spec.ts:33` |
 | 1 | toggles a real preference; set SETTINGS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-functional.spec.ts:38` |
-| 1 | uploads/removes a real cover image; set SETTINGS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-profile-creation.spec.ts:12` |
+| 1 | uploads/removes a real cover image; set SETTINGS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-profile-photo-e2e.spec.ts:12` |
 | 1 | adds a real Instant Reply; set SETTINGS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-security.spec.ts:18` |
-| 1 | changes a real (cosmetic) preference; set SETTINGS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-theme.spec.ts:12` |
+| 1 | changes a real (cosmetic) preference; set SETTINGS_UI_LIFECYCLE=true | `tests/kpost-ui/settings/settings-theme-e2e.spec.ts:12` |
 | 1 | creates a real diary schedule; set KDIARY_UI_LIFECYCLE=true | `tests/kpost-ui/verticals/kdiary-e2e.spec.ts:17` |
 | 1 | creates and deletes a real document; set KOS_UI_LIFECYCLE=true | `tests/kpost-ui/verticals/kword.spec.ts:65` |
 
@@ -362,14 +363,14 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
-| 15 | the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts | `tests/kpost-ui/contacts/contacts-accessibility.spec.ts:108`, `tests/kpost-ui/contacts/contacts-accessibility.spec.ts:122`, `tests/kpost-ui/contacts/contacts-accessibility.spec.ts:138`, `tests/kpost-ui/contacts/contacts-functional.spec.ts:37` +11 more |
-| 10 | already-exists the random mobile happened to collide — re-run | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:172`, `tests/kpost-ui/auth/signup-business.spec.ts:132`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:217`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:250` +6 more |
-| 10 | invalid the OTP bypass code was rejected this run — re-run | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:177`, `tests/kpost-ui/auth/signup-business.spec.ts:137`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:222`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:255` +6 more |
+| 15 | the Contacts panel was not showing right now (a session or load condition, not a Contacts defect) — see support/contacts.ts | `tests/kpost-ui/contacts/contacts-accessibility.spec.ts:108`, `tests/kpost-ui/contacts/contacts-accessibility.spec.ts:122`, `tests/kpost-ui/contacts/contacts-accessibility.spec.ts:138`, `tests/kpost-ui/contacts/contacts-dynamic-screens.spec.ts:57` +11 more |
+| 10 | already-exists the random mobile happened to collide — re-run | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:132`, `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:172`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:217`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:250` +6 more |
+| 10 | invalid the OTP bypass code was rejected this run — re-run | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:137`, `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:177`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:222`, `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:255` +6 more |
 | 4 | already-exists the randomly generated mobile number happened to already be registered — re-run | `tests/kpost-ui/auth/signup-kpostid-length-validation.spec.ts:38`, `tests/kpost-ui/auth/signup-pincode-validation.spec.ts:38`, `tests/kpost-ui/auth/signup-pincode-validation.spec.ts:88`, `tests/kpost-ui/auth/signup-pincode-validation.spec.ts:134` |
-| 3 | invalid the OTP bypass code was rejected this run — likely transient; re-run | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:70`, `tests/kpost-ui/auth/signup-business.spec.ts:325`, `tests/kpost-ui/auth/signup-mobile-lifecycle.spec.ts:52` |
+| 3 | invalid the OTP bypass code was rejected this run — likely transient; re-run | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:325`, `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:70`, `tests/kpost-ui/auth/signup-mobile-e2e.spec.ts:52` |
 | 3 | already-exists the randomly generated mobile number happened to already be registered — vanishingly rare; re-run | `tests/kpost-ui/auth/signup-validation.spec.ts:58`, `tests/kpost-ui/auth/signup-validation.spec.ts:139`, `tests/kpost-ui/auth/signup-validation.spec.ts:181` |
 | 3 | invalid the OTP box rejected the bypass code this run — see enterMobileOtp's own doc comment; re-run | `tests/kpost-ui/auth/signup-validation.spec.ts:63`, `tests/kpost-ui/auth/signup-validation.spec.ts:144`, `tests/kpost-ui/auth/signup-validation.spec.ts:186` |
-| 3 | the new group was not listed in Katchup right now (four reloads) | `tests/kpost-ui/group/group-admin-e2e.spec.ts:216`, `tests/kpost-ui/group/group-info.spec.ts:214`, `tests/kpost-ui/group/group-post-targeting.spec.ts:47` |
+| 3 | the new group was not listed in Katchup right now (four reloads) | `tests/kpost-ui/group/group-admin-e2e.spec.ts:216`, `tests/kpost-ui/group/group-info-functional.spec.ts:214`, `tests/kpost-ui/group/group-post-targeting-e2e.spec.ts:47` |
 | 2 | the QA company name could not be read right now; not invented | `tests/admin-api/flows/role-posting-lifecycle.spec.ts:598`, `tests/admin-api/performance/latency.spec.ts:298` |
 | 2 | invalid the OTP box rejected the bypass code this run — see enterMobileOtp's doc comment; re-run | `tests/kpost-ui/auth/signup-kpostid-length-validation.spec.ts:43`, `tests/kpost-ui/auth/signup-pincode-validation.spec.ts:43` |
 | 2 | the fixed probe id was not accepted right now — step 2 was not shown | `tests/kpost-ui/auth/signup-login-accessibility.spec.ts:157`, `tests/kpost-ui/auth/signup-login-screens.spec.ts:133` |
@@ -379,8 +380,8 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 | 2 | the Instant Reply editor was not showing right now (session or load condition; path verified live 2026-10-11) | `tests/kpost-ui/settings/settings-functional.spec.ts:127`, `tests/kpost-ui/settings/settings-security.spec.ts:56` |
 | 1 | the QA company's name could not be read right now — not invented; set up a role posting or company name first | `tests/admin-api/flows/role-posting-lifecycle.spec.ts:173` |
 | 1 | the probe location was not created (HTTP … …) | `tests/admin-api/security/cross-tenant-reads.spec.ts:75` |
-| 1 | the QA company has no workplace tier values on this account to place a location under | `tests/admin-ui/admin-setup/workplace-location-setup.spec.ts:74` |
-| 1 | no employee was available to pick on the … tab | `tests/admin-ui/human-resources/admin-employee-management-pii.spec.ts:41` |
+| 1 | the QA company has no workplace tier values on this account to place a location under | `tests/admin-ui/admin-setup/workplace-location-setup-e2e.spec.ts:74` |
+| 1 | no employee was available to pick on the … tab | `tests/admin-ui/human-resources/employee-management-pii-security.spec.ts:41` |
 | 1 | Submit button was not available on this tab right now (admin role gating) | `tests/admin-ui/screens/admin-dead-screens.spec.ts:59` |
 | 1 | "Menu Privilege" nav link was not available right now (admin role gating) | `tests/admin-ui/screens/admin-dead-screens.spec.ts:104` |
 | 1 | "Postal Code Library" nav link was not available right now (admin role gating) | `tests/admin-ui/screens/admin-dead-screens.spec.ts:131` |
@@ -397,46 +398,46 @@ Run `run-dfe2c798-be51-4420-b08c-e803574d4045` at 2026-10-31T03:35:37.216Z: 0 ch
 | 1 | image upload failed (replied …) | `tests/kpost-api/security/katchup-idor-regression-2026-10-03.spec.ts:352` |
 | 1 | no app version to re-send right now (read answered …) | `tests/kpost-api/security/privileged-endpoints.spec.ts:74` |
 | 1 | could not read back a real …; nothing to attack | `tests/kpost-api/security/profile-record-object-authorization.spec.ts:95` |
-| 1 | already-exists … was reported as already registered — set a fresh … | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:64` |
-| 1 | taken "…" is already registered — set a fresh … | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:103` |
-| 1 | taken "…" is already taken — set a fresh … | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:107` |
-| 1 | taken ….… is taken — set a fresh … | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:114` |
-| 1 | taken the generated company name happened to collide — re-run | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:209` |
-| 1 | taken the generated unique name happened to collide — re-run | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:213` |
-| 1 | taken the generated KPOST ID happened to collide — re-run | `tests/kpost-ui/auth/signup-business-medium-large.spec.ts:220` |
-| 1 | taken the generated id collided — re-run | `tests/kpost-ui/auth/signup-business.spec.ts:249` |
+| 1 | taken the generated id collided — re-run | `tests/kpost-ui/auth/signup-business-e2e.spec.ts:249` |
+| 1 | already-exists … was reported as already registered — set a fresh … | `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:64` |
+| 1 | taken "…" is already registered — set a fresh … | `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:103` |
+| 1 | taken "…" is already taken — set a fresh … | `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:107` |
+| 1 | taken ….… is taken — set a fresh … | `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:114` |
+| 1 | taken the generated company name happened to collide — re-run | `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:209` |
+| 1 | taken the generated unique name happened to collide — re-run | `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:213` |
+| 1 | taken the generated KPOST ID happened to collide — re-run | `tests/kpost-ui/auth/signup-business-medium-large-e2e.spec.ts:220` |
 | 1 | invalid the OTP box rejected the bypass code this run; re-run | `tests/kpost-ui/auth/signup-pincode-validation.spec.ts:93` |
 | 1 | every spare QA account is already a contact right now — nothing new to add | `tests/kpost-ui/contacts/contacts-functional.spec.ts:206` |
 | 1 | the directory search returned no Qatest… Bench right now — cannot drive add | `tests/kpost-ui/contacts/contacts-functional.spec.ts:233` |
-| 1 | the Contacts panel was not showing right now (session or load condition) | `tests/kpost-ui/cross-layer/cross-layer-flows.spec.ts:277` |
+| 1 | the Contacts panel was not showing right now (session or load condition) | `tests/kpost-ui/cross-layer/cross-layer-flows-e2e.spec.ts:277` |
 | 1 | the new group was not listed in Katchup right now — a list condition | `tests/kpost-ui/group/group-exit-e2e.spec.ts:70` |
-| 1 | the new group was not listed in Katchup right now (four reloads) — a list or session condition, not a Group Info defect | `tests/kpost-ui/group/group-info.spec.ts:41` |
-| 1 | the new group is absent from Katchup right now (four reloads) | `tests/kpost-ui/group/group-member-profile-session.spec.ts:64` |
+| 1 | the new group was not listed in Katchup right now (four reloads) — a list or session condition, not a Group Info defect | `tests/kpost-ui/group/group-info-functional.spec.ts:41` |
+| 1 | the new group is absent from Katchup right now (four reloads) | `tests/kpost-ui/group/group-member-profile-session-functional.spec.ts:64` |
 | 1 | this account has no message history to click into — nothing to test | `tests/kpost-ui/home/home-functional.spec.ts:156` |
-| 1 | the name-capture modal was not showing right now (the crash-safety test above covers the failure mode) | `tests/kpost-ui/kall/global-kool-kall.spec.ts:51` |
+| 1 | the name-capture modal was not showing right now (the crash-safety test above covers the failure mode) | `tests/kpost-ui/kall/kall-global-kool-kall-functional.spec.ts:51` |
 | 1 | no past start time is available right now (needs an hour of today behind us) | `tests/kpost-ui/kall/kall-validation.spec.ts:104` |
 | 1 | no past end time with a future start time is available right now (needs 01:00–21:59) | `tests/kpost-ui/kall/kall-validation.spec.ts:141` |
-| 1 | no chat-header avatar rendered right now (header still loading) — nothing to click | `tests/kpost-ui/katchup/chat-avatar-session.spec.ts:62` |
-| 1 | the second contact (…) is not in this account's Recents right now — nothing to switch to | `tests/kpost-ui/katchup/katchup-draft-persistence.spec.ts:54` |
+| 1 | no chat-header avatar rendered right now (header still loading) — nothing to click | `tests/kpost-ui/katchup/katchup-chat-avatar-session-functional.spec.ts:62` |
+| 1 | the second contact (…) is not in this account's Recents right now — nothing to switch to | `tests/kpost-ui/katchup/katchup-draft-persistence-functional.spec.ts:54` |
 | 1 | no contact matching "…" is in this account's address book right now — nothing to forward to | `tests/kpost-ui/katchup/katchup-forward-subflow-e2e.spec.ts:80` |
 | 1 | Select All only picked … messages here — need 6+, nothing to test right now | `tests/kpost-ui/katchup/katchup-multi-forward-e2e.spec.ts:196` |
 | 1 | no contact matching "Qatest3" is in this account\'s address book right now — nothing to transfer to | `tests/kpost-ui/katchup/katchup-transfer-subflow-e2e.spec.ts:70` |
 | 1 | qatest1 has no outside-domain contacts on this account to open | `tests/kpost-ui/kmail/kmail-browse-e2e.spec.ts:346` |
-| 1 | the header offers no language other than English right now | `tests/kpost-ui/platform/i18n-switch.spec.ts:70` |
+| 1 | the header offers no language other than English right now | `tests/kpost-ui/platform/platform-i18n-functional.spec.ts:70` |
 | 1 | the Contact Information editor was not showing right now (session or load condition; path verified live 2026-10-11) | `tests/kpost-ui/profile/profile-functional.spec.ts:137` |
 | 1 | the Education/School form was not showing right now (session or load condition; path verified live 2026-10-11) | `tests/kpost-ui/profile/profile-functional.spec.ts:231` |
 | 1 | the Experience form was not showing right now (session or load condition; path verified live 2026-10-11) | `tests/kpost-ui/profile/profile-functional.spec.ts:257` |
 | 1 | the About editor was not showing right now (session or load condition; path verified live 2026-10-11) | `tests/kpost-ui/profile/profile-functional.spec.ts:282` |
 | 1 | Enter Address line 1 no saved address on this account yet, so the required fields cannot be kept as they are | `tests/kpost-ui/profile/profile-sections-save-e2e.spec.ts:223` |
 | 1 | no saved address on this account yet, so there is no required value to clear | `tests/kpost-ui/profile/profile-validation.spec.ts:88` |
-| 1 | no plan rows are reachable from the Data Storage panel right now (radios and Buy open nothing) — the plan modal is covered on /kcloud | `tests/kpost-ui/settings/settings-data-storage.spec.ts:85` |
+| 1 | no plan rows are reachable from the Data Storage panel right now (radios and Buy open nothing) — the plan modal is covered on /kcloud | `tests/kpost-ui/settings/settings-data-storage-functional.spec.ts:85` |
 | 1 | the Notification settings panel was not showing right now (session or load condition; path verified live 2026-10-11) | `tests/kpost-ui/settings/settings-functional.spec.ts:72` |
-| 1 | no member mobile number was listed on the page right now — nothing to collide with | `tests/kpost-ui/user-management/usermanagement.spec.ts:75` |
-| 1 | no merchants returned right now — nothing to click through | `tests/kpost-ui/verticals/ecommerce.spec.ts:60` |
+| 1 | no member mobile number was listed on the page right now — nothing to collide with | `tests/kpost-ui/user-management/usermanagement-e2e.spec.ts:75` |
+| 1 | no merchants returned right now — nothing to click through | `tests/kpost-ui/verticals/ecommerce-functional.spec.ts:60` |
 | 1 | redbus has no bus with a seat map for that day right now (a live condition) | `tests/kpost-ui/verticals/kbooking-validation.spec.ts:150` |
 | 1 | no time left today to make a task for today right now (needs two hours before midnight) | `tests/kpost-ui/verticals/kdiary-participants-validation.spec.ts:30` |
-| 1 | the directory search returned no entry for "…" (… / India / English) right now — set KDIRECTORY_SEARCH_TERM to a listed name | `tests/kpost-ui/verticals/kdirectory-launch.spec.ts:90` |
-| 1 | no article loaded to share (live feed may be empty right now) | `tests/kpost-ui/verticals/knews.spec.ts:121` |
+| 1 | the directory search returned no entry for "…" (… / India / English) right now — set KDIRECTORY_SEARCH_TERM to a listed name | `tests/kpost-ui/verticals/kdirectory-functional.spec.ts:90` |
+| 1 | no article loaded to share (live feed may be empty right now) | `tests/kpost-ui/verticals/knews-functional.spec.ts:121` |
 
 ## No reason string — classified from the condition only; Phase 1 gives each one a reason (0)
 

@@ -100,7 +100,7 @@ resolves.**
    updates, translation. Gated `KMAIL_LIFECYCLE=true`, `allowLiveWrite`, self-cleaning, QA accounts
    only. The confidential-recipient secrecy rule (receiverType 3) gets its own test, like Katchup's.
 3. **Mail OTP (type 12)** stays blocked (OTP-gated, no live bypass).
-4. **Screen** — `/kmail` (`tests/kpost-ui/kmail/kmail.spec.ts` already asserts the shell; deepen to compose
+4. **Screen** — `/kmail` (`tests/kpost-ui/kmail/kmail-screens.spec.ts` already asserts the shell; deepen to compose
    controls / mail list once the API is in).
 
 Codes pinned in the module's coverage self-test; the flow's discrepancies recorded here as found.

@@ -377,7 +377,7 @@ test.describe(
       recordCreatedAccount({
         kpostId: fullKpostId,
         mobileNumber,
-        source: 'signup-business.spec.ts (UI)',
+        source: 'signup-business-e2e.spec.ts (UI)',
         note: `Business (Small) registration driven end-to-end; company "${testData.signupBusinessCompanyName}"`,
       });
 

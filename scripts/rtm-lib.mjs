@@ -89,7 +89,7 @@ function whereTokens(text) {
   const toks = new Set();
   for (const m of text.matchAll(/`([^`]+)`/g))
     for (const raw of m[1].split(/[\s,]+|\s+\+\s+/)) {
-      // Strip wrapping punctuation only — an inner dot is part of the name ("katchup-actions.spec.ts").
+      // Strip wrapping punctuation only — an inner dot is part of the name ("katchup-actions-e2e.spec.ts").
       const p = raw.trim().replace(/[`()]/g, '').replace(/\.+$/, '');
       if (!p) continue;
       if (

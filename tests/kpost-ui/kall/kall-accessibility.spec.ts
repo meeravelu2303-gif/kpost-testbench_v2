@@ -11,7 +11,7 @@ import { settleAnimations } from '../support/usermanagement';
 
 /**
  * axe-core WCAG scans of Kall's dynamic states: the Kool Kall tab and the open schedule modal (never
- * submitted). The default /kall state is covered by accessibility-axe.spec.ts.
+ * submitted). The default /kall state is covered by platform-axe-accessibility.spec.ts.
  */
 test.describe(
   'KPost Kall · dynamic-state accessibility (axe-core WCAG)',
