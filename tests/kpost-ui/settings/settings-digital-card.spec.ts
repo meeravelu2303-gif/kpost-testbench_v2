@@ -1,6 +1,26 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import type { Locator, Page } from '@playwright/test';
 import { settleFrames } from '../support/settle';
+
+/** Flips a switch's checkbox as the switch does: the input sits off-screen under its slider. */
+async function flip(checkbox: Locator): Promise<void> {
+  await checkbox.evaluate((el) => (el as HTMLInputElement).click());
+}
+
+/**
+ * The switch of one Digital Card row ("About", "Experience", ...): the innermost element holding the
+ * label and a checkbox. The checkbox sits under a styled switch, so it is attached, not "visible".
+ */
+function toggleFor(page: Page, label: RegExp): Locator {
+  return page
+    .locator('div')
+    .filter({ has: page.getByText(label) })
+    .filter({ has: page.getByRole('checkbox') })
+    .last()
+    .getByRole('checkbox')
+    .first();
+}
 
 /**
  * Settings › Digital Card Settings: flip one privacy toggle, confirm the request and new state, flip it
@@ -26,12 +46,8 @@ test.describe(
       await settingsPage.goto();
       await settingsPage.openTopLevelPanel('Digital Card Settings');
 
-      const aboutRow = page
-        .getByText(/^About$/i)
-        .first()
-        .locator('xpath=../..');
-      const aboutCheckbox = aboutRow.getByRole('checkbox');
-      await expect(aboutCheckbox, 'the About toggle renders').toBeVisible({ timeout: 15_000 });
+      const aboutCheckbox = toggleFor(page, /^About$/i);
+      await expect(aboutCheckbox, 'the About toggle renders').toBeAttached({ timeout: 15_000 });
 
       const before = await aboutCheckbox.isChecked();
 
@@ -40,7 +56,7 @@ test.describe(
           req.url().includes('/profile/updatePrivacySettingDetails') && req.method() === 'POST',
         { timeout: 10_000 },
       );
-      await aboutCheckbox.click();
+      await flip(aboutCheckbox);
       const request = await requestPromise;
 
       expect(request, 'toggling About fires a real updatePrivacySettingDetails POST').toBeTruthy();
@@ -55,7 +71,7 @@ test.describe(
           req.url().includes('/profile/updatePrivacySettingDetails') && req.method() === 'POST',
         { timeout: 10_000 },
       );
-      await aboutCheckbox.click();
+      await flip(aboutCheckbox);
       await restorePromise;
       await expect(
         aboutCheckbox,
@@ -70,12 +86,8 @@ test.describe(
       await settingsPage.goto();
       await settingsPage.openTopLevelPanel('Digital Card Settings');
 
-      const experienceRow = page
-        .getByText(/^Experience$/i)
-        .first()
-        .locator('xpath=../..');
-      const experienceCheckbox = experienceRow.getByRole('checkbox');
-      await expect(experienceCheckbox, 'the Experience toggle renders').toBeVisible({
+      const experienceCheckbox = toggleFor(page, /^Experience$/i);
+      await expect(experienceCheckbox, 'the Experience toggle renders').toBeAttached({
         timeout: 15_000,
       });
       const before = await experienceCheckbox.isChecked();
@@ -85,7 +97,7 @@ test.describe(
         route.fulfill({ status: 500, contentType: 'application/json', body: '{"status":"ERROR"}' }),
       );
 
-      await experienceCheckbox.click();
+      await flip(experienceCheckbox);
       await settleFrames(page);
 
       await expect(

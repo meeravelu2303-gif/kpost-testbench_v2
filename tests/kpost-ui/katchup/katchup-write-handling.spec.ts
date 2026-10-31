@@ -283,9 +283,16 @@ test.describe(
       ).toBe(true);
 
       await openBellMenu(page, message);
+      // The item's name starts with its icon glyph (" Save"), so the end of the name is matched.
       await page
-        .getByRole('menuitem', { name: /^Save$/i })
+        .getByRole('menuitem', { name: /\bSave$/i })
         .click()
+        .catch(() => undefined);
+      // Newer builds confirm in a page dialog ("... Please confirm" › Confirm), not a native confirm.
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: /^Confirm$/i })
+        .click({ timeout: 5_000 })
         .catch(() => undefined);
       await settleFrames(page);
 

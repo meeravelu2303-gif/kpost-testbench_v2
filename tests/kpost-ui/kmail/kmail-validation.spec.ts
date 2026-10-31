@@ -105,7 +105,64 @@ test.describe(
       await form.subject.click();
       await page.keyboard.type('Q'.repeat(80));
       expect(await form.subject.inputValue(), 'the subject holds 70 characters').toHaveLength(70);
-      await expect(toast(page, /maximum 70 characters/), 'the user is told the limit').toBeVisible({
+      await expect(
+        toast(page, 'You’ve reached the maximum 70 characters!'),
+        'the user is told the limit',
+      ).toBeVisible({ timeout: 10_000 });
+    });
+
+    test('a salutation is required to send', async ({ page }) => {
+      const form = await openCompose(page);
+      await chooseRecipient(page, form.to, testData.personal3KpostId);
+      await form.subject.fill('QA validation: no salutation');
+      await form.body.click();
+      await page.keyboard.type('QA bench body');
+      await page.getByPlaceholder('Select Salutation').first().fill('');
+      await page.keyboard.press('Escape');
+      const posted = countRequests(page, POST_MAIL);
+      await form.send.click();
+      await expect(toast(page, 'Saluation Cannot Be Empty!'), 'the user is told why').toBeVisible({
+        timeout: 10_000,
+      });
+      expect(posted(), 'a mail with no salutation never reaches the server').toBe(0);
+    });
+
+    test('a new salutation refuses special characters', async ({ page }) => {
+      await page.route(/salutation|saluation/i, (route) =>
+        route.request().method() === 'GET' ? route.continue() : route.abort(),
+      );
+      await openCompose(page);
+      // The salutation's more-options (⋮) → Add opens the new-salutation field.
+      await page.locator('.pluscircle svg').first().click();
+      await page
+        .locator('.optionstyle')
+        .filter({ hasText: /^\s*Add\s*$/ })
+        .first()
+        .click();
+      const field = page.getByPlaceholder('Enter Salutation.....').first();
+      await field.pressSequentially('Dear@#Sir');
+      await expect(
+        toast(page, 'Special Characters are not Allowed!'),
+        'the user is told why',
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(field, 'the special characters are dropped').toHaveValue('DearSir');
+    });
+
+    test('bulk mail refuses an Excel file with no e-mail ids', async ({ page }) => {
+      await openCompose(page);
+      const bulk = page.getByText('Bulk Mail', { exact: true }).first();
+      test.skip(
+        !(await bulk.isVisible({ timeout: 3_000 }).catch(() => false)),
+        'Bulk Mail is not offered on this build (its button is commented out in WriteMailPage.js)',
+      );
+      await bulk.click();
+      // XLSX.read parses CSV bytes as well, so a one-column sheet with no address is enough.
+      await page.locator('input[type="file"][accept=".xls,.xlsx"]').setInputFiles({
+        name: 'qa-no-emails.xlsx',
+        mimeType: 'text/csv',
+        buffer: Buffer.from('name\nQA Bench\n', 'utf8'),
+      });
+      await expect(toast(page, 'No email ids found in Excel'), 'the user is told why').toBeVisible({
         timeout: 10_000,
       });
     });

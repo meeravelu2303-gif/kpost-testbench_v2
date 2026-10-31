@@ -182,7 +182,9 @@ export const adminUserManagementApis: EndpointDefinition[] = [
       entityType: 'BUSINESS_M',
     })),
     destructive: true,
-    sideEffect: 'global',
+    // Texts the new password to the member's mobile on file, whatever the request names
+    // (SignUpLoginServiceImpl.resetPassword → KpostSendSMS.sendSMS), so the SMS kill-switch owns it.
+    sideEffect: 'external',
   }),
   defineKpostEndpoint({
     id: 'admin-hold-or-release',

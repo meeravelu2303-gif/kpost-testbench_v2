@@ -158,6 +158,82 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     judgedBy: 'QA live re-verify (run-420b3816)',
     date: '2026-10-12',
   },
+  // Triage of run-7ba221a3 (KPost API, 2026-10-30), each replayed live on 2026-10-31.
+  {
+    fingerprint: 'KP-F6FB49',
+    endpoint: '/admin/createKpostIDAndDesignationSuggestion',
+    reason:
+      'The 200 to a foreign companyID returns nothing of that company: replayed as the 1034 admin, "Accounts Officer" (used only in 1034) gives "Accounts Officer1" with companyID 1034 AND 242, and "QA Tester" (5 users in 242, none in 1034) gives "QA Tester" with both. The server now scopes the lookup to the caller (#1027 fixed); the check only sees the 200.',
+    judgedBy: 'QA live re-verify (run-7ba221a3, owner control)',
+    date: '2026-10-31',
+  },
+  {
+    fingerprint: 'KP-108498',
+    endpoint: '/admin/displayNameSuggestion',
+    reason:
+      'displayNameSuggestion only abbreviates the companyName and designation the caller sends ("Neb Sol QA Tes"); it reads no company record, so a foreign companyID discloses nothing. Same answer for companyID 242 and 1034 on replay.',
+    judgedBy: 'QA live re-verify (run-7ba221a3)',
+    date: '2026-10-31',
+  },
+  {
+    fingerprint: 'KP-DDD302',
+    endpoint: '/v2/katchup/patchWorkForGroup',
+    reason:
+      'Admin-only repair job: KatchupControllerV2 refuses everyone but info@kpost.in with 403 (developer change 26-Sep-2026), and the definition declares 403. The valid-token check counted that role refusal as a rejected token; fixed in valid-token.validator.ts the same day.',
+    judgedBy: 'QA triage (run-7ba221a3, source + live replay)',
+    date: '2026-10-31',
+  },
+  {
+    fingerprint: 'KP-A8C21C',
+    endpoint: '/v2/profile/kmailPasswordPatchWork',
+    reason:
+      'Admin-only job: UserProfileControllerV2 allows only two named admin ids and answers 403 to everyone else (developer change 28-Sep-2026), as the definition declares. A role refusal, not a rejected token; the valid-token check is fixed.',
+    judgedBy: 'QA triage (run-7ba221a3, source + live replay)',
+    date: '2026-10-31',
+  },
+  {
+    fingerprint: 'KP-87DB8E',
+    endpoint: '/v2/signupLogin/signup',
+    reason:
+      'The firstName/lastName/dateOfBirth cases answer 409 because the fixture account already exists, which refuses the request before typing is looked at. The one real fault in it (countryCode → 500) is any unknown country code, number or text, and is filed separately with the right cause.',
+    judgedBy: 'QA live re-verify (run-7ba221a3)',
+    date: '2026-10-31',
+  },
+  // One root cause, one bug: any requestType it does not know answers 500, filed as KP-E9D179.
+  ...(['KP-275ADF', 'KP-D95458'] as const).map((fingerprint): KnownFalsePositive => ({
+    fingerprint,
+    endpoint: '/v2/profile/getDesignationOrProfession',
+    reason:
+      'Same root cause as KP-E9D179: every requestType the endpoint does not recognise answers 500, a plain word ("nonsense") and an empty body included, so the script/SQL strings are not being interpreted. Filed once, under KP-E9D179.',
+    judgedBy: 'QA live re-verify (run-7ba221a3)',
+    date: '2026-10-31',
+  })),
+  {
+    endpoint: '/readMail/draftMailContent',
+    validator: 'request.data-type',
+    field: 'draftKmailID',
+    reason:
+      'draftKmailID is a long (ReadMailRequestObject.java:53), so the "number instead of string" case sends the right type; the 500 is a draft id that does not exist. Judged INVALID by the developers as #791; KP-3721F7 on 2026-10-30 is the same finding.',
+    judgedBy: 'QA triage, following developer ruling #791',
+    date: '2026-10-31',
+  },
+  // UI chromium run-dfe2c798 (2026-10-31): two failures that never reached the behaviour they check.
+  {
+    fingerprint: 'KP-EF6767',
+    actualContains: 'the 2nd QA account is in the conversation list',
+    reason:
+      'Not the avatar logout (#13288): the test could not find the conversation row because this build ids Recents rows "katchup-recent-<date>-<kpostID>". Bench selector fixed (support/katchup.ts conversationRow); a failure at the avatar step still files.',
+    judgedBy: 'QA triage (run-dfe2c798, DOM read live)',
+    date: '2026-10-31',
+  },
+  {
+    fingerprint: 'KP-68A77F',
+    actualContains: 'the save request must have fired',
+    reason:
+      'The rejected-save check never reached Save: this build names the menu item with its icon (" Save") and confirms in a page dialog, so the bench clicked nothing. Spec fixed the same day and passes alone (the app shows the error). A failure after the Save request fires still files.',
+    judgedBy: 'QA triage (run-dfe2c798, re-run alone)',
+    date: '2026-10-31',
+  },
 ];
 
 function norm(tag: string): string {

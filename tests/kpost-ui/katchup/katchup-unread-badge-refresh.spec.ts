@@ -3,6 +3,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Browser, Page } from '@playwright/test';
 import {
+  conversationRow,
   deleteSentMessage,
   gotoKatchup,
   openConversation,
@@ -119,7 +120,7 @@ test.describe(
 
         // Opening the conversation keeps the list (and its badge) on screen.
         readAt = Date.now();
-        await page.locator(`[id="${victim}"], [id^="${victim}-"]`).first().click();
+        await conversationRow(page, victim).click();
 
         // Give the read and the client's socket-driven re-fetch up to 10s — but NO reload.
         let after = before;
@@ -206,7 +207,7 @@ test.describe(
 
         // Read it in-SPA (the side menu stays on screen), then wait up to 10s — NO reload.
         readAt = Date.now();
-        await page.locator(`[id="${victim}"], [id^="${victim}-"]`).first().click();
+        await conversationRow(page, victim).click();
         await parkPointerAwayFromSideMenu(page);
         let after = before;
         const deadline = Date.now() + 10_000;

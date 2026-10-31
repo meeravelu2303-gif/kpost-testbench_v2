@@ -1,5 +1,6 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { conversationRow } from '../support/katchup';
 
 /**
  * Katchup conversation search: the box takes a query and clearing it restores the list. Read-only,
@@ -23,8 +24,8 @@ test.describe('KPost Katchup search', { tag: ['@ui', '@katchup', '@regression'] 
     const search = page.locator('[placeholder*="Search" i]').first();
     await expect(search, 'the Katchup search box is present').toBeVisible({ timeout: 20_000 });
 
-    // Baseline: the 2nd QA account's conversation is in the list (its row id is that KPOST ID).
-    const victimRow = page.locator(`[id="${testData.victimKpostId}"]`).first();
+    // Baseline: the 2nd QA account's conversation is in the list (its row id ends with that KPOST ID).
+    const victimRow = conversationRow(page, testData.victimKpostId);
     await expect(victimRow, 'the 2nd QA account is in the conversation list').toBeVisible({
       timeout: 20_000,
     });

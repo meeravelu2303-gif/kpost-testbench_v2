@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { pickReactSelect } from '../support/react-select';
@@ -50,6 +50,17 @@ async function openAddForm(page: Page) {
 }
 
 type Form = Awaited<ReturnType<typeof openAddForm>>;
+
+/** Takes focus off a field (Tab only moves between a date or time input's own segments). */
+const leave = (field: Locator) => field.evaluate((el: HTMLElement) => el.blur());
+
+/** A react-select found by its field label (its own text changes once a value is chosen). */
+const selectLabelled = (page: Page, label: string): Locator =>
+  page
+    .locator(
+      `xpath=//label[normalize-space()='${label}']/following::div[contains(@class,'react-select__control')][1]`,
+    )
+    .first();
 
 /** Fills every field (the date defaults to today) with the given values. */
 async function fill(
@@ -134,7 +145,7 @@ test.describe(
       });
       await form.save.click();
       await expect(
-        page.getByText(/End time (must|should) be (after|later than) (the )?start/i).first(),
+        page.getByText('End time must be later than start time', { exact: true }).first(),
         'the user is told the end is before the start',
       ).toBeVisible({ timeout: 10_000 });
       expect(sent, 'a schedule that ends before it starts never reaches the server').toHaveLength(
@@ -156,6 +167,73 @@ test.describe(
         Number(sent[0]?.scheduleEndDateAndTime) - Number(sent[0]?.scheduleStartDateAndTime),
         'one hour between start and end',
       ).toBe(3_600_000);
+    });
+
+    test('each field of a one-time schedule says when it is left empty', async ({ page }) => {
+      const sent = await blockCreate(page);
+      const form = await openAddForm(page);
+      const message = (text: string) => page.getByText(text, { exact: true }).first();
+      // A field reports itself once it loses focus (Diary.js handleBlur).
+      const date = page.locator('input[type="date"]:visible').first();
+      await date.fill('');
+      await leave(date);
+      await expect(message('Date is required'), 'an empty date').toBeVisible();
+      await form.start.fill('');
+      await leave(form.start);
+      await expect(message('Start time is required'), 'an empty start time').toBeVisible();
+      await form.end.fill('');
+      await leave(form.end);
+      await expect(message('End time is required'), 'an empty end time').toBeVisible();
+      // Priority cannot be emptied once chosen (a plain select), so it is only ever missing: Save waits.
+      await expect(form.save, 'Save stays disabled').toBeDisabled();
+      expect(sent, 'nothing was sent').toHaveLength(0);
+    });
+
+    test('a repeated schedule needs its repeat type, period, weeks and days', async ({ page }) => {
+      const sent = await blockCreate(page);
+      const form = await openAddForm(page);
+      const message = (text: string) => page.getByText(text, { exact: true }).first();
+      await page.getByRole('radio', { name: /Repeated/ }).check();
+      await form.title.fill('QA validation repeated');
+      await form.description.fill('QA bench');
+      await form.start.fill('09:00');
+      await form.end.fill('10:00');
+      const repeat = page.getByLabel('Repeat schedule');
+      await repeat.focus();
+      await leave(repeat);
+      // The list shows "Daily" first, so an untouched value must still count as chosen or say so.
+      const repeatValue = await repeat.inputValue();
+      if (!repeatValue) {
+        await expect(message('Repeat type is required'), 'no repeat type').toBeVisible();
+      }
+
+      // The schedule period cannot be emptied once chosen (a plain select): while it is missing,
+      // Save waits.
+      await pickReactSelect(form.priority, 'High Priority', { page });
+      await expect(form.save, 'no schedule period yet: Save stays disabled').toBeDisabled();
+      await pickReactSelect(selectLabelled(page, 'Schedule Period'), 'Next One Week', { page });
+
+      await repeat.selectOption('weekly');
+      for (const [label, option, rule] of [
+        ['Preferred Weeks', '1st Week', 'Preferred weeks are required'],
+        ['Preferred Days', 'Monday', 'Preferred days are required'],
+      ] as const) {
+        // A multi-select combobox under the label: type, Enter to add, Backspace to remove.
+        const box = page
+          .locator(`xpath=//*[normalize-space()='${label}']/following::input[@role='combobox'][1]`)
+          .first();
+        await box.click();
+        await box.pressSequentially(option);
+        await box.press('Enter');
+        await box.press('Escape');
+        await box.press('Backspace');
+        // The field re-checks only when another field is left, as a user moving on would.
+        await form.title.focus();
+        await leave(form.title);
+        await expect(message(rule), `weekly: ${rule.toLowerCase()}`).toBeVisible();
+      }
+      await expect(form.save, 'Save stays disabled').toBeDisabled();
+      expect(sent, 'nothing was sent').toHaveLength(0);
     });
   },
 );

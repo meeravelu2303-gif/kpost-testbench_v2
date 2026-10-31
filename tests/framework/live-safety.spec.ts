@@ -242,6 +242,59 @@ test.describe('live-application safety @framework', () => {
     }
   });
 
+  test('GLOBAL_LIFECYCLE opens a flow’s own shared-state write on the QA server, and nothing else', () => {
+    const appVersion: GuardedEndpoint = {
+      label: 'POST /v2/common/updateFlutterAppVersion',
+      destructive: true,
+      sideEffect: 'global',
+    };
+    const qaServer = {
+      isProduction: true,
+      allowDestructive: false,
+      testDbMode: true,
+      globalLifecycle: true,
+      allowGlobalLifecycle: true,
+    };
+    expect(
+      destructiveBlockReason(appVersion, qaServer),
+      'a self-cleaning flow may write shared state on the QA server',
+    ).toBeUndefined();
+
+    // Each of the four conditions is required on its own.
+    for (const [missing, flags] of [
+      ['the env flag', { ...qaServer, globalLifecycle: false }],
+      ['TEST_DB_MODE', { ...qaServer, testDbMode: false }],
+      [
+        'the per-call flag (the engine never sets it)',
+        { ...qaServer, allowGlobalLifecycle: false },
+      ],
+      ['a QA-only host list', { ...qaServer, liveHostConfigured: true }],
+    ] as const) {
+      expect(
+        destructiveBlockReason(appVersion, flags),
+        `without ${missing} the shared-state write stays blocked`,
+      ).toBeTruthy();
+    }
+
+    // It never reaches a real phone or mailbox, and never ends a session outside the throwaway.
+    const sms: GuardedEndpoint = {
+      label: 'POST /v2/common/sendOTP/',
+      destructive: true,
+      sideEffect: 'external',
+      otpDependent: 'sends',
+    };
+    expect(destructiveBlockReason(sms, qaServer), 'real SMS stays blocked').toMatch(/kill-switch/i);
+    const logoutAll: GuardedEndpoint = {
+      label: 'GET /v2/signupLogin/userLogoutFromAllDevices/',
+      destructive: true,
+      sideEffect: 'global',
+    };
+    expect(
+      destructiveBlockReason(logoutAll, qaServer),
+      'ending every session needs the throwaway account, not this flag',
+    ).toBeTruthy();
+  });
+
   test('every registered OTP/SMS sender is blocked against a real host', () => {
     const senders = apiRegistry
       .all()

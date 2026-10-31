@@ -16,6 +16,7 @@ import { maskString } from '@utils/masking';
 import { type BusinessRuleFinding, type FlowFinding, isServerError } from './flow-finding';
 import {
   destructiveBlockReason,
+  LIVE_HOST_CONFIGURED,
   ProductionSafetyError,
   THROWAWAY_ACCOUNT_ID,
 } from './production-guard';
@@ -52,6 +53,11 @@ export interface SendOptions {
   allowLiveRead?: boolean;
   /** The request names a non-existent account/mobile, so an SMS sender texts nobody. */
   noSmsRecipient?: boolean;
+  /**
+   * Authorize this shared-state (`global`) write on the QA test server (needs GLOBAL_LIFECYCLE; see
+   * SafetyFlags); set per call by a self-cleaning flow, never by the engine.
+   */
+  allowGlobalLifecycle?: boolean;
   /**
    * The throwaway account (`apiflowkpost<N>@kpostindia.com`) this call acts on, created by the same
    * flow; the call must sign in as it. Opens session-ending and global actions on the test gateway.
@@ -153,6 +159,10 @@ export class EndpointExecutor {
       testDbMode: env.TEST_DB_MODE,
       // OTP test-gateway (with TEST_DB_MODE): opens the OTP/signup flows on the disposable test DB.
       otpTestGateway: env.OTP_TEST_GATEWAY,
+      // A self-cleaning flow's shared-state write on the QA test server (GLOBAL_LIFECYCLE + per call).
+      globalLifecycle: env.GLOBAL_LIFECYCLE,
+      allowGlobalLifecycle: options.allowGlobalLifecycle,
+      liveHostConfigured: LIVE_HOST_CONFIGURED,
     });
     if (blocked) throw new ProductionSafetyError(blocked);
 
@@ -178,7 +188,9 @@ export class EndpointExecutor {
     const exchange = await client.execute(request, options.label);
 
     // A 5xx during an authorized lifecycle call is a fileable defect; a 4xx may be our payload.
-    if ((options.allowLiveWrite || options.allowLiveRead) && isServerError(exchange.status)) {
+    const authorized =
+      options.allowLiveWrite || options.allowLiveRead || options.allowGlobalLifecycle;
+    if (authorized && isServerError(exchange.status)) {
       this.flowFindings.push({
         endpoint,
         method: options.method ?? endpoint.method,
@@ -210,7 +222,9 @@ export class EndpointExecutor {
       throw new Error(`throwawayAccount "${id}" is not a throwaway account id`);
     const signedInAs =
       options.auth && 'principal' in options.auth ? options.auth.principal.username : undefined;
-    if (endpoint.authentication.required && signedInAs !== id)
+    // No token at all can act as nobody, so it may probe the throwaway's own auth gate.
+    const noToken = options.auth !== undefined && 'header' in options.auth && !options.auth.header;
+    if (endpoint.authentication.required && signedInAs !== id && !noToken)
       throw new Error(
         `${endpoint.label}: a throwaway call must sign in as ${id}, not ${signedInAs ?? 'the default account'}`,
       );

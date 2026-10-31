@@ -79,14 +79,24 @@ test.describe(
         .catch(() => undefined);
       const section = page.locator('#Experience').first();
       await expect(section, 'the Experience section renders').toBeVisible({ timeout: 20_000 });
-      // The add icon is hover-revealed; hover the section first, then force the small-icon click.
-      await section.hover();
-      await section.locator('.icon-KP_45-Add').first().click({ force: true });
+      // Older builds: a hover-revealed add icon opening a modal. Since 2026-10-31: an inline
+      // "+ Add New Experience" form under the section heading.
+      const addNew = page.getByText(/^\+?\s*Add New Experience$/i).first();
+      if (await addNew.isVisible({ timeout: 5_000 }).catch(() => false)) {
+        await addNew.click();
+      } else {
+        await section.hover();
+        await section.locator('.icon-KP_45-Add').first().click({ force: true });
+      }
 
       // .first() wraps the combined .or(), or it can still match two elements.
       await expect(
-        page.getByRole('dialog').or(page.locator('.modal-content')).first(),
-        'the Experience add modal opens',
+        page
+          .getByRole('dialog')
+          .or(page.locator('.modal-content'))
+          .or(page.getByPlaceholder('Enter Company Name'))
+          .first(),
+        'the Experience add form opens',
       ).toBeVisible({ timeout: 15_000 });
     });
   },

@@ -13,11 +13,11 @@ choice, and every one is still contract-validated OFF live.
 
 | Category | Count |
 | -------- | ----: |
-| Shared / global write (by choice) | 24 |
+| Shared / global write (by choice) | 22 |
 | OTP — no bypass on live (permanent) | 17 |
-| Real SMS / email to a real recipient | 6 |
+| Real SMS / email to a real recipient | 7 |
+| Needs setup we lack (business login 403, company logo 500) | 3 |
 | Public record write (enquiry / unsubscribe) | 2 |
-| Needs setup we lack (business login 403, company logo 500) | 2 |
 | Route not deployed on this test build (confirmed 404) | 2 |
 | Written, execution blocked pending explicit owner authorization | 1 |
 | **Total not tested on live** | **54** |
@@ -35,7 +35,7 @@ choice, and every one is still contract-validated OFF live.
 | `POST` | `/admin/createOrRemoveBackupAdmin/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/holdOrRelease/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/removeCompanyLogo` | writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/admin/resetPassword/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/resetPassword/` | sends a real SMS or email to a real recipient |
 | `POST` | `/admin/terminateUser/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/updateBankAccountDetails` | writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/updateCompanyDetails` | writes state shared by the whole environment (no self-cleaning lifecycle) |
@@ -116,7 +116,7 @@ choice, and every one is still contract-validated OFF live.
 | Method | Path | Why not tested on live |
 | ------ | ---- | ---------------------- |
 | `POST` | `/v2/common/saveUnsubscriberDetails` | persists a real shared record (enquiry / unsubscribe) — no self-cleaning lifecycle |
-| `POST` | `/v2/sentMail/getMailCredentials/` | writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/sentMail/getMailCredentials/` | read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 
 ### Kall (1)
 

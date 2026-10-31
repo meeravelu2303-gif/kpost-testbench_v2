@@ -1,6 +1,11 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { EDITOR, gotoKatchup, parkPointerAwayFromSideMenu } from '../support/katchup';
+import {
+  conversationRow,
+  EDITOR,
+  gotoKatchup,
+  parkPointerAwayFromSideMenu,
+} from '../support/katchup';
 import { settleFrames } from '../support/settle';
 
 /**
@@ -34,9 +39,7 @@ test.describe(
       await parkPointerAwayFromSideMenu(page);
 
       // Open conversation A (the 2nd QA account) and its composer, then type a draft WITHOUT sending.
-      const rowA = page
-        .locator(`[id="${testData.victimKpostId}"], [id^="${testData.victimKpostId}-"]`)
-        .first();
+      const rowA = conversationRow(page, testData.victimKpostId);
       await expect(rowA, 'conversation A is in the list').toBeVisible({ timeout: 20_000 });
       await rowA.click();
       await page.locator('.msg-arrow').first().click();
@@ -47,9 +50,7 @@ test.describe(
 
       // Switch to conversation B (a different contact) in-SPA, then back to A.
       await parkPointerAwayFromSideMenu(page);
-      const rowB = page
-        .locator(`[id="${SECOND_CONTACT_ID}"], [id^="${SECOND_CONTACT_ID}-"]`)
-        .first();
+      const rowB = conversationRow(page, SECOND_CONTACT_ID);
       test.skip(
         (await rowB.count()) === 0,
         `the second contact (${SECOND_CONTACT_ID}) is not in this account's Recents right now — nothing to switch to`,

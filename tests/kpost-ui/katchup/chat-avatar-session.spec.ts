@@ -2,6 +2,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
 import { retryOrSkip } from '../../support/live-condition';
+import { conversationRow } from '../support/katchup';
 
 /**
  * Katchup chat header: clicking the contact's avatar must not log the user out. Read-only; each test
@@ -37,7 +38,7 @@ test.describe(
         .catch(() => undefined);
 
       // Open the conversation with the 2nd QA account, then its chat thread.
-      const conversation = page.locator(`[id="${testData.victimKpostId}"]`).first();
+      const conversation = conversationRow(page, testData.victimKpostId);
       await expect(conversation, 'the 2nd QA account is in the conversation list').toBeVisible({
         timeout: 20_000,
       });

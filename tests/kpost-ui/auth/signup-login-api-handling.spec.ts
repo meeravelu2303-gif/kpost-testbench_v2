@@ -146,11 +146,13 @@ test.describe(
         'the generated local part happened to collide — re-run',
       );
 
-      // Stub only the final submit; every earlier call was real.
+      // Stub only the final submit; every earlier call was real. The shape the server really sends:
+      // SignUpLoginControllerV2 answers with the HTTP status of its statusCode (500 here), so an
+      // HTTP 200 carrying a 500 envelope is a state it no longer produces (2026-10-31).
       await page.route('**/signupLogin/signup/**', async (route) => {
         if (route.request().method() !== 'POST') return route.continue();
         await route.fulfill({
-          status: 200,
+          status: 500,
           contentType: 'application/json',
           body: JSON.stringify({
             statusCode: 500,

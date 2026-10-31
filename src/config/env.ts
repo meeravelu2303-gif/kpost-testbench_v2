@@ -133,6 +133,13 @@ const EnvSchema = z.object({
    */
   ADMIN_LIFECYCLE: z.stringbool().default(false),
   /**
+   * The target is the QA test server (owner, 2026-10-30: "we are using local for testing purpose
+   * only"): self-cleaning flows may make shared-state (`global`) writes, each with a per-call
+   * `allowGlobalLifecycle`. Needs TEST_DB_MODE; refused when any configured host is live; never
+   * real SMS/e-mail, never the engine.
+   */
+  GLOBAL_LIFECYCLE: z.stringbool().default(false),
+  /**
    * Run the role-posting lifecycle (writes to live KSMACC), QA companies only; the engine never
    * fuzzes it.
    */

@@ -126,7 +126,9 @@ Profiles: `SMOKE` → `REGRESSION` (default) → `SECURITY` → `FULL` (= everyt
 Key flags (defaults in `src/config/env.ts`): `BUGZILLA_DRY_RUN` (true), `BUGZILLA_AUTO_RESOLVE` (true),
 `BUGZILLA_RESOLVE_ONLY`, `VALIDATION_PROFILE`, `TEST_DB_MODE` (full matrix on a disposable test DB),
 `WRITE_FUZZ` (fuzz writes; needs TEST_DB_MODE), `ALLOW_DESTRUCTIVE_TESTS`, `OTP_TEST_GATEWAY` (123456
-validates; only on a genuine test gateway), `*_LIFECYCLE` (gated feature flows), `DB_ALLOW_WRITES`.
+validates; only on a genuine test gateway), `*_LIFECYCLE` (gated feature flows), `DB_ALLOW_WRITES`,
+`GLOBAL_LIFECYCLE` (QA test server only: a self-cleaning flow's shared-state write, each call opted in
+with `allowGlobalLifecycle`; never the engine, never SMS/e-mail, refused if any host is live).
 Always armed regardless of flags: the QA-identifier guard (no request may name a record we don't own),
 the OTP/SMS kill-switch, and `sideEffect: 'global'`/`external` blocks. Forgot-password and the profile's
 device/deactivation OTP senders text a real phone even with the OTP bypass, so they stay blocked; account

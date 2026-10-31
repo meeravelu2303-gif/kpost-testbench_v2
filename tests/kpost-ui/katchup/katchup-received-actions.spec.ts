@@ -252,12 +252,22 @@ test.describe(
             .filter({ hasText: /^\s*Save\s*$/i })
             .first()
             .click();
+          // Older builds: a native confirm (dismissed above). Since 2026-10-31: a page dialog
+          // "... Message Folder Please confirm" with Cancel / Confirm, which is cancelled here.
+          const pageDialog = page
+            .getByRole('dialog')
+            .filter({ hasText: /Message Folder|Please confirm/i })
+            .last();
           await expect
-            .poll(() => confirms.length, {
-              message: 'Save opens a Save Messages confirmation dialog',
-              timeout: 15_000,
-            })
-            .toBeGreaterThan(0);
+            .poll(
+              async () => confirms.length > 0 || (await pageDialog.isVisible().catch(() => false)),
+              { message: 'Save opens a Save Messages confirmation dialog', timeout: 15_000 },
+            )
+            .toBe(true);
+          if (!confirms.length) {
+            confirms.push(`confirm: ${(await pageDialog.innerText()).replace(/\s+/g, ' ')}`);
+            await pageDialog.getByRole('button', { name: /^Cancel$/i }).click();
+          }
           test.info().annotations.push({ type: 'observed', description: confirms.join(' || ') });
           expect(confirms[0], 'the dialog is a confirm about saving the selected message').toMatch(
             /confirm: .*(saved|Message Folder)/i,

@@ -3,7 +3,153 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-30 (latest) — Web validation for Contacts, KDiary, KBooking, User Management; guard-refused probes skip
+### 2026-10-31 (latest) — KPost UI Chromium filed; new web build, fuzz pollution, hand triage
+
+- **Run:** `product:kpost-ui:chromium` (run-dfe2c798: 456 passed, 168 failed, 6.3 h). Only
+  selector-independent specs auto-file (`UI_FILING_SPECS`), so every other failure was re-run alone
+  and triaged by hand. `bug:apply` closed #1123, #1286, #1327, #13289. Two of its items were
+  suppressed (`known-false-positives.ts`): a reopen of #13288 and a "save fails silently" bug, both
+  failures of the bench against the new build.
+- **New web build (seen 2026-10-31), bench followed it:**
+  - Recents rows are ided `katchup-recent-<date>-<kpostID>` (`support/katchup.ts conversationRow`,
+    six Katchup specs).
+  - The bell-menu names start with an icon glyph, and Save confirms in a page dialog
+    (`katchup-write-handling`, `katchup-received-actions`).
+  - Digital Card toggles are switches with an off-screen input (`settings-digital-card` flips them
+    from script).
+  - Experience adds inline (`profile-actions`).
+  - The KMail Status row is a plain name (`kmail-more-actions`).
+  - The signup stub now answers the HTTP 500 the controller really sends (`signup-login-api-handling`).
+- **API fuzzing had polluted the UI account:**
+  - KPost settings writes left qatest1's layout theme and font as "javascript:alert(1)".
+  - KMail `addOtherDomainContacts` left eight nameless junk outside contacts, which crash Write Mail.
+  - Both were repaired through the app's own endpoints. The engine now runs the settings endpoints
+    and the outside-contact writes as qatest5 (`principalKey: 'personal-5'`).
+  - qatest1's Katchup Do-Not-Disturb is still On: `katchupNotification` answers 400 (KP-8EF976).
+- **Filed (each reproduced alone, duplicate-checked):**
+  - KPost UI: #13360 (sends carry no receiver; blocker), #13361 (Kall calls a just-blocked contact),
+    #13362 (under-18 DOB saved), #13363 (KBooking past date), #13364 (Write Mail To crashes on a
+    nameless outside contact), #13366 (Japanese 32% untranslated), #13367 (side menu not
+    keyboard-focusable), #13368 (clearing one "Sent Mail Not Opened" mail sends no selectedContact).
+  - KMail API: #13365 (addOtherDomainContacts stores any text as an e-mail).
+  - Reopened: #1348 (opened mail shows no body), #1358 (badge does not rise on a new mail), #895
+    (a failed final signup shows "Successfully completed the Signup").
+- **Left as is:**
+  - Kool Kall invite Accept/Decline answer 404 "Kall not found": the same fault as the open #13206.
+  - Offline: the open #1205/#1113 family.
+  - Transfer-wording: below the filing floor.
+  - KMail multi-select copy (no toast, clipboard empty): unresolved, not filed.
+- **Working note:** `bug:file` defaults to version "unspecified", which KMail API does not have
+  (only "5.0"); give `version` in the finding JSON.
+
+### 2026-10-31 — KPost API + KMail API filed; triage judgments from the live replays
+
+- **Runs:** `product:kpost-api` (run-7ba221a3: 4575 passed, 319 failed) and `product:kmail-api` (744
+  passed, 66 failed), each reviewed with `report:filing`, replayed live, then `bug:apply`.
+- **Filed:** KPost API #13334-#13352 (plan), #13353 (removing an absent company logo → 500) and
+  #13354 (`addingUserForReallocateByAdmin` → 500), both held flow items replayed then approved, and
+  #13355 by hand: signup answers 500 `"Not Applicable"` for any unknown countryCode. The generated
+  ticket blamed the number type, but `"12345"` and `12345` both crash while `"91"` and `91` don't.
+  #486 reopened. Closed: #723, #1262, #13272 (status pass) and #1027 (re-tested by hand with an owner
+  control: the designation lookup now ignores the body's companyID). KMail API #13356-#13359.
+- **Judged not defects** (`known-false-positives.ts`, each with its replay):
+  - the cross-tenant suggestion findings: the answer is the same for both companies;
+  - the patch-work 403s: the endpoints are admin-only by the developers' design;
+  - the signup typing 409s: the fixture account already exists;
+  - `draftKmailID` as a number: #791 ruled it INVALID.
+    getDesignationOrProfession's XSS and SQL findings are the same root cause as #13351 (any unknown
+    `requestType` → 500), so the bug is filed once.
+- **Bench fix:** `authentication.valid-token` no longer counts a 403 as a rejected token when the
+  definition declares 403 as the answer (`tests/framework/validators/valid-token.spec.ts`).
+- **Working notes:**
+  - `bug:apply` rewrites `reports/REPORT.json`. Run `bug:file-reviewed` before it, or point it at the
+    dry-run copy in `reports/history/`.
+  - With QATEST_ONLY, the QA_PERSONAL_* values in `.env` are the older accounts. A hand replay logs
+    in as `QATEST<N>_KPOST_ID` with `QATEST_SHARED_PASSWORD`, read with dotenv: the value is quoted.
+
+### 2026-10-30 — Web input-rule ledger; rule-by-rule negative coverage
+
+- **Why gaps kept surfacing:** coverage was judged screen by screen from what had been met, never
+  against the full list. `tests/framework/ui-rule-coverage.spec.ts` now extracts every refusal and
+  error message from the React source on each `npm run framework` and writes
+  `docs/generated/ui-rule-coverage.md`: each rule, whether a test names it, and a reasoned
+  "not testable here" list (device permissions, placeholders, real-SMS OTPs, rules a user cannot reach).
+  Start: 45 of 166 input rules checked. Now: 72 of 161 (unreachable ones moved out with reasons).
+- **New or extended specs (all run alone on chromium):** `katchup/katchup-select-validation` (Copy /
+  Transfer / Save / Delete / Forward with none or two ticked), `group/group-admin-validation` (admin
+  exit, last admin, all admins, existing member: the live screen hides Exit for admins and greys
+  existing members out, which counts), `kmail/kmail-validation` (+ salutation required, special
+  characters; Bulk Mail is not on this build: skipped with that reason), `verticals/kdiary-validation`
+  (+ every one-time field, repeated schedule weeks/days), `kall/kall-validation` (+ end time past, edit
+  times, calling a blocked contact). Helpers moved to `support/kall.ts` (scheduleMeeting, openMeeting,
+  endMeeting, button) from the Kool Kall e2e spec.
+- **New API spec** `contacts/block-enforcement.spec.ts`.
+- **Found, reproduced 2-3 times, duplicate-checked (new):**
+  - **Web: Kall calls a contact just blocked from their Digital Card** (`initiateKall` is sent; no
+    "User is Blocked" message): the check reads a contact list the block did not update.
+  - **API: `initiateKall` and `sendMessage` accept a call / message to a contact the caller blocked**
+    (200 each; the web says "Unblock to send message"). A blocked contact's message is correctly not
+    delivered.
+  - Web: Transfer with two messages ticked says "You can copy only one message at a time." (wording).
+- Facts for later runs: qatest4 and qatest5 are deleted from qatest1's contacts; qatest2 is the one
+  active QA contact there. A group the browser account creates is found in Recents by name (its row has
+  no id). In Chromium, Tab inside a date/time input moves between its segments, so specs blur instead.
+
+### 2026-10-30 — The nine never-driven endpoints now have flows; seven new findings
+
+Each new flow ran alone twice on the QA server; the findings below reproduced both times and were
+duplicate-checked against their real components. They file through the next product previews.
+
+- `security/privileged-endpoints.spec.ts`: the app-version write and the KNews feed admin refuse an
+  ordinary account (pass). **Any signed-in account can re-import the RedBus city list** (`/redbus/**` needs
+  no admin role), and a failed import answers **HTTP 200 with the Java exception text**. **The public
+  `/signupLoginForMediumAndLarge/addingUserByAdmin` has no login gate** (a tokenless unparseable body gets
+  400, not 401). Every probe is zero-impact: the version is re-sent unchanged, the feed id does not exist,
+  the add-member body is unparseable; the city table was checked intact (3,416 rows).
+- `common/company-logo-lifecycle.spec.ts`: the 242 admin sets, reads back byte-identical and removes the
+  logo; another company's admin and an ordinary account get 403 (#985 still fixed); a missing logo reads 404. **Removing a logo that is not there answers 500.** The original (none) is restored.
+- `kmail-api/security/credential-disclosure.spec.ts` (rewritten; the endpoint reclassified as a read):
+  own call 200, no token 401; **wrong password and unknown account answer 500**; **another account's
+  token gets the mailbox credentials** when it supplies that account's password (the account comes from
+  the body). Passwords are read from the QA DB and never printed.
+- `security/katchup-change-caption.spec.ts`: **a non-participant rewrites another conversation's message**
+  (qatest3 on a qatest5→qatest4 message); the sender's own call is the control. Messages deleted after.
+- `katchup/multipart-upload.spec.ts`: **uploadMultipartFiles answers 200 with a uuid but stores nothing**
+  (no name, size 0, download 404); the row is deleted after. #614 (WONTFIX, a different multipart route,
+  same spirit) may decide this one too: review it in `report:filing`.
+- `admin/member-lifecycle.spec.ts`: **the web's Allocate (addingUserByAdmin, requestType "reallocate") is
+  refused with 409 "User already exists"**: the KP-1009 duplicate check also blocks reallocations, and the
+  reallocation Katchup message is sent before that check. **addingUserForReallocateByAdmin answers 500** to
+  the same body. All throwaway members end terminated.
+- The executor now files a flow 5xx for `allowGlobalLifecycle` calls too (it did for allowLiveWrite/Read).
+- Still not drivable: KNews feed articles (no feeds on the QA server; #13310); the real-SMS/push senders.
+
+### 2026-10-30 — QA server is for testing only: shared-state flows unlocked (GLOBAL_LIFECYCLE)
+
+- **Owner, 2026-10-30:** "we are using local for testing purpose only, so we should cover and test
+  everything". Correction to an earlier claim: the "2,156 mutating/attack probes unsafe to send" line in
+  the run report is only a keyword bucket over skip reasons; with WRITE_FUZZ + TEST_DB_MODE (set by the
+  product commands) every attack and bad-input validator already runs on write endpoints. What really
+  never ran were the `sideEffect: 'global'` endpoints, refused unconditionally on TEST_ENV=production.
+- **New flag `GLOBAL_LIFECYCLE`** (set by the `product:kpost-api*` commands): a self-cleaning flow's
+  `global` write passes the guard when the call itself sets `allowGlobalLifecycle`, TEST_DB_MODE is on and
+  no configured host is live. The engine never sets the per-call flag; SMS/e-mail stay on the kill-switch;
+  ending sessions still needs the throwaway account. The old `adminLifecycle`/`allowGlobalLifecycle` guard
+  fields were declared but never checked; they are now real. Self-test in `live-safety.spec.ts`.
+- **Reclassified:** `admin-reset-password` is `external`: it texts the new password to the member's real
+  mobile (`KpostSendSMS`), so it would have reached a stranger's phone. `member-lifecycle.spec.ts` now
+  runs (create → backup admin on/off → terminate, QA company 242, verified terminated in the DB) and only
+  checks that resetPassword is refused.
+- **Throwaway flow:** log out from all devices added. The deployed server serves it as GET (the local
+  source copy's POST is older; POST answers 405). The GET answers **500 "Unable to log out from all
+  devices"** and the session stays valid, 3/3 runs; no token → 401. New (duplicate-checked): it files as
+  `SESSION-logout-all-devices-fails` through the next KPost API preview.
+- Checked and already filed: the Settings notification saves (400 masking a service exception, a
+  developer comment says so on purpose) are #13275–#13277 with #835–#837 reopened.
+- Still to drive: company logo, Flutter app version, Katchup change-caption and multipart upload, KBooking
+  city list, KMail credentials, KNews feed articles, the public business add-user and reallocate.
+
+### 2026-10-30 — Web validation for Contacts, KDiary, KBooking, User Management; guard-refused probes skip
 
 - **New `-validation` specs**, each blocking its save request at the network so nothing is written:
   `contacts/contacts-validation` (Add Ref from qatest2's conversation header: empty disabled, blank

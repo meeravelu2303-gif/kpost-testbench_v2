@@ -1,10 +1,15 @@
-import type { Locator, Page, Response } from '@playwright/test';
-import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
+import type { Page, Response } from '@playwright/test';
 import { STORAGE_STATE_2, TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
-import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
-import { gotoKoolKall } from '../support/kall';
+import {
+  button,
+  endMeeting,
+  gotoKoolKall,
+  kallIdOf,
+  openMeeting,
+  scheduleMeeting as schedule,
+} from '../support/kall';
 import { checkboxFor } from '../support/pickers';
 import { openSession, requireAccounts, requireFlags } from '../journeys/support/journey';
 
@@ -19,78 +24,6 @@ import { openSession, requireAccounts, requireFlags } from '../journeys/support/
 
 const HOUR = 3_600_000;
 
-/** The kallID in a scheduledKall / reScheduleKall reply. */
-function kallIdOf(body: unknown): number | undefined {
-  const root = (body ?? {}) as Record<string, unknown>;
-  const data = root.data;
-  const row = Array.isArray(data) ? (data[0] as Record<string, unknown> | undefined) : undefined;
-  const obj =
-    data && typeof data === 'object' && !Array.isArray(data)
-      ? (data as Record<string, unknown>)
-      : undefined;
-  for (const candidate of [obj?.kallID, obj?.id, row?.kallID, row?.id, root.kallID]) {
-    if (typeof candidate === 'number') return candidate;
-  }
-  return undefined;
-}
-
-async function schedule(
-  endpoints: EndpointExecutor,
-  subject: string,
-  startInMs: number,
-  invitees: string[],
-): Promise<number> {
-  const start = Date.now() + startInMs;
-  const scheduled = await endpoints.sendTo(
-    'kall-scheduled',
-    {
-      body: scheduleShape({
-        subject,
-        scheduledStartTime: start,
-        scheduledEndTime: start + 30 * 60_000,
-        kallDetails: invitees.map((receiver) => ({ receiver })),
-      }),
-    },
-    { label: 'kool-kall-e2e:schedule', allowLiveWrite: true },
-  );
-  expect(scheduled.status, 'the meeting is scheduled (setup)').toBeLessThan(300);
-  const json = scheduled.json();
-  const kallID = kallIdOf(json.ok ? json.value : undefined);
-  expect(kallID, 'the scheduled meeting has an id (setup)').toBeTruthy();
-  return kallID!;
-}
-
-async function endMeeting(endpoints: EndpointExecutor, kallIDs: Array<number | undefined>) {
-  for (const kallID of new Set(kallIDs.filter((id): id is number => typeof id === 'number'))) {
-    // `kallID` alone: sending `id` too makes endKoolKall answer 500.
-    await endpoints
-      .sendTo(
-        'kall-end-kool',
-        { body: { kallID } },
-        { label: 'kool-kall-e2e:end', allowLiveWrite: true },
-      )
-      .catch(() => undefined);
-  }
-}
-
-/** Opens the meeting's dialog from Kall › Kool Kall (or Kall › Recents, today's meetings). */
-async function openMeeting(page: Page, title: string, from: 'kool' | 'recents' = 'kool') {
-  if (from === 'kool') {
-    await gotoKoolKall(page);
-  } else {
-    await page.goto('/kall', { waitUntil: 'domcontentloaded', timeout: 45_000 });
-    await page
-      .getByRole('tab', { name: /Recents/i })
-      .first()
-      .click({ timeout: 15_000 })
-      .catch(() => undefined);
-  }
-  await page.getByText(title).first().click({ timeout: 30_000 });
-  const modal = page.getByRole('dialog').filter({ hasText: title }).last();
-  await expect(modal, `the "${title}" meeting opens`).toBeVisible({ timeout: 20_000 });
-  return modal;
-}
-
 /** The next updateKallStatus answer and the kallStatus the screen sent with it. */
 async function statusUpdate(page: Page, act: () => Promise<void>) {
   const answer = page.waitForResponse((r) => r.url().includes('/kall/updateKallStatus'), {
@@ -104,12 +37,6 @@ async function statusUpdate(page: Page, act: () => Promise<void>) {
 
 async function bodyOf(response: Response): Promise<{ status?: string; statusCode?: number }> {
   return (await response.json().catch(() => ({}))) as { status?: string; statusCode?: number };
-}
-
-function button(scope: Locator, name: string | RegExp): Locator {
-  return scope
-    .getByRole('button', { name: typeof name === 'string' ? new RegExp(`^${name}$`, 'i') : name })
-    .first();
 }
 
 test.describe(

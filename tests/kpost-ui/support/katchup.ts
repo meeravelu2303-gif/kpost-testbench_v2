@@ -4,12 +4,24 @@ import { setupStep } from '@ui/setup-step';
 import type { Locator, Page } from '@playwright/test';
 
 /**
- * Shared Katchup UI helpers. A conversation row's `id` is the counterpart's KPOST ID; the composer is
- * a Quill editor (type, never `.fill()`); a sent message is an element with its own bell icon.
+ * Shared Katchup UI helpers. A conversation row's `id` ends with the counterpart's KPOST ID (see
+ * `conversationRow`); the composer is a Quill editor (type, never `.fill()`); a sent message is an
+ * element with its own bell icon.
  */
 
 /** The composer's editable Quill area (not a read-only sent-message display). */
 export const EDITOR = '.ql-editor[contenteditable="true"]';
+
+/**
+ * The Recents row of the conversation with `kpostId` (a person or a group). The live app ids it
+ * `katchup-recent-<dd-mm-yyyy>-<kpostId>` (seen 2026-10-31); older builds used the bare KPOST ID,
+ * or `<kpostId>-<n>` for a repeated row. All three are matched.
+ */
+export function conversationRow(page: Page, kpostId: string): Locator {
+  return page
+    .locator(`[id="${kpostId}"], [id^="${kpostId}-"], [id^="katchup-recent-"][id$="-${kpostId}"]`)
+    .first();
+}
 
 /** Open Katchup, wait out the loader overlay, and open the conversation with `kpostId`. */
 export async function openConversation(page: Page, kpostId: string): Promise<void> {
@@ -20,7 +32,7 @@ export async function openConversation(page: Page, kpostId: string): Promise<voi
     .catch(() => undefined);
 
   await parkPointerAwayFromSideMenu(page);
-  const conversation = page.locator(`[id="${kpostId}"]`).first();
+  const conversation = conversationRow(page, kpostId);
   const listed = await conversation
     .waitFor({ state: 'visible', timeout: 10_000 })
     .then(() => true)
@@ -35,7 +47,7 @@ export async function openConversation(page: Page, kpostId: string): Promise<voi
     timeout: 10_000,
   });
   await search.fill(kpostId);
-  const hit = page.locator(`[id="${kpostId}"], [id^="${kpostId}-"]`).first();
+  const hit = conversationRow(page, kpostId);
   if (await hit.isVisible({ timeout: 10_000 }).catch(() => false)) {
     await hit.click();
     return;
@@ -91,7 +103,7 @@ export async function openReceivedConversation(page: Page, subject: string): Pro
  * menu does not intercept the click.
  */
 export async function openGroupConversation(page: Page, groupKpostID: string): Promise<boolean> {
-  const groupRow = page.locator(`[id="${groupKpostID}"]`).first();
+  const groupRow = conversationRow(page, groupKpostID);
   for (let attempt = 1; attempt <= 4; attempt++) {
     await gotoKatchup(page);
     const found = await groupRow

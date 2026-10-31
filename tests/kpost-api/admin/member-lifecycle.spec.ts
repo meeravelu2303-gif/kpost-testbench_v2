@@ -5,8 +5,10 @@ import { expect, test } from '@fixtures';
 
 /**
  * Admin throwaway-member lifecycle: mint a member with addingUserByAdmin, toggle backup-admin, reset its
- * password, terminate it in `finally`. Payload and kpostID domain rule follow UserManagement.js.
- * Skipped: these are sideEffect 'global', which production-guard.ts refuses on TEST_ENV=production.
+ * terminate it in `finally`. Payload and kpostID domain rule follow UserManagement.js. These are
+ * shared-state (`global`) writes, so each call is authorized on its own and only on the QA test
+ * server (GLOBAL_LIFECYCLE + TEST_DB_MODE). resetPassword texts the member's real mobile, so it is
+ * left to the SMS kill-switch and only that refusal is checked.
  */
 
 const ADMIN: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'business-m')!;
@@ -31,18 +33,22 @@ function throwawayMobile(): string {
 
 test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
   test.skip(
-    true,
-    'PERMANENT on this environment: addingUserByAdmin/createOrRemoveBackupAdmin/resetPassword/' +
-      'terminateUser are all sideEffect:"global", which production-guard.ts refuses unconditionally ' +
-      'on TEST_ENV=production — needs a non-production environment, not a flag (see docs/generated/blocked-endpoints.md)',
+    process.env.GLOBAL_LIFECYCLE !== 'true' || process.env.TEST_DB_MODE !== 'true',
+    'creates and terminates a real company member on the QA server; set GLOBAL_LIFECYCLE=true and TEST_DB_MODE=true',
   );
 
-  test('create → backup-admin toggle → reset password → terminate, on a throwaway member only', async ({
+  test('create → backup-admin toggle → terminate → reallocate → terminate, on a throwaway member only', async ({
     endpoints,
+    databases,
   }) => {
     const localPart = `qa-bench-throwaway-${Date.now()}`;
     const domain = domainFrom(testData.businessMKpostId);
     const kpostID = `${localPart}.${domain}`;
+    const mobile = throwawayMobile();
+    // The person the channel is reallocated to (a different mobile).
+    const newMobile = `97${mobile.slice(2)}`;
+    // Minted by this flow, so the QA-identifier guard trusts exactly these on its calls.
+    const owned = [kpostID, mobile, newMobile];
     let created = false;
 
     try {
@@ -57,31 +63,36 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
       const admin = profileJson.data ?? {};
 
       // --- create the throwaway member ------------------------------------------------------------
+      // The web’s Add Manually body (UserManagement.js addingUserToChannel).
+      const memberBody = {
+        companyID,
+        companyName: admin.userProfile?.companyName ?? testData.companyName,
+        firstName: 'QA',
+        lastName: 'Throwaway',
+        mobileNumber: mobile,
+        gender: 'male',
+        countryID: admin.countryID ?? testData.countryId,
+        countryCode: admin.countryCode ?? '91',
+        userType: 'BUSINESS_M',
+        language: 'english',
+        country: admin.userProfile?.country ?? 'India',
+        designation: 'QA Tester',
+        role: null,
+        state: admin.userProfile?.state ?? 'Tamil Nadu',
+        referenceName: 'QA Throwaway',
+        activeStatus: 'yes',
+        kpostID,
+        requestType: 'newUser',
+      };
       const create = await endpoints.sendTo(
         'admin-adding-user-by-admin',
+        { body: memberBody },
         {
-          body: {
-            companyID,
-            companyName: admin.userProfile?.companyName ?? testData.companyName,
-            firstName: 'QA',
-            lastName: 'Throwaway',
-            mobileNumber: throwawayMobile(),
-            gender: 'male',
-            countryID: admin.countryID ?? testData.countryId,
-            countryCode: admin.countryCode ?? '91',
-            userType: 'BUSINESS_M',
-            language: 'english',
-            country: admin.userProfile?.country ?? 'India',
-            designation: 'QA Tester',
-            role: null,
-            state: admin.userProfile?.state ?? 'Tamil Nadu',
-            referenceName: 'QA Throwaway',
-            activeStatus: 'yes',
-            kpostID,
-            requestType: 'newUser',
-          },
+          label: 'admin-lifecycle:create',
+          auth: { principal: ADMIN },
+          allowGlobalLifecycle: true,
+          ownedIdentifiers: owned,
         },
-        { label: 'admin-lifecycle:create', auth: { principal: ADMIN }, allowLiveWrite: true },
       );
       expect(create.status, `addingUserByAdmin succeeds for a brand-new kpostID (${kpostID})`).toBe(
         200,
@@ -95,7 +106,8 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
         {
           label: 'admin-lifecycle:backup-admin-on',
           auth: { principal: ADMIN },
-          allowLiveWrite: true,
+          allowGlobalLifecycle: true,
+          ownedIdentifiers: owned,
         },
       );
       expect
@@ -107,7 +119,8 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
         {
           label: 'admin-lifecycle:backup-admin-off',
           auth: { principal: ADMIN },
-          allowLiveWrite: true,
+          allowGlobalLifecycle: true,
+          ownedIdentifiers: owned,
         },
       );
       expect
@@ -117,37 +130,108 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
         )
         .toBeLessThan(300);
 
-      // --- reset the throwaway member's password (never the shared fixture's) ----------------------
-      const reset = await endpoints.sendTo(
-        'admin-reset-password',
-        {
-          body: {
-            kpostID,
-            countryID: admin.countryID ?? testData.countryId,
-            mobileNumber: throwawayMobile(),
-            entityType: 'BUSINESS_M',
+      // --- resetPassword texts the member's real mobile: the SMS kill-switch must refuse it ------
+      await expect(
+        endpoints.sendTo(
+          'admin-reset-password',
+          {
+            body: {
+              kpostID,
+              countryID: admin.countryID ?? testData.countryId,
+              entityType: 'BUSINESS_M',
+            },
           },
-        },
-        {
-          label: 'admin-lifecycle:reset-password',
-          auth: { principal: ADMIN },
-          allowLiveWrite: true,
-        },
+          {
+            label: 'admin-lifecycle:reset-password',
+            auth: { principal: ADMIN },
+            allowGlobalLifecycle: true,
+            ownedIdentifiers: owned,
+          },
+        ),
+        'resetPassword sends a real SMS, so it is never sent',
+      ).rejects.toThrow(/kill-switch/);
+
+      // --- terminate, then reallocate the channel to a new person (UserManagement.js: requestType
+      //     "reallocate" keeps the kpostID) ------------------------------------------------------
+      const call = (id: string, body: Record<string, unknown>, label: string) =>
+        endpoints.sendTo(
+          id,
+          { body },
+          {
+            label: `admin-lifecycle:${label}`,
+            auth: { principal: ADMIN },
+            allowGlobalLifecycle: true,
+            ownedIdentifiers: owned,
+          },
+        );
+      const firstTerminate = await call(
+        'admin-terminate-user',
+        { kpostID, companyID },
+        'terminate',
       );
-      expect.soft(reset.status, 'resetPassword succeeds on the throwaway member').toBeLessThan(300);
+      expect.soft(firstTerminate.status, 'terminateUser ends the member').toBe(200);
+      const reallocateBody = {
+        ...memberBody,
+        lastName: 'Reallocated',
+        mobileNumber: newMobile,
+        referenceName: 'QA Reallocated',
+        requestType: 'reallocate',
+      };
+      const reallocated = await call('admin-adding-user-by-admin', reallocateBody, 'reallocate');
+      if (reallocated.status >= 400) {
+        endpoints.recordBusinessRuleViolation({
+          endpointId: 'admin-adding-user-by-admin',
+          ruleId: 'ADMIN-reallocate-refused-as-existing-user',
+          rule: 'Reallocating a terminated channel (User Management › Allocate: addingUserByAdmin with requestType "reallocate" and the channel’s own kpostID) must give it to the new person; the duplicate-kpostID check added for KP-1009 must not apply to a reallocation, and the reallocation message must not be sent when it fails.',
+          expected: '200, the channel active again with the new person’s mobile',
+          actual: `addingUserByAdmin answered ${reallocated.status}: ${(reallocated.bodyText ?? '').slice(0, 160)}`,
+          request: { body: { ...reallocateBody, mobileNumber: '(throwaway)' } },
+        });
+      }
+      expect
+        .soft(reallocated.status, 'the web’s reallocate gives the channel to a new person')
+        .toBe(200);
+      const db = databases.for('kpost-api');
+      if (db.enabled) {
+        const row = await db.findOne<{ active_status: string; mobile_number: unknown }>({
+          table: 'TBL_KPOST_USER_MASTER',
+          where: { kpost_id: kpostID },
+        });
+        expect.soft(row?.active_status, 'the reallocated channel is active again').toBe('yes');
+        expect
+          .soft(String(row?.mobile_number), 'and belongs to the new person’s mobile')
+          .toBe(newMobile);
+      }
+      // The admin-module reallocate route, sent the same body: no client sends it, but a body it
+      // cannot use must be refused, not crash (its `entity` is dereferenced unchecked).
+      const otherRoute = await call(
+        'admin-adding-user-for-reallocate',
+        reallocateBody,
+        'reallocate-route',
+      );
+      expect
+        .soft(otherRoute.status, 'addingUserForReallocateByAdmin answers a 4xx or 2xx, not a crash')
+        .toBeLessThan(500);
     } finally {
       if (created) {
-        await endpoints
+        const terminated = await endpoints
           .sendTo(
             'admin-terminate-user',
             { body: { kpostID, companyID } },
             {
               label: 'admin-lifecycle:terminate',
               auth: { principal: ADMIN },
-              allowLiveWrite: true,
+              allowGlobalLifecycle: true,
+              ownedIdentifiers: owned,
             },
           )
           .catch(() => undefined);
+        expect
+          .soft(
+            terminated?.status,
+            'terminateUser removes the throwaway member (nothing left behind)',
+          )
+          .toBe(200);
       }
     }
   });

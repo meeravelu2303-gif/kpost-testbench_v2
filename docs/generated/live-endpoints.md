@@ -219,7 +219,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/admin/createOrRemoveBackupAdmin/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/holdOrRelease/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/removeCompanyLogo` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
-| `POST` | `/admin/resetPassword/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/admin/resetPassword/` | common · company | OFF-LIVE by choice: sends a real SMS or email to a real recipient |
 | `POST` | `/admin/terminateUser/` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/updateBankAccountDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
 | `POST` | `/admin/updateCompanyDetails` | common · company | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
@@ -338,7 +338,7 @@ Not failures — these are refused before a request is sent, each for a stated r
 | `POST` | `/v2/readMail/referenceMailContent/` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `POST` | `/v2/readMail/sentAndInboxMailContent/` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
 | `GET` | `/v2/sentMail/bulkMail/status/{fromAddress}` | KMail | COVERED via lifecycle: read keyed by a runtime id (message / call / group / document) a write flow mints |
-| `POST` | `/v2/sentMail/getMailCredentials/` | KMail | OFF-LIVE by choice: writes state shared by the whole environment (no self-cleaning lifecycle) |
+| `POST` | `/v2/sentMail/getMailCredentials/` | KMail | OFF-LIVE: read needs setup we do not have (business-tier login answers 403; company logo 500s) |
 | `POST` | `/v2/sentMail/postBulkMail` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/v2/sentMail/postMail/` | KMail | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |
 | `POST` | `/ai/chatResponse` | KOS | COVERED via lifecycle: write/delete — driven on live by its module `*_LIFECYCLE` flow, self-cleaning |

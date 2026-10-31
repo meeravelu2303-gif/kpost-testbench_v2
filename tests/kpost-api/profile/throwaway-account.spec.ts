@@ -54,7 +54,7 @@ test.describe(
       'the account is deleted from the test DB afterwards; set DB_ALLOW_WRITES=true',
     );
 
-    test('signup → devices → access code → password → deactivate, then the account is deleted', async ({
+    test('signup → devices → access code → password → logout all → deactivate, then the account is deleted', async ({
       endpoints,
       databases,
     }) => {
@@ -222,7 +222,50 @@ test.describe(
         );
         expect.soft(changed.status, 'changePassword').toBe(200);
 
-        // 6. Deactivation (the account's session is gone afterwards; login answers 403).
+        // 6. Log out from all devices (FR-S12): a bodyless GET (the workbook and the deployed server
+        //    agree; the local source copy's POST is older). Each check uses a fresh session.
+        const session = (key: string): Principal => ({ ...principal, key, password: NEW_PASSWORD });
+        const alive = async (as: Principal, label: string) =>
+          (await asMe('contacts-my-contacts', { lastfetchDate: null }, label, as)).status !== 401;
+        const logoutAll = (label: string, auth: object) =>
+          endpoints.sendTo(
+            'signup-login-logout-all-devices',
+            {},
+            {
+              label: `throwaway:logout-all-${label}`,
+              auth: auth as never,
+              ownedIdentifiers: owned,
+              throwawayAccount: me.kpostId,
+            },
+          );
+
+        const anonymous = await logoutAll('no-token', { header: undefined });
+        expect.soft(anonymous.status, 'without a token the call is refused (401)').toBe(401);
+
+        const own = session('throwaway-own-logout');
+        expect(await alive(own, 'session-before-logout'), 'a fresh session works').toBe(true);
+        const loggedOut = await logoutAll('own', { principal: own });
+        if (loggedOut.status >= 500) {
+          endpoints.recordBusinessRuleViolation({
+            endpointId: 'signup-login-logout-all-devices',
+            ruleId: 'SESSION-logout-all-devices-fails',
+            rule: 'GET /v2/signupLogin/userLogoutFromAllDevices/ (FR-S12) must end every session of the signed-in account.',
+            expected: '200, and the account’s existing tokens are refused afterwards',
+            actual: `${loggedOut.status}: ${(loggedOut.bodyText ?? '').slice(0, 160)}`,
+            request: {},
+          });
+        }
+        expect.soft(loggedOut.status, 'the account can log itself out of all devices').toBe(200);
+        expect
+          .soft(
+            await alive(own, 'session-after-logout'),
+            'and its token is refused afterwards (401)',
+          )
+          .toBe(false);
+        // A new sign-in (its own cache key, the new password) carries on.
+        const relogged = session('throwaway-relogin');
+
+        // 7. Deactivation (the account's session is gone afterwards; login answers 403).
         expect
           .soft(await otp('Deactivation'), 'the deactivation OTP')
           .toEqual({ sent: 200, checked: 200 });
@@ -230,6 +273,7 @@ test.describe(
           'profile-deactivate-account',
           { reason: 'QA bench throwaway account' },
           'deactivate',
+          relogged,
         );
         expect.soft(deactivated.status, 'deactivateAccount').toBe(200);
         const login = await loginStatus(endpoints, me, NEW_PASSWORD, owned);

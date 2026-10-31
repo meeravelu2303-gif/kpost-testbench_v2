@@ -69,6 +69,13 @@ export const convertPdfApi = defineKmailEndpoint({
   note: 'needs a real kmailID',
 });
 
+/**
+ * The engine adds, edits and deletes outside contacts as qatest5, not qatest1: the write fuzzer's
+ * probes are stored as contacts (on 2026-10-30 eight nameless junk rows on qatest1 crashed the web
+ * Write Mail To field, #13364). The manage workflow still names qatest1 and removes what it adds.
+ */
+const asWriteTarget = { required: true, principalKey: 'personal-5' } as const;
+
 export const addOtherDomainContactApi = defineKmailEndpoint({
   id: 'kmail-add-od-contact',
   requirements: ['FR-KM-022'],
@@ -77,8 +84,9 @@ export const addOtherDomainContactApi = defineKmailEndpoint({
   summary: 'Add a non-KPost (external) mail contact',
   tags: [...M, 'external'],
   destructive: true,
+  authentication: asWriteTarget,
   request: body(() => ({
-    contactEmailID: testData.kpostId,
+    contactEmailID: testData.personal5KpostId,
     contactName: 'QA',
     referenceName: 'QA',
   })),
@@ -92,7 +100,8 @@ export const deleteOtherDomainContactApi = defineKmailEndpoint({
   summary: 'Delete a non-KPost mail contact',
   tags: [...M, 'external'],
   destructive: true,
-  request: body(() => ({ contactEmailID: testData.kpostId })),
+  authentication: asWriteTarget,
+  request: body(() => ({ contactEmailID: testData.personal5KpostId })),
 });
 
 export const editOtherDomainContactApi = defineKmailEndpoint({
@@ -102,7 +111,8 @@ export const editOtherDomainContactApi = defineKmailEndpoint({
   summary: 'Edit a non-KPost mail contact',
   tags: [...M, 'external'],
   destructive: true,
-  request: body(() => ({ contactEmailID: testData.kpostId, contactName: 'QA Edited' })),
+  authentication: asWriteTarget,
+  request: body(() => ({ contactEmailID: testData.personal5KpostId, contactName: 'QA Edited' })),
 });
 
 export const downloadOdAttachmentApi = defineKmailEndpoint({
@@ -123,11 +133,11 @@ export const mailCredentialsApi = defineKmailEndpoint({
   path: '/sentMail/getMailCredentials/',
   summary: 'Fetch the caller’s mail send credentials',
   tags: [...M, 'sensitive'],
-  // Takes a password and returns credentials, so it is contract-validated but never driven on live.
-  destructive: true,
-  sideEffect: 'global',
+  // A read that returns the mailbox password when the body's password matches: never cleared for
+  // the engine; security/credential-disclosure.spec.ts drives it on the QA server with allowLiveRead.
+  destructive: false,
   request: body(() => ({ kpostID: testData.kpostId, password: '' })),
-  note: 'sensitive: returns credentials; not driven on live',
+  note: 'sensitive: returns credentials (masked in every report); driven only by the security spec',
 });
 
 /** The unsubscribe body (sender, receiver, reason, createdBy). */

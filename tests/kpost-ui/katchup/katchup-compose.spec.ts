@@ -1,6 +1,7 @@
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import type { Page } from '@playwright/test';
+import { conversationRow } from '../support/katchup';
 
 /**
  * Katchup composer: a Subject on every chat message (BR-K01), plus a gated send-and-recall.
@@ -19,7 +20,7 @@ async function openComposer(page: Page): Promise<void> {
     .waitFor({ state: 'hidden', timeout: 30_000 })
     .catch(() => undefined);
 
-  const conversation = page.locator(`[id="${testData.victimKpostId}"]`).first();
+  const conversation = conversationRow(page, testData.victimKpostId);
   await expect(conversation, 'the 2nd QA account is in the conversation list').toBeVisible({
     timeout: 20_000,
   });

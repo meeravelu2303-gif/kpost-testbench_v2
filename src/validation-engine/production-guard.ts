@@ -1,5 +1,15 @@
 import { env } from '@config/env';
+import { isLiveHost } from '@config/live-hosts';
 import type { ResolvedEndpoint } from './validation-policy';
+
+/** Whether any configured host is a live KPost host (then no shared-state write may run). */
+export const LIVE_HOST_CONFIGURED = [
+  env.BASE_URL,
+  env.API_BASE_URL,
+  env.KPOST_API_BASE_URL,
+  env.KMAIL_API_BASE_URL,
+  env.ADMIN_API_BASE_URL,
+].some((url) => Boolean(url) && isLiveHost(new URL(url!).hostname));
 
 export class ProductionSafetyError extends Error {
   override readonly name = 'ProductionSafetyError';
@@ -20,10 +30,15 @@ export interface SafetyFlags {
   testDbMode?: boolean;
   /** OTP is a test gateway (`123456` validates); with `testDbMode` it opens the OTP endpoints. */
   otpTestGateway?: boolean;
-  /** Env `ADMIN_LIFECYCLE`; unlocks nothing without a per-call `allowGlobalLifecycle`. */
-  adminLifecycle?: boolean;
-  /** Per-call authorization of one live `global` admin write; also needs `adminLifecycle`. */
+  /**
+   * Env `GLOBAL_LIFECYCLE`: the target is the QA test server, so self-cleaning flows may make
+   * shared-state (`global`) writes. Unlocks nothing without a per-call `allowGlobalLifecycle`.
+   */
+  globalLifecycle?: boolean;
+  /** Per-call authorization of one `global` write by a self-cleaning flow; never the engine. */
   allowGlobalLifecycle?: boolean;
+  /** Some configured host is a live one: `globalLifecycle` then unlocks nothing. */
+  liveHostConfigured?: boolean;
   /**
    * The call acts on a throwaway account its own flow created this run, signed in as that account
    * (the executor checks both). With the OTP test gateway on the test DB, it may run what would end
@@ -75,7 +90,8 @@ export function destructiveBlockReason(
     writeFuzz: env.WRITE_FUZZ,
     testDbMode: env.TEST_DB_MODE,
     otpTestGateway: env.OTP_TEST_GATEWAY,
-    adminLifecycle: env.ADMIN_LIFECYCLE,
+    globalLifecycle: env.GLOBAL_LIFECYCLE,
+    liveHostConfigured: LIVE_HOST_CONFIGURED,
   },
 ): string | undefined {
   /*
@@ -87,7 +103,7 @@ export function destructiveBlockReason(
   const isOtpFlow = Boolean(endpoint.otpDependent) || looksLikeSmsSender;
   // Deactivate / re-designate-primary would end the running session: blocked even on the gateway.
   const isSessionDestroyer =
-    /deactivat|delete\s*account|close\s*account|setdeviceasprimary|updatedeviceasprimary/i.test(
+    /deactivat|delete\s*account|close\s*account|setdeviceasprimary|updatedeviceasprimary|logoutfromalldevices/i.test(
       endpoint.label,
     );
   // The test-gateway unlock needs both `otpTestGateway` and `testDbMode`, and opens OTP flows only.
@@ -130,6 +146,23 @@ export function destructiveBlockReason(
   }
   // After every real-SMS rule: the throwaway account's own calls may run whatever they need.
   if (throwawayAuthorized) return undefined;
+  /*
+   * A self-cleaning flow's shared-state (`global`) write on the QA test server: GLOBAL_LIFECYCLE and
+   * TEST_DB_MODE, the call's own allowGlobalLifecycle, and no live host configured. The engine never
+   * sets the per-call flag; real SMS/e-mail were refused above; ending a session needs the throwaway.
+   */
+  if (
+    flags.isProduction &&
+    flags.globalLifecycle === true &&
+    flags.testDbMode === true &&
+    flags.allowGlobalLifecycle === true &&
+    flags.liveHostConfigured !== true &&
+    endpoint.destructive === true &&
+    endpoint.sideEffect === 'global' &&
+    !isSessionDestroyer
+  ) {
+    return undefined;
+  }
   /*
    * Live default deny: blocked unless `productionSafe: true`, since a delete on a real record is
    * irreversible. An allowlist, because a blocklist admits every endpoint nobody has thought about.

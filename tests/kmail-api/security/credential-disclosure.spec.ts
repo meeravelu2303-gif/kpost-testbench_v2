@@ -1,88 +1,131 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
+import type { AuthMode, EndpointExecutor } from '@engine/endpoint-executor';
+import { isSqlClient } from '@database/database-client';
 import { kmailAuthGate } from '@fixtures/kmail-auth-gate';
+import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 
 /**
- * KMail credential disclosure (IDOR): getMailCredentials looks up the body's kpostID, not the
- * caller's, so A's token may read B's mail credentials. Skipped: the endpoint is sideEffect 'global',
- * which the production guard always refuses. A disclosed password is never logged, only a boolean.
+ * KMail getMailCredentials (SentMailServiceImpl.getMailCredentials) returns an account's mailbox
+ * password when the body's kpostID and password match; it reads the account from the BODY, not the
+ * token. Checked on the QA server: the account's own call works (the control), a wrong password and
+ * an unknown account are refused cleanly (not 500), no token is refused, and another account's
+ * token is refused even with the right password. Passwords come from the QA database and are never
+ * printed: reports mask every password key, and only booleans are recorded.
  */
 const K = AUTH_PROFILES.kpost;
-const A = K.principals.find((p) => p.key === 'personal')!; // caller
-const B = K.principals.find((p) => p.key === 'victim')!; // target named in the body, not the caller
+const A = K.principals.find((p) => p.key === 'personal-5'); // the caller
+const B = K.principals.find((p) => p.key === 'personal-4'); // the account named in the body
 
-interface CredentialsResponse {
-  host?: string;
-  fromAddress?: string;
-  fromAddPassword?: string;
+interface Credentials {
+  data?: { host?: string; fromAddress?: string; fromAddPassword?: string };
 }
 
+const ask = (
+  endpoints: EndpointExecutor,
+  kpostID: string,
+  password: string,
+  auth: AuthMode,
+  label: string,
+) =>
+  endpoints.sendTo(
+    'kmail-credentials',
+    { body: { kpostID, password } },
+    { label: `kmail-credentials:${label}`, auth, allowLiveRead: true },
+  );
+
+const disclosed = (bodyText: string | undefined): boolean => {
+  const data = (JSON.parse(bodyText || '{}') as Credentials).data;
+  return Boolean(data?.fromAddPassword || data?.fromAddress);
+};
+
 test.describe(
-  'KMail · credential-disclosure IDOR proof (plan item 0b) @api @kmail-api @kmail @security',
+  'KMail · getMailCredentials gives an account’s mailbox password only to that account',
   {
-    tag: ['@api', '@kmail', '@regression'],
+    tag: ['@api', '@kmail', '@security', '@regression'],
     annotation: [{ type: 'non-functional', description: 'security' }],
   },
   () => {
     test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
     test.skip(
-      true,
-      'PERMANENT on this environment (sideEffect:"global", refused by production-guard.ts) AND ' +
-        'requires explicit authorization even on a future non-production environment, given it ' +
-        'compares real credential material — see docs/generated/blocked-endpoints.md',
+      process.env.TEST_DB_MODE !== 'true',
+      'reads QA mailbox passwords from the test database; set TEST_DB_MODE=true',
     );
+    test.skip(!A || !B, 'needs the 4th and 5th QA accounts');
 
-    test("baseline: the endpoint accepts A's own kpostID with the shared default password", async ({
+    test('own account works; wrong password, unknown account, no token and another account are refused', async ({
       endpoints,
+      databases,
     }) => {
-      const ex = await endpoints.sendTo(
-        'kmail-credentials',
-        { body: { kpostID: A.username, password: process.env.QA_PASSWORD ?? '' } },
-        { label: 'cred-disclosure:self', auth: { principal: A }, allowLiveRead: true },
+      const db = databases.for('kpost-api');
+      test.skip(!isSqlClient(db), 'needs the KPOST_QA database to read the mailbox passwords');
+      if (!isSqlClient(db)) return;
+      const passwordOf = async (kpostId: string): Promise<string> => {
+        const [row] = await db.query<{ kmail_password: string }>(
+          'SELECT kmail_password FROM TBL_KPOST_USER_MASTER WHERE kpost_id = ?',
+          [kpostId],
+        );
+        return row?.kmail_password ?? '';
+      };
+      const passwordA = await passwordOf(A!.username);
+      const passwordB = await passwordOf(B!.username);
+      test.skip(
+        !passwordA || !passwordB,
+        'needs provisioned KMail mailboxes for the 4th and 5th QA accounts (no kmail_password row)',
       );
-      test.info().annotations.push({
-        type: 'note',
-        description: `self-lookup status=${ex.status} (establishes whether kmailPassword == the shared QA default for this account at all, before testing cross-account)`,
-      });
-      // A baseline reading only: 200 means this account's kmailPassword is the shared QA default.
-      expect(
-        ex.status,
-        'the endpoint answers (any status) for a well-formed self-lookup',
-      ).toBeLessThan(600);
-    });
 
-    test("IDOR: A's token can query B's kmailPassword by naming B's kpostID, never B's own session", async ({
-      endpoints,
-    }) => {
-      const ex = await endpoints.sendTo(
-        'kmail-credentials',
-        { body: { kpostID: B.username, password: process.env.QA_PASSWORD ?? '' } },
-        { label: 'cred-disclosure:cross-account', auth: { principal: A }, allowLiveRead: true },
+      // Control: the account's own call with its own password returns its credentials.
+      const own = await ask(endpoints, A!.username, passwordA, { principal: A! }, 'own');
+      expect.soft(own.status, 'the account can read its own mail credentials').toBe(200);
+      expect.soft(disclosed(own.bodyText), 'and they are returned').toBe(true);
+
+      // Bad input is refused as bad input, not as a server crash.
+      for (const [label, kpostID, password] of [
+        ['wrong password', A!.username, 'QA-bench-wrong-password'],
+        ['unknown account', testData.kpostIdAbsent, 'QA-bench-wrong-password'],
+      ] as const) {
+        const res = await ask(endpoints, kpostID, password, { principal: A! }, label);
+        expect.soft(disclosed(res.bodyText), `${label}: nothing is disclosed`).toBe(false);
+        expect
+          .soft(res.status, `${label}: refused with a 4xx, not a server error (got ${res.status})`)
+          .toBeGreaterThanOrEqual(400);
+        expect
+          .soft(res.status, `${label}: refused with a 4xx, not a server error`)
+          .toBeLessThan(500);
+      }
+
+      const anonymous = await ask(
+        endpoints,
+        A!.username,
+        passwordA,
+        { header: undefined },
+        'no-token',
       );
-      const body = ex.status < 300 ? (JSON.parse(ex.bodyText ?? '{}') as CredentialsResponse) : {};
-      const disclosed = Boolean(body.host || body.fromAddress || body.fromAddPassword);
+      expect.soft(disclosed(anonymous.bodyText), 'no token: nothing is disclosed').toBe(false);
+      expect.soft(anonymous.status, 'no token: refused (401)').toBe(401);
 
-      if (disclosed) {
+      // IDOR: A's token naming B, with B's correct password.
+      const cross = await ask(
+        endpoints,
+        B!.username,
+        passwordB,
+        { principal: A! },
+        'cross-account',
+      );
+      const leaked = disclosed(cross.bodyText);
+      if (leaked) {
         endpoints.recordBusinessRuleViolation({
           endpointId: 'kmail-credentials',
           ruleId: 'IDOR-kmail-credentials-by-kpostid',
-          rule:
-            "getMailCredentials must only return the AUTHENTICATED CALLER's own mail credentials — " +
-            "it must not disclose another account's credentials just because the caller's token is " +
-            "valid and happens to know (or share) that other account's kmailPassword.",
-          expected: `refused (A's token is not B's session) — status >= 400`,
-          actual: `status=${ex.status}, credentials disclosed for ${B.username} to a request authenticated as ${A.username}`,
-          request: { body: { kpostID: B.username, password: '(shared QA default — redacted)' } },
+          rule: "getMailCredentials must return only the signed-in caller's own credentials; it reads the account from the body, so another account's token gets them.",
+          expected: "refused: the token is not the named account's",
+          actual: `status ${cross.status}: ${B!.username}'s mail credentials returned to ${A!.username}'s token`,
+          request: { body: { kpostID: B!.username, password: '(redacted)' } },
         });
       }
-
       expect
-        .soft(
-          ex.status,
-          "getMailCredentials must refuse a request naming an account other than the caller's own, " +
-            'regardless of whether the supplied password happens to be correct for that account',
-        )
-        .toBeGreaterThanOrEqual(400);
+        .soft(leaked, `another account's token gets nothing (answered ${cross.status})`)
+        .toBe(false);
     });
   },
 );

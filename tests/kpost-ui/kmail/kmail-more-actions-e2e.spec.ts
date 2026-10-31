@@ -253,10 +253,15 @@ test.describe(
         .filter({ visible: true })
         .first()
         .click();
+      // The contact's row inside the "Sent Mail Not Opened" panel (since 2026-10-31 a plain name
+      // row; a .contactBar_Dropdown of the same name sits off-screen in the hidden Recents tab).
       await page
-        .locator('.contactBar_Dropdown')
-        .filter({ hasText: /qatest3/i })
-        .first()
+        .locator('div')
+        .filter({ has: page.getByText('Sent Mail Not Opened', { exact: true }) })
+        .filter({ has: page.getByText(/^Qatest3 Bench$/i) })
+        .last()
+        .getByText(/^Qatest3 Bench$/i)
+        .last()
         .click({ timeout: 20_000 });
       const mail = page.locator('[id]').filter({ hasText: subject }).last();
       await expect(mail, 'the unopened mail is listed').toBeVisible({ timeout: 20_000 });
