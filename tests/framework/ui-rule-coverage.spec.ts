@@ -22,7 +22,7 @@ const NOT_TESTABLE: Array<[RegExp, string]> = [
   [/^[,(]|error\);|\);$/, 'a console call, not a message'],
   [/coming soon|launching soon|in progress|scroll is working/i, 'a placeholder notice, not a rule'],
   [
-    /mic|microphone|speech|voice recording|clipboard|geolocation|permission denied|copy (automatically|the link|meeting)/i,
+    /mic|microphone|speech|voice recording|upload voice message|clipboard|geolocation|permission denied|copy (automatically|the link|meeting)/i,
     'needs a device permission the test browser does not grant',
   ],
   [/otp/i, 'behind an OTP that texts a real phone'],
@@ -142,6 +142,57 @@ const UNREACHABLE: Array<[string, RegExp, string]> = [
     'K-Booking',
     /^Error: Payment details could not be retrieved/,
     'comes after the ticket is blocked for payment, which the bench never does',
+  ],
+  // Read from the source on 2026-10-31 (scratchpad research, each re-checked):
+  ...[
+    'auth',
+    'Verticals/Personal',
+    'Verticals/Business/Small/Signup',
+    'Verticals/Business/MediumLarge/Signup',
+  ].map((screen): [string, RegExp, string] => [
+    screen,
+    /^Error checking mobile number existence/,
+    'CheckIsMobileNoExist and SendOTP catch their own errors and every read uses ?., so nothing throws into this catch',
+  ]),
+  ['Katchup/KatchupMessage', /^Transcription failed/, 'the handler that shows it is never called'],
+  [
+    'Katchup/WriteMessage',
+    /^Some Error Occurred!, Please Try Again!/,
+    'only the bulk send shows it, and its menu entry is commented out',
+  ],
+  ['Katchup/WriteMessage', /^Failed to generate/, 'the K-AI generate call never rejects'],
+  ['Kmail/writemailbox', /^Failed to generate/, 'the K-AI generate call never rejects'],
+  [
+    'Katchup/MessageBox',
+    /^(Unable to open this document|File is not available)/,
+    'shown only for a KAD document message (KDoc/KOS, excluded from testing)',
+  ],
+  [
+    'Katchup/ContactList',
+    /^Failed to update reference/,
+    'it edits an other-domain contact, and other-domain rows are not listed in Katchup Contacts',
+  ],
+  ['Kmail/KmailMessagebox', /^Save is not available/, 'the Save menu items are commented out'],
+  [
+    'Kmail/KmailMessagebox',
+    /^Error While Showing Attachment/,
+    'the attachment stream service never throws',
+  ],
+  [
+    'Kmail/KmailMessagebox',
+    /^Unable to load current read status/,
+    'raised only for a malformed 200 (data not a list), never for a failed call',
+  ],
+  ['Kmail/WriteMailPage', /^Error From Adding Saluation/, 'the salutation service never throws'],
+  [
+    'Katchup/Diary',
+    /^Unable to update participants for this task/,
+    'edit mode is set only after the event-id check, and mode and id are always reset together (Diary.js:511-557)',
+  ],
+  [
+    'Katchup/Diary',
+    /^Unable to update remarks/,
+    'UpdateDiaryScheduleRemarks returns null on any error, so nothing throws into this catch (a failed call shows "Unable to update task remarks")',
   ],
 ];
 

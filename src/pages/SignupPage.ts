@@ -266,7 +266,15 @@ export class SignupPage extends BasePage {
 
   /** "Continue" after OTP and pincode; forced, since a leftover datepicker cell can block it. */
   async continueToKpostId(): Promise<void> {
-    await this.page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
+    const continueButton = this.page.getByRole('button', { name: /^Continue$/i });
+    // At phone width the Pincode dialog's fade still covers Continue for a moment, and a forced
+    // click lands on that overlay; a normal click waits until the button itself takes it.
+    await continueButton
+      .click({ timeout: 10_000 })
+      .catch(() => continueButton.click({ force: true }));
+    await this.page
+      .getByPlaceholder('Enter Preferred KPOST ID')
+      .waitFor({ state: 'visible', timeout: 15_000 });
   }
 
   /** Types a Preferred KPOST ID and waits for the availability check; `taken` is valid. */

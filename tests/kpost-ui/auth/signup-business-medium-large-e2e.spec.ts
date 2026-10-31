@@ -2,6 +2,7 @@ import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { retryOrSkip } from '../../support/live-condition';
+import { toast } from '../support/validation';
 
 /**
  * Business Medium/Large signup (MLRegister.js) through to login. Mints a real, permanent company, so
@@ -251,6 +252,71 @@ test.describe(
         outcome,
         'the success modal must never appear when the server rejected the submission',
       ).not.toBe('false-success');
+    });
+
+    test('a registration submit that gets no answer says "Unable to complete registration" @ui', async ({
+      signupPage,
+      page,
+    }) => {
+      const mobileNumber = `77${Date.now().toString().slice(-8)}`;
+      await signupPage.goto();
+      await signupPage.chooseAccountType('Business');
+      await signupPage.chooseBusinessCategory('Medium');
+      await signupPage.selectCountryLanguageDomain('India', 'English', 'kpost.in');
+      const otpOutcome = await signupPage.requestMobileOtp(mobileNumber);
+      retryOrSkip(
+        otpOutcome === 'already-exists',
+        'the random mobile happened to collide right now — re-run',
+      );
+      const otpEntryOutcome = await signupPage.enterMobileOtp(testData.bypassOtp);
+      retryOrSkip(
+        otpEntryOutcome === 'invalid',
+        'the OTP bypass code was rejected right now — re-run',
+      );
+      await signupPage.fillBusinessPersonalDetails({
+        firstName: 'QA',
+        lastName: 'NoAnswer',
+        gender: 'Male',
+        dobDay: 15,
+        dobMonth: 'June',
+        dobYear: 1990,
+      });
+      await page.getByRole('button', { name: /^Continue$/i }).click({ force: true });
+      const uniqueSuffix = mobileNumber.slice(-6);
+      const { companyNameOutcome, uniqueNameOutcome } =
+        await signupPage.fillMediumLargeCompanyDetails({
+          typeOfBusiness: 'Software Services',
+          companyName: `QA NoAnswer Co ${uniqueSuffix}`,
+          website: 'https://qa-bench.example.com',
+          registrationNo: 'QA-REG-0000',
+          gstNo: 'QA-GST-0000',
+          employeeCount: '100',
+          pincode: testData.pinCode,
+          area: 'Chennai',
+          address1: 'QA Bench Address',
+          adminDesignation: 'Manager',
+          preAdminDesignationId: `qna${uniqueSuffix}`,
+          businessUniqueName: `qna${uniqueSuffix}`,
+          licenses: '1',
+        });
+      retryOrSkip(companyNameOutcome === 'taken', 'the company name collided right now — re-run');
+      retryOrSkip(uniqueNameOutcome === 'taken', 'the unique name collided right now — re-run');
+      await signupPage.continueToBusinessFinalStep();
+      const idOutcome = await signupPage.businessKpostIdAvailability();
+      retryOrSkip(idOutcome === 'taken', 'the KPOST ID collided right now — re-run');
+
+      // The registration never reaches the server, so no company or account is created.
+      let aborted = 0;
+      await page.route(/\/signupLogin\/adminRegistration\/?(\?.*)?$/, (route) => {
+        aborted += 1;
+        return route.abort();
+      });
+      await signupPage.setPasswordAndSubmit('QaBench@2026');
+      await expect(
+        toast(page, 'Unable to complete registration. Check your connection and try again.'),
+        'the user is told the registration did not go through',
+      ).toBeVisible({ timeout: 15_000 });
+      expect(aborted, 'the registration was stopped in the browser').toBe(1);
     });
   },
 );

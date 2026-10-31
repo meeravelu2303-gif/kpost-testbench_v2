@@ -3,7 +3,42 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-31 (latest) — Response contracts from the backend source, the S3 upload cap, one API folder layout
+### 2026-10-31 (latest) — Every reachable server-failure message on the web screens is tested (64/64)
+
+- **Ledger:** `docs/generated/ui-rule-coverage.md` went from 24 of 82 server-failure messages to 64 of 64.
+  - 18 are recorded in `UNREACHABLE` with the reason read from the source. Examples: the mobile-number
+    check never throws, and the KMail "Save"/"Error While Showing Attachment"/salutation/K-AI generate
+    paths cannot fail.
+  - "Unable to upload voice message" needs a microphone. The two KAD-document messages are KDoc.
+  - Each new test fails exactly one call in the browser (abort, or the FAILURE shape the screen reads),
+    so nothing reaches the server.
+- **New specs:**
+  - `auth/login-api-handling` (7 tests). Sign-in, plus the forgot-password send/resend/verify/paste/
+    update messages, with every OTP call answered in the browser.
+  - `contacts/contacts-digitalcard-api-handling`. Block, delete, unblock, photo, and the 5 QR-share
+    outcomes.
+  - `verticals/kdiary-api-handling`, `katchup/katchup-message-api-handling` (including the emoji
+    block-list), `verticals/kdirectory-api-handling`, `verticals/global-digital-card-api-handling`.
+  - `kmail/kmail-compose-api-handling`, `kmail/kmail-thread-api-handling`,
+    `kmail/kmail-translate-i18n-functional`, `user-management/usermanagement-api-handling`.
+  - Signup and business registration "no answer" cases, added to the existing signup specs.
+- **Two bench faults fixed:**
+  - `signup-login-api-handling` stubbed `**/signupLogin/signup/**`, but the app posts to
+    `/signupLogin/signup` (no slash). The stub never matched, so each run created a real account. 9
+    were deleted from the QA DB. The stubs now use a regex and assert they were hit; an audit of every
+    UI route glob found no other miss.
+  - `SignupPage.continueToKpostId` force-clicked Continue. At phone width that click landed on the
+    Pincode dialog's fading overlay, which is why `signup-mobile-e2e` had been failing.
+- **Filed #13374** (KMail, web). In the Russian UI the translate icon does nothing: the icon passes
+  "Translate", but the handler compares it with t("Translate"). The same steps in English open the
+  language list.
+- **QA data repaired** (write-fuzz leftovers):
+  - qatest1's About held `javascript:alert(1)`; set back to NULL.
+  - Three bench-made groups (4657, 4682, 5031) had SQL-probe text as their picture path; set to NULL.
+- **Checked, not bugs:** KMail attachments upload fine alone; the earlier failure was the dev-server
+  error overlay. The voice-translate call to the live host is #13312.
+
+### 2026-10-31 — Response contracts from the backend source, the S3 upload cap, one API folder layout
 
 Owner: "we have the application codes for all products so, first analyse the complete code … get the
 response documented and shapes everything … with perfect and neat folder and file structure". And:

@@ -4,8 +4,8 @@
 (`npm run framework`) from the React source. A rule is checked when a test names its text.
 
 - Input rules checked: **116 of 119**
-- Server-failure messages checked: **24 of 82**
-- Not testable from a browser here: 83
+- Server-failure messages checked: **64 of 64**
+- Not testable from a browser here: 101
 
 ## Input rules (bad input the screen must refuse)
 
@@ -135,69 +135,54 @@
 
 | Screen | Message | Checked |
 | ------ | ------- | ------- |
-| `auth` | Unable to sign in. Check your connection and try again. | **no** |
-| `auth` | Unable to update password. Check your connection and try again. | **no** |
-| `auth` | Error checking mobile number existence | **no** |
-| `auth` | Unable to complete signup. Check your connection and try again. | **no** |
-| `common/GlobalDigitalCard` | Error loading image! | **no** |
+| `auth` | Unable to sign in. Check your connection and try again. | yes |
+| `auth` | Unable to update password. Check your connection and try again. | yes |
+| `auth` | Unable to complete signup. Check your connection and try again. | yes |
+| `common/GlobalDigitalCard` | Error loading image! | yes |
 | `common/SunEditor` | Image upload failed | yes |
-| `common/VoiceMessagePlayer` | Error Occured While Translating | **no** |
+| `common/VoiceMessagePlayer` | Error Occured While Translating | yes |
 | `CommonComponent/TransferMessage` | Something went wrong..! | yes |
 | `K-Booking` | Something went wrong! | yes |
-| `Katchup/BlockContact` | Some Error Occurred! | **no** |
-| `Katchup/ContactList` | Failed to update reference | **no** |
-| `Katchup/ContactList` | Gmail ID is not available for this contact | **no** |
-| `Katchup/DeleteContact` | Some Error Occured! | **no** |
-| `Katchup/Diary` | Unable to identify event for participant update. | **no** |
-| `Katchup/Diary` | Unable to update participants for this task. | **no** |
-| `Katchup/Diary` | Unable to update participants. | **no** |
-| `Katchup/Diary` | Unable to identify event for delete. | **no** |
-| `Katchup/Diary` | Unable to delete task. | **no** |
-| `Katchup/Diary` | Unable to update remarks | **no** |
-| `Katchup/Diary` | Unable to create schedule. | **no** |
-| `Katchup/DigitalCard` | Failed to update the contact. Please try again. | **no** |
-| `Katchup/DigitalCard` | Unable to load image | **no** |
-| `Katchup/DigitalCard` | QR shared to some recipients. Please retry failed ones. | **no** |
-| `Katchup/DigitalCard` | Failed to share QR Code in Katchup | **no** |
-| `Katchup/DigitalCard` | Unable to share QR Code in Katchup | **no** |
-| `Katchup/DigitalCard` | Failed to share QR Code in KMail | **no** |
-| `Katchup/DigitalCard` | Unable to share QR Code in KMail | **no** |
+| `Katchup/BlockContact` | Some Error Occurred! | yes |
+| `Katchup/ContactList` | Gmail ID is not available for this contact | yes |
+| `Katchup/DeleteContact` | Some Error Occured! | yes |
+| `Katchup/Diary` | Unable to identify event for participant update. | yes |
+| `Katchup/Diary` | Unable to update participants. | yes |
+| `Katchup/Diary` | Unable to identify event for delete. | yes |
+| `Katchup/Diary` | Unable to delete task. | yes |
+| `Katchup/Diary` | Unable to create schedule. | yes |
+| `Katchup/DigitalCard` | Failed to update the contact. Please try again. | yes |
+| `Katchup/DigitalCard` | Unable to load image | yes |
+| `Katchup/DigitalCard` | QR shared to some recipients. Please retry failed ones. | yes |
+| `Katchup/DigitalCard` | Failed to share QR Code in Katchup | yes |
+| `Katchup/DigitalCard` | Unable to share QR Code in Katchup | yes |
+| `Katchup/DigitalCard` | Failed to share QR Code in KMail | yes |
+| `Katchup/DigitalCard` | Unable to share QR Code in KMail | yes |
 | `Katchup/forwardFooter` | Something went wrong..! | yes |
 | `Katchup/KatchupMessage` | Profile upload failed | yes |
-| `Katchup/KatchupMessage` | Some Error Occured!, Please Try Again! | **no** |
-| `Katchup/KatchupMessage` | Error Occured While Translating | **no** |
-| `Katchup/KatchupMessage` | Voice transcription failed | **no** |
-| `Katchup/KatchupMessage` | Some Error Occured! | **no** |
-| `Katchup/KatchupMessage` | Transcription failed | **no** |
-| `Katchup/MessageBox` | Unable to open this document | **no** |
-| `Katchup/MessageBox` | File is not available | **no** |
+| `Katchup/KatchupMessage` | Some Error Occured!, Please Try Again! | yes |
+| `Katchup/KatchupMessage` | Error Occured While Translating | yes |
+| `Katchup/KatchupMessage` | Voice transcription failed | yes |
+| `Katchup/KatchupMessage` | Some Error Occured! | yes |
 | `Katchup/ProfilePage` | Profile upload failed | yes |
 | `Katchup/ReferenceMsg` | Something Went Wrong! | yes |
-| `Katchup/WriteMessage` | This emoji is not available | **no** |
-| `Katchup/WriteMessage` | Some Error Occurred!, Please Try Again! | **no** |
-| `Katchup/WriteMessage` | Failed to generate. Please try again. | **no** |
+| `Katchup/WriteMessage` | This emoji is not available | yes |
 | `Katchup/WriteMessage` | Something Went Wrong ! | yes |
-| `Katchup/WriteMessage` | Unable to upload voice message | **no** |
-| `Kdirectory/components` | Adding Contact Failed | **no** |
-| `Kmail/AddOtherDomain` | Some Thing Went wrong! | **no** |
-| `Kmail/KmailMessage` | Unable to load mail content. Please try again. | **no** |
-| `Kmail/KmailMessage` | This mail action is not available. | **no** |
+| `Kdirectory/components` | Adding Contact Failed | yes |
+| `Kmail/AddOtherDomain` | Some Thing Went wrong! | yes |
+| `Kmail/KmailMessage` | Unable to load mail content. Please try again. | yes |
+| `Kmail/KmailMessage` | This mail action is not available. | yes |
 | `Kmail/KmailMessage` | Something  Went Wrong | yes |
-| `Kmail/KmailMessage` | Some Error Occured! | **no** |
+| `Kmail/KmailMessage` | Some Error Occured! | yes |
 | `Kmail/KmailMessage` | Profile upload failed | yes |
-| `Kmail/KmailMessagebox` | Save is not available for this message. | **no** |
-| `Kmail/KmailMessagebox` | Error While Showing Attachment | **no** |
-| `Kmail/KmailMessagebox` | Unable to load current read status. | **no** |
-| `Kmail/MailFooter` | Unable to load mail content. Please try again. | **no** |
+| `Kmail/MailFooter` | Unable to load mail content. Please try again. | yes |
 | `Kmail/StatusType` | Something Went Wrong ! | yes |
-| `Kmail/writemailbox` | Some Error Occured! | **no** |
-| `Kmail/writemailbox` | Failed to generate. Please try again. | **no** |
+| `Kmail/writemailbox` | Some Error Occured! | yes |
 | `Kmail/writemailbox` | Something Went Wrong ! | yes |
-| `Kmail/WriteMailPage` | Error From Adding Saluation | **no** |
-| `Kmail/WriteMailPage` | Mail delivery failed | **no** |
-| `Kmail/WriteMailPage` | Some Error Occurred! | **no** |
-| `Kmail/WriteMailPage` | An unexpected error occurred. | **no** |
-| `Kmail/WriteMailPage` | Some Error Occured! | **no** |
+| `Kmail/WriteMailPage` | Mail delivery failed | yes |
+| `Kmail/WriteMailPage` | Some Error Occurred! | yes |
+| `Kmail/WriteMailPage` | An unexpected error occurred. | yes |
+| `Kmail/WriteMailPage` | Some Error Occured! | yes |
 | `KNews/components/HeadLines` | Something went wrong..! | yes |
 | `KNews/components/NewsList` | Something went wrong..! | yes |
 | `Settings/BlockedContact` | Something went wrong | yes |
@@ -208,15 +193,12 @@
 | `Settings/SettingProfile` | Profile remove failed | yes |
 | `Settings/SettingProfile` | Unexpected error occurred | yes |
 | `Settings/SettingProfile` | Profile upload failed | yes |
-| `UserManagement` | some error occured ! | **no** |
+| `UserManagement` | some error occured ! | yes |
 | `UserProfile` | Profile upload failed | yes |
-| `Verticals/Business/MediumLarge/Signup` | Error checking mobile number existence | **no** |
-| `Verticals/Business/MediumLarge/Signup` | Unable to complete registration. Check your connection and try again. | **no** |
-| `Verticals/Business/Small/Signup` | Error checking mobile number existence | **no** |
+| `Verticals/Business/MediumLarge/Signup` | Unable to complete registration. Check your connection and try again. | yes |
 | `Verticals/Business/Small/Signup` | Something went wrong ! | yes |
-| `Verticals/Business/Small/Signup` | Unable to complete registration. Check your connection and try again. | **no** |
-| `Verticals/Personal` | Error checking mobile number existence | **no** |
-| `Verticals/Personal` | Unable to complete signup. Check your connection and try again. | **no** |
+| `Verticals/Business/Small/Signup` | Unable to complete registration. Check your connection and try again. | yes |
+| `Verticals/Personal` | Unable to complete signup. Check your connection and try again. | yes |
 
 ## Not testable from a browser here
 
@@ -229,6 +211,7 @@
 | `auth` | Please Paste the OTP with 6 Digits Only! | behind an OTP that texts a real phone |
 | `auth` | You are logged out on this device as you logged on another 3rd party device | a session or live-call event |
 | `auth` | Your session has expired. Please login again. | a session or live-call event |
+| `auth` | Error checking mobile number existence | unreachable: CheckIsMobileNoExist and SendOTP catch their own errors and every read uses ?., so nothing throws into this catch |
 | `auth` | Invalid OTP. Please enter the correct code | behind an OTP that texts a real phone |
 | `auth` | This module is currently in progress. | a placeholder notice, not a rule |
 | `common/AttachmentSummary` | , e);
@@ -254,12 +237,15 @@
 | `Kall/KallPage` | You have received new kool kall | unreachable: a live push from another user’s browser creating the meeting (socket) |
 | `Kall/KoolKallModal` | Failed to copy meeting URL. | needs a device permission the test browser does not grant |
 | `Katchup/ContactList` | Already this contact is saved in contact List | unreachable: other-domain rows are not listed in Katchup Contacts |
+| `Katchup/ContactList` | Failed to update reference | unreachable: it edits an other-domain contact, and other-domain rows are not listed in Katchup Contacts |
 | `Katchup/ContactList` | Please enter a group name | unreachable: Create is disabled while the name is empty |
 | `Katchup/ContactList` | Please select at least one group member | unreachable: Create only appears once a member is added |
 | `Katchup/ContactList` | Group Info Coming Soon | a placeholder notice, not a rule |
 | `Katchup/Diary` | Repeat type is required | unreachable: a plain select that cannot be emptied (Save waits instead; kdiary-validation) |
 | `Katchup/Diary` | Schedule period is required | unreachable: a plain select that cannot be emptied (Save waits instead; kdiary-validation) |
 | `Katchup/Diary` | Priority is required | unreachable: a plain select that cannot be emptied (Save waits instead; kdiary-validation) |
+| `Katchup/Diary` | Unable to update participants for this task. | unreachable: edit mode is set only after the event-id check, and mode and id are always reset together (Diary.js:511-557) |
+| `Katchup/Diary` | Unable to update remarks | unreachable: UpdateDiaryScheduleRemarks returns null on any error, so nothing throws into this catch (a failed call shows "Unable to update task remarks") |
 | `Katchup/DigitalCard` | No image available! | unreachable: the photo button always has an image address |
 | `Katchup/DigitalCard` | Launching Soon | a placeholder notice, not a rule |
 | `Katchup/forwardFooter` | Enter Your Message | unreachable: its only callers are commented out |
@@ -272,9 +258,12 @@
 | `Katchup/KatchupMessage` | Unable to copy text to clipboard | needs a device permission the test browser does not grant |
 | `Katchup/KatchupMessage` | Error!, Please Try Again After Some Time! | unreachable: the delete service swallows errors, so this catch never runs |
 | `Katchup/KatchupMessage` | Single Admin Cannot Exit the group !, Make a Member an Admin to Exit | unreachable: an earlier return ("Group admins cannot exit") always wins, and Exit is hidden for admins |
+| `Katchup/KatchupMessage` | Transcription failed | unreachable: the handler that shows it is never called |
 | `Katchup/KatchupMessage` | Group Info Coming Soon | a placeholder notice, not a rule |
 | `Katchup/KatchupMessage` | Your message is Block | unreachable: the bell menu is not rendered for that message type |
 | `Katchup/MessageBox` | Can not able to select more than one message for forward | unreachable: the checkbox is disabled under the same condition |
+| `Katchup/MessageBox` | Unable to open this document | unreachable: shown only for a KAD document message (KDoc/KOS, excluded from testing) |
+| `Katchup/MessageBox` | File is not available | unreachable: shown only for a KAD document message (KDoc/KOS, excluded from testing) |
 | `Katchup/MultipleContact` | Access Denied | unreachable: removed groups are filtered out of the list and their checkbox is disabled |
 | `Katchup/ProfilePage` | , error);
         toast.error( | a console call, not a message |
@@ -285,13 +274,19 @@
   const msgType = {
     0: | a console call, not a message |
 | `Katchup/RecentMessage` | Group Info Coming Soon | a placeholder notice, not a rule |
+| `Katchup/WriteMessage` | Some Error Occurred!, Please Try Again! | unreachable: only the bulk send shows it, and its menu entry is commented out |
 | `Katchup/WriteMessage` | Microphone not found or access denied. Please ensure a microphone is connected and permissions are granted. | needs a device permission the test browser does not grant |
 | `Katchup/WriteMessage` | Speech Recognition API not supported in this browser. | needs a device permission the test browser does not grant |
+| `Katchup/WriteMessage` | Failed to generate. Please try again. | unreachable: the K-AI generate call never rejects |
+| `Katchup/WriteMessage` | Unable to upload voice message | needs a device permission the test browser does not grant |
 | `Katchup/WriteMessage` | Voice recording is not supported in this browser | needs a device permission the test browser does not grant |
 | `Katchup/WriteMessage` | Mic Not Found ! | needs a device permission the test browser does not grant |
 | `Kmail/KmailMessage` | , error);
         toast.error( | a console call, not a message |
 | `Kmail/KmailMessage` | Group info coming soon | a placeholder notice, not a rule |
+| `Kmail/KmailMessagebox` | Save is not available for this message. | unreachable: the Save menu items are commented out |
+| `Kmail/KmailMessagebox` | Error While Showing Attachment | unreachable: the attachment stream service never throws |
+| `Kmail/KmailMessagebox` | Unable to load current read status. | unreachable: raised only for a malformed 200 (data not a list), never for a failed call |
 | `Kmail/MailFooter` | Mail could not be sent. Please try again. | unreachable: only a client-side exception reaches it; a failed send shows the server’s own message |
 | `Kmail/MailFooter` | Speech Recognition API not supported in this browser. | needs a device permission the test browser does not grant |
 | `Kmail/MailFooter` | Microphone not found or access denied. Please ensure a microphone is connected and permissions are granted. | needs a device permission the test browser does not grant |
@@ -302,7 +297,9 @@
   const notifyReceivedMail = (obj) => {
     if (!obj) return;
     const isGroup = obj.mailFlag === | a console call, not a message |
+| `Kmail/writemailbox` | Failed to generate. Please try again. | unreachable: the K-AI generate call never rejects |
 | `Kmail/writemailbox` | Microphone not found or access denied. Please ensure a microphone is connected and permissions are granted. | needs a device permission the test browser does not grant |
+| `Kmail/WriteMailPage` | Error From Adding Saluation | unreachable: the salutation service never throws |
 | `Kmail/WriteMailPage` | No email ids found in Excel | Bulk Mail is not offered on this build (kmail-validation skips with that reason) |
 | `Kmail/WriteMailPage` | , err);
         toast.error(t( | a console call, not a message |
@@ -317,12 +314,15 @@
 | `Settings/Settingdetails` | This module is currently in progress. | a placeholder notice, not a rule |
 | `UserProfile` | , error);
         toast.error( | a console call, not a message |
+| `Verticals/Business/MediumLarge/Signup` | Error checking mobile number existence | unreachable: CheckIsMobileNoExist and SendOTP catch their own errors and every read uses ?., so nothing throws into this catch |
 | `Verticals/Business/MediumLarge/Signup` | Error sending OTP to email | behind an OTP that texts a real phone |
 | `Verticals/Business/MediumLarge/Signup` | Invalid OTP. Please enter the correct code | behind an OTP that texts a real phone |
 | `Verticals/Business/MediumLarge/Signup` | Please Paste the OTP with 6 Digits Only! | behind an OTP that texts a real phone |
+| `Verticals/Business/Small/Signup` | Error checking mobile number existence | unreachable: CheckIsMobileNoExist and SendOTP catch their own errors and every read uses ?., so nothing throws into this catch |
 | `Verticals/Business/Small/Signup` | Error sending OTP to email | behind an OTP that texts a real phone |
 | `Verticals/Business/Small/Signup` | Invalid OTP. Please enter the correct code | behind an OTP that texts a real phone |
 | `Verticals/Business/Small/Signup` | Please Paste the OTP with 6 Digits Only! | behind an OTP that texts a real phone |
+| `Verticals/Personal` | Error checking mobile number existence | unreachable: CheckIsMobileNoExist and SendOTP catch their own errors and every read uses ?., so nothing throws into this catch |
 | `Verticals/Personal` | Error sending OTP to email | behind an OTP that texts a real phone |
 | `Verticals/Personal` | Invalid OTP. Please enter the correct code | behind an OTP that texts a real phone |
 | `Verticals/Personal` | Please Paste the OTP with 6 Digits Only! | behind an OTP that texts a real phone |

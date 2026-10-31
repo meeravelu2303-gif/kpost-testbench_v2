@@ -4,6 +4,7 @@ import { testData } from '@config/test-data.config';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
 import { retryOrSkip } from '../../support/live-condition';
+import { toast } from '../support/validation';
 
 /**
  * Business (Small) signup: the category picker, Company Details validation, and one full registration.
@@ -281,6 +282,43 @@ test.describe(
         registerRequests,
         'no registration request may be dispatched while the agree-checkbox is unchecked',
       ).toHaveLength(0);
+    });
+
+    test('a registration submit that gets no answer says "Unable to complete registration" @ui', async ({
+      page,
+      signupPage,
+    }) => {
+      await reachCompanyDetails(signupPage, page);
+      const mobile = freshMobile();
+      await signupPage.fillCompanyDetails({
+        companyName: `QA NoAnswer Co ${Date.now()}`,
+        typeOfBusiness: 'QA Testing',
+        pincode: testData.pinCode,
+        area: 'Chennai',
+        adminDesignation: 'Manager',
+        preAdminDesignationId: `q${mobile.slice(-6)}`,
+        businessUniqueName: `qn${mobile.slice(-6)}`,
+      });
+      await signupPage.continueToBusinessFinalStep();
+      const idOutcome = await signupPage.businessKpostIdAvailability();
+      retryOrSkip(idOutcome === 'taken', 'the generated id collided right now — re-run');
+
+      // The registration never reaches the server, so no company or account is created.
+      let aborted = 0;
+      await page.route(/\/signupLogin\/adminRegistration\/?(\?.*)?$/, (route) => {
+        aborted += 1;
+        return route.abort();
+      });
+      await page.getByPlaceholder('Enter Password').fill('QaBench@2026');
+      await page.getByPlaceholder(/Enter Confirm Password/).fill('QaBench@2026');
+      await page.locator('input[type="checkbox"]').last().check();
+      await page.getByRole('button', { name: /^Submit$/i }).click();
+
+      await expect(
+        toast(page, 'Unable to complete registration. Check your connection and try again.'),
+        'the user is told the registration did not go through',
+      ).toBeVisible({ timeout: 15_000 });
+      expect(aborted, 'the registration was stopped in the browser').toBe(1);
     });
   },
 );
