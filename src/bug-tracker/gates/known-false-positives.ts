@@ -65,6 +65,51 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     date: '2026-10-11',
   },
   {
+    endpoint: '/v2/kall/kallDashboard',
+    field: 'repeatedDate',
+    actualContains: '12345',
+    reason:
+      'Same seeded repeatedDate "12345" surfacing through the Kall dashboard read — QA test data, not a product defect.',
+    judgedBy: 'QA triage (run-4836ce56)',
+    date: '2026-11-02',
+  },
+  // Already filed by hand: the bench's finding is the same fault, so it must not be filed twice.
+  {
+    fingerprint: 'KP-11C494',
+    reason:
+      'Duplicate of #13355 (an unknown countryCode crashes signup with a 500): the only crash in this signup boundary finding is countryCode; the other cases are 409 "already registered" because the base request reuses an existing KPOST ID.',
+    judgedBy: 'QA triage (run-4836ce56)',
+    date: '2026-11-02',
+  },
+  {
+    fingerprint: 'KP-1663E7',
+    reason:
+      'Duplicate of #13355: the only crash in this signup empty-value finding is an empty countryCode; the other cases are 409 "already registered".',
+    judgedBy: 'QA triage (run-4836ce56)',
+    date: '2026-11-02',
+  },
+  {
+    fingerprint: 'KP-95A597',
+    reason:
+      "Duplicate of #13385 (any user can change a call's status by naming its sender in the body): same endpoint, same fault; #13385 is the open hand-filed bug.",
+    judgedBy: 'QA triage (run-4836ce56)',
+    date: '2026-11-02',
+  },
+  {
+    fingerprint: 'KP-1B6DB4',
+    reason:
+      'Correct refusal, not a defect: the definition sends an empty letterhead id on purpose ("needs a real letterhead id", settings.api.ts), so setLetterHead answering 400 is right; same as deleteLetterHead (KP-D59B4D, already judged).',
+    judgedBy: 'QA triage (run-45d44eca)',
+    date: '2026-11-02',
+  },
+  {
+    fingerprint: 'KP-A86C64',
+    reason:
+      'Correct refusal, not a defect: adminRegistration answered 400 "Mobile number or email is not verified, or the OTP verification has expired" because this run had not verified the OTP first (a bench precondition).',
+    judgedBy: 'QA triage (run-4836ce56)',
+    date: '2026-11-02',
+  },
+  {
     endpoint: '/dairySchedule/getTodaySchedules',
     field: 'preferredDate',
     actualContains: 'null',

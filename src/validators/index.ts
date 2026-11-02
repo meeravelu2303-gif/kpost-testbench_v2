@@ -22,6 +22,7 @@ import { urlValidator } from './common/url.validator';
 import { payloadSizeValidator } from './performance/payload-size.validator';
 import { responseTimeValidator } from './performance/response-time.validator';
 import { timeoutValidator } from './performance/timeout.validator';
+import { boundaryAcceptValidator } from './request/boundary-accept.validator';
 import { boundaryValueValidator } from './request/boundary-value.validator';
 import { dataTypeValidator } from './request/data-type.validator';
 import { emptyValueValidator } from './request/empty-value.validator';
@@ -92,6 +93,7 @@ export const validationRegistry = new ValidationRegistry().register(
   emptyValueValidator,
   dataTypeValidator,
   boundaryValueValidator,
+  boundaryAcceptValidator,
   enumValidator,
   formatValidator,
   unknownFieldsValidator,

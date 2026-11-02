@@ -14,7 +14,7 @@
       "mobileNumber": "9000000777",
       "source": "signup-login-signup",
       "note": "otp-signup-lifecycle.spec.ts: personal registration",
-      "createdAt": "2026-10-31T07:57:21.513Z"
+      "createdAt": "2026-11-01T19:40:41.136Z"
     },
     {
       "kpostId": "qabenchweb@kpostindia.com",
@@ -1219,6 +1219,13 @@
       "source": "kpost:deep (write-fuzz run)",
       "note": "caught by before/after DB diff, not a known hand-written signup path",
       "createdAt": "2026-10-26T12:09:53.412Z"
+    },
+    {
+      "kpostId": "qabenchmob3@kpostindia.com",
+      "mobileNumber": "9000000781",
+      "source": "signup-mobile-e2e.spec.ts (UI, 480×900)",
+      "note": "Personal registration driven end-to-end at mobile viewport width",
+      "createdAt": "2026-11-01T10:50:57.850Z"
     }
   ]
 }

@@ -20,7 +20,7 @@ void main() {
       await signInWithPassword($);
 
       await $(find.byIcon(KPOST.KP_20_Menu_Open)).tap();
-      await $(Drawer).$('Settings').scrollTo().tap();
+      await tapDrawerItem($, 'Settings');
       await $('Profile Creation').tap();
       await $('About').tap();
 

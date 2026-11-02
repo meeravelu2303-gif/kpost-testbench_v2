@@ -3,7 +3,233 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-10-31 (latest) — Every reachable server-failure message on the web screens is tested (64/64)
+### 2026-11-01 (latest) — Boundary tests: real limits read from the code and the QA DB
+
+Owner: "we have the boundary test in our test bench?" → "Yes" → "continue the boundary test with full
+coverage". Before this, `request.boundary-value` tested nothing: the workbook lists types only, and
+0 of 307 request schemas declared a limit.
+
+- **Limits from the source:** `src/api/contract/source/<suite>.limits.json` (bench-maintained) has
+  200 KPost, 27 KMail and 7 Admin limits. Each limit cites a file and line. A limit comes from one
+  of three places: a bean-validation annotation that is enforced (`@Valid` present), a hand-written
+  check in the controller or service, or the width of the column the field is saved into. The QA DB
+  runs `STRICT_TRANS_TABLES`, so a longer value is refused by MySQL. `source-limits.ts` writes the
+  limits into the schemas when an endpoint is resolved (`validation-policy.ts`). It only adds to a
+  schema that already exists and never invents a request shape.
+- **Engine:**
+  - The validator now walks array items, so Admin's array bodies and member lists are reached.
+  - New cases: one item too few (`minItems`).
+  - Fillers: digits for a numeric field; a distinctive `qaboundary…` text filler otherwise.
+  - Id fields (`kallID`, `*_id`) never get an edge value. Found live: the "minimum" 1 went to
+    endKoolKall / modifyKallMembers. Kall #1 does not exist, so nothing was touched.
+- **New validator `request.boundary-accept`:**
+  - A value exactly at a limit must be taken without a 5xx; a 4xx is not judged.
+  - Never runs on `global`/OTP endpoints (password, access code, devices, roles).
+  - On a write, it re-sends the normal request afterwards, which puts the record back.
+  - Filing stays as for every input fuzzer: an over-limit value the API merely accepts is lenient
+    (not filed); a 5xx is.
+- **Cleanup:** create endpoints really store the edge values. The first run left 72 rows in the
+  QA DB, plus filler in 3 group photos, all removed by hand: 15 enquiries, 3 Katchup messages,
+  6 attachments, 9 Kool Kalls with their 9 member rows, and 36 login-history rows; the 3 group
+  photo paths were set to NULL.
+  `tests/kpost-api/maintenance/boundary-filler-cleanup.spec.ts` now does this every
+  `product:kpost-api` run. It deletes created rows, with their child rows, and NULLs any other
+  filler. Verified live: 10 enquiry rows deleted, re-scan empty.
+- **First live run (boundary validators only, 614 tests):**
+  - **A value one character over the column's width gives a 500** on about 15 KPost endpoints:
+    profile contact, designation and privacy; userLogin session/device fields;
+    addContactReference; scheduledKall, initiateKall and scheduledRepeatKall; Katchup multipart
+    and bulk file names; presign file names; the enquiry form; KNews settings; signup countryCode.
+  - **The API's own limit is wider than the column** on updateContactInformation: pinCode 3–12
+    characters goes into an INT column, and two 250-character address lines go into one 250
+    column. Both give a 500 at the edge.
+  - userLogin `oneSignal_Key` gives a 500 at exactly 1000 characters.
+  - Filed 2026-11-02 from the full `product:kpost-api` preview (run-4836ce56) → `report:filing` →
+    `bug:apply`: **#13392–#13409** (18 new); **#486** reopened (downloadCoverImage with no token: a
+    500 three times out of three when replayed alone). Kept out with a reason, in
+    `known-false-positives.ts`:
+    - KP-11C494 and KP-1663E7 duplicate #13355 (the only crash is countryCode);
+    - KP-95A597 duplicates #13385;
+    - KP-A86C64 is a correct "OTP not verified" refusal;
+    - the kallDashboard `repeatedDate` value 12345 is the bench's own seeded value.
+  - The screen side is filed by hand as **#13410** (KPost UI › Settings).
+  - KMail (`product:kmail-api`, run-45d44eca), **#13411–#13415**:
+    - saveUnsubscriberDetails: 301 characters give a 500, and so does exactly 300. The column is
+      300, so a second, narrower write fails too; filed as two bugs because they need two fixes.
+    - addOtherDomainContacts and editOtherDomainContactsDetails: `contactName` at 201 gives a 500.
+    - postBulkMail: content over 200 KB gives a 500, not a 400.
+    - #13357 and #13359 closed: they now pass.
+    - setLetterHead's 400 on the bench's empty id (KP-1B6DB4) is a correct refusal and is kept out.
+- **Web screens** (`tests/kpost-ui/profile/profile-field-limits-validation.spec.ts`, plus a typing test in
+  `verticals/kdirectory-validation.spec.ts`). Every save is aborted at the network, so nothing is written.
+  - Already correct:
+    - About stops at 500.
+    - Contact Pin Code stops at 6 and drops letters; Second Mobile stops at 10.
+    - KDirectory mobile stops at 10 and pincode at 6.
+    - Each Contact text field at exactly its column width is sent in full.
+  - **Fails, a real finding:** City, Area, Landline and Address line 1 have no limit. One character
+    over the column reaches the server, which answers 500. `Setting.js ContactInformationCreate`
+    swallows the error and `ContactInformation.js` only logs it, so the user sees nothing.
+  - Lead: Second Mobile Number is disabled unless Address line 2 has text
+    (`isDisabled={value.addresslinetwo ? false : true}`); probably a copy-paste slip.
+- **Leads checked 2026-11-02:**
+  - **#13416 (critical):** `/v2/translator/postMail` takes no token (SecurityConfiguration:126
+    permitAll) and sends as the body's `fromAddress`. Proved live with one QA mail: kmail 47023,
+    "from" qatest2 to qatest1, no login, delivered; the normal send path answered 401.
+    `tests/kmail-api/security/translator-postmail-no-login.spec.ts` re-checks it with zero writes
+    (an unparseable body: 400 = past the filter, 401 = refused).
+  - Dropped: `getMailCredentials` hands back the KMail password only to a caller who already sent
+    that account's correct password (SentMailServiceImpl ~2191), so nothing leaks.
+  - Not yet done:
+    - Admin company scoping: needs two QA companies' attribute ids; the identifier guard forbids
+      naming another tenant's ids.
+    - Admin short-name 500: a write on the live Admin DB.
+    - Kall reschedule checks.
+    - Bulk-mail status: an in-memory store keyed by fromAddress, readable once by anyone who names
+      the sender. Still to replay.
+  - Admin preview (run-b17a4278): nothing to file. The Admin length gap is already #13258.
+  - Firefox UI preview (run-854245fd), applied on the owner's "Yes" (2026-11-02): 42 bugs CLOSED as
+    re-test passed (#1079, #1085–#1291: the Home, Kall, Katchup, KBooking, KCloud, KDiary,
+    KDirectory, ECommerce, KMail, KNews, Settings and Profile crawl, keyboard, network and health
+    sweeps). 0 failures; nothing new filed. KP-53FD80 (colour contrast) stays open.
+- **Code-review leads from the same read** (not yet verified live; each needs a duplicate check and
+  a replay alone before filing):
+  - KMail: `/v2/translator/postMail` takes no token and trusts the body's fromAddress;
+    `getMailCredentials` is not tied to the caller; the bulk-mail status is readable and deletable
+    by anyone.
+  - Admin: a tier/variable name under 3 characters gives a 500; `location/getLocation` and
+    `workplaceHierarchy/getWorkPlaceHierarchy` are not company-scoped.
+  - Kall: reschedule and repeat-schedule skip scheduledKall's subject, session and link checks.
+  - Web: the KMail K-AI assist calls live devapi2.
+  - Web: 19 inputs let a user type more than the server or the column holds.
+
+### 2026-11-01 — S3 write issues filed from the code (owner chose "file from the code")
+
+Owner: after the explanation, "Which one is best way?" → filing from the code. These bugs are not
+replayed live: the bucket is the live S3 bucket and a test would leave or replace a permanent public
+file.
+
+- **#13390 (KMail):** convertMailAsPDF renders the request's own subject and body and saves the PDF,
+  public-read, into `<request kpostID>/Kmail/<date>/` (CommonMailServiceImpl ~1329-1395,
+  S3ServiceImpl ~47-49). Any user can drop a fake "mail" PDF into anyone's folder.
+- **#13391 (KPost):** convertBase64ToImage and uploadImageToS3 use the client's fileName (or the
+  original file name) as the complete S3 key, public-read (UserProfileServiceImpl ~724-770). Any user
+  can overwrite another user's profile photo (`<kpostID>/kprofile/...`) or any public object.
+- Both bugs carry a safe reproduction for the developer, using a throwaway object that is deleted
+  afterwards.
+
+### 2026-11-01 — Four more security checks: session revocation, open redirect, mass assignment, CORS
+
+Owner: "Yes, please" to the four security gaps closable without risk.
+
+- **Session revocation → #13389 (major).** A logged-out token is refused, then accepted again once
+  the same user logs in on the same device. Token checks look at the device's session row, not the
+  token. Reproduced 2 of 2 on qatest4 with its own device id.
+  - KPost allows one session per account: a login on device B ends device A's session. So "log out
+    of all devices" has no other sessions to end (its own failure is #13334).
+  - Spec: `kpost-api/security/session-revocation.spec.ts`.
+- **Open redirect: safe, from the source.** Login follows `returnTo` only when it starts with
+  `/kposter` (no backslash or newline), via React Router navigate, never a full URL. A browser test
+  needs a sign-in that does not kick the shared session; it is to be added when a run slot is free.
+- **Mass assignment: protected.** Basic and contact profile saves on qatest4, sent with userType,
+  companyID, activeStatus, isBackUpAdmin, mobile, email, name, accessCode, role and qatest2's
+  kpostID, changed only the form's own fields; qatest2 was untouched. All 8 changed columns were
+  restored from a snapshot.
+  - Spec: `kpost-api/security/profile-mass-assignment.spec.ts`, which snapshots and restores in
+    `finally`.
+- **CORS: safe for bearer auth.** KPost, KMail and Admin answer `Access-Control-Allow-Origin: *`
+  without credentials. Spec: `kpost-api/security/cors-policy.spec.ts`, which fails if an origin is
+  reflected or credentials are allowed.
+- The three new specs plus `session-revocation` are typechecked and linted. They are run alone once
+  the Firefox UI run finishes (no Playwright run while one is in progress).
+
+### 2026-11-01 — Source-review security leads replayed live: 6 bugs filed, each now a bench test
+
+Owner: "test and file the valid bugs" / "cover completely that test also". Every lead from the
+2026-10-31 source review was replayed on the QA backend with an owner control. Each confirmed one is
+filed and has a permanent spec that fails until it is fixed.
+
+- **#13380 (critical)**: KMail exports its Spring Data REST repositories at the service root. Any
+  signed-in user can read 23 tables: users (2,547, including password/kmailPassword/accessCode
+  fields), loginSessions (1,482), kmailContents (25,620 bodies), katchupMessageses (798,875) and more.
+  Only key names and counts were read, and no write method was tried.
+  Spec: `kmail-api/security/repository-exposure.spec.ts`.
+- **#13381**: getKmailDetailsUsingKmailID returns a foreign mail's metadata when one own id is in the
+  list, and answers 500 for a list of only foreign ids.
+- **#13383 (critical)**: referenceMailContent returns the full body of any mail id to any user.
+- **#13384**: the web's own request to it (no kmailType) is always refused with 400. This is the web
+  half of the drift, filed under KPost UI because the gatekeeper held a second bug on the same
+  endpoint.
+  - The three KMail bugs above share one spec: `kmail-api/security/mail-id-idor.spec.ts`. A mails B,
+    C reads, and the mails are deleted afterwards.
+- **#13382**: updatePrivacySettingDetails stores any string. A value that is not a JSON object makes
+  every later read of that profile answer 500.
+  - Spec: `kpost-api/validation/profile-privacy-stored-value.spec.ts`. It runs on qatest4 and always
+    restores the row in the QA DB (privacy_details NULL, privacy_status 0).
+- **#13385**: updateSenderAndReceiverKallStatus takes the sender from the body; an outsider changed
+  another pair's call (2/2). Spec: `kpost-api/security/kall-status-sender-spoof.spec.ts`.
+- **#13386**: kmailGroupReadStatus gives a non-member the group mail's member list and each member's
+  read/reply/delete status (2/2).
+  - Spec: `kmail-api/security/group-read-status-idor.spec.ts`. The group creator makes a QA group
+    and mails it; qatest4 asks; the mail and group are deleted afterwards. It needs
+    GROUP_LIFECYCLE + KMAIL_LIFECYCLE.
+- **Not filed (source-only, minor):** getBulkKmailDashboardMsg returns the unfiltered list, but the
+  CC/BCC rows are stripped in place on the same objects. Only mails to a group the caller deleted
+  keep their BCC rows, and that needs a bulk mail to a deleted group to reproduce.
+- **Checked and not filed:**
+  - setAccessCode answers a generic "Invalid accessCode or currentPassword", so it is no oracle
+    beyond login.
+  - shareUserDetails and getUserProfileUsingKpostID return what the public card and profile pages
+    display. Whether a no-login link may show DOB and mobile is the owner's decision.
+  - saveUnsubscriberDetails is public by design (#13283); trusting sender/receiver from the body is
+    the owner's decision.
+  - convertMailAsPDF writes a client-supplied PDF into any kpostID's S3 folder. It was not replayed
+    (a live S3 write into another user's folder with no delete).
+  - bulkMail/status had no record to test.
+- **Product rule (owner, 2026-11-01):** "the kpost users if share the digital card profile they can
+  see it is product rule not flaw". The public digital card / ProfileWebView showing DOB, mobile,
+  email and pincode is intended; never file it.
+- **adminUserLogin: no leak for this account.**
+  - The two failed business logins on 2026-10-31 were the replay script's fault. `.env` has no
+    QA_BUSINESS_PASSWORD (the bench falls back to QA_PASSWORD), so the script sent an empty password.
+    QA_PASSWORD was checked offline against both business accounts' bcrypt hashes and matches;
+    nothing was changed.
+  - With it, adminUserLogin answers 200 and returns the user entity with `password` empty and
+    `accessCode` null; this admin has no access code.
+  - Proving the in-clear access code would need setting one on a shared business account, so it
+    stays a source-level note.
+- **#13388 (filed at the owner's request: "File the issue becoz i am not sure on that").**
+  saveUnsubscriberDetails is public (#13283) and trusts sender/receiver from the body. Anyone can
+  unsubscribe any user from any sender, and each call also creates or flips the pair in the sender's
+  other-domain contacts.
+  - Proof: a no-login probe (unparseable body → 400, a protected endpoint → 401) plus the source.
+    No real write was made, since the endpoint has no undo.
+- **AI session (one paid call, owner-approved):** qatest3 started session 593. qatest4 asking for its
+  messages got no data, but an HTTP 500 instead of 403/404: **#13387** (normal). Appending to someone
+  else's session would need a second paid call; it was not tested.
+- **QA data:** qatest4's privacy row was broken by the first replay and repaired in the DB; all its
+  profile reads answer 200 again.
+
+### 2026-10-31 — #13326 verified fixed on the phone; mobile sign-in passes end to end
+
+- **#13326 CLOSED** (owner: "it was fixed just check that").
+  - Fix: Test_ENV commit bbf29fb9b (base_api.dart getApiHeaders) sends Authorization only when there
+    is a token.
+  - Live check: on the realme C55 the sign-in lookup opens the password step, with no "session
+    expired". Screenshot attached to the bug.
+  - The server is unchanged: an empty "Bearer " header still answers 401, and no header answers 200.
+- **`auth/login_test.dart` passed on the phone** (KPost ID → password → Home, 85 s). It is the first
+  run past sign-in.
+- **Bench fixes found on the way:**
+  - `first_run.dart` waited for "Enter Password", which is only the field's hint; a text finder does
+    not see it. It now waits for "Login with Other KPOST ID". `login_negative_test.dart` had the same
+    mistake, so its two "never opens" checks could not fail.
+  - The splash's location prompt can arrive after the startup window. It is now allowed whenever it
+    shows during the intro, and once more after Login.
+- **Phone connected over Wireless debugging** (owner's choice): `adb pair` + `adb connect`. PC
+  192.168.0.50 and phone 192.168.10.237 reach each other and both QA ports, so no tunnel is needed.
+
+### 2026-10-31 — Every reachable server-failure message on the web screens is tested (64/64)
 
 - **Ledger:** `docs/generated/ui-rule-coverage.md` went from 24 of 82 server-failure messages to 64 of 64.
   - 18 are recorded in `UNREACHABLE` with the reason read from the source. Examples: the mobile-number

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:kpost5_2023/app_common/views/screens/home_dashboard_screens/home_dashboard_screen.dart';
 import 'package:kpost5_2023/main.dart' as app;
 import 'package:patrol/patrol.dart';
@@ -12,7 +13,11 @@ import 'bench.dart';
 Future<void> signInWithPassword(PatrolIntegrationTester $) async {
   Bench.requireConfig();
   await startFreshApp($);
+  await signInFromSignInScreen($);
+}
 
+/// From the sign-in screen (country not chosen yet): KPost ID, password, Home.
+Future<void> signInFromSignInScreen(PatrolIntegrationTester $) async {
   // Step A: the KPost ID field stays read-only until a country is chosen.
   await $('Select your Country').tap();
   await $('India').tap();
@@ -20,7 +25,9 @@ Future<void> signInWithPassword(PatrolIntegrationTester $) async {
   await $('Submit').tap();
 
   // Step B: the same screen swaps in the password field (the app bar also says "Login").
-  await $('Enter Password').waitUntilVisible();
+  // "Enter Password" is only the field's hint, which a text finder does not see; this link is
+  // real text on the password step (user_auth_widget.dart).
+  await $('Login with Other KPOST ID').waitUntilVisible();
   await $(TextField).first.enterText(Bench.password);
   await $(ElevatedButton).$('Login').tap();
 
@@ -54,8 +61,25 @@ Future<void> allowStartupPermissions(PatrolIntegrationTester $) async {
 /// Intro slides → Skip; welcome → Login (SignUp would start the sign-up path instead). The intro shows
 /// only on the very first launch: a phone where the app's data survived (realme keeps it between
 /// runs) opens straight on the welcome screen, so Skip is tapped only if it appears first.
+///
+/// The splash's permission requests can arrive late (seen 2026-10-31: location came after the
+/// startup window, over the welcome screen), so a dialog is allowed whenever one shows meanwhile.
 Future<void> passIntroToSignIn(PatrolIntegrationTester $) async {
   for (var second = 0; second < 30; second++) {
+    if (await $.platform.mobile.isPermissionDialogVisible(
+      timeout: const Duration(milliseconds: 500),
+    )) {
+      await $.platform.mobile.grantPermissionWhenInUse();
+      continue;
+    }
+    // The phone keeps the app's data between tests, so a later test can open on the remembered
+    // user's unlock screen (access code or password, e.g. after access_code_test): start over from
+    // the KPost ID step as a fresh install would.
+    if ($('Login with Other KPOST ID').exists) {
+      await $('Login with Other KPOST ID').tap();
+      await allowStartupPermissions($);
+      return;
+    }
     if ($('Skip').exists) {
       await $('Skip').tap();
       break;
@@ -64,6 +88,7 @@ Future<void> passIntroToSignIn(PatrolIntegrationTester $) async {
     await $.pump(const Duration(seconds: 1));
   }
   await $('Login').tap();
+  await allowStartupPermissions($);
 }
 
 /// After sign-in: the showcase tour, "Add Your Profession" and "Set as Primary Device" queue up in no
@@ -87,6 +112,16 @@ Future<void> dismissHomePopups(PatrolIntegrationTester $) async {
     }
     quietRounds = 0;
   }
+}
+
+/// Taps a drawer entry (the drawer must be open), scrolling the drawer's own list to it. A bare
+/// scrollTo() scrolls the first list on screen, which is Home's Recents behind the drawer, so an
+/// entry further down (Logout) was never reached (seen 2026-10-31).
+Future<void> tapDrawerItem(PatrolIntegrationTester $, String label) async {
+  final drawerList = find
+      .descendant(of: find.byType(Drawer), matching: find.byType(Scrollable))
+      .first;
+  await $(Drawer).$(label).scrollTo(view: drawerList).tap();
 }
 
 /// Android 14+ may open the full-screen-intent Settings page over the app right after sign-in; Back

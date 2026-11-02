@@ -48,6 +48,7 @@ export const PRODUCTION_SAFE_VALIDATORS: readonly string[] = [
 /** Validators excluded on live, with reasons; a self-test checks each is in exactly one list. */
 export const PRODUCTION_BLOCKED_VALIDATORS: Readonly<Record<string, string>> = {
   'request.boundary-value': 'mutates every field including ids, then sends it',
+  'request.boundary-accept': 'writes edge-of-limit values into every field, then sends them',
   'request.data-type': 'sends wrong-typed values into id fields',
   'request.null-value': 'sends null into required fields',
   'request.empty-value': 'sends empty values into required fields',
@@ -89,6 +90,7 @@ const READ_SAFE_FUZZERS = new Set<string>([
   'request.null-value',
   'request.data-type',
   'request.boundary-value',
+  'request.boundary-accept',
   'request.enum',
   'request.empty-value',
   'request.empty-body',

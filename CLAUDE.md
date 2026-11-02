@@ -295,6 +295,11 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
   `src/api/contract/source/<suite>.source.json`, one entry per endpoint read from its controller method
   (cited), used only once a live QA success matched it (`liveCheck: matched <date>`). A failure body is
   never checked against it. Trial unconfirmed ones with `SOURCE_CONTRACT_TRIAL=true` (never on a filing run).
+- **Input limits come from the code and the QA DB** (since 2026-11-01): `src/api/contract/source/<suite>.limits.json`,
+  each cited (an enforced annotation, a hand-written check, or the saved column's width; strict SQL mode), written into
+  the request schemas at resolve time for `request.boundary-value` (just outside → 4xx) and `request.boundary-accept`
+  (exactly at → no 5xx; never on `global`/OTP endpoints; re-sends the normal request after). Their text filler is
+  `qaboundary…`; `tests/kpost-api/maintenance/boundary-filler-cleanup.spec.ts` removes what create endpoints stored.
 - **Only POST and GET exist.** Documented payload = POST, none = GET; every derived method records its source.
 - **Never invent a contract or a payload value.** Send what the real frontend sends; `payload-audit.spec.ts`
   enforces it. Admin save endpoints take a JSON array; update takes an object.

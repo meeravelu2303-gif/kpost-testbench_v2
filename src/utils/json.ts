@@ -16,6 +16,13 @@ export function getPath(value: unknown, path: string): unknown {
 export function setPath<T>(target: T, path: string, value: unknown): T {
   const [head, ...rest] = path.split('.');
   if (head === undefined) return target;
+  // A numeric step into an array writes that item (array request bodies, e.g. Admin saves).
+  if (Array.isArray(target) && /^\d+$/.test(head)) {
+    const copy: unknown[] = [...target];
+    const index = Number(head);
+    copy[index] = rest.length ? setPath(copy[index], rest.join('.'), value) : value;
+    return copy as T;
+  }
   const source: JsonObject = isPlainObject(target) ? target : {};
   return {
     ...source,

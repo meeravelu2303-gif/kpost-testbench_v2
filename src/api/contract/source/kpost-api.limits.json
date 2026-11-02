@@ -1,0 +1,1558 @@
+{
+  "suite": "kpost-api",
+  "derivedFrom": "D:/KPOST_PROJECTS/KPOST_V5.0 (controllers, services, request DTOs) + QA DB column widths (information_schema, kpost schema)",
+  "derivedOn": "2026-11-01",
+  "note": "Input limits for request.boundary-value / request.boundary-accept. Each cites its source; a db-column limit is the width of the column the field is saved into (strict SQL mode). Bench-maintained; re-derive when the backend changes.",
+  "endpoints": {
+    "admin-adding-user-by-admin": {
+      "body.activeStatus": {
+        "maxLength": {
+          "value": 10,
+          "from": "db-column TBL_KPOST_USER_MASTER.active_status varchar(10)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1075"
+        }
+      },
+      "body.companyName": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_USER_PROFILE.company_name varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRegistrationRO.java:26"
+        }
+      },
+      "body.country": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_USER_PROFILE.country_name varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1111"
+        }
+      },
+      "body.designation": {
+        "maxLength": {
+          "value": 350,
+          "from": "db-column TBL_KPOST_USER_PROFILE.designation varchar(350)",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRegistrationRO.java:105"
+        }
+      },
+      "body.firstName": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_USER_MASTER.first_name varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRegistrationRO.java:33"
+        }
+      },
+      "body.gender": {
+        "maxLength": {
+          "value": 6,
+          "from": "db-column TBL_KPOST_USER_MASTER.gender varchar(6)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1070"
+        }
+      },
+      "body.kpostID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_USER_MASTER.kpost_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRegistrationRO.java:18"
+        }
+      },
+      "body.language": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_USER_PROFILE.preferred_language varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1108"
+        }
+      },
+      "body.lastName": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_USER_MASTER.last_name varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRegistrationRO.java:36"
+        }
+      },
+      "body.mobileNumber": {
+        "minLength": {
+          "value": 7,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRegistrationRO.java:45"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRegistrationRO.java:45"
+        }
+      },
+      "body.referenceName": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_USER_PROFILE.reference_name varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1113"
+        }
+      },
+      "body.role": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_PROFILE.role varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1106"
+        }
+      },
+      "body.userType": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_MASTER.user_type varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1059,1087"
+        }
+      }
+    },
+    "admin-hold-or-release": {
+      "body.activeStatus": {
+        "maxLength": {
+          "value": 10,
+          "from": "db-column TBL_KPOST_USER_MASTER.active_status varchar(10)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoImpl.java:544-550"
+        }
+      }
+    },
+    "admin-update-company-details": {
+      "body.address1": {
+        "maxLength": {
+          "value": 250,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.address1 varchar(250)",
+          "source": "src/main/java/com/webservice/kpost/repository/AdminRegistrationRepository.java:17-20"
+        }
+      },
+      "body.address2": {
+        "maxLength": {
+          "value": 250,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.address2 varchar(250)",
+          "source": "src/main/java/com/webservice/kpost/repository/AdminRegistrationRepository.java:17-20"
+        }
+      },
+      "body.companyName": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.company_name varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/repository/AdminRegistrationRepository.java:17-20"
+        }
+      },
+      "body.gstNumber": {
+        "maxLength": {
+          "value": 60,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.gst_number varchar(60)",
+          "source": "src/main/java/com/webservice/kpost/repository/AdminRegistrationRepository.java:17-20"
+        }
+      },
+      "body.panNumber": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.pan_card varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/repository/AdminRegistrationRepository.java:17-20"
+        }
+      }
+    },
+    "admin-update-role": {
+      "body.role": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_PROFILE.role varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoImpl.java:715-716"
+        }
+      }
+    },
+    "aws-check-attachment": {
+      "body.attachmentsUuid": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/PresignedURLController.java:243"
+        }
+      }
+    },
+    "aws-generate-presigned": {
+      "body.extension": {
+        "maxLength": {
+          "value": 5,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/PresignedURLController.java:60"
+        }
+      },
+      "body.fileName": {
+        "maxLength": {
+          "value": 400,
+          "from": "db-column TBL_KPOST_KMAIL_ATTACHMENT.original_file_name varchar(400)",
+          "source": "src/main/java/com/webservice/kpost/entity/kmail/KmailAttachments.java:29"
+        }
+      },
+      "body.fileSize": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_KMAIL_ATTACHMENT.file_size varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/kmail/KmailAttachments.java:38"
+        }
+      }
+    },
+    "aws-katchup-presigned": {
+      "body.fileName": {
+        "maxLength": {
+          "value": 400,
+          "from": "db-column TBL_KPOST_KATCHUP_ATTACHMENT.original_file_name varchar(400)",
+          "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupAttachment.java:30"
+        }
+      },
+      "body.fileSize": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_KATCHUP_ATTACHMENT.file_size varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupAttachment.java:39"
+        }
+      }
+    },
+    "common-cities-by-region": {
+      "body.regionId": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1701"
+        }
+      }
+    },
+    "common-designations-by-profession": {
+      "body.profession.professionID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:436"
+        }
+      }
+    },
+    "common-forgot-password-update": {
+      "body.forgotPassword": {
+        "minLength": {
+          "value": 8,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:32"
+        }
+      },
+      "body.mobileNumber": {
+        "minLength": {
+          "value": 7,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:23"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:23"
+        }
+      }
+    },
+    "common-kpost-id-using-module": {
+      "body.module": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1660"
+        }
+      }
+    },
+    "common-mobile-no-exist": {
+      "body.countryID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:306"
+        }
+      },
+      "body.mobileNumber": {
+        "minLength": {
+          "value": 7,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/MobileValidationRO.java:21"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/MobileValidationRO.java:21"
+        }
+      }
+    },
+    "common-mobile-no-exist-in-company": {
+      "body.mobileNumber": {
+        "minLength": {
+          "value": 7,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/MobileValidationRO.java:21"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/MobileValidationRO.java:21"
+        }
+      }
+    },
+    "common-save-enquiry-details": {
+      "body.companyName": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_ENQUIRY_FORM.company_name varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/common/EnquiryForm.java:23"
+        }
+      },
+      "body.designation": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_ENQUIRY_FORM.designation varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/entity/common/EnquiryForm.java:38"
+        }
+      },
+      "body.email": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_ENQUIRY_FORM.email varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/common/EnquiryForm.java:44"
+        }
+      },
+      "body.entity": {
+        "maxLength": {
+          "value": 255,
+          "from": "db-column TBL_KPOST_ENQUIRY_FORM.entity varchar(255)",
+          "source": "src/main/java/com/webservice/kpost/entity/common/EnquiryForm.java:26"
+        }
+      },
+      "body.firstName": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_ENQUIRY_FORM.first_name varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/common/EnquiryForm.java:32"
+        }
+      },
+      "body.lastName": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_ENQUIRY_FORM.last_name varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/entity/common/EnquiryForm.java:35"
+        }
+      },
+      "body.maximumMembersCount": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1135"
+        }
+      },
+      "body.mobileNumber": {
+        "maxLength": {
+          "value": 12,
+          "from": "db-column TBL_KPOST_ENQUIRY_FORM.mobile_number varchar(12)",
+          "source": "src/main/java/com/webservice/kpost/entity/common/EnquiryForm.java:41"
+        }
+      },
+      "body.timeToContact": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_ENQUIRY_FORM.time_to_contact varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/common/EnquiryForm.java:47"
+        }
+      }
+    },
+    "common-send-otp-to-mail": {
+      "body.otherEmail": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_EMAIL_OTP_VALIDATION.email varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/common/EmailOtpValidation.java:22"
+        }
+      }
+    },
+    "common-total-count-by-date": {
+      "body.date": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1059"
+        }
+      }
+    },
+    "common-update-company-logo": {
+      "body.text.companyID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1206"
+        }
+      }
+    },
+    "contacts-add": {
+      "body.contactID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_USER_CONTACTS.contact_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:519-524"
+        }
+      },
+      "body.referenceName": {
+        "maxLength": {
+          "value": 160,
+          "from": "db-column TBL_KPOST_USER_CONTACTS.reference_name varchar(160)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:141,183,191"
+        }
+      },
+      "body.userType": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_CONTACTS.user_type varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/contacts/Contacts.java:57"
+        }
+      }
+    },
+    "contacts-add-multiple": {
+      "body.(body)": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:1023-1028"
+        }
+      },
+      "body.[].contactID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_USER_CONTACTS.contact_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:1044-1051"
+        }
+      },
+      "body.[].referenceName": {
+        "maxLength": {
+          "value": 160,
+          "from": "db-column TBL_KPOST_USER_CONTACTS.reference_name varchar(160)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:141,183"
+        }
+      },
+      "body.[].userType": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_CONTACTS.user_type varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/contacts/Contacts.java:57"
+        }
+      }
+    },
+    "contacts-add-reference": {
+      "body.referenceName": {
+        "maxLength": {
+          "value": 160,
+          "from": "db-column TBL_KPOST_USER_CONTACTS.reference_name varchar(160)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:595-602"
+        }
+      }
+    },
+    "contacts-block-multiple": {
+      "body.contactIDs": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:1219-1224"
+        }
+      }
+    },
+    "contacts-import-phone": {
+      "body.phoneContacts": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:657-662"
+        }
+      }
+    },
+    "group-add-user": {
+      "body.memberDetails": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:126-146"
+        }
+      },
+      "body.memberDetails[].hasAdminAccess": {
+        "maxLength": {
+          "value": 2,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.admin_access varchar(2)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:53-55"
+        }
+      },
+      "body.memberDetails[].name": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.name varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:44"
+        }
+      },
+      "body.memberDetails[].privacyStatus": {
+        "maxLength": {
+          "value": 2,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.privacy_status varchar(2)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:57-59"
+        }
+      }
+    },
+    "group-admin-access": {
+      "body.hasAdminAccess": {
+        "maxLength": {
+          "value": 2,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.admin_access varchar(2)",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:234-240"
+        }
+      },
+      "body.ids": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:226-232"
+        }
+      },
+      "body.kpostIDs": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:226-232"
+        }
+      }
+    },
+    "group-create": {
+      "body.activeStatus": {
+        "maxLength": {
+          "value": 1,
+          "from": "db-column TBL_KPOST_USERGROUP_MASTER.active_status varchar(1)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroup.java:57"
+        }
+      },
+      "body.createdBy": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_USERGROUP_MASTER.created_by varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroup.java:76"
+        }
+      },
+      "body.groupPicturePath": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERGROUP_MASTER.group_picture_path varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroup.java:48"
+        }
+      },
+      "body.isPrivateGroup": {
+        "maxLength": {
+          "value": 1,
+          "from": "db-column TBL_KPOST_USERGROUP_MASTER.is_private_group varchar(1)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroup.java:54"
+        }
+      },
+      "body.memberDetails[].createdBy": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.created_by varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:64"
+        }
+      },
+      "body.memberDetails[].hasAdminAccess": {
+        "maxLength": {
+          "value": 2,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.admin_access varchar(2)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:53-55"
+        }
+      },
+      "body.memberDetails[].kpostID": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.kpost_id varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:41"
+        }
+      },
+      "body.memberDetails[].memberDesignation": {
+        "maxLength": {
+          "value": 350,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.member_designation varchar(350)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:47"
+        }
+      },
+      "body.memberDetails[].name": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.name varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:44"
+        }
+      },
+      "body.memberDetails[].privacyStatus": {
+        "maxLength": {
+          "value": 2,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.privacy_status varchar(2)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:57-59"
+        }
+      },
+      "body.memberDetails[].remarks": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.remarks varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:61"
+        }
+      }
+    },
+    "group-remove-member": {
+      "body.groupID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:172-177"
+        }
+      },
+      "body.memberKpostIdList": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:172-177"
+        }
+      }
+    },
+    "group-remove-member-v1-legacy": {
+      "body.groupID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:172-177"
+        }
+      },
+      "body.memberKpostIdList": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:172-177"
+        }
+      }
+    },
+    "group-update-image": {
+      "body.file": {
+        "maximum": {
+          "value": 519999,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:341,382-387"
+        }
+      },
+      "body.text.groupKpostID": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERGROUP_MASTER.group_picture_path varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:347-349"
+        }
+      }
+    },
+    "kall-clear-by-ids": {
+      "body.kallIds": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:174"
+        }
+      }
+    },
+    "kall-end-kool": {
+      "body.kallID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:441"
+        }
+      }
+    },
+    "kall-get-status": {
+      "body.kallID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:994"
+        }
+      }
+    },
+    "kall-get-status-by-id": {
+      "body.kallID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:1096"
+        }
+      }
+    },
+    "kall-initiate": {
+      "body.kallSession": {
+        "maxLength": {
+          "value": 120,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_session varchar(120)",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:46"
+        }
+      },
+      "body.receiver": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KOOL_KALL_DETAILS.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallDetails.java:30"
+        }
+      }
+    },
+    "kall-modify-members": {
+      "body.addingUserIds[]": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KOOL_KALL_DETAILS.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallDetails.java:30"
+        }
+      },
+      "body.kallID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:527"
+        }
+      }
+    },
+    "kall-reschedule": {
+      "body.kallDetails": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:636"
+        }
+      },
+      "body.kallID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:647"
+        }
+      },
+      "body.kallSession": {
+        "maxLength": {
+          "value": 120,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_session varchar(120)",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:46"
+        }
+      }
+    },
+    "kall-scheduled": {
+      "body.kallDetails": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:339"
+        }
+      },
+      "body.kallDetails[].receiver": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KOOL_KALL_DETAILS.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallDetails.java:30"
+        }
+      },
+      "body.kallSession": {
+        "maxLength": {
+          "value": 120,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_session varchar(120)",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:46"
+        }
+      },
+      "body.meetingLink": {
+        "maxLength": {
+          "value": 500,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/util/KallInputValidator.java:24"
+        }
+      }
+    },
+    "kall-scheduled-repeat": {
+      "body.kallDetails": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:603"
+        }
+      },
+      "body.kallSession": {
+        "maxLength": {
+          "value": 120,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_session varchar(120)",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:46"
+        }
+      }
+    },
+    "katchup-bulk-message-info": {
+      "body.sharedMessageId": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1722"
+        }
+      }
+    },
+    "katchup-forward-backtrack": {
+      "body.msgID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:2302"
+        }
+      }
+    },
+    "katchup-forward-message": {
+      "body.files": {
+        "minLength": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1391"
+        }
+      }
+    },
+    "katchup-forward-message-new": {
+      "body.forwardReceiverList[]": {
+        "minLength": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1636"
+        }
+      }
+    },
+    "katchup-forward-multiple": {
+      "body.forwardMessageIDList": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2464"
+        },
+        "maxItems": {
+          "value": 5,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2476"
+        }
+      },
+      "body.forwardReceiverList": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2466"
+        },
+        "maxItems": {
+          "value": 10,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2473"
+        }
+      }
+    },
+    "katchup-mark-important": {
+      "body.msgID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:627"
+        }
+      }
+    },
+    "katchup-read-status-group": {
+      "body.msgID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:784"
+        }
+      }
+    },
+    "katchup-report-abuse": {
+      "body.msgID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:2136"
+        }
+      },
+      "body.reason": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_REPORT_DETAILS.reason varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/entity/katchup/ReportDetails.java:31"
+        }
+      },
+      "body.reportingKpostID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_REPORT_DETAILS.reporting_kpost_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/katchup/ReportDetails.java:22"
+        }
+      }
+    },
+    "katchup-send-bulk": {
+      "body.receiverList": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1592"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupMessages.java:60"
+        }
+      }
+    },
+    "katchup-send-bulk-multipart": {
+      "body.files": {
+        "minLength": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1231"
+        }
+      },
+      "body.text.receiverList": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1592"
+        }
+      }
+    },
+    "katchup-send-forward-selected-attachment": {
+      "body.uuid[]": {
+        "minLength": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:284"
+        }
+      }
+    },
+    "katchup-send-message": {
+      "body.deviceID": {
+        "maxLength": {
+          "value": 255,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.device_id varchar(255)",
+          "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupMessages.java:57"
+        }
+      },
+      "body.receiver": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupMessages.java:45"
+        }
+      },
+      "body.referenceMessageIDList": {
+        "maxItems": {
+          "value": 119,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/KatchupMessageRO.java:74"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupMessages.java:60"
+        }
+      },
+      "body.sharedMessageDetails.hiddenContactList": {
+        "maxItems": {
+          "value": 20,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/util/SharedMessageDetailsValidator.java:31"
+        }
+      },
+      "body.sharedMessageDetails.revealContactList": {
+        "maxItems": {
+          "value": 60,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/util/SharedMessageDetailsValidator.java:24"
+        }
+      }
+    },
+    "katchup-send-multipart": {
+      "body.files": {
+        "minLength": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:951"
+        }
+      },
+      "body.files[].originalFilename": {
+        "maxLength": {
+          "value": 400,
+          "from": "db-column TBL_KPOST_KATCHUP_ATTACHMENT.original_file_name varchar(400)",
+          "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupAttachment.java:30"
+        }
+      }
+    },
+    "katchup-shared-message-info": {
+      "body.sharedMessageId": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1196"
+        }
+      }
+    },
+    "kbooking-available-trips": {
+      "body.destinationCityID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:228"
+        }
+      },
+      "body.sourceCityID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:228"
+        }
+      }
+    },
+    "kdiary-create-event": {
+      "body.kallSession": {
+        "maxLength": {
+          "value": 120,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_session varchar(120)",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:46"
+        }
+      },
+      "body.participants[].participant": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KDIARY_SCHEDULE_PARTICIPANT.participant varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/kdiary/ScheduleParticipant.java:29"
+        }
+      },
+      "body.snoozeDetails": {
+        "maxLength": {
+          "value": 255,
+          "from": "db-column TBL_KPOST_KDIARY_SCHEDULE.snooze_details varchar(255)",
+          "source": "src/main/java/com/webservice/kpost/entity/kdiary/DiarySchedule.java:63"
+        }
+      }
+    },
+    "kdiary-get-event-selected-date": {
+      "body.scheduleEndDateAndTime": {
+        "minimum": {
+          "value": 946684800000,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:335"
+        },
+        "maximum": {
+          "value": 4102444799999,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:335"
+        }
+      },
+      "body.scheduleStartDateAndTime": {
+        "minimum": {
+          "value": 946684800000,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:378"
+        },
+        "maximum": {
+          "value": 4102444799999,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:379"
+        }
+      }
+    },
+    "knews-news-feed": {
+      "query.category": {
+        "maxItems": {
+          "value": 10,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/util/knews/NewsQueryParser.java:26"
+        }
+      },
+      "query.languageCode": {
+        "maxItems": {
+          "value": 10,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/util/knews/NewsQueryParser.java:26"
+        }
+      },
+      "query.limit": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/util/knews/NewsQueryParser.java:85"
+        },
+        "maximum": {
+          "value": 100,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/util/knews/NewsQueryParser.java:85"
+        }
+      }
+    },
+    "knews-update-settings": {
+      "body.category": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.category varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:39"
+        }
+      },
+      "body.cityNames": {
+        "maxLength": {
+          "value": 500,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.city_names varchar(500)",
+          "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:24"
+        }
+      },
+      "body.countryName": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.country_name varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:18"
+        }
+      },
+      "body.newsSource": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.news_source varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:33"
+        }
+      },
+      "body.newsType": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.news_type varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:30"
+        }
+      },
+      "body.publications": {
+        "maxLength": {
+          "value": 500,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.publications varchar(500)",
+          "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:36"
+        }
+      },
+      "body.stateName": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.state_name varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:21"
+        }
+      },
+      "body.subCategories": {
+        "maxLength": {
+          "value": 500,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.sub_categories varchar(500)",
+          "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:42"
+        }
+      },
+      "body.subscriptionDetails": {
+        "maxLength": {
+          "value": 500,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.subscription_details varchar(500)",
+          "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:51"
+        }
+      }
+    },
+    "profile-advanced-search": {
+      "body.(body)": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:139-143"
+        }
+      }
+    },
+    "profile-change-or-forgot-access-code": {
+      "body.accessCode": {
+        "maxLength": {
+          "value": 20,
+          "from": "db-column TBL_KPOST_USER_MASTER.access_code varchar(20)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:1011-1035"
+        }
+      }
+    },
+    "profile-change-password": {
+      "body.confirmPassword": {
+        "maxLength": {
+          "value": 350,
+          "from": "db-column TBL_KPOST_USER_MASTER.password varchar(350)",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:35"
+        }
+      }
+    },
+    "profile-deactivate-account": {
+      "body.reason": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_DEACTIVATED_DETAILS.reason varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/contacts/DeactivatedDetails.java:24"
+        }
+      }
+    },
+    "profile-set-device-primary": {
+      "body.deviceIdentity_primary": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERS_KMAIL_SETTINGS.device_identity_primary varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:943-958"
+        }
+      }
+    },
+    "profile-set-device-secondary": {
+      "body.deviceIdentity_secondary": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERS_KMAIL_SETTINGS.device_identity_secondary varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:1071-1086"
+        }
+      }
+    },
+    "profile-update-basic": {
+      "body.designation": {
+        "maxLength": {
+          "value": 350,
+          "from": "db-column TBL_KPOST_USER_PROFILE.designation varchar(350)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:876-880"
+        }
+      },
+      "body.gender": {
+        "maxLength": {
+          "value": 6,
+          "from": "db-column TBL_KPOST_USER_MASTER.gender varchar(6)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:884-889"
+        }
+      },
+      "body.otherEmail": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USER_PROFILE.other_email varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:763-774"
+        }
+      }
+    },
+    "profile-update-contact": {
+      "body.addressLine1": {
+        "maxLength": {
+          "value": 250,
+          "from": "db-column TBL_KPOST_USER_PROFILE.present_address varchar(250)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:479-494"
+        }
+      },
+      "body.addressLine2": {
+        "maxLength": {
+          "value": 250,
+          "from": "db-column TBL_KPOST_USER_PROFILE.present_address varchar(250)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:479-494"
+        }
+      },
+      "body.areaName": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_USER_PROFILE.area_name varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:532-540"
+        }
+      },
+      "body.city": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_USER_PROFILE.city varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:532-540"
+        }
+      },
+      "body.country": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_USER_PROFILE.country_name varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:532-540"
+        }
+      },
+      "body.landLineNumber": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_PROFILE.landline_number varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:486-494"
+        }
+      },
+      "body.pinCode": {
+        "minLength": {
+          "value": 3,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:527"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:527"
+        }
+      }
+    },
+    "profile-update-designation": {
+      "body.designation": {
+        "maxLength": {
+          "value": 350,
+          "from": "db-column TBL_KPOST_USER_PROFILE.designation varchar(350)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:881-886"
+        }
+      }
+    },
+    "profile-update-device-primary": {
+      "body.deviceIdentity_primary": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERS_KMAIL_SETTINGS.device_identity_primary varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:1521,1538-1539"
+        }
+      }
+    },
+    "profile-update-device-secondary": {
+      "body.deviceIdentity_secondary": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERS_KMAIL_SETTINGS.device_identity_secondary varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:1675,1692-1693"
+        }
+      }
+    },
+    "profile-update-privacy": {
+      "body.privacyDetails": {
+        "maxLength": {
+          "value": 500,
+          "from": "db-column TBL_KPOST_USER_PROFILE.privacy_details varchar(500)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/UserProfileServiceImpl.java:716-718"
+        }
+      }
+    },
+    "settings-kall-notification": {
+      "body.(body)": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GeneralSettingController.java:222-226"
+        }
+      }
+    },
+    "settings-katchup-notification": {
+      "body.(body)": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GeneralSettingController.java:128-132"
+        }
+      }
+    },
+    "settings-kmail-notification": {
+      "body.(body)": {
+        "minItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/GeneralSettingController.java:175-179"
+        }
+      }
+    },
+    "signup-login-admin-registration": {
+      "body.mobileNumber": {
+        "minLength": {
+          "value": 7,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/RegistrationRO.java:46"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/RegistrationRO.java:46"
+        }
+      }
+    },
+    "signup-login-kpost-id-exist": {
+      "body.mobileNumber": {
+        "minLength": {
+          "value": 7,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:23"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:23"
+        }
+      }
+    },
+    "signup-login-kpost-id-suggestions": {
+      "body.mobileNumber": {
+        "minLength": {
+          "value": 7,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:23"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:23"
+        }
+      }
+    },
+    "signup-login-set-access-code": {
+      "body.accessCode": {
+        "maxLength": {
+          "value": 20,
+          "from": "db-column TBL_KPOST_USER_MASTER.access_code varchar(20)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:842-877"
+        }
+      }
+    },
+    "signup-login-signup": {
+      "body.countryCode": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_MASTER.country_code varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/User.java:50"
+        }
+      },
+      "body.firstName": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_USER_MASTER.first_name varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/controller/SignUpLoginControllerV2.java:161"
+        }
+      },
+      "body.gender": {
+        "maxLength": {
+          "value": 6,
+          "from": "db-column TBL_KPOST_USER_MASTER.gender varchar(6)",
+          "source": "src/main/java/com/webservice/kpost/controller/SignUpLoginControllerV2.java:151-152,168-169"
+        }
+      },
+      "body.kpostID": {
+        "minLength": {
+          "value": 4,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/SignUpLoginControllerV2.java:144-150,176"
+        },
+        "maxLength": {
+          "value": 15,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/SignUpLoginControllerV2.java:144-150,176"
+        }
+      },
+      "body.lastName": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_USER_MASTER.last_name varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/controller/SignUpLoginControllerV2.java:162"
+        }
+      },
+      "body.mobileNumber": {
+        "minLength": {
+          "value": 7,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/User.java:56"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/User.java:56"
+        }
+      },
+      "body.password": {
+        "maxLength": {
+          "value": 350,
+          "from": "db-column TBL_KPOST_USER_MASTER.password varchar(350)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/User.java:66"
+        },
+        "minLength": {
+          "value": 8,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/User.java:66"
+        }
+      },
+      "body.userProfile.areaName": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_USER_PROFILE.area_name varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/UserProfile.java:81"
+        }
+      },
+      "body.userProfile.city": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_USER_PROFILE.city varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/UserProfile.java:44"
+        }
+      },
+      "body.userProfile.landLineNumber": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_PROFILE.landline_number varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/UserProfile.java:126"
+        }
+      },
+      "body.userProfile.otherEmail": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USER_PROFILE.other_email varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/UserProfile.java:72"
+        }
+      },
+      "body.userProfile.referalId": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_PROFILE.referal_id varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/UserProfile.java:123"
+        }
+      },
+      "body.userProfile.state": {
+        "maxLength": {
+          "value": 40,
+          "from": "db-column TBL_KPOST_USER_PROFILE.state varchar(40)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/UserProfile.java:41"
+        }
+      },
+      "body.userType": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_MASTER.user_type varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/User.java:44"
+        }
+      }
+    },
+    "signup-login-user-login": {
+      "body.deviceIdentity_primary": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.device_identity_primary varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:28"
+        }
+      },
+      "body.deviceIdentity_secondary": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.device_identity_secondary varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:31"
+        }
+      },
+      "body.deviceType": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.device_type varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:25"
+        }
+      },
+      "body.oneSignal_Key": {
+        "maxLength": {
+          "value": 1000,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.onesignal_key varchar(1000)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:43"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.session_id varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:19"
+        }
+      },
+      "body.socketID": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.socket_id varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:46"
+        }
+      }
+    }
+  }
+}

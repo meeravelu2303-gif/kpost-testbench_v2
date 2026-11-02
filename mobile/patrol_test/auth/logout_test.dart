@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kpost5_2023/app_common/constants/kpost_icons.dart';
 import 'package:patrol/patrol.dart';
@@ -14,7 +13,7 @@ void main() {
     await signInWithPassword($);
 
     await $(find.byIcon(KPOST.KP_20_Menu_Open)).tap();
-    await $(Drawer).$('Logout').scrollTo().tap();
+    await tapDrawerItem($, 'Logout');
 
     await $('Confirm Logout').waitUntilVisible();
     expect($('Are you sure you want to log out?'), findsOneWidget,

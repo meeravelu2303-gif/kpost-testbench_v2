@@ -27,7 +27,7 @@ void main() {
       await submit.tap(settlePolicy: SettlePolicy.noSettle);
       await $('Enter KpostID or Mobile Number').waitUntilVisible();
     }
-    expect($('Enter Password'), findsNothing,
+    expect($('Login with Other KPOST ID'), findsNothing,
         reason: 'with no KPost ID the password step never opens');
   });
 
@@ -38,8 +38,16 @@ void main() {
     await $(TextField).first.enterText(absent);
     await $('Submit').tap(settlePolicy: SettlePolicy.noSettle);
     await $('Please Enter Valid KpostID or MobileNumber').waitUntilVisible();
-    expect($('Enter Password'), findsNothing,
-        reason: 'an unknown KPost ID never reaches the password step');
+    // What the screen shows, so a failure says why (the texts go into the reason).
+    final shown = find
+        .byType(Text)
+        .evaluate()
+        .map((e) => (e.widget as Text).data)
+        .whereType<String>()
+        .where((t) => t.trim().isNotEmpty)
+        .join(' | ');
+    expect($('Login with Other KPOST ID'), findsNothing,
+        reason: 'an unknown KPost ID never reaches the password step; on screen: $shown');
   });
 
   patrolTest('a wrong password is refused with "Invalid Credential", then the right one signs in',
@@ -47,18 +55,47 @@ void main() {
     await openKpostIdStep($);
     await $(TextField).first.enterText(Bench.kpostId);
     await $('Submit').tap();
-    await $('Enter Password').waitUntilVisible();
+    await $('Login with Other KPOST ID').waitUntilVisible();
 
     await $(TextField).first.enterText('${Bench.password}-wrong');
     await $(ElevatedButton).$('Login').tap(settlePolicy: SettlePolicy.noSettle);
-    await $('Invalid Credential').waitUntilVisible();
+
+    // The right answer is "Invalid Credential" on the password step. The app instead shows a
+    // "session expired" alert for the server's 401 (#13379): waited for side by side, so the test
+    // reports that instead of waiting forever for the message.
+    var refusedRightly = false;
+    var expiredAlert = false;
+    for (var second = 0; second < 20 && !refusedRightly && !expiredAlert; second++) {
+      await $.pump(const Duration(seconds: 1));
+      refusedRightly = $('Invalid Credential').exists;
+      expiredAlert = $('Your session has expired. Please login again.').exists;
+    }
     expect($(HomeDashboardScreen), findsNothing, reason: 'a wrong password does not open Home');
 
     // The account rule: a wrong password is always followed by a good login.
-    await $(TextField).first.enterText(Bench.password);
-    await $(ElevatedButton).$('Login').tap();
-    await waitForHome($);
-    await dismissHomePopups($);
+    if (expiredAlert) {
+      // The alert's button text is padded ('   Logout   ', app_utils.dart showAlert).
+      await $(RegExp(r'^\s*Logout\s*$')).last.tap();
+      // Logout lands on the sign-in screen, or on the remembered user's screen: start over.
+      for (var second = 0; second < 15; second++) {
+        await $.pump(const Duration(seconds: 1));
+        if ($('Select your Country').exists) break;
+        if ($('Login with Other KPOST ID').exists) {
+          await $('Login with Other KPOST ID').tap();
+          break;
+        }
+      }
+      await signInFromSignInScreen($);
+    } else {
+      await $(TextField).first.enterText(Bench.password);
+      await $(ElevatedButton).$('Login').tap();
+      await waitForHome($);
+      await dismissHomePopups($);
+    }
     expect($(HomeDashboardScreen), findsOneWidget, reason: 'the right password still signs in');
+    expect(refusedRightly, isTrue,
+        reason: expiredAlert
+            ? 'a wrong password must say "Invalid Credential", not "Your session has expired" (#13379)'
+            : 'a wrong password must say "Invalid Credential"');
   });
 }

@@ -1,0 +1,71 @@
+{
+  "suite": "admin-api",
+  "derivedFrom": "D:/KPOST_PROJECTS/Admin_Module (controllers, services; no @Size/@Min/@Max exist)",
+  "derivedOn": "2026-11-01",
+  "note": "Input limits for request.boundary-value / request.boundary-accept. Each cites its source; a db-column limit is the width of the column the field is saved into (strict SQL mode). Bench-maintained; re-derive when the backend changes.",
+  "endpoints": {
+    "admin-hr-tier-attribute-save": {
+      "body.[].attributeName": {
+        "minLength": {
+          "value": 3,
+          "from": "service-check",
+          "source": "Admin_Module/src/main/java/com/kpost/admin/utils/CreateAbbreviationAndCodeForHrSetUpTierAttribute.java:20"
+        }
+      }
+    },
+    "admin-hr-tier-variable-save": {
+      "body.[].variableName": {
+        "minLength": {
+          "value": 3,
+          "from": "service-check",
+          "source": "Admin_Module/src/main/java/com/kpost/admin/utils/CreateAbbreviationAndCodeForHrSetUpTierVariable.java:21"
+        }
+      }
+    },
+    "admin-hr-tier-variable-update": {
+      "body.variableName": {
+        "minLength": {
+          "value": 3,
+          "from": "service-check",
+          "source": "Admin_Module/src/main/java/com/kpost/admin/utils/CreateAbbreviationAndCodeForHrSetUpTierVariable.java:21"
+        }
+      }
+    },
+    "admin-workplace-location-save": {
+      "body.[].countryId": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "Admin_Module/src/main/java/com/kpost/admin/controller/LocationController.java:62-64"
+        }
+      }
+    },
+    "admin-workplace-location-update": {
+      "body.countryId": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "Admin_Module/src/main/java/com/kpost/admin/controller/LocationController.java:160-162"
+        }
+      }
+    },
+    "admin-workplace-tier-attribute-save": {
+      "body.[].attributeName": {
+        "minLength": {
+          "value": 3,
+          "from": "service-check",
+          "source": "Admin_Module/src/main/java/com/kpost/admin/utils/CreateAbbreviationAndCodeForAdminTierAttribute.java:20"
+        }
+      }
+    },
+    "admin-workplace-tier-variable-save": {
+      "body.[].variableName": {
+        "minLength": {
+          "value": 3,
+          "from": "service-check",
+          "source": "Admin_Module/src/main/java/com/kpost/admin/utils/CreateAbbreviationAndCodeForHrSetUpTierVariable.java:21"
+        }
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import type { HttpMethod } from '@api/client/request-builder';
 import type { AuthFailureMode, EndpointDefinition } from '@api/registry/endpoint-definition';
+import { withSourceLimits, type LimitSection } from '@api/contract/source-limits';
 import type { ContractSchema } from '@api/schema/contract-schema';
 import { apiConfig } from '@config/api.config';
 import { authProfileFor } from '@config/auth-profile';
@@ -123,6 +124,13 @@ const MUTATING_METHODS: readonly HttpMethod[] = ['POST', 'PUT', 'PATCH', 'DELETE
 /** What an endpoint with a `precondition` may legitimately answer: success or a client rejection. */
 export const PRECONDITION_STATUS: readonly number[] = [200, 201, 204, 400, 403, 404, 409, 422];
 
+const limited = (
+  definition: EndpointDefinition,
+  section: LimitSection,
+  schema: ContractSchema | undefined,
+): ContractSchema | undefined =>
+  definition.suite ? withSourceLimits(definition.suite, definition.id, section, schema) : schema;
+
 export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoint {
   const contract = responseContract(definition.responseContract);
   const roles = definition.authorization?.roles ?? [];
@@ -159,9 +167,10 @@ export function resolveEndpoint(definition: EndpointDefinition): ResolvedEndpoin
       deniedStatus: definition.authorization?.deniedStatus ?? authConfig.deniedStatus,
       privilegeEscalation: definition.authorization?.privilegeEscalation,
     },
-    requestSchema: definition.requestSchema,
-    pathParamsSchema: definition.pathParamsSchema,
-    querySchema: definition.querySchema,
+    // Limits read from the backend source (source-limits.ts) are written into the schemas here.
+    requestSchema: limited(definition, 'body', definition.requestSchema),
+    pathParamsSchema: limited(definition, 'path', definition.pathParamsSchema),
+    querySchema: limited(definition, 'query', definition.querySchema),
     invalidRequestStatus: definition.invalidRequestStatus ?? apiConfig.invalidRequestStatus,
     responseSchema: definition.responseSchema,
     pagination: definition.pagination ?? false,

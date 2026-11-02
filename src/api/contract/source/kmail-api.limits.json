@@ -1,0 +1,215 @@
+{
+  "suite": "kmail-api",
+  "derivedFrom": "D:/KPOST_PROJECTS/Kpost_Kmail_5.0 (controllers, services, request DTOs) + QA DB column widths (KPOST_QA schema)",
+  "derivedOn": "2026-11-01",
+  "note": "Input limits for request.boundary-value / request.boundary-accept. Each cites its source; a db-column limit is the width of the column the field is saved into (strict SQL mode). Bench-maintained; re-derive when the backend changes.",
+  "endpoints": {
+    "kmail-add-od-contact": {
+      "body.contactEmailID": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_KMAIL_OTHER_DOMAIN_CONTACTS.contact_email_id varchar(200)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/CommonMailServiceImpl.java:1621"
+        }
+      },
+      "body.contactName": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_KMAIL_OTHER_DOMAIN_CONTACTS.contact_name varchar(200)",
+          "source": "src/main/java/com/kpost/kmail/entity/contacts/KmailOtherDomainContacts.java:42"
+        }
+      },
+      "body.referenceName": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_KMAIL_OTHER_DOMAIN_CONTACTS.reference_name varchar(100)",
+          "source": "src/main/java/com/kpost/kmail/entity/contacts/KmailOtherDomainContacts.java:45"
+        }
+      }
+    },
+    "kmail-delete": {
+      "body.transactionIDs": {
+        "minItems": {
+          "value": 1,
+          "from": "bean-validation",
+          "source": "src/main/java/com/kpost/kmail/entity/requestObject/DeleteKmailRequestObject.java:25"
+        }
+      }
+    },
+    "kmail-delete-od-contact": {
+      "body.contactEmailID": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_KMAIL_OTHER_DOMAIN_CONTACTS.contact_email_id varchar(200)",
+          "source": "src/main/java/com/kpost/kmail/entity/contacts/KmailOtherDomainContacts.java:39"
+        }
+      }
+    },
+    "kmail-download-od-attachment": {
+      "body.referenceMails": {
+        "minItems": {
+          "value": 1,
+          "from": "bean-validation",
+          "source": "src/main/java/com/kpost/kmail/entity/requestObject/ReadMailRequestObject.java:45"
+        }
+      }
+    },
+    "kmail-draft-delete": {
+      "body.kmailID": {
+        "minimum": {
+          "value": 1,
+          "from": "bean-validation",
+          "source": "src/main/java/com/kpost/kmail/entity/kmail/Draft.java:28"
+        }
+      }
+    },
+    "kmail-draft-save": {
+      "body.saluation": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_KMAIL_DRAFTS.saluation varchar(45)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/KmailDraftServiceImpl.java:203"
+        }
+      },
+      "body.saluationName": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_KMAIL_DRAFTS.saluation_name varchar(200)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/KmailDraftServiceImpl.java:204"
+        }
+      },
+      "body.toAddress": {
+        "maxLength": {
+          "value": 300,
+          "from": "db-column TBL_KPOST_KMAIL_DRAFTS.toaddress varchar(300)",
+          "source": "src/main/java/com/kpost/kmail/entity/requestObject/SentMailRequestObject.java:84"
+        }
+      }
+    },
+    "kmail-edit-od-contact": {
+      "body.contactEmailID": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_KMAIL_OTHER_DOMAIN_CONTACTS.contact_email_id varchar(200)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/CommonMailServiceImpl.java:1654"
+        }
+      },
+      "body.contactName": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_KMAIL_OTHER_DOMAIN_CONTACTS.contact_name varchar(200)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/CommonMailServiceImpl.java:1654"
+        }
+      },
+      "body.referenceName": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_KMAIL_OTHER_DOMAIN_CONTACTS.reference_name varchar(100)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/CommonMailServiceImpl.java:1654"
+        }
+      }
+    },
+    "kmail-post-bulk": {
+      "body.kmailContent": {
+        "maxLength": {
+          "value": 204800,
+          "from": "service-check",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/SentMailServiceImpl.java:2758"
+        }
+      },
+      "body.toAddressList": {
+        "minItems": {
+          "value": 1,
+          "from": "bean-validation",
+          "source": "src/main/java/com/kpost/kmail/entity/requestObject/BulkMailRequestObject.java:52"
+        }
+      }
+    },
+    "kmail-post-mail": {
+      "body.bccList[]": {
+        "maxLength": {
+          "value": 300,
+          "from": "db-column TBL_KPOST_KMAIL_TRANSACTION.receiver varchar(300)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/SentMailServiceImpl.java:265"
+        }
+      },
+      "body.ccList[]": {
+        "maxLength": {
+          "value": 300,
+          "from": "db-column TBL_KPOST_KMAIL_TRANSACTION.receiver varchar(300)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/SentMailServiceImpl.java:269"
+        }
+      },
+      "body.forwardList": {
+        "minItems": {
+          "value": 1,
+          "from": "bean-validation",
+          "source": "src/main/java/com/kpost/kmail/validationImpl/RequiredMailRecipientValidator.java:23"
+        }
+      },
+      "body.fromAddress": {
+        "maxLength": {
+          "value": 300,
+          "from": "db-column TBL_KPOST_KMAIL_TRANSACTION.sender varchar(300)",
+          "source": "src/main/java/com/kpost/kmail/controller/SentMailController.java:71"
+        }
+      },
+      "body.selectedMembers": {
+        "maxLength": {
+          "value": 1,
+          "from": "db-column TBL_KPOST_KMAIL_TRANSACTION.selected_members varchar(1)",
+          "source": "src/main/java/com/kpost/kmail/entity/requestObject/SentMailRequestObject.java:106"
+        }
+      },
+      "body.senderLatitde": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_KMAIL_MASTER.sender_latitude varchar(45)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/SentMailServiceImpl.java:597"
+        }
+      },
+      "body.senderLongitude": {
+        "maxLength": {
+          "value": 500,
+          "from": "db-column TBL_KPOST_KMAIL_MASTER.sender_longitude varchar(500)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/SentMailServiceImpl.java:598"
+        }
+      },
+      "body.toAddress": {
+        "maxLength": {
+          "value": 300,
+          "from": "db-column TBL_KPOST_KMAIL_TRANSACTION.receiver varchar(300)",
+          "source": "src/main/java/com/kpost/kmail/validationImpl/RequiredMailRecipientValidator.java:21"
+        },
+        "maxItems": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/SentMailServiceImpl.java:256"
+        }
+      }
+    },
+    "kmail-save-unsubscriber": {
+      "body.reason": {
+        "maxLength": {
+          "value": 300,
+          "from": "db-column TBL_KPOST_KMAIL_UNSUBSCRIBER_LIST.reason varchar(300)",
+          "source": "src/main/java/com/kpost/kmail/entity/kmail/KmailUnsubscriber.java:27"
+        }
+      },
+      "body.receiver": {
+        "maxLength": {
+          "value": 300,
+          "from": "db-column TBL_KPOST_KMAIL_UNSUBSCRIBER_LIST.receiver varchar(300)",
+          "source": "src/main/java/com/kpost/kmail/entity/kmail/KmailUnsubscriber.java:24"
+        }
+      },
+      "body.sender": {
+        "maxLength": {
+          "value": 300,
+          "from": "db-column TBL_KPOST_KMAIL_UNSUBSCRIBER_LIST.sender varchar(300)",
+          "source": "src/main/java/com/kpost/kmail/serviceImpl/CommonMailServiceImpl.java:1979"
+        }
+      }
+    }
+  }
+}

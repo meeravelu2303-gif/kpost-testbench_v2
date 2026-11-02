@@ -77,12 +77,17 @@ function unwrapNullable(schema: JsonSchema): { schema: JsonSchema; nullable: boo
   return { schema, nullable: schema.nullable === true };
 }
 
-/** Flattens a JSON Schema into fields (root first, then nested properties depth-first). */
+/**
+ * Flattens a JSON Schema into fields (root first, then nested properties depth-first). With
+ * `withItems`, an array's first item is walked too (path `<array>.0`), so limits on the fields of
+ * array items (an Admin save body, a member list) are reachable.
+ */
 export function collectFields(
   schema: JsonSchema,
   section: RequestSection,
   prefix = '',
   required = true,
+  withItems = false,
 ): FieldInfo[] {
   const { schema: unwrapped, nullable } = unwrapNullable(schema);
   const fields: FieldInfo[] = [
@@ -98,7 +103,13 @@ export function collectFields(
         section,
         prefix ? `${prefix}.${key}` : key,
         requiredKeys.includes(key),
+        withItems,
       ),
+    );
+  }
+  if (withItems && isPlainObject(unwrapped.items)) {
+    fields.push(
+      ...collectFields(unwrapped.items, section, prefix ? `${prefix}.0` : '0', true, withItems),
     );
   }
   return fields;
@@ -136,41 +147,50 @@ export function wrongTypeValue(type: string | undefined): unknown {
 
 function parentExists(values: unknown, path: string): boolean {
   const lastDot = path.lastIndexOf('.');
-  return lastDot < 0 || isPlainObject(getPath(values, path.slice(0, lastDot)));
+  if (lastDot < 0) return true;
+  const parent = getPath(values, path.slice(0, lastDot));
+  return isPlainObject(parent) || Array.isArray(parent);
 }
+
+/** An array item (`.0` path) is only mutated when the base request really has one. */
+const isItemPath = (path: string): boolean => /(^|\.)\d+$/.test(path);
 
 async function buildCases(
   context: ValidationContext,
-  sections: readonly RequestSection[],
-  strategy: MutationStrategy,
+  options: RequestValidatorOptions,
 ): Promise<ProbeCase[]> {
   const base = await context.nextRequest();
   const cases: ProbeCase[] = [];
+  const acceptValid = options.cases === 'valid';
 
-  for (const section of sections) {
+  for (const section of options.sections) {
     // No body fuzzing on a GET/HEAD; query and path still apply.
     if (section === 'body' && !carriesRequestBody(context.endpoint)) continue;
     const schema = sectionSchema(context.endpoint, section);
     if (!schema) continue;
     const values: unknown = base[SPEC_KEY[section]];
 
-    for (const field of collectFields(toJsonSchema(schema), section)) {
+    for (const field of collectFields(toJsonSchema(schema), section, '', true, options.withItems)) {
       if (field.isRoot && section !== 'body') continue;
       if (!field.isRoot && !parentExists(values, field.path)) continue;
       const current = field.isRoot ? values : getPath(values, field.path);
+      if (isItemPath(field.path) && current === undefined) continue;
 
-      for (const candidate of strategy(field, current)) {
+      for (const candidate of options.strategy(field, current)) {
         const spec = applyCandidate(base, field, candidate.value);
-        // Only send cases the contract itself rejects — no false positives from loose schemas.
+        // Negative cases are sent only when the contract itself rejects them (no false positives
+        // from loose schemas); valid-edge cases only when it accepts them.
         const violations = validateSchema(schema, spec[SPEC_KEY[section]], {
           coerce: section !== 'body',
         });
-        if (!violations.length) continue;
+        if (acceptValid ? violations.length : !violations.length) continue;
         cases.push({
           name: `${section}.${field.path || '(root)'}: ${candidate.label}`,
           spec,
-          expectedStatus:
-            section === 'path'
+          // A valid edge value may still fail a business rule; it must just never crash (5xx).
+          expectedStatus: acceptValid
+            ? undefined
+            : section === 'path'
               ? apiConfig.invalidPathParamStatus
               : context.endpoint.invalidRequestStatus,
         });
@@ -187,6 +207,20 @@ export interface RequestValidatorOptions {
   severity?: Severity;
   sections: readonly RequestSection[];
   strategy: MutationStrategy;
+  /** Walk array items too (see `collectFields`). */
+  withItems?: boolean;
+  /**
+   * `invalid` (default): send values the contract rejects and expect a 4xx. `valid`: send values
+   * the contract accepts (the edge of a limit) and expect anything but a 5xx.
+   */
+  cases?: 'invalid' | 'valid';
+  /** An extra reason this validator does not apply to the endpoint, or true. */
+  onlyWhen?: (endpoint: ResolvedEndpoint) => true | string;
+  /**
+   * After the cases, re-send the endpoint's normal request once, so a record a valid edge value
+   * really changed (a profile field) is put back to the bench's own value. Writes only.
+   */
+  restoreAfter?: boolean;
 }
 
 /** Factory used by every schema-driven request validator. */
@@ -199,20 +233,32 @@ export function createRequestValidator(options: RequestValidatorOptions): Valida
     toggle: 'request',
     profiles: PROFILE_SETS.DEEP,
     stage: 'probe',
-    appliesTo: (context) =>
-      options.sections.some(
+    appliesTo: (context) => {
+      const extra = options.onlyWhen?.(context.endpoint) ?? true;
+      if (extra !== true) return extra;
+      return options.sections.some(
         (section) =>
           (section !== 'body' || carriesRequestBody(context.endpoint)) &&
           sectionSchema(context.endpoint, section),
       )
         ? true
-        : `no fuzzable ${options.sections.join('/')} schema (a GET carries no request body)`,
-    check: async (context) =>
-      runProbes(
+        : `no fuzzable ${options.sections.join('/')} schema (a GET carries no request body)`;
+    },
+    check: async (context) => {
+      const cases = await buildCases(context, options);
+      const outcome = await runProbes(
         context,
         options.name,
-        await buildCases(context, options.sections, options.strategy),
-        'negative request cases',
-      ),
+        cases,
+        options.cases === 'valid' ? 'edge-of-limit request cases' : 'negative request cases',
+      );
+      if (options.restoreAfter && context.endpoint.destructive && cases.length) {
+        // Best effort: the verdict is already decided; a failed restore must not change it.
+        await context
+          .send(await context.nextRequest(), { label: `${options.name}:restore` })
+          .catch(() => undefined);
+      }
+      return outcome;
+    },
   });
 }

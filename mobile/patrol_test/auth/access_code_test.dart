@@ -19,7 +19,7 @@ void main() {
     await signInWithPassword($);
 
     await $(find.byIcon(KPOST.KP_20_Menu_Open)).tap();
-    await $(Drawer).$('Settings').scrollTo().tap();
+    await tapDrawerItem($, 'Settings');
     await $(ListTile).containing('General Settings').tap();
     await $('Change Access Code').scrollTo().tap();
 
