@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { readBugzillaConfig } from '@config/bugzilla.config';
+import { DEFAULT_SUITE, SUITES } from '@config/ownership.config';
 import { createLogger } from '@utils/logger';
 import { test } from '@playwright/test';
 import {
@@ -95,19 +96,23 @@ function loadCandidate(): BugCandidate {
   }
   raw.severity = normaliseSeverity(raw.severity);
 
+  // The owner, suite and version follow the Bugzilla product the finding names (ownership.config):
+  // a fixed KPost API default sent eight hand-filed KMail bugs to the wrong developer (2026-11-02).
+  const suite =
+    Object.values(SUITES).find((s) => s.bugzilla.product === raw.product) ?? SUITES[DEFAULT_SUITE];
   // Defaults for the bookkeeping fields, so a finding need not restate the environment.
   return {
-    source: 'api',
-    suiteId: 'kpost-api',
+    source: suite.kind,
+    suiteId: suite.id,
     title: String(raw.id),
     category: 'Functional',
     // A person wrote this bug, so the tracker shows it as a manual test, not bench automation.
     filedBy: 'manual',
-    version: 'unspecified',
-    assignee: 'jagan@kpost.in',
-    ownerName: 'Jaganathan Murthy',
+    version: suite.bugzilla.version,
+    assignee: suite.owner.email,
+    ownerName: suite.owner.name,
     environment: process.env.TEST_ENV ?? 'test',
-    baseURL: process.env.KPOST_API_BASE_URL ?? '',
+    baseURL: suite.baseUrl,
     build: process.env.BUILD_ID ?? 'local',
     testRunId: `manual-${new Date().toISOString().slice(0, 10)}`,
     observedAt: new Date().toISOString(),

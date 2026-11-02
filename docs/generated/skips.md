@@ -10,24 +10,24 @@ be in, one it should not stay in (no reason string), and one that fails the buil
 | ----- | ----: | ---------: |
 | Retune | 1 | 1 |
 | Blocked by a defect | 48 | 27 |
-| Provision | 412 | 287 |
-| Owner decision | 232 | 172 |
+| Provision | 415 | 289 |
+| Owner decision | 233 | 173 |
 | Live condition | 142 | 65 |
 | No reason string | 0 | 0 |
 | Unclassified | 0 | 0 |
-| **Total** | **835** | **334** |
+| **Total** | **839** | **337** |
 
 ## The last run, by the engine’s own skip classes
 
-Run `run-b17a4278-909e-42e4-b881-2fcc5545d43c` at 2026-11-01T20:12:35.195Z: 2714 checks, 1066 applicable ran (96.6% passed), 1648 skipped:
+Run `run-a98960d8-2425-48f5-af0c-4b0043d99a8c` at 2026-11-02T05:17:55.226Z: 2667 checks, 1053 applicable ran (96.4% passed), 1614 skipped:
 
 | Engine skip class | Checks | Meaning |
 | ----------------- | -----: | ------- |
-| notApplicable | 1565 | the validator does not apply to that endpoint (by design) |
+| notApplicable | 1532 | the validator does not apply to that endpoint (by design) |
 | recoverable | 0 | needs a fixture, an id or a second principal — a gap to close |
 | blockedByDefect | 21 | an open defect stops the check from being meaningful |
 | deliberate | 0 | an owner pause or a safety choice |
-| environmental | 62 | host or transport trouble this run |
+| environmental | 61 | host or transport trouble this run |
 
 ## Retune — a selector that no longer matches, or a defect; Phase 1 drives this to 0 (1)
 
@@ -74,14 +74,14 @@ Run `run-b17a4278-909e-42e4-b881-2fcc5545d43c` at 2026-11-01T20:12:35.195Z: 2714
 | 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a composer-control finding | `tests/kpost-ui/kmail/kmail-composer-controls-functional.spec.ts:30` |
 | 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a compose-fuzz finding | `tests/kpost-ui/kmail/kmail-security.spec.ts:58` |
 
-## Provision — an account, connection, host or secret this machine lacks (412)
+## Provision — an account, connection, host or secret this machine lacks (415)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
 | 86 | qa.bench needs a real live account (QA_KPOST_ID) | `tests/kpost-ui/auth/login-screens.spec.ts:12`, `tests/kpost-ui/auth/login-session-functional.spec.ts:14`, `tests/kpost-ui/auth/login-session-functional.spec.ts:80`, `tests/kpost-ui/auth/login-token-security.spec.ts:16` +82 more |
 | 33 | needs the KPOST_QA connection | `tests/framework/_diff-accounts.local.spec.ts:23`, `tests/framework/_snapshot-accounts.local.spec.ts:22`, `tests/kmail-api/flows/workflow-db.spec.ts:105`, `tests/kmail-api/flows/workflow-db.spec.ts:136` +29 more |
 | 25 | qa.bench needs both QA accounts | `tests/kpost-ui/contacts/contacts-screens.spec.ts:61`, `tests/kpost-ui/cross-layer/cross-layer-flows-e2e.spec.ts:47`, `tests/kpost-ui/group/group-exit-e2e.spec.ts:95`, `tests/kpost-ui/group/group-security.spec.ts:18` +21 more |
-| 22 | (no reason string) kmailAuthGate() !== undefined, kmailAuthGate() ?? '' | `tests/kmail-api/coverage/kmail-api.spec.ts:16`, `tests/kmail-api/engine/contract.spec.ts:8`, `tests/kmail-api/engine/read.spec.ts:12`, `tests/kmail-api/flows/attachment-integrity.spec.ts:29` +18 more |
+| 23 | (no reason string) kmailAuthGate() !== undefined, kmailAuthGate() ?? '' | `tests/kmail-api/coverage/kmail-api.spec.ts:16`, `tests/kmail-api/engine/contract.spec.ts:8`, `tests/kmail-api/engine/read.spec.ts:12`, `tests/kmail-api/flows/attachment-integrity.spec.ts:29` +19 more |
 | 11 | needs the KPOST_QA connection to judge by the row | `tests/kmail-api/security/mutation-idor.spec.ts:36`, `tests/kpost-api/security/group-object-authorization.spec.ts:250`, `tests/kpost-api/security/group-object-authorization.spec.ts:464`, `tests/kpost-api/security/group-object-authorization.spec.ts:552` +7 more |
 | 10 | qa.bench needs a real QA account (QA_KPOST_ID) | `tests/kpost-ui/contacts/contacts-digitalcard-api-handling.spec.ts:162`, `tests/kpost-ui/contacts/contacts-digitalcard-api-handling.spec.ts:333`, `tests/kpost-ui/kmail/kmail-compose-api-handling.spec.ts:71`, `tests/kpost-ui/kmail/kmail-thread-api-handling.spec.ts:44` +6 more |
 | 9 | needs the 2nd QA account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/contacts/contacts-digitalcard-api-handling.spec.ts:166`, `tests/kpost-ui/contacts/contacts-digitalcard-validation.spec.ts:21`, `tests/kpost-ui/kall/kall-validation.spec.ts:81`, `tests/kpost-ui/katchup/katchup-attachment-message-validation.spec.ts:101` +5 more |
@@ -104,6 +104,7 @@ Run `run-b17a4278-909e-42e4-b881-2fcc5545d43c` at 2026-11-01T20:12:35.195Z: 2714
 | 3 | qa.victim needs the 2nd QA account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/kmail/kmail-compose-api-handling.spec.ts:75`, `tests/kpost-ui/kmail/kmail-thread-api-handling.spec.ts:63`, `tests/kpost-ui/kmail/kmail-translate-i18n-functional.spec.ts:16` |
 | 3 | needs the second QA account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/smoke/contacts.smoke.spec.ts:16`, `tests/kpost-ui/smoke/katchup.smoke.spec.ts:24`, `tests/kpost-ui/smoke/kmail.smoke.spec.ts:22` |
 | 2 | qa.business.m needs the BUSINESS_M account of the QA testing company (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID) | `tests/admin-api/flows/role-posting-lifecycle.spec.ts:122`, `tests/admin-api/flows/role-posting-lifecycle.spec.ts:516` |
+| 2 | the KMail BASE_URL is not configured | `tests/kmail-api/security/bulk-status-cross-user.spec.ts:26`, `tests/kmail-api/security/translator-postmail-no-login.spec.ts:30` |
 | 2 | needs the 4th and 5th QA accounts | `tests/kmail-api/security/credential-disclosure.spec.ts:54`, `tests/kpost-api/validation/contacts-block-enforcement.spec.ts:68` |
 | 2 | needs the 3rd and 4th QA accounts | `tests/kmail-api/security/group-read-status-idor.spec.ts:35`, `tests/kpost-api/validation/profile-privacy-stored-value.spec.ts:19` |
 | 2 | needs the BUSINESS_S admin principal | `tests/kpost-api/security/admin-bank-company-cross-company.spec.ts:15`, `tests/kpost-api/security/admin-usermanagement-cross-company.spec.ts:15` |
@@ -124,11 +125,12 @@ Run `run-b17a4278-909e-42e4-b881-2fcc5545d43c` at 2026-11-01T20:12:35.195Z: 2714
 | 1 | roleEmployeeMobile roleEmployeeEmail needs ADMIN_ROLE_POSTING_LIVE=true and the reserved QA employee identity (QA_ROLE_EMPLOYEE_MOBILE/EMAIL) | `tests/admin-api/performance/latency.spec.ts:272` |
 | 1 | needs ADMIN_API_BASE_URL (the Admin test box) | `tests/admin-api/sanity/read-sweep.spec.ts:15` |
 | 1 | needs both BUSINESS_M and BUSINESS_S principals | `tests/admin-api/security/cross-tenant-reads.spec.ts:15` |
+| 1 | needs the BUSINESS_M principal (QA company 242) | `tests/admin-api/validation/short-name-validation.spec.ts:73` |
 | 1 | needs a configured admin host | `tests/admin-ui/auth/admin-login-functional.spec.ts:11` |
 | 1 | ADMIN_MONGO_URI is not configured (read-only) — needed to judge the Admin document | `tests/admin-ui/cross-layer/admin-cross-layer-e2e.spec.ts:58` |
 | 1 | "Add From Application" tab not reachable with this account\'s role value | `tests/admin-ui/screens/admin-dead-screens.spec.ts:46` |
 | 1 | an Admin connection has been configured | `tests/framework/admin-db-safety.spec.ts:69` |
-| 1 | no finding supplied — pass --bug=<file.json> (see the usage block above) | `tests/framework/bug-tracker/manual-bug.spec.ts:125` |
+| 1 | no finding supplied — pass --bug=<file.json> (see the usage block above) | `tests/framework/bug-tracker/manual-bug.spec.ts:130` |
 | 1 | no local .env on this machine (fresh checkout / CI) | `tests/framework/env-template.spec.ts:62` |
 | 1 | needs at least two configured accounts | `tests/framework/kmail-flags.spec.ts:128` |
 | 1 | needs BUGZILLA_URL and BUGZILLA_API_KEY | `tests/framework/ownership.spec.ts:300` |
@@ -139,7 +141,6 @@ Run `run-b17a4278-909e-42e4-b881-2fcc5545d43c` at 2026-11-01T20:12:35.195Z: 2714
 | 1 | needs the KPOST_QA database to read the mailbox passwords | `tests/kmail-api/security/credential-disclosure.spec.ts:61` |
 | 1 | needs provisioned KMail mailboxes for the 4th and 5th QA accounts (no kmail_password row) | `tests/kmail-api/security/credential-disclosure.spec.ts:72` |
 | 1 | needs the KMail host (KMAIL_API_BASE_URL) | `tests/kmail-api/security/repository-exposure.spec.ts:26` |
-| 1 | the KMail BASE_URL is not configured | `tests/kmail-api/security/translator-postmail-no-login.spec.ts:30` |
 | 1 | needs provisioned DB_ALLOW_WRITES=true: the API cannot remove saved bank details, so the column is restored in the QA DB | `tests/kpost-api/flows/admin-company-details-lifecycle.spec.ts:107` |
 | 1 | needs the BUSINESS_M and BUSINESS_S admins and the 5th QA account | `tests/kpost-api/flows/common-company-logo-lifecycle.spec.ts:73` |
 | 1 | needs the KPOST_QA connection to resolve the real membership id | `tests/kpost-api/flows/group-feature.spec.ts:310` |
@@ -223,7 +224,7 @@ Run `run-b17a4278-909e-42e4-b881-2fcc5545d43c` at 2026-11-01T20:12:35.195Z: 2714
 | 1 | needs provisioned active member in the BUSINESS_S company | `tests/kpost-ui/user-management/usermanagement-api-handling.spec.ts:45` |
 | 1 | needs provisioned member the admin can make backup admin | `tests/kpost-ui/user-management/usermanagement-api-handling.spec.ts:61` |
 
-## Owner decision — gated flows, pauses and safety choices (232)
+## Owner decision — gated flows, pauses and safety choices (233)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -325,6 +326,7 @@ Run `run-b17a4278-909e-42e4-b881-2fcc5545d43c` at 2026-11-01T20:12:35.195Z: 2714
 | 1 | the OTP flows are opened only with OTP_TEST_GATEWAY=true and TEST_DB_MODE=true | `tests/kpost-api/validation/common-forgot-password-limited.spec.ts:12` |
 | 1 | testingapi answers 404 "No matching endpoint for this request" for POST saveUnsubscriberDetails, live-verified 2026-09-24. Not run standalone (a 404 there reads  | `tests/kpost-api/validation/common-gaps.spec.ts:17` |
 | 1 | blocks a QA contact and tries a call and messages; set CONTACTS_LIFECYCLE and KALL_LIFECYCLE | `tests/kpost-api/validation/contacts-block-enforcement.spec.ts:64` |
+| 1 | schedules real calls; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5) | `tests/kpost-api/validation/kall-reschedule-input-rules.spec.ts:54` |
 | 1 | sends real messages between the QA accounts; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/validation/katchup-rules.spec.ts:92` |
 | 1 | logs in and out repeatedly; set LOGIN_UI_LIFECYCLE=true | `tests/kpost-ui/auth/login-forgot-password-e2e.spec.ts:18` |
 | 1 | sends ONE real SMS to the spare account; set FORGOT_PASSWORD_SMS=true (the run levels do) | `tests/kpost-ui/auth/login-forgot-password-e2e.spec.ts:22` |

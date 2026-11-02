@@ -80,13 +80,31 @@ coverage". Before this, `request.boundary-value` tested nothing: the workbook li
     (an unparseable body: 400 = past the filter, 401 = refused).
   - Dropped: `getMailCredentials` hands back the KMail password only to a caller who already sent
     that account's correct password (SentMailServiceImpl ~2191), so nothing leaks.
-  - Not yet done:
-    - Admin company scoping: needs two QA companies' attribute ids; the identifier guard forbids
-      naming another tenant's ids.
-    - Admin short-name 500: a write on the live Admin DB.
-    - Kall reschedule checks.
-    - Bulk-mail status: an in-memory store keyed by fromAddress, readable once by anyone who names
-      the sender. Still to replay.
+  - The remaining leads, done on the owner's "start on the open leads" (2026-11-02). Each was
+    duplicate-checked, replayed alone with QA data, and left a bench test:
+    - **#13417 (KMail):** bulkMail/status/{fromAddress} reads the named sender's result, then
+      removes it. qatest3 got qatest1's result and qatest1 then got 404, 2 of 2 times.
+      `tests/kmail-api/security/bulk-status-cross-user.spec.ts`.
+    - **#1306 REOPENED (KPost API):** the stored-XSS fix guards only scheduledKall.
+      reScheduleKall and scheduledRepeatKall take a script subject, an unsafe kallSession and a
+      `javascript:` link (200 for each), and kallDashboard returns the markup unescaped.
+      `tests/kpost-api/validation/kall-reschedule-input-rules.spec.ts` (KALL_LIFECYCLE;
+      scheduledKall is the control).
+    - **#13418 (Admin, filed through the pipeline):** `location/getLocation` lists company 242's
+      location to company 1034's token. A unique marker was used, with the owner control, 2 of 2
+      times. This differs from #1034 (INVALID), where getAllLocation only returned the caller's own
+      data. `getLocationById` is correctly scoped. For `getWorkPlaceHierarchy` the owner control
+      did not list the probe, so nothing is claimed. Added to
+      `tests/admin-api/security/cross-tenant-reads.spec.ts`.
+    - **#13419 (Admin):** a tier or variable name "Q", "QA" or "Q Tier" gives a 500 on all four
+      save endpoints (12 of 12); "QAS" saves. The abbreviation builders cut the name before
+      saveAll, so nothing is stored. Company 242's lists showed nothing left over.
+      `tests/admin-api/validation/short-name-validation.spec.ts`.
+  - **Filer fix:** the manual filer defaulted every finding to the KPost API owner, so eight
+    hand-filed KMail bugs went to the wrong developer: #13380, #13381, #13383, #13386, #13388,
+    #13390, #13416 and #13417. They were reassigned to Jitendra (owner field only, no comment).
+    `manual-bug.spec.ts` now takes the owner, suite, version and base URL from the product the
+    finding names (ownership.config).
   - Admin preview (run-b17a4278): nothing to file. The Admin length gap is already #13258.
   - Firefox UI preview (run-854245fd), applied on the owner's "Yes" (2026-11-02): 42 bugs CLOSED as
     re-test passed (#1079, #1085–#1291: the Home, Kall, Katchup, KBooking, KCloud, KDiary,

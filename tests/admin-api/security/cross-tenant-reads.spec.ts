@@ -119,10 +119,72 @@ test.describe('KPost Admin · cross-tenant read-by-id IDOR @api @admin-api @secu
           request: { body: { id: mine.id } },
         });
       }
-      expect(
-        leaked,
-        "a workplace location created by company 242 must not be readable by company 1034's token",
-      ).toBe(false);
+      expect
+        .soft(
+          leaked,
+          "a workplace location created by company 242 must not be readable by company 1034's token",
+        )
+        .toBe(false);
+
+      // The list reads are keyed by the parent level, not by company (LocationServiceImpl
+      // getLocation, WorkplaceHierarchyServiceImpl): the same owner-control pattern for each.
+      const listReads = [
+        {
+          id: 'admin-workplace-location-get',
+          body: { attributeId: tierId, variableId: varId },
+          ruleId: 'IDOR-admin-cross-tenant-list-locations',
+          what: "company 242's locations under its own level",
+        },
+        {
+          id: 'admin-workplace-hierarchy',
+          body: { parentAttributeId: tierId, parentVariableId: varId },
+          ruleId: 'IDOR-admin-cross-tenant-workplace-hierarchy',
+          what: "company 242's workplace hierarchy under its own level",
+        },
+      ] as const;
+      for (const read of listReads) {
+        const owner = await endpoints.sendTo(
+          read.id,
+          { body: read.body },
+          {
+            label: `admin:xtenant-${read.id}-owner`,
+            auth: { principal: businessM! },
+            allowLiveRead: true,
+          },
+        );
+        const ownerSees = owner.status < 300 && owner.bodyText.includes(marker);
+        if (!ownerSees) {
+          test.info().annotations.push({
+            type: 'skip-reason',
+            description: `${read.id}: owner control did not list the probe (HTTP ${owner.status}), so a stranger's answer proves nothing`,
+          });
+          continue;
+        }
+        const stranger = await endpoints.sendTo(
+          read.id,
+          { body: read.body },
+          {
+            label: `admin:xtenant-${read.id}-cross`,
+            auth: { principal: businessS! },
+            allowLiveRead: true,
+            allowLiveWrite: true,
+          },
+        );
+        const listed = stranger.status < 300 && stranger.bodyText.includes(marker);
+        if (listed) {
+          endpoints.recordBusinessRuleViolation({
+            endpointId: read.id,
+            ruleId: read.ruleId,
+            rule:
+              "A list read must return only the caller's own company records: BUSINESS_S must not " +
+              "get BUSINESS_M's records by naming BUSINESS_M's level ids.",
+            expected: 'nothing of company 242 is returned to company 1034',
+            actual: `the read succeeded (${stranger.status}) and returned ${read.what} to BUSINESS_S`,
+            request: { body: read.body },
+          });
+        }
+        expect.soft(listed, `${read.id} must not return ${read.what} to company 1034`).toBe(false);
+      }
     } finally {
       const del = await endpoints.sendTo(
         'admin-workplace-location-delete',
