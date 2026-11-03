@@ -19,7 +19,7 @@ defects in it and files them to Bugzilla, routed to the developer who owns the m
 | KPost API                | `kpost-api`    | Jaganathan Murthy (jagan@kpost.in)       | `KPOST_API_BASE_URL` (http://192.168.0.100:8989, the QA backend)        |
 | KPost Admin              | `admin-api`    | Karan S (karans@kpost.in)                | `ADMIN_API_BASE_URL` (http://192.168.11.11:9595, MongoDB same IP)       |
 | KMail API                | `kmail-api`    | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
-| KPost UI                 | `kpost-ui`     | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                        |
+| KPost UI                 | `kpost-ui`     | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (http://192.168.0.100, nginx; it calls the :8989 API)        |
 | KPost Admin UI           | `admin-ui`     | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/admin-ui`       |
 | Kpost Mobile Application | `kpost-mobile` | Balaji J G (balajijg@kpostindia.com)     | the app copy calls `KPOST_API_BASE_URL`/v2; `mobile/patrol_test`        |
 

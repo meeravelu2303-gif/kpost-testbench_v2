@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kpost5_2023/app_common/constants/kpost_icons.dart';
 import 'package:kpost5_2023/app_common/views/screens/home_dashboard_screens/home_dashboard_screen.dart';
 import 'package:kpost5_2023/main.dart' as app;
 import 'package:patrol/patrol.dart';
+import 'package:pinput/pinput.dart';
 
 import 'bench.dart';
 
@@ -137,6 +139,23 @@ Future<void> tapDrawerItem(PatrolIntegrationTester $, String label) async {
       .descendant(of: find.byType(Drawer), matching: find.byType(Scrollable))
       .first;
   await $(Drawer).$(label).scrollTo(view: drawerList).tap();
+}
+
+/// Signed in on Home: sets the access code to [Bench.accessCode] from Settings › General Settings ›
+/// Change Access Code (the account keeps the same code every run) and waits for the unlock screen the
+/// app then shows, in access-code mode.
+Future<void> setAccessCodeFromSettings(PatrolIntegrationTester $) async {
+  await $(find.byIcon(KPOST.KP_20_Menu_Open)).tap();
+  await tapDrawerItem($, 'Settings');
+  await $(ListTile).containing('General Settings').tap();
+  await $('Change Access Code').scrollTo().tap();
+  await $(TextField).first.enterText(Bench.password);
+  await $(ElevatedButton).containing('Continue').tap();
+  await $('Enter Your New Access Code').waitUntilVisible();
+  await $(Pinput).at(0).enterText(Bench.accessCode);
+  await $(Pinput).at(1).enterText(Bench.accessCode);
+  await $(ElevatedButton).containing('Submit').tap(settlePolicy: SettlePolicy.noSettle);
+  await $('Login with Password').waitUntilVisible();
 }
 
 /// Android 14+ may open the full-screen-intent Settings page over the app right after sign-in; Back

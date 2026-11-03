@@ -169,6 +169,12 @@ class ApiUser {
     await _dio.post<Object>('profile/updateAboutYourself/', data: {'aboutYourself': text});
   }
 
+  /// This account's registered mobile number and first name, as the profile returns them.
+  Future<({String mobile, String firstName})> identity() async {
+    final p = await profile();
+    return (mobile: '${p['mobileNumber'] ?? ''}', firstName: '${p['firstName'] ?? ''}');
+  }
+
   /// This account's `userProfile` block from profile/getUserProfile/ (empty when none).
   Future<Map<String, dynamic>> userProfile() async {
     final response = await _dio.get<Map<String, dynamic>>('profile/getUserProfile/');
@@ -187,19 +193,84 @@ class ApiUser {
     return profile == null ? <String, dynamic>{} : Map<String, dynamic>.from(profile);
   }
 
-  /// This account's Other Activities, as the profile lists them.
-  Future<List<Map<String, dynamic>>> otherActivities() async {
-    final list = (await userProfile())['otherActivities'];
+  /// One of the profile's stored lists (schoolDetails, collegeDetails, universityDetails,
+  /// experienceDetails, otherActivities). The server keeps each as one JSON string column and returns
+  /// it as that string (UserProfile.java), so it is decoded here; the order is arbitrary (the DAO
+  /// rewrites a HashMap), so callers match rows by value.
+  Future<List<Map<String, dynamic>>> profileList(String key) async {
+    Object? list = (await userProfile())[key];
+    if (list is String) list = list.trim().isEmpty ? null : jsonDecode(list);
     return list is List
         ? list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
         : <Map<String, dynamic>>[];
   }
 
-  /// Deletes one of this account's Other Activities (cleanup; failures are ignored).
+  /// This account's Other Activities (`activityID`, `title`, `achievements`, …).
+  Future<List<Map<String, dynamic>>> otherActivities() => profileList('otherActivities');
+
+  /// Deletes one of this account's Other Activities (cleanup; the app itself has no delete).
   Future<void> deleteOtherActivity(String activityId) async {
-    await _dio
-        .post<Object>('profile/deleteOtherActivity', data: {'activityID': activityId})
-        .catchError((Object _) => Response<Object>(requestOptions: RequestOptions()));
+    await _dio.post<Object>('profile/deleteOtherActivity', data: {'activityID': activityId});
+  }
+
+  /// Deletes a School, College or University entry ([kind] = 'school' | 'college' | 'university'),
+  /// with the body the app sends (delete_school_details_request_model.dart: the id under both
+  /// spellings). Cleanup; the result is not checked.
+  Future<void> deleteEducation(String kind, String id) async {
+    final path = {
+      'school': 'profile/deleteSchoolDetail',
+      'college': 'profile/deleteCollegeDetail',
+      'university': 'profile/deleteUniversityDetail',
+    }[kind]!;
+    await _dio.post<Object>(path, data: {'${kind}ID': id, '${kind}id': id});
+  }
+
+  /// Adds a School entry with the body the app sends (school_details_request_model.dart, no id =
+  /// a new entry), so a phone test can start from a known card.
+  Future<void> addSchool(String name) async {
+    final response = await _dio.post<Object>('profile/saveOrUpdateSchoolDetails/', data: {
+      'schoolDetails': [
+        {
+          'schoolName': name,
+          'standard': '12th',
+          'course': 'Science',
+          'yearFrom': '2008',
+          'yearTo': '2010',
+          'logoPath': null,
+          'about': 'QA bench',
+          'attachmentPath': <String>[],
+        },
+      ],
+    });
+    if (response.statusCode != 200) {
+      throw StateError('the school entry was not added: HTTP ${response.statusCode}');
+    }
+  }
+
+  /// Deletes one Experience entry (cleanup; the app itself has no delete).
+  Future<void> deleteExperience(String experienceId) async {
+    await _dio.post<Object>('profile/deleteExperienceDetail', data: {'experienceID': experienceId});
+  }
+
+  /// The stored profile picture's path ('' when none).
+  Future<String> profileImage() async => '${(await userProfile())['profileImage'] ?? ''}';
+
+  /// Uploads [jpeg] as the profile picture, as the app does (multipart field `file`,
+  /// profile/updateProfileImage/). Kept far under the bench's 64 KB upload cap.
+  Future<void> setProfileImage(List<int> jpeg) async {
+    if (jpeg.length > 64 * 1024) throw StateError('upload cap: ${jpeg.length} bytes');
+    final response = await _dio.post<Object>(
+      'profile/updateProfileImage/',
+      data: FormData.fromMap({'file': MultipartFile.fromBytes(jpeg, filename: 'qa_bench.jpg')}),
+    );
+    if (response.statusCode != 200) {
+      throw StateError('the profile picture did not upload: HTTP ${response.statusCode}');
+    }
+  }
+
+  /// Removes the profile picture (profile/removeProfileImage/).
+  Future<void> removeProfileImage() async {
+    await _dio.get<Object>('profile/removeProfileImage/');
   }
 
   /// Puts Basic Information back (the server requires a designation and a gender).

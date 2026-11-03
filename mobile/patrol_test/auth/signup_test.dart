@@ -6,10 +6,19 @@ import '../support/bench.dart';
 import '../support/first_run.dart';
 
 /// Personal signup on the phone, with a throwaway `mobkpost<N>` account that the runner deletes
-/// afterwards (scripts/mobile/signup-account.mjs). The mobile number needs no OTP since Test_ENV
-/// 99a6abf48 ("Mobile number Verify Disable"), and the captcha origin is the QA host in the copy.
+/// afterwards (scripts/mobile/signup-account.mjs).
+///
+/// SKIPPED since Test_ENV 6cc10c491 ("In Signup Need Mobile Number Verification", 2026-11-03), which
+/// undid 99a6abf48: Continue now refuses with "Verify Mobile Number" until the mobile's SMS OTP is
+/// validated, and Verify sends a real SMS (common/sendOTP/, with a Cloudflare captcha token). The bench
+/// never texts a phone, so this test waits for a test OTP gateway. What can be checked before Verify
+/// is in signup_validation_test.dart.
 void main() {
-  patrolTest('a new personal user signs up with mobile, details, KPost ID and password', config: benchConfig, ($) async {
+  const blockedOnSmsOtp = true;
+
+  patrolTest('a new personal user signs up with mobile, details, KPost ID and password '
+      '(SKIPPED: needs a real SMS OTP since Test_ENV 6cc10c491)', skip: blockedOnSmsOtp,
+      config: benchConfig, ($) async {
     Bench.requireConfig();
     expect(Bench.signupLocal, isNotEmpty, reason: 'run through `npm run mobile:test` (signup identity)');
     await startFreshApp($);

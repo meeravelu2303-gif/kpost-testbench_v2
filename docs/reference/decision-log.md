@@ -3,7 +3,55 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-02 (latest) — Mobile: login tested on the phone, signup unblocked by the bench, bugs go to Balaji J G
+### 2026-11-03 (latest) — KPost UI moved behind nginx at http://192.168.0.100; QA login down (500)
+
+Owner: "http://192.168.0.100/ this is the kpost ui dont want use the port becoz now, we have deploy on nginix".
+
+- `BASE_URL` = `http://192.168.0.100` (was `:3000`, which no longer answers). The host allowlists
+  (`run-level.mjs` TEST_HOSTS, the mobile QA_HOSTS) check the host only, so nothing else changed.
+- **The API is not behind nginx.** The deployed bundle (`main.a28db837.js`) uses its `local` setting:
+  apiV2 `http://192.168.0.100:8989/v2`, mail `http://192.168.0.100:9081/v2`. Every API path tried without
+  a port answers nginx's 405 (static files only). `KPOST_API_BASE_URL` / `KMAIL_API_BASE_URL` stay on
+  :8989 / :9081; change them only when nginx proxies the API and the bundle calls it there.
+- **Outage, not filed:** `POST /v2/signupLogin/userLogin/` answers 500 "Unexpected error occurred" for
+  qatest7 and qatest8 (correct passwords) since about 2026-11-03 midday; `fetchUserDetails` and `msStatus`
+  answer 200. Every signed-in test (API, UI, mobile) waits for it.
+
+### 2026-11-03 — Mobile: Signup, Login and Profile test coverage completed (written, not yet run)
+
+Owner: "make sure we have complete coverage of signup, login and profile module tests in mobile application".
+Every screen of the three modules was mapped from the Test_ENV source (app copy at 9021e9002) and the KPost
+backend, and a test written for each behaviour a user can reach without texting a phone. `flutter analyze`
+on `mobile/patrol_test` is clean; the owner runs them on the phone.
+
+- **Profile lists are JSON strings.** `getUserProfile` returns `schoolDetails`, `collegeDetails`,
+  `universityDetails`, `experienceDetails` and `otherActivities` as one JSON-encoded string each (plus an
+  `…AsJson` copy that is `{}` when empty), in HashMap order. `ApiUser.profileList()` decodes them and tests
+  match rows by value. The 2026-11-02 Other Activities failure was this bench fault (the activity was
+  stored), and the "no title is not saved" pass proved nothing; both re-written.
+- **Signup end to end is SKIPPED again**: Test_ENV `6cc10c491` ("In Signup Need Mobile Number Verification")
+  undid `99a6abf48`, so Continue needs a validated SMS OTP and Verify sends a real SMS. `signup_test` is
+  `skip: true` with the reason in its title; `signup_validation_test` covers every check before Verify and
+  never taps Verify with a full number. The KPost ID / password / confirm screen is unreachable on the phone
+  until there is a test OTP gateway.
+- **New files:** `auth/signup_validation_test`, `auth/login_options_test` (mobile-number login, "@" domain
+  suggestion, password step controls), `auth/unlock_screen_test` (password mode, back to access code, Forgot
+  Access Code: password, then a new code; no OTP), `profile/education_test` (School/College/University save,
+  no-name, years, edit, delete), `profile/experience_test`, `profile/profile_picture_test` (a 665-byte QA
+  picture set over the API, removed on the phone); `about_test` and `other_activities_test` extended.
+- **Not driven on the phone, by rule:** Forgot Password (texts the phone on opening), Delete My Account and
+  Set as Primary Device (OTP), Change Password (damages the shared account; the API throwaway flow covers
+  it), business signup (needs the SMS OTP and creates a company), choosing a new picture (phone gallery +
+  third-party editor; the upload endpoint is in the API suite).
+- **Expected to fail (source read, not yet seen live; file only after a solo reproduction):** Other
+  Activities keeps the old Achievements (`clearActivityDetails` clears the Experience field), College /
+  University / Experience / Other Activities save with no name, years accept letters and To before From,
+  the Experience form keeps the last entry, a blank About is ignored silently, Forgot Access Code may lose
+  its arguments on the second screen.
+- Helpers: `setAccessCodeFromSettings` (first_run.dart); `profileList`, `deleteEducation`, `addSchool`,
+  `deleteExperience`, `profileImage`/`setProfileImage`/`removeProfileImage`, `identity` (peer_api.dart).
+
+### 2026-11-02 — Mobile: login tested on the phone, signup unblocked by the bench, bugs go to Balaji J G
 
 Owner: "start the mobile test … first check the signup and login then go module by module", then "the mobile
 automation bugs directly go file to balaji gj dont want manohar".

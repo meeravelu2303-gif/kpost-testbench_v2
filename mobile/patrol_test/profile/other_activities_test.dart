@@ -8,8 +8,9 @@ import '../support/first_run.dart';
 import '../support/peer_api.dart';
 
 /// Profile › Other Activities on the phone (settings/views/screens/other_activity.dart,
-/// settings_controller.dart otheractivitiesInfo): an activity with a title is saved and listed, and an
-/// empty one is not. Every activity a test leaves on the account is deleted afterwards.
+/// settings_controller.dart otheractivitiesInfo): an activity with a title is saved and kept by the
+/// server, an empty one is not, and the form is empty when opened again. The app has no list, edit or
+/// delete for activities, so every activity a test leaves on the account is deleted over the API.
 void main() {
   Future<void> openOtherActivities(PatrolIntegrationTester $) async {
     await signInWithPassword($);
@@ -20,6 +21,27 @@ void main() {
     await $.pump(const Duration(seconds: 2));
   }
 
+  PatrolFinder titleField(PatrolIntegrationTester $) => $(TextField).containing('Enter Activate Title');
+  PatrolFinder achievementsField(PatrolIntegrationTester $) => $(TextField).containing('Enter Course');
+
+  String textOf(PatrolIntegrationTester $, PatrolFinder field) =>
+      $.tester.widget<TextField>(field.first).controller?.text ?? '';
+
+  /// Taps Save and waits up to 10 s for the screen to leave (it goes back only on HTTP 200).
+  Future<String> save(PatrolIntegrationTester $) async {
+    await $('Save').tap();
+    for (var second = 0; second < 10; second++) {
+      await $.pump(const Duration(seconds: 1));
+      if (!titleField($).exists) break;
+    }
+    return dumpScreen($, 'after Save');
+  }
+
+  Future<Set<String>> activityIds() async => {
+        for (final a in await (await ApiUser.phoneAccountForCleanup()).otherActivities())
+          '${a['activityID'] ?? ''}',
+      };
+
   /// Deletes every activity that was not on the account before the test.
   Future<void> removeNew(Set<String> before) async {
     final api = await ApiUser.phoneAccountForCleanup();
@@ -29,25 +51,22 @@ void main() {
     }
   }
 
-  Future<Set<String>> activityIds() async => {
-        for (final a in await (await ApiUser.phoneAccountForCleanup()).otherActivities())
-          '${a['activityID'] ?? ''}',
-      };
-
-  patrolTest('an activity with a title and achievements is saved and listed', config: benchConfig,
-      ($) async {
+  patrolTest('an activity with a title and achievements is saved and kept by the server',
+      config: benchConfig, ($) async {
     final before = await activityIds();
     final title = 'QA activity ${DateTime.now().millisecondsSinceEpoch}';
     try {
       await openOtherActivities($);
-      await $(TextField).containing('Enter Activate Title').enterText(title);
-      await $(TextField).containing('Enter Course').enterText('QA bench achievement');
-      await $('Save').tap();
-      await $.pump(const Duration(seconds: 4));
-      dumpScreen($, 'after Save');
+      await titleField($).enterText(title);
+      await achievementsField($).enterText('QA bench achievement');
+      final shown = await save($);
+      expect($('Profile Creation'), findsWidgets,
+          reason: 'a saved activity returns to Profile Creation; on screen: $shown');
       final stored = await (await ApiUser.phoneAccountForCleanup()).otherActivities();
-      expect(stored.map((a) => a['title']), contains(title),
-          reason: 'the server lists the activity saved on the phone; stored: $stored');
+      final row = stored.where((a) => a['title'] == title);
+      expect(row, hasLength(1), reason: 'the server keeps the activity once; stored: $stored');
+      expect(row.first['achievements'], 'QA bench achievement',
+          reason: 'with the achievements typed on the phone');
     } finally {
       await removeNew(before);
     }
@@ -57,13 +76,34 @@ void main() {
     final before = await activityIds();
     try {
       await openOtherActivities($);
-      await $('Save').tap();
-      await $.pump(const Duration(seconds: 4));
-      final shown = dumpScreen($, 'after empty Save');
-      final after = await activityIds();
-      expect(after.difference(before), isEmpty,
-          reason: 'an empty activity must not be stored (the Save button only greys out); '
-              'on screen: $shown');
+      await titleField($).enterText('');
+      await achievementsField($).enterText('');
+      final shown = await save($);
+      final added = (await activityIds()).difference(before);
+      expect(added, isEmpty,
+          reason: 'an empty activity must not be stored (Save is never disabled, only dimmed, and '
+              'neither the app nor the server checks the title); on screen: $shown');
+    } finally {
+      await removeNew(before);
+    }
+  });
+
+  patrolTest('the form is empty when Other Activities is opened again after a save',
+      config: benchConfig, ($) async {
+    final before = await activityIds();
+    try {
+      await openOtherActivities($);
+      await titleField($).enterText('QA activity ${DateTime.now().millisecondsSinceEpoch}');
+      await achievementsField($).enterText('QA leftover achievement');
+      await save($);
+      await $('Other Activities').tap();
+      await $.pump(const Duration(seconds: 2));
+      dumpScreen($, 'reopened');
+      expect(textOf($, titleField($)), isEmpty, reason: 'the saved title is cleared');
+      expect(textOf($, achievementsField($)), isEmpty,
+          reason: 'the saved achievements are cleared too (settings_controller.dart '
+              'clearActivityDetails clears achieveMentscontroller, the Experience field, instead of '
+              'activityAchieveMentscontroller)');
     } finally {
       await removeNew(before);
     }
