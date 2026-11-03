@@ -70,6 +70,12 @@ void main() {
       refusedRightly = $('Invalid Credential').exists;
       expiredAlert = $('Your session has expired. Please login again.').exists;
     }
+    // Keep watching briefly: the other one can follow the first by a moment.
+    for (var second = 0; second < 4; second++) {
+      await $.pump(const Duration(seconds: 1));
+      refusedRightly = refusedRightly || $('Invalid Credential').exists;
+      expiredAlert = expiredAlert || $('Your session has expired. Please login again.').exists;
+    }
     expect($(HomeDashboardScreen), findsNothing, reason: 'a wrong password does not open Home');
 
     // The account rule: a wrong password is always followed by a good login.
@@ -93,9 +99,10 @@ void main() {
       await dismissHomePopups($);
     }
     expect($(HomeDashboardScreen), findsOneWidget, reason: 'the right password still signs in');
-    expect(refusedRightly, isTrue,
-        reason: expiredAlert
-            ? 'a wrong password must say "Invalid Credential", not "Your session has expired" (#13379)'
-            : 'a wrong password must say "Invalid Credential"');
+    expect(refusedRightly, isTrue, reason: 'a wrong password must say "Invalid Credential"');
+    // Both can show at once (2026-11-02: "Invalid Credential" plus the expired alert, which forces a
+    // logout), so the alert is checked on its own.
+    expect(expiredAlert, isFalse,
+        reason: 'a wrong password must not also show "Your session has expired" and log out (#13379)');
   });
 }

@@ -37,9 +37,24 @@ Future<void> signInFromSignInScreen(PatrolIntegrationTester $) async {
 
 /// A fresh install started and taken to the sign-in screen (country not chosen yet).
 Future<void> startFreshApp(PatrolIntegrationTester $) async {
+  // main.dart (~746) hands Flutter errors to Crashlytics; with that handler in place an app error only
+  // shows up as an opaque "_pendingExceptionDetails != null" assertion. The test binding's handler is
+  // put back once main() has run, so a failing test names the app's real error and its stack.
+  final testHandler = FlutterError.onError;
   // Not awaited: main() waits for the notification permission dialog before it calls runApp.
   unawaited(app.main());
   await allowStartupPermissions($);
+  FlutterError.onError = (details) {
+    // An image the server refuses (a profile photo loaded without a token answers 401) is logged for
+    // review, not failed: it is a separate finding, and it would fail every test that shows an avatar.
+    final text = details.exceptionAsString();
+    if (details.library == 'image resource service' && text.contains('Invalid statusCode')) {
+      // ignore: avoid_print
+      print('BENCH-APP-IMAGE-ERROR: ${text.replaceAll('\n', ' ')}');
+      return;
+    }
+    testHandler?.call(details);
+  };
   await passIntroToSignIn($);
 }
 
@@ -133,4 +148,19 @@ Future<void> waitForHome(PatrolIntegrationTester $) async {
     await $.platform.android.pressBack();
     await $(HomeDashboardScreen).waitUntilExists(timeout: const Duration(seconds: 30));
   }
+}
+
+/// Prints every non-empty text on screen with a `BENCH-SCREEN <label>:` prefix (read from the phone's
+/// log), and returns them: the evidence a failing step quotes, and how a new flow is mapped.
+String dumpScreen(PatrolIntegrationTester $, String label) {
+  final shown = find
+      .byType(Text)
+      .evaluate()
+      .map((e) => (e.widget as Text).data)
+      .whereType<String>()
+      .where((t) => t.trim().isNotEmpty)
+      .join(' | ');
+  // ignore: avoid_print
+  print('BENCH-SCREEN $label: $shown');
+  return shown;
 }

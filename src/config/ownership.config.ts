@@ -172,7 +172,8 @@ const UI_COMPONENT_BY_SCREEN: Record<string, string> = {
 
 /**
  * Phone (Patrol) test areas → components of the `Kpost Mobile Application` product, every one
- * assigned to Manohar (components created 2026-10-29). Keys are the test file's area.
+ * assigned to Balaji J G since 2026-11-02 (owner: "the mobile automation bugs directly go file to
+ * balaji gj"; Manohar before). Keys are the test file's area.
  */
 const MOBILE_COMPONENT_BY_SCREEN: Record<string, string> = {
   login: 'Auth',
@@ -280,7 +281,7 @@ export const SUITES: Record<SuiteId, SuiteOwnership> = {
     label: 'KPost Flutter app (Android; iOS later)',
     kind: 'ui',
     repository: 'kpost5_flutter, branch Test_ENV',
-    owner: { name: 'Manohar', email: 'manohar@kpost.in' },
+    owner: { name: 'Balaji J G', email: 'balajijg@kpostindia.com' },
     bugzilla: {
       product: 'Kpost Mobile Application',
       version: '1.0',

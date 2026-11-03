@@ -3,7 +3,49 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-01 (latest) — Boundary tests: real limits read from the code and the QA DB
+### 2026-11-02 (latest) — Mobile: login tested on the phone, signup unblocked by the bench, bugs go to Balaji J G
+
+Owner: "start the mobile test … first check the signup and login then go module by module", then "the mobile
+automation bugs directly go file to balaji gj dont want manohar".
+
+- **Owner of `Kpost Mobile Application` = Balaji J G (`balajijg@kpostindia.com`)** in
+  `ownership.config.ts`, CLAUDE.md and the mobile design doc; Manohar before. The bench now sets this
+  assignee on every mobile bug it files.
+  - The 13 Bugzilla components defaulted to Manohar. Bugzilla 5.0 has no REST call to change a
+    component, so the owner changed each Default Assignee in Administration › Products › Kpost Mobile
+    Application. All 13 now show balajijg@kpostindia.com, and `ownership.spec.ts` passes against the
+    live Bugzilla.
+  - The manual filer now takes the owner, suite, version and base URL from the product
+    (`manual-bug.spec.ts`). It used to default to the KPost API owner, which sent eight hand-filed
+    KMail bugs to the wrong developer; they were reassigned to Jitendra.
+- **Login on the realme C55 (qatest7):**
+  - Passed: sign-in, empty ID, logout, set access code, access-code negatives.
+  - **#13420** filed: an unknown KPost ID throws an uncaught "Bad state: No element"
+    (signin_controller.dart:215), which the app records to Crashlytics as fatal.
+  - **#13379 CLOSED** on Test_ENV `9c0a6254a`: a wrong password shows "Invalid Credential" and no
+    longer the expired-session alert. The test now also fails if that alert appears.
+- **Readable failures:** main.dart replaces `FlutterError.onError` with Crashlytics, which turned every
+  app error into an opaque `_pendingExceptionDetails != null` assertion. `startFreshApp` puts the test
+  binding's handler back, so a failure names the app's real error and stack. Image-load HTTP errors (a
+  profile photo loaded without a token answers 401) are logged as `BENCH-APP-IMAGE-ERROR` instead of
+  failing unrelated tests.
+  - Lead for Profile: the access-code screen's avatar is requested with no token, so it always answers 401. qatest7 has no photo, so this is not yet visible.
+- **Signup:**
+  - Test_ENV `99a6abf48` "Mobile number Verify Disable" removed the app's verify-mobile check, so the
+    captcha (only in Send OTP) is no longer needed.
+  - `mobile:prepare` points the captcha origin, which was the live `account.kpostindia.com`, at the QA
+    host, and refuses to build if the live origin is left. `--latest` fetches Test_ENV from the
+    developers' remote into the copy; the local repo is left as it is.
+  - Each run gets a throwaway `mobkpost<N>` / `90000009NN` identity, picked and deleted by
+    `scripts/mobile/signup-account.mjs` (QA DB only; it refuses any other id).
+    `mobile/patrol_test/auth/signup_test.dart` walks the whole flow.
+  - Result: Submit is sent, but the server answers 500 and the app hangs on "Please wait...".
+    - **#13421** (KPost API): personal signup without a verified mobile answers 500 with no message.
+      Filed as distinct from #13355 (unknown countryCode, which fails at an earlier step); the
+      gatekeeper's same-endpoint text match was overridden deliberately, with the reason in the bug.
+    - **#13422** (Mobile): the loader is never closed after a failed signup.
+
+### 2026-11-01 — Boundary tests: real limits read from the code and the QA DB
 
 Owner: "we have the boundary test in our test bench?" → "Yes" → "continue the boundary test with full
 coverage". Before this, `request.boundary-value` tested nothing: the workbook lists types only, and

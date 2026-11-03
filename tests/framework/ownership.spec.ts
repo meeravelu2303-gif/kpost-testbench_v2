@@ -70,7 +70,7 @@ test.describe('Defect ownership', { tag: '@framework' }, () => {
     expect(SUITES['kpost-ui'].bugzilla.product).toBe('KPost UI');
     expect(SUITES['kpost-ui'].owner.email).toBe('ayyappan@kpostindia.com');
     expect(SUITES['kpost-mobile'].bugzilla.product).toBe('Kpost Mobile Application');
-    expect(SUITES['kpost-mobile'].owner.email).toBe('manohar@kpost.in');
+    expect(SUITES['kpost-mobile'].owner.email).toBe('balajijg@kpostindia.com');
   });
 
   test('a phone test routes to its module component, an unknown area to General', () => {

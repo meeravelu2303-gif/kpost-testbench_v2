@@ -169,6 +169,71 @@ class ApiUser {
     await _dio.post<Object>('profile/updateAboutYourself/', data: {'aboutYourself': text});
   }
 
+  /// This account's `userProfile` block from profile/getUserProfile/ (empty when none).
+  Future<Map<String, dynamic>> userProfile() async {
+    final response = await _dio.get<Map<String, dynamic>>('profile/getUserProfile/');
+    final data = response.data?['data'];
+    final profile = (data is List && data.isNotEmpty ? data.first : data) as Map?;
+    final userProfile = profile?['userProfile'];
+    return userProfile is Map ? Map<String, dynamic>.from(userProfile) : <String, dynamic>{};
+  }
+
+  /// The whole profile from profile/getUserProfile/ (date of birth and gender are top-level; the rest
+  /// is under `userProfile`).
+  Future<Map<String, dynamic>> profile() async {
+    final response = await _dio.get<Map<String, dynamic>>('profile/getUserProfile/');
+    final data = response.data?['data'];
+    final profile = (data is List && data.isNotEmpty ? data.first : data) as Map?;
+    return profile == null ? <String, dynamic>{} : Map<String, dynamic>.from(profile);
+  }
+
+  /// This account's Other Activities, as the profile lists them.
+  Future<List<Map<String, dynamic>>> otherActivities() async {
+    final list = (await userProfile())['otherActivities'];
+    return list is List
+        ? list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+        : <Map<String, dynamic>>[];
+  }
+
+  /// Deletes one of this account's Other Activities (cleanup; failures are ignored).
+  Future<void> deleteOtherActivity(String activityId) async {
+    await _dio
+        .post<Object>('profile/deleteOtherActivity', data: {'activityID': activityId})
+        .catchError((Object _) => Response<Object>(requestOptions: RequestOptions()));
+  }
+
+  /// Puts Basic Information back (the server requires a designation and a gender).
+  Future<void> setBasic(Map<String, dynamic> original) async {
+    final userProfile = (original['userProfile'] as Map?) ?? const {};
+    await _dio.post<Object>('profile/updateBasicInformation/', data: {
+      'designation': userProfile['designation'] ?? 'QA Bench Tester',
+      'gender': original['gender'] ?? 'female',
+      'dateOfBirth': original['dateOfBirth'] ?? '1995-01-01',
+      'otherEmail': userProfile['otherEmail'],
+      'knownLanguages': userProfile['knownLanguages'] ?? <String>[],
+    });
+  }
+
+  /// Puts contact details back as the web app sends them (the address as addressLine1, which is
+  /// what the server stores).
+  Future<void> setContact(Map<String, dynamic> original) async {
+    String? line1;
+    final stored = original['presentAddress'];
+    if (stored is String && stored.contains('addressLine1')) {
+      line1 = RegExp(r'"addressLine1"\s*:\s*"([^"]*)"').firstMatch(stored)?.group(1);
+    }
+    await _dio.post<Object>('profile/updateContactInformation/', data: {
+      'country': original['country'],
+      'pinCode': original['pinCode'],
+      'city': original['city'],
+      'areaName': original['areaName'],
+      'addressLine1': line1,
+      'addressLine2': null,
+      'alternateMobileno': original['alternateMobileno'],
+      'landLineNumber': original['landLineNumber'],
+    });
+  }
+
   /// The kallIDs of today's Kool Kalls whose subject is [subject].
   Future<List<int>> todaysKoolKalls(String subject) async {
     final response = await _dio.get<Object>('kall/todayKoolKall/');

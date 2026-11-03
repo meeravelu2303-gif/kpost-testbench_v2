@@ -17,7 +17,7 @@ record why. Commands: `docs/guides/commands.md`, "KPost Mobile".
 - **The app copy calls the owner's QA backend** (`192.168.0.100:8989/v2/` and `:9081/v2/`, owner's choice
   2026-10-29). Test_ENV `c9aa9d4c2` (2026-10-27) had those hosts without `/v2/` (login 401); the developer
   fixed it in `1145282ff` the same afternoon, before the bug was filed, so the copy now matches Test_ENV.
-- **Bugs go to Bugzilla product `Kpost Mobile Application`**, owner Manohar (`manohar@kpost.in`), 13
+- **Bugs go to Bugzilla product `Kpost Mobile Application`**, owner Balaji J G (`balajijg@kpostindia.com`; Manohar until 2026-11-02), 13
   components (Auth, Katchup, Kall, KMail, Contacts, Group, Profile, Settings, KDiary, KBooking, Notifications &
   Calls, Security, General). Suite `kpost-mobile` in `src/config/ownership.config.ts`.
 

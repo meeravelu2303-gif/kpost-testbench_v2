@@ -79,6 +79,19 @@ if (!/^\d{4}$/.test(accessCode)) fail('QATEST7_ACCESS_CODE must be the 4-digit a
 fs.rmSync(path.join(APP, 'patrol_test'), { recursive: true, force: true });
 fs.cpSync(TESTS, path.join(APP, 'patrol_test'), { recursive: true });
 
+const target = option('--target');
+
+// A signup test gets a free throwaway identity (scripts/mobile/signup-account.mjs) and its account is
+// deleted after the run, whatever happened.
+const SIGNUP_ACCOUNT = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  'signup-account.mjs',
+);
+const signup = /(^|[\\/])signup/.test(target ?? '')
+  ? (JSON.parse(run('node', [SIGNUP_ACCOUNT, 'pick']).stdout || 'null') ??
+    fail('could not pick a mobkpost<N> signup identity (see signup-account.mjs)'))
+  : undefined;
+
 const definesFile = path.join(COPY, 'bench-defines.json');
 fs.writeFileSync(
   definesFile,
@@ -89,11 +102,11 @@ fs.writeFileSync(
     BENCH_PEER_ID: env('QATEST8_KPOST_ID'),
     BENCH_PEER_PASSWORD: env('QATEST_SHARED_PASSWORD'),
     BENCH_KPOST_API: stamp.kpost,
+    BENCH_SIGNUP_LOCAL: signup?.local ?? '',
+    BENCH_SIGNUP_MOBILE: signup?.mobile ?? '',
   }),
   'utf8',
 );
-
-const target = option('--target');
 const device = option('--device') ?? devices[0];
 // Video works on emulators; on a phone it depends on the maker (the realme C55 refuses to start it).
 const video = device.startsWith('emulator-') || args.includes('--video');
@@ -161,4 +174,13 @@ try {
 } finally {
   closeTunnel();
   fs.rmSync(definesFile, { force: true });
+  if (signup) {
+    const removed = run('node', [SIGNUP_ACCOUNT, 'delete', signup.kpostId, signup.mobile]);
+    console.log(
+      removed.status === 0
+        ? `mobile:test: signup account ${signup.kpostId} removed ${removed.stdout.trim()}`
+        : `mobile:test: CLEAN-UP FAILED for ${signup.kpostId}: ${removed.stderr.trim()}`,
+    );
+    if (removed.status !== 0) process.exitCode = 1;
+  }
 }

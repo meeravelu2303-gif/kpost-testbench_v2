@@ -21,7 +21,7 @@ defects in it and files them to Bugzilla, routed to the developer who owns the m
 | KMail API                | `kmail-api`    | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
 | KPost UI                 | `kpost-ui`     | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (test.kpostindia.com)                                        |
 | KPost Admin UI           | `admin-ui`     | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/admin-ui`       |
-| Kpost Mobile Application | `kpost-mobile` | Manohar (manohar@kpost.in)               | the app copy calls `KPOST_API_BASE_URL`/v2; `mobile/patrol_test`        |
+| Kpost Mobile Application | `kpost-mobile` | Balaji J G (balajijg@kpostindia.com)     | the app copy calls `KPOST_API_BASE_URL`/v2; `mobile/patrol_test`        |
 
 **The target is the TEST deployment only** — `test.kpostindia.com`, `testingapi`, `testkmail`, the Admin
 test box, and (since 2026-10-27, the owner's choice for every KPost API run) the KPost API QA backend

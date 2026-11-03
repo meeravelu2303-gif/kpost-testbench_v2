@@ -29,6 +29,11 @@ class Bench {
   /// The QA backend's KPost API, as the app copy calls it (ends in /v2/).
   static const kpostApi = String.fromEnvironment('BENCH_KPOST_API');
 
+  /// A signup test's throwaway identity (`mobkpost<N>` / `90000009NN`), free in the QA DB; the
+  /// account is deleted after the run (scripts/mobile/signup-account.mjs). Empty in other tests.
+  static const signupLocal = String.fromEnvironment('BENCH_SIGNUP_LOCAL');
+  static const signupMobile = String.fromEnvironment('BENCH_SIGNUP_MOBILE');
+
   static void requireConfig() {
     final missing = {
       'BENCH_KPOST_ID': kpostId,

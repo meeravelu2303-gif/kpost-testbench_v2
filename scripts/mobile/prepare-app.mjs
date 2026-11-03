@@ -42,7 +42,7 @@ const IOS_BUNDLE = 'com.kpost.kpost5Flutter';
 const QA_HOSTS = new Set(['192.168.0.100']);
 /** Live hosts that must never be called from the copy (comments and share-link texts aside). */
 const FORBIDDEN =
-  /devapi2\.kpostindia|kmail5\.kpostindia|adminmodule\.kpostindia|testingapi\.kpostindia/;
+  /devapi2\.kpostindia|kmail5\.kpostindia|adminmodule\.kpostindia|testingapi\.kpostindia|turnstileBaseUrl = 'https:\/\/account\.kpostindia/;
 
 function fail(message) {
   console.error(`mobile:prepare: ${message}`);
@@ -82,8 +82,16 @@ function qaBase(variable) {
 // ---- 1. The copy: clone once, then reset to the branch on every run (ignored build caches kept)
 if (!fs.existsSync(path.join(SOURCE, '.git'))) fail(`${SOURCE} is not a git repository`);
 if (fs.existsSync(path.join(COPY, '.git'))) {
-  git('-C', COPY, 'fetch', '--quiet', 'origin', BRANCH);
-  git('-C', COPY, 'checkout', '--quiet', '-f', '-B', BRANCH, `origin/${BRANCH}`);
+  // --latest: the developers' remote itself (its URL read from the local repo, which is left as it
+  // is), for a commit pushed after this PC's copy of the repo was last pulled.
+  if (args.includes('--latest')) {
+    const remote = git('-C', SOURCE, 'remote', 'get-url', 'origin');
+    git('-C', COPY, 'fetch', '--quiet', remote, BRANCH);
+    git('-C', COPY, 'checkout', '--quiet', '-f', '-B', BRANCH, 'FETCH_HEAD');
+  } else {
+    git('-C', COPY, 'fetch', '--quiet', 'origin', BRANCH);
+    git('-C', COPY, 'checkout', '--quiet', '-f', '-B', BRANCH, `origin/${BRANCH}`);
+  }
   git('-C', COPY, 'clean', '-fdq');
 } else {
   fs.mkdirSync(path.dirname(COPY), { recursive: true });
@@ -144,6 +152,16 @@ replaceOnce(
   /^([ \t]*)static const String kmailThumbnailAPI =\s*"[^"]*";/m,
   `$1static const String kmailThumbnailAPI = "${kmail}/readMail/downloadThumbnail/";`,
   'KMail thumbnail URL',
+);
+// The signup captcha (Cloudflare Turnstile) loads from the live account.kpostindia.com as soon as a
+// 10-digit mobile is typed (user_signup_personal.dart prefetchCaptchaToken). Pointed at the QA
+// origin, it never reaches the live site; its token is only needed by Send OTP, which signup no longer
+// requires (Test_ENV 99a6abf48 "Mobile number Verify Disable", 2026-11-02).
+replaceOnce(
+  path.join(COPY, 'kpost_common', 'lib', 'utils', 'string_constants.dart'),
+  /^const String turnstileBaseUrl = '[^']*';/m,
+  `const String turnstileBaseUrl = '${kpost}';`,
+  'Turnstile captcha origin',
 );
 
 const leftovers = [];
