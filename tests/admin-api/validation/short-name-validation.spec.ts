@@ -67,7 +67,7 @@ const idsOf = (text: string): string[] => {
 
 test.describe(
   'KPost Admin · a short tier or variable name is answered cleanly @api @admin-api',
-  { tag: ['@api', '@admin', '@regression'] },
+  { tag: ['@api', '@admin'] },
   () => {
     test.describe.configure({ mode: 'default', timeout: 240_000 });
     test.skip(!businessM, 'needs the BUSINESS_M principal (QA company 242)');

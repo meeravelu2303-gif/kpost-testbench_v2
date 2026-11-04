@@ -60,7 +60,7 @@ const tick = (name: string) => `\`${name}\``;
 
 test.describe(
   'maintenance · boundary filler cleanup @api @kpost-api @database',
-  { tag: ['@maintenance', '@api', '@regression'] },
+  { tag: ['@maintenance', '@api', '@platform', '@regression'] },
   () => {
     test('nothing the boundary validators stored is left in the QA DB', async ({ databases }) => {
       test.setTimeout(600_000);

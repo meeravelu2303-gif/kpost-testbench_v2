@@ -60,6 +60,12 @@ export function defineAdminEndpoint(config: KpostEndpointConfig): EndpointDefini
       role: 'COMPANY_ADMIN',
       principalKey: 'business-m',
     },
+    // Only a company admin may call Admin, so the engine sends each call again with a personal user's
+    // token (authorization.permission). That token carries no company and the server refuses it with
+    // 400 "companyId is required" and no data (measured 2026-11-03), so 400 counts as the refusal.
+    // Not tenantScoped: the company comes from the token, so another company's admin rightly reads
+    // its own data; cross-company writes by id are tests/admin-api/security/cross-tenant-writes.spec.ts.
+    authorization: config.authorization ?? { roles: ['COMPANY_ADMIN'], deniedStatus: [400, 403] },
     expectedStatus: config.expectedStatus,
     envelope: config.envelope,
     contentType: config.contentType,

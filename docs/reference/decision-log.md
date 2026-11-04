@@ -3,7 +3,59 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-03 (latest) — KPost UI moved behind nginx at http://192.168.0.100; QA login down (500)
+### 2026-11-03 (latest) — KPost API full run filed; web login blocked by a new-device token rule
+
+Owner: "run the kpost api fully … smoke, sanity, regression … file the valid bugs and update the bugs status
+properly then run the kpost ui chromium file … then run the firefox".
+
+- **Run levels first failed lint:tags** (24 old violations: `@kdirectory` unknown, missing module tags,
+  an Admin spec tagged `@regression`); fixed in 8 specs. Smoke then fails whenever qatest1's call
+  history is empty: `kallDashboard` answers FAILURE/400 for an empty history (#117, REOPENED with live
+  proof). Kall tests clear the history, so a run level after them needs one call seeded first.
+- **product:kpost-api applied** after review: filed #13459-#13464, reopened #13334/#13348/#13406, closed 29.
+  Not filed: `/v2/common/sendMessage` 401s (the public "send as anyone" path was locked down; definition now
+  authenticated, three fingerprints in known-false-positives, #13338 CLOSED after a no-token replay);
+  `initiateKall` 403 (a leftover block: qatest1 had deleted-but-blocked qatest5, unblocked);
+  `createUserGroup` 409 "name already exists" on "QA Bench Group …" names only (868 leftover QA groups in
+  the DB; not separated from that data yet). The last two were dropped from that run's
+  `filing-input.json` only.
+- **Bench gaps found:** the engine's `contacts-block` call blocks the victim and never unblocks it; QA
+  groups are not cleaned up (868 "QA Bench Group" rows).
+- **Web login is broken (filed #13465 API, #13466 UI, blockers):** a login with a `deviceIdentity_primary`
+  the server has not seen answers 200 with a token that every endpoint refuses (401); the web app sends a
+  new uuid per login (Login.js:842). The Chromium run had all four logins BLOCKED (660 skipped); its plan
+  was not applied and Firefox was not run. Resume both once #13465/#13466 are fixed.
+- BASE_URL is the nginx UI; the bench's own API logins use one fixed device id, so API runs are unaffected.
+
+### 2026-11-03 — Auth and permission gaps closed: cross-company, cross-user, route guards
+
+Owner: "did we have Auth and permission tests completly?" then "first cover the gaps". Audit: authentication
+was already complete (missing/invalid/malformed/expired token on every endpoint; expired comes from
+`.auth/token-history.json` when `EXPIRED_TOKEN` is empty). Permissions were not.
+
+- **Admin roles:** `defineAdminEndpoint` now declares `authorization: { roles: ['COMPANY_ADMIN'],
+deniedStatus: [400, 403] }`, so the engine sends every Admin call again with a personal token. That token
+  has no company and is refused 400 "companyId is required" with no data (measured), hence 400 counts.
+  Not `tenantScoped` (the company comes from the token; a list read by another company is its own data).
+- **New specs** (owner control + read-back proof + cleanup in `finally`, each run alone first):
+  `admin-api/security/cross-tenant-writes` (6 Admin record types, rename and delete by another company),
+  `kpost-api/security/{contacts-group,kall,katchup,kdiary,profile}-cross-user`,
+  `kmail-api/security/kmail-cross-user`, `kpost-ui/auth/route-guard-security` (14 signed-in routes →
+  /login signed out; a personal user typing /usermanagement). Endpoints judged not object-scoped by their
+  backend source (caller from the token, cursor ids, public by design) are named in each file's header.
+- **Found (reproduced 2 of 2, solo):** Admin update takes over another company's HR/Workplace tiers and
+  variables (filed #13458, Karan); group leave with `memberKpostIdList` removes any member; a refused
+  legacy group removal still posts its alert; Kall join returns another call's details when naming its
+  kallID; Katchup forward unlocks another pair's attachment by uuid; thumbnail generation runs on another
+  pair's uuid; reportAbuse now reads `reportCode` while the app sends `reportID` (app's report broken).
+  The KPost API ones file through the next `product:kpost-api` run.
+- **Not probed, owner's call:** `profile-user-basic-by-kpostid` returns mobile and DOB unmasked by design
+  (kmed/kjournal lookup); `katchup-voice-translate` (paid OpenAI call); `kmail-convert-pdf` writes to S3
+  under the body's kpostID with no delete path.
+- `QA_KPOST_ID`'s login hangs (> 60 s) while qatest1-8 answer in 0.3 s; every product command sets
+  `QATEST_ONLY=true`, so runs are unaffected.
+
+### 2026-11-03 — KPost UI moved behind nginx at http://192.168.0.100; QA login down (500)
 
 Owner: "http://192.168.0.100/ this is the kpost ui dont want use the port becoz now, we have deploy on nginix".
 

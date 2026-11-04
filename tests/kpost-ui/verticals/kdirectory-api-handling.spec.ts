@@ -23,7 +23,7 @@ const SEED = {
 test.describe(
   'KPost KDirectory · an add-to-contacts the server refuses is reported',
   {
-    tag: ['@ui', '@kdirectory', '@regression'],
+    tag: ['@ui', '@verticals', '@regression'],
     annotation: [{ type: 'non-functional', description: 'resilience' }],
   },
   () => {

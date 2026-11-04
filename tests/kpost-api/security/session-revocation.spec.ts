@@ -46,7 +46,7 @@ const readWith = async (request: APIRequestContext, token: string): Promise<numb
 test.describe(
   'KPost sessions · a logged-out token stays dead @api @kpost-api @signup-login @security',
   {
-    tag: ['@api', '@signup-login', '@regression'],
+    tag: ['@api', '@auth', '@signup-login', '@regression'],
     annotation: [{ type: 'non-functional', description: 'security' }],
   },
   () => {

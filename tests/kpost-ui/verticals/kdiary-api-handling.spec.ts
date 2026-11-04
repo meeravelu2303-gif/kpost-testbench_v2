@@ -120,7 +120,7 @@ async function createWithoutId(page: Page): Promise<() => number> {
 test.describe(
   'KPost KDiary · a failed or incomplete server answer is reported',
   {
-    tag: ['@ui', '@kdiary', '@regression'],
+    tag: ['@ui', '@verticals', '@kdiary', '@regression'],
     annotation: [{ type: 'non-functional', description: 'resilience' }],
   },
   () => {

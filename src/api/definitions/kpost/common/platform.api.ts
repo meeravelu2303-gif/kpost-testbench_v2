@@ -86,10 +86,11 @@ export const publicSendMessageApi = defineUndocumentedKpostEndpoint({
   id: 'common-send-message',
   method: 'POST',
   path: '/v2/common/sendMessage',
-  summary: 'Send a Katchup message without a login (the app’s "hidden sender" path)',
+  summary: 'Send a Katchup message through the common route (the app’s "hidden sender" path)',
   tags: ['common', 'katchup', 'katchup-send', 'security'],
-  // Public: the sender comes from the BODY. QA sender and QA receiver only; writes a real message.
-  authentication: { required: false },
+  // Was public, with the sender from the BODY; since 2026-11-03 it answers 401 without a login and
+  // the app sends its token (katchup_api.dart:1331). QA sender and QA receiver only; writes a real message.
+  authentication: { required: true },
   destructive: true,
   sideEffect: 'data',
   request: body(() => sendShape({ sender: testData.kpostId })),
@@ -98,9 +99,8 @@ export const publicSendMessageApi = defineUndocumentedKpostEndpoint({
     'CommonControllerV2.java:874 sendMessage (public under /v2/common/**, SecurityConfiguration:67); ' +
     'Flutter katchup_api.dart:1310-1328 sendMessageCommon from katchup_message_controller.dart:4335-4375',
   note:
-    'security defect candidate: no token, sender taken from the body, so anyone can send as anyone ' +
-    '(the authenticated /v2/katchup/sendMessage takes the sender from the token) — verify live with ' +
-    'QA accounts before filing',
+    'was public (anyone could send as anyone); locked down live by 2026-11-03 (401 without a token). ' +
+    'The engine now checks the token is required on every run.',
 });
 
 export const publicKeyApi = defineUndocumentedKpostEndpoint({

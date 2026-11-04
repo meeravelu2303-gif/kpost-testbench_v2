@@ -74,6 +74,16 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     date: '2026-11-02',
   },
   // Already filed by hand: the bench's finding is the same fault, so it must not be filed twice.
+  // /v2/common/sendMessage was public (sender from the body: anyone could send as anyone). It now
+  // answers 401 without a login and the app sends a token (katchup_api.dart:1331): the hole was
+  // closed, and these findings came from the bench's stale public definition (now authenticated).
+  ...(['KP-942060', 'KP-44C181', 'KP-1A53B4'] as const).map((fingerprint): KnownFalsePositive => ({
+    fingerprint,
+    reason:
+      'POST /v2/common/sendMessage now requires a login (401 without a token). That is the fix for the public "send as anyone" path, not a defect; the bench definition was updated to send a token.',
+    judgedBy: 'QA triage (run-d8f8a84c)',
+    date: '2026-11-03',
+  })),
   {
     fingerprint: 'KP-11C494',
     reason:

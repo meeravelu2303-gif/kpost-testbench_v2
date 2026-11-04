@@ -21,7 +21,7 @@ function localAt(hoursAhead: number): string {
 
 test.describe(
   'KPost KDiary · adding participants to a task needs at least one',
-  { tag: ['@ui', '@kdiary', '@regression'] },
+  { tag: ['@ui', '@verticals', '@kdiary', '@regression'] },
   () => {
     test.skip(!ME || !testData.kpostId, 'needs a real QA account (QA_KPOST_ID)');
 

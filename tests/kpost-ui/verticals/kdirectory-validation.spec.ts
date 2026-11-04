@@ -11,7 +11,7 @@ import { pickReactSelect, reactSelectByPlaceholder } from '../support/react-sele
  */
 test.describe(
   'KPost KDirectory · Advanced Search refuses a pincode that does not exist',
-  { tag: ['@ui', '@kdirectory', '@regression'] },
+  { tag: ['@ui', '@verticals', '@regression'] },
   () => {
     test.skip(!testData.kpostId, 'needs a real QA account (QA_KPOST_ID)');
 
