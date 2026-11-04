@@ -213,10 +213,13 @@ replaceOnce(
   '$1multiDexEnabled true\n$1testInstrumentationRunner "pl.leancode.patrol.PatrolJUnitRunner"\n$1testInstrumentationRunnerArguments clearPackageData: "true"',
   'defaultConfig',
 );
+// installation: the debug APK is ~500 MB; over wireless adb its install outlasts the default
+// timeout (ShellCommandUnresponsiveException, "Test APK installation Error", 0 tests run).
 replaceOnce(
   gradle,
   /^([ \t]*)lintOptions \{$/m,
-  '$1testOptions {\n$1    execution "ANDROIDX_TEST_ORCHESTRATOR"\n$1}\n\n$1lintOptions {',
+  '$1testOptions {\n$1    execution "ANDROIDX_TEST_ORCHESTRATOR"\n$1}\n\n' +
+    '$1installation {\n$1    timeOutInMs 15 * 60 * 1000\n$1}\n\n$1lintOptions {',
   'testOptions',
 );
 replaceOnce(

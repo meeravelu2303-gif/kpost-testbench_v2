@@ -85,6 +85,20 @@ export const KNOWN_FALSE_POSITIVES: readonly KnownFalsePositive[] = [
     date: '2026-11-03',
   })),
   {
+    fingerprint: 'KP-C18F54',
+    reason:
+      'Duplicate of #13355: every 500 in this signup aggregate is an unknown or empty countryCode, which #13355 (open) already covers.',
+    judgedBy: 'QA review of held items (run-d8f8a84c)',
+    date: '2026-11-04',
+  },
+  {
+    fingerprint: 'KP-ED2A92',
+    reason:
+      'Duplicate of #13464 and #13406: the 500s in this updateContactInformation aggregate are the over-length addressLine1/addressLine2 (#13464) and the edge-of-limit pinCode/address cases (#13406), both open.',
+    judgedBy: 'QA review of held items (run-d8f8a84c)',
+    date: '2026-11-04',
+  },
+  {
     fingerprint: 'KP-11C494',
     reason:
       'Duplicate of #13355 (an unknown countryCode crashes signup with a 500): the only crash in this signup boundary finding is countryCode; the other cases are 409 "already registered" because the base request reuses an existing KPOST ID.',

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kpost5_2023/app_common/constants/kpost_icons.dart';
 import 'package:kpost5_2023/settings/views/widget/Education_added_widget.dart';
+import 'package:kpost5_2023/settings/views/widget/college-widget.dart';
+import 'package:kpost5_2023/settings/views/widget/school_widget.dart';
+import 'package:kpost5_2023/settings/views/widget/university_widget.dart';
 import 'package:patrol/patrol.dart';
 
 import '../support/bench.dart';
@@ -41,8 +44,18 @@ void main() {
   Future<List<Map<String, dynamic>>> stored(String kind) async =>
       (await ApiUser.phoneAccountForCleanup()).profileList('${kind}Details');
 
+  // The open tab's form. All three tab pages stay built, so an unscoped finder also matches the
+  // hidden forms' fields, and scrolling to one of them swipes the tabs to that page.
+  const forms = {
+    'School': EductionTextfieldwidget,
+    'College': CollegeTextfieldwidget,
+    'University': UniversityTextfieldwidget,
+  };
+  var openTab = 'School';
+
   /// Drawer › Settings › Profile Creation › Education (the list), on the [tab] tab.
   Future<void> openEducation(PatrolIntegrationTester $, {String tab = 'School'}) async {
+    openTab = tab;
     await signInWithPassword($);
     await $(find.byIcon(KPOST.KP_20_Menu_Open)).tap();
     await tapDrawerItem($, 'Settings');
@@ -59,7 +72,18 @@ void main() {
     await $.pump(const Duration(seconds: 2));
   }
 
-  PatrolFinder field(PatrolIntegrationTester $, String hint) => $(TextField).containing(hint);
+  PatrolFinder form(PatrolIntegrationTester $) => $(forms[openTab]!);
+
+  /// Scrolls [target] into view inside the open form's own scroll view. scrollTo() alone scrolls the
+  /// first Scrollable it finds, which is the hidden School page's.
+  Future<PatrolFinder> reveal(PatrolIntegrationTester $, PatrolFinder target) => target.scrollTo(
+        view: find
+            .descendant(of: find.byType(forms[openTab]!), matching: find.byType(Scrollable))
+            .first,
+      );
+
+  PatrolFinder field(PatrolIntegrationTester $, String hint) =>
+      form($).$(TextField).containing(hint);
 
   String textOf(PatrolIntegrationTester $, String hint) =>
       $.tester.widget<TextField>(field($, hint).first).controller?.text ?? '';
@@ -76,20 +100,24 @@ void main() {
     await field($, nameHint).enterText(name);
     if (college) {
       await field($, 'Enter Degree').enterText('B.E.');
-      await field($, 'Enter Field').scrollTo().enterText('Engineering');
+      await (await reveal($, field($, 'Enter Field'))).enterText('Engineering');
     } else {
       await field($, 'Enter Standard').enterText('12th');
     }
-    await field($, 'Enter Course').scrollTo().enterText('Computer Science');
-    await field($, 'Type Message Here...').scrollTo().enterText('QA bench achievement');
-    await field($, 'From').scrollTo().enterText(from);
-    await field($, 'To').scrollTo().enterText(to);
+    await (await reveal($, field($, 'Enter Course'))).enterText('Computer Science');
+    await (await reveal($, field($, 'Type Message Here...'))).enterText('QA bench achievement');
+    await (await reveal($, field($, 'From'))).enterText(from);
+    await (await reveal($, field($, 'To'))).enterText(to);
     await $.pump(const Duration(milliseconds: 500));
   }
 
   /// Taps Save and waits up to 10 s for the form to close (it goes back only on HTTP 200).
   Future<String> save(PatrolIntegrationTester $) async {
-    await $('Save').scrollTo().tap();
+    // The "No Data Found" toast (an empty list) covers the Save button until it fades.
+    for (var second = 0; second < 8 && $('No Data Found').exists; second++) {
+      await $.pump(const Duration(seconds: 1));
+    }
+    await (await reveal($, form($).$('Save'))).tap();
     for (var second = 0; second < 10; second++) {
       await $.pump(const Duration(seconds: 1));
       if ($('Add New').exists) break;
@@ -97,9 +125,13 @@ void main() {
     return dumpScreen($, 'after Save');
   }
 
-  /// The list card that shows [name].
-  PatrolFinder card(PatrolIntegrationTester $, String name) =>
-      $(find.ancestor(of: find.text(name), matching: find.byType(SchoolAddNew)));
+  /// The list card that shows [name]. The list title-cases names ("QA school 1" shows as
+  /// "Qa School 1"), so the text is matched ignoring case.
+  PatrolFinder card(PatrolIntegrationTester $, String name) => $(find.ancestor(
+        of: find.byWidgetPredicate(
+            (w) => w is Text && w.data?.toLowerCase() == name.toLowerCase()),
+        matching: find.byType(SchoolAddNew),
+      ));
 
   String unique(String what) => 'QA $what ${DateTime.now().millisecondsSinceEpoch}';
 
@@ -111,7 +143,7 @@ void main() {
       await addNew($);
       await fill($, nameHint: 'Enter School Name', name: name);
       final shown = await save($);
-      expect($(name), findsWidgets, reason: 'the new School is listed; on screen: $shown');
+      expect(card($, name), findsWidgets, reason: 'the new School is listed; on screen: $shown');
       final row = (await stored('school')).where((r) => r['schoolName'] == name);
       expect(row, hasLength(1), reason: 'the server keeps the School once');
       expect(row.first, containsPair('standard', '12th'));
@@ -132,7 +164,7 @@ void main() {
       await addNew($);
       await fill($, nameHint: 'Enter Collage Name', name: name, college: true);
       final shown = await save($);
-      expect($(name), findsWidgets, reason: 'the new College is listed; on screen: $shown');
+      expect(card($, name), findsWidgets, reason: 'the new College is listed; on screen: $shown');
       final row = (await stored('college')).where((r) => r['collegeName'] == name);
       expect(row, hasLength(1), reason: 'the server keeps the College once');
       expect(row.first, containsPair('degree', 'B.E.'));
@@ -151,7 +183,7 @@ void main() {
       await addNew($);
       await fill($, nameHint: 'Enter University Name', name: name, college: true);
       final shown = await save($);
-      expect($(name), findsWidgets, reason: 'the new University is listed; on screen: $shown');
+      expect(card($, name), findsWidgets, reason: 'the new University is listed; on screen: $shown');
       final row = (await stored('university')).where((r) => r['universityName'] == name);
       expect(row, hasLength(1), reason: 'the server keeps the University once');
       expect(row.first, containsPair('course', 'Computer Science'));
@@ -211,10 +243,10 @@ void main() {
   patrolTest('the Year fields take 4 digits and nothing else', config: benchConfig, ($) async {
     await openEducation($);
     await addNew($);
-    await field($, 'From').scrollTo().enterText('20155');
+    await (await reveal($, field($, 'From'))).enterText('20155');
     await $.pump(const Duration(milliseconds: 500));
     expect(textOf($, 'From'), '2015', reason: 'a 5th digit is not taken (LengthLimitingTextInputFormatter(4))');
-    await field($, 'To').scrollTo().enterText('ab12');
+    await (await reveal($, field($, 'To'))).enterText('ab12');
     await $.pump(const Duration(milliseconds: 500));
     expect(textOf($, 'To'), '12',
         reason: 'letters are not taken in a year (school_widget.dart has a number keyboard but no '
@@ -273,7 +305,7 @@ void main() {
       await card($, name).$(find.byIcon(KPOST.KP_29_Delete)).tap();
       await $.pump(const Duration(seconds: 3));
       final shown = dumpScreen($, 'after Delete');
-      expect($(name), findsNothing, reason: 'the card leaves the list; on screen: $shown');
+      expect(card($, name), findsNothing, reason: 'the card leaves the list; on screen: $shown');
       expect((await stored('school')).where((r) => r['schoolName'] == name), isEmpty,
           reason: 'the server no longer has the School');
     } finally {

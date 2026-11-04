@@ -517,20 +517,34 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       });
       expect.soft(sent.status, 'the copies message is accepted').toBeLessThan(300);
 
-      // B's and C's view of the message must not reveal D (the confidential recipient).
-      const bView = await conversation(endpoints, B, A.username);
-      const cView = await conversation(endpoints, C, A.username);
+      // B's and C's copy of THIS message must not reveal D (the confidential recipient). Only the
+      // marker row is checked: older rows in the same conversation (scheduled-call notices) name D
+      // legitimately.
+      const rowsOf = async (who: Principal) => {
+        const view = await conversation(endpoints, who, A.username);
+        const parsed = JSON.parse(view.text || '{}') as { data?: Record<string, unknown>[] };
+        return (parsed.data ?? []).filter((row) => row.actualMessage === marker);
+      };
+      const [bRows, cRows, dRows] = [await rowsOf(B), await rowsOf(C), await rowsOf(D)];
+      expect.soft(bRows.length, 'the TO recipient receives the message').toBeGreaterThan(0);
+      expect.soft(cRows.length, 'the Copy recipient receives the message').toBeGreaterThan(0);
       expect
         .soft(
-          bView.text,
+          JSON.stringify(bRows),
           "the TO recipient must not see the confidential copy's address (NFR-SEC02)",
         )
         .not.toContain(D.username);
       expect
-        .soft(cView.text, 'the Copy recipient must not see the confidential copy (NFR-SEC02)')
+        .soft(
+          JSON.stringify(cRows),
+          'the Copy recipient must not see the confidential copy (NFR-SEC02)',
+        )
         .not.toContain(D.username);
 
-      await cleanup(endpoints, A, sent.msgID);
+      // The send answers with B's row only, but stores one row per recipient: delete them all.
+      const ids = new Set([sent.msgID, ...[...bRows, ...cRows, ...dRows].map((row) => row.msgID)]);
+      for (const msgID of ids)
+        await cleanup(endpoints, A, typeof msgID === 'number' ? msgID : undefined);
     },
   );
 

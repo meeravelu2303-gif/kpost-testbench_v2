@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { readBugzillaConfig } from '@config/bugzilla.config';
 import { DEFAULT_SUITE, SUITES } from '@config/ownership.config';
 import { createLogger } from '@utils/logger';
@@ -10,7 +11,7 @@ import {
 } from '../../../src/bug-tracker/ticket/bug-builder';
 import { BugzillaClient } from '../../../src/bug-tracker/bugzilla/bugzilla-client';
 import { gatekeep } from '../../../src/bug-tracker/gates/gatekeeper';
-import type { BugCandidate } from '../../../src/bug-tracker/findings/bug-candidate';
+import type { BugCandidate, ProofFile } from '../../../src/bug-tracker/findings/bug-candidate';
 
 /**
  * The single supported way to file a bug by hand: it uses the engine's formatter and gatekeeper,
@@ -40,6 +41,8 @@ import type { BugCandidate } from '../../../src/bug-tracker/findings/bug-candida
  *   curl            runnable, with $KPOST_TOKEN in place of a real bearer token
  *   verificationSql the query that shows the discrepancy, for any DB-backed finding
  *   reproduction    { attempts, failures } — say whether it failed once or every time
+ *   mobileTest      a mobile bug: the failed Patrol test's name; its phone screenshots from the
+ *                   newest `npm run mobile:test` are attached (required for a mobile finding)
  */
 
 const REQUIRED = [
@@ -81,6 +84,32 @@ function normaliseSeverity(value: unknown): string {
   return mapped;
 }
 
+/**
+ * A mobile bug's proof: the screenshots the newest `npm run mobile:test` kept for the named failed
+ * test (scripts/mobile/screenshots.mjs). Refuses rather than filing a mobile bug without them.
+ */
+function mobileProof(testName: string): ProofFile[] {
+  const latest = path.join('reports', 'mobile', 'latest.json');
+  if (!existsSync(latest)) throw new Error('mobileTest: no mobile run yet (npm run mobile:test)');
+  const { dir } = JSON.parse(readFileSync(latest, 'utf8')) as { dir: string };
+  const failures = JSON.parse(readFileSync(path.join(dir, 'failures.json'), 'utf8')) as Array<{
+    test: string;
+    screenshots: string[];
+  }>;
+  const match = failures.find((f) => f.test === testName);
+  if (!match?.screenshots.length) {
+    throw new Error(
+      `mobileTest: "${testName}" has no screenshots in the newest mobile run (${dir}); ` +
+        `failed tests there: ${failures.map((f) => `"${f.test}"`).join(', ') || 'none'}`,
+    );
+  }
+  return match.screenshots.map((file, i) => ({
+    path: file,
+    contentType: 'image/png',
+    label: `Phone screenshot ${i + 1} (${path.basename(file, '.png').replace(/^\d+-/, '')})`,
+  }));
+}
+
 function loadCandidate(): BugCandidate {
   const arg = process.argv.find((a) => a.startsWith('--bug='));
   const file = arg ? arg.slice('--bug='.length) : process.env.MANUAL_BUG;
@@ -95,6 +124,11 @@ function loadCandidate(): BugCandidate {
     );
   }
   raw.severity = normaliseSeverity(raw.severity);
+  if (typeof raw.mobileTest === 'string' && !raw.proof) raw.proof = mobileProof(raw.mobileTest);
+  // Owner, 2026-11-04: every mobile bug carries the phone's screenshots from here on.
+  if (raw.product === 'Kpost Mobile Application' && !raw.proof) {
+    throw new Error('a mobile finding needs "mobileTest" (the failed test) or "proof" screenshots');
+  }
 
   // The owner, suite and version follow the Bugzilla product the finding names (ownership.config):
   // a fixed KPost API default sent eight hand-filed KMail bugs to the wrong developer (2026-11-02).
@@ -190,4 +224,23 @@ test('file a hand-authored finding through the standard formatter', async () => 
   }
   const created = await client.createBug(fields as unknown as Record<string, unknown>);
   console.log('created:', JSON.stringify(created));
+  if (!('id' in created)) return;
+
+  // The proof (a mobile bug's phone screenshots): createBug files the text only.
+  const missed: string[] = [];
+  for (const item of candidate.proof ?? []) {
+    const slug = item.label.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    const fileName = `${candidate.id}-${slug}${path.extname(item.path)}`;
+    const attached = await client.attachFile(created.id, {
+      fileName,
+      summary: `${item.label} — proof for ${candidate.id}`,
+      data: readFileSync(item.path),
+      contentType: item.contentType,
+    });
+    console.log(`${attached ? 'attached' : 'NOT ATTACHED'}: ${fileName}`);
+    if (!attached) missed.push(fileName);
+  }
+  if (missed.length) {
+    throw new Error(`bug #${created.id} filed, but ${missed.join(', ')} did not attach`);
+  }
 });

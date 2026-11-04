@@ -6,6 +6,7 @@
 //   npm run mobile:test -- --device emulator-5554          a chosen device
 //   npm run mobile:test -- --video                         record video on a phone too
 //   npm run mobile:test -- --max-minutes 45                stop a hung run later (default 30)
+//   npm run mobile:test -- --verbose                       show Gradle's output (a run that ends with 0 tests)
 //
 // The phone signs in as qatest7 (no Playwright run uses it, so neither kicks the other's session) and
 // qatest8 is the second user, driven over the API from inside the test. Account values reach the test
@@ -14,8 +15,10 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
+import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import { watchScreens } from './screenshots.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 dotenv.config({ path: path.join(ROOT, '.env'), quiet: true });
@@ -112,12 +115,18 @@ const device = option('--device') ?? devices[0];
 const video = device.startsWith('emulator-') || args.includes('--video');
 // A hung run (Patrol can wait for ever after a failure) is stopped after this many minutes.
 const maxMinutes = Number(option('--max-minutes') ?? 30);
+// --verbose prints Gradle's command line, whose -Pdart-defines carry the accounts' values (base64, so
+// the password too): that output is filtered, never inherited.
+const verbose = args.includes('--verbose');
+const redact = (text) => text.replace(/-Pdart-defines=\S+/g, '-Pdart-defines=<redacted>');
 const patrolArgs = [
   'test',
   `--dart-define-from-file=${definesFile}`,
   '--device',
   device,
   ...(video ? ['--record-video'] : []),
+  // Patrol hides Gradle's own error (an install or orchestrator failure) unless asked.
+  ...(verbose ? ['--verbose'] : []),
   ...(target ? ['--target', path.join('patrol_test', target)] : []),
 ];
 console.log(`mobile:test: ${stamp.branch} @ ${stamp.commit} on ${device}, KPost ${stamp.kpost}`);
@@ -133,8 +142,16 @@ async function openTunnel() {
       phone.on('error', () => qa.destroy());
       qa.on('error', () => phone.destroy());
     });
-    await new Promise((resolve, reject) => {
-      server.once('error', reject);
+    await new Promise((resolve) => {
+      // In use: an earlier mobile:test that lost its phone is still waiting, relays and all.
+      server.once('error', (err) =>
+        fail(
+          err.code === 'EADDRINUSE'
+            ? `port ${port} is in use: an earlier mobile:test is still running; stop it first ` +
+                '(Get-CimInstance Win32_Process | Where-Object CommandLine -match "run.mjs")'
+            : `the relay on port ${port} could not start: ${err.message}`,
+        ),
+      );
       server.listen(Number(port), '127.0.0.1', resolve);
     });
     relays.push(server);
@@ -153,12 +170,19 @@ async function openTunnel() {
 
 // Patrol runs asynchronously so the tunnel's relays keep serving while it does.
 const closeTunnel = await openTunnel();
+// A failed test's screenshots, the proof a mobile bug is filed with (screenshots.mjs).
+const screens = watchScreens(ROOT, device);
 try {
   const child = spawn('patrol', patrolArgs, {
     cwd: APP,
-    stdio: 'inherit',
+    stdio: verbose ? ['inherit', 'pipe', 'pipe'] : 'inherit',
     shell: process.platform === 'win32',
   });
+  if (verbose) {
+    // Whole lines, so a value split across two chunks is still caught.
+    readline.createInterface({ input: child.stdout }).on('line', (l) => console.log(redact(l)));
+    readline.createInterface({ input: child.stderr }).on('line', (l) => console.error(redact(l)));
+  }
   const watchdog = setTimeout(() => {
     console.error(`mobile:test: still running after ${maxMinutes} min: stopped (--max-minutes)`);
     // The whole tree: patrol starts Gradle and adb, which outlive a killed parent on Windows.
@@ -172,6 +196,13 @@ try {
   });
   clearTimeout(watchdog);
 } finally {
+  const { dir, failures } = await screens.stop();
+  if (failures.length) {
+    console.log(`mobile:test: screenshots of the failed tests in ${path.relative(ROOT, dir)}`);
+    for (const { test, screenshots } of failures) {
+      console.log(`  ${test}: ${screenshots.length} screenshot(s)`);
+    }
+  }
   closeTunnel();
   fs.rmSync(definesFile, { force: true });
   if (signup) {

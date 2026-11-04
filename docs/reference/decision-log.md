@@ -3,7 +3,29 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-03 (latest) — KPost API full run filed; web login blocked by a new-device token rule
+### 2026-11-04 (latest) — KPost API held items reviewed, hand-filed bugs re-checked; new-device 401 fixed
+
+Owner: "first complete that [the 7 held items and the 15 re-check-by-hand bugs] then we test mobile then we go
+to chrome".
+
+- **New-device login (#13465/#13466) is fixed** since ~11:50 IST. Before that it was half-fixed: after a
+  server restart an account's FIRST new-device login worked and every later one got a token refused with
+  401, so one successful login proved nothing. The poll now needs two back-to-back new-device logins.
+- **Held items (run-d8f8a84c):** #611 (forwardKatchupMessageNew, no referenceMessage → 500) reproduced 3/3
+  on replay → REOPENED. The four other flow 500s (createOrRemoveBackupAdmin, holdOrRelease, endKoolKall,
+  modifyKallMembers) passed with their flows run alone → not filed. The signup and updateContactInformation
+  aggregates are duplicates of #13355 and #13464/#13406 → known-false-positives (KP-C18F54, KP-ED2A92).
+- **Confidential-copy flow was a bench false failure** (failing silently every run): it searched the whole
+  conversation for the confidential recipient, and older scheduled-call notices name qatest4 legitimately.
+  Replay showed TO and Copy recipients never see the hidden list. It now checks only the marker row, and
+  deletes every row the send stored (the send answers with one row but stores one per recipient).
+- **Re-check by hand (15):** #13310 (news) and #13389 (logged-out token revives) fixed → CLOSED. Still
+  broken, left as is: #966, #1306, #1336, #1337, #1356, #1357, #13308, #13355, #13385, #13387. #13382: a
+  non-JSON privacy value no longer breaks the profile reads, but the save still accepts it (left open;
+  qatest4's privacy_details restored to NULL in the QA DB). Not re-checkable now: #13372 (needs a report
+  written 00:00–05:30 IST) and #13391 (would overwrite objects on the live S3 bucket).
+
+### 2026-11-03 — KPost API full run filed; web login blocked by a new-device token rule
 
 Owner: "run the kpost api fully … smoke, sanity, regression … file the valid bugs and update the bugs status
 properly then run the kpost ui chromium file … then run the firefox".
