@@ -15,6 +15,40 @@ class ApiUser {
   final Dio _dio;
   final String kpostId;
 
+  /// The signed-in KPost API client (base URL [Bench.kpostApi], bearer token set), for the
+  /// module helpers in support/<module>_api.dart, which are extensions on this class.
+  Dio get dio => _dio;
+
+  /// This account's bearer token (for a second client, e.g. the KMail API).
+  String get token => '${_dio.options.headers['Authorization']}'.replaceFirst('Bearer ', '');
+
+  /// Every map anywhere in [node] (a decoded JSON response) for which [test] holds, depth first.
+  /// A JSON string column that holds a list or an object is decoded and searched too.
+  static List<Map<String, dynamic>> findMaps(
+    Object? node,
+    bool Function(Map<String, dynamic> map) test,
+  ) {
+    final found = <Map<String, dynamic>>[];
+    void walk(Object? n) {
+      if (n is Map) {
+        final map = n.map((k, v) => MapEntry('$k', v));
+        if (test(map)) found.add(map);
+        n.values.forEach(walk);
+      } else if (n is List) {
+        n.forEach(walk);
+      } else if (n is String && (n.startsWith('{') || n.startsWith('['))) {
+        try {
+          walk(jsonDecode(n));
+        } on FormatException {
+          // plain text that only looks like JSON
+        }
+      }
+    }
+
+    walk(node);
+    return found;
+  }
+
   /// The second user (qatest8).
   static Future<ApiUser> peer() => signIn(Bench.peerId, Bench.peerPassword);
 

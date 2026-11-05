@@ -113,10 +113,12 @@ void main() {
 
   /// Taps Save and waits up to 10 s for the form to close (it goes back only on HTTP 200).
   Future<String> save(PatrolIntegrationTester $) async {
-    // The "No Data Found" toast (an empty list) covers the Save button until it fades.
-    for (var second = 0; second < 8 && $('No Data Found').exists; second++) {
-      await $.pump(const Duration(seconds: 1));
+    // The empty list's "No Data Found" snackbar sits over Save/Cancel and outlasted 13 s of waiting
+    // in a run; it is not what these tests check, so it is cleared.
+    for (final messenger in find.byType(ScaffoldMessenger).evaluate()) {
+      ((messenger as StatefulElement).state as ScaffoldMessengerState).clearSnackBars();
     }
+    await $.pump(const Duration(milliseconds: 500));
     await (await reveal($, form($).$('Save'))).tap();
     for (var second = 0; second < 10; second++) {
       await $.pump(const Duration(seconds: 1));

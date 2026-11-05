@@ -4,8 +4,11 @@ import { expect, test } from '@fixtures';
 
 /**
  * AWS business rules for the two presign generators (Kmail vs Katchup S3 folders) and check-attachment.
- * Not gated: a presigned URL creates no S3 object. check-attachment's numeric keys are a status legend;
- * `data` holds `{uuid: statusCode}` entries, and a never-presigned uuid is simply absent.
+ * check-attachment's numeric keys are a status legend; `data` holds `{uuid: statusCode}` entries, and a
+ * never-presigned uuid is simply absent.
+ * A presign is a write: it puts a 0-byte public-read object in the live S3 bucket and saves an
+ * attachment row (PreSignedURLServiceImpl putObject + kmail/katchupAttachmentRepo.save). So the file is
+ * gated behind AWS_LIFECYCLE and every uuid it mints is deleted afterwards (deleteAttachmentFromS3).
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
@@ -14,14 +17,35 @@ interface CheckAttachmentBody {
   data?: Array<Record<string, string>>;
 }
 
+/** Every uuid a presign minted, deleted after each test. */
+const minted: string[] = [];
+
 function extractUuid(url: string): string | undefined {
-  return url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)?.[1];
+  const uuid = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)?.[1];
+  if (uuid) minted.push(uuid);
+  return uuid;
 }
 
 test.describe(
   'KPost AWS · business rules @api @aws',
   { tag: ['@api', '@platform', '@regression'] },
   () => {
+    test.skip(
+      process.env.AWS_LIFECYCLE !== 'true',
+      'each presign writes a placeholder to the live S3 bucket; set AWS_LIFECYCLE=true',
+    );
+
+    test.afterEach(async ({ endpoints }) => {
+      for (const uuid of minted.splice(0)) {
+        const deleted = await endpoints.sendTo(
+          'aws-delete-attachment',
+          { pathParams: { uuid } },
+          { label: 'aws:cleanup-delete', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect.soft(deleted.status, `the placeholder ${uuid} is deleted afterwards`).toBe(200);
+      }
+    });
+
     test('generate-presigned and katchup-presigned mint keys under different S3 module folders', async ({
       endpoints,
     }) => {
@@ -74,6 +98,9 @@ test.describe(
           },
         );
         const text = huge.bodyText ?? '';
+        // Both presigns (and a wrongly granted 50 GB one) are cleaned up after the test.
+        extractUuid(small.bodyText ?? '');
+        extractUuid(text);
         test.info().annotations.push({
           type: 'observed',
           description: `50 GB → HTTP ${huge.status}: ${text.replace(/X-Amz-[^&"]+/g, 'X-Amz-…').slice(0, 200)}`,

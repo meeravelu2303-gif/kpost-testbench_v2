@@ -3,7 +3,28 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-04 (latest) — KPost API held items reviewed, hand-filed bugs re-checked; new-device 401 fixed
+### 2026-11-04 (latest, night) — UI health: a cache-busted API call is not a "broken asset"; Chromium plan not applied
+
+The Chromium preview (run-1a8d4fdc, 773 tests: 625 passed, 104 failed) planned 11 new bugs, all one
+false alarm. Bench UI flows had created and deleted two test groups (`qau368`, `qau413`: active_status N,
+every member removed_flag 1). qatest1's contact list still lists them, so the web app requests their
+avatars, and since KP-3F7D82 `downloadGroupProfileImage` answers 403 to a non-member (correct). The health
+monitor classed that API call as a broken static asset because its cache-buster `?v=…/profile/x.jpg`
+matched `\.jpg(\?|$)`, failing every screen that shows contacts (10 crawls + the Contacts "crash").
+
+- `src/ui/ui-health.ts`: `isStaticAsset()` tests the URL path only; an API failure is context
+  (`failedApiCalls`), as every other background GET already was. Self-test `tests/framework/ui-health.spec.ts`.
+- The Chromium plan was NOT applied (bug:apply is all-or-nothing). Its genuine items (reopen #1022, close
+  #1328/#13288) are re-checked live by hand.
+- Open question for the owner: should a deleted group stay in its former members' contact list? If not, that
+  is one UI bug (Ayyappan), filed by hand.
+- Also written today, not yet run: KPost API validation/security specs for Group, Settings, KNews, KBooking
+  (writes behind `KBOOKING_LIFECYCLE`, not authorized) and AWS access; `tests/kmail-api/validation` (now in
+  `product:kmail-api`); 13 UI spec files; 77 mobile Patrol tests. `aws-business-rules.spec.ts` is now behind
+  `AWS_LIFECYCLE` and deletes every presign placeholder it creates. Mobile: failure screenshots
+  (`scripts/mobile/screenshots.mjs`, attached by `bug:file` via `mobileTest`), a 15-min APK install timeout.
+
+### 2026-11-04 — KPost API held items reviewed, hand-filed bugs re-checked; new-device 401 fixed
 
 Owner: "first complete that [the 7 held items and the 15 re-check-by-hand bugs] then we test mobile then we go
 to chrome".

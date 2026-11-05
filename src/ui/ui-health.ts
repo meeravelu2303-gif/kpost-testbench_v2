@@ -46,7 +46,21 @@ function appHosts(): string[] {
     .filter(Boolean);
 }
 
-const STATIC_ASSET = /\.(js|mjs|css|png|jpe?g|gif|svg|webp|woff2?|ttf|ico)(\?|$)/i;
+const STATIC_ASSET = /\.(js|mjs|css|png|jpe?g|gif|svg|webp|woff2?|ttf|ico)$/i;
+
+/**
+ * True when the URL's PATH is a static file. The query is ignored: an API call such as
+ * `/v2/group/downloadGroupProfileImage/{group}/{me}?v=…/profile/x.jpg` carries a file name only as a
+ * cache-buster, and treating it as a broken asset turned a 403 for a group the viewer had left into a
+ * "screen broke" failure on every screen that lists contacts (Chromium run, 2026-11-04).
+ */
+export function isStaticAsset(url: string): boolean {
+  try {
+    return STATIC_ASSET.test(new URL(url).pathname);
+  } catch {
+    return STATIC_ASSET.test(url.split(/[?#]/)[0] ?? '');
+  }
+}
 
 /** True when a request targets one of the KPost application hosts (not a third party). */
 function isAppRequest(url: string, hosts: readonly string[]): boolean {
@@ -83,7 +97,7 @@ export function watchUiHealth(page: Page): () => UiHealthReport {
     const url = response.url();
     if (!isAppRequest(url, hosts)) return; // ignore third-party/analytics failures
     const call: FailedCall = { url: url.slice(0, 300), status, method: request.method() };
-    if (STATIC_ASSET.test(url)) report.brokenResources.push(call);
+    if (isStaticAsset(url)) report.brokenResources.push(call);
     else report.failedApiCalls.push(call);
   };
 
