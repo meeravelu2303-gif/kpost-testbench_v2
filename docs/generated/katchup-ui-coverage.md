@@ -1,6 +1,6 @@
 # Katchup UI coverage — every feature, measured
 
-**GENERATED — do not edit.** Written by `tests/framework/coverage/katchup-ui-coverage.spec.ts`.
+**GENERATED — do not edit.** Written by `tests/framework/ledgers/katchup-ui-features-ledger.spec.ts`.
 Reconciles `src/ui/katchup-features.ts` (enumerated from the FRD, the `katchupMessageType` enum,
 and the frontend action menus) so a Katchup feature cannot be silently missed.
 

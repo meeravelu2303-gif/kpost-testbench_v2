@@ -57,16 +57,17 @@ What the bench tests, product by product and type by type, with file and test co
 
 ## `generated/` — written by `npm run framework`, never hand-edited
 
-| Document                                                     | Written by                    | What it reconciles                                           |
-| ------------------------------------------------------------ | ----------------------------- | ------------------------------------------------------------ |
-| [`coverage.md`](generated/coverage.md)                       | `coverage-ledger.spec.ts`     | Every documented endpoint and screen against the registry.   |
-| [`live-endpoints.md`](generated/live-endpoints.md)           | `live-coverage.spec.ts`       | What runs on the live application and what is blocked.       |
-| [`blocked-endpoints.md`](generated/blocked-endpoints.md)     | `live-coverage.spec.ts`       | The blocked set, grouped by reason.                          |
-| [`component-routing.md`](generated/component-routing.md)     | `component-routing.spec.ts`   | Every endpoint → its Bugzilla component.                     |
-| [`payload-audit.md`](generated/payload-audit.md)             | `payload-audit.spec.ts`       | Every documented example field is actually sent.             |
-| [`ui-coverage.md`](generated/ui-coverage.md)                 | `ui-coverage.spec.ts`         | Every screen, the check catalogue and the interaction flows. |
-| [`katchup-ui-coverage.md`](generated/katchup-ui-coverage.md) | `katchup-ui-coverage.spec.ts` | Every Katchup feature against its UI spec.                   |
-| [`skips.md`](generated/skips.md)                             | `skip-ledger.spec.ts`         | Every skip reason in the suite, in one of four classes.      |
+| Document                                                             | Written by                             | What it reconciles                                                               |
+| -------------------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
+| [`coverage.md`](generated/coverage.md)                               | `endpoints-and-screens-ledger.spec.ts` | Every documented endpoint and screen against the registry.                       |
+| [`live-endpoints.md`](generated/live-endpoints.md)                   | `live-endpoints-ledger.spec.ts`        | What runs on the live application and what is blocked.                           |
+| [`blocked-endpoints.md`](generated/blocked-endpoints.md)             | `live-endpoints-ledger.spec.ts`        | The blocked set, grouped by reason.                                              |
+| [`component-routing.md`](generated/component-routing.md)             | `component-routing.spec.ts`            | Every endpoint → its Bugzilla component.                                         |
+| [`payload-audit.md`](generated/payload-audit.md)                     | `payload-audit.spec.ts`                | Every documented example field is actually sent.                                 |
+| [`ui-coverage.md`](generated/ui-coverage.md)                         | `ui-screens-ledger.spec.ts`            | Every screen, the check catalogue and the interaction flows.                     |
+| [`katchup-ui-coverage.md`](generated/katchup-ui-coverage.md)         | `katchup-ui-features-ledger.spec.ts`   | Every Katchup feature against its UI spec.                                       |
+| [`kpost-api-type-coverage.md`](generated/kpost-api-type-coverage.md) | `test-types-ledger.spec.ts`            | Each KPost API test type: how many endpoints it really covers, and the gap list. |
+| [`skips.md`](generated/skips.md)                                     | `skip-ledger.spec.ts`                  | Every skip reason in the suite, in one of four classes.                          |
 
 ## `api-specs/` — the product owner's source files
 

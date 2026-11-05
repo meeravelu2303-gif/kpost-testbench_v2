@@ -196,7 +196,7 @@ test.describe('coverage ledger @framework', () => {
     const lines: string[] = [
       '# Coverage ledger — every endpoint, every screen',
       '',
-      '**GENERATED — do not edit.** Written by `tests/framework/coverage/coverage-ledger.spec.ts`',
+      '**GENERATED — do not edit.** Written by `tests/framework/ledgers/endpoints-and-screens-ledger.spec.ts`',
       '(`npm run framework`). It reconciles the registry against the generated contracts, so it',
       'cannot drift from what is actually tested.',
       '',

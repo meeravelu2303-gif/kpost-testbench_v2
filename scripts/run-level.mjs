@@ -113,7 +113,6 @@ const PRODUCTS = {
       'tests/kpost-api/boundary',
       'tests/kpost-api/business-rules',
       'tests/kpost-api/contract',
-      'tests/kpost-api/coverage',
       'tests/kpost-api/data-integrity',
       'tests/kpost-api/e2e',
       'tests/kpost-api/maintenance',

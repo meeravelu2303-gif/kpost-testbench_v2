@@ -123,7 +123,7 @@ test.describe('live endpoint coverage @framework', () => {
     const lines = [
       '# Live endpoints — what we can and cannot test',
       '',
-      '**GENERATED — do not edit.** Written by `tests/framework/coverage/live-coverage.spec.ts`',
+      '**GENERATED — do not edit.** Written by `tests/framework/ledgers/live-endpoints-ledger.spec.ts`',
       '(`npm run framework`). Edit the endpoint definitions, not this file.',
       '',
       `Target: the test environment (\`${new URL(env.KPOST_API_BASE_URL ?? env.API_BASE_URL ?? 'http://unset.invalid').host}\`, from \`KPOST_API_BASE_URL\`). Scope: PERSONAL accounts plus the`,
@@ -215,7 +215,7 @@ test.describe('live endpoint coverage @framework', () => {
     const blockedLines = [
       '# Endpoints NOT tested on the live application',
       '',
-      '**GENERATED — do not edit.** Written by `tests/framework/coverage/live-coverage.spec.ts`.',
+      '**GENERATED — do not edit.** Written by `tests/framework/ledgers/live-endpoints-ledger.spec.ts`.',
       '',
       `**${offLive.length} of ${all.length}** registered endpoints are **not driven against the live app**.`,
       `The rest ARE tested on live: **${runs.length}** on the default run + **${coveredCount}** via the`,

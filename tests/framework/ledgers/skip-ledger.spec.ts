@@ -181,7 +181,7 @@ test.describe('skip ledger', () => {
     const lines: string[] = [
       '# Skip ledger — every skip reason in the suite, classified',
       '',
-      '**GENERATED — do not edit.** Written by `tests/framework/coverage/skip-ledger.spec.ts`',
+      '**GENERATED — do not edit.** Written by `tests/framework/ledgers/skip-ledger.spec.ts`',
       '(`npm run framework`). Edit the specs, not this file.',
       '',
       'A skip is honest only when its reason says what kind of skip it is. Five classes a skip may',

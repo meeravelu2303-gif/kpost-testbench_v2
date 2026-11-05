@@ -10,7 +10,7 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /** Self-tests for the module's wiring. No HTTP: these assert what a reviewer would have to trust. */
-test.describe('KPost Signup & Login · module coverage', () => {
+test.describe('KPost Signup & Login · endpoint definitions', () => {
   test('every documented signupLogin endpoint has a definition @framework', () => {
     expect(uncoveredSignupLoginPaths(), 'documented but untested').toEqual([]);
   });

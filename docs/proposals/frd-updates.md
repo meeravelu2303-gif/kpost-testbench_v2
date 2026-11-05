@@ -42,7 +42,7 @@ Evidence: `profile-*.spec.ts` (7 files), `api/kpost/profile/*` (4 files / ~27 te
 | ----------- | ------------------------------------------------- | -------------------------------------------------------------------------------- | -------- |
 | FR-PROF-001 | Edit own profile fields (name, designation, etc.) | profile-edit-e2e.spec.ts, profile-update-data-integrity.spec.ts                  | P2       |
 | FR-PROF-002 | Profile image upload / change / share             | profile-actions-e2e.spec.ts                                                      | P2       |
-| FR-PROF-003 | Device management (list, set primary, remove)     | kpost-api/coverage/profile-device-guarded-coverage.spec.ts                       | P1       |
+| FR-PROF-003 | Device management (list, set primary, remove)     | framework/safety/walled-endpoints.spec.ts (no live run; by rule)                 | P1       |
 | FR-PROF-004 | Directory lookup of a user by KPost ID            | kpost-api/data-integrity/profile/profile-directory-lookup-data-integrity.spec.ts | P2       |
 | FR-PROF-005 | Profile read returns own full details             | kpost-api/business-rules/profile/profile-reads-business-rules.spec.ts            | P2       |
 | FR-PROF-006 | Profile webview render                            | profile-webview-security.spec.ts                                                 | P3       |

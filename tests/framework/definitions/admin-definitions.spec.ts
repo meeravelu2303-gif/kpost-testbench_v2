@@ -7,7 +7,7 @@ import { expect, test } from '@fixtures';
 /**
  * Self-tests for the core `/admin/*` module in the kpost-api suite (not the separate admin-api service).
  */
-test.describe('KPost core admin (/admin/*) · module coverage', () => {
+test.describe('KPost core admin (/admin/*) · endpoint definitions', () => {
   test('every definition matches the generated contract @framework', () => {
     for (const api of adminUserManagementApis) {
       const documented = api.contractPath ?? api.path;

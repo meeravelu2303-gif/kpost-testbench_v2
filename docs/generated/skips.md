@@ -1,6 +1,6 @@
 # Skip ledger — every skip reason in the suite, classified
 
-**GENERATED — do not edit.** Written by `tests/framework/coverage/skip-ledger.spec.ts`
+**GENERATED — do not edit.** Written by `tests/framework/ledgers/skip-ledger.spec.ts`
 (`npm run framework`). Edit the specs, not this file.
 
 A skip is honest only when its reason says what kind of skip it is. Five classes a skip may
@@ -9,13 +9,13 @@ be in, one it should not stay in (no reason string), and one that fails the buil
 | Class | Sites | Spec files |
 | ----- | ----: | ---------: |
 | Retune | 1 | 1 |
-| Blocked by a defect | 48 | 27 |
+| Blocked by a defect | 46 | 25 |
 | Provision | 469 | 318 |
-| Owner decision | 263 | 194 |
+| Owner decision | 253 | 192 |
 | Live condition | 151 | 70 |
 | No reason string | 3 | 1 |
 | Unclassified | 58 | 15 |
-| **Total** | **993** | **370** |
+| **Total** | **981** | **367** |
 
 ## The last run, by the engine’s own skip classes
 
@@ -35,7 +35,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | ----: | ------ | ----- |
 | 1 | Bulk Mail is not offered on this build (its button is commented out in WriteMailPage.js) | `tests/kpost-ui/validation/kmail/kmail-validation.spec.ts:293` |
 
-## Blocked by a defect — an open bug stops the check from meaning anything (48)
+## Blocked by a defect — an open bug stops the check from meaning anything (46)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -62,8 +62,6 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | send did not return a sharedMessageId (replied …) | `tests/kpost-api/authorization/katchup/katchup-idor-authorization.spec.ts:104` |
 | 1 | the group send did not return a msgID (replied …) | `tests/kpost-api/authorization/katchup/katchup-object-authorization.spec.ts:246` |
 | 1 | createEvent did not return a usable eventID; cannot continue | `tests/kpost-api/authorization/kdiary/kdiary-object-authorization.spec.ts:54` |
-| 1 | katchup-send-multipart is the OLD direct-upload path — owner-confirmed 2026-09-26 that the current client uses the presigned-URL flow instead (aws-katchup-presigned + a direct S3 PUT + katchup-send-message's own uuid field). The route stays registered (generic validator sweep still runs against it) but its attachment-storage behaviour is no longer product- relevant, so it is not asserted on live. The prior finding is closed as #614 WONTFIX, not chased further. See presigned-attachment-workflow.spec.ts for the current, real upload path. | `tests/kpost-api/coverage/katchup-legacy-upload-coverage.spec.ts:12` |
-| 1 | deactivateAccount is sideEffect:'global' AND otpDependent:'requires' — doubly blocked on live. Disabling the QA account mid-suite would take every other test down with it. Never run for real; only the off-live negative probes touch it. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:107` |
 | 1 | also blocked on #499 (kos-create-doc does not return a docId) independent of deferral | `tests/kpost-api/excluded/concurrency/scenarios.spec.ts:173` |
 | 1 | blocked by Bugzilla #499 (kword/create 500) — activates automatically once a docId is issued (create replied …) | `tests/kpost-api/excluded/kdoc/kword-object-authorization.spec.ts:58` |
 | 1 | … is genuinely already registered — set a fresh QA_SIGNUP_UI_MOBILE the signup screen's mobile Verify step is broken (a repeat of #720): it misreports this free number as taken, so the OTP modal never opens | `tests/kpost-ui/e2e/auth/signup-login-e2e.spec.ts:75` |
@@ -80,7 +78,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | ----: | ------ | ----- |
 | 91 | qa.bench needs a real live account (QA_KPOST_ID) | `tests/kpost-ui/accessibility/contacts/contacts-accessibility.spec.ts:29`, `tests/kpost-ui/accessibility/home/home-accessibility.spec.ts:21`, `tests/kpost-ui/accessibility/kall/kall-accessibility.spec.ts:23`, `tests/kpost-ui/accessibility/kmail/kmail-accessibility.spec.ts:20` +87 more |
 | 33 | needs the KPOST_QA connection | `tests/framework/local-tools/_diff-accounts.local.spec.ts:24`, `tests/framework/local-tools/_snapshot-accounts.local.spec.ts:23`, `tests/kmail-api/data-integrity/kmail-mail-state-data-integrity.spec.ts:105`, `tests/kmail-api/data-integrity/kmail-mail-state-data-integrity.spec.ts:136` +29 more |
-| 26 | (no reason string) kmailAuthGate() !== undefined, kmailAuthGate() ?? '' | `tests/kmail-api/authorization/kmail-attachment-delete-idor-authorization.spec.ts:23`, `tests/kmail-api/authorization/kmail-attachment-idor-authorization.spec.ts:24`, `tests/kmail-api/authorization/kmail-bulk-status-cross-user-authorization.spec.ts:25`, `tests/kmail-api/authorization/kmail-content-idor-authorization.spec.ts:23` +22 more |
+| 26 | (no reason string) kmailAuthGate() !== undefined, kmailAuthGate() ?? '' | `tests/framework/definitions/kmail-definitions.spec.ts:16`, `tests/kmail-api/authorization/kmail-attachment-delete-idor-authorization.spec.ts:23`, `tests/kmail-api/authorization/kmail-attachment-idor-authorization.spec.ts:24`, `tests/kmail-api/authorization/kmail-bulk-status-cross-user-authorization.spec.ts:25` +22 more |
 | 26 | qa.bench needs both QA accounts | `tests/kpost-ui/accessibility/katchup/katchup-accessibility.spec.ts:23`, `tests/kpost-ui/api-handling/katchup/katchup-api-handling.spec.ts:17`, `tests/kpost-ui/api-handling/katchup/katchup-write-api-handling.spec.ts:23`, `tests/kpost-ui/cross-layer/cross-layer-flows-e2e.spec.ts:47` +22 more |
 | 17 | qa.bench needs a real QA account (QA_KPOST_ID) | `tests/kpost-ui/api-handling/contacts/contacts-digitalcard-api-handling.spec.ts:162`, `tests/kpost-ui/api-handling/contacts/contacts-digitalcard-api-handling.spec.ts:333`, `tests/kpost-ui/api-handling/group/group-create-api-handling.spec.ts:78`, `tests/kpost-ui/api-handling/kall/kall-dashboard-api-handling.spec.ts:83` +13 more |
 | 13 | needs the KPOST_QA connection to judge by the row | `tests/kmail-api/authorization/kmail-mutation-idor-authorization.spec.ts:36`, `tests/kpost-api/authorization/contacts/contacts-group-cross-user-authorization.spec.ts:198`, `tests/kpost-api/authorization/contacts/contacts-group-cross-user-authorization.spec.ts:335`, `tests/kpost-api/authorization/group/group-object-authorization.spec.ts:250` +9 more |
@@ -139,8 +137,8 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | no local .env on this machine (fresh checkout / CI) | `tests/framework/config/env-template.spec.ts:62` |
 | 1 | needs at least two configured accounts | `tests/framework/config/kmail-flags.spec.ts:128` |
 | 1 | needs BUGZILLA_URL and BUGZILLA_API_KEY | `tests/framework/config/ownership.spec.ts:300` |
-| 1 | needs provisioned React source on this machine (set FRONTEND_SRC) | `tests/framework/coverage/ui-rule-coverage.spec.ts:222` |
 | 1 | no … endpoint is registered here (its host is not configured) | `tests/framework/engine/check-types.spec.ts:71` |
+| 1 | needs provisioned React source on this machine (set FRONTEND_SRC) | `tests/framework/ledgers/ui-rules-ledger.spec.ts:222` |
 | 1 | no pre-run snapshot found — run _snapshot-accounts.local.spec.ts first | `tests/framework/local-tools/_diff-accounts.local.spec.ts:25` |
 | 1 | an Admin connection has been configured | `tests/framework/safety/admin-db-safety.spec.ts:69` |
 | 1 | needs four distinct QA principals configured (QA_* accounts) | `tests/kmail-api/authorization/kmail-copies-info-idor-authorization.spec.ts:28` |
@@ -243,7 +241,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | needs provisioned conversation with more than ten loaded mails | `tests/kpost-ui/validation/kmail/kmail-validation.spec.ts:198` |
 | 1 | needs provisioned browser account principal | `tests/kpost-ui/validation/kmail/kmail-validation.spec.ts:233` |
 
-## Owner decision — gated flows, pauses and safety choices (263)
+## Owner decision — gated flows, pauses and safety choices (253)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -328,16 +326,6 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | sends a real message between our two accounts; set KATCHUP_LIFECYCLE=true (owner sign-off) | `tests/kpost-api/business-rules/katchup/katchup-unread-count-business-rules.spec.ts:32` |
 | 1 | calls blockTicket (a real partner seat hold) with bodies that cannot hold a seat; needs the owner’s authorization, then KBOOKING_LIFECYCLE=true | `tests/kpost-api/business-rules/kbooking/kbooking-booking-business-rules.spec.ts:207` |
 | 1 | (no reason string) process.env.SETTINGS_LIFECYCLE !== 'true', "writes A's own KNews settings (resto | `tests/kpost-api/business-rules/knews/knews-settings-business-rules.spec.ts:137` |
-| 1 | testingapi answers 404 "No matching endpoint for this request" for POST saveUnsubscriberDetails, live-verified 2026-09-24. Not run standalone (a 404 there reads  | `tests/kpost-api/coverage/common-known-gaps-coverage.spec.ts:17` |
-| 1 | sendPrimaryDeviceOtp is otpDependent:'sends' with sideEffect:'external' — the SMS/OTP kill-switch in destructiveBlockReason() refuses it against any real host in every mode. Only a confirmed OTP test gateway (OTP_TEST_GATEWAY + TEST_DB_MODE, neither configured here) would open it. Not worked around: sending a real OTP on a normal run would cost money and exhaust the SMS gateway. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:16` |
-| 1 | sendPrimaryOrSecondaryDeviceOtp is otpDependent:'sends' with sideEffect:'external' — same SMS/OTP kill-switch as sendPrimaryDeviceOtp above. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:28` |
-| 1 | sendAccountDeactivationOtp is otpDependent:'sends' with sideEffect:'external' — same SMS/OTP kill-switch, and it is the OTP step of the account-deactivation flow, which stays blocked in its own right below regardless. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:37` |
-| 1 | forgotPasswordOrKpostID is otpDependent:'sends' with sideEffect:'external' — a public (unauthenticated) recovery entry point that sends a real OTP; same kill-switch as the others above. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:47` |
-| 1 | setDeviceAsPrimary is otpDependent:'requires' AND matches the guard's isSessionDestroyer pattern — blocked even when OTP_TEST_GATEWAY+TEST_DB_MODE are both set, specifically because it would displace the primary device of the account every other test in the suite is logged in as, breaking every later test in the run. Not worked around: there is no safe way to exercise this against the suite's own live session. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:57` |
-| 1 | updateDeviceAsPrimary matches the same isSessionDestroyer pattern as setDeviceAsPrimary above, for the same reason. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:69` |
-| 1 | setDeviceAsSecondary matches the isSessionDestroyer pattern (updateDeviceAs*/setDeviceAs*) for the same reason as the primary-device pair above. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:78` |
-| 1 | updateDeviceAsSecondary matches the isSessionDestroyer pattern for the same reason as the others above. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:87` |
-| 1 | changePassword is sideEffect:'global', never cleared for live under any flag. Running it would change the credential every other suite/test logs in with mid-run — a self-inflicted lockout, not a defect to find. The documented sample is also missing a distinct newPassword field from confirmPassword, which the null/required negative probes already exercise off-live. | `tests/kpost-api/coverage/profile-device-guarded-coverage.spec.ts:96` |
 | 1 | places real calls between the QA accounts; set KALL_LIFECYCLE=true | `tests/kpost-api/data-integrity/kall/kall-call-outcomes-data-integrity.spec.ts:118` |
 | 1 | OTP flows run only on a confirmed test gateway: OTP_TEST_GATEWAY=true + TEST_DB_MODE=true | `tests/kpost-api/data-integrity/signup-login/signup-login-otp-data-integrity.spec.ts:18` |
 | 1 | needs a real 10-minute wait; set OTP_EXPIRY_WAIT=true to run the expiry boundary | `tests/kpost-api/data-integrity/signup-login/signup-login-otp-data-integrity.spec.ts:366` |

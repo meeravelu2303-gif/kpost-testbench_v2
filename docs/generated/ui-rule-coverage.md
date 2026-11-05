@@ -1,6 +1,6 @@
 # Web input-rule coverage
 
-**GENERATED — do not edit.** Written by `tests/framework/coverage/ui-rule-coverage.spec.ts`
+**GENERATED — do not edit.** Written by `tests/framework/ledgers/ui-rules-ledger.spec.ts`
 (`npm run framework`) from the React source. A rule is checked when a test names its text.
 
 - Input rules checked: **116 of 119**

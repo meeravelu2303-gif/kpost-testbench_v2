@@ -11,7 +11,7 @@ import { expect, test } from '@fixtures';
  * Self-tests for the KMail definitions, no HTTP: coverage, contract agreement, auth, the live-write
  * and identifier guards, and the planned case count.
  */
-test.describe('KPost KMail · module coverage', () => {
+test.describe('KPost KMail · endpoint definitions', () => {
   // Gated while KMail refuses every valid token (src/fixtures/kmail-auth-gate.ts).
   test.skip(kmailAuthGate() !== undefined, kmailAuthGate() ?? '');
 

@@ -11,7 +11,7 @@ Source of truth for the payloads: `D:\KPOST_PROJECTS\KPOST_REACTJS_2023_V1\src\S
 ## 1. The codes (owner-supplied; already in the workbook, verified to match)
 
 All four enum groups the owner gave match the workbook's Types tab exactly — nothing to add, only to
-pin (`tests/kpost-api/coverage/kall-coverage.spec.ts`).
+pin (`tests/framework/definitions/kall-definitions.spec.ts`).
 
 **`kallStatus`** (sender & receiver)
 

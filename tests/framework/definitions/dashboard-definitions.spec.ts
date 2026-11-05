@@ -5,7 +5,7 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /** Self-tests for the Dashboard module wiring. No HTTP. */
-test.describe('KPost Dashboard · module coverage', () => {
+test.describe('KPost Dashboard · endpoint definitions', () => {
   test('every documented dashboard endpoint has a definition @framework', () => {
     expect(uncoveredDashboardPaths(), 'documented but untested').toEqual([]);
   });

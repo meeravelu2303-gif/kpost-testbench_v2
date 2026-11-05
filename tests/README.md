@@ -7,7 +7,7 @@
 
 | Products | Test types | Test files |  Tests |
 | -------: | ---------: | ---------: | -----: |
-|        6 |         25 |        572 | 22,710 |
+|        6 |         24 |        553 | 22,617 |
 
 Tests are counted the way the product commands run them (FULL profile): the API engine generates one
 test per endpoint × validator. UI tests are counted once; each browser (Chromium, Firefox, WebKit) runs
@@ -18,19 +18,19 @@ self-tests are listed separately below.
 
 | Folder                           | Bugzilla product         | Runs with              | Test types | Test files |      Tests |
 | -------------------------------- | ------------------------ | ---------------------- | ---------: | ---------: | ---------: |
-| [`kpost-api/`](kpost-api/)       | KPost API                | Playwright (API)       |         15 |        223 |     15,557 |
-| [`kmail-api/`](kmail-api/)       | KMail API                | Playwright (API)       |         14 |         37 |      4,188 |
+| [`kpost-api/`](kpost-api/)       | KPost API                | Playwright (API)       |         14 |        205 |     15,470 |
+| [`kmail-api/`](kmail-api/)       | KMail API                | Playwright (API)       |         13 |         36 |      4,182 |
 | [`admin-api/`](admin-api/)       | KPost Admin              | Playwright (API)       |         13 |         25 |      1,962 |
 | [`kpost-ui/`](kpost-ui/)         | KPost UI                 | Playwright (browser)   |         15 |        239 |        833 |
 | [`admin-ui/`](admin-ui/)         | KPost Admin UI           | Playwright (browser)   |          7 |         12 |         45 |
 | [`kpost-mobile/`](kpost-mobile/) | Kpost Mobile Application | Patrol (Android phone) |          3 |         36 |        125 |
-| **Total**                        |                          |                        |            |    **572** | **22,710** |
+| **Total**                        |                          |                        |            |    **553** | **22,617** |
 
 ## The tree
 
 ```
 tests/
-├── kpost-api/            KPost API · 223 files · 15,557 tests
+├── kpost-api/            KPost API · 205 files · 15,470 tests
 │   ├── smoke/            1 file · 23 tests
 │   ├── sanity/           1 file · 2,138 tests
 │   ├── contract/         13 files · 3,710 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
@@ -44,11 +44,10 @@ tests/
 │   ├── data-integrity/   14 files · 46 tests  (contacts, kall, katchup, profile, settings, signup-login)
 │   ├── business-rules/   21 files · 95 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
 │   ├── e2e/              20 files · 77 tests  (admin, aws, common, contacts, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
-│   ├── coverage/         18 files · 87 tests
 │   ├── maintenance/      2 files · 2 tests
 │   └── excluded/         6 files · not collected  (concurrency, kdoc)
 │
-├── kmail-api/            KMail API · 37 files · 4,188 tests
+├── kmail-api/            KMail API · 36 files · 4,182 tests
 │   ├── smoke/            1 file · 3 tests
 │   ├── sanity/           1 file · 616 tests
 │   ├── contract/         1 file · 994 tests
@@ -62,7 +61,6 @@ tests/
 │   ├── data-integrity/   3 files · 5 tests
 │   ├── business-rules/   6 files · 33 tests
 │   ├── e2e/              4 files · 31 tests
-│   ├── coverage/         1 file · 6 tests
 │   └── support/
 │
 ├── admin-api/            KPost Admin · 25 files · 1,962 tests
@@ -123,7 +121,7 @@ tests/
 
 ## KPost API — `tests/kpost-api/`
 
-223 test files, 15,557 tests.
+205 test files, 15,470 tests.
 
 | Type                                           | What it proves                                                                                                                          | Files |         Tests | Modules (files)                                                                                                                                                                               |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----: | ------------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -140,13 +138,12 @@ tests/
 | [`data-integrity/`](kpost-api/data-integrity/) | Data integrity: what the API says it stored is what the database holds, and bytes survive a round trip.                                 |    14 |            46 | contacts (1), kall (1), katchup (3), profile (4), settings (3), signup-login (2)                                                                                                              |
 | [`business-rules/`](kpost-api/business-rules/) | Business rules: the product's own rules, checked by their end result in every party's view.                                             |    21 |            95 | aws (1), common (4), contacts (3), dashboard (1), group (1), kall (2), katchup (3), kbooking (1), kdiary (1), knews (1), profile (1), settings (1), signup-login (1)                          |
 | [`e2e/`](kpost-api/e2e/)                       | End to end: a lifecycle (create → read → update → delete), across accounts.                                                             |    20 |            77 | admin (2), aws (1), common (1), contacts (1), group (1), kall (1), katchup (6), kbooking (1), kdiary (1), knews (1), profile (2), settings (1), signup-login (1)                              |
-| [`coverage/`](kpost-api/coverage/)             | No HTTP: every documented endpoint is defined, routed and owned.                                                                        |    18 |            87 | —                                                                                                                                                                                             |
 | [`maintenance/`](kpost-api/maintenance/)       | QA data cleanup and one-time setup (self-cleaning).                                                                                     |     2 |             2 | —                                                                                                                                                                                             |
 | [`excluded/`](kpost-api/excluded/)             | Out of scope by owner decision (KDoc/KOS, concurrency). Never collected: `testIgnore` in playwright.config.ts.                          |     6 | not collected | concurrency (1), kdoc (5)                                                                                                                                                                     |
 
 ## KMail API — `tests/kmail-api/`
 
-37 test files, 4,188 tests.
+36 test files, 4,182 tests.
 
 | Type                                           | What it proves                                                                                                                          | Files | Tests | Modules (files) |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----: | ----: | --------------- |
@@ -163,7 +160,6 @@ tests/
 | [`data-integrity/`](kmail-api/data-integrity/) | Data integrity: what the API says it stored is what the database holds, and bytes survive a round trip.                                 |     3 |     5 | —               |
 | [`business-rules/`](kmail-api/business-rules/) | Business rules: the product's own rules, checked by their end result in every party's view.                                             |     6 |    33 | —               |
 | [`e2e/`](kmail-api/e2e/)                       | End to end: a lifecycle (create → read → update → delete), across accounts.                                                             |     4 |    31 | —               |
-| [`coverage/`](kmail-api/coverage/)             | No HTTP: every documented endpoint is defined, routed and owned.                                                                        |     1 |     6 | —               |
 
 ## KPost Admin — `tests/admin-api/`
 
@@ -234,21 +230,22 @@ tests/
 
 ## The bench's own self-tests — `tests/framework/`
 
-64 files, 464 tests. No KPost server is called; `npm run framework`.
+80 files, 555 tests. No KPost server is called; `npm run framework`.
 
-| Area                                     | What it checks                                                   | Files | Tests |
-| ---------------------------------------- | ---------------------------------------------------------------- | ----: | ----: |
-| [`bug-tracker/`](framework/bug-tracker/) | Bug filing: candidates, gates, dedupe, ticket text, status pass. |    16 |   154 |
-| [`validators/`](framework/validators/)   | Each centralized validator against fixed replies.                |     8 |    88 |
-| [`engine/`](framework/engine/)           | The validation engine, sweeps, flow findings, token handling.    |    10 |    67 |
-| [`contracts/`](framework/contracts/)     | Source contracts, input limits, types and payload audit.         |     5 |    27 |
-| [`coverage/`](framework/coverage/)       | Coverage ledgers: endpoints, screens, UI rules, FRD, skips.      |     7 |    13 |
-| [`safety/`](framework/safety/)           | Live-system guards: Admin DB, uploads, secrets, raw bodies.      |     5 |    56 |
-| [`config/`](framework/config/)           | Env template, flags, ownership routing.                          |     5 |    36 |
-| [`reporting/`](framework/reporting/)     | Run summary, report archive, run continuity.                     |     3 |     9 |
-| [`ui/`](framework/ui/)                   | UI health classification.                                        |     1 |     2 |
-| [`layout/`](framework/layout/)           | This folder layout and the tests/README.md inventory.            |     1 |     9 |
-| [`local-tools/`](framework/local-tools/) | One-off local probes (`_*.local.spec.ts`), self-skipping.        |     3 |     3 |
+| Area                                     | What it checks                                                                                                                       | Files | Tests |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----: | ----: |
+| [`bug-tracker/`](framework/bug-tracker/) | Bug filing: candidates, gates, dedupe, ticket text, status pass.                                                                     |    16 |   154 |
+| [`validators/`](framework/validators/)   | Each centralized validator against fixed replies.                                                                                    |     8 |    88 |
+| [`engine/`](framework/engine/)           | The validation engine, sweeps, flow findings, token handling.                                                                        |    10 |    67 |
+| [`contracts/`](framework/contracts/)     | Source contracts, input limits, types and payload audit.                                                                             |     5 |    27 |
+| [`definitions/`](framework/definitions/) | Each API module’s endpoint definitions: every documented endpoint defined, matching its contract, writes gated, routed to its owner. |    14 |    78 |
+| [`ledgers/`](framework/ledgers/)         | The generated ledgers in docs/generated/: endpoints, screens, test types, UI rules, requirements, skips.                             |     8 |    14 |
+| [`safety/`](framework/safety/)           | Live-system guards: Admin DB, uploads, secrets, raw bodies, walled endpoints.                                                        |     6 |    68 |
+| [`config/`](framework/config/)           | Env template, flags, ownership routing.                                                                                              |     5 |    36 |
+| [`reporting/`](framework/reporting/)     | Run summary, report archive, run continuity.                                                                                         |     3 |     9 |
+| [`ui/`](framework/ui/)                   | UI health classification.                                                                                                            |     1 |     2 |
+| [`layout/`](framework/layout/)           | This folder layout and the tests/README.md inventory.                                                                                |     1 |     9 |
+| [`local-tools/`](framework/local-tools/) | One-off local probes (`_*.local.spec.ts`), self-skipping.                                                                            |     3 |     3 |
 
 ## Where a new test goes
 
@@ -264,4 +261,4 @@ tests/
 add `"<new path>": "<old path>"` to `src/bug-tracker/findings/ui-spec-renames.json` so its bugs keep
 their tags (`uiFingerprintPath`). Run tests through the product commands in `docs/guides/commands.md`.
 
-<!-- inventory-files: {"admin-api/authentication":1,"admin-api/authorization":4,"admin-api/boundary":2,"admin-api/business-rules":2,"admin-api/contract":1,"admin-api/e2e":3,"admin-api/maintenance":2,"admin-api/negative":3,"admin-api/performance":2,"admin-api/positive":1,"admin-api/sanity":1,"admin-api/security":2,"admin-api/smoke":1,"admin-ui/cross-layer":1,"admin-ui/e2e":4,"admin-ui/functional":1,"admin-ui/sanity":1,"admin-ui/screens":3,"admin-ui/security":1,"admin-ui/smoke":1,"kmail-api/authentication":3,"kmail-api/authorization":10,"kmail-api/boundary":1,"kmail-api/business-rules":6,"kmail-api/contract":1,"kmail-api/coverage":1,"kmail-api/data-integrity":3,"kmail-api/e2e":4,"kmail-api/negative":1,"kmail-api/performance":1,"kmail-api/positive":1,"kmail-api/sanity":1,"kmail-api/security":3,"kmail-api/smoke":1,"kpost-api/authentication":18,"kpost-api/authorization":41,"kpost-api/boundary":13,"kpost-api/business-rules":21,"kpost-api/contract":13,"kpost-api/coverage":18,"kpost-api/data-integrity":14,"kpost-api/e2e":20,"kpost-api/excluded":6,"kpost-api/maintenance":2,"kpost-api/negative":14,"kpost-api/performance":13,"kpost-api/positive":16,"kpost-api/sanity":1,"kpost-api/security":18,"kpost-api/smoke":1,"kpost-mobile/e2e":28,"kpost-mobile/screens":2,"kpost-mobile/validation":6,"kpost-ui/accessibility":13,"kpost-ui/api-handling":19,"kpost-ui/cross-layer":2,"kpost-ui/e2e":53,"kpost-ui/excluded":4,"kpost-ui/functional":44,"kpost-ui/journeys":10,"kpost-ui/performance":1,"kpost-ui/resilience":8,"kpost-ui/responsive":2,"kpost-ui/sanity":2,"kpost-ui/screens":31,"kpost-ui/security":17,"kpost-ui/smoke":9,"kpost-ui/validation":26,"kpost-ui/visual":2} -->
+<!-- inventory-files: {"admin-api/authentication":1,"admin-api/authorization":4,"admin-api/boundary":2,"admin-api/business-rules":2,"admin-api/contract":1,"admin-api/e2e":3,"admin-api/maintenance":2,"admin-api/negative":3,"admin-api/performance":2,"admin-api/positive":1,"admin-api/sanity":1,"admin-api/security":2,"admin-api/smoke":1,"admin-ui/cross-layer":1,"admin-ui/e2e":4,"admin-ui/functional":1,"admin-ui/sanity":1,"admin-ui/screens":3,"admin-ui/security":1,"admin-ui/smoke":1,"kmail-api/authentication":3,"kmail-api/authorization":10,"kmail-api/boundary":1,"kmail-api/business-rules":6,"kmail-api/contract":1,"kmail-api/data-integrity":3,"kmail-api/e2e":4,"kmail-api/negative":1,"kmail-api/performance":1,"kmail-api/positive":1,"kmail-api/sanity":1,"kmail-api/security":3,"kmail-api/smoke":1,"kpost-api/authentication":18,"kpost-api/authorization":41,"kpost-api/boundary":13,"kpost-api/business-rules":21,"kpost-api/contract":13,"kpost-api/data-integrity":14,"kpost-api/e2e":20,"kpost-api/excluded":6,"kpost-api/maintenance":2,"kpost-api/negative":14,"kpost-api/performance":13,"kpost-api/positive":16,"kpost-api/sanity":1,"kpost-api/security":18,"kpost-api/smoke":1,"kpost-mobile/e2e":28,"kpost-mobile/screens":2,"kpost-mobile/validation":6,"kpost-ui/accessibility":13,"kpost-ui/api-handling":19,"kpost-ui/cross-layer":2,"kpost-ui/e2e":53,"kpost-ui/excluded":4,"kpost-ui/functional":44,"kpost-ui/journeys":10,"kpost-ui/performance":1,"kpost-ui/resilience":8,"kpost-ui/responsive":2,"kpost-ui/sanity":2,"kpost-ui/screens":31,"kpost-ui/security":17,"kpost-ui/smoke":9,"kpost-ui/validation":26,"kpost-ui/visual":2} -->

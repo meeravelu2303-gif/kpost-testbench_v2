@@ -5,7 +5,7 @@ import { expect, test } from '@fixtures';
 
 /**
  * Common company-lookup rules (read-only, ungated): three routes answer the same "which company owns
- * this admin's mobile" question and must agree. The company-logo endpoints are in common-known-gaps-coverage.spec.ts.
+ * this admin's mobile" question and must agree. The company-logo endpoints are driven in e2e/common/common-company-logo-e2e.spec.ts.
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;

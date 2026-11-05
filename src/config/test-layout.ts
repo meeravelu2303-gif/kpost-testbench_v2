@@ -72,11 +72,6 @@ const apiTypes = (modules: boolean): readonly TestType[] => [
     byModule: modules,
   },
   {
-    dir: 'coverage',
-    holds: 'No HTTP: every documented endpoint is defined, routed and owned.',
-    byModule: false,
-  },
-  {
     dir: 'maintenance',
     holds: 'QA data cleanup and one-time setup (self-cleaning).',
     byModule: false,
@@ -219,8 +214,20 @@ export const FRAMEWORK_AREAS: readonly { dir: string; holds: string }[] = [
   { dir: 'validators', holds: 'Each centralized validator against fixed replies.' },
   { dir: 'engine', holds: 'The validation engine, sweeps, flow findings, token handling.' },
   { dir: 'contracts', holds: 'Source contracts, input limits, types and payload audit.' },
-  { dir: 'coverage', holds: 'Coverage ledgers: endpoints, screens, UI rules, FRD, skips.' },
-  { dir: 'safety', holds: 'Live-system guards: Admin DB, uploads, secrets, raw bodies.' },
+  {
+    dir: 'definitions',
+    holds:
+      'Each API module’s endpoint definitions: every documented endpoint defined, matching its contract, writes gated, routed to its owner.',
+  },
+  {
+    dir: 'ledgers',
+    holds:
+      'The generated ledgers in docs/generated/: endpoints, screens, test types, UI rules, requirements, skips.',
+  },
+  {
+    dir: 'safety',
+    holds: 'Live-system guards: Admin DB, uploads, secrets, raw bodies, walled endpoints.',
+  },
   { dir: 'config', holds: 'Env template, flags, ownership routing.' },
   { dir: 'reporting', holds: 'Run summary, report archive, run continuity.' },
   { dir: 'ui', holds: 'UI health classification.' },

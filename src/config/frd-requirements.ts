@@ -1,6 +1,6 @@
 /**
  * The FRD requirement ids from the six per-module FRDs; every endpoint `requirements` tag must name
- * one (enforced by requirements-traceability.spec.ts). Map: `docs/reference/requirements-frd.md`.
+ * one (enforced by requirements-ledger.spec.ts). Map: `docs/reference/requirements-frd.md`.
  */
 
 /** Builds `PREFIX-001..PREFIX-NNN`. */

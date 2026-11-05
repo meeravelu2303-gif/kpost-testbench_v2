@@ -102,7 +102,7 @@ tests/ — tests/<product>/<type>/[<module>/]<file> (since 2026-11-05). Declared
   kpost-api/<type>/<module>/<module>-<what>-<type>.spec.ts (since 2026-11-05, second pass): smoke sanity, then
                         one folder per test type — contract positive negative boundary authentication
                         authorization security performance data-integrity business-rules — then e2e (the
-                        lifecycles, <module>-lifecycle-e2e.spec.ts) coverage maintenance excluded/{kdoc,concurrency}.
+                        lifecycles, <module>-lifecycle-e2e.spec.ts) maintenance excluded/{kdoc,concurrency}.
                         Cross-module checks in platform/. Each type folder holds the engine's checks of that type
                         (<module>-endpoints-<type>.spec.ts, one line: describeEndpointChecks; which endpoints:
                         src/validation-engine/endpoint-groups.ts; which check is which type: check-types.ts) beside
@@ -117,7 +117,7 @@ tests/ — tests/<product>/<type>/[<module>/]<file> (since 2026-11-05). Declared
   admin-ui/<type>/      the UI types, flat: smoke sanity e2e functional screens security cross-layer support
   kpost-mobile/<type>/<module>/<flow>_test.dart: e2e validation screens + support/ (Dart, Patrol); copied into
                         mobile/.app (the app copy they run in; generated, gitignored) as its patrol_test/
-  framework/<area>/     bench self-tests: bug-tracker validators engine contracts coverage safety config reporting
+  framework/<area>/     bench self-tests: bug-tracker validators engine definitions contracts ledgers safety config reporting
                         ui layout local-tools · setup/ logins that save sessions · support/ helpers shared by products
   UI bug tags are hashed from the pre-2026-10-27 folder names and pre-2026-10-31 file names (uiFingerprintPath,
   `src/bug-tracker/findings/ui-spec-renames.json`, new path → hashed path), so a move or rename keeps each bug's

@@ -10,7 +10,7 @@ import { expect, test } from '@fixtures';
  * Self-tests for the Contacts module. No HTTP: full coverage, contract agreement, every write gated,
  * and every cleared read's payload passes the QA-identifier guard.
  */
-test.describe('KPost Contacts · module coverage', () => {
+test.describe('KPost Contacts · endpoint definitions', () => {
   test('every documented contacts endpoint has a definition @framework', () => {
     expect(uncoveredContactsPaths(), 'documented but untested').toEqual([]);
   });

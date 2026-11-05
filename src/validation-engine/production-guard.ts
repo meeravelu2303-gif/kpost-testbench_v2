@@ -101,9 +101,11 @@ export function destructiveBlockReason(
    */
   const looksLikeSmsSender = /otp|sms|sendcode|forgotpassword|sentkpostidsms/i.test(endpoint.label);
   const isOtpFlow = Boolean(endpoint.otpDependent) || looksLikeSmsSender;
-  // Deactivate / re-designate-primary would end the running session: blocked even on the gateway.
+  // Deactivate / re-designate a device would end the running session or re-bind the shared account's
+  // devices: blocked even on the gateway, open only to the throwaway account (CLAUDE.md §3). The
+  // secondary-device calls were missing until 2026-11-05 (walled-endpoints.spec.ts found it).
   const isSessionDestroyer =
-    /deactivat|delete\s*account|close\s*account|setdeviceasprimary|updatedeviceasprimary|logoutfromalldevices/i.test(
+    /deactivat|delete\s*account|close\s*account|setdeviceas(primary|secondary)|updatedeviceas(primary|secondary)|logoutfromalldevices/i.test(
       endpoint.label,
     );
   // The test-gateway unlock needs both `otpTestGateway` and `testDbMode`, and opens OTP flows only.

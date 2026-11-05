@@ -1,6 +1,6 @@
 /**
  * The Katchup UI feature catalogue, from the FRD (FR-K01..K25), the message-type enum and the
- * front-end action menus. `katchup-ui-coverage.spec.ts` fails the build if a feature lacks a
+ * front-end action menus. `katchup-ui-features-ledger.spec.ts` fails the build if a feature lacks a
  * status, a `built` feature names no spec, or an FR-K id is missing. Every non-`built` status
  * carries a `reason`.
  */

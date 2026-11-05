@@ -3,7 +3,33 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-05 (latest) — API tests split by test type, every API spec renamed `<module>-<what>-<type>`
+### 2026-11-05 (latest) — No product `coverage/` folder; definitions and ledgers named for what they are; a guard gap closed
+
+Owner: "why we have the folder name as coverage? write the test properly with correct inside folder with
+valid names and valid files".
+
+- **`tests/kpost-api/coverage/` and `tests/kmail-api/coverage/` are gone.** Their 14 `<module>-coverage.spec.ts`
+  never called KPost: they check the bench's own endpoint definitions (every documented endpoint defined,
+  matching the generated contract, writes gated, routed to its owner). They are bench self-tests, now
+  `tests/framework/definitions/<module>-definitions.spec.ts`, run by `npm run framework`, no longer by the
+  product commands. **12 of their checks fail, and failed the same way in the api project** (proved by
+  running one there): definitions out of step with the generated workbook contract (e.g. `/v2/common/country`
+  is not in it), `kmail-save-unsubscriber` not requiring a token, a missing `common-save-unsubscriber-details`.
+  Not fixed here; they were hidden among the product run's failures.
+- **`tests/framework/coverage/` is `tests/framework/ledgers/`** (it writes `docs/generated/`), files named
+  `<what>-ledger.spec.ts`. New: `test-types-ledger.spec.ts` → `docs/generated/kpost-api-type-coverage.md`,
+  how complete each KPost API test type is, with the gap list per type (endpoints that send a real SMS or end
+  the session are "walled by rule", not gaps).
+- **Placeholders replaced by a real test.** Five specs only skipped or asserted `expect(true)`. The guard ones
+  are now `tests/framework/safety/walled-endpoints.spec.ts`, which asks the production guard directly (no
+  request) with the product run's flags, with and without a flow's live-write opt-in. Deleted: the
+  unsubscriber, legacy-multipart and kdiary-event-date placeholders (the facts live on the definitions).
+- **Guard gap found and closed:** `setDeviceAsSecondary` / `updateDeviceAsSecondary` were NOT refused in a
+  product run (OTP gateway + `otpDependent` opened them; the session-destroyer list named only the primary
+  calls), so the engine's profile-device sweep could send them on the shared QA account. Both are now in that
+  list: refused everywhere except the throwaway account's own flow (CLAUDE.md §3).
+
+### 2026-11-05 — API tests split by test type, every API spec renamed `<module>-<what>-<type>`
 
 Owner: "the test files must have valid names … proper and neat … smoke, sanity, positive test, negative
 test, Boundary tests, Contract / schema tests, Data integrity tests etc., have separate folder".

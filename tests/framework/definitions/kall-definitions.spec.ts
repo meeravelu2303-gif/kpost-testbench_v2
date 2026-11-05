@@ -11,7 +11,7 @@ import { kallReadApis } from '@api/definitions/kpost/kall/read.api';
  * Kall module self-tests (no HTTP): coverage, contract agreement, pinned codes, gated writes, and
  * cleared reads passing the QA-identifier guard.
  */
-test.describe('KPost Kall · module coverage', () => {
+test.describe('KPost Kall · endpoint definitions', () => {
   test('every documented kall endpoint has a definition @framework', () => {
     expect(uncoveredKallPaths(), 'documented but untested').toEqual([]);
   });

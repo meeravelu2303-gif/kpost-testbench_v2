@@ -1,6 +1,6 @@
 # Endpoints NOT tested on the live application
 
-**GENERATED — do not edit.** Written by `tests/framework/coverage/live-coverage.spec.ts`.
+**GENERATED — do not edit.** Written by `tests/framework/ledgers/live-endpoints-ledger.spec.ts`.
 
 **54 of 401** registered endpoints are **not driven against the live app**.
 The rest ARE tested on live: **144** on the default run + **203** via the

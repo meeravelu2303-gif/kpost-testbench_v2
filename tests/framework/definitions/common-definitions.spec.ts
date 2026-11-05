@@ -5,7 +5,7 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /** Self-tests (no HTTP) that the common module is fully wired. */
-test.describe('KPost common · module coverage', () => {
+test.describe('KPost common · endpoint definitions', () => {
   test('every documented common endpoint has a definition @framework', () => {
     // Fails the moment a new workbook dump adds a common endpoint nobody has covered.
     expect(uncoveredCommonPaths(), 'documented but untested').toEqual([]);

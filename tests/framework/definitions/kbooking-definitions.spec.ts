@@ -5,7 +5,7 @@ import { resolveEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
 /** Self-tests for the KBooking module wiring. No HTTP. */
-test.describe('KPost KBooking · module coverage', () => {
+test.describe('KPost KBooking · endpoint definitions', () => {
   test('every documented, frontend-active redbus endpoint has a definition @framework', () => {
     // Every documented path has a definition, including three the web app never calls
     // (boardingPoint, tripdetailsV2, updatecitylist).

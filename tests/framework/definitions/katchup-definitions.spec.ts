@@ -13,7 +13,7 @@ import { expect, test } from '@fixtures';
  * Katchup module self-tests (no HTTP): coverage, contract agreement, pinned enum codes, and every
  * send authenticated and gated.
  */
-test.describe('KPost Katchup · module coverage', () => {
+test.describe('KPost Katchup · endpoint definitions', () => {
   test('every documented katchup endpoint has a definition @framework', () => {
     expect(uncoveredKatchupPaths(), 'documented but untested').toEqual([]);
   });
