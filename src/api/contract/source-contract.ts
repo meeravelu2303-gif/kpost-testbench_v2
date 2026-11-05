@@ -24,6 +24,12 @@ export interface SourceEndpointContract {
   dataSchema?: JsonSchema;
   /** JSON Schema of the extra top-level keys, when `payloadKey` is null. */
   topLevel?: JsonSchema;
+  /**
+   * The whole body of the success the code gives when nothing matched (e.g. KMail's
+   * `{"message":"No Data Found","status":"SUCCESS"}`), when it differs from the normal success.
+   * The response must then match either shape: the full one or exactly this one.
+   */
+  emptyResult?: JsonSchema;
   /** HTTP status of a success (KPost and KMail mostly 200; a few answer 202, 204 or 303). */
   successStatus?: number;
   /** The failure answers the code can give, for the negative tests (null: the body has no such key). */
@@ -104,8 +110,9 @@ export function sourceResponseSchema(
       );
   }
   if (Object.keys(properties).length === 0) return undefined;
+  const success: JsonSchema = { properties, ...(required.length ? { required } : {}) };
   return {
-    schema: unlessFailure({ properties, ...(required.length ? { required } : {}) }),
+    schema: unlessFailure(entry.emptyResult ? { anyOf: [success, entry.emptyResult] } : success),
     source,
   };
 }

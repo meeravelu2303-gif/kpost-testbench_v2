@@ -417,9 +417,29 @@
         }
       ],
       "confidence": "medium",
-      "liveCheck": "not-run: POST /v2/common/getBulkKmailDashboardMsg is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-def",
-      "evidence": ["CommonMailController.java:145-191", "CommonMailServiceImpl.java:1999-2083"],
-      "notes": "The controller rejects a body without firstKmailID/lastKmailID, so the service's kmailID/selectedDate/\"all\" branches are unreachable. The service returns the UNFILTERED list (resultList with the confidential-copy filtering is built and discarded, line 2082), so receiverType 3 (BCC) transactions of other users are exposed. The lastKmailID branch looks up getKmailID() instead of lastKmailID. On 500 the error text is under \"data\"."
+      "liveCheck": "matched 2026-11-05: matched with firstKmailID; the web app/workbook body {kmailID} is refused 400; a lastKmailID lookup answers the No Data Found body (emptyResult)",
+      "evidence": [
+        "CommonMailController.java:145-191",
+        "CommonMailServiceImpl.java:1999-2083",
+        "CommonMailController.java:170-174: an empty list answers {status SUCCESS, message No Data Found, urlPath} with no statusCode (live 2026-11-05)"
+      ],
+      "notes": "The controller rejects a body without firstKmailID/lastKmailID, so the service's kmailID/selectedDate/\"all\" branches are unreachable. The service returns the UNFILTERED list (resultList with the confidential-copy filtering is built and discarded, line 2082), so receiverType 3 (BCC) transactions of other users are exposed. The lastKmailID branch looks up getKmailID() instead of lastKmailID. On 500 the error text is under \"data\".",
+      "emptyResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          },
+          "message": {
+            "const": "No Data Found"
+          },
+          "urlPath": {
+            "const": "getBulkKmailDashboardMsg"
+          }
+        },
+        "required": ["status", "message", "urlPath"],
+        "additionalProperties": false
+      }
     },
     "kmail-bulk-status": {
       "handler": "SentMailController.java:237 getBulkMailStatus",
@@ -523,7 +543,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/sentMail/bulkMail/status/{fromAddress} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoi",
+      "liveCheck": "matched 2026-11-05: matched the finished-send body (200); a send still in progress answers 202",
       "evidence": [
         "SentMailController.java:237-240 no ownership check, path value used as is",
         "SentMailServiceImpl.java:2796-2830",
@@ -589,7 +609,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-11-05: matched with the web app body {kmailStatusFlag, selectMailType A}",
       "evidence": ["CommonMailController.java:1014-1036", "CommonMailServiceImpl.java:1898-1976"],
       "notes": "Only \"A\" (case-insensitive) is accepted. Clears that state for ALL contacts of the caller."
     },
@@ -650,7 +670,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "matched 2026-11-05: matched with the web app body {kmailStatusFlag, selectMailType A, selectedContact}",
       "evidence": [
         "CommonMailController.java:989-1012 @Validated(Default, StatusOfKmailsContactsValidation, MailTypeValidation)",
         "CommonMailServiceImpl.java:1728-1867",
@@ -713,7 +733,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: no engine case (a write driven by its flow)",
+      "liveCheck": "not-run: blocked by a server defect — with the exact MailPDFConverterRequestObject fields the call answers 200 {} (the service swallows the PDF error and returns an empty map), so no success body exists to match (live 2026-11-05)",
       "evidence": [
         "CommonMailController.java:742-748 always HttpStatus.OK, no try/catch",
         "CommonMailServiceImpl.java:1273-1402",
@@ -3135,7 +3155,7 @@
         }
       ],
       "confidence": "medium",
-      "liveCheck": "not-run: POST /v2/readMail/referenceMailContent/ is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-defi",
+      "liveCheck": "matched 2026-11-05: web app body {referenceMails} alone is refused (ReadMailRequestObject @NotBlank kmailType); matched with kmailType sent/inbox",
       "evidence": [
         "ReadKmailController.java:72-110",
         "ReadKmailServiceImpl.java:138-343 (resultList.add is OUTSIDE the loop: exactly one element)",

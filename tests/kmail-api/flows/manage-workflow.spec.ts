@@ -41,11 +41,12 @@ test.describe(
       'writes real KMail data; set KMAIL_LIFECYCLE=true',
     );
 
-    test('clearStatusOfKmailsContacts and clearStatusOfAllKmailsContacts: `kmailStatusFlag` is required, but no value satisfies it', async ({
+    test('clearStatusOfKmailsContacts and clearStatusOfAllKmailsContacts clear a status with the web app body', async ({
       endpoints,
     }) => {
-      // A missing kmailStatusFlag must be a 4xx, not a 500. With the flag present, no value (0-4)
-      // passes the REPLY_NOT_SENT check; the real contract is still unknown.
+      // The web app's bodies (KmailMessage.js ClearStatusOfKmail, StatusType.js ClearAllStatusOfMail):
+      // the service acts only when selectMailType is 'A' (CommonMailServiceImpl.clearstatusOfKmailsContacts),
+      // which the bench's earlier bodies omitted. Flag 0 = SENTLETTERS_NOT_OPENED, on QA mails only.
       expect
         .soft(
           await act(
@@ -62,23 +63,23 @@ test.describe(
           await act(
             endpoints,
             'kmail-clear-status',
-            { selectedContact: B.username, kmailStatusFlag: 0 },
+            { kmailStatusFlag: 0, selectMailType: 'A', selectedContact: B.username },
             'clear-status-with-flag',
           ),
-          'clearStatusOfKmailsContacts: exact contract still Unknown/Requires Clarification — kmailStatusFlag present but no value passes REPLY_NOT_SENT',
+          'clearStatusOfKmailsContacts clears "sent, not opened" for one contact (web app body)',
         )
-        .toBeLessThan(400);
+        .toBe(200);
       expect
         .soft(
           await act(
             endpoints,
             'kmail-clear-all-status',
-            { kmailStatusFlag: 0 },
+            { kmailStatusFlag: 0, selectMailType: 'A' },
             'clear-all-status',
           ),
-          'clearStatusOfAllKmailsContacts: same Unknown/Requires Clarification contract as clear-status',
+          'clearStatusOfAllKmailsContacts clears "sent, not opened" for every contact (web app body)',
         )
-        .toBeLessThan(400);
+        .toBe(200);
     });
 
     test('convertMailAsPDF and downloadODAttachment, fed a real kmailID from a compose @api', async ({
@@ -186,17 +187,29 @@ test.describe(
       // No cleanup: the response carries no id to delete by.
 
       // bulk-status is keyed by the caller's own address and should report the mail just sent.
-      const status = await endpoints.sendTo(
-        'kmail-bulk-status',
-        { pathParams: { fromAddress: testData.kpostId } },
-        { label: 'kmail:bulk-status', auth: { principal: A }, allowLiveRead: true },
-      );
+      // 202 = the send is still running (SentMailController.getBulkMailStatus); the finished answer is
+      // a 200 whose body is checked against its schema, so poll for it (about a minute at most).
+      const readStatus = () =>
+        endpoints.sendTo(
+          'kmail-bulk-status',
+          { pathParams: { fromAddress: testData.kpostId } },
+          { label: 'kmail:bulk-status', auth: { principal: A }, allowLiveRead: true },
+        );
+      let status = await readStatus();
+      for (let attempt = 0; status.status === 202 && attempt < 12; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 5_000));
+        status = await readStatus();
+      }
+      expect.soft(status.status, 'bulkMail/status reports the finished bulk send').toBe(200);
+      const statusBody = JSON.parse(status.bodyText || '{}') as {
+        total?: number;
+        totalCount?: number;
+      };
       expect
-        .soft(status.status, 'bulkMail/status reads back after a real bulk send')
-        .toBeLessThan(300);
-      const statusBody = JSON.parse(status.bodyText || '{}') as { total?: number };
-      expect
-        .soft(statusBody.total, 'the status reflects at least the mail just sent')
+        .soft(
+          statusBody.totalCount ?? statusBody.total,
+          'the status reflects at least the mail just sent',
+        )
         .toBeGreaterThan(0);
     });
 
@@ -210,10 +223,12 @@ test.describe(
       expect(true, 'placeholder — this test body never runs past test.skip above').toBe(true);
     });
 
-    test('referenceMailContent: exact request shape is Unknown/Requires Clarification (identifier-guard gap fixed)', async ({
+    test('referenceMailContent: the web app body opens a referenced mail, and the reply matches its schema', async ({
       endpoints,
     }) => {
-      // The request shape is unknown: every shape tried with a real kmailID returns 400.
+      // The web app sends { referenceMails: [id] } (KmailMessage.js RefMailShow). The server's
+      // ReadMailRequestObject also demands kmailType (@NotBlank), so that body is refused with 400.
+      // The second call adds kmailType so the reply can be checked against its schema either way.
       const composed = await endpoints.sendTo(
         'kmail-post-mail',
         {
@@ -240,11 +255,16 @@ test.describe(
           { label: 'kmail:reference-content', auth: { principal: A }, allowLiveRead: true },
         );
         expect
-          .soft(
-            ref.status,
-            'referenceMailContent returns a status (exact required shape: Unknown/Requires Clarification)',
-          )
-          .toBeLessThan(500);
+          .soft(ref.status, 'referenceMailContent accepts the body the web app sends')
+          .toBe(200);
+        const typed = await endpoints.sendTo(
+          'kmail-reference-content',
+          { body: { referenceMails: [kmailID], kmailType: 'sent' } },
+          { label: 'kmail:reference-content-typed', auth: { principal: A }, allowLiveRead: true },
+        );
+        expect
+          .soft(typed.status, 'referenceMailContent with kmailType returns the referenced mail')
+          .toBe(200);
       }
     });
 

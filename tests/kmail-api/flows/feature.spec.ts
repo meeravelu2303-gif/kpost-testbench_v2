@@ -154,6 +154,9 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
           ['kmail-status-with-count', { kmailStatusFlag: 2 }],
           // Not productionSafe: needs allowLiveRead (set on every call below).
           ['kmail-bulk-dashboard', { kmailID: id }],
+          // The fields the controller actually checks (CommonMailController.getBulkKmailDashboardMsg),
+          // so the reply is a success that its schema is checked against.
+          ['kmail-bulk-dashboard', { firstKmailID: id }],
         ];
         for (const [epId, reqBody] of reads) {
           const ex = await endpoints.sendTo(
@@ -164,10 +167,26 @@ test.describe('KPost KMail · feature flow', { tag: ['@api', '@kmail', '@regress
               auth: { principal: A },
               allowLiveWrite: true,
               allowLiveRead: true,
+              // The mail this flow just composed, under whichever key the endpoint names it.
+              ownedIdentifiers: [id],
             },
           );
           expect.soft(ex.status, `${epId} reads the mail without a server error`).toBeLessThan(500);
         }
+
+        // The body the web app and the workbook send (BulkMailDashboard.js getDashboard: { kmailID }).
+        const dashboard = await endpoints.sendTo(
+          'kmail-bulk-dashboard',
+          { body: { kmailID: id } },
+          {
+            label: 'kmail:bulk-dashboard-web-body',
+            auth: { principal: A },
+            allowLiveRead: true,
+          },
+        );
+        expect
+          .soft(dashboard.status, 'getBulkKmailDashboardMsg accepts the body the web app sends')
+          .toBe(200);
 
         // A GET keyed by path param; not productionSafe, so it needs allowLiveRead.
         const copies = await endpoints.sendTo(

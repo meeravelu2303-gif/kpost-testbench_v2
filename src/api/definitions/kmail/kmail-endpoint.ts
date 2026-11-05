@@ -45,6 +45,9 @@ export function defineKmailEndpoint(config: KpostEndpointConfig): EndpointDefini
     // The workbook wins; the definition's schema (typed from the live client's body) fills in only
     // where the workbook row documents no body, so negative request cases can still be generated.
     requestSchema: contract.requestSchema ?? config.requestSchema,
+    // Mirrors `defineKpostEndpoint`: the workbook never types path or query parameters.
+    pathParamsSchema: config.pathParamsSchema,
+    querySchema: config.querySchema,
     responseSchema: contract.responseSchema ?? fromSource?.schema,
     responseSchemaSource: fromSource?.source,
     destructive: config.destructive,

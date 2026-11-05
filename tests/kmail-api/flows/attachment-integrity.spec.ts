@@ -97,6 +97,46 @@ test.describe(
             expected,
           );
         }
+
+        // The other two readers of the same real attachment (ReadKmailController downloadThumbnail and
+        // streamUrl). Both return a file or a redirect to it, not JSON, so the check is "a real answer".
+        const thumb = await endpoints.sendTo(
+          'kmail-download-thumbnail',
+          { pathParams: { uuid } },
+          {
+            label: 'integrity:thumbnail',
+            auth: { principal: B },
+            allowLiveRead: true,
+            timeoutMs: 60_000,
+          },
+        );
+        test.info().annotations.push({
+          type: 'observed',
+          description: `thumbnail: HTTP ${thumb.status}, ${thumb.bodyDigest?.bytes ?? 0} bytes, ${thumb.headers['content-type'] ?? 'no content-type'}`,
+        });
+        expect.soft(thumb.status, 'the recipient gets the attachment thumbnail').toBe(200);
+        expect
+          .soft(thumb.bodyDigest?.bytes ?? 0, 'the thumbnail answer is not empty')
+          .toBeGreaterThan(0);
+
+        const stream = await endpoints.sendTo(
+          'kmail-media-streaming',
+          { pathParams: { uuid } },
+          {
+            label: 'integrity:media-streaming',
+            auth: { principal: B },
+            allowLiveRead: true,
+            timeoutMs: 60_000,
+          },
+        );
+        test.info().annotations.push({
+          type: 'observed',
+          description: `mediaStreaming: HTTP ${stream.status}, location ${stream.headers['location'] ? 'present' : 'absent'}, ${stream.bodyDigest?.bytes ?? 0} bytes`,
+        });
+        // A 303 to S3 (the source contract) or, when the client follows it, the file itself.
+        expect
+          .soft([200, 303], 'mediaStreaming answers with the media or a redirect to it')
+          .toContain(stream.status);
       } finally {
         await deleteUploaded(endpoints, A, uuid, 'integrity:cleanup-file');
         // postMail's reply carries no transaction list, so each side's transaction ids are read from

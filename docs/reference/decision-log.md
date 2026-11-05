@@ -3,7 +3,36 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-04 (latest, night) — UI health: a cache-busted API call is not a "broken asset"; Chromium plan not applied
+### 2026-11-05 (latest) — KMail API contract/schema coverage closed; five web-app bodies the server refuses
+
+Owner: "first focus on the kmail api, cover with 100 percentage of Contract and schema test".
+
+- **Source schemas confirmed live (QA, 2026-11-05):** reference-content, bulk-dashboard, clear-status,
+  clear-all-status, bulk-status (`liveCheck: matched 2026-11-05`). They had stayed unconfirmed because every
+  flow call to them failed on the bench's own bodies: clear-status lacked `selectMailType` (the service acts
+  only on 'A'), bulk-dashboard sent `kmailID` (the controller checks `firstKmailID`/`lastKmailID`),
+  reference-content lacked the `@NotBlank kmailType`. The flows now send the web app's body (asserted 200:
+  the real-bug check) AND the body the server accepts (schema-checked). bulk-status polls past 202.
+- **`emptyResult`** (new, `source-contract.ts`): a cited second success shape, used for bulk-dashboard's
+  `{"message":"No Data Found","status":"SUCCESS"}` (no statusCode). The schema is then "the full success OR
+  exactly this", never looser.
+- **Path parameters:** `defineKmailEndpoint` never passed `pathParamsSchema` through; it does now, and
+  `idRead` derives it from the path's `{placeholders}` (5/5 KMail path-parameter endpoints).
+- **Guard:** `selectmailtype` (a scope flag 'A'/'S') added to `NOT_A_RESOURCE`. `kmail-group-read-status` is
+  `destructive: false` (a pure read, CommonMailServiceImpl.kmailGroupReadStatus).
+- **Product commands:** `product:kmail-api` and `:file` now set `AWS_LIFECYCLE=true GROUP_LIFECYCLE=true`, so
+  the self-cleaning attachment tests (≤64 KB upload, S3 object + both mail copies deleted) and the group
+  read-status test run every night. attachment-integrity now also reads the thumbnail and media stream.
+- **Not live-confirmable (stated, not counted as covered):** postBoxContacts (no route), draftMailMultiPart
+  (not in use, 404), saveUnsubscriberDetails (public write, no undo — rule 8), deleteLetterHead (dev-confirmed
+  shared default), convertMailAsPDF (server defect: answers `200 {}` when the PDF fails), downloadODAttachment
+  (server refuses the web app's body).
+- **Findings awaiting the owner (not filed):** the web app's bodies for getBulkKmailDashboardMsg,
+  referenceMailContent and downloadODAttachment are all refused 400 (API/UI drift: file both halves);
+  convertMailAsPDF `200 {}`; group read-status readable by a non-member (re-run alone first); bulk-status
+  `totalCount 0` after a finished send (unverified).
+
+### 2026-11-04 (night) — UI health: a cache-busted API call is not a "broken asset"; Chromium plan not applied
 
 The Chromium preview (run-1a8d4fdc, 773 tests: 625 passed, 104 failed) planned 11 new bugs, all one
 false alarm. Bench UI flows had created and deleted two test groups (`qau368`, `qau413`: active_status N,

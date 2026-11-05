@@ -1,4 +1,4 @@
-import { typesOnlySchema } from '@api/schema/sample-schema';
+import { pathParamSchema, typesOnlySchema } from '@api/schema/sample-schema';
 import { testData } from '@config/test-data.config';
 import type { ContractSchema } from '../../schema/contract-schema';
 import { body, pathParams } from '../kpost/kpost-endpoint';
@@ -302,7 +302,11 @@ const idRead = (
   request: ReturnType<typeof body>,
   note: string,
   tags: string[] = [],
-  opts: { authentication?: { required: boolean }; requestSchema?: ContractSchema } = {},
+  opts: {
+    authentication?: { required: boolean };
+    requestSchema?: ContractSchema;
+    destructive?: boolean;
+  } = {},
 ) =>
   defineKmailEndpoint({
     id,
@@ -312,9 +316,19 @@ const idRead = (
     tags: [...R, 'needs-id', ...tags],
     request,
     requestSchema: opts.requestSchema,
+    // The path's own {placeholders}, so the path-parameter cases cover every one of them.
+    pathParamsSchema: pathPlaceholders(path).length
+      ? pathParamSchema(...pathPlaceholders(path))
+      : undefined,
     note,
     authentication: opts.authentication,
+    destructive: opts.destructive,
   });
+
+/** The `{name}` placeholders of a path, in order. */
+function pathPlaceholders(path: string): string[] {
+  return [...path.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]!);
+}
 
 export const copiesInfoApi = idRead(
   'kmail-copies-info',
@@ -388,6 +402,8 @@ export const groupReadStatusApi = idRead(
   body(() => ({ kmailID: 0 })),
   'needs a real group kmailID',
   ['read-receipt'],
+  // A pure read (CommonMailController.kmailGroupReadStatus returns the per-member read flags).
+  { destructive: false },
 );
 export const detailsByIdApi = idRead(
   'kmail-details-by-id',

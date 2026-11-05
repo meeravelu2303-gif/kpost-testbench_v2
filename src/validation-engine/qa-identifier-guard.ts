@@ -51,6 +51,8 @@ const NOT_A_RESOURCE = new Set(
     'secretmessageexpiretime',
     'sharedtype',
     'selectedmembers',
+    // KMail clear-status scope: 'A' (all of a contact's mails) or 'S' (the selected transactions).
+    'selectmailtype',
     'isvoicemessage',
     'attachmentcaption',
     'referencemessagelist',
