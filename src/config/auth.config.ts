@@ -17,6 +17,12 @@ const PrincipalSchema = z.object({
   userType: z.string().min(1).optional(),
   /** Login endpoint for this principal, overriding the auth profile's default. */
   loginEndpointId: z.string().min(1).optional(),
+  /**
+   * The device this principal signs in from (`deviceIdentity_primary`), overriding the device every
+   * bench login names. Only a throwaway account sets it: to sign in from the device it registered,
+   * which device-bound calls (phone contacts) need.
+   */
+  deviceIdentity: z.string().min(1).optional(),
 });
 export type Principal = z.infer<typeof PrincipalSchema>;
 

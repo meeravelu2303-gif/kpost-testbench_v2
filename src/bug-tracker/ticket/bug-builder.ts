@@ -228,8 +228,9 @@ export function buildDescription(candidate: BugCandidate): string {
     );
   }
 
-  const guidance = developerGuidance(candidate.classification);
-  if (guidance) lines.push('', 'How to fix:', ...wrap(firstSentence(guidance.fix)));
+  // A finding's own fix (read from the code) wins over the classification's generic one.
+  const fix = candidate.fix ?? developerGuidance(candidate.classification)?.fix;
+  if (fix) lines.push('', 'How to fix:', ...wrap(candidate.fix ? fix : firstSentence(fix)));
 
   // Tokens are a $KPOST_TOKEN placeholder (see curl.ts).
   if (candidate.curl) lines.push('', 'curl:', clamp(candidate.curl, 'curl'));

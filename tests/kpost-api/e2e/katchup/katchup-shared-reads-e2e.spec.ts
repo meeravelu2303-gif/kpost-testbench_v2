@@ -2,6 +2,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 
 /**
@@ -138,6 +139,30 @@ test.describe(
         expect
           .soft(details.status, 'getSharedMessageDetails does not crash on a real msgID')
           .toBeLessThan(500);
+      } finally {
+        await cleanup(endpoints, msgID);
+      }
+    });
+
+    test('every shared/reference read, through the full engine, on a real sent message', async ({
+      endpoints,
+      validationEngine,
+    }) => {
+      // The sweep cannot send these (a placeholder id could name someone else's message); this
+      // message is our own, so every engine check runs on it here.
+      const { msgID, sharedMessageId } = await sendOne(endpoints);
+      try {
+        test.skip(!msgID || !sharedMessageId, 'the send returned no msgID/sharedMessageId');
+        // Shared-message info/details and messages-by-reference need a genuinely shared or
+        // referenced message (a plain one answers 404), so they are not run on this record.
+        const reads: Array<[string, Parameters<typeof checkOnRealRecord>[2]]> = [
+          ['katchup-bulk-message-info', { body: { sharedMessageId } }],
+          [
+            'katchup-reference-details',
+            { body: { referenceMessageIDList: [msgID], sourceMsgID: msgID } },
+          ],
+        ];
+        for (const [id, spec] of reads) await checkOnRealRecord(validationEngine, id, spec);
       } finally {
         await cleanup(endpoints, msgID);
       }

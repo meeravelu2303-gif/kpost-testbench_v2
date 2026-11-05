@@ -206,10 +206,40 @@ interface Offence {
   value: unknown;
 }
 
+/**
+ * True when the guard treats a request key as naming a record (its value must be QA-owned), so a
+ * fuzzed value there is never sent. Read by the test-type ledger; the guard itself uses the same test.
+ */
+export function isGuardedIdentifierKey(key: string): boolean {
+  return IDENTIFIER_KEY.test(key) && !NOT_A_RESOURCE.has(key.toLowerCase());
+}
+
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * A value that cannot be anybody's record because of its shape (owner, 2026-11-05: "yes" to letting
+ * malformed values through so the negative fuzzers can send them). Only three shapes, each impossible
+ * for the key's kind of record; anything real-looking stays checked:
+ *   - a KPost ID with no `@` (every KPost ID is e-mail-form);
+ *   - an id with no digit at all (`not-a-number`): no numeric record id has none;
+ *   - a uuid that is not UUID-shaped (`not-a-uuid`, `12345`): no S3 key is.
+ * Mobile numbers and e-mail addresses are not exempt: they reach a real phone or the live mail server.
+ */
+export function cannotBeARecord(key: string, value: string | number): boolean {
+  const v = String(value).trim();
+  if (/uuid/i.test(key)) return !UUID_SHAPE.test(v);
+  // A contact is named by its KPost ID (`contactID: "qatest1@kpostindia.com"`), so it is one too.
+  // E-mail keys are NOT exempt (they reach the live mail server; owner approved KPost IDs only).
+  if (/email|mail/i.test(key)) return false;
+  if (/kpost|^contactids?$/i.test(key)) return !v.includes('@');
+  if (/ids?$/i.test(key)) return !/\d/.test(v) && !v.includes('@');
+  return false;
+}
+
 /** A value names somebody else's record unless it is ours — or empty, which names nothing at all. */
-const notOurs = (value: string | number, owned: Set<string>): boolean => {
+const notOurs = (value: string | number, owned: Set<string>, key = ''): boolean => {
   const v = String(value).trim().toLowerCase();
-  return v !== '' && !owned.has(v);
+  return v !== '' && !owned.has(v) && !cannotBeARecord(key, value);
 };
 
 function walk(node: unknown, trail: string, owned: Set<string>, found: Offence[]): void {
@@ -220,15 +250,15 @@ function walk(node: unknown, trail: string, owned: Set<string>, found: Offence[]
   if (node && typeof node === 'object') {
     for (const [key, value] of Object.entries(node)) {
       const here = trail ? `${trail}.${key}` : key;
-      const isIdentifier = IDENTIFIER_KEY.test(key) && !NOT_A_RESOURCE.has(key.toLowerCase());
+      const isIdentifier = isGuardedIdentifierKey(key);
 
       if (isIdentifier && (typeof value === 'string' || typeof value === 'number')) {
-        if (notOurs(value, owned)) found.push({ path: here, value });
+        if (notOurs(value, owned, key)) found.push({ path: here, value });
       } else if (isIdentifier && Array.isArray(value)) {
         // `{"kallIds":[2,3]}` and `{"memberKpostIdList":[…]}` — each element is a target.
         value.forEach((item, index) => {
           if (typeof item === 'string' || typeof item === 'number') {
-            if (notOurs(item, owned)) {
+            if (notOurs(item, owned, key)) {
               found.push({ path: `${here}[${index}]`, value: item });
             }
           } else {

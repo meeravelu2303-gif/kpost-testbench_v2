@@ -136,6 +136,11 @@ export interface BugCandidate {
   curl?: string;
   /** SQL that shows the same discrepancy in the database, for findings asserted on MySQL state. */
   verificationSql?: string;
+  /**
+   * The specific fix, when the finder knows it (a hand-written finding read from the backend code).
+   * Shown as "How to fix", in place of the classification's generic guidance.
+   */
+  fix?: string;
   /** How the reproduction gate scored it: `failures` of `attempts` passes failed. */
   reproduction?: { attempts: number; failures: number };
   correlationId?: string;

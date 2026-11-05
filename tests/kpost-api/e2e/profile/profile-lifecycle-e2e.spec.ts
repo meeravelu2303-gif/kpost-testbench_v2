@@ -466,6 +466,55 @@ test.describe(
       );
       expect.soft(jpegUploadEx.status, 'updateProfileImage accepts a JPEG').toBeLessThan(300);
 
+      // The picture just uploaded, read back through every route that serves it. Each answer is also
+      // checked against the route's file contract (the bytes agree with the Content-Type).
+      for (const id of [
+        'profile-download-image',
+        'profile-download-full-image',
+        'common-download-profile-image',
+      ]) {
+        const image = await endpoints.sendTo(
+          id,
+          { pathParams: { kpostID: testData.kpostId } },
+          { label: `profile:readback:${id}`, auth: { principal: A } },
+        );
+        expect.soft(image.status, `${id} serves the picture just uploaded`).toBe(200);
+        // common/downloadProfileImage answers 200 with an EMPTY body when the image exists
+        // (CommonControllerV2.java:1822 returns body(null) on success): this fails until it is fixed.
+        expect
+          .soft(
+            image.magicType ?? `no image bytes (${image.bodyText.length} characters)`,
+            `${id} serves an image`,
+          )
+          .toMatch(/^image\//);
+      }
+
+      // The cover, uploaded as the web app does (a real image file), then read back.
+      const coverUpload = await endpoints.sendTo(
+        'profile-upload-cover',
+        {
+          multipart: {
+            file: {
+              name: 'qa-bench-cover.jpg',
+              mimeType: 'image/jpeg',
+              buffer: Buffer.from(JPEG_1X1, 'base64'),
+            },
+            text: JSON.stringify({ kpostID: testData.kpostId }),
+          },
+        },
+        { label: 'profile:upload-cover-jpeg', auth: { principal: A }, allowLiveWrite: true },
+      );
+      expect.soft(coverUpload.status, 'uploadCoverImage accepts a JPEG').toBeLessThan(300);
+      const cover = await endpoints.sendTo(
+        'profile-download-cover',
+        { pathParams: { kpostID: testData.kpostId } },
+        { label: 'profile:readback:cover', auth: { principal: A } },
+      );
+      expect.soft(cover.status, 'downloadCoverImage serves the cover just uploaded').toBe(200);
+      expect
+        .soft(cover.magicType ?? 'no image bytes', 'downloadCoverImage serves an image')
+        .toMatch(/^image\//);
+
       const pngUpload = await endpoints.sendTo(
         'profile-update-image',
         {
@@ -502,7 +551,6 @@ test.describe(
         .toBeLessThan(500);
 
       for (const [id, label] of [
-        ['profile-upload-cover', 'upload-cover'],
         ['profile-update-signature', 'upload-signature'],
         ['profile-upload-attachments', 'upload-attachments'],
         ['profile-upload-image-s3', 'upload-s3'],

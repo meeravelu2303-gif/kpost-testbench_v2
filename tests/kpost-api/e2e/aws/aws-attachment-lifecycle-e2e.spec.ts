@@ -3,6 +3,7 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 
 /**
@@ -46,11 +47,13 @@ test.describe('KPost AWS · feature flow', { tag: ['@api', '@platform', '@regres
   test(
     'generate presigned URL → delete, on our own attachment @api @aws',
     { tag: '@sanity' },
-    async ({ endpoints }) => {
+    async ({ endpoints, validationEngine }) => {
+      // A tiny file (far under the 64 KB upload cap): uploads land in the live S3 bucket.
+      const content = '%PDF-1.4\n% QA bench attachment, safe to delete\n';
       const generated = await run(
         endpoints,
         'aws-generate-presigned',
-        { body: { extension: 'pdf', fileName: 'qa-bench.pdf', fileSize: '940' } },
+        { body: { extension: 'pdf', fileName: 'qa-bench.pdf', fileSize: String(content.length) } },
         'generate',
       );
       expect.soft(generated.status, 'generate-presigned is accepted').toBeLessThan(300);
@@ -75,6 +78,38 @@ test.describe('KPost AWS · feature flow', { tag: ['@api', '@platform', '@regres
             'checkAttachmenS3 knows our freshly presigned uuid (417: not uploaded yet)',
           )
           .toBe(417);
+
+        // Upload to the presigned URL exactly as the client does (a direct S3 PUT), then check again:
+        // now the attachment exists, and the check's success answer is what its contract is read on.
+        const raw = generated.text.trim();
+        const url = raw.startsWith('{')
+          ? String((JSON.parse(raw) as { presignedURL?: string }).presignedURL ?? '')
+          : raw.replace(/^"|"$/g, '');
+        const put = await fetch(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/pdf' },
+          body: content,
+        });
+        expect.soft(put.status, 'the direct S3 upload succeeds').toBeLessThan(300);
+        const uploaded = await endpoints.sendTo(
+          'aws-check-attachment-get',
+          { pathParams: { uuid } },
+          {
+            label: 'aws:check-get-after-upload',
+            auth: { principal: A },
+            allowLiveRead: true,
+            ownedIdentifiers: [uuid],
+          },
+        );
+        await checkOnRealRecord(
+          validationEngine,
+          'aws-check-attachment-get',
+          { pathParams: { uuid } },
+          [uuid],
+        );
+        expect
+          .soft(uploaded.status, 'checkAttachmenS3 sees the uploaded attachment (200)')
+          .toBe(200);
 
         // Delete the presigned key we just reserved (and the S3 object, if any).
         const deleted = await run(

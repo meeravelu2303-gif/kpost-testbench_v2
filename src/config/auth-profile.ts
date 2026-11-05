@@ -156,6 +156,8 @@ export const AUTH_PROFILES: Record<AuthProfile['id'], AuthProfile> = {
     loginRequest: (principal) => ({
       body: {
         ...DEVICE,
+        // A throwaway account may sign in from the device it registered (auth.config.ts).
+        deviceIdentity_primary: principal.deviceIdentity ?? DEVICE.deviceIdentity_primary,
         // Unique per login (see DEVICE).
         sessionID: randomUUID(),
         kpostID: principal.username,

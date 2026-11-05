@@ -2,6 +2,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
+import { checkOnRealRecord } from '@engine/real-record';
 
 /**
  * KBooking feature flow: the bus-search chain (city → destinations → trips → trip details), each step
@@ -37,7 +38,7 @@ test.describe(
     test(
       'search chain: city → destinations → available trips → trip details, each fed the prior real result',
       { tag: '@sanity' },
-      async ({ endpoints }) => {
+      async ({ endpoints, validationEngine }) => {
         const citySuggestion = await endpoints.sendTo(
           'kbooking-city-suggestion',
           { pathParams: { query: 'chennai' } },
@@ -97,6 +98,7 @@ test.describe(
             allowLiveRead: true,
           },
         );
+        await checkOnRealRecord(validationEngine, 'kbooking-trip-details', { body: { tripID } });
         expect(
           details.status,
           `tripdetails succeeds when fed a real tripID (${tripID}) from the search just performed`,
@@ -113,6 +115,9 @@ test.describe(
             allowLiveRead: true,
           },
         );
+        await checkOnRealRecord(validationEngine, 'kbooking-trip-details-v2', {
+          body: { inventoryId: tripID },
+        });
         expect(detailsV2.status, `tripdetailsV2 succeeds for the real trip ${tripID}`).toBe(200);
 
         // One boarding point of that trip: boardingTimes[].bpId.
@@ -133,6 +138,9 @@ test.describe(
             allowLiveRead: true,
           },
         );
+        await checkOnRealRecord(validationEngine, 'kbooking-boarding-point', {
+          body: { boardingID: String(bpId), tripID },
+        });
         expect(
           boarding.status,
           `boardingPoint succeeds for boarding point ${bpId} of trip ${tripID}`,

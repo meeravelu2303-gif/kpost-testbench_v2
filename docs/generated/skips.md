@@ -10,12 +10,12 @@ be in, one it should not stay in (no reason string), and one that fails the buil
 | ----- | ----: | ---------: |
 | Retune | 1 | 1 |
 | Blocked by a defect | 46 | 25 |
-| Provision | 469 | 318 |
+| Provision | 472 | 318 |
 | Owner decision | 253 | 192 |
-| Live condition | 151 | 70 |
+| Live condition | 152 | 71 |
 | No reason string | 3 | 1 |
-| Unclassified | 58 | 15 |
-| **Total** | **981** | **367** |
+| Unclassified | 60 | 17 |
+| **Total** | **987** | **368** |
 
 ## The last run, by the engine’s own skip classes
 
@@ -39,7 +39,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
-| 3 | scheduledKall did not return a kallID (status …) | `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:38`, `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:87`, `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:133` |
+| 3 | scheduledKall did not return a kallID (status …) | `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:66`, `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:122`, `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:175` |
 | 3 | kall-initiate did not return a kallID to attack (placed replied …) | `tests/kpost-api/authorization/kall/kall-object-authorization.spec.ts:57`, `tests/kpost-api/authorization/kall/kall-object-authorization.spec.ts:152`, `tests/kpost-api/authorization/kall/kall-object-authorization.spec.ts:415` |
 | 3 | sendMessage did not return a msgID (status …) | `tests/kpost-api/authorization/katchup/katchup-cross-account-idor-authorization.spec.ts:51`, `tests/kpost-api/authorization/katchup/katchup-cross-account-idor-authorization.spec.ts:112`, `tests/kpost-api/authorization/katchup/katchup-legacy-recall-authorization.spec.ts:40` |
 | 3 | send did not return a msgID (replied …) | `tests/kpost-api/authorization/katchup/katchup-idor-authorization.spec.ts:44`, `tests/kpost-api/authorization/katchup/katchup-idor-authorization.spec.ts:169`, `tests/kpost-api/authorization/katchup/katchup-idor-authorization.spec.ts:253` |
@@ -47,7 +47,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 2 | kmail-post-mail did not return a kmailID (…) | `tests/kmail-api/authorization/kmail-content-idor-authorization.spec.ts:64`, `tests/kmail-api/authorization/kmail-copies-info-idor-authorization.spec.ts:67` |
 | 2 | sendMessage did not return a msgID to attack (send replied …) — activates automatically once one is issued | `tests/kpost-api/authorization/katchup/katchup-object-authorization.spec.ts:50`, `tests/kpost-api/authorization/katchup/katchup-object-authorization.spec.ts:122` |
 | 2 | BLOCKED: needs the message from "send" | `tests/kpost-api/data-integrity/katchup/katchup-message-lifecycle-data-integrity.spec.ts:94`, `tests/kpost-api/data-integrity/katchup/katchup-message-lifecycle-data-integrity.spec.ts:168` |
-| 2 | BLOCKED: needs the msgID from "a message sends" | `tests/kpost-api/e2e/katchup/katchup-one-to-one-e2e.spec.ts:101`, `tests/kpost-api/e2e/katchup/katchup-one-to-one-e2e.spec.ts:112` |
+| 2 | BLOCKED: needs the msgID from "a message sends" | `tests/kpost-api/e2e/katchup/katchup-one-to-one-e2e.spec.ts:102`, `tests/kpost-api/e2e/katchup/katchup-one-to-one-e2e.spec.ts:113` |
 | 1 | BLOCKED: needs the record from "1 create" | `tests/framework/reporting/run-continuity.spec.ts:100` |
 | 1 | BLOCKED: needs never the record from a step that failed | `tests/framework/reporting/run-continuity.spec.ts:102` |
 | 1 | kmail-post-mail did not return a kmailID to attack (send replied …) | `tests/kmail-api/authorization/kmail-mutation-idor-authorization.spec.ts:57` |
@@ -72,7 +72,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a composer-control finding | `tests/kpost-ui/functional/kmail/kmail-composer-controls-functional.spec.ts:30` |
 | 1 | /writemail rendered the error boundary ("Something went wrong") — #990-shaped crash, reported by screens-batch4, not a compose-fuzz finding | `tests/kpost-ui/security/kmail/kmail-security.spec.ts:58` |
 
-## Provision — an account, connection, host or secret this machine lacks (469)
+## Provision — an account, connection, host or secret this machine lacks (472)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -83,16 +83,16 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 17 | qa.bench needs a real QA account (QA_KPOST_ID) | `tests/kpost-ui/api-handling/contacts/contacts-digitalcard-api-handling.spec.ts:162`, `tests/kpost-ui/api-handling/contacts/contacts-digitalcard-api-handling.spec.ts:333`, `tests/kpost-ui/api-handling/group/group-create-api-handling.spec.ts:78`, `tests/kpost-ui/api-handling/kall/kall-dashboard-api-handling.spec.ts:83` +13 more |
 | 13 | needs the KPOST_QA connection to judge by the row | `tests/kmail-api/authorization/kmail-mutation-idor-authorization.spec.ts:36`, `tests/kpost-api/authorization/contacts/contacts-group-cross-user-authorization.spec.ts:198`, `tests/kpost-api/authorization/contacts/contacts-group-cross-user-authorization.spec.ts:335`, `tests/kpost-api/authorization/group/group-object-authorization.spec.ts:250` +9 more |
 | 11 | qa.business needs the BUSINESS_S account (QA_BUSINESS_S_KPOST_ID) | `tests/kpost-ui/accessibility/user-management/usermanagement-accessibility.spec.ts:32`, `tests/kpost-ui/api-handling/user-management/usermanagement-api-handling.spec.ts:24`, `tests/kpost-ui/e2e/settings/settings-business-bank-details-e2e.spec.ts:19`, `tests/kpost-ui/e2e/settings/settings-business-company-details-e2e.spec.ts:20` +7 more |
+| 9 | account registry says which role is missing (requireAll) | `tests/kmail-api/data-integrity/kmail-mail-state-data-integrity.spec.ts:36`, `tests/kpost-api/authentication/signup-login/signup-login-session-rows-authentication.spec.ts:22`, `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:102`, `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:155` +5 more |
 | 9 | needs the 2nd QA account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/api-handling/contacts/contacts-digitalcard-api-handling.spec.ts:166`, `tests/kpost-ui/api-handling/katchup/katchup-message-api-handling.spec.ts:155`, `tests/kpost-ui/validation/contacts/contacts-digitalcard-validation.spec.ts:21`, `tests/kpost-ui/validation/kall/kall-validation.spec.ts:81` +5 more |
 | 9 | qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/kpost-ui/e2e/katchup/katchup-actions-e2e.spec.ts:23`, `tests/kpost-ui/e2e/katchup/katchup-actions-more-e2e.spec.ts:34`, `tests/kpost-ui/e2e/katchup/katchup-compose-e2e.spec.ts:32`, `tests/kpost-ui/e2e/katchup/katchup-content-correctness-e2e.spec.ts:62` +5 more |
 | 6 | qa.business.m needs the BUSINESS_M account (QA_BUSINESS_M_KPOST_ID + QA_BUSINESS_M_COMPANY_ID) | `tests/admin-api/authorization/admin-cross-tenant-probes-authorization.spec.ts:15`, `tests/admin-api/authorization/admin-cross-tenant-reads-authorization.spec.ts:16`, `tests/admin-api/authorization/admin-cross-tenant-writes-authorization.spec.ts:180`, `tests/admin-api/business-rules/admin-reads-business-rules.spec.ts:16` +2 more |
 | 6 | qa.business.m needs the BUSINESS_M account of the QA testing company (QA_BUSINESS_M_KPOST_ID) | `tests/admin-api/business-rules/admin-field-rules-business-rules.spec.ts:325`, `tests/admin-api/e2e/admin-endpoint-matrix-e2e.spec.ts:345`, `tests/admin-api/maintenance/admin-qa-leftovers-maintenance.spec.ts:40`, `tests/admin-api/negative/admin-required-fields-negative.spec.ts:64` +2 more |
-| 6 | account registry says which role is missing (requireAll) | `tests/kmail-api/data-integrity/kmail-mail-state-data-integrity.spec.ts:36`, `tests/kpost-api/authentication/signup-login/signup-login-session-rows-authentication.spec.ts:22`, `tests/kpost-api/data-integrity/contacts/contacts-add-delete-data-integrity.spec.ts:21`, `tests/kpost-api/data-integrity/contacts/contacts-add-delete-data-integrity.spec.ts:159` +2 more |
 | 6 | qa.bench qa.bench needs both QA accounts (QA_KPOST_ID, QA_VICTIM_KPOST_ID) | `tests/kmail-api/e2e/kmail-reply-forward-e2e.spec.ts:51`, `tests/kpost-api/business-rules/katchup/katchup-unread-count-business-rules.spec.ts:36`, `tests/kpost-ui/e2e/katchup/katchup-received-actions-e2e.spec.ts:78`, `tests/kpost-ui/e2e/katchup/katchup-two-session-e2e.spec.ts:44` +2 more |
 | 6 | needs the personal and personal-3 principals | `tests/kpost-api/authorization/aws/aws-object-access-authorization.spec.ts:174`, `tests/kpost-api/authorization/kbooking/kbooking-cross-user-authorization.spec.ts:95`, `tests/kpost-api/authorization/kdiary/kdiary-cross-user-authorization.spec.ts:78`, `tests/kpost-api/authorization/kdiary/kdiary-object-authorization.spec.ts:40` +2 more |
 | 6 | qa.victim needs the 2nd QA account (QA_VICTIM_KPOST_ID) | `tests/kpost-ui/api-handling/kmail/kmail-compose-api-handling.spec.ts:75`, `tests/kpost-ui/api-handling/kmail/kmail-thread-api-handling.spec.ts:63`, `tests/kpost-ui/functional/kmail/kmail-translate-i18n-functional.spec.ts:16`, `tests/kpost-ui/resilience/kmail/kmail-compose-resilience.spec.ts:107` +2 more |
 | 5 | needs the KPOST_QA connection to assert persistence | `tests/kmail-api/data-integrity/kmail-mail-state-data-integrity.spec.ts:44`, `tests/kpost-api/data-integrity/katchup/katchup-message-lifecycle-data-integrity.spec.ts:53`, `tests/kpost-api/data-integrity/katchup/katchup-message-lifecycle-data-integrity.spec.ts:92`, `tests/kpost-api/data-integrity/katchup/katchup-message-lifecycle-data-integrity.spec.ts:125` +1 more |
-| 5 | needs two distinct KPost principals | `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:19`, `tests/kpost-api/authorization/kall/kall-object-authorization.spec.ts:519`, `tests/kpost-api/authorization/katchup/katchup-legacy-recall-authorization.spec.ts:19`, `tests/kpost-api/authorization/katchup/katchup-object-authorization.spec.ts:23` +1 more |
+| 5 | needs two distinct KPost principals | `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:47`, `tests/kpost-api/authorization/kall/kall-object-authorization.spec.ts:519`, `tests/kpost-api/authorization/katchup/katchup-legacy-recall-authorization.spec.ts:19`, `tests/kpost-api/authorization/katchup/katchup-object-authorization.spec.ts:23` +1 more |
 | 4 | qa.bench needs a real account (QA_KPOST_ID) | `tests/kpost-ui/accessibility/platform/platform-axe-accessibility.spec.ts:27`, `tests/kpost-ui/accessibility/platform/platform-keyboard-accessibility.spec.ts:19`, `tests/kpost-ui/resilience/platform/platform-network-resilience.spec.ts:19`, `tests/kpost-ui/visual/platform/platform-visual.spec.ts:22` |
 | 3 | not configured for this run: … | `tests/admin-api/smoke/admin-api.smoke.spec.ts:17`, `tests/kmail-api/smoke/kmail-api.smoke.spec.ts:15`, `tests/kpost-api/smoke/kpost-api.smoke.spec.ts:15` |
 | 3 | needs three QA accounts | `tests/kmail-api/business-rules/kmail-draft-business-rules.spec.ts:75`, `tests/kmail-api/business-rules/kmail-mail-semantics-business-rules.spec.ts:46`, `tests/kmail-api/business-rules/kmail-send-business-rules.spec.ts:33` |
@@ -174,7 +174,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | needs the KPOST_QA connection (DB_HOST/DB_NAME) to prove the account exists | `tests/kpost-api/data-integrity/profile/profile-directory-lookup-data-integrity.spec.ts:20` |
 | 1 | needs provisioned DB_ALLOW_WRITES=true: the API cannot remove saved bank details, so the column is restored in the QA DB | `tests/kpost-api/e2e/admin/admin-company-details-e2e.spec.ts:107` |
 | 1 | needs the BUSINESS_M and BUSINESS_S admins and the 5th QA account | `tests/kpost-api/e2e/common/common-company-logo-e2e.spec.ts:73` |
-| 1 | needs the KPOST_QA connection to resolve the real membership id | `tests/kpost-api/e2e/group/group-lifecycle-e2e.spec.ts:310` |
+| 1 | needs the KPOST_QA connection to resolve the real membership id | `tests/kpost-api/e2e/group/group-lifecycle-e2e.spec.ts:321` |
 | 1 | needs the 5th QA account | `tests/kpost-api/e2e/katchup/katchup-multipart-upload-e2e.spec.ts:24` |
 | 1 | needs the KPOST_QA database to remove the attachment row | `tests/kpost-api/e2e/katchup/katchup-multipart-upload-e2e.spec.ts:28` |
 | 1 | needs the KPOST_QA database to see read_time | `tests/kpost-api/e2e/katchup/katchup-offline-delivery-e2e.spec.ts:76` |
@@ -258,7 +258,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 4 | needs auth2.setup.ts for the 2nd account; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/e2e/kmail/kmail-actions-e2e.spec.ts:21`, `tests/kpost-ui/e2e/kmail/kmail-features-e2e.spec.ts:30`, `tests/kpost-ui/e2e/kmail/kmail-status-e2e.spec.ts:148`, `tests/kpost-ui/e2e/kmail/kmail-status-e2e.spec.ts:313` |
 | 3 | uploads a real file to S3 and sends a real mail; set KMAIL_LIFECYCLE=true and AWS_LIFECYCLE=true | `tests/kmail-api/authorization/kmail-attachment-delete-idor-authorization.spec.ts:24`, `tests/kmail-api/authorization/kmail-attachment-idor-authorization.spec.ts:25`, `tests/kmail-api/data-integrity/kmail-attachment-bytes-data-integrity.spec.ts:30` |
 | 3 | sends a real mail; set KMAIL_LIFECYCLE=true | `tests/kmail-api/authorization/kmail-content-idor-authorization.spec.ts:24`, `tests/kmail-api/authorization/kmail-copies-info-idor-authorization.spec.ts:24`, `tests/kmail-api/authorization/kmail-mutation-idor-authorization.spec.ts:26` |
-| 3 | uploads a real file to S3 and sends a real message; set KATCHUP_LIFECYCLE=true and AWS_LIFECYCLE=true | `tests/kpost-api/authorization/katchup/katchup-attachment-idor-authorization.spec.ts:26`, `tests/kpost-api/data-integrity/katchup/katchup-attachment-bytes-data-integrity.spec.ts:31`, `tests/kpost-api/e2e/katchup/katchup-attachment-upload-e2e.spec.ts:18` |
+| 3 | uploads a real file to S3 and sends a real message; set KATCHUP_LIFECYCLE=true and AWS_LIFECYCLE=true | `tests/kpost-api/authorization/katchup/katchup-attachment-idor-authorization.spec.ts:26`, `tests/kpost-api/data-integrity/katchup/katchup-attachment-bytes-data-integrity.spec.ts:31`, `tests/kpost-api/e2e/katchup/katchup-attachment-upload-e2e.spec.ts:19` |
 | 3 | sends a real message; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/authorization/katchup/katchup-cross-account-idor-authorization.spec.ts:36`, `tests/kpost-api/authorization/katchup/katchup-legacy-recall-authorization.spec.ts:20`, `tests/kpost-api/authorization/katchup/katchup-object-authorization.spec.ts:24` |
 | 3 | uploads to S3; set AWS_LIFECYCLE=true | `tests/kpost-api/authorization/katchup/katchup-cross-user-authorization.spec.ts:117`, `tests/kpost-api/authorization/katchup/katchup-cross-user-authorization.spec.ts:174`, `tests/kpost-api/authorization/katchup/katchup-cross-user-authorization.spec.ts:269` |
 | 3 | needs auth2.setup.ts to log the 2nd account in; set KATCHUP_UI_LIFECYCLE=true | `tests/kpost-ui/e2e/group/group-exit-e2e.spec.ts:91`, `tests/kpost-ui/e2e/kmail/kmail-read-receipt-e2e.spec.ts:89`, `tests/kpost-ui/e2e/kmail/kmail-two-session-e2e.spec.ts:22` |
@@ -266,7 +266,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 3 | edits a profile field; set PROFILE_UI_LIFECYCLE=true | `tests/kpost-ui/e2e/profile/profile-edit-e2e.spec.ts:15`, `tests/kpost-ui/functional/profile/profile-functional.spec.ts:47`, `tests/kpost-ui/security/profile/profile-security.spec.ts:17` |
 | 2 | writes real org structure; set ADMIN_LIFECYCLE=true | `tests/admin-api/e2e/admin-org-setup-e2e.spec.ts:59`, `tests/admin-api/negative/admin-write-fuzz-negative.spec.ts:208` |
 | 2 | creates real KPost (testingapi) + KSMACC accounts for the QA company; set ADMIN_LIFECYCLE=true and ADMIN_ROLE_POSTING_LIVE=true | `tests/admin-api/e2e/admin-role-posting-e2e.spec.ts:114`, `tests/admin-api/e2e/admin-role-posting-e2e.spec.ts:512` |
-| 2 | only meaningful when TEST_ENV=production | `tests/framework/safety/live-safety.spec.ts:566`, `tests/framework/safety/live-safety.spec.ts:591` |
+| 2 | only meaningful when TEST_ENV=production | `tests/framework/safety/live-safety.spec.ts:597`, `tests/framework/safety/live-safety.spec.ts:622` |
 | 2 | sends real KMail between our accounts; set KMAIL_LIFECYCLE=true | `tests/kmail-api/business-rules/kmail-mail-semantics-business-rules.spec.ts:42`, `tests/kmail-api/business-rules/kmail-send-business-rules.spec.ts:29` |
 | 2 | writes real KMail data; set KMAIL_LIFECYCLE=true | `tests/kmail-api/business-rules/kmail-manage-business-rules.spec.ts:20`, `tests/kmail-api/e2e/kmail-manage-e2e.spec.ts:39` |
 | 2 | writes real KMail settings; set KMAIL_LIFECYCLE=true | `tests/kmail-api/business-rules/kmail-settings-business-rules.spec.ts:60`, `tests/kmail-api/e2e/kmail-signature-letterhead-e2e.spec.ts:34` |
@@ -275,9 +275,9 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 2 | places a real call; set KALL_LIFECYCLE=true | `tests/kpost-api/authorization/kall/kall-object-authorization.spec.ts:27`, `tests/kpost-api/authorization/kall/kall-status-sender-spoof-authorization.spec.ts:24` |
 | 2 | creates a real diary event and report; set KDIARY_LIFECYCLE=true | `tests/kpost-api/authorization/kdiary/kdiary-cross-user-authorization.spec.ts:74`, `tests/kpost-api/business-rules/kdiary/kdiary-reads-business-rules.spec.ts:96` |
 | 2 | creates a real diary event; set KDIARY_LIFECYCLE=true | `tests/kpost-api/authorization/kdiary/kdiary-object-authorization.spec.ts:36`, `tests/kpost-api/business-rules/kdiary/kdiary-reads-business-rules.spec.ts:26` |
-| 2 | creates real groups; set GROUP_LIFECYCLE=true | `tests/kpost-api/business-rules/group/group-input-state-business-rules.spec.ts:141`, `tests/kpost-api/e2e/group/group-lifecycle-e2e.spec.ts:110` |
+| 2 | creates real groups; set GROUP_LIFECYCLE=true | `tests/kpost-api/business-rules/group/group-input-state-business-rules.spec.ts:141`, `tests/kpost-api/e2e/group/group-lifecycle-e2e.spec.ts:111` |
 | 2 | changes account preferences; set SETTINGS_LIFECYCLE=true | `tests/kpost-api/business-rules/settings/settings-input-state-business-rules.spec.ts:172`, `tests/kpost-api/e2e/settings/settings-lifecycle-e2e.spec.ts:33` |
-| 2 | writes a real message; set KATCHUP_LIFECYCLE=true to run (owner sign-off, flow doc Q4) | `tests/kpost-api/data-integrity/katchup/katchup-message-lifecycle-data-integrity.spec.ts:21`, `tests/kpost-api/e2e/katchup/katchup-one-to-one-e2e.spec.ts:16` |
+| 2 | writes a real message; set KATCHUP_LIFECYCLE=true to run (owner sign-off, flow doc Q4) | `tests/kpost-api/data-integrity/katchup/katchup-message-lifecycle-data-integrity.spec.ts:21`, `tests/kpost-api/e2e/katchup/katchup-one-to-one-e2e.spec.ts:17` |
 | 2 | drives a real mobile OTP to reach this step; set SIGNUP_UI_LIFECYCLE=true | `tests/kpost-ui/accessibility/auth/signup-login-accessibility.spec.ts:203`, `tests/kpost-ui/accessibility/auth/signup-login-accessibility.spec.ts:235` |
 | 2 | creates a real group; set GROUP_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows-e2e.spec.ts:269`, `tests/kpost-ui/functional/group/group-create-functional.spec.ts:12` |
 | 2 | creates a real scheduled call; set KALL_UI_LIFECYCLE=true | `tests/kpost-ui/cross-layer/cross-layer-flows-e2e.spec.ts:405`, `tests/kpost-ui/functional/kall/kall-features-functional.spec.ts:102` |
@@ -302,7 +302,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | (no reason string) process.env.AWS_LIFECYCLE !== 'true', 'creates 0-byte S3 placeholders (deleted a | `tests/kpost-api/authorization/aws/aws-object-access-authorization.spec.ts:170` |
 | 1 | creates a throwaway group with a photo; set GROUP_LIFECYCLE=true | `tests/kpost-api/authorization/contacts/contacts-group-cross-user-authorization.spec.ts:419` |
 | 1 | schedules real calls; set KALL_LIFECYCLE=true | `tests/kpost-api/authorization/kall/kall-cross-user-authorization.spec.ts:159` |
-| 1 | schedules a real call; set KALL_LIFECYCLE=true | `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:20` |
+| 1 | schedules a real call; set KALL_LIFECYCLE=true | `tests/kpost-api/authorization/kall/kall-legacy-writes-authorization.spec.ts:48` |
 | 1 | rewrites real message rows on the QA test server; set GLOBAL_LIFECYCLE=true and TEST_DB_MODE=true | `tests/kpost-api/authorization/katchup/katchup-change-caption-authorization.spec.ts:69` |
 | 1 | sends real messages; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/authorization/katchup/katchup-cross-user-authorization.spec.ts:109` |
 | 1 | sends real messages / creates real groups; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/authorization/katchup/katchup-idor-authorization.spec.ts:21` |
@@ -331,15 +331,15 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | needs a real 10-minute wait; set OTP_EXPIRY_WAIT=true to run the expiry boundary | `tests/kpost-api/data-integrity/signup-login/signup-login-otp-data-integrity.spec.ts:366` |
 | 1 | rewrites the QA company’s details and puts them back; set GLOBAL_LIFECYCLE=true and TEST_DB_MODE=true | `tests/kpost-api/e2e/admin/admin-company-details-e2e.spec.ts:58` |
 | 1 | creates and terminates a real company member on the QA server; set GLOBAL_LIFECYCLE=true and TEST_DB_MODE=true | `tests/kpost-api/e2e/admin/admin-member-e2e.spec.ts:26` |
-| 1 | S3 attachment lifecycle; set AWS_LIFECYCLE=true | `tests/kpost-api/e2e/aws/aws-attachment-lifecycle-e2e.spec.ts:41` |
+| 1 | S3 attachment lifecycle; set AWS_LIFECYCLE=true | `tests/kpost-api/e2e/aws/aws-attachment-lifecycle-e2e.spec.ts:42` |
 | 1 | (no reason string) process.env.GLOBAL_LIFECYCLE !== 'true' \|\| process.env.TEST_DB_MODE !== 'true',  | `tests/kpost-api/e2e/common/common-company-logo-e2e.spec.ts:69` |
 | 1 | writes to the address book; set CONTACTS_LIFECYCLE=true | `tests/kpost-api/e2e/contacts/contacts-lifecycle-e2e.spec.ts:89` |
 | 1 | places/schedules real calls; set KALL_LIFECYCLE=true (owner sign-off, docs/modules/kall-flow.md §5) | `tests/kpost-api/e2e/kall/kall-lifecycle-e2e.spec.ts:58` |
-| 1 | writes real messages; set KATCHUP_LIFECYCLE=true (owner sign-off, docs/modules/katchup-flow.md §6) | `tests/kpost-api/e2e/katchup/katchup-lifecycle-e2e.spec.ts:182` |
+| 1 | writes real messages; set KATCHUP_LIFECYCLE=true (owner sign-off, docs/modules/katchup-flow.md §6) | `tests/kpost-api/e2e/katchup/katchup-lifecycle-e2e.spec.ts:183` |
 | 1 | uploads to the QA server and deletes the row after; set GLOBAL_LIFECYCLE, TEST_DB_MODE and DB_ALLOW_WRITES | `tests/kpost-api/e2e/katchup/katchup-multipart-upload-e2e.spec.ts:18` |
 | 1 | sends a real message between the QA accounts; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/e2e/katchup/katchup-offline-delivery-e2e.spec.ts:64` |
-| 1 | sends a real message to get an id to test with; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/e2e/katchup/katchup-shared-reads-e2e.spec.ts:18` |
-| 1 | real third-party seat hold, unconfirmed sandbox — needs explicit authorization | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:148` |
+| 1 | sends a real message to get an id to test with; set KATCHUP_LIFECYCLE=true | `tests/kpost-api/e2e/katchup/katchup-shared-reads-e2e.spec.ts:19` |
+| 1 | real third-party seat hold, unconfirmed sandbox — needs explicit authorization | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:156` |
 | 1 | writes real diary events; set KDIARY_LIFECYCLE=true | `tests/kpost-api/e2e/kdiary/kdiary-lifecycle-e2e.spec.ts:66` |
 | 1 | writes real profile data; set PROFILE_LIFECYCLE=true to run | `tests/kpost-api/e2e/profile/profile-lifecycle-e2e.spec.ts:50` |
 | 1 | runs only on a confirmed OTP test gateway: OTP_TEST_GATEWAY=true + TEST_DB_MODE=true | `tests/kpost-api/e2e/profile/profile-throwaway-account-e2e.spec.ts:48` |
@@ -402,7 +402,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | (no reason string) process.env.KALL_UI_LIFECYCLE !== 'true', 'schedules a real meeting (ended after | `tests/kpost-ui/validation/kall/kall-validation.spec.ts:338` |
 | 1 | visual regression is opt-in: run `npm run product:kpost-ui:visual:update` to baseline, then `npm run product:kpost-ui:visual` | `tests/kpost-ui/visual/platform/platform-visual.spec.ts:18` |
 
-## Live condition — the application had nothing to test this run (151)
+## Live condition — the application had nothing to test this run (152)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -446,12 +446,13 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | A has no report for today to attack | `tests/kpost-api/authorization/kdiary/kdiary-cross-user-authorization.spec.ts:290` |
 | 1 | no app version to re-send right now (read answered …) | `tests/kpost-api/authorization/platform/platform-privileged-endpoints-authorization.spec.ts:74` |
 | 1 | could not read back a real …; nothing to attack | `tests/kpost-api/authorization/profile/profile-record-object-authorization.spec.ts:95` |
-| 1 | no real marker available on this account right now (empty recent-activity window) | `tests/kpost-api/business-rules/dashboard/dashboard-recent-activity-business-rules.spec.ts:109` |
+| 1 | no real marker available on this account right now (empty recent-activity window) | `tests/kpost-api/business-rules/dashboard/dashboard-recent-activity-business-rules.spec.ts:111` |
 | 1 | no deactivated accounts on this target to check against | `tests/kpost-api/data-integrity/profile/profile-directory-lookup-data-integrity.spec.ts:138` |
-| 1 | no city returned for "chennai" right now — cannot chain the search | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:49` |
-| 1 | no reachable destination returned for this source city right now | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:64` |
-| 1 | no trips running on the first six real routes 14 days out right now — nothing to chain tripdetails to | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:85` |
-| 1 | the trip lists no boarding point right now — nothing to look up | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:123` |
+| 1 | the send returned no msgID/sharedMessageId | `tests/kpost-api/e2e/katchup/katchup-shared-reads-e2e.spec.ts:155` |
+| 1 | no city returned for "chennai" right now — cannot chain the search | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:50` |
+| 1 | no reachable destination returned for this source city right now | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:65` |
+| 1 | no trips running on the first six real routes 14 days out right now — nothing to chain tripdetails to | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:86` |
+| 1 | the trip lists no boarding point right now — nothing to look up | `tests/kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts:128` |
 | 1 | no news feed on this target to read (the server has no KNews feeds configured) | `tests/kpost-api/e2e/knews/knews-settings-e2e.spec.ts:69` |
 | 1 | taken the generated local part happened to collide right now — re-run | `tests/kpost-ui/api-handling/auth/signup-login-api-handling.spec.ts:251` |
 | 1 | the new group was not listed in KMail Contacts right now (three loads) | `tests/kpost-ui/api-handling/kmail/kmail-thread-api-handling.spec.ts:208` |
@@ -504,7 +505,7 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | ----: | ------ | ----- |
 | 3 | (no reason string) !opened, SKIP_REASON | `tests/kpost-ui/resilience/contacts/contacts-list-resilience.spec.ts:39`, `tests/kpost-ui/resilience/contacts/contacts-list-resilience.spec.ts:54`, `tests/kpost-ui/resilience/contacts/contacts-list-resilience.spec.ts:115` |
 
-## Unclassified — must be 0 (the build fails otherwise) (58)
+## Unclassified — must be 0 (the build fails otherwise) (60)
 
 | Sites | Reason | Where |
 | ----: | ------ | ----- |
@@ -547,6 +548,8 @@ Run `run-efdc0f7c-bbc8-4890-bb0a-74be220f5b40` at 2026-11-05T03:04:42.275Z: 0 ch
 | 1 | both accounts need a stored katchup preference and font (V restored afterwards) | `tests/kpost-api/authorization/settings/settings-cross-user-authorization.spec.ts:325` |
 | 1 | getAllCategories lists no category to compare against | `tests/kpost-api/business-rules/knews/knews-settings-business-rules.spec.ts:211` |
 | 1 | Font Size string the caller has no stored font to restore afterwards | `tests/kpost-api/business-rules/settings/settings-input-state-business-rules.spec.ts:307` |
+| 1 | the upload named no uuid | `tests/kpost-api/e2e/katchup/katchup-attachment-upload-e2e.spec.ts:342` |
+| 1 | no HTTP answer from adminUserLogin for … (…): not re-checked | `tests/kpost-api/positive/signup-login/signup-login-admin-login-positive.spec.ts:24` |
 | 1 | the company lists no member | `tests/kpost-ui/functional/user-management/user-management-members-functional.spec.ts:50` |
 | 1 | the first member has no name to search for | `tests/kpost-ui/functional/user-management/user-management-members-functional.spec.ts:76` |
 | 1 | no listed member shows a mobile number | `tests/kpost-ui/functional/user-management/user-management-members-functional.spec.ts:103` |

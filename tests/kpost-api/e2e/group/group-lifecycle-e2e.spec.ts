@@ -2,6 +2,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 
 /**
@@ -124,7 +125,7 @@ test.describe(
           { type: 'requirement', description: 'FR-GM-011' },
         ],
       },
-      async ({ endpoints }) => {
+      async ({ endpoints, validationEngine }) => {
         let groupID: number | undefined;
         let createdKpostID: string | undefined;
         try {
@@ -189,6 +190,16 @@ test.describe(
             expect
               .soft(imageUpdate.status, 'updateGroupProfileImage is accepted')
               .toBeLessThan(300);
+
+            // The id-keyed group reads the sweep cannot send, through the full engine on this group.
+            for (const [id, pathParams] of [
+              ['group-details-by-id', { groupKpostID }],
+              ['group-download-image', { groupKpostID, kpostID: A.username }],
+              ['group-download-full-image', { groupKpostID, kpostID: A.username }],
+            ] as const)
+              await checkOnRealRecord(validationEngine, id, { pathParams: { ...pathParams } }, [
+                groupKpostID,
+              ]);
 
             for (const [who, id, bodyObj, label] of steps) {
               // Image downloads are path-param reads (allowLiveRead), kept in order with the writes.

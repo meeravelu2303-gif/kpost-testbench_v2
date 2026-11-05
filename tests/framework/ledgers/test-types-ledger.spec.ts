@@ -6,6 +6,7 @@ import { ROOT_DIR } from '@config/constants';
 import { DEFAULT_SUITE } from '@config/ownership.config';
 import { CHECK_TYPES, type CheckType } from '@engine/check-types';
 import { destructiveBlockReason, type SafetyFlags } from '@engine/production-guard';
+import { cannotBeARecord, isGuardedIdentifierKey } from '@engine/qa-identifier-guard';
 import { resolveEndpoint, type ResolvedEndpoint } from '@engine/validation-policy';
 import { expect, test } from '@fixtures';
 
@@ -79,8 +80,36 @@ const PRODUCT_RUN: SafetyFlags = {
 
 const WALLED = 'walled by owner rule (a real SMS/e-mail, or ends the running session)';
 
+/**
+ * Endpoints the guard would let through but the owner's standing rules forbid on a shared QA server
+ * (CLAUDE.md §1, §3, §5): each changes state for every user, outside parties, or other accounts.
+ */
+const WALLED_BY_OWNER: Readonly<Record<string, string>> = {
+  'common-update-flutter-app-version': 'sets the app-update prompt of every Flutter client',
+  'katchup-patch-work-for-group': 'a one-off data migration only two developer ids may run',
+  'profile-kmail-password-patch-work': 'resets KMail passwords; only two developer ids may run it',
+  'kbooking-update-city-list': 'refreshes the RedBus city list of every user',
+  'kbooking-block-ticket': 'holds a real seat at the booking partner',
+  'knews-admin-feed-sync': 'changes the news feed of every user',
+  'knews-admin-feed-enable': 'changes the news feed of every user',
+  'knews-admin-feed-disable': 'changes the news feed of every user',
+  'signup-login-business-adding-user-public':
+    'overwrites any existing account (no login, no company check)',
+  // Out of reach by design: no QA account or record can ever make them succeed.
+  'katchup-forward-backtrack':
+    'unreachable by design: only the system sender id may call it (KatchupControllerV2 forwardMessageBacktrackByMsgID)',
+  'kall-legacy-set-status':
+    'unreachable by design: acts on the old TBL_KPOST_KALL_TRACKERS, which no current route writes ("Kall not found" for the owner too)',
+  'kall-legacy-cancel-schedule':
+    'unreachable by design: acts on the old TBL_KPOST_KALL_TRACKERS, which no current route writes ("Kall not found" for the owner too)',
+  'kall-legacy-remove-member':
+    'unreachable by design: acts on the old TBL_KPOST_KALL_SCHEDULE_DETAILS, which no current route writes',
+};
+
 /** Why the engine may not send this endpoint's normal request in a product run, or undefined. */
 function blocked(e: ResolvedEndpoint): string | undefined {
+  const owner = WALLED_BY_OWNER[e.id];
+  if (owner) return `${WALLED}: ${owner}`;
   const reason = destructiveBlockReason(e, PRODUCT_RUN);
   if (!reason) return undefined;
   // One line per kind, without the endpoint label the guard puts in front.
@@ -114,6 +143,42 @@ function handWritten(type: string): string {
 const mentioned = (type: string, e: ResolvedEndpoint): boolean =>
   new RegExp(`['"\`\\[]${e.id}['"\`\\]]`).test(handWritten(type));
 
+/** The wall reason when the owner rules forbid the endpoint, else undefined. */
+const walledReason = (e: ResolvedEndpoint): string | undefined => {
+  const why = blocked(e);
+  return why?.startsWith(WALLED) ? why : undefined;
+};
+
+/** Hand-written folders whose specs drive endpoints with real data (lifecycles, rules, cross-user). */
+const FLOW_TYPES = [
+  'e2e',
+  'business-rules',
+  'data-integrity',
+  'positive',
+  'authentication',
+  'authorization',
+  'security',
+  'negative',
+  'boundary',
+];
+const drivenByFlow = (e: ResolvedEndpoint): boolean => FLOW_TYPES.some((t) => mentioned(t, e));
+
+/**
+ * Specs that run the full engine on a real record (`checkOnRealRecord`, src/validation-engine/
+ * real-record.ts): an endpoint they name is reached by every engine check, sweep or not.
+ */
+const REAL_RECORD_SPECS = FLOW_TYPES.map(handWritten)
+  .join('\n')
+  .split(/^import /m)
+  .filter((file) => file.includes('checkOnRealRecord('))
+  .join('\n');
+const onRealRecord = (e: ResolvedEndpoint): boolean =>
+  new RegExp(`['"\`]${e.id}['"\`]`).test(REAL_RECORD_SPECS);
+
+/** Why the engine's checks cannot reach this endpoint: guard-blocked and no real-record run. */
+const engineBlocked = (e: ResolvedEndpoint): string | undefined =>
+  onRealRecord(e) ? undefined : blocked(e);
+
 const isWrite = (e: ResolvedEndpoint): boolean =>
   e.method !== 'GET' && !e.tags.some((t) => /(^|-)(read|reads|reference|search|lookup)$/.test(t));
 
@@ -134,10 +199,9 @@ const RULES: Record<CheckType, { means: string; rule: Rule }> = {
     rule: (e) => {
       const why = blocked(e);
       if (!why) return { applies: true, covered: true };
-      const flow = ['e2e', 'business-rules', 'data-integrity', 'positive', 'authentication'].some(
-        (t) => mentioned(t, e),
-      );
-      return flow ? { applies: true, covered: true } : { applies: true, covered: false, gap: why };
+      return drivenByFlow(e)
+        ? { applies: true, covered: true }
+        : { applies: true, covered: false, gap: why };
     },
   },
   contract: {
@@ -147,19 +211,42 @@ const RULES: Record<CheckType, { means: string; rule: Rule }> = {
         ? {
             applies: true,
             covered: false,
-            gap: 'no response schema (workbook silent, source not confirmed live)',
+            gap:
+              walledReason(e) ?? 'no response schema (workbook silent, source not confirmed live)',
           }
-        : blocked(e)
-          ? { applies: true, covered: false, gap: `schema known, but ${blocked(e)}` }
-          : { applies: true, covered: true },
+        : !blocked(e) || drivenByFlow(e)
+          ? // A flow's every successful call is checked against the schema too (endpoint-executor.ts).
+            { applies: true, covered: true }
+          : {
+              applies: true,
+              covered: false,
+              gap: `schema known, but ${blocked(e)} and no flow drives it`,
+            },
   },
   negative: {
     means: 'an endpoint that takes input gets bad input sent to it',
     rule: (e) => {
       if (!inputs(e).length && e.method === 'GET') return NA;
+      const walled = walledReason(e);
+      if (walled) return { applies: true, covered: false, gap: walled };
       if (!inputs(e).length)
         return { applies: true, covered: false, gap: 'no request schema to mutate' };
-      const why = blocked(e);
+      // A fuzzed value in a key the QA-identifier guard protects is never sent (it could name a real
+      // record), so an endpoint whose every input is such a key gets no negative probe at all.
+      // ...unless the fuzzer's own wrong-type value is one no record can have (cannotBeARecord).
+      const fuzzable = inputs(e).filter((f) => {
+        const key = f.path.split('.').pop()?.replace('[]', '') ?? '';
+        const junk = /integer|number/.test(f.type) ? 'not-a-number' : 12345;
+        return !isGuardedIdentifierKey(key) || cannotBeARecord(key, junk);
+      });
+      if (!fuzzable.length)
+        return {
+          applies: true,
+          covered: false,
+          // Owner, 2026-11-05: mobile numbers, e-mails and company names stay protected.
+          gap: `${WALLED}: every input is a mobile number, e-mail or company name the QA guard protects`,
+        };
+      const why = engineBlocked(e);
       return why ? { applies: true, covered: false, gap: why } : { applies: true, covered: true };
     },
   },
@@ -175,7 +262,7 @@ const RULES: Record<CheckType, { means: string; rule: Rule }> = {
           covered: false,
           gap: `no limit for ${open.slice(0, 6).join(', ')}${open.length > 6 ? ` +${open.length - 6}` : ''}`,
         };
-      const why = blocked(e);
+      const why = engineBlocked(e);
       return why ? { applies: true, covered: false, gap: why } : { applies: true, covered: true };
     },
   },
@@ -183,7 +270,7 @@ const RULES: Record<CheckType, { means: string; rule: Rule }> = {
     means: 'a login-protected endpoint is sent no, forged, expired and malformed tokens',
     rule: (e) => {
       if (!e.authentication.required) return NA;
-      const why = blocked(e);
+      const why = engineBlocked(e);
       return why ? { applies: true, covered: false, gap: why } : { applies: true, covered: true };
     },
   },
@@ -208,14 +295,14 @@ const RULES: Record<CheckType, { means: string; rule: Rule }> = {
   security: {
     means: 'injection, XSS, headers and data-exposure probes run on it',
     rule: (e) => {
-      const why = blocked(e);
+      const why = engineBlocked(e);
       return why ? { applies: true, covered: false, gap: why } : { applies: true, covered: true };
     },
   },
   performance: {
     means: 'its response time and size are measured on the QA server',
     rule: (e) => {
-      const why = blocked(e);
+      const why = engineBlocked(e);
       return why ? { applies: true, covered: false, gap: why } : { applies: true, covered: true };
     },
   },
@@ -250,7 +337,7 @@ test.describe('KPost API coverage by test type @framework', () => {
     ];
     const rows: string[] = [];
     const sections: string[] = [];
-    const byType = new Map<CheckType, string[]>();
+    const walledWhy = new Map<string, string>();
     for (const type of order) {
       const all = endpoints.map((e) => ({ e, v: RULES[type].rule(e) })).filter((x) => x.v.applies);
       // Walled by owner rule (a real SMS/e-mail, a session ender): never to be run, so not a gap.
@@ -261,11 +348,8 @@ test.describe('KPost API coverage by test type @framework', () => {
       rows.push(
         `| ${type} | ${RULES[type].means} | ${verdicts.length} | ${covered} | ${verdicts.length - covered} | ${walled.length} | **${pct}%** |`,
       );
-      if (walled.length)
-        byType.set(
-          type,
-          walled.map((x) => x.e.id),
-        );
+      for (const x of walled)
+        walledWhy.set(x.e.id, (x.v.gap ?? '').slice((x.v.gap ?? '').indexOf(WALLED)));
       const gaps = verdicts.filter((x) => !x.v.covered);
       const byReason = new Map<string, string[]>();
       for (const { e, v } of gaps) {
@@ -301,13 +385,14 @@ test.describe('KPost API coverage by test type @framework', () => {
       '| --- | --- | ---: | ---: | ---: | ---: | ---: |',
       ...rows,
       '',
-      '"Walled by rule": endpoints that send a real SMS/e-mail or end the running session. The owner rules',
-      'forbid running them on a shared QA account, so they are not counted as gaps (proved refused by',
-      '`tests/framework/safety/walled-endpoints.spec.ts`):',
-      [...new Set([...byType.values()].flat())]
-        .sort()
-        .map((id) => `\`${id}\``)
-        .join(', ') + '.',
+      '"Walled by rule": endpoints the owner rules forbid on a shared QA server, or that no QA account can',
+      'ever make succeed (unreachable by design), so they are not counted as gaps. The SMS senders and',
+      'session enders are refused by the production guard (`tests/framework/safety/walled-endpoints.spec.ts`);',
+      'the others are listed with why.',
+      '',
+      ...[...walledWhy.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([id, why]) => `- \`${id}\` — ${why.replace(`${WALLED}: `, '')}`),
       '',
       ...sections.map((s) => `${s}\n`),
     ].join('\n');

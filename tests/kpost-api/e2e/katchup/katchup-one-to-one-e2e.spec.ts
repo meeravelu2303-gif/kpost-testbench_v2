@@ -2,6 +2,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import { env } from '@config/env';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { flowState, needs } from '../../../support/flow-state';
@@ -107,7 +108,7 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
     expect(exchange.status, 'recall succeeds').toBeLessThan(300);
   });
 
-  test('delete removes it entirely (FR-K20)', async ({ endpoints }) => {
+  test('delete removes it entirely (FR-K20)', async ({ endpoints, validationEngine }) => {
     const msgID = flow.get('msgID');
     needs(msgID, 'the msgID from "a message sends"');
     const exchange = await endpoints.sendTo(
@@ -122,6 +123,12 @@ test.describe('KPost Katchup · 1:1 lifecycle', { tag: ['@api', '@katchup', '@re
       'katchup-deleted-message-ids',
       { pathParams: { lastMsgID: msgID! } },
       { label: 'katchup-lifecycle:deleted-ids', allowLiveRead: true, ownedIdentifiers: [msgID!] },
+    );
+    await checkOnRealRecord(
+      validationEngine,
+      'katchup-deleted-message-ids',
+      { pathParams: { lastMsgID: msgID! } },
+      [msgID!],
     );
     expect
       .soft(deleted.status, 'getDeletedKatchupMsgIds answers for our deleted message')

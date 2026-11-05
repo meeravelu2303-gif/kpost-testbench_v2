@@ -32,11 +32,28 @@ function zodForValue(value: unknown): z.ZodType {
 }
 
 /**
- * A types-only schema for path parameters: all strings, all required (a path cannot resolve without
- * them).
+ * What a path parameter really carries, read from the backend (KPOST_V5.0 @PathVariable types and
+ * the values they hold), so the negative fuzzers have something to break: until 2026-11-05 every
+ * path parameter was a bare string, so `request.data-type`/`request.format` never produced a case
+ * and no path-keyed endpoint got a single negative probe. Names not listed stay plain strings.
  */
+const PATH_PARAM_TYPES: Readonly<Record<string, () => z.ZodType>> = {
+  // `long`/`Long` path variables (CommonControllerV2 getCompanyLogo, KatchupControllerV2
+  // getSharedMessageDetails / getDeletedKatchupMsgIds, AdminController userManagementDetails).
+  companyID: () => z.number().int(),
+  msgID: () => z.number().int(),
+  lastMsgID: () => z.number().int(),
+  // An attachment's S3 key is a UUID (PresignedURLController mints it).
+  uuid: () => z.uuid(),
+  // KPost IDs are e-mail-form ("qatest1@kpostindia.com"); a group's id is one too.
+  kpostID: () => z.email(),
+  kpostId: () => z.email(),
+  groupKpostID: () => z.email(),
+};
+
+/** A schema for path parameters, all required (a path cannot resolve without them). */
 export function pathParamSchema(...names: string[]): z.ZodType {
   const shape: Record<string, z.ZodType> = {};
-  for (const name of names) shape[name] = z.string();
+  for (const name of names) shape[name] = PATH_PARAM_TYPES[name]?.() ?? z.string();
   return z.object(shape);
 }

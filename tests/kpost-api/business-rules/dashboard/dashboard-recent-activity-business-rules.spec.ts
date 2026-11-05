@@ -1,5 +1,6 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 
 /**
@@ -98,6 +99,7 @@ test.describe(
 
     test('homeDashboardNewMsgs: fed a real marker, succeeds and returns only messages newer than it', async ({
       endpoints,
+      validationEngine,
     }) => {
       const home = await endpoints.sendTo(
         'dashboard-home-msgs',
@@ -115,6 +117,12 @@ test.describe(
         'dashboard-home-new-msgs',
         { body: { firstMsgID: homeBody.firstMsgID, serverTime: homeBody.LastFetchDate } },
         { label: 'dashboard:new-with-real-marker', auth: { principal: A }, allowLiveRead: true },
+      );
+      await checkOnRealRecord(
+        validationEngine,
+        'dashboard-home-new-msgs',
+        { body: { firstMsgID: homeBody.firstMsgID, serverTime: homeBody.LastFetchDate } },
+        [],
       );
       expect(
         withRealMarker.status,

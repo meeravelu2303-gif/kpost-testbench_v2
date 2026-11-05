@@ -7,6 +7,7 @@ import { browserSessionToken } from '@api/client/browser-session-token';
 import type { ApiRegistry } from '@api/registry/api-registry';
 import type { RequestFactoryHelpers } from '@api/registry/endpoint-definition';
 import { formatIssues, validateSchema } from '@api/schema/contract-schema';
+import { isRawBodyContract, rawBodyVerdict } from '@api/schema/raw-body-contract';
 import { authProfileFor, principalForRole, type AuthProfile } from '@config/auth-profile';
 import { authConfig, type Principal, type Role } from '@config/auth.config';
 import { env } from '@config/env';
@@ -85,15 +86,23 @@ function flowSchemaCheck(
   endpoint: ResolvedEndpoint,
   exchange: ApiResponseWrapper,
 ): string | undefined {
-  if (!endpoint.responseSchema || !endpoint.envelope) return undefined;
+  // A file or a bare text answer: the bytes (and their type) or the text are its contract.
+  if (isRawBodyContract(endpoint.responseSchema)) {
+    const raw = rawBodyVerdict(endpoint.responseSchema, exchange);
+    if (!raw.applies) return undefined;
+    return raw.issues.length ? `mismatch: ${raw.issues.join('; ')}` : 'matched';
+  }
+  if (!endpoint.responseSchema) return undefined;
   const parsed = exchange.json();
   if (!parsed.ok) return undefined;
   // An allowed FAILURE answer is no success to compare (a schema would pass it vacuously).
   const status = getPath(parsed.value, 'status');
   if (typeof status === 'string' && /^(failure|error)$/i.test(status)) return undefined;
   const { contract } = endpoint;
+  // The same payload response.schema reads (validators/support.ts responseData): a non-envelope
+  // answer is checked whole.
   const value =
-    contract.schemaTarget === 'data' && contract.dataKey
+    endpoint.envelope && contract.schemaTarget === 'data' && contract.dataKey
       ? getPath(parsed.value, contract.dataKey)
       : parsed.value;
   const issues = validateSchema(endpoint.responseSchema, value);

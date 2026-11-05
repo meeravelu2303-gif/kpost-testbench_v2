@@ -176,6 +176,50 @@ test.describe(
         expect
           .soft(setPrimary.bodyText, 'and it was really set, not "already mapped"')
           .toContain('Primary Device');
+
+        // 2b. Phone contacts belong to the registered device (ContactsDirectoryServiceImpl
+        //     importPhoneContacts: "No device found" otherwise, which is why the shared QA accounts
+        //     cannot import), so a session signed in FROM that device imports. The account's own number
+        //     only; the whole account is deleted afterwards.
+        const onDevice: Principal = {
+          ...principal,
+          key: 'throwaway-on-device',
+          deviceIdentity: primary,
+        };
+        const imported = await asMe(
+          'contacts-import-phone',
+          {
+            deviceID: primary,
+            mobileNumber: me.mobile,
+            countryCode: '91',
+            phoneContacts: [{ name: 'QA Bench', mobileNumber: me.mobile, countryCode: '91' }],
+          },
+          'import-phone',
+          onDevice,
+        );
+        expect
+          .soft(
+            imported.status,
+            `importPhoneContacts stores the number (${imported.bodyText.slice(0, 160)})`,
+          )
+          .toBe(200);
+        const invited = await asMe(
+          'contacts-update-invite',
+          { mobileNumber: me.mobile },
+          'update-invite',
+          onDevice,
+        );
+        expect
+          .soft(
+            invited.status,
+            `updateInviteStatus marks it invited (${invited.bodyText.slice(0, 160)})`,
+          )
+          .toBe(200);
+        const list = await asMe('contacts-imported-phone', {}, 'imported-phone', onDevice);
+        expect
+          .soft(list.bodyText, 'the imported number now reads as invited')
+          .toMatch(/"inviteStatus\\?":\\?"Y/);
+
         const updPrimary = await asMe(
           'profile-update-device-primary',
           { deviceIdentity_primary: randomUUID() },
@@ -212,7 +256,10 @@ test.describe(
           { kpostID: me.kpostId, currentPassword: PASSWORD, accessCode: '1357' },
           'set-access-code',
         );
-        expect.soft(setCode.status, 'setAccessCode').toBe(200);
+        expect.soft(setCode.status, `setAccessCode (${setCode.bodyText.slice(0, 160)})`).toBe(200);
+        expect
+          .soft(setCode.bodyText, 'and the body says SUCCESS, not a FAILURE at HTTP 200')
+          .toMatch(/"status":"SUCCESS"/);
 
         // 5. Password change: the old password no longer logs in, the new one does.
         const changed = await asMe(
@@ -255,7 +302,12 @@ test.describe(
             request: {},
           });
         }
-        expect.soft(loggedOut.status, 'the account can log itself out of all devices').toBe(200);
+        expect
+          .soft(
+            loggedOut.status,
+            `the account can log itself out of all devices (${loggedOut.bodyText.slice(0, 200)})`,
+          )
+          .toBe(200);
         expect
           .soft(
             await alive(own, 'session-after-logout'),

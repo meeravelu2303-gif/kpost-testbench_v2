@@ -229,7 +229,8 @@ export const downloadGroupImageApi = defineGroupEndpoint({
   summary: "Download a group's profile image",
   tags: ['group-image', 'binary', 'needs-message-id'],
   envelope: false,
-  contentType: 'image/png',
+  // The image the admin uploaded, in its own type (the flow uploads a JPEG; live 2026-11-05).
+  contentType: 'image/*',
   request: pathParams(() => ({ groupKpostID: testData.kpostIdAbsent, kpostID: testData.kpostId })),
   pathParamsSchema: pathParamSchema('groupKpostID', 'kpostID'),
   note: 'needs a real groupKpostID with an image',
@@ -244,7 +245,7 @@ export const downloadGroupFullImageApi = defineGroupEndpoint({
   summary: "Download a group's full profile image",
   tags: ['group-image', 'binary', 'needs-message-id'],
   envelope: false,
-  contentType: 'image/png',
+  contentType: 'image/*',
   request: pathParams(() => ({ groupKpostID: testData.kpostIdAbsent, kpostID: testData.kpostId })),
   pathParamsSchema: pathParamSchema('groupKpostID', 'kpostID'),
   note: 'needs a real groupKpostID with an image',

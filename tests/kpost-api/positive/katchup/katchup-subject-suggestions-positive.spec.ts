@@ -1,5 +1,6 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 
 /** Katchup reads that need a real id: the subject suggestions for a real contact (id as a path param). */
@@ -11,11 +12,18 @@ test.describe(
   () => {
     test('katchup-messages-subject returns the subject lines used with a real contact @api', async ({
       endpoints,
+      validationEngine,
     }) => {
       const ex = await endpoints.sendTo(
         'katchup-messages-subject',
         { pathParams: { id: testData.victimKpostId } },
         { label: 'needs-id:messages-subject', auth: { principal: A }, allowLiveRead: true },
+      );
+      await checkOnRealRecord(
+        validationEngine,
+        'katchup-messages-subject',
+        { pathParams: { id: testData.victimKpostId } },
+        [],
       );
       expect(ex.status, 'getKatchupMessagesSubject succeeds with a real contact id').toBe(200);
       const body = JSON.parse(ex.bodyText || '{}') as { data?: unknown };

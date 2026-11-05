@@ -115,6 +115,15 @@ test.describe(
         const now = await readLogo(endpoints, request);
         expect.soft(now.status, 'the new logo can be downloaded').toBe(200);
         expect.soft(now.bytes?.equals(PNG), 'the downloaded logo is the uploaded file').toBe(true);
+        // The same read through the bench's client, so its answer is checked against the route's
+        // file contract (the bytes agree with the Content-Type) like every other flow call.
+        const viaClient = await endpoints.sendTo(
+          'common-download-company-logo',
+          { pathParams: { companyID: String(COMPANY) } },
+          { label: 'company-logo:read-contract', auth: { principal: ADMIN! }, allowLiveRead: true },
+        );
+        expect.soft(viaClient.status, 'downloadCompanyLogo serves the logo').toBe(200);
+        expect.soft(viaClient.magicType ?? 'no image bytes', 'as a PNG image').toBe('image/png');
 
         // The admin removes it; the download then answers 404 (no logo), not 500.
         const removed = await remove(endpoints, ADMIN!, 'admin-remove');

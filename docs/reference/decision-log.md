@@ -3,7 +3,123 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-05 (latest) — No product `coverage/` folder; definitions and ledgers named for what they are; a guard gap closed
+### 2026-11-05 (latest) — QA guard lets provably-malformed ids through; negative 70% → 87%
+
+Owner: "yes" (to: let through values that cannot be anyone's record — a KPost ID without `@`, a non-number where
+a numeric id goes, a malformed uuid — so the negative fuzzers can send them).
+
+- **Guard** (`cannotBeARecord`, qa-identifier-guard.ts): exactly those three shapes, per key kind (`kpost*`/
+  `contactID` keys, `*id`/`*ids` keys with no digit, `uuid` keys). Mobile numbers, e-mail keys and company names
+  stay fully protected. One overreach was caught and reverted the same hour: the first version also exempted
+  e-mail keys, which sent `otherEmail: 12345` to `sendOTPtoMail` once (a value with no `@` cannot be delivered; it
+  answered 500); e-mail keys are protected again and a self-test pins it (live-safety.spec.ts).
+- **The full engine on real records in nine flows** (`checkOnRealRecord`): attachment downloads (6), bulk-info and
+  reference-details, group details and image downloads, the three KBooking trip calls, the AWS check after upload,
+  subject suggestions, dashboard new-messages, deleted-message ids, group read status. It fails a flow only on what
+  the filer would file (judged checks and lenient acceptance are reported, not failed). Shared-message info/details
+  and messages-by-reference are left out: a plain message is the wrong record (404).
+- **Definitions corrected from live answers:** group image downloads serve the uploaded type (`image/*`).
+- **Server findings, for the next product run's filing:** `homeDashboardNewMsgs` answers 500 to a null `firstMsgID`
+  and to `{}` (#85/#87, fixed in October as lenient 200s, come back as crashes: same fingerprint, so they are
+  REOPENED); `getBankAndCompanyDetails/not-a-number` 500; `mediaStreaming/12345` 500; an XSS probe in a path gets
+  Tomcat's HTML 400 page (not the JSON error shape) on group details and message subjects.
+- **Ledger:** negative 87.1% (175/201), authentication 90%, security and performance 91%. Walled now lists the
+  endpoints whose only inputs are mobiles, e-mails or company names (guarded by the owner's choice) and puts
+  owner-walled endpoints before "no request schema". Left: 19 writes needing a real-record run in their flows
+  (admin members, company logo, throwaway credentials, change-caption, generate-jwt, kdiary event date,
+  reference-messages, knews feed articles: blocked by #13478) and 7 multipart uploads (the fuzzers mutate JSON only).
+
+### 2026-11-05 — Defects filed (#13476-#13478); negative tests reach path parameters and real records
+
+Owner: "first file the defects above first in one filing pass then continue the negative test".
+
+- **Filed after a fresh live replay and duplicate check (incl. General/Home):** #13476 `common/downloadProfileImage`
+  answers 200 with an empty body for a user with a picture; #13477 the Katchup thumbnail serves PNG bytes as
+  `image/jpeg`; #13478 KNews is empty (`TBL_KPOST_NEWS_FEED` 0 rows, sources 12). **Not filed:** logout-all
+  (#13334 is open, REOPENED) and report-reasons (#13309 IN_PROGRESS) already exist; business-L admin login
+  (now 200 in 245 ms), company-logo download (404 is right: no logo) and KBooking `availabletrips` (trips again)
+  were transient when re-checked. A hand-written finding may now carry its own `fix` (shown as "How to fix";
+  the classification's generic text otherwise).
+- **Contract 97.6%** (KBooking trip-details/v2/boarding-point and company-logo download confirmed live; the logo
+  flow now reads through the bench's client so the file contract is checked). **Positive 100%.**
+- **Path parameters were never fuzzed.** Every path parameter was a bare string, so `request.data-type` and
+  `request.format` produced no case and no path-keyed endpoint got a negative probe. `pathParamSchema` now types
+  them from the backend (`companyID`/`msgID`/`lastMsgID` long, `uuid` a UUID, KPost IDs e-mail-form). First live
+  result: `GET /v2/katchup/mediaStreaming/12345` answers **500** (3/3), its siblings a clean 404; the next product
+  run files it.
+- **The full engine on real records** (`src/validation-engine/real-record.ts`, `checkOnRealRecord`): a flow that
+  has just created a record runs every engine check on an endpoint the sweep may not send, with its real request
+  (the Admin matrix's pattern). First use: the six Katchup attachment reads; it corrected six definitions that had
+  never run (download/old-download serve the file's own type: new `*/*` content type; downloadAttachment/
+  downloadFromS3 answer JSON; the thumbnail is documented JPEG; media streaming succeeds with 303).
+- **The ledger is honest about the QA-identifier guard:** a fuzzed value in a key the guard protects is never sent,
+  so 23 endpoints whose every input is such a key (kpostID/company/mobile paths) get no negative probe. Negative is
+  **70.1%** counted honestly (it showed 79% before this rule). The guard is unchanged (`isGuardedIdentifierKey` is
+  its own test, exported).
+
+### 2026-11-05 — KPost API contract 91% → 96%: every gap the bench could close is closed; 10 wait on the server
+
+Owner: "yes go ahead" (close the bench-side contract gaps).
+
+- **Confirmed live (8 more):** the three profile image downloads (the lifecycle now reads back the picture and a
+  real cover it uploads, before removing them), forward-selected-attachment (the web app's body, with a real
+  uuid), check-attachment (the AWS lifecycle now PUTs the file and checks again: 200), admin-user-login,
+  admin reallocate, update-invite and set-access-code (on the throwaway account).
+- **Bench bugs fixed on the way:** the admin-login check sent `{ body: { body } }` (it never logged in; "must not
+  500" passed on a 400) and counted a timeout (status 0) as a pass; the reallocate route was sent to an active
+  channel (409 is correct; now terminate first); the profile cover was "uploaded" as `{}`; the AWS flow never
+  uploaded before checking; the binary contract now fails a non-image body labelled `image/*`, as
+  `response.binary-content` does.
+- **Phone contacts need the registered device** (`importPhoneContacts`: "No device found"; the shared QA
+  accounts have none, and the bench's common device id is "already mapped"). A principal may now carry its own
+  `deviceIdentity` (auth.config.ts, used by the KPost login); the throwaway account signs in from the device it
+  registered, imports its own number, marks it invited and reads back `inviteStatus` Y.
+- **Legacy Kall V1 writes are unreachable, and their "fixed" verdict was empty.** They act on the old
+  `TBL_KPOST_KALL_TRACKERS`; today's `/v2/kall` routes (KallControllerV3) write `TBL_KPOST_KOOL_KALL_MASTER`, so the
+  owner's own call answers "Kall not found" too. The three authorization tests now take the owner control and
+  skip as INCONCLUSIVE instead of passing on that 404. Forward-backtrack is system-sender only. All four are
+  "unreachable by design" in the ledger. **Re-check by hand** any closed legacy-Kall IDOR bug: its closure rested
+  on a refusal that refused everyone.
+- **Server defects found (not filed):** `common/downloadProfileImage` answers 200 with an EMPTY body when the image
+  exists (CommonControllerV2.java:1822 returns `body(null)` on success); `userLogoutFromAllDevices` answers 500
+  for a signed-in throwaway (2 runs; FR-S12); the Katchup thumbnail is PNG bytes labelled `image/jpeg`; business-L
+  `adminUserLogin` times out (>10 s, 2/2).
+- **The 10 left are all server-side:** the empty-body image, company logo (500), logout-all (500),
+  report-reasons (500) and report-abuse (needs a reason code from it), the mislabelled thumbnail, the KBooking
+  detail chain (QA `availabletrips` fails), knews feed-articles (the feed is empty).
+
+### 2026-11-05 — KPost API contract coverage 69% → 91%: 22 source schemas confirmed live, file contracts checked
+
+Owner: "first I want cover 100 percentage of each test … start with contract".
+
+- **Measured, not guessed:** `docs/generated/kpost-api-type-coverage.md` (`tests/framework/ledgers/test-types-ledger.spec.ts`)
+  counts, per type, the endpoints the bench can really check on QA. Contract counts a schema (workbook, or source
+  confirmed live) that the engine checks or a flow's calls are checked against. "Walled by rule" (not a gap,
+  listed with why): the guard's SMS/session walls plus the owner-rule list in the ledger (global news feed,
+  RedBus city list, Flutter version prompt, seat hold, the two developer-only migrations, the account-overwrite
+  addingUserByAdmin).
+- **22 source schemas confirmed against a live QA success** (`liveCheck: matched 2026-11-05 (in <spec>)`),
+  from a `SOURCE_CONTRACT_TRIAL=true` run of the engine (SMOKE) and of the 30 specs that drive them: legacy
+  group remove-member, change-caption, forward-message, legacy recall, reference/shared message details,
+  kdiary delete-report, the three notification toggles, global-search, news-feed, storage-details, and nine
+  file/text answers (below).
+- **Non-JSON contracts are checked now** (`src/api/schema/raw-body-contract.ts`, used by `response.schema` and
+  the flow check): a file's magic bytes must agree with its Content-Type and the source's `contentMediaType`; a
+  JSON body where bytes are promised fails; a bare text answer (the public key) is checked against its pattern.
+  Only adopted schemas use it, so outside a trial nothing changed until these were confirmed. The flow check
+  also reads a non-envelope JSON answer whole, as `response.schema` does (it skipped them before).
+- **Media streaming asserted properly:** the attachment e2e now expects 303 and a presigned S3 `Location`, not
+  just "no 5xx" (passed live).
+- **Finding (not filed):** `katchup-download-thumbnail` answers PNG bytes labelled `Content-Type: image/jpeg`
+  (for a .txt attachment's icon); its schema stays not adopted until the server labels it right.
+- **23 left**, each needing a real record or a fixed request: the profile/common image downloads (QA accounts
+  have no image: 204), the legacy Kall routes and forward-backtrack (no owner-control success yet),
+  forward-selected-attachment (sent without a uuid), update-invite (no imported phone contact), report-abuse
+  (needs a reason code; report-reasons answers 500), check-attachment (417), the KBooking detail chain (QA
+  `availabletrips` fails), knews feed-articles (the feed is empty), company logo (500), admin reallocate (409),
+  admin-user-login (400), logout-all-devices (401 on the throwaway), set-access-code (not compared yet).
+
+### 2026-11-05 — No product `coverage/` folder; definitions and ledgers named for what they are; a guard gap closed
 
 Owner: "why we have the folder name as coverage? write the test properly with correct inside folder with
 valid names and valid files".

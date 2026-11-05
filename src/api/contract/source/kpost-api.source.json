@@ -287,7 +287,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /admin/addingUserForReallocateByAdmin is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-d",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/admin/admin-member-e2e.spec.ts; a terminated throwaway channel)",
       "evidence": [
         "AdminController.java:70-101 toHttpResponse: HTTP = body statusCode when >= 400",
         "SignUpLoginServiceImpl.java:2141-2262 resultMap.put(DATA, result) where result = signUpLoginRepository.save(userMaster); password = PasswordHasher.hash(...) NOT blanked",
@@ -610,7 +610,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/aws/checkAttachmenS3/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definiti",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/aws/aws-attachment-lifecycle-e2e.spec.ts; after the real S3 upload)",
       "evidence": [
         "integration/PresignedURLController.java:197-236 (path typo \"checkAttachmenS3\" is the real mapping); catch returns the still-empty map with 500",
         "serviceimpl/integration/PreSignedURLServiceImpl.java:411-433 KMail attachments only"
@@ -1073,7 +1073,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/common/downloadCompanyLogo/{companyID} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoi",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/common/common-company-logo-e2e.spec.ts; the PNG the admin just set)",
       "evidence": [
         "CommonControllerV2.java:1274-1301",
         "AWSs3ClientServiceImpl.multiPartfileDownload: resolveContentType, 204 when missing, raw \"S3 error: \" body on 500"
@@ -1112,7 +1112,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: response has no content (HTTP 204)",
+      "liveCheck": "not-run: live 2026-11-05 (profile-lifecycle-e2e.spec.ts) answers 200 with an EMPTY body for an account that has an image: CommonControllerV2.java:1822 returns body(null) on success. A server defect; not adopted until it serves the bytes",
       "evidence": [
         "CommonControllerV2.java:1761-1782",
         "AWSs3ClientServiceImpl.multiPartfileDownloadForProfileImage: contentType(MediaType.IMAGE_JPEG), 204 when missing, raw \"S3 error: \" + e.getMessage() on 500",
@@ -2222,7 +2222,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/profile/profile-throwaway-account-e2e.spec.ts; a session signed in from the account's registered device)",
       "evidence": [
         "ContactsDirectoryControllerV2.java:1121 @PostMapping(\"updateInviteStatus\"); :1128-1135 400; :1140-1145 success; :1157-1162 404 by service string; :1164-1173 catch"
       ],
@@ -2256,7 +2256,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: response body is not valid JSON (Unexpected token 'M', \"MIIBIjANBg\"... is not valid JSON)",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/contract/common/common-endpoints-contract.spec.ts; the 392-char base64 key)",
       "evidence": [
         "CryptoController.java:22-26 Base64(publicKey.getEncoded())",
         "RsaKeyServiceImpl: RSA 2048, X.509 SubjectPublicKeyInfo DER, rotated when older than 24 h",
@@ -3395,7 +3395,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/group/downloadGroupFullProfileImage/{groupKpostID}/{kpostID} is not cleared for the live application (no productionSafe flag — see s",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/authorization/contacts/contacts-group-cross-user-authorization.spec.ts; image bytes and Content-Type agree)",
       "evidence": [
         "GroupControllerV2.java:44 @RequestMapping(\"v2/group\") + :494 @GetMapping(\"downloadGroupFullProfileImage/{groupKpostID}/{kpostID}\")",
         "GroupControllerV2.java:502 isActiveMember(groupKpostID, token kpostID) else 403 body(null)",
@@ -3449,7 +3449,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/group/downloadGroupProfileImage/{groupKpostID}/{kpostID} is not cleared for the live application (no productionSafe flag — see src/a",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/group/group-lifecycle-e2e.spec.ts; image bytes and Content-Type agree)",
       "evidence": [
         "GroupControllerV2.java:44 @RequestMapping(\"v2/group\") + :465 @GetMapping(\"downloadGroupProfileImage/{groupKpostID}/{kpostID}\")",
         "GroupControllerV2.java:473 isActiveMember(groupKpostID, token kpostID) else 403 body(null)",
@@ -3511,7 +3511,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 403); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/authorization/contacts/contacts-group-cross-user-authorization.spec.ts)",
       "evidence": [
         "GroupController.java:30 @RequestMapping(\"group\") + :75 @PostMapping(\"removeGroupMember\")",
         "GroupController.java:83-93 success puts DATA=\"Removed from the group successfully\" + STATUS=result; else DATA=NOTAPPLICABLE (\"Not Applicable\") + STATUS=<DAO string>, HTTP 403",
@@ -5002,7 +5002,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /v2/katchup/changeCaption is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definition.ts",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/authorization/katchup/katchup-change-caption-authorization.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:1575-1599",
         "KatchupServiceImpl.java:2279-2298 for each id: getById, referenceMessage.replaceAll(\"attachmentDetails\",\"attachmentCaption\"), sleep 500 ms, save"
@@ -5099,7 +5099,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/katchup/download/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definition.t",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/katchup/katchup-attachment-upload-e2e.spec.ts; bytes and Content-Type agree)",
       "evidence": [
         "KatchupControllerV2.java:1123-1149",
         "KatchupServiceImpl.java:1441-1454 multiPartfileNewDownload -> AWSs3ClientServiceImpl.multiPartfileDownload (559-599)"
@@ -5176,7 +5176,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/katchup/downloadAttachment/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-de",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/katchup/katchup-attachment-upload-e2e.spec.ts)",
       "evidence": [
         "SecurityConfiguration.java:67-73 /v2/katchup/downloadAttachment/** is permitAll (a present token is still validated by AuthenticationFilter)",
         "KatchupControllerV2.java:998-1035",
@@ -5226,7 +5226,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/katchup/downloadFromS3/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-defini",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/katchup/katchup-attachment-upload-e2e.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:1067-1111 (urlPath \"/downloadFromS3/{uuid}\" literally, braces included)",
         "KatchupServiceImpl.java:1457-1475 returns \"https://\" + bucketName + \".s3.\" + regionName + \".amazonaws.com/\" + filePath"
@@ -5279,7 +5279,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/katchup/downloadThumbnail/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-def",
+      "liveCheck": "not-run: live 2026-11-05 (katchup-attachment-upload-e2e.spec.ts) answered PNG bytes labelled Content-Type image/jpeg, a mislabelled thumbnail; not adopted until the server labels it right",
       "evidence": [
         "SecurityConfiguration.java:70 /v2/katchup/downloadThumbnail/** permitAll",
         "KatchupControllerV2.java:1151-1168",
@@ -5631,7 +5631,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/authorization/katchup/katchup-cross-user-authorization.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:1328-1437 multipart: @RequestPart files (optional) + @RequestParam(\"text\") JSON; passes service status/body through",
         "KatchupServiceImpl.java:1958-1965 success data = modifyKatchupResponse, urlPath \"forwardKatchupMessage\"",
@@ -6391,7 +6391,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 401); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/contract/katchup/katchup-endpoints-contract.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:1993-2027",
         "KatchupServiceImpl.java:2723-2741 searchMsgIds over the last 3 months (LocalDate.now().minusMonths(3) .. today), findAllByMsgID, modifyKatchupResponse",
@@ -6455,7 +6455,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 200); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/authorization/katchup/katchup-legacy-recall-authorization.spec.ts)",
       "evidence": [
         "KatchupController.java:41 @RequestMapping(\"katchup\") (no v2), 190-220 returns a plain Map (always HTTP 200), never puts statusCode, never sets sender from the token",
         "KatchupServiceImpl.java:990-1028 recallMessage: group branch has no sender check at all; 1:1 branch uses the body's sender",
@@ -6495,7 +6495,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/katchup/mediaStreaming/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-defini",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/katchup/katchup-attachment-upload-e2e.spec.ts; 303 to a presigned S3 URL)",
       "evidence": [
         "KatchupControllerV2.java:1301-1326",
         "KatchupServiceImpl.java:1763-1770",
@@ -6584,7 +6584,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/katchup/oldDownload/{uuid} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definitio",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/katchup/katchup-attachment-upload-e2e.spec.ts; bytes and Content-Type agree)",
       "evidence": [
         "KatchupControllerV2.java:1037-1065",
         "KatchupServiceImpl.java:1413-1438 multiPartfileDownload + downloadError (text/plain)",
@@ -7059,7 +7059,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /v2/katchup/getReferenceMessagesDetails is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/authorization/katchup/katchup-idor-authorization.spec.ts)",
       "evidence": [
         "KatchupControllerV2.java:1486-1507 empty -> 200 data [] + message; else data",
         "KatchupServiceImpl.java:2105-2118 findAllById(referenceMessageIDList) filtered to messages the caller is party to, then modifyKatchupResponse",
@@ -7758,7 +7758,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/katchup/katchup-attachment-upload-e2e.spec.ts; the web app's body)",
       "evidence": [
         "KatchupControllerV2.java:284-420; 403-408 passes through katchupService.sendMessage status and body, overwriting urlPath",
         "KatchupServiceImpl.java:150-904 sendMessage; success 857-864 data = modifyKatchupResponse(saved)",
@@ -7838,7 +7838,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/katchup/getSharedMessageDetails/{msgID} is not cleared for the live application (no productionSafe flag — see src/api/registry/endpo",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/authorization/katchup/katchup-cross-user-authorization.spec.ts)",
       "evidence": [
         "KatchupServiceImpl.java:2368-2417 countAccessibleMessages()==0 -> 404; sharedDetailsRepo.findByMessageID -> data",
         "SharedDetails.java:12-55 long ID (getID -> JSON \"id\"), long messageID, String mapDetails, String contactDetails"
@@ -8127,7 +8127,7 @@
         }
       ],
       "confidence": "medium",
-      "liveCheck": "not-run: POST /redbus/boardingPoint/ is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definition.ts)",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts; a real trip's boarding point)",
       "evidence": [
         "RedBusIntegrationController.java:412 @RequestMapping(value = \"/boardingPoint/\") - no method restriction, so GET/PUT/DELETE also reach it",
         "RedBusIntegrationController.java:422-437 value = BoardingPoint or null with SUCCESS",
@@ -8740,7 +8740,7 @@
         }
       ],
       "confidence": "medium",
-      "liveCheck": "not-run: POST /redbus/tripdetails/ is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definition.ts)",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts; a real trip id)",
       "evidence": [
         "RedBusIntegrationController.java:60 @RequestMapping(\"/redbus\") + :318 @PostMapping(\"/tripdetails/\")",
         "RedBusIntegrationController.java:323-362 value = TripDetails, row0..row4 = seats split by Seat.row (rows >=5 dropped), final = BPDPDetails, errorcode/errorvalue \"Not Applicable\"",
@@ -8880,7 +8880,7 @@
         }
       ],
       "confidence": "medium",
-      "liveCheck": "not-run: POST /redbus/tripdetailsV2/ is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definition.ts)",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/kbooking/kbooking-bus-search-e2e.spec.ts; a real trip id)",
       "evidence": [
         "RedBusIntegrationController.java:381 @PostMapping(\"/tripdetailsV2/\") body TripDetailsRequest; :385-387 status + value only (no errorcode/errorvalue on success)",
         "SSRestServiceClient.java:169 getTripDetails(TripDetailsRequest)",
@@ -9153,7 +9153,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 404); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/authorization/kdiary/kdiary-cross-user-authorization.spec.ts)",
       "evidence": [
         "KdiaryScheduleController.java:478 @PostMapping(\"deleteReport\"); :485-490 400 without urlPath; :491-493 HTTP = service statusCode; :494-499 catch",
         "KdiaryScheduleServiceImpl.java:502-535 deleteReport: 404 / 403 / 200 / 500 branches, urlPath \"deleteReport\""
@@ -10145,7 +10145,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 500); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/contract/knews/knews-endpoints-contract.spec.ts)",
       "evidence": [
         "NewsController.java:41 @RequestMapping(\"/v1/news\"); returns NewsListResponse directly (no envelope)",
         "NewsListResponse.java record(items, pagination{nextCursor}, failedFeeds); NewsArticleDTO.java record(id..region, all String); FailedFeedDTO.java record(feedId, name, message)",
@@ -11240,7 +11240,7 @@
         }
       ],
       "confidence": "medium",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 401); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/profile/profile-lifecycle-e2e.spec.ts; the cover just uploaded)",
       "evidence": [
         "UserProfileControllerV2.java:1239-1265: logAudit at :1242 before the token check at :1254",
         "AuditServiceImpl.java:86-94 logAudit(String,...) saves without a null check; :35-39 comment: kpost_id is NOT NULL in the audit table",
@@ -11283,7 +11283,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 401); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/profile/profile-lifecycle-e2e.spec.ts; the JPEG just uploaded)",
       "evidence": [
         "UserProfileControllerV2.java:1114-1141 path <kpostID @->_>/profile/<name>.jpg",
         "AWSs3ClientServiceImpl.java:559-597 multiPartfileDownload (resolveContentType, 204 when missing)"
@@ -11332,7 +11332,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 401); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/profile/profile-lifecycle-e2e.spec.ts; the JPEG just uploaded)",
       "evidence": [
         "UserProfileControllerV2.java:1081-1112 path: <kpostID with @->_>/profile/<part before first \".\" with @->_>_thn.jpg",
         "AWSs3ClientServiceImpl.java:1157-1187 multiPartfileDownloadForProfileImage: 204 when missing, image/jpeg on success, S3 error text on 500",
@@ -11398,7 +11398,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 401); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/business-rules/profile/profile-reads-business-rules.spec.ts; a JPEG labelled image/jpeg)",
       "evidence": [
         "UserProfileServiceImpl.java:822-824 passes through",
         "UserProfileDaoImpl.java:1386-1403 getSignatureImage: notFound().build(), contentType parsed from \"data:<type>;base64,\""
@@ -11895,7 +11895,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 401); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/contract/profile/profile-endpoints-contract.spec.ts)",
       "evidence": [
         "UserProfileControllerV2.java:1707-1729 returns the service body as is; catch map has no urlPath",
         "UserProfileServiceImpl.java:522-541 getStorageDetails: HashMap {katchupDataSize, kallDataSize}, both Double",
@@ -12849,7 +12849,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/settings/settings-lifecycle-e2e.spec.ts)",
       "evidence": [
         "GeneralSettingController.java:214 @PostMapping(\"kallNotification\") body Map<String,Object>",
         "GeneralSettingController.java:215+ validates empty map -> 400, service non-SUCCESS -> 400 \"Invalid request\" (deliberate, KPA-835/836/837 comment)"
@@ -12914,7 +12914,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/settings/settings-lifecycle-e2e.spec.ts)",
       "evidence": [
         "GeneralSettingController.java:121 @PostMapping(\"katchupNotification\") body Map<String,Object>",
         "GeneralSettingController.java:122+ validates empty map -> 400, service non-SUCCESS -> 400 \"Invalid request\" (deliberate, KPA-835/836/837 comment)"
@@ -12979,7 +12979,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 400); needs a success to compare",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/settings/settings-lifecycle-e2e.spec.ts)",
       "evidence": [
         "GeneralSettingController.java:167 @PostMapping(\"kmailNotification\") body Map<String,Object>",
         "GeneralSettingController.java:168+ validates empty map -> 400, service non-SUCCESS -> 400 \"Invalid request\" (deliberate, KPA-835/836/837 comment)"
@@ -13285,7 +13285,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /signupLoginForMediumAndLarge/adminUserLogin is not cleared for the live application (no productionSafe flag — see src/api/registry/end",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/positive/signup-login/signup-login-admin-login-positive.spec.ts; the business-M admin)",
       "evidence": [
         "SignUpLoginForMediumAndLargeController.java:116-117 return ResponseEntity.ok().body(responseObject.getBody()) - drops the service HTTP status and the accessToken/refreshToken headers",
         "SignUpLoginServiceImpl.java:2285 createdBy admin + BUSINESS_M/L gate, else 500 \"Not A Admin\"",
@@ -13788,7 +13788,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: GET /v2/signupLogin/userLogoutFromAllDevices/ is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoin",
+      "liveCheck": "not-run: live 2026-11-05 (profile-throwaway-account-e2e.spec.ts, 2 runs) answers 500 \"Unable to log out from all devices\" for a signed-in throwaway account: the handler caught an exception. A server defect; not adopted until it succeeds",
       "evidence": [
         "SignUpLoginControllerV2.java:509-555 KPOSTValidation.isEmpty(int) == (value == 0)",
         "SignUpLoginServiceImpl.java:980 userLogoutFromAllDevices -> int rows"
@@ -13801,7 +13801,19 @@
       "envelopeKeys": ["statusCode", "status", "urlPath"],
       "successStatus": 200,
       "topLevel": {
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "const": 200
+          },
+          "status": {
+            "const": "SUCCESS"
+          },
+          "urlPath": {
+            "const": "setAccessCode"
+          }
+        },
+        "required": ["statusCode", "status", "urlPath"]
       },
       "failures": [
         {
@@ -13848,12 +13860,12 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: POST /v2/signupLogin/setAccessCode is not cleared for the live application (no productionSafe flag — see src/api/registry/endpoint-definitio",
+      "liveCheck": "matched 2026-11-05 (in kpost-api/e2e/profile/profile-throwaway-account-e2e.spec.ts)",
       "evidence": [
         "SignUpLoginControllerV2.java:304-352",
         "UserProfileDaoImpl.changeAccessCode: kpostID from BODY, PasswordHasher.matches(currentPassword), UPDATE User.accessCode"
       ],
-      "notes": "Success body has no message and no data (just statusCode/status/urlPath). SECURITY: route is permitAll and kpostID comes from the body, so it works with no token and acts as a password-guessing oracle (400 \"Invalid accessCode or currentPassword\" vs \"Invalid kpostID\" also enumerates accounts). Destructive for a QA account (changes its access code): throwaway accounts only."
+      "notes": "Success body has no message and no data (just statusCode/status/urlPath). SECURITY: route is permitAll and kpostID comes from the body, so it works with no token and acts as a password-guessing oracle (400 \"Invalid accessCode or currentPassword\" vs \"Invalid kpostID\" also enumerates accounts). Destructive for a QA account (changes its access code): throwaway accounts only. The success carries only the envelope (SignUpLoginControllerV2.java setAccessCode: statusCode 200, status SUCCESS, urlPath), typed here since 2026-11-05 so it can be compared."
     },
     "signup-login-user-logout": {
       "handler": "SignUpLoginControllerV2.java:464 userLogout",

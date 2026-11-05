@@ -3,6 +3,7 @@ import type { Principal } from '@config/auth.config';
 import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/contract/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { KpostRepository } from '@database/repositories/kpost.repository';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 
@@ -351,7 +352,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
   test(
     'group message: send reaches members and read receipts are tracked (FR-K06 / FR-K07) @api @katchup',
     { annotation: [{ type: 'requirement', description: 'BR-KU-RECEIPTS' }] },
-    async ({ endpoints }) => {
+    async ({ endpoints, validationEngine }) => {
       // Create a group A(admin) + B, C, D.
       const members = [B, C, D].map((p) => ({
         createdBy: A.username,
@@ -439,6 +440,12 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
             'katchup-read-status-group',
             { body: { msgID } },
             { label: 'feature:read-receipts-after', auth: { principal: A }, allowLiveRead: true },
+          );
+          await checkOnRealRecord(
+            validationEngine,
+            'katchup-read-status-group',
+            { body: { msgID } },
+            [],
           );
           const afterParsed = receiptsAfter.json();
           const afterList = (

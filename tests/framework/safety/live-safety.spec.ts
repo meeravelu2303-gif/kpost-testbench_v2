@@ -522,6 +522,37 @@ test.describe('live-application safety @framework', () => {
     ]);
   });
 
+  test('a malformed value that cannot be any record passes; anything real-looking is still refused', () => {
+    // Owner, 2026-11-05: the negative fuzzers may send values whose shape no record can have.
+    const malformed = foreignIdentifiers({
+      body: { kpostID: 'not-an-email', contactID: 12345, companyID: 'not-a-number' },
+      pathParams: { uuid: 'not-a-uuid', groupKpostID: 12345 },
+    });
+    expect(malformed, 'no-@ KPost IDs, digit-less ids and non-UUID uuids name nobody').toEqual([]);
+
+    const realLooking = foreignIdentifiers({
+      body: {
+        kpostID: 'stranger@kpostindia.com',
+        companyID: 12345,
+        mobileNumber: '12345',
+        otherEmail: 'someone@example.com',
+      },
+      pathParams: { kpostID: 'other-user@kpostindia.com' },
+    });
+    // E-mail keys reach the live mail server: even a value with no `@` stays refused.
+    expect(
+      foreignIdentifiers({ body: { otherEmail: 12345, email: 'not-an-email' } }).map((o) => o.path),
+    ).toEqual(['body.otherEmail', 'body.email']);
+    // (`uuid` and `groupKpostID` keys were already exempt before this rule: runtime-scoped, gated.)
+    expect(realLooking.map((offence) => offence.path).sort()).toEqual([
+      'body.companyID',
+      'body.kpostID',
+      'body.mobileNumber',
+      'body.otherEmail',
+      'path.kpostID',
+    ]);
+  });
+
   test('reference data and bench-generated values are not treated as resources', () => {
     // Flagging these would refuse every request. countryID is shared; sessionID/deviceID are ours.
     const foreign = foreignIdentifiers({

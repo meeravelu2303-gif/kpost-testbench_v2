@@ -19,10 +19,11 @@ export const downloadApi = defineKatchupEndpoint({
   summary: 'Download a message attachment',
   tags: [...ATTACH_TAGS],
   envelope: false,
-  contentType: 'application/octet-stream',
+  // Each file in its own stored type (S3 metadata): text/plain for a .txt, live 2026-11-05.
+  contentType: '*/*',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
-  note: 'bytes correct, Content-Type wrong (hardcoded image/jpeg) — see #617',
+  note: 'bytes and Content-Type correct (#617, the fixed image/jpeg, is fixed; live 2026-11-05)',
 });
 
 export const downloadAttachmentApi = defineKatchupEndpoint({
@@ -33,7 +34,8 @@ export const downloadAttachmentApi = defineKatchupEndpoint({
   summary: 'Download an attachment (alternate route)',
   tags: [...ATTACH_TAGS],
   envelope: false,
-  contentType: 'application/octet-stream',
+  // JSON: the presigned URL, file name and type (source contract, matched live 2026-11-05).
+  contentType: 'application/json',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
   note: 'metadata correct, ASCII filename fallback hardcoded to "file.xlsx" — see #618',
@@ -47,7 +49,8 @@ export const downloadFromS3Api = defineKatchupEndpoint({
   summary: 'Download an attachment stored in S3',
   tags: [...ATTACH_TAGS],
   envelope: false,
-  contentType: 'application/octet-stream',
+  // JSON: the plain S3 URL under data (source contract, matched live 2026-11-05).
+  contentType: 'application/json',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
   note: 'confirmed working live 2026-09-26 with a real attachment uuid',
@@ -60,7 +63,8 @@ export const downloadThumbnailApi = defineKatchupEndpoint({
   summary: 'Download an attachment thumbnail',
   tags: [...ATTACH_TAGS],
   envelope: false,
-  contentType: 'image/png',
+  // Documented JPEG (<uuid>_thn.jpg); the PNG icon served for a non-image file is #13477.
+  contentType: 'image/jpeg',
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
   note: 'confirmed reachable live 2026-09-26 with a real attachment uuid',
@@ -74,6 +78,8 @@ export const mediaStreamingApi = defineKatchupEndpoint({
   tags: [...ATTACH_TAGS, 'streaming'],
   envelope: false,
   contentType: 'application/octet-stream',
+  // Its success is a 303 to a presigned S3 URL (KatchupControllerV2 mediaStreaming; live 2026-11-05).
+  expectedStatus: [303],
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
   note: 'confirmed reachable live 2026-09-26 with a real attachment uuid (303 redirect)',
@@ -100,7 +106,8 @@ export const oldDownloadApi = defineUndocumentedKpostEndpoint({
   summary: 'Download an attachment by uuid (the older inline-download route)',
   tags: ['katchup', ...ATTACH_TAGS],
   envelope: false,
-  contentType: 'application/octet-stream',
+  // Each file in its own stored type, as katchup-download (live 2026-11-05).
+  contentType: '*/*',
   // A real uuid comes from katchup-attachment-upload-e2e.spec.ts; standalone it is the not-found path.
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),

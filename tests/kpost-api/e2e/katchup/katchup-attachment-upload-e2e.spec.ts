@@ -2,6 +2,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 
 /**
@@ -95,6 +96,51 @@ test.describe(
           'the message carries the uploaded uuid as its attachmentUuid',
         ).toEqual([uuid]);
       } finally {
+        await cleanup(endpoints, msgID);
+      }
+    });
+
+    test('a selected attachment is forwarded as a new message, with the body the web app sends', async ({
+      endpoints,
+    }) => {
+      const { msgID, uuid } = await uploadAndSend(
+        endpoints,
+        'qa-bench.txt',
+        'txt',
+        'text/plain',
+        'QA bench forwarded attachment content',
+      );
+      let forwardedID: number | undefined;
+      try {
+        // The web app's "forward selected attachments" body (ForwardFooter.js SendMessageWithSelectedAttachment):
+        // a new message, type 24, naming only the attachments the user ticked.
+        const forwarded = await endpoints.sendTo(
+          'katchup-send-forward-selected-attachment',
+          {
+            body: sendShape({
+              messageType: 24,
+              subject: 'General',
+              sharedType: 0,
+              status: 0,
+              attachmentCaption: JSON.stringify([]),
+              uuid: uuid ? [uuid] : [],
+            }),
+          },
+          { label: 'presigned:forward-selected', auth: { principal: A }, allowLiveWrite: true },
+        );
+        expect(forwarded.status, 'the selected attachment is forwarded').toBe(200);
+        const row = (
+          JSON.parse(forwarded.bodyText || '{}') as {
+            data?: Array<{ msgID?: number; attachmentUuid?: unknown }>;
+          }
+        ).data?.[0];
+        forwardedID = row?.msgID;
+        expect.soft(forwardedID, 'the forward is a new message with its own id').toBeTruthy();
+        expect
+          .soft(row?.attachmentUuid, 'carrying exactly the selected attachment')
+          .toEqual([uuid]);
+      } finally {
+        await cleanup(endpoints, forwardedID);
         await cleanup(endpoints, msgID);
       }
     });
@@ -242,10 +288,15 @@ test.describe(
           { pathParams: { uuid: uuid ?? '' } },
           { label: 'presigned:media-streaming', auth: { principal: A }, allowLiveRead: true },
         );
-        // A non-media file may answer 303 (redirect), so only "no 5xx" is asserted.
+        // Its documented success (KatchupControllerV2 mediaStreaming, source contract): 303 with no
+        // body and a Location that is a presigned S3 GET URL for the attachment.
         expect
           .soft(streaming.status, 'mediaStreaming does not crash for a real uuid')
           .toBeLessThan(500);
+        expect.soft(streaming.status, 'mediaStreaming redirects to the file (303)').toBe(303);
+        expect
+          .soft(streaming.header('location') ?? '', 'the redirect is a presigned S3 URL')
+          .toMatch(/^https:\/\/[^/]+\.amazonaws\.com\/.+X-Amz-Signature=/);
       } finally {
         await cleanup(endpoints, msgID);
       }
@@ -268,6 +319,36 @@ test.describe(
           { label: 'presigned:generate-thumbnail', auth: { principal: A }, allowLiveWrite: true },
         );
         expect(ex.status, 'generateThumbnailUsingUUID succeeds for a real uuid').toBeLessThan(300);
+      } finally {
+        await cleanup(endpoints, msgID);
+      }
+    });
+
+    test('every id-keyed attachment read, through the full engine, on a real attachment', async ({
+      endpoints,
+      validationEngine,
+    }) => {
+      // The sweep cannot send these (a placeholder uuid could name someone else's file); this
+      // attachment is our own, so the engine's negative, boundary, auth, security, performance and
+      // contract checks run on it here.
+      const { msgID, uuid } = await uploadAndSend(
+        endpoints,
+        'qa-bench.txt',
+        'txt',
+        'text/plain',
+        'QA bench engine-on-record attachment',
+      );
+      try {
+        test.skip(!uuid, 'the upload named no uuid');
+        for (const id of [
+          'katchup-download',
+          'katchup-old-download',
+          'katchup-download-attachment',
+          'katchup-download-from-s3',
+          'katchup-download-thumbnail',
+          'katchup-media-streaming',
+        ])
+          await checkOnRealRecord(validationEngine, id, { pathParams: { uuid: uuid! } }, [uuid!]);
       } finally {
         await cleanup(endpoints, msgID);
       }

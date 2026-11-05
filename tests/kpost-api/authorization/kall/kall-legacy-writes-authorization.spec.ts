@@ -3,11 +3,39 @@
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
+import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 
 const K = AUTH_PROFILES.kpost;
 const owner = K.principals.find((p) => p.key === 'personal');
 const attacker = K.principals.find((p) => p.key === 'personal-3');
+
+/**
+ * The owner's identical call on their own Kall: the control. When it is refused too, the stranger's
+ * refusal proves nothing (CLAUDE.md §7), so the test is INCONCLUSIVE, never a pass. Its success is also
+ * what the route's response contract is checked on.
+ *
+ * Live 2026-11-05: the owner is refused too ("Kall not found", 404). These V1 routes act on the old
+ * TBL_KPOST_KALL_TRACKERS (KallDaoImpl.checkKallAccess), and today's /v2/kall routes (KallControllerV3)
+ * write TBL_KPOST_KOOL_KALL_MASTER, so no call made now exists for them: a stranger's 404 is not a fix.
+ */
+async function ownerControl(
+  endpoints: EndpointExecutor,
+  endpointId: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; reason: string }> {
+  const control = await endpoints.sendTo(
+    endpointId,
+    { body },
+    { label: `kall-legacy:${endpointId}:owner`, auth: { principal: owner! }, allowLiveWrite: true },
+  );
+  return {
+    ok: control.status === 200,
+    reason:
+      `INCONCLUSIVE: the owner's own ${endpointId} on their own call is refused too ` +
+      `(HTTP ${control.status} ${control.bodyText.slice(0, 120)}), so the stranger's refusal proves nothing`,
+  };
+}
 
 test.describe(
   'KPost Security · Kall V1 legacy writes — unscoped by kallID/id @api @kpost-api @security @kall',
@@ -65,6 +93,13 @@ test.describe(
           request: { body: { kallID, kallStatus: 'cancelled' } },
         });
       }
+      const control = await ownerControl(endpoints, 'kall-legacy-set-status', {
+        kallID,
+        kallStatus: 'cancelled',
+        kallEndTime: new Date().toISOString(),
+      });
+      // A stranger who succeeded is a finding whatever the control says; a refusal needs the control.
+      if (!succeeded) test.skip(!control.ok, control.reason);
       expect(
         succeeded,
         "an attacker must not be able to modify another account's call via the legacy route",
@@ -111,6 +146,13 @@ test.describe(
           request: { body: { kallID, kallStatus: 'cancelled' } },
         });
       }
+      const control = await ownerControl(endpoints, 'kall-legacy-cancel-schedule', {
+        kallID,
+        kallStatus: 'cancelled',
+        kallEndTime: new Date().toISOString(),
+      });
+      // A stranger who succeeded is a finding whatever the control says; a refusal needs the control.
+      if (!succeeded) test.skip(!control.ok, control.reason);
       expect(
         succeeded,
         "an attacker must not be able to modify another account's call via the legacy route",
@@ -159,6 +201,11 @@ test.describe(
           request: { body: { idsList: [kallID] } },
         });
       }
+      const control = await ownerControl(endpoints, 'kall-legacy-remove-member', {
+        idsList: [kallID],
+      });
+      // A stranger who succeeded is a finding whatever the control says; a refusal needs the control.
+      if (!succeeded) test.skip(!control.ok, control.reason);
       expect(
         succeeded,
         "an attacker must not be able to delete another account's scheduled call via the legacy route",

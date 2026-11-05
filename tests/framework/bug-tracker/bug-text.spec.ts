@@ -143,6 +143,14 @@ test.describe('plain, short bug text @framework', () => {
     expect(block(description, 'Steps to reproduce')).toContain('2. Run the curl below.');
   });
 
+  test("a finding's own fix, read from the code, is the How to fix in full", () => {
+    const fix =
+      'Return the S3 response when it is OK, instead of a new empty 200. Keep the 204 for a missing image.';
+    const description = buildDescription({ ...apiBug(), fix });
+    expect(block(description, 'How to fix')).toBe(fix);
+    expect(description.indexOf('How to fix:')).toBeLessThan(description.indexOf('curl:'));
+  });
+
   test('no engine words, no internal names, and the reply is not printed twice', () => {
     const description = buildDescription(apiBug({ actual: `status=500, body=${reply}` }));
     for (const word of [

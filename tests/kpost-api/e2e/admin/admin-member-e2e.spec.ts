@@ -253,16 +253,28 @@ test.describe('KPost Admin · throwaway-member lifecycle @api @admin', () => {
           .soft(String(row?.mobile_number), 'and belongs to the new person’s mobile')
           .toBe(newMobile);
       }
-      // The admin-module reallocate route, sent the same body: no client sends it, but a body it
-      // cannot use must be refused, not crash (its `entity` is dereferenced unchecked).
+      // The admin-module reallocate route (no client sends it). It works only on a terminated channel
+      // (SignUpLoginServiceImpl: an active user answers 409 "cannot be reallocated"), so the channel is
+      // terminated again first and then reallocated through this route to a third person.
+      const secondTerminate = await call(
+        'admin-terminate-user',
+        { kpostID, companyID },
+        'terminate-again',
+      );
+      expect.soft(secondTerminate.status, 'terminateUser ends the reallocated member').toBe(200);
+      const thirdMobile = `96${mobile.slice(2)}`;
+      owned.push(thirdMobile);
       const otherRoute = await call(
         'admin-adding-user-for-reallocate',
-        reallocateBody,
+        { ...reallocateBody, mobileNumber: thirdMobile, referenceName: 'QA Reallocated Twice' },
         'reallocate-route',
       );
       expect
-        .soft(otherRoute.status, 'addingUserForReallocateByAdmin answers a 4xx or 2xx, not a crash')
-        .toBeLessThan(500);
+        .soft(
+          otherRoute.status,
+          'addingUserForReallocateByAdmin gives a terminated channel to a new person',
+        )
+        .toBe(200);
     } finally {
       if (created) {
         const terminated = await endpoints
